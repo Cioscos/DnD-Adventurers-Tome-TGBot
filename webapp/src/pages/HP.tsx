@@ -512,6 +512,7 @@ export default function HP() {
         <DeathSaveResultDialog
           result={deathRollResult}
           onClose={() => setDeathRollResult(null)}
+          afterRoll={{ charId }}
         />
       )}
 
@@ -519,6 +520,7 @@ export default function HP() {
         <ConcentrationSaveDialog
           result={concSaveResult}
           onClose={() => setConcSaveResult(null)}
+          afterRoll={{ charId }}
         />
       )}
       <InstantDeathDialog open={instantDeathOpen} onClose={() => setInstantDeathOpen(false)} />

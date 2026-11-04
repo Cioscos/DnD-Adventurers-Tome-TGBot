@@ -2,16 +2,21 @@ import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import ResultDialog from '@/components/ui/ResultDialog'
+import { useRetouched } from '@/hooks/useRetouched'
 import type { DeathSaveRollResult } from '@/api/client'
 
 interface Props {
   result: DeathSaveRollResult
   onClose: () => void
+  /** Il tiro è ritoccabile con i privilegi usati dopo averlo visto. */
+  afterRoll?: { charId: number }
 }
 
-export default function DeathSaveResultDialog({ result, onClose }: Props) {
+export default function DeathSaveResultDialog({ result: rolled, onClose, afterRoll }: Props) {
   const { t } = useTranslation()
+  const [result, retouch] = useRetouched(rolled)
   const { outcome, die, successes, failures, revived, stable } = result
 
   const isSuccess = outcome === 'success' || outcome === 'nat20'
@@ -34,6 +39,14 @@ export default function DeathSaveResultDialog({ result, onClose }: Props) {
       pulse={pulse}
       size="sm"
       title={t('character.death_saves.roll_result')}
+      extraActions={afterRoll && (
+        <AfterRollOptions
+          charId={afterRoll.charId}
+          query={{ roll: 'death_save' }}
+          rollToken={rolled}
+          onResult={(to) => to.death && retouch(to.death)}
+        />
+      )}
     >
       {outcome === 'nat20' && (
         <p className="text-dnd-gold-bright font-bold font-cinzel">

@@ -2,16 +2,21 @@ import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import ResultDialog from '@/components/ui/ResultDialog'
+import { useRetouched } from '@/hooks/useRetouched'
 import type { ConcentrationSaveResult } from '@/api/client'
 
 interface Props {
   result: ConcentrationSaveResult
   onClose: () => void
+  /** Il tiro è ritoccabile con i privilegi usati dopo averlo visto. */
+  afterRoll?: { charId: number }
 }
 
-export default function ConcentrationSaveDialog({ result, onClose }: Props) {
+export default function ConcentrationSaveDialog({ result: rolled, onClose, afterRoll }: Props) {
   const { t } = useTranslation()
+  const [result, retouch] = useRetouched(rolled)
   const { success, dc, total, die, bonus, is_critical, is_fumble, lost_concentration } = result
 
   // RAW: 20 e 1 naturali non decidono il TS, quindi il banner compare solo se concorda con l'esito.
@@ -29,6 +34,14 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
       pulse={pulse}
       size="sm"
       title={t('character.spells.conc_save_title', { dc })}
+      extraActions={afterRoll && !result.auto_fail && (
+        <AfterRollOptions
+          charId={afterRoll.charId}
+          query={{ roll: 'save', ability: 'constitution' }}
+          rollToken={rolled}
+          onResult={(to) => to.concentration && retouch(to.concentration)}
+        />
+      )}
     >
       {showCritical && (
         <p className="text-dnd-gold-bright font-bold font-cinzel uppercase tracking-wider">{t('character.dice.critical_banner')}</p>

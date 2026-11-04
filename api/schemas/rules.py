@@ -1,6 +1,14 @@
 from pydantic import BaseModel
 
-from api.schemas.common import D20Dice, RollMode, RollOptionsBody, RollResult, absent_when_none
+from api.schemas.common import (
+    ConcentrationSaveResult,
+    D20Dice,
+    DeathSaveRollResult,
+    RollMode,
+    RollOptionsBody,
+    RollResult,
+    absent_when_none,
+)
 from api.schemas.condition_effects import PendingSaveRead
 from api.schemas.item import WeaponAttackResult
 
@@ -70,3 +78,10 @@ class LastRollResult(RollResult):
     condition_removed: bool | None = absent_when_none()
     save: PendingSaveRead | None = absent_when_none()
     attack: WeaponAttackResult | None = absent_when_none()
+    death: DeathSaveRollResult | None = absent_when_none()
+    concentration: ConcentrationSaveResult | None = absent_when_none()
+
+
+class LastRollRefund(BaseModel):
+    """``succeeded``: il giocatore dichiara il tiro riuscito, il pagamento resta e la domanda si chiude."""
+    succeeded: bool = False

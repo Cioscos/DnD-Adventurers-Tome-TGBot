@@ -743,7 +743,8 @@
         "forced_hit": "Hit",
         "after_roll_failed": "Feature not applied: the roll stands as it was",
         "succeeded_question": "Did the roll succeed? If not, the use comes back.",
-        "refund_failed": "Refund failed: fix the uses by hand"
+        "refund_failed": "Answer not sent: try again",
+        "refund_title": "Last roll: {{total}}"
     },
     "conditions": {
       "duration": {

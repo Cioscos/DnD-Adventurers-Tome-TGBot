@@ -1,3 +1,5 @@
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
+import { useRetouched } from '@/hooks/useRetouched'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
@@ -137,6 +139,8 @@ export default function Dice() {
       haptic.error()
     }
   }
+
+  const [shownInitiative, retouchInitiative] = useRetouched(initiativeResult)
 
   const handleInitiative = async (mode: RollMode) => {
     setInitiativeRolling(true)
@@ -288,7 +292,7 @@ export default function Dice() {
 
       {/* Initiative result */}
       <AnimatePresence>
-        {initiativeResult && (
+        {shownInitiative && (
           <m.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -305,13 +309,18 @@ export default function Dice() {
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ ...spring.elastic, delay: 0.1 }}
               >
-                {initiativeResult.total}
+                {shownInitiative.total}
               </m.p>
               <p className="text-xs text-dnd-text-muted font-mono mt-1">
-                <D20Faces die={initiativeResult.die} dice={initiativeResult.dice} mode={initiativeResult.mode} />{' '}
-                {initiativeResult.bonus >= 0 ? '+' : ''}{initiativeResult.bonus}
+                <D20Faces die={shownInitiative.die} dice={shownInitiative.dice} mode={shownInitiative.mode} />{' '}
+                {shownInitiative.bonus >= 0 ? '+' : ''}{shownInitiative.bonus}
               </p>
-              <RollNotes notes={initiativeResult.notes} autoFail={initiativeResult.auto_fail} className="mt-1" />
+              <RollNotes notes={shownInitiative.notes} autoFail={shownInitiative.auto_fail} className="mt-1" />
+              {!shownInitiative.auto_fail && (
+                <div className="mt-3">
+                  <AfterRollOptions charId={charId} query={{ roll: 'initiative' }} rollToken={initiativeResult} onResult={retouchInitiative} />
+                </div>
+              )}
             </Surface>
           </m.div>
         )}

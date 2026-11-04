@@ -553,6 +553,8 @@ def _settle_attack(
 
 def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: dict) -> WeaponAttackResult:
     """Il tiro per colpire è cambiato dopo un'opzione. Il danno già tirato resta, salvo che cambino critico o 1 naturale."""
+    # shortcut: l'evento homebrew `attack_rolled` resta sul primo d20 (Qualità & Usura usura su un 1 poi trasformato);
+    # da rivedere se una regola homebrew deve reagire all'esito finale, rinviando il dispatch al danno o al «Mancato».
     result = WeaponAttackResult(**pending["result"])
     block = roll["option_result"]
     if (result.is_critical, result.is_fumble) != (roll["is_critical"], roll["is_fumble"]):
@@ -634,6 +636,9 @@ async def deferred_attack_damage(
     result.option_result = option_result(opts, rolls, extra, previous=result.option_result)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
     _set_pending_attack(char, None)
+    turn = get_turn(char)
+    if turn.get("last_roll"):  # il danno dice che il colpo è andato a segno: niente più da rimborsare
+        char.turn_state = {**turn, "last_roll": {**turn["last_roll"], "refundable": {}}}
     if opts.keys:
         _add_history(session, char.id, "attack_roll",
                      f"Danno {result.weapon_name} con {', '.join(opts.keys)}: {result.damage_total}")

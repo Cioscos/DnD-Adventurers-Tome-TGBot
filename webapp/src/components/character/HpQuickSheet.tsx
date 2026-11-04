@@ -1,3 +1,5 @@
+import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
+import type { ConcentrationSaveResult } from '@/api/client'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -43,6 +45,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [damageType, setDamageType] = useState('')
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [pendingChip, setPendingChip] = useState<number | null>(null)
+  const [lostSave, setLostSave] = useState<ConcentrationSaveResult | null>(null)
 
   const hpMutation = useMutation({
     mutationFn: async ({ op, value, modifier }: {
@@ -113,6 +116,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         const conc = updated.concentration_save
         if (conc?.lost_concentration) {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
+          setLostSave(conc)
         }
         const undoId = updated.hp_undo_id
         if (undoId) {
@@ -133,6 +137,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   }
 
   return (
+    <>
+    {lostSave && <ConcentrationSaveDialog result={lostSave} onClose={() => setLostSave(null)} afterRoll={{ charId: char.id }} />}
     <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
         {char.active_form && (
@@ -224,5 +230,6 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         </Button>
       </div>
     </Sheet>
+    </>
   )
 }

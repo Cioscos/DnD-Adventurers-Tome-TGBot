@@ -222,6 +222,8 @@ export type LastRollResult = RollResult & {
   condition_removed?: boolean
   save?: PendingSaveRollResult['save']
   attack?: WeaponAttackResult
+  death?: DeathSaveRollResult
+  concentration?: ConcentrationSaveResult
 }
 
 export type HitDiceSpendResult = {
@@ -565,8 +567,9 @@ export const api = {
       ),
     lastRollOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; mode: RollMode; dice?: number[] }) =>
       request<LastRollResult>(`/characters/${id}/last-roll/options`, { method: 'POST', body: JSON.stringify(body) }),
-    lastRollRefund: (id: number) =>
-      request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST' }),
+    /** Risponde a «Il tiro è riuscito?»: `succeeded` tiene il pagamento, altrimenti torna. */
+    lastRollRefund: (id: number, succeeded: boolean = false) =>
+      request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST', body: JSON.stringify({ succeeded }) }),
     featureUse: (id: number, featureKey: string, amount: number = 1) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
         method: 'POST', body: JSON.stringify({ amount }),

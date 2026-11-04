@@ -85,6 +85,7 @@ export default function ResultDialog({
         >
           <m.div
             className={`relative rounded-3xl p-6 pt-7 w-full ${SIZE_CLASS[size]} space-y-4 text-center
+                        max-h-[calc(100dvh-2rem)] overflow-y-auto
                         bg-gradient-parchment surface-parchment border-2 ${ACCENT_BORDER[accent]} ${pulseClass}
                         shadow-parchment-2xl`}
             onClick={(e) => e.stopPropagation()}

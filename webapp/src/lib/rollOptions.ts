@@ -14,6 +14,10 @@ export type PromptContext = {
   canReroll?: boolean
   /** 1 naturale: si offre solo ciò che può cambiarlo. */
   fumble?: boolean
+  /** Opzioni dopo il tiro già usate su questo tiro: non si offrono più. */
+  used?: string[]
+  /** Il prompt resta aperto anche senza opzioni: il giocatore deve poter dichiarare il mancato. */
+  keepOpen?: boolean
 }
 
 export type PromptRequest = {
@@ -26,6 +30,9 @@ export type PromptRequest = {
 }
 
 export const usePromptStore = create<{ request: PromptRequest | null }>(() => ({ request: null }))
+
+/** Quante domande «Il tiro è riuscito?» sono aperte nei modali di esito. */
+export const useRefundStore = create<{ inline: number }>(() => ({ inline: 0 }))
 
 async function listOptions(charId: number, query: RollOptionsQuery): Promise<RollOption[]> {
   try {
@@ -82,9 +89,10 @@ export async function askRollOptions(
   const options = inPhase.filter((o) => !o.needs || inPhase.some((p) => p.key === o.needs))
   // Su un 1 naturale una somma non basta: resta mancato.
   const afterRoll = phase === 'after_hit'
-    ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !(context?.fumble && o.after === 'add'))
+    ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !context?.used?.includes(o.key)
+        && !(context?.fumble && o.after === 'add'))
     : []
-  if (options.length === 0 && afterRoll.length === 0) return base
+  if (options.length === 0 && afterRoll.length === 0 && !context?.keepOpen) return base
   return new Promise((resolve) => {
     usePromptStore.setState({
       request: {

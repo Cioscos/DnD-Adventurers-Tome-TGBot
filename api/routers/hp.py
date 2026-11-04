@@ -47,7 +47,13 @@ from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
 from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.roll_options import refund_spent, scale_damage
-from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_options import (
+    merge_options,
+    option_result,
+    remember_roll,
+    roll_option_dice,
+    use_options,
+)
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
 from api.services.character_response import build_character_response
@@ -796,6 +802,7 @@ async def roll_death_save(
             revived=False, current_hp=char.current_hit_points,
         )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
+    before = {"death_saves": dict(ds), "hp": char.current_hit_points}
 
     applied = modifiers_for(char, "death_save")
     opts = use_options(session, char, "death_save", body)
@@ -804,6 +811,68 @@ async def roll_death_save(
     die = d20.kept
     record_dice(char, d20_records(d20))
     option_rolls, option_total = roll_option_dice(char, opts)
+    bonus = applied.flat + opts.bonus
+    outcome, revived = await _apply_death_roll(session, char, ds, die, bonus + option_total)
+
+    block = option_result(opts, option_rolls, option_total)
+    remember_roll(char, "death_save", opts, {
+        "die": die, "dice": d20.dice, "mode": d20.mode, "bonus": bonus, "total": die + bonus + option_total,
+        "notes": applied.notes, "auto_fail": False, "description": "",
+        "option_result": block.model_dump(mode="json") if block else None,
+    }, death={"before": before, "after": death_state(char)})
+
+    ds = char.death_saves
+    return DeathSaveRollResult(
+        die=die,
+        dice=d20.dice,
+        mode=d20.mode,
+        mode_applied=d20.mode,
+        notes=applied.notes,
+        outcome=outcome,
+        successes=ds["successes"],
+        failures=ds["failures"],
+        stable=ds.get("stable", False),
+        revived=revived,
+        current_hp=char.current_hit_points,
+        option_result=block,
+    )
+
+
+def death_state(char: Character) -> dict:
+    """Ciò che un TS contro la morte ha lasciato: se cambia dopo, il tiro non si ritocca più."""
+    return {"death_saves": char.death_saves, "hp": char.current_hit_points, "is_dead": char.is_dead}
+
+
+async def retouch_death_save(
+    session: AsyncSession, char: Character, death: dict, roll: dict,
+) -> tuple[DeathSaveRollResult, dict]:
+    """Il tiro è cambiato dopo un privilegio: si riparte dallo stato di prima, 1 e 20 naturali compresi."""
+    was_dead = death["after"]["is_dead"]
+    rows = (await session.execute(select(CharacterHistory).where(
+        CharacterHistory.character_id == char.id, CharacterHistory.event_type == "death_save",
+    ).order_by(CharacterHistory.id.desc()))).scalars()
+    counted = next((r for r in rows if (r.meta or {}).get("ds")), None)
+    if counted is not None:  # il riepilogo della serata conta l'esito finale, non quello corretto
+        counted.meta = None
+    char.current_hit_points = death["before"]["hp"]
+    char.is_dead = False
+    die, total = roll["die"], roll["total"]
+    outcome, revived = await _apply_death_roll(session, char, dict(death["before"]["death_saves"]), die, total - die,
+                                               notify=not was_dead)
+    if was_dead and not char.is_dead:
+        _add_history(session, char.id, "death_save", "Correzione: il nuovo tiro evita la morte")
+    ds = char.death_saves
+    return DeathSaveRollResult(
+        die=die, dice=roll["dice"], mode=roll["mode"], mode_applied=roll["mode"], notes=roll["notes"], outcome=outcome,
+        successes=ds["successes"], failures=ds["failures"], stable=ds.get("stable", False), revived=revived,
+        current_hp=char.current_hit_points, option_result=roll["option_result"],
+    ), {**death, "after": death_state(char)}
+
+
+async def _apply_death_roll(
+    session: AsyncSession, char: Character, ds: dict, die: int, modifier: int, notify: bool = True,
+) -> tuple[str, bool]:
+    """Applica l'esito a ``char``: (esito, rianimato)."""
     revived = False
 
     if die == 20:
@@ -824,7 +893,7 @@ async def roll_death_save(
                      f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)",
                      meta={"ds": "failure", "n": 2})
 
-    elif die + applied.flat + opts.bonus + option_total >= 10:
+    elif die + modifier >= 10:
         # 10+: 1 success (Esaurimento 2024 e bonus di classe contano; 20 e 1 naturali no)
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         outcome = "success"
@@ -851,22 +920,10 @@ async def roll_death_save(
     if ds.get("failures", 0) >= 3:
         char.is_dead = True
         _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
-        await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
+        if notify:
+            await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
-    return DeathSaveRollResult(
-        die=die,
-        dice=d20.dice,
-        mode=d20.mode,
-        mode_applied=d20.mode,
-        notes=applied.notes,
-        outcome=outcome,
-        successes=ds["successes"],
-        failures=ds["failures"],
-        stable=ds.get("stable", False),
-        revived=revived,
-        current_hp=char.current_hit_points,
-        option_result=option_result(opts, option_rolls, option_total),
-    )
+    return outcome, revived
 
 
 # ---------------------------------------------------------------------------

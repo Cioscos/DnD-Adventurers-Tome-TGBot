@@ -181,6 +181,34 @@ describe('useAttackRoll', () => {
       expect(lastRollRefund).toHaveBeenCalledWith(1)
     })
 
+    it('the last available pay_if_success option keeps the prompt open: the miss still refunds, no automatic damage', async () => {
+      rollOptions.mockResolvedValueOnce([add]).mockResolvedValueOnce([add]).mockResolvedValue([])
+      attack.mockResolvedValue(hit)
+      lastRollOptions.mockResolvedValue({ attack: { ...hit, to_hit_total: 18 }, refundable: ['add'] })
+      lastRollRefund.mockResolvedValue({})
+      const done = start()
+      await userEvent.click(await screen.findByRole('button', { name: /Somma\?/ }))
+      await userEvent.click(await screen.findByText('character.roll_options.miss'))
+      await expect(done).resolves.toBeNull()
+      expect(attackDamage).not.toHaveBeenCalled()
+      expect(lastRollRefund).toHaveBeenCalledWith(1)
+    })
+
+    it('a used option is no longer offered on the same attack, and comes back after an inspiration reroll', async () => {
+      rollOptions.mockResolvedValue([add, luck])
+      attack.mockResolvedValue(hit)
+      lastRollOptions.mockResolvedValue({ attack: hit })
+      attackDamage.mockResolvedValue({ damage_total: 1 })
+      const done = start(true)
+      await userEvent.click(await screen.findByRole('button', { name: /Somma\?/ }))
+      await screen.findByRole('button', { name: /Fortuna\?/ })
+      expect(screen.queryByRole('button', { name: /Somma\?/ })).toBeNull()
+      await userEvent.click(screen.getByText('character.roll_options.reroll'))
+      await screen.findByRole('button', { name: /Somma\?/ })
+      await userEvent.click(screen.getByText('character.roll_options.damage'))
+      await done
+    })
+
     it('a refused option keeps the prompt on the same attack and warns', async () => {
       rollOptions.mockResolvedValue([again])
       attack.mockResolvedValue(hit)

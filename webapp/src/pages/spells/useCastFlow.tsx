@@ -374,6 +374,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
             <AfterRollOptions
               charId={charId}
               query={{ roll: 'attack', spell_id: attackState.spell.id }}
+              rollToken={`${attackMutation.submittedAt}:${attackRerollMutation.submittedAt}`}
               onResult={(roll) => setAttackState((prev) => prev && {
                 ...prev,
                 result: {

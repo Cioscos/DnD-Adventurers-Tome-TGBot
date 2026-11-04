@@ -19,7 +19,14 @@ from api.services import telegram_notify
 from api.routers._helpers import initiative_bonus
 from api.services.d20 import d20_records, resolve_body, resolve_d20
 from api.services.dice_stats import record_dice
-from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_options import (
+    LAST_ROLL_FIELDS,
+    merge_options,
+    option_result,
+    remember_roll,
+    roll_option_dice,
+    use_options,
+)
 from core.db.models import Character, CharacterHistory
 from core.rules.modifiers import modifiers_for
 from api.schemas.common import (
@@ -125,12 +132,14 @@ async def roll_character_initiative(
     _log_roll(session, char, f"{len(outcome.dice)}d20{keep}{bonus:+d}", outcome.dice, total, bonus, "init",
               body.label if body else None)
     await session.flush()
-    return RollResult(
+    result = RollResult(
         die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
         auto_fail=applied.auto_fail, bonus=bonus, total=total,
         is_critical=die == 20 and not applied.auto_fail, is_fumble=die == 1, description="initiative",
         option_result=option_result(opts, option_rolls, option_total),
     )
+    remember_roll(char, "initiative", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS), ability="dexterity")
+    return result
 
 
 @router.post("/{char_id}/dice/result", response_model=DiceRollResult)

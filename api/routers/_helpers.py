@@ -9,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult, RollMode
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
+from api.services.rules_options import remember_roll
+from core.rules.roll_options import AppliedOptions
 from api.services.dice_stats import record_dice
 from api.services.durations import end_concentration, is_concentrating
 from api.services.effects import cap_current_hp
-from api.services.condition_effects import release_concentration_effects
+from api.services.condition_effects import release_concentration_effects, restore_released
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.data.spell_slots import normalize_class_name
@@ -179,6 +181,43 @@ def _append_concentration_history(
     ))
 
 
+async def _lose_concentration(session: AsyncSession, char: Character) -> dict:
+    """Fa cadere la concentrazione e restituisce ciò che serve per ripristinarla dopo un ritiro riuscito."""
+    settings = char.settings or {}
+    snapshot = {"spell_id": char.concentrating_spell_id, "item_spell": settings.get("concentration_item_spell"),
+                "rounds": settings.get("concentration_rounds_left"), "active_states": list(char.active_states or []),
+                "released": []}
+    end_concentration(char)
+    await release_concentration_effects(session, char, snapshot["released"])
+    return snapshot
+
+
+async def retouch_concentration(
+    session: AsyncSession, char: Character, conc: dict, roll: dict,
+) -> tuple[ConcentrationSaveResult, dict]:
+    """Il TS è cambiato dopo un privilegio: un successo ripristina ciò che il fallimento aveva fatto cadere."""
+    conc = dict(conc)
+    success = roll["total"] >= conc["dc"]
+    if success and conc["lost"]:
+        snap = conc["snapshot"]
+        # L'incantesimo può essere stato eliminato nel frattempo.
+        char.concentrating_spell_id = (snap["spell_id"] if any(s.id == snap["spell_id"] for s in char.spells)
+                                       else None)
+        settings = dict(char.settings or {})
+        if snap["item_spell"] is not None:
+            settings["concentration_item_spell"] = snap["item_spell"]
+        if snap["rounds"] is not None:
+            settings["concentration_rounds_left"] = snap["rounds"]
+        char.settings = settings
+        char.active_states = list(snap["active_states"])
+        await restore_released(session, snap["released"])
+        conc.update(lost=False, snapshot=None)
+    elif not success and not conc["lost"] and is_concentrating(char):
+        conc.update(lost=True, snapshot=await _lose_concentration(session, char))
+    return ConcentrationSaveResult(**roll, description=f"DC {conc['dc']}", dc=conc["dc"], success=success,
+                                   lost_concentration=conc["lost"]), conc
+
+
 async def roll_concentration_save(
     char: Character,
     damage: int,
@@ -209,13 +248,16 @@ async def roll_concentration_save(
     success = total >= dc and not applied.auto_fail
 
     lost_concentration = not success and is_concentrating(char)
-    if lost_concentration:
-        end_concentration(char)
-        await release_concentration_effects(session, char)
+    snapshot = await _lose_concentration(session, char) if lost_concentration else None
 
     _append_concentration_history(
         session, char.id, damage, dc, d20_history_label(outcome), con_mod, total, success, lost_concentration,
     )
+    remember_roll(char, "save", AppliedOptions(), {
+        "die": die, "dice": outcome.dice, "mode": outcome.mode, "bonus": con_mod, "total": total,
+        "notes": applied.notes, "auto_fail": applied.auto_fail, "description": f"DC {dc}",
+    }, ability="constitution", modifier_roll="concentration",
+        concentration={"dc": dc, "lost": lost_concentration, "snapshot": snapshot})
 
     return ConcentrationSaveResult(
         die=die,

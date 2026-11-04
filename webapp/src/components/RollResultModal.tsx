@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRetouched } from '@/hooks/useRetouched'
 import type { OptionResult, RollOptionsQuery } from '@/api/client'
 import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import RollNotes from '@/components/rules/RollNotes'
@@ -50,9 +50,7 @@ export default function RollResultModal({
   afterRoll,
 }: Props) {
   const { t } = useTranslation()
-  // Il ritocco vale per il tiro da cui parte: un nuovo tiro del genitore (ispirazione) lo sostituisce.
-  const [retouched, setRetouched] = useState<{ from: RollResult; to: RollResult } | null>(null)
-  const result = retouched?.from === rolled ? retouched.to : rolled
+  const [result, retouch] = useRetouched(rolled)
   const { die, bonus, total, is_critical, is_fumble } = result
   const pair = result.dice && result.dice.length === 2 ? result.dice : null
   // The kept die is the first matching face; the other one is the discarded one (dimmed).
@@ -92,7 +90,8 @@ export default function RollResultModal({
               <AfterRollOptions
                 charId={afterRoll.charId}
                 query={afterRoll.query}
-                onResult={(to) => setRetouched({ from: rolled, to: { ...to, description: rolled.description } })}
+                rollToken={rolled}
+                onResult={(to) => retouch({ ...to, description: rolled.description })}
               />
             )}
             {showInspirationButton && (

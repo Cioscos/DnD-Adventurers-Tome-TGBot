@@ -231,6 +231,7 @@ class TurnBlock(BaseModel):
     free_interaction_used: bool = False
     damaged: bool = False
     pending_attack: Optional[dict] = None
+    last_roll: Optional[dict] = None  # la domanda «Riuscito?» resta finché ``refundable`` non è vuoto
 
 
 class TurnState(BaseModel):

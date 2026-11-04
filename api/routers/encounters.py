@@ -41,7 +41,7 @@ from api.services.condition_effects import (
 )
 from api.services.effects import apply_conditions
 from api.services.durations import process_edge
-from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_turn import reset_turn
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -366,6 +366,12 @@ async def roll_initiative(
     option_rolls, option_total = ([], 0) if char is None else roll_option_dice(char, opts)
     comb.initiative_die = outcome.kept
     comb.initiative = outcome.kept + comb.initiative_mod + applied.flat + opts.bonus + option_total
+    if char is not None and comb.owner_user_id == user_id:  # il GM che tira per un PG non ha i suoi privilegi
+        remember_roll(char, "initiative", opts, {
+            "die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode,
+            "bonus": comb.initiative - outcome.kept - option_total, "total": comb.initiative, "notes": applied.notes,
+            "auto_fail": False, "description": "initiative",
+        }, ability="dexterity", combatant_id=comb.id)
     _touch(session)
     await db.flush()
     live = await build_encounter_block(db, enc, viewer_is_gm=is_gm)

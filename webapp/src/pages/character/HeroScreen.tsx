@@ -449,7 +449,7 @@ export default function HeroScreen({ char }: Props) {
         />
       )}
       {deathRollResult && (
-        <DeathSaveResultDialog result={deathRollResult} onClose={() => setDeathRollResult(null)} />
+        <DeathSaveResultDialog result={deathRollResult} onClose={() => setDeathRollResult(null)} afterRoll={{ charId: char.id }} />
       )}
       <HpQuickSheet char={char} open={hpSheetOpen} onClose={() => setHpSheetOpen(false)} />
       <HeroLayoutSheet char={char} open={layoutSheetOpen} onClose={() => setLayoutSheetOpen(false)} />

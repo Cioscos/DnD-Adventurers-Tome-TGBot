@@ -5,14 +5,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import InitiativeCta from '@/pages/session/InitiativeCta'
 import type { CombatantLive } from '@/types'
 
-const { rollSpy } = vi.hoisted(() => ({ rollSpy: vi.fn() }))
+const { rollSpy, rollOptionsSpy, lastRollSpy } = vi.hoisted(() => ({ rollSpy: vi.fn(), rollOptionsSpy: vi.fn(), lastRollSpy: vi.fn() }))
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
 })
 vi.mock('@/api/client', () => ({
-  api: { sessions: { encounter: { rollInitiative: rollSpy } } },
+  api: { characters: { rollOptions: rollOptionsSpy, lastRollOptions: lastRollSpy }, sessions: { encounter: { rollInitiative: rollSpy } } },
 }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
@@ -42,7 +42,12 @@ function renderCta(c: CombatantLive) {
   )
 }
 
-beforeEach(() => rollSpy.mockReset())
+beforeEach(() => {
+  rollSpy.mockReset()
+  rollOptionsSpy.mockReset()
+  rollOptionsSpy.mockResolvedValue([])
+  lastRollSpy.mockReset()
+})
 
 describe('InitiativeCta', () => {
   it('mostra il bottone e invia il tiro', async () => {
@@ -56,5 +61,24 @@ describe('InitiativeCta', () => {
     renderCta(combatant({ initiative: 17, initiative_die: 14 }))
     expect(screen.queryByText('session.combat.roll_initiative')).not.toBeInTheDocument()
     expect(screen.getByText('session.combat.rolled_detail')).toBeInTheDocument()
+    // Riaperta più tardi: non è il tiro appena fatto, i privilegi non si offrono.
+    expect(rollOptionsSpy).not.toHaveBeenCalled()
+  })
+
+  it('subito dopo il tiro offre i privilegi usabili a esito noto', async () => {
+    rollSpy.mockResolvedValue({})
+    rollOptionsSpy.mockResolvedValue([{
+      key: 'add', phase: 'after_roll', label: 'Somma?', dice: null, bonus: 3, mode: null, multiplier: null, slot: null,
+      once_per_turn: false, auto_fail: false, cost: null, dice_cost: 0, needs: null, after: 'add',
+    }])
+    lastRollSpy.mockResolvedValue({ total: 20 })
+    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const ui = (c: CombatantLive) => <QueryClientProvider client={qc}><InitiativeCta sessionId={42} combatant={c} /></QueryClientProvider>
+    const view = render(ui(combatant()))
+    await userEvent.click(screen.getByText('session.combat.roll_initiative'))
+    await waitFor(() => expect(rollSpy).toHaveBeenCalled())
+    view.rerender(ui(combatant({ initiative: 17, initiative_die: 14 })))
+    await userEvent.click(await screen.findByRole('button', { name: /Somma\?/ }))
+    await waitFor(() => expect(lastRollSpy).toHaveBeenCalledWith(7, expect.objectContaining({ options: ['add'] })))
   })
 })

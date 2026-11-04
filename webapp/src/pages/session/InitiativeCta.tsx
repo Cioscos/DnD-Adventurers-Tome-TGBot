@@ -6,6 +6,7 @@ import { GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import RollButton from '@/components/ui/RollButton'
 import { useRollNoteLabels } from '@/hooks/useRollNoteLabels'
 import type { CombatantLive } from '@/types'
@@ -55,6 +56,17 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
         <p className="text-center text-xs text-dnd-text-muted font-body italic mt-1">
           {t('session.combat.waiting_others')}
         </p>
+        {/* Solo il tiro appena fatto è l'ultimo: riaperta più tardi la riga non ha senso. */}
+        {rollMutation.isSuccess && combatant.character_id != null && (
+          <div className="mt-3">
+            <AfterRollOptions
+              charId={combatant.character_id}
+              query={{ roll: 'initiative' }}
+              rollToken={rollMutation.data}
+              onResult={() => qc.invalidateQueries({ queryKey: ['session-live', sessionId] })}
+            />
+          </div>
+        )}
       </div>
     )
   }

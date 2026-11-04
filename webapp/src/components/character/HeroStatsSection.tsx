@@ -262,6 +262,7 @@ export default function HeroStatsSection({ char }: Props) {
           result={initResult}
           title={t('character.hero.initiative')}
           onClose={() => setInitResult(null)}
+          afterRoll={{ charId: char.id, query: { roll: 'initiative' } }}
         />
       )}
     </div>

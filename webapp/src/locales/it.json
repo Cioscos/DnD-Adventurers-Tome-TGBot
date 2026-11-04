@@ -743,7 +743,8 @@
         "forced_hit": "Colpo a segno",
         "after_roll_failed": "Privilegio non applicato: il tiro resta com'era",
         "succeeded_question": "Il tiro è riuscito? Se no, l'uso torna.",
-        "refund_failed": "Rimborso non riuscito: correggi a mano gli usi"
+        "refund_failed": "Risposta non inviata: riprova",
+        "refund_title": "Ultimo tiro: {{total}}"
     },
     "conditions": {
       "duration": {

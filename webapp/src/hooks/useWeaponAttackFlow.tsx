@@ -45,13 +45,16 @@ export function useAttackRoll() {
       let result = first
       let canReroll = inspiration
       let refundable = false  // dichiarare il mancato restituisce ciò che si paga solo se il tiro riesce
+      let used: string[] = []
       while (result.attack_id) {
         const bonus = `${result.to_hit_bonus >= 0 ? '+' : ''}${result.to_hit_bonus}`
         const summary = t('character.roll_options.summary', { total: result.to_hit_total, die: result.to_hit_die, bonus })
           + (result.is_critical ? ` · ${t('character.dice.critical_banner')}` : '')
           + (result.is_fumble ? ` · ${t('character.dice.fumble_banner')}` : '')
           + (result.forced_hit ? ` · ${t('character.roll_options.forced_hit')}` : '')
-        const after = await askRollOptions(charId, query, 'after_hit', { summary, canReroll, fumble: result.is_fumble })
+        const after = await askRollOptions(charId, query, 'after_hit', {
+          summary, canReroll, fumble: result.is_fumble, used, keepOpen: used.length > 0,
+        })
         // Su un 1 naturale non c'è danno da chiedere: anche senza più opzioni l'esito è il mancato.
         if (after.outcome === 'miss' || (result.is_fumble && !after.outcome)) {
           if (refundable) await api.characters.lastRollRefund(charId).catch(() => toast.warning(t('character.roll_options.refund_failed')))
@@ -62,6 +65,7 @@ export function useAttackRoll() {
             const updated = await applyAfterRoll(charId, after.after_option!, rollD20)
             result = updated.attack!
             refundable = refundable || !!updated.refundable?.length
+            used = [...used, after.after_option!.key]
           } catch {
             toast.warning(t('character.roll_options.after_roll_failed'))
           }
@@ -78,6 +82,7 @@ export function useAttackRoll() {
         }
         canReroll = false
         refundable = false
+        used = []
         result = await post(true, { dice: await rollD20('normal'), mode: 'normal', defer_damage: true })
       }
       return result

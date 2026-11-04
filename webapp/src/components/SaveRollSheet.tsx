@@ -164,6 +164,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
               <AfterRollOptions
                 charId={charId}
                 query={{ roll: 'save', ability: view.save.ability }}
+                rollToken={roll.data}
                 onResult={(roll) => {
                   setShown({
                     save: view.save,

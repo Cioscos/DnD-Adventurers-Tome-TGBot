@@ -870,6 +870,7 @@ export interface TurnBlock {
   bonus_spell_cast: boolean
   free_interaction_used: boolean
   pending_attack?: Record<string, unknown> | null
+  last_roll?: { roll_id: string; total: number; refundable?: Record<string, string[]> } | null
 }
 
 export type TurnSlot = 'action' | 'bonus' | 'reaction' | 'free_interaction' | 'spell_slot' | 'bonus_spell' | 'attack'

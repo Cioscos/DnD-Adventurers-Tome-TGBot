@@ -158,6 +158,11 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
                 await _restore_row(db, PendingSave, {**ps, "effect_id": eff.id})
 
 
+async def restore_released(db: AsyncSession, entries: list[dict]) -> None:
+    """Ricrea gli effetti fatti cadere con ``release_concentration_effects(..., undo_list)``."""
+    await _restore_released(db, entries, set(), {})
+
+
 async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | None,
                         undo_list: list[dict] | None) -> str:
     """Switch the condition off on its target (dropping the effect row); returns its label.
