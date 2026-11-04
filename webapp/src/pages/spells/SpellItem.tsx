@@ -13,6 +13,7 @@ import ExpandChevron from '@/components/ui/ExpandChevron'
 import RollButton from '@/components/ui/RollButton'
 import { isAttackSpell } from '@/lib/spellType'
 import { scaleCantripDice } from '@/lib/dnd'
+import { ledgerEntry } from '@/styles/ledger'
 import type { RollMode } from '@/api/client'
 import type { Spell } from '@/types'
 
@@ -83,12 +84,8 @@ function SpellItemInner({
   }, [menuOpen])
 
   return (
-    <div
-      className={`rounded-2xl border border-dnd-border overflow-hidden transition-colors
-        ${isCastable ? 'bg-gradient-parchment' : 'bg-dnd-surface'}
-        ${isConcentrating ? 'ring-1 ring-dnd-arcane' : ''}`}
-    >
-      <div className={`w-full flex items-center gap-1 pr-3 ${showPreparedToggle ? 'pl-1' : 'pl-3'}`}>
+    <div className={ledgerEntry(isExpanded)}>
+      <div className={`w-full flex items-center gap-1 ${isExpanded ? 'px-3' : 'px-1'}`}>
         {showPreparedToggle && (
           <Pressable
             onClick={onPreparedToggle}
@@ -103,15 +100,15 @@ function SpellItemInner({
           >
             {spell.is_prepared
               ? <BookmarkCheck size={16} className="text-dnd-gold-bright" />
-              : <Bookmark size={16} className="text-dnd-text-muted/60" />}
+              : <Bookmark size={16} className="text-dnd-text-faint" />}
           </Pressable>
         )}
         <Pressable
-          className="flex-1 min-w-0 flex items-center gap-2 py-3 text-left"
+          className="my-[3px] flex-1 min-w-0 min-h-[48px] flex items-center gap-2 py-2 text-left"
           onClick={onToggle}
         >
-          <span className={`flex-1 min-w-0 truncate font-display font-bold text-sm ${
-            isCastable ? 'text-dnd-gold-bright' : 'text-dnd-text-muted'
+          <span className={`flex-1 min-w-0 truncate font-body font-semibold text-sm ${
+            isConcentrating ? 'text-dnd-arcane-bright' : isCastable ? 'text-dnd-text' : 'text-dnd-text-faint'
           }`}>{spell.name}</span>
           <div className="flex gap-1.5 shrink-0 items-center">
             {spell.is_concentration && (

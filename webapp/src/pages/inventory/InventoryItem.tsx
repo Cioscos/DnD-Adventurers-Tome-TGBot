@@ -13,6 +13,7 @@ import type { Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
+import { ledgerEntry } from '@/styles/ledger'
 import Pressable from '@/components/ui/Pressable'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import RollButton from '@/components/ui/RollButton'
@@ -362,18 +363,17 @@ function InventoryItemInner({
 
   return (
     <div
-      className={`rounded-2xl bg-dnd-surface overflow-hidden border
-        ${item.is_equipped ? 'border-dnd-emerald/60' : 'border-transparent'}`}
+      className={ledgerEntry(isExpanded)}
     >
       {/* Header row — tap to expand */}
       <Pressable
-        className="w-full flex items-center gap-2 px-4 py-3 text-left active:opacity-70"
+        className={`my-[3px] w-full min-h-[48px] flex items-center gap-2 py-2 text-left active:opacity-70 ${isExpanded ? 'px-3' : 'px-1'}`}
         onClick={onToggle}
       >
         <span className="text-lg shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm text-dnd-text">{item.name}</span>
+            <span className="font-body font-semibold text-sm text-dnd-text">{item.name}</span>
             {itemRarity(item) && <RarityBadge rarity={itemRarity(item)!} />}
             {requiresAttunement(item) && (
               <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md border ${isAttuned(item) ? 'bg-dnd-gold/15 text-dnd-gold-bright border-dnd-gold/40' : 'bg-dnd-chip-bg text-dnd-text-muted border-dnd-border'}`}>
@@ -381,7 +381,7 @@ function InventoryItemInner({
               </span>
             )}
             {item.is_equipped && (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/30">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-emerald/10 text-dnd-emerald-bright border border-dnd-emerald/30">
                 {t('character.inventory.equipped')}
               </span>
             )}

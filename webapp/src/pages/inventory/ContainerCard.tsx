@@ -16,11 +16,11 @@ export default function ContainerCard({ item, onOpen }: { item: Item; onOpen: ()
   return (
     <Pressable
       onClick={onOpen}
-      className={`w-full min-h-[44px] flex items-center gap-3 p-3 rounded-xl bg-dnd-surface border text-left ${over ? 'border-dnd-crimson-bright' : 'border-dnd-border'}`}
+      className="mb-1 w-full min-h-[48px] flex items-center gap-3 px-1 py-2 border-b border-dnd-border/60 text-left"
     >
       <Folder size={20} className="text-dnd-gold shrink-0" />
       <span className="flex-1 min-w-0">
-        <span className="block font-cinzel text-sm text-dnd-gold-bright truncate">{item.name}</span>
+        <span className="block font-body font-semibold text-sm text-dnd-text truncate">{item.name}</span>
         <span className="block text-xs text-dnd-text-muted font-mono tabular-nums">
           {t('character.inventory.containers.items', { count: stats?.items_count ?? 0 })}
           {(stats?.containers_count ?? 0) > 0 && ` · ${t('character.inventory.containers.boxes', { count: stats!.containers_count })}`}
