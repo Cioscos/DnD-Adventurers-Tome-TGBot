@@ -26,6 +26,7 @@ import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import YourTurnBanner from '@/components/character/YourTurnBanner'
 import QuickActions from '@/components/character/QuickActions'
 import ActiveFormBanner from '@/components/character/ActiveFormBanner'
+import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
 import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
 import { DeathSaveTracker } from '@/pages/hp/DeathSaves'
@@ -177,6 +178,7 @@ export default function HeroScreen({ char }: Props) {
         )}
 
         {form && <ActiveFormBanner charId={char.id} form={form} />}
+        <ActiveStatesBar char={char} />
 
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">

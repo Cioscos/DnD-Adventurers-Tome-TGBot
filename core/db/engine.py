@@ -127,6 +127,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Edizione delle regole seguita dal personaggio (2014 | 2024)
     ("characters", "rules_edition", "VARCHAR(4)", "'2014'"),
     ("characters", "turn_state", "JSON", None),
+    ("characters", "active_states", "JSON", None),
     ("characters", "last_long_rest_at", "VARCHAR(50)", None),
     # Custom paper-doll silhouette (E4)
     ("characters", "silhouette_path", "VARCHAR(500)", None),

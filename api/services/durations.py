@@ -13,7 +13,8 @@ from api.services.condition_effects import (
     UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
 from api.services.effects import _add_history
-from api.services.rules_turn import reset_turn
+from api.services.rules_states import end_states, tick_states
+from api.services.rules_turn import get_turn, reset_turn
 
 
 def is_concentrating(char: Character) -> bool:
@@ -24,6 +25,7 @@ def is_concentrating(char: Character) -> bool:
 def end_concentration(char: Character) -> None:
     """Single place that drops concentration (spell id, item spell, round counter)."""
     char.concentrating_spell_id = None
+    end_states(char, "concentration_end")
     s = dict(char.settings or {})
     if any([s.pop("concentration_rounds_left", None) is not None,
             s.pop("concentration_item_spell", None) is not None]):
@@ -77,6 +79,7 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
     char.settings = s
     if ended:
         char.concentrating_spell_id = None
+        end_states(char, "concentration_end")
         _add_history(session, char.id, "concentration",
                      "Concentrazione terminata: durata scaduta")
     return entry, ended
@@ -97,6 +100,7 @@ async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
     if ended:
         expired.append("Concentrazione")
         expired += await release_concentration_effects(session, char)
+    expired += tick_states(char)
     return expired
 
 
@@ -133,6 +137,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "start":
         reset_turn(char)
+        expired += tick_states(char)
         entry, ended = _tick_concentration(db, char)
         if entry is not None:
             undo.concentration = entry
@@ -140,6 +145,9 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             expired.append("Concentrazione")
             expired += await release_concentration_effects(
                 db, char, entry["released_effects"])
+
+    if char is not None and edge == "end" and not get_turn(char)["attacks_made"]:
+        end_states(char, "turn_end_no_attack")
 
     saves = (await db.execute(select(ConditionEffect).where(
         on_x, ConditionEffect.save_edge == edge, ConditionEffect.save_ability.is_not(None),

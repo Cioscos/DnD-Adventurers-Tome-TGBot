@@ -953,6 +953,8 @@
       "cast": "Cast",
       "use": "Use",
       "no_uses": "No uses left",
+      "state_rounds_left": "{{n}} rounds",
+      "end_state": "End",
       "banner": "It's your turn",
       "banner_cta": "Open the Turn view"
     },

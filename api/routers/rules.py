@@ -4,12 +4,14 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.schemas.session import TurnBlock
+from api.routers.hp import _get_owned_full
+from api.services.rules_states import remove_state, use_feature
 from api.services.rules_turn import release, reset_turn, spend
 from core.db.models import Character
 from api.schemas.rules import ProficiencyGrantRead, SubclassRead
@@ -75,3 +77,39 @@ async def turn_new(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     return reset_turn(await _owned_char(db, char_id, user_id))
+
+
+# ---------------------------------------------------------------------------
+# Uso dei privilegi e stati attivi
+# ---------------------------------------------------------------------------
+
+class FeatureUse(BaseModel):
+    amount: int = Field(1, ge=1)
+    params: dict | None = None
+
+
+class FeatureUseResult(BaseModel):
+    rolls: list[int] = []
+    healed: int = 0
+    state: dict | None = None
+    notes: list[str] = []
+
+
+@turn_router.post("/{char_id}/features/{feature_key}/use", response_model=FeatureUseResult)
+async def feature_use(
+    char_id: int, feature_key: str, body: FeatureUse, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> FeatureUseResult:
+    char = await _get_owned_full(char_id, user_id, db)
+    res = await use_feature(db, char, feature_key, body.amount, body.params)
+    return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes)
+
+
+@turn_router.delete("/{char_id}/active-states/{key}", response_model=list[dict])
+async def end_active_state(
+    char_id: int, key: str, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[dict]:
+    char = await _get_owned_full(char_id, user_id, db)
+    remove_state(char, key)
+    return char.active_states

@@ -159,6 +159,7 @@ class CharacterFull(BaseModel):
     spell_slots_mode: str = "manual"
     rules_edition: Edition = "2014"
     concentrating_spell_id: Optional[int] = None
+    active_states: Optional[list[dict[str, Any]]] = None
 
     # Populated only by PATCH /xp when a level-up occurs
     hp_gained: Optional[int] = None

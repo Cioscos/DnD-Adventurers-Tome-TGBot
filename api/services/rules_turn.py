@@ -69,6 +69,14 @@ def release(char, slot: str) -> dict:
     return st
 
 
+def grant_action(char) -> dict:
+    """+1 azione extra per questo turno (Azione Impetuosa)."""
+    st = get_turn(char)
+    st["extra_actions"] += 1
+    _save(char, st)
+    return st
+
+
 def mark_once(char, key: str) -> bool:
     """Registra un effetto «una volta per turno»; False se era già stato usato."""
     st = get_turn(char)

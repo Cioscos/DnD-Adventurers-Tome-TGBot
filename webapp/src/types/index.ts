@@ -103,6 +103,24 @@ export interface Ability {
   is_class_feature: boolean
   feature_key?: string | null
   action_type?: ActionType | null
+  /** Il «Usa» passa da POST /features/{key}/use (cura, stato, azione extra) invece di scalare solo il contatore. */
+  has_on_use?: boolean
+}
+
+/** Stato avviato da un privilegio (Ira...): finisce per round, riposo, svenimento o a mano. */
+export interface ActiveState {
+  key: string
+  feature_key: string
+  rounds_left: number | null
+  ends_on: string[]
+  data: Record<string, unknown>
+}
+
+export interface FeatureUseResult {
+  rolls: number[]
+  healed: number
+  state: ActiveState | null
+  notes: string[]
 }
 
 export interface MapEntry {
@@ -332,6 +350,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   rules_edition: '2014' | '2024'
   spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number
+  active_states?: ActiveState[] | null
   hp_gained?: number
   /** Scelte di livello in sospeso (aumento caratteristiche / talento). */
   pending_choices?: PendingChoice[] | null

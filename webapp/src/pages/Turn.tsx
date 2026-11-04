@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
+import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
@@ -22,7 +23,7 @@ import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import { standardActionsFor } from '@/data/standardActions'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
-import type { TurnBlock, TurnSlot, TurnState } from '@/types'
+import type { Ability, TurnBlock, TurnSlot, TurnState } from '@/types'
 import { LEDGER_TITLE } from '@/styles/ledger'
 import type { CharacterFull } from '@/types'
 
@@ -72,10 +73,16 @@ export default function Turn() {
   const castFlow = useCastFlow(charId, char)
   const tick = useTickRound(charId)
 
+  // Un privilegio con effetto reale passa dal server (usi, slot di turno, cura, stato); gli altri scalano solo il contatore.
   const abilityUse = useMutation({
-    mutationFn: ({ abilityId, uses }: { abilityId: number; uses: number }) =>
-      api.abilities.update(charId, abilityId, { uses }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
+    mutationFn: async ({ ability, uses }: { ability: Ability; uses: number }) => {
+      if (ability.has_on_use && ability.feature_key) await api.characters.featureUse(charId, ability.feature_key)
+      else await api.abilities.update(charId, ability.id, { uses })
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+    },
   })
 
   if (!char) {
@@ -165,8 +172,8 @@ export default function Turn() {
         label = `${e.label} (${left}/${ab.max_uses})`
         control = (
           <Button size="sm" variant="secondary" disabled={left <= 0}
-            loading={abilityUse.isPending && abilityUse.variables?.abilityId === ab.id}
-            onClick={() => abilityUse.mutate({ abilityId: ab.id, uses: Math.max(0, left - 1) })}>
+            loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
+            onClick={() => abilityUse.mutate({ ability: ab, uses: Math.max(0, left - 1) })}>
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
@@ -258,6 +265,8 @@ export default function Turn() {
           </Button>
         </div>
       </div>
+
+      <ActiveStatesBar char={char} />
 
       {/* Sempre aperta: un attacco può servire anche fuori dall'azione (opportunità, altra mano). */}
       <section>

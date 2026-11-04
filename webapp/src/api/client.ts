@@ -53,6 +53,8 @@ import type {
   TurnState,
   TurnBlock,
   TurnSlot,
+  ActiveState,
+  FeatureUseResult,
   PendingSaveRollResult,
   GameSessionLive,
   HistoryEntry,
@@ -468,6 +470,12 @@ export const api = {
       request<TurnState>(`/characters/${id}/turn-state`),
     turnUse: (id: number, slot: TurnSlot, used: boolean = true) =>
       request<TurnBlock>(`/characters/${id}/turn/use`, { method: 'POST', body: JSON.stringify({ slot, used }) }),
+    featureUse: (id: number, featureKey: string, amount: number = 1) =>
+      request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
+        method: 'POST', body: JSON.stringify({ amount }),
+      }),
+    endActiveState: (id: number, key: string) =>
+      request<ActiveState[]>(`/characters/${id}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),
     turnNew: (id: number) =>
       request<TurnBlock>(`/characters/${id}/turn/new`, { method: 'POST' }),
     pendingSaves: {

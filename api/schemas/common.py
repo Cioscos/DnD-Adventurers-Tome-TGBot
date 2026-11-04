@@ -214,6 +214,8 @@ class AbilityRead(BaseModel):
     is_class_feature: bool = False
     feature_key: Optional[str] = None
     action_type: Optional[str] = None
+    # Il privilegio a catalogo ha un effetto reale al «Usa» (POST /features/{key}/use); popolato da build_character_response
+    has_on_use: bool = False
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).

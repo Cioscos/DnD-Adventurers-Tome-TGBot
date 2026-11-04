@@ -135,6 +135,8 @@ class Character(Base):
     settings: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     # Stato del turno in corso (azione/bonus/reazione usate, attacchi fatti...): vedi api/services/rules_turn.py
     turn_state: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Stati attivi dei privilegi (Ira...): lista di {key, feature_key, rounds_left, ends_on, data}; vedi api/services/rules_states.py
+    active_states: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     # Contatori cumulativi dei tiri: {"d20": {"1": 3, "20": 2}, ...} (faccia → conteggio)
     dice_stats: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     # Snapshot server-side dell'ultima operazione PF per l'annullamento:

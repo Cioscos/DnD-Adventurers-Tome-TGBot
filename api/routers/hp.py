@@ -20,6 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
+from api.services.rules_states import end_states
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -267,6 +268,7 @@ async def update_hp(
         # Privo di sensi (0 PF) => fine concentrazione (RAW)
         if char.current_hit_points == 0:
             end_concentration(char)
+            end_states(char, "unconscious")
 
         # Auto concentration save — only if still conscious and concentrating
         if (
@@ -551,6 +553,7 @@ async def rest(
         char.temp_hp = 0
         # Break concentration
         end_concentration(char)
+        end_states(char, "rest_short", "rest_long")
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
@@ -591,6 +594,7 @@ async def rest(
 
     else:
         # D8: il riposo breve non interrompe la concentrazione.
+        end_states(char, "rest_short")
         # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
         for slot in char.spell_slots:
             if slot.is_pact:

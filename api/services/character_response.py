@@ -23,6 +23,7 @@ from core.game.actions import attacks_per_action
 from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
+from core.rules.catalog import active_features
 from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import effective_ability_mod
 
@@ -88,6 +89,10 @@ async def build_character_response(
     response.pending_choices = [
         {**c, "options": option_catalog(char, c)} if c.get("kind") == "class_option" else c
         for c in (char.pending_choices or [])]
+
+    usable = {spec.key for spec, _ in active_features(char) if spec.on_use}
+    for ab in response.abilities:
+        ab.has_on_use = ab.feature_key in usable
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the

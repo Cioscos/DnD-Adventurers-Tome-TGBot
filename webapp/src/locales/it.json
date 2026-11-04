@@ -952,6 +952,8 @@
       "cast": "Lancia",
       "use": "Usa",
       "no_uses": "Usi esauriti",
+      "state_rounds_left": "{{n}} round",
+      "end_state": "Termina",
       "banner": "È il tuo turno",
       "banner_cta": "Apri la vista Turno"
     },
