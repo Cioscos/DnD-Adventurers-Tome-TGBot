@@ -1,15 +1,21 @@
 """Sync delle feature di classe dal catalogo per edizione: nessuna perdita di dati."""
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy import select
 
 from api.services.class_features import sync_class_feature_abilities
-from core.db.models import Ability, AbilityScore, Character, CharacterClass
+from core.db.models import Ability, AbilityScore, Character, CharacterClass, EquipmentSlot, Item
 from core.rules.catalog import active_features
 from core.rules.sample_characters import SAMPLE_SPECS, build_rules_character
 from core.rules.types import FeatureSpec, Uses
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration._telegram_stub import install_fake_telegram
+from tests.integration.test_campaigns_api import _enrolled, act
+from tests.integration.test_session_trade import PLAYER2_ID, _seed_trade
 
 
 def _spec(key, edition="2014", uses=None, **kw) -> FeatureSpec:
@@ -189,6 +195,18 @@ async def test_description_follows_edition_unless_edited(test_session_factory, r
         assert row.description == "barbarian.rage 2024 it"
 
 
+async def test_counterless_feature_has_no_restoration_and_unlimited_keeps_it(test_session_factory, rules_catalog):
+    """Criterio dell'etichetta «illimitato»: ricarica presente e nessun massimo."""
+    rules_catalog(_spec("rogue.cunning_action", restoration="short_rest"),
+                  _spec("rogue.tricks", uses=Uses(table={1: 2}, unlimited_from=5), restoration="long_rest"))
+    async with test_session_factory() as s:
+        char, cls = await _char(s, "rogue", 5)
+        await sync_class_feature_abilities(s, char, cls)
+        cunning, tricks = _row(char, "rogue.cunning_action"), _row(char, "rogue.tricks")
+        assert cunning.max_uses is None and cunning.restoration_type == "none"
+        assert tricks.max_uses is None and tricks.restoration_type == "long_rest"
+
+
 async def test_passive_feature_row_has_no_counter(test_session_factory, rules_catalog):
     rules_catalog(_spec("rogue.sneak", passive=True))
     async with test_session_factory() as s:
@@ -310,7 +328,7 @@ async def test_archive_survives_stale_settings_snapshot(client, rules_catalog):
     assert _by_key(body, "barbarian.old")["uses"] == 1
 
 
-async def test_edition_change_without_catalog_changes_nothing(client):
+async def test_edition_change_without_catalog_changes_nothing(client, rules_catalog):
     cid, body = await _api_char(client, "fighter", 5)
     rows = sorted(body["abilities"], key=lambda a: a["id"])
     assert rows
@@ -345,6 +363,68 @@ async def test_ability_change_and_equip_update_uses(client, rules_catalog):
     assert _by_key(r.json(), "bard.bardic_inspiration")["max_uses"] == 5
     r = await client.patch(f"/characters/{cid}/items/{item['id']}", json={"is_equipped": False})
     assert _by_key(r.json(), "bard.bardic_inspiration")["max_uses"] == 3
+
+
+CHA_BAND = {"ability_modifiers": [{"ability": "charisma", "kind": "absolute", "value": 20}]}
+
+
+async def test_add_equipped_and_delete_item_update_uses(client, rules_catalog):
+    rules_catalog(_spec("bard.bardic_inspiration", uses=Uses(ability="charisma")))
+    cid, _ = await _api_char(client, "bard")
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": "Fascia", "item_type": "wondrous", "item_metadata": CHA_BAND, "is_equipped": True})
+    assert r.status_code == 201, r.text
+    assert _by_key(r.json(), "bard.bardic_inspiration")["max_uses"] == 5
+    item = next(i for i in r.json()["items"] if i["name"] == "Fascia")
+    r = await client.delete(f"/characters/{cid}/items/{item['id']}")
+    assert r.status_code == 200, r.text
+    assert _by_key(r.json(), "bard.bardic_inspiration")["max_uses"] == 1
+
+
+async def test_session_trade_of_worn_item_updates_uses(client, test_session_factory, rules_catalog, monkeypatch):
+    install_fake_telegram(monkeypatch)
+    rules_catalog(_spec("fighter.vigor", uses=Uses(ability="constitution")))
+    sid, hero, _lyra, item_id = await _seed_trade(test_session_factory, equipped_con=True)
+    async with test_session_factory() as s:
+        score = (await s.execute(select(AbilityScore).where(
+            AbilityScore.character_id == hero, AbilityScore.name == "constitution"))).scalar_one()
+        score.value = 14  # 16 con l'anello: 3 usi; senza: 2
+        await s.commit()
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/trade", json={
+        "from_character_id": hero, "to_user_id": PLAYER2_ID, "item_id": item_id})
+    assert r.status_code == 200, r.text
+    assert _by_key(r.json(), "fighter.vigor")["max_uses"] == 2
+
+
+async def test_stash_put_of_worn_item_updates_uses(client, test_session_factory, rules_catalog):
+    rules_catalog(_spec("wizard.tricks", uses=Uses(ability="charisma")))
+    camp, pg = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    sid = (await client.post("/sessions", json={"campaign_id": camp["id"]})).json()["id"]
+    act(PLAYER_ID)
+    assert (await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": pg})).status_code == 200
+    async with test_session_factory() as s:
+        s.add(AbilityScore(character_id=pg, name="charisma", value=14))
+        band = Item(character_id=pg, name="Fascia", item_type="accessory", item_metadata=json.dumps(CHA_BAND),
+                    is_equipped=True, equipment_slot=EquipmentSlot.RING1)
+        s.add(band)
+        await s.commit()
+        band_id = band.id
+    r = await client.post(f"/sessions/{sid}/stash/put", json={"from_character_id": pg, "item_id": band_id})
+    assert r.status_code == 200, r.text
+    assert _by_key(r.json(), "wizard.tricks")["max_uses"] == 2
+
+
+async def test_remove_class_updates_uses_of_remaining_classes(client, rules_catalog):
+    rules_catalog(_spec("bard.tricks", uses=Uses(proficiency=True)))
+    cid, body = await _api_char(client, "bard", 4)
+    body = (await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 1})).json()
+    assert _by_key(body, "bard.tricks")["max_uses"] == 3
+    fighter = next(c for c in body["classes"] if c["class_name"] == "fighter")
+    r = await client.delete(f"/characters/{cid}/classes/{fighter['id']}")
+    assert r.status_code == 200, r.text
+    assert _by_key(r.json(), "bard.tricks")["max_uses"] == 2
 
 
 async def test_asi_updates_uses(client, rules_catalog):
@@ -428,6 +508,66 @@ async def test_import_syncs_only_with_rules_edition_in_file(client, rules_catalo
     r = await client.post("/characters/import", json=data)
     assert r.status_code == 201, r.text
     assert _by_key(r.json(), "barbarian.rage")["max_uses"] == 9
+
+
+@pytest.mark.parametrize("archive", [
+    "x",
+    None,
+    ["barbarian.rage"],
+    {"barbarian.rage": "x"},
+    {"barbarian.rage": {"spent": "x"}},
+    {"barbarian.rage": {"spent": -5}},
+    {"barbarian.rage": {"spent": True}},
+    {"barbarian.rage": {"spent": 1.5}},
+    {"barbarian.rage": {"description": 5}},
+])
+@pytest.mark.parametrize("with_edition", [True, False])
+async def test_import_discards_malformed_archive(client, rules_catalog, archive, with_edition):
+    rules_catalog(_spec("barbarian.rage", uses=Uses(table={1: 5})))
+    cid, _ = await _api_char(client, "barbarian")
+    data = await _export(client, cid)
+    data["abilities"] = []  # riga assente: il sync legge l'archivio
+    data["character"]["settings"]["archived_features"] = archive
+    if not with_edition:
+        del data["character"]["rules_edition"]
+    r = await client.post("/characters/import", json=data)
+    assert r.status_code == 201, r.text
+    new_id = r.json()["id"]
+    assert not r.json()["settings"].get("archived_features")
+    # il personaggio resta sincronizzabile
+    r = await client.patch(f"/characters/{new_id}/ability_scores/strength", json={"value": 12})
+    assert r.status_code == 200, r.text
+    assert (await _export(client, new_id))["character"]["settings"].get("archived_features") in (None, {})
+
+
+async def test_import_keeps_valid_archive_fields_only(client, rules_catalog):
+    rules_catalog(_spec("barbarian.rage", uses=Uses(table={1: 5})))
+    cid, _ = await _api_char(client, "barbarian")
+    data = await _export(client, cid)
+    data["abilities"] = []
+    data["character"]["settings"]["archived_features"] = {
+        "barbarian.rage": {"spent": 2, "description": "Mia", "junk": 1},
+        "barbarian.half": {"spent": "x", "description": "Solo testo"},
+        "barbarian.bad": 7,
+    }
+    body = (await client.post("/characters/import", json=data)).json()
+    rage = _by_key(body, "barbarian.rage")
+    assert (rage["max_uses"], rage["uses"], rage["description"]) == (5, 3, "Mia")
+    assert body["settings"]["archived_features"] == {"barbarian.half": {"description": "Solo testo"}}
+
+
+async def test_duplicate_keeps_archive(client, rules_catalog):
+    rules_catalog(_spec("barbarian.old", uses=Uses(table={1: 4})), _spec("barbarian.rage", "2024", uses=Uses(table={1: 2})))
+    cid, body = await _api_char(client, "barbarian")
+    old = _by_key(body, "barbarian.old")
+    await client.patch(f"/characters/{cid}/abilities/{old['id']}", json={"uses": 1, "description": "Mia"})
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    r = await client.post(f"/characters/{cid}/duplicate")
+    assert r.status_code == 201, r.text
+    assert r.json()["settings"]["archived_features"] == {"barbarian.old": {"spent": 3, "description": "Mia"}}
+    body = (await client.patch(f"/characters/{r.json()['id']}", json={"rules_edition": "2014"})).json()
+    back = _by_key(body, "barbarian.old")
+    assert (back["uses"], back["description"]) == (1, "Mia")
 
 
 async def test_short_rest_recovers_survives_export_import(client, rules_catalog):

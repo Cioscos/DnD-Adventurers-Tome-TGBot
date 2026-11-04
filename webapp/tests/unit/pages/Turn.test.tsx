@@ -96,6 +96,16 @@ describe('Turn page', () => {
     expect(screen.queryByText('character.turn.use')).not.toBeInTheDocument()
   })
 
+  it('does not call unlimited an active feature that simply has no counter', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 6, name: 'Azione Scaltra', is_passive: false, is_active: true, is_class_feature: true,
+      feature_key: 'rogue.cunning_action', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none',
+    }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('Azione Scaltra')).toBeInTheDocument()
+    expect(screen.queryByText(/character\.abilities\.unlimited/)).not.toBeInTheDocument()
+  })
+
   it('keeps the standard actions closed until asked for', async () => {
     getChar.mockResolvedValue(char)
     renderWithProviders(<Turn />)

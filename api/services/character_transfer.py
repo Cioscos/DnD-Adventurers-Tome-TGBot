@@ -15,6 +15,7 @@ from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
 from core.game.containers import is_container
+from core.rules.feature_sync import ARCHIVED_FEATURES, clean_archive
 from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
@@ -250,6 +251,9 @@ async def import_character(
         char.settings = s
     elif rolls is not None:  # non-dict (file artefatto): ignora
         char.settings = {k: v for k, v in char.settings.items() if k != "hp_rolls"}
+
+    if ARCHIVED_FEATURES in (char.settings or {}):  # server-owned: il client non potrebbe più ripararlo
+        char.settings = {**char.settings, ARCHIVED_FEATURES: clean_archive(char.settings[ARCHIVED_FEATURES])}
 
     for a in data.abilities:
         src = classes[int(a.source_class_key[1:])].id if a.source_class_key else None

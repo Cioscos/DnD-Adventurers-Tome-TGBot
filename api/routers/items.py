@@ -178,6 +178,7 @@ async def add_item(
     body: ItemCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
@@ -231,6 +232,8 @@ async def add_item(
     await _apply_item_property_defaults(session, char_id, item)
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
+    if item.is_equipped:
+        await sync_cataloged_features(session, char, lang)
     return await build_character_response(session, char)
 
 
@@ -380,6 +383,7 @@ async def delete_item(
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -394,6 +398,7 @@ async def delete_item(
     await session.flush()
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
+    await sync_cataloged_features(session, char, lang)
     return await build_character_response(session, char)
 
 

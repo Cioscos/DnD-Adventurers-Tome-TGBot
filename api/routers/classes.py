@@ -191,6 +191,7 @@ async def add_class(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     await create_class_for_character(char, body, session, lang=lang)
+    await session.flush()  # expire() scarta anche le modifiche del sync sulle abilità (cascade "all")
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
     await recalc_spell_slots(session, char)
@@ -364,6 +365,7 @@ async def remove_class(
     class_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
@@ -377,6 +379,7 @@ async def remove_class(
     await session.flush()
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
+    await sync_cataloged_features(session, char, lang)  # il bonus di competenza può scendere
 
     # Removing a class lowers total_level → recalc max HP from the remaining
     # classes (finding #3: previously only spell slots were recalculated, leaving

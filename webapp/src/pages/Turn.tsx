@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
 import { api } from '@/api/client'
+import { isUnlimitedFeature } from '@/lib/abilityUses'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
 import ExpandChevron from '@/components/ui/ExpandChevron'
@@ -134,7 +135,7 @@ export default function Turn() {
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
-      } else if (ab?.is_class_feature && ab.max_uses == null) {
+      } else if (ab && isUnlimitedFeature(ab)) {
         label = `${e.label} (${t('character.abilities.unlimited')})`
       }
     }

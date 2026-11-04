@@ -24,6 +24,7 @@ import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
+import { isUnlimitedFeature } from '@/lib/abilityUses'
 import type { Ability, ActionType } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
@@ -358,7 +359,7 @@ export default function Abilities() {
                 {current}/{max}
               </span>
             )}
-            {!hasUses && ab.is_class_feature && !ab.is_passive && <span>{t('character.abilities.unlimited')}</span>}
+            {isUnlimitedFeature(ab) && <span>{t('character.abilities.unlimited')}</span>}
           </div>
           <ExpandChevron open={isOpen} />
         </Pressable>

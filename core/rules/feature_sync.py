@@ -51,6 +51,24 @@ async def sync_cataloged_features(session: AsyncSession, char: Character, lang: 
     await session.flush()
 
 
+def clean_archive(raw: object) -> dict[str, dict]:
+    """Da un file importato tiene solo `{str: {"spent": int >= 0, "description": str}}`; il resto è scartato."""
+    if not isinstance(raw, dict):
+        return {}
+    clean: dict[str, dict] = {}
+    for key, state in raw.items():
+        if not isinstance(state, dict):
+            continue
+        entry: dict = {}
+        if type(state.get("spent")) is int and state["spent"] >= 0:
+            entry["spent"] = state["spent"]
+        if isinstance(state.get("description"), str):
+            entry["description"] = state["description"]
+        if entry:
+            clean[key] = entry
+    return clean
+
+
 def _restoration(spec: FeatureSpec, level: int) -> RestorationType:
     value = spec.restoration
     if isinstance(value, dict):
@@ -117,7 +135,8 @@ def _sync_from_catalog(session: AsyncSession, char: Character, cls: CharacterCla
         ability.name = spec.name.get(lang) or spec.name["it"]
         ability.action_type = spec.action_type
         ability.is_passive = spec.passive
-        ability.restoration_type = _restoration(spec, cls.level)
+        # Senza contatore la ricarica non esiste: `none` distingue questa riga da una risorsa illimitata.
+        ability.restoration_type = RestorationType.NONE if spec.uses is None else _restoration(spec, cls.level)
         ability.short_rest_recovers = spec.short_rest_recovers
         if "description" in saved:
             ability.description = saved["description"]

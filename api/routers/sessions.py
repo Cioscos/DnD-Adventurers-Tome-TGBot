@@ -17,7 +17,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import TelegramUser, get_current_telegram_user, get_current_user
+from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, get_current_user
 from api.database import get_db
 from core.game.containers import is_container, trade_snapshot
 from api.schemas.session import (
@@ -48,6 +48,7 @@ from api.routers._helpers import apply_con_hp, collect_homebrew_notifications, e
 from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
+from api.services.class_features import sync_cataloged_features
 from api.services.recap import close_game_session, dice_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
@@ -948,18 +949,18 @@ async def _load_char_full(db: AsyncSession, char_id: int) -> Character:
     return result.scalar_one()
 
 
-async def _settle_move(db, actor: Character, other: Character, old_con_mod, removed: list) -> list[dict]:
-    """After an item/coin move out of `actor`: CON-HP, encumbrance of both, item_unequipped dispatch.
+async def _settle_move(db, actor: Character, other: Character, old_con_mod, removed: list, lang: str) -> list[dict]:
+    """After an item/coin move out of `actor`: CON-HP, class feature uses, encumbrance of both, item_unequipped dispatch.
 
     `removed` = (id, type, name, slot) of rows taken off the actor's paper-doll. Returns notifications.
     """
     apply_con_hp(actor, old_con_mod)
-    # shortcut: cedere un oggetto indossato non ricalcola gli usi a caratteristica fino al sync successivo, qui manca la lingua per i nomi; se serve, passarla dai router.
     await db.flush()
     for c in (actor, other):
         await db.refresh(c, attribute_names=["items"])
         c.recalculate_encumbrance()
     await db.flush()
+    await sync_cataloged_features(db, actor, lang)
     notifications: list[dict] = []
     for item_id, item_type, _name, slot in removed:
         firing = await dispatch(db, actor, "item_unequipped", {
@@ -985,6 +986,7 @@ async def trade(
     body: TradeRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Player action: give an item/container/coins to another PG of the session.
 
@@ -1021,7 +1023,7 @@ async def trade(
         coins_given = give_coins(sender, recipient, body.coins)
         what = _coins_text(coins_given)
 
-    notifications = await _settle_move(db, sender, recipient, old_con_mod, removed)
+    notifications = await _settle_move(db, sender, recipient, old_con_mod, removed, lang)
 
     payload = {
         "kind": "trade",
@@ -1108,7 +1110,7 @@ async def get_stash(
     return await _stash_read(db, stash)
 
 
-async def _player_stash_move(session_id, user_id, db, char_id, item_id, quantity, coins, putting: bool):
+async def _player_stash_move(session_id, user_id, db, char_id, item_id, quantity, coins, putting: bool, lang: str):
     """Shared body of put (PG -> stash) and take (stash -> PG)."""
     session_obj, me, stash = await _stash_ctx(session_id, user_id, db)
     if me.role != SessionRole.PLAYER or me.character_id is None or me.character_id != char_id:
@@ -1133,7 +1135,7 @@ async def _player_stash_move(session_id, user_id, db, char_id, item_id, quantity
         what = _coins_text(moved)
 
     # on take the PG's CON can't change: apply_con_hp is a no-op there
-    notifications = await _settle_move(db, pg, stash, old_con_mod, removed)
+    notifications = await _settle_move(db, pg, stash, old_con_mod, removed, lang)
 
     me_ref = {"character_id": pg.id, "name": pg.name}
     verb = "messo nel" if putting else "preso dal"
@@ -1153,10 +1155,11 @@ async def stash_put(
     body: StashPutRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Player: move an item/container/coins from their PG into the party stash."""
     return await _player_stash_move(
-        session_id, user_id, db, body.from_character_id, body.item_id, body.quantity, body.coins, True)
+        session_id, user_id, db, body.from_character_id, body.item_id, body.quantity, body.coins, True, lang)
 
 
 @router.post("/{session_id}/stash/take", response_model=CharacterFull)
@@ -1165,10 +1168,11 @@ async def stash_take(
     body: StashTakeRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Player: move an item/container/coins from the party stash to their PG."""
     return await _player_stash_move(
-        session_id, user_id, db, body.to_character_id, body.item_id, body.quantity, body.coins, False)
+        session_id, user_id, db, body.to_character_id, body.item_id, body.quantity, body.coins, False, lang)
 
 
 async def _gm_stash_ctx(session_id, user_id, db):

@@ -168,7 +168,8 @@ describe('Abilities page', () => {
   it('shows an unlimited class feature without a counter, a passive one without the label', async () => {
     const unlimited = { ...classFeature, id: 3, name: 'Ira', max_uses: null, uses: null }
     const passive = { ...classFeature, id: 4, name: 'Attacco Furtivo', max_uses: null, uses: null, is_passive: true }
-    getChar.mockResolvedValue(char([unlimited, passive]))
+    const noCounter = { ...classFeature, id: 5, name: 'Azione Scaltra', max_uses: null, uses: null, restoration_type: 'none' }
+    getChar.mockResolvedValue(char([unlimited, passive, noCounter]))
     renderWithProviders(<Abilities />)
     await screen.findByText('Ira')
     expect(screen.getAllByText('character.abilities.unlimited')).toHaveLength(1)
