@@ -325,6 +325,7 @@ export const api = {
         level?: number
         hit_die?: number
         spellcasting_ability?: string | null
+        skill_choices?: string[]
       } | null,
       identity?: {
         race?: string
@@ -532,6 +533,16 @@ export const api = {
       request<{ key: string; name: Record<string, string>; choice_level: number }[]>(
         `/rules/subclasses?edition=${edition}&class_key=${classKey}`,
       ),
+    proficiencies: (edition: string, classKey: string, asMulticlass: boolean) =>
+      request<{
+        armor: string[]
+        weapons: string[]
+        tools: string[]
+        saves: string[]
+        skills_from: string[]
+        skills_count: number
+        languages: string[]
+      }>(`/rules/proficiencies?edition=${edition}&class_key=${encodeURIComponent(classKey)}&as_multiclass=${asMulticlass}`),
   },
 
   // ---------------------------------------------------------------------------

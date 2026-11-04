@@ -14,6 +14,8 @@ import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
 import SelectSheet from '@/components/ui/SelectSheet'
 import SubclassSelect from '@/pages/multiclass/SubclassSelect'
+import ClassSkillChoice from '@/components/ClassSkillChoice'
+import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
 import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
@@ -40,6 +42,7 @@ type NewEntry = {
   subclass: string
   hitDie: number
   spellcasting?: string
+  skillChoices: string[]
   level: number
 }
 
@@ -83,6 +86,10 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   const [pickerKey, setPickerKey] = useState<string>('')
   const [pickerCustomName, setPickerCustomName] = useState('')
   const [pickerSubclass, setPickerSubclass] = useState('')
+  const [pickerSkills, setPickerSkills] = useState<string[]>([])
+  const pickerProf = useClassProficiencies(
+    char.rules_edition, pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null, true,
+  )
   // Il picker annidato ha un toggle reale (showPicker): il blur si spegne
   // subito quando il picker si chiude, coerentemente col resto del pattern.
   const pickerBlur = useDeferredBlur(showPicker)
@@ -92,6 +99,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     setPickerKey('')
     setPickerCustomName('')
     setPickerSubclass('')
+    setPickerSkills([])
   }
 
   // ESC/back coerenti: il picker annidato sta in cima allo stack, poi il modale.
@@ -166,6 +174,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
         subclass: pickerSubclass,
         hitDie,
         spellcasting,
+        skillChoices: pickerSkills,
         level: 1,
       },
     ])
@@ -186,6 +195,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
           hit_die: ne.hitDie,
           spellcasting_ability: ne.spellcasting,
           subclass: ne.subclass.trim() || undefined,
+          skill_choices: ne.skillChoices.length ? ne.skillChoices : undefined,
         })) as CharacterFull
         const newId = updatedChar.classes.find((c) => !previousIds.has(c.id))?.id
         if (newId == null) throw new Error('new class id missing after add')
@@ -418,7 +428,10 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   title={t('character.multiclass.class_name')}
                   options={classOptions(t)}
                   value={pickerKey}
-                  onChange={setPickerKey}
+                  onChange={(k) => {
+                    setPickerKey(k)
+                    setPickerSkills([])
+                  }}
                   placeholder={t('character.multiclass.class_name')}
                   zClassName="z-[70]"
                 />
@@ -437,6 +450,14 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   value={pickerSubclass}
                   onChange={setPickerSubclass}
                   zClassName="z-[70]"
+                />
+
+                <ClassSkillChoice
+                  edition={char.rules_edition}
+                  className={pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null}
+                  asMulticlass
+                  value={pickerSkills}
+                  onChange={setPickerSkills}
                 />
 
                 {pickerUnmet.length > 0 && (
@@ -478,7 +499,12 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   variant="primary"
                   size="md"
                   fullWidth
-                  disabled={!pickerKey || (pickerKey === CUSTOM_KEY && !pickerCustomName.trim())}
+                  disabled={
+                    !pickerKey ||
+                    (pickerKey === CUSTOM_KEY && !pickerCustomName.trim()) ||
+                    pickerProf.isLoading ||
+                    pickerSkills.length !== (pickerProf.data?.skills_count ?? 0)
+                  }
                   onClick={addPickedClass}
                   icon={<Plus size={16} />}
                   haptic="light"

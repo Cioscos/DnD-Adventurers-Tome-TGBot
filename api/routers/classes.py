@@ -25,7 +25,10 @@ from core.data.classes import (
     CLASS_HIT_DIE,
     CLASS_SPELLCASTING,
     class_table_key,
-    get_saving_throw_proficiencies,
+)
+from core.data.spell_slots import normalize_class_name
+from core.rules.proficiencies import (
+    class_proficiencies, mark_seeded, merge_grant, validate_skill_choices,
 )
 from core.rules.level_choices import sync_level_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
@@ -112,6 +115,12 @@ async def create_class_for_character(
     if is_first_class is None:
         is_first_class = len(char.classes) == 0
 
+    grant = class_proficiencies(character_edition(char), normalize_class_name(body.class_name),
+                                as_multiclass=not is_first_class)
+    chosen = body.skill_choices or []
+    if (msg := validate_skill_choices(grant, chosen)) is not None:
+        raise HTTPException(status_code=422, detail=msg)
+
     hit_die = body.hit_die
     spellcasting_ability = body.spellcasting_ability
     table_key = class_table_key(body.class_name)
@@ -142,16 +151,10 @@ async def create_class_for_character(
     sync_level_choices(char, cls, 0, cls.level)  # classe nata sopra il livello 1: scelte dei livelli già raggiunti
     await sync_class_feature_abilities(session, char, cls, lang=lang)
 
-    # Seed saving throw proficiencies from the *starting* class only (D&D 5e:
-    # multiclassing does not grant additional save proficiencies). We only fill
-    # in saves not already present so we never clobber user-set proficiencies.
-    if is_first_class:
-        class_saves = get_saving_throw_proficiencies(body.class_name)
-        if class_saves:
-            current_saves = dict(char.saving_throws or {})
-            for ability, proficient in class_saves.items():
-                current_saves.setdefault(ability, proficient)
-            char.saving_throws = current_saves
+    # Competenze della classe per edizione: TS solo dalla prima, il resto dalla tabella multiclasse.
+    # Sempre additive: non toglie né sovrascrive quanto l'utente ha già.
+    merge_grant(char, grant, lang, tuple(chosen))
+    mark_seeded(char)
 
     settings = char.settings or {}
     auto_calc = settings.get("hp_auto_calc", True)

@@ -459,7 +459,7 @@
       "mode_melee": "Melee",
       "mode_thrown": "Thrown",
       "magic_bonus": "Magic bonus +{{n}}",
-      "proficiency_warning": "Proficiency not listed",
+      "proficiency_warning": "Not proficient with this weapon: proficiency bonus not applied",
       "to_hit": "To hit",
       "damage": "Damage",
       "damage_critical": "Damage (critical)"
@@ -1438,6 +1438,8 @@
       "subclass": "Subclass",
       "subclass_other": "Other (free text)",
       "subclass_other_hint": "The text is kept as written: no subclass automation.",
+      "skill_choice_title": "Skills: choose {{count}}",
+      "skill_choice_hint": "{{chosen}} of {{count}} chosen",
       "hit_die": "Hit die",
       "spellcasting": "Spellcasting ability",
       "auto_resources_hint": "Class features will be created automatically",

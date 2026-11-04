@@ -459,7 +459,7 @@
       "mode_melee": "Mischia",
       "mode_thrown": "Lancio",
       "magic_bonus": "Bonus magico +{{n}}",
-      "proficiency_warning": "Competenza non indicata",
+      "proficiency_warning": "Arma senza competenza: bonus di competenza non applicato",
       "to_hit": "Per colpire",
       "damage": "Danno",
       "damage_critical": "Danno (critico)"
@@ -1437,6 +1437,8 @@
       "subclass": "Sottoclasse",
       "subclass_other": "Altro (testo libero)",
       "subclass_other_hint": "Il testo resta com'è: nessun automatismo di sottoclasse.",
+      "skill_choice_title": "Abilità: scegline {{count}}",
+      "skill_choice_hint": "Scelte {{chosen}} di {{count}}",
       "hit_die": "Dado vita",
       "spellcasting": "Abilità da incantatore",
       "auto_resources_hint": "Le abilità di classe saranno create automaticamente",

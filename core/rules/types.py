@@ -54,6 +54,8 @@ class FeatureSpec:
     passive: bool = False
     attacks_per_action: int = 0
     target_effect: Any = None
+    # categoria (`armor`/`weapons`/`tools`) -> id di `core.rules.proficiencies.LABELS`, concesse una volta sola
+    proficiency_grants: dict[str, tuple[str, ...]] | None = None
 
 
 @dataclass(frozen=True)

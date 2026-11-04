@@ -517,6 +517,20 @@ def _migrate_condition_state(connection) -> None:
         s.commit()
 
 
+def _seed_proficiencies(connection) -> None:
+    """Una tantum (`settings.proficiencies_seeded`): competenze delle classi in aggiunta a quelle esistenti."""
+    from sqlalchemy.orm import Session
+
+    from core.db.models import Character
+    from core.rules.proficiencies import SEEDED_FLAG, seed_character
+
+    with Session(bind=connection) as s:
+        for char in s.query(Character).all():
+            if not (char.settings or {}).get(SEEDED_FLAG):
+                seed_character(char)
+        s.commit()
+
+
 async def init_db() -> None:
     """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -526,6 +540,7 @@ async def init_db() -> None:
         await conn.run_sync(_migrate_class_resources_to_abilities)
         await conn.run_sync(_backfill_ability_action_types)
         await conn.run_sync(_migrate_condition_state)
+        await conn.run_sync(_seed_proficiencies)
 
 
 @asynccontextmanager

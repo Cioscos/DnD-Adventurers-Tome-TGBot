@@ -133,6 +133,8 @@ class CharacterClassCreate(BaseModel):
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
+    # Abilità scelte fra quelle della classe (vedi GET /rules/proficiencies); validate nel router.
+    skill_choices: Optional[list[str]] = None
 
     _subclass_blank = field_validator("subclass")(_blank_to_none)
 

@@ -32,6 +32,8 @@ import languagesSrd from '@/data/languages-srd.json'
 import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
+import ClassSkillChoice from '@/components/ClassSkillChoice'
+import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import { creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies } from '@/lib/species'
 import { localized } from '@/lib/srd/catalog'
 import { STANDARD_ARRAY, arrayScores, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
@@ -57,6 +59,8 @@ type SelectedClass = {
   class_name: string
   hit_die: number
   spellcasting_ability: string | null
+  /** Abilità di classe scelte (2014 per i personaggi nuovi). */
+  skills?: string[]
 }
 
 type IdentityPayload = {
@@ -151,6 +155,7 @@ export default function CharacterSelect() {
               level: 1,
               hit_die: cls.hit_die,
               spellcasting_ability: cls.spellcasting_ability ?? null,
+              ...(cls.skills?.length ? { skill_choices: cls.skills } : {}),
             }
           : null,
         identity,
@@ -239,6 +244,11 @@ export default function CharacterSelect() {
   const isCustomSelected =
     selectedClass != null &&
     !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
+
+  const classProf = useClassProficiencies('2014', selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
+  const classSkillsIncomplete =
+    !!selectedClass && !isCustomSelected &&
+    (classProf.isLoading || (selectedClass.skills?.length ?? 0) !== (classProf.data?.skills_count ?? 0))
 
   if (isLoading) {
     return (
@@ -520,6 +530,7 @@ export default function CharacterSelect() {
                           class_name: t(`dnd.classes.${cls.key}`),
                           hit_die: cls.hit_die,
                           spellcasting_ability: cls.spellcasting_ability,
+                          skills: isBuiltinSelected(cls.key) ? selectedClass?.skills : [],
                         })}
                         className={`flex flex-col items-center py-2.5 px-1 rounded-xl
                                    border transition-colors duration-200
@@ -540,6 +551,18 @@ export default function CharacterSelect() {
                       </Pressable>
                     ))}
                   </m.div>
+
+                  {selectedClass && !isCustomSelected && (
+                    <div className="mb-3">
+                      <ClassSkillChoice
+                        edition="2014"
+                        className={selectedClass.class_name}
+                        asMulticlass={false}
+                        value={selectedClass.skills ?? []}
+                        onChange={(skills) => setSelectedClass({ ...selectedClass, skills })}
+                      />
+                    </div>
+                  )}
 
                   {/* Special options row */}
                   <div className="grid grid-cols-2 gap-2 mb-1">
@@ -585,7 +608,7 @@ export default function CharacterSelect() {
                     onSecondary={() => setStep('name')}
                     primaryLabel={`${t('common.next')} →`}
                     onPrimary={() => setStep('species')}
-                    primaryDisabled={selectedClass === undefined}
+                    primaryDisabled={selectedClass === undefined || classSkillsIncomplete}
                     primaryHaptic="medium"
                   />
                 </>

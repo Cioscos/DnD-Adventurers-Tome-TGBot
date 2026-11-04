@@ -43,7 +43,8 @@ from api.schemas.container import ItemMoveRequest
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
-from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, normalize_proficiencies
+from api.schemas.common import ConsumableUseResult, D20Dice, RollMode
+from core.rules.proficiencies import is_weapon_proficient
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -501,23 +502,6 @@ class AttackSubmission(BaseModel):
     attack_mode: Literal["melee", "thrown"] = "melee"
 
 
-def _lacks_weapon_proficiency(char, weapon_name: str, category: str | None) -> bool:
-    """True when the weapons proficiencies are non-empty and cover neither the weapon nor its category.
-
-    Reads ``weapons`` plus ``other`` (legacy lists were migrated there).
-    """
-    cats = normalize_proficiencies(char.general_proficiencies)
-    profs = {str(p).strip().lower() for p in cats["weapons"] + cats["other"]}
-    if not profs:
-        return False
-    names = {weapon_name.strip().lower()}
-    if category == "simple":
-        names |= {"armi semplici", "simple weapons"}
-    elif category == "martial":
-        names |= {"armi da guerra", "martial weapons"}
-    return not (profs & names)
-
-
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
 async def attack_with_weapon(
     char_id: int,
@@ -576,7 +560,9 @@ async def attack_with_weapon(
     else:
         ability_mod = str_mod
 
-    pb = char.proficiency_bonus
+    # Bonus di competenza solo con un'arma in cui si è competenti (core.rules.proficiencies).
+    proficient = is_weapon_proficient(char, item)
+    pb = char.proficiency_bonus if proficient else 0
 
     # To-hit roll
     outcome = resolve_body(body)
@@ -664,7 +650,7 @@ async def attack_with_weapon(
         ammo=ammo_state,
         ammo_missing=ammo_missing,
         magic_bonus=magic_bonus,
-        proficiency_warning=_lacks_weapon_proficiency(char, item.name, meta.get("weapon_category")),
+        proficiency_warning=not proficient,
         weapon_name=item.name,
         to_hit_die=to_hit_die,
         dice=outcome.dice,
