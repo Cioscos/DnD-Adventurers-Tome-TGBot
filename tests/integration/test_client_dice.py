@@ -69,6 +69,7 @@ async def test_weapon_attack_client_1_is_a_fumble(client):
 
 async def test_weapon_reroll_spends_inspiration_and_keeps_the_client_die(client):
     cid = await _make_char(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     item_id = await _add_weapon(client, cid)
     await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     r = await client.post(

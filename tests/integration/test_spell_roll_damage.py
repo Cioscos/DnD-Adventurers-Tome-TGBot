@@ -5,7 +5,7 @@ RNG): the server validates count + range and uses them verbatim. D&D 5e rules
 encoded:
 - A critical doubles the *dice count* (not the flat bonus): a base ``NdX`` then
   expects ``2N`` values when ``is_critical``.
-- ``half_damage`` rounds up: ``(total + 1) // 2``.
+- ``half_damage`` rounds down: ``total // 2``.
 - ``casting_level`` must be within ``[spell.level, 9]``.
 - A flat bonus inside ``damage_dice`` (e.g. ``1d6+2``) is added once.
 
@@ -33,7 +33,7 @@ async def _add_spell(client, cid: int, *, name="Spell", level=3, damage_dice="2d
     return r.json()["id"]
 
 
-async def test_main_rolls_used_verbatim_and_half_rounds_up(client):
+async def test_main_rolls_used_verbatim_and_half_rounds_down(client):
     cid = await _create_character(client)
     sid = await _add_spell(client, cid, level=1, damage_dice="2d6", damage_type="fire")
 
@@ -46,7 +46,7 @@ async def test_main_rolls_used_verbatim_and_half_rounds_up(client):
     assert body["rolls"] == [3, 4]
     assert body["main_rolls"] == [3, 4]
     assert body["total"] == 7
-    assert body["half_damage"] == 4  # (7 + 1)//2, rounded up
+    assert body["half_damage"] == 3  # 7//2, per difetto
     assert body["main_kind"] == "d6"
     assert body["damage_type"] == "fire"
     assert body["is_critical"] is False

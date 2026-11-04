@@ -6,12 +6,13 @@ import json
 import re
 from typing import Any, Optional
 
-from pydantic import BaseModel, ValidationInfo, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
 from api.schemas.common import OptionResult, RollMode, absent_when_none
 from api.schemas.container import ContainerStatsRead, validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
+from core.rules.weapons import weapon_mastery
 from api.services.equipment import slot_allowed_for_type
 
 
@@ -126,6 +127,7 @@ class ItemRead(BaseModel):
     equipment_slot: Optional[EquipmentSlot] = None
     container_id: Optional[int] = None
     container_stats: Optional[ContainerStatsRead] = None
+    mastery: str | None = absent_when_none()  # proprietà di maestria 2024 dell'arma; l'interfaccia la mostra solo in 2024
 
     model_config = {"from_attributes": True}
 
@@ -138,6 +140,12 @@ class ItemRead(BaseModel):
             except (json.JSONDecodeError, TypeError):
                 return None
         return v
+
+    @model_validator(mode="after")
+    def set_mastery(self) -> "ItemRead":
+        if self.item_type == "weapon":
+            self.mastery = weapon_mastery(self)
+        return self
 
 
 class ItemCreate(BaseModel):
@@ -238,3 +246,6 @@ class WeaponAttackResult(BaseModel):
     option_result: OptionResult | None = absent_when_none()
     forced_hit: bool | None = absent_when_none()  # colpo a segno per un privilegio, qualunque sia il d20
     attack_id: str | None = absent_when_none()  # attacco in sospeso: il danno finale passa da /attack/{id}/damage
+    grazed: bool | None = absent_when_none()  # mancato, con il danno di un'opzione (Graze)
+    effect: str | None = absent_when_none()  # colpo senz'armi 2024: `grapple` o `shove`, senza tiro per colpire
+    save_dc: int | None = absent_when_none()  # ... e la CD del TS del bersaglio

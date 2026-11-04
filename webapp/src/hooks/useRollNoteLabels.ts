@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import type { CharacterFull } from '@/types'
 
-/** Traduce le note di un tiro: `condition:<slug>`, `armor:untrained`, `feature:<chiave>`.
+/** Traduce le note di un tiro: `condition:<slug>`, `armor:untrained`, `weapon:heavy`, `inspiration:advantage`, `feature:<chiave>`.
  *  `charId` serve fuori da /char/:id (sessione): dà l'edizione per il nome della spossatezza. */
 export function useRollNoteLabels(charId?: number): (notes: string[]) => string[] {
   const { t } = useTranslation()
@@ -27,6 +27,8 @@ export function useRollNoteLabels(charId?: number): (notes: string[]) => string[
         : t(`character.conditions.${value}`)
     }
     if (kind === 'armor') return t('character.roll_notes.armor_untrained')
+    if (kind === 'weapon') return t('character.roll_notes.weapon_heavy')
+    if (kind === 'inspiration') return t('character.roll_notes.inspiration')
     if (kind === 'feature') return featureName(value)
     return note
   })

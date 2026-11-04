@@ -9,7 +9,7 @@ import {
   GiBackpack as Backpack,
 } from 'react-icons/gi'
 import { TYPE_ICON, consumableIcon, hasSingleQuantity } from './itemMetadata'
-import type { Item } from '@/types'
+import type { CharacterFull, Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
@@ -45,7 +45,7 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
 
 /* ---------- Type-specific stat chips ---------- */
 
-function ItemStatChips({ item }: { item: Item }) {
+function ItemStatChips({ item, edition }: { item: Item; edition?: string }) {
   const { t } = useTranslation()
   const system = useUnitSettings((s) => s.system)
   const meta = item.item_metadata as Record<string, unknown> | undefined
@@ -82,6 +82,13 @@ function ItemStatChips({ item }: { item: Item }) {
           {wpnType}
         </Chip>
       )
+      if (edition === '2024' && item.mastery) {
+        chips.push(
+          <Chip key="mastery" icon={<Swords size={12} />}>
+            {t('character.inventory.mastery', { name: item.mastery.charAt(0).toUpperCase() + item.mastery.slice(1) })}
+          </Chip>
+        )
+      }
     } else if (item.item_type === 'armor') {
       const armorType = t(`character.inventory.armor_type.${meta.armor_type}`, { defaultValue: String(meta.armor_type ?? '') })
       chips.push(
@@ -294,6 +301,8 @@ interface InventoryItemProps {
   onEquipToggle: () => void
   onQuantityChange: (delta: number) => void
   onAttack: (mode: RollMode) => void
+  /** Serve a edizione, altra mano e incapacitato; assente nei contesti senza scheda. */
+  char?: CharacterFull
   weaponChoice: WeaponChoice
   onWeaponChoice: (c: WeaponChoice) => void
   onUse: () => void
@@ -329,6 +338,7 @@ function InventoryItemInner({
   onEquipToggle,
   onQuantityChange,
   onAttack,
+  char,
   weaponChoice,
   onWeaponChoice,
   onUse,
@@ -416,7 +426,7 @@ function InventoryItemInner({
           )}
 
           {/* Stat chips */}
-          <ItemStatChips item={item} />
+          <ItemStatChips item={item} edition={char?.rules_edition} />
 
           {/* Homebrew property chips — editable, resolved against active rules */}
           <HomebrewPropertyChips
@@ -466,7 +476,7 @@ function InventoryItemInner({
           )}
 
           {item.item_type === 'weapon' && (
-            <WeaponChoiceRow item={item} choice={weaponChoice} onChange={onWeaponChoice} />
+            <WeaponChoiceRow item={item} char={char} choice={weaponChoice} onChange={onWeaponChoice} />
           )}
 
           {/* Action buttons — same pattern as SpellItem */}
@@ -490,6 +500,7 @@ function InventoryItemInner({
               <RollButton
                 onRoll={onAttack}
                 pending={attackPending}
+                disabled={!!char?.computed?.incapacitated}
                 ariaLabel={`${t('character.inventory.attack')} ${item.name}`}
                 className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                            bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30

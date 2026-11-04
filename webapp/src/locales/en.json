@@ -465,6 +465,20 @@
       "homebrew_label": "Homebrew Bonus"
     },
     "attack": {
+      "offhand": "Other hand",
+      "ability_strength": "Strength",
+      "ability_dexterity": "Dexterity",
+      "grapple": "Grapple",
+      "shove": "Shove",
+      "effect_grapple": "Grapple: the target makes a Strength or Dexterity save, DC {{dc}}. On a failure it is Grappled. You need a free hand.",
+      "effect_shove": "Shove: the target makes a Strength or Dexterity save, DC {{dc}}. On a failure you move it 5 ft or knock it Prone.",
+      "grazed": "Graze: damage on a miss",
+      "limit_title": "No attacks left",
+      "limit_text": "You already made {{made}} of {{allowed}} attacks with the Attack action. Attack anyway, for a feature or a reaction?",
+      "limit_confirm": "Attack anyway",
+      "limit_cancel": "Cancel",
+      "incapacitated": "You are incapacitated: you can't attack.",
+      "bonus_used": "Bonus action already used this turn.",
       "ammo_missing": "Ammunition empty or not equipped: track it yourself",
       "grip_one": "One hand",
       "grip_two": "Two hands",
@@ -714,9 +728,12 @@
     },
     "roll_notes": {
       "auto_fail": "Automatic failure",
+      "weapon_heavy": "Heavy weapon",
+      "inspiration": "Inspiration",
       "armor_untrained": "Armor without training"
     },
     "roll_options": {
+        "second_attack": "Second creature, to hit: {{die}} = {{total}}",
         "title_before": "Before the roll",
         "title_after_hit": "Did the attack hit?",
         "title_damage_in": "Before the damage",
@@ -1322,6 +1339,9 @@
       },
       "magic_bonus_label": "Magic bonus (+0 to +10)",
       "versatile_dice_label": "Two-handed die (versatile)",
+      "mastery": "Mastery: {{name}}",
+      "base_weapon_label": "Base weapon (for mastery)",
+      "base_weapon_auto": "From the item name",
       "weapon_category_label": "Weapon category",
       "weapon_category": {
         "none": "None",

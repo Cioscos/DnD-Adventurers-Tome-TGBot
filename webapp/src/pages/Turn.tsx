@@ -66,11 +66,12 @@ export default function Turn() {
   const otherTurn = useMutation({ mutationFn: () => api.characters.turnOther(charId), onSuccess: setBlock })
   const rollD20 = useD20Roll()
   const skillMutation = useMutation({
-    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode }) => {
+    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean }) => {
       const choice = await askRollOptions(charId, { roll: 'skill', skill })
       return { result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode), choice)), skill }
     },
-    onSuccess: ({ result, skill }) => {
+    onSuccess: ({ result, skill }, { spendsAttack }) => {
+      if (spendsAttack) useSlot.mutate({ slot: 'attack' })
       refreshAfterOptions(qc, charId, result.option_result)
       setSkillRoll({ result: { ...result, description: undefined }, skill })
     },
@@ -118,7 +119,7 @@ export default function Turn() {
           {(std?.skills?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {std?.skills?.map((sk) => (
-                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode })}
+                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode, spendsAttack: std.spends_attack })}
                   pending={skillMutation.isPending && skillMutation.variables?.skill === sk}
                   ariaLabel={t(`character.skills.${sk}`)}
                   className={`${BTN} border-dnd-border text-dnd-text`}>
@@ -143,7 +144,20 @@ export default function Turn() {
       const crimson = `${BTN} bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30`
       if (e.id === 'unarmed') {
         label = t('character.turn.unarmed')
-        extra = <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes) })}</p>
+        extra = (
+          <>
+            <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes, c.rules_edition, c.items) })}</p>
+            {c.rules_edition === '2024' && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(['grapple', 'shove'] as const).map((effect) => (
+                  <Button key={effect} size="sm" variant="secondary" onClick={() => weaponFlow.attackUnarmedEffect(effect)}>
+                    {t(`character.attack.${effect}`)}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </>
+        )
         control = (
           <RollButton onRoll={weaponFlow.attackUnarmed} pending={weaponFlow.isUnarmedPending}
             ariaLabel={`${t('character.turn.attack')} ${label}`} className={crimson}>
@@ -159,7 +173,7 @@ export default function Turn() {
             <Target size={14} />{t('character.turn.attack')}
           </RollButton>
         )
-        if (item) extra = <WeaponChoiceRow item={item} choice={choiceOf(choices, itemId)} onChange={(ch) => setChoice(itemId, ch)} />
+        if (item) extra = <WeaponChoiceRow item={item} char={c} choice={choiceOf(choices, itemId)} onChange={(ch) => setChoice(itemId, ch)} />
       }
     } else if (e.kind === 'spell') {
       const spell = c.spells.find((s) => String(s.id) === e.id)
@@ -309,7 +323,12 @@ export default function Turn() {
           <span className={LEDGER_TITLE}>{t('character.turn.section_other')}</span>
           <ExpandChevron open={otherOpen} className="text-dnd-text-muted" />
         </Pressable>
-        {otherOpen && sectionBody(t('character.turn.section_other'), groups.other)}
+        {otherOpen && (
+          <fieldset data-testid="turn-other" disabled={!!char.computed?.incapacitated}
+            className={`min-w-0 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
+            {sectionBody(t('character.turn.section_other'), groups.other)}
+          </fieldset>
+        )}
       </section>
 
       {skillRoll && (

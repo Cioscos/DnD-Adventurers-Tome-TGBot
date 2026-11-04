@@ -17,11 +17,12 @@ from api.services.effects import cap_current_hp
 from api.services.condition_effects import release_concentration_effects, restore_released
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
-from core.data.spell_slots import normalize_class_name
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_mod
+from core.rules.edition import character_edition
 from core.rules.modifiers import modifiers_for
+from core.rules.weapons import has_property, martial_arts_level
 
 logger = logging.getLogger(__name__)
 
@@ -102,28 +103,28 @@ async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
             await cap_current_hp(session, char)
 
 
-def weapon_attack_profile(char: Character, item: Any, attack_mode: str = "melee") -> tuple[int, str, str]:
-    """Modificatore, caratteristica e modalità (`melee`, `thrown`, `ranged`) di un attacco con ``item``."""
+def weapon_attack_profile(
+    char: Character, item: Any, attack_mode: str = "melee", chosen: str | None = None,
+) -> tuple[int, str, str]:
+    """Modificatore, caratteristica e modalità (`melee`, `thrown`, `ranged`) di un attacco con ``item``.
+
+    ``chosen`` vale solo dove la regola lascia la scelta (Accurata, armi da monaco); senza, la migliore."""
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    str_mod = effective_ability_mod(char, "strength")
-    dex_mod = effective_ability_mod(char, "dexterity")
+    mods = {a: effective_ability_mod(char, a) for a in ("strength", "dexterity")}
     is_ranged = meta.get("weapon_type", "melee") == "ranged" and attack_mode != "thrown"
-    if any("finesse" in p.lower() for p in meta.get("properties", [])):
-        ability_mod = max(str_mod, dex_mod)
-    elif is_ranged:
-        ability_mod = dex_mod
+    if has_property(item, "finesse") or martial_arts_level(char, item):
+        best = "dexterity" if mods["dexterity"] > mods["strength"] else "strength"
+        ability = chosen if chosen in mods else best
     else:
-        ability_mod = str_mod
-    ability = "strength" if ability_mod == str_mod and not is_ranged else "dexterity"
-    return ability_mod, ability, "ranged" if is_ranged else attack_mode
+        ability = "dexterity" if is_ranged else "strength"
+    return mods[ability], ability, "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
 
 
 def unarmed_attack_profile(char: Character) -> tuple[int, str, str]:
     """Modificatore, dadi di danno e caratteristica del colpo senz'armi."""
     str_mod = effective_ability_mod(char, "strength")
     dex_mod = effective_ability_mod(char, "dexterity")
-    monk_level = next((c.level for c in char.classes if normalize_class_name(c.class_name) == "monk"), 0)
-    ability_mod, damage_dice = unarmed_strike_profile(str_mod, dex_mod, monk_level)
+    ability_mod, damage_dice = unarmed_strike_profile(str_mod, dex_mod, martial_arts_level(char), character_edition(char))
     return ability_mod, damage_dice, "strength" if ability_mod == str_mod else "dexterity"
 
 

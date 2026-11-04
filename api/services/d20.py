@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from fastapi import HTTPException
 
 from api.schemas.common import RollMode
+from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, final_mode
 
 
@@ -16,6 +17,15 @@ class D20Outcome:
     dice: list[int]
     kept: int
     mode: RollMode
+
+
+def spend_inspiration_reroll(char) -> None:
+    """Il rilancio è del 2024. Nel 2014 l'Ispirazione si spende prima del tiro, con l'opzione ``inspiration:advantage``."""
+    if character_edition(char) == "2014":
+        raise HTTPException(status_code=409, detail="inspiration_before_roll")
+    if not char.heroic_inspiration:
+        raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+    char.heroic_inspiration = False
 
 
 def resolve_d20(mode: RollMode, dice: list[int] | None, die: int | None) -> D20Outcome:
@@ -51,7 +61,7 @@ def resolve_applied(
 
 
 def resolve_body(body, applied: Applied | None = None) -> D20Outcome:
-    """resolve_d20 from an optional request body; inspiration is a single-die reroll."""
+    """resolve_d20 from an optional request body; inspiration (2024 only) is a single-die reroll."""
     applied = applied or Applied()
     if body is None:
         return resolve_applied("normal", None, None, applied)

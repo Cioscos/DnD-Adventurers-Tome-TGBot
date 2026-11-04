@@ -77,6 +77,38 @@ async function spendOneHitDie() {
 
 afterEach(() => { vi.clearAllMocks() })
 
+describe('QuickActions when incapacitated', () => {
+  const armed = (incapacitated: boolean) => ({
+    id: 7,
+    settings: { quick_actions: [{ type: 'weapon', id: 5 }, { type: 'save', ability: 'dexterity' }] },
+    classes: [],
+    ability_scores: [],
+    items: [{ id: 5, name: 'Spada', item_type: 'weapon', item_metadata: {}, is_equipped: true }],
+    computed: { incapacitated },
+  }) as unknown as CharacterFull
+
+  const show = (c: CharacterFull) => render(
+    <QueryClientProvider client={new QueryClient()}>
+      <QuickActions char={c} />
+    </QueryClientProvider>,
+  )
+
+  it('turns off the attack and says why, leaving saves usable', () => {
+    show(armed(true))
+    expect(screen.getByText('character.turn.incapacitated')).toBeTruthy()
+    const buttons = screen.getAllByRole('button') as HTMLButtonElement[]
+    expect(buttons.find((b) => b.textContent?.includes('Spada'))?.disabled).toBe(true)
+    expect(buttons.find((b) => /dexterity/i.test(b.textContent ?? ''))?.disabled).toBe(false)
+  })
+
+  it('keeps the attack usable otherwise', () => {
+    show(armed(false))
+    expect(screen.queryByText('character.turn.incapacitated')).toBeNull()
+    const sword = (screen.getAllByRole('button') as HTMLButtonElement[]).find((b) => b.textContent?.includes('Spada'))
+    expect(sword?.disabled).toBe(false)
+  })
+})
+
 describe('QuickActions hit die', () => {
   // Un onError proprio esclude l'handler globale: senza avviso restava la sola vibrazione.
   it('warns when spending fails for network reasons', async () => {

@@ -465,6 +465,20 @@
       "homebrew_label": "Bonus Homebrew"
     },
     "attack": {
+      "offhand": "Altra mano",
+      "ability_strength": "Forza",
+      "ability_dexterity": "Destrezza",
+      "grapple": "Afferra",
+      "shove": "Spingi",
+      "effect_grapple": "Afferrare: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce è Afferrato. Serve una mano libera.",
+      "effect_shove": "Spingere: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce lo sposti di 1,5 m o lo rendi Prono.",
+      "grazed": "Graze: danno sul mancato",
+      "limit_title": "Attacchi esauriti",
+      "limit_text": "Hai già fatto {{made}} attacchi su {{allowed}} con l'azione Attacco. Attacchi comunque, per un privilegio o una reazione?",
+      "limit_confirm": "Attacca comunque",
+      "limit_cancel": "Annulla",
+      "incapacitated": "Sei incapacitato: non puoi attaccare.",
+      "bonus_used": "Azione bonus già usata in questo turno.",
       "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
       "grip_one": "Una mano",
       "grip_two": "Due mani",
@@ -714,9 +728,12 @@
     },
     "roll_notes": {
       "auto_fail": "Fallimento automatico",
+      "weapon_heavy": "Arma pesante",
+      "inspiration": "Ispirazione",
       "armor_untrained": "Armatura senza addestramento"
     },
     "roll_options": {
+        "second_attack": "Seconda creatura, colpire: {{die}} = {{total}}",
         "title_before": "Prima del tiro",
         "title_after_hit": "Il colpo va a segno?",
         "title_damage_in": "Prima del danno",
@@ -1321,6 +1338,9 @@
       },
       "magic_bonus_label": "Bonus magico (+0 a +10)",
       "versatile_dice_label": "Dado a due mani (versatile)",
+      "mastery": "Maestria: {{name}}",
+      "base_weapon_label": "Arma base (per la maestria)",
+      "base_weapon_auto": "Dal nome dell'oggetto",
       "weapon_category_label": "Categoria arma",
       "weapon_category": {
         "none": "Nessuna",

@@ -24,11 +24,13 @@ class ChoiceSpec:
 
     ``levels``: livello di classe minimo -> totale delle opzioni conosciute a quel livello.
     ``options(ctx)``: chiavi scegliibili (``ctx.class_row.options[group]`` contiene già le scelte).
+    ``label(key)``: ``{"name": ..., "summary": ...}`` delle opzioni che non sono privilegi del catalogo (armi).
     """
     group: str
     levels: dict[int, int]
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
+    label: Callable[[str], dict] | None = None
 
 
 @dataclass(frozen=True)
@@ -135,7 +137,10 @@ class RollOptionSpec:
     totale (seconda creatura). ``on_confirm(session, ctx, inputs)``: effetto collaterale dopo il pagamento, nella
     stessa transazione; è sincrono e ``/hp/undo`` non lo annulla.
     ``after`` (solo ``after_roll``): ``add`` somma al totale, ``reroll`` impone un nuovo d20 (``bonus`` e ``mode``
-    valgono su quello), ``succeed`` porta prova o TS a 20 e fa di un attacco un colpo a segno non critico.
+    valgono su quello), ``succeed`` porta prova o TS a 20 e fa di un attacco un colpo a segno non critico,
+    ``miss`` chiude un attacco mancato con il danno ``miss_damage(ctx)`` (Graze).
+    ``effect(ctx, inputs) -> {"it": ..., "en": ...}``: esito da mostrare al giocatore (CD, durata).
+    ``second_attack``: i dadi ``separate_damage`` valgono per un secondo tiro per colpire, fatto dal server (Cleave).
     ``pay_if_success``: si rimborsa se il tiro resta fallito. ``replace_die`` (solo ``before``): il d20 è uno dei
     valori di ``Character.settings["saved_dice"][key]``, dichiarato con ``{"die": n}`` e consumato."""
     key: str
@@ -159,14 +164,17 @@ class RollOptionSpec:
     crit_doubles: bool = True
     separate_damage: bool = False
     on_confirm: "Callable[[Any, RuleContext, dict], None] | None" = None
-    after: Literal["add", "reroll", "succeed"] | None = None
+    after: Literal["add", "reroll", "succeed", "miss"] | None = None
     pay_if_success: bool = False
     replace_die: bool = False
+    miss_damage: "Callable[[RuleContext], int] | None" = None
+    effect: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
+    second_attack: bool = False
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "damage_in"):
             raise ValueError(f"fase sconosciuta: {self.phase}")
-        if (self.phase == "after_roll") != (self.after in ("add", "reroll", "succeed")):
+        if (self.phase == "after_roll") != (self.after in ("add", "reroll", "succeed", "miss")):
             raise ValueError("after è obbligatorio in after_roll e vale solo lì")
         if self.phase == "after_roll" and self.requires_input:
             raise ValueError("after_roll è un pulsante nel modale di esito: non chiede input")
@@ -182,6 +190,10 @@ class RollOptionSpec:
             raise ValueError("force_crit vale solo prima del tiro")
         if self.cost and self.cost.spell_slot_min is not None and self.requires_input != "slot":
             raise ValueError("uno slot come costo richiede requires_input='slot'")
+        if (self.after == "miss") != (self.miss_damage is not None):
+            raise ValueError("after='miss' e miss_damage vanno insieme")
+        if self.second_attack and not self.separate_damage:
+            raise ValueError("second_attack riguarda i dadi separate_damage")
         if self.dice_cost and not self.needs:
             raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
 
@@ -229,4 +241,5 @@ class RuleContext:
     damage_type: Any = None
     attack_mode: Any = None  # solo attacchi: `melee`, `thrown` o `ranged`
     grip: Any = None  # solo attacchi: `one` o `two`
+    offhand: bool = False  # solo attacchi: l'attacco extra della proprietà Leggera
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo

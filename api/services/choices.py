@@ -40,8 +40,15 @@ def _choice_spec(char: Character, cls: CharacterClass, group: str | None):
 
 def _entries(char: Character, cls: CharacterClass, group: str, keys: list[str]) -> list[dict]:
     specs = {s.option_key: s for s in features_for(character_edition(char), class_key(cls)) if s.option_group == group}
-    return [{"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
-             "summary": specs[k].summary if k in specs else {"it": "", "en": ""}} for k in keys]
+    choice = _choice_spec(char, cls, group)
+    labelled = choice.label if choice and choice.label else None
+
+    def entry(k: str) -> dict:
+        if labelled and k not in specs:
+            return {"key": k, **labelled(k)}
+        return {"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
+                "summary": specs[k].summary if k in specs else {"it": "", "en": ""}}
+    return [entry(k) for k in keys]
 
 
 def _available(char: Character, cls: CharacterClass, ch) -> list[str]:

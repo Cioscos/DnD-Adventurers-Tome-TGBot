@@ -8,7 +8,7 @@ from core.db.models import Character, ConditionEffect, PendingSave
 from tests.integration._encounter_helpers import as_user
 
 
-async def _setup(client, factory, *, dc=10, status="pending", inspiration=False):
+async def _setup(client, factory, *, dc=10, status="pending", inspiration=False, edition="2024"):
     r = await client.post("/characters", json={"name": "Eroe"})
     assert r.status_code == 201, r.text
     cid = r.json()["id"]
@@ -16,6 +16,7 @@ async def _setup(client, factory, *, dc=10, status="pending", inspiration=False)
         ch = await s.get(Character, cid)
         ch.conditions = {"poisoned": True}
         ch.heroic_inspiration = inspiration
+        ch.rules_edition = edition
         eff = await upsert_effect(s, ("character", cid), "poisoned",
                                   save=SaveSpec("constitution", dc, "end"))
         ps = PendingSave(effect_id=eff.id, character_id=cid, ability="constitution", dc=dc,
@@ -83,6 +84,12 @@ async def test_inspiration_reroll_only_after_fail(client, test_session_factory):
     r = await _post(client, cid, psid, {"die": 20, "with_inspiration": True})
     assert r.status_code == 200 and r.json()["passed"] is True
     assert (await _conds(test_session_factory, cid))[1] is False
+
+
+async def test_inspiration_reroll_is_2024_only(client, test_session_factory):
+    cid, psid = await _setup(client, test_session_factory, status="failed", inspiration=True, edition="2014")
+    r = await _post(client, cid, psid, {"die": 20, "with_inspiration": True})
+    assert (r.status_code, r.json()["detail"]) == (409, "inspiration_before_roll")
 
 
 async def test_inspiration_unavailable_is_409(client, test_session_factory):

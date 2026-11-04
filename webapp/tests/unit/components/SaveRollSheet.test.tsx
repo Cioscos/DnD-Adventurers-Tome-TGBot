@@ -36,7 +36,7 @@ const result = (passed: boolean) => ({
 
 function setup(inspiration = false) {
   const qc = new QueryClient()
-  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration })
+  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration, rules_edition: '2024' })
   const invalidate = vi.spyOn(qc, 'invalidateQueries')
   const onClose = vi.fn()
   render(
@@ -49,7 +49,7 @@ function setup(inspiration = false) {
 
 function setupLive(saves: (typeof save)[], inspiration = false) {
   const qc = new QueryClient()
-  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration })
+  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration, rules_edition: '2024' })
   const onClose = vi.fn()
   const ui = (list: (typeof save)[]) => (
     <QueryClientProvider client={qc}>

@@ -24,10 +24,10 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from api.services.rules_turn import get_turn, spend
+from api.services.rules_turn import attacks_allowed, get_turn, refuse_if_incapacitated, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
-from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
+from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.modifiers import modifiers_for
 from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
@@ -54,8 +54,11 @@ from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
+from core.game.attacks import martial_arts_die
+from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
-from core.rules.roll_options import AppliedOptions, roll_options_for, scale_damage
+from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage
+from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -513,7 +516,10 @@ class AttackSubmission(RollOptionsBody):
     mode: RollMode = "normal"
     dice: D20Dice | None = None
     grip: Literal["one", "two"] = "one"
-    attack_mode: Literal["melee", "thrown"] = "melee"
+    attack_mode: Literal["melee", "thrown", "offhand"] = "melee"
+    ability: Literal["strength", "dexterity"] | None = None  # dove la regola lascia la scelta; senza, la migliore
+    confirm_extra_attack: bool = False  # oltre il limite dell'azione: privilegio, reazione, decisione del giocatore
+    effect: Literal["damage", "grapple", "shove"] = "damage"  # colpo senz'armi 2024
 
 
 def _set_pending_attack(char: Character, pending: dict | None) -> None:
@@ -525,21 +531,30 @@ def _set_pending_attack(char: Character, pending: dict | None) -> None:
     char.turn_state = turn
 
 
+def _check_attack_limit(char: Character, body: AttackSubmission | None) -> None:
+    """Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito."""
+    if body and (body.with_inspiration or body.confirm_extra_attack):
+        return
+    made, allowed = get_turn(char)["attacks_made"], attacks_allowed(char)
+    if made >= allowed:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "attack_limit", "made": made, "allowed": allowed})
+
+
 def _settle_attack(
     char: Character, body: AttackSubmission | None, result: WeaponAttackResult, item: Item | None, ability: str,
-    attack_mode: str, grip: str, opts: AppliedOptions,
+    attack_mode: str, grip: str, opts: AppliedOptions, offhand: bool = False,
 ) -> WeaponAttackResult:
     """Tiene da parte l'attacco se il danno finale aspetta le opzioni.
 
     Un 1 naturale non ha danno da aspettare, a meno che un'opzione dopo il tiro possa ancora cambiarlo."""
     pending = None
     item_id = item.id if item else None
-    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip)
+    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand)
     if body and body.defer_damage and (
             not result.is_fumble or any(o.spec.phase == "after_roll" for o in roll_options_for(context))):
         result.attack_id = uuid.uuid4().hex
         pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
-                   "attack_mode": attack_mode, "grip": grip,
+                   "attack_mode": attack_mode, "grip": grip, "offhand": offhand,
                    "options": result.option_result.keys if result.option_result else [],
                    "result": result.model_dump(mode="json")}
     _set_pending_attack(char, pending)
@@ -564,8 +579,10 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
             result.damage_rolls, result.damage_bonus, result.damage_total = [0], 0, 0
         else:
             item = next((i for i in char.items if i.id == pending["item_id"]), None)
-            ability_mod = (weapon_attack_profile(char, item, pending["attack_mode"]) if item
+            ability_mod = (weapon_attack_profile(char, item, pending["attack_mode"], pending["ability"]) if item
                            else unarmed_attack_profile(char))[0]
+            if pending.get("offhand"):
+                ability_mod = min(ability_mod, 0)
             result.damage_rolls, result.damage_bonus = _base_damage(
                 char, item, result.damage_dice, pending["ability"], ability_mod, result.magic_bonus, roll["is_critical"])
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
@@ -585,6 +602,25 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
     _set_pending_attack(char, {**pending, "options": block.keys if block else [],
                                "result": result.model_dump(mode="json")})
     return result
+
+
+def close_grazed_attack(char: Character, attack: WeaponAttackResult, damage: int) -> WeaponAttackResult:
+    """L'attacco è mancato ma un'opzione infligge comunque danno: niente dadi, niente più da chiedere."""
+    _set_pending_attack(char, None)
+    return attack.model_copy(update={"attack_id": None, "grazed": True, "damage_rolls": [], "damage_bonus": damage,
+                                     "damage_total": damage})
+
+
+def _second_attack(char: Character, opts: AppliedOptions, pending: dict, item: Item | None, bonus: int) -> dict:
+    """Il secondo tiro per colpire di un'opzione: un 1 naturale manca, un critico raddoppia i dadi a parte."""
+    applied = modifiers_for(char, "attack", ability=pending["ability"], item=item, attack_mode=pending["attack_mode"])
+    outcome = resolve_applied("normal", None, None, applied)
+    record_dice(char, d20_records(outcome))
+    if outcome.kept == 1:
+        opts.separate_dice = []
+    elif outcome.kept >= applied.crit_min:
+        opts.separate_dice = [[doubled_dice(expr), False] for expr, _ in opts.separate_dice]
+    return {"second_die": outcome.kept, "second_total": outcome.kept + bonus}
 
 
 def _base_damage(
@@ -628,12 +664,13 @@ async def deferred_attack_damage(
     if pending["result"]["is_fumble"]:
         raise HTTPException(status_code=409, detail={"code": "attack_missed"})
     opts = use_options(session, char, "attack", body, phase="after_hit", ability=pending["ability"], item=item,
-                       attack_mode=pending["attack_mode"], grip=pending["grip"])
+                       attack_mode=pending["attack_mode"], grip=pending["grip"], offhand=pending.get("offhand", False))
     result = WeaponAttackResult(**pending["result"])
     result.homebrew_notifications = None  # già consegnate col tiro per colpire
+    second = _second_attack(char, opts, pending, item, result.to_hit_bonus) if opts.second_attack else {}
     rolls, extra, result.damage_total = _option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
     result.damage_bonus += opts.bonus
-    result.option_result = option_result(opts, rolls, extra, previous=result.option_result)
+    result.option_result = option_result(opts, rolls, extra, previous=result.option_result, **second)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
     _set_pending_attack(char, None)
     turn = get_turn(char)
@@ -662,6 +699,7 @@ async def attack_with_weapon(
         raise HTTPException(status_code=404, detail="Item not found")
     if item.item_type != "weapon":
         raise HTTPException(status_code=400, detail="Item is not a weapon")
+    refuse_if_incapacitated(char)
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
     damage_dice_str: str = meta.get("damage_dice", "1d4")
@@ -671,8 +709,17 @@ async def attack_with_weapon(
     has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
     grip = body.grip if body else "one"
     attack_mode = body.attack_mode if body else "melee"
+    offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
+    if offhand:
+        if not has_property(item, "light"):
+            raise HTTPException(status_code=422, detail="offhand_not_light")
+        if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and has_property(i, "light")
+                   for i in char.items):
+            raise HTTPException(status_code=422, detail="offhand_needs_second_light_weapon")
+    else:
+        _check_attack_limit(char, body)
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
             i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
@@ -684,20 +731,23 @@ async def attack_with_weapon(
         raise HTTPException(status_code=422, detail="weapon_not_thrown")
 
     if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     # Determine ability modifier (effective: equipped-item bonuses included)
-    ability_mod, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode)
+    ability_mod, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, body.ability if body else None)
+    if martial := martial_arts_level(char, item):
+        damage_dice_str = best_damage_dice(damage_dice_str, martial_arts_die(martial, character_edition(char)))
+    # L'attacco extra non somma la caratteristica al danno, salvo che sia negativa.
+    damage_mod = min(ability_mod, 0) if offhand else ability_mod
 
     # Bonus di competenza solo con un'arma in cui si è competenti (core.rules.proficiencies).
     proficient = is_weapon_proficient(char, item)
     pb = char.proficiency_bonus if proficient else 0
 
     # To-hit roll
-    applied = modifiers_for(char, "attack", ability=ability, item=item)
-    opts = use_options(session, char, "attack", body, ability=ability, item=item, attack_mode=resolved_mode, grip=grip)
+    applied = modifiers_for(char, "attack", ability=ability, item=item, attack_mode=resolved_mode)
+    opts = use_options(session, char, "attack", body, ability=ability, item=item, attack_mode=resolved_mode, grip=grip,
+                       offhand=offhand)
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
@@ -716,7 +766,7 @@ async def attack_with_weapon(
         damage_total = 0
     else:
         damage_rolls, damage_bonus = _base_damage(
-            char, item, damage_dice_str, ability, ability_mod, magic_bonus, is_critical)
+            char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
@@ -729,8 +779,11 @@ async def attack_with_weapon(
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
-    if not (body and body.with_inspiration):
-        spend(char, "attack")  # il rilancio con ispirazione è lo stesso attacco
+    if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
+        if not offhand:
+            spend(char, "attack")
+        elif NICK_OPTION not in opts.keys:
+            spend(char, "bonus")
 
     # Ammunition: scale one piece per attack (also on miss/fumble), never on a reroll.
     ammo_state: AmmoState | None = None
@@ -802,12 +855,26 @@ async def attack_with_weapon(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
-    ), item, ability, resolved_mode, grip, opts)
+    ), item, ability, resolved_mode, grip, opts, offhand)
 
 
 # ---------------------------------------------------------------------------
 # Unarmed strike
 # ---------------------------------------------------------------------------
+
+def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int) -> WeaponAttackResult:
+    """Afferrare o Spingere 2024: niente tiro per colpire, il bersaglio fa un TS su Forza o Destrezza contro ``dc``."""
+    if character_edition(char) != "2024":
+        raise HTTPException(status_code=422, detail="unarmed_effect_2024_only")
+    use_options(session, char, "attack", None)  # è un tiro nuovo: il precedente non si ritocca più
+    _set_pending_attack(char, None)
+    spend(char, "attack")
+    _add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
+    return WeaponAttackResult(
+        weapon_name="Attacco a mano libera", to_hit_die=0, to_hit_bonus=0, to_hit_total=0, is_critical=False,
+        is_fumble=False, damage_dice="", damage_rolls=[], damage_bonus=0, damage_total=0, effect=effect, save_dc=dc,
+    )
+
 
 @router.post("/{char_id}/attack/unarmed", response_model=WeaponAttackResult)
 async def attack_unarmed(
@@ -818,14 +885,16 @@ async def attack_unarmed(
 ) -> WeaponAttackResult:
     """Unarmed strike: 1+STR bludgeoning; Monk uses best of STR/DEX + Martial Arts die."""
     char = await _get_owned_full(char_id, user_id, session)
-
-    if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+    refuse_if_incapacitated(char)
+    _check_attack_limit(char, body)
 
     ability_mod, damage_dice_str, ability = unarmed_attack_profile(char)
     pb = char.proficiency_bonus
+    if body and body.effect != "damage":
+        return _unarmed_effect(session, char, body.effect, 8 + ability_mod + pb)
+
+    if body and body.with_inspiration:
+        spend_inspiration_reroll(char)
 
     applied = modifiers_for(char, "attack", ability=ability)
     opts = use_options(session, char, "attack", body, ability=ability, attack_mode="melee", grip="one")

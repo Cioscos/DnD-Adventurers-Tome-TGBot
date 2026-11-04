@@ -1,4 +1,4 @@
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -214,7 +214,7 @@ export default function SavingThrows() {
           result={rollState.result}
           title={rollState.title}
           note={rollNoteOf(char, `save.${rollState.ability}`)}
-          inspirationAvailable={Boolean(char.heroic_inspiration)}
+          inspirationAvailable={canRerollInspiration(char)}
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}

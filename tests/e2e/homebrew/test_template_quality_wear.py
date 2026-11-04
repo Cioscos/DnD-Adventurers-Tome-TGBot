@@ -70,7 +70,7 @@ async def test_quality_wear_complete_lifecycle(
     #   distrutta + unequip + notify error.
     patch_random_roll([1, 5])
 
-    r2 = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
+    r2 = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack", json={"confirm_extra_attack": True})
     assert r2.status_code == 200
 
     msgs2 = [n["message"].lower() for n in r2.json().get("homebrew_notifications", [])]

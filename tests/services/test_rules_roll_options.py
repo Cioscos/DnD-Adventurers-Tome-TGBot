@@ -29,7 +29,7 @@ def _char(conditions=None, edition="2014", class_key="rogue", level=5, **kw):
         id=1, rules_edition=edition, conditions=conditions or {}, items=[], settings={}, active_states=[],
         classes=[SimpleNamespace(class_name=class_key, level=level, subclass_key=None, options={})],
         hit_points=40, damage_modifiers={}, proficiency_bonus=3, skills={}, saving_throws={}, shield_armor_class=0,
-        general_proficiencies={}, turn_state={}, abilities=[], spell_slots=[],
+        general_proficiencies={}, turn_state={}, abilities=[], spell_slots=[], heroic_inspiration=False, race=None,
     )
     return SimpleNamespace(**{**base, **kw})
 

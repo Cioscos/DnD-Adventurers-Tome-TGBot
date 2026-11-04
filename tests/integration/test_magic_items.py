@@ -78,10 +78,10 @@ async def test_weapon_attack_bonus_from_item(client):
     wid = await _item(client, cid, name="Spada", item_type="weapon", damage_dice="1d8",
                       weapon_type="melee", bonuses=[{"target": "attack", "value": 2},
                                                     {"target": "damage", "value": 1}])
-    r0 = (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).json()
+    r0 = (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
     # unequipped weapon: not active
     await client.patch(f"/characters/{cid}/items/{wid}", json={"is_equipped": True, "equipment_slot": "main_hand"})
-    r1 = (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).json()
+    r1 = (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
     assert r1["to_hit_bonus"] == r0["to_hit_bonus"] + 2
     assert r1["damage_bonus"] == r0["damage_bonus"] + 1
 
@@ -142,7 +142,7 @@ async def test_speed_and_initiative_items(client):
 
 
 async def _swing(client, cid, wid):
-    return (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).json()
+    return (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
 
 
 async def test_weapon_bonus_applies_only_to_that_weapon(client):
@@ -160,8 +160,8 @@ async def test_ring_attack_bonus_applies_to_all_weapons_and_unarmed(client):
     sword = await _item(client, cid, name="Spada", item_type="weapon", slot="main_hand", damage_dice="1d8")
     dagger = await _item(client, cid, name="Pugnale", item_type="weapon", slot="off_hand", damage_dice="1d4")
     b = [(await _swing(client, cid, w))["to_hit_bonus"] for w in (sword, dagger)]
-    u0 = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).json()["to_hit_bonus"]
+    u0 = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "confirm_extra_attack": True})).json()["to_hit_bonus"]
     await _item(client, cid, name="Anello", slot="ring1", bonuses=[{"target": "attack", "value": 1}])
     a = [(await _swing(client, cid, w))["to_hit_bonus"] for w in (sword, dagger)]
-    u1 = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).json()["to_hit_bonus"]
+    u1 = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "confirm_extra_attack": True})).json()["to_hit_bonus"]
     assert a == [x + 1 for x in b] and u1 == u0 + 1

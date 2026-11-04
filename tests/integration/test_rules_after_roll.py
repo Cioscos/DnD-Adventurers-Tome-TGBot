@@ -721,7 +721,7 @@ async def test_replace_die_token_is_refundable(client, test_session_factory):
 
 
 async def test_inspiration_reroll_unchanged(client):
-    cid = await _char(client)
+    cid = await _char(client, edition="2024")
     r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     assert r.status_code == 200, r.text
     first = await _skill(client, cid, die=5)
@@ -735,8 +735,8 @@ async def test_inspiration_reroll_unchanged(client):
 async def test_inspiration_after_before_option_keeps_it_without_paying(client, rules_catalog):
     bless = RollOptionSpec(key="bless2", phase="before", rolls=("skill",), label=_LABEL, bonus=lambda _c, _i: 2,
                            cost=Cost(feature_key="fighter.prova"))
-    rules_catalog(_feature(bless, uses=_USES))
-    cid = await _char(client)
+    rules_catalog(replace(_feature(bless, uses=_USES), edition="2024"))
+    cid = await _char(client, edition="2024")
     await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     first = await _skill(client, cid, die=5, options=["bless2"])
     uses = await _uses(client, cid)

@@ -1,4 +1,4 @@
-import { askRollOptions } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions } from '@/lib/rollOptions'
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -176,7 +176,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
             )}
             {!view.res.passed && (
               <InspirationRerollButton
-                available={!!char?.heroic_inspiration}
+                available={canRerollInspiration(char)}
                 pending={roll.isPending}
                 onClick={() => roll.mutate({ save: view.save, reroll: true })}
               />

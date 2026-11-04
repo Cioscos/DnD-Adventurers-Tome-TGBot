@@ -10,6 +10,7 @@ from typing import Any
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
 from core.rules.types import TURN_FLAGS, RollOptionSpec, RuleContext
+from core.rules.weapons import has_property, small_race
 
 _DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
 
@@ -18,8 +19,24 @@ def _on(condition: str):
     return lambda ctx: bool((ctx.char.conditions or {}).get(condition))
 
 
-# Condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
+def _spend_inspiration(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    ctx.char.heroic_inspiration = False
+
+
+# Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
 _CONDITION_OPTIONS = (
+    RollOptionSpec(
+        key="inspiration:advantage", phase="before", rolls=("attack", "skill", "save", "initiative", "death_save"),
+        mode="advantage", on_confirm=_spend_inspiration,
+        label={"it": "Spendi l'Ispirazione: tiro con vantaggio", "en": "Spend Inspiration: roll with advantage"},
+        available=lambda ctx: ctx.edition == "2014" and bool(ctx.char.heroic_inspiration),
+    ),
+    RollOptionSpec(
+        key="weapon:heavy_small", phase="before", rolls=("attack",), mode="disadvantage",
+        label={"it": "Arma pesante: sei una creatura Piccola?", "en": "Heavy weapon: are you a Small creature?"},
+        available=lambda ctx: (ctx.edition == "2014" and ctx.item is not None and has_property(ctx.item, "heavy")
+                               and small_race(ctx.char) is None),
+    ),
     RollOptionSpec(
         key="condition:frightened", phase="before", rolls=("attack", "skill", "initiative"), mode="disadvantage",
         label={"it": "Spaventato: vedi la fonte della paura?", "en": "Frightened: can you see the source of your fear?"},
@@ -77,6 +94,9 @@ class AppliedOptions:
     succeed: bool = False
     refundable: dict[str, list[str]] = field(default_factory=dict)  # chiave -> gettoni, per ``pay_if_success``
     replace_die: int | None = None
+    miss_damage: int | None = None
+    effects: list[dict[str, str]] = field(default_factory=list)  # {"it", "en"}: esiti da mostrare
+    second_attack: bool = False
 
     @property
     def mode(self) -> str | None:
@@ -243,6 +263,11 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.replace_die = given["die"]
         out.reroll = out.reroll or spec.after == "reroll"
         out.succeed = out.succeed or spec.after == "succeed"
+        out.second_attack = out.second_attack or spec.second_attack
+        if spec.miss_damage:
+            out.miss_damage = max(0, spec.miss_damage(option.ctx))
+        if spec.effect:
+            out.effects.append(spec.effect(option.ctx, given))
         if spec.extra_dice:
             dice[key] = spec.extra_dice(option.ctx, given)
         if spec.bonus:
@@ -314,6 +339,12 @@ def roll_extra(dice: list[str], critical: bool = False) -> tuple[list[tuple[str,
         rolled += [(f"d{sides}", random.randint(1, sides)) for _ in range(count)]
         flat += int(match[3] or 0)
     return rolled, flat
+
+
+def doubled_dice(expr: str) -> str:
+    """Il critico raddoppia i dadi, non il fisso."""
+    match = _DICE.match(expr)
+    return f"{int(match[1]) * 2}d{match[2]}{match[3] or ''}" if match else expr
 
 
 def scale_damage(value: int, multiplier: float) -> int:

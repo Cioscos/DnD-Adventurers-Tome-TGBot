@@ -41,6 +41,7 @@ export default function WeaponAttackModal({
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
   const showInspirationButton =
     inspirationAvailable && !wasRerolled && onInspirationReroll != null && !result.attack_id
+    && !result.effect && !result.grazed
 
   const toHitColor = is_critical
     ? 'text-dnd-gold-bright'
@@ -89,7 +90,12 @@ export default function WeaponAttackModal({
         </p>
       )}
       <RollNotes notes={result.notes} optionResult={result.option_result} />
-      <m.div
+      {result.effect && (
+        <p data-testid="unarmed-effect" className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3 text-sm font-body text-dnd-text">
+          {t(`character.attack.effect_${result.effect}`, { dc: result.save_dc })}
+        </p>
+      )}
+      {!result.effect && <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -105,9 +111,22 @@ export default function WeaponAttackModal({
         <p className={`text-4xl font-black font-display mt-1 ${toHitColor}`}>
           {to_hit_total}
         </p>
-      </m.div>
+      </m.div>}
 
-      {!is_fumble && (
+      {result.grazed && (
+        <m.div
+          data-testid="grazed-damage"
+          className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">{t('character.attack.grazed')}</p>
+          <p className="text-4xl font-black font-display mt-1 text-dnd-crimson-bright">{damage_total}</p>
+        </m.div>
+      )}
+
+      {!is_fumble && !result.effect && !result.grazed && (
         <m.div
           className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
           initial={{ opacity: 0, y: 10 }}

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Turn from '@/pages/Turn'
@@ -35,11 +35,15 @@ beforeEach(() => {
   server.block = { ...NEW_BLOCK }
   server.extra = {}
 })
+const { attackUnarmedEffect, rollSkill } = vi.hoisted(() => ({
+  attackUnarmedEffect: vi.fn(),
+  rollSkill: vi.fn().mockResolvedValue({ die: 10, total: 12, notes: [] }),
+}))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn(), d20Arg: vi.fn() }))
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, tickRound: vi.fn(), rollSkill: vi.fn() },
+    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, tickRound: vi.fn(), rollSkill, rollOptions: vi.fn().mockResolvedValue([]) },
     sessions: { me: sessionMe },
     abilities: { update: vi.fn() },
   },
@@ -64,14 +68,15 @@ vi.mock('@/pages/spells/useCastFlow', () => ({
 }))
 vi.mock('@/hooks/useWeaponAttackFlow', () => ({
   useWeaponAttackFlow: () => ({
-    attackWeapon: vi.fn(), attackUnarmed: vi.fn(), isWeaponPending: () => false, isUnarmedPending: false, elements: null,
+    attackWeapon: vi.fn(), attackUnarmed: vi.fn(), attackUnarmedEffect, isWeaponPending: () => false, isUnarmedPending: false, elements: null,
   }),
 }))
 vi.mock('@/hooks/useTickRound', () => ({ useTickRound: () => ({ mutate: vi.fn(), isPending: false }) }))
 vi.mock('@/components/ui/RollButton', async () => {
   const React = await import('react')
-  return { default: (p: { children?: ReactNode }) => React.createElement('button', null, p.children) }
+  return { default: (p: { children?: ReactNode; onRoll?: (mode: string) => void }) => React.createElement('button', { onClick: () => p.onRoll?.('normal') }, p.children) }
 })
+vi.mock('@/components/RollResultModal', () => ({ default: () => null }))
 vi.mock('@/components/WeaponChoiceRow', () => ({ default: () => null }))
 vi.mock('@/components/skeletons/ActionsSkeleton', () => ({ default: () => null }))
 vi.mock('@/components/ui/Pressable', async () => {
@@ -121,6 +126,39 @@ describe('Turn page', () => {
     expect(await screen.findByText('character.turn.incapacitated')).toBeInTheDocument()
     expect(screen.getByLabelText('character.turn.mark_used: character.turn.section_action')).toBeDisabled()
     expect(screen.getByText('character.turn.new_turn').closest('button')).toBeEnabled()
+  })
+
+  it('turns off the Other section too while incapacitated', async () => {
+    getChar.mockResolvedValue({ ...char, computed: { incapacitated: true },
+      abilities: [{ id: 1, name: 'Tocco', action_type: 'other', uses: 1, max_uses: 1 }] })
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.section_other'))
+    const fieldset = screen.getByTestId('turn-other')
+    expect(fieldset).toBeDisabled()
+  })
+
+  it('offers grapple and shove on the unarmed strike only in 2024', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    const { unmount } = renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.attack.grapple'))
+    expect(attackUnarmedEffect).toHaveBeenCalledWith('grapple')
+    expect(screen.getByText('character.attack.shove')).toBeInTheDocument()
+    unmount()
+    getChar.mockResolvedValue({ ...char, rules_edition: '2014' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.section_action')
+    expect(screen.queryByText('character.attack.grapple')).toBeNull()
+  })
+
+  it('in 2014 grapple is an Athletics roll that uses up one attack', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2014' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Lottare').closest('li') as HTMLElement
+    await userEvent.click(within(row).getByText('character.skills.athletics'))
+    await waitFor(() => expect(turnUse).toHaveBeenCalledWith(7, 'attack', true))
+    expect(rollSkill.mock.calls[0][1]).toBe('athletics')
   })
 
   it('leaves actions enabled when not incapacitated', async () => {

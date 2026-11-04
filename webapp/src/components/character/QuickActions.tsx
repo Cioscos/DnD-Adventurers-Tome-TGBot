@@ -25,6 +25,8 @@ import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { isAttackSpell } from '@/lib/spellType'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
+import { canRerollInspiration } from '@/lib/rollOptions'
+import type { WeaponChoice } from '@/lib/weaponOptions'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -55,7 +57,7 @@ interface Props {
   char: CharacterFull
 }
 
-type AttackState = { result: WeaponAttackResult; itemId: number; wasRerolled: boolean }
+type AttackState = { result: WeaponAttackResult; itemId: number; choice: WeaponChoice; wasRerolled: boolean }
 type SaveRollState = { result: RollResult; ability: string; wasRerolled: boolean }
 type CounterEditState = { kind: 'ability'; ability: Ability } | { kind: 'ammo'; item: Item }
 type EditorGroup = { labelKey: string; rows: { entry: QuickActionEntry; label: string }[]; emptyKey: string | null }
@@ -127,11 +129,15 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
+  const inspiration = canRerollInspiration(char)
+  const incapacitated = !!char.computed?.incapacitated
+
   const attackMutation = useMutation({
+    onMutate: ({ itemId }: { itemId: number; mode: RollMode }) => ({ choice: choiceOf(weaponChoices, itemId) }),
     mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      attack.roll(char.id, itemId, mode, !!char.heroic_inspiration, choiceOf(weaponChoices, itemId)),
-    onSuccess: (result, { itemId }) => {
-      if (result) setAttackState({ result, itemId, wasRerolled: false })
+      attack.roll(char.id, itemId, mode, inspiration, choiceOf(weaponChoices, itemId)),
+    onSuccess: (result, { itemId }, context) => {
+      if (result) setAttackState({ result, itemId, choice: context.choice, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       haptic.success()
@@ -139,7 +145,7 @@ export default function QuickActions({ char }: Props) {
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: (itemId: number) => attack.reroll(char.id, itemId, choiceOf(weaponChoices, itemId)),
+    mutationFn: ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => attack.reroll(char.id, itemId, choice),
     onSuccess: (result) => {
       setAttackState((prev) => (result && prev ? { ...prev, result, wasRerolled: true } : null))
       qc.invalidateQueries({ queryKey: ['character', char.id] })
@@ -516,6 +522,9 @@ export default function QuickActions({ char }: Props) {
           </Pressable>
         </div>
 
+        {incapacitated && (
+          <p role="status" className="px-1 pb-1 text-sm font-body text-dnd-crimson-bright">{t('character.turn.incapacitated')}</p>
+        )}
         {resolved.length === 0 ? (
           <p className="border-t border-dnd-border px-1 py-3 text-xs text-dnd-text-muted font-body italic">
             {t('character.quick_actions.empty_hint')}
@@ -633,6 +642,7 @@ export default function QuickActions({ char }: Props) {
                     <RollButton
                       onRoll={(mode) => run(a, mode)}
                       pending={isActionPending(a)}
+                      disabled={incapacitated && a.type !== 'save'}
                       ariaLabel={actionLabel(a)}
                       className={rowClass}
                     >
@@ -646,6 +656,7 @@ export default function QuickActions({ char }: Props) {
                       <div className="pb-2 empty:hidden">
                         <WeaponChoiceRow
                           item={a.item}
+                          char={char}
                           choice={choiceOf(weaponChoices, a.item.id)}
                           onChange={(c) => setWeaponChoice(a.item.id, c)}
                         />
@@ -659,6 +670,7 @@ export default function QuickActions({ char }: Props) {
                   <Pressable
                     type="button"
                     pending={isActionPending(a)}
+                    disabled={incapacitated && (a.type === 'ability' || a.type === 'spell')}
                     onClick={() => run(a)}
                     whileTap={{ scale: 0.96 }}
                     className={rowClass}
@@ -817,10 +829,10 @@ export default function QuickActions({ char }: Props) {
         <WeaponAttackModal
           result={attackState.result}
           onClose={() => setAttackState(null)}
-          inspirationAvailable={!!char.heroic_inspiration}
+          inspirationAvailable={inspiration}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
-          onInspirationReroll={() => attackRerollMutation.mutate(attackState.itemId)}
+          onInspirationReroll={() => attackRerollMutation.mutate({ itemId: attackState.itemId, choice: attackState.choice })}
         />
       )}
       {saveState && (
@@ -828,7 +840,7 @@ export default function QuickActions({ char }: Props) {
           result={saveState.result}
           title={`${t('character.saves.title')}: ${t(`character.stats.${saveState.ability}`)}`}
           onClose={() => setSaveState(null)}
-          inspirationAvailable={!!char.heroic_inspiration}
+          inspirationAvailable={inspiration}
           isRerolling={saveRerollMutation.isPending}
           wasRerolled={saveState.wasRerolled}
           onInspirationReroll={() => saveRerollMutation.mutate(saveState.ability)}

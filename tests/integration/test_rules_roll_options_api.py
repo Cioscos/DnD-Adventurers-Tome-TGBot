@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+from dataclasses import replace
 
 import pytest
 from sqlalchemy import select
@@ -91,7 +92,8 @@ def _code(r) -> str | None:
 
 
 async def _deferred(client, cid, item, die=10, **extra) -> dict:
-    r = await client.post(f"/characters/{cid}/items/{item}/attack", json={"die": die, "defer_damage": True, **extra})
+    r = await client.post(f"/characters/{cid}/items/{item}/attack",
+                          json={"die": die, "defer_damage": True, "confirm_extra_attack": True, **extra})
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -147,7 +149,8 @@ async def test_option_cost_is_spent_only_when_used(client, rules_catalog):
     assert r.json()["mode_applied"] == "advantage" and len(r.json()["dice"]) == 2
     assert await _uses(client, cid) == 0
 
-    async_ok = await client.post(f"/characters/{cid}/items/{item}/attack", json={"die": 10, "options": ["focus"]})
+    async_ok = await client.post(f"/characters/{cid}/items/{item}/attack",
+                                 json={"die": 10, "options": ["focus"], "confirm_extra_attack": True})
     assert async_ok.status_code == 409 and _code(async_ok) == "option_unavailable"
 
 
@@ -269,8 +272,8 @@ async def test_unarmed_attack_defers_too(client, rules_catalog):
 async def test_inspiration_reroll_keeps_the_paid_bonus_without_spending_again(client, rules_catalog, test_session_factory):
     bless_paid = RollOptionSpec(key="bless", phase="before", rolls=("attack",), label=_LABEL, bonus=lambda _c, _i: 2,
                                 cost=Cost(feature_key="fighter.prova"))
-    rules_catalog(_feature(bless_paid, uses=Uses(table={1: 1})))
-    cid = await _char(client)
+    rules_catalog(replace(_feature(bless_paid, uses=Uses(table={1: 1})), edition="2024"))
+    cid = await _char(client, edition="2024")
     item = await _weapon(client, cid)
     async with test_session_factory() as s:
         (await s.get(Character, cid)).heroic_inspiration = True
@@ -364,8 +367,8 @@ async def test_skill_and_save_add_bonus_and_dice_to_the_total(client, rules_cata
 
 
 async def test_skill_reroll_keeps_option_bonus(client, rules_catalog, test_session_factory):
-    rules_catalog(_feature(BLESS))
-    cid = await _char(client)
+    rules_catalog(replace(_feature(BLESS), edition="2024"))
+    cid = await _char(client, edition="2024")
     async with test_session_factory() as s:
         (await s.get(Character, cid)).heroic_inspiration = True
         await s.commit()
@@ -412,7 +415,7 @@ async def test_spell_damage_with_options_doubles_dice_only(client, rules_catalog
     body = r.json()
     assert len(body["option_result"]["extra_rolls"]) == 2
     assert body["total"] == 5 + sum(body["option_result"]["extra_rolls"]) + 1
-    assert body["half_damage"] == (body["total"] + 1) // 2
+    assert body["half_damage"] == body["total"] // 2
     r = await client.post(url, json={"options": ["empower"], "is_critical": True, "main_rolls": [5, 5]})
     assert len(r.json()["option_result"]["extra_rolls"]) == 4
     assert "option_result" not in (await client.post(url, json={})).json()

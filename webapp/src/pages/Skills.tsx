@@ -1,4 +1,4 @@
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -356,7 +356,7 @@ export default function Skills() {
           result={rollState.result}
           title={t(`character.skills.${rollState.skillName}`)}
           note={rollNoteOf(char, `skill.${rollState.skillName}`)}
-          inspirationAvailable={Boolean(char.heroic_inspiration)}
+          inspirationAvailable={canRerollInspiration(char)}
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.skillName)}

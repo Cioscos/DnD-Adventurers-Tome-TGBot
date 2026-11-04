@@ -14,7 +14,7 @@ from api.routers._helpers import unarmed_attack_profile, weapon_attack_profile
 from api.routers._helpers import retouch_concentration
 from api.routers.characters import _add_history, close_pending_save, open_failed_save
 from api.routers.hp import _get_owned_full, death_state, retouch_death_save
-from api.routers.items import retouch_pending_attack
+from api.routers.items import close_grazed_attack, retouch_pending_attack
 from api.routers.sessions import _touch
 from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
@@ -123,7 +123,7 @@ async def roll_options(
     ability: str | None = None,
     skill: str | None = None,
     damage_type: str | None = None,
-    attack_mode: Literal["melee", "thrown"] = "melee",
+    attack_mode: Literal["melee", "thrown", "offhand"] = "melee",
     grip: Literal["one", "two"] = "one",
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
@@ -141,8 +141,8 @@ async def roll_options(
             _, _, ability = unarmed_attack_profile(char)
             attack = {"attack_mode": "melee", "grip": "one"}
         else:
-            _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode)
-            attack = {"attack_mode": resolved_mode, "grip": grip}
+            _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, ability)
+            attack = {"attack_mode": resolved_mode, "grip": grip, "offhand": attack_mode == "offhand"}
     return list_options(char, roll, lang, item=item, spell=spell, skill=skill, **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type))
 
@@ -185,10 +185,12 @@ async def last_roll_options(
     where = {"skill": last["skill"], "ability": last["ability"],
              "item": next((i for i in char.items if i.id == last["item_id"]), None),
              "spell": next((s for s in char.spells if s.id == last["spell_id"]), None)}
-    grip = {"attack_mode": pending["attack_mode"], "grip": pending["grip"]} if weapon_attack else {}
+    grip = ({"attack_mode": pending["attack_mode"], "grip": pending["grip"], "offhand": pending.get("offhand", False)}
+            if weapon_attack else {})
     opts = use_options(db, char, last["roll"], body, phase="after_roll", **where, **grip)
 
-    applied = modifiers_for(char, last.get("modifier_roll") or last["roll"], **where)
+    applied = modifiers_for(char, last.get("modifier_roll") or last["roll"], **where,
+                            **({"attack_mode": pending["attack_mode"]} if weapon_attack else {}))
     merge_options(applied, opts)
     die, dice, mode, bonus, total = last["die"], last["dice"], last["mode"], last["bonus"], last["total"]
     if opts.reroll:
@@ -244,6 +246,10 @@ async def last_roll_options(
         attack = retouch_pending_attack(char, pending, last["applied"], {
             "die": die, "dice": dice, "mode": mode, "total": total, "is_critical": is_critical, "is_fumble": is_fumble,
             "forced_hit": forced_hit, "notes": notes, "option_result": block})
+        if opts.miss_damage is not None:  # dichiarato mancato: si rimborsa ciò che si paga solo se il tiro riesce
+            attack = close_grazed_attack(char, attack, opts.miss_damage)
+            refund_spent(char, [token for spent in refundable.values() for token in spent])
+            refundable = {}
 
     turn = get_turn(char)  # pagamenti e attacco in sospeso hanno riscritto il turno
     turn["last_roll"] = {**last, "die": die, "dice": dice, "mode": mode, "bonus": bonus, "total": total, "notes": notes,

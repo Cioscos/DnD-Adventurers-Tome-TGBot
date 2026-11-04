@@ -97,7 +97,7 @@ async def test_without_conditions_the_dice_contract_is_unchanged(client):
 
 
 async def test_inspiration_reroll_stays_a_single_die_under_conditions(client, test_session_factory):
-    cid = await _char(client)
+    cid = await _char(client, edition="2024")
     await _cond(client, cid, poisoned=True)
     async with test_session_factory() as s:
         (await s.get(Character, cid)).heroic_inspiration = True
@@ -140,11 +140,11 @@ async def test_weapon_and_unarmed_attack_modes(client):
     weapon = await _weapon(client, cid)
     await _cond(client, cid, prone=True)
     for url in (f"/characters/{cid}/items/{weapon}/attack", f"/characters/{cid}/attack/unarmed"):
-        body = (await client.post(url)).json()
+        body = (await client.post(url, json={"confirm_extra_attack": True})).json()
         assert body["mode_applied"] == "disadvantage" and len(body["dice"]) == 2
         assert body["notes"] == ["condition:prone"]
     await _cond(client, cid, prone=False, invisible=True)
-    body = (await client.post(f"/characters/{cid}/attack/unarmed")).json()
+    body = (await client.post(f"/characters/{cid}/attack/unarmed", json={"confirm_extra_attack": True})).json()
     assert body["mode_applied"] == "advantage"
 
 
@@ -173,7 +173,8 @@ async def test_exhaustion_2024_reduces_every_d20_test_and_the_sheet(client):
     assert full["skill_bonuses"]["stealth"] == clean["skill_bonuses"]["stealth"] - 4
     assert full["initiative_bonus"] == clean["initiative_bonus"] - 4
     assert full["computed"]["speed"] == clean["computed"]["speed"] - 10
-    attack = (await client.post(f"/characters/{cid}/items/{weapon}/attack", json={"die": 10})).json()
+    attack = (await client.post(f"/characters/{cid}/items/{weapon}/attack",
+                                json={"die": 10, "confirm_extra_attack": True})).json()
     assert attack["to_hit_bonus"] == base_attack["to_hit_bonus"] - 4
     assert attack["mode_applied"] == "normal" and attack["notes"] == ["condition:exhaustion"]
     skill = (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()

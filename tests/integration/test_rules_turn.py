@@ -121,7 +121,8 @@ async def test_attacks_increment_counter_on_server(client):
     wid = next(i["id"] for i in r.json()["items"] if i["name"] == "Spada")
     assert (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).status_code == 200
     assert await _attacks_made(client, cid) == 1
-    assert (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).status_code == 200
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "confirm_extra_attack": True})
+    assert r.status_code == 200
     assert await _attacks_made(client, cid) == 2
 
 

@@ -6,12 +6,22 @@ import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
 import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import type { RollOption } from '@/api/client'
 
-const { rollOptions, lastRollOptions, lastRollRefund, attack, attackDamage, toastWarning } = vi.hoisted(() => ({
-  rollOptions: vi.fn(), lastRollOptions: vi.fn(), lastRollRefund: vi.fn(), attack: vi.fn(), attackDamage: vi.fn(), toastWarning: vi.fn(),
+const { rollOptions, lastRollOptions, lastRollRefund, attack, attackDamage, attackUnarmed, turnState, toastWarning, toastError, ApiErr } = vi.hoisted(() => ({
+  rollOptions: vi.fn(), lastRollOptions: vi.fn(), lastRollRefund: vi.fn(), attack: vi.fn(), attackDamage: vi.fn(),
+  attackUnarmed: vi.fn(), turnState: vi.fn(), toastWarning: vi.fn(), toastError: vi.fn(),
+  ApiErr: class extends Error {
+    status: number
+    detail: unknown
+    constructor(status: number, detail: unknown) {
+      super('api')
+      this.status = status
+      this.detail = detail
+    }
+  },
 }))
 vi.mock('@/api/client', () => ({
-  api: { characters: { rollOptions, lastRollOptions, lastRollRefund }, items: { attack, attackDamage } },
-  ApiError: class extends Error {},
+  api: { characters: { rollOptions, lastRollOptions, lastRollRefund, turnState }, items: { attack, attackDamage, attackUnarmed } },
+  ApiError: ApiErr,
 }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
@@ -24,7 +34,7 @@ vi.mock('react-i18next', async (orig) => {
 vi.mock('@/hooks/useD20Roll', async (orig) => ({
   ...(await orig() as object), useD20Roll: () => async () => undefined,
 }))
-vi.mock('sonner', () => ({ toast: { warning: toastWarning, error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { warning: toastWarning, error: toastError, success: vi.fn(), info: vi.fn() } }))
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => [9] }))
 
 const sneak = {
@@ -45,6 +55,7 @@ describe('useAttackRoll', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     rollOptions.mockResolvedValue([sneak])
+    turnState.mockResolvedValue({ attacks_allowed: 1, turn: { attacks_made: 0 } })
   })
 
   it('without options the attack call stays the legacy one', async () => {
@@ -228,5 +239,61 @@ describe('useAttackRoll', () => {
     await screen.findByText('character.roll_options.summary:+5')
     await userEvent.click(screen.getByText('character.roll_options.miss'))
     await done
+  })
+
+  describe('limite di attacchi', () => {
+    beforeEach(() => {
+      rollOptions.mockResolvedValue([])
+      attack.mockResolvedValue({ damage_total: 5 })
+      turnState.mockResolvedValue({ attacks_allowed: 1, turn: { attacks_made: 1 } })
+    })
+
+    it('asks before rolling and sends the confirmation', async () => {
+      const done = start()
+      await userEvent.click(await screen.findByText('character.attack.limit_confirm'))
+      await done
+      expect(attack).toHaveBeenCalledWith(1, 3, false, undefined, { ...CHOICE, confirm_extra_attack: true })
+    })
+
+    it('cancelling does not attack', async () => {
+      const done = start()
+      await userEvent.click(await screen.findByText('character.attack.limit_cancel'))
+      await expect(done).resolves.toBeNull()
+      expect(attack).not.toHaveBeenCalled()
+    })
+
+    it('the extra attack with the other hand does not count', async () => {
+      renderWithProviders(<RollOptionsHost />)
+      const { result } = renderHook(() => useAttackRoll())
+      const choice = { grip: 'one', attack_mode: 'offhand' } as const
+      await result.current.roll(1, 3, 'normal', false, choice)
+      expect(screen.queryByText('character.attack.limit_confirm')).toBeNull()
+      expect(attack).toHaveBeenCalledWith(1, 3, false, undefined, choice)
+    })
+  })
+
+  it('tells the player when the server refuses an incapacitated attack', async () => {
+    rollOptions.mockResolvedValue([])
+    attack.mockRejectedValue(new ApiErr(409, { code: 'incapacitated' }))
+    await expect(start()).resolves.toBeNull()
+    expect(toastError.mock.calls[0][0]).toBe('character.attack.incapacitated')
+  })
+
+  it('goes back to the normal attack after the other hand', async () => {
+    rollOptions.mockResolvedValue([])
+    attack.mockResolvedValue({ attack_id: null })
+    const { useWeaponChoices } = await import('@/store/weaponChoiceStore')
+    const choice = { grip: 'one', attack_mode: 'offhand' } as const
+    useWeaponChoices.getState().setChoice(3, choice)
+    const { result } = renderHook(() => useAttackRoll())
+    await result.current.roll(1, 3, 'normal', false, choice)
+    expect(useWeaponChoices.getState().choices[3].attack_mode).toBe('melee')
+  })
+
+  it('grapple and shove go through the limit and reach the server without a d20', async () => {
+    attackUnarmed.mockResolvedValue({ effect: 'grapple', save_dc: 13 })
+    const { result } = renderHook(() => useAttackRoll())
+    await expect(result.current.unarmedEffect(1, 'grapple')).resolves.toEqual({ effect: 'grapple', save_dc: 13 })
+    expect(attackUnarmed).toHaveBeenCalledWith(1, false, undefined, { effect: 'grapple' })
   })
 })

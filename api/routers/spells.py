@@ -33,10 +33,11 @@ from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
-from api.services.d20 import d20_records, d20_history_label, resolve_body
+from api.services.d20 import d20_records, d20_history_label, resolve_body, spend_inspiration_reroll
 from core.rules.modifiers import modifiers_for
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
+from api.services.rules_turn import refuse_if_incapacitated
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import best_caster, build_spellcasting_info
@@ -265,11 +266,10 @@ async def spell_attack(
         raise HTTPException(status_code=404, detail="Spell not found")
     if (spell.attack_save or "").strip().upper() != "ATK":
         raise HTTPException(status_code=400, detail="Spell is not an attack spell")
+    refuse_if_incapacitated(char)
 
     if body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
     elif spell.level == 0:
         # Cantrip: nessun consumo, ma la concentrazione si attiva comunque.
         if spell.is_concentration:
@@ -462,7 +462,7 @@ async def roll_spell_damage(
     option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
     total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
     total = scale_damage(total, opts.multiplier)
-    half_damage = (total + 1) // 2  # round up half damage (D&D 5e)
+    half_damage = total // 2  # per difetto, in entrambe le edizioni
 
     breakdown_parts = [f"{dice_count}d{sides}={main_rolls}"]
     if extra_rolls:

@@ -1,4 +1,5 @@
-import { askRollOptions } from '@/lib/rollOptions'
+import { notifyMutationError } from '@/lib/mutationError'
+import { canRerollInspiration, askRollOptions } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -124,6 +125,13 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       qc.setQueryData(['character', charId], result.character)
       setAttackState({ ...cast, result, wasRerolled: false })
       haptic.success()
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && (err.detail as { code?: string } | null)?.code === 'incapacitated') {
+        toast.error(t('character.attack.incapacitated'))
+      } else {
+        notifyMutationError()
+      }
     },
   })
 
@@ -366,7 +374,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           canRollDamage={!!attackState.spell.damage_dice && !attackState.result.is_fumble}
           onRollDamage={openDamageAfterAttack}
           onClose={() => setAttackState(null)}
-          inspirationAvailable={!!char?.heroic_inspiration}
+          inspirationAvailable={canRerollInspiration(char)}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
           onInspirationReroll={() => attackRerollMutation.mutate(attackState.spell)}

@@ -31,6 +31,23 @@ export type PromptRequest = {
 
 export const usePromptStore = create<{ request: PromptRequest | null }>(() => ({ request: null }))
 
+export const useAttackLimitStore = create<{ request: { made: number; allowed: number; answer: (go: boolean) => void } | null }>(
+  () => ({ request: null }),
+)
+
+/** Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito. */
+export function askAttackLimit(made: number, allowed: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    useAttackLimitStore.setState({
+      request: { made, allowed, answer: (go) => { useAttackLimitStore.setState({ request: null }); resolve(go) } },
+    })
+  })
+}
+
+/** Il rilancio è del 2024: nel 2014 l'Ispirazione si spende prima del tiro, come opzione. */
+export const canRerollInspiration = (char?: { heroic_inspiration?: boolean; rules_edition?: string } | null): boolean =>
+  !!char?.heroic_inspiration && char.rules_edition === '2024'
+
 /** Quante domande «Il tiro è riuscito?» sono aperte nei modali di esito. */
 export const useRefundStore = create<{ inline: number }>(() => ({ inline: 0 }))
 

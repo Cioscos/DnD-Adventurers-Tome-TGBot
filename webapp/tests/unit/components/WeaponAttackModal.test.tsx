@@ -183,4 +183,22 @@ describe('WeaponAttackModal', () => {
     render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
     expect(screen.queryByText(/munizion/i)).not.toBeInTheDocument()
   })
+
+  it('grapple and shove show the DC, without to-hit or damage', () => {
+    render(<WeaponAttackModal onClose={vi.fn()} inspirationAvailable onInspirationReroll={vi.fn()} result={{
+      weapon_name: 'x', to_hit_die: 0, to_hit_bonus: 0, to_hit_total: 0, is_critical: false, is_fumble: false,
+      damage_dice: '', damage_rolls: [], damage_bonus: 0, damage_total: 0, effect: 'grapple', save_dc: 13,
+    }} />)
+    expect(screen.getByTestId('unarmed-effect')).toBeInTheDocument()
+    expect(screen.queryByText('character.attack.to_hit')).toBeNull()
+    expect(screen.queryByTestId('inspiration-reroll')).toBeNull()
+  })
+
+  it('a grazed miss shows its damage even on a natural 1', () => {
+    render(<WeaponAttackModal onClose={vi.fn()} result={{
+      weapon_name: 'x', to_hit_die: 1, to_hit_bonus: 5, to_hit_total: 6, is_critical: false, is_fumble: true,
+      damage_dice: '2d6', damage_rolls: [], damage_bonus: 3, damage_total: 3, grazed: true,
+    }} />)
+    expect(screen.getByTestId('grazed-damage')).toHaveTextContent('3')
+  })
 })

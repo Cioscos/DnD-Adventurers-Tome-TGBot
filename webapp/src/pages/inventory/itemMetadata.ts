@@ -150,6 +150,8 @@ export type ItemFormData = {
   /** Dado a due mani (arma versatile); vuoto = non impostato. */
   versatile_dice: string
   weapon_category: '' | 'simple' | 'martial'
+  /** Chiave della tabella 2024 per un'arma dal nome libero; vuoto = dal nome. */
+  base_weapon: string
   // armor
   armor_type: string
   ac_value: string
@@ -194,6 +196,7 @@ export const emptyForm: ItemFormData = {
   magic_bonus: '',
   versatile_dice: '',
   weapon_category: '',
+  base_weapon: '',
   armor_type: 'light',
   ac_value: '11',
   stealth_disadvantage: false,
@@ -236,6 +239,7 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
         meta.versatile_dice = form.versatile_dice.trim()
       }
       if (form.weapon_category) meta.weapon_category = form.weapon_category
+      if (form.base_weapon) meta.base_weapon = form.base_weapon
       break
     case 'armor':
       meta = {
@@ -344,7 +348,7 @@ export function isItemFormValid(form: ItemFormData): boolean {
 /** Chiavi che il form riscrive da sé: tutte le altre finiscono in `extra_meta`. */
 const FORM_OWNED_KEYS = new Set<string>([
   'damage_dice', 'damage_type', 'weapon_type', 'properties', 'magic_bonus', 'versatile_dice',
-  'weapon_category', 'armor_type', 'ac_value', 'stealth_disadvantage', 'strength_req', 'ac_bonus',
+  'weapon_category', 'base_weapon', 'armor_type', 'ac_value', 'stealth_disadvantage', 'strength_req', 'ac_bonus',
   'subtype', 'effect', 'effects', 'tool_type', 'ability_modifiers', ...MAGIC_KEYS,
 ])
 
@@ -369,6 +373,7 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     magic_bonus: meta.magic_bonus ? String(meta.magic_bonus) : '',
     versatile_dice: meta.versatile_dice ? String(meta.versatile_dice) : '',
     weapon_category: meta.weapon_category === 'simple' || meta.weapon_category === 'martial' ? meta.weapon_category : '',
+    base_weapon: typeof meta.base_weapon === 'string' ? meta.base_weapon : '',
     armor_type: String(meta.armor_type ?? 'light'),
     ac_value: String(meta.ac_value ?? '11'),
     stealth_disadvantage: !!meta.stealth_disadvantage,

@@ -12,6 +12,7 @@ from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_armor_proficient
 from core.rules.types import Edition, Modifier, RuleContext
+from core.rules.weapons import ability_score, has_property, small_race
 
 INCAPACITATING = frozenset({"incapacitated", "paralyzed", "petrified", "stunned", "unconscious"})
 
@@ -133,6 +134,17 @@ def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
     return out
 
 
+def _heavy_weapon(ctx: RuleContext) -> list[Modifier]:
+    """2024: Forza o Destrezza sotto 13. 2014: creatura Piccola; una razza sconosciuta passa dalla conferma al tiro."""
+    if ctx.roll != "attack" or ctx.item is None or not has_property(ctx.item, "heavy"):
+        return []
+    if ctx.edition == "2024":
+        weak = ability_score(ctx.char, "dexterity" if ctx.attack_mode == "ranged" else "strength") < 13
+    else:
+        weak = small_race(ctx.char) is True
+    return [Modifier("disadvantage", 1, source="weapon:heavy")] if weak else []
+
+
 def _half_prof(ctx: RuleContext) -> int:
     """Mezza competenza per difetto su prove e TS, solo dove il personaggio non è già competente.
     La passiva parte dal bonus di abilità, che la comprende già."""
@@ -150,7 +162,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
     pairs: list[tuple[Modifier, RuleContext, str]] = [
         (m, ctx, m.source) for m in compute_condition_effects(ctx.char, ctx.edition, ctx)
     ]
-    pairs += [(m, ctx, m.source) for m in _armor_modifiers(ctx)]
+    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_heavy_weapon(ctx)]]
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         pairs += [(m, feature_ctx, m.source or f"feature:{spec.key}") for m in spec.modifiers]

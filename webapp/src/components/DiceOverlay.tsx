@@ -15,6 +15,7 @@ import { api } from '@/api/client'
 import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import type { DiceKind } from '@/dice/types'
+import { canRerollInspiration } from '@/lib/rollOptions'
 
 const KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const SIDES_FOR = {
@@ -306,7 +307,7 @@ export default function DiceOverlay() {
         <DicePoolResultModal
           charId={charId}
           initialResults={results}
-          inspirationAvailable={Boolean(char?.heroic_inspiration)}
+          inspirationAvailable={canRerollInspiration(char)}
           onClose={() => setResults(null)}
         />
       )}

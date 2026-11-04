@@ -9,17 +9,20 @@ import { haptic } from '@/auth/telegram'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
-import { applyAfterRoll, askRollOptions, hasDeferringOptions } from '@/lib/rollOptions'
+import { applyAfterRoll, askAttackLimit, askRollOptions, canRerollInspiration, hasDeferringOptions } from '@/lib/rollOptions'
 import type { RollOptionsQuery } from '@/api/client'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import type { CharacterFull } from '@/types'
 
 type AttackSource = { type: 'weapon'; itemId: number; choice: WeaponChoice } | { type: 'unarmed' }
+type UnarmedEffect = 'grapple' | 'shove'
 type AttackState = { result: WeaponAttackResult; source: AttackSource; wasRerolled: boolean }
 
 export interface WeaponAttackFlow {
   attackWeapon: (itemId: number, mode: RollMode) => void
   attackUnarmed: (mode: RollMode) => void
+  /** Colpo senz'armi 2024: afferrare o spingere, senza tiro per colpire. */
+  attackUnarmedEffect: (effect: UnarmedEffect) => void
   isWeaponPending: (itemId: number) => boolean
   isUnarmedPending: boolean
   /** Il chiamante monta il modal di esito una volta nel proprio JSX. */
@@ -34,13 +37,31 @@ export function useAttackRoll() {
   const rollD20 = useD20Roll()
   const rollDice = useAnimatedRoll()
 
-  const flow = (charId: number, itemId: number | null, choice?: WeaponChoice) => {
+  /** Oltre il limite dell'azione Attacco si passa solo confermando. `null`: il giocatore ha rinunciato. */
+  const limitConfirmation = async (charId: number): Promise<{ confirm_extra_attack?: true } | null> => {
+    const state = await api.characters.turnState(charId).catch(() => null)
+    if (!state || state.turn.attacks_made < state.attacks_allowed) return {}
+    return (await askAttackLimit(state.turn.attacks_made, state.attacks_allowed)) ? { confirm_extra_attack: true } : null
+  }
+
+  /** Il server può rifiutare ciò che la pagina non aveva ancora visto: lo si dice, senza errori muti. */
+  const refused = (err: unknown): boolean => {
+    const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+    if (code === 'incapacitated') toast.error(t('character.attack.incapacitated'))
+    else if (code === 'attack_limit') toast.error(t('character.attack.limit_title'))
+    else if (code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))
+    else return false
+    return true
+  }
+
+  const flow = (charId: number, itemId: number | null, choice?: WeaponChoice, confirm?: { confirm_extra_attack?: true }) => {
     const query: RollOptionsQuery = itemId === null
       ? { roll: 'attack' }
-      : { roll: 'attack', item_id: itemId, attack_mode: choice?.attack_mode, grip: choice?.grip }
+      : { roll: 'attack', item_id: itemId, attack_mode: choice?.attack_mode, grip: choice?.grip, ability: choice?.ability }
+    const confirmed = confirm?.confirm_extra_attack ? confirm : undefined
     const post = (reroll: boolean, roll: D20Roll | undefined) => (itemId === null
-      ? api.items.attackUnarmed(charId, reroll, roll)
-      : api.items.attack(charId, itemId, reroll, roll, choice))
+      ? api.items.attackUnarmed(charId, reroll, roll, confirmed)
+      : api.items.attack(charId, itemId, reroll, roll, confirmed ? { ...choice, ...confirmed } : choice))
     const secondStep = async (first: WeaponAttackResult, inspiration: boolean): Promise<WeaponAttackResult | null> => {
       let result = first
       let canReroll = inspiration
@@ -94,9 +115,32 @@ export function useAttackRoll() {
     roll: async (
       charId: number, itemId: number | null, mode: RollMode, inspiration: boolean, choice?: WeaponChoice,
     ): Promise<WeaponAttackResult | null> => {
-      const { query, post, secondStep } = flow(charId, itemId, choice)
+      const offhand = choice?.attack_mode === 'offhand'
+      const confirm = offhand ? {} : await limitConfirmation(charId)
+      if (!confirm) return null
+      const { query, post, secondStep } = flow(charId, itemId, choice, confirm)
       const before = await askRollOptions(charId, query)
-      return secondStep(await post(false, d20Arg(mode, await rollD20(mode), before)), inspiration)
+      const dice = await rollD20(mode)
+      let first: WeaponAttackResult
+      try {
+        first = await post(false, d20Arg(mode, dice, before))
+      } catch (err) {
+        if (refused(err)) return null
+        throw err
+      }
+      // L'altra mano vale per un attacco: il prossimo torna normale.
+      if (offhand && itemId !== null) useWeaponChoices.getState().setChoice(itemId, { ...choice!, attack_mode: 'melee' })
+      return secondStep(first, inspiration)
+    },
+    unarmedEffect: async (charId: number, effect: UnarmedEffect): Promise<WeaponAttackResult | null> => {
+      const confirm = await limitConfirmation(charId)
+      if (!confirm) return null
+      try {
+        return await api.items.attackUnarmed(charId, false, undefined, { effect, ...confirm })
+      } catch (err) {
+        if (refused(err)) return null
+        throw err
+      }
     },
     /** Ritira con l'ispirazione dal modal di esito: anche dopo un 1 naturale il secondo tempo va proposto. */
     reroll: async (charId: number, itemId: number | null, choice?: WeaponChoice): Promise<WeaponAttackResult | null> => {
@@ -117,15 +161,17 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const attack = useAttackRoll()
-  const inspiration = !!char?.heroic_inspiration
+  const inspiration = canRerollInspiration(char)
 
   const weaponAttack = useMutation({
+    // La scelta usata per il rilancio è quella del tiro: l'altra mano si spegne dopo il primo.
+    onMutate: ({ itemId }: { itemId: number; mode: RollMode }) => ({ choice: choiceOf(choices, itemId) }),
     mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
       attack.roll(charId, itemId, mode, inspiration, choiceOf(choices, itemId)),
-    onSuccess: (result, { itemId }) => {
+    onSuccess: (result, { itemId }, context) => {
       if (result) {
         setAttackState({
-          result, source: { type: 'weapon', itemId, choice: choiceOf(choices, itemId) }, wasRerolled: false,
+          result, source: { type: 'weapon', itemId, choice: context.choice }, wasRerolled: false,
         })
       }
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -139,6 +185,15 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
     onSuccess: (result) => {
       if (result) setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+      haptic.success()
+    },
+  })
+
+  const unarmedEffect = useMutation({
+    mutationFn: (effect: UnarmedEffect) => attack.unarmedEffect(charId, effect),
+    onSuccess: (result) => {
+      if (result) setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
@@ -168,7 +223,7 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
     <WeaponAttackModal
       result={attackState.result}
       onClose={() => setAttackState(null)}
-      inspirationAvailable={!!char?.heroic_inspiration}
+      inspirationAvailable={inspiration}
       isRerolling={rerollAttack.isPending}
       wasRerolled={attackState.wasRerolled}
       onInspirationReroll={() => rerollAttack.mutate(attackState.source)}
@@ -178,6 +233,7 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   return {
     attackWeapon: (itemId, mode) => weaponAttack.mutate({ itemId, mode }),
     attackUnarmed: (mode) => unarmedAttack.mutate(mode),
+    attackUnarmedEffect: (effect) => unarmedEffect.mutate(effect),
     isWeaponPending: (itemId) => weaponAttack.isPending && weaponAttack.variables?.itemId === itemId,
     isUnarmedPending: unarmedAttack.isPending,
     elements,

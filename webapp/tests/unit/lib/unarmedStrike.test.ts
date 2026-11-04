@@ -45,4 +45,20 @@ describe('unarmedDamageDice', () => {
       ]),
     ).toBe('1d10')
   })
+
+  it('uses the 2024 dice when the edition says so', () => {
+    expect(martialArtsDie(1, '2024')).toBe('1d6')
+    expect(martialArtsDie(17, '2024')).toBe('1d12')
+    expect(unarmedDamageDice([{ class_name: 'monk', level: 5 }], '2024')).toBe('1d8')
+  })
+
+  it('armor, shield or a non-monk weapon cancel Martial Arts', () => {
+    const monk = [{ class_name: 'monk', level: 5 }]
+    const worn = (item_type: string, item_metadata = {}) => ({ item_type, is_equipped: true, item_metadata })
+    expect(unarmedDamageDice(monk, '2014', [worn('armor')])).toBe('1')
+    expect(unarmedDamageDice(monk, '2014', [worn('shield')])).toBe('1')
+    expect(unarmedDamageDice(monk, '2014', [worn('weapon', { weapon_category: 'martial' })])).toBe('1')
+    expect(unarmedDamageDice(monk, '2014', [worn('weapon', { weapon_category: 'simple' })])).toBe('1d6')
+    expect(unarmedDamageDice(monk, '2024', [worn('weapon', { weapon_category: 'martial', properties: ['prop_light'] })])).toBe('1d8')
+  })
 })

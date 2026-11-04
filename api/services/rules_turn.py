@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 
 from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
+from core.rules.modifiers import is_incapacitated
 from core.rules.types import TURN_FLAGS as _FLAGS
 
 SLOTS = (*_FLAGS, "attack")
@@ -92,8 +93,11 @@ def clear_once_per_turn(char) -> list[str]:
 def reset_turn(char) -> dict:
     """Nuovo turno: tutto a zero (anche reazione, azioni extra e attacco in sospeso).
 
-    ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014)."""
-    _save(char, {**_default(), "damaged": get_turn(char)["damaged"]})
+    ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014). ``vex`` arriva fino alla
+    fine del turno seguente a quello del colpo."""
+    previous = get_turn(char)
+    vex = {"vex": previous["vex"] - 1} if previous.get("vex", 0) > 1 else {}
+    _save(char, {**_default(), "damaged": previous["damaged"], **vex})
     return char.turn_state
 
 
@@ -102,6 +106,12 @@ def set_damaged(char, value: bool = True) -> None:
     st = get_turn(char)
     if st["damaged"] != value:
         _save(char, {**st, "damaged": value})
+
+
+def refuse_if_incapacitated(char) -> None:
+    """Chi non può compiere azioni né reazioni non attacca."""
+    if is_incapacitated(char):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "incapacitated"})
 
 
 def attacks_allowed(char) -> int:

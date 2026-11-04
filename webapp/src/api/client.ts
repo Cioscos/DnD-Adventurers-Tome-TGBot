@@ -149,6 +149,11 @@ export type OptionResult = {
   /** Danno a parte: non scala col moltiplicatore e non si somma ai dadi extra. */
   separate_rolls?: number[]
   separate_total?: number
+  /** Esiti da mostrare al giocatore (CD, durata). */
+  effects?: { it: string; en: string }[]
+  /** Secondo tiro per colpire dell'opzione, fatto dal server. */
+  second_die?: number | null
+  second_total?: number | null
   damage_before?: number | null
   damage_after?: number | null
 }
@@ -211,6 +216,11 @@ export type WeaponAttackResult = {
   attack_id?: string
   /** Colpo a segno per un privilegio, qualunque sia il d20. */
   forced_hit?: boolean
+  /** Mancato, con il danno di un'opzione (Graze). */
+  grazed?: boolean
+  /** Colpo senz'armi 2024: niente tiro per colpire, il bersaglio fa un TS contro `save_dc`. */
+  effect?: 'grapple' | 'shove'
+  save_dc?: number
 }
 
 /** Il tiro dopo un privilegio usato a esito noto. */
@@ -390,10 +400,18 @@ function requestFormDataWithProgress<T>(
 // Characters
 // ---------------------------------------------------------------------------
 
+type AttackChoice = {
+  grip?: 'one' | 'two'
+  attack_mode?: 'melee' | 'thrown' | 'offhand'
+  ability?: 'strength' | 'dexterity'
+  confirm_extra_attack?: boolean
+  effect?: 'grapple' | 'shove'
+}
+
 function attackBody(
   withInspiration: boolean,
   roll: D20Roll | undefined,
-  choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+  choice?: AttackChoice,
 ): string | undefined {
   const fields = roll === undefined ? {} : d20Fields(roll)
   if (!withInspiration && roll === undefined && !choice) return undefined
@@ -784,8 +802,7 @@ export const api = {
         body: JSON.stringify({ spell_index: spellIndex }),
       }),
     attack: (
-      charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll,
-      choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+      charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll, choice?: AttackChoice,
     ) =>
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
@@ -796,10 +813,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ options: choice.options, option_inputs: choice.option_inputs }),
       }),
-    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll) =>
+    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll, choice?: AttackChoice) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {
         method: 'POST',
-        body: attackBody(withInspiration, die),
+        body: attackBody(withInspiration, die, choice),
       }),
     use: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/use`, {

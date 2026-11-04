@@ -69,6 +69,7 @@ async def test_inspiration_required_when_absent(client):
 
 async def test_inspiration_is_consumed(client):
     cid = await _fighter(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     assert r.status_code == 200, r.text
     r = await _roll(client, cid, "strength", die=15, with_inspiration=True)

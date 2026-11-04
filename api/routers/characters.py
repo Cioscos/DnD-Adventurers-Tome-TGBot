@@ -54,7 +54,7 @@ from api.routers.sessions import active_encounter_row
 from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
-from api.services.d20 import d20_history_label, d20_records, resolve_body
+from api.services.d20 import d20_history_label, d20_records, resolve_body, spend_inspiration_reroll
 from api.services.rules_options import (
     LAST_ROLL_FIELDS,
     merge_options,
@@ -634,9 +634,7 @@ async def roll_skill(
     char = await _get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     bonus = await skill_bonus(session, char, skill_name)
 
@@ -698,9 +696,7 @@ async def roll_saving_throw(
     char = await _get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     bonus = await saving_throw_bonus(session, char, ability)
 
@@ -813,7 +809,7 @@ async def roll_pending_save(
         if not char.heroic_inspiration:
             raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
     if reroll:
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     bonus = await saving_throw_bonus(session, char, ps.ability)
     applied = modifiers_for(char, "save", ability=ps.ability)

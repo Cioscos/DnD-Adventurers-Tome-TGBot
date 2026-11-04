@@ -6,14 +6,26 @@ type Props = { notes?: string[]; autoFail?: boolean; className?: string; charId?
 
 /** Perché il tiro ha quel modo o quel bonus: condizioni, armatura, privilegi. */
 export default function RollNotes({ notes = [], autoFail = false, className = '', charId, optionResult }: Props) {
+  const { t, i18n } = useTranslation()
   const extra = optionResult?.extra_rolls ?? []
   const separate = optionResult?.separate_rolls ?? []
-  if (notes.length === 0 && !autoFail && extra.length === 0 && separate.length === 0) return null
+  const effects = optionResult?.effects ?? []
+  const second = optionResult?.second_total
+  if (notes.length === 0 && !autoFail && extra.length === 0 && separate.length === 0 && effects.length === 0 && second == null) return null
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}
       {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" rolls={extra} total={optionResult!.extra_total} className={className} />}
+      {second != null && (
+        <span className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
+          {t('character.roll_options.second_attack', { die: optionResult!.second_die, total: second })}
+        </span>
+      )}
       {separate.length > 0 && <ExtraDice testId="roll-option-separate" label="separate_dice" rolls={separate} total={optionResult!.separate_total ?? 0} className={className} />}
+      {effects.map((e) => (
+        <span key={e.it} className={`block text-xs font-body text-dnd-text ${className}`}>{e[lang]}</span>
+      ))}
     </>
   )
 }

@@ -17,7 +17,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from api.services import telegram_notify
 from api.routers._helpers import initiative_bonus
-from api.services.d20 import d20_records, resolve_body, resolve_d20
+from api.services.d20 import d20_records, resolve_body, resolve_d20, spend_inspiration_reroll
 from api.services.dice_stats import record_dice
 from api.services.rules_options import (
     LAST_ROLL_FIELDS,
@@ -179,9 +179,7 @@ async def post_dice_result(
     char = await _get_owned(char_id, user_id, session)
 
     if body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     record_dice(char, [(e.kind, e.value) for e in body.rolls])
     _log_roll(session, char, notation, rolls, total, body.modifier, body.source or "manual", body.label,

@@ -13,6 +13,8 @@ export interface StandardAction {
   by_edition?: Partial<Record<Edition, { it: Text; en: Text; skills?: string[] }>>
   /** Abilità tirabili dall'azione (chiavi del backend), da `POST /skills/{skill}/roll`. */
   skills?: string[]
+  /** Sostituisce un attacco dell'azione Attacco: il tiro lo conta nel turno. */
+  spends_attack?: boolean
 }
 
 /** Azioni standard 5e per edizione: elenco localizzato; nessuna azione bonus fissa. */
@@ -20,6 +22,12 @@ export const STANDARD_ACTIONS: StandardAction[] = [
   { id: 'attack', bucket: 'action',
     it: { name: 'Attacco', desc: 'Effettui un attacco in mischia o a distanza.' },
     en: { name: 'Attack', desc: 'Make a melee or ranged attack.' } },
+  { id: 'grapple', bucket: 'action', editions: ['2014'], skills: ['athletics'], spends_attack: true,
+    it: { name: 'Lottare', desc: 'Sostituisce un attacco: Atletica contro Atletica o Acrobazia del bersaglio. Se vinci, è afferrato.' },
+    en: { name: 'Grapple', desc: 'Replaces one attack: Athletics against the target\'s Athletics or Acrobatics. If you win, it is grappled.' } },
+  { id: 'shove', bucket: 'action', editions: ['2014'], skills: ['athletics'], spends_attack: true,
+    it: { name: 'Spingere', desc: 'Sostituisce un attacco: Atletica contro Atletica o Acrobazia del bersaglio. Se vinci, cade prono o arretra di 1,5 m.' },
+    en: { name: 'Shove', desc: 'Replaces one attack: Athletics against the target\'s Athletics or Acrobatics. If you win, it falls prone or moves back 5 ft.' } },
   { id: 'cast', bucket: 'action',
     it: { name: 'Lanciare un incantesimo', desc: 'Lanci un incantesimo con tempo di lancio di 1 azione.' },
     en: { name: 'Cast a Spell', desc: 'Cast a spell with a casting time of 1 action.' },

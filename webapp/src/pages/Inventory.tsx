@@ -45,6 +45,7 @@ import GiveSheet from '@/pages/inventory/GiveSheet'
 import { useTradePartners } from '@/hooks/useTradePartners'
 import ContainerForm from '@/pages/inventory/ContainerForm'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
+import { canRerollInspiration } from '@/lib/rollOptions'
 
 const COIN_KEYS = ['platinum', 'gold', 'electrum', 'silver', 'copper'] as const
 const COIN_ABBR = { platinum: 'pp', gold: 'gp', electrum: 'ep', silver: 'sp', copper: 'cp' } as const
@@ -352,12 +353,13 @@ export default function Inventory() {
   const attack = useAttackRoll()
 
   const attackMutation = useMutation({
+    onMutate: ({ itemId }: { itemId: number; mode: RollMode }) => ({ choice: choiceOf(weaponChoices, itemId) }),
     mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      attack.roll(charId, itemId, mode, !!char?.heroic_inspiration, choiceOf(weaponChoices, itemId)),
-    onSuccess: (result, { itemId }) => {
+      attack.roll(charId, itemId, mode, canRerollInspiration(char), choiceOf(weaponChoices, itemId)),
+    onSuccess: (result, { itemId }, context) => {
       if (result) {
         setAttackState({
-          result, itemId, choice: choiceOf(weaponChoices, itemId), wasRerolled: false,
+          result, itemId, choice: context.choice, wasRerolled: false,
         })
       }
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -846,6 +848,7 @@ export default function Inventory() {
                             onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
                             onAttack={(mode) => attackMutation.mutate({ itemId: item.id, mode })}
+                            char={char}
                             weaponChoice={choiceOf(weaponChoices, item.id)}
                             onWeaponChoice={(c) => setWeaponChoice(item.id, c)}
                             onUse={() => setUseTarget(item)}
@@ -882,6 +885,7 @@ export default function Inventory() {
       {showAdd && (
         <ItemForm
           initialData={editingItem}
+          edition={char?.rules_edition}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
@@ -921,7 +925,7 @@ export default function Inventory() {
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}
-          inspirationAvailable={Boolean(char?.heroic_inspiration)}
+          inspirationAvailable={canRerollInspiration(char)}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
           onInspirationReroll={() => attackRerollMutation.mutate({ itemId: attackState.itemId, choice: attackState.choice })}

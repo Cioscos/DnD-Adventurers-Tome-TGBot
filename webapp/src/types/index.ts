@@ -185,6 +185,8 @@ export interface Item {
   container_id?: number | null
   /** Solo per i contenitori, nelle risposte CharacterFull. */
   container_stats?: ContainerStats | null
+  /** Proprietà di maestria 2024 dell'arma: si mostra solo ai personaggi 2024. */
+  mastery?: string
 }
 
 export interface ContainerStats {

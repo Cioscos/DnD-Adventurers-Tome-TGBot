@@ -103,6 +103,7 @@ async def test_monk_crit_doubles_martial_arts_dice(client, monkeypatch):
 
 async def test_unarmed_consumes_inspiration(client, monkeypatch):
     cid = await _create_plain(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     ri = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     assert ri.status_code == 200, ri.text
     _patch_sequence(monkeypatch, [10])

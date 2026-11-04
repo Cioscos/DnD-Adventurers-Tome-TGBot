@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RollOption } from '@/api/client'
-import { optionHints, usePromptStore, type PromptRequest } from '@/lib/rollOptions'
+import { optionHints, useAttackLimitStore, usePromptStore, type PromptRequest } from '@/lib/rollOptions'
 import { AfterRollButton } from '@/components/rules/AfterRollOptions'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -11,7 +11,28 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 /** Da montare una volta sola: ogni flusso di tiro passa da `askRollOptions`. */
 export function RollOptionsHost() {
   const request = usePromptStore((s) => s.request)
-  return request ? <RollOptionsPrompt key={[...request.options, ...request.afterRoll].map((o) => o.key).join()} request={request} /> : null
+  const limit = useAttackLimitStore((s) => s.request)
+  return (
+    <>
+      {request && <RollOptionsPrompt key={[...request.options, ...request.afterRoll].map((o) => o.key).join()} request={request} />}
+      {limit && <AttackLimitPrompt {...limit} />}
+    </>
+  )
+}
+
+function AttackLimitPrompt({ made, allowed, answer }: { made: number; allowed: number; answer: (go: boolean) => void }) {
+  const { t } = useTranslation()
+  return (
+    <Sheet open onClose={() => answer(false)} zClassName="z-[70]" title={t('character.attack.limit_title')}>
+      <div className="p-5 space-y-3">
+        <p className="text-sm font-body text-dnd-text">{t('character.attack.limit_text', { made, allowed })}</p>
+        <div className="flex gap-2">
+          <Button variant="secondary" fullWidth onClick={() => answer(false)}>{t('character.attack.limit_cancel')}</Button>
+          <Button variant="primary" fullWidth onClick={() => answer(true)}>{t('character.attack.limit_confirm')}</Button>
+        </div>
+      </div>
+    </Sheet>
+  )
 }
 
 function RollOptionsPrompt({ request }: { request: PromptRequest }) {
