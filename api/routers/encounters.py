@@ -39,6 +39,7 @@ from api.services.condition_effects import (
 )
 from api.services.effects import apply_conditions
 from api.services.durations import process_edge
+from api.services.rules_turn import reset_turn
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -419,6 +420,10 @@ async def start_encounter(
     enc.active_combatant_id = first.id if first else None
     db.add(_system_feed_message(session, "⚔️ Combattimento iniziato"))
     _touch(session)
+    if first is not None and first.kind == "pc" and first.character_id:
+        first_char = await db.get(Character, first.character_id)
+        if first_char is not None:
+            reset_turn(first_char)  # il primo turno non passa da process_edge
     await db.flush()
     if first is not None:
         await _notify_turn(enc, first)

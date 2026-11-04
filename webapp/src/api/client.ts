@@ -51,6 +51,8 @@ import type {
   SessionRecap,
   CampaignStash,
   TurnState,
+  TurnBlock,
+  TurnSlot,
   PendingSaveRollResult,
   GameSessionLive,
   HistoryEntry,
@@ -464,6 +466,10 @@ export const api = {
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
     turnState: (id: number) =>
       request<TurnState>(`/characters/${id}/turn-state`),
+    turnUse: (id: number, slot: TurnSlot, used: boolean = true) =>
+      request<TurnBlock>(`/characters/${id}/turn/use`, { method: 'POST', body: JSON.stringify({ slot, used }) }),
+    turnNew: (id: number) =>
+      request<TurnBlock>(`/characters/${id}/turn/new`, { method: 'POST' }),
     pendingSaves: {
       roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false) =>
         request<PendingSaveRollResult>(`/characters/${id}/pending-saves/${saveId}/roll`, {

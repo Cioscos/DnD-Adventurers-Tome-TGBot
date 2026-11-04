@@ -1,4 +1,4 @@
-import { STANDARD_ACTIONS } from '@/data/standardActions'
+import { standardActionsFor } from '@/data/standardActions'
 import type { ActionType, CharacterFull } from '@/types'
 
 export interface TurnEntry {
@@ -46,6 +46,6 @@ export function groupForTurn(char: CharacterFull): TurnGroups {
     g[bucket].push({ kind: 'ability', id: String(a.id), label: a.name })
   }
 
-  for (const s of STANDARD_ACTIONS) g[s.bucket].push({ kind: 'standard', id: s.id, label: s.it.name })
+  for (const s of standardActionsFor(char.rules_edition)) g[s.bucket].push({ kind: 'standard', id: s.id, label: s.it.name })
   return g
 }

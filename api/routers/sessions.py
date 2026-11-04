@@ -53,6 +53,7 @@ from api.services.recap import close_game_session, dice_baseline, record_departu
 from api.services.homebrew.dispatcher import dispatch
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
 from api.services.condition_effects import character_effect_payload
+from api.services.rules_turn import attacks_allowed, get_turn
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Campaign,
@@ -312,17 +313,20 @@ async def character_turn_state(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TurnState:
-    char = await db.get(Character, character_id)
+    char = (await db.execute(select(Character).where(Character.id == character_id)
+                             .options(selectinload(Character.classes)))).scalar_one_or_none()
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
     if char.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     _, pendings = await character_effect_payload(db, character_id)
+    block = {"turn": get_turn(char), "attacks_allowed": attacks_allowed(char)}
     row = await active_encounter_row(db, character_id)
     if row is None:
-        return TurnState(in_encounter=False, is_my_turn=False, pending_saves=pendings)
+        return TurnState(in_encounter=False, is_my_turn=False, pending_saves=pendings, **block)
     enc, combatant_id = row
     return TurnState(
+        **block,
         pending_saves=pendings,
         in_encounter=True,
         is_my_turn=enc.active_combatant_id == combatant_id,

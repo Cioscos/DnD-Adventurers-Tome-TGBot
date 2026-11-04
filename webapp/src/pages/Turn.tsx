@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, type RollMode } from '@/api/client'
 import { isUnlimitedFeature } from '@/lib/abilityUses'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
@@ -19,13 +19,16 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
 import { unarmedDamageDice } from '@/lib/unarmedStrike'
-import { STANDARD_ACTIONS } from '@/data/standardActions'
+import { standardActionsFor } from '@/data/standardActions'
+import RollResultModal, { type RollResult } from '@/components/RollResultModal'
+import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
+import type { TurnBlock, TurnSlot, TurnState } from '@/types'
 import { LEDGER_TITLE } from '@/styles/ledger'
 import type { CharacterFull } from '@/types'
 
 type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
-const NONE_USED: Record<Bucket, boolean> = { action: false, bonus_action: false, reaction: false }
+const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -33,7 +36,7 @@ export default function Turn() {
   const charId = Number(id)
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
-  const [used, setUsed] = useState(NONE_USED)
+  const [skillRoll, setSkillRoll] = useState<{ result: RollResult; skill: string } | null>(null)
   const [otherOpen, setOtherOpen] = useState(false)
   const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
   const choices = useWeaponChoices((s) => s.choices)
@@ -43,16 +46,27 @@ export default function Turn() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
-  const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me() })
-  const { data: turn } = useTurnState(charId, session?.status === 'active')
+  const { data: turn } = useTurnState(charId, true)
 
-  // Un nuovo turno (false -> true) azzera gli indicatori "usata".
-  const wasMyTurn = useRef(false)
-  const isMyTurn = !!turn?.is_my_turn
-  useEffect(() => {
-    if (isMyTurn && !wasMyTurn.current) setUsed(NONE_USED)
-    wasMyTurn.current = isMyTurn
-  }, [isMyTurn])
+  // Lo stato del turno vive sul server: sopravvive a ricarica e cambio pagina.
+  const block = turn?.turn
+  const used: Record<Bucket, boolean> = {
+    action: !!block?.action_used, bonus_action: !!block?.bonus_used, reaction: !!block?.reaction_used,
+  }
+  const setBlock = (b: TurnBlock) =>
+    qc.setQueryData(['turn-state', charId], (old: TurnState | undefined) => old && { ...old, turn: b })
+  const useSlot = useMutation({
+    mutationFn: ({ slot, on = true }: { slot: TurnSlot; on?: boolean }) => api.characters.turnUse(charId, slot, on),
+    onSuccess: setBlock,
+    onError: () => qc.invalidateQueries({ queryKey: ['turn-state', charId] }),
+  })
+  const newTurn = useMutation({ mutationFn: () => api.characters.turnNew(charId), onSuccess: setBlock })
+  const rollD20 = useD20Roll()
+  const skillMutation = useMutation({
+    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode }) =>
+      ({ result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode))), skill }),
+    onSuccess: ({ result, skill }) => setSkillRoll({ result: { ...result, description: undefined }, skill }),
+  })
 
   const weaponFlow = useWeaponAttackFlow(charId, char)
   const castFlow = useCastFlow(charId, char)
@@ -74,16 +88,36 @@ export default function Turn() {
 
   const groups = groupForTurn(char)
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
-  const attacks = char.attacks_per_action ?? 1
+  const attacks = turn?.attacks_allowed ?? char.attacks_per_action ?? 1
+  const stdActions = standardActionsFor(char.rules_edition)
+  const countAttack = () => useSlot.mutate({ slot: 'attack' })
 
   const renderEntry = (e: TurnEntry, c: CharacterFull) => {
     const key = `${e.kind}:${e.id}`
     if (e.kind === 'standard') {
-      const std = STANDARD_ACTIONS.find((s) => s.id === e.id)
+      const std = stdActions.find((s) => s.id === e.id)
       return (
         <li key={key} className="px-1 py-2">
           <p className="font-cinzel text-sm text-dnd-text">{std?.[lang].name ?? e.label}</p>
           <p className="text-xs text-dnd-text-muted">{std?.[lang].desc}</p>
+          {(std?.skills?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {std?.skills?.map((sk) => (
+                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode })}
+                  pending={skillMutation.isPending && skillMutation.variables?.skill === sk}
+                  ariaLabel={t(`character.skills.${sk}`)}
+                  className={`${BTN} border-dnd-border text-dnd-text`}>
+                  {t(`character.skills.${sk}`)}
+                </RollButton>
+              ))}
+            </div>
+          )}
+          {(e.id === 'use_object') && (
+            <Button size="sm" variant="secondary" className="mt-2" disabled={!!block?.free_interaction_used}
+              onClick={() => useSlot.mutate({ slot: 'free_interaction' })}>
+              {block?.free_interaction_used ? t('character.turn.free_interaction_used') : t('character.turn.free_interaction')}
+            </Button>
+          )}
         </li>
       )
     }
@@ -96,7 +130,7 @@ export default function Turn() {
         label = t('character.turn.unarmed')
         extra = <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes) })}</p>
         control = (
-          <RollButton onRoll={weaponFlow.attackUnarmed} pending={weaponFlow.isUnarmedPending}
+          <RollButton onRoll={(mode) => { countAttack(); weaponFlow.attackUnarmed(mode) }} pending={weaponFlow.isUnarmedPending}
             ariaLabel={`${t('character.turn.attack')} ${label}`} className={crimson}>
             <Target size={14} />{t('character.turn.attack')}
           </RollButton>
@@ -105,7 +139,7 @@ export default function Turn() {
         const item = c.items.find((i) => String(i.id) === e.id)
         const itemId = Number(e.id)
         control = (
-          <RollButton onRoll={(mode) => weaponFlow.attackWeapon(itemId, mode)} pending={weaponFlow.isWeaponPending(itemId)}
+          <RollButton onRoll={(mode) => { countAttack(); weaponFlow.attackWeapon(itemId, mode) }} pending={weaponFlow.isWeaponPending(itemId)}
             ariaLabel={`${t('character.turn.attack')} ${label}`} className={crimson}>
             <Target size={14} />{t('character.turn.attack')}
           </RollButton>
@@ -184,7 +218,7 @@ export default function Turn() {
           <Pressable
             aria-pressed={isUsed}
             aria-label={`${t('character.turn.mark_used')}: ${title}`}
-            onClick={() => setUsed((u) => ({ ...u, [bucket]: !u[bucket] }))}
+            onClick={() => useSlot.mutate({ slot: SLOT_OF[bucket], on: !isUsed })}
             className={`inline-flex items-center gap-1 min-h-11 px-3 rounded-lg border text-xs font-medium ${
               isUsed
                 ? 'border-dnd-gold-dim text-dnd-gold-bright'
@@ -204,7 +238,7 @@ export default function Turn() {
     <Layout title={t('character.turn.title')} backTo={`/char/${charId}`} group="combat" page="turn">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm text-dnd-text font-body tabular-nums">
-          {t('character.turn.attacks_per_action', { n: attacks })}
+          {t('character.turn.attacks_made', { made: block?.attacks_made ?? 0, n: attacks })}
           {turn?.in_encounter && turn.round != null && (
             <span className="ml-3 text-dnd-text-muted">{t('character.turn.round', { n: turn.round })}</span>
           )}
@@ -217,7 +251,7 @@ export default function Turn() {
               {t('character.turn.end_round')}
             </Button>
           )}
-          <Button size="sm" variant="secondary" icon={<RotateCcw size={14} />} onClick={() => setUsed(NONE_USED)}>
+          <Button size="sm" variant="secondary" icon={<RotateCcw size={14} />} loading={newTurn.isPending} onClick={() => newTurn.mutate()}>
             {t('character.turn.new_turn')}
           </Button>
         </div>
@@ -247,6 +281,10 @@ export default function Turn() {
         {otherOpen && sectionBody(t('character.turn.section_other'), groups.other)}
       </section>
 
+      {skillRoll && (
+        <RollResultModal result={skillRoll.result} title={t(`character.skills.${skillRoll.skill}`)}
+          onClose={() => setSkillRoll(null)} />
+      )}
       {weaponFlow.elements}
       {castFlow.elements}
     </Layout>

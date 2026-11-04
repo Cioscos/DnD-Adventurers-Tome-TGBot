@@ -932,7 +932,9 @@
     "turn": {
       "title": "Turno",
       "round": "Round {{n}}",
-      "attacks_per_action": "Attacchi per azione: {{n}}",
+      "attacks_made": "Attacchi: {{made}}/{{n}}",
+      "free_interaction": "Interazione gratuita",
+      "free_interaction_used": "Interazione usata",
       "section_attacks": "Attacchi",
       "section_action": "Azione",
       "section_bonus_action": "Azione bonus",

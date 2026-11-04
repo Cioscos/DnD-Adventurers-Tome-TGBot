@@ -75,3 +75,14 @@ describe('groupForTurn', () => {
     expect(all).not.toContain('ability:21')
   })
 })
+
+describe('azioni standard per edizione', () => {
+  const std = (c: CharacterFull) => groupForTurn(c).action.filter((e) => e.kind === 'standard').map((e) => e.id)
+  it('2014 non ha Influenzare e Studiare', () => {
+    expect(std({ ...char, rules_edition: '2014' } as CharacterFull)).not.toEqual(expect.arrayContaining(['influence']))
+    expect(std({ ...char, rules_edition: '2014' } as CharacterFull)).not.toContain('study')
+  })
+  it('2024 aggiunge Influenzare e Studiare', () => {
+    expect(std({ ...char, rules_edition: '2024' } as CharacterFull)).toEqual(expect.arrayContaining(['influence', 'study']))
+  })
+})

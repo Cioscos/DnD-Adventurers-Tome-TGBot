@@ -816,7 +816,24 @@ export interface SessionFeedResponse {
   has_more: boolean
 }
 
+export interface TurnBlock {
+  action_used: boolean
+  bonus_used: boolean
+  reaction_used: boolean
+  attacks_made: number
+  extra_actions: number
+  once_per_turn: string[]
+  spell_slot_cast: boolean
+  bonus_spell_cast: boolean
+  free_interaction_used: boolean
+  pending_attack?: Record<string, unknown> | null
+}
+
+export type TurnSlot = 'action' | 'bonus' | 'reaction' | 'free_interaction' | 'spell_slot' | 'bonus_spell' | 'attack'
+
 export interface TurnState {
+  turn: TurnBlock
+  attacks_allowed: number
   in_encounter: boolean
   is_my_turn: boolean
   round: number | null

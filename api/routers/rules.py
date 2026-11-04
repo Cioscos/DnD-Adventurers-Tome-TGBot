@@ -1,11 +1,17 @@
 """Cataloghi delle regole di classe (sola lettura)."""
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_lang, get_current_user
+from api.database import get_db
+from api.schemas.session import TurnBlock
+from api.services.rules_turn import release, reset_turn, spend
+from core.db.models import Character
 from api.schemas.rules import ProficiencyGrantRead, SubclassRead
 from core.data.spell_slots import normalize_class_name
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
@@ -31,3 +37,41 @@ async def class_proficiency_grant(
     """Competenze che dà la classe (con elenco e numero delle abilità da scegliere)."""
     class_key = normalize_class_name(class_key) or class_key
     return ProficiencyGrantRead(**grant_to_dict(class_proficiencies(edition, class_key, as_multiclass), lang))
+
+
+# ---------------------------------------------------------------------------
+# Stato del turno
+# ---------------------------------------------------------------------------
+
+turn_router = APIRouter(prefix="/characters", tags=["rules"])
+
+
+class TurnUse(BaseModel):
+    slot: Literal["action", "bonus", "reaction", "free_interaction", "spell_slot", "bonus_spell", "attack"]
+    used: bool = True  # False = annulla (correzione manuale)
+
+
+async def _owned_char(db: AsyncSession, char_id: int, user_id: int) -> Character:
+    char = await db.get(Character, char_id)
+    if char is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Character not found")
+    if char.user_id != user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    return char
+
+
+@turn_router.post("/{char_id}/turn/use", response_model=TurnBlock)
+async def turn_use(
+    char_id: int, body: TurnUse, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    char = await _owned_char(db, char_id, user_id)
+    return (spend if body.used else release)(char, body.slot)
+
+
+@turn_router.post("/{char_id}/turn/new", response_model=TurnBlock)
+async def turn_new(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    return reset_turn(await _owned_char(db, char_id, user_id))

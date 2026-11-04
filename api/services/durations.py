@@ -13,6 +13,7 @@ from api.services.condition_effects import (
     UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
 from api.services.effects import _add_history
+from api.services.rules_turn import reset_turn
 
 
 def is_concentrating(char: Character) -> bool:
@@ -131,6 +132,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             expired.append(await expire_effect(db, eff, "Durata scaduta: {label}", undo.expired))
 
     if char is not None and edge == "start":
+        reset_turn(char)
         entry, ended = _tick_concentration(db, char)
         if entry is not None:
             undo.concentration = entry

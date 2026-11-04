@@ -219,7 +219,22 @@ class GMGrantItemResponse(BaseModel):
     results: list[GMGrantItemResult]
 
 
+class TurnBlock(BaseModel):
+    action_used: bool = False
+    bonus_used: bool = False
+    reaction_used: bool = False
+    attacks_made: int = 0
+    extra_actions: int = 0
+    once_per_turn: list[str] = []
+    spell_slot_cast: bool = False
+    bonus_spell_cast: bool = False
+    free_interaction_used: bool = False
+    pending_attack: Optional[dict] = None
+
+
 class TurnState(BaseModel):
+    turn: TurnBlock = TurnBlock()
+    attacks_allowed: int = 1
     in_encounter: bool
     is_my_turn: bool
     round: Optional[int] = None
