@@ -28,7 +28,7 @@ from core.rules.modifiers import (
     effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment,
 )
 from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
-from api.routers._helpers import effective_ability_mod
+from api.routers._helpers import effective_ability_mod, initiative_bonus
 
 
 async def build_character_response(
@@ -84,12 +84,7 @@ async def build_character_response(
     )
 
     response.speed_items_modifier = item_bonus_total(char.items, "speed")
-    response.initiative_bonus = (
-        effective_ability_mod(char, "dexterity")
-        + item_bonus_total(char.items, "initiative")
-        + await get_passive_modifiers(session, char, "character.initiative")
-        + modifiers_for(char, "initiative", ability="dexterity").flat
-    )
+    response.initiative_bonus = await initiative_bonus(session, char)
     _apply_encumbrance(char, response)
     _apply_containers(char, response)
     response.pending_choices = [

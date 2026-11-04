@@ -9,6 +9,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
+import RollNotes from '@/components/rules/RollNotes'
 import type { PendingSave, PendingSaveRollResult } from '@/types'
 
 const MODES: RollMode[] = ['normal', 'advantage', 'disadvantage']
@@ -43,7 +44,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
           save: current,
           res: {
             save: current,
-            roll: { total: Number((current.last_roll as { total?: number } | null)?.total ?? 0) } as PendingSaveRollResult['roll'],
+            roll: { ...current.last_roll, total: Number(current.last_roll?.total ?? 0) } as PendingSaveRollResult['roll'],
             passed: false,
             condition_removed: false,
           },
@@ -154,6 +155,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
             >
               {t(view.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
             </p>
+            <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" />
             {!view.res.passed && (
               <InspirationRerollButton
                 available={!!char?.heroic_inspiration}

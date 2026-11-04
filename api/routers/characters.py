@@ -55,6 +55,7 @@ from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body
+from api.services.effects import cap_current_hp
 from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
@@ -573,6 +574,7 @@ async def update_xp(
     if total_hp_gained > 0:
         char.hit_points += total_hp_gained
         char.current_hit_points += total_hp_gained
+        await cap_current_hp(session, char)
 
     # Notifica best-effort: solo all'attraversamento di soglia (categoria level_up)
     old_level_from_xp = xp_to_level(old_xp)
@@ -634,7 +636,7 @@ async def roll_skill(
     outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
-    is_crit = die == 20
+    is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
     history_msg = (
@@ -689,7 +691,7 @@ async def roll_saving_throw(
     outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
-    is_crit = die == 20
+    is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
     history_msg = (
@@ -765,7 +767,7 @@ async def roll_pending_save(
     die = outcome.kept
     total = die + bonus
     passed = total >= ps.dc and not applied.auto_fail
-    is_crit, is_fumble = die == 20, die == 1
+    is_crit, is_fumble = die == 20 and not applied.auto_fail, die == 1
 
     history_msg = (
         f"TS {ability_label(ps.ability)} per {condition_label(effect.slug)}: "
@@ -781,7 +783,8 @@ async def roll_pending_save(
     ps.status = "passed" if passed else "failed"
     ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
     ps.last_roll = {"die": die, "dice": outcome.dice, "bonus": bonus, "total": total,
-                    "mode": outcome.mode, "passed": passed}
+                    "mode": outcome.mode, "passed": passed, "auto_fail": applied.auto_fail,
+                    "notes": applied.notes}
     # Build the read model before apply_conditions deletes the effect and its saves.
     save_read = pending_read(ps, effect.slug)
     if passed:

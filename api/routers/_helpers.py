@@ -9,6 +9,7 @@ from api.schemas.common import ConcentrationSaveResult, RollMode
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.durations import end_concentration, is_concentrating
+from api.services.effects import cap_current_hp
 from api.services.condition_effects import release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
@@ -85,13 +86,24 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
         return 0
 
 
-def apply_con_hp(char, old_con_mod: int) -> None:
+async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
     """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade)."""
     if (char.settings or {}).get("hp_auto_calc", True):
         delta = (effective_con_mod(char) - old_con_mod) * char.total_level
         if delta != 0:
             char.hit_points = max(0, char.hit_points + delta)
             char.current_hit_points = max(0, min(char.current_hit_points + delta, char.hit_points))
+            await cap_current_hp(session, char)
+
+
+async def initiative_bonus(session: AsyncSession, char: Character) -> int:
+    """Bonus d'iniziativa come sulla scheda: Destrezza effettiva, oggetti, homebrew e regole."""
+    return (
+        effective_ability_mod(char, "dexterity")
+        + item_bonus_total(char.items, "initiative")
+        + await get_passive_modifiers(session, char, "character.initiative")
+        + modifiers_for(char, "initiative", ability="dexterity").flat
+    )
 
 
 async def saving_throw_bonus(session: AsyncSession, char: Character, ability: str, roll: str = "save") -> int:
@@ -163,7 +175,7 @@ async def roll_concentration_save(
     die = outcome.kept
     record_dice(char, d20_records(outcome))
     total = die + con_mod
-    is_crit = die == 20
+    is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
     success = total >= dc and not applied.auto_fail
 

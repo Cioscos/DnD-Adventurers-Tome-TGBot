@@ -320,7 +320,7 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     from core.rules.modifiers import effective_hp_max
     await session.refresh(char, attribute_names=["classes", "items"])  # /turn-start non carica le relazioni
     effective_max = effective_hp_max(char, hb_hp_bonus)
-    char.current_hit_points = min(effective_max, char.current_hit_points + amount)
+    char.current_hit_points = max(before, min(effective_max, char.current_hit_points + amount))
     actual = char.current_hit_points - before
 
     # D&D 5e rule: HP above 0 resets death saves (per CLAUDE.md "HEAL/SET_CURRENT
@@ -490,6 +490,8 @@ async def execute_apply_modifier_once(action, ctx, rfr, session, char, **kw):
         char.hit_points = max(0, char.hit_points + delta)
         # Clamp current HP to new max
         char.current_hit_points = min(char.current_hit_points, char.hit_points)
+        from api.services.effects import cap_current_hp  # import locale: effects usa il dispatcher
+        await cap_current_hp(session, char)
     elif target == "character.speed":
         char.speed = max(0, char.speed + delta)
     else:

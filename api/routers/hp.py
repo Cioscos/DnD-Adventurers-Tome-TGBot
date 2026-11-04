@@ -17,7 +17,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
-from api.services.effects import apply_heal
+from api.services.effects import apply_heal, cap_current_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
 from api.services.rules_states import end_states, on_damage
@@ -331,6 +331,7 @@ async def update_hp(
         char.hit_points = max(0, body.value)
         # Clamp current to new max
         char.current_hit_points = min(char.current_hit_points, char.hit_points)
+        await cap_current_hp(session, char)
         _add_history(session, char.id, "hp_change",
                      f"HP max impostati: {old} → {char.hit_points}",
                      meta={"op": "SET_MAX"})
@@ -409,6 +410,7 @@ async def undo_hp(
     old = char.current_hit_points
     char.current_hit_points = before["current_hit_points"]
     char.hit_points = before["hit_points"]
+    await cap_current_hp(session, char)  # la spossatezza può essere cambiata dopo l'operazione
     char.temp_hp = before["temp_hp"]
     char.death_saves = dict(before["death_saves"])
     char.is_dead = before["is_dead"]
@@ -874,6 +876,7 @@ async def recalc_hp(
         char.current_hit_points = max(0, char.current_hit_points + (new_max - old_max))
     else:
         char.current_hit_points = min(char.current_hit_points, new_max)
+    await cap_current_hp(session, char)
 
     _add_history(session, char.id, "hp_change",
                  f"HP ricalcolati da formula: {old_max} → {new_max}",

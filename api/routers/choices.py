@@ -84,7 +84,7 @@ async def resolve_choice(
                      body.custom_name, body.custom_text, lang)
         changed = [body.ability] if body.ability else []
     for ability in changed:  # same side effects as PATCH /ability_scores (CON HP, STR carry, AC)
-        apply_ability_change(char, ability, old_con_mod)
+        await apply_ability_change(session, char, ability, old_con_mod)
     if changed:
         await sync_cataloged_features(session, char, lang)
     mark_resolved(char, choice)

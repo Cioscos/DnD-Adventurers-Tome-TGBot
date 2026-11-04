@@ -959,7 +959,7 @@ async def _settle_move(db, actor: Character, other: Character, old_con_mod, remo
 
     `removed` = (id, type, name, slot) of rows taken off the actor's paper-doll. Returns notifications.
     """
-    apply_con_hp(actor, old_con_mod)
+    await apply_con_hp(db, actor, old_con_mod)
     await db.flush()
     for c in (actor, other):
         await db.refresh(c, attribute_names=["items"])

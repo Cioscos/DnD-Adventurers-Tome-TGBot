@@ -18,6 +18,7 @@ from core.game.stats import sync_base_ac
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
 from api.routers._helpers import effective_con_mod
+from api.services.effects import cap_current_hp
 from api.services.character_response import build_character_response
 from pydantic import BaseModel
 from typing import Optional
@@ -43,7 +44,7 @@ class UnarmoredDefenseUpdate(BaseModel):
     ability: Optional[str] = None
 
 
-def apply_ability_change(char: Character, ability: str, old_con_mod: int) -> None:
+async def apply_ability_change(session: AsyncSession, char: Character, ability: str, old_con_mod: int) -> None:
     """Side effects of an ability score change; call after writing the new value.
 
     `old_con_mod` is effective_con_mod(char) taken before the change.
@@ -60,6 +61,7 @@ def apply_ability_change(char: Character, ability: str, old_con_mod: int) -> Non
                 0,
                 min(char.current_hit_points + delta * char.total_level, char.hit_points),
             )
+            await cap_current_hp(session, char)
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -115,7 +117,7 @@ async def update_ability_score(
     else:
         score.value = body.value
 
-    apply_ability_change(char, ability_name.lower(), old_con_mod)
+    await apply_ability_change(session, char, ability_name.lower(), old_con_mod)
     await sync_cataloged_features(session, char, lang)
     return await build_character_response(session, char)
 

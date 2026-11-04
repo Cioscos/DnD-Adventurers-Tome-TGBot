@@ -39,7 +39,7 @@ vi.mock('@/store/unitSettings', () => ({
   formatLength: (v: number) => `${v} ft`,
 }))
 // profBonus is the real @/lib/dnd helper (profBonus(5) === 3).
-vi.mock('@/api/client', () => ({ api: { dice: { result: diceResultSpy } } }))
+vi.mock('@/api/client', () => ({ api: { dice: { initiative: diceResultSpy } } }))
 // Il tiro d'iniziativa (fallback random, animate3d disattivata) deve girare
 // sincrono nel test — niente DiceAnimationProvider reale in giro.
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: vi.fn() }) }))
@@ -122,7 +122,7 @@ describe('HeroStatsSection', () => {
   })
 
   it('does not navigate when the initiative cell is tapped (it rolls instead)', async () => {
-    diceResultSpy.mockResolvedValue({ notation: '1d20+2', rolls: [15], total: 17, modifier: 2, label: 'character.hero.initiative' })
+    diceResultSpy.mockResolvedValue({ die: 15, dice: [15], bonus: 2, total: 17, is_critical: false, is_fumble: false })
     renderHero(char())
     await userEvent.click(screen.getByRole('button', { name: 'character.hero.initiative: +2' }))
     expect(navigateSpy).not.toHaveBeenCalled()
@@ -138,18 +138,12 @@ describe('HeroStatsSection', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/char/7/identity')
   })
 
-  it('rolls 1d20+DEX and shows the RollResultModal when the initiative cell is tapped', async () => {
-    diceResultSpy.mockResolvedValue({ notation: '1d20+2', rolls: [15], total: 17, modifier: 2, label: 'character.hero.initiative' })
+  it('rolls through the server and shows the RollResultModal when the initiative cell is tapped', async () => {
+    diceResultSpy.mockResolvedValue({ die: 15, dice: [15], bonus: 2, total: 17, is_critical: false, is_fumble: false })
     renderHero(char())
     await userEvent.click(screen.getByRole('button', { name: 'character.hero.initiative: +2' }))
     await waitFor(() =>
-      expect(diceResultSpy).toHaveBeenCalledWith(
-        7,
-        expect.objectContaining({
-          rolls: [{ kind: 'd20', value: expect.any(Number) }],
-          modifier: 2,
-        }),
-      ),
+      expect(diceResultSpy).toHaveBeenCalledWith(7, undefined, 'character.hero.initiative'),
     )
     expect(await screen.findByTestId('roll-modal-title')).toHaveTextContent('character.hero.initiative')
   })

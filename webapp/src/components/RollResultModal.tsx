@@ -51,13 +51,14 @@ export default function RollResultModal({
   // Neutral rolls get the default (gold) frame; emerald/crimson are reserved
   // for nat-20/nat-1 so the accent stays semantic (Semantic Triad), not
   // decorative on an ordinary result.
-  const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'default'
+  const autoFail = !!result.auto_fail
+  const accent = is_critical ? 'gold' : is_fumble || autoFail ? 'crimson' : 'default'
   // Il numero protagonista è il TOTALE (tiro + modificatore): è quello che conta
   // per il giocatore. Il colore semantico (oro nat-20 / cremisi nat-1 / neutro)
   // si applica quindi al totale, non più al solo tiro grezzo.
   const numberColor = is_critical
     ? 'text-dnd-gold-bright'
-    : is_fumble
+    : is_fumble || autoFail
       ? 'text-dnd-crimson-bright'
       : 'text-dnd-text'
 
@@ -84,6 +85,11 @@ export default function RollResultModal({
         ) : undefined
       }
     >
+      {autoFail && (
+        <p className="text-dnd-crimson-bright font-bold text-sm font-cinzel uppercase tracking-wider">
+          {t('character.roll_notes.auto_fail')}
+        </p>
+      )}
       {is_critical && (
         <m.p
           className="text-dnd-gold-bright font-bold text-sm font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5"
@@ -132,7 +138,7 @@ export default function RollResultModal({
         )}
       </p>
 
-      <RollNotes notes={result.notes} autoFail={result.auto_fail} />
+      <RollNotes notes={result.notes} />
       {note && <p className="text-xs text-dnd-text font-body">{note}</p>}
 
       {result.description && (

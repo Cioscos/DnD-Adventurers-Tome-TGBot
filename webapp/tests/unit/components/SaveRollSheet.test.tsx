@@ -75,6 +75,33 @@ describe('SaveRollSheet', () => {
     expect(rollSpy.mock.calls[0][3]).toBe(false)
   })
 
+  it('explains why a high total failed', async () => {
+    rollSpy.mockResolvedValue({
+      ...result(false),
+      roll: { die: 20, bonus: 5, total: 25, is_critical: false, is_fumble: false, auto_fail: true, notes: ['condition:stunned'] },
+    })
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'pendingSaves.roll' }))
+    expect(await screen.findByTestId('roll-notes')).toHaveTextContent(
+      'character.roll_notes.auto_fail · character.conditions.stunned',
+    )
+  })
+
+  it('reopening a failed save keeps the reason stored on the server', async () => {
+    const failed = {
+      ...save, status: 'failed' as const,
+      last_roll: { total: 25, auto_fail: true, notes: ['condition:stunned'] },
+    }
+    const qc = new QueryClient()
+    qc.setQueryData(['character', 7], { heroic_inspiration: false })
+    render(
+      <QueryClientProvider client={qc}>
+        <SaveRollSheet charId={7} saves={[failed as unknown as typeof save]} onClose={vi.fn()} />
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByTestId('roll-notes')).toHaveTextContent('character.roll_notes.auto_fail')
+  })
+
   it('passed shows the freedom text', async () => {
     rollSpy.mockResolvedValue(result(true))
     setup()

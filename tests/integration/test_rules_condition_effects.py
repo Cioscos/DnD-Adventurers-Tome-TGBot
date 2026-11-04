@@ -488,3 +488,167 @@ async def test_homebrew_heal_on_a_character_without_relations_loaded_respects_th
     r = await client.post(f"/characters/{cid}/homebrew/turn-start")
     assert r.status_code == 200, r.text
     assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == 20
+
+
+# --- Rilievi di revisione: fallimento automatico ------------------------------------------------------------------------
+
+async def test_auto_fail_is_never_critical(client):
+    cid = await _char(client)
+    await _cond(client, cid, stunned=True)
+    body = (await client.post(f"/characters/{cid}/saving_throws/dexterity/roll", json={"die": 20})).json()
+    assert body["auto_fail"] is True and body["is_critical"] is False
+    body = (await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"die": 20})).json()
+    assert body["is_critical"] is True
+
+
+async def test_pending_save_keeps_the_reason_of_an_auto_fail(client, test_session_factory):
+    from api.services.condition_effects import SaveSpec, upsert_effect
+    from core.db.models import PendingSave
+    cid = await _char(client)
+    await _cond(client, cid, stunned=True)
+    async with test_session_factory() as s:
+        eff = await upsert_effect(s, ("character", cid), "stunned", save=SaveSpec("dexterity", 10, "end"))
+        ps = PendingSave(effect_id=eff.id, character_id=cid, ability="dexterity", dc=10, status="pending",
+                         created_at="2026-11-04T00:00:00")
+        s.add(ps)
+        await s.commit()
+        psid = ps.id
+    body = (await client.post(f"/characters/{cid}/pending-saves/{psid}/roll", json={"die": 20})).json()
+    assert body["roll"]["is_critical"] is False
+    async with test_session_factory() as s:
+        last = (await s.get(PendingSave, psid)).last_roll
+    assert last["auto_fail"] is True and "condition:stunned" in last["notes"]
+
+
+# --- Rilievi di revisione: PF correnti e massimo dimezzato ----------------------------------------------------------------
+
+async def _halved(client, cid) -> dict:
+    await _set_hp(client, cid, 40)
+    full = await _cond(client, cid, exhaustion=4)
+    assert full["computed"]["hp_max_effective"] == 20 and full["current_hit_points"] == 20
+    return full
+
+
+async def _con_item(client, cid, value=8) -> int:
+    meta = {"ability_modifiers": [{"ability": "constitution", "kind": "relative", "value": value}]}
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory", "item_metadata": meta})
+    assert r.status_code == 201, r.text
+    return next(i["id"] for i in r.json()["items"] if i["name"] == "Amuleto")
+
+
+def _within_max(full: dict) -> None:
+    assert full["current_hit_points"] <= full["computed"]["hp_max_effective"]
+
+
+async def test_equipping_con_item_stays_within_the_halved_maximum_and_heal_never_lowers(client):
+    cid = await _char(client, level=5)
+    await _halved(client, cid)
+    item = await _con_item(client, cid)
+    r = await client.patch(f"/characters/{cid}/items/{item}", json={"is_equipped": True})
+    assert r.status_code == 200, r.text
+    full = r.json()
+    assert full["hit_points"] == 60  # il massimo reale segue la COS: +4 per 5 livelli
+    assert full["computed"]["hp_max_effective"] == 30
+    _within_max(full)
+    before = full["current_hit_points"]
+    healed = (await client.patch(f"/characters/{cid}/hp", json={"op": "heal", "value": 1})).json()
+    assert healed["current_hit_points"] >= before
+    _within_max(healed)
+    # tolta la spossatezza il massimo torna integro
+    back = await _cond(client, cid, exhaustion=0)
+    assert back["computed"]["hp_max_effective"] == 60 and back["hit_points"] == 60
+
+
+async def test_constitution_change_stays_within_the_halved_maximum(client):
+    cid = await _char(client, level=5)
+    await _halved(client, cid)
+    r = await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 20})
+    assert r.status_code == 200, r.text
+    full = (await client.get(f"/characters/{cid}")).json()
+    assert full["hit_points"] == 65  # +5 per 5 livelli
+    _within_max(full)
+
+
+async def test_set_max_and_recalc_stay_within_the_halved_maximum(client):
+    cid = await _char(client, level=3)
+    await _halved(client, cid)
+    full = (await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 24})).json()
+    assert full["hit_points"] == 24 and full["current_hit_points"] == 12
+    # il ricalcolo alza il massimo reale sommando il delta ai correnti
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 4})
+    full = (await client.post(f"/characters/{cid}/hp/recalc")).json()
+    assert full["hit_points"] > 4
+    _within_max(full)
+
+
+async def test_hp_undo_stays_within_the_halved_maximum(client):
+    cid = await _char(client)
+    await _set_hp(client, cid, 40)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 1})
+    undo_id = r.json()["hp_undo_id"]
+    await _cond(client, cid, exhaustion=4)
+    # i PF sono scesi a 20: l'annullamento non si applica più, oppure resta nel massimo
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": undo_id})
+    assert r.status_code in (200, 409)
+    _within_max((await client.get(f"/characters/{cid}")).json())
+
+
+async def test_homebrew_max_hp_action_stays_within_the_halved_maximum(client, test_session_factory):
+    from api.services.homebrew import actions
+    from api.services.homebrew.actions import RuleFiringResult
+    from sqlalchemy.orm import selectinload
+    cid = await _char(client)
+    await _halved(client, cid)
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).options(
+            selectinload(Character.classes), selectinload(Character.items)).where(Character.id == cid))).scalar_one()
+        char.current_hit_points = 25  # come dopo un altro percorso: l'azione riporta nel massimo
+        await actions.execute_apply_modifier_once(
+            {"action": "apply_modifier_once", "target": "character.hit_points_max", "delta": 2, "label": "x"},
+            None, RuleFiringResult(rule_id=1, rule_name="x"), s, char)
+        await s.commit()
+    full = (await client.get(f"/characters/{cid}")).json()
+    assert full["hit_points"] == 42 and full["computed"]["hp_max_effective"] == 21
+    assert full["current_hit_points"] == 21
+
+
+# --- Rilievi di revisione: iniziativa fuori dall'incontro -----------------------------------------------------------------
+
+async def test_character_initiative_uses_mode_and_the_sheet_bonus(client):
+    cid = await _char(client, edition="2024")
+    await _passive_rule(client, cid, "character.initiative", 2)
+    full = await _cond(client, cid, poisoned=True, exhaustion=1)
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 15})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["bonus"] == full["initiative_bonus"] == 0  # DES 10, homebrew +2, esaurimento -2
+    assert body["mode_applied"] == "disadvantage" and len(body["dice"]) == 2 and body["dice"][0] == 15
+    assert body["total"] == body["die"] + body["bonus"]
+    assert set(body["notes"]) == {"condition:poisoned", "condition:exhaustion"}
+
+
+async def test_character_initiative_player_mode_cancels_and_history_is_kept(client):
+    cid = await _char(client)
+    await _cond(client, cid, poisoned=True)
+    body = (await client.post(f"/characters/{cid}/dice/initiative",
+                              json={"mode": "advantage", "dice": [4, 18], "label": "Iniziativa"})).json()
+    assert body["mode_applied"] == "normal" and body["die"] == 4
+    history = (await client.get(f"/characters/{cid}/dice/history")).json()
+    assert history[-1]["source"] == "init" and history[-1]["label"] == "Iniziativa"
+    assert history[-1]["total"] == body["total"]
+
+
+async def test_character_initiative_without_body_rolls_on_the_server(client):
+    cid = await _char(client)
+    body = (await client.post(f"/characters/{cid}/dice/initiative")).json()
+    assert body["mode_applied"] == "normal" and len(body["dice"]) == 1
+
+
+async def test_xp_level_up_stays_within_the_halved_maximum(client):
+    cid = await _char(client)
+    await _halved(client, cid)
+    r = await client.patch(f"/characters/{cid}/xp", json={"add": 900})
+    assert r.status_code == 200, r.text
+    full = r.json()
+    assert full["hit_points"] > 40
+    _within_max(full)

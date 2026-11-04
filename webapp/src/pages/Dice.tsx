@@ -1,3 +1,8 @@
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import RollButton from '@/components/ui/RollButton'
+import D20Faces from '@/components/ui/D20Faces'
+import RollNotes from '@/components/rules/RollNotes'
+import type { RollResult } from '@/api/client'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -26,12 +31,6 @@ import type { DiceKind } from '@/dice/types'
 
 const DICE = [4, 6, 8, 10, 12, 20, 100] as const
 type DieSide = typeof DICE[number]
-
-type InitiativeResult = {
-  roll: number
-  dexMod: number
-  total: number
-}
 
 const toDiceKind = (side: DieSide): DiceKind => `d${side}` as DiceKind
 
@@ -62,7 +61,7 @@ export default function Dice() {
   const [count, setCount] = useState(1)
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
   const [statRollExtras, setStatRollExtras] = useState<StatRollExtras | null>(null)
-  const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
+  const [initiativeResult, setInitiativeResult] = useState<RollResult | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [initiativeRolling, setInitiativeRolling] = useState(false)
 
@@ -82,6 +81,7 @@ export default function Dice() {
   const history = historyQuery.data ?? []
 
   const { roll, isPending: rollPending } = useRollAndPersist(charId)
+  const rollD20 = useD20Roll()
 
   const handleRoll = async (die: DieSide) => {
     const kind = toDiceKind(die)
@@ -137,14 +137,12 @@ export default function Dice() {
     }
   }
 
-  const handleInitiative = async () => {
+  const handleInitiative = async (mode: RollMode) => {
     setInitiativeRolling(true)
     try {
-      const groups = await roll([{ kind: 'd20', count: 1 }])
-      const dexScore = char?.ability_scores.find((s) => s.name === 'dexterity')
-      const dexMod = dexScore?.modifier ?? 0
-      const rollVal = groups[0]?.total ?? 0
-      setInitiativeResult({ roll: rollVal, dexMod, total: rollVal + dexMod })
+      setInitiativeResult(await api.dice.initiative(charId, d20Arg(mode, await rollD20(mode)), t('character.dice.initiative')))
+      qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+      qc.invalidateQueries({ queryKey: ['history', charId] })
       setLastResult(null)
       haptic.medium()
     } catch {
@@ -172,24 +170,22 @@ export default function Dice() {
     onError: () => {},
   })
 
-  const dexMod = char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
+  const dexMod = char?.initiative_bonus ?? char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
   const modLabel = dexMod >= 0 ? `+${dexMod}` : String(dexMod)
 
   return (
     <Layout title={t('character.dice.title')} backTo={`/char/${charId}`} group="tools" page="dice">
       {/* Initiative button */}
-      <Button
-        variant="secondary"
-        size="lg"
-        fullWidth
-        onClick={() => handleInitiative()}
-        disabled={initiativeRolling || rollPending}
-        loading={initiativeRolling}
-        icon={<Swords size={18} />}
-        haptic="medium"
+      <RollButton
+        onRoll={handleInitiative}
+        pending={initiativeRolling || rollPending}
+        ariaLabel={t('character.dice.initiative')}
+        className="w-full min-h-[48px] px-4 py-3 rounded-xl flex items-center justify-center gap-2 font-body font-semibold
+                   border border-dnd-border bg-dnd-surface text-dnd-text"
       >
+        <Swords size={18} />
         {t('character.dice.initiative')} (d20 {modLabel})
-      </Button>
+      </RollButton>
 
       {/* Common roll presets */}
       <div className="grid grid-cols-3 gap-2">
@@ -308,8 +304,10 @@ export default function Dice() {
                 {initiativeResult.total}
               </m.p>
               <p className="text-xs text-dnd-text-muted font-mono mt-1">
-                d20 ({initiativeResult.roll}) {initiativeResult.dexMod >= 0 ? '+' : ''}{initiativeResult.dexMod}
+                <D20Faces die={initiativeResult.die} dice={initiativeResult.dice} mode={initiativeResult.mode} />{' '}
+                {initiativeResult.bonus >= 0 ? '+' : ''}{initiativeResult.bonus}
               </p>
+              <RollNotes notes={initiativeResult.notes} autoFail={initiativeResult.auto_fail} className="mt-1" />
             </Surface>
           </m.div>
         )}

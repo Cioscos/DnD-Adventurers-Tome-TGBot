@@ -71,7 +71,6 @@ class SpellcastingInfo(BaseModel):
 
 
 class CharacterSummary(BaseModel):
-    hp_max_effective: Optional[int] = None
     """Lightweight model returned in the character list."""
 
     id: int
@@ -87,6 +86,7 @@ class CharacterSummary(BaseModel):
     heroic_inspiration: bool = False
     experience_points: int = 0
     hp_max_homebrew_modifier: int = 0
+    hp_max_effective: Optional[int] = None
     ac_homebrew_modifier: int = 0
     ac_items_modifier: int = 0
     is_dead: bool = False
@@ -135,6 +135,7 @@ class CharacterFull(BaseModel):
     # Homebrew passive-modifier breakdown (populated by router after model_validate)
     ac_breakdown: Optional[AcBreakdown] = None
     hp_max_homebrew_modifier: int = 0
+    hp_max_effective: Optional[int] = None
     speed_homebrew_modifier: int = 0
     speed_items_modifier: int = 0
     # DEX effective mod + item initiative bonus (+ homebrew initiative, Task 21)

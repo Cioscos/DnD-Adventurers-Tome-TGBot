@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, CharacterHistory
@@ -33,6 +34,20 @@ def _add_history(session, char_id: int, event_type: str, description: str,
     ))
 
 
+async def cap_current_hp(session: AsyncSession, char: Character) -> None:
+    """Con il massimo dimezzato (Indebolimento 4) i PF correnti non lo superano.
+
+    Da chiamare dopo ogni scrittura di `hit_points`: quel valore resta il massimo reale e torna
+    effettivo quando la penalità finisce. Senza penalità non cambia nulla."""
+    # I chiamanti non caricano sempre le relazioni (GM, scadenze, homebrew): servono per i privilegi.
+    unloaded = {"classes", "items"} & inspect(char).unloaded
+    if unloaded:
+        await session.refresh(char, attribute_names=list(unloaded))
+    if modifiers_for(char, "hp_max").hp_half:
+        bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+        char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
+
+
 async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dict:
     """Heal `char` by `amount` HP, clamped to effective max (base + passive
     homebrew bonus). Resets death saves if HP rises from 0. Logs history and
@@ -45,7 +60,8 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     old = char.current_hit_points
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     effective_max = effective_hp_max(char, hb_hp_bonus)
-    char.current_hit_points = min(effective_max, char.current_hit_points + amount)
+    # max(old, ...): una cura non abbassa mai i PF.
+    char.current_hit_points = max(old, min(effective_max, char.current_hit_points + amount))
     healed = char.current_hit_points - old
     _add_history(session, char.id, "hp_change",
                  f"Cura: +{amount} HP ({old} → {char.current_hit_points})",
@@ -113,9 +129,5 @@ async def apply_conditions(session: AsyncSession, char: Character,
             char.is_dead = True
             _add_history(session, char.id, "death_save", "Morto — spossatezza al 6° livello")
             return {"changed": changed}
-        # I chiamanti non caricano sempre le relazioni (GM, scadenze): qui servono per i privilegi.
-        await session.refresh(char, attribute_names=["classes", "items"])
-        if modifiers_for(char, "hp_max").hp_half:
-            bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-            char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
+        await cap_current_hp(session, char)
     return {"changed": changed}

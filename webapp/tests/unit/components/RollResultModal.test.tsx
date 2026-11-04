@@ -90,9 +90,17 @@ describe('RollResultModal', () => {
         title="T" onClose={() => {}}
       />,
     )
+    expect(screen.getByText('character.roll_notes.auto_fail')).toBeInTheDocument()
     expect(screen.getByTestId('roll-notes')).toHaveTextContent(
-      'character.roll_notes.auto_fail · character.conditions.poisoned · character.roll_notes.armor_untrained',
+      'character.conditions.poisoned · character.roll_notes.armor_untrained',
     )
+  })
+
+  it('an automatic failure is crimson and shows no critical banner, even on a natural 20', () => {
+    render(<RollResultModal result={result({ die: 20, is_critical: false, auto_fail: true })} title="T" onClose={() => {}} />)
+    expect(screen.queryByText('character.dice.critical_banner')).toBeNull()
+    expect(screen.getByText('character.roll_notes.auto_fail')).toBeInTheDocument()
+    expect(screen.getByText(String(result().total)).className).toContain('crimson')
   })
 
   it('shows no explanation without notes', () => {

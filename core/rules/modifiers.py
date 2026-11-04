@@ -77,7 +77,7 @@ def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> 
         add("disadvantage", *sorted(on & {"blinded", "frightened", "poisoned", "prone", "restrained"}))
         if "invisible" in on:
             add("advantage", "invisible")
-        if is_2024 and "grappled" in on:  # shortcut: anche contro chi afferra; la conferma arriva col Task 17
+        if is_2024 and "grappled" in on:  # shortcut: anche contro chi afferra; la conferma arriva col Task 12
             add("disadvantage", "grappled")
     if roll in _CHECKS:
         add("disadvantage", *sorted(on & {"frightened", "poisoned"}))

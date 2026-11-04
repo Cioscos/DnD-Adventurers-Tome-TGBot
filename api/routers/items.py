@@ -308,7 +308,7 @@ async def update_item(
         apply_equip_ac(char, item, displaced)
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
-    _apply_con_hp(char, old_con_mod)
+    await _apply_con_hp(session, char, old_con_mod)
 
     char.recalculate_encumbrance()
     # Flush + refresh so the post-update Character (and items) are visible to
@@ -359,7 +359,7 @@ async def move_items_endpoint(
     old_con_mod = effective_con_mod(char)
     worn = [(i, i.equipment_slot) for i in char.items if i.id in body.item_ids and i.is_equipped]
     names = await move_items(session, char, body.item_ids, body.container_id, body.quantity)
-    _apply_con_hp(char, old_con_mod)
+    await _apply_con_hp(session, char, old_con_mod)
     char.recalculate_encumbrance()
     await session.flush()
     await session.refresh(char, attribute_names=["items"])

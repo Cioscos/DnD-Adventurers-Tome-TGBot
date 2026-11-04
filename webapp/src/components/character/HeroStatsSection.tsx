@@ -9,7 +9,7 @@ import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
-import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
+import { d20Arg, useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
 import { api } from '@/api/client'
 import { LEDGER_LABEL, LEDGER_ROW } from '@/styles/ledger'
@@ -92,34 +92,14 @@ export default function HeroStatsSection({ char }: Props) {
 
   const initiativeMutation = useMutation({
     mutationFn: async (mode: RollMode) => {
-      // Il client tira (con animazione 3D se attiva), il BE persiste nello storico.
-      const n = mode === 'normal' ? 1 : 2
-      const faces = (await rollD20(mode)) ?? Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20))
-      const value = mode === 'advantage' ? Math.max(...faces) : mode === 'disadvantage' ? Math.min(...faces) : faces[0]
-      const keep = mode === 'advantage' ? 'kh1' : mode === 'disadvantage' ? 'kl1' : ''
-      const notation = `${n}d20${keep}${initBonus >= 0 ? '+' : ''}${initBonus}`
-      await api.dice.result(char.id, {
-        rolls: faces.map((v) => ({ kind: 'd20' as const, value: v })),
-        modifier: initBonus,
-        notation,
-        label: t('character.hero.initiative'),
-        mode,
-      })
-      return { value, faces, mode }
+      // Facce dai dadi 3D se attivi; modo finale, bonus e storico li decide il server.
+      return api.dice.initiative(char.id, d20Arg(mode, await rollD20(mode)), t('character.hero.initiative'))
     },
-    onSuccess: ({ value, faces, mode }) => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
       qc.invalidateQueries({ queryKey: ['history', char.id] })
-      setInitResult({
-        die: value,
-        dice: faces,
-        mode,
-        bonus: initBonus,
-        total: value + initBonus,
-        is_critical: value === 20,
-        is_fumble: value === 1,
-      })
+      setInitResult(result)
       haptic.success()
     },
   })

@@ -958,6 +958,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    /** Iniziativa fuori da un incontro: modo automatico e bonus li decide il server. */
+    initiative: (charId: number, roll: D20Roll | undefined, label: string) =>
+      request<RollResult>(`/characters/${charId}/dice/initiative`, {
+        method: 'POST',
+        body: JSON.stringify({ ...d20Fields(roll), label }),
+      }),
     history: (charId: number) => request<DiceRollResult[]>(`/characters/${charId}/dice/history`),
     clearHistory: (charId: number) =>
       request<void>(`/characters/${charId}/dice/history`, { method: 'DELETE' }),
