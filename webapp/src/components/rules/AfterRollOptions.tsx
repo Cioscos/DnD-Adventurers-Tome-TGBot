@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/useToast'
 import { applyAfterRoll, optionHints, usePromptStore, useRefundStore } from '@/lib/rollOptions'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
+import type { TurnState } from '@/types'
 
 /** Un privilegio da usare dopo aver visto il d20: etichetta e costo. */
 export function AfterRollButton({ option, loading, onClick }: { option: RollOption; loading?: boolean; onClick: () => void }) {
@@ -36,10 +37,13 @@ function useRefreshAfterRoll(charId: number) {
 function RefundQuestion({ charId, onDone }: { charId: number; onDone: () => void }) {
   const { t } = useTranslation()
   const toast = useToast()
+  const qc = useQueryClient()
   const refresh = useRefreshAfterRoll(charId)
   const answer = useMutation({
     mutationFn: (succeeded: boolean) => api.characters.lastRollRefund(charId, succeeded),
-    onSuccess: () => {
+    onSuccess: (turn) => {
+      // Prima di chiudere: con la cache vecchia l'host riaprirebbe la domanda fino alla rilettura.
+      qc.setQueryData(['turn-state', charId], (old: TurnState | undefined) => old && { ...old, turn })
       onDone()
       refresh()
     },

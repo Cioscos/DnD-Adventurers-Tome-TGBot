@@ -225,4 +225,26 @@ describe('RefundQuestionHost', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Aggiungi 1d10\?/ }))
     await waitFor(() => expect(screen.getAllByText('character.roll_options.succeeded_question')).toHaveLength(1))
   })
+
+  it.each([['common.no', false], ['common.yes', true]])('dopo %s nel modale non riapre la domanda mentre la rilettura è in corso', async (name, succeeded) => {
+    turnState.mockResolvedValue(pending)
+    rollOptions.mockResolvedValue([option({ pay_if_success: true })])
+    lastRollOptions.mockResolvedValue({ ...ROLL, total: 12, refundable: ['add'] })
+    lastRollRefund.mockResolvedValue({ last_roll: { total: 12, refundable: {} } })
+    renderWithProviders(
+      <>
+        <RefundQuestionHost />
+        <RollResultModal result={ROLL} title="Atletica" onClose={() => undefined} afterRoll={{ charId: 1, query: QUERY }} />
+      </>,
+      { route: '/char/1/skills' },
+    )
+    await userEvent.click(await screen.findByRole('button', { name: /Aggiungi 1d10\?/ }))
+    await screen.findByText('character.roll_options.succeeded_question')
+    await waitFor(() => expect(turnState.mock.calls.length).toBeGreaterThan(1))
+    turnState.mockReturnValue(new Promise(() => undefined))
+    await userEvent.click(screen.getByRole('button', { name: name as string }))
+    await waitFor(() => expect(lastRollRefund).toHaveBeenCalledWith(1, succeeded))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText('character.roll_options.succeeded_question')).toBeNull()
+  })
 })
