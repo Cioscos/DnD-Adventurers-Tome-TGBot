@@ -920,6 +920,7 @@
       "section_other": "Other",
       "used": "Used",
       "mark_used": "Mark as used",
+      "standard_actions": "Standard actions ({{n}})",
       "new_turn": "New turn",
       "end_round": "End of round (−1)",
       "empty": "Nothing here",
@@ -4587,7 +4588,8 @@
             "The equipped weapons and the \"Unarmed strike\" are in the \"Action\" section.",
             "Spells go into the section of their casting time. The page shows cantrips and prepared spells.",
             "Active abilities go into the section of their action type. Passive abilities do not show.",
-            "Each section also shows the standard actions of the rules, with a short description."
+            "At the bottom of each section, \"Standard actions\" opens the actions of the rules with a short description.",
+            "When you mark a section as used, it closes and what you can still do stays in view."
           ]
         },
         {

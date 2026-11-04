@@ -6,11 +6,15 @@
       "improved": {
         "it": [
           "Testi più leggibili in penombra: etichette e testi secondari sono più contrastati nel tema scuro.",
-          "Il tema pergamena è più chiaro e meno giallo, con inchiostri più scuri su tutte le pagine."
+          "Il tema pergamena è più chiaro e meno giallo, con inchiostri più scuri su tutte le pagine.",
+          "Il menu del personaggio è un indice a righe e le statistiche sono un registro: etichetta a sinistra, valore a destra.",
+          "Nel Turno vedi subito cosa puoi ancora fare: le azioni standard si aprono a richiesta e una sezione usata si richiude."
         ],
         "en": [
           "Easier reading in low light: labels and secondary text have more contrast in the dark theme.",
-          "The parchment theme is lighter and less yellow, with darker inks on every page."
+          "The parchment theme is lighter and less yellow, with darker inks on every page.",
+          "The character menu is an index of rows and the stats are a ledger: label on the left, value on the right.",
+          "The Turn page shows what you can still do: standard actions open on request and a used section closes."
         ]
       },
       "fixed": {

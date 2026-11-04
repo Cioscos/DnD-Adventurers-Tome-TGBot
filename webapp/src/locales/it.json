@@ -919,6 +919,7 @@
       "section_other": "Altro",
       "used": "Usata",
       "mark_used": "Segna come usata",
+      "standard_actions": "Azioni standard ({{n}})",
       "new_turn": "Nuovo turno",
       "end_round": "Fine round (−1)",
       "empty": "Nessuna voce",
@@ -4586,7 +4587,8 @@
             "Le armi equipaggiate e il \"Colpo senza armi\" sono nella sezione \"Azione\".",
             "Gli incantesimi vanno nella sezione del loro tempo di lancio. La pagina mostra i trucchetti e gli incantesimi preparati.",
             "Le capacità attive vanno nella sezione del loro tipo di azione. Le capacità passive non compaiono.",
-            "Ogni sezione mostra anche le azioni standard delle regole, con una breve descrizione."
+            "In fondo a ogni sezione, \"Azioni standard\" apre le azioni delle regole con una breve descrizione.",
+            "Quando segni una sezione come usata, si richiude e resta in vista quello che puoi ancora fare."
           ]
         },
         {
