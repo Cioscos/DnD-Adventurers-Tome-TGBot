@@ -18,6 +18,7 @@
           "Le emoji lasciano il posto a icone incise, in inventario e nelle regole homebrew. Le opzioni selezionate hanno lo stesso aspetto in tutta l'app e «Skills» ora si chiama «Abilità».",
           "Impostazioni, Identità, Dadi, Punti Ferita, Note, Homebrew e Note di versione completano il passaggio allo schema a righe, e le schermate di caricamento hanno la stessa sagoma delle pagine.",
           "Il riposo lungo dalla pagina Punti Ferita mostra cosa recuperi prima di confermare.",
+          "Chi non ha ancora razza, classe o sesso compare come un viandante incappucciato, disegnato con lo stesso tratto inciso delle altre silhouette.",
           "I punti ferita restano verdi dal 75% in su: sotto diventano oro, e rossi dal 25% in giù.",
           "I pulsanti principali sono in oro pieno, senza sfumatura.",
           "In Inventario il pulsante Aggiungi oggetto resta fermo in basso, a portata di pollice, e non cambia forma mentre scorri."
@@ -36,6 +37,7 @@
           "Emoji give way to engraved icons, in the inventory and homebrew rules. Selected options look the same across the app.",
           "Settings, Identity, Dice, Hit Points, Notes, Homebrew and Release notes complete the move to rows, and loading screens now match the shape of their pages.",
           "A long rest from the Hit Points page shows what you recover before you confirm.",
+          "Characters without a race, class or gender appear as a hooded wanderer, drawn with the same engraved line as the other silhouettes.",
           "Hit points stay green from 75% up: below that they turn gold, and red from 25% down.",
           "Main buttons are solid gold, without a gradient.",
           "In the Inventory, the Add item button stays at the bottom, within thumb reach, and no longer changes shape as you scroll."

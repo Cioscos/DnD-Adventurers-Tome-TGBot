@@ -369,6 +369,7 @@
     },
     "ac": {
       "title": "Classe Armatura",
+      "short": "CA",
       "base": "Base",
       "base_help": "Base = 10 + bonus DES (con cap se armatura media/pesante) oppure valore CA dell'armatura equipaggiata.",
       "shield": "Scudo",

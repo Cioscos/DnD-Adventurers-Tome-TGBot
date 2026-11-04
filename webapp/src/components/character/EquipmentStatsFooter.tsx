@@ -52,7 +52,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
       <div className="flex flex-col items-center gap-1">
         <span
           aria-hidden="true"
-          className="font-mono font-black text-dnd-gold-bright leading-none"
+          className="font-display font-black text-dnd-gold-bright leading-none"
           style={{ fontSize: 'clamp(2.25rem, 9vw, 3rem)' }}
         >
           {acTotal}

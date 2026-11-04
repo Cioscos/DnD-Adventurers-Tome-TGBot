@@ -369,6 +369,7 @@
     },
     "ac": {
       "title": "Armor Class",
+      "short": "AC",
       "base": "Base",
       "base_help": "Base = 10 + DEX bonus (capped for medium/heavy armor) or the equipped armor's AC value.",
       "shield": "Shield",
