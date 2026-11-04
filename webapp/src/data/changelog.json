@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "2.38.0",
+      "date": "2026-11-04",
+      "improved": {
+        "it": [
+          "Azioni e Turno ora sono un'unica pagina: gli attacchi stanno in una sezione sempre aperta in cima al Turno, pronti anche fuori dal tuo turno.",
+          "Il colpo senza armi nel Turno mostra i dadi del danno, compreso il dado del Monaco."
+        ],
+        "en": [
+          "Actions and Turn are now one page: attacks sit in an always open section at the top of Turn, ready even outside your turn.",
+          "The unarmed strike on the Turn page shows its damage dice, including the Monk die."
+        ]
+      }
+    },
+    {
       "version": "2.37.0",
       "date": "2026-11-04",
       "improved": {
@@ -12,8 +26,7 @@
           "Azioni rapide e sezioni del Turno seguono lo stesso schema a righe della scheda.",
           "Il riepilogo degli slot nella schermata del personaggio mostra quanti ne restano per ogni livello.",
           "Caratteristiche, Abilità, Tiri salvezza, Classe Armatura, Monete, Esperienza e Classe si leggono come righe di una scheda, con più contenuto a colpo d'occhio.",
-          "Incantesimi, Inventario, Abilità speciali, Slot e Condizioni sono elenchi a righe: la card compare solo aprendo una voce.",
-          "Azioni e Turno ora sono un'unica pagina: gli attacchi stanno in una sezione sempre aperta in cima al Turno, pronti anche fuori dal tuo turno.",
+          "Incantesimi, Inventario, Abilità speciali, Slot, Azioni e Condizioni sono elenchi a righe: la card compare solo aprendo una voce.",
           "La home è un elenco dei tuoi personaggi con PF e CA in vista, e il pulsante Nuovo personaggio resta sempre in basso, a portata di pollice.",
           "Sessione, combattimento e campagna seguono lo stesso schema a righe: partecipanti, iniziativa, membri, lore e serate si leggono come un registro, e i punti ferita usano la stessa barra del personaggio.",
           "Le emoji lasciano il posto a icone incise, in inventario e nelle regole homebrew. Le opzioni selezionate hanno lo stesso aspetto in tutta l'app e «Skills» ora si chiama «Abilità».",
@@ -33,8 +46,7 @@
           "Quick actions and Turn sections follow the same row layout as the character sheet.",
           "The spell slot summary on the character screen shows how many you have left at each level.",
           "Ability Scores, Skills, Saving Throws, Armor Class, Coins, Experience and Class read as rows of a sheet, with more in view at a glance.",
-          "Spells, Inventory, Special Abilities, Slots and Conditions are lists of rows: a card only appears when you open an entry.",
-          "Actions and Turn are now one page: attacks sit in an always open section at the top of Turn, ready even outside your turn.",
+          "Spells, Inventory, Special Abilities, Slots, Actions and Conditions are lists of rows: a card only appears when you open an entry.",
           "The home screen lists your characters with HP and AC in view, and the New character button always stays at the bottom, within thumb reach.",
           "Session, combat and campaign follow the same row layout: participants, initiative, members, lore and evenings read like a ledger, and hit points use the same bar as the character sheet.",
           "Emoji give way to engraved icons, in the inventory and homebrew rules. Selected options look the same across the app.",
