@@ -2,11 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
+import { Check, ChevronDown, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
@@ -32,6 +33,7 @@ export default function Turn() {
   const qc = useQueryClient()
   const [used, setUsed] = useState(NONE_USED)
   const [otherOpen, setOtherOpen] = useState(false)
+  const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -78,7 +80,7 @@ export default function Turn() {
       const std = STANDARD_ACTIONS.find((s) => s.id === e.id)
       return (
         <li key={key} className="py-2">
-          <p className="font-cinzel text-dnd-gold">{std?.[lang].name ?? e.label}</p>
+          <p className="font-cinzel text-sm text-dnd-text">{std?.[lang].name ?? e.label}</p>
           <p className="text-xs text-dnd-text-muted">{std?.[lang].desc}</p>
         </li>
       )
@@ -143,29 +145,53 @@ export default function Turn() {
     )
   }
 
-  const section = (title: string, entries: TurnEntry[], bucket?: Bucket) => (
-    <Surface variant="elevated" className={bucket && used[bucket] ? 'opacity-60' : ''}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">{title}</h2>
-        {bucket && (
-          <Pressable
-            aria-pressed={used[bucket]}
-            aria-label={`${t('character.turn.mark_used')}: ${title}`}
-            onClick={() => setUsed((u) => ({ ...u, [bucket]: !u[bucket] }))}
-            className={`min-h-11 px-3 rounded-lg border text-xs font-medium ${
-              used[bucket]
-                ? 'bg-dnd-gold/20 border-dnd-gold-dim text-dnd-gold-bright'
-                : 'bg-dnd-chip-bg border-dnd-border text-dnd-text-muted'}`}
-          >
-            {t('character.turn.used')}
-          </Pressable>
+  const section = (title: string, entries: TurnEntry[], bucket?: Bucket) => {
+    const isUsed = !!bucket && used[bucket]
+    const playable = entries.filter((e) => e.kind !== 'standard')
+    const standard = entries.filter((e) => e.kind === 'standard')
+    const standardOpen = openStandard[title]
+    return (
+      <Surface variant="elevated" className={isUsed ? 'opacity-60' : ''}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">{title}</h2>
+          {bucket && (
+            <Pressable
+              aria-pressed={isUsed}
+              aria-label={`${t('character.turn.mark_used')}: ${title}`}
+              onClick={() => setUsed((u) => ({ ...u, [bucket]: !u[bucket] }))}
+              className={`inline-flex items-center gap-1 min-h-11 px-3 rounded-lg border text-xs font-medium ${
+                isUsed
+                  ? 'bg-dnd-gold/20 border-dnd-gold-dim text-dnd-gold-bright'
+                  : 'bg-dnd-chip-bg border-dnd-border text-dnd-text-muted'}`}
+            >
+              {isUsed && <Check size={14} aria-hidden />}
+              {isUsed ? t('character.turn.used') : t('character.turn.mark_used')}
+            </Pressable>
+          )}
+        </div>
+        {/* Una sezione usata si richiude: in vista resta solo ciò che si può ancora fare. */}
+        {!isUsed && (
+          <>
+            {entries.length === 0 && <p className="text-sm text-dnd-text-muted py-2">{t('character.turn.empty')}</p>}
+            {playable.length > 0 && <ul className="divide-y divide-dnd-border/40">{playable.map((e) => renderEntry(e, char))}</ul>}
+            {standard.length > 0 && (
+              <>
+                <Pressable
+                  aria-expanded={!!standardOpen}
+                  onClick={() => setOpenStandard((o) => ({ ...o, [title]: !o[title] }))}
+                  className="mt-1 flex w-full min-h-11 items-center justify-between gap-2 text-left text-sm font-body text-dnd-text-muted"
+                >
+                  {t('character.turn.standard_actions', { n: standard.length })}
+                  <ExpandChevron open={!!standardOpen} className="text-dnd-text-muted" />
+                </Pressable>
+                {standardOpen && <ul className="divide-y divide-dnd-border/40">{standard.map((e) => renderEntry(e, char))}</ul>}
+              </>
+            )}
+          </>
         )}
-      </div>
-      {entries.length === 0
-        ? <p className="text-sm text-dnd-text-muted py-2">{t('character.turn.empty')}</p>
-        : <ul className="divide-y divide-dnd-border/40">{entries.map((e) => renderEntry(e, char))}</ul>}
-    </Surface>
-  )
+      </Surface>
+    )
+  }
 
   return (
     <Layout title={t('character.turn.title')} backTo={`/char/${charId}`} group="combat" page="turn">

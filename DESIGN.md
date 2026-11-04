@@ -305,6 +305,14 @@ Surfaces come in seven named variants — each is a scene the page wants to evok
 - **sigil**: gradient-parchment + gold/40 border + shadow-parchment-xl + grain. Reserved — a "this is the sealed declaration" surface, used once per page if at all.
 - **Interactive surfaces** scale to `0.98` on press with the press spring (`stiffness 420, damping 28, mass 0.6`). Optional layoutId for shared-element transitions.
 
+### Ledger Rows
+The default for reference data and navigation lists: the page reads like a character sheet or a codex index, not a dashboard. A card is for content that is a unit of its own; a list of labelled values is not.
+
+- **Shape:** hairline rules (`border-dnd-border`, `/60` between rows), no fill, no radius. Never nested inside a card.
+- **Value rows:** Cinzel label on the left, value on the right. Numbers follow The Tabular Numerics Rule. Min height 48px.
+- **Index rows:** one ink for every icon (`text-dnd-gold`), body-font label, two columns on a phone. Section titles are plain Cinzel labels, without ornament. Keep at least 4px between neighbouring touch targets.
+- **Affordance:** a row that does something other than open a page says so with a glyph (the die on Initiative rolls).
+
 ### Chips / Pills
 Two species share the Cinzel-caps inscription but differ in shape, and the shape is the signal: a lozenge is a static label, a pill is a tappable toggle.
 

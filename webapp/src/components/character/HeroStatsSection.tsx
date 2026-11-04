@@ -2,10 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { BarChart3 } from 'lucide-react'
-import { GiShieldEchoes, GiArcheryTarget } from 'react-icons/gi'
-import Surface from '@/components/ui/Surface'
-import SectionDivider from '@/components/ui/SectionDivider'
+import { GiPerspectiveDiceSixFacesRandom } from 'react-icons/gi'
 import Pressable from '@/components/ui/Pressable'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
@@ -22,6 +19,9 @@ import type { CharacterFull } from '@/types'
 const ABILITY_ORDER = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
 ]
+
+const LEDGER_ROW = 'flex w-full min-h-[48px] items-center justify-between gap-3 px-1 py-2 text-left hover:bg-dnd-surface/60 transition-colors'
+const LEDGER_LABEL = 'min-w-0 font-cinzel text-xs font-bold uppercase tracking-wider leading-tight text-dnd-text-muted'
 
 type SkillLvl = false | true | 'expert'
 
@@ -155,24 +155,15 @@ export default function HeroStatsSection({ char }: Props) {
 
   return (
     <div>
-      <SectionDivider align="center" icon={<BarChart3 size={11} />}>
-        {t('character.hero.stats_section')}
-      </SectionDivider>
-
-      {/* Combat-number cells — 2×2 grid, full names above, mono value below. */}
-      <div className="grid grid-cols-2 gap-1.5">
+      {/* Registro: una riga per voce, come su una scheda vera. Solo l'iniziativa tira, e lo dice il dado. */}
+      <div className="border-y border-dnd-border divide-y divide-dnd-border/60">
         {cells.map((c) => {
-          const cellClass = `flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
-                       bg-dnd-surface-raised border-dnd-border text-dnd-text
-                       hover:border-dnd-gold transition-colors`
           const body = (
             <>
-              <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
-                               text-xs font-cinzel uppercase tracking-wide leading-tight opacity-80">
-                {c.label}
-              </span>
-              <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
-                {c.value}
+              <span className={LEDGER_LABEL}>{c.label}</span>
+              <span className="inline-flex items-center gap-2">
+                {c.key === 'init' && <GiPerspectiveDiceSixFacesRandom size={16} aria-hidden className="text-dnd-gold" />}
+                <span className="font-mono text-lg font-bold tabular-nums leading-none text-dnd-text">{c.value}</span>
               </span>
             </>
           )
@@ -182,7 +173,7 @@ export default function HeroStatsSection({ char }: Props) {
               onRoll={(mode) => { haptic.medium(); initiativeMutation.mutate(mode) }}
               pending={initiativeMutation.isPending}
               ariaLabel={`${c.label}: ${c.value}`}
-              className={cellClass}
+              className={LEDGER_ROW}
             >
               {body}
             </RollButton>
@@ -192,13 +183,46 @@ export default function HeroStatsSection({ char }: Props) {
               type="button"
               onClick={() => go(c.path)}
               aria-label={`${c.label}: ${c.value}`}
-              className={cellClass}
-              whileTap={{ scale: 0.95 }}
+              className={LEDGER_ROW}
+              whileTap={{ scale: 0.99 }}
             >
               {body}
             </Pressable>
           )
         })}
+        <Pressable type="button" onClick={() => go('saves')} className={LEDGER_ROW} whileTap={{ scale: 0.99 }}>
+          <span className={LEDGER_LABEL}>{t('character.saves.title')}</span>
+          {profSaves.length > 0 ? (
+            <span className="flex flex-wrap justify-end gap-x-2 gap-y-0.5">
+              {profSaves.map((s) => (
+                <span key={s.key} className="text-sm text-dnd-text">
+                  <span className="font-cinzel text-xs uppercase tracking-wide text-dnd-text-muted">{s.label}</span>{' '}
+                  <span className="font-mono font-bold tabular-nums">{sign(s.bonus)}</span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-sm font-body text-dnd-text-faint">{t('character.hero.none_m')}</span>
+          )}
+        </Pressable>
+        <Pressable type="button" onClick={() => go('skills')} className={LEDGER_ROW} whileTap={{ scale: 0.99 }}>
+          <span className={LEDGER_LABEL}>{t('character.skills.title')}</span>
+          {totalSkillProf > 0 ? (
+            <span className="text-right text-sm font-body text-dnd-text">
+              <span className="font-mono font-bold tabular-nums">{totalSkillProf}</span>{' '}
+              {t('character.hero.proficient_label', { count: totalSkillProf })}
+              {expertCount > 0 && (
+                <span className="text-dnd-text-muted">
+                  {' · '}
+                  <span className="font-mono font-bold tabular-nums">{expertCount}</span>{' '}
+                  {t('character.hero.expert_label', { count: expertCount })}
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="text-sm font-body text-dnd-text-faint">{t('character.hero.none_f')}</span>
+          )}
+        </Pressable>
       </div>
 
       {senses.length > 0 && (
@@ -251,54 +275,6 @@ export default function HeroStatsSection({ char }: Props) {
           )}
         </div>
       )}
-
-      {/* Saves / Skills summary cards. */}
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        <Surface variant="elevated" interactive onClick={() => go('saves')} className="!p-3 min-h-[56px]">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <GiShieldEchoes size={13} className="text-dnd-gold-bright shrink-0" />
-            <span className="text-xs font-cinzel font-bold uppercase tracking-widest max-xs:tracking-wide text-dnd-gold truncate max-xs:whitespace-normal leading-tight">
-              {t('character.saves.title')}
-            </span>
-          </div>
-          {profSaves.length > 0 ? (
-            <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-              {profSaves.map((s) => (
-                <span key={s.key} className="text-xs text-dnd-text">
-                  <span className="font-cinzel uppercase tracking-wide text-dnd-text-muted">{s.label}</span>{' '}
-                  <span className="font-mono font-bold tabular-nums">{sign(s.bonus)}</span>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span className="text-xs font-body text-dnd-text-faint">{t('character.hero.none_m')}</span>
-          )}
-        </Surface>
-
-        <Surface variant="elevated" interactive onClick={() => go('skills')} className="!p-3 min-h-[56px]">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <GiArcheryTarget size={13} className="text-dnd-gold-bright shrink-0" />
-            <span className="text-xs font-cinzel font-bold uppercase tracking-widest max-xs:tracking-wide text-dnd-gold truncate max-xs:whitespace-normal leading-tight">
-              {t('character.skills.title')}
-            </span>
-          </div>
-          {totalSkillProf > 0 ? (
-            <div className="text-xs font-body text-dnd-text">
-              <span className="font-mono font-bold tabular-nums">{totalSkillProf}</span>{' '}
-              {t('character.hero.proficient_label', { count: totalSkillProf })}
-              {expertCount > 0 && (
-                <span className="text-dnd-text-muted">
-                  {' · '}
-                  <span className="font-mono font-bold tabular-nums">{expertCount}</span>{' '}
-                  {t('character.hero.expert_label', { count: expertCount })}
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-xs font-body text-dnd-text-faint">{t('character.hero.none_f')}</span>
-          )}
-        </Surface>
-      </div>
 
       {initResult && (
         <RollResultModal
