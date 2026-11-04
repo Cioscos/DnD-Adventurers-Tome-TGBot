@@ -34,7 +34,7 @@ from core.rules.level_choices import sync_level_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
-from core.game.stats import hit_points_for_level, total_base_hp
+from core.game.stats import total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
@@ -159,9 +159,8 @@ async def create_class_for_character(
     settings = char.settings or {}
     auto_calc = settings.get("hp_auto_calc", True)
     if is_first_class and char.hit_points == 0 and auto_calc and hit_die:
-        con_row = next((a for a in char.ability_scores if a.name == "constitution"), None)
-        con_mod = (con_row.value - 10) // 2 if con_row else 0
-        hp = hit_points_for_level(hit_die, con_mod, 1)
+        # Classe nata sopra il livello 1: PF di tutti i livelli, con la COS effettiva.
+        hp = total_base_hp([cls], effective_con_mod(char))
         char.hit_points = hp
         char.current_hit_points = hp
         await session.flush()
@@ -194,7 +193,10 @@ async def add_class(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    old_total_hp, old_current_hp = char.hit_points or 0, char.current_hit_points or 0
     await create_class_for_character(char, body, session, lang=lang)
+    if len(char.classes) > 1:  # la prima classe imposta i PF da sé
+        _recalc_max_hp(char, old_total_hp, old_current_hp)
     await session.flush()  # expire() scarta anche le modifiche del sync sulle abilità (cascade "all")
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)

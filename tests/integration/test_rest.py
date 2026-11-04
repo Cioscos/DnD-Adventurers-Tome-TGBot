@@ -24,9 +24,7 @@ async def _set_hp(client, cid: int, *, maximum: int, current: int) -> None:
 async def test_long_rest_restores_full_hp_and_resets_death_saves(client):
     cid = await _create_character(client)
     await _set_hp(client, cid, maximum=20, current=3)
-    # Drop to 0 and take a hit at 0 to accrue a death-save failure.
-    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 3})
-    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 1})
+    await client.patch(f"/characters/{cid}/death_saves", json={"action": "failure"})
 
     r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})
     assert r.status_code == 200, r.text
@@ -36,27 +34,13 @@ async def test_long_rest_restores_full_hp_and_resets_death_saves(client):
     assert ds["successes"] == 0 and ds["failures"] == 0 and ds.get("stable") is False
 
 
-async def test_short_rest_heals_by_hit_dice_spent(client):
+async def test_short_rest_does_not_heal_by_itself(client):
+    # La cura del riposo breve passa solo da POST /hit_dice/spend.
     cid = await _create_character(client)
     await _set_hp(client, cid, maximum=20, current=5)
-
-    r = await client.post(
-        f"/characters/{cid}/rest", json={"rest_type": "short", "hit_dice_used": 10}
-    )
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})
     assert r.status_code == 200, r.text
-    # 5 + 10 = 15, not a full heal to 20.
-    assert r.json()["current_hit_points"] == 15
-
-
-async def test_short_rest_heal_is_clamped_to_maximum(client):
-    cid = await _create_character(client)
-    await _set_hp(client, cid, maximum=20, current=5)
-
-    r = await client.post(
-        f"/characters/{cid}/rest", json={"rest_type": "short", "hit_dice_used": 100}
-    )
-    assert r.status_code == 200, r.text
-    assert r.json()["current_hit_points"] == 20
+    assert r.json()["current_hit_points"] == 5
 
 
 async def test_invalid_rest_type_is_rejected(client):

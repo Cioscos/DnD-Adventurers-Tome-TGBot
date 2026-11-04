@@ -222,7 +222,17 @@
       "rest_done": "Riposo completato",
       "spend_hit_die_title": "Spendi un dado vita",
       "spend_hit_die_body": "{{cls}}: tira 1d{{die}} + COS e recupera HP ({{remaining}} rimasti).",
-      "hit_die_exhausted": "Nessun dado vita rimasto"
+      "hit_die_exhausted": "Nessun dado vita rimasto",
+      "rest_interrupted": "Riposo interrotto?",
+      "rest_interrupted_long_2014": "Almeno un'ora di attività pesante: il riposo va ricominciato e non dà benefici.",
+      "rest_interrupted_long_2024": "Almeno un'ora di attività: valgono solo i benefici del riposo breve.",
+      "rest_interrupted_short_2024": "Un riposo breve interrotto non dà benefici.",
+      "rest_ate_and_drank": "Hai mangiato e bevuto?",
+      "rest_ate_and_drank_hint": "Senza cibo e acqua la spossatezza non scende.",
+      "rest_too_soon_title": "Riposo lungo ravvicinato",
+      "rest_too_soon_body": "Dall'ultimo riposo lungo sono passate meno di {{hours}} ore. Procedere comunque?",
+      "rest_too_soon_use_menu": "Ultimo riposo lungo troppo recente: conferma dal menu Riposo.",
+      "rest_needs_hp": "A 0 PF non si può fare un riposo lungo."
     },
     "select": {
       "title": "I tuoi personaggi",

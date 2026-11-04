@@ -259,7 +259,8 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 
 ### D&D 5e Rule Compliance Notes
 - **Death save roll**: nat 20 → revive with 1 HP + reset saves; nat 1 → 2 failures; 10+ → 1 success; 2-9 → 1 failure
-- **Rests break concentration**: both short and long rest clear `concentrating_spell_id`
+- **Rests and concentration (D8)**: the short rest keeps concentration, the long rest ends it
+- **Rests by edition**: long rest refused (409 `long_rest_needs_hp`) at 0 HP; `last_long_rest_at` + 409 `long_rest_too_soon` under 24 h (2014) / 16 h (2024) unless `confirm_early`; hit dice regained on a long rest: half (min 1) in 2014, all in 2024; hit die heals roll + CON, minimum 0 (2014) / 1 (2024) via `apply_heal`; `interrupted` (2014 long: no benefits; 2024 long: short-rest benefits; 2024 short: none); `ate_and_drank=false` blocks the exhaustion reduction in 2014. `/rest` no longer heals: healing is `POST /hit_dice/spend`
 - **HP above 0 resets death saves**: HEAL/SET_CURRENT automatically clears death saves when HP crosses from 0 to positive
 - **Long rest includes short-rest resources**: long rest restores abilities/resources with `restoration_type` of `long_rest` OR `short_rest`
 - **d20 modes**: advantage/disadvantage on all d20 rolls (skills, saves, initiative, death saves); advantage and disadvantage cancel out

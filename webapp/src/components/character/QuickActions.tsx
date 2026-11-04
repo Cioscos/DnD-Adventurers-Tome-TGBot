@@ -294,6 +294,12 @@ export default function QuickActions({ char }: Props) {
 
   const restMutation = useMutation({
     mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.detail : null
+      if (detail === 'long_rest_needs_hp') toast.error(t('character.quick_actions.rest_needs_hp'))
+      else if (detail === 'long_rest_too_soon') toast.error(t('character.quick_actions.rest_too_soon_use_menu'))
+      else notifyMutationError()
+    },
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })

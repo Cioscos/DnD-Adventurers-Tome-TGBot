@@ -396,10 +396,14 @@ export const api = {
       request<CharacterFull>(`/characters/${id}/revive`, {
         method: 'POST',
       }),
-    rest: (id: number, restType: 'long' | 'short', hitDiceUsed?: number) =>
+    rest: (
+      id: number,
+      restType: 'long' | 'short',
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean },
+    ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',
-        body: JSON.stringify({ rest_type: restType, hit_dice_used: hitDiceUsed }),
+        body: JSON.stringify({ rest_type: restType, ...opts }),
       }),
     restPreview: (id: number, restType: 'long' | 'short') =>
       request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}`),

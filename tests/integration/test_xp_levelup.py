@@ -114,4 +114,4 @@ async def test_multiclass_does_not_auto_sync_levels(client):
     # Two classes → no automatic level sync; both stay at 1.
     assert sorted(c["level"] for c in body["classes"]) == [1, 1]
     assert body["hp_gained"] is None
-    assert body["hit_points"] == 10
+    assert body["hit_points"] == 15  # 10 + 5 dalla seconda classe

@@ -106,6 +106,8 @@ class Character(Base):
 
     # Edizione delle regole seguita dal personaggio ("2014" | "2024")
     rules_edition: Mapped[str] = mapped_column(String(4), default="2014", server_default="2014")
+    # Ultimo riposo lungo completo (ISO UTC): serve all'avviso sul limite di 24 h (2014) / 16 h (2024)
+    last_long_rest_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Encumbrance
     carry_capacity: Mapped[int] = mapped_column(Integer, default=150)

@@ -51,12 +51,12 @@ vi.mock('@/pages/hp/HitDiceResultDialog', async () => {
 
 const char = { id: 7, classes: [{ id: 1, class_name: 'fighter', level: 3 }] } as unknown as CharacterFull
 
-function setup() {
+function setup(c: CharacterFull = char) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const onClose = vi.fn()
   render(
     <QueryClientProvider client={qc}>
-      <RestSheet char={char} open onClose={onClose} />
+      <RestSheet char={c} open onClose={onClose} />
     </QueryClientProvider>,
   )
   return { qc, onClose }
@@ -83,11 +83,38 @@ describe('RestSheet short rest', () => {
     const { qc, onClose } = setup()
     await openShortRest()
     await userEvent.click(screen.getByText('rest'))
-    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', {
+      interrupted: false, ate_and_drank: true, confirm_early: undefined }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(qc.getQueryData(['character', 7])).toEqual(updated)
     expect(toastSuccess).toHaveBeenCalledWith('character.quick_actions.rest_done')
     expect(screen.queryByTestId('hit-dice-modal')).toBeNull()
+  })
+
+  it('2024: offers the interrupted question and sends it', async () => {
+    rest.mockResolvedValue(char)
+    setup({ ...char, rules_edition: '2024' } as CharacterFull)
+    await openShortRest()
+    await userEvent.click(screen.getByRole('switch'))
+    await userEvent.click(screen.getByText('rest'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', {
+      interrupted: true, ate_and_drank: true, confirm_early: undefined }))
+  })
+
+  it('2014: no interrupted question on the short rest', async () => {
+    setup({ ...char, rules_edition: '2014' } as CharacterFull)
+    await openShortRest()
+    expect(screen.queryByRole('switch')).toBeNull()
+  })
+
+  it('a refused rest at 0 HP warns instead of the generic error', async () => {
+    const { ApiError } = await import('@/api/client')
+    rest.mockRejectedValue(new ApiError(409, 'long_rest_needs_hp'))
+    setup()
+    await openShortRest()
+    await userEvent.click(screen.getByText('rest'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.quick_actions.rest_needs_hp'))
+    expect(notifyMutationError).not.toHaveBeenCalled()
   })
 
   // Un onError proprio esclude l'handler globale: senza avviso restava la sola vibrazione.

@@ -68,14 +68,14 @@ async def test_distribute_updates_levels_and_scales_full_hp(client):
     assert body["hit_points"] == 21                 # 10 + 6 + 5
     # current was full (10/10) → ratio 1.0 → current tracks the new max.
     assert body["current_hit_points"] == 21
-    assert body["hp_gained"] == 11                  # 21 - 10
+    assert body["hp_gained"] == 6                   # 21 - 15
 
 
 async def test_distribute_scales_current_hp_by_ratio(client):
     cid, gid = await _create_fighter(client)
     lid = await _add_rogue(client, cid)
     await _set_xp(client, cid, 900)
-    # Halve current HP first → ratio 0.5 against old max 10.
+    # Current HP a 5 su un massimo di 15 → rapporto 1/3.
     rh = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 5})
     assert rh.status_code == 200, rh.text
 
@@ -87,7 +87,7 @@ async def test_distribute_scales_current_hp_by_ratio(client):
     body = r.json()
     new_max = body["hit_points"]
     assert new_max == 21
-    assert body["current_hit_points"] == round(0.5 * new_max)  # round(10.5) → 10
+    assert body["current_hit_points"] == round(5 / 15 * new_max)  # 7
 
 
 async def test_sum_exceeding_xp_level_is_400(client):

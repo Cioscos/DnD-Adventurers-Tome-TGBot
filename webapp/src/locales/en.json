@@ -222,7 +222,17 @@
       "rest_done": "Rest completed",
       "spend_hit_die_title": "Spend a hit die",
       "spend_hit_die_body": "{{cls}}: roll 1d{{die}} + CON and heal ({{remaining}} left).",
-      "hit_die_exhausted": "No hit dice left"
+      "hit_die_exhausted": "No hit dice left",
+      "rest_interrupted": "Rest interrupted?",
+      "rest_interrupted_long_2014": "At least an hour of strenuous activity: the rest must start over and gives no benefits.",
+      "rest_interrupted_long_2024": "At least an hour of activity: only the short rest benefits apply.",
+      "rest_interrupted_short_2024": "An interrupted short rest gives no benefits.",
+      "rest_ate_and_drank": "Did you eat and drink?",
+      "rest_ate_and_drank_hint": "Without food and water exhaustion does not go down.",
+      "rest_too_soon_title": "Long rest too soon",
+      "rest_too_soon_body": "Less than {{hours}} hours have passed since the last long rest. Proceed anyway?",
+      "rest_too_soon_use_menu": "Last long rest too recent: confirm from the Rest menu.",
+      "rest_needs_hp": "You cannot take a long rest at 0 HP."
     },
     "select": {
       "title": "Your characters",

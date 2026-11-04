@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -42,6 +42,7 @@ from api.schemas.common import (
 from core.data.damage_types import LABELS_IT, canonical_damage_type, damage_multiplier
 from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
+from core.rules.edition import character_edition
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
 from api.services.character_response import build_character_response
@@ -63,8 +64,12 @@ class HitDiceSpendResult(BaseModel):
 router = APIRouter(prefix="/characters", tags=["hp"])
 
 
+def _utcnow() -> datetime:
+    return datetime.utcnow()
+
+
 def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
+    return _utcnow().isoformat(timespec="seconds")
 
 
 def _add_history(
@@ -443,22 +448,24 @@ def _restores_resource(resource, rest_type: str) -> bool:
     return resource.restoration_type in types
 
 
-def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0) -> RestPreview:
+def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,
+                         ate_and_drank: bool = True) -> RestPreview:
     """Pure: cosa cambierebbe un riposo. Usata da /rest (che poi applica) e dall'anteprima."""
     fx = RestPreview()
     if char.is_dead:  # un riposo non rianima un personaggio morto
         return fx
     long = rest_type == "long"
-    fx.ends_concentration = is_concentrating(char)
+    fx.ends_concentration = long and is_concentrating(char)  # D8: solo il riposo lungo
     fx.pact_slots = sum(s.used for s in char.spell_slots if s.is_pact and s.used > 0)
     if long:
         fx.hp_gain = max(0, char.hit_points + hp_max_bonus - char.current_hit_points)
         for s in char.spell_slots:
             if not s.is_pact and s.used > 0:
                 fx.slots[s.level] = fx.slots.get(s.level, 0) + s.used
-        # Recupero dadi vita (RAW PHB): fino a metà del totale (min 1),
+        # Dadi vita: 2014 fino a metà del totale (min 1), 2024 tutti quelli spesi;
         # dal dado più grande in caso di multiclasse (spec 2026-07-17).
-        hd_budget = max(1, sum(c.level for c in char.classes) // 2)
+        hd_budget = (sum(c.level for c in char.classes) if character_edition(char) == "2024"
+                     else max(1, sum(c.level for c in char.classes) // 2))
         for cls in sorted(char.classes, key=lambda c: (c.hit_die or 8), reverse=True):
             if hd_budget <= 0:
                 break
@@ -467,9 +474,10 @@ def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0)
             if back > 0:
                 fx.hit_dice_regain[cls.id] = back
                 hd_budget -= back
-        # A long rest reduces Exhaustion by 1 level (PHB p.186).
+        # Spossatezza -1 livello; nel 2014 solo se ci si è anche nutriti.
         exh = (char.conditions or {}).get("exhaustion", 0)
-        if isinstance(exh, int) and not isinstance(exh, bool) and exh > 0:
+        fed = ate_and_drank or character_edition(char) == "2024"
+        if fed and isinstance(exh, int) and not isinstance(exh, bool) and exh > 0:
             fx.exhaustion_change = -1
     fx.abilities = [a.name for a in char.abilities
                     if _restores_ability(a, rest_type) and a.uses != a.max_uses]
@@ -505,19 +513,38 @@ async def rest(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    if body.rest_type not in ("long", "short"):
+        raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
     # Un riposo non rianima un personaggio morto.
     if char.is_dead:
         return await build_character_response(session, char)
+    edition = character_edition(char)
+    rest_type = body.rest_type
+    if rest_type == "long":
+        # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
+        if char.current_hit_points <= 0 and char.hit_points > 0:
+            raise HTTPException(status_code=409, detail="long_rest_needs_hp")
+    if body.interrupted and (rest_type == "long" or edition == "2024"):
+        if rest_type == "short" or edition == "2014":
+            # Nessun beneficio (2014: lungo da ricominciare; 2024: breve interrotto).
+            _add_history(session, char.id, "rest", "Riposo interrotto: nessun beneficio",
+                         meta={"kind": rest_type, "interrupted": True})
+            return await build_character_response(session, char)
+        rest_type = "short"  # 2024: il lungo interrotto dopo almeno un'ora vale un riposo breve
+    if rest_type == "long" and not body.confirm_early and char.last_long_rest_at:
+        gap = timedelta(hours=16 if edition == "2024" else 24)
+        if _utcnow() - datetime.fromisoformat(char.last_long_rest_at) < gap:
+            raise HTTPException(status_code=409, detail="long_rest_too_soon")
     notifications: list[dict] = []
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    fx = compute_rest_effects(char, body.rest_type, hb_hp_bonus) if body.rest_type in ("long", "short") else None
-    if body.rest_type in ("long", "short"):
-        for r in plan_item_recharges(char.items, body.rest_type):
-            set_item_charges(r.item, r.after)
-            _add_history(session, char.id, "item_charges",
-                         f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
+    fx = compute_rest_effects(char, rest_type, hb_hp_bonus, body.ate_and_drank)
+    for r in plan_item_recharges(char.items, rest_type):
+        set_item_charges(r.item, r.after)
+        _add_history(session, char.id, "item_charges",
+                     f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
-    if body.rest_type == "long":
+    if rest_type == "long":
+        char.last_long_rest_at = _now()
         # Restore to effective max HP (base + passive homebrew modifier).
         char.current_hit_points = char.hit_points + hb_hp_bonus
         char.temp_hp = 0
@@ -561,19 +588,12 @@ async def rest(
         firing = await dispatch(session, char, "long_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))
 
-    elif body.rest_type == "short":
-        # Break concentration
-        end_concentration(char)
+    else:
+        # D8: il riposo breve non interrompe la concentrazione.
         # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
         for slot in char.spell_slots:
             if slot.is_pact:
                 slot.used = 0
-        healed = 0
-        if body.hit_dice_used and body.hit_dice_used > 0:
-            # Simple roll: average hit die value * count (frontend handles the roll display)
-            healed = body.hit_dice_used
-            # Use effective max HP (base + passive homebrew modifier) as the heal cap.
-            char.current_hit_points = min(char.hit_points + hb_hp_bonus, char.current_hit_points + healed)
         # Restore short-rest abilities (le ex-risorse di classe sono ora Ability).
         for ability in char.abilities:
             if _restores_ability(ability, "short"):
@@ -583,13 +603,11 @@ async def rest(
             if _restores_resource(resource, "short"):
                 resource.current = resource.max
         _add_history(session, char.id, "rest",
-                     f"Riposo breve completato (HP recuperati: {healed})",
+                     "Riposo breve completato",
                      meta={"kind": "short"})
 
         firing = await dispatch(session, char, "short_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))
-    else:
-        raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
     await release_concentration_effects(session, char)
 
     result = await build_character_response(session, char)
@@ -642,13 +660,14 @@ async def spend_hit_dice(
         rolls = list(body.rolls)
     else:
         rolls = [random.randint(1, hit_die) for _ in range(body.count)]
-    # Each die heals roll + CON mod (minimum 1 per die)
-    per_die = [max(1, r + con_mod) for r in rolls]
-    total_healed = sum(per_die)
+    # Ogni dado cura tiro + COS: minimo 0 nel 2014, 1 nel 2024.
+    floor = 1 if character_edition(char) == "2024" else 0
+    total_healed = sum(max(floor, r + con_mod) for r in rolls)
 
     old_hp = char.current_hit_points
-    char.current_hit_points = min(char.hit_points, old_hp + total_healed)
-    actual_healed = char.current_hit_points - old_hp
+    # apply_heal: tetto con bonus homebrew e azzeramento dei tiri contro morte risalendo da 0 PF.
+    healed = await apply_heal(session, char, total_healed)
+    actual_healed = healed["healed"]
 
     cls.hit_dice_used = (cls.hit_dice_used or 0) + body.count
 

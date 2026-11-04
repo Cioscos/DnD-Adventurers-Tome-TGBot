@@ -7,6 +7,7 @@ import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
@@ -30,6 +31,10 @@ export default function RestSheet({ char, open, onClose }: Props) {
   const [shortRestOpen, setShortRestOpen] = useState(false)
   const [confirmLongRest, setConfirmLongRest] = useState(false)
   const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
+  const [interrupted, setInterrupted] = useState(false)
+  const [ateAndDrank, setAteAndDrank] = useState(true)
+  const [tooSoon, setTooSoon] = useState(false)
+  const is2024 = char.rules_edition === '2024'
 
   const rollDice = useAnimatedRoll()
 
@@ -55,8 +60,27 @@ export default function RestSheet({ char, open, onClose }: Props) {
   })
 
   const restMutation = useMutation({
-    mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
+    mutationFn: ({ restType, confirmEarly }: { restType: 'long' | 'short'; confirmEarly?: boolean }) =>
+      api.characters.rest(char.id, restType, {
+        interrupted,
+        ate_and_drank: ateAndDrank,
+        confirm_early: confirmEarly,
+      }),
+    onError: (err) => {
+      const detail = err instanceof ApiError ? err.detail : null
+      if (detail === 'long_rest_too_soon') {
+        setConfirmLongRest(false)
+        setTooSoon(true)
+      } else if (detail === 'long_rest_needs_hp') {
+        toast.error(t('character.quick_actions.rest_needs_hp'))
+      } else {
+        notifyMutationError()
+      }
+    },
     onSuccess: (updated) => {
+      setTooSoon(false)
+      setInterrupted(false)
+      setAteAndDrank(true)
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
       setConfirmLongRest(false)
@@ -66,6 +90,17 @@ export default function RestSheet({ char, open, onClose }: Props) {
       haptic.success()
     },
   })
+
+  const interruptedToggle = (hint: string) => (
+    <div className="text-left">
+      <SwitchToggle
+        checked={interrupted}
+        onChange={setInterrupted}
+        label={t('character.quick_actions.rest_interrupted')}
+        hint={hint}
+      />
+    </div>
+  )
 
   const rowClass = `w-full min-h-[44px] flex items-center gap-3 px-4 py-3 rounded-2xl
                     bg-dnd-surface border border-dnd-border text-left
@@ -100,20 +135,49 @@ export default function RestSheet({ char, open, onClose }: Props) {
           <div className="space-y-3">
             <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
             {confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
+            {interruptedToggle(t(is2024
+              ? 'character.quick_actions.rest_interrupted_long_2024'
+              : 'character.quick_actions.rest_interrupted_long_2014'))}
+            {!is2024 && (
+              <div className="text-left">
+                <SwitchToggle
+                  checked={ateAndDrank}
+                  onChange={setAteAndDrank}
+                  label={t('character.quick_actions.rest_ate_and_drank')}
+                  hint={t('character.quick_actions.rest_ate_and_drank_hint')}
+                />
+              </div>
+            )}
           </div>
         }
         confirmLabel={t('character.quick_actions.rest_long')}
         confirmVariant="primary"
         loading={restMutation.isPending}
-        onConfirm={() => restMutation.mutate('long')}
+        onConfirm={() => restMutation.mutate({ restType: 'long' })}
+      />
+
+      <ConfirmSheet
+        open={tooSoon}
+        onClose={() => setTooSoon(false)}
+        title={t('character.quick_actions.rest_too_soon_title')}
+        body={<p>{t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}</p>}
+        confirmLabel={t('character.quick_actions.rest_long')}
+        confirmVariant="primary"
+        loading={restMutation.isPending}
+        onConfirm={() => restMutation.mutate({ restType: 'long', confirmEarly: true })}
       />
 
       {shortRestOpen && (
         <HitDiceModal
           classes={char.classes ?? []}
           onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
-          onConfirmRest={() => restMutation.mutate('short')}
-          preview={<RestPreviewList charId={char.id} restType="short" />}
+          onConfirmRest={() => restMutation.mutate({ restType: 'short' })}
+          preview={
+            <>
+              <RestPreviewList charId={char.id} restType="short" />
+              {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
+            </>
+          }
           onClose={() => setShortRestOpen(false)}
           isPending={hitDieMutation.isPending}
           pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}

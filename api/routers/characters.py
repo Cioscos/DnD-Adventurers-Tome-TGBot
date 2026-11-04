@@ -548,10 +548,7 @@ async def update_xp(
             sync_level_choices(char, cls, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
-            con_row = next(
-                (a for a in char.ability_scores if a.name == "constitution"), None
-            )
-            con_mod = (con_row.value - 10) // 2 if con_row else 0
+            con_mod = effective_con_mod(char)
             if auto_calc and cls.hit_die and new_level < old_level:
                 # Symmetric to level-up: each lost level gives back its stored roll or the fixed value.
                 lost = sum(

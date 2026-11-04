@@ -99,9 +99,9 @@ async def test_release_on_zero_hp(client, test_session_factory):
     await _assert_released(client, test_session_factory, target)
 
 
-async def test_release_on_short_rest(client, test_session_factory):
+async def test_release_on_long_rest(client, test_session_factory):
     caster, target, _ = await _setup(client, test_session_factory)
-    r = await client.post(f"/characters/{caster}/rest", json={"rest_type": "short"})
+    r = await client.post(f"/characters/{caster}/rest", json={"rest_type": "long"})
     assert r.status_code == 200, r.text
     await _assert_released(client, test_session_factory, target)
 

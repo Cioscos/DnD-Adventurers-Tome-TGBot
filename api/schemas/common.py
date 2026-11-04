@@ -294,7 +294,9 @@ class HPUndoRequest(BaseModel):
 
 class RestRequest(BaseModel):
     rest_type: str  # "long" | "short"
-    hit_dice_used: Optional[int] = None
+    interrupted: bool = False
+    ate_and_drank: bool = True  # 2014: senza cibo e acqua il riposo lungo non riduce la spossatezza
+    confirm_early: bool = False  # riposo lungo prima del limite di 24 h (2014) / 16 h (2024)
 
 
 class ItemChargePreview(BaseModel):

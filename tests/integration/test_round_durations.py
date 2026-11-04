@@ -100,12 +100,13 @@ async def test_rest_clears_concentration_duration(client):
     sp = (await client.post(f"/characters/{cid}/spells", json={
         "name": "B", "level": 1, "is_concentration": True,
     })).json()["id"]
-    for rest in ("short", "long"):
-        await client.patch(f"/characters/{cid}/concentration", json={"spell_id": sp, "rounds": 10})
-        r = await client.post(f"/characters/{cid}/rest", json={"rest_type": rest})
-        assert r.status_code == 200, r.text
-        assert r.json()["concentrating_spell_id"] is None
-        assert "concentration_rounds_left" not in (r.json()["settings"] or {})
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": sp, "rounds": 10})
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})  # D8: la conserva
+    assert r.json()["concentrating_spell_id"] == sp
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})
+    assert r.status_code == 200, r.text
+    assert r.json()["concentrating_spell_id"] is None
+    assert "concentration_rounds_left" not in (r.json()["settings"] or {})
 
 
 async def test_tick_other_user_403(client, test_session_factory):
