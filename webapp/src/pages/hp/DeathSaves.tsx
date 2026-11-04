@@ -40,8 +40,8 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
     ? 'border-dnd-emerald/35'
     : 'border-dnd-crimson/35'
   const labelColor = tone === 'emerald'
-    ? 'text-dnd-emerald/85'
-    : 'text-dnd-crimson/85'
+    ? 'text-dnd-emerald-bright'
+    : 'text-dnd-crimson-bright'
   const glow = tone === 'emerald'
     ? 'shadow-[0_0_8px_rgba(63,166,106,0.5)]'
     : 'shadow-[0_0_8px_rgba(179,58,58,0.5)]'
@@ -106,7 +106,7 @@ export function DeathSaveTracker({ deathSaves, onRoll, isRolling }: Pick<DeathSa
         onRoll={onRoll}
         pending={isRolling}
         ariaLabel={t('character.death_saves.roll')}
-        className="w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
+        className="w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-dnd-gold text-dnd-ink"
       >
         <Dice1 size={18} />
         {t('character.death_saves.roll')}
@@ -156,7 +156,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
             onClick={() => onAction('success')}
             loading={pendingAction === 'success'}
             icon={<Check size={14} />}
-            className="!bg-dnd-emerald/15 !border-dnd-emerald/40 !text-dnd-emerald-bright"
+            className="!bg-dnd-emerald/10 !border-dnd-emerald/40 !text-dnd-emerald-bright"
           >
             {t('character.death_saves.success')}
           </Button>
@@ -166,7 +166,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
             onClick={() => onAction('failure')}
             loading={pendingAction === 'failure'}
             icon={<X size={14} />}
-            className="!bg-dnd-crimson/15 !border-dnd-crimson/40 !text-dnd-crimson-bright"
+            className="!bg-dnd-crimson/10 !border-dnd-crimson/40 !text-dnd-crimson-bright"
           >
             {t('character.death_saves.failure')}
           </Button>
@@ -176,7 +176,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
             onClick={() => onAction('stabilize')}
             loading={pendingAction === 'stabilize'}
             icon={<Heart size={14} />}
-            className="!bg-dnd-cobalt/15 !border-dnd-cobalt/40 !text-dnd-cobalt-bright"
+            className="!bg-dnd-cobalt/10 !border-dnd-cobalt/40 !text-dnd-cobalt-bright"
           >
             {t('character.death_saves.stabilize')}
           </Button>

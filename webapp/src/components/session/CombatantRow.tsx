@@ -55,7 +55,7 @@ function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null })
         <div className={`h-full ${BUCKET_BAR[bucket]}`} style={{ width: '100%' }} />
       ) : (
         <div
-          className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
+          className={`h-full ${(pct ?? 0) >= 75 ? 'bg-dnd-emerald-bright' : (pct ?? 0) > 25 ? 'bg-dnd-amber' : 'bg-dnd-crimson'}`}
           style={{ width: `${pct ?? 0}%` }}
         />
       )}
@@ -118,12 +118,10 @@ export default function CombatantRow({
       data-active={isActive ? 'true' : 'false'}
       data-dead={c.is_dead ? 'true' : 'false'}
       {...wrapperProps}
-      className={`rounded-lg border ${collapsed ? 'px-3 py-2' : 'p-3'} transition-all min-h-[44px]
-        ${c.is_dead ? 'opacity-50' : ''}
-        ${isActive
-          ? 'border-dnd-gold bg-dnd-surface-raised ring-2 ring-dnd-gold-bright/50 shadow-dnd-glow'
-          : `bg-dnd-surface ${isPc ? 'border-dnd-gold-dim/70' : 'border-dnd-crimson/50'}`}
-        ${clickable ? 'cursor-pointer hover:border-dnd-gold-bright' : ''}`}
+      className={`mb-1 border-b ${collapsed ? 'py-1.5' : 'py-2.5'} px-1 transition-colors min-h-[44px]
+        ${c.is_dead ? 'opacity-60' : ''}
+        ${isActive ? 'border-dnd-gold bg-dnd-gold/10' : 'border-dnd-border/60'}
+        ${clickable ? 'cursor-pointer hover:bg-dnd-surface/60' : ''}`}
     >
       <div className="flex items-center gap-3">
         <div className="w-9 shrink-0 text-center">
@@ -146,7 +144,7 @@ export default function CombatantRow({
             {isPc && snapshot?.has_pending_save && (
               <span
                 aria-label={t('session.combat.pending_save')}
-                className="shrink-0 rounded-full border border-dnd-amber/60 bg-dnd-amber/15 px-2 py-0.5 text-xs font-body text-dnd-amber tabular-nums whitespace-nowrap"
+                className="shrink-0 rounded-full border border-dnd-amber/60 bg-dnd-amber/10 px-2 py-0.5 text-xs font-body text-dnd-amber tabular-nums whitespace-nowrap"
               >
                 {pcSave
                   ? t('character.conditions.effect.save_any', {

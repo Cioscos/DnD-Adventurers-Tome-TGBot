@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Weight, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, HandHeart, Trash2, ListChecks, Check } from 'lucide-react'
+import { Plus, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, HandHeart, Trash2, ListChecks, Check } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
@@ -13,7 +13,7 @@ import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
+import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import Sheet from '@/components/ui/Sheet'
@@ -96,8 +96,6 @@ export default function Inventory() {
   const system = useUnitSettings((s) => s.system)
   const [editingCap, setEditingCap] = useState(false)
   const [capDraft, setCapDraft] = useState('')
-  const [scrolled, setScrolled] = useState(false)
-  const topSentinelRef = useRef<HTMLDivElement>(null)
 
   const toggleType = (type: string) => {
     setCollapsedTypes((prev) => {
@@ -489,23 +487,6 @@ export default function Inventory() {
     return () => window.clearTimeout(tid)
   }, [highlightId, charLoaded, navigate, location.pathname])
 
-  // Pill flottante: quando la sentinella in cima esce dalla viewport (scroll),
-  // il pulsante "Aggiungi" si comprime in pill in alto a destra. Stesso pattern
-  // sentinella + IntersectionObserver usato da ScrollArea.
-  useEffect(() => {
-    const el = topSentinelRef.current
-    if (!el) {
-      setScrolled(false)
-      return
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [hasItems])
-
   if (!char) {
     return (
       <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
@@ -588,34 +569,18 @@ export default function Inventory() {
   })()
 
   return (
-    <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
-      {/* Add button — barra sticky che si comprime in pill flottante su scroll.
-          Nascosta del tutto se non ci sono oggetti (l'empty-state ha già la sua CTA). */}
-      {hasItems && (
-        <>
-          <div className="sticky top-[calc(var(--crumb-offset,0px)+0.5rem)] z-20 flex pointer-events-none">
-            <m.div
-              layout
-              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              className={scrolled ? 'ml-auto pointer-events-auto' : 'w-full pointer-events-auto'}
-            >
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth={!scrolled}
-                onClick={() => setShowAdd(true)}
-                icon={<Plus size={18} />}
-                haptic="medium"
-                className={scrolled ? '!rounded-full' : ''}
-              >
-                {scrolled ? t('character.inventory.add_short') : t('character.inventory.add')}
-              </Button>
-            </m.div>
-          </div>
-          <div ref={topSentinelRef} className="h-px" aria-hidden />
-        </>
-      )}
-
+    <Layout
+      title={t('character.inventory.title')}
+      backTo={`/char/${charId}`}
+      group="equipment"
+      page="inventory"
+      // Senza oggetti l'EmptyState ha già il suo invito ad aggiungere.
+      bottomAction={hasItems ? (
+        <Button variant="primary" size="lg" fullWidth onClick={() => setShowAdd(true)} icon={<Plus size={20} />} haptic="medium">
+          {t('character.inventory.add')}
+        </Button>
+      ) : undefined}
+    >
       <div className="flex gap-2 mb-2">
         {selecting ? (
           <>
@@ -643,7 +608,7 @@ export default function Inventory() {
       </div>
 
       {current && (
-        <Surface variant="elevated" className="!py-2">
+        <section className="border-b border-dnd-border pb-2.5">
           <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-1 text-xs font-cinzel text-dnd-gold-dim">
             <Pressable
               onClick={() => navigate(`/char/${charId}/inventory`)}
@@ -705,15 +670,14 @@ export default function Inventory() {
               </Button>
             ))}
           </div>
-        </Surface>
+        </section>
       )}
 
       {/* Carry capacity progress bar (Semantic Triad coloring) + manual override */}
       {!current && (
-      <Surface variant="elevated" className="!py-2">
+      <section className="border-y border-dnd-border px-1 py-2">
         <div className="flex items-center gap-2 mb-1.5">
-          <Weight size={13} className="text-dnd-gold-dim" />
-          <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+          <p className={`flex-1 ${LEDGER_LABEL}`}>
             {t('character.inventory.carry_label')}
           </p>
           {!editingCap && (
@@ -776,7 +740,7 @@ export default function Inventory() {
 
         {char.carry_capacity_override ? (
           <div className="flex items-center justify-between gap-2 mt-1.5">
-            <p className="text-xs text-dnd-crimson-bright font-body italic flex-1">
+            <p className="text-xs text-dnd-amber font-body italic flex-1">
               {t('character.inventory.carry_override_hint')}
             </p>
             <Button
@@ -800,7 +764,7 @@ export default function Inventory() {
             })}
           </p>
         )}
-      </Surface>
+      </section>
       )}
 
       {items.length === 0 && (
@@ -823,10 +787,10 @@ export default function Inventory() {
       {!current && <AttunementSection charId={charId} items={items} />}
 
       {childBoxes.length > 0 && (
-        <section className="space-y-2 mb-4">
-          <p className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">
+        <section className="mb-4">
+          <h2 className={`border-b border-dnd-border pb-1 pl-1 ${LEDGER_TITLE}`}>
             {t('character.inventory.containers.section')}
-          </p>
+          </h2>
           {childBoxes.map((b) => (
             <div key={b.id}>{selectable(b.id, <ContainerCard item={b} onOpen={() => navigate(`/char/${charId}/inventory/c/${b.id}`)} />)}</div>
           ))}
@@ -845,15 +809,15 @@ export default function Inventory() {
             <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
               <Pressable
                 onClick={() => toggleType(type)}
-                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg border-b border-dnd-border/40 text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
+                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 mb-px bg-dnd-bg border-b border-dnd-border text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight
                   size={14}
                   className={`text-dnd-gold-bright transition-transform ${!isCollapsed ? 'rotate-90' : ''}`}
                 />
-                <TypeIcon size={14} className="text-dnd-gold/80 shrink-0" />
-                <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
+                <TypeIcon size={14} className="text-dnd-gold shrink-0" />
+                <span className={`flex-1 ${LEDGER_TITLE}`}>
                   {t(`character.inventory.types.${type}`)}
                 </span>
                 <span className="text-xs text-dnd-text-muted font-mono tabular-nums">
@@ -868,7 +832,7 @@ export default function Inventory() {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="space-y-2 mt-2">
+                    <div>
                       {groupItems.map((item) => (
                         // Niente `layout` per oggetto: framer rimisurava tutta la lista a ogni
                         // render (anche solo aprendo un dettaglio); come negli incantesimi.

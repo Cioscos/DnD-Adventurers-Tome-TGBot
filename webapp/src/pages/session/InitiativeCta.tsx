@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
-import Surface from '@/components/ui/Surface'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
@@ -34,7 +33,7 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
 
   if (combatant.initiative !== null) {
     return (
-      <Surface variant="elevated">
+      <div>
         <p className="text-center text-sm font-mono tabular-nums text-dnd-gold-bright">
           {combatant.initiative_die !== null
             ? t('session.combat.rolled_detail', {
@@ -47,24 +46,21 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
         <p className="text-center text-xs text-dnd-text-muted font-body italic mt-1">
           {t('session.combat.waiting_others')}
         </p>
-      </Surface>
+      </div>
     )
   }
 
   return (
-    <Surface variant="ember" ornamented>
-      <p className="text-center text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel mb-2">
-        {t('session.combat.initiative')}
-      </p>
+    <div>
       <RollButton
         onRoll={(mode) => rollMutation.mutate(mode)}
         pending={rollMutation.isPending}
         ariaLabel={t('session.combat.roll_initiative')}
-        className="w-full min-h-[48px] px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
+        className="w-full min-h-[48px] px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold bg-dnd-gold text-dnd-ink"
       >
         <Dices size={18} />
         {t('session.combat.roll_initiative')}
       </RollButton>
-    </Surface>
+    </div>
   )
 }

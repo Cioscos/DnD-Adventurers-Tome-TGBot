@@ -58,7 +58,6 @@ const passthrough = vi.hoisted(() => async () => {
   return { default: (p: { children?: ReactNode }) => React.createElement('div', null, p.children) }
 })
 vi.mock('@/components/Layout', passthrough)
-vi.mock('@/components/ui/Surface', passthrough)
 
 const char = {
   id: 7, attacks_per_action: 2, items: [], abilities: [], spells: [], classes: [], spellcasting: null,
@@ -79,6 +78,28 @@ describe('Turn page', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(screen.getByText('character.turn.new_turn'))
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('keeps the standard actions closed until asked for', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.unarmed')).toBeInTheDocument()
+    expect(screen.queryByText('Schivata')).not.toBeInTheDocument()
+    const rows = screen.getAllByRole('button', { name: 'character.turn.standard_actions' })
+    expect(rows[0]).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(rows[0])
+    expect(rows[0]).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Schivata')).toBeInTheDocument()
+  })
+
+  it('a section marked as used closes, and new turn reopens it', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.unarmed')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('character.turn.mark_used: character.turn.section_action'))
+    expect(screen.queryByText('character.turn.unarmed')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.turn.new_turn'))
+    expect(screen.getByText('character.turn.unarmed')).toBeInTheDocument()
   })
 
   it('shows "Fine round" outside an encounter', async () => {

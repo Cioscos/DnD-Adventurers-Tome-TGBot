@@ -263,7 +263,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                   icon={<Trash2 size={16} />}
                   onClick={() => setConfirmDeleteIndex(index)}
                   haptic="none"
-                  className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 mt-6"
+                  className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson-bright hover:bg-dnd-crimson/10 mt-6"
                   aria-label={t('common.delete')}
                 />
               </div>

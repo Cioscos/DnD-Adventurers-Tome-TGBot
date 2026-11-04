@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -9,7 +9,6 @@ import Layout from '@/components/Layout'
 import Reveal from '@/components/ui/Reveal'
 import { haptic } from '@/auth/telegram'
 import { ease, stagger } from '@/styles/motion'
-import type { AbilityScore } from '@/types'
 import AbilityScoresSkeleton from '@/components/skeletons/AbilityScoresSkeleton'
 import AbilityScoreEditModal from '@/components/character/AbilityScoreEditModal'
 import AbilityScoreCard from '@/components/character/AbilityScoreCard'
@@ -75,43 +74,34 @@ export default function AbilityScores() {
 
   const ordered = [...char.ability_scores]
     .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
-  const rows: AbilityScore[][] = []
-  for (let i = 0; i < ordered.length; i += 2) rows.push(ordered.slice(i, i + 2))
 
   return (
     <Layout title={t('character.stats.title')} backTo={`/char/${charId}`} group="skills" page="stats">
-      <Reveal.Stagger stagger={stagger.list} cap={12} className="grid grid-cols-2 gap-3">
-        {rows.map((row) => {
-          const expandedScore = row.find((s) => s.name === expanded)
-          return (
-            <Fragment key={row.map((s) => s.name).join('-')}>
-              {row.map((score) => (
-                <Reveal.Item key={score.name}>
-                  <AbilityScoreCard
-                    score={score}
-                    expanded={expanded === score.name}
-                    onToggle={() => setExpanded((p) => (p === score.name ? null : score.name))}
-                    onEdit={() => setEditing(score.name)}
-                  />
-                </Reveal.Item>
-              ))}
-              <AnimatePresence initial={false}>
-                {expandedScore && (
-                  <m.div
-                    key={`detail-${expandedScore.name}`}
-                    className="col-span-2 overflow-hidden"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: ease.inkSpread }}
-                  >
-                    <AbilityScoreDetail score={expandedScore} />
-                  </m.div>
-                )}
-              </AnimatePresence>
-            </Fragment>
-          )
-        })}
+      <Reveal.Stagger stagger={stagger.list} cap={12} className="border-y border-dnd-border divide-y divide-dnd-border/60">
+        {ordered.map((score) => (
+          <Reveal.Item key={score.name}>
+            <AbilityScoreCard
+              score={score}
+              expanded={expanded === score.name}
+              onToggle={() => setExpanded((p) => (p === score.name ? null : score.name))}
+              onEdit={() => setEditing(score.name)}
+            />
+            <AnimatePresence initial={false}>
+              {expanded === score.name && (
+                <m.div
+                  key={`detail-${score.name}`}
+                  className="overflow-hidden"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: ease.inkSpread }}
+                >
+                  <AbilityScoreDetail score={score} />
+                </m.div>
+              )}
+            </AnimatePresence>
+          </Reveal.Item>
+        ))}
       </Reveal.Stagger>
 
       {(() => {

@@ -49,7 +49,7 @@ vi.mock('@/dice/useDiceAnimation', () => ({
   useDiceAnimation: () => ({ playAndCollect: vi.fn() }),
 }))
 vi.mock('@/components/ui/ConditionBadge', () => ({ default: () => null }))
-vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }) }))
+vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }), ease: { inkSpread: [0, 0, 1, 1] } }))
 vi.mock('framer-motion', async () => {
   const React = await import('react')
   const MOTION = new Set(['initial', 'animate', 'exit', 'transition', 'variants', 'whileTap', 'whileHover', 'drag', 'layout'])
@@ -63,6 +63,7 @@ vi.mock('framer-motion', async () => {
     AnimatePresence: ({ children }: { children?: React.ReactNode }) => children,
     // Sheet usa il drag-to-dismiss dal giro r2.
     useDragControls: () => ({ start: () => {} }),
+    useReducedMotion: () => true,
   }
 })
 

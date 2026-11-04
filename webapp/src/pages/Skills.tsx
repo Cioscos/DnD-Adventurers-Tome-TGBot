@@ -3,15 +3,11 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Check, Eye } from 'lucide-react'
-import {
-  GiPerspectiveDiceSixFacesRandom as Dices, GiPolarStar as Star,
-} from 'react-icons/gi'
+import { Check } from 'lucide-react'
+import { GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
-import SectionDivider from '@/components/ui/SectionDivider'
-import StatPill from '@/components/ui/StatPill'
+import ProficiencyMark from '@/components/ui/ProficiencyMark'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import ScrollArea from '@/components/ScrollArea'
@@ -30,6 +26,7 @@ import { rollNoteOf } from '@/lib/settings'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
+import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -104,9 +101,7 @@ function SkillRow({
     onLongPress,
     onProgress: setPressProgress,
   })
-  const isExpert = level === 'expert'
-  const isProficient = level === true
-  const hasMark = isExpert || isProficient
+  const hasMark = level !== false
 
   // Circumference of an r=20 circle (the ring radius below).
   const RING_CIRC = 2 * Math.PI * 20
@@ -118,12 +113,7 @@ function SkillRow({
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.02, duration: 0.18 }}
-      className={`flex flex-wrap items-center gap-2 max-xs:gap-1 px-3 max-xs:px-2 py-2 rounded-xl border transition-colors
-        ${isExpert
-          ? 'bg-gradient-to-r from-dnd-arcane-deep/30 to-dnd-gold-deep/20 border-dnd-arcane/40'
-          : isProficient
-            ? 'bg-dnd-surface-raised border-dnd-gold/30'
-            : 'bg-dnd-surface border-dnd-border'}`}
+      className="flex flex-wrap items-center gap-2 max-xs:gap-1 py-1"
     >
       <div
         {...longPress}
@@ -151,19 +141,7 @@ function SkillRow({
               />
             </svg>
           )}
-          {isExpert ? (
-            <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-dnd-arcane-bright to-dnd-gold-bright border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_6px_var(--dnd-gold-glow)]">
-              <Star size={10} className="text-dnd-ink" fill="currentColor" strokeWidth={1} />
-            </div>
-          ) : isProficient ? (
-            <div className="w-5 h-5 rounded-full bg-dnd-gold border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_4px_var(--dnd-gold-glow)]">
-              <Check size={11} className="text-dnd-ink" strokeWidth={3} />
-            </div>
-          ) : (
-            <div className="w-5 h-5 rounded-full border-2 border-dnd-border flex items-center justify-center text-xs leading-none text-dnd-gold-dim">
-              {half ? '½' : null}
-            </div>
-          )}
+          <ProficiencyMark level={level} half={half} />
         </div>
         <span
           className="flex-1 min-w-0 text-left text-sm font-body font-medium truncate max-xs:whitespace-normal max-xs:line-clamp-2 max-xs:leading-tight"
@@ -182,13 +160,13 @@ function SkillRow({
       <RollButton
         onRoll={onRoll}
         pending={rollPending}
-        className="relative shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
+        className="relative shrink-0 w-11 h-11 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
         ariaLabel={rollAriaLabel}
       >
-        <Dices size={16} />
+        <Dices size={18} />
       </RollButton>
       {rollNoteOf(char, `skill.${skillKey}`) && (
-        <p className="basis-full text-xs text-dnd-text-muted font-body italic">{rollNoteOf(char, `skill.${skillKey}`)}</p>
+        <p className="basis-full pl-1 pb-1 text-xs text-dnd-text-muted font-body italic">{rollNoteOf(char, `skill.${skillKey}`)}</p>
       )}
     </m.div>
   )
@@ -304,41 +282,33 @@ export default function Skills() {
           -top-4 compensa il p-4 del contenitore di scroll del Layout (stesso pattern di
           Inventory/Spells): con top-0 la barra si fermava 16px sotto il bordo e il
           contenuto scorreva visibile sopra il pannello blurrato. */}
-      <div className="sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg">
-        <Surface variant="elevated" className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.skills.prof_bonus')}
-            </p>
-            <StatPill tone="gold" size="sm" value={`+${pb}`} />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {passiveRow.map(({ key, ability }) => (
-              <div key={key} className="flex items-center gap-1.5">
-                {key === 'perception' && <Eye size={14} className="text-dnd-arcane-bright" />}
-                <p className="text-xs font-cinzel uppercase tracking-wide text-dnd-gold-dim">
-                  {t(`character.skills.passive_${key}`)}
-                </p>
-                <StatPill tone="arcane" size="sm" value={passiveOf(key, ability)} />
-              </div>
-            ))}
-          </div>
-        </Surface>
+      <div className="sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg border-b border-dnd-border">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          {[
+            { key: 'prof_bonus', value: `+${pb}` },
+            ...passiveRow.map(({ key, ability }) => ({ key: `passive_${key}`, value: String(passiveOf(key, ability)) })),
+          ].map(({ key, value }) => (
+            <div key={key} className="flex min-w-0 items-center justify-between gap-2 px-1">
+              <dt className={LEDGER_LABEL}>{t(`character.skills.${key}`)}</dt>
+              <dd className="font-mono text-base font-bold tabular-nums text-dnd-text">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       <ScrollArea>
-        <div className="space-y-4">
+        <div className="space-y-5">
           {ABILITY_GROUPS.map((ability) => {
             const groupSkills = SKILLS.filter((s) => s.ability === ability)
             if (groupSkills.length === 0) return null
 
             return (
               <div key={ability}>
-                <SectionDivider>
+                <h2 className={`pb-1 pl-1 ${LEDGER_TITLE}`}>
                   {t(`character.stats.${ability}`)}
-                </SectionDivider>
+                </h2>
 
-                <div className="space-y-1.5">
+                <div className="border-y border-dnd-border divide-y divide-dnd-border/60">
                   {groupSkills.map((skill, idx) => {
                     const level = getLevel(skills[skill.key])
                     const abilMod = abilityModifier(skill.ability)

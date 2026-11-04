@@ -6,7 +6,6 @@ import { m } from 'framer-motion'
 import { Trash2, BarChart3, WifiOff } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import DiceIcon from '@/components/ui/DiceIcon'
@@ -128,35 +127,35 @@ export default function DiceStats() {
           hint={t('character.dice_stats.empty_hint')}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-1">
           {/* Trofei nat 20 / nat 1 + totale */}
           <div className="grid grid-cols-2 gap-3">
-            <Surface variant="elevated" className="text-center py-3">
+            <div className="text-center py-2">
               <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-emerald-bright">
                 {t('character.dice_stats.nat20')}
               </p>
-              <p className="text-3xl font-mono font-bold tabular-nums text-dnd-emerald-bright mt-1">
+              <p className="text-3xl font-display font-black tabular-nums text-dnd-emerald-bright mt-1">
                 {nat20}
               </p>
-            </Surface>
-            <Surface variant="elevated" className="text-center py-3">
+            </div>
+            <div className="text-center py-2">
               <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">
                 {t('character.dice_stats.nat1')}
               </p>
-              <p className="text-3xl font-mono font-bold tabular-nums text-dnd-crimson-bright mt-1">
+              <p className="text-3xl font-display font-black tabular-nums text-dnd-crimson-bright mt-1">
                 {nat1}
               </p>
-            </Surface>
+            </div>
           </div>
 
-          <Surface variant="elevated" className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center justify-between border-b border-dnd-border/60 px-1 py-3">
             <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
               {t('character.dice_stats.total_rolls')}
             </span>
             <span className="text-xl font-mono font-bold tabular-nums text-dnd-gold-bright">
               {totalRolls}
             </span>
-          </Surface>
+          </div>
 
           {/* Card per tipo di dado */}
           {kinds.map((k, i) => (
@@ -166,11 +165,11 @@ export default function DiceStats() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
             >
-              <Surface variant="elevated">
+              <div className="border-b border-dnd-border/60 px-1 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <DiceIcon sides={k.sides} size={28} className="text-dnd-gold" />
-                    <span className="font-cinzel font-bold text-dnd-gold-bright uppercase">
+                    <span className="font-cinzel font-bold text-dnd-text uppercase">
                       {k.kind}
                     </span>
                   </div>
@@ -185,7 +184,7 @@ export default function DiceStats() {
                   </div>
                 </div>
                 <FaceHistogram sides={k.sides} faces={k.faces} />
-              </Surface>
+              </div>
             </m.div>
           ))}
 

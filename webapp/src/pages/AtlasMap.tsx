@@ -202,7 +202,7 @@ function AtlasMapView() {
           <Pressable
             onClick={() => setMode('place')}
             aria-label={t('atlas.new_marker')}
-            className="absolute right-4 bottom-safe-fab z-30 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-gold text-dnd-ink shadow-parchment-md"
+            className="absolute right-4 bottom-safe-fab z-30 flex h-14 w-14 items-center justify-center rounded-full bg-dnd-gold text-dnd-ink shadow-parchment-md"
           >
             <MapPinPlus size={24} />
           </Pressable>

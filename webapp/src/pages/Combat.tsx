@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { WifiOff } from 'lucide-react'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import { api, ApiError } from '@/api/client'
@@ -75,9 +74,7 @@ export default function Combat() {
 
   if (!live) {
     return layout(
-      <Surface variant="elevated">
-        <p className="text-center text-dnd-text-muted font-body py-6">{t('session.not_found')}</p>
-      </Surface>,
+      <p className="text-center text-dnd-text-muted font-body py-6">{t('session.not_found')}</p>,
     )
   }
 

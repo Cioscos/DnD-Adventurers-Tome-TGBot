@@ -141,7 +141,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
                       icon={<Trash2 size={16} />}
                       onClick={() => setConfirmDeleteIndex(index)}
                       haptic="none"
-                      className="w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
+                      className="w-11 h-11 rounded-lg text-dnd-crimson-bright hover:bg-dnd-crimson/10"
                       aria-label={t('common.delete')}
                     />
                   </div>

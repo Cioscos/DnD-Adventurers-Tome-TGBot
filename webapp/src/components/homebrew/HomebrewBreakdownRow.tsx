@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react'
+import { GiCauldron } from 'react-icons/gi'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -18,7 +18,7 @@ export default function HomebrewBreakdownRow({ value, label, display }: Props) {
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1 text-sm">
       <span className="flex items-center gap-1.5 text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim">
-        <Sparkles size={14} className="text-dnd-gold-dim" />
+        <GiCauldron size={14} className="text-dnd-gold-dim" />
         {text}
       </span>
       <span className="font-mono font-bold tabular-nums text-dnd-gold-bright">

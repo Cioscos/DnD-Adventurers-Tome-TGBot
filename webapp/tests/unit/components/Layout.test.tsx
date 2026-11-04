@@ -57,6 +57,7 @@ vi.mock('framer-motion', async () => {
 
 afterEach(() => {
   navigateSpy.mockReset()
+  goToPageSpy.mockReset()
   groupInfo.value = null
 })
 
@@ -134,6 +135,26 @@ describe('Layout', () => {
     render(<Layout title="T" group="combat" page="ac">x</Layout>)
     await userEvent.click(screen.getByText('character.menu.hp'))
     expect(goToPageSpy).toHaveBeenCalledWith('hp')
+  })
+
+  it('asks the leave guard before going back or to a sibling page', async () => {
+    groupInfo.value = { pages: ['hp', 'ac', 'saves', 'actions'], index: 1, total: 4 }
+    const guard = vi.fn()
+    render(<Layout title="T" backTo="/char/7" group="combat" page="ac" leaveGuard={guard}>x</Layout>)
+    await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
+    await userEvent.click(screen.getByText('character.menu.hp'))
+    expect(navigateSpy).not.toHaveBeenCalled()
+    expect(goToPageSpy).not.toHaveBeenCalled()
+    expect(guard).toHaveBeenCalledTimes(2)
+    guard.mock.calls[0][0]()
+    expect(navigateSpy).toHaveBeenCalledWith('/char/7')
+    guard.mock.calls[1][0]()
+    expect(goToPageSpy).toHaveBeenCalledWith('hp')
+  })
+
+  it('renders the bottom action next to the content', () => {
+    render(<Layout title="T" bottomAction={<button>salva</button>}>x</Layout>)
+    expect(screen.getByRole('button', { name: 'salva' })).toBeInTheDocument()
   })
 
   // Perf (S22): il breadcrumb che si comprimeva DENTRO l'header ne animava l'altezza,

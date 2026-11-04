@@ -47,7 +47,7 @@ export default function PresetTextField({
   const chipCls = (active: boolean) =>
     `min-h-[44px] px-3 py-2 rounded-xl text-xs font-medium transition-colors break-words
      ${active
-       ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+       ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
        : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`
 
   return (

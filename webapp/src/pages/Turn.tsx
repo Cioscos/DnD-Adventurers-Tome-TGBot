@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
+import { Check, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
@@ -18,6 +18,7 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
 import { STANDARD_ACTIONS } from '@/data/standardActions'
+import { LEDGER_TITLE } from '@/styles/ledger'
 import type { CharacterFull } from '@/types'
 
 type Bucket = 'action' | 'bonus_action' | 'reaction'
@@ -32,6 +33,7 @@ export default function Turn() {
   const qc = useQueryClient()
   const [used, setUsed] = useState(NONE_USED)
   const [otherOpen, setOtherOpen] = useState(false)
+  const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -77,8 +79,8 @@ export default function Turn() {
     if (e.kind === 'standard') {
       const std = STANDARD_ACTIONS.find((s) => s.id === e.id)
       return (
-        <li key={key} className="py-2">
-          <p className="font-cinzel text-dnd-gold">{std?.[lang].name ?? e.label}</p>
+        <li key={key} className="px-1 py-2">
+          <p className="font-cinzel text-sm text-dnd-text">{std?.[lang].name ?? e.label}</p>
           <p className="text-xs text-dnd-text-muted">{std?.[lang].desc}</p>
         </li>
       )
@@ -87,7 +89,7 @@ export default function Turn() {
     let extra: ReactNode = null
     let label = e.label
     if (e.kind === 'weapon') {
-      const crimson = `${BTN} bg-dnd-crimson/20 text-dnd-crimson-bright border-dnd-crimson/30`
+      const crimson = `${BTN} bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30`
       if (e.id === 'unarmed') {
         label = t('character.turn.unarmed')
         control = (
@@ -113,7 +115,7 @@ export default function Turn() {
         control = (
           <RollButton onRoll={(mode) => castFlow.beginCast(spell, mode)} pending={castFlow.isSpellPending(spell.id)}
             ariaLabel={`${t('character.turn.cast')} ${label}`}
-            className={`${BTN} bg-dnd-arcane/20 text-dnd-arcane-bright border-dnd-arcane/30`}>
+            className={`${BTN} bg-dnd-arcane/10 text-dnd-arcane-bright border-dnd-arcane/30`}>
             <Sparkles size={14} />{t('character.turn.cast')}
           </RollButton>
         )
@@ -133,9 +135,9 @@ export default function Turn() {
       }
     }
     return (
-      <li key={key} className="py-2">
+      <li key={key} className="px-1 py-2">
         <div className="flex items-center gap-3">
-          <span className="flex-1 min-w-0 truncate">{label}</span>
+          <span className="flex-1 min-w-0 truncate font-body text-sm text-dnd-text">{label}</span>
           {control}
         </div>
         {extra}
@@ -143,29 +145,55 @@ export default function Turn() {
     )
   }
 
-  const section = (title: string, entries: TurnEntry[], bucket?: Bucket) => (
-    <Surface variant="elevated" className={bucket && used[bucket] ? 'opacity-60' : ''}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">{title}</h2>
-        {bucket && (
+  const sectionBody = (title: string, entries: TurnEntry[]) => {
+    const playable = entries.filter((e) => e.kind !== 'standard')
+    const standard = entries.filter((e) => e.kind === 'standard')
+    const standardOpen = openStandard[title]
+    return (
+      <div className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
+        {entries.length === 0 && <p className="text-sm text-dnd-text-muted px-1 py-2">{t('character.turn.empty')}</p>}
+        {playable.length > 0 && <ul className="divide-y divide-dnd-border/60">{playable.map((e) => renderEntry(e, char))}</ul>}
+        {standard.length > 0 && (
           <Pressable
-            aria-pressed={used[bucket]}
-            aria-label={`${t('character.turn.mark_used')}: ${title}`}
-            onClick={() => setUsed((u) => ({ ...u, [bucket]: !u[bucket] }))}
-            className={`min-h-11 px-3 rounded-lg border text-xs font-medium ${
-              used[bucket]
-                ? 'bg-dnd-gold/20 border-dnd-gold-dim text-dnd-gold-bright'
-                : 'bg-dnd-chip-bg border-dnd-border text-dnd-text-muted'}`}
+            aria-expanded={!!standardOpen}
+            onClick={() => setOpenStandard((o) => ({ ...o, [title]: !o[title] }))}
+            className="flex w-full min-h-[48px] items-center justify-between gap-2 px-1 text-left text-sm font-body text-dnd-text-muted"
           >
-            {t('character.turn.used')}
+            {t('character.turn.standard_actions', { n: standard.length })}
+            <ExpandChevron open={!!standardOpen} className="text-dnd-text-muted" />
           </Pressable>
         )}
+        {standard.length > 0 && standardOpen && (
+          <ul className="divide-y divide-dnd-border/60">{standard.map((e) => renderEntry(e, char))}</ul>
+        )}
       </div>
-      {entries.length === 0
-        ? <p className="text-sm text-dnd-text-muted py-2">{t('character.turn.empty')}</p>
-        : <ul className="divide-y divide-dnd-border/40">{entries.map((e) => renderEntry(e, char))}</ul>}
-    </Surface>
-  )
+    )
+  }
+
+  const section = (title: string, entries: TurnEntry[], bucket: Bucket) => {
+    const isUsed = used[bucket]
+    return (
+      <section>
+        <div className="flex items-center justify-between gap-2 border-b border-dnd-border pb-1 pl-1">
+          <h2 className={LEDGER_TITLE}>{title}</h2>
+          <Pressable
+            aria-pressed={isUsed}
+            aria-label={`${t('character.turn.mark_used')}: ${title}`}
+            onClick={() => setUsed((u) => ({ ...u, [bucket]: !u[bucket] }))}
+            className={`inline-flex items-center gap-1 min-h-11 px-3 rounded-lg border text-xs font-medium ${
+              isUsed
+                ? 'border-dnd-gold-dim text-dnd-gold-bright'
+                : 'border-dnd-border text-dnd-text-muted'}`}
+          >
+            {isUsed && <Check size={14} aria-hidden />}
+            {isUsed ? t('character.turn.used') : t('character.turn.mark_used')}
+          </Pressable>
+        </div>
+        {/* Una sezione usata si richiude: in vista resta solo ciò che si può ancora fare. */}
+        {!isUsed && sectionBody(title, entries)}
+      </section>
+    )
+  }
 
   return (
     <Layout title={t('character.turn.title')} backTo={`/char/${charId}`} group="combat" page="turn">
@@ -194,15 +222,17 @@ export default function Turn() {
         <div key={b}>{section(t(`character.turn.section_${b}`), groups[b], b)}</div>
       ))}
 
-      <Pressable
-        aria-expanded={otherOpen}
-        onClick={() => setOtherOpen((o) => !o)}
-        className="w-full min-h-11 flex items-center justify-between px-3 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-text-muted"
-      >
-        <span className="font-cinzel uppercase tracking-widest text-xs">{t('character.turn.section_other')}</span>
-        <ChevronDown size={16} className={otherOpen ? 'rotate-180' : ''} />
-      </Pressable>
-      {otherOpen && section(t('character.turn.section_other'), groups.other)}
+      <section>
+        <Pressable
+          aria-expanded={otherOpen}
+          onClick={() => setOtherOpen((o) => !o)}
+          className="flex w-full min-h-11 items-center justify-between gap-2 border-b border-dnd-border pl-1 pr-1 text-left"
+        >
+          <span className={LEDGER_TITLE}>{t('character.turn.section_other')}</span>
+          <ExpandChevron open={otherOpen} className="text-dnd-text-muted" />
+        </Pressable>
+        {otherOpen && sectionBody(t('character.turn.section_other'), groups.other)}
+      </section>
 
       {weaponFlow.elements}
       {castFlow.elements}

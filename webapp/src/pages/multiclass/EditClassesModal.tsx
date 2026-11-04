@@ -208,7 +208,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
             next: d.next,
             defaultValue: '{{name}}: massimo {{prev}} → {{next}}',
           }),
-          { duration: 3500, icon: '⚡' },
+          { duration: 3500 },
         )
       }
       haptic.success()

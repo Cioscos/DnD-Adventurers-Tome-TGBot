@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Share2 } from 'lucide-react'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -31,7 +30,7 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   return (
     <>
       <SectionDivider>{title}</SectionDivider>
-      <Surface variant="elevated">{children}</Surface>
+      <div className="px-1">{children}</div>
     </>
   )
 }
@@ -41,8 +40,8 @@ function CharacterCard({ c }: { c: SessionRecapCharacter }) {
   const slots = Object.entries(c.slots_used).sort(([a], [b]) => Number(a) - Number(b))
   const info = [c.player_name, c.class_summary].filter(Boolean).join(' · ')
   return (
-    <Surface variant="elevated">
-      <h3 className="font-display font-bold text-dnd-gold-bright break-words">{c.name}</h3>
+    <div className="px-1 py-3">
+      <h3 className="font-display font-bold text-dnd-text break-words">{c.name}</h3>
       {info && <p className="text-xs text-dnd-text-muted break-words">{info}</p>}
       <div className="mt-2 space-y-1">
         <Stat label={t(`${P}rolls`)} value={c.dice.rolls} />
@@ -70,7 +69,7 @@ function CharacterCard({ c }: { c: SessionRecapCharacter }) {
           ))}
         </div>
       )}
-    </Surface>
+    </div>
   )
 }
 
@@ -123,26 +122,26 @@ export default function CampaignRecap() {
 
   return (
     <Layout title={title} backTo={backTo}>
-      <Surface variant="sigil" ornamented>
-        <h2 className="font-display font-bold text-xl text-dnd-gold-bright text-center break-words">{title}</h2>
-        {recap.campaign_name && <p className="text-center text-sm text-dnd-text-muted break-words">{recap.campaign_name}</p>}
-        <p className="mt-1 flex flex-wrap items-baseline justify-center gap-x-3 text-sm font-body">
+      <section className="px-1">
+        <h2 className="font-display text-xl font-bold text-dnd-text break-words">{title}</h2>
+        {recap.campaign_name && <p className="text-sm text-dnd-text-muted break-words">{recap.campaign_name}</p>}
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-3 text-sm font-body">
           <span>{dayHeader(fromServer(recap.started_at), locale)}</span>
           <span className="font-mono tabular-nums text-dnd-text-muted">{formatDuration(recap.duration_seconds)}</span>
         </p>
         {camp?.is_gm && canShareMessage() && (
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3">
             <Button variant="secondary" size="sm" icon={<Share2 size={14} />} loading={share.isPending} onClick={() => share.mutate()}>
               {t(`${P}share`)}
             </Button>
           </div>
         )}
-      </Surface>
+      </section>
 
       {recap.characters.length > 0 && (
         <>
           <SectionDivider>{t(`${P}players`)}</SectionDivider>
-          <div className="space-y-3">{recap.characters.map((c) => <CharacterCard key={c.character_id} c={c} />)}</div>
+          <div className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">{recap.characters.map((c) => <CharacterCard key={c.character_id} c={c} />)}</div>
         </>
       )}
 

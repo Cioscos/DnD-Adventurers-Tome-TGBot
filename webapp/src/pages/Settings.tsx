@@ -2,16 +2,12 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell, Download, Send, Copy, Share2 } from 'lucide-react'
-import {
-  GiSparkles as Sparkles, GiCutDiamond as Gem,
-  GiPerspectiveDiceSixFacesRandom as Dices,
-} from 'react-icons/gi'
+import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell, Download, Send, Copy } from 'lucide-react'
+import { GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import type { CharacterSummary } from '@/types'
 import Layout from '@/components/Layout'
 import GenericPageSkeleton from '@/components/skeletons/GenericPageSkeleton'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
@@ -58,7 +54,7 @@ type SettingKey =
   | 'prep_cap_value'
   | 'reset'
 
-function D20Thumb({ body, accent, active }: { body: string; accent: string; active: boolean }) {
+function D20Thumb({ body, accent }: { body: string; accent: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -66,11 +62,7 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
       height="32"
       aria-hidden
       className="shrink-0"
-      style={{
-        filter: active
-          ? 'drop-shadow(0 0 4px var(--dnd-gold-glow))'
-          : 'drop-shadow(0 1px 2px rgba(26,16,8,0.35))',
-      }}
+      
     >
       <polygon
         points="12,2 22,8 22,16 12,22 2,16 2,8"
@@ -290,15 +282,15 @@ export default function Settings() {
 
   return (
     <Layout help="settings" title={t('character.settings.title')} backTo={`/char/${charId}`}>
-      <SectionDivider icon={<Settings2 size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.preferences')}
       </SectionDivider>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Languages size={16} className="text-dnd-gold-bright" />
-            <p className="font-display font-bold text-dnd-gold-bright">
+            <Languages size={16} className="text-dnd-gold-dim" />
+            <p className="font-body font-semibold text-dnd-text">
               {t('character.settings.language')}
             </p>
           </div>
@@ -309,13 +301,13 @@ export default function Settings() {
             </span>
           </Button>
         </div>
-      </Surface>
+      </div>
 
-      <Surface variant="elevated">
-        <div className="flex items-start gap-3 mb-3">
-          <Sun size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+      <div className="border-b border-dnd-border/60 px-1 py-3">
+        <div className="flex items-start gap-2 mb-3">
+          <Sun size={16} className="text-dnd-gold-dim shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-display font-bold text-dnd-gold-bright">
+            <p className="font-body font-semibold text-dnd-text">
               {t('character.settings.theme.title')}
             </p>
             <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
@@ -335,7 +327,7 @@ export default function Settings() {
               }}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${themeMode === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
               whileTap={{ scale: 0.96 }}
               transition={spring.press}
@@ -344,9 +336,9 @@ export default function Settings() {
             </Pressable>
           ))}
         </div>
-      </Surface>
+      </div>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <SwitchToggle
           icon={<Dices size={16} />}
           label={t('character.settings.dice_3d')}
@@ -354,14 +346,14 @@ export default function Settings() {
           checked={animate3d}
           onChange={setAnimate3d}
         />
-      </Surface>
+      </div>
 
       {/* Measurement unit system — affects length displays (speed, ranges). */}
-      <Surface variant="elevated">
-        <div className="flex items-start gap-3 mb-3">
-          <Settings2 size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+      <div className="border-b border-dnd-border/60 px-1 py-3">
+        <div className="flex items-start gap-2 mb-3">
+          <Settings2 size={16} className="text-dnd-gold-dim shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-display font-bold text-dnd-gold-bright">
+            <p className="font-body font-semibold text-dnd-text">
               {t('character.settings.unit_system')}
             </p>
             <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
@@ -381,7 +373,7 @@ export default function Settings() {
               }}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${unitSystem === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
               whileTap={{ scale: 0.96 }}
               transition={spring.press}
@@ -392,14 +384,14 @@ export default function Settings() {
             </Pressable>
           ))}
         </div>
-      </Surface>
+      </div>
 
-      <Surface variant="elevated" className={animate3d ? '' : 'opacity-50 pointer-events-none'}>
+      <div className={`border-b border-dnd-border/60 px-1 py-3 ${animate3d ? '' : 'opacity-50 pointer-events-none'}`}>
         <div className="space-y-2">
           <div className="flex items-start gap-2">
-            <Dices size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+            <Dices size={16} className="text-dnd-gold-dim shrink-0 mt-0.5" />
             <div>
-              <p className="font-display font-bold text-dnd-gold-bright">
+              <p className="font-body font-semibold text-dnd-text">
                 {t('character.settings.dice.pack.title')}
               </p>
               <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
@@ -434,12 +426,12 @@ export default function Settings() {
                     aria-hidden
                     className={`relative w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
                       ${selected
-                        ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
+                        ? 'bg-dnd-gold border-dnd-gold-bright'
                         : 'border-dnd-border'}`}
                   >
                     {selected && <span className="w-2 h-2 rounded-full bg-dnd-ink" />}
                   </span>
-                  <D20Thumb body={preview.body} accent={preview.accent} active={selected} />
+                  <D20Thumb body={preview.body} accent={preview.accent} />
                   <span>{packNames?.[id] ?? id}</span>
                 </label>
               )
@@ -454,14 +446,14 @@ export default function Settings() {
             </p>
           )}
         </div>
-      </Surface>
+      </div>
 
       {/* Telegram game notifications — per-category opt-out (BE: telegram_notify) */}
-      <SectionDivider icon={<Bell size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.notifications.title')}
       </SectionDivider>
 
-      <Surface variant="elevated" className="divide-y divide-dnd-border/50 [&>*:not(:first-child)]:pt-3 [&>*:not(:last-child)]:pb-3">
+      <div className="px-1 divide-y divide-dnd-border/60 border-b border-dnd-border/60 [&>*]:py-2">
         {(['party_emergency', 'gm_events', 'level_up', 'encounter'] as const).map((key) => (
           <SwitchToggle
             key={key}
@@ -479,14 +471,14 @@ export default function Settings() {
             }}
           />
         ))}
-      </Surface>
+      </div>
 
       {/* Currency preferences — hide Electrum toggle */}
-      <SectionDivider icon={<Coins size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.currency_group')}
       </SectionDivider>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <SwitchToggle
           checked={!hideElectrum}
           pending={updateMutation.isPending && activeSetting === 'hide_electrum'}
@@ -498,18 +490,18 @@ export default function Settings() {
           label={t('character.settings.currency_show_electrum')}
           hint={t('character.settings.currency_show_electrum_hint')}
         />
-      </Surface>
+      </div>
 
       {/* History retention */}
-      <SectionDivider icon={<History size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.history_group')}
       </SectionDivider>
 
-      <Surface variant="elevated">
-        <div className="flex items-start gap-3 mb-3">
-          <History size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+      <div className="border-b border-dnd-border/60 px-1 py-3">
+        <div className="flex items-start gap-2 mb-3">
+          <History size={16} className="text-dnd-gold-dim shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-display font-bold text-dnd-gold-bright">
+            <p className="font-body font-semibold text-dnd-text">
               {t('character.settings.history_retention')}
             </p>
             <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
@@ -535,7 +527,7 @@ export default function Settings() {
                 pending={updateMutation.isPending && activeSetting === `retention:${mode}`}
                 className={`min-h-[44px] rounded-xl px-2 font-cinzel text-xs uppercase tracking-normal transition-colors
                   ${selected
-                    ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                    ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                     : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
                 whileTap={{ scale: 0.96 }}
                 transition={spring.press}
@@ -578,13 +570,13 @@ export default function Settings() {
             </p>
           </div>
         )}
-      </Surface>
+      </div>
 
-      <SectionDivider icon={<RefreshCw size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.hp.title')}
       </SectionDivider>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <div className="space-y-3">
           <SwitchToggle
             checked={hpAutoCalc}
@@ -606,9 +598,9 @@ export default function Settings() {
             {t('character.settings.hp.recalc')}
           </Pressable>
         </div>
-      </Surface>
+      </div>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <div className="space-y-3">
           <SwitchToggle
             checked={settings.advancement === 'milestone'}
@@ -631,9 +623,9 @@ export default function Settings() {
             hint={t('character.settings.advancement.rolled_hp_hint')}
           />
         </div>
-      </Surface>
+      </div>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <SwitchToggle
           checked={warCaster}
           pending={updateMutation.isPending && activeSetting === 'war_caster'}
@@ -644,9 +636,9 @@ export default function Settings() {
           label={t('character.settings.war_caster_label')}
           hint={t('character.settings.war_caster_hint')}
         />
-      </Surface>
+      </div>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <div className="space-y-3">
           <SwitchToggle
             checked={settings.encumbrance_variant === true}
@@ -672,13 +664,13 @@ export default function Settings() {
             hint={t('character.settings.coin_weight_hint', { unit_weight: formatWeight(1, unitSystem) })}
           />
         </div>
-      </Surface>
+      </div>
 
-      <SectionDivider icon={<Eye size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.privacy.title')}
       </SectionDivider>
 
-      <Surface variant="elevated">
+      <div className="border-b border-dnd-border/60 px-1 py-3">
         <SwitchToggle
           checked={showPrivateIdentity}
           pending={updateMutation.isPending && activeSetting === 'show_private_identity'}
@@ -690,17 +682,16 @@ export default function Settings() {
           label={t('character.settings.privacy.show_private_label')}
           hint={t('character.settings.privacy.show_private_hint')}
         />
-      </Surface>
+      </div>
 
       {/* Advanced — spell slots mode (Auto/Manual). Less commonly toggled than
           language/theme, so kept near the bottom per U082. */}
-      <SectionDivider icon={<Gem size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.spell_slots_mode')}
       </SectionDivider>
 
-      <Surface variant="elevated">
-        <div className="flex items-start gap-3 mb-3">
-          <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
+      <div className="border-b border-dnd-border/60 px-1 py-3">
+        <div className="flex items-start gap-2 mb-3">
           <p className="text-xs text-dnd-text-muted font-body italic flex-1">
             {slotsMode === 'auto'
               ? t('character.settings.mode_auto_hint')
@@ -715,7 +706,7 @@ export default function Settings() {
               pending={updateMutation.isPending && activeSetting === `slot_mode:${mode}`}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${slotsMode === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
               whileTap={{ scale: 0.96 }}
               transition={spring.press}
@@ -724,18 +715,18 @@ export default function Settings() {
             </Pressable>
           ))}
         </div>
-      </Surface>
+      </div>
 
       {/* Tetto preparazione incantesimi: solo per PG con classi preparanti. */}
       {spellcasting?.has_preparing_class && (
         <>
-          <SectionDivider icon={<BookmarkCheck size={11} />} align="center">
+          <SectionDivider>
             {t('character.settings.prepared_cap')}
           </SectionDivider>
 
-          <Surface variant="elevated">
-            <div className="flex items-start gap-3 mb-3">
-              <BookmarkCheck size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+          <div className="border-b border-dnd-border/60 px-1 py-3">
+            <div className="flex items-start gap-2 mb-3">
+              <BookmarkCheck size={16} className="text-dnd-gold-dim shrink-0 mt-0.5" />
               <p className="text-xs text-dnd-text-muted font-body italic flex-1">
                 {prepCapMode === 'auto'
                   ? t('character.settings.prepared_cap_auto_hint', { cap: spellcasting.prepared_cap ?? 0 })
@@ -753,7 +744,7 @@ export default function Settings() {
                   pending={updateMutation.isPending && activeSetting === `prep_cap_mode:${mode}`}
                   className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                     ${prepCapMode === mode
-                      ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                      ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                       : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
                   whileTap={{ scale: 0.96 }}
                   transition={spring.press}
@@ -793,15 +784,15 @@ export default function Settings() {
                 </Button>
               </div>
             )}
-          </Surface>
+          </div>
         </>
       )}
 
-      <SectionDivider icon={<Share2 size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.transfer.title')}
       </SectionDivider>
 
-      <Surface variant="elevated" className="space-y-2">
+      <div className="border-b border-dnd-border/60 px-1 py-3 space-y-2">
         <p className="text-xs text-dnd-text-muted font-body italic">
           {t('character.settings.transfer.export_hint')}
         </p>
@@ -827,7 +818,7 @@ export default function Settings() {
         >
           {t('character.settings.transfer.duplicate')}
         </Button>
-      </Surface>
+      </div>
 
       <Sheet
         open={showExport}
@@ -865,7 +856,7 @@ export default function Settings() {
       </Sheet>
 
       {/* Zona pericolosa: eliminazione del personaggio, in fondo alla pagina. */}
-      <SectionDivider icon={<Trash2 size={11} />} align="center">
+      <SectionDivider>
         {t('character.settings.danger_zone')}
       </SectionDivider>
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Hash, Check, X } from 'lucide-react'
+import { Tag, Hash, Check, X } from 'lucide-react'
 import IconButton from '@/components/ui/IconButton'
 import Pressable from '@/components/ui/Pressable'
 import type { Property } from '@/lib/homebrew/types'
@@ -7,9 +7,9 @@ import { tonePerValue, type BadgeTone } from './propertyBadge.utils'
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   danger:
-    'bg-dnd-crimson/20 border border-dnd-crimson/40 text-dnd-crimson-bright',
+    'bg-dnd-crimson/10 border border-dnd-crimson/40 text-dnd-crimson-bright',
   success:
-    'bg-dnd-emerald/20 border border-dnd-emerald/40 text-dnd-emerald-bright',
+    'bg-dnd-emerald/10 border border-dnd-emerald/40 text-dnd-emerald-bright',
   neutral:
     'bg-dnd-chip-bg border border-dnd-chip-border/60 text-dnd-text',
 }
@@ -55,7 +55,7 @@ function pickIcon(property: Property, value: unknown) {
   if (property.type === 'number') {
     return <Hash size={12} />
   }
-  return <Sparkles size={12} />
+  return <Tag size={12} />
 }
 
 export default function PropertyBadge({

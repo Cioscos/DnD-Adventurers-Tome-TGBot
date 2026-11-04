@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mic, Pencil, Share2, Trash2 } from 'lucide-react'
-import Surface from '@/components/ui/Surface'
 import Pressable from '@/components/ui/Pressable'
 import { renderInlineMarkdown } from '@/lib/inlineMarkdown'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
@@ -50,9 +49,9 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
   if (note.is_voice) {
     const filename = extractVoiceFilename(note.body)
     return (
-      <Surface variant="flat">
+      <div className="border-b border-dnd-border/60 px-1 py-2">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold font-cinzel text-dnd-gold flex items-center gap-1.5 min-w-0">
+          <h3 className="font-semibold font-cinzel text-dnd-text flex items-center gap-1.5 min-w-0">
             <Mic size={14} className="shrink-0 text-dnd-gold-dim" />
             <span className="truncate">{note.title}</span>
           </h3>
@@ -97,18 +96,17 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
             {editedPrefix} · {relLabel}
           </p>
         )}
-      </Surface>
+      </div>
     )
   }
 
   return (
-    <Surface
-      variant="flat"
+    <div
       onClick={onView ? () => onView(note) : undefined}
-      className={onView ? 'cursor-pointer' : undefined}
+      className={`border-b border-dnd-border/60 px-1 py-2 ${onView ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between gap-1 mb-1">
-        <h3 className="font-semibold font-cinzel text-dnd-gold min-w-0 break-words pt-2">{note.title}</h3>
+        <h3 className="font-semibold font-cinzel text-dnd-text min-w-0 break-words pt-2">{note.title}</h3>
         <div className="flex shrink-0 -my-2 -mr-2">
           {onShare && (
             <Pressable
@@ -169,7 +167,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
           {editedPrefix} · {relLabel}
         </p>
       )}
-    </Surface>
+    </div>
   )
 }
 

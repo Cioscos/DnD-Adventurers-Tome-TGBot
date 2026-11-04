@@ -24,13 +24,9 @@ vi.mock('framer-motion', async () => {
   }
   return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
 })
-vi.mock('@/components/ui/Surface', async () => {
-  const React = await import('react')
-  return { default: (p: { children?: unknown }) => React.createElement('div', null, p.children) }
-})
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 
-const slot = (level: number, total: number): SpellSlot => ({ level, total } as unknown as SpellSlot)
+const slot = (level: number, total: number, available = total): SpellSlot => ({ level, total, available } as unknown as SpellSlot)
 
 afterEach(() => navigateSpy.mockReset())
 
@@ -45,11 +41,15 @@ describe('SpellSlotsSummary', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('sums totals per spell level (Warlock multiclass: two level-1 rows → combined count)', () => {
-    const { container } = render(<SpellSlotsSummary slots={[slot(1, 2), slot(1, 1)]} />)
-    // the single non-zero level cell shows the combined 3
-    const bright = container.querySelector('.text-dnd-gold-bright')
-    expect(bright?.textContent).toBe('3')
+  it('sums per spell level and shows what is left (Warlock multiclass: two level-1 rows → combined count)', () => {
+    const { container } = render(<SpellSlotsSummary slots={[slot(1, 2, 1), slot(1, 1, 1)]} />)
+    expect(container.querySelector('.text-dnd-gold-bright')?.textContent).toBe('2')
+  })
+
+  it('always shows all nine levels, with what is left in each', () => {
+    const { container } = render(<SpellSlotsSummary slots={[slot(2, 3), slot(1, 4, 0), slot(3, 0)]} />)
+    const cells = [...container.querySelectorAll('.grid > div')].map((c) => c.textContent)
+    expect(cells).toEqual(['10', '23', '3–', '4–', '5–', '6–', '7–', '8–', '9–'])
   })
 
   it('navigates to the slots page when tapped', async () => {

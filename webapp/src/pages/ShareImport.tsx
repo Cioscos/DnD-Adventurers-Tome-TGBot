@@ -95,7 +95,7 @@ export default function ShareImport() {
 
   return (
     <Layout help="share_import" title={t('share.import.title')} backTo="/">
-      <Surface variant="elevated">
+      <div className="px-1">
         <div className="flex items-center gap-2 mb-2">
           {preview.is_voice ? (
             <Mic size={16} className="text-dnd-gold-bright shrink-0" />
@@ -123,9 +123,9 @@ export default function ShareImport() {
             ×{preview.quantity}
           </p>
         )}
-      </Surface>
+      </div>
 
-      <Surface variant="elevated">
+      <div className="px-1">
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-dnd-gold-bright" />
           <p className="font-display font-bold text-dnd-gold-bright text-sm">
@@ -161,7 +161,7 @@ export default function ShareImport() {
                 onClick={() => setSelectedCharId(c.id)}
                 className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors
                   ${effectiveCharId === c.id
-                    ? 'bg-gradient-gold text-dnd-ink border-dnd-gold shadow-engrave'
+                    ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                     : 'bg-dnd-surface border-dnd-border text-dnd-text hover:border-dnd-gold-dim'}`}
               >
                 <div className="flex items-center justify-between">
@@ -174,7 +174,7 @@ export default function ShareImport() {
             ))}
           </div>
         )}
-      </Surface>
+      </div>
 
       {hasCharacters && (
         <Button

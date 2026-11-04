@@ -71,6 +71,17 @@ describe('useSwipeNavigation — rilascio del gesto', () => {
     act(() => { vi.advanceTimersByTime(400) })
   }
 
+  it('con i gesti disattivati (modifiche non salvate) il trascinamento non naviga', () => {
+    const hook = renderHook(() => useSwipeNavigation('combat', 'ac', false))
+    const content = document.createElement('div')
+    Object.defineProperty(content, 'offsetWidth', { value: WIDTH })
+    ;(hook.result.current.contentRef as { current: HTMLDivElement | null }).current = content
+    const at = (x: number) => ({ touches: [{ clientX: x, clientY: 100 }], target: content }) as unknown as React.TouchEvent
+    drag({ hook, content, at }, 40, 5)
+    expect(navigateSpy).not.toHaveBeenCalled()
+    expect(content.style.transform).toBe('')
+  })
+
   it('un trascinamento lento e corto torna indietro, senza navigare', () => {
     const s = setup()
     drag(s, 280, 50)

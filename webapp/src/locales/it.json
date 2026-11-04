@@ -219,7 +219,6 @@
     },
     "select": {
       "title": "I tuoi personaggi",
-      "subtitle": "Scegli un eroe per la tua avventura",
       "new": "Nuovo personaggio",
       "empty": "Nessun personaggio. Creane uno!",
       "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile.",
@@ -238,7 +237,7 @@
       "hp": "Punti Ferita",
       "ac": "Classe Armatura",
       "stats": "Caratteristiche",
-      "skills": "Skills",
+      "skills": "Abilità",
       "saves": "Tiri Salvezza",
       "actions": "Azioni",
       "turn": "Turno",
@@ -301,7 +300,7 @@
       "max_short": "MASSIMO",
       "temp_short": "Temporanei",
       "long_rest_confirm_title": "Riposo lungo",
-      "long_rest_confirm_body": "Sei sicuro? Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
+      "long_rest_confirm_body": "Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
       "long_rest_confirm_action": "Riposa",
       "quick_damage_undo": "Inflitti {{n}} danni",
       "quick_heal_undo": "Curati {{n}} HP",
@@ -370,6 +369,7 @@
     },
     "ac": {
       "title": "Classe Armatura",
+      "short": "CA",
       "base": "Base",
       "base_help": "Base = 10 + bonus DES (con cap se armatura media/pesante) oppure valore CA dell'armatura equipaggiata.",
       "shield": "Scudo",
@@ -406,7 +406,7 @@
       "tremorsense": "Percezione tellurica"
     },
     "skills": {
-      "title": "Skills",
+      "title": "Abilità",
       "proficient": "Competente",
       "expert": "Esperto",
       "picker_title": "Livello competenza",
@@ -814,7 +814,8 @@
       "languages": "Lingue",
       "proficiencies": "Competenze",
       "damage_modifiers": "Modificatori Danno",
-      "physicality": "Fisicità",
+      "movement_senses": "Movimento e sensi",
+      "biography": "Biografia",
       "senses": "Sensi",
       "culture": "Cultura",
       "resistances": "Resistenze",
@@ -830,7 +831,7 @@
       "placeholder_bonds": "Descrivi i tuoi legami...",
       "placeholder_flaws": "Descrivi i tuoi difetti...",
       "private_badge": "Info private",
-      "private_hint": "Background, ideali, legami, difetti: visibili solo al giocatore.",
+      "private_hint": "Background, tratti, ideali, legami e difetti li vedi solo tu, a meno che non li mostri dalle Impostazioni.",
       "language_placeholder": "Aggiungi lingua…",
       "proficiencies_armor": "Competenze: armature",
       "proficiencies_weapons": "Competenze: armi",
@@ -846,8 +847,19 @@
       "proficiency_placeholder": "Aggiungi competenza…",
       "unsaved_changes": "Modifiche non salvate",
       "save_now": "Salva ora",
-      "damage_already_in": "{{type}} è già in un'altra lista",
-      "damage_vuln_wins_hint": "Un tipo di danno sta in una sola lista. Dalla scheda PF, scegliendo il tipo, resistenze e immunità si applicano in automatico.",
+      "damage_vuln_wins_hint": "Res. dimezza il danno, Imm. lo azzera, Vul. lo raddoppia. Dalla pagina Punti Ferita, scegliendo il tipo, si applicano in automatico.",
+      "damage_none": "Nessun modificatore: ogni tipo fa il danno normale.",
+      "damage_normal": "normale",
+      "damage_custom_title": "Tipi personalizzati (homebrew)",
+      "save_changes": "Salva modifiche",
+      "name_required": "Il personaggio ha bisogno di un nome.",
+      "distance_invalid": "Scrivi un numero da 0 in su.",
+      "draft_restored": "Modifiche non salvate ritrovate.",
+      "draft_discard": "Scarta",
+      "leave_title": "Modifiche non salvate",
+      "leave_body": "Se esci senza salvare, le perdi.",
+      "leave_save": "Salva ed esci",
+      "leave_discard": "Esci senza salvare",
       "damage_custom_placeholder": "Aggiungi personalizzato (homebrew)…",
       "damage_custom_hint": "Personalizzate: non applicate in automatico al calcolo del danno.",
       "resistances_short": "Res.",
@@ -919,6 +931,7 @@
       "section_other": "Altro",
       "used": "Usata",
       "mark_used": "Segna come usata",
+      "standard_actions": "Azioni standard ({{n}})",
       "new_turn": "Nuovo turno",
       "end_round": "Fine round (−1)",
       "empty": "Nessuna voce",
@@ -1001,7 +1014,7 @@
         "level_up": "LEVEL UP",
         "max": "MAX"
       },
-      "legend": "Tu sei una leggenda"
+      "legend": "Livello massimo"
     },
     "notes": {
       "tag_suggestions": ["Organizzazioni", "Alleati", "Nemici", "Storia", "Luoghi"],
@@ -1048,7 +1061,7 @@
       "delete_zone_confirm": "Eliminare tutta la zona {{zone}} con tutti i suoi file?",
       "open_file": "Apri file",
       "empty_title": "Nessuna mappa",
-      "empty_hint": "Carica una mappa o un PDF della tua avventura: sarà sempre a portata di mano.",
+      "empty_hint": "Carica una mappa o un PDF della tua avventura.",
       "zoom_hint": "Pizzica per zoomare",
       "reorder_hint": "Tieni premuto o trascina per riordinare",
       "reorder_pick_target": "Tocca la posizione di destinazione",
@@ -1147,7 +1160,6 @@
       "range_label": "Gittata",
       "thrown_range_label": "Gittata lancio",
       "item_type": "Tipo",
-      "add_short": "Aggiungi",
       "description": "Descrizione",
       "damage_dice_label": "Dado danno",
       "dice_count": "N° dadi",
@@ -2108,10 +2120,10 @@
       "encounter_title": "Combattimento",
       "round_label": "Round {{n}}",
       "turn_of": "Turno di {{name}}",
-      "your_turn": "⚔️ Tocca a te!",
+      "your_turn": "Tocca a te!",
       "roll_initiative": "Tira iniziativa!",
       "initiative": "Iniziativa",
-      "rolled_detail": "🎲 {{die}} + {{mod}} = {{total}}",
+      "rolled_detail": "{{die}} + {{mod}} = {{total}}",
       "rolled_total": "Iniziativa: {{total}}",
       "waiting_others": "In attesa degli altri…",
       "roll_failed": "Tiro non riuscito, riprova",
@@ -2419,22 +2431,22 @@
       "modal_title_new": "Nuovo passo",
       "modal_title_edit": "Modifica passo",
       "actions": {
-        "roll_dice": "🎲 Tira un dado",
-        "lookup_table": "📊 Guarda in tabella",
-        "match": "🔀 Caso (multi-branch)",
-        "if": "🤔 Condizione",
-        "set_property": "📝 Imposta caratteristica",
-        "inc_property": "➕ Incrementa caratteristica",
-        "unequip": "🧺 Rimuovi dall'equipaggiamento",
-        "damage_character": "💢 Danno al personaggio",
-        "heal_character": "❤️ Cura al personaggio",
-        "change_resource": "🔄 Modifica risorsa",
-        "restore_resource": "♻️ Ripristina risorsa",
-        "apply_condition": "🔸 Applica condizione",
-        "remove_condition": "🔹 Rimuovi condizione",
-        "apply_modifier_once": "⭐ Applica modificatore",
-        "notify": "💬 Notifica",
-        "add_history": "📜 Annota nello storico"
+        "roll_dice": "Tira un dado",
+        "lookup_table": "Guarda in tabella",
+        "match": "Caso (multi-branch)",
+        "if": "Condizione",
+        "set_property": "Imposta caratteristica",
+        "inc_property": "Incrementa caratteristica",
+        "unequip": "Rimuovi dall'equipaggiamento",
+        "damage_character": "Danno al personaggio",
+        "heal_character": "Cura al personaggio",
+        "change_resource": "Modifica risorsa",
+        "restore_resource": "Ripristina risorsa",
+        "apply_condition": "Applica condizione",
+        "remove_condition": "Rimuovi condizione",
+        "apply_modifier_once": "Applica modificatore",
+        "notify": "Notifica",
+        "add_history": "Annota nello storico"
       },
       "fields": {
         "notation": "Notazione dadi",
@@ -2782,7 +2794,7 @@
             "La sezione \"Statistiche\" mostra Iniziativa, bonus di competenza, Percezione passiva e Velocità.",
             "Per tirare l'iniziativa, tocca \"Iniziativa\". Per tirare con vantaggio o svantaggio, tieni premuto.",
             "Per aprire la pagina collegata, tocca una delle altre statistiche.",
-            "Le schede \"Tiri Salvezza\" e \"Skills\" mostrano le tue competenze. Tocca una scheda per aprire la sua pagina.",
+            "Le schede \"Tiri Salvezza\" e \"Abilità\" mostrano le tue competenze. Tocca una scheda per aprire la sua pagina.",
             "La sezione \"Slot incantesimi\" mostra il numero totale di slot per ogni livello. Tocca la sezione per aprire gli slot.",
             "Per cambiare l'ordine delle sezioni, tocca \"Personalizza schermata\" e usa le frecce.",
             "Per mostrare o nascondere una sezione, tocca l'occhio."
@@ -3441,7 +3453,7 @@
           "title": "Applicare danni o cure",
           "items": [
             "Scegli l'operazione: \"DANNI\", \"CURA\", \"ATTUALI\", \"MASSIMO\" o \"Temporanei\".",
-            "Scrivi il valore nel campo numerico.",
+            "Scrivi il valore.",
             "Tocca \"Conferma\" o premi Invio per applicare il valore.",
             "Per applicare subito 1, 5, 10 o 20 punti, tocca il pulsante rapido corrispondente.",
             "Con \"ATTUALI\" e \"MASSIMO\", i pulsanti rapidi scrivono solo il valore nel campo. Poi tocca \"Conferma\".",
@@ -3526,36 +3538,38 @@
         {
           "title": "Salvare le modifiche",
           "items": [
-            "Quando cambi un campo, in alto appare l'avviso \"Modifiche non salvate\".",
-            "Per salvare subito, tocca \"Salva ora\" nell'avviso.",
-            "Puoi anche toccare \"Salva\" in fondo alla pagina.",
-            "ATTENZIONE: se esci dalla pagina senza salvare, perdi le modifiche."
+            "Quando cambi un campo, in basso appare il pulsante \"Salva modifiche\".",
+            "Se esci con modifiche in sospeso, l'app ti chiede se salvare o uscire senza salvare.",
+            "Se l'app si chiude all'improvviso, ritrovi le modifiche al prossimo accesso. Puoi tenerle o toccare \"Scarta\".",
+            "Con modifiche in sospeso non puoi cambiare pagina con lo swipe: salva prima, oppure tocca il nome della pagina in alto."
           ]
         },
         {
-          "title": "Nome e fisicità",
+          "title": "Nome e movimento",
           "items": [
             "Per cambiare il nome del personaggio, scrivi nel campo \"Nome\".",
             "Scrivi \"Razza\", \"Genere\" e \"Allineamento\" come testo libero.",
             "Scrivi la \"Velocità\" nell'unità di misura scelta nelle \"Impostazioni\".",
             "Sotto la velocità vedi il valore convertito nell'altra unità di misura.",
-            "Nel riquadro \"Aspetto\", scrivi età, altezza, peso, occhi, capelli e pelle."
+            "Per aggiungere volo, nuoto, scalata o scavo, attiva il relativo interruttore e scrivi la distanza.",
+            "Il nome è obbligatorio e le distanze partono da 0: se un valore non va bene, l'app ti porta al campo da correggere."
           ]
         },
         {
           "title": "Sensi",
           "items": [
-            "Per dare un senso al personaggio, tocca \"Scurovisione\", \"Vista cieca\", \"Vista pura\" o \"Percezione tellurica\".",
+            "Per dare un senso al personaggio, attiva l'interruttore di \"Scurovisione\", \"Vista cieca\", \"Vista pura\" o \"Percezione tellurica\".",
             "Quando attivi un senso, l'app imposta la distanza a 60 piedi (18 metri).",
             "Per cambiare la distanza, scrivi il valore nel campo accanto al senso.",
-            "Per togliere un senso, tocca di nuovo il suo nome.",
+            "Per togliere un senso, spegni il suo interruttore.",
             "I sensi attivi appaiono nella sezione \"Statistiche\" della scheda principale."
           ]
         },
         {
-          "title": "Personalità",
+          "title": "Biografia",
           "items": [
             "Scrivi \"Background\", \"Tratti caratteriali\", \"Ideali\", \"Legami\" e \"Difetti\".",
+            "Tocca \"Aspetto\" per aprire età, altezza, peso, occhi, capelli e pelle.",
             "Queste informazioni sono private. Solo tu le vedi.",
             "Per mostrarle al GM e agli altri giocatori in sessione, attiva l'opzione nelle \"Impostazioni\", sezione \"Privacy\"."
           ]
@@ -3572,10 +3586,10 @@
         {
           "title": "Modificatori del danno",
           "items": [
-            "Per ogni lista, tocca i tipi di danno: \"Resistenze\", \"Immunità\" e \"Vulnerabilità\".",
-            "Un tipo di danno sta in una sola lista. Se lo scegli in un'altra lista, l'app lo sposta.",
+            "Ogni tipo di danno ha una riga. Tocca \"Res.\" per la resistenza, \"Imm.\" per l'immunità, \"Vul.\" per la vulnerabilità, o il trattino per il danno normale.",
+            "Sopra le righe vedi il riepilogo di ciò che è attivo.",
             "Quando applichi un danno con il suo tipo, l'app usa queste liste in automatico.",
-            "Per un tipo homebrew, scrivilo nel campo \"Aggiungi personalizzato (homebrew)…\".",
+            "Per un tipo homebrew, apri \"Tipi personalizzati (homebrew)\" e scrivilo nella lista giusta.",
             "L'app non applica in automatico i tipi personalizzati.",
             "I modificatori appaiono come badge nella scheda principale."
           ]
@@ -4586,7 +4600,8 @@
             "Le armi equipaggiate e il \"Colpo senza armi\" sono nella sezione \"Azione\".",
             "Gli incantesimi vanno nella sezione del loro tempo di lancio. La pagina mostra i trucchetti e gli incantesimi preparati.",
             "Le capacità attive vanno nella sezione del loro tipo di azione. Le capacità passive non compaiono.",
-            "Ogni sezione mostra anche le azioni standard delle regole, con una breve descrizione."
+            "In fondo a ogni sezione, \"Azioni standard\" apre le azioni delle regole con una breve descrizione.",
+            "Quando segni una sezione come usata, si richiude e resta in vista quello che puoi ancora fare."
           ]
         },
         {
@@ -4656,7 +4671,7 @@
             "Il numero grande è il livello del personaggio. Sotto vedi gli XP attuali.",
             "La pillola sopra la barra indica quanti XP mancano al livello successivo.",
             "La barra e la percentuale mostrano il progresso verso il livello successivo.",
-            "Al livello 20 vedi \"Tu sei una leggenda\" e la barra non appare più.",
+            "Al livello 20 vedi \"Livello massimo\" e la barra non appare più.",
             "Con una sola classe, il livello della classe segue gli XP in modo automatico."
           ]
         },

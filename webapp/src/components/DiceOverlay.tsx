@@ -262,7 +262,7 @@ export default function DiceOverlay() {
               pending={isRolling}
               spinnerSize={16}
               className="absolute right-full top-0 mr-2 h-14 px-5 rounded-2xl
-                         bg-gradient-gold
+                         bg-dnd-gold
                          border border-dnd-gold-dim shadow-halo-gold
                          flex items-center justify-center gap-2 text-dnd-ink
                          font-cinzel uppercase tracking-wider font-bold text-sm
@@ -283,7 +283,7 @@ export default function DiceOverlay() {
           aria-label={open ? t('character.dice_overlay.close') : t('character.dice_overlay.open')}
           onClick={toggleOpen}
           className="w-14 h-14 rounded-full
-                     bg-gradient-gold
+                     bg-dnd-gold
                      border border-dnd-gold-dim shadow-halo-gold
                      flex items-center justify-center text-dnd-ink touch-manipulation"
           whileTap={{ scale: 0.9 }}

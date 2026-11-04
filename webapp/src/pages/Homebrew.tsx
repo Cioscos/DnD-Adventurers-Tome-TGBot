@@ -3,11 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, CheckCircle2, BookOpenCheck, Zap, Trash2, RefreshCw } from 'lucide-react'
-import { GiScrollUnfurled, GiPotionBall, GiCauldron } from 'react-icons/gi'
+import { Plus, CheckCircle2, Zap, Trash2, RefreshCw } from 'lucide-react'
+import { GiScrollUnfurled } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import IconButton from '@/components/ui/IconButton'
 import SwitchToggle from '@/components/ui/SwitchToggle'
@@ -61,18 +60,13 @@ function RuleCard({
       onClick={isFeat ? undefined : onClick}
       whileTap={isFeat ? undefined : { scale: 0.99 }}
       transition={spring.press}
-      className={`group flex items-center gap-3 p-3 rounded-2xl
-                  bg-dnd-surface-raised border border-dnd-border
-                  hover:border-dnd-gold/60 ${isFeat ? '' : 'cursor-pointer'}
-                  transition-[border-color] duration-200 min-h-[64px]
-                  ${dimmed ? 'opacity-70' : ''}`}
+      className={`group flex items-center gap-3 px-1 py-2 border-b border-dnd-border/60
+                  hover:bg-dnd-surface/60 ${isFeat ? '' : 'cursor-pointer'}
+                  transition-colors min-h-[56px]`}
     >
-      <div className="shrink-0 w-10 h-10 rounded-xl bg-dnd-surface border border-dnd-gold-dim/30
-                      flex items-center justify-center text-dnd-gold-bright">
-        <GiScrollUnfurled size={20} />
-      </div>
+      <GiScrollUnfurled size={20} aria-hidden className="shrink-0 text-dnd-gold-dim" />
       <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-[15px] text-dnd-text truncate">{rule.name}</p>
+        <p className={`font-body font-semibold text-sm truncate ${dimmed ? 'text-dnd-text-faint' : 'text-dnd-text'}`}>{rule.name}</p>
         {rule.template_id != null && (
           <span className="inline-block mt-1 px-1.5 py-0.5 rounded-lg
                            bg-dnd-chip-bg border border-dnd-chip-border/60
@@ -134,21 +128,12 @@ interface TemplateCardProps {
 }
 
 function TemplateCard({ template, installed, installing, onInstall, t }: TemplateCardProps) {
-  const surfaceClasses = installed
-    ? 'bg-dnd-emerald/5 border-dashed border-dnd-emerald/40'
-    : 'bg-dnd-gold-bright/5 border-dashed border-dnd-gold-bright/30'
-
   return (
-    <div className={`flex flex-col gap-2 p-3 rounded-2xl border ${surfaceClasses}`}>
-      <div className="flex items-start gap-2">
-        <span className="text-2xl leading-none shrink-0" aria-hidden>
-          {template.icon}
-        </span>
-        <p className="font-display font-bold text-[15px] text-dnd-text leading-tight flex-1 min-w-0 break-words">
-          {template.name}
-        </p>
-      </div>
-      <p className="text-xs text-dnd-text-muted font-body italic line-clamp-3 min-h-[3.6em]">
+    <div className="flex flex-col gap-2 border-b border-dnd-border/60 px-1 py-3">
+      <p className="font-body font-semibold text-sm text-dnd-text leading-tight break-words">
+        {template.name}
+      </p>
+      <p className="text-xs text-dnd-text-muted font-body italic line-clamp-3">
         {template.description}
       </p>
       {installed ? (
@@ -312,7 +297,7 @@ export default function Homebrew() {
         <Skeleton.Rect height="72px" delay={80} />
         <Skeleton.Rect height="72px" delay={160} />
         <Skeleton.Ornament delay={200} />
-        <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-3">
           <Skeleton.Rect height="140px" delay={240} />
           <Skeleton.Rect height="140px" delay={300} />
           <Skeleton.Rect height="140px" delay={360} />
@@ -336,8 +321,8 @@ export default function Homebrew() {
         animate={{ opacity: 1, y: 0 }}
         transition={spring.drift}
       >
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <SectionDivider icon={<GiCauldron size={11} />}>
+        <div className="mb-2">
+          <SectionDivider>
             <span className="flex items-center gap-1.5">
               {t('homebrew.sections.active')}
               <span className="font-mono tabular-nums text-dnd-text-faint">· {active.length}</span>
@@ -355,13 +340,11 @@ export default function Homebrew() {
         </Button>
 
         {active.length === 0 ? (
-          <Surface variant="flat" className="text-center py-5 mt-3">
-            <p className="text-dnd-text-muted font-body italic">
-              {t('homebrew.no_rules_yet')}
-            </p>
-          </Surface>
+          <p className="mt-3 px-1 text-sm text-dnd-text-muted font-body italic">
+            {t('homebrew.no_rules_yet')}
+          </p>
         ) : (
-          <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="space-y-2 mt-3">
+          <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="mt-3">
             {active.map((r) => {
               const hasManualTrigger = (r.dsl.triggers ?? []).some(
                 (tr) => tr.event === 'manual_trigger',
@@ -400,7 +383,7 @@ export default function Homebrew() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...spring.drift, delay: 0.05 }}
         >
-          <SectionDivider icon={<GiPotionBall size={11} />}>
+          <SectionDivider>
             <span className="flex items-center gap-1.5">
               {t('homebrew.sections.disabled')}
               <span className="font-mono tabular-nums text-dnd-text-faint">
@@ -408,7 +391,7 @@ export default function Homebrew() {
               </span>
             </span>
           </SectionDivider>
-          <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="space-y-2">
+          <Reveal.Stagger stagger={stagger.listTight} delay={0.05}>
             {disabled.map((r) => (
               <Reveal.Item key={r.id}>
                 <RuleCard
@@ -435,10 +418,10 @@ export default function Homebrew() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...spring.drift, delay: 0.1 }}
       >
-        <SectionDivider icon={<BookOpenCheck size={11} />} align="center">
+        <SectionDivider>
           {t('homebrew.sections.library')}
         </SectionDivider>
-        <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+        <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="grid grid-cols-1 xs:grid-cols-2 gap-x-3">
           {templates.map((tpl) => (
             <Reveal.Item key={tpl.id}>
               <TemplateCard

@@ -46,7 +46,7 @@ export default function SwitchToggle({
       aria-busy={pending || undefined}
       className={`hit-44 w-12 h-7 rounded-full transition-colors shrink-0 border flex items-center px-0.5 disabled:opacity-50
         ${checked
-          ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_var(--dnd-gold-glow)] justify-end'
+          ? 'bg-dnd-gold border-dnd-gold-bright justify-end'
           : 'bg-dnd-surface border-dnd-border justify-start'}`}
       whileTap={disabled || pending ? undefined : { scale: 0.92 }}
     >
@@ -73,10 +73,10 @@ export default function SwitchToggle({
       className={`flex items-center justify-between gap-3 min-h-[44px] cursor-pointer ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
     >
       <div className="flex items-start gap-2 flex-1 min-w-0">
-        {icon && <span className="text-dnd-gold-bright shrink-0 mt-0.5">{icon}</span>}
+        {icon && <span className="text-dnd-gold-dim shrink-0 mt-0.5">{icon}</span>}
         <div className="min-w-0">
           {label && (
-            <p className="font-display font-bold text-dnd-gold-bright">{label}</p>
+            <p className="font-body font-semibold text-dnd-text">{label}</p>
           )}
           {hint && (
             <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">{hint}</p>

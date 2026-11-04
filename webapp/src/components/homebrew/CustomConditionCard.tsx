@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
+import { GiCauldron } from 'react-icons/gi'
 import IconButton from '@/components/ui/IconButton'
 
 interface CustomConditionCardProps {
@@ -58,8 +59,8 @@ export default function CustomConditionCard({
                  bg-dnd-crimson/10 px-3 py-2.5 shadow-parchment-md"
     >
       <span className="shrink-0 inline-flex w-9 h-9 items-center justify-center
-                       rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright">
-        <Sparkles size={18} />
+                       rounded-lg bg-dnd-crimson/10 text-dnd-crimson-bright">
+        <GiCauldron size={18} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="font-body text-sm font-semibold text-dnd-text truncate">
@@ -79,8 +80,8 @@ export default function CustomConditionCard({
         disabled={disabled}
         haptic="none"
         aria-label={t('character.conditions.custom_remove_aria', { name: title })}
-        className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright
-                   hover:bg-dnd-crimson/15 disabled:opacity-50"
+        className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson-bright
+                   hover:bg-dnd-crimson/10 disabled:opacity-50"
       />
     </div>
   )

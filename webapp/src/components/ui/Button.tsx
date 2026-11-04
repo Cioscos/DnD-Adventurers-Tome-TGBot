@@ -28,11 +28,11 @@ interface ButtonProps {
 function variantClasses(variant: ButtonVariant): string {
   switch (variant) {
     case 'primary':
-      return 'bg-gradient-gold text-dnd-ink shadow-engrave'
+      return 'bg-dnd-gold text-dnd-ink hover:bg-dnd-gold-bright'
     case 'secondary':
       return 'bg-dnd-surface-raised text-dnd-text border border-dnd-gold-dim/30 hover:border-dnd-gold/70'
     case 'danger':
-      return 'bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/40 hover:bg-dnd-crimson/25 hover:border-dnd-crimson/60'
+      return 'bg-dnd-crimson/10 text-dnd-crimson-bright border border-dnd-crimson/40 hover:bg-dnd-crimson/20 hover:border-dnd-crimson/60'
     case 'arcane':
       return 'bg-gradient-to-r from-dnd-arcane-deep to-dnd-arcane text-dnd-parchment border border-dnd-arcane-bright/40 shadow-halo-arcane'
     case 'ghost':

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Pencil, Trash2, RotateCcw, FilterX } from 'lucide-react'
-import { GiLightningTrio as Zap, GiSparkles as Sparkles } from 'react-icons/gi'
+import { GiLightningTrio as Zap, GiAura } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
@@ -17,9 +17,8 @@ import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
 import SwitchToggle from '@/components/ui/SwitchToggle'
-import Surface from '@/components/ui/Surface'
+import { LEDGER_TITLE, gemClass, ledgerEntry } from '@/styles/ledger'
 import ScrollArea from '@/components/ScrollArea'
-import StatPill from '@/components/ui/StatPill'
 import FilterChip from '@/components/ui/FilterChip'
 import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
@@ -341,31 +340,21 @@ export default function Abilities() {
       <m.div
         key={ab.id}
         layout
-        className={`rounded-2xl border overflow-hidden transition-colors
-          ${ab.is_passive
-            ? 'bg-dnd-surface-raised border-dnd-gold-dim/30'
-            : 'bg-gradient-parchment border-dnd-border'}
-          ${isDepleted ? 'opacity-60' : ''}`}
+        className={ledgerEntry(isOpen)}
       >
         <Pressable
-          className="w-full flex items-center gap-2 px-3 py-3 text-left"
+          className={`my-[3px] w-full min-h-[48px] flex items-center gap-2 py-2 text-left ${isOpen ? 'px-3' : 'px-1'}`}
           onClick={() => setExpanded(isOpen ? null : ab.id)}
           whileTap={{ scale: 0.995 }}
         >
-          <span className="flex-1 min-w-0 font-display font-bold text-sm text-dnd-gold-bright truncate">
+          <span className={`flex-1 min-w-0 font-body font-semibold text-sm truncate ${isDepleted ? 'text-dnd-text-faint' : 'text-dnd-text'}`}>
             {ab.name}
           </span>
-          <div className="flex gap-1.5 items-center shrink-0">
-            {className && (
-              <StatPill tone="cobalt" size="sm" value={className} />
-            )}
-            {ab.is_passive ? (
-              <StatPill tone="cobalt" size="sm" value={t('character.abilities.passive')} />
-            ) : (
-              <StatPill tone="amber" size="sm" value={t('character.abilities.active')} />
-            )}
+          <div className="flex gap-2 items-center shrink-0 text-xs font-body text-dnd-text-muted">
+            {className && <span>{className}</span>}
+            <span>{ab.is_passive ? t('character.abilities.passive') : t('character.abilities.active')}</span>
             {hasUses && (
-              <span className="text-xs text-dnd-text-faint font-mono tabular-nums">
+              <span className="font-mono font-bold tabular-nums">
                 {current}/{max}
               </span>
             )}
@@ -404,7 +393,7 @@ export default function Abilities() {
 
                 {/* Usi ≤ soglia → pallini interattivi (acceso = usato, come gli slot) */}
                 {usePips && (
-                  <div className="flex gap-2 flex-wrap rounded-xl bg-dnd-surface border border-dnd-border p-2.5">
+                  <div className="flex gap-2 flex-wrap py-1">
                     {Array.from({ length: max }).map((_, i) => {
                       const isUsed = i < usedCount
                       return (
@@ -420,11 +409,7 @@ export default function Abilities() {
                           spinnerSize={12}
                           whileTap={{ scale: 0.85 }}
                           aria-pressed={isUsed}
-                          className={`hit-44 w-7 h-7 rounded-full border-2 transition-all disabled:opacity-50 ${
-                            isUsed
-                              ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_10px_rgba(244,208,111,0.5)]'
-                              : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
-                          }`}
+                          className={`${gemClass(isUsed)} disabled:opacity-50`}
                         />
                       )
                     })}
@@ -433,14 +418,14 @@ export default function Abilities() {
 
                 {/* Usi > soglia → stepper numerico */}
                 {hasUses && !usePips && (
-                  <div className="flex items-center gap-3 rounded-xl bg-dnd-surface border border-dnd-border p-2">
+                  <div className="flex items-center gap-3">
                     <IconButton
                       icon={<Minus size={16} />}
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
                       loading={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
                       disabled={current <= 0}
                       haptic="none"
-                      className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
+                      className="rounded-lg border border-dnd-border"
                     />
                     <Pressable
                       className="flex-1 text-center rounded-lg py-1 border border-transparent
@@ -463,7 +448,7 @@ export default function Abilities() {
                       loading={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
                       disabled={current >= max}
                       haptic="none"
-                      className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
+                      className="rounded-lg border border-dnd-border"
                     />
                   </div>
                 )}
@@ -622,18 +607,18 @@ export default function Abilities() {
             }}
           />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {classFeatures.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
+              <section>
+                <h3 className={`border-b border-dnd-border pb-1 pl-1 ${LEDGER_TITLE}`}>
                   {t('character.abilities.class_features_section')}
                 </h3>
                 {classFeatures.map(renderAbility)}
               </section>
             )}
             {manualAbilities.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
+              <section>
+                <h3 className={`border-b border-dnd-border pb-1 pl-1 ${LEDGER_TITLE}`}>
                   {t('character.abilities.custom_section')}
                 </h3>
                 {manualAbilities.map(renderAbility)}
@@ -644,8 +629,8 @@ export default function Abilities() {
       </ScrollArea>
 
       {resources && resources.length > 0 && (
-        <Surface variant="elevated" className="mt-3">
-          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-3">
+        <section className="mt-3">
+          <h3 className={`mb-2 pl-1 ${LEDGER_TITLE}`}>
             {t('character.homebrew.resources.section_title')}
           </h3>
           <div className="space-y-2">
@@ -672,7 +657,7 @@ export default function Abilities() {
               />
             ))}
           </div>
-        </Surface>
+        </section>
       )}
 
       {/* Description-only editor for class features (struttura bloccata) */}
@@ -744,7 +729,7 @@ export default function Abilities() {
                   checked={form.is_passive}
                   onChange={(v) => setForm((f) => ({ ...f, is_passive: v }))}
                   label={t('character.abilities.passive')}
-                  icon={<Sparkles size={14} />}
+                  icon={<GiAura size={14} />}
                   aria-label={t('character.abilities.passive')}
                 />
               </div>

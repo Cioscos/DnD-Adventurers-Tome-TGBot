@@ -4,11 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { Clock, Info, Plus, RotateCcw } from 'lucide-react'
-import { GiFlame as Flame } from 'react-icons/gi'
 import { api } from '@/api/client'
 import type { Effect, HomebrewRule } from '@/lib/homebrew/types'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
+import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import FilterChip from '@/components/ui/FilterChip'
@@ -290,7 +289,7 @@ export default function Conditions() {
         </Button>
       )}
 
-      <Surface variant="flat">
+      <section>
         <DurationInput value={nextDuration} onChange={setNextDuration} />
         {inEncounter && (
           <p className="mt-2 text-xs text-dnd-text-muted font-body">
@@ -309,7 +308,7 @@ export default function Conditions() {
             {t('character.conditions.duration.tick')}
           </Button>
         )}
-      </Surface>
+      </section>
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
@@ -340,22 +339,16 @@ export default function Conditions() {
       </div>
 
       {activeCount === 0 && !filterActive && (
-        <Surface variant="flat" className="text-center py-5">
-          <p className="text-dnd-text-muted font-body italic">
-            {t('character.conditions.none_active')}
-          </p>
-        </Surface>
+        <p className="px-1 text-sm text-dnd-text-muted font-body italic">
+          {t('character.conditions.none_active')}
+        </p>
       )}
 
       {/* Exhaustion tracker — separated because levels are cumulative, not toggle. */}
-      <Surface variant="elevated" ornamented>
-        <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-text-faint italic mb-1.5 text-center">
-          {t('character.conditions.exhaustion_caption', { defaultValue: 'Livelli (cumulativi)' })}
-        </p>
-        <div className="flex items-center justify-between mb-3">
+      <section className="border-y border-dnd-border px-1 py-2.5">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Flame size={16} className="text-dnd-amber" />
-            <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-dim">
+            <span className={LEDGER_LABEL}>
               {t('character.conditions.exhaustion_condition')}
             </span>
             <Pressable
@@ -371,7 +364,7 @@ export default function Conditions() {
               <Info size={14} />
             </Pressable>
           </div>
-          <span className={`text-lg font-display font-black
+          <span className={`font-mono text-lg font-bold tabular-nums
             ${currentExhaustion > 0 ? 'text-dnd-amber' : 'text-dnd-text-faint'}`}>
             {currentExhaustion}<span className="text-sm text-dnd-text-muted">/6</span>
           </span>
@@ -393,7 +386,7 @@ export default function Conditions() {
                   ${isActive
                     ? 'bg-gradient-ember text-dnd-parchment shadow-parchment-md'
                     : isFilled
-                      ? 'bg-dnd-amber/40 text-dnd-amber'
+                      ? 'bg-dnd-amber/40 text-dnd-text'
                       : 'bg-dnd-surface border border-dnd-border text-dnd-text-faint'}`}
                 whileTap={{ scale: 0.92 }}
                 transition={spring.press}
@@ -424,7 +417,7 @@ export default function Conditions() {
                       className={
                         isCurrent
                           ? 'px-3 py-2 rounded-md border border-dnd-gold/50 bg-dnd-gold/10 text-dnd-gold-bright'
-                          : 'px-3 py-1.5 text-dnd-text-faint opacity-60'
+                          : 'px-3 py-1.5 text-dnd-text-faint'
                       }
                     >
                       {desc}
@@ -435,11 +428,14 @@ export default function Conditions() {
             </div>
           )
         })()}
-      </Surface>
+        <p className="mt-2 text-xs font-body text-dnd-text-muted">
+          {t('character.conditions.exhaustion_caption', { defaultValue: 'Livelli (cumulativi)' })}
+        </p>
+      </section>
 
       {effectRows.length > 0 && (
-        <Surface variant="flat">
-          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-2">
+        <section className="px-1">
+          <h3 className={`mb-2 ${LEDGER_TITLE}`}>
             {t('character.conditions.effect.active_title')}
           </h3>
           <ul className="space-y-2">
@@ -458,12 +454,12 @@ export default function Conditions() {
               </li>
             ))}
           </ul>
-        </Surface>
+        </section>
       )}
 
       {/* Condition grid */}
       <m.div
-        className="grid grid-cols-2 max-[359px]:grid-cols-1 md:grid-cols-3 gap-2"
+        className="grid grid-cols-2 max-[359px]:grid-cols-1 md:grid-cols-3 gap-x-4 border-t border-dnd-border"
         initial="initial"
         animate="animate"
         variants={{
@@ -481,10 +477,8 @@ export default function Conditions() {
                 initial: { opacity: 0, y: 8 },
                 animate: { opacity: 1, y: 0 },
               }}
-              className={`flex items-center rounded-xl border transition-colors
-                ${active
-                  ? 'bg-gradient-to-br from-dnd-crimson-deep/40 to-dnd-crimson/20 border-dnd-crimson/60 text-dnd-text'
-                  : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}
+              className={`flex min-w-0 items-center border-b border-dnd-border/60 transition-colors
+                ${active ? 'bg-dnd-crimson/10 text-dnd-text' : 'text-dnd-text'}`}
             >
               <Pressable
                 onClick={() => toggle(key)}
@@ -493,10 +487,10 @@ export default function Conditions() {
                 whileTap={{ scale: 0.95 }}
                 animate={active && justActivated === key ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex-1 min-w-0 min-h-[44px] flex items-center gap-1.5 pl-2.5 py-3 text-left"
+                className="my-0.5 flex-1 min-w-0 min-h-[44px] flex items-center gap-2 pl-1 py-1 text-left"
               >
-                <Icon size={16} className={`shrink-0 ${active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'}`} />
-                <span className="min-w-0 truncate text-sm font-body leading-tight">
+                <Icon size={16} className={`shrink-0 ${active ? 'text-dnd-crimson-bright' : 'text-dnd-gold'}`} />
+                <span className={`min-w-0 truncate text-sm font-body leading-tight ${active ? 'font-semibold' : ''}`}>
                   {t(`character.conditions.${key}`)}
                 </span>
                 {active && durations[key] != null && (
@@ -522,8 +516,8 @@ export default function Conditions() {
           rule has an `apply_condition` effect for a not-yet-active key — no
           dead UI otherwise. */}
       {appliableCustoms.length > 0 && (
-        <Surface variant="elevated">
-          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-3">
+        <section className="px-1">
+          <h3 className={`mb-2 ${LEDGER_TITLE}`}>
             {t('character.conditions.apply_custom_title')}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -547,13 +541,13 @@ export default function Conditions() {
               </Pressable>
             ))}
           </div>
-        </Surface>
+        </section>
       )}
 
       {/* Custom conditions applied by homebrew rules (`apply_condition`). */}
       {customEntries.length > 0 && (
-        <Surface variant="elevated">
-          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-3">
+        <section className="px-1">
+          <h3 className={`mb-2 ${LEDGER_TITLE}`}>
             {t('character.conditions.custom_section_title')}
           </h3>
           <div className="space-y-2">
@@ -577,7 +571,7 @@ export default function Conditions() {
               )
             })}
           </div>
-        </Surface>
+        </section>
       )}
 
       {detailKey !== null && (

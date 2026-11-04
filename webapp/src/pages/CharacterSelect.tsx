@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { Plus, Pencil, SkipForward, ScrollText, Upload, BookOpen, Link2 } from 'lucide-react'
 import {
-  GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
+  GiPolarStar as Star, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
 } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
@@ -13,7 +13,6 @@ import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
 import CampaignSessionBanner from '@/components/ui/CampaignSessionBanner'
 import OfflineNotice from '@/components/ui/OfflineNotice'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import PageHelp from '@/components/PageHelp'
@@ -22,14 +21,13 @@ import ChipInput from '@/components/ui/ChipInput'
 import Sheet from '@/components/ui/Sheet'
 import DdbImportSheet from '@/components/character/DdbImportSheet'
 import WizardFooter from '@/components/ui/WizardFooter'
-import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { WaxSeal } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { resetHubReturn } from '@/lib/hubReturn'
 import { useToast } from '@/hooks/useToast'
-import { spring, stagger } from '@/styles/motion'
+import { stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
 import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
@@ -265,25 +263,17 @@ export default function CharacterSelect() {
   }
 
   return (
-    <div className="w-full overflow-hidden" style={{ height: 'var(--tg-vh, 100vh)' }}>
+    <div className="flex w-full flex-col overflow-hidden" style={{ height: 'var(--tg-vh, 100vh)' }}>
       {/* Own scroll container: the home page no longer relies on document/body
           scroll (broken under the global overscroll-behavior + Telegram
           disableVerticalSwipes), it scrolls inside here like every Layout page. */}
-      <div className="h-full overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-safe pb-safe relative">
-      {/* Hero halo behind title */}
-      <div
-        className="absolute top-0 left-0 right-0 h-60 pointer-events-none"
-        style={{ background: 'var(--gradient-hero-halo)' }}
-      />
-
-      <div className="relative space-y-5">
-        <div className="pt-4">
-          <FancyHeader
-            title={t('character.select.title')}
-            subtitle={t('character.select.subtitle')}
-            align="center"
-            size="xl"
-          />
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-4 pt-safe">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3 pt-3">
+          <h1 className="min-w-0 font-display text-2xl font-bold leading-tight text-dnd-gold-bright">
+            {t('character.select.title')}
+          </h1>
+          <PageHelp helpKey="home" title={t('character.select.title')} />
         </div>
 
         <OfflineNotice query={charactersQuery} />
@@ -291,78 +281,63 @@ export default function CharacterSelect() {
         <CampaignSessionBanner />
 
         {/* Session CTA (always available — GM does not need a character) */}
-        <div className="flex items-center gap-3">
-          <Button
-            variant="secondary"
-            size="md"
-            className="flex-1"
-            icon={<Swords size={16} />}
-            onClick={() => navigate(hasActiveSession ? `/session/${activeSession!.id}` : '/session')}
-          >
-            {hasActiveSession ? t('session.resume') : t('session.title')}
-          </Button>
-          <PageHelp helpKey="home" title={t('character.select.title')} />
-        </div>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Swords size={16} />}
+          onClick={() => navigate(hasActiveSession ? `/session/${activeSession!.id}` : '/session')}
+        >
+          {hasActiveSession ? t('session.resume') : t('session.title')}
+        </Button>
 
         {/* Character roster */}
         {characters.length === 0 ? (
-          <m.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ ...spring.elastic, delay: 0.2 }}
-            className="flex flex-col items-center gap-4 py-12"
-          >
-            <m.div
-              animate={{ rotate: [0, -3, 3, -2, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <WaxSeal size={100} />
-            </m.div>
+          <div className="flex flex-col items-center gap-4 py-12">
+            <WaxSeal size={100} />
             <p className="text-dnd-text-muted text-center font-body italic max-w-[240px]">
               {t('character.select.empty')}
             </p>
-          </m.div>
+          </div>
         ) : (
-          <Reveal.Stagger stagger={stagger.list} className="space-y-3">
+          <Reveal.Stagger stagger={stagger.list} className="border-y border-dnd-border divide-y divide-dnd-border/60">
             {characters.map((char) => {
               const status = cardStatus(char)
               const isDanger = status === 'dead' || status === 'down'
               const hpMax = effectiveHpMax(char)
               return (
               <Reveal.Item key={char.id}>
-                <Surface
-                  variant="tome"
-                  interactive
-                  ornamented
-                  layoutId={`char-hero-${char.id}`}
+                <Pressable
                   onClick={() => navigate(`/char/${char.id}`)}
-                  className={`overflow-hidden${isDanger ? ' !border-dnd-crimson-bright/70 shadow-halo-danger' : ''}`}
+                  whileTap={{ scale: 0.99 }}
+                  className={`my-0.5 block w-full px-1 py-3 text-left transition-colors hover:bg-dnd-surface/60${isDanger ? ' bg-dnd-crimson/10' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="font-display font-bold text-lg text-dnd-gold-bright truncate">
+                        <h2 className="min-w-0 truncate font-display text-lg font-bold text-dnd-text">
                           {char.name}
                         </h2>
                         {status === 'down' && (
-                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-lg bg-dnd-crimson/10 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.unconscious_badge')}
                           </span>
                         )}
                         {status === 'dead' && (
-                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-lg bg-dnd-crimson/10 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.dead_badge')}
                           </span>
                         )}
                         {status === 'unconfigured' && (
-                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-surface-raised text-dnd-text-muted border border-dnd-border shrink-0">
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-lg text-dnd-text-muted border border-dnd-border shrink-0">
                             {t('character.select.unconfigured_badge')}
                           </span>
                         )}
                         {char.heroic_inspiration && (
-                          <Sparkles
+                          <Star
                             size={16}
-                            className="text-dnd-amber animate-shimmer shrink-0"
+                            aria-hidden
+                            className="text-dnd-amber shrink-0"
                           />
                         )}
                       </div>
@@ -372,9 +347,9 @@ export default function CharacterSelect() {
                       </p>
 
                       {/* HP + AC row */}
-                      <div className="mt-2.5 flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 text-xs text-dnd-text-muted font-mono w-[70px] shrink-0">
-                          <Heart size={12} className="text-dnd-crimson-bright" />
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-sm font-bold text-dnd-text font-mono tabular-nums shrink-0">
+                          <Heart size={13} aria-hidden className="text-dnd-crimson-bright" />
                           {char.current_hit_points}/{hpMax}
                         </span>
                         <div className="flex-1">
@@ -386,32 +361,20 @@ export default function CharacterSelect() {
                             segmented
                           />
                         </div>
-                        <span className="inline-flex items-center gap-1 text-xs text-dnd-gold font-mono shrink-0">
-                          <Shield size={12} />
+                        <span className="inline-flex items-center gap-1 text-sm font-bold text-dnd-text font-mono tabular-nums shrink-0">
+                          <Shield size={13} aria-hidden className="text-dnd-gold" />
                           {effectiveAc(char)}
                         </span>
                       </div>
                     </div>
 
                   </div>
-                </Surface>
+                </Pressable>
               </Reveal.Item>
               )
             })}
           </Reveal.Stagger>
         )}
-
-        {/* New character CTA — always visible, opens wizard Sheet. */}
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          onClick={() => setCreating(true)}
-          icon={<Plus size={20} />}
-          haptic="medium"
-        >
-          {t('character.select.new')}
-        </Button>
 
         <input
           ref={fileRef}
@@ -424,29 +387,31 @@ export default function CharacterSelect() {
             if (file) importMutation.mutate(file)
           }}
         />
-        <Button
-          variant="secondary"
-          size="md"
-          fullWidth
-          icon={<Upload size={16} />}
-          loading={importMutation.isPending}
-          onClick={() => fileRef.current?.click()}
-        >
-          {t('character.select.import')}
-        </Button>
-        <Button
-          variant="secondary"
-          size="md"
-          fullWidth
-          icon={<Link2 size={16} />}
-          onClick={() => setDdbOpen(true)}
-        >
-          {t('character.select.import_ddb')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-[44px]"
+            icon={<Upload size={14} />}
+            loading={importMutation.isPending}
+            onClick={() => fileRef.current?.click()}
+          >
+            {t('character.select.import')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-[44px]"
+            icon={<Link2 size={14} />}
+            onClick={() => setDdbOpen(true)}
+          >
+            {t('character.select.import_ddb')}
+          </Button>
+        </div>
         <DdbImportSheet open={ddbOpen} onClose={() => setDdbOpen(false)} />
 
         {/* Version footer — opens the in-app changelog / release notes. */}
-        <div className="pt-2 flex justify-center">
+        <div className="flex justify-center">
           <Pressable
             onClick={() => { haptic.light(); navigate('/changelog') }}
             className="min-h-[44px] px-3 inline-flex items-center gap-1.5 text-dnd-text-faint hover:text-dnd-gold-bright transition-colors"
@@ -457,6 +422,20 @@ export default function CharacterSelect() {
           </Pressable>
         </div>
       </div>
+      </div>
+
+      {/* Il pulsante d'oro della pagina: fisso in basso, a portata di pollice. */}
+      <div className="shrink-0 border-t border-dnd-border bg-dnd-bg px-4 pt-3 pb-safe-cta">
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => setCreating(true)}
+          icon={<Plus size={20} />}
+          haptic="medium"
+        >
+          {t('character.select.new')}
+        </Button>
       </div>
 
       {/* Creation wizard — modal Sheet. Flusso: Nome → Classe → Identità → Crea. */}
@@ -521,7 +500,7 @@ export default function CharacterSelect() {
 
               {!showCustom ? (
                 <>
-                  <p className="text-[12px] text-dnd-gold-bright font-body italic text-center mb-3">
+                  <p className="text-xs text-dnd-text-muted font-body italic text-center mb-3">
                     {t('character.create.tap_class_hint', { name: newName.trim() || '—' })}
                   </p>
 
@@ -543,10 +522,10 @@ export default function CharacterSelect() {
                           spellcasting_ability: cls.spellcasting_ability,
                         })}
                         className={`flex flex-col items-center py-2.5 px-1 rounded-xl
-                                   bg-dnd-surface border transition-[box-shadow,border-color] duration-200
+                                   border transition-colors duration-200
                                    text-center
                                    ${isBuiltinSelected(cls.key)
-                                     ? '!border-dnd-gold shadow-halo-gold'
+                                     ? '!border-dnd-gold bg-dnd-gold/20'
                                      : 'border-dnd-border hover:border-dnd-gold/60'}`}
                         variants={{
                           initial: { opacity: 0, scale: 0.9 },
@@ -554,7 +533,7 @@ export default function CharacterSelect() {
                         }}
                         whileTap={{ scale: 0.93 }}
                       >
-                        <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
+                        <span className="text-sm font-body font-semibold text-dnd-text">
                           {t(`dnd.classes.${cls.key}`)}
                         </span>
                         <span className="text-xs text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
@@ -567,15 +546,15 @@ export default function CharacterSelect() {
                     <Pressable
                       onClick={() => setShowCustom(true)}
                       className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                 bg-dnd-surface-raised border text-center
-                                 ${isCustomSelected ? '!border-dnd-gold shadow-halo-gold' : 'border-dnd-gold-dim/40'}`}
+                                 border text-center
+                                 ${isCustomSelected ? '!border-dnd-gold bg-dnd-gold/20' : 'border-dnd-border'}`}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.1 }}
                       whileTap={{ scale: 0.93 }}
                     >
                       <Pencil size={14} className="text-dnd-gold-dim mb-0.5" />
-                      <span className="text-[13px] font-display font-bold text-dnd-text">
+                      <span className="text-sm font-body font-semibold text-dnd-text">
                         {isCustomSelected && selectedClass ? selectedClass.class_name : t('character.create.custom_class')}
                       </span>
                       <span className="text-xs text-dnd-text-faint font-mono mt-0.5">
@@ -585,15 +564,15 @@ export default function CharacterSelect() {
                     <Pressable
                       onClick={() => setSelectedClass(null)}
                       className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                 bg-dnd-surface border text-center
-                                 ${isSkipSelected ? '!border-dnd-gold shadow-halo-gold' : 'border-dnd-border'}`}
+                                 border text-center
+                                 ${isSkipSelected ? '!border-dnd-gold bg-dnd-gold/20' : 'border-dnd-border'}`}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.15 }}
                       whileTap={{ scale: 0.93 }}
                     >
                       <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
-                      <span className="text-[13px] font-display font-bold text-dnd-text">
+                      <span className="text-sm font-body font-semibold text-dnd-text">
                         {t('character.create.skip_class')}
                       </span>
                       <span className="text-xs text-dnd-text-faint font-mono mt-0.5">—</span>
@@ -636,8 +615,8 @@ export default function CharacterSelect() {
                         onClick={() => setCustomHitDie(d)}
                         className={`flex-1 py-2.5 rounded-xl font-cinzel font-bold text-sm transition-colors
                           ${customHitDie === d
-                            ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
-                            : 'bg-dnd-surface text-dnd-text border border-dnd-border'}`}
+                            ? 'border border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright'
+                            : 'text-dnd-text border border-dnd-border'}`}
                         whileTap={{ scale: 0.95 }}
                       >
                         d{d}
@@ -692,7 +671,7 @@ export default function CharacterSelect() {
               />
               <Pressable
                 onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep('identity') }}
-                className="mt-1 w-full min-h-[44px] text-[12px] text-dnd-gold-dim underline underline-offset-2"
+                className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
               >
                 {t('character.create.scores_skip')}
               </Pressable>
@@ -710,7 +689,7 @@ export default function CharacterSelect() {
                 <Pressable
                   onClick={() => handleCreate(null)}
                   pending={createMutation.isPending}
-                  className="text-[12px] text-dnd-gold-dim hover:text-dnd-gold-bright font-body underline underline-offset-2 disabled:opacity-40"
+                  className="min-h-[44px] text-xs text-dnd-gold-dim hover:text-dnd-gold-bright font-body underline underline-offset-2 disabled:opacity-40"
                 >
                   {t('character.create.identity_skip')}
                 </Pressable>

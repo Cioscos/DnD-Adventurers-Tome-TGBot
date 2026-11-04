@@ -1,10 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { Minus, Plus, Heart, HeartPulse, Check } from 'lucide-react'
+import { Minus, Plus, Heart, HeartPulse, Check, ShieldPlus } from 'lucide-react'
 import { GiSkullCrossedBones as Skull } from 'react-icons/gi'
-import { GiSparkles as Sparkles } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
@@ -39,11 +37,11 @@ interface HpOperationFormProps {
 
 // Short labels fit the 5-column segmented control at 390px viewport.
 const ops: { key: HPOp; label_key: string; full_key: string; icon: IconCmp; toneClass: string }[] = [
-  { key: 'damage',      label_key: 'character.hp.damage_short',  full_key: 'character.hp.damage',      icon: Minus,       toneClass: '!bg-gradient-ember !text-dnd-parchment !border-transparent shadow-halo-danger' },
-  { key: 'heal',        label_key: 'character.hp.heal_short',    full_key: 'character.hp.heal',        icon: Plus,        toneClass: '!bg-dnd-emerald/25 !text-dnd-emerald-bright !border-dnd-emerald/60' },
-  { key: 'set_current', label_key: 'character.hp.current_short', full_key: 'character.hp.set_current', icon: Heart,       toneClass: '!bg-dnd-cobalt/20 !text-dnd-cobalt-bright !border-dnd-cobalt/60' },
-  { key: 'set_max',     label_key: 'character.hp.max_short',     full_key: 'character.hp.set_max',     icon: HeartPulse,  toneClass: '!bg-dnd-amber/20 !text-dnd-amber !border-dnd-amber/60' },
-  { key: 'set_temp',    label_key: 'character.hp.temp_short',    full_key: 'character.hp.set_temp',    icon: Sparkles,    toneClass: '!bg-dnd-arcane/20 !text-dnd-arcane-bright !border-dnd-arcane/60' },
+  { key: 'damage',      label_key: 'character.hp.damage_short',  full_key: 'character.hp.damage',      icon: Minus,       toneClass: '!bg-dnd-crimson/10 !text-dnd-crimson-bright !border-dnd-crimson/60' },
+  { key: 'heal',        label_key: 'character.hp.heal_short',    full_key: 'character.hp.heal',        icon: Plus,        toneClass: '!bg-dnd-emerald/10 !text-dnd-emerald-bright !border-dnd-emerald/60' },
+  { key: 'set_current', label_key: 'character.hp.current_short', full_key: 'character.hp.set_current', icon: Heart,       toneClass: '!bg-dnd-cobalt/10 !text-dnd-cobalt-bright !border-dnd-cobalt/60' },
+  { key: 'set_max',     label_key: 'character.hp.max_short',     full_key: 'character.hp.set_max',     icon: HeartPulse,  toneClass: '!bg-dnd-amber/10 !text-dnd-amber !border-dnd-amber/60' },
+  { key: 'set_temp',    label_key: 'character.hp.temp_short',    full_key: 'character.hp.set_temp',    icon: ShieldPlus,    toneClass: '!bg-dnd-arcane/10 !text-dnd-arcane-bright !border-dnd-arcane/60' },
 ]
 
 export default function HpOperationForm({
@@ -73,7 +71,7 @@ export default function HpOperationForm({
   return (
     <>
       {/* Op selector — segmented control, 2-row (3+2) so labels stay readable at 390px */}
-      <Surface variant="flat" className="!p-1.5 space-y-1">
+      <div className="space-y-1">
         <div className="grid grid-cols-3 gap-1">
           {ops.slice(0, 3).map((op) => {
             const Icon = op.icon
@@ -116,7 +114,7 @@ export default function HpOperationForm({
             )
           })}
         </div>
-      </Surface>
+      </div>
 
       {/* Prima ciò che modifica il colpo (vale anche per i chip), poi i chip che lo applicano. */}
       {activeOp === 'damage' && (
@@ -134,7 +132,7 @@ export default function HpOperationForm({
               aria-pressed={crit}
               className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
                 ${crit
-                  ? '!bg-gradient-ember !text-dnd-parchment !border-transparent'
+                  ? '!bg-dnd-crimson/10 !text-dnd-crimson-bright !border-dnd-crimson/60'
                   : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
             >
               <Skull size={16} />
@@ -162,7 +160,7 @@ export default function HpOperationForm({
       />
 
       {/* Number input + apply */}
-      <Surface variant="elevated">
+      <div>
         <div className="flex flex-col gap-3">
           <Input
             type="number"
@@ -202,7 +200,7 @@ export default function HpOperationForm({
               : t('common.confirm')}
           </Button>
         </div>
-      </Surface>
+      </div>
     </>
   )
 }

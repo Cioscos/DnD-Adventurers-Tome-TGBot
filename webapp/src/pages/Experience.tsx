@@ -85,7 +85,6 @@ export default function Experience() {
       if (newLevel > oldLevel) {
         toast.success(t('character.xp.level_up_toast', { level: newLevel }), {
           duration: 3500,
-          icon: '✨',
         })
         // Beat del level-up: burst dei flourish sulla card (niente coriandoli,
         // DESIGN.md vieta il registro gacha delle "ranked-up celebrations").
@@ -94,7 +93,6 @@ export default function Experience() {
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
           duration: 2000,
-          icon: '❤',
         })
       }
       // Resource pools that auto-scaled with the class level-up.
@@ -108,7 +106,7 @@ export default function Experience() {
               next: d.next,
               defaultValue: '{{name}}: massimo {{prev}} → {{next}}',
             }),
-            { duration: 3500, icon: '⚡' },
+            { duration: 3500 },
           )
         }
       }
@@ -199,11 +197,7 @@ export default function Experience() {
       )}
 
       {/* Hero level + XP */}
-      <Surface
-        variant="tome"
-        ornamented
-        className={`text-center relative overflow-hidden ${levelUpBurstKey ? 'animate-pulse-gold' : ''}`}
-      >
+      <section className={`text-center relative rounded-2xl py-2 ${levelUpBurstKey ? 'animate-pulse-gold' : ''}`}>
         {levelUpBurstKey > 0 && !reducedMotion && (
           <div className="absolute inset-0 pointer-events-none z-[2] text-dnd-gold-bright">
             {[
@@ -267,7 +261,7 @@ export default function Experience() {
 
         {isMaxLevel && (
           <p className="mt-3 text-sm font-display font-bold text-dnd-gold-bright">
-            ★ {t('character.xp.legend')} ★
+            {t('character.xp.legend')}
           </p>
         )}
 
@@ -296,7 +290,7 @@ export default function Experience() {
             <p className="text-xs text-dnd-text-faint font-mono mt-1 text-right">{progress}%</p>
           </div>
         )}
-      </Surface>
+      </section>
 
       {milestone && !isMaxLevel && (
         <Button
@@ -313,27 +307,26 @@ export default function Experience() {
 
       {/* Mode toggle */}
       {!milestone && (<>
-      <Surface variant="flat" className="!p-1.5">
+      <section className="space-y-2">
         <div className="grid grid-cols-2 gap-1">
           {(['add', 'set'] as const).map((m) => {
             const isActive = setMode ? m === 'set' : m === 'add'
             return (
               <Pressable
                 key={m}
+                aria-pressed={isActive}
                 onClick={() => setSetMode(m === 'set')}
-                className={`min-h-[44px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
+                className={`min-h-[44px] rounded-lg border font-cinzel text-xs uppercase tracking-widest transition-colors
                   ${isActive
-                    ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
-                    : 'bg-transparent text-dnd-text-muted'}`}
+                    ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                    : 'border-dnd-border text-dnd-text-muted'}`}
               >
                 {m === 'add' ? `+ ${t('character.xp.add')}` : `= ${t('character.currency.mode_set')}`}
               </Pressable>
             )
           })}
         </div>
-      </Surface>
 
-      <Surface variant="elevated">
         <div className="flex gap-3 items-end">
           <Input
             type="number"
@@ -346,7 +339,7 @@ export default function Experience() {
             className="flex-1"
           />
           <Button
-            variant={levelUpAvailable ? 'secondary' : 'primary'}
+            variant="secondary"
             size="md"
             onClick={handleApply}
             disabled={!addValue}
@@ -357,7 +350,7 @@ export default function Experience() {
             {t('common.applica')}
           </Button>
         </div>
-      </Surface>
+      </section>
 
       {!isMaxLevel && (
         <Button

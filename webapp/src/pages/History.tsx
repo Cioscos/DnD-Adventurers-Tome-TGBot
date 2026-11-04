@@ -16,6 +16,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { EVENT_META } from '@/lib/eventMeta'
+import { LEDGER_TITLE } from '@/styles/ledger'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
 
 export default function History() {
@@ -58,10 +59,10 @@ export default function History() {
   return (
     <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history" hideScrollbar offlineQuery={historyQuery}>
       {isLoading ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface border border-dnd-border">
-              <Skeleton.Circle width="32px" delay={i * 80} />
+            <div key={i} className="flex gap-3">
+              <Skeleton.Circle width="48px" delay={i * 80} />
               <div className="flex-1 space-y-2">
                 <Skeleton.Line width="80%" height="14px" delay={i * 80} />
                 <Skeleton.Line width="40%" height="10px" delay={i * 80 + 50} />
@@ -86,7 +87,7 @@ export default function History() {
         <>
           {/* Top-of-page action bar — clear button always reachable without scrolling. */}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <span className={LEDGER_TITLE}>
               {t('character.history.entries_count', {
                 count: search ? filteredEntries.length : entries.length,
               })}

@@ -270,7 +270,7 @@ export default function HeroScreen({ char }: Props) {
         {atZero && deathSaves.stable && !char.is_dead && (
           <p className="mt-3 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5
                         text-xs font-cinzel font-bold uppercase tracking-wider
-                        bg-dnd-cobalt/15 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
+                        bg-dnd-cobalt/10 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
             <HeartPulse size={13} aria-hidden />
             {t('character.death_saves.stabilized_badge')}
           </p>
@@ -356,7 +356,7 @@ export default function HeroScreen({ char }: Props) {
         {char.ability_scores.length > 0 && (
           <div className="mt-4 pt-3 border-t border-dnd-gold-dim/30">
             <m.div
-              className="grid grid-cols-6 @max-[300px]:grid-cols-3 gap-0.5 xs:gap-1 text-center"
+              className="grid grid-cols-6 @max-[300px]:grid-cols-3 divide-x divide-dnd-border/60 text-center"
               initial="initial"
               animate="animate"
               variants={{
@@ -377,17 +377,17 @@ export default function HeroScreen({ char }: Props) {
                     type="button"
                     onClick={() => { haptic.light(); navigate(`/char/${char.id}/stats`) }}
                     aria-label={`${shortLabel}: ${score.value}, mod ${modStr}`}
-                    className="flex flex-col items-center rounded-lg p-1.5 border bg-dnd-surface-raised border-dnd-border text-dnd-text cursor-pointer hover:border-dnd-gold transition-colors"
+                    className="flex flex-col items-center py-1 text-dnd-text cursor-pointer hover:bg-dnd-surface/60 transition-colors"
                     variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } }}
                     transition={spring.snappy}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <span className="text-xs font-cinzel uppercase tracking-wider opacity-80">
+                    <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">
                       {shortLabel}
                     </span>
                     {/* Il modificatore è il numero che si tira: guida lui, il punteggio accompagna. */}
                     <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">{modStr}</span>
-                    <span className="text-xs font-mono tabular-nums mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25 text-dnd-text-muted">
+                    <span className="text-xs font-mono tabular-nums mt-1 text-dnd-text-muted">
                       {score.value}
                     </span>
                   </Pressable>

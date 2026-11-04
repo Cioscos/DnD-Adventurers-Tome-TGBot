@@ -12,13 +12,13 @@ colors:
   parchment: "#f4e8c1"
   text: "#ebdfbf"
   text-muted: "#b5a482"
-  text-faint: "#857761"
+  text-faint: "#9a8c75"
   gold: "#d4a847"
   gold-bright: "#f0c970"
-  gold-dim: "#8b7335"
+  gold-dim: "#a48c4e"
   gold-deep: "#5a4820"
   crimson: "#b33a3a"
-  crimson-bright: "#e85050"
+  crimson-bright: "#fa615f"
   crimson-deep: "#7a1f1f"
   emerald: "#3fa66a"
   emerald-bright: "#6fd195"
@@ -188,28 +188,28 @@ The palette is a single warm-brown family with five semantic accents. Every neut
 ### Primary
 - **Gold Leaf** (`#d4a847`): the only color reserved for primary affordance — primary buttons, the active-page sigil, the focus-visible halo, the page-header underline. Its rarity is the point.
 - **Gold Bright** (`#f0c970`): hover state of primary, ink-spread highlight, dialog accent border on success-feeling outcomes (good roll, level-up).
-- **Gold Dim** (`#8b7335`): inactive ornament, secondary-button border resting state, label color for de-emphasized form fields.
-- **Gold Deep** (`#5a4820`): bottom of the metallic gradient, only inside `--gradient-gold`.
+- **Gold Dim** (`#a48c4e`): inactive ornament, secondary-button border resting state, label color for de-emphasized form fields.
+- **Gold Deep** (`#5a4820`): bottom of `--gradient-gold`, used only by progress bars (XP, upload), never by buttons.
 
 ### Secondary (semantic, not visual hierarchy)
-- **Dragon Crimson** (`#b33a3a` / bright `#e85050` / deep `#7a1f1f`): damage, danger, HP threshold ≤25%, destructive actions, death saves. Never used decoratively.
+- **Dragon Crimson** (`#b33a3a` / bright `#fa615f` / deep `#7a1f1f`): damage, danger, HP threshold ≤25%, destructive actions, death saves. Never used decoratively.
 - **Druid Emerald** (`#3fa66a` / bright `#6fd195` / deep `#1f6b3f`): healing, success states, HP threshold ≥75%, save passed. Never used decoratively.
 - **Arcane Amethyst** (`#9b59b6` / bright `#c589e8` / deep `#4a2858`): magic — spell slots, concentration, spellcasting buttons, arcane dialog accent.
 - **Cobalt Sigil** (`#3a7ca5` / bright `#6fa8cf` / deep `#1e4060`): information, neutral metadata, tooltips, info dialogs.
 - **Candle Amber** (`#e8a547`): rare-warning highlight (concentration banner pulse, level-up call-out). Adjacent to gold but desaturated; never substituted for gold in primary affordance.
 
 ### Neutral (warm-brown, dark mode default)
-- **Lampblack Ink** (`#0d0a08`): deepest surface — page background under all chrome, primary-button text on gold gradient.
+- **Lampblack Ink** (`#0d0a08`): deepest surface — page background under all chrome, primary-button text on gold.
 - **Tome Background** (`#1a1512`): body background; the candlelit page.
 - **Tome Surface** (`#241d18`): default card / surface fill.
 - **Surface Raised** (`#2f261f`): elevated card fill, dialog body, secondary button.
 - **Surface Lifted** (`#3b3026`): top-of-stack popovers, drag-active states.
 - **Border** (`#4a3d30`) / **Border Strong** (`#6b5841`): rules and frames; never colored stripes.
-- **Parchment** (`#f4e8c1`): button text on gradients, light-mode page surface, button-arcane label.
-- **Manuscript Text** (`#ebdfbf` / muted `#b5a482` / faint `#857761`): three-step text hierarchy on dark surfaces.
+- **Parchment** (`#f4e8c1`): button text on the arcane gradient, light-mode page surface, button-arcane label.
+- **Manuscript Text** (`#ebdfbf` / muted `#b5a482` / faint `#9a8c75`): three-step text hierarchy on dark surfaces.
 
 ### Light mode (aged parchment)
-Light mode is a deliberate alternative palette, not a derivation. Background is `#f2e4b9` (aged paper); ink darkens to `#2e2410`; gold darkens to `#8a6a1e` so it still reads as metallic on bright cream. Both modes pass the same contrast and signal bar.
+Light mode is a deliberate alternative palette, not a derivation. Background is `#f2e4b9` (aged paper); ink darkens to `#2e2410`; gold darkens to `#765600` so it still reads as metallic on bright cream; surfaces stay pale (`#efe0b2` / `#e8d7a2`) so the inks do not collapse into one brown. Every text token reaches 4.5:1 on `bg`, `surface` and `surface-raised` in both modes; check tinted grounds too, since a semantic tint above 10% usually drops its own bright ink below that bar.
 
 ### Named Rules
 - **The Gold Leaf Rule.** Gold is the primary affordance and the focus halo. It must not exceed 10% of any rendered screen and must not appear as a decorative gradient on text. If you need to draw the eye somewhere and gold is already used elsewhere on the screen, you have placed the wrong element first — rebuild the hierarchy, do not double-up gold.
@@ -238,7 +238,7 @@ Light mode is a deliberate alternative palette, not a derivation. Background is 
 - **The Inscription Rule.** Cinzel is for inscribed words: section headers, labels, chips, button text, ornamental rules. Use it short — never set a paragraph in Cinzel; never set a label in Fraunces. Long-form text always falls to Fraunces.
 - **The Illuminated Capital Rule.** Cormorant Unicase speaks only for what the manuscript would illuminate: proper names (the character, a combatant, a page title) and the one hero value the eye must land on first (current HP, AC, a coin total). Everything structural — section headers, list labels, buttons, form captions — stays in Cinzel. If a screen sets more than one or two values in Cormorant, it has stopped illuminating and started shouting.
 - **The Tabular Numerics Rule.** Any number that compares against another number (HP/maxHP, dice rolls, AC components, money totals) is set in JetBrains Mono with `font-variant-numeric: tabular-nums`. Mixed-font numerics inside a row break the rhythm. One sanctioned exception: the single hero numeral of a surface is an illuminated capital in Cormorant Unicase (see The Illuminated Capital Rule); its comparative companions stay mono — `38` may be illuminated, `/54` never is.
-- **The No Gradient Text Rule.** Even though the system has a `--gradient-flourish` and an `animate-gold-shimmer` utility, gradient text is reserved for **one** ornamental flourish element per page (the page-header underline glyph). Body text, headings, button labels, numerics — all solid color. The `animate-gold-shimmer` utility outside that one role is forbidden.
+- **The No Gradient Text Rule.** Text is always a solid color: body, headings, button labels, numerics. The system has no gradient-text utility.
 
 ## 4. Elevation
 
@@ -253,7 +253,6 @@ Halos are a separate vocabulary. They are not for elevation — they are for **r
 - **shadow-3** (`0 6px 14px / 0 2px 4px`): elevated card, popover.
 - **shadow-4** (`0 14px 28px / 0 6px 10px`): modal sheet, drag-active.
 - **shadow-5** (`0 24px 48px / 0 10px 20px`): result dialog at center stage.
-- **shadow-engrave** (`inset 0 1px 0 rgba(255,220,140,.25), inset 0 -1px 2px rgba(0,0,0,.35)`): metallic-pressed inset on gold primary buttons. Sells the "stamped" feel.
 
 ### Halo Vocabulary (signal, not elevation)
 
@@ -268,13 +267,13 @@ Halos are a separate vocabulary. They are not for elevation — they are for **r
 ## 5. Components
 
 ### Buttons
-Buttons read as inscribed plates pressed into the page. Primary is gold leaf with shadow-engrave inset and an ink-spread ripple on press; secondary is a raised parchment surface with a gold-dim hairline border that warms to gold on hover; ghost is a transparent gold-text affordance for tertiary navigation.
+Buttons read as inscribed plates pressed into the page. Primary is flat solid gold, no gradient and no bevel, with an ink-spread ripple on press; secondary is a raised parchment surface with a gold-dim hairline border that warms to gold on hover; ghost is a transparent gold-text affordance for tertiary navigation.
 
 - **Shape:** rounded `12px` (`rounded-xl`). Never sharp; never pill.
 - **Sizes:** sm `min-h-44px`, md `min-h-48px`, lg `min-h-56px`. Never below 44px on a phone (touch target).
-- **Primary:** `bg-gradient-gold`, `text-dnd-ink`, `shadow-engrave`. Hover: brighten gradient (no scale). Press: `scale 0.97`, ink-spread ripple at click coordinate (320ms ease-out).
+- **Primary:** `bg-dnd-gold`, `text-dnd-ink`. Hover: `bg-dnd-gold-bright` (no scale). Press: `scale 0.97`, ink-spread ripple at click coordinate (320ms ease-out).
 - **Secondary:** `bg-dnd-surface-raised`, `text-dnd-text`, `border border-dnd-gold-dim/30`. Hover: border warms to `border-dnd-gold/70`.
-- **Danger:** crimson tint at 15% on surface, crimson-bright text, crimson border at 40%. No solid red fill — danger reads as warning ink, not as alarm.
+- **Danger:** crimson tint at 10% on surface, crimson-bright text, crimson border at 40%. No solid red fill — danger reads as warning ink, not as alarm.
 - **Arcane:** gradient `arcane-deep → arcane`, parchment-white text, halo-arcane shadow. Reserved for explicit magic actions (cast, concentrate).
 - **Ghost:** transparent, gold text, no border at rest. Hover: gold-bright text only.
 - **Loading:** spinner (current-color, 4px stroke) replaces leading icon; label remains visible.
@@ -305,6 +304,23 @@ Surfaces come in seven named variants — each is a scene the page wants to evok
 - **sigil**: gradient-parchment + gold/40 border + shadow-parchment-xl + grain. Reserved — a "this is the sealed declaration" surface, used once per page if at all.
 - **Interactive surfaces** scale to `0.98` on press with the press spring (`stiffness 420, damping 28, mass 0.6`). Optional layoutId for shared-element transitions.
 
+### Ledger Rows
+The default for reference data and navigation lists: the page reads like a character sheet or a codex index, not a dashboard. A card is for content that is a unit of its own; a list of labelled values is not.
+
+- **Shape:** hairline rules (`border-dnd-border`, `/60` between rows), no fill, no radius. Never nested inside a card.
+- **Value rows:** Cinzel label on the left, value on the right. Numbers follow The Tabular Numerics Rule. Min height 48px.
+- **Index rows:** one ink for every icon (`text-dnd-gold`), body-font label, two columns on a phone. Section titles are plain Cinzel labels, without ornament. Keep at least 4px between neighbouring touch targets.
+- **Counter rows:** span both columns, with bordered neutral steppers. Adding or spending a use is not a danger, so the steppers carry no semantic tint.
+- **Depleted:** a spent row drops to `text-dnd-text-faint`. Never lower its opacity: that pushes the text under the contrast floor.
+- **Classes:** `webapp/src/styles/ledger.ts` holds the shared row, label and title classes.
+- **Affordance:** a row that does something other than open a page says so with a glyph (the die on Initiative rolls).
+- **Identity edits as ruled rows:** mechanics come before biography. Each damage type is one row with a `– / Res / Imm / Vul` selector; senses and extra speeds are switch rows. Form inputs keep their fields, and rarely used groups stay behind a row that opens them.
+- **The history timeline is not a ledger:** Cronologia keeps its gold line and icon medallions, a choice made by the owner. It is the one list where sequence is the content, and the line is its signature.
+- **The hub's spell slot summary is a ruled grid:** nine columns, level above and slots left below, a layout chosen by the owner. Rules only, no frame or fill.
+- **Where a frame stays:** an opened spell or item, the result of a roll, the dice tray, the combatant card, dialogs and sheets, and states that need attention (dying, dead, concentration, unsaved changes). Everything else is rows.
+- **Selected state:** `bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright`, with no gradient and no halo. Semantic tints stay at 10% or less. The gradient belongs to the primary button; the halo belongs to signals.
+- **Icons, not emoji:** engraved icons in one ink. `Sparkles` means magic and nothing else.
+
 ### Chips / Pills
 Two species share the Cinzel-caps inscription but differ in shape, and the shape is the signal: a lozenge is a static label, a pill is a tappable toggle.
 
@@ -328,6 +344,8 @@ HP, AC, dice totals, XP — the values the player checks first. The hero value i
 - `hp-glow-gold` for wounded (25–75%)
 - `hp-glow-crimson` for critical (≤25%)
 The glow itself is signal — hue and intensity together communicate state at a glance from across the table. On value change the number pops in with `spring.elastic` (scale 0.85 → 1): the one sanctioned elastic gesture outside the dice roller.
+
+The HP bar (`HPGauge`) is a deliberate exception to the flat look of the rest of the app: it keeps its threshold-coloured gradient and glow, like the numeral it sits under.
 
 ### Ornaments (signature)
 - **Corner flourishes**: 4 SVG sigils on dialog corners, gold-dim, decorative-only.

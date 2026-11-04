@@ -144,7 +144,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
           </>
         ) : (
           <div className="space-y-3">
-            <p className="text-center font-mono text-3xl font-bold tabular-nums text-dnd-gold-bright">
+            <p className="text-center font-display text-3xl font-black tabular-nums text-dnd-gold-bright">
               {t('pendingSaves.total_vs_dc', { total: view.res.roll.total, dc: active.dc })}
             </p>
             <p

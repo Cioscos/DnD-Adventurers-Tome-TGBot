@@ -69,7 +69,7 @@ export default function JoinCampaignSessionSheet({ open, onClose, item }: Props)
                 onClick={() => setPicked(m.character_id)}
                 className={`min-h-[44px] px-4 rounded-full border text-sm font-display font-bold max-w-full break-words
                   ${charId === m.character_id
-                    ? 'bg-gradient-gold text-dnd-ink border-dnd-gold shadow-engrave'
+                    ? 'bg-dnd-gold/20 text-dnd-gold-bright border-dnd-gold'
                     : 'bg-dnd-surface border-dnd-border text-dnd-text'}`}
               >
                 {m.character_name}

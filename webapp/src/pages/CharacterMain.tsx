@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, PresenceContext } from 'framer-motion'
 import { ChevronLeft, RefreshCw, Search, Settings, UserX } from 'lucide-react'
-import { GiSparkles } from 'react-icons/gi'
+import { GiPolarStar } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
@@ -189,7 +189,7 @@ export default function CharacterMain() {
           whileTap={{ scale: 0.9 }}
           aria-label={t('character.inspiration.aria')}
         >
-          <GiSparkles
+          <GiPolarStar
             size={14}
             className={char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-gold-dim'}
           />

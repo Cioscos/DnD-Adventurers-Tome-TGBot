@@ -4,14 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { ArrowUpDown, HandHeart, RefreshCw, Delete, Minus, Plus } from 'lucide-react'
-import { GiTwoCoins as Coins } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import CoinMoveSheet from '@/pages/currency/CoinMoveSheet'
 import GiveCoinsSheet from '@/pages/currency/GiveCoinsSheet'
 import { useTradePartners } from '@/hooks/useTradePartners'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -20,6 +18,7 @@ import ChipSelect from '@/components/ui/ChipSelect'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
+import { LEDGER_LABEL } from '@/styles/ledger'
 import CurrencySkeleton from '@/components/skeletons/CurrencySkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 
@@ -227,15 +226,15 @@ export default function Currency() {
   return (
     <Layout title={t('character.currency.title')} backTo={`/char/${charId}`} group="equipment" page="currency">
       {/* Borsa: le monete in grande, toccandone una la imposti a un valore esatto. */}
-      <Surface variant="tome" ornamented className="!p-3">
-        <div className={`grid gap-1.5 ${coins.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+      <section>
+        <div className={`grid gap-1 ${coins.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
           {coins.map(({ key, label }) => (
             <Pressable
               key={key}
               onClick={() => { haptic.light(); setDetailCoin(key) }}
               whileTap={{ scale: 0.95 }}
               aria-label={`${coinName(key)}: ${have(key)}`}
-              className="min-h-[64px] min-w-0 flex flex-col items-center justify-center gap-1 rounded-xl bg-dnd-surface/60 border border-dnd-border hover:border-dnd-gold/60 transition-colors"
+              className="min-h-[64px] min-w-0 flex flex-col items-center justify-center gap-1 hover:bg-dnd-surface/60 transition-colors"
             >
               <CoinTile metal={key} label={label} />
               <span className="max-w-full truncate px-0.5 text-lg font-mono font-bold tabular-nums text-dnd-text leading-none">
@@ -244,11 +243,10 @@ export default function Currency() {
             </Pressable>
           ))}
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <Coins size={18} className="shrink-0 text-dnd-gold-bright" />
+        <div className="mt-2 flex items-center gap-2 border-y border-dnd-border px-1 py-1.5">
           {/* Etichetta sopra il numero: in riga col pulsante sforava a 360px con totali a 4+ cifre. */}
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-cinzel uppercase text-dnd-gold-dim truncate">
+            <p className={`truncate ${LEDGER_LABEL}`}>
               {t('character.currency.total_gold')}
             </p>
             <m.p
@@ -272,10 +270,10 @@ export default function Currency() {
             {t('character.currency.convert')}
           </Button>
         </div>
-      </Surface>
+      </section>
 
       {/* Transazione su una moneta */}
-      <Surface variant="elevated" className="!p-3 space-y-2.5">
+      <section className="space-y-2.5">
         <div className={`grid gap-1.5 ${coins.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
           {coins.map(({ key, label }) => (
             <Pressable
@@ -296,7 +294,7 @@ export default function Currency() {
         <div className="flex items-baseline justify-end gap-2 px-2 min-h-[40px]">
           <span
             data-testid="tx-amount"
-            className={`text-4xl font-mono font-bold tabular-nums leading-none ${
+            className={`text-4xl font-display font-black tabular-nums leading-none ${
               fresh || amount === 0 ? 'text-dnd-text-faint' : 'text-dnd-text'
             }`}
           >
@@ -368,7 +366,7 @@ export default function Currency() {
             {t('character.inventory.give.action')}
           </Button>
         )}
-      </Surface>
+      </section>
 
       {/* Dove stanno le monete di questa moneta, con Sposta e valore esatto. */}
       <Sheet

@@ -27,7 +27,7 @@ export default function DiceSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface border border-dnd-border"
+            className="flex gap-3 px-4 py-3 border-b border-dnd-border/60"
           >
             <Skeleton.Circle width="32px" delay={400 + i * 80} />
             <div className="flex-1 space-y-2">

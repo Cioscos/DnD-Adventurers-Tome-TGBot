@@ -120,8 +120,8 @@ export default function ResultDialog({
               <m.button
                 type="button"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl bg-gradient-gold text-dnd-ink font-semibold
-                           min-h-[48px] shadow-engrave font-cinzel uppercase tracking-wider"
+                className="w-full py-2.5 rounded-xl bg-dnd-gold text-dnd-ink font-semibold
+                           min-h-[48px] font-cinzel uppercase tracking-wider"
                 whileTap={{ scale: 0.97 }}
               >
                 {okLabel}

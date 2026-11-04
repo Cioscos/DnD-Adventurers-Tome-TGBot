@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import FilterChip from '@/components/ui/FilterChip'
@@ -66,9 +65,9 @@ export default function LoreSection({ campaignId, isGm }: { campaignId: number; 
       ) : (
         <div className="space-y-2" data-testid="lore-list">
           {shown.map((e) => (
-            <Surface key={e.id} variant="elevated" className={e.revealed ? '' : 'opacity-80'}>
+            <div key={e.id} className="border-b border-dnd-border/60 px-1 py-2">
               <Pressable onClick={() => setViewId(e.id)} className="block w-full min-h-[44px] text-left">
-                <p className="font-display font-bold text-dnd-gold-bright break-words">
+                <p className="font-body font-semibold text-sm text-dnd-text break-words">
                   {e.title}
                   {!e.revealed && (
                     <span className="ml-2 align-middle inline-block rounded-full border border-dnd-border-strong px-2 py-0.5 text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">
@@ -89,7 +88,7 @@ export default function LoreSection({ campaignId, isGm }: { campaignId: number; 
                   <Button variant="danger" size="sm" onClick={() => setDeleting(e)}>{t('common.delete')}</Button>
                 </div>
               )}
-            </Surface>
+            </div>
           ))}
         </div>
       )}

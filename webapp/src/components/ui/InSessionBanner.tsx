@@ -49,8 +49,8 @@ export default function InSessionBanner({ charId }: InSessionBannerProps) {
       transition={spring.drift}
       whileTap={{ scale: 0.98 }}
       className="sticky top-0 z-30 w-full flex items-center gap-2 px-3 py-2
-                 bg-gradient-to-r from-dnd-amber/20 via-dnd-gold/15 to-dnd-amber/20
-                 border-y border-dnd-amber/60 shadow-parchment-md backdrop-blur-sm"
+                 bg-dnd-surface-raised
+                 border-y border-dnd-amber/60 shadow-parchment-md"
       aria-label={t('character.inSession.cta')}
     >
       <Swords size={14} className="text-dnd-amber shrink-0" />

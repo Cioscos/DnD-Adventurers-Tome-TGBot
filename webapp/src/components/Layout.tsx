@@ -39,16 +39,21 @@ interface LayoutProps {
   offlineQuery?: OfflineNoticeQuery
   /** Chiave della guida "?" (`help.<key>` nei locale). Default: `page`. */
   help?: string
+  /** Azione principale fissa in basso, a sinistra del pulsante dei dadi. */
+  bottomAction?: React.ReactNode
+  /** Se presente, ogni uscita passa da qui: la pagina decide se e quando chiamare `proceed`.
+   * Blocca anche lo swipe fra pagine, che a metà gesto non può più chiedere conferma. */
+  leaveGuard?: (proceed: () => void) => void
 }
 
 // Altezza della fascia breadcrumb: riga tappabile da 44 px + pb-3 + bordo.
 // shortcut: costante, non misurata — se cambia l'altezza della riga va aggiornata qui.
 const CRUMB_STRIP_PX = 57
 
-export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery, help = page }: LayoutProps) {
+export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery, help = page, bottomAction, leaveGuard }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const swipe = useSwipeNavigation(group, page)
+  const swipe = useSwipeNavigation(group, page, !leaveGuard)
   const info = getGroupInfo(group, page)
   const { id } = useParams<{ id: string }>()
 
@@ -139,10 +144,11 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // Finding #5: prefer the declared logical parent (e.g. the character hub) over
   // history.back(), so a single tap from a deep page returns to /char/:id instead
   // of unwinding the navigation stack one cross-link at a time.
-  const handleBack = () => {
+  const leave = (go: () => void) => (leaveGuard ? leaveGuard(go) : go())
+  const handleBack = () => leave(() => {
     if (backTo) navigate(backTo)
     else navigate(-1)
-  }
+  })
   // Stessa destinazione per il back hardware/BackButton di Telegram (Android).
   usePageBack(handleBack)
 
@@ -250,7 +256,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                 ) : (
                   <Pressable
                     type="button"
-                    onClick={() => swipe.goToPage(pageKey)}
+                    onClick={() => leave(() => swipe.goToPage(pageKey))}
                     whileTap={{ scale: 0.95 }}
                     aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
                     className="text-dnd-gold-dim whitespace-nowrap px-2 py-1.5 min-h-[44px] min-w-[44px] rounded hover:text-dnd-gold-bright transition-colors"
@@ -303,6 +309,10 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
             </>
           )}
         </main>
+
+        {bottomAction && !charNotFound && (
+          <div className="absolute left-4 right-20 bottom-safe-fab z-20">{bottomAction}</div>
+        )}
 
         {/* touch-pan-y su <main>: l'orizzontale è dello swipe di pagina, non del
             browser (che farebbe il suo back o annullerebbe il tocco a metà gesto). */}

@@ -4,7 +4,7 @@ export default function HPSkeleton() {
   return (
     <div className="space-y-3" aria-hidden>
       {/* Hero HP card */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3">
+      <div className="border-b border-dnd-border/60 px-1 py-4 space-y-3">
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-2">
             <Skeleton.Line width="80px" height="10px" />
@@ -16,7 +16,7 @@ export default function HPSkeleton() {
         <Skeleton.Rect height="12px" rounded="rounded-full" delay={160} />
       </div>
       {/* Operation form */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3">
+      <div className="border-b border-dnd-border/60 px-1 py-4 space-y-3">
         <Skeleton.Rect height="44px" rounded="rounded-xl" delay={80} />
         <div className="grid grid-cols-3 gap-2">
           <Skeleton.Rect height="36px" rounded="rounded-xl" delay={100} />

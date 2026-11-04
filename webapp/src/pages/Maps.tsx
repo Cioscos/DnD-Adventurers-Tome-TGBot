@@ -171,7 +171,7 @@ export default function Maps() {
                 <Pressable
                   onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
                   className="w-12 h-12 flex items-center justify-center rounded-full
-                             bg-gradient-gold text-dnd-ink border-2 border-dnd-gold-bright
+                             bg-dnd-gold text-dnd-ink border-2 border-dnd-gold-bright
                              shadow-[0_0_20px_var(--dnd-gold-glow)]"
                   whileTap={{ scale: 0.9 }}
                   aria-label={t('common.close')}
@@ -218,7 +218,7 @@ export default function Maps() {
                       href={api.maps.fileUrl(charId, overlayMap.id)}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-block px-4 py-2 rounded-xl bg-gradient-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider shadow-engrave"
+                      className="inline-block px-4 py-2 rounded-xl bg-dnd-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {t('character.maps.open_file')}

@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { GiDeathSkull } from 'react-icons/gi'
 import i18n from '@/i18n'
 
 interface Props {
@@ -32,9 +33,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
         className="flex flex-col items-center justify-center gap-4 px-8 text-center bg-dnd-bg"
         style={{ minHeight: 'var(--tg-vh, 100vh)' }}
       >
-        <span className="text-4xl" aria-hidden>
-          💀
-        </span>
+        <GiDeathSkull size={40} aria-hidden className="text-dnd-text-muted" />
         <h1 className="font-cinzel text-lg text-dnd-gold">
           {i18n.t('common.error_boundary.title')}
         </h1>
@@ -45,8 +44,8 @@ export default class AppErrorBoundary extends Component<Props, State> {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="min-h-[48px] px-6 py-3 rounded-xl bg-gradient-gold text-dnd-ink
-                     font-cinzel text-sm shadow-engrave"
+          className="min-h-[48px] px-6 py-3 rounded-xl bg-dnd-gold text-dnd-ink
+                     font-cinzel text-sm"
         >
           {i18n.t('common.error_boundary.reload')}
         </button>

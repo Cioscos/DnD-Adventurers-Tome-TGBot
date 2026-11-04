@@ -111,12 +111,10 @@ describe('SpellSlots page', () => {
     expect(screen.getByTestId('spellslots-skeleton')).toBeInTheDocument()
   })
 
-  it('renders available/total and the roman level from the SpellSlotRead shape', async () => {
+  it('renders available/total from the SpellSlotRead shape', async () => {
     getChar.mockResolvedValue(manualChar)
     renderWithProviders(<SpellSlots />)
-    // available 2 / total 3, level 1 → roman "I"
     expect(await screen.findByText('2/3')).toBeInTheDocument()
-    expect(screen.getByText('I')).toBeInTheDocument()
   })
 
   it('casting an available gem PATCHes used+1 (clamped to total)', async () => {

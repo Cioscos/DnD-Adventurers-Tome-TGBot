@@ -1,3 +1,8 @@
+import type { IconType } from 'react-icons'
+import {
+  GiBreastplate, GiBroadsword, GiCardboardBox, GiCheckedShield, GiGemPendant, GiHammerNails,
+  GiKnapsack, GiMeat, GiPotionBall, GiQuiver, GiScrollUnfurled,
+} from 'react-icons/gi'
 /** Pure logic — constants, form types, and metadata builder for inventory items. */
 import type { AbilityModifier } from '@/types'
 import {
@@ -107,25 +112,25 @@ export function serializeDamageDice(count: number, die: number, mod: number): st
   return base
 }
 
-export const TYPE_ICON: Record<string, string> = {
-  weapon: '\u2694\uFE0F',
-  armor: '\uD83D\uDEE1\uFE0F',
-  shield: '\uD83D\uDEE1\uFE0F',
-  accessory: '\uD83D\uDC8E',
-  consumable: '\uD83E\uDDEA',
-  tool: '\uD83D\uDD27',
-  generic: '\uD83D\uDCE6',
-  potion: '\uD83E\uDDEA',
-  scroll: '\uD83D\uDCDC',
-  gear: '\uD83C\uDF92',
-  ammunition: '\uD83C\uDFF9',
+export const TYPE_ICON: Record<string, IconType> = {
+  weapon: GiBroadsword,
+  armor: GiBreastplate,
+  shield: GiCheckedShield,
+  accessory: GiGemPendant,
+  consumable: GiPotionBall,
+  tool: GiHammerNails,
+  generic: GiCardboardBox,
+  potion: GiPotionBall,
+  scroll: GiScrollUnfurled,
+  gear: GiKnapsack,
+  ammunition: GiQuiver,
 }
 
-/** Emoji for a consumable based on its subtype (falls back to the consumable icon). */
-export function consumableEmoji(subtype: string | undefined): string {
+/** Icon for a consumable based on its subtype (falls back to the consumable icon). */
+export function consumableIcon(subtype: string | undefined): IconType {
   if (subtype === 'potion') return TYPE_ICON.potion
   if (subtype === 'scroll') return TYPE_ICON.scroll
-  if (subtype === 'food') return '\uD83C\uDF56' // meat on bone
+  if (subtype === 'food') return GiMeat
   return TYPE_ICON.consumable
 }
 
