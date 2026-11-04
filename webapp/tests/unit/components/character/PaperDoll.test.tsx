@@ -60,6 +60,7 @@ describe('PaperDoll', () => {
     expect(screen.getByRole('img')).toBeInTheDocument()
     rerender(<PaperDoll items={[]} onSlotTap={() => {}} silhouetteUrl={null} />)
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wanderer-silhouette')).toBeInTheDocument()
   })
 
   it('renders the optional silhouette action affordance', () => {
