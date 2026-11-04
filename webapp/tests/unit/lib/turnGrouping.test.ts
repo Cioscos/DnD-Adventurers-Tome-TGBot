@@ -57,9 +57,9 @@ describe('groupForTurn', () => {
   const g = groupForTurn(char)
   const ids = (list: { kind: string; id: string }[]) => list.map((e) => `${e.kind}:${e.id}`)
 
-  it('equipped weapons and unarmed go to action', () => {
-    expect(ids(g.action)).toEqual(expect.arrayContaining(['weapon:1', 'weapon:unarmed']))
-    expect(ids(g.action)).not.toContain('weapon:2')
+  it('equipped weapons then unarmed go to attacks, not to action', () => {
+    expect(ids(g.attacks)).toEqual(['weapon:1', 'weapon:unarmed'])
+    expect(ids(g.action).filter((x) => x.startsWith('weapon:'))).toEqual([])
   })
   it('bonus action spell lands in bonus', () => {
     expect(ids(g.bonus_action)).toEqual(['spell:11'])

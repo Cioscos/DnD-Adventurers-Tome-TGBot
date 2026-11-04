@@ -8,6 +8,7 @@ export interface TurnEntry {
 }
 
 export interface TurnGroups {
+  attacks: TurnEntry[]
   action: TurnEntry[]
   bonus_action: TurnEntry[]
   reaction: TurnEntry[]
@@ -24,12 +25,12 @@ export function parseCastingTime(text: string | null | undefined): 'action' | 'b
 }
 
 export function groupForTurn(char: CharacterFull): TurnGroups {
-  const g: TurnGroups = { action: [], bonus_action: [], reaction: [], other: [] }
+  const g: TurnGroups = { attacks: [], action: [], bonus_action: [], reaction: [], other: [] }
 
   for (const it of char.items ?? []) {
-    if (it.item_type === 'weapon' && it.is_equipped) g.action.push({ kind: 'weapon', id: String(it.id), label: it.name })
+    if (it.item_type === 'weapon' && it.is_equipped) g.attacks.push({ kind: 'weapon', id: String(it.id), label: it.name })
   }
-  g.action.push({ kind: 'weapon', id: 'unarmed', label: 'Colpo senza armi' })
+  g.attacks.push({ kind: 'weapon', id: 'unarmed', label: 'Colpo senza armi' })
 
   const noPrep = char.spellcasting?.has_preparing_class === false
   for (const s of char.spells ?? []) {

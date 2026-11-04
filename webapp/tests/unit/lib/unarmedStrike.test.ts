@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { martialArtsDie, unarmedDamageDice } from '@/lib/unarmedStrike'
 
 // Contract mirror of core/game/attacks.py::martial_arts_die.
-// Both sides MUST agree, otherwise the Actions page shows the wrong damage die.
+// Both sides MUST agree, otherwise the Turn page shows the wrong damage die.
 describe('martialArtsDie — Monk Martial Arts die scaling', () => {
   it('is empty for non-monk level 0 or below', () => {
     expect(martialArtsDie(0)).toBe('')

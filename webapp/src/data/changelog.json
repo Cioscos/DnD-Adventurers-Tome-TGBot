@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "2.38.0",
+      "date": "2026-11-04",
+      "improved": {
+        "it": [
+          "Azioni e Turno ora sono un'unica pagina: gli attacchi stanno in una sezione sempre aperta in cima al Turno, pronti anche fuori dal tuo turno.",
+          "Il colpo senza armi nel Turno mostra i dadi del danno, compreso il dado del Monaco."
+        ],
+        "en": [
+          "Actions and Turn are now one page: attacks sit in an always open section at the top of Turn, ready even outside your turn.",
+          "The unarmed strike on the Turn page shows its damage dice, including the Monk die."
+        ]
+      }
+    },
+    {
       "version": "2.37.0",
       "date": "2026-11-04",
       "improved": {

@@ -239,7 +239,6 @@
       "stats": "Ability Scores",
       "skills": "Skills",
       "saves": "Saving Throws",
-      "actions": "Actions",
       "turn": "Turn",
       "spells": "Spells",
       "slots": "Spell Slots",
@@ -445,15 +444,6 @@
       "ts_short": "prof",
       "tap_to_roll": "Tap to roll",
       "homebrew_label": "Homebrew Bonus"
-    },
-    "actions": {
-      "attacks_per_action": "Attacks per action: {{n}}",
-      "title": "Actions",
-      "unarmed": "Unarmed Strike",
-      "unarmed_desc": "Strike without weapons ({{damage}} + mod, bludgeoning)",
-      "weapons_section": "Equipped weapons",
-      "no_weapons": "No weapon equipped",
-      "attack": "Attack"
     },
     "attack": {
       "ammo_missing": "Ammunition empty or not equipped: track it yourself",
@@ -926,6 +916,7 @@
       "title": "Turn",
       "round": "Round {{n}}",
       "attacks_per_action": "Attacks per action: {{n}}",
+      "section_attacks": "Attacks",
       "section_action": "Action",
       "section_bonus_action": "Bonus action",
       "section_reaction": "Reaction",
@@ -937,6 +928,7 @@
       "end_round": "End of round (−1)",
       "empty": "Nothing here",
       "unarmed": "Unarmed strike",
+      "unarmed_desc": "{{damage}} + mod, bludgeoning",
       "attack": "Attack",
       "cast": "Cast",
       "use": "Use",
@@ -2650,58 +2642,6 @@
             "The Base changes automatically when you change the ability scores.",
             "Do not equip body armor when this function is on.",
             "To turn off the function, tap \"Off\". The Base goes back to the armor value, or to 10."
-          ]
-        }
-      ]
-    },
-    "actions": {
-      "summary": "This page is for attacks. It shows the unarmed strike and the equipped weapons. The app rolls the d20 and the damage and shows the result.",
-      "sections": [
-        {
-          "title": "What the page shows",
-          "items": [
-            "At the top, \"Attacks per action\" shows how many attacks you make with one Attack action.",
-            "The \"Unarmed Strike\" panel shows the damage die of the unarmed strike.",
-            "For a Monk, the damage die follows the Monk level.",
-            "The \"Equipped weapons\" section shows only the equipped weapons.",
-            "If you have no equipped weapons, the section shows \"No weapon equipped\". To equip a weapon, use the inventory or the equipment."
-          ]
-        },
-        {
-          "title": "Make an attack",
-          "items": [
-            "To attack, tap \"Attack\" next to the weapon or the unarmed strike.",
-            "To attack with advantage or disadvantage, press and hold \"Attack\" and select the mode.",
-            "The app rolls the d20 and adds the attack bonus.",
-            "The result shows \"To hit\", the die roll and the total.",
-            "If you hit, the result also shows the \"Damage\", the dice rolls and the total."
-          ]
-        },
-        {
-          "title": "Weapon options",
-          "items": [
-            "For a versatile weapon, select \"One hand\" or \"Two hands\" before you attack.",
-            "For a thrown weapon, select \"Melee\" or \"Thrown\" before you attack.",
-            "The app keeps your selection for each weapon. The selection also applies on the Turn page."
-          ]
-        },
-        {
-          "title": "Critical hits, fumbles and warnings",
-          "items": [
-            "With a natural 20 the result shows \"Critical!\" and the damage is critical.",
-            "With a natural 1 the result shows \"Fumble!\" and does not show the damage.",
-            "\"Proficiency not listed\" means that the character does not have proficiency with this weapon.",
-            "For a weapon that uses ammunition, the app removes one equipped ammunition and shows the ammunition that remains.",
-            "If you have no equipped ammunition, the result shows a warning. In this case, count the ammunition yourself."
-          ]
-        },
-        {
-          "title": "Reroll with Heroic Inspiration",
-          "items": [
-            "If you have Heroic Inspiration, the result shows the \"Use Inspiration\" button.",
-            "To roll the d20 again, tap \"Use Inspiration\".",
-            "The app spends the Heroic Inspiration and shows the new result with the \"Inspiration reroll\" mark.",
-            "You can reroll only one time for each attack."
           ]
         }
       ]
@@ -4590,7 +4530,7 @@
       ]
     },
     "turn": {
-      "summary": "This page shows what you can do on your turn. It puts weapons, spells and abilities into Action, Bonus action and Reaction. You can also mark what you already used.",
+      "summary": "This page shows what you can do on your turn. Attacks are always at the top, spells and abilities are split into Action, Bonus action and Reaction. You can also mark what you already used.",
       "sections": [
         {
           "title": "What the page shows",
@@ -4598,7 +4538,7 @@
             "At the top, \"Attacks per action\" shows how many attacks you make with one Attack action.",
             "During a session encounter, the row also shows the round number.",
             "The \"Action\", \"Bonus action\" and \"Reaction\" sections show the entries of each type.",
-            "The equipped weapons and the \"Unarmed strike\" are in the \"Action\" section.",
+            "The equipped weapons and the \"Unarmed strike\" are in the \"Attacks\" section, always open: you can also use it for an opportunity attack or an off-hand attack.",
             "Spells go into the section of their casting time. The page shows cantrips and prepared spells.",
             "Active abilities go into the section of their action type. Passive abilities do not show.",
             "At the bottom of each section, \"Standard actions\" opens the actions of the rules with a short description.",
@@ -4609,9 +4549,29 @@
           "title": "Attack",
           "items": [
             "To attack, tap \"Attack\" next to the weapon or the \"Unarmed strike\".",
+            "The \"Unarmed strike\" shows its damage die. For a Monk, the die follows the Monk level.",
             "To attack with advantage or disadvantage, press and hold \"Attack\" and select the mode.",
             "For a versatile or thrown weapon, first select \"One hand\" or \"Two hands\", \"Melee\" or \"Thrown\".",
-            "The result is the same as on the Actions page."
+            "The app rolls the d20 and the damage and shows the result. It remembers the choice made for each weapon."
+          ]
+        },
+        {
+          "title": "Critical hits, fumbles and warnings",
+          "items": [
+            "With a natural 20 the result shows \"Critical!\" and the damage is critical.",
+            "With a natural 1 the result shows \"Fumble!\" and does not show the damage.",
+            "\"Proficiency not listed\" means that the character does not have proficiency with this weapon.",
+            "For a weapon that uses ammunition, the app removes one equipped ammunition and shows the ammunition that remains.",
+            "If you have no equipped ammunition, the result shows a warning. In this case, count the ammunition yourself."
+          ]
+        },
+        {
+          "title": "Reroll with Heroic Inspiration",
+          "items": [
+            "If you have Heroic Inspiration, the result shows the \"Use Inspiration\" button.",
+            "To roll the d20 again, tap \"Use Inspiration\".",
+            "The app spends the Heroic Inspiration and shows the new result with the \"Inspiration reroll\" mark.",
+            "You can reroll only one time for each attack."
           ]
         },
         {
@@ -4636,7 +4596,7 @@
           "title": "Mark used actions",
           "items": [
             "To mark a section as used, tap \"Used\" in the section.",
-            "A used section becomes lighter. To remove the mark, tap \"Used\" again.",
+            "A used section closes. The \"Attacks\" section always stays open. To remove the mark, tap \"Used\" again.",
             "To remove all marks, tap \"New turn\".",
             "During a session, the app removes all marks when your turn starts.",
             "The app does not save the marks. When you leave the page, the marks go away."
