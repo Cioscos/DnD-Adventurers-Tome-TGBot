@@ -736,6 +736,7 @@ export interface RollDamageRequest extends Partial<RollChoice> {
 /** Esito di POST /characters/{id}/spells/{spell_id}/attack. */
 export interface SpellAttackResult {
   notes?: string[]
+  forced_hit?: boolean
   spell_name: string
   to_hit_die: number
   dice?: number[]

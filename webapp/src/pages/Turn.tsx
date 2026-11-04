@@ -314,6 +314,7 @@ export default function Turn() {
 
       {skillRoll && (
         <RollResultModal result={skillRoll.result} title={t(`character.skills.${skillRoll.skill}`)}
+          afterRoll={{ charId, query: { roll: 'skill', skill: skillRoll.skill } }}
           onClose={() => setSkillRoll(null)} />
       )}
       {weaponFlow.elements}

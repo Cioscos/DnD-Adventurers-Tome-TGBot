@@ -1,6 +1,7 @@
 """Conferma al tiro lato API: contesto, errore HTTP, dadi e risposta. La logica sta in ``core.rules.roll_options``."""
 from __future__ import annotations
 
+import uuid
 from dataclasses import asdict
 from typing import Any
 
@@ -19,6 +20,7 @@ from core.rules.roll_options import (
     apply_options,
     roll_extra,
     roll_options_for,
+    saved_dice,
     slot_choices,
 )
 from core.rules.types import RuleContext
@@ -33,24 +35,44 @@ def roll_context(char: Any, roll: str, **kw: Any) -> RuleContext:
 def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "before", **kw: Any) -> AppliedOptions:
     """Le opzioni della richiesta, pagate. 409 ``option_unavailable`` se il server non le riconosce.
 
-    Il rilancio con ispirazione è lo stesso tiro: ritrova ciò che era stato confermato, senza pagarlo di nuovo."""
+    Il rilancio con ispirazione è lo stesso tiro: ritrova ciò che era stato confermato, senza pagarlo di nuovo.
+    Ogni altro tiro nuovo cancella ``last_roll``: chi lo rende ritoccabile lo riscrive con ``remember_roll``."""
     if getattr(body, "with_inspiration", False):
-        stored = get_turn(char).get("last_options") or {}
-        return AppliedOptions(**stored["applied"]) if stored.get("roll") == roll else AppliedOptions()
+        stored = get_turn(char).get("last_roll") or {}
+        if stored.get("roll") == roll:
+            return AppliedOptions(**stored["applied"])
+        _forget_roll(char)
+        return AppliedOptions()
     keys = getattr(body, "options", None) or []
     try:
         opts = apply_options(session, roll_context(char, roll, **kw), keys,
                              getattr(body, "option_inputs", None), phase)
     except OptionUnavailable as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": exc.key}) from exc
-    if phase == "before" and (keys or (char.turn_state or {}).get("last_options")):
-        turn = get_turn(char)
-        turn.pop("last_options", None)
-        if keys:
-            # il modo non torna: l'ispirazione ritira un solo dado
-            turn["last_options"] = {"roll": roll, "applied": {**asdict(opts), "modes": [], "spent": []}}
-        char.turn_state = turn
+    if phase == "before":
+        _forget_roll(char)
     return opts
+
+
+def _forget_roll(char: Any) -> None:
+    if (char.turn_state or {}).get("last_roll"):
+        char.turn_state = {k: v for k, v in get_turn(char).items() if k != "last_roll"}
+
+
+# Il tiro sul server, per i privilegi usati dopo averlo visto. Ogni tiro nuovo lo sostituisce, ``reset_turn`` lo cancella.
+LAST_ROLL_FIELDS = {"die", "dice", "mode", "bonus", "total", "notes", "auto_fail", "description", "option_result"}
+
+
+def remember_roll(char: Any, roll: str, opts: AppliedOptions, fields: dict, **where: Any) -> None:
+    """``fields``: ``LAST_ROLL_FIELDS``. ``where``: skill, ability, item_id, spell_id, pending_save_id."""
+    turn = get_turn(char)
+    turn["last_roll"] = {
+        "roll_id": uuid.uuid4().hex, "roll": roll, "skill": None, "ability": None, "item_id": None, "spell_id": None,
+        "pending_save_id": None, **where, **fields, "forced_hit": False, "refundable": {},
+        # né il modo né il dado dichiarato tornano: l'ispirazione ritira un solo dado
+        "applied": {**asdict(opts), "modes": [], "spent": [], "replace_die": None},
+    }
+    char.turn_state = turn
 
 
 def merge_options(applied: Applied, opts: AppliedOptions) -> None:
@@ -58,6 +80,7 @@ def merge_options(applied: Applied, opts: AppliedOptions) -> None:
     applied.advantage = applied.advantage or opts.mode in ("advantage", "normal")
     applied.disadvantage = applied.disadvantage or opts.mode in ("disadvantage", "normal")
     applied.auto_fail = applied.auto_fail or opts.auto_fail
+    applied.replace_die = opts.replace_die
     applied.notes += [n for n in opts.notes if n not in applied.notes]
 
 
@@ -108,6 +131,8 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
         needs=None if spec.needs in ctx.confirmed else spec.needs, group=spec.group, dice_cost=spec.dice_cost,
         requires_input=spec.requires_input, input_options=slots, auto_fail=spec.auto_fail,
+        after=spec.after, pay_if_success=spec.pay_if_success,
+        saved_dice=saved_dice(ctx.char, spec.key) if spec.replace_die else [],
         cost=RollOptionCost(feature_key=spec.cost.feature_key, amount=spec.cost.amount,
                             spell_slot_min=spec.cost.spell_slot_min) if spec.cost else None,
     )

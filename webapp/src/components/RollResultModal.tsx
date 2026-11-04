@@ -1,4 +1,6 @@
-import type { OptionResult } from '@/api/client'
+import { useState } from 'react'
+import type { OptionResult, RollOptionsQuery } from '@/api/client'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -32,10 +34,12 @@ type Props = {
   isRerolling?: boolean
   wasRerolled?: boolean
   onInspirationReroll?: () => void | Promise<void>
+  /** Il tiro è ritoccabile con i privilegi usati dopo averlo visto. */
+  afterRoll?: { charId: number; query: RollOptionsQuery }
 }
 
 export default function RollResultModal({
-  result,
+  result: rolled,
   title,
   note,
   onClose,
@@ -43,8 +47,12 @@ export default function RollResultModal({
   isRerolling = false,
   wasRerolled = false,
   onInspirationReroll,
+  afterRoll,
 }: Props) {
   const { t } = useTranslation()
+  // Il ritocco vale per il tiro da cui parte: un nuovo tiro del genitore (ispirazione) lo sostituisce.
+  const [retouched, setRetouched] = useState<{ from: RollResult; to: RollResult } | null>(null)
+  const result = retouched?.from === rolled ? retouched.to : rolled
   const { die, bonus, total, is_critical, is_fumble } = result
   const pair = result.dice && result.dice.length === 2 ? result.dice : null
   // The kept die is the first matching face; the other one is the discarded one (dimmed).
@@ -78,12 +86,23 @@ export default function RollResultModal({
       title={title}
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
       extraActions={
-        showInspirationButton ? (
-          <InspirationRerollButton
-            available
-            pending={isRerolling}
-            onClick={onInspirationReroll}
-          />
+        showInspirationButton || (afterRoll && !autoFail) ? (
+          <div className="space-y-2">
+            {afterRoll && !autoFail && (
+              <AfterRollOptions
+                charId={afterRoll.charId}
+                query={afterRoll.query}
+                onResult={(to) => setRetouched({ from: rolled, to: { ...to, description: rolled.description } })}
+              />
+            )}
+            {showInspirationButton && (
+              <InspirationRerollButton
+                available
+                pending={isRerolling}
+                onClick={onInspirationReroll}
+              />
+            )}
+          </div>
         ) : undefined
       }
     >

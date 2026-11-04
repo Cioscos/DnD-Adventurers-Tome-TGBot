@@ -1,5 +1,9 @@
 from pydantic import BaseModel
 
+from api.schemas.common import D20Dice, RollMode, RollOptionsBody, RollResult, absent_when_none
+from api.schemas.condition_effects import PendingSaveRead
+from api.schemas.item import WeaponAttackResult
+
 
 class SubclassRead(BaseModel):
     key: str
@@ -44,6 +48,25 @@ class RollOptionRead(BaseModel):
     group: str | None = None
     dice_cost: int = 0
     requires_input: str | None = None
+    after: str | None = None
+    pay_if_success: bool = False
+    saved_dice: list[int] = []
     input_options: list[RollOptionSlot] = []
     auto_fail: bool = False
     cost: RollOptionCost | None = None
+
+
+class LastRollBody(RollOptionsBody):
+    """``dice``: facce dei dadi 3D per un ritiro; senza, tira il server."""
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
+
+
+class LastRollResult(RollResult):
+    """Il tiro aggiornato; ``attack`` per un attacco in sospeso, ``passed``/``save`` per un TS in sospeso."""
+    forced_hit: bool | None = absent_when_none()
+    refundable: list[str] | None = absent_when_none()  # opzioni da rimborsare se il giocatore dichiara il fallimento
+    passed: bool | None = absent_when_none()
+    condition_removed: bool | None = absent_when_none()
+    save: PendingSaveRead | None = absent_when_none()
+    attack: WeaponAttackResult | None = absent_when_none()

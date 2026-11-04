@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,16 +11,23 @@ from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.schemas.session import TurnBlock
 from api.routers._helpers import unarmed_attack_profile, weapon_attack_profile
+from api.routers.characters import _add_history, close_pending_save, open_failed_save
 from api.routers.hp import _get_owned_full
+from api.routers.items import retouch_pending_attack
+from api.schemas.common import OptionResult
+from api.services.d20 import d20_records, resolve_applied
+from api.services.dice_stats import record_dice
 from api.services.rules_states import remove_state, use_feature
 from api.services.rules_turn import clear_once_per_turn, get_turn, release, reset_turn, spend
 from core.db.models import Character
-from api.schemas.rules import ProficiencyGrantRead, RollOptionRead, SubclassRead
-from api.services.rules_options import list_options
+from api.schemas.rules import LastRollBody, LastRollResult, ProficiencyGrantRead, RollOptionRead, SubclassRead
+from api.services.rules_options import list_options, merge_options, option_result, roll_option_dice, use_options
 from core.data.damage_types import canonical_damage_type
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.spell_slots import normalize_class_name
+from core.rules.modifiers import modifiers_for
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
+from core.rules.roll_options import AppliedOptions, refund_spent
 from core.rules.subclasses import subclasses_for
 from core.rules.types import Edition
 
@@ -128,6 +135,107 @@ async def roll_options(
             attack = {"attack_mode": resolved_mode, "grip": grip}
     return list_options(char, roll, lang, item=item, spell=spell, skill=skill, **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type))
+
+
+def _refuse(code: str, **extra: str) -> HTTPException:
+    return HTTPException(status.HTTP_409_CONFLICT, detail={"code": code, **extra})
+
+
+_HISTORY_EVENT = {"skill": "skill_roll", "save": "saving_throw", "attack": "attack_roll"}
+
+
+@turn_router.post("/{char_id}/last-roll/options", response_model=LastRollResult)
+async def last_roll_options(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[LastRollBody | None, Body()] = None,
+) -> LastRollResult:
+    """Privilegi usati dopo aver visto il d20. Il tiro è quello salvato dal server, non quello del client."""
+    char = await _get_owned_full(char_id, user_id, db)
+    body = body or LastRollBody()
+    turn = get_turn(char)
+    last, pending = turn.get("last_roll"), turn.get("pending_attack")
+    is_attack = bool(last) and last["roll"] == "attack"
+    weapon_attack = is_attack and last["spell_id"] is None
+    if not last or (weapon_attack and not pending):  # il danno è già stato tirato
+        raise _refuse("no_last_roll")
+    if last["auto_fail"]:
+        raise _refuse("option_unavailable", key=(body.options or [""])[0])
+    save = await open_failed_save(db, char, last["pending_save_id"]) if last["pending_save_id"] else None
+
+    where = {"skill": last["skill"], "ability": last["ability"],
+             "item": next((i for i in char.items if i.id == last["item_id"]), None),
+             "spell": next((s for s in char.spells if s.id == last["spell_id"]), None)}
+    grip = {"attack_mode": pending["attack_mode"], "grip": pending["grip"]} if weapon_attack else {}
+    opts = use_options(db, char, last["roll"], body, phase="after_roll", **where, **grip)
+
+    applied = modifiers_for(char, last["roll"], **where)
+    merge_options(applied, opts)
+    die, dice, mode, bonus, total = last["die"], last["dice"], last["mode"], last["bonus"], last["total"]
+    if opts.reroll:
+        outcome = resolve_applied(body.mode, body.dice, None, applied)
+        total += outcome.kept - die
+        die, dice, mode = outcome.kept, outcome.dice, outcome.mode
+        record_dice(char, d20_records(outcome))
+    rolls, extra = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    total += opts.bonus + extra
+    forced_hit = last["forced_hit"] or (opts.succeed and is_attack)
+    if opts.succeed and not is_attack:
+        total += 20 - die
+        die = 20
+    is_fumble = die == 1 and not forced_hit
+    is_critical = (die >= applied.crit_min or (AppliedOptions(**last["applied"]).force_crit and not is_fumble)
+                   if is_attack else die == 20)
+    notes = [*last["notes"], *(n for n in applied.notes if n not in last["notes"])]
+    previous = OptionResult(**last["option_result"]) if last.get("option_result") else None
+    block = option_result(opts, rolls, extra, previous=previous)
+    refundable = {**last["refundable"], **opts.refundable}
+    if opts.keys:
+        _add_history(db, char.id, _HISTORY_EVENT[last["roll"]],
+                     f"Dopo il tiro ({', '.join(opts.keys)}): d20={die} {bonus:+d} = {total}")
+
+    closed: dict = {}
+    if save:
+        ps, effect = save
+        read, passed = await close_pending_save(db, char, ps, effect, {
+            "die": die, "dice": dice, "bonus": bonus, "total": total, "mode": mode, "auto_fail": False, "notes": notes})
+        closed = {"save": read, "passed": passed, "condition_removed": passed}
+        if not passed:  # la CD è nota: il rimborso non va chiesto
+            refund_spent(char, [token for spent in refundable.values() for token in spent])
+        refundable = {}
+
+    attack = None
+    if weapon_attack:
+        attack = retouch_pending_attack(char, pending, last["applied"], {
+            "die": die, "dice": dice, "mode": mode, "total": total, "is_critical": is_critical, "is_fumble": is_fumble,
+            "forced_hit": forced_hit, "notes": notes, "option_result": block})
+
+    turn = get_turn(char)  # pagamenti e attacco in sospeso hanno riscritto il turno
+    turn["last_roll"] = {**last, "die": die, "dice": dice, "mode": mode, "bonus": bonus, "total": total, "notes": notes,
+                         "forced_hit": forced_hit, "refundable": refundable,
+                         "option_result": block.model_dump(mode="json") if block else None}
+    char.turn_state = turn
+    return LastRollResult(
+        die=die, dice=dice, mode=mode, mode_applied=mode, notes=notes, bonus=bonus, total=total,
+        is_critical=is_critical, is_fumble=is_fumble, description=last["description"], option_result=block,
+        refundable=list(refundable) or None, forced_hit=forced_hit or None, attack=attack, **closed,
+    )
+
+
+@turn_router.post("/{char_id}/last-roll/refund", response_model=TurnBlock)
+async def last_roll_refund(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Il giocatore dichiara il tiro fallito: tornano le opzioni che si pagano solo se riesce."""
+    char = await _get_owned_full(char_id, user_id, db)
+    last = get_turn(char).get("last_roll") or {}
+    refundable = last.get("refundable")
+    if not refundable:
+        raise _refuse("nothing_to_refund")
+    refund_spent(char, [token for spent in refundable.values() for token in spent])
+    char.turn_state = {**get_turn(char), "last_roll": {**last, "refundable": {}}}
+    _add_history(db, char.id, _HISTORY_EVENT[last["roll"]], f"Tiro fallito, rimborsato: {', '.join(refundable)}")
+    return char.turn_state
 
 
 # ---------------------------------------------------------------------------

@@ -218,6 +218,7 @@ export default function SavingThrows() {
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
+          afterRoll={{ charId, query: { roll: 'save', ability: rollState.ability } }}
           onClose={() => setRollState(null)}
         />
       )}

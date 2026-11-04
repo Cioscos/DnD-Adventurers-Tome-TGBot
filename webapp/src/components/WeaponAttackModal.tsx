@@ -83,6 +83,11 @@ export default function WeaponAttackModal({
         </p>
       )}
 
+      {result.forced_hit && (
+        <p className="text-dnd-emerald-bright font-bold font-cinzel uppercase tracking-wider">
+          {t('character.roll_options.forced_hit')}
+        </p>
+      )}
       <RollNotes notes={result.notes} optionResult={result.option_result} />
       <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"

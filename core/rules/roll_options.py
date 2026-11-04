@@ -73,6 +73,10 @@ class AppliedOptions:
     notes: list[str] = field(default_factory=list)
     auto_fail: bool = False
     force_crit: bool = False
+    reroll: bool = False
+    succeed: bool = False
+    refundable: dict[str, list[str]] = field(default_factory=dict)  # chiave -> gettoni, per ``pay_if_success``
+    replace_die: int | None = None
 
     @property
     def mode(self) -> str | None:
@@ -110,7 +114,20 @@ def _once_key(spec: RollOptionSpec) -> str:
     return spec.group or spec.key
 
 
+def saved_dice(char: Any, key: str) -> list[int]:
+    """Valori del d20 salvati per l'opzione ``key`` (Portento), ognuno usabile una volta."""
+    return list(((char.settings or {}).get("saved_dice") or {}).get(key) or [])
+
+
+def _store_saved_dice(char: Any, key: str, values: list[int]) -> None:
+    settings = dict(char.settings or {})
+    settings["saved_dice"] = {**(settings.get("saved_dice") or {}), key: values}
+    char.settings = settings  # nuovo dict: SQLAlchemy non vede le mutazioni in place
+
+
 def _affordable(char: Any, spec: RollOptionSpec) -> bool:
+    if spec.replace_die and not saved_dice(char, spec.key):
+        return False
     if spec.once_per_turn and _once_key(spec) in _turn(char).get("once_per_turn", []):
         return False
     if spec.slot and not _slot_free(char, spec.slot):
@@ -170,6 +187,13 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
         slot = next(s for s in char.spell_slots if s.level == level and s.available > 0)
         slot.use_slot()
         spent.append(f"slot:{level}:pact" if slot.is_pact else f"slot:{level}")
+    if spec.replace_die:
+        values = saved_dice(char, spec.key)
+        if inputs.get("die") not in values:
+            raise OptionUnavailable(spec.key)
+        values.remove(inputs["die"])
+        _store_saved_dice(char, spec.key, values)
+        spent.append(f"die:{spec.key}:{inputs['die']}")
     if spent:
         session.add(CharacterHistory(
             character_id=char.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
@@ -210,8 +234,15 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             groups.add(spec.group)
         if spec.requires_input == "slot":
             _slot_level(ctx.char, spec, given)  # i dadi dipendono dallo slot: va controllato prima di calcolarli
-        out.spent += _spend(session, option, given)
+        paid = _spend(session, option, given)
+        out.spent += paid
         out.keys.append(key)
+        if spec.pay_if_success:
+            out.refundable[key] = paid
+        if spec.replace_die:
+            out.replace_die = given["die"]
+        out.reroll = out.reroll or spec.after == "reroll"
+        out.succeed = out.succeed or spec.after == "succeed"
         if spec.extra_dice:
             dice[key] = spec.extra_dice(option.ctx, given)
         if spec.bonus:
@@ -265,6 +296,9 @@ def refund_spent(char: Any, spent: list[str]) -> None:
                          if s.level == int(level) and bool(s.is_pact) == bool(pact) and s.used > 0), None)
             if slot is not None:
                 slot.used -= 1
+        elif kind == "die":
+            key, _, value = rest.rpartition(":")
+            _store_saved_dice(char, key, [*saved_dice(char, key), int(value)])
     char.turn_state = turn
 
 

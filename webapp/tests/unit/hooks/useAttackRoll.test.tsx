@@ -6,11 +6,11 @@ import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
 import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import type { RollOption } from '@/api/client'
 
-const { rollOptions, attack, attackDamage, toastWarning } = vi.hoisted(() => ({
-  rollOptions: vi.fn(), attack: vi.fn(), attackDamage: vi.fn(), toastWarning: vi.fn(),
+const { rollOptions, lastRollOptions, lastRollRefund, attack, attackDamage, toastWarning } = vi.hoisted(() => ({
+  rollOptions: vi.fn(), lastRollOptions: vi.fn(), lastRollRefund: vi.fn(), attack: vi.fn(), attackDamage: vi.fn(), toastWarning: vi.fn(),
 }))
 vi.mock('@/api/client', () => ({
-  api: { characters: { rollOptions }, items: { attack, attackDamage } },
+  api: { characters: { rollOptions, lastRollOptions, lastRollRefund }, items: { attack, attackDamage } },
   ApiError: class extends Error {},
 }))
 vi.mock('@/components/ui/Sheet', async () => {
@@ -135,6 +135,62 @@ describe('useAttackRoll', () => {
       attack.mockResolvedValue({ damage_total: 3 })
       await expect(reroll()).resolves.toEqual({ damage_total: 3 })
       expect(attack).toHaveBeenCalledWith(1, 3, true, 9, CHOICE)
+    })
+  })
+
+  describe('after_roll in the same prompt', () => {
+    const luck = { ...sneak, key: 'luck', phase: 'after_roll', label: 'Fortuna?', dice: null, after: 'succeed' } as RollOption
+    const add = { ...sneak, key: 'add', phase: 'after_roll', label: 'Somma?', after: 'add', pay_if_success: true } as RollOption
+    const again = { ...sneak, key: 'again', phase: 'after_roll', label: 'Ritira?', dice: null, after: 'reroll', mode: 'advantage' } as RollOption
+
+    it('defers even when only after_roll options exist, and the button loops on the updated attack', async () => {
+      rollOptions.mockResolvedValue([luck])
+      attack.mockResolvedValue(hit)
+      lastRollOptions.mockResolvedValue({ attack: { ...hit, forced_hit: true, to_hit_total: 7 } })
+      attackDamage.mockResolvedValue({ damage_total: 4 })
+      const done = start()
+      await userEvent.click(await screen.findByRole('button', { name: /Fortuna\?/ }))
+      await act(async () => { await new Promise((r) => setTimeout(r, 0)) })
+      expect(attack.mock.calls[0][3]).toMatchObject({ defer_damage: true })
+      expect(lastRollOptions).toHaveBeenCalledWith(1, expect.objectContaining({ options: ['luck'] }))
+      await userEvent.click(await screen.findByText('character.roll_options.damage'))
+      await expect(done).resolves.toEqual({ damage_total: 4 })
+    })
+
+    it('a natural 1 offers only what can change it: no damage button, no sums, and the miss shows the fumble', async () => {
+      rollOptions.mockResolvedValue([luck, add, sneak])
+      attack.mockResolvedValue({ ...hit, to_hit_die: 1, is_fumble: true })
+      const done = start()
+      await screen.findByRole('button', { name: /Fortuna\?/ })
+      expect(screen.queryByRole('button', { name: /Somma\?/ })).toBeNull()
+      expect(screen.queryByRole('switch', { name: 'Furtivo?' })).toBeNull()
+      expect(screen.queryByText('character.roll_options.damage')).toBeNull()
+      await userEvent.click(screen.getByText('character.roll_options.miss'))
+      await expect(done).resolves.toMatchObject({ is_fumble: true, attack_id: undefined })
+    })
+
+    it('declaring the miss refunds what is paid only on success', async () => {
+      rollOptions.mockResolvedValue([add])
+      attack.mockResolvedValue(hit)
+      lastRollOptions.mockResolvedValue({ attack: { ...hit, to_hit_total: 18 }, refundable: ['add'] })
+      lastRollRefund.mockResolvedValue({})
+      const done = start()
+      await userEvent.click(await screen.findByRole('button', { name: /Somma\?/ }))
+      await userEvent.click(await screen.findByText('character.roll_options.miss'))
+      await expect(done).resolves.toBeNull()
+      expect(lastRollRefund).toHaveBeenCalledWith(1)
+    })
+
+    it('a refused option keeps the prompt on the same attack and warns', async () => {
+      rollOptions.mockResolvedValue([again])
+      attack.mockResolvedValue(hit)
+      lastRollOptions.mockRejectedValueOnce(new Error('409'))
+      const done = start()
+      await userEvent.click(await screen.findByRole('button', { name: /Ritira\?/ }))
+      await screen.findByRole('button', { name: /Ritira\?/ })
+      expect(toastWarning).toHaveBeenCalledWith('character.roll_options.after_roll_failed', expect.anything())
+      await userEvent.click(screen.getByText('character.roll_options.miss'))
+      await expect(done).resolves.toBeNull()
     })
   })
 

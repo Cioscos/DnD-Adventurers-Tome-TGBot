@@ -48,14 +48,21 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult
-from api.schemas.condition_effects import PendingSaveRollResult
+from api.schemas.condition_effects import PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
 from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body
-from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_options import (
+    LAST_ROLL_FIELDS,
+    merge_options,
+    option_result,
+    remember_roll,
+    roll_option_dice,
+    use_options,
+)
 from api.services.effects import cap_current_hp
 from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
@@ -655,7 +662,7 @@ async def roll_skill(
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
-    return RollResult(
+    result = RollResult(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
@@ -669,6 +676,9 @@ async def roll_skill(
         description=skill_name,
         option_result=option_result(opts, option_rolls, option_total),
     )
+    remember_roll(char, "skill", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS),
+                  skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -716,7 +726,7 @@ async def roll_saving_throw(
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
-    return RollResult(
+    result = RollResult(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
@@ -730,6 +740,8 @@ async def roll_saving_throw(
         description=ability,
         option_result=option_result(opts, option_rolls, option_total),
     )
+    remember_roll(char, "save", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS), ability=ability)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -741,6 +753,36 @@ async def _owned_pending_save(session: AsyncSession, char_id: int, psid: int) ->
     if ps is None or ps.character_id != char_id:
         raise HTTPException(status_code=404, detail="Pending save not found")
     return ps
+
+
+async def close_pending_save(
+    session: AsyncSession, char: Character, ps: PendingSave, effect: ConditionEffect, roll: dict,
+) -> tuple[PendingSaveRead, bool]:
+    """Registra l'esito del TS e, se riuscito, libera dalla condizione. ``roll`` è ciò che resta in ``ps.last_roll``."""
+    passed = roll["total"] >= ps.dc and not roll["auto_fail"]
+    ps.status = "passed" if passed else "failed"
+    ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
+    ps.last_roll = {**roll, "passed": passed}
+    # Build the read model before apply_conditions deletes the effect and its saves.
+    save_read = pending_read(ps, effect.slug)
+    if passed:
+        _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
+        await apply_conditions(session, char, {effect.slug: False})
+    await session.flush()
+    return save_read, passed
+
+
+async def open_failed_save(session: AsyncSession, char: Character, psid: int) -> tuple[PendingSave, ConditionEffect]:
+    """Il TS in sospeso del tiro appena fatto, se fallito e ancora ritoccabile; altrimenti 409."""
+    ps = await session.get(PendingSave, psid)
+    if ps is None:  # riuscito: la condizione e i suoi TS non ci sono più
+        raise HTTPException(status_code=409, detail={"code": "no_last_roll"})
+    effect = await session.get(ConditionEffect, ps.effect_id)
+    newer = (await session.execute(select(PendingSave.id).where(
+        PendingSave.effect_id == ps.effect_id, PendingSave.id > ps.id))).first()
+    if effect is None or ps.status != "failed" or ps.dismissed or newer or not (char.conditions or {}).get(effect.slug):
+        raise HTTPException(status_code=409, detail={"code": "not_rerollable"})
+    return ps, effect
 
 
 @router.post("/{char_id}/pending-saves/{psid}/roll", response_model=PendingSaveRollResult)
@@ -782,7 +824,6 @@ async def roll_pending_save(
     option_rolls, option_total = roll_option_dice(char, opts)
     bonus += opts.bonus
     total = die + bonus + option_total
-    passed = total >= ps.dc and not applied.auto_fail
     is_crit, is_fumble = die == 20 and not applied.auto_fail, die == 1
 
     history_msg = (
@@ -796,25 +837,17 @@ async def roll_pending_save(
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
-    ps.status = "passed" if passed else "failed"
-    ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
-    ps.last_roll = {"die": die, "dice": outcome.dice, "bonus": bonus, "total": total,
-                    "mode": outcome.mode, "passed": passed, "auto_fail": applied.auto_fail,
-                    "notes": applied.notes}
-    # Build the read model before apply_conditions deletes the effect and its saves.
-    save_read = pending_read(ps, effect.slug)
-    if passed:
-        _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
-        await apply_conditions(session, char, {effect.slug: False})
-    await session.flush()
-
-    return PendingSaveRollResult(
-        save=save_read, passed=passed, condition_removed=passed,
-        roll=RollResult(die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode,
+    save_read, passed = await close_pending_save(session, char, ps, effect, {
+        "die": die, "dice": outcome.dice, "bonus": bonus, "total": total, "mode": outcome.mode,
+        "auto_fail": applied.auto_fail, "notes": applied.notes,
+    })
+    result = RollResult(die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode,
                         notes=applied.notes, auto_fail=applied.auto_fail, bonus=bonus, total=total,
-                        is_critical=is_crit, is_fumble=is_fumble, description=ps.ability,
-                        option_result=option_result(opts, option_rolls, option_total)),
-    )
+                        is_critical=is_crit, is_fumble=is_fumble, description=save_read.ability,
+                        option_result=option_result(opts, option_rolls, option_total))
+    remember_roll(char, "save", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS),
+                  ability=save_read.ability, pending_save_id=psid)
+    return PendingSaveRollResult(save=save_read, passed=passed, condition_removed=passed, roll=result)
 
 
 @router.post("/{char_id}/pending-saves/{psid}/dismiss", status_code=204)

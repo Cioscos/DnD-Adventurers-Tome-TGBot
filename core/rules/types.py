@@ -133,9 +133,13 @@ class RollOptionSpec:
     ``needs`` vale anche per un'opzione confermata prima del tiro di questo attacco (``RuleContext.confirmed``).
     ``crit_doubles=False``: i dadi non raddoppiano al critico. ``separate_damage``: dadi riportati a parte, fuori dal
     totale (seconda creatura). ``on_confirm(session, ctx, inputs)``: effetto collaterale dopo il pagamento, nella
-    stessa transazione; è sincrono e ``/hp/undo`` non lo annulla."""
+    stessa transazione; è sincrono e ``/hp/undo`` non lo annulla.
+    ``after`` (solo ``after_roll``): ``add`` somma al totale, ``reroll`` impone un nuovo d20 (``bonus`` e ``mode``
+    valgono su quello), ``succeed`` porta prova o TS a 20 e fa di un attacco un colpo a segno non critico.
+    ``pay_if_success``: si rimborsa se il tiro resta fallito. ``replace_die`` (solo ``before``): il d20 è uno dei
+    valori di ``Character.settings["saved_dice"][key]``, dichiarato con ``{"die": n}`` e consumato."""
     key: str
-    phase: Literal["before", "after_hit", "damage_in"]
+    phase: Literal["before", "after_roll", "after_hit", "damage_in"]
     rolls: tuple[str, ...]
     label: dict[str, str]
     available: "Callable[[RuleContext], bool]" = lambda _ctx: True
@@ -155,10 +159,21 @@ class RollOptionSpec:
     crit_doubles: bool = True
     separate_damage: bool = False
     on_confirm: "Callable[[Any, RuleContext, dict], None] | None" = None
+    after: Literal["add", "reroll", "succeed"] | None = None
+    pay_if_success: bool = False
+    replace_die: bool = False
 
     def __post_init__(self) -> None:
-        if self.phase not in ("before", "after_hit", "damage_in"):
+        if self.phase not in ("before", "after_roll", "after_hit", "damage_in"):
             raise ValueError(f"fase sconosciuta: {self.phase}")
+        if (self.phase == "after_roll") != (self.after in ("add", "reroll", "succeed")):
+            raise ValueError("after è obbligatorio in after_roll e vale solo lì")
+        if self.phase == "after_roll" and self.requires_input:
+            raise ValueError("after_roll è un pulsante nel modale di esito: non chiede input")
+        if self.pay_if_success and self.phase != "after_roll":
+            raise ValueError("pay_if_success vale solo dopo il tiro")
+        if self.replace_die and (self.phase != "before" or self.requires_input):
+            raise ValueError("replace_die vale solo prima del tiro e il suo input è il dado salvato")
         if self.slot is not None and self.slot not in TURN_FLAGS:
             raise ValueError(f"slot sconosciuto: {self.slot}")
         if self.requires_input not in (None, "slot"):

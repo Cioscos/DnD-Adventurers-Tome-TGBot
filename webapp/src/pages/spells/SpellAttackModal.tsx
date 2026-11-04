@@ -1,3 +1,4 @@
+import type React from 'react'
 import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +22,8 @@ type Props = {
   isRerolling?: boolean
   wasRerolled?: boolean
   onInspirationReroll?: () => void | Promise<void>
+  /** Riga dei privilegi usati dopo aver visto il d20. */
+  afterRollRow?: React.ReactNode
 }
 
 /** Esito del tiro per colpire di un incantesimo d'attacco (modellato su WeaponAttackModal). */
@@ -33,6 +36,7 @@ export default function SpellAttackModal({
   isRerolling = false,
   wasRerolled = false,
   onInspirationReroll,
+  afterRollRow,
 }: Props) {
   const { t } = useTranslation()
   const { spell_name, to_hit_die, dice, mode, to_hit_bonus, to_hit_total, is_critical, is_fumble, caster_class } = result
@@ -70,6 +74,7 @@ export default function SpellAttackModal({
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
       extraActions={
         <div className="space-y-2">
+          {afterRollRow}
           {showInspirationButton && (
             <InspirationRerollButton available pending={isRerolling} onClick={onInspirationReroll} />
           )}
@@ -98,6 +103,11 @@ export default function SpellAttackModal({
         </p>
       )}
 
+      {result.forced_hit && (
+        <p className="text-dnd-emerald-bright font-bold font-cinzel uppercase tracking-wider">
+          {t('character.roll_options.forced_hit')}
+        </p>
+      )}
       <RollNotes notes={result.notes} />
       <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"

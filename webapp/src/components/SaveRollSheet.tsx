@@ -10,6 +10,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import type { PendingSave, PendingSaveRollResult } from '@/types'
 
@@ -158,6 +159,20 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
               {t(view.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
             </p>
             <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" charId={charId} optionResult={view.res.roll.option_result} />
+            {/* Un TS già fallito riaperto non è più l'ultimo tiro: solo quello appena fatto si ritocca. */}
+            {shown && !view.res.passed && !view.res.roll.auto_fail && (
+              <AfterRollOptions
+                charId={charId}
+                query={{ roll: 'save', ability: view.save.ability }}
+                onResult={(roll) => {
+                  setShown({
+                    save: view.save,
+                    res: { save: roll.save ?? view.res.save, roll, passed: !!roll.passed, condition_removed: !!roll.condition_removed },
+                  })
+                  if (roll.passed) haptic.success()
+                }}
+              />
+            )}
             {!view.res.passed && (
               <InspirationRerollButton
                 available={!!char?.heroic_inspiration}

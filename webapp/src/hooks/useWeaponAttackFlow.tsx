@@ -9,7 +9,7 @@ import { haptic } from '@/auth/telegram'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
-import { askRollOptions, hasAfterHitOptions } from '@/lib/rollOptions'
+import { applyAfterRoll, askRollOptions, hasDeferringOptions } from '@/lib/rollOptions'
 import type { RollOptionsQuery } from '@/api/client'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import type { CharacterFull } from '@/types'
@@ -44,12 +44,29 @@ export function useAttackRoll() {
     const secondStep = async (first: WeaponAttackResult, inspiration: boolean): Promise<WeaponAttackResult | null> => {
       let result = first
       let canReroll = inspiration
+      let refundable = false  // dichiarare il mancato restituisce ciò che si paga solo se il tiro riesce
       while (result.attack_id) {
         const bonus = `${result.to_hit_bonus >= 0 ? '+' : ''}${result.to_hit_bonus}`
         const summary = t('character.roll_options.summary', { total: result.to_hit_total, die: result.to_hit_die, bonus })
           + (result.is_critical ? ` · ${t('character.dice.critical_banner')}` : '')
-        const after = await askRollOptions(charId, query, 'after_hit', { summary, canReroll })
-        if (after.outcome === 'miss') return null
+          + (result.is_fumble ? ` · ${t('character.dice.fumble_banner')}` : '')
+          + (result.forced_hit ? ` · ${t('character.roll_options.forced_hit')}` : '')
+        const after = await askRollOptions(charId, query, 'after_hit', { summary, canReroll, fumble: result.is_fumble })
+        // Su un 1 naturale non c'è danno da chiedere: anche senza più opzioni l'esito è il mancato.
+        if (after.outcome === 'miss' || (result.is_fumble && !after.outcome)) {
+          if (refundable) await api.characters.lastRollRefund(charId).catch(() => toast.warning(t('character.roll_options.refund_failed')))
+          return result.is_fumble ? { ...result, attack_id: undefined } : null
+        }
+        if (after.outcome === 'after_roll') {
+          try {
+            const updated = await applyAfterRoll(charId, after.after_option!, rollD20)
+            result = updated.attack!
+            refundable = refundable || !!updated.refundable?.length
+          } catch {
+            toast.warning(t('character.roll_options.after_roll_failed'))
+          }
+          continue
+        }
         if (after.outcome !== 'reroll') {
           try {
             return await api.items.attackDamage(charId, result.attack_id, after)
@@ -60,6 +77,7 @@ export function useAttackRoll() {
           }
         }
         canReroll = false
+        refundable = false
         result = await post(true, { dice: await rollD20('normal'), mode: 'normal', defer_damage: true })
       }
       return result
@@ -78,7 +96,7 @@ export function useAttackRoll() {
     /** Ritira con l'ispirazione dal modal di esito: anche dopo un 1 naturale il secondo tempo va proposto. */
     reroll: async (charId: number, itemId: number | null, choice?: WeaponChoice): Promise<WeaponAttackResult | null> => {
       const { query, post, secondStep } = flow(charId, itemId, choice)
-      const deferred = await hasAfterHitOptions(charId, query)
+      const deferred = await hasDeferringOptions(charId, query)
       const dice = await rollDice('d20', 1)
       if (!deferred) return post(true, dice?.[0])
       return secondStep(await post(true, { dice, mode: 'normal', defer_damage: true }), false)

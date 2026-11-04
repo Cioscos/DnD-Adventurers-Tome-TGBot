@@ -236,4 +236,5 @@ class WeaponAttackResult(BaseModel):
     magic_bonus: int = 0
     proficiency_warning: bool = False
     option_result: OptionResult | None = absent_when_none()
+    forced_hit: bool | None = absent_when_none()  # colpo a segno per un privilegio, qualunque sia il d20
     attack_id: str | None = absent_when_none()  # attacco in sospeso: il danno finale passa da /attack/{id}/damage

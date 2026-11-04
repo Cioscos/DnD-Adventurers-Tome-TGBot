@@ -37,7 +37,9 @@ def resolve_applied(
     """Tiro con i modificatori automatici. Il client conosce solo il modo scelto dal giocatore: se quello
     finale chiede un altro numero di dadi si tengono i suoi e si tira il mancante (mai un 422)."""
     mode: RollMode = player_mode if reroll else final_mode(player_mode, applied)
-    if mode != player_mode:
+    if applied.replace_die is not None:
+        mode, dice = "normal", [applied.replace_die]
+    elif mode != player_mode:
         given = dice if dice is not None else [die] if die is not None else None
         if given is not None:
             need = 1 if mode == "normal" else 2

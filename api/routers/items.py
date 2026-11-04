@@ -16,7 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_lang, get_current_user
-from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_options import (
+    merge_options,
+    option_result,
+    remember_roll,
+    roll_context,
+    roll_option_dice,
+    use_options,
+)
 from api.services.rules_turn import get_turn, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
@@ -48,7 +55,7 @@ from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
 from core.rules.proficiencies import is_weapon_proficient
-from core.rules.roll_options import AppliedOptions, scale_damage
+from core.rules.roll_options import AppliedOptions, roll_options_for, scale_damage
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -91,12 +98,12 @@ def _record_attack_dice(
     is_fumble: bool,
 ) -> None:
     """Statistiche: d20 di to-hit + dadi danno (esclusi fumble e danno piatto '1')."""
-    recorded = d20_records(outcome)
+    record_dice(char, d20_records(outcome) + ([] if is_fumble else _damage_records(damage_dice_str, damage_rolls)))
+
+
+def _damage_records(damage_dice_str: str, damage_rolls: list[int]) -> list[tuple[str, int]]:
     m = _DICE_RE.match(damage_dice_str.strip()) if damage_dice_str else None
-    if not is_fumble and m:
-        sides = int(m.group(2))
-        recorded += [(f"d{sides}", v) for v in damage_rolls]
-    record_dice(char, recorded)
+    return [(f"d{m.group(2)}", v) for v in damage_rolls] if m else []
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -519,19 +526,79 @@ def _set_pending_attack(char: Character, pending: dict | None) -> None:
 
 
 def _settle_attack(
-    char: Character, body: AttackSubmission | None, result: WeaponAttackResult, item_id: int | None, ability: str,
-    attack_mode: str, grip: str,
+    char: Character, body: AttackSubmission | None, result: WeaponAttackResult, item: Item | None, ability: str,
+    attack_mode: str, grip: str, opts: AppliedOptions,
 ) -> WeaponAttackResult:
-    """Tiene da parte l'attacco se il danno finale aspetta le opzioni. Un 1 naturale non ha danno da aspettare."""
+    """Tiene da parte l'attacco se il danno finale aspetta le opzioni.
+
+    Un 1 naturale non ha danno da aspettare, a meno che un'opzione dopo il tiro possa ancora cambiarlo."""
     pending = None
-    if body and body.defer_damage and not result.is_fumble:
+    item_id = item.id if item else None
+    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip)
+    if body and body.defer_damage and (
+            not result.is_fumble or any(o.spec.phase == "after_roll" for o in roll_options_for(context))):
         result.attack_id = uuid.uuid4().hex
         pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
                    "attack_mode": attack_mode, "grip": grip,
                    "options": result.option_result.keys if result.option_result else [],
                    "result": result.model_dump(mode="json")}
     _set_pending_attack(char, pending)
+    remember_roll(char, "attack", opts, {
+        "die": result.to_hit_die, "dice": result.dice, "mode": result.mode, "bonus": result.to_hit_bonus,
+        "total": result.to_hit_total, "notes": result.notes, "auto_fail": False, "description": "",
+        "option_result": result.option_result.model_dump(mode="json") if result.option_result else None,
+    }, item_id=item_id, ability=ability)
     return result
+
+
+def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: dict) -> WeaponAttackResult:
+    """Il tiro per colpire è cambiato dopo un'opzione. Il danno già tirato resta, salvo che cambino critico o 1 naturale."""
+    result = WeaponAttackResult(**pending["result"])
+    block = roll["option_result"]
+    if (result.is_critical, result.is_fumble) != (roll["is_critical"], roll["is_fumble"]):
+        before = AppliedOptions(**applied)
+        extra_rolls, extra_total = [], 0
+        if roll["is_fumble"]:
+            result.damage_rolls, result.damage_bonus, result.damage_total = [0], 0, 0
+        else:
+            item = next((i for i in char.items if i.id == pending["item_id"]), None)
+            ability_mod = (weapon_attack_profile(char, item, pending["attack_mode"]) if item
+                           else unarmed_attack_profile(char))[0]
+            result.damage_rolls, result.damage_bonus = _base_damage(
+                char, item, result.damage_dice, pending["ability"], ability_mod, result.magic_bonus, roll["is_critical"])
+            record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
+            extra_rolls, extra_total, result.damage_total = _option_damage(
+                char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus))
+        if block and before.keys:  # i dadi delle opzioni prima del tiro sono stati ritirati col danno
+            block = block.model_copy(update={"extra_rolls": extra_rolls, "extra_total": extra_total,
+                                             "separate_rolls": before.separate_rolls,
+                                             "separate_total": before.separate_total})
+    result.to_hit_die, result.dice, result.mode, result.mode_applied = (
+        roll["die"], roll["dice"], roll["mode"], roll["mode"])
+    result.to_hit_bonus, result.to_hit_total = roll["total"] - roll["die"], roll["total"]
+    result.is_critical, result.is_fumble = roll["is_critical"], roll["is_fumble"]
+    result.forced_hit = roll["forced_hit"] or None
+    result.notes = roll["notes"]
+    result.option_result = block
+    _set_pending_attack(char, {**pending, "options": block.keys if block else [],
+                               "result": result.model_dump(mode="json")})
+    return result
+
+
+def _base_damage(
+    char: Character, item: Item | None, damage_dice_str: str, ability: str, ability_mod: int, magic_bonus: int,
+    is_critical: bool,
+) -> tuple[list[int], int]:
+    """Dadi e bonus del danno dell'arma o del colpo senz'armi. Il danno piatto '1' non ha dadi da raddoppiare."""
+    dice_bonus = 0
+    if damage_dice_str == "1":
+        damage_rolls = [1]
+    else:
+        damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
+        if is_critical:
+            damage_rolls = damage_rolls + _roll_dice(damage_dice_str)[0]
+    return damage_rolls, (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
+                          + modifiers_for(char, "damage", ability=ability, item=item).flat)
 
 
 def _option_damage(char: Character, opts: AppliedOptions, is_critical: bool, damage: int) -> tuple[list[int], int, int]:
@@ -556,6 +623,8 @@ async def deferred_attack_damage(
     item = next((i for i in char.items if i.id == pending["item_id"]), None)
     if pending["item_id"] is not None and item is None:
         raise HTTPException(status_code=404, detail={"code": "attack_not_found"})
+    if pending["result"]["is_fumble"]:
+        raise HTTPException(status_code=409, detail={"code": "attack_missed"})
     opts = use_options(session, char, "attack", body, phase="after_hit", ability=pending["ability"], item=item,
                        attack_mode=pending["attack_mode"], grip=pending["grip"])
     result = WeaponAttackResult(**pending["result"])
@@ -634,21 +703,15 @@ async def attack_with_weapon(
     is_critical = to_hit_die >= applied.crit_min or (opts.force_crit and not is_fumble)
 
     # Damage roll
-    damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
-    if is_critical:
-        # Double the dice on crit
-        extra_rolls, _ = _roll_dice(damage_dice_str)
-        damage_rolls = damage_rolls + extra_rolls
     option_rolls: list[int] = []
     option_total = 0
     if is_fumble:
         damage_rolls = [0]
-        dice_bonus = 0
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
-                        + modifiers_for(char, "damage", ability=ability, item=item).flat)
+        damage_rolls, damage_bonus = _base_damage(
+            char, item, damage_dice_str, ability, ability_mod, magic_bonus, is_critical)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
@@ -734,7 +797,7 @@ async def attack_with_weapon(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
-    ), item.id, ability, resolved_mode, grip)
+    ), item, ability, resolved_mode, grip, opts)
 
 
 # ---------------------------------------------------------------------------
@@ -769,17 +832,6 @@ async def attack_unarmed(
     is_fumble = to_hit_die == 1
     is_critical = to_hit_die >= applied.crit_min or (opts.force_crit and not is_fumble)
 
-    dice_bonus = 0
-    if damage_dice_str == "1":
-        # Flat-1 unarmed damage (non-Monk): no dice component, so a crit does
-        # NOT double it (D&D 5e: crit doubles dice, not the flat 1 + mod).
-        damage_rolls = [1]
-    else:
-        damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
-        if is_critical:
-            extra_rolls, _ = _roll_dice(damage_dice_str)
-            damage_rolls = damage_rolls + extra_rolls
-
     option_rolls: list[int] = []
     option_total = 0
     if is_fumble:
@@ -787,8 +839,7 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = (ability_mod + attack_bonus_total(char.items, None, "damage") + dice_bonus
-                        + modifiers_for(char, "damage", ability=ability).flat)
+        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, ability, ability_mod, 0, is_critical)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
@@ -835,7 +886,7 @@ async def attack_unarmed(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
-    ), None, ability, "melee", "one")
+    ), None, ability, "melee", "one", opts)
 
 
 # ---------------------------------------------------------------------------

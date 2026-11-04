@@ -739,7 +739,11 @@
         "separate_dice": "Danno a parte",
         "damage_failed": "Opzioni non applicate: resta il danno base",
         "list_failed": "Opzioni del tiro non disponibili: tiro senza conferme",
-        "damage_changed": "Danno {{before}} → {{after}}"
+        "damage_changed": "Danno {{before}} → {{after}}",
+        "forced_hit": "Colpo a segno",
+        "after_roll_failed": "Privilegio non applicato: il tiro resta com'era",
+        "succeeded_question": "Il tiro è riuscito? Se no, l'uso torna.",
+        "refund_failed": "Rimborso non riuscito: correggi a mano gli usi"
     },
     "conditions": {
       "duration": {

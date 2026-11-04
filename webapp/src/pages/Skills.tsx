@@ -360,6 +360,7 @@ export default function Skills() {
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.skillName)}
+          afterRoll={{ charId, query: { roll: 'skill', skill: rollState.skillName } }}
           onClose={() => setRollState(null)}
         />
       )}

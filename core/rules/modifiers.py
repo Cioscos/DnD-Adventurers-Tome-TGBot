@@ -43,6 +43,7 @@ class Applied:
     speed_zero: bool = False
     speed_half: bool = False
     hp_half: bool = False
+    replace_die: int | None = None  # d20 dichiarato (Portento): nessun dado si tira
 
 
 def has_state(ctx: RuleContext, key: str) -> bool:

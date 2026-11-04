@@ -12,6 +12,7 @@ import Sheet from '@/components/ui/Sheet'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import SpellAttackModal from '@/pages/spells/SpellAttackModal'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { CharacterFull, Spell, SpellAttackResult, SpellSlot } from '@/types'
@@ -369,6 +370,20 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
           onInspirationReroll={() => attackRerollMutation.mutate(attackState.spell)}
+          afterRollRow={(
+            <AfterRollOptions
+              charId={charId}
+              query={{ roll: 'attack', spell_id: attackState.spell.id }}
+              onResult={(roll) => setAttackState((prev) => prev && {
+                ...prev,
+                result: {
+                  ...prev.result, to_hit_die: roll.die, dice: roll.dice, mode: roll.mode, notes: roll.notes,
+                  to_hit_bonus: roll.total - roll.die, to_hit_total: roll.total, is_critical: roll.is_critical,
+                  is_fumble: roll.is_fumble, forced_hit: roll.forced_hit,
+                },
+              })}
+            />
+          )}
         />
       )}
 

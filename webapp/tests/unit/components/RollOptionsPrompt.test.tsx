@@ -113,6 +113,16 @@ describe('askRollOptions', () => {
     await expect(answer).resolves.toEqual({ options: ['smite'], option_inputs: { smite: { slot_level: 2 } } })
   })
 
+  it('a saved die is chosen among the saved values and sent as `die`', async () => {
+    rollOptions.mockResolvedValue([option({ key: 'portent', label: 'Portento?', saved_dice: [4, 17] })])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'skill', skill: 'stealth' })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Portento?' }))
+    await userEvent.click(screen.getByRole('button', { name: '17' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(answer).resolves.toEqual({ options: ['portent'], option_inputs: { portent: { die: 17 } } })
+  })
+
   it('an option that needs another one is off until that one is on, and falls with it', async () => {
     rollOptions.mockResolvedValue([SMITE, UNDEAD])
     renderWithProviders(<RollOptionsHost />)

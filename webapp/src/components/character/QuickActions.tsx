@@ -832,6 +832,7 @@ export default function QuickActions({ char }: Props) {
           isRerolling={saveRerollMutation.isPending}
           wasRerolled={saveState.wasRerolled}
           onInspirationReroll={() => saveRerollMutation.mutate(saveState.ability)}
+          afterRoll={{ charId: char.id, query: { roll: 'save', ability: saveState.ability } }}
         />
       )}
 

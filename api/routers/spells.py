@@ -36,7 +36,7 @@ from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_body
 from core.rules.modifiers import modifiers_for
 from core.rules.roll_options import scale_damage
-from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import best_caster, build_spellcasting_info
@@ -308,6 +308,10 @@ async def spell_attack(
         },
     )
     notifications = collect_homebrew_notifications(firing)
+    remember_roll(char, "attack", opts, {
+        "die": die, "dice": outcome.dice, "mode": outcome.mode, "bonus": bonus, "total": total,
+        "notes": applied.notes, "auto_fail": False, "description": "",
+    }, spell_id=spell.id)
 
     return SpellAttackResult(
         spell_name=spell.name,

@@ -89,7 +89,7 @@ function d20Fields(roll: D20Roll | undefined): Record<string, unknown> {
 }
 
 // Conferma al tiro (GET /characters/{id}/roll-options)
-export type RollOptionPhase = 'before' | 'after_hit' | 'damage_in'
+export type RollOptionPhase = 'before' | 'after_roll' | 'after_hit' | 'damage_in'
 
 export type RollOption = {
   key: string
@@ -111,6 +111,12 @@ export type RollOption = {
   group: string | null
   /** Dadi tolti all'opzione indicata da `needs`. */
   dice_cost: number
+  /** Solo `after_roll`: cosa fa al tiro già visto. */
+  after?: 'add' | 'reroll' | 'succeed' | null
+  /** Si rimborsa se il giocatore dichiara il tiro fallito. */
+  pay_if_success?: boolean
+  /** Portento: il d20 si sceglie fra questi valori salvati. */
+  saved_dice?: number[]
 }
 
 export type RollOptionsQuery = {
@@ -126,10 +132,11 @@ export type RollOptionsQuery = {
 
 export type RollChoice = {
   options: string[]
-  option_inputs: Record<string, { slot_level: number }>
+  option_inputs: Record<string, { slot_level: number } | { die: number }>
   defer_damage?: boolean
-  /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato o ritira con l'ispirazione. */
-  outcome?: 'miss' | 'reroll'
+  /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato, ritira con l'ispirazione o usa un'opzione. */
+  outcome?: 'miss' | 'reroll' | 'after_roll'
+  after_option?: RollOption
 }
 
 export type OptionResult = {
@@ -202,6 +209,19 @@ export type WeaponAttackResult = {
   option_result?: OptionResult
   /** Attacco in sospeso: il danno finale passa da `attackDamage`. */
   attack_id?: string
+  /** Colpo a segno per un privilegio, qualunque sia il d20. */
+  forced_hit?: boolean
+}
+
+/** Il tiro dopo un privilegio usato a esito noto. */
+export type LastRollResult = RollResult & {
+  /** Opzioni da rimborsare se il giocatore dichiara il fallimento. */
+  refundable?: string[]
+  forced_hit?: boolean
+  passed?: boolean
+  condition_removed?: boolean
+  save?: PendingSaveRollResult['save']
+  attack?: WeaponAttackResult
 }
 
 export type HitDiceSpendResult = {
@@ -543,6 +563,10 @@ export const api = {
           Object.entries(query).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]),
         )}`,
       ),
+    lastRollOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; mode: RollMode; dice?: number[] }) =>
+      request<LastRollResult>(`/characters/${id}/last-roll/options`, { method: 'POST', body: JSON.stringify(body) }),
+    lastRollRefund: (id: number) =>
+      request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST' }),
     featureUse: (id: number, featureKey: string, amount: number = 1) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
         method: 'POST', body: JSON.stringify({ amount }),
