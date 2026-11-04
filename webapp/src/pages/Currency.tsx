@@ -294,7 +294,7 @@ export default function Currency() {
         <div className="flex items-baseline justify-end gap-2 px-2 min-h-[40px]">
           <span
             data-testid="tx-amount"
-            className={`text-4xl font-mono font-bold tabular-nums leading-none ${
+            className={`text-4xl font-display font-black tabular-nums leading-none ${
               fresh || amount === 0 ? 'text-dnd-text-faint' : 'text-dnd-text'
             }`}
           >

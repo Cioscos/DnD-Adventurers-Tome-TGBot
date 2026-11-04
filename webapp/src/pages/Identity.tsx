@@ -105,7 +105,7 @@ function RangeToggles({ keys, labelKey, values, defaultFt, unitSystem, onChange 
               onClick={toggle}
               aria-pressed={on}
               className={`min-h-11 flex-1 px-3 rounded-xl border text-sm font-body text-left ${
-                on ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text'
+                on ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text'
               }`}
             >
               {label}
@@ -494,7 +494,7 @@ export default function Identity() {
                         aria-pressed={on}
                         className={`min-h-[44px] px-3 rounded-xl border text-sm font-medium transition-colors
                           ${on
-                            ? 'bg-dnd-gold text-dnd-ink border-transparent'
+                            ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                             : 'bg-dnd-surface-raised text-dnd-text border-dnd-border'}`}
                       >
                         {damageTypeLabel(t, slug)}

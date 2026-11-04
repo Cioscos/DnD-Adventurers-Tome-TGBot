@@ -77,7 +77,7 @@ export default function CustomResourceCounter({
             loading={isPending}
             haptic="none"
             aria-label={t('character.homebrew.resources.aria_decrement', { name: resource.name })}
-            className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright
+            className="w-11 h-11 rounded-xl bg-dnd-crimson/10 text-dnd-crimson-bright
                        border border-dnd-crimson/30 disabled:opacity-30"
           />
           <div className="flex-1 text-center">
@@ -94,7 +94,7 @@ export default function CustomResourceCounter({
             loading={isPending}
             haptic="none"
             aria-label={t('character.homebrew.resources.aria_increment', { name: resource.name })}
-            className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright
+            className="w-11 h-11 rounded-xl bg-dnd-emerald/10 text-dnd-emerald-bright
                        border border-dnd-emerald/30 disabled:opacity-30"
           />
         </div>

@@ -36,12 +36,12 @@ export default function DeathSaveResultDialog({ result, onClose }: Props) {
     >
       {outcome === 'nat20' && (
         <p className="text-dnd-gold-bright font-bold font-cinzel">
-          ✦ {t('character.death_saves.nat20')}
+          {t('character.death_saves.nat20')}
         </p>
       )}
       {outcome === 'nat1' && (
         <p className="text-dnd-crimson-bright font-bold font-cinzel">
-          💀 {t('character.death_saves.nat1')}
+          {t('character.death_saves.nat1')}
         </p>
       )}
 

@@ -46,7 +46,7 @@ export default function SwitchToggle({
       aria-busy={pending || undefined}
       className={`hit-44 w-12 h-7 rounded-full transition-colors shrink-0 border flex items-center px-0.5 disabled:opacity-50
         ${checked
-          ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_var(--dnd-gold-glow)] justify-end'
+          ? 'bg-dnd-gold border-dnd-gold-bright justify-end'
           : 'bg-dnd-surface border-dnd-border justify-start'}`}
       whileTap={disabled || pending ? undefined : { scale: 0.92 }}
     >

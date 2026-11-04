@@ -16,7 +16,7 @@ describe('DamageDiceBuilder', () => {
     render(<DamageDiceBuilder value="2d6+3" onChange={() => {}} />)
     expect(screen.getByText('2')).toBeInTheDocument() // count
     expect(screen.getByText('+3')).toBeInTheDocument() // modifier
-    expect(screen.getByRole('button', { name: 'd6' })).toHaveClass('bg-dnd-gold') // active die
+    expect(screen.getByRole('button', { name: 'd6' })).toHaveClass('bg-dnd-gold/20') // active die
     expect(screen.getByText('2d6 + 3')).toBeInTheDocument() // preview
   })
 
@@ -54,7 +54,7 @@ describe('DamageDiceBuilder', () => {
   it('renders a custom die set (spell config with d20) without the unknown-die fallback', () => {
     render(<DamageDiceBuilder value="1d20" onChange={() => {}} dieSizes={[4, 6, 8, 10, 12, 20]} />)
     expect(screen.getAllByRole('button', { name: 'd20' })).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'd20' })).toHaveClass('bg-dnd-gold')
+    expect(screen.getByRole('button', { name: 'd20' })).toHaveClass('bg-dnd-gold/20')
   })
 
   it('honors maxCount: 11th die reachable with maxCount=12, blocked at 12', async () => {

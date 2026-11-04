@@ -167,7 +167,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                           type="button"
                           onClick={() => toggleFilter(key, v)}
                           className={`px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors
-                            ${on ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold' : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
+                            ${on ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                         >
                           {chipLabel(key, v)}
                         </Pressable>

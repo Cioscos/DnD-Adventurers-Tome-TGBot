@@ -12,19 +12,19 @@ interface FilterChipProps {
   'aria-label'?: string
 }
 
-/** Per-tone selected/idle classes. gold/arcane carry a halo (attention signal);
- *  neutral/danger/success are flat semantic fills. danger/success keep a faint
+/** Per-tone selected/idle classes: tinte piatte, l'alone resta ai segnali.
+ * danger/success keep a faint
  *  colored text even when idle so the meaning reads before selection (#47). */
 const TONE_STYLES: Record<
   NonNullable<FilterChipProps['tone']>,
   { on: string; off: string }
 > = {
   gold: {
-    on: 'bg-dnd-chip-bg border-dnd-gold/70 text-dnd-gold-bright shadow-halo-gold',
+    on: 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright',
     off: 'bg-dnd-surface border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright/80',
   },
   arcane: {
-    on: 'bg-[rgba(155,89,182,0.18)] border-dnd-arcane/70 text-dnd-arcane-bright shadow-halo-arcane',
+    on: 'bg-dnd-arcane/10 border-dnd-arcane/70 text-dnd-arcane-bright',
     off: 'bg-dnd-surface border-dnd-border text-dnd-text-muted hover:text-dnd-arcane-bright/80',
   },
   neutral: {
@@ -36,7 +36,7 @@ const TONE_STYLES: Record<
     off: 'bg-dnd-surface border-dnd-border text-dnd-crimson-bright',
   },
   success: {
-    on: 'bg-dnd-emerald/15 border-dnd-emerald/70 text-dnd-emerald-bright',
+    on: 'bg-dnd-emerald/10 border-dnd-emerald/70 text-dnd-emerald-bright',
     off: 'bg-dnd-surface border-dnd-border text-dnd-emerald-bright',
   },
 }

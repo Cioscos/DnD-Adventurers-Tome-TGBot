@@ -55,7 +55,7 @@ export default function AbilityScoreEditModal({
           </Pressable>
 
           <div className="flex flex-col items-center min-w-[96px]">
-            <span className="text-5xl font-mono font-bold tabular-nums text-dnd-text leading-none">
+            <span className="text-5xl font-display font-black tabular-nums text-dnd-text leading-none">
               {displayValue}
             </span>
             <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">

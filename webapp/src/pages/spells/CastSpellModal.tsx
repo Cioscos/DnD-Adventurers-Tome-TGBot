@@ -67,7 +67,7 @@ export default function CastSpellModal({
                 <span className="flex gap-1" aria-hidden>
                   {Array.from({ length: slot.total }).map((_, i) => (
                     <span key={i} className={`w-3 h-3 rounded-full border ${i < slot.used
-                      ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright'
+                      ? 'bg-dnd-gold border-dnd-gold-bright'
                       : 'border-dnd-gold-dim/70'}`} />
                   ))}
                 </span>

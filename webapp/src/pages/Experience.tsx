@@ -85,7 +85,6 @@ export default function Experience() {
       if (newLevel > oldLevel) {
         toast.success(t('character.xp.level_up_toast', { level: newLevel }), {
           duration: 3500,
-          icon: '✨',
         })
         // Beat del level-up: burst dei flourish sulla card (niente coriandoli,
         // DESIGN.md vieta il registro gacha delle "ranked-up celebrations").
@@ -94,7 +93,6 @@ export default function Experience() {
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
           duration: 2000,
-          icon: '❤',
         })
       }
       // Resource pools that auto-scaled with the class level-up.
@@ -108,7 +106,7 @@ export default function Experience() {
               next: d.next,
               defaultValue: '{{name}}: massimo {{prev}} → {{next}}',
             }),
-            { duration: 3500, icon: '⚡' },
+            { duration: 3500 },
           )
         }
       }

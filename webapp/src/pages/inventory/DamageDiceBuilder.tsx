@@ -109,7 +109,7 @@ export default function DamageDiceBuilder({
                 onClick={() => emit(count, d, mod)}
                 className={`min-h-[44px] px-3 rounded-lg text-sm font-bold tabular-nums transition-colors
                   ${active
-                    ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+                    ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                     : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
               >
                 d{d}

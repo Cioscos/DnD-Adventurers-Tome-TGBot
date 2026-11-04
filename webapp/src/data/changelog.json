@@ -14,7 +14,8 @@
           "Caratteristiche, Abilità, Tiri salvezza, Classe Armatura, Monete, Esperienza e Classe si leggono come righe di una scheda, con più contenuto a colpo d'occhio.",
           "Incantesimi, Inventario, Abilità speciali, Slot, Azioni, Condizioni e Cronologia sono elenchi a righe: la card compare solo aprendo una voce.",
           "La home è un elenco dei tuoi personaggi con PF e CA in vista, e il pulsante Nuovo personaggio resta sempre in basso, a portata di pollice.",
-          "Sessione, combattimento e campagna seguono lo stesso schema a righe: partecipanti, iniziativa, membri, lore e serate si leggono come un registro, e i punti ferita usano la stessa barra del personaggio."
+          "Sessione, combattimento e campagna seguono lo stesso schema a righe: partecipanti, iniziativa, membri, lore e serate si leggono come un registro, e i punti ferita usano la stessa barra del personaggio.",
+          "Le emoji lasciano il posto a icone incise, in inventario e nelle regole homebrew. Le opzioni selezionate hanno lo stesso aspetto in tutta l'app e «Skills» ora si chiama «Abilità»."
         ],
         "en": [
           "Easier reading in low light: labels and secondary text have more contrast in the dark theme.",
@@ -26,7 +27,8 @@
           "Ability Scores, Skills, Saving Throws, Armor Class, Coins, Experience and Class read as rows of a sheet, with more in view at a glance.",
           "Spells, Inventory, Special Abilities, Slots, Actions, Conditions and History are lists of rows: a card only appears when you open an entry.",
           "The home screen lists your characters with HP and AC in view, and the New character button always stays at the bottom, within thumb reach.",
-          "Session, combat and campaign follow the same row layout: participants, initiative, members, lore and evenings read like a ledger, and hit points use the same bar as the character sheet."
+          "Session, combat and campaign follow the same row layout: participants, initiative, members, lore and evenings read like a ledger, and hit points use the same bar as the character sheet.",
+          "Emoji give way to engraved icons, in the inventory and homebrew rules. Selected options look the same across the app."
         ]
       },
       "fixed": {
