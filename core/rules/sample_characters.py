@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Ability, AbilityScore, Character, CharacterClass, RestorationType
-from core.rules.edition import CLASS_KEYS
+from core.rules.edition import CLASS_KEYS, class_key
+from core.rules.subclasses import match_subclass
 
 PREFIX = "[prova]"
 HIT_DICE = {
@@ -63,6 +64,7 @@ async def build_rules_character(session: AsyncSession, spec: dict, user_id: int)
     classes = []
     for name, level, subclass, die in spec["classes"]:
         row = CharacterClass(character_id=char.id, class_name=name, level=level, subclass=subclass, hit_die=die)
+        row.subclass_key = match_subclass(subclass, class_key(row), spec["edition"])
         session.add(row)
         classes.append(row)
     await session.flush()

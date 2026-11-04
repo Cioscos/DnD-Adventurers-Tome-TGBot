@@ -15,6 +15,7 @@ from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
 from core.game.containers import is_container
+from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
     Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
@@ -230,6 +231,7 @@ async def import_character(
             item_metadata=json.dumps(it.item_metadata), equipment_slot=slot, is_equipped=equipped,
         ))
     char.classes = classes
+    sync_subclass_keys(char)
     char.ability_scores = [AbilityScore(**a.model_dump()) for a in data.ability_scores]
     char.spells = spells
     char.spell_slots = [SpellSlot(**s.model_dump()) for s in data.spell_slots]

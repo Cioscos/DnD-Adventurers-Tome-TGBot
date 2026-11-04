@@ -12,6 +12,8 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.db.models import Character, CharacterClass
+from core.rules.edition import character_edition, class_key
+from core.rules.subclasses import match_subclass
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     CharacterClassCreate,
@@ -128,6 +130,7 @@ async def create_class_for_character(
         hit_die=hit_die,
     )
     session.add(cls)
+    cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
     await session.flush()
 
     # char.abilities deve essere caricato per il sync (selectinload in _get_owned_full).
@@ -304,6 +307,8 @@ async def update_class(
     old_current_hp = char.current_hit_points or 0
     for field, value in data.items():
         setattr(cls, field, value)
+    if "subclass" in data:
+        cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
     add_asi_choices(char, cls.class_name, old_level, cls.level)
 
     # When level changes, sync class-feature abilities and recalc max HP like distribute.

@@ -38,6 +38,8 @@ export interface CharacterClass {
   class_name: string
   level: number
   subclass?: string
+  /** Chiave di catalogo riconosciuta dal testo; null per testo libero. */
+  subclass_key?: string | null
   spellcasting_ability?: string
   hit_die?: number
   /** Dadi vita spesi (residui = level - hit_dice_used). */

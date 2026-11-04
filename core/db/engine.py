@@ -58,6 +58,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "concentrating_spell_id", "INTEGER REFERENCES spells(id) ON DELETE SET NULL", None),
     # CharacterClass subclass
     ("character_classes", "subclass", "VARCHAR(100)", None),
+    ("character_classes", "subclass_key", "VARCHAR(50)", None),
     # Conditions feature
     ("characters", "conditions", "TEXT", None),
     # Skills feature
@@ -220,6 +221,26 @@ def _rebuild_spell_slots_for_pact(connection) -> None:
     connection.execute(text("ALTER TABLE spell_slots_new RENAME TO spell_slots"))
 
 
+def _backfill_subclass_keys(connection) -> None:
+    """Riconosce le sottoclassi gia' scritte: imposta `subclass_key` senza mai toccare `subclass` (idempotente)."""
+    from core.rules.subclasses import match_subclass
+    from core.data.spell_slots import normalize_class_name
+
+    try:
+        rows = connection.execute(text(
+            "SELECT cc.id, cc.class_name, cc.subclass, c.rules_edition FROM character_classes cc "
+            "JOIN characters c ON c.id = cc.character_id "
+            "WHERE cc.subclass IS NOT NULL AND cc.subclass_key IS NULL"
+        )).fetchall()
+        for cid, cname, sub, ed in rows:
+            key = match_subclass(sub, normalize_class_name(cname), ed if ed in ("2014", "2024") else "2014")
+            if key:
+                connection.execute(text("UPDATE character_classes SET subclass_key = :k WHERE id = :id"),
+                                   {"k": key, "id": cid})
+    except Exception as exc:
+        logger.warning("Backfill character_classes.subclass_key failed: %s", exc)
+
+
 def _migrate_schema(connection) -> None:
     """Add missing columns, drop legacy columns/tables (idempotent)."""
     _rebuild_spell_slots_for_pact(connection)
@@ -244,6 +265,8 @@ def _migrate_schema(connection) -> None:
             logger.info("Migrating: %s", ddl)
             connection.execute(text(ddl))
             column_cache[table].add(column)
+
+    _backfill_subclass_keys(connection)
 
     # Ad-hoc index for whisper filter queries
     try:

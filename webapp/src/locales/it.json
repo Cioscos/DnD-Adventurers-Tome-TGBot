@@ -1427,6 +1427,8 @@
       "custom_class_name": "Nome personalizzato",
       "level": "Livello",
       "subclass": "Sottoclasse",
+      "subclass_other": "Altro (testo libero)",
+      "subclass_other_hint": "Il testo resta com'è: nessun automatismo di sottoclasse.",
       "hit_die": "Dado vita",
       "spellcasting": "Abilità da incantatore",
       "auto_resources_hint": "Le abilità di classe saranno create automaticamente",

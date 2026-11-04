@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { AlertTriangle, Check, Plus, Trash2, X } from 'lucide-react'
@@ -20,6 +20,8 @@ import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import type { CharacterFull } from '@/types'
+
+const OTHER_SUBCLASS = '__other__'
 
 type ExistingEntry = {
   kind: 'existing'
@@ -57,7 +59,7 @@ function makeTempId(): string {
 }
 
 export default function EditClassesModal({ char, targetLevel, milestone = false, onClose }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   useRegisterOverlay(true)
   // Backdrop statico (nessuna animazione di opacità propria): il blur si
@@ -82,6 +84,16 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   const [pickerKey, setPickerKey] = useState<string>('')
   const [pickerCustomName, setPickerCustomName] = useState('')
   const [pickerSubclass, setPickerSubclass] = useState('')
+  // '' = nessuna scelta, OTHER_SUBCLASS = testo libero, altrimenti la chiave di catalogo
+  const [pickerSubclassKey, setPickerSubclassKey] = useState('')
+  const lang = i18n.language.startsWith('en') ? 'en' : 'it'
+  const catalogClass = pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null
+  const { data: subclassCatalog = [] } = useQuery({
+    queryKey: ['rules', 'subclasses', char.rules_edition, catalogClass],
+    queryFn: () => api.rules.subclasses(char.rules_edition, catalogClass as string),
+    enabled: catalogClass !== null,
+    staleTime: Infinity,
+  })
   // Il picker annidato ha un toggle reale (showPicker): il blur si spegne
   // subito quando il picker si chiude, coerentemente col resto del pattern.
   const pickerBlur = useDeferredBlur(showPicker)
@@ -91,6 +103,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     setPickerKey('')
     setPickerCustomName('')
     setPickerSubclass('')
+    setPickerSubclassKey('')
   }
 
   // ESC/back coerenti: il picker annidato sta in cima allo stack, poi il modale.
@@ -407,11 +420,37 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   />
                 )}
 
-                <Input
-                  value={pickerSubclass}
-                  onChange={setPickerSubclass}
-                  placeholder={t('character.multiclass.subclass')}
-                />
+                {catalogClass && (
+                  <SelectSheet
+                    title={t('character.multiclass.subclass')}
+                    options={[
+                      ...subclassCatalog.map((s) => ({ value: s.key, label: s.name[lang] ?? s.name.it })),
+                      { value: OTHER_SUBCLASS, label: t('character.multiclass.subclass_other') },
+                    ]}
+                    value={pickerSubclassKey}
+                    onChange={(k) => {
+                      setPickerSubclassKey(k)
+                      const hit = subclassCatalog.find((s) => s.key === k)
+                      setPickerSubclass(hit ? (hit.name[lang] ?? hit.name.it) : '')
+                    }}
+                    placeholder={t('character.multiclass.subclass')}
+                    zClassName="z-[70]"
+                  />
+                )}
+                {(!catalogClass || pickerSubclassKey === OTHER_SUBCLASS) && (
+                  <>
+                    <Input
+                      value={pickerSubclass}
+                      onChange={setPickerSubclass}
+                      placeholder={t('character.multiclass.subclass')}
+                    />
+                    {catalogClass && (
+                      <p className="text-xs text-dnd-text-muted font-body">
+                        {t('character.multiclass.subclass_other_hint')}
+                      </p>
+                    )}
+                  </>
+                )}
 
                 {pickerUnmet.length > 0 && (
                   <Surface variant="elevated" className="!p-3 border border-dnd-amber/50 space-y-1.5">

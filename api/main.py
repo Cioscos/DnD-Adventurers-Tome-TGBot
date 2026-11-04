@@ -31,6 +31,7 @@ from api.routers import (
     characters,
     choices,
     classes,
+    rules,
     companions,
     currency,
     dice,
@@ -174,6 +175,7 @@ app.include_router(characters.router)
 app.include_router(hp.router)
 app.include_router(stats.router)
 app.include_router(classes.router)
+app.include_router(rules.router)
 app.include_router(choices.router)
 app.include_router(spells.router)
 app.include_router(spell_slots.router)

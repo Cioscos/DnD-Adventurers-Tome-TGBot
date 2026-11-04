@@ -526,6 +526,13 @@ export const api = {
       }),
   },
 
+  rules: {
+    subclasses: (edition: string, classKey: string) =>
+      request<{ key: string; name: Record<string, string>; choice_level: number }[]>(
+        `/rules/subclasses?edition=${edition}&class_key=${classKey}`,
+      ),
+  },
+
   // ---------------------------------------------------------------------------
   // Classes
   // ---------------------------------------------------------------------------

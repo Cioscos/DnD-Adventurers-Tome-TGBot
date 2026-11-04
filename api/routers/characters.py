@@ -29,6 +29,7 @@ from core.db.models import (
     SessionStatus,
 )
 from core.data.xp_thresholds import xp_to_level
+from core.rules.subclasses import sync_subclass_keys
 from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
@@ -347,6 +348,8 @@ async def update_character(
             value = {k: v for k, v in value.items() if k not in SERVER_OWNED_SETTINGS}
             value.update({k: old[k] for k in SERVER_OWNED_SETTINGS if k in old})
         setattr(char, field, value)
+    if "rules_edition" in body.model_fields_set:
+        sync_subclass_keys(char)  # una sottoclasse assente nell'altra edizione resta solo testo
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See
     # _refresh_char_full() for the full rationale.

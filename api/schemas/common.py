@@ -109,6 +109,7 @@ class CharacterClassRead(BaseModel):
     class_name: str
     level: int
     subclass: Optional[str] = None
+    subclass_key: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
     hit_dice_used: int = 0

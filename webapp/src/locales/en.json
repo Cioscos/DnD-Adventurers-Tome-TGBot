@@ -1428,6 +1428,8 @@
       "custom_class_name": "Custom name",
       "level": "Level",
       "subclass": "Subclass",
+      "subclass_other": "Other (free text)",
+      "subclass_other_hint": "The text is kept as written: no subclass automation.",
       "hit_die": "Hit die",
       "spellcasting": "Spellcasting ability",
       "auto_resources_hint": "Class features will be created automatically",
