@@ -315,6 +315,7 @@ The default for reference data and navigation lists: the page reads like a chara
 - **Depleted:** a spent row drops to `text-dnd-text-faint`. Never lower its opacity: that pushes the text under the contrast floor.
 - **Classes:** `webapp/src/styles/ledger.ts` holds the shared row, label and title classes.
 - **Affordance:** a row that does something other than open a page says so with a glyph (the die on Initiative rolls).
+- **The history timeline is not a ledger:** Cronologia keeps its gold line and icon medallions, a choice made by the owner. It is the one list where sequence is the content, and the line is its signature.
 - **Where a frame stays:** an opened spell or item, the result of a roll, the dice tray, the combatant card, dialogs and sheets, and states that need attention (dying, dead, concentration, unsaved changes). Everything else is rows.
 - **Selected state:** `bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright`, with no gradient and no halo. Semantic tints stay at 10% or less. The gradient belongs to the primary button; the halo belongs to signals.
 - **Icons, not emoji:** engraved icons in one ink. `Sparkles` means magic and nothing else.
