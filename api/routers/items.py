@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_lang, get_current_user
+from api.services.rules_turn import spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
@@ -596,6 +597,8 @@ async def attack_with_weapon(
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
+    if not (body and body.with_inspiration):
+        spend(char, "attack")  # il rilancio con ispirazione è lo stesso attacco
 
     # Ammunition: scale one piece per attack (also on miss/fumble), never on a reroll.
     ammo_state: AmmoState | None = None
@@ -731,6 +734,8 @@ async def attack_unarmed(
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
+    if not (body and body.with_inspiration):
+        spend(char, "attack")  # il rilancio con ispirazione è lo stesso attacco
 
     firing_results = await dispatch(
         session, char, "attack_rolled",

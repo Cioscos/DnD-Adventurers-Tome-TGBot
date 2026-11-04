@@ -106,3 +106,31 @@ async def test_turn_without_encounter_and_foreign_character(client, test_session
     _, pc_id = await seed_session(test_session_factory)  # personaggio di un altro utente
     r = await client.post(f"/characters/{pc_id}/turn/use", json={"slot": "action"})
     assert r.status_code == 403
+
+
+async def _attacks_made(client, cid) -> int:
+    return (await _turn(client, cid))["turn"]["attacks_made"]
+
+
+async def test_attacks_increment_counter_on_server(client):
+    cid = await _new_char(client)
+    r = await client.post(
+        f"/characters/{cid}/items",
+        json={"name": "Spada", "item_type": "weapon", "quantity": 1, "item_metadata": {"damage_dice": "1d8"}},
+    )
+    wid = next(i["id"] for i in r.json()["items"] if i["name"] == "Spada")
+    assert (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).status_code == 200
+    assert await _attacks_made(client, cid) == 1
+    assert (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).status_code == 200
+    assert await _attacks_made(client, cid) == 2
+
+
+async def test_failed_attack_does_not_count(client):
+    cid = await _new_char(client)
+    r = await client.post(f"/characters/{cid}/items/9999/attack", json={"die": 10})
+    assert r.status_code == 404
+    assert await _attacks_made(client, cid) == 0
+    # senza ispirazione disponibile il rilancio fallisce: nemmeno questo conta
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "with_inspiration": True})
+    assert r.status_code == 409
+    assert await _attacks_made(client, cid) == 0

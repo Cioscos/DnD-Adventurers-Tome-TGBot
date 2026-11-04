@@ -76,13 +76,13 @@ vi.mock('@/components/ui/Pressable', async () => {
   return {
     default: (p: Record<string, unknown>) =>
       React.createElement('button', {
-        onClick: p.onClick, 'aria-pressed': p['aria-pressed'], 'aria-expanded': p['aria-expanded'], 'aria-label': p['aria-label'],
+        onClick: p.onClick, disabled: p.disabled, 'aria-pressed': p['aria-pressed'], 'aria-expanded': p['aria-expanded'], 'aria-label': p['aria-label'],
       }, p.children as ReactNode),
   }
 })
 vi.mock('@/components/ui/Button', async () => {
   const React = await import('react')
-  return { default: (p: { onClick?: () => void; children?: ReactNode }) => React.createElement('button', { onClick: p.onClick }, p.children) }
+  return { default: (p: { onClick?: () => void; disabled?: boolean; children?: ReactNode }) => React.createElement('button', { onClick: p.onClick, disabled: p.disabled }, p.children) }
 })
 const passthrough = vi.hoisted(() => async () => {
   const React = await import('react')
@@ -198,5 +198,21 @@ describe('Turn page', () => {
     renderWithProviders(<Turn />)
     expect(await screen.findByText('character.conditions.duration.in_encounter')).toBeInTheDocument()
     expect(screen.queryByText('character.turn.end_round')).not.toBeInTheDocument()
+  })
+
+  it('disables the turn controls while a request is in flight, so taps go out one at a time', async () => {
+    getChar.mockResolvedValue(char)
+    let release: () => void = () => {}
+    turnUse.mockImplementationOnce(() => new Promise((res) => {
+      release = () => res({ ...NEW_BLOCK, action_used: true })
+    }))
+    renderWithProviders(<Turn />)
+    const action = await screen.findByLabelText('character.turn.mark_used: character.turn.section_action')
+    const bonus = screen.getByLabelText('character.turn.mark_used: character.turn.section_bonus_action')
+    await userEvent.click(action)
+    await waitFor(() => expect(bonus).toBeDisabled())
+    expect(screen.getByText('character.turn.new_turn')).toBeDisabled()
+    release()
+    await waitFor(() => expect(bonus).not.toBeDisabled())
   })
 })

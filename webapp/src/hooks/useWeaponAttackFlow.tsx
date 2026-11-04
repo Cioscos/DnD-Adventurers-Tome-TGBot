@@ -44,6 +44,7 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
         result, source: { type: 'weapon', itemId, choice: choiceOf(choices, itemId) }, wasRerolled: false,
       })
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
   })
@@ -54,6 +55,7 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
     onSuccess: (result) => {
       setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
   })

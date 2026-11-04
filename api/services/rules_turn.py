@@ -31,6 +31,8 @@ def get_turn(char) -> dict:
     return {**_default(), **(char.turn_state or {})}
 
 
+# shortcut: read-modify-write sul JSON, più dispositivi insieme possono sovrascriversi; usare un
+# UPDATE atomico o un lock di riga se serve il multi-dispositivo.
 def _save(char, state: dict) -> None:
     char.turn_state = state  # nuovo dict: SQLAlchemy non vede le mutazioni in place
 

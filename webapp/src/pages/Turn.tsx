@@ -90,7 +90,8 @@ export default function Turn() {
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const attacks = turn?.attacks_allowed ?? char.attacks_per_action ?? 1
   const stdActions = standardActionsFor(char.rules_edition)
-  const countAttack = () => useSlot.mutate({ slot: 'attack' })
+  // Richieste in serie dallo stesso dispositivo: il server fa read-modify-write sul JSON.
+  const busy = useSlot.isPending || newTurn.isPending
 
   const renderEntry = (e: TurnEntry, c: CharacterFull) => {
     const key = `${e.kind}:${e.id}`
@@ -113,7 +114,7 @@ export default function Turn() {
             </div>
           )}
           {(e.id === 'use_object') && (
-            <Button size="sm" variant="secondary" className="mt-2" disabled={!!block?.free_interaction_used}
+            <Button size="sm" variant="secondary" className="mt-2" disabled={busy || !!block?.free_interaction_used}
               onClick={() => useSlot.mutate({ slot: 'free_interaction' })}>
               {block?.free_interaction_used ? t('character.turn.free_interaction_used') : t('character.turn.free_interaction')}
             </Button>
@@ -130,7 +131,7 @@ export default function Turn() {
         label = t('character.turn.unarmed')
         extra = <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes) })}</p>
         control = (
-          <RollButton onRoll={(mode) => { countAttack(); weaponFlow.attackUnarmed(mode) }} pending={weaponFlow.isUnarmedPending}
+          <RollButton onRoll={weaponFlow.attackUnarmed} pending={weaponFlow.isUnarmedPending}
             ariaLabel={`${t('character.turn.attack')} ${label}`} className={crimson}>
             <Target size={14} />{t('character.turn.attack')}
           </RollButton>
@@ -139,7 +140,7 @@ export default function Turn() {
         const item = c.items.find((i) => String(i.id) === e.id)
         const itemId = Number(e.id)
         control = (
-          <RollButton onRoll={(mode) => { countAttack(); weaponFlow.attackWeapon(itemId, mode) }} pending={weaponFlow.isWeaponPending(itemId)}
+          <RollButton onRoll={(mode) => weaponFlow.attackWeapon(itemId, mode)} pending={weaponFlow.isWeaponPending(itemId)}
             ariaLabel={`${t('character.turn.attack')} ${label}`} className={crimson}>
             <Target size={14} />{t('character.turn.attack')}
           </RollButton>
@@ -217,6 +218,7 @@ export default function Turn() {
           <h2 className={LEDGER_TITLE}>{title}</h2>
           <Pressable
             aria-pressed={isUsed}
+            disabled={busy}
             aria-label={`${t('character.turn.mark_used')}: ${title}`}
             onClick={() => useSlot.mutate({ slot: SLOT_OF[bucket], on: !isUsed })}
             className={`inline-flex items-center gap-1 min-h-11 px-3 rounded-lg border text-xs font-medium ${
@@ -251,7 +253,7 @@ export default function Turn() {
               {t('character.turn.end_round')}
             </Button>
           )}
-          <Button size="sm" variant="secondary" icon={<RotateCcw size={14} />} loading={newTurn.isPending} onClick={() => newTurn.mutate()}>
+          <Button size="sm" variant="secondary" icon={<RotateCcw size={14} />} loading={newTurn.isPending} disabled={busy} onClick={() => newTurn.mutate()}>
             {t('character.turn.new_turn')}
           </Button>
         </div>
