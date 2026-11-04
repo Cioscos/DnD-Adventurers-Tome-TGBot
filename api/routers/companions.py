@@ -134,7 +134,7 @@ async def activate_wild_shape(
     ability = (await session.execute(
         select(Ability).where(Ability.character_id == char_id, Ability.feature_key == "druid.wild_shape")
     )).scalars().first()
-    if ability is not None:
+    if ability is not None and ability.max_uses is not None:  # NULL: illimitata
         if (ability.uses or 0) > 0:
             ability.uses -= 1
         elif not (body and body.force):

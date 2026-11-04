@@ -29,7 +29,7 @@ from core.data.classes import (
 )
 from api.services.choices import add_asi_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
-from api.services.class_features import sync_class_feature_abilities
+from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import hit_points_for_level, total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
@@ -316,6 +316,8 @@ async def update_class(
     if level_changed:
         record_rolls(char, cls, old_level, cls.level, hp_rolls)
         await sync_class_feature_abilities(session, char, cls, lang=lang)
+    elif "subclass" in data:
+        await sync_cataloged_features(session, char, lang)
 
     # Flush pending setattr mutations before any relationship traversal —
     # `CharacterFull.model_validate(char)` (and dispatch's `total_level`

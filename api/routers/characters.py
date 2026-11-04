@@ -33,7 +33,8 @@ from core.rules.subclasses import sync_subclass_keys
 from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
-from api.services.class_features import sync_class_feature_abilities
+from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
+from core.rules.feature_sync import ARCHIVED_FEATURES
 from core.game.stats import hit_points_for_level
 from api.schemas.character import (
     CharacterCreate,
@@ -68,7 +69,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations",
-                         "concentration_rounds_left", "concentration_item_spell")
+                         "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -289,6 +290,7 @@ async def create_character(
     # caricata, quindi senza questa init l'accesso scatena un lazy-load async →
     # MissingGreenlet (rompe POST /characters con initial_class).
     char.classes = []
+    char.items = []  # Stesso motivo: gli usi a catalogo leggono la caratteristica effettiva.
     # Apply optional identity in the SAME transaction (atomic create). Same
     # field→column mapping as update_character; set before flush so it lands
     # in the initial INSERT.
@@ -339,6 +341,7 @@ async def update_character(
     body: CharacterUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -350,6 +353,7 @@ async def update_character(
         setattr(char, field, value)
     if "rules_edition" in body.model_fields_set:
         sync_subclass_keys(char)  # una sottoclasse assente nell'altra edizione resta solo testo
+        await sync_cataloged_features(session, char, lang)
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See
     # _refresh_char_full() for the full rationale.

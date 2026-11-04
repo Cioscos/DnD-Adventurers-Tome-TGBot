@@ -14,7 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
+from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
@@ -240,6 +241,7 @@ async def update_item(
     body: ItemUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -309,6 +311,7 @@ async def update_item(
     # which would otherwise break `CharacterFull.model_validate(char)` below.
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
+    await sync_cataloged_features(session, char, lang)
 
     # Emit item_equipped / item_unequipped events for installed homebrew rules.
     # SCOPE: only the explicitly-patched item — the displaced occupant (from
@@ -344,6 +347,7 @@ async def move_items_endpoint(
     body: ItemMoveRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     old_con_mod = effective_con_mod(char)
@@ -353,6 +357,7 @@ async def move_items_endpoint(
     char.recalculate_encumbrance()
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
+    await sync_cataloged_features(session, char, lang)
     notifications: list[dict] = []
     for it, slot in worn:
         if not it.is_equipped:

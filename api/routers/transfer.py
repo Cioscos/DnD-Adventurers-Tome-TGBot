@@ -18,7 +18,7 @@ from api.schemas.ddb_import import DdbImportRequest, DdbImportResult
 from api.schemas.transfer import CharacterExport
 from api.services.character_response import build_character_response
 from api.services.character_transfer import build_export, import_character, load_for_export
-from api.services.class_features import sync_class_feature_abilities
+from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from api.services.ddb_import import DdbImportError, convert, fetch_ddb, parse_ddb_id
 from api.services.spell_slots import recalc_spell_slots
 from api.services.telegram_notify import bot_token_configured, send_telegram_document
@@ -108,9 +108,12 @@ async def _import_body(request: Request) -> bytes:
     return raw
 
 
-async def _create_from(session: AsyncSession, user_id: int, data: CharacterExport, suffix: str) -> CharacterFull:
-    char = await import_character(session, user_id, data, name_suffix=suffix)
+async def _create_from(session: AsyncSession, user_id: int, data: CharacterExport, lang: str, kind: str) -> CharacterFull:
+    char = await import_character(session, user_id, data, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])[kind])
     char = await _refresh_char_full(session, char.id, user_id)
+    if "rules_edition" in data.character.model_fields_set:  # un file vecchio resta com'è
+        await sync_cataloged_features(session, char, lang)
+        char = await _refresh_char_full(session, char.id, user_id)
     return await build_character_response(session, char)
 
 
@@ -132,7 +135,7 @@ async def import_character_endpoint(
     for rec in data.character.notes.values():
         if isinstance(rec, dict):
             rec.pop("campaign_id", None)
-    return await _create_from(session, user_id, data, _SUFFIX.get(lang, _SUFFIX["it"])["import"])
+    return await _create_from(session, user_id, data, lang, "import")
 
 
 _DDB_STATUS = {"ddb_unreachable": 502}
@@ -208,4 +211,4 @@ async def duplicate_character(
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session)
     data = await build_export(session, char)
-    return await _create_from(session, user_id, data, _SUFFIX.get(lang, _SUFFIX["it"])["dup"])
+    return await _create_from(session, user_id, data, lang, "dup")

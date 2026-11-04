@@ -358,6 +358,7 @@ export default function Abilities() {
                 {current}/{max}
               </span>
             )}
+            {!hasUses && ab.is_class_feature && !ab.is_passive && <span>{t('character.abilities.unlimited')}</span>}
           </div>
           <ExpandChevron open={isOpen} />
         </Pressable>

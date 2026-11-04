@@ -102,6 +102,8 @@ async def update_ability(
     if ability.uses is not None:
         floor = max(0, ability.uses)
         ability.uses = floor if ability.max_uses is None else min(floor, ability.max_uses)
+        if ability.is_class_feature and ability.max_uses is None:  # illimitata: nessun contatore
+            ability.uses = None
     await session.flush()
 
     notifications: list[dict] = []

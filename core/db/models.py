@@ -518,6 +518,8 @@ class Ability(Base):
     feature_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     # Costo in azioni: action | bonus_action | reaction | free | special (NULL = non indicato).
     action_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    # Usi recuperati a ogni riposo breve (NULL = la ricarica segue solo restoration_type).
+    short_rest_recovers: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="abilities")
 

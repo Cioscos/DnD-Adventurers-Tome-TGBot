@@ -15,6 +15,7 @@ from api.routers.classes import _get_owned_full, _refresh_char_full
 from api.routers.stats import apply_ability_change
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
+from api.services.class_features import sync_cataloged_features
 from api.services.choices import remove_feat, resolve_asi, resolve_feat
 from core.db.models import HomebrewRule
 
@@ -57,6 +58,8 @@ async def resolve_choice(
         changed = [body.ability] if body.ability else []
     for ability in changed:  # same side effects as PATCH /ability_scores (CON HP, STR carry, AC)
         apply_ability_change(char, ability, old_con_mod)
+    if changed:
+        await sync_cataloged_features(session, char, lang)
     char.pending_choices = [c for c in choices if c["id"] != choice_id]
     char = await _refresh_char_full(char_id, user_id, session)
     return await build_character_response(session, char)

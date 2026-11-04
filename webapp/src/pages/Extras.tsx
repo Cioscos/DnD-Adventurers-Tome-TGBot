@@ -46,7 +46,7 @@ export default function Extras() {
   const druidLevel = druid?.level ?? 0
   const isMoon = /moon|luna/i.test(druid?.subclass ?? '')
   const ws = char.abilities.find((a) => a.feature_key === 'druid.wild_shape')
-  const wsUses = ws ? ws.uses ?? 0 : null
+  const wsUses = ws && ws.max_uses != null ? ws.uses ?? 0 : null // illimitata: come senza contatore
 
   return (
     <Layout title={title} backTo={`/char/${charId}`} group="character" page="extras">

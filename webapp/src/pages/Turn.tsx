@@ -134,6 +134,8 @@ export default function Turn() {
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
+      } else if (ab?.is_class_feature && ab.max_uses == null) {
+        label = `${e.label} (${t('character.abilities.unlimited')})`
       }
     }
     return (

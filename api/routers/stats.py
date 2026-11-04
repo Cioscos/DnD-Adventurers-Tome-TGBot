@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
+from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from core.db.models import AbilityScore, Character
 from core.game.stats import ability_modifier, unarmored_defense_ac
@@ -122,6 +123,7 @@ async def update_ability_score(
     body: AbilityScoreUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
@@ -144,6 +146,7 @@ async def update_ability_score(
         score.value = body.value
 
     apply_ability_change(char, ability_name.lower(), old_con_mod)
+    await sync_cataloged_features(session, char, lang)
     return await build_character_response(session, char)
 
 

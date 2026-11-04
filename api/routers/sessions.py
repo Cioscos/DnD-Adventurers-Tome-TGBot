@@ -954,6 +954,7 @@ async def _settle_move(db, actor: Character, other: Character, old_con_mod, remo
     `removed` = (id, type, name, slot) of rows taken off the actor's paper-doll. Returns notifications.
     """
     apply_con_hp(actor, old_con_mod)
+    # shortcut: cedere un oggetto indossato non ricalcola gli usi a caratteristica fino al sync successivo, qui manca la lingua per i nomi; se serve, passarla dai router.
     await db.flush()
     for c in (actor, other):
         await db.refresh(c, attribute_names=["items"])

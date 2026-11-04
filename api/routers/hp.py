@@ -422,9 +422,20 @@ async def undo_hp(
 # ---------------------------------------------------------------------------
 
 def _restores_ability(ability, rest_type: str) -> bool:
+    if ability.max_uses is None:
+        return False
+    if rest_type == "short" and ability.short_rest_recovers:
+        return True
     # A long rest includes short-rest benefits; le ex-risorse di classe sono Ability.
     types = ("long_rest", "short_rest") if rest_type == "long" else ("short_rest",)
-    return ability.restoration_type in types and ability.max_uses is not None
+    return ability.restoration_type in types
+
+
+def _restore_ability(ability, rest_type: str) -> None:
+    if rest_type == "short" and ability.short_rest_recovers:
+        ability.uses = min(ability.max_uses, (ability.uses or 0) + ability.short_rest_recovers)
+    else:
+        ability.uses = ability.max_uses
 
 
 def _restores_resource(resource, rest_type: str) -> bool:
@@ -526,7 +537,7 @@ async def rest(
         # benefits). Le ex-risorse di classe sono ora Ability e rientrano qui.
         for ability in char.abilities:
             if _restores_ability(ability, "long"):
-                ability.uses = ability.max_uses
+                _restore_ability(ability, "long")
         # Homebrew resources auto-restore on rest by restoration_type (D3),
         # mirroring abilities: a long rest restores both long_rest and short_rest.
         for resource in char.homebrew_resources:
@@ -566,7 +577,7 @@ async def rest(
         # Restore short-rest abilities (le ex-risorse di classe sono ora Ability).
         for ability in char.abilities:
             if _restores_ability(ability, "short"):
-                ability.uses = ability.max_uses
+                _restore_ability(ability, "short")
         # Homebrew resources: a short rest restores only short_rest resources (D3).
         for resource in char.homebrew_resources:
             if _restores_resource(resource, "short"):

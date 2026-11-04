@@ -86,6 +86,16 @@ describe('Turn page', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('shows an unlimited class feature without a use button', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true,
+      feature_key: 'barbarian.rage', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'long_rest',
+    }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('Ira (character.abilities.unlimited)')).toBeInTheDocument()
+    expect(screen.queryByText('character.turn.use')).not.toBeInTheDocument()
+  })
+
   it('keeps the standard actions closed until asked for', async () => {
     getChar.mockResolvedValue(char)
     renderWithProviders(<Turn />)

@@ -1366,6 +1366,7 @@
       "title": "Abilità Speciali",
       "add": "Aggiungi abilità",
       "uses_left": "{{current}}/{{max}} usi",
+      "unlimited": "illimitato",
       "passive": "Passiva",
       "active": "Attiva",
       "use": "Usa",

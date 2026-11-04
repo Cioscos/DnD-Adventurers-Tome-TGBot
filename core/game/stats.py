@@ -175,6 +175,17 @@ def effective_ability_score(
     return effective, applied
 
 
+def effective_ability_mod(char, ability: str) -> int:
+    """Effective modifier for `ability` (base score + modifiers from equipped
+    items), the same value the character sheet shows."""
+    row = next((a for a in char.ability_scores if a.name == ability), None)
+    if row is None:
+        return 0
+    eq_items = [i for i in char.items if i.is_equipped]
+    effective, _ = effective_ability_score(ability, row.value, eq_items)
+    return (effective - 10) // 2
+
+
 def _extract_ability_modifiers(item: "_ItemLike") -> list[dict]:
     """Read `ability_modifiers` from an item's metadata (parsed JSON).
 

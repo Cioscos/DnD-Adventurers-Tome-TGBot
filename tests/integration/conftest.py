@@ -16,6 +16,7 @@ from api.database import get_db
 from api.main import app
 from api.services import campaigns as campaign_svc
 from core.db.models import Base
+from core.rules import catalog
 
 TEST_USER_ID = 1234
 
@@ -25,6 +26,19 @@ def _isolate_campaign_files(tmp_path, monkeypatch):
     """Campaign delete rmtree's data/lore/{id} and data/atlas/{id}: never let a test hit the dev data folder."""
     monkeypatch.setattr(campaign_svc, "LORE_DIR", tmp_path / "lore")
     monkeypatch.setattr(campaign_svc, "ATLAS_DIR", tmp_path / "atlas")
+
+
+@pytest.fixture
+def rules_catalog(monkeypatch):
+    """Registro privilegi vuoto per il test: `rules_catalog(spec, ...)` registra privilegi di prova."""
+    registry: dict = {}
+    monkeypatch.setattr(catalog, "_REGISTRY", registry)
+
+    def register(*specs) -> None:
+        for s in specs:
+            registry[(s.edition, s.class_key)] = registry.get((s.edition, s.class_key), ()) + (s,)
+    register.clear = registry.clear
+    return register
 
 
 @pytest_asyncio.fixture

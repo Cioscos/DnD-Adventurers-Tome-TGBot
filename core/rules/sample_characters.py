@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Ability, AbilityScore, Character, CharacterClass, RestorationType
 from core.rules.edition import CLASS_KEYS, class_key
+from core.rules.feature_sync import sync_class_feature_abilities
 from core.rules.subclasses import match_subclass
 
 PREFIX = "[prova]"
@@ -57,23 +58,26 @@ async def build_rules_character(session: AsyncSession, spec: dict, user_id: int)
         general_proficiencies=spec.get("proficiencies", ["Armi semplici", "Armi da guerra"]),
         settings=spec.get("settings", {}),
     )
-    session.add(char)
-    await session.flush()
-    for ab in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"):
-        session.add(AbilityScore(character_id=char.id, name=ab, value=14))
-    classes = []
+    # Relazioni assegnate prima del flush: il sync le legge senza lazy-load in contesto async.
+    char.ability_scores = [
+        AbilityScore(name=ab, value=14)
+        for ab in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
+    ]
+    char.items, char.abilities, char.classes = [], [], []
     for name, level, subclass, die in spec["classes"]:
-        row = CharacterClass(character_id=char.id, class_name=name, level=level, subclass=subclass, hit_die=die)
+        row = CharacterClass(class_name=name, level=level, subclass=subclass, hit_die=die)
         row.subclass_key = match_subclass(subclass, class_key(row), spec["edition"])
-        session.add(row)
-        classes.append(row)
+        char.classes.append(row)
+    session.add(char)
     await session.flush()
     if "spent_uses" in spec:
         key, label, max_uses, uses = spec["spent_uses"]
-        session.add(Ability(
-            character_id=char.id, name=label, max_uses=max_uses, uses=uses, is_class_feature=True,
-            feature_key=key, source_class_id=classes[0].id, restoration_type=RestorationType.LONG_REST,
+        char.abilities.append(Ability(
+            name=label, max_uses=max_uses, uses=uses, is_class_feature=True,
+            feature_key=key, source_class_id=char.classes[0].id, restoration_type=RestorationType.LONG_REST,
         ))
+    for row in char.classes:
+        await sync_class_feature_abilities(session, char, row)
     await session.flush()
     return char
 

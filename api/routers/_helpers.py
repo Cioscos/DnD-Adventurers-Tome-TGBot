@@ -13,7 +13,7 @@ from api.services.condition_effects import release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.item_bonuses import item_bonus_total
-from core.game.stats import effective_ability_score
+from core.game.stats import effective_ability_mod
 
 logger = logging.getLogger(__name__)
 
@@ -82,17 +82,6 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
     except Exception as exc:
         logger.warning("prune_history failed for char %s: %s", char.id, exc)
         return 0
-
-
-def effective_ability_mod(char, ability: str) -> int:
-    """Effective modifier for `ability` (base score + modifiers from equipped
-    items), the same value the character sheet shows."""
-    row = next((a for a in char.ability_scores if a.name == ability), None)
-    if row is None:
-        return 0
-    eq_items = [i for i in char.items if i.is_equipped]
-    effective, _ = effective_ability_score(ability, row.value, eq_items)
-    return (effective - 10) // 2
 
 
 def apply_con_hp(char, old_con_mod: int) -> None:

@@ -166,6 +166,7 @@ class ExportAbility(BaseModel):
     is_class_feature: bool = False
     feature_key: Optional[str] = None
     action_type: Optional[ActionType] = None
+    short_rest_recovers: Optional[Int0] = None
     source_class_key: Optional[str] = None  # "c<indice in classes>"
 
     @field_validator("action_type", mode="wrap")
