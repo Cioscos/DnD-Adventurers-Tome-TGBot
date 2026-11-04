@@ -119,7 +119,7 @@ export default function Sheet({
 
             {title ? (
               <div className="relative px-5 pb-3 border-b border-dnd-border/50">
-                <h2 className="font-display text-xl font-bold text-dnd-gold-bright text-center pr-8">
+                <h2 className="font-display text-xl font-bold text-dnd-gold-bright text-center px-8">
                   {title}
                 </h2>
                 {dismissible && (
