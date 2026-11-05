@@ -106,6 +106,17 @@ class CompanionActivate(BaseModel):
     force: bool = False  # activate even with no Wild Shape uses left
 
 
+class WildHealRequest(BaseModel):
+    slot_level: int = Field(ge=1, le=9)  # Forma Selvatica da Combattimento: il livello dello slot da spendere
+
+
+class WildHealResult(BaseModel):
+    companion: CompanionRead
+    slot_level: int
+    rolls: list[int]
+    healed: int  # PF che la forma ha recuperato davvero (il massimo della forma non si supera)
+
+
 class CompanionHp(BaseModel):
     op: Literal["damage", "heal", "set_temp"]
     value: int = Field(ge=0, le=100_000)
@@ -129,5 +140,6 @@ class CompanionAttackResult(BaseModel):
     damage_rolls: list[int]
     damage_total: int
     damage_type: Optional[str] = None
+    is_magical: bool = False  # Colpo Primordiale: l'attacco in forma bestiale conta come magico per resistenze e immunità
     option_result: OptionResult | None = absent_when_none()
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server

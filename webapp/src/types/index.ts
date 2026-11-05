@@ -204,6 +204,8 @@ export interface Spell {
   /** CD e attacco della classe dell'incantesimo. */
   save_dc?: number | null
   attack_bonus?: number | null
+  /** Un privilegio lo concede a volontà: si lancia senza slot (Mille Forme). */
+  at_will?: boolean
 }
 
 export interface SpellSlot {
@@ -1082,9 +1084,19 @@ export interface CompanionAttackResult {
   damage_rolls: number[]
   damage_total: number
   damage_type: string | null
+  /** Colpo Primordiale: l'attacco in forma bestiale conta come magico per resistenze e immunità. */
+  is_magical?: boolean
   option_result?: OptionResult
   /** `[lati, valore]` dei dadi ritirabili, con l'indice del server. */
   reroll_dice?: [number, number][]
+}
+
+/** Forma Selvatica da Combattimento: la cura della forma con uno slot. */
+export interface WildHealResult {
+  companion: Companion
+  slot_level: number
+  rolls: number[]
+  healed: number
 }
 
 // Import da D&D Beyond (POST /characters/import/ddb)

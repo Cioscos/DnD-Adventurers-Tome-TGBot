@@ -135,7 +135,7 @@ async def apply_conditions(session: AsyncSession, char: Character,
     """
     old_conditions = dict(char.conditions or {})
     # Uno stato attivo (Ira Incontenibile) impedisce di aggiungere quelle condizioni; toglierle resta possibile.
-    immune = immune_conditions(char)
+    immune = immune_conditions(char) if any(changes.values()) else set()  # solo chi aggiunge ha da guardare le immunità
     changes = {c: v for c, v in changes.items() if not (v and c in immune)}
     current = dict(old_conditions)
     current.update(changes)

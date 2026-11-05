@@ -343,6 +343,8 @@ class RestRequest(BaseModel):
     interrupted: bool = False
     ate_and_drank: bool = True  # 2014: senza cibo e acqua il riposo lungo non riduce la spossatezza
     confirm_early: bool = False  # riposo lungo prima del limite di 24 h (2014) / 16 h (2024)
+    # Recupero Naturale (Druido 2014): livello dello slot -> quanti ne recupera durante un riposo breve
+    natural_recovery: Optional[dict[int, int]] = None
 
 
 class ItemChargePreview(BaseModel):

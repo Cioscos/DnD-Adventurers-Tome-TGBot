@@ -167,6 +167,12 @@ def max_pick_level(char: Character, cls: CharacterClass) -> int:
     return max((level for level, total in regular.items() if total > 0), default=0)
 
 
+def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
+    """Livello massimo dell'incantesimo di una scelta: quello della classe, o meno se la scelta è di soli trucchetti."""
+    top = max_pick_level(char, cls)
+    return top if ch.spell_level is None else min(top, ch.spell_level)
+
+
 def spell_pick_info(char: Character, choice: dict) -> dict | None:
     """Per una scelta di incantesimi: se non conta fra i conosciuti e il livello massimo ammesso; altrimenti ``None``."""
     if choice.get("kind") != "class_option":
@@ -175,7 +181,7 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
     ch = _choice_spec(char, cls, choice.get("group")) if cls else None
     if ch is None or not ch.spell_pick:
         return None
-    info = {"free": ch.spell_pick == "extra", "max_level": max_pick_level(char, cls)}
+    info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch)}
     if choice.get("retrofit"):  # R39: gli incantesimi che il personaggio ha già e può dichiarare «già sulla scheda»
         taken = (cls.options or {}).get(ch.group, [])
         free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
@@ -195,7 +201,7 @@ def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int |
         raise HTTPException(404, detail={"code": "choice_not_found"})
     if class_id is not None and class_id != cls.id:
         raise HTTPException(400, detail={"code": "bad_class"})
-    if level > max_pick_level(char, cls):
+    if level > _pick_cap(char, cls, ch):
         raise HTTPException(422, detail={"code": "spell_pick_level"})
     lowered = name.strip().lower()
     if any((srd_index and s.srd_index == srd_index) or s.name.strip().lower() == lowered for s in char.spells):

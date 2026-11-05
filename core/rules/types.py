@@ -33,6 +33,7 @@ class ChoiceSpec:
     ``extra`` no: Segreti Magici Aggiuntivi); ``options`` non si usa.
     ``owned(ctx)``: abilità che il giocatore ha già sulla scheda e che, per un personaggio esistente prima del catalogo
     (scelta con ``retrofit``, R39), si possono dichiarare «già sulla scheda» invece di aggiungerne altre.
+    ``spell_level``: con ``spell_pick``, il livello massimo dell'incantesimo scelto (0: un trucchetto).
     """
     group: str
     levels: dict[int, int]
@@ -42,6 +43,7 @@ class ChoiceSpec:
     grants: Literal["proficient", "expert", "language"] | None = None
     spell_pick: Literal["known", "extra"] | None = None
     owned: Callable[["RuleContext"], list[str]] | None = None
+    spell_level: int | None = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language"):
@@ -399,6 +401,9 @@ class FeatureSpec:
     unarmored: UnarmoredAc | None = None
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
     granted_ritual_only: bool = False  # gli incantesimi concessi si lanciano solo come rituale (Cercatore di Spiriti)
+    condition_immunities: tuple[str, ...] = ()  # condizioni che il privilegio impedisce sempre (Interdizione della Natura)
+    ignores_components: bool = False  # Arcidruido: le componenti V, S e M senza costo non servono
+    at_will_spells: tuple[str, ...] = ()  # ``srd_index`` degli incantesimi lanciabili a volontà, senza slot (Mille Forme)
     acts_when_surprised: str | None = None  # 2014: con quello stato attivo il turno da sorpreso non toglie le azioni
     zero_hp_save: ZeroHpSave | None = None
     # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce

@@ -18,7 +18,9 @@ from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
-from core.rules.spellcasting import caster_stats, can_ritual, granted_ritual_only, known_limits, prepared_limit, prepares, spell_stats
+from core.rules.spellcasting import (
+    at_will, caster_stats, can_ritual, granted_ritual_only, known_limits, prepared_limit, prepares, spell_stats,
+)
 
 
 def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
@@ -26,6 +28,7 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         stats = spell_stats(char, spell)
         if stats:
             spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
+        spell.at_will = at_will(char, spell)
 
 
 def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:

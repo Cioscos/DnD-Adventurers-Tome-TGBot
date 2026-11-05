@@ -248,6 +248,16 @@ describe('Spells page', () => {
       await waitFor(() => expect(addSpy).toHaveBeenCalledWith(9, expect.objectContaining({ name: 'Magic Missile', pick_id: 'sec1', class_id: null })))
     })
 
+    it('a cantrip-only pick says so instead of announcing a spell level', async () => {
+      const base = pickChar(true)
+      getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'bonus_cantrip', count: 1,
+        spell_pick: { free: true, max_level: 0 } }] })
+      renderPick()
+      const banner = await screen.findByTestId('spell-pick-banner')
+      expect(banner).toHaveTextContent('character.spells.pick_cantrip_banner')
+      expect(banner).not.toHaveTextContent('character.spells.pick_banner')
+    })
+
     it('says an extra secret does not count among the known spells', async () => {
       getChar.mockResolvedValue(pickChar(true))
       renderPick()

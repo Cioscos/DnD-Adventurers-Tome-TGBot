@@ -18,6 +18,7 @@ import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { askRollOptions, refreshAfterOptions, rerollDiceOf } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
 import { haptic } from '@/auth/telegram'
+import WildHealSheet, { type HealSlot } from '@/pages/extras/WildHealSheet'
 import type { Companion, CompanionAction, CompanionAttackResult } from '@/types'
 
 function EnBadge() {
@@ -36,9 +37,11 @@ interface Props {
   wildShapeUses: number | null
   /** 2024: la forma non ha PF propri (sono quelli del druido con i temporanei): niente barra né pulsanti PF. */
   formHasNoHp?: boolean
+  /** Circolo della Luna: i livelli di slot con cui curare la forma (azione bonus); `null` se il personaggio non ha il privilegio. */
+  healSlots?: HealSlot[] | null
 }
 
-export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp }: Props) {
+export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp, healSlots }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
@@ -47,6 +50,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [forceAsk, setForceAsk] = useState(false)
+  const [healing, setHealing] = useState(false)
   const [formReasons, setFormReasons] = useState<string[] | null>(null)
   const [result, setResult] = useState<{ name: string; r: CompanionAttackResult } | null>(null)
 
@@ -184,6 +188,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
           {result.name}: {result.r.to_hit_die}{result.r.to_hit_bonus >= 0 ? '+' : ''}{result.r.to_hit_bonus} = {result.r.to_hit_total}
           {result.r.is_critical && ` · ${t('character.extras.critical')}`}
           {' · '}{result.r.damage_total} {result.r.damage_type ?? ''}
+          {result.r.is_magical && ` · ${t('character.extras.magical')}`}
           <RollNotes notes={result.r.notes} className="mt-1" />
         </p>
       )}
@@ -198,9 +203,16 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
 
       {comp.kind === 'wild_shape' && (
         comp.is_active ? (
-          <Button variant="secondary" fullWidth className="min-h-11" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>
-            {t('character.extras.end_form')}
-          </Button>
+          <div className="space-y-2">
+            {healSlots && (
+              <Button variant="primary" fullWidth className="min-h-11" onClick={() => setHealing(true)}>
+                {t('character.extras.wild_heal')}
+              </Button>
+            )}
+            <Button variant="secondary" fullWidth className="min-h-11" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>
+              {t('character.extras.end_form')}
+            </Button>
+          </div>
         ) : (
           <Button fullWidth className="min-h-11" loading={activate.isPending} onClick={() => activate.mutate(false)}>
             {t('character.extras.activate')}{wildShapeUses != null ? ` (${wildShapeUses})` : ''}
@@ -229,6 +241,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
 
       <ConfirmSheet open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={() => remove.mutate()}
         title={t('character.extras.delete_title', { name: comp.name })} confirmLabel={t('common.delete')} loading={remove.isPending} />
+      {healing && healSlots && <WildHealSheet charId={charId} comp={comp} slots={healSlots} onClose={() => setHealing(false)} />}
       <ConfirmSheet open={forceAsk} onClose={() => setForceAsk(false)} onConfirm={() => activate.mutate(true)}
         title={t('character.extras.force_title')} body={t('character.extras.force_body')}
         confirmLabel={t('character.extras.force_confirm')} confirmVariant="primary" loading={activate.isPending} />

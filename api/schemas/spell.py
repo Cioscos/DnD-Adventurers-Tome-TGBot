@@ -43,6 +43,7 @@ class SpellRead(BaseModel):
     # CD e attacco della classe dell'incantesimo; li riempie il server dove serve la scheda.
     save_dc: Optional[int] = None
     attack_bonus: Optional[int] = None
+    at_will: bool = False  # un privilegio lo concede a volontà: si lancia senza slot (Mille Forme)
 
     model_config = {"from_attributes": True}
 

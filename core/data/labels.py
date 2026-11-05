@@ -68,6 +68,7 @@ ABILITY_LABELS_IT: dict[str, str] = {
 CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "turned": {"it": "Scacciato", "en": "Turned"},
     "thoughts_read": {"it": "Pensieri letti", "en": "Thoughts read"},
+    "nature_ward": {"it": "Dissuaso", "en": "Warded off"},
 }
 
 

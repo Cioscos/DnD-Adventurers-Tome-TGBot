@@ -11,6 +11,9 @@ const FAMILIAR_FORMS = new Set([
 
 type Rule = Pick<MonsterEntry, 'index' | 'type' | 'challenge_rating' | 'speed'>
 
+// Forma Selvatica Elementale (Circolo della Luna 2014, dal 10°): i quattro elementali, senza limiti di GS (mirror di `core/rules/forms.py`).
+const ELEMENTALS = new Set(['air-elemental', 'earth-elemental', 'fire-elemental', 'water-elemental'])
+
 /** i18n key of the advisory warning, or null when the form is allowed. */
 export function familiarWarning(entry: Pick<MonsterEntry, 'index'>): string | null {
   return FAMILIAR_FORMS.has(entry.index) ? null : 'character.extras.warn.familiar_form'
@@ -26,6 +29,7 @@ export function wildShapeMaxCr(druidLevel: number, isMoon: boolean, edition: str
 
 /** i18n key of the first broken Wild Shape limit, or null. Advisory: the server asks to confirm on activation. */
 export function wildShapeWarning(entry: Rule, druidLevel: number, isMoon: boolean, edition: string = '2014'): string | null {
+  if (edition !== '2024' && isMoon && druidLevel >= 10 && ELEMENTALS.has(entry.index)) return null // Forma Selvatica Elementale
   if (entry.type !== 'beast') return 'character.extras.warn.not_beast'
   if (entry.challenge_rating > wildShapeMaxCr(druidLevel, isMoon, edition)) return 'character.extras.warn.cr'
   if ((entry.speed.fly_ft ?? 0) > 0 && druidLevel < 8) return 'character.extras.warn.fly'

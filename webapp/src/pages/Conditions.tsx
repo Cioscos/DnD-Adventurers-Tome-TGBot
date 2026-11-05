@@ -108,6 +108,8 @@ export default function Conditions() {
   const [filterActive, setFilterActive] = useState(false)
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
   const [confirmLethalOpen, setConfirmLethalOpen] = useState(false)
+  // Interdizione della Natura: affascinato o spaventato che chiede da dove viene (elementale o folletto = immune).
+  const [wardAsk, setWardAsk] = useState<'charmed' | 'frightened' | null>(null)
   // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
   const [nextDuration, setNextDuration] = useState<number | null>(null)
   const tick = useTickRound(charId)
@@ -206,8 +208,24 @@ export default function Conditions() {
     (c) => !conditions[c.key] || typeof conditions[c.key] !== 'object',
   )
 
+  const hasWard = (char.abilities ?? []).some((a) => a.feature_key === 'druid.natures_ward')
+
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
+    if (!current && hasWard) {
+      if (key === 'poisoned') {  // il server la rifiuterebbe: lo diciamo prima
+        toast.info(t('character.conditions.ward.poisoned'))
+        return
+      }
+      if (key === 'charmed' || key === 'frightened') {
+        setWardAsk(key)
+        return
+      }
+    }
+    apply(key, current)
+  }
+
+  const apply = (key: string, current: unknown) => {
     setPendingConditionKey(key)
     setJustActivated(current ? null : key)
     mutation.mutate({
@@ -590,6 +608,17 @@ export default function Conditions() {
           onClose={() => setDetailKey(null)}
         />
       )}
+
+      <ConfirmSheet
+        open={wardAsk !== null}
+        onClose={() => { setWardAsk(null); toast.info(t('character.conditions.ward.immune_done')) }}
+        title={t('character.conditions.ward.title')}
+        body={t('character.conditions.ward.body')}
+        confirmLabel={t('character.conditions.ward.apply')}
+        cancelLabel={t('character.conditions.ward.immune')}
+        confirmVariant="primary"
+        onConfirm={() => { if (wardAsk) apply(wardAsk, false); setWardAsk(null) }}
+      />
 
       <ConfirmSheet
         open={confirmLethalOpen}

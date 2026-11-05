@@ -80,8 +80,10 @@ vi.mock('@/components/ui/FilterChip', async () => {
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { open: boolean; confirmLabel: string; onConfirm: () => void }) =>
-      p.open ? React.createElement('button', { onClick: p.onConfirm }, p.confirmLabel) : null,
+    default: (p: { open: boolean; confirmLabel: string; cancelLabel?: string; onConfirm: () => void; onClose: () => void }) =>
+      p.open ? React.createElement('div', null,
+        React.createElement('button', { onClick: p.onConfirm }, p.confirmLabel),
+        p.cancelLabel ? React.createElement('button', { onClick: p.onClose }, p.cancelLabel) : null) : null,
   }
 })
 vi.mock('@/pages/conditions/ConditionDetailModal', async () => ({ default: () => null }))
@@ -141,6 +143,49 @@ describe('Conditions page', () => {
     renderWithProviders(<Conditions />)
     await userEvent.click(await screen.findByText('character.conditions.blinded'))
     await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { blinded: true }))
+  })
+
+  describe("Nature's Ward (druid, level 10)", () => {
+    const ward = { id: 5, conditions: {}, abilities: [{ feature_key: 'druid.natures_ward' }] }
+
+    it('never sends poisoned: the druid is immune', async () => {
+      getChar.mockResolvedValue(ward)
+      listRules.mockResolvedValue([])
+      renderWithProviders(<Conditions />)
+      await userEvent.click(await screen.findByText('character.conditions.poisoned'))
+      expect(updateConditions).not.toHaveBeenCalled()
+      expect(toastInfo).toHaveBeenCalledWith('character.conditions.ward.poisoned')
+    })
+
+    it('asks whether charm or fear comes from an elemental or a fey before applying it', async () => {
+      getChar.mockResolvedValue(ward)
+      listRules.mockResolvedValue([])
+      updateConditions.mockResolvedValue({ id: 5, conditions: { charmed: true } })
+      renderWithProviders(<Conditions />)
+      await userEvent.click(await screen.findByText('character.conditions.charmed'))
+      expect(updateConditions).not.toHaveBeenCalled()
+      await userEvent.click(await screen.findByText('character.conditions.ward.apply'))  // no: la causa è un'altra
+      await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { charmed: true }))
+    })
+
+    it('an elemental or fey source leaves the druid untouched', async () => {
+      getChar.mockResolvedValue(ward)
+      listRules.mockResolvedValue([])
+      renderWithProviders(<Conditions />)
+      await userEvent.click(await screen.findByText('character.conditions.frightened'))
+      await userEvent.click(await screen.findByText('character.conditions.ward.immune'))
+      expect(updateConditions).not.toHaveBeenCalled()
+      expect(toastInfo).toHaveBeenCalledWith('character.conditions.ward.immune_done')
+    })
+
+    it('without the feature the conditions go through as before', async () => {
+      getChar.mockResolvedValue({ id: 5, conditions: {}, abilities: [] })
+      listRules.mockResolvedValue([])
+      updateConditions.mockResolvedValue({ id: 5, conditions: { charmed: true } })
+      renderWithProviders(<Conditions />)
+      await userEvent.click(await screen.findByText('character.conditions.charmed'))
+      await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { charmed: true }))
+    })
   })
 
   it('setting an exhaustion level PATCHes the cumulative value', async () => {

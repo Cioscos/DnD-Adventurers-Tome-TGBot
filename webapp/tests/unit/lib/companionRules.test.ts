@@ -38,6 +38,15 @@ describe('wildShapeWarning', () => {
     expect(wildShapeMaxCr(2, true, '2024')).toBe(0.25)
     expect(wildShapeMaxCr(6, true, '2024')).toBe(2)
   })
+  it('Elemental Wild Shape: the four elementals pass for the Moon from level 10 (2014), nobody else', () => {
+    const elemental = (index: string) => ({ index, type: 'elemental', challenge_rating: 5, speed: { walk_ft: 50 } })
+    expect(wildShapeWarning(elemental('fire-elemental'), 10, true)).toBeNull()
+    expect(wildShapeWarning(elemental('water-elemental'), 14, true)).toBeNull()
+    expect(wildShapeWarning(elemental('fire-elemental'), 9, true)).toBe('character.extras.warn.not_beast')
+    expect(wildShapeWarning(elemental('fire-elemental'), 10, false)).toBe('character.extras.warn.not_beast')
+    expect(wildShapeWarning(elemental('fire-elemental'), 10, true, '2024')).toBe('character.extras.warn.not_beast')
+    expect(wildShapeWarning(elemental('invisible-stalker'), 10, true)).toBe('character.extras.warn.not_beast')
+  })
   it('requires a beast', () => {
     expect(wildShapeWarning(beast(0.25, { walk_ft: 30 }, 'monstrosity'), 8, false)).toBe('character.extras.warn.not_beast')
   })

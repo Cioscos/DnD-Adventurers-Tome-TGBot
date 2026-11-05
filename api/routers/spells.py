@@ -58,7 +58,7 @@ from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
 from core.game.stats import cantrip_dice_multiplier
 from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
-from core.rules.spellcasting import can_ritual, cast_warnings, caster_stats, casting_kind, spell_stats
+from core.rules.spellcasting import at_will, can_ritual, cast_warnings, caster_stats, casting_kind, spell_stats
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -174,9 +174,11 @@ def _consume_cast(
     Condiviso da /use e /attack. Una regola violata e non confermata risponde 409 ``cast_confirm`` prima di spendere.
     """
     free_state = None
-    if free_cast:  # R43: serve uno stato attivo per questo incantesimo; costa l'azione, non uno slot
+    free_at_will = False
+    if free_cast:  # R43: serve uno stato attivo (o un privilegio a volontà) per questo incantesimo; costa l'azione, non uno slot
         free_state = free_cast_state(char, spell)
-        if free_state is None or ritual:
+        free_at_will = free_state is None and at_will(char, spell)
+        if (free_state is None and not free_at_will) or ritual:
             raise HTTPException(status_code=409, detail={"code": "free_cast_unavailable"})
     if ritual:
         # Lancio rituale: +10 min, nessuno slot. Richiede il tag ritual e chi può celebrarlo per edizione.
@@ -191,7 +193,10 @@ def _consume_cast(
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
-    if free_state is not None:
+    if free_at_will:
+        spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
+        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
+    elif free_state is not None:
         spend(char, "action")  # 409 turn_slot_used: nulla è ancora scritto
         remove_state(char, free_state["key"])
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")

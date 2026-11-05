@@ -7,14 +7,14 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
 from api.schemas.companion import (
     DICE_RE, MAX_COMPANIONS, CompanionActivate, CompanionAttack, CompanionAttackResult, CompanionCreate,
-    CompanionHp, CompanionRead, CompanionUpdate,
+    CompanionHp, CompanionRead, CompanionUpdate, WildHealRequest, WildHealResult,
 )
 from api.routers.hp import _get_owned_full
 from api.routers.items import _option_damage
@@ -24,10 +24,11 @@ from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, use_options
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import deactivate_other_forms, end_form, form_limits, start_form
-from core.db.models import Ability, Character, CharacterHistory, Companion
+from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
 from core.rules.companions import companion_stats
 from core.rules.edition import character_edition
-from core.rules.forms import form_violations
+from core.rules.catalog import active_features
+from core.rules.forms import elemental_violations, form_violations, is_elemental_form
 from core.rules.modifiers import Applied, modifiers_for
 
 router = APIRouter(prefix="/characters", tags=["companions"])
@@ -168,7 +169,12 @@ async def activate_wild_shape(
         raise HTTPException(status_code=409, detail="character_down")
     force = bool(body and body.force)
     limits = form_limits(char)
-    reasons = form_violations(limits, comp.statblock or {}) if limits is not None else []
+    # Forma Selvatica Elementale (2014): un elementale costa due usi e ha regole sue
+    elemental = character_edition(char) == "2014" and is_elemental_form(comp.statblock or {}, comp.srd_index)
+    reasons: list[str] = []
+    if limits is not None:
+        reasons = (elemental_violations(limits, comp.statblock or {}, comp.srd_index) if elemental
+                   else form_violations(limits, comp.statblock or {}))
     if reasons and not force:  # la forma rompe i limiti di livello e circolo: si ammette solo confermando
         raise HTTPException(status_code=409, detail={"code": "form_not_allowed", "reasons": reasons})
     if limits is not None:  # 2014 azione (Luna: bonus), 2024 azione bonus; 409 turn_slot_used prima di spendere usi
@@ -181,10 +187,13 @@ async def activate_wild_shape(
         select(Ability).where(Ability.character_id == char_id, Ability.feature_key == "druid.wild_shape")
     )).scalars().first()
     if ability is not None and ability.max_uses is not None:  # NULL: illimitata
-        if (ability.uses or 0) > 0:
-            ability.uses -= 1
+        needed, have = (2 if elemental and limits is not None else 1), ability.uses or 0
+        if have >= needed:
+            ability.uses = have - needed
         elif not force:
             raise HTTPException(status_code=409, detail="no_wild_shape_uses")
+        else:
+            ability.uses = 0
     comp.is_active = True
     comp.current_hp = comp.max_hp  # each transformation starts at full HP
     comp.temp_hp = 0
@@ -204,9 +213,52 @@ async def deactivate_wild_shape(
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
     if comp.is_active:
+        if character_edition(char) == "2014" and form_limits(char) is not None:
+            try:
+                spend(char, "bonus")  # tornare normali è un'azione bonus; se è già spesa si torna lo stesso
+            except HTTPException:
+                pass
         end_form(char, comp)
         _history(session, char_id, "companion_hp", "Forma selvatica terminata")
     return _read(char, comp)
+
+
+@router.post("/{char_id}/companions/{comp_id}/wild-heal", response_model=WildHealResult)
+async def wild_heal(
+    char_id: int,
+    comp_id: int,
+    body: WildHealRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> WildHealResult:
+    """Forma Selvatica da Combattimento (Druido 2014, Circolo della Luna): in forma, azione bonus e uno slot per curare la
+    forma di 1d8 per livello dello slot. Il server tira; lo slot si prende con un UPDATE condizionato."""
+    char = await _get_char(session, char_id, user_id)
+    comp = await _get_companion(session, char_id, comp_id)
+    if comp.kind != "wild_shape" or not comp.is_active:
+        raise HTTPException(status_code=409, detail={"code": "form_not_active"})
+    if not any(spec.key == "druid.combat_wild_shape" for spec, _row in active_features(char)):
+        raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
+    candidates = sorted((s for s in char.spell_slots if s.level == body.slot_level and s.used < s.total),
+                        key=lambda s: s.is_pact)  # prima gli slot normali, poi quelli del Patto
+    if not candidates:
+        raise HTTPException(status_code=409, detail={"code": "no_slot"})
+    refuse_if_incapacitated(char)
+    spend(char, "bonus")  # 409 turn_slot_used: la risposta annulla tutto, nulla è ancora speso
+    taken = await session.execute(
+        update(SpellSlot).where(SpellSlot.id == candidates[0].id, SpellSlot.used < SpellSlot.total)
+        .values(used=SpellSlot.used + 1))
+    if taken.rowcount != 1:  # un'altra richiesta ha preso l'ultimo slot
+        raise HTTPException(status_code=409, detail={"code": "no_slot"})
+    await session.refresh(candidates[0])
+    rolls = [random.randint(1, 8) for _ in range(body.slot_level)]
+    record_dice(char, [("d8", r) for r in rolls])
+    before = comp.current_hp
+    comp.current_hp = min(_effective_max_hp(char, comp), before + sum(rolls))
+    _history(session, char_id, "companion_hp",
+             f"Forma selvatica da combattimento: {comp.name} +{comp.current_hp - before} PF (slot di livello {body.slot_level})")
+    return WildHealResult(companion=_read(char, comp), slot_level=body.slot_level, rolls=rolls,
+                          healed=comp.current_hp - before)
 
 
 @router.delete("/{char_id}/companions/{comp_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -315,6 +367,7 @@ async def companion_attack(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
         dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,
         damage_total=total, damage_type=action.get("damage_type"),
+        is_magical=in_form and any(spec.key == "druid.primal_strike" for spec, _row in active_features(char)),
         option_result=option_result(opts, option_rolls, option_total),
     )
     turn = get_turn(char)  # i dadi di questo colpo si possono ritirare, come per l'arma

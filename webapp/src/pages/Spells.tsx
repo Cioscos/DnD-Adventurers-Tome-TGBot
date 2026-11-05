@@ -378,7 +378,9 @@ export default function Spells() {
         <Surface variant="arcane">
           <div data-testid="spell-pick-banner" className="space-y-1">
             <p className="font-body text-sm text-dnd-text">
-              {t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
+              {pick.spell_pick.max_level === 0
+                ? t('character.spells.pick_cantrip_banner', { count: pick.count ?? 0 })
+                : t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
             </p>
             {pick.spell_pick.free && (
               <p className="font-body text-xs text-dnd-text-muted">{t('character.spells.pick_free')}</p>

@@ -38,8 +38,12 @@ def free_cast_state(char: Any, spell: Any) -> dict | None:
 
 
 def immune_conditions(char: Any) -> set[str]:
-    """Condizioni che gli stati attivi impediscono (e sospendono se già presenti)."""
-    return {c for s in char.active_states or [] for c in s.get("immune_conditions") or []}
+    """Condizioni che gli stati attivi e i privilegi (Interdizione della Natura) impediscono, sospendendo quelle già presenti."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    from_states = {c for s in char.active_states or [] for c in s.get("immune_conditions") or []}
+    if "classes" not in vars(char):  # personaggio letto senza classi (un altro PG su cui si applica un effetto): solo gli stati
+        return from_states
+    return from_states | {c for spec, _row in active_features(char) for c in spec.condition_immunities}
 
 
 def casting_blocked_by(char: Any) -> bool:

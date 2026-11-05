@@ -20,6 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
+from api.services.natural_recovery import recover as recover_slots
 from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.rules_turn import get_turn, set_damaged
@@ -663,6 +664,8 @@ async def rest(
         return await build_character_response(session, char)
     edition = character_edition(char)
     rest_type = body.rest_type
+    if body.natural_recovery and rest_type != "short":
+        raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
         if char.current_hit_points <= 0 and char.hit_points > 0:
@@ -679,6 +682,11 @@ async def rest(
         if _utcnow() - datetime.fromisoformat(char.last_long_rest_at) < gap:
             raise HTTPException(status_code=409, detail="long_rest_too_soon")
     notifications: list[dict] = []
+    if body.natural_recovery:  # convalida ed effetto prima di ogni altra scrittura del riposo
+        back = await recover_slots(session, char, body.natural_recovery)
+        _add_history(session, char.id, "rest",
+                     "Recupero Naturale: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
+                     meta={"kind": "natural_recovery", "slots": {str(lv): n for lv, n in back.items()}})
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     fx = compute_rest_effects(char, rest_type, hb_hp_bonus, body.ate_and_drank)
     for r in plan_item_recharges(char.items, rest_type):

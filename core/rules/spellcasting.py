@@ -1,6 +1,7 @@
 """Incantesimi per edizione e per classe: slot, limiti, CD e conferme al lancio. Valori dalle schede delle classi."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
@@ -211,6 +212,29 @@ def _form_block(char: Any) -> bool:
             and not any(spec.cast_in_form for spec, _row in active_features(char)))
 
 
+def at_will(char: Any, spell: Any) -> bool:
+    """Un privilegio attivo concede l'incantesimo a volontà: si lancia senza slot, tutte le volte che si vuole."""
+    key = getattr(spell, "srd_index", None)
+    return bool(key) and any(key in spec.at_will_spells for spec, _row in active_features(char))
+
+
+_MATERIAL = re.compile(r"^M(?![A-Za-z])", re.IGNORECASE)
+
+
+def _form_materials(char: Any, spell: Any) -> str | None:
+    """Incantesimi Bestiali: in forma bestiale non si forniscono materiali. L'Arcidruido ignora quelli senza costo, ma l'app
+    non sa se il materiale ne ha uno: glielo chiede."""
+    if not any(s.get("key") == "wild_shape" for s in char.active_states or []):
+        return None
+    specs = [spec for spec, _row in active_features(char)]
+    if not any(s.cast_in_form for s in specs):
+        return None
+    tokens = [t.strip() for t in (spell.components or "").replace(";", ",").split(",")]
+    if not any(_MATERIAL.match(t) for t in tokens):
+        return None
+    return "form_materials_cost" if any(s.ignores_components for s in specs) else "form_materials"
+
+
 def _turn_warning(char: Any, spell: Any) -> str | None:
     kind = casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
@@ -228,6 +252,8 @@ def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char):
         out.append("wild_shape")
+    elif (materials := _form_materials(char, spell)) is not None:
+        out.append(materials)
     if casting_blocked_by(char):
         out.append("state_blocks_casting")
     if not ritual and spell.level > 0 and granted_ritual_only(char, spell):

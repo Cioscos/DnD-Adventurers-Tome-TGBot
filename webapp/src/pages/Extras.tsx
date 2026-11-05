@@ -49,6 +49,11 @@ export default function Extras() {
   const edition = char.rules_edition ?? '2014'
   const ws = char.abilities.find((a) => a.feature_key === 'druid.wild_shape')
   const wsUses = ws && ws.max_uses != null ? ws.uses ?? 0 : null // illimitata: come senza contatore
+  // Circolo della Luna: gli slot con cui curare la forma (un livello per volta, quanti ne restano)
+  const healSlots = char.abilities.some((a) => a.feature_key === 'druid.combat_wild_shape')
+    ? [...new Set(char.spell_slots.filter((s) => s.available > 0).map((s) => s.level))].sort((a, b) => a - b)
+      .map((level) => ({ level, left: char.spell_slots.filter((s) => s.level === level).reduce((n, s) => n + s.available, 0) }))
+    : null
 
   return (
     <Layout title={title} backTo={`/char/${charId}`} group="character" page="extras">
@@ -66,7 +71,7 @@ export default function Extras() {
                 {t(`character.extras.kinds.${kind}`)}
               </h2>
               {rows.map((c) => <CompanionCard key={c.id} charId={charId} comp={c} wildShapeUses={wsUses}
-                formHasNoHp={edition === '2024' && druidLevel > 0} />)}
+                formHasNoHp={edition === '2024' && druidLevel > 0} healSlots={healSlots} />)}
             </section>
           )
         })}

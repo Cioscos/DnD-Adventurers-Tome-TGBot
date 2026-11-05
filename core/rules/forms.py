@@ -20,6 +20,7 @@ class FormLimits:
     temp_hp: int
     own_hp: bool
     ac_wisdom: bool = False  # 2024, Circolo della Luna: CA minima 13 + modificatore di Saggezza
+    elemental: bool = False  # 2014, Circolo della Luna dal 10°: Forma Selvatica Elementale (due usi)
 
 
 def FormRules(edition: Edition, level: int, subclass_key: str | None) -> FormLimits:  # noqa: N802
@@ -30,12 +31,30 @@ def FormRules(edition: Edition, level: int, subclass_key: str | None) -> FormLim
         if moon and cr is not None:
             cr = 1 if level < 6 else level // 3
         return FormLimits(max_cr=cr, fly=level >= 8, swim=level >= 4, known_forms=None,
-                          rounds=level // 2 * ROUNDS_PER_HOUR, temp_hp=0, own_hp=True)
+                          rounds=level // 2 * ROUNDS_PER_HOUR, temp_hp=0, own_hp=True, elemental=moon and level >= 10)
     if moon and level >= 3:
         cr = level // 3
     known = None if level < 2 else 4 if level < 4 else 6 if level < 8 else 8
     return FormLimits(max_cr=cr, fly=level >= 8, swim=True, known_forms=known, rounds=level // 2 * ROUNDS_PER_HOUR,
                       temp_hp=level * (3 if moon and level >= 3 else 1), own_hp=False, ac_wisdom=moon and level >= 3)
+
+
+ELEMENTALS = frozenset({"air-elemental", "earth-elemental", "fire-elemental", "water-elemental"})
+
+
+def is_elemental_form(statblock: dict, srd_index: str | None) -> bool:
+    """La forma è un elementale (Forma Selvatica Elementale): per tipo dello statblock o per indice dei quattro."""
+    return statblock.get("type") == "elemental" or srd_index in ELEMENTALS
+
+
+def elemental_violations(limits: FormLimits, statblock: dict, srd_index: str | None) -> list[str]:
+    """Forma Selvatica Elementale: ``no_elemental_shape`` (non è la Luna dal 10°) o ``not_elemental_form`` (un elementale
+    SRD che non è fra i quattro). Il manuale non dà limiti di GS, volo o nuoto: non se ne controlla nessuno."""
+    if not limits.elemental:
+        return ["no_elemental_shape"]
+    if srd_index is not None and srd_index not in ELEMENTALS:
+        return ["not_elemental_form"]
+    return []
 
 
 def form_violations(limits: FormLimits, statblock: dict) -> list[str]:

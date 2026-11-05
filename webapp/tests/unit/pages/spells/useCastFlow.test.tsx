@@ -239,6 +239,22 @@ describe('useCastFlow damageless casts', () => {
     expect(updateConc).not.toHaveBeenCalled()
   })
 
+  it('a spell granted at will is cast at once without a slot (Thousand Forms)', async () => {
+    useSpell.mockResolvedValue(char)
+    renderFlow({ ...bless, id: 8, name: 'Alterare se stessi', level: 2, srd_index: 'alter-self', at_will: true } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({
+      free_cast: true, slot_level: null, as_ritual: false })))
+    expect(screen.queryByText('cast-slot-3')).toBeNull()  // nessuna scelta dello slot
+  })
+
+  it('a spell that is not at will still asks for the slot', async () => {
+    renderFlow(bless)
+    await userEvent.click(screen.getByText('begin'))
+    expect(await screen.findByText('cast-slot-3')).toBeInTheDocument()
+    expect(useSpell).not.toHaveBeenCalled()
+  })
+
   it('a refused confirmation casts nothing and shows no error', async () => {
     castCheck.mockResolvedValue(['armor'])
     renderFlow(bless)

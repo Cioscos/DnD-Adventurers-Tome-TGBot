@@ -72,6 +72,7 @@ import type {
   SpellAttackResult,
   Companion,
   CompanionAttackResult,
+  WildHealResult,
   CompanionPayload,
   SessionFeedResponse,
   SessionMessage,
@@ -562,7 +563,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number> },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',
@@ -981,6 +982,10 @@ export const api = {
       request<Companion>(`/characters/${charId}/companions/${id}/activate`, { method: 'POST', body: JSON.stringify({ force }) }),
     deactivate: (charId: number, id: number) =>
       request<Companion>(`/characters/${charId}/companions/${id}/deactivate`, { method: 'POST' }),
+    wildHeal: (charId: number, id: number, slotLevel: number) =>
+      request<WildHealResult>(`/characters/${charId}/companions/${id}/wild-heal`, {
+        method: 'POST', body: JSON.stringify({ slot_level: slotLevel }),
+      }),
   },
 
   abilities: {

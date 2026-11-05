@@ -30,7 +30,7 @@ export const CONDITION_ICONS: Record<string, IconType> = {
 
 /** Condizioni `custom:<nome>` che il catalogo dei privilegi imposta su altri: hanno l'etichetta in `target_effect.custom`
  *  (specchio di `CUSTOM_CONDITION_LABELS` in `core/data/labels.py`). Quelle scritte dal giocatore si mostrano col suo nome. */
-const CATALOG_CUSTOM = ['turned', 'thoughts_read', 'sap', 'slow']
+const CATALOG_CUSTOM = ['turned', 'thoughts_read', 'nature_ward', 'sap', 'slow']
 
 /** Nome di una condizione per slug, anche `custom:<nome>`: mai la chiave grezza. */
 export function conditionLabel(slug: string, t: TFunction): string {

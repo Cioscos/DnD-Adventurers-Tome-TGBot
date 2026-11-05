@@ -191,6 +191,11 @@
       "nothing": "Niente da recuperare"
     },
     "quick_actions": {
+      "natural_recovery": "Recupero Naturale",
+      "natural_recovery_hint": "Riprendi slot spesi, fino a metà del livello da druido (per eccesso) in livelli di slot. Livelli ancora recuperabili:",
+      "natural_recovery_slot": "Slot di livello {{level}} (spesi: {{spent}})",
+      "natural_recovery_less": "Meno slot di livello {{level}}",
+      "natural_recovery_more": "Più slot di livello {{level}}",
       "song_of_rest": "Canto di Riposo",
       "song_of_rest_hint": "Chi spende Dadi Vita in questo riposo recupera un dado extra. Dura fino al riposo lungo, al prossimo nuovo turno o finché non lo spegni.",
       "group_order": "Ordine",
@@ -539,6 +544,7 @@
       "not_prepared": "Non preparato",
       "prepared_counter": "Preparati",
       "pick_banner": "Segreti Magici: ancora {{count}} da scegliere fra gli incantesimi di qualsiasi classe, fino al livello {{max}} (anche trucchetti). Aggiungili uno alla volta.",
+      "pick_cantrip_banner": "Scegli {{count}} trucchetto fra quelli che ti concede il privilegio. Aggiungilo dal catalogo.",
       "pick_free": "Questi incantesimi non contano fra quelli conosciuti.",
       "spell_pick_level": "Livello troppo alto: non puoi ancora lanciare incantesimi di questo livello.",
       "spell_already_known": "Conosci già questo incantesimo: scegline un altro.",
@@ -561,7 +567,11 @@
         "state_blocks_casting_title": "Incantesimi durante un effetto attivo",
         "state_blocks_casting_body": "Un effetto attivo (per esempio l'Ira) impedisce di lanciare incantesimi. Lanciarlo comunque?",
         "ritual_only_title": "Solo come rituale",
-        "ritual_only_body": "Questo incantesimo ti è concesso da un privilegio e si lancia solo come rituale."
+        "ritual_only_body": "Questo incantesimo ti è concesso da un privilegio e si lancia solo come rituale.",
+        "form_materials_title": "Materiali in forma bestiale",
+        "form_materials_body": "In forma bestiale non puoi fornire componenti materiali: l'incantesimo ne richiede. Lanciarlo comunque?",
+        "form_materials_cost_title": "Materiale in forma bestiale",
+        "form_materials_cost_body": "Come Arcidruido ignori i materiali senza costo, ma in forma bestiale non fornisci gli altri. Questo materiale ha un costo?"
       },
       "class_label": "Classe dell'incantesimo",
       "class_auto": "Migliore",
@@ -809,7 +819,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -852,6 +862,14 @@
         "refund_title": "Ultimo tiro: {{total}}"
     },
     "conditions": {
+      "ward": {
+        "title": "Interdizione della Natura",
+        "body": "La condizione viene da un elementale o da un folletto?",
+        "immune": "Sì: sono immune",
+        "apply": "No: applicala",
+        "immune_done": "Elementali e folletti non possono affascinarti né spaventarti.",
+        "poisoned": "Sei immune alla condizione avvelenato (Interdizione della Natura)."
+      },
       "duration": {
         "label": "Durata in round",
         "until_end": "Fino a fine",
@@ -1079,7 +1097,7 @@
       "hp_goes_to_form": "Danni e cure vanno alla forma: {{name}}",
       "character_down": "Il personaggio è a 0 PF: impossibile assumere una forma.",
       "force_title": "Nessun uso di Forma Selvatica",
-      "force_body": "Non hai usi rimasti. Attivare comunque la forma?",
+      "force_body": "Non hai usi sufficienti di Forma Selvatica (l'elementale ne costa due). Attivare comunque la forma?",
       "force_confirm": "Attiva comunque",
       "delete_title": "Eliminare {{name}}?",
       "limit": "Limite di 30 elementi raggiunto.",
@@ -1091,8 +1109,17 @@
         "not_beast": "Serve una bestia.",
         "cr": "Il GS supera il limite del tuo livello.",
         "fly": "Il volo è ammesso dall'8° livello.",
-        "swim": "Il nuoto è ammesso dal 4° livello."
+        "swim": "Il nuoto è ammesso dal 4° livello.",
+        "no_elemental_shape": "La forma elementale è del Circolo della Luna dal 10° livello.",
+        "not_elemental_form": "Servono l'elementale dell'aria, della terra, del fuoco o dell'acqua."
       },
+      "magical": "magico",
+      "wild_heal": "Cura la forma con uno slot",
+      "wild_heal_title": "Forma Selvatica da Combattimento",
+      "wild_heal_hint": "Azione bonus: spendi uno slot e {{name}} recupera 1d8 PF per livello dello slot.",
+      "wild_heal_slot": "Slot di livello {{level}} ({{left}} rimasti): {{dice}}",
+      "wild_heal_no_slot": "Non hai slot da spendere.",
+      "wild_heal_done": "La forma recupera {{n}} PF ({{dice}})",
       "critical": "critico",
       "statblock": "Scheda mostro",
       "kinds": {

@@ -191,6 +191,11 @@
       "nothing": "Nothing to recover"
     },
     "quick_actions": {
+      "natural_recovery": "Natural Recovery",
+      "natural_recovery_hint": "Regain spent slots, up to half your druid level (rounded up) in slot levels. Levels still recoverable:",
+      "natural_recovery_slot": "Level {{level}} slots (spent: {{spent}})",
+      "natural_recovery_less": "Fewer level {{level}} slots",
+      "natural_recovery_more": "More level {{level}} slots",
       "song_of_rest": "Song of Rest",
       "song_of_rest_hint": "Whoever spends Hit Dice during this rest regains an extra die. It lasts until a long rest, the next new turn or until you turn it off.",
       "group_order": "Order",
@@ -539,6 +544,7 @@
       "not_prepared": "Not prepared",
       "prepared_counter": "Prepared",
       "pick_banner": "Magical Secrets: {{count}} left to choose among the spells of any class, up to level {{max}} (cantrips too). Add them one at a time.",
+      "pick_cantrip_banner": "Choose {{count}} cantrip granted by the feature. Add it from the catalog.",
       "pick_free": "These spells do not count among your known spells.",
       "spell_pick_level": "Level too high: you cannot cast spells of this level yet.",
       "spell_already_known": "You already know this spell: pick another.",
@@ -561,7 +567,11 @@
         "state_blocks_casting_title": "Spells during an active effect",
         "state_blocks_casting_body": "An active effect (such as Rage) stops you from casting spells. Cast it anyway?",
         "ritual_only_title": "Ritual only",
-        "ritual_only_body": "A feature grants you this spell and it can only be cast as a ritual."
+        "ritual_only_body": "A feature grants you this spell and it can only be cast as a ritual.",
+        "form_materials_title": "Materials in beast shape",
+        "form_materials_body": "In beast shape you cannot provide material components, and this spell needs some. Cast it anyway?",
+        "form_materials_cost_title": "Material in beast shape",
+        "form_materials_cost_body": "As Archdruid you ignore costless materials, but in beast shape you cannot provide the others. Does this material have a cost?"
       },
       "class_label": "Spell's class",
       "class_auto": "Best",
@@ -809,7 +819,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -852,6 +862,14 @@
         "refund_title": "Last roll: {{total}}"
     },
     "conditions": {
+      "ward": {
+        "title": "Nature's Ward",
+        "body": "Does the condition come from an elemental or a fey?",
+        "immune": "Yes: I am immune",
+        "apply": "No: apply it",
+        "immune_done": "Elementals and fey cannot charm or frighten you.",
+        "poisoned": "You are immune to the poisoned condition (Nature's Ward)."
+      },
       "duration": {
         "label": "Duration in rounds",
         "until_end": "Until ended",
@@ -1080,7 +1098,7 @@
       "hp_goes_to_form": "Damage and healing go to the form: {{name}}",
       "character_down": "The character is at 0 HP: cannot assume a form.",
       "force_title": "No Wild Shape uses left",
-      "force_body": "You have no uses left. Activate the form anyway?",
+      "force_body": "You do not have enough Wild Shape uses (an elemental costs two). Activate the form anyway?",
       "force_confirm": "Activate anyway",
       "delete_title": "Delete {{name}}?",
       "limit": "Limit of 30 entries reached.",
@@ -1092,8 +1110,17 @@
         "not_beast": "It must be a beast.",
         "cr": "The CR is above the limit for your level.",
         "fly": "Flying is allowed from level 8.",
-        "swim": "Swimming is allowed from level 4."
+        "swim": "Swimming is allowed from level 4.",
+        "no_elemental_shape": "The elemental shape belongs to the Circle of the Moon from level 10.",
+        "not_elemental_form": "It must be an air, earth, fire or water elemental."
       },
+      "magical": "magical",
+      "wild_heal": "Heal the form with a slot",
+      "wild_heal_title": "Combat Wild Shape",
+      "wild_heal_hint": "Bonus action: spend a slot and {{name}} regains 1d8 HP per slot level.",
+      "wild_heal_slot": "Level {{level}} slot ({{left}} left): {{dice}}",
+      "wild_heal_no_slot": "You have no slot to spend.",
+      "wild_heal_done": "The form regains {{n}} HP ({{dice}})",
       "critical": "critical",
       "statblock": "Statblock",
       "kinds": {

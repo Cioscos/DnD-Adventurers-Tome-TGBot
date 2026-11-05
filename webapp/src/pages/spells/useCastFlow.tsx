@@ -73,7 +73,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const spellcasting = char?.spellcasting ?? null
   /** Uno stato attivo autorizza questo incantesimo senza slot (Lettura del Pensiero): il server lo ricontrolla. */
   const freeCastFor = (spell: Spell) =>
-    !!spell.srd_index && (char?.active_states ?? []).some((s) => (s.data as { free_cast?: string } | undefined)?.free_cast === spell.srd_index)
+    !!spell.at_will || (!!spell.srd_index && (char?.active_states ?? []).some((s) => (s.data as { free_cast?: string } | undefined)?.free_cast === spell.srd_index))
   const spellSlots: SpellSlot[] = char?.spell_slots ?? []
 
   // Conferma dei lanci senza danno: nome + slot/rituale + concentrazione.
@@ -204,6 +204,11 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
         return
       }
       castMutation.mutate({ spell })
+      return
+    }
+    // A volontà (Mille Forme): nessuno slot da scegliere. Solo per i lanci senza tiri: nessun incantesimo a volontà del catalogo li ha.
+    if (spell.at_will && !isAttackSpell(spell) && !spell.damage_dice && !isHealingSpell(spell)) {
+      castMutation.mutate({ spell, free: true })
       return
     }
     // Livellato — prima si sceglie lo slot.
