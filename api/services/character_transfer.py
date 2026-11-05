@@ -21,6 +21,7 @@ from core.rules.feature_sync import (
     ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, clean_ability_bonus, clean_archive, clean_granted_keys,
     clean_target_immunity, clean_zero_hp_uses,
 )
+from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.states import TARGET_IMMUNITY, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
@@ -99,6 +100,11 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     for k in ("languages", "pending_choices"):
         cols[k] = cols[k] or []
     cols["general_proficiencies"] = normalize_proficiencies(cols["general_proficiencies"])
+    # Gli incantesimi che non contano fra i conosciuti stanno per id: nel file usano le chiavi "s{i}" degli incantesimi.
+    free = cols["settings"].get(FREE_KNOWN_KEY)
+    if free is not None:
+        cols["settings"] = {**cols["settings"],
+                            FREE_KNOWN_KEY: [spell_key[i] for i in free if isinstance(i, int) and i in spell_key]}
     # hp_rolls e' indicizzato per class_id: nel file usa le stesse chiavi "c{i}" delle abilita'.
     raw_rolls = cols["settings"].get("hp_rolls")
     if raw_rolls is not None:  # dati legacy/corrotti: scarta quel che non e' {id: {...}}
@@ -263,6 +269,11 @@ async def import_character(
 
     if ARCHIVED_FEATURES in (char.settings or {}):  # server-owned: il client non potrebbe più ripararlo
         char.settings = {**char.settings, ARCHIVED_FEATURES: clean_archive(char.settings[ARCHIVED_FEATURES])}
+    if FREE_KNOWN_KEY in (char.settings or {}):  # chiavi "s{i}" del file -> id nuovi; il resto è scartato
+        by_key = {sp.export_key: row.id for sp, row in zip(data.spells, spells)}
+        wanted = char.settings[FREE_KNOWN_KEY]
+        char.settings = {**char.settings, FREE_KNOWN_KEY: [by_key[k] for k in wanted if isinstance(k, str) and k in by_key]
+                         if isinstance(wanted, list) else []}
     if GRANTED_SPELL_KEYS in (char.settings or {}):
         char.settings = {**char.settings, GRANTED_SPELL_KEYS: clean_granted_keys(char.settings[GRANTED_SPELL_KEYS])}
     for key, clean in ((ABILITY_BONUS_KEY, clean_ability_bonus), (ZERO_HP_USES, clean_zero_hp_uses),

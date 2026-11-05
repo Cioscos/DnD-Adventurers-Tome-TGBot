@@ -8,6 +8,8 @@ import type { CharacterFull } from '@/types'
 
 const { resolve } = vi.hoisted(() => ({ resolve: vi.fn() }))
 const { classOptions, replaceOption } = vi.hoisted(() => ({ classOptions: vi.fn(), replaceOption: vi.fn() }))
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
+vi.mock('react-router-dom', async (orig) => ({ ...((await orig()) as Record<string, unknown>), useNavigate: () => navigate }))
 vi.mock('@/api/client', () => ({ api: { choices: { resolve, classOptions, replaceOption } } }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
@@ -41,6 +43,21 @@ describe('ClassOptionSheet', () => {
     expect(screen.getByText('Nome b').closest('button')).toBeDisabled() // limite raggiunto
     await userEvent.click(confirm)
     await waitFor(() => expect(resolve).toHaveBeenCalledWith(7, 'opt1', { kind: 'class_option', options: ['a', 'c'] }))
+  })
+
+  it('sends a spell pick (Magical Secrets) to the spells page instead of a list of options', async () => {
+    const picking = {
+      id: 7, ability_scores: [],
+      pending_choices: [{
+        id: 'sec1', kind: 'class_option', class_key: 'Bardo', level: 10, created_at: '', group: 'magical_secrets', count: 2,
+        options: [], spell_pick: { free: false, max_level: 5 },
+      }],
+    } as unknown as CharacterFull
+    navigate.mockClear()
+    renderWithProviders(<PendingChoicesBadge char={picking} />)
+    await userEvent.click(screen.getByText('character.level_choice.badge'))
+    expect(navigate).toHaveBeenCalledWith('/char/7/spells?pick=sec1')
+    expect(screen.queryByText('character.level_choice.confirm')).not.toBeInTheDocument()
   })
 
   it('replaces a chosen option with an available one', async () => {

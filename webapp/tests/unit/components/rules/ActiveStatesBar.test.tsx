@@ -23,6 +23,14 @@ describe('ActiveStatesBar', () => {
     expect(screen.getByText('Lupo (Spirito Totemico): Gli alleati hanno vantaggio.')).toBeInTheDocument()
   })
 
+  it('shows the size of the die a state carries, such as Bardic Inspiration', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'bardic_inspiration', feature_key: 'bard.bardic_inspiration', rounds_left: 100, ends_on: ['manual'], data: { die: 8 } }],
+      [{ id: 1, name: 'Ispirazione Bardica', feature_key: 'bard.bardic_inspiration' }],
+    )} />)
+    expect(screen.getByText('d8')).toBeInTheDocument()
+  })
+
   it('shows nothing extra for a state without effects on others', () => {
     renderWithProviders(<ActiveStatesBar char={char([{ ...rage, data: {} }], [{ id: 1, name: 'Ira', feature_key: 'barbarian.rage' }])} />)
     expect(screen.getByText('Ira')).toBeInTheDocument()

@@ -17,6 +17,7 @@ from core.data.spell_slots import caster_kind
 from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.rules.edition import character_edition, class_key
+from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.spellcasting import caster_stats, can_ritual, granted_ritual_only, known_limits, prepared_limit, prepares, spell_stats
 
 
@@ -31,11 +32,12 @@ def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
     edition = character_edition(char)
     casters = [c for c in char.classes if class_key(c) and caster_kind(c, edition)]
     out: list[ClassSpellLimits] = []
+    free = set((char.settings or {}).get(FREE_KNOWN_KEY) or [])  # Segreti Magici Aggiuntivi: fuori dai conosciuti
     for cls in casters:
         key = class_key(cls)
         limits = known_limits(edition, key, cls.level)
         # Non assegnati: appartengono all'unica classe che lancia incantesimi, altrimenti solo al totale.
-        mine = [s for s in char.spells if not s.always_prepared
+        mine = [s for s in char.spells if not s.always_prepared and s.id not in free
                 and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))]
         leveled = [s for s in mine if s.level >= 1]
         cap = prepared_limit(edition, key, cls.level, char)

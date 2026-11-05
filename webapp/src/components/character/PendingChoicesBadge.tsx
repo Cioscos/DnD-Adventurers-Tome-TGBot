@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { GiPolarStar } from 'react-icons/gi'
 import Pressable from '@/components/ui/Pressable'
@@ -10,12 +11,15 @@ import type { CharacterFull } from '@/types'
 export default function PendingChoicesBadge({ char }: { char: CharacterFull }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const choices = char.pending_choices ?? []
   if (choices.length === 0) return null
+  // Incantesimi a scelta (Segreti Magici): non c'è un elenco da mostrare, si scelgono dalla pagina degli incantesimi.
+  const picking = choices[0].kind === 'class_option' && choices[0].spell_pick
   return (
     <>
       <Pressable
-        onClick={() => setOpen(true)}
+        onClick={() => (picking ? navigate(`/char/${char.id}/spells?pick=${choices[0].id}`) : setOpen(true))}
         className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3 rounded-xl
                    bg-dnd-gold/15 border border-dnd-gold text-dnd-gold-bright"
       >

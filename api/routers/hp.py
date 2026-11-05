@@ -21,6 +21,7 @@ from api.services.effects import apply_conditions, apply_heal, cap_current_hp, e
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
 from api.services.rules_states import end_states, on_damage
+from api.services.song_of_rest import roll_song_of_rest
 from api.services.rules_turn import get_turn, set_damaged
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
@@ -80,6 +81,9 @@ class HitDiceSpendResult(BaseModel):
     healed: int
     new_current_hp: int
     homebrew_notifications: Optional[list[dict]] = None
+    # Canto di Riposo di un bardo al tavolo: il dado extra (già compreso in `healed`)
+    song_die: Optional[int] = None
+    song_rolls: list[int] = []
 
 router = APIRouter(prefix="/characters", tags=["hp"])
 
@@ -807,6 +811,8 @@ async def spend_hit_dice(
     # Ogni dado cura tiro + COS: minimo 0 nel 2014, 1 nel 2024.
     floor = 1 if character_edition(char) == "2024" else 0
     total_healed = sum(max(floor, r + con_mod) for r in rolls)
+    song_die, song_rolls = await roll_song_of_rest(session, char)  # Canto di Riposo: un dado extra a testa per riposo
+    total_healed += sum(song_rolls)
 
     old_hp = char.current_hit_points
     # apply_heal: tetto con bonus homebrew e azzeramento dei tiri contro morte risalendo da 0 PF.
@@ -817,9 +823,10 @@ async def spend_hit_dice(
 
     _add_history(session, char.id, "hit_dice",
                  f"Dado vita {body.count}d{hit_die}+{con_mod}: "
-                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})",
+                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})"
+                 + (f", Canto di Riposo d{song_die}={song_rolls}" if song_rolls else ""),
                  meta={"healed": actual_healed})
-    record_dice(char, [(f"d{hit_die}", r) for r in rolls])
+    record_dice(char, [(f"d{hit_die}", r) for r in rolls] + [(f"d{song_die}", r) for r in song_rolls])
 
     notifications = collect_homebrew_notifications(healed["firing"])
     return HitDiceSpendResult(
@@ -828,6 +835,8 @@ async def spend_hit_dice(
         healed=actual_healed,
         new_current_hp=char.current_hit_points,
         homebrew_notifications=notifications or None,
+        song_die=song_die,
+        song_rolls=song_rolls,
     )
 
 

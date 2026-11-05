@@ -66,6 +66,8 @@ class SpellCreate(BaseModel):
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
     class_id: Optional[int] = None
     always_prepared: bool = False
+    # Scelta di incantesimi in sospeso (Segreti Magici) che questo incantesimo risolve; non è una colonna.
+    pick_id: Optional[str] = Field(default=None, max_length=64)
 
 
 class SpellUpdate(BaseModel):

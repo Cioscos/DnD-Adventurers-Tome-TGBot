@@ -15,8 +15,11 @@ from core.data.feats import ALL_ABILITIES
 from core.data.feats_2024 import ALL_FEATS as FEATS
 from core.db.models import Ability, Character, CharacterClass, CharacterHistory, HomebrewRule, RestorationType
 from core.rules.catalog import features_for
-from core.rules.level_choices import active_choice_specs, mark_resolved, pending_key, sync_level_choices  # noqa: F401
+from core.rules.level_choices import (  # noqa: F401
+    FREE_KNOWN_KEY, active_choice_specs, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
+)
 from core.rules.edition import character_edition, class_key
+from core.rules.spellcasting import slots_for
 from core.rules.types import RuleContext
 
 _WHEN = {"path": "$character.id", "op": "gt", "value": 0}
@@ -90,12 +93,66 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
 def resolve_class_option(session: AsyncSession, char: Character, choice: dict, picked: list[str]) -> None:
     cls = _class_by_key(char, choice.get("class_key"))
     group, count = choice.get("group"), choice.get("count")
+    ch = _choice_spec(char, cls, group) if cls else None
+    if ch is not None and ch.spell_pick:  # gli incantesimi si scelgono dalla pagina degli incantesimi
+        raise _bad("spell_pick_via_spells")
     valid = {o["key"] for o in option_catalog(char, choice)}
     if (cls is None or not group or not count or len(picked) != count
             or len(set(picked)) != len(picked) or not set(picked) <= valid):
         raise _bad(f"Pick exactly {count} distinct valid options")
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
+    if ch is not None and ch.grants:  # abilità: competenza o maestria, senza mai abbassare una maestria
+        skills = dict(char.skills or {})
+        for key in picked:
+            if not (ch.grants == "proficient" and skills.get(key) == "expert"):
+                skills[key] = "expert" if ch.grants == "expert" else True
+        char.skills = skills
     _history(session, char, f"{group}: {', '.join(picked)}")
+
+
+def max_pick_level(char: Character) -> int:
+    """Livello più alto che il personaggio può lanciare secondo la tabella degli slot."""
+    regular = slots_for(character_edition(char), char.classes).regular
+    return max((level for level, total in regular.items() if total > 0), default=0)
+
+
+def spell_pick_info(char: Character, choice: dict) -> dict | None:
+    """Per una scelta di incantesimi: se non conta fra i conosciuti e il livello massimo ammesso; altrimenti ``None``."""
+    if choice.get("kind") != "class_option":
+        return None
+    cls = _class_by_key(char, choice.get("class_key"))
+    ch = _choice_spec(char, cls, choice.get("group")) if cls else None
+    if ch is None or not ch.spell_pick:
+        return None
+    return {"free": ch.spell_pick == "extra", "max_level": max_pick_level(char)}
+
+
+def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int | None, name: str,
+                      srd_index: str | None) -> tuple[CharacterClass, object]:
+    """Controlla che la scelta esista e che l'incantesimo sia ammesso; restituisce classe e ``ChoiceSpec``."""
+    choice = next((c for c in char.pending_choices or [] if c.get("id") == pick_id), None)
+    cls = _class_by_key(char, choice.get("class_key")) if choice else None
+    ch = _choice_spec(char, cls, choice.get("group")) if cls else None
+    if ch is None or not ch.spell_pick:
+        raise HTTPException(404, detail={"code": "choice_not_found"})
+    if class_id is not None and class_id != cls.id:
+        raise HTTPException(400, detail={"code": "bad_class"})
+    if level > max_pick_level(char):
+        raise HTTPException(422, detail={"code": "spell_pick_level"})
+    lowered = name.strip().lower()
+    if any((srd_index and s.srd_index == srd_index) or s.name.strip().lower() == lowered for s in char.spells):
+        raise HTTPException(409, detail={"code": "spell_already_known"})
+    return cls, ch
+
+
+def consume_spell_pick(session: AsyncSession, char: Character, cls: CharacterClass, ch, spell) -> None:
+    """L'incantesimo è stato aggiunto: la scelta scala di uno; un extra non entra nel conteggio dei conosciuti."""
+    cls.options = {**(cls.options or {}), ch.group: [*(cls.options or {}).get(ch.group, []), spell.srd_index or spell.name]}
+    if ch.spell_pick == "extra":
+        free = [*((char.settings or {}).get(FREE_KNOWN_KEY) or []), spell.id]
+        char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: free}
+    _history(session, char, f"{ch.group}: {spell.name}")
+    reconcile_choices(char)
 
 
 def _check_feat(char: Character, spec, boon: bool) -> None:

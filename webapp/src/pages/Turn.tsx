@@ -123,7 +123,11 @@ export default function Turn() {
       await api.abilities.update(charId, ability.id, { uses })
       return null
     },
-    onSuccess: (res) => { if (res?.targets?.length) setTargetKey(res.targets[0]) },
+    onSuccess: (res) => {
+      if (res?.targets?.length) setTargetKey(res.targets[0])
+      // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
+      if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: res.rolls.join(' + ') })
+    },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
     onError: (err) => {
       const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
-from api.services.choices import option_catalog
+from api.services.choices import option_catalog, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
@@ -95,7 +95,8 @@ async def build_character_response(
     _apply_encumbrance(char, response)
     _apply_containers(char, response)
     response.pending_choices = [
-        {**c, "options": option_catalog(char, c)} if c.get("kind") == "class_option" else c
+        {**c, "options": option_catalog(char, c), **({"spell_pick": pick} if (pick := spell_pick_info(char, c)) else {})}
+        if c.get("kind") == "class_option" else c
         for c in (char.pending_choices or [])]
 
     usable = {spec.key: (spec.on_use, row) for spec, row in active_features(char) if spec.on_use}

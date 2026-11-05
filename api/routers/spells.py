@@ -45,11 +45,12 @@ from api.services.last_damage import last_damage_total, pairs
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
+from api.services.choices import consume_spell_pick, spell_pick_target
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
 from core.game.stats import cantrip_dice_multiplier
-from core.rules.spellcasting import can_ritual, cast_warnings, casting_kind, spell_stats
+from core.rules.spellcasting import can_ritual, cast_warnings, caster_stats, casting_kind, spell_stats
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -150,6 +151,9 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     turn = get_turn(char)
     turn["spell_slot_cast"] = turn["spell_slot_cast"] or spent_slot
     turn["bonus_spell_cast"] = turn["bonus_spell_cast"] or kind == "bonus"
+    if kind == "action":  # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale)
+        casters = caster_stats(char)
+        turn["action_spell_class"] = spell.class_id or (casters[0].class_id if len(casters) == 1 else None)
     char.turn_state = turn
 
 
@@ -227,12 +231,18 @@ async def add_spell(
 ) -> Spell:
     char = await _get_owned_full(char_id, user_id, session)
     _check_class(char, body.class_id)
+    pick = None
+    if body.pick_id:  # Segreti Magici: l'incantesimo è di qualsiasi classe e passa alla classe del bardo
+        pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index)
+        body.class_id = pick[0].id
     if body.is_prepared and body.level >= 1 and not body.always_prepared:
         _ensure_prepare_capacity(char, body.class_id)
-    spell = Spell(character_id=char_id, **body.model_dump())
+    spell = Spell(character_id=char_id, **body.model_dump(exclude={"pick_id"}))
     spell.is_prepared = spell.is_prepared or body.always_prepared
     session.add(spell)
     await session.flush()
+    if pick:
+        consume_spell_pick(session, char, *pick, spell)
     return spell
 
 

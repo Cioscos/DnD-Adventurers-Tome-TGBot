@@ -285,6 +285,9 @@ export type HitDiceSpendResult = {
   healed: number
   new_current_hp: number
   homebrew_notifications?: Array<Record<string, unknown>> | null
+  /** Canto di Riposo di un bardo al tavolo: il dado extra, già compreso in `healed`. */
+  song_die?: number | null
+  song_rolls?: number[]
 }
 
 export type RestPreview = {
@@ -787,7 +790,7 @@ export const api = {
   spells: {
     list: (charId: number, q?: string) =>
       request<Spell[]>(`/characters/${charId}/spells${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-    add: (charId: number, data: Partial<Spell>) =>
+    add: (charId: number, data: Partial<Spell> & { pick_id?: string }) =>
       request<Spell>(`/characters/${charId}/spells`, {
         method: 'POST',
         body: JSON.stringify(data),

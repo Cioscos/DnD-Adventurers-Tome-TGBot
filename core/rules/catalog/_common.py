@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.data.labels import SKILL_LABELS_IT
 from core.rules.states import has_state
 from core.rules.types import FeatureSpec, RuleContext
 from core.utils.session_view import armor_category
@@ -30,6 +31,12 @@ def once_used(char: Any, key: str) -> bool:
 
 def attacks_made(ctx: RuleContext) -> int:
     return int((ctx.turn or {}).get("attacks_made") or 0)
+
+
+def skill_label(slug: str) -> dict:
+    """Etichetta bilingue di un'abilità per le opzioni di una `ChoiceSpec` (Maestria, competenze a scelta)."""
+    english = slug.replace("_", " ").title().replace(" Of ", " of ")
+    return {"name": {"it": SKILL_LABELS_IT.get(slug, english), "en": english}, "summary": {"it": "", "en": ""}}
 
 
 def feature(key: str, class_key: str, edition: str, level: int, title: str, name: tuple[str, str],

@@ -83,6 +83,8 @@ export interface PendingChoice {
   group?: string
   count?: number
   options?: ClassOptionEntry[]
+  /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti. */
+  spell_pick?: { free: boolean; max_level: number }
 }
 
 export type ResolveChoiceBody =

@@ -31,6 +31,9 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
             <div className="flex-1 min-w-0 text-sm font-body text-dnd-text break-words">
               <p>
                 {name}
+                {typeof s.data?.die === 'number' && (
+                  <span className="ml-2 font-mono text-dnd-text-muted">d{s.data.die}</span>
+                )}
                 {s.rounds_left != null && (
                   <span className="ml-2 text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
                 )}

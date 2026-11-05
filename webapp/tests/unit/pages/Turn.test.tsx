@@ -77,8 +77,8 @@ vi.mock('@/hooks/useWeaponAttackFlow', () => ({
     attackWeapon: vi.fn(), attackUnarmed: vi.fn(), attackUnarmedEffect, isWeaponPending: () => false, isUnarmedPending: false, elements: null,
   }),
 }))
-const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
-vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
+const { toastError, toastInfo } = vi.hoisted(() => ({ toastError: vi.fn(), toastInfo: vi.fn() }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: toastInfo, success: vi.fn() }) }))
 vi.mock('@/hooks/useTickRound', () => ({ useTickRound: () => ({ mutate: vi.fn(), isPending: false }) }))
 vi.mock('@/components/ui/RollButton', async () => {
   const React = await import('react')
@@ -291,6 +291,30 @@ describe('Turn page', () => {
     expect(screen.getAllByText('character.turn.use')).toHaveLength(2)
     await userEvent.click(within(screen.getByText('Presenza Intimidatoria').closest('li') as HTMLElement).getByText('character.turn.use'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence'))
+  })
+
+  it('shows the dice a feature rolled when it is used, such as Cutting Words', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 8, name: 'Parole Taglienti', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'bard.cutting_words', max_uses: null, uses: null, action_type: 'reaction', restoration_type: 'none',
+    }] })
+    featureUse.mockResolvedValueOnce({ rolls: [5], healed: 0, state: null, notes: [] })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(within((await screen.findByText('Parole Taglienti')).closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_rolled', { description: '5' }))
+  })
+
+  it('says nothing about dice when the feature rolled none', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 8, name: 'Controfascino', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'bard.countercharm', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+    }] })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(within((await screen.findByText('Controfascino')).closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.countercharm'))
+    expect(toastInfo).not.toHaveBeenCalled()
   })
 
   it('sends the switches chosen when using a feature, such as Frenzy when entering the rage', async () => {

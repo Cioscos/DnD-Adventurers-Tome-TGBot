@@ -25,13 +25,25 @@ class ChoiceSpec:
 
     ``levels``: livello di classe minimo -> totale delle opzioni conosciute a quel livello.
     ``options(ctx)``: chiavi scegliibili (``ctx.class_row.options[group]`` contiene già le scelte).
-    ``label(key)``: ``{"name": ..., "summary": ...}`` delle opzioni che non sono privilegi del catalogo (armi).
+    ``label(key)``: ``{"name": ..., "summary": ...}`` delle opzioni che non sono privilegi del catalogo (armi, abilità).
+    ``grants``: alla risoluzione le opzioni scelte sono abilità e diventano ``proficient`` (competenza) o ``expert``
+    (maestria); un'abilità già ``expert`` non scende mai. ``spell_pick``: le scelte non sono opzioni di un elenco ma
+    incantesimi di qualsiasi classe, aggiunti dalla pagina degli incantesimi (``known`` conta fra i conosciuti,
+    ``extra`` no: Segreti Magici Aggiuntivi); ``options`` non si usa.
     """
     group: str
     levels: dict[int, int]
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
     label: Callable[[str], dict] | None = None
+    grants: Literal["proficient", "expert"] | None = None
+    spell_pick: Literal["known", "extra"] | None = None
+
+    def __post_init__(self) -> None:
+        if self.grants not in (None, "proficient", "expert"):
+            raise ValueError(f"grants sconosciuto: {self.grants}")
+        if self.spell_pick not in (None, "known", "extra"):
+            raise ValueError(f"spell_pick sconosciuto: {self.spell_pick}")
 
 
 @dataclass(frozen=True)
@@ -126,6 +138,9 @@ class OnUse:
     (``1d10``, validato alla definizione); ``heal(ctx, tirato) -> PF`` converte il tiro in cura. ``grants_action``: +1
     azione extra. Con ``amount`` = N (pool come Imposizione delle Mani) l'effetto per unità si ripete N volte: tiri, cura
     e azioni extra; lo stato e l'effetto sul bersaglio si avviano una volta sola.
+    ``rolls`` può essere anche ``f(ctx) -> "NdM"`` quando il dado dipende dal livello (Parole Taglienti).
+    ``spends``: chiave di un altro privilegio i cui usi si spendono (``cost``), invece degli usi di questo; senza usi
+    sufficienti l'uso è rifiutato (409 ``no_uses``) prima di toccare il turno.
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
     ``state``: uno ``StateSpec`` oppure ``f(ctx, params) -> StateSpec`` quando dipende dal livello o da una scelta fatta
@@ -140,15 +155,16 @@ class OnUse:
     available: "Callable[[RuleContext], bool] | None" = None
     toggles: "tuple[UseToggle, ...]" = ()
     grants_action: bool = False
-    rolls: str | None = None
+    rolls: "str | Callable[[RuleContext], str] | None" = None
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
     choose_amount: bool = False
     max_amount: int | None = None
+    spends: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
             raise ValueError("max_amount (>= 1) vale solo con choose_amount")
-        if self.rolls is not None and not parse_dice(self.rolls):
+        if isinstance(self.rolls, str) and not parse_dice(self.rolls):
             raise ValueError(f"rolls non valido: {self.rolls!r} (atteso NdM, per esempio 1d10)")
 
 

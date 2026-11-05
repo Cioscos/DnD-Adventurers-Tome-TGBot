@@ -110,6 +110,10 @@ export default function Spells() {
     }))
   }
 
+  // Segreti Magici: la scelta in sospeso a cui l'incantesimo che si sta aggiungendo risponde (`?pick=<id>` dalla scheda).
+  const pickId = searchParams.get('pick')
+  const pick = char?.pending_choices?.find((c) => c.id === pickId && c.spell_pick) ?? null
+
   const addMutation = useMutation({
     mutationFn: (data: SpellFormData) =>
       api.spells.add(charId, {
@@ -130,8 +134,10 @@ export default function Spells() {
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || undefined,
         is_pinned: false,
-        class_id: data.class_id ? Number(data.class_id) : null,
+        // Una scelta di incantesimi va sempre alla classe che la dà: la sceglie il server.
+        class_id: pick ? null : data.class_id ? Number(data.class_id) : null,
         always_prepared: data.always_prepared,
+        ...(pick ? { pick_id: pick.id } : {}),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -139,7 +145,15 @@ export default function Spells() {
       setEditingSpell(null)
       haptic.success()
     },
-    onError: onPrepareError,
+    onError: (e) => {
+      const code = e instanceof ApiError ? (e.detail as { code?: string } | null)?.code : undefined
+      if (code === 'spell_pick_level' || code === 'spell_already_known') {
+        haptic.warning()
+        toast.warning(t(`character.spells.${code}`))
+        return
+      }
+      onPrepareError(e)
+    },
   })
 
   const updateMutation = useMutation({
@@ -358,6 +372,19 @@ export default function Spells() {
     <Layout title={t('character.spells.title')} backTo={`/char/${charId}`} group="magic" page="spells">
       <CasterStats casters={spellcasting?.casters ?? []} />
       <SpellLimits limits={spellcasting?.limits ?? []} />
+
+      {pick?.spell_pick && (
+        <Surface variant="arcane">
+          <div data-testid="spell-pick-banner" className="space-y-1">
+            <p className="font-body text-sm text-dnd-text">
+              {t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
+            </p>
+            {pick.spell_pick.free && (
+              <p className="font-body text-xs text-dnd-text-muted">{t('character.spells.pick_free')}</p>
+            )}
+          </div>
+        </Surface>
+      )}
 
       <SpellFilter
         search={search}

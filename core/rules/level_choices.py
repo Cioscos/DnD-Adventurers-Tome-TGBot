@@ -15,6 +15,7 @@ from core.rules.catalog import features_for
 from core.rules.edition import character_edition, class_key
 
 RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "epic_boon:19"]}
+FREE_KNOWN_KEY = "free_known_spells"  # settings: id degli incantesimi che non contano fra i conosciuti (Segreti Magici Aggiuntivi)
 
 
 def _now() -> str:
@@ -90,7 +91,7 @@ def reconcile_choices(char: Any) -> None:
                 continue
             if sum(c.get("count", 0) for c in existing) == needed:
                 out.extend(existing)
-            else:
-                out.append({"id": uuid.uuid4().hex, "kind": "class_option", "class_key": key,
+            else:  # la scelta resta la stessa (stesso id) con meno opzioni da prendere
+                out.append({"id": existing[0]["id"] if existing else uuid.uuid4().hex, "kind": "class_option", "class_key": key,
                             "level": max(reached), "group": ch.group, "count": needed, "created_at": _now()})
     char.pending_choices = out

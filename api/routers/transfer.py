@@ -208,7 +208,9 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
                     if spec.option_group == ch.group and spec.option_key == key:
                         names.update({_norm_name(n): key for n in spec.name.values()})
                 if ch.label is not None:
-                    names[_norm_name(ch.label(key).get("name", ""))] = key
+                    label = ch.label(key).get("name", "")  # una stringa, o {it, en} come lo vuole l'interfaccia
+                    for text in (label.values() if isinstance(label, dict) else [label]):
+                        names[_norm_name(text)] = key
             for name in list(free):
                 key = names.get(_norm_name(name))
                 if key is not None and key not in chosen.get(ch.group, []) and len(chosen.get(ch.group, [])) < limit:

@@ -137,7 +137,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost * amount
-    if spec.uses is not None:
+    if on_use.spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
+        ability = next((a for a in char.abilities if a.feature_key == on_use.spends), None)
+        if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):
+            raise _err(status.HTTP_409_CONFLICT, "no_uses")
+    elif spec.uses is not None:
         # senza riga o con usi a None il contatore è illimitato solo se la formula lo dichiara (max_uses None)
         if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
@@ -149,7 +153,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     result = UseResult()
     ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
     healed = 0
-    dice = parse_dice(on_use.rolls) if on_use.rolls else None
+    formula = on_use.rolls(ctx) if callable(on_use.rolls) else on_use.rolls
+    dice = parse_dice(formula) if formula else None
     for _ in range(amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
         rolled = [random.randint(1, dice[1]) for _ in range(dice[0])] if dice else []
         result.rolls += rolled
@@ -166,7 +171,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)
     if on_use.state:
-        name = (ability.name if ability is not None and ability.name else None) or spec.name["it"]
+        own = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
+        name = (own.name if own is not None and own.name else None) or spec.name["it"]
         state_spec = on_use.state(ctx, params or {}) if callable(on_use.state) else on_use.state
         result.state = start_state(char, state_spec, feature_key, name)
     if on_use.target_effect:

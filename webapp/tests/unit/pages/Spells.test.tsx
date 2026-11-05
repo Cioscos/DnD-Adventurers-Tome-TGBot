@@ -208,6 +208,54 @@ describe('Spells page', () => {
     expect(toastError).not.toHaveBeenCalled()
   })
 
+  describe('spell pick (Magical Secrets)', () => {
+    const pickChar = (free = false) => ({
+      ...manualChar(),
+      pending_choices: [{
+        id: 'sec1', kind: 'class_option', class_key: 'Bardo', level: 10, created_at: '', group: 'magical_secrets', count: 2,
+        options: [], spell_pick: { free, max_level: 5 },
+      }],
+    })
+    const renderPick = () => renderWithProviders(<Spells />, { route: '/char/9/spells?pick=sec1' })
+
+    it('announces the picks left and the highest level, and adds the spell against the pending choice', async () => {
+      getChar.mockResolvedValue(pickChar())
+      addSpy.mockResolvedValue({ id: 500 })
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_banner')
+      await userEvent.click(await screen.findByText('add-spell'))
+      await userEvent.click(await screen.findByText('submit-spell'))
+      await waitFor(() => expect(addSpy).toHaveBeenCalledWith(9, expect.objectContaining({ name: 'Magic Missile', pick_id: 'sec1', class_id: null })))
+    })
+
+    it('says an extra secret does not count among the known spells', async () => {
+      getChar.mockResolvedValue(pickChar(true))
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_free')
+    })
+
+    it('never sends a pick id without a pending pick', async () => {
+      getChar.mockResolvedValue(manualChar())
+      addSpy.mockResolvedValue({ id: 500 })
+      renderPick()
+      await userEvent.click(await screen.findByText('add-spell'))
+      await userEvent.click(await screen.findByText('submit-spell'))
+      await waitFor(() => expect(addSpy).toHaveBeenCalled())
+      expect(addSpy.mock.calls[0][1]).not.toHaveProperty('pick_id')
+      expect(screen.queryByTestId('spell-pick-banner')).not.toBeInTheDocument()
+    })
+
+    it.each([['spell_pick_level', 422], ['spell_already_known', 409]])('tells the player why a pick failed (%s)', async (code, status) => {
+      getChar.mockResolvedValue(pickChar())
+      addSpy.mockRejectedValue(new ApiError(status as number, { code }))
+      renderPick()
+      await userEvent.click(await screen.findByText('add-spell'))
+      await userEvent.click(await screen.findByText('submit-spell'))
+      await waitFor(() => expect(toastWarning).toHaveBeenCalledWith(`character.spells.${code}`))
+      expect(toastError).not.toHaveBeenCalled()
+    })
+  })
+
   it('another toggle failure never shows the technical message', async () => {
     getChar.mockResolvedValue(preparingChar())
     updateSpy.mockRejectedValue(new ApiError(500, 'boom'))
