@@ -21,7 +21,9 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const qc = useQueryClient()
   const [picked, setPicked] = useState<string[]>([])
-  const count = choice.count ?? 1
+  const total = choice.count ?? 1
+  // Con meno opzioni del dovuto se ne prendono quante ne offre la scheda, il resto aspetta (R39).
+  const count = choice.pick_count ?? total
   const options = choice.options ?? []
   const classEn = Object.entries(CLASS_NAME_TO_PROGRESSION_KEY).find(([, v]) => v === choice.class_key)?.[0]
   const classLabel = classEn ? t(`dnd.classes.${classEn}`, { defaultValue: choice.class_key }) : choice.class_key
@@ -44,9 +46,16 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
   return (
     <Sheet open={open} onClose={onClose} title={`${t('character.level_choice.class_option_title')} · ${classLabel} ${choice.level}`}>
       <div className="p-5 space-y-3">
-        <p className="text-xs font-body text-dnd-text-muted">
-          {t('character.level_choice.options_left', { n: count - picked.length })}
-        </p>
+        {count === 0 ? (
+          <p className="text-sm font-body text-dnd-text">{t('character.level_choice.waiting_for_skills', { n: total })}</p>
+        ) : (
+          <p className="text-xs font-body text-dnd-text-muted">
+            {t('character.level_choice.options_left', { n: count - picked.length })}
+          </p>
+        )}
+        {count > 0 && count < total && (
+          <p className="text-xs font-body text-dnd-text-muted">{t('character.level_choice.partial', { n: total - count })}</p>
+        )}
         {options.map((o) => {
           const on = picked.includes(o.key)
           return (
@@ -60,20 +69,23 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
             >
               <span className="block text-sm font-body text-dnd-text">{o.name[lang]}</span>
               {o.summary[lang] && <span className="block text-xs font-body text-dnd-text-muted">{o.summary[lang]}</span>}
+              {o.owned && <span className="block text-xs font-body text-dnd-gold-bright">{t('character.level_choice.already_on_sheet')}</span>}
             </Pressable>
           )
         })}
         {mutation.isError && (
           <p className="text-xs font-body text-dnd-crimson-bright">{t('character.level_choice.error')}</p>
         )}
-        <Pressable
-          onClick={() => mutation.mutate()}
-          disabled={picked.length !== count}
-          pending={mutation.isPending}
-          className="w-full min-h-[44px] rounded-xl bg-dnd-gold/15 border border-dnd-gold text-sm font-body text-dnd-gold-bright disabled:opacity-40"
-        >
-          {t('character.level_choice.confirm')}
-        </Pressable>
+        {count > 0 && (
+          <Pressable
+            onClick={() => mutation.mutate()}
+            disabled={picked.length !== count}
+            pending={mutation.isPending}
+            className="w-full min-h-[44px] rounded-xl bg-dnd-gold/15 border border-dnd-gold text-sm font-body text-dnd-gold-bright disabled:opacity-40"
+          >
+            {t('character.level_choice.confirm')}
+          </Pressable>
+        )}
       </div>
     </Sheet>
   )

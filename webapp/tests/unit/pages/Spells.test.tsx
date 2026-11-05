@@ -5,8 +5,9 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Spells from '@/pages/Spells'
 
 const {
-  getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo, toastWarning, toastError, ApiError,
+  getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo, toastWarning, toastError, ApiError, resolveChoice,
 } = vi.hoisted(() => ({
+  resolveChoice: vi.fn(),
   getChar: vi.fn(),
   updateChar: vi.fn(),
   addSpy: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('@/api/client', () => ({
     characters: { get: getChar, update: updateChar },
     spells: { add: addSpy, update: updateSpy, remove: removeSpy, use: useSpy, updateConcentration: concSpy },
     spellSlots: { update: slotUpdateSpy, add: slotAddSpy },
+    choices: { resolve: resolveChoice },
   },
 }))
 
@@ -217,6 +219,24 @@ describe('Spells page', () => {
       }],
     })
     const renderPick = () => renderWithProviders(<Spells />, { route: '/char/9/spells?pick=sec1' })
+
+    it('lets a saved character say which known spells already are the secrets (R39)', async () => {
+      const owned = [{ id: 11, name: 'Palla di fuoco', level: 3 }, { id: 12, name: 'Volare', level: 3 }]
+      getChar.mockResolvedValue({ ...pickChar(), pending_choices: [{ ...pickChar().pending_choices[0], retrofit: true,
+        spell_pick: { free: false, max_level: 5, owned } }] })
+      resolveChoice.mockResolvedValue(pickChar())
+      renderPick()
+      await userEvent.click(await screen.findByText('Palla di fuoco'))
+      await userEvent.click(screen.getByText('character.spells.pick_already_known'))
+      await waitFor(() => expect(resolveChoice).toHaveBeenCalledWith(9, 'sec1', { kind: 'class_option', options: ['11'] }))
+    })
+
+    it('does not offer that shortcut to a character that is not a saved one', async () => {
+      getChar.mockResolvedValue(pickChar())
+      renderPick()
+      await screen.findByTestId('spell-pick-banner')
+      expect(screen.queryByText('character.spells.pick_already_known')).not.toBeInTheDocument()
+    })
 
     it('announces the picks left and the highest level, and adds the spell against the pending choice', async () => {
       getChar.mockResolvedValue(pickChar())

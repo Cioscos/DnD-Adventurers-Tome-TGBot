@@ -1,10 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import type { CharacterFull } from '@/types'
 
-vi.mock('@/api/client', () => ({ api: { characters: { endActiveState: vi.fn() } } }))
+const { bardicDieAc, toastInfo } = vi.hoisted(() => ({ bardicDieAc: vi.fn(), toastInfo: vi.fn() }))
+vi.mock('@/api/client', () => ({ api: { characters: { endActiveState: vi.fn(), bardicDieAc } } }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: vi.fn(), success: vi.fn() }) }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -29,6 +32,34 @@ describe('ActiveStatesBar', () => {
       [{ id: 1, name: 'Ispirazione Bardica', feature_key: 'bard.bardic_inspiration' }],
     )} />)
     expect(screen.getByText('d8')).toBeInTheDocument()
+  })
+
+  it('hides the internal markers a feature keeps for itself (Song of Rest received)', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'song_of_rest_received', feature_key: 'bard.song_of_rest', rounds_left: null, ends_on: ['rest_short'], name: 'Canto di Riposo', data: { internal: true } }],
+      [],
+    )} />)
+    expect(screen.queryByText('Canto di Riposo')).not.toBeInTheDocument()
+    expect(screen.queryByText('character.turn.end_state')).not.toBeInTheDocument()
+  })
+
+  it('adds the die of Combat Inspiration to the armor class as a reaction and says the value', async () => {
+    bardicDieAc.mockResolvedValue({ die: 6, roll: 4 })
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'bardic_die', feature_key: 'bard.bardic_inspiration', rounds_left: 100, ends_on: ['manual'], name: 'Ispirazione Bardica', data: { die: 6, combat: true } }],
+      [],
+    )} />)
+    await userEvent.click(screen.getByText('character.turn.bardic_die_ac'))
+    await waitFor(() => expect(bardicDieAc).toHaveBeenCalledWith(7))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.bardic_die_ac_result', { description: '+4' }))
+  })
+
+  it('offers no armor class use for a die without Combat Inspiration', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'bardic_die', feature_key: 'bard.bardic_inspiration', rounds_left: 100, ends_on: ['manual'], name: 'Ispirazione Bardica', data: { die: 6 } }],
+      [],
+    )} />)
+    expect(screen.queryByText('character.turn.bardic_die_ac')).not.toBeInTheDocument()
   })
 
   it('shows nothing extra for a state without effects on others', () => {

@@ -20,6 +20,7 @@ import FilterChip from '@/components/ui/FilterChip'
 import FilterRow from '@/components/ui/FilterRow'
 import { haptic } from '@/auth/telegram'
 import { toast } from 'sonner'
+import OwnedSecrets from '@/pages/spells/OwnedSecrets'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
@@ -383,6 +384,9 @@ export default function Spells() {
               <p className="font-body text-xs text-dnd-text-muted">{t('character.spells.pick_free')}</p>
             )}
           </div>
+          {pick.retrofit && (pick.spell_pick.owned?.length ?? 0) > 0 && (
+            <OwnedSecrets charId={charId} pick={pick} />
+          )}
         </Surface>
       )}
 

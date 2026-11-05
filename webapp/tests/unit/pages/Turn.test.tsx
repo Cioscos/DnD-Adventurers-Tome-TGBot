@@ -10,7 +10,7 @@ const NEW_BLOCK = {
   once_per_turn: [], spell_slot_cast: false, bonus_spell_cast: false, free_interaction_used: false,
 }
 // Il server finto tiene lo stato del turno fra una richiesta e l'altra, come quello vero.
-const { getChar, turnState, sessionMe, server, turnUse, turnNew, turnOther, featureUse, endActiveState } = vi.hoisted(() => {
+const { getChar, turnState, sessionMe, server, turnUse, turnNew, turnOther, featureUse, endActiveState, sessionAllies } = vi.hoisted(() => {
   const server = { block: {} as Record<string, unknown>, extra: {} as Record<string, unknown> }
   const flag: Record<string, string> = { action: 'action_used', bonus: 'bonus_used', reaction: 'reaction_used', free_interaction: 'free_interaction_used' }
   return {
@@ -29,6 +29,7 @@ const { getChar, turnState, sessionMe, server, turnUse, turnNew, turnOther, feat
     turnOther: vi.fn(async () => (server.block = { ...server.block, once_per_turn: [] })),
     featureUse: vi.fn().mockResolvedValue({ rolls: [], healed: 0, state: null, notes: [] }),
     endActiveState: vi.fn().mockResolvedValue([]),
+    sessionAllies: vi.fn().mockResolvedValue([]),
   }
 })
 beforeEach(() => {
@@ -45,7 +46,7 @@ vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn(), d20Arg: vi.fn(
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, tickRound: vi.fn(), rollSkill, updateConditions, hide, rollOptions: vi.fn().mockResolvedValue([]) },
+    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, sessionAllies, tickRound: vi.fn(), rollSkill, updateConditions, hide, rollOptions: vi.fn().mockResolvedValue([]) },
     sessions: { me: sessionMe },
     abilities: { update: vi.fn() },
   },
@@ -68,6 +69,10 @@ vi.mock('react-i18next', async (orig) => {
       i18n: { language: 'it' },
     }),
   }
+})
+vi.mock('@/components/ui/Sheet', async () => {
+  const React = await import('react')
+  return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
 })
 vi.mock('@/pages/spells/useCastFlow', () => ({
   useCastFlow: () => ({ beginCast: vi.fn(), isSpellPending: () => false, elements: null }),
@@ -315,6 +320,34 @@ describe('Turn page', () => {
     await userEvent.click(within((await screen.findByText('Controfascino')).closest('li') as HTMLElement).getByText('character.turn.use'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.countercharm'))
     expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  describe('Bardic Inspiration goes to an ally of the table (R38)', () => {
+    const inspiration = { id: 9, name: 'Ispirazione Bardica', is_passive: false, is_active: true, is_class_feature: true,
+      has_on_use: true, gives_to_ally: true, feature_key: 'bard.bardic_inspiration', max_uses: 3, uses: 3,
+      action_type: 'bonus_action', restoration_type: 'long_rest' }
+    const useIt = async () => userEvent.click(within((await screen.findByText(/Ispirazione Bardica/)).closest('li') as HTMLElement)
+      .getByText('character.turn.use'))
+
+    it('asks who gets the die and sends the chosen ally', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [inspiration] })
+      sessionAllies.mockResolvedValueOnce([{ id: 31, name: 'Brun' }, { id: 32, name: 'Lia' }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await useIt()
+      expect(featureUse).not.toHaveBeenCalled()  // prima si sceglie a chi
+      await userEvent.click(await screen.findByText('Lia'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.bardic_inspiration', 1, { target_character_id: 32 }))
+    })
+
+    it('uses it straight away when nobody else sits at the table', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [inspiration] })
+      sessionAllies.mockResolvedValueOnce([])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await useIt()
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.bardic_inspiration'))
+    })
   })
 
   it('sends the switches chosen when using a feature, such as Frenzy when entering the rage', async () => {

@@ -60,6 +60,48 @@ describe('ClassOptionSheet', () => {
     expect(screen.queryByText('character.level_choice.confirm')).not.toBeInTheDocument()
   })
 
+  describe('choices that cannot be resolved yet (R39)', () => {
+    const waiting = { id: 'exp', kind: 'class_option', class_key: 'Bardo', level: 10, created_at: '', group: 'expertise',
+      count: 4, pick_count: 0, resolvable: false, options: [] }
+    const ready = { id: 'sec', kind: 'class_option', class_key: 'Bardo', level: 10, created_at: '', group: 'magical_secrets',
+      count: 2, resolvable: true, options: [], spell_pick: { free: false, max_level: 5 } }
+    const withChoices = (...choices: unknown[]) => ({ id: 7, ability_scores: [], pending_choices: choices }) as unknown as CharacterFull
+
+    it('opens the first choice that can be resolved, not the one waiting for more skills', async () => {
+      navigate.mockClear()
+      renderWithProviders(<PendingChoicesBadge char={withChoices(waiting, ready)} />)
+      await userEvent.click(screen.getByText('character.level_choice.badge'))
+      expect(navigate).toHaveBeenCalledWith('/char/7/spells?pick=sec')
+    })
+
+    it('explains what is missing when nothing can be resolved', async () => {
+      renderWithProviders(<PendingChoicesBadge char={withChoices(waiting)} />)
+      await userEvent.click(screen.getByText('character.level_choice.badge'))
+      expect(screen.getByText('character.level_choice.waiting_for_skills')).toBeInTheDocument()
+      expect(screen.queryByText('character.level_choice.confirm')).not.toBeInTheDocument()
+    })
+
+    it('asks for as many skills as the sheet can offer when fewer than the count', async () => {
+      resolve.mockResolvedValue({ id: 7 })
+      const some = { ...waiting, pick_count: 2, resolvable: true, options: [opt('a'), opt('b')] }
+      renderWithProviders(<PendingChoicesBadge char={withChoices(some)} />)
+      await userEvent.click(screen.getByText('character.level_choice.badge'))
+      expect(screen.getByText('character.level_choice.partial')).toBeInTheDocument()
+      await userEvent.click(screen.getByText('Nome a'))
+      await userEvent.click(screen.getByText('Nome b'))
+      await userEvent.click(screen.getByText('character.level_choice.confirm'))
+      await waitFor(() => expect(resolve).toHaveBeenCalledWith(7, 'exp', { kind: 'class_option', options: ['a', 'b'] }))
+    })
+
+    it('marks the skills a saved character already has', async () => {
+      const owned = { ...waiting, group: 'lore_skills', count: 3, pick_count: 3, resolvable: true, retrofit: true,
+        options: [{ ...opt('a'), owned: true }, opt('b'), opt('c')] }
+      renderWithProviders(<PendingChoicesBadge char={withChoices(owned)} />)
+      await userEvent.click(screen.getByText('character.level_choice.badge'))
+      expect(screen.getAllByText('character.level_choice.already_on_sheet')).toHaveLength(1)
+    })
+  })
+
   it('replaces a chosen option with an available one', async () => {
     classOptions.mockResolvedValue({ replaceable: true, chosen: [opt('a')], available: [opt('z')] })
     replaceOption.mockResolvedValue({ id: 7 })

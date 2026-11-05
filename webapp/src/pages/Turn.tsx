@@ -14,6 +14,7 @@ import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import TargetEffectSheet from '@/components/rules/TargetEffectSheet'
+import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
 import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
@@ -59,6 +60,8 @@ export default function Turn() {
   const [toggles, setToggles] = useState<Record<number, Record<string, boolean>>>({})
   // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
   const [targetKey, setTargetKey] = useState<string | null>(null)
+  // Privilegio che dà lo stato a un alleato della serata (Ispirazione Bardica): prima si sceglie a chi (R38).
+  const [allyPick, setAllyPick] = useState<{ ability: Ability; uses: number; amount?: number; allies: { id: number; name: string }[] } | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -112,8 +115,9 @@ export default function Turn() {
 
   // Un privilegio con effetto reale passa dal server (usi, slot di turno, cura, stato); gli altri scalano solo il contatore.
   const abilityUse = useMutation({
-    mutationFn: async ({ ability, uses, amount }: { ability: Ability; uses: number; amount?: number }) => {
+    mutationFn: async ({ ability, uses, amount, allyId }: { ability: Ability; uses: number; amount?: number; allyId?: number }) => {
       if (ability.has_on_use && ability.feature_key) {
+        if (allyId !== undefined) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, { target_character_id: allyId })
         const chosen = toggles[ability.id]
         const params = ability.use_toggles?.length ? Object.fromEntries(ability.use_toggles.map((x) => [x.key, !!chosen?.[x.key]])) : undefined
         if (params) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
@@ -136,8 +140,20 @@ export default function Turn() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+      setAllyPick(null)
     },
   })
+  /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
+  const triggerAbility = async (args: { ability: Ability; uses: number; amount?: number }) => {
+    if (args.ability.gives_to_ally) {
+      const allies = await api.characters.sessionAllies(charId).catch(() => [])
+      if (allies.length > 0) {
+        setAllyPick({ ...args, allies })
+        return
+      }
+    }
+    abilityUse.mutate(args)
+  }
 
   if (!char) {
     return (
@@ -297,7 +313,7 @@ export default function Turn() {
         control = (
           <Button size="sm" variant="secondary" disabled={left <= 0}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
-            onClick={() => abilityUse.mutate({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
+            onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
@@ -308,7 +324,7 @@ export default function Turn() {
           extra = renderToggles(ab)
           control = (
             <Button size="sm" variant="secondary" loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
-              onClick={() => abilityUse.mutate({ ability: ab, uses: 0 })}>
+              onClick={() => triggerAbility({ ability: ab, uses: 0 })}>
               {t('character.turn.use')}
             </Button>
           )
@@ -464,6 +480,10 @@ export default function Turn() {
       )}
       {weaponFlow.elements}
       {castFlow.elements}
+      {allyPick && (
+        <AllyTargetSheet allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
+          onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, allyId })} />
+      )}
       {targetKey && <TargetEffectSheet charId={charId} effectKey={targetKey} onClose={() => setTargetKey(null)} />}
     </Layout>
   )

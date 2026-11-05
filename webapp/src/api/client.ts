@@ -644,10 +644,14 @@ export const api = {
       request<TargetEffectResult>(`/characters/${id}/target-effects`, {
         method: 'POST', body: JSON.stringify({ effect_key: effectKey, combatant_id: combatantId }),
       }),
-    featureUse: (id: number, featureKey: string, amount: number = 1, params?: Record<string, boolean>) =>
+    featureUse: (id: number, featureKey: string, amount: number = 1, params?: Record<string, boolean | number>) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
         method: 'POST', body: JSON.stringify(params ? { amount, params } : { amount }),
       }),
+    /** Gli altri personaggi seduti alla stessa serata attiva (vuoto fuori serata). */
+    sessionAllies: (id: number) => request<{ id: number; name: string }[]>(`/characters/${id}/session-allies`),
+    /** Ispirazione in Combattimento alla CA: spende la reazione e il dado, restituisce il valore da sommare. */
+    bardicDieAc: (id: number) => request<{ die: number; roll: number }>(`/characters/${id}/bardic-die/ac`, { method: 'POST' }),
     endActiveState: (id: number, key: string) =>
       request<ActiveState[]>(`/characters/${id}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),
     turnNew: (id: number) =>

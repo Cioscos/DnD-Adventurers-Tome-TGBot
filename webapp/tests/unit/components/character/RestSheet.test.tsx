@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import RestSheet from '@/components/character/RestSheet'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, rest, restPreview, notifyMutationError, toastError, toastSuccess } = vi.hoisted(() => ({
+const { spendHitDice, rest, restPreview, notifyMutationError, toastError, toastSuccess, featureUse, endActiveState } = vi.hoisted(() => ({
+  featureUse: vi.fn(),
+  endActiveState: vi.fn(),
   spendHitDice: vi.fn(),
   rest: vi.fn(),
   restPreview: vi.fn(),
@@ -17,7 +19,7 @@ const { spendHitDice, rest, restPreview, notifyMutationError, toastError, toastS
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { characters: { spendHitDice, rest, restPreview } } }
+  return { ...actual, api: { characters: { spendHitDice, rest, restPreview, featureUse, endActiveState } } }
 })
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: toastSuccess }) }))
@@ -105,6 +107,32 @@ describe('RestSheet short rest', () => {
     setup({ ...char, rules_edition: '2014' } as CharacterFull)
     await openShortRest()
     expect(screen.queryByRole('switch')).toBeNull()
+  })
+
+  describe('Song of Rest switch (bard)', () => {
+    const bard = { id: 7, classes: [{ id: 1, class_name: 'bard', level: 3 }], active_states: [],
+      abilities: [{ id: 4, feature_key: 'bard.song_of_rest', name: 'Canto di Riposo', has_on_use: true }] } as unknown as CharacterFull
+
+    it('is offered only to a bard and starts the song for the rest', async () => {
+      featureUse.mockResolvedValue({ rolls: [], state: { key: 'song_of_rest' } })
+      setup()
+      await openShortRest()
+      expect(screen.queryByRole('switch')).toBeNull()
+      vi.clearAllMocks()
+      setup(bard)
+      await userEvent.click(screen.getAllByText('character.quick_actions.rest_short').at(-1) as HTMLElement)
+      await userEvent.click(screen.getByRole('switch'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.song_of_rest'))
+    })
+
+    it('shows the song as on when it is already active and turns it off', async () => {
+      endActiveState.mockResolvedValue([])
+      setup({ ...bard, active_states: [{ key: 'song_of_rest', feature_key: 'bard.song_of_rest' }] } as unknown as CharacterFull)
+      await openShortRest()
+      expect(screen.getByRole('switch')).toBeChecked()
+      await userEvent.click(screen.getByRole('switch'))
+      await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'song_of_rest'))
+    })
   })
 
   it('a refused rest at 0 HP warns instead of the generic error', async () => {

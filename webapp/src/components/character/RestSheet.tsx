@@ -9,6 +9,7 @@ import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import RestPreviewList from '@/components/character/RestPreviewList'
+import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
@@ -175,6 +176,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
           preview={
             <>
               <RestPreviewList charId={char.id} restType="short" />
+              <SongOfRestToggle char={char} />
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
             </>
           }

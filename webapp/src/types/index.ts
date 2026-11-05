@@ -65,6 +65,8 @@ export interface ClassOptionEntry {
   key: string
   name: { it: string; en: string }
   summary: { it: string; en: string }
+  /** Già sulla scheda di un personaggio salvato prima del catalogo: si dichiara, non si aggiunge (R39). */
+  owned?: boolean
 }
 
 export interface ClassOptionsState {
@@ -83,8 +85,15 @@ export interface PendingChoice {
   group?: string
   count?: number
   options?: ClassOptionEntry[]
-  /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti. */
-  spell_pick?: { free: boolean; max_level: number }
+  /** Quante opzioni si prendono adesso: meno di `count` se la scheda non ne offre abbastanza, il resto aspetta (R39). */
+  pick_count?: number | null
+  /** Falso se non c'è ancora nulla da scegliere: non blocca le scelte successive. */
+  resolvable?: boolean
+  /** Personaggio salvato prima del catalogo o importato: ammette ciò che ha già sulla scheda (R39). */
+  retrofit?: boolean
+  /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti.
+   *  `owned`: con `retrofit`, gli incantesimi già conosciuti che si possono dichiarare «già sulla scheda». */
+  spell_pick?: { free: boolean; max_level: number; owned?: { id: number; name: string; level: number }[] }
 }
 
 export type ResolveChoiceBody =
@@ -109,6 +118,8 @@ export interface Ability {
   action_type?: ActionType | null
   /** Il «Usa» passa da POST /features/{key}/use (cura, stato, azione extra) invece di scalare solo il contatore. */
   has_on_use?: boolean
+  /** Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): si chiede a chi (R38). */
+  gives_to_ally?: boolean
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null

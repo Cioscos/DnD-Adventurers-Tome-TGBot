@@ -84,6 +84,9 @@
   },
   "character": {
     "level_choice": {
+      "waiting_for_skills": "Servono altre competenze: non hai abbastanza abilità per tutte le {{n}} scelte. Aggiungile dalla pagina Abilità e tornerà qui.",
+      "partial": "Ne mancano ancora {{n}}: aspettano altre competenze sulla scheda.",
+      "already_on_sheet": "Già sulla tua scheda",
       "replace_title": "Sostituisci opzione",
       "replace_old": "Opzione da sostituire",
       "replace_new": "Nuova opzione",
@@ -188,6 +191,8 @@
       "nothing": "Niente da recuperare"
     },
     "quick_actions": {
+      "song_of_rest": "Canto di Riposo",
+      "song_of_rest_hint": "Chi spende Dadi Vita in questo riposo recupera un dado extra. Dura fino al riposo lungo, al prossimo nuovo turno o finché non lo spegni.",
       "group_order": "Ordine",
       "restore_defaults": "Ripristina predefinite",
       "restore_title": "Ripristinare le azioni predefinite?",
@@ -514,6 +519,8 @@
       "sources": "Sorgenti"
     },
     "spells": {
+      "pick_already_known": "È già sulla mia scheda",
+      "pick_owned_title": "Li conosci già? Segna quelli che sono già i tuoi Segreti Magici, senza aggiungerli di nuovo.",
       "title": "Incantesimi",
       "search": "Cerca incantesimo...",
       "level": "Livello",
@@ -1090,6 +1097,10 @@
       }
     },
     "turn": {
+      "bardic_die_ac": "Aggiungi alla CA",
+      "bardic_die_ac_result": "Dado di Ispirazione: somma alla CA",
+      "ally_title": "Ispirazione Bardica",
+      "ally_pick": "A chi dai il dado?",
       "title": "Turno",
       "round": "Round {{n}}",
       "attacks_made": "Attacchi: {{made}}/{{n}}",

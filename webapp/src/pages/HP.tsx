@@ -19,6 +19,7 @@ import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RestPreviewList from '@/components/character/RestPreviewList'
+import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
@@ -511,6 +512,7 @@ export default function HP() {
       {showShortRest && (
         <HitDiceModal
           classes={classes}
+          preview={<SongOfRestToggle char={char} />}
           onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
           onConfirmRest={() => {
             restMutation.mutate('short')

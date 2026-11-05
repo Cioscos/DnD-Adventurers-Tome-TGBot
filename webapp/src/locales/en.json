@@ -84,6 +84,9 @@
   },
   "character": {
     "level_choice": {
+      "waiting_for_skills": "More proficiencies needed: your sheet has too few skills for all {{n}} picks. Add them on the Skills page and this will come back.",
+      "partial": "{{n}} more are still waiting for more proficiencies on the sheet.",
+      "already_on_sheet": "Already on your sheet",
       "replace_title": "Replace option",
       "replace_old": "Option to replace",
       "replace_new": "New option",
@@ -188,6 +191,8 @@
       "nothing": "Nothing to recover"
     },
     "quick_actions": {
+      "song_of_rest": "Song of Rest",
+      "song_of_rest_hint": "Whoever spends Hit Dice during this rest regains an extra die. It lasts until a long rest, the next new turn or until you turn it off.",
       "group_order": "Order",
       "restore_defaults": "Restore defaults",
       "restore_title": "Restore the default actions?",
@@ -514,6 +519,8 @@
       "sources": "Sources"
     },
     "spells": {
+      "pick_already_known": "It is already on my sheet",
+      "pick_owned_title": "Already know them? Mark the ones that are already your Magical Secrets, without adding them again.",
       "title": "Spells",
       "search": "Search spells...",
       "level": "Level",
@@ -1091,6 +1098,10 @@
       }
     },
     "turn": {
+      "bardic_die_ac": "Add to AC",
+      "bardic_die_ac_result": "Inspiration die: add to your AC",
+      "ally_title": "Bardic Inspiration",
+      "ally_pick": "Who gets the die?",
       "title": "Turn",
       "round": "Round {{n}}",
       "attacks_made": "Attacks: {{made}}/{{n}}",
