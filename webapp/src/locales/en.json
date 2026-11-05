@@ -1157,6 +1157,7 @@
       "state_dc": "{{save}} save, DC {{dc}}",
       "state_cr": "Destroys undead up to CR {{cr}}",
       "state_attack_bonus": "+{{n}} to the attack roll",
+      "state_maximized": "Dice at maximum",
       "state_bonus": "Fixed damage +{{n}}",
       "state_duplicates": "Duplicates: {{n}}",
       "divine_success": "Success (d100 {{roll}} vs {{level}}): wait 7 days, then end the state",

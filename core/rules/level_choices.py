@@ -51,6 +51,15 @@ def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
     scende. Unico punto per la risoluzione di una scelta e per l'import."""
     if not ch.grants:
         return
+    if ch.grants == "language":
+        known = {str(x).strip().lower() for x in char.languages or []}
+        added = list(char.languages or [])
+        for key in keys:
+            names = ch.label(key)["name"] if ch.label else {"it": key, "en": key}
+            if not ({n.lower() for n in names.values()} & known):
+                added.append(names["it"])
+        char.languages = added
+        return
     skills = dict(char.skills or {})
     for key in keys:
         if not (ch.grants == "proficient" and skills.get(key) == "expert"):

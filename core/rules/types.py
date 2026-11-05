@@ -27,7 +27,8 @@ class ChoiceSpec:
     ``options(ctx)``: chiavi scegliibili (``ctx.class_row.options[group]`` contiene già le scelte).
     ``label(key)``: ``{"name": ..., "summary": ...}`` delle opzioni che non sono privilegi del catalogo (armi, abilità).
     ``grants``: alla risoluzione le opzioni scelte sono abilità e diventano ``proficient`` (competenza) o ``expert``
-    (maestria); un'abilità già ``expert`` non scende mai. ``spell_pick``: le scelte non sono opzioni di un elenco ma
+    (maestria); un'abilità già ``expert`` non scende mai. ``language``: le opzioni sono lingue (``label`` ne dà il nome
+    bilingue) e si aggiungono a ``Character.languages`` senza duplicati. ``spell_pick``: le scelte non sono opzioni di un elenco ma
     incantesimi di qualsiasi classe, aggiunti dalla pagina degli incantesimi (``known`` conta fra i conosciuti,
     ``extra`` no: Segreti Magici Aggiuntivi); ``options`` non si usa.
     ``owned(ctx)``: abilità che il giocatore ha già sulla scheda e che, per un personaggio esistente prima del catalogo
@@ -38,12 +39,12 @@ class ChoiceSpec:
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
     label: Callable[[str], dict] | None = None
-    grants: Literal["proficient", "expert"] | None = None
+    grants: Literal["proficient", "expert", "language"] | None = None
     spell_pick: Literal["known", "extra"] | None = None
     owned: Callable[["RuleContext"], list[str]] | None = None
 
     def __post_init__(self) -> None:
-        if self.grants not in (None, "proficient", "expert"):
+        if self.grants not in (None, "proficient", "expert", "language"):
             raise ValueError(f"grants sconosciuto: {self.grants}")
         if self.spell_pick not in (None, "known", "extra"):
             raise ValueError(f"spell_pick sconosciuto: {self.spell_pick}")
@@ -165,8 +166,12 @@ class OnUse:
     ``invalid_target``) prima di spendere qualcosa. Senza bersaglio lo stato è di chi lo usa.
     ``concentration``: l'uso avvia una concentrazione che non è di un incantesimo (Invocare Duplicato), per la durata
     dello stato; gli stati con ``concentration_end`` finiscono con lei.
+    ``ally_exclusive``: lo stato dato a un alleato è uno solo alla volta: un nuovo uso toglie quello del bersaglio precedente,
+    il cui id il server tiene in ``settings["ally_exclusive"]``.
     ``panel``: l'uso passa da un pannello e da un endpoint propri (Preservare Vita): ``POST /features/{key}/use`` lo
     rifiuta (409 ``needs_panel``) e la scheda dice quale pannello aprire in ``use_panel``.
+    ``maximize_if(ctx, params)``: i dadi tirati dall'uso valgono il massimo e l'uso spende anche un uso di ``maximize_cost``
+    (Collera Distruttiva su Collera della Tempesta); senza usi sufficienti l'uso è rifiutato prima di spendere (409 ``no_uses``).
     ``choices``: scelte da fare all'uso, validate prima di spendere qualcosa (422 ``invalid_choice``).
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
@@ -190,6 +195,9 @@ class OnUse:
     ally_state: bool = False
     concentration: bool = False
     panel: str | None = None
+    ally_exclusive: bool = False
+    maximize_if: "Callable[[RuleContext, dict], bool] | None" = None
+    maximize_cost: str | None = None
     choices: "tuple[UseChoice, ...]" = ()
 
     def __post_init__(self) -> None:

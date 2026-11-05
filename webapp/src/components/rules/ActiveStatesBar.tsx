@@ -17,6 +17,8 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
     out.push(t('character.turn.state_dc', { dc: d.dc, save: typeof d.save === 'string' ? t(`common.abilities.${d.save}`) : '' }))
   }
   if (typeof d.skill === 'string') out.push(t(`character.skills.${d.skill}`))
+  if (typeof d.damage_type === 'string') out.push(t(`character.inventory.damage_types.dmg_${d.damage_type}`))
+  if (d.maximized === true) out.push(t('character.turn.state_maximized'))
   if (typeof d.cr === 'string') out.push(t('character.turn.state_cr', { cr: d.cr }))
   if (typeof d.attack_bonus === 'number') out.push(t('character.turn.state_attack_bonus', { n: d.attack_bonus }))
   if (typeof d.bonus === 'number') out.push(t('character.turn.state_bonus', { n: d.bonus }))

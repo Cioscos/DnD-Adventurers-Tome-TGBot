@@ -12,7 +12,7 @@ from core.data.skills import SKILLS
 from core.rules.catalog._common import attacks_made, feature, skill_label, state_on
 from core.rules.types import (
     TRICKSTER_BLESSING, WAR_GODS_BLESSING, ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext,
-    StateSpec, TargetEffect, UseChoice, Uses,
+    StateSpec, TargetEffect, UseChoice, Uses, UseToggle,
 )
 
 ED, CK = "2014", "cleric"
@@ -45,6 +45,31 @@ def spell_dc(ctx: RuleContext) -> int:
 def _wisdom_mod(ctx: RuleContext) -> int:
     from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
     return effective_ability_mod(ctx.char, "wisdom")
+
+
+LANGUAGES = {
+    "common": ("Comune", "Common"), "dwarvish": ("Nanico", "Dwarvish"), "elvish": ("Elfico", "Elvish"),
+    "giant": ("Gigante", "Giant"), "gnomish": ("Gnomesco", "Gnomish"), "goblin": ("Goblin", "Goblin"),
+    "halfling": ("Halfling", "Halfling"), "orc": ("Orchesco", "Orc"), "abyssal": ("Abissale", "Abyssal"),
+    "celestial": ("Celestiale", "Celestial"), "draconic": ("Draconico", "Draconic"),
+    "deep_speech": ("Gergo delle Profondità", "Deep Speech"), "infernal": ("Infernale", "Infernal"),
+    "primordial": ("Primordiale", "Primordial"), "sylvan": ("Silvano", "Sylvan"), "undercommon": ("Sottocomune", "Undercommon"),
+}
+
+
+def language_label(slug: str) -> dict:
+    it, en = LANGUAGES[slug]
+    return {"name": {"it": it, "en": en}, "summary": {"it": "", "en": ""}}
+
+
+def _languages_owned(ctx: RuleContext) -> list[str]:
+    """Lingue già sulla scheda: un personaggio esistente prima del catalogo le dichiara invece di aggiungerne altre (R39)."""
+    have = {str(x).strip().lower() for x in ctx.char.languages or []}
+    return [k for k, names in LANGUAGES.items() if {n.lower() for n in names} & have]
+
+
+def _languages_missing(ctx: RuleContext) -> list[str]:
+    return [k for k in LANGUAGES if k not in _languages_owned(ctx)]
 
 
 def _no_options(_ctx: RuleContext) -> list[str]:
@@ -82,9 +107,15 @@ def _radiance_state(ctx: RuleContext, _params: dict) -> StateSpec:
                      data={"dc": spell_dc(ctx), "save": "constitution", "bonus": ctx.class_level})
 
 
-def _wrath_state(ctx: RuleContext, _params: dict) -> StateSpec:
+def _wrath_state(ctx: RuleContext, params: dict) -> StateSpec:
     return StateSpec("wrath_of_the_storm", rounds=1, ends_on=("manual", "new_turn"),
-                     data={"dc": spell_dc(ctx), "save": "dexterity", "others": [WRATH_OF_THE_STORM]})
+                     data={"dc": spell_dc(ctx), "save": "dexterity", "damage_type": params.get("damage_type"),
+                           "maximized": bool(params.get("destructive")), "others": [WRATH_OF_THE_STORM]})
+
+
+def _wrath_maximized(ctx: RuleContext, params: dict) -> bool:
+    """Collera Distruttiva: fulmine o tuono sono sempre i tipi di Collera della Tempesta; serve averla (2° livello)."""
+    return bool(params.get("destructive")) and ctx.class_level >= 2
 
 
 def _flare_state(ctx: RuleContext, _params: dict) -> StateSpec:
@@ -379,12 +410,14 @@ FEATURES = (
     feature("blessings_of_knowledge", CK, ED, 1,
             "Benedizioni della Conoscenza / Blessings of Knowledge (Conoscenza 1, pag. 60)",
             ("Benedizioni della Conoscenza", "Blessings of Knowledge"),
-            ("Due abilità fra Arcano, Natura, Religione e Storia passano a maestria (doppia competenza).",
-             "Two skills among Arcana, Nature, Religion and History gain expertise (double proficiency)."),
+            ("Due linguaggi a scelta e due abilità fra Arcano, Natura, Religione e Storia, che passano a maestria (doppia competenza).",
+             "Two languages of your choice and two skills among Arcana, Nature, Religion and History, which gain expertise (double proficiency)."),
             subclass="knowledge",
             choices=(ChoiceSpec(group="knowledge_skills", levels={1: 2},
                                 options=lambda _c: ["arcana", "nature", "religion", "history"],
-                                label=skill_label, grants="expert"),)),
+                                label=skill_label, grants="expert"),
+                     ChoiceSpec(group="knowledge_languages", levels={1: 2}, options=_languages_missing,
+                                label=language_label, grants="language", owned=_languages_owned))),
     feature("knowledge_of_the_ages", CK, ED, 2,
             "Incanalare Divinità: Conoscenze Secolari / Channel Divinity: Knowledge of the Ages (Conoscenza 2, pag. 60)",
             ("Conoscenze Secolari", "Knowledge of the Ages"),
@@ -467,7 +500,7 @@ FEATURES = (
             ("Benedizione dell'Ingannatore", "Blessing of the Trickster"),
             ("Azione: una creatura consenziente, non tu, ha vantaggio alle prove di Furtività per 1 ora o finché non la usi di nuovo.",
              "Action: a willing creature other than you has advantage on Stealth checks for 1 hour or until you use this again."),
-            "action", subclass="trickery", on_use=OnUse(slot="action", ally_state=True, state=_trickster_state)),
+            "action", subclass="trickery", on_use=OnUse(slot="action", ally_state=True, ally_exclusive=True, state=_trickster_state)),
     feature("divine_strike_trickery", CK, ED, 8, "Colpo Divino / Divine Strike (Inganno 8, pag. 61)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni da veleno in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra poison damage."),
@@ -590,7 +623,14 @@ FEATURES = (
             ("Reazione: chi ti colpisce entro 1,5 m fa un TS Destrezza o subisce 2d8 da fulmine o tuono (la metà se lo supera). Usi pari a Saggezza (minimo 1), al riposo lungo.",
              "Reaction: a creature within 5 ft that hits you makes a Dexterity save or takes 2d8 lightning or thunder (half on a success). Uses equal Wisdom (minimum 1), per long rest."),
             "reaction", subclass="tempest", uses=Uses(ability="wisdom", minimum=1), restoration="long_rest",
-            on_use=OnUse(slot="reaction", rolls="2d8", state=_wrath_state)),
+            on_use=OnUse(slot="reaction", rolls="2d8", state=_wrath_state, maximize_if=_wrath_maximized, maximize_cost=POOL,
+                         choices=(UseChoice("damage_type", {"it": "Tipo di danno", "en": "Damage type"},
+                                            lambda _c: ["lightning", "thunder"],
+                                            lambda t: {"it": "Fulmine", "en": "Lightning"} if t == "lightning"
+                                            else {"it": "Tuono", "en": "Thunder"}),),
+                         toggles=(UseToggle("destructive", {"it": "Collera Distruttiva: spendi un uso di Incanalare Divinità, dadi al massimo",
+                                                            "en": "Destructive Wrath: spend a Channel Divinity use, dice at maximum"},
+                                            available=lambda c: c.class_level >= 2),))),
     feature("destructive_wrath", CK, ED, 2,
             "Incanalare Divinità: Collera Distruttiva / Channel Divinity: Destructive Wrath (Tempesta 2, pag. 63)",
             ("Collera Distruttiva", "Destructive Wrath"),

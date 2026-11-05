@@ -331,3 +331,90 @@ async def test_knowledge_of_the_ages_does_not_stack_on_a_skill_you_already_have(
     before = (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()["total"]
     await client.post(f"/characters/{cid}/features/{AGES}/use", json={"params": {"skill": "stealth"}})
     assert (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()["total"] == before
+
+
+# ---------------------------------------------------------------------------
+# Benedizione dell'Ingannatore: un solo bersaglio alla volta
+# ---------------------------------------------------------------------------
+
+async def test_a_new_trickster_blessing_takes_the_state_off_the_previous_target(client, test_session_factory):
+    from core.db.models import AbilityScore, Character, SessionParticipant, SessionRole
+    from tests.integration._encounter_helpers import GM_ID, NOW, PLAYER_ID, as_user
+    sid, cleric, hero = await _table(client, test_session_factory, 1, "trickery")
+    async with test_session_factory() as s:
+        other = Character(user_id=9002, name="Compagno")
+        s.add(other)
+        await s.flush()
+        s.add(AbilityScore(character_id=other.id, name="dexterity", value=12))
+        s.add(SessionParticipant(session_id=sid, user_id=9002, character_id=other.id, role=SessionRole.PLAYER,
+                                 display_name="Compagno", joined_at=NOW))
+        await s.commit()
+        other_id = other.id
+    key = "cleric.blessing_of_the_trickster"
+    assert (await _give(client, cleric, hero, key)).status_code == 200
+    await client.post(f"/characters/{cleric}/turn/new")
+    assert (await _give(client, cleric, other_id, key)).status_code == 200
+    as_user(PLAYER_ID)
+    assert await _states(client, hero) == []  # tolto dal bersaglio precedente
+    as_user(9002)
+    assert [s["key"] for s in await _states(client, other_id)] == ["trickster_blessing"]
+    as_user(GM_ID)
+    assert (await _full(client, cleric))["settings"]["ally_exclusive"] == {key: other_id}
+    await client.post(f"/characters/{cleric}/turn/new")
+    assert (await _give(client, cleric, other_id, key)).status_code == 200  # lo stesso bersaglio: resta uno solo
+    as_user(9002)
+    assert len(await _states(client, other_id)) == 1
+
+
+async def test_the_exclusive_target_is_server_owned_and_cleaned_on_import(client):
+    cid = await _cleric(client, 1, "trickery")
+    full = await _full(client, cid)
+    await client.patch(f"/characters/{cid}", json={"settings": {**full["settings"], "ally_exclusive": {"cleric.blessing_of_the_trickster": 99}}})
+    assert "ally_exclusive" not in (await _full(client, cid))["settings"]
+    exported = (await client.get(f"/characters/{cid}/export")).json()
+    exported["character"]["settings"]["ally_exclusive"] = {"cleric.blessing_of_the_trickster": 1}
+    new = (await client.post("/characters/import", json=exported)).json()["id"]
+    assert "ally_exclusive" not in (await _full(client, new))["settings"]
+
+
+# ---------------------------------------------------------------------------
+# Benedizioni della Conoscenza: i due linguaggi
+# ---------------------------------------------------------------------------
+
+def _choice_of(full, group):
+    return next(c for c in full["pending_choices"] if c.get("group") == group)
+
+
+async def test_blessings_of_knowledge_adds_two_languages_without_duplicates(client):
+    cid = await _cleric(client, 1, "knowledge")
+    await client.patch(f"/characters/{cid}", json={"languages": ["Elfico"]})
+    choice = _choice_of(await _full(client, cid), "knowledge_languages")
+    assert choice["count"] == 2 and len(choice["options"]) == 15  # quelli che hai già non si offrono
+    assert next(o for o in choice["options"] if o["key"] == "dwarvish")["name"] == {"it": "Nanico", "en": "Dwarvish"}
+    assert "elvish" not in {o["key"] for o in choice["options"]}
+    r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve", json={"kind": "class_option", "options": ["sylvan", "dwarvish"]})
+    assert r.status_code == 200, r.text
+    assert (await _full(client, cid))["languages"] == ["Elfico", "Silvano", "Nanico"]
+    assert not any(c.get("group") == "knowledge_languages" for c in r.json()["pending_choices"])
+
+
+async def test_blessings_of_knowledge_languages_need_two_valid_picks(client):
+    cid = await _cleric(client, 1, "knowledge")
+    choice = _choice_of(await _full(client, cid), "knowledge_languages")
+    for picked in (["elvish"], ["elvish", "elvish"], ["elvish", "klingon"]):
+        r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve", json={"kind": "class_option", "options": picked})
+        assert r.status_code in (400, 422)
+    assert (await _full(client, cid))["languages"] in ([], None)
+
+
+async def test_an_imported_cleric_can_declare_the_languages_it_already_has(client):
+    cid = await _cleric(client, 1, "knowledge")
+    await client.patch(f"/characters/{cid}", json={"languages": ["Comune", "Elfico", "Nanico"]})
+    exported = (await client.get(f"/characters/{cid}/export")).json()
+    new = (await client.post("/characters/import", json=exported)).json()["id"]
+    choice = _choice_of(await _full(client, new), "knowledge_languages")
+    assert choice["retrofit"] is True
+    assert {o["key"] for o in choice["options"] if o.get("owned")} == {"common", "elvish", "dwarvish"}
+    r = await client.post(f"/characters/{new}/choices/{choice['id']}/resolve", json={"kind": "class_option", "options": ["elvish", "dwarvish"]})
+    assert r.status_code == 200, r.text
+    assert (await _full(client, new))["languages"] == ["Comune", "Elfico", "Nanico"]  # nessun duplicato

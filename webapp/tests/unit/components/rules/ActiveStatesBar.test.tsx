@@ -88,6 +88,16 @@ describe('ActiveStatesBar', () => {
     expect(screen.getByText(/character\.turn\.state_bonus/)).toBeInTheDocument()
   })
 
+  it('shows the damage type and the maximised dice of Wrath of the Storm', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'wrath_of_the_storm', feature_key: 'cleric.wrath_of_the_storm', rounds_left: 1, ends_on: ['manual'], name: 'Collera della Tempesta',
+         data: { dc: 12, save: 'dexterity', damage_type: 'thunder', maximized: true } }],
+      [],
+    )} />)
+    expect(screen.getByText(/dmg_thunder/)).toBeInTheDocument()
+    expect(screen.getByText(/state_maximized/)).toBeInTheDocument()
+  })
+
   it('tells the outcome of a Divine Intervention', () => {
     renderWithProviders(<ActiveStatesBar char={char(
       [{ key: 'divine_intervention', feature_key: 'cleric.divine_intervention', rounds_left: null, ends_on: ['rest_long', 'manual'],

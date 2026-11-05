@@ -70,6 +70,9 @@ def restore_exhaustion(char: Any, level: int) -> None:
 ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 
 
+ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
+
+
 TARGET_IMMUNITY = "target_immunity"  # settings: {chiave dell'effetto: ["combatant:3", "character:7"]}
 
 

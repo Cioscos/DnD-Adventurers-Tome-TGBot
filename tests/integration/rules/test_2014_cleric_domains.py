@@ -196,11 +196,51 @@ async def test_wrath_of_the_storm_rolls_2d8_and_shows_the_dexterity_dc(client):
     cid = await _cleric(client, 1, "tempest", wisdom=14)
     key = "cleric.wrath_of_the_storm"
     assert (await _ability(client, cid, key))["max_uses"] == 2
-    r = await _use(client, cid, key)
+    r = await client.post(f"/characters/{cid}/features/{key}/use", json={"params": {"damage_type": "thunder"}})
     assert r.status_code == 200, r.text
     assert len(r.json()["rolls"]) == 2 and all(1 <= v <= 8 for v in r.json()["rolls"])
-    assert (r.json()["state"]["data"]["dc"], r.json()["state"]["data"]["save"]) == (8 + 2 + 2, "dexterity")
+    data = r.json()["state"]["data"]
+    assert (data["dc"], data["save"], data["damage_type"]) == (8 + 2 + 2, "dexterity", "thunder")
     assert (await _turn(client, cid))["reaction_used"] is True and (await _ability(client, cid, key))["uses"] == 1
+
+
+async def test_wrath_of_the_storm_asks_for_lightning_or_thunder_before_spending(client):
+    cid = await _cleric(client, 1, "tempest", wisdom=14)
+    key = "cleric.wrath_of_the_storm"
+    [choice] = (await _ability(client, cid, key))["use_choices"]
+    assert {o["key"] for o in choice["options"]} == {"lightning", "thunder"}
+    for params in ({}, {"damage_type": "fire"}):
+        r = await client.post(f"/characters/{cid}/features/{key}/use", json={"params": params})
+        assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"
+    assert (await _ability(client, cid, key))["uses"] == 2 and (await _turn(client, cid))["reaction_used"] is False
+
+
+async def test_destructive_wrath_maximises_the_wrath_of_the_storm_dice_and_spends_the_pool(client):
+    cid = await _cleric(client, 2, "tempest", wisdom=14)
+    key = "cleric.wrath_of_the_storm"
+    assert [t["key"] for t in (await _ability(client, cid, key))["use_toggles"]] == ["destructive"]
+    r = await client.post(f"/characters/{cid}/features/{key}/use", json={"params": {"damage_type": "lightning", "destructive": True}})
+    assert r.status_code == 200, r.text
+    assert r.json()["rolls"] == [8, 8] and r.json()["state"]["data"]["maximized"] is True
+    assert (await _ability(client, cid, POOL))["uses"] == 0 and (await _ability(client, cid, key))["uses"] == 1
+
+
+async def test_destructive_wrath_without_a_channel_divinity_use_is_refused_and_changes_nothing(client):
+    cid = await _cleric(client, 2, "tempest", wisdom=14)  # una sola Incanalare Divinità, due Collere
+    key = "cleric.wrath_of_the_storm"
+    params = {"damage_type": "thunder", "destructive": True}
+    assert (await client.post(f"/characters/{cid}/features/{key}/use", json={"params": params})).status_code == 200
+    await client.post(f"/characters/{cid}/turn/new")
+    r = await client.post(f"/characters/{cid}/features/{key}/use", json={"params": params})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_uses"
+    assert (await _ability(client, cid, key))["uses"] == 1 and (await _turn(client, cid))["reaction_used"] is False
+    plain = await client.post(f"/characters/{cid}/features/{key}/use", json={"params": {"damage_type": "thunder"}})
+    assert plain.status_code == 200  # senza Collera Distruttiva si tira normalmente
+
+
+async def test_destructive_wrath_is_not_offered_at_level_1(client):
+    cid = await _cleric(client, 1, "tempest")
+    assert (await _ability(client, cid, "cleric.wrath_of_the_storm"))["use_toggles"] == []
 
 
 # ---------------------------------------------------------------------------

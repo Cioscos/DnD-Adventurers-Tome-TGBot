@@ -1156,6 +1156,7 @@
       "state_dc": "TS {{save}}, CD {{dc}}",
       "state_cr": "Distrugge i non morti fino a GS {{cr}}",
       "state_attack_bonus": "+{{n}} al tiro per colpire",
+      "state_maximized": "Dadi al massimo",
       "state_bonus": "Danni +{{n}} fissi",
       "state_duplicates": "Duplicati: {{n}}",
       "divine_success": "Riuscito (d100 {{roll}} su {{level}}): attendi 7 giorni, poi termina lo stato",

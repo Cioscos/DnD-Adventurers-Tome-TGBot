@@ -115,6 +115,23 @@ def start_state(char, spec: StateSpec, feature_key: str, name: str | None = None
     return begin_state(char, spec, feature_key, name)
 
 
+async def _swap_exclusive_target(session: AsyncSession, char, feature_key: str, target) -> None:
+    """Un nuovo uso toglie lo stato dal bersaglio precedente (id scritto dal server, mai dal client) e segna il nuovo."""
+    from core.db.models import Character  # import locale
+    from core.rules.states import ALLY_EXCLUSIVE
+    held = dict((char.settings or {}).get(ALLY_EXCLUSIVE) or {})
+    previous = held.get(feature_key)
+    if type(previous) is int and previous != (target.id if target is not None else None):
+        old = await session.get(Character, previous)
+        if old is not None:
+            old.active_states = [s for s in old.active_states or [] if s.get("feature_key") != feature_key]
+    if target is not None:
+        held[feature_key] = target.id
+    else:
+        held.pop(feature_key, None)
+    char.settings = {**(char.settings or {}), ALLY_EXCLUSIVE: held}
+
+
 @dataclass
 class UseResult:
     rolls: list[int] = field(default_factory=list)
@@ -144,6 +161,13 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         ctx_choice = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
         if (params or {}).get(choice.key) not in choice.options(ctx_choice):
             raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    maximize = False
+    if on_use.maximize_if and on_use.maximize_if(
+            RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level), params or {}):
+        maximize = True
+        extra = next((a for a in char.abilities if a.feature_key == on_use.maximize_cost), None)
+        if extra is None or (extra.max_uses is not None and (extra.uses or 0) < 1):
+            raise _err(status.HTTP_409_CONFLICT, "no_uses")
     target = None
     if on_use.ally_state and (params or {}).get("target_character_id") is not None:
         target = await ally_target(session, char, params["target_character_id"])
@@ -161,6 +185,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         spend(char, on_use.slot)  # 409 turn_slot_used prima di toccare gli usi
     if ability is not None and ability.max_uses is not None and ability.uses is not None:
         ability.uses -= cost
+    if maximize and extra.max_uses is not None and extra.uses is not None:
+        extra.uses -= 1
 
     result = UseResult()
     ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
@@ -168,7 +194,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     formula = on_use.rolls(ctx) if callable(on_use.rolls) else on_use.rolls
     dice = parse_dice(formula) if formula else None
     for _ in range(amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
-        rolled = [random.randint(1, dice[1]) for _ in range(dice[0])] if dice else []
+        rolled = ([dice[1]] * dice[0] if maximize else [random.randint(1, dice[1]) for _ in range(dice[0])]) if dice else []
         result.rolls += rolled
         if on_use.heal:
             healed += max(0, on_use.heal(ctx, sum(rolled)))
@@ -187,6 +213,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         spell_state = on_use.state(ctx, {}) if callable(on_use.state) else on_use.state
         start_concentration(char, None, spell_state.rounds if spell_state else None,
                             {"feature_key": feature_key, "name": spec.name["it"]})
+    if on_use.ally_exclusive:
+        await _swap_exclusive_target(session, char, feature_key, target)
     if on_use.state:
         own = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
         name = (own.name if own is not None and own.name else None) or spec.name["it"]
