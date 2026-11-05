@@ -54,6 +54,11 @@ _CONDITION_OPTIONS = (
         available=lambda ctx: ctx.edition == "2024" and _on("grappled")(ctx),
     ),
     RollOptionSpec(
+        key="condition:invisible", phase="before", rolls=("attack",), mode="disadvantage",
+        label={"it": "Invisibile: un nemico ti vede?", "en": "Invisible: can an enemy see you?"},
+        available=lambda ctx: ctx.edition == "2024" and _on("invisible")(ctx),
+    ),
+    RollOptionSpec(
         key="condition:blinded", phase="before", rolls=("skill",), auto_fail=True,
         label={"it": "Accecato: la prova richiede la vista?", "en": "Blinded: does this check require sight?"},
         available=_on("blinded"),

@@ -459,3 +459,22 @@ async def test_hide_removed_by_hand_does_not_linger(client):
     r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12})
     assert r.status_code == 200, r.text
     assert (await _full(client, cid))["conditions"]["invisible"] is True
+
+
+# --- Invisibile 2024: chi ti vede annulla il beneficio -------------------------------------------------------------
+
+async def test_invisible_2024_asks_whether_an_enemy_sees_you(client):
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True}})
+    listed = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})
+    assert any(o["key"] == "condition:invisible" for o in listed.json())
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12, "options": ["condition:invisible"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode_applied"] == "normal"  # vantaggio dell'Invisibile e svantaggio di chi ti vede si annullano
+
+
+async def test_invisible_2014_has_no_such_question(client):
+    cid = await _char(client)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True}})
+    listed = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})
+    assert all(o["key"] != "condition:invisible" for o in listed.json())
