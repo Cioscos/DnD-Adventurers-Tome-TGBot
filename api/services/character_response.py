@@ -96,9 +96,12 @@ async def build_character_response(
         {**c, "options": option_catalog(char, c)} if c.get("kind") == "class_option" else c
         for c in (char.pending_choices or [])]
 
-    usable = {spec.key for spec, _ in active_features(char) if spec.on_use}
+    usable = {spec.key: spec.on_use for spec, _ in active_features(char) if spec.on_use}
     for ab in response.abilities:
-        ab.has_on_use = ab.feature_key in usable
+        on_use = usable.get(ab.feature_key)
+        ab.has_on_use = on_use is not None
+        ab.choose_amount = bool(on_use and on_use.choose_amount)
+        ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the

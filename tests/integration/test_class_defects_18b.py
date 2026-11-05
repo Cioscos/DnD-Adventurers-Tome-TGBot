@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from core.db.models import Character
+from api.services.rules_states import start_state, state_name
 from core.rules.types import Cost, OnUse, RollOptionSpec, StateSpec, Uses
 from tests.integration.test_rules_states import _char, _fighter, _spec, _use, _uses_of
 
@@ -122,3 +124,99 @@ async def test_flat_damage_reroll_keeps_the_fixed_part_in_the_list(client, rules
     again = r.json()
     assert again["damage_rolls"] == [1]  # il fisso resta nell'elenco mostrato
     assert again["damage_total"] == body["damage_total"] - body["reroll_dice"][0][1] + 6
+
+
+# --- Giro 1: stato senza riga né nome, spesa di N usi -----------------------------------------------------------------
+
+def test_start_state_without_a_name_stores_none_never_the_key():
+    from types import SimpleNamespace
+    char = SimpleNamespace(active_states=[], abilities=[])
+    state = start_state(char, StateSpec("wild_shape"), "druid.wild_shape")
+    assert state["name"] is None
+    assert state_name(char, state) == "Effetto attivo"
+
+
+async def test_state_without_row_or_name_is_never_named_by_its_key(client, test_session_factory):
+    cid = await _fighter(client, test_session_factory)
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == cid))).scalar_one()
+        char.active_states = [{"key": "wild_shape", "feature_key": "druid.wild_shape", "name": None,
+                               "rounds_left": 1, "ends_on": ["manual"], "data": {}}]
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/rounds/tick")
+    assert r.json()["expired_effects"] == ["Effetto attivo"]
+
+
+async def test_wild_shape_state_has_no_raw_key_name(client, test_session_factory):
+    from api.services.wild_shape import start_form
+    from core.db.models import Companion
+    cid = await _fighter(client, test_session_factory)
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == cid).options(
+            selectinload(Character.classes), selectinload(Character.abilities),
+            selectinload(Character.ability_scores), selectinload(Character.items),
+        ))).scalar_one()
+        form = Companion(character_id=cid, name="Lupo", kind="wild_shape", max_hp=10, current_hp=10,
+                        created_at="2026-01-01T00:00:00")
+        s.add(form)
+        await s.flush()
+        start_form(char, form)
+        assert char.active_states[0]["name"] is None
+        await s.commit()
+
+
+async def test_amount_over_the_remaining_uses_is_refused_and_spends_nothing(client, test_session_factory, rules_catalog):
+    rules_catalog(_spec(OnUse(heal=lambda _c, _r: 1, state=StateSpec("aura"), grants_action=True, slot="bonus"),
+                        uses=Uses(table={1: 2})))
+    cid = await _fighter(client, test_session_factory, hp=(30, 10))
+    r = await _use(client, cid, amount=3)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_uses"
+    char = await _char(client, cid)
+    assert _uses_of(char) == 2 and char["current_hit_points"] == 10 and not char["active_states"]
+    turn = (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]
+    assert turn["bonus_used"] is False and turn["extra_actions"] == 0
+
+
+async def test_grants_action_repeats_for_each_unit(client, test_session_factory, rules_catalog):
+    rules_catalog(_spec(OnUse(grants_action=True), uses=Uses(table={1: 5})))
+    cid = await _fighter(client, test_session_factory)
+    assert (await _use(client, cid, amount=3)).status_code == 200
+    assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]["extra_actions"] == 3
+
+
+async def test_hp_undo_after_a_pool_heal_is_refused_and_never_restores_stale_hp(client, test_session_factory, rules_catalog):
+    # La cura di un privilegio non scrive uno snapshot di annullamento PF: `/hp/undo` di un'operazione precedente
+    # trova i PF cambiati e rifiuta (409), senza riportare i PF a prima della cura. Gli usi restano spesi.
+    rules_catalog(_spec(OnUse(heal=lambda _c, _r: 1), uses=Uses(table={1: 10})))
+    cid = await _fighter(client, test_session_factory, hp=(30, 10))
+    dmg = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 2})).json()
+    assert (await _use(client, cid, amount=4)).status_code == 200
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": dmg["hp_undo_id"]})
+    assert r.status_code == 409 and r.json()["detail"] == "hp_undo_not_applicable"
+    char = await _char(client, cid)
+    assert char["current_hit_points"] == 12 and _uses_of(char) == 6
+
+
+async def test_pool_feature_declares_that_the_player_chooses_the_amount(client, test_session_factory, rules_catalog):
+    rules_catalog(_spec(OnUse(heal=lambda _c, _r: 1, choose_amount=True, max_amount=5), uses=Uses(table={1: 10})))
+    cid = await _fighter(client, test_session_factory, hp=(30, 10))
+    ab = next(a for a in (await _char(client, cid))["abilities"] if a["feature_key"] == "fighter.prova")
+    assert ab["has_on_use"] is True and ab["choose_amount"] is True and ab["max_amount"] == 5
+    r = await _use(client, cid, amount=6)  # oltre il tetto del privilegio: rifiutato, nulla speso
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "amount_too_high"
+    assert _uses_of(await _char(client, cid)) == 10
+    assert (await _use(client, cid, amount=5)).json()["healed"] == 5
+
+
+async def test_plain_feature_does_not_ask_for_an_amount(client, test_session_factory, rules_catalog):
+    rules_catalog(_spec(OnUse(slot="bonus")))
+    cid = await _fighter(client, test_session_factory)
+    ab = next(a for a in (await _char(client, cid))["abilities"] if a["feature_key"] == "fighter.prova")
+    assert ab["choose_amount"] is False and ab["max_amount"] is None
+
+
+def test_max_amount_needs_choose_amount():
+    with pytest.raises(ValueError):
+        OnUse(max_amount=5)
+    with pytest.raises(ValueError):
+        OnUse(choose_amount=True, max_amount=0)

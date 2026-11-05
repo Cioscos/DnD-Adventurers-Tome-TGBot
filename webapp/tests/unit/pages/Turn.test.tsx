@@ -396,12 +396,54 @@ describe('Turn page', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(key))
   })
 
+  const pool = (over: Record<string, unknown> = {}) => ({
+    ...char,
+    abilities: [{
+      id: 8, name: 'Imposizione', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'paladin.lay_on_hands', max_uses: 10, uses: 4, action_type: 'action', restoration_type: 'long_rest',
+      choose_amount: true, max_amount: null, ...over,
+    }],
+  })
+
+  it('lets the player choose how many uses a pool feature spends, up to the uses left', async () => {
+    getChar.mockResolvedValue(pool())
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const more = await screen.findByLabelText('character.turn.amount_more')
+    const less = screen.getByLabelText('character.turn.amount_less')
+    expect(screen.getByTestId('use-amount')).toHaveTextContent('1')
+    expect(less).toBeDisabled()
+    for (let i = 0; i < 6; i++) await userEvent.click(more)
+    expect(screen.getByTestId('use-amount')).toHaveTextContent('4')  // mai oltre gli usi rimasti
+    expect(more).toBeDisabled()
+    await userEvent.click(less)
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 3))
+  })
+
+  it('caps the pool selector at the feature own max_amount', async () => {
+    getChar.mockResolvedValue(pool({ max_amount: 2 }))
+    renderWithProviders(<Turn />)
+    const more = await screen.findByLabelText('character.turn.amount_more')
+    for (let i = 0; i < 3; i++) await userEvent.click(more)
+    expect(screen.getByTestId('use-amount')).toHaveTextContent('2')
+  })
+
+  it('shows no amount selector for an ordinary feature, which keeps spending one use', async () => {
+    getChar.mockResolvedValue(pool({ choose_amount: false }))
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    expect(screen.queryByTestId('use-amount')).toBeNull()
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands'))
+  })
+
   it('names an active state by the saved name, never by its raw key', async () => {
     getChar.mockResolvedValue({
       ...char,
       active_states: [
         { key: 'rage', feature_key: 'barbarian.rage', name: 'Ira', rounds_left: null, ends_on: ['manual'], data: {} },
-        { key: 'wild', feature_key: 'druid.wild', rounds_left: null, ends_on: ['manual'], data: {} },
+        { key: 'wild', feature_key: 'druid.wild', name: null, rounds_left: null, ends_on: ['manual'], data: {} },
       ],
     })
     renderWithProviders(<Turn />)

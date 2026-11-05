@@ -1109,9 +1109,13 @@
       "state_rounds_left": "{{n}} round",
       "end_state": "Termina",
       "state_generic": "Effetto attivo",
+      "amount_label": "Usi da spendere",
+      "amount_less": "Un uso in meno",
+      "amount_more": "Un uso in più",
       "use_errors": {
         "turn_slot_used": "Hai già usato quell'azione in questo turno.",
         "no_uses": "Usi esauriti.",
+        "amount_too_high": "Troppi usi in una volta per questo privilegio.",
         "feature_not_usable": "Questo privilegio non si può usare ora.",
         "default": "Impossibile usare il privilegio. Riprova."
       },

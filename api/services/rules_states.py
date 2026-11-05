@@ -19,6 +19,10 @@ def _err(code: int, name: str) -> HTTPException:
     return HTTPException(code, detail={"code": name})
 
 
+# Stato senza riga del privilegio né nome (Forma Selvatica): come la barra del client.
+GENERIC_STATE_NAME = "Effetto attivo"
+
+
 def get_states(char) -> list[dict]:
     return list(char.active_states or [])
 
@@ -33,9 +37,10 @@ def end_states(char, *reasons: str) -> list[str]:
 
 
 def state_name(char, state: dict) -> str:
-    """Nome da mostrare: quello della riga del privilegio (come lo vede il giocatore), poi quello salvato nello stato."""
+    """Nome da mostrare: quello della riga del privilegio (come lo vede il giocatore), poi quello salvato nello stato,
+    altrimenti il testo generico: mai la chiave."""
     ability = next((a for a in char.abilities if a.feature_key == state.get("feature_key")), None)
-    return (ability.name if ability is not None and ability.name else None) or state.get("name") or state["key"]
+    return (ability.name if ability is not None and ability.name else None) or state.get("name") or GENERIC_STATE_NAME
 
 
 def tick_states(char) -> list[str]:
@@ -89,9 +94,9 @@ def remove_state(char, key: str) -> None:
 
 
 def start_state(char, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
-    """Avvia lo stato; se la chiave è già attiva lo rinnova. ``name``: come lo chiama il giocatore."""
+    """Avvia lo stato; se la chiave è già attiva lo rinnova. ``name``: come lo chiama il giocatore (``None``: nome generico)."""
     state = {"key": spec.key, "feature_key": feature_key, "rounds_left": spec.rounds,
-             "ends_on": list(spec.ends_on), "data": dict(spec.data), "name": name or spec.key}
+             "ends_on": list(spec.ends_on), "data": dict(spec.data), "name": name}
     char.active_states = [*(s for s in get_states(char) if s["key"] != spec.key), state]
     return state
 
@@ -114,6 +119,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         raise _err(status.HTTP_404_NOT_FOUND, "feature_not_usable")
     spec, row = found
     on_use = spec.on_use
+    if on_use.max_amount is not None and amount > on_use.max_amount:
+        raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost * amount
     if spec.uses is not None:

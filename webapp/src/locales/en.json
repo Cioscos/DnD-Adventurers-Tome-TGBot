@@ -1110,9 +1110,13 @@
       "state_rounds_left": "{{n}} rounds",
       "end_state": "End",
       "state_generic": "Active effect",
+      "amount_label": "Uses to spend",
+      "amount_less": "One use fewer",
+      "amount_more": "One use more",
       "use_errors": {
         "turn_slot_used": "You have already used that action this turn.",
         "no_uses": "No uses left.",
+        "amount_too_high": "Too many uses at once for this feature.",
         "feature_not_usable": "This feature cannot be used right now.",
         "default": "Could not use the feature. Try again."
       },

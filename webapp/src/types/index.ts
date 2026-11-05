@@ -107,6 +107,9 @@ export interface Ability {
   action_type?: ActionType | null
   /** Il «Usa» passa da POST /features/{key}/use (cura, stato, azione extra) invece di scalare solo il contatore. */
   has_on_use?: boolean
+  /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
+  choose_amount?: boolean
+  max_amount?: number | null
 }
 
 /** Stato avviato da un privilegio (Ira...): finisce per round, riposo, svenimento o a mano. */
@@ -114,7 +117,7 @@ export interface ActiveState {
   key: string
   feature_key: string
   /** Come lo chiama il giocatore; assente negli stati avviati prima che il server lo salvasse. */
-  name?: string
+  name?: string | null
   rounds_left: number | null
   ends_on: string[]
   data: Record<string, unknown>

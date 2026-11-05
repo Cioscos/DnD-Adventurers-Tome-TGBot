@@ -13,6 +13,7 @@ import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
+import AmountStepper from '@/components/rules/AmountStepper'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
@@ -35,7 +36,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -50,6 +51,8 @@ export default function Turn() {
   // Influenzare 2024: CD scelta dal giocatore (15 di base) e totale dell'ultima prova, per mostrare l'esito.
   const [influenceDc, setInfluenceDc] = useState('15')
   const [influenceRolled, setInfluenceRolled] = useState(false)
+  // Usi da spendere per i privilegi a pool (per id della riga); senza scelta si spende 1.
+  const [amounts, setAmounts] = useState<Record<number, number>>({})
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -103,9 +106,11 @@ export default function Turn() {
 
   // Un privilegio con effetto reale passa dal server (usi, slot di turno, cura, stato); gli altri scalano solo il contatore.
   const abilityUse = useMutation({
-    mutationFn: async ({ ability, uses }: { ability: Ability; uses: number }) => {
-      if (ability.has_on_use && ability.feature_key) await api.characters.featureUse(charId, ability.feature_key)
-      else await api.abilities.update(charId, ability.id, { uses })
+    mutationFn: async ({ ability, uses, amount }: { ability: Ability; uses: number; amount?: number }) => {
+      if (ability.has_on_use && ability.feature_key) {
+        if (amount) await api.characters.featureUse(charId, ability.feature_key, amount)
+        else await api.characters.featureUse(charId, ability.feature_key)
+      } else await api.abilities.update(charId, ability.id, { uses })
     },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
     onError: (err) => {
@@ -252,11 +257,15 @@ export default function Turn() {
       const ab = c.abilities.find((a) => String(a.id) === e.id)
       if (ab && (ab.max_uses ?? 0) > 0) {
         const left = ab.uses ?? 0
+        const pickable = !!(ab.has_on_use && ab.choose_amount)
+        const cap = Math.max(1, Math.min(left, ab.max_amount ?? left))
+        const amount = Math.min(amounts[ab.id] ?? 1, cap)
         label = `${e.label} (${left}/${ab.max_uses})`
+        if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
         control = (
           <Button size="sm" variant="secondary" disabled={left <= 0}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
-            onClick={() => abilityUse.mutate({ ability: ab, uses: Math.max(0, left - 1) })}>
+            onClick={() => abilityUse.mutate({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )

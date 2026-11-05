@@ -101,7 +101,9 @@ class OnUse:
     ``slot``: slot di turno da spendere (``action``, ``bonus``, ``reaction``...). ``rolls``: dado tirato
     (``1d10``, validato alla definizione); ``heal(ctx, tirato) -> PF`` converte il tiro in cura. ``grants_action``: +1
     azione extra. Con ``amount`` = N (pool come Imposizione delle Mani) l'effetto per unità si ripete N volte: tiri, cura
-    e azioni extra; lo stato e l'effetto sul bersaglio si avviano una volta sola."""
+    e azioni extra; lo stato e l'effetto sul bersaglio si avviano una volta sola.
+    ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
+    ``max_amount``: tetto per un uso solo."""
     cost: int = 1
     slot: str | None = None
     heal: Callable[["RuleContext", int], int] | None = None
@@ -109,8 +111,12 @@ class OnUse:
     grants_action: bool = False
     rolls: str | None = None
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
+    choose_amount: bool = False
+    max_amount: int | None = None
 
     def __post_init__(self) -> None:
+        if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
+            raise ValueError("max_amount (>= 1) vale solo con choose_amount")
         if self.rolls is not None and not parse_dice(self.rolls):
             raise ValueError(f"rolls non valido: {self.rolls!r} (atteso NdM, per esempio 1d10)")
 
