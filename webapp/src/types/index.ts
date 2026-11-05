@@ -281,6 +281,7 @@ export interface ComputedStats {
   resistances: string[]
   immunities: string[]
   incapacitated: boolean
+  surprised?: boolean
   save_flat: Record<string, number>
 }
 
@@ -667,6 +668,8 @@ export interface CombatantLive {
   initiative_mod: number
   sort_order: number | null
   is_dead: boolean
+  /** Colto di sorpresa nel primo turno (lo segna il GM). */
+  surprised?: boolean
   conditions: Record<string, unknown>
   current_hp: number | null
   max_hp: number | null
@@ -708,6 +711,7 @@ export interface CombatantPatch {
   ac?: number
   conditions?: Record<string, unknown>
   is_dead?: boolean
+  surprised?: boolean
 }
 
 export interface GameSessionLive extends GameSession {

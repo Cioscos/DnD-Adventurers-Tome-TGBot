@@ -47,6 +47,7 @@ class ComputedStats(BaseModel):
     resistances: list[str] = []
     immunities: list[str] = []
     incapacitated: bool = False
+    surprised: bool = False  # 2014: è il turno della sorpresa
     save_flat: dict[str, int] = {}
 
 
@@ -405,6 +406,11 @@ class ConditionsUpdate(BaseModel):
     conditions: dict[str, Any]
     # slug -> rounds left; None removes the duration
     durations: Optional[dict[str, Optional[int]]] = None
+
+
+class HideRequest(BaseModel):
+    """Totale della prova di Furtività dell'azione Nascondersi."""
+    total: int
 
 
 class InspirationUpdate(BaseModel):

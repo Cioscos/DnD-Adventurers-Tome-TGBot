@@ -34,7 +34,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
   // and heal both send `{ current_hp }`), so we track the initiating control
   // locally and clear it once the mutation settles.
   const [activeAction, setActiveAction] = useState<
-    'damage' | 'heal' | 'initiative' | 'dead' | null
+    'damage' | 'heal' | 'initiative' | 'dead' | 'surprised' | null
   >(null)
   const [reorderDir, setReorderDir] = useState<-1 | 1 | null>(null)
   const [showAddCondition, setShowAddCondition] = useState(false)
@@ -224,6 +224,23 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
               {t('session.combat.apply')}
             </Pressable>
           </div>
+        </section>
+
+        <section className="space-y-1">
+          <Pressable
+            onClick={() => {
+              setActiveAction('surprised')
+              patchMutation.mutate({ surprised: !c.surprised })
+            }}
+            aria-pressed={!!c.surprised}
+            disabled={patchMutation.isPending && activeAction !== 'surprised'}
+            pending={patchMutation.isPending && activeAction === 'surprised'}
+            className={`w-full min-h-[44px] px-3 py-2.5 rounded-md border text-sm active:opacity-60 disabled:opacity-40
+              ${c.surprised ? 'border-dnd-amber/60 bg-dnd-amber/10 text-dnd-amber' : 'border-dnd-border bg-dnd-surface'}`}
+          >
+            {t('session.combat.surprised')}
+          </Pressable>
+          <p className="text-xs text-dnd-text-muted font-body">{t('session.combat.surprised_hint')}</p>
         </section>
 
         {encounter.status === 'active' && (

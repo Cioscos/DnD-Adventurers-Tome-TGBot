@@ -1,13 +1,15 @@
 import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
 
-/** Moltiplicatore del danno: metà (resistenza), doppio (vulnerabilità), 0 (immunità).
+/** Moltiplicatore del danno: metà (resistenza), doppio (vulnerabilità), prima la metà e poi il doppio
+ *  (entrambe), 0 (immunità).
  *  `null` = nessun override scelto dall'utente. */
-export type DamageModifier = 'half' | 'double' | 'none' | 'immune' | null
+export type DamageModifier = 'half' | 'double' | 'half_double' | 'none' | 'immune' | null
 export type DamageMultiplier = Exclude<DamageModifier, null>
 
 export function applyDamageModifier(value: number, mod: DamageModifier): number {
   if (mod === 'half') return Math.floor(value / 2)
   if (mod === 'double') return value * 2
+  if (mod === 'half_double') return Math.floor(value / 2) * 2
   if (mod === 'immune') return 0
   return value
 }
@@ -49,7 +51,7 @@ export function effectiveDamageMods(char: {
 }
 
 /** Specchio di `damage_multiplier` lato server: l'immunità prevale,
- *  resistenza + vulnerabilità si annullano. */
+ *  resistenza + vulnerabilità si applicano in ordine (prima la metà). */
 export function damageMultiplier(mods: DamageModifiersMap, type: string | null | undefined): DamageMultiplier {
   const slug = canonicalDamageType(type)
   if (!slug || !mods) return 'none'
@@ -57,8 +59,8 @@ export function damageMultiplier(mods: DamageModifiersMap, type: string | null |
   if (has('immunities')) return 'immune'
   const res = has('resistances')
   const vul = has('vulnerabilities')
-  if (res === vul) return 'none'
-  return res ? 'half' : 'double'
+  if (res && vul) return 'half_double'
+  return res ? 'half' : vul ? 'double' : 'none'
 }
 
 /** Etichetta tradotta di un tipo salvato (slug o testo legacy); ignoto = testo com'è. */

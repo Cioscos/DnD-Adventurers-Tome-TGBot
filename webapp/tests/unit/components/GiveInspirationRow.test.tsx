@@ -1,0 +1,65 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { renderWithProviders } from '../utils/renderWithProviders'
+import GiveInspirationRow from '@/components/character/GiveInspirationRow'
+
+const { giveInspiration, partners } = vi.hoisted(() => ({
+  giveInspiration: vi.fn().mockResolvedValue({ id: 7, heroic_inspiration: false }),
+  partners: { current: null as null | { sessionId: number; partners: { user_id: number }[]; stash: boolean } },
+}))
+vi.mock('@/api/client', () => ({
+  api: { sessions: { giveInspiration } },
+  ApiError: class ApiError extends Error {},
+}))
+vi.mock('@/hooks/useTradePartners', () => ({ useTradePartners: () => partners.current }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: vi.fn(), info: vi.fn(), success: vi.fn() }) }))
+vi.mock('@/auth/telegram', () => ({ haptic: { success: vi.fn(), light: vi.fn() } }))
+vi.mock('react-i18next', async (orig) => ({
+  ...((await orig()) as Record<string, unknown>),
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }),
+}))
+vi.mock('@/components/ui/Sheet', async () => {
+  const React = await import('react')
+  return { default: (p: { children?: ReactNode }) => React.createElement('div', null, p.children) }
+})
+vi.mock('@/pages/inventory/GiveSheet', async () => {
+  const React = await import('react')
+  return {
+    PartnerPicker: (p: { onChange: (id: number) => void }) =>
+      React.createElement('button', { onClick: () => p.onChange(55) }, 'pick'),
+  }
+})
+vi.mock('@/components/ui/Button', async () => {
+  const React = await import('react')
+  return { default: (p: { onClick?: () => void; disabled?: boolean; children?: ReactNode }) => React.createElement('button', { onClick: p.onClick, disabled: p.disabled }, p.children) }
+})
+
+const char = { id: 7, rules_edition: '2024', heroic_inspiration: true } as never
+
+beforeEach(() => {
+  giveInspiration.mockClear()
+  partners.current = { sessionId: 3, partners: [{ user_id: 55 }, { user_id: 66 }], stash: false }
+})
+
+describe('GiveInspirationRow', () => {
+  it('lets a 2024 character with Inspiration give it to a party member', async () => {
+    renderWithProviders(<GiveInspirationRow char={char} />)
+    await userEvent.click(screen.getByText('character.inspiration.give'))
+    expect(screen.getByText('character.inspiration.give_confirm').closest('button')).toBeDisabled()
+    await userEvent.click(screen.getByText('pick'))
+    await userEvent.click(screen.getByText('character.inspiration.give_confirm'))
+    await waitFor(() => expect(giveInspiration).toHaveBeenCalledWith(3, { from_character_id: 7, to_user_id: 55 }))
+  })
+
+  it.each([
+    ['in 2014', { rules_edition: '2014' }, true],
+    ['without Inspiration', { heroic_inspiration: false }, true],
+    ['outside a session', {}, false],
+  ])('shows nothing %s', (_name, over, inSession) => {
+    if (!inSession) partners.current = null
+    const { container } = renderWithProviders(<GiveInspirationRow char={{ ...(char as object), ...over } as never} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+})

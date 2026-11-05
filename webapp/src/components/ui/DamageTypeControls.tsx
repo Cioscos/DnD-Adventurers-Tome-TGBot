@@ -7,7 +7,8 @@ import { haptic } from '@/auth/telegram'
 import { damageTypeLabel, type DamageModifier, type DamageMultiplier } from '@/lib/damageModifier'
 
 const LABEL_KEYS = {
-  none: 'modifier_none', half: 'modifier_half', double: 'modifier_double', immune: 'modifier_immune',
+  none: 'modifier_none', half: 'modifier_half', double: 'modifier_double', half_double: 'modifier_half_double',
+  immune: 'modifier_immune',
 } as const
 
 interface DamageTypeControlsProps {
@@ -26,7 +27,9 @@ export default function DamageTypeControls({
 }: DamageTypeControlsProps) {
   const { t } = useTranslation()
   const effective: DamageModifier = damageModifier ?? (damageType ? proposedModifier ?? null : null)
-  const mods: DamageMultiplier[] = damageType ? ['none', 'half', 'double', 'immune'] : ['half', 'double']
+  const mods: DamageMultiplier[] = damageType
+    ? ['none', 'half', 'double', ...(proposedModifier === 'half_double' ? ['half_double' as const] : []), 'immune']
+    : ['half', 'double']
   // Chiuso di default: è opzionale e non deve spingere il valore e il pulsante fuori schermo.
   const [open, setOpen] = useState(!!damageType || !!damageModifier)
   const summary = [

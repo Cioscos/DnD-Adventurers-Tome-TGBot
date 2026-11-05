@@ -35,6 +35,7 @@ def combatant_payload(
         initiative_mod=c.initiative_mod,
         sort_order=c.sort_order,
         is_dead=c.is_dead,
+        surprised=c.surprised,
         conditions=c.conditions or {},
         current_hp=c.current_hp if (show_hp and viewer_is_gm) else None,
         max_hp=c.max_hp if (show_hp and viewer_is_gm) else None,

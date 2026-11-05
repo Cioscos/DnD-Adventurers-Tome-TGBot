@@ -14,7 +14,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
-from api.services.rules_turn import get_turn, set_damaged
+from core.rules.edition import character_edition
+from api.services.rules_turn import get_turn, set_damaged, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
     Character, Combatant, ConditionEffect, Encounter, PendingSave,
@@ -59,6 +60,9 @@ class UndoLog:
     char_states: dict[str, dict] = field(default_factory=dict)
     # {char_id: lista} dei PG a cui l'avanzamento ha svuotato gli effetti «una volta per turno»
     once_per_turn: dict[str, list[str]] = field(default_factory=dict)
+    # Sorpresa: combattenti a cui il turno finito l'ha tolta; PG 2014 a cui il turno iniziato l'ha imposta
+    surprise_ended: list[int] = field(default_factory=list)
+    surprise_started: list[int] = field(default_factory=list)
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -132,6 +136,17 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
         pc = await db.get(Character, int(char_id))
         if pc is not None:
             pc.turn_state = {**get_turn(pc), "once_per_turn": used}
+    for comb_id in log.surprise_ended:
+        comb = await db.get(Combatant, comb_id)
+        if comb is not None:
+            comb.surprised = True
+            pc = await db.get(Character, comb.character_id) if comb.character_id else None
+            if pc is not None and character_edition(pc) == "2014":
+                set_surprised(pc)
+    for char_id in log.surprise_started:
+        pc = await db.get(Character, char_id)
+        if pc is not None:
+            set_surprised(pc, False)
     for eid in log.skip_cleared:
         eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
         if eff is not None:

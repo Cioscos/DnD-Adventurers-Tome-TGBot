@@ -35,15 +35,17 @@ beforeEach(() => {
   server.block = { ...NEW_BLOCK }
   server.extra = {}
 })
-const { attackUnarmedEffect, rollSkill } = vi.hoisted(() => ({
+const { attackUnarmedEffect, rollSkill, updateConditions, hide } = vi.hoisted(() => ({
   attackUnarmedEffect: vi.fn(),
   rollSkill: vi.fn().mockResolvedValue({ die: 10, total: 12, notes: [] }),
+  updateConditions: vi.fn().mockResolvedValue({ id: 7 }),
+  hide: vi.fn().mockResolvedValue({ id: 7 }),
 }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn(), d20Arg: vi.fn() }))
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, tickRound: vi.fn(), rollSkill, rollOptions: vi.fn().mockResolvedValue([]) },
+    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, tickRound: vi.fn(), rollSkill, updateConditions, hide, rollOptions: vi.fn().mockResolvedValue([]) },
     sessions: { me: sessionMe },
     abilities: { update: vi.fn() },
   },
@@ -159,6 +161,41 @@ describe('Turn page', () => {
     await userEvent.click(within(row).getByText('character.skills.athletics'))
     await waitFor(() => expect(turnUse).toHaveBeenCalledWith(7, 'attack', true))
     expect(rollSkill.mock.calls[0][1]).toBe('athletics')
+  })
+
+  it('stands up from prone and drops prone with the free actions of the Other section', async () => {
+    getChar.mockResolvedValue({ ...char, conditions: { prone: true }, computed: { speed: 30 } })
+    const { unmount } = renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.section_other'))
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' }).at(-1)!)
+    expect(screen.getByText('character.turn.drop_prone').closest('button')).toBeDisabled()
+    await userEvent.click(screen.getByText('character.turn.stand_up'))
+    await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(7, { prone: false }))
+    unmount()
+    getChar.mockResolvedValue({ ...char, conditions: {}, computed: { speed: 30 } })
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.section_other'))
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' }).at(-1)!)
+    expect(screen.getByText('character.turn.stand_up').closest('button')).toBeDisabled()
+    await userEvent.click(screen.getByText('character.turn.drop_prone'))
+    await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(7, { prone: true }))
+  })
+
+  it('in 2024 a Hide check of 15 or more offers the Invisible state, a lower one only says so', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 17, notes: [] })
+    hide.mockResolvedValueOnce({ ...char, rules_edition: '2024' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Nascondersi').closest('li') as HTMLElement
+    await userEvent.click(within(row).getByText('character.skills.stealth'))
+    await userEvent.click(await within(row).findByText('character.turn.hide_confirm'))
+    await waitFor(() => expect(hide).toHaveBeenCalledWith(7, 17))
+    rollSkill.mockResolvedValueOnce({ die: 3, total: 9, notes: [] })
+    await userEvent.click(within(row).getByText('character.skills.stealth'))
+    expect(await within(row).findByText('character.turn.hide_failed')).toBeInTheDocument()
+    expect(within(row).queryByText('character.turn.hide_confirm')).toBeNull()
   })
 
   it('leaves actions enabled when not incapacitated', async () => {

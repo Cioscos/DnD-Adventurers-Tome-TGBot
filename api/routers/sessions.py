@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, get_current_user
 from api.database import get_db
 from core.game.containers import is_container, trade_snapshot
+from core.rules.edition import character_edition
 from core.rules.modifiers import modifiers_for
 from api.schemas.session import (
     CharacterLiveSnapshot,
@@ -39,6 +40,7 @@ from api.schemas.session import (
     StashGMRemoveRequest,
     StashPutRequest,
     StashTakeRequest,
+    InspirationGiveRequest,
     TradeRequest,
     TurnState,
 )
@@ -1058,6 +1060,49 @@ async def trade(
         )
 
     return await _move_response(db, sender, removed, notifications)
+
+
+@router.post("/{session_id}/inspiration/give", response_model=CharacterFull)
+async def give_inspiration(
+    session_id: int,
+    body: InspirationGiveRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Ispirazione Eroica 2024: la si ha una sola volta, quella in più va a chi ne è privo."""
+    session_obj = await _load_session(session_id, db)
+    if session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+    me = _assert_participant(session_obj, user_id)
+    if me.role != SessionRole.PLAYER or me.character_id is None or me.character_id != body.from_character_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_your_character")
+    other = next((p for p in session_obj.participants if p.user_id == body.to_user_id), None)
+    if (other is None or other.role != SessionRole.PLAYER or other.character_id is None
+            or other.user_id == user_id):
+        raise HTTPException(status_code=422, detail="invalid_recipient")
+    sender = await _load_char_full(db, me.character_id)
+    recipient = await _load_char_full(db, other.character_id)
+    if character_edition(sender) != "2024":
+        raise HTTPException(status_code=422, detail={"code": "inspiration_give_2024_only"})
+    if not sender.heroic_inspiration:
+        raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
+    if recipient.heroic_inspiration:
+        raise HTTPException(status_code=409, detail={"code": "recipient_has_inspiration"})
+    sender.heroic_inspiration, recipient.heroic_inspiration = False, True
+    for char, text in ((sender, f"Ispirazione Eroica ceduta a {recipient.name}"),
+                       (recipient, f"Ispirazione Eroica ricevuta da {sender.name}")):
+        db.add(CharacterHistory(character_id=char.id, timestamp=_now(), event_type="other", description=text))
+    db.add(SessionMessage(
+        session_id=session_obj.id, user_id=session_obj.gm_user_id, role=SessionRole.GAME_MASTER,
+        body=f"{sender.name} ha ceduto l'Ispirazione Eroica a {recipient.name}", sent_at=_now(),
+        sender_display_name="__GM__",
+    ))
+    _touch(session_obj)
+    await db.flush()
+    if telegram_notify.notifications_enabled(recipient, "gm_events"):
+        await telegram_notify.send_telegram_message(
+            body.to_user_id, f"✨ {sender.name} ti ha ceduto l'Ispirazione Eroica")
+    return await build_character_response(db, sender)
 
 
 _STASH = {"character_id": None, "name": "stash"}

@@ -50,7 +50,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const hpMutation = useMutation({
     mutationFn: async ({ op, value, modifier }: {
       op: 'damage' | 'heal'; value: number
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
     }) => {
       const choice = op === 'damage'
         ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type }, 'damage_in')

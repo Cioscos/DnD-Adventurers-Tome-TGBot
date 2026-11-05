@@ -1,4 +1,4 @@
-export type StandardBucket = 'action' | 'reaction'
+export type StandardBucket = 'action' | 'reaction' | 'other'
 type Edition = '2014' | '2024'
 type Text = { name: string; desc: string }
 
@@ -79,6 +79,12 @@ export const STANDARD_ACTIONS: StandardAction[] = [
     by_edition: { '2024': {
       it: { name: 'Utilizzare', desc: 'Usi un oggetto non magico che richiede un\'azione; l\'interazione gratuita resta una per turno.' },
       en: { name: 'Utilize', desc: 'Use a nonmagical object that needs an action; the free interaction stays one per turn.' } } } },
+  { id: 'stand_up', bucket: 'other',
+    it: { name: 'Rialzati', desc: 'Da prono ti rialzi spendendo metà del tuo movimento (non puoi con velocità 0).' },
+    en: { name: 'Stand Up', desc: 'From prone you stand up by spending half your movement (not with speed 0).' } },
+  { id: 'drop_prone', bucket: 'other',
+    it: { name: 'Gettati a terra', desc: 'Ti getti a terra senza spendere movimento né azioni.' },
+    en: { name: 'Drop Prone', desc: 'You drop prone without spending movement or an action.' } },
   { id: 'opportunity', bucket: 'reaction',
     it: { name: 'Attacco di opportunità', desc: 'Un nemico lascia la tua portata: un attacco in mischia come reazione.' },
     en: { name: 'Opportunity Attack', desc: 'A foe leaves your reach: make one melee attack as a reaction.' } },

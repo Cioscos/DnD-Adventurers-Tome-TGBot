@@ -891,6 +891,8 @@ class Combatant(Base):
     ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     is_dead: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Colto di sorpresa nel primo turno: lo segna il GM; cade a fine del primo turno del combattente.
+    surprised: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sort_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 

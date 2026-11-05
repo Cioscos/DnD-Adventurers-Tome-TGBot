@@ -8,6 +8,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from core.data.damage_types import damage_multiplier
+from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_armor_proficient
@@ -57,8 +58,13 @@ def exhaustion_level(char: Any) -> int:
     return int(level) if isinstance(level, (int, bool)) else 0
 
 
+def surprised_turn(char: Any) -> bool:
+    """2014: è il turno della sorpresa, la creatura non agisce né si muove né reagisce (``turn_state``, scritto dal turno)."""
+    return bool((getattr(char, "turn_state", None) or {}).get("surprised"))
+
+
 def is_incapacitated(char: Any) -> bool:
-    return any((char.conditions or {}).get(c) for c in INCAPACITATING)
+    return surprised_turn(char) or any((char.conditions or {}).get(c) for c in INCAPACITATING)
 
 
 def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> list[Modifier]:
@@ -94,6 +100,8 @@ def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> 
 
     zero = {"grappled", "restrained", "paralyzed", "petrified", "unconscious"}
     add("speed_zero", *sorted(on & (zero if is_2024 else zero | {"stunned"})))
+    if surprised_turn(char):
+        add("speed_zero", "surprised")
     if "petrified" in on:
         add("resistance:all", "petrified")
         if not is_2024:
@@ -119,13 +127,29 @@ def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> 
     return out
 
 
+def _strength_required(item: Any) -> int:
+    try:
+        return int(item_meta(item).get("strength_req") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
-    """Armatura o scudo senza addestramento (R21). Il blocco degli incantesimi è del Task 15."""
+    """Armatura o scudo (R21): senza addestramento, Forza insufficiente (velocità -10 ft) e Furtività. Il blocco degli
+    incantesimi è del Task 15."""
     out: list[Modifier] = []
     is_2024 = ctx.edition == "2024"
     d20 = ctx.roll == "attack" or ctx.roll in _SAVES or ctx.roll in _CHECKS
     for item in ctx.char.items or []:
-        if not item.is_equipped or item.item_type not in ("armor", "shield") or is_armor_proficient(ctx.char, item):
+        if not item.is_equipped or item.item_type not in ("armor", "shield"):
+            continue
+        if item.item_type == "armor":
+            required = _strength_required(item)
+            if required and ability_score(ctx.char, "strength") < required:
+                out.append(Modifier("speed", -10, source="armor:strength"))
+            if item_meta(item).get("stealth_disadvantage") and ctx.roll == "skill" and ctx.skill == "stealth":
+                out.append(Modifier("disadvantage", 1, source="armor:stealth"))
+        if is_armor_proficient(ctx.char, item):
             continue
         if item.item_type == "shield" and is_2024:
             out.append(Modifier("ac", -(ctx.char.shield_armor_class or 0), source="armor:untrained"))

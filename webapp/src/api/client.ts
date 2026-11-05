@@ -528,7 +528,7 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string } & Partial<RollChoice>,
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string } & Partial<RollChoice>,
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
@@ -652,6 +652,8 @@ export const api = {
       dismiss: (id: number, saveId: number) =>
         request<void>(`/characters/${id}/pending-saves/${saveId}/dismiss`, { method: 'POST' }),
     },
+    hide: (id: number, total: number) =>
+      request<CharacterFull>(`/characters/${id}/hide`, { method: 'POST', body: JSON.stringify({ total }) }),
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',
@@ -1344,6 +1346,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    giveInspiration: (sessionId: number, body: { from_character_id: number; to_user_id: number }) =>
+      request<CharacterFull>(`/sessions/${sessionId}/inspiration/give`, { method: 'POST', body: JSON.stringify(body) }),
     stashPut: (sessionId: number, body: StashMoveRequest & { from_character_id: number }) =>
       request<CharacterFull>(`/sessions/${sessionId}/stash/put`, { method: 'POST', body: JSON.stringify(body) }),
     stashTake: (sessionId: number, body: StashMoveRequest & { to_character_id: number }) =>

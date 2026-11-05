@@ -17,7 +17,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
-from api.services.effects import apply_heal, cap_current_hp
+from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
 from api.services.rules_states import end_states, on_damage
@@ -41,7 +41,7 @@ from api.schemas.common import (
     RestPreview,
     RestRequest,
 )
-from core.data.damage_types import LABELS_IT, canonical_damage_type
+from core.data.damage_types import LABELS_IT, apply_damage_mode, canonical_damage_type
 from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
@@ -151,6 +151,13 @@ def _hp_state(char: Character, form=None) -> dict:
     }
 
 
+def _zero_conditions(char: Character) -> dict:
+    """Ciò che i PF a 0 scrivono da soli: l'annullamento lo rimette com'era."""
+    conditions = char.conditions or {}
+    return {"unconscious": bool(conditions.get("unconscious")), "prone": bool(conditions.get("prone")),
+            "knocked_out": bool((char.settings or {}).get("knocked_out"))}
+
+
 # ---------------------------------------------------------------------------
 # HP update
 # ---------------------------------------------------------------------------
@@ -172,6 +179,7 @@ async def update_hp(
     if form is not None and not form_own_hp(char):
         form = None  # 2024: la forma non ha PF propri, i danni vanno ai temporanei e ai PF del druido
     before = _hp_state(char, form)
+    zero_before = _zero_conditions(char)
     option_block = None
     conc_result: ConcentrationSaveResult | None = None
     notifications: list[dict] = []
@@ -193,14 +201,14 @@ async def update_hp(
             option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after)
             # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
             raw = option_after
-            applied = {"half": raw // 2, "double": raw * 2}.get(mod, raw)
+            applied = apply_damage_mode(raw, mod)
         if mod is None:
             # Senza tipo conta solo una resistenza a tutti i danni (Pietrificato).
             mod = damage_taken_mode(char, slug)
             if slug is not None or mod != "none":
                 if not body.options:
                     raw = body.value
-                applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
+                applied = apply_damage_mode(raw, mod)
         elif mod == "immune":
             applied = 0
         # Wild shape: the form soaks the (already resistance-adjusted, using the
@@ -235,14 +243,16 @@ async def update_hp(
             amount -= absorbed
         old = char.current_hit_points
         char.current_hit_points = max(0, char.current_hit_points - amount)
-        if slug is not None and mod in ("half", "double", "immune"):
-            word = {"half": "resistenza", "double": "vulnerabilità", "immune": "immunità"}[mod]
+        knocked = False  # 2024: il tramortito resta a 1 PF, non è «sceso a 0»
+        if slug is not None and mod in ("half", "double", "half_double", "immune"):
+            word = {"half": "resistenza", "double": "vulnerabilità", "half_double": "resistenza e vulnerabilità",
+                    "immune": "immunità"}[mod]
             desc = (f"Danno {raw} {LABELS_IT[slug]} → {pre_form} ({word}) "
                     f"({old} → {char.current_hit_points})")
         else:
             note = ""
-            if body.raw_value is not None and mod in ("half", "double"):
-                word = "dimezzati" if mod == "half" else "raddoppiati"
+            if body.raw_value is not None and mod in ("half", "double", "half_double"):
+                word = {"half": "dimezzati", "double": "raddoppiati", "half_double": "dimezzati e raddoppiati"}[mod]
                 note = f" ({body.raw_value} {word})"
             desc = f"Danni: -{pre_form} HP{note} ({old} → {char.current_hit_points})"
         if form_overflow:
@@ -287,6 +297,17 @@ async def update_hp(
                 # anche un eventuale "stable" stantio (RAW: chi scende a 0 HP
                 # ricomincia a morire da capo).
                 char.death_saves = {"successes": 0, "failures": 0, "stable": False}
+                if body.knock_out:
+                    knocked = True
+                    if character_edition(char) == "2024":
+                        char.current_hit_points = 1
+                        char.settings = {**(char.settings or {}), "knocked_out": True}
+                        await apply_conditions(session, char, {"unconscious": True, "prone": True})
+                    else:
+                        char.death_saves = {"successes": 0, "failures": 0, "stable": True}
+                    _add_history(session, char.id, "hp_change", "Tramortito: non muore, è privo di sensi")
+
+        await sync_zero_hp(session, char, was_at_zero)
 
         # Notifica best-effort ai compagni di sessione (categoria party_emergency)
         if char.current_hit_points == 0 and amount > 0:
@@ -329,7 +350,7 @@ async def update_hp(
                 },
             )
             notifications.extend(collect_homebrew_notifications(firing))
-        if old > 0 and char.current_hit_points == 0:
+        if old > 0 and char.current_hit_points == 0 and not knocked:
             firing = await dispatch(
                 session, char, "dropped_to_zero",
                 {
@@ -382,6 +403,9 @@ async def update_hp(
         _add_history(session, char.id, "companion_hp",
                      f"Forma selvatica terminata: {form.name} (PF a 0)")
 
+    if body.op == HPOp.SET_CURRENT:  # SET_MAX non tocca i PF correnti: un personaggio appena creato non è «a terra»
+        await sync_zero_hp(session, char, was_at_zero)
+
     # Auto-reset death saves when rising from 0 HP
     if was_at_zero and char.current_hit_points > 0:
         ds = dict(char.death_saves or {})
@@ -393,7 +417,7 @@ async def update_hp(
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
-                    "spent": option_block.spent if option_block else []}
+                    "spent": option_block.spent if option_block else [], "zero_before": zero_before}
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
@@ -466,6 +490,11 @@ async def undo_hp(
         else:
             settings[k] = before[k]
     char.settings = settings
+    zero = snap.get("zero_before")
+    if zero:  # Privo di sensi, Prono e tramortito scritti dall'operazione tornano come prima
+        char.conditions = {**(char.conditions or {}), "unconscious": zero["unconscious"], "prone": zero["prone"]}
+        settings = {k: v for k, v in (char.settings or {}).items() if k != "knocked_out"}
+        char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
     char.hp_undo = None
 
     _add_history(session, char.id, "hp_change",
@@ -664,6 +693,7 @@ async def rest(
 
         firing = await dispatch(session, char, "short_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))
+    await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
 
     result = await build_character_response(session, char)
@@ -869,6 +899,7 @@ async def retouch_death_save(
         counted.meta = None
     char.current_hit_points = death["before"]["hp"]
     char.is_dead = False
+    await sync_zero_hp(session, char, False)  # un 20 corretto aveva tolto Privo di sensi
     die, total = roll["die"], roll["total"]
     outcome, revived = await _apply_death_roll(session, char, dict(death["before"]["death_saves"]), die, total - die,
                                                notify=not was_dead)
@@ -892,6 +923,7 @@ async def _apply_death_roll(
         # Natural 20: revive with 1 HP
         ds = {"successes": 0, "failures": 0, "stable": False}
         char.current_hit_points = 1
+        await sync_zero_hp(session, char, True)
         revived = True
         outcome = "nat20"
         _add_history(session, char.id, "death_save",
@@ -999,5 +1031,6 @@ async def revive(
             char.conditions = {**(char.conditions or {}), "exhaustion": 5}
         end_concentration(char)
         await release_concentration_effects(session, char)
+        await sync_zero_hp(session, char, True)
         _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
     return await build_character_response(session, char)

@@ -42,8 +42,8 @@ def test_multiplier_each_kind():
     assert damage_multiplier(None, "fire") == "none"
 
 
-def test_resistance_plus_vulnerability_cancel():
-    assert damage_multiplier({"resistances": ["fire"], "vulnerabilities": ["Fuoco"]}, "fire") == "none"
+def test_resistance_plus_vulnerability_apply_in_order():
+    assert damage_multiplier({"resistances": ["fire"], "vulnerabilities": ["Fuoco"]}, "fire") == "half_double"
 
 
 def test_immunity_wins():

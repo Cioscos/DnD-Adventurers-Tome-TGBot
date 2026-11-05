@@ -314,9 +314,11 @@ class HPUpdate(RollOptionsBody):
     # Override esplicito: `value` è già il danno applicato dal client (annotazione),
     # tranne "immune" che azzera. Senza override il server applica le resistenze
     # del personaggio al `damage_type`.
-    damage_modifier: Literal["half", "double", "none", "immune"] | None = None
+    damage_modifier: Literal["half", "double", "half_double", "none", "immune"] | None = None
     raw_value: int | None = Field(None, ge=0)
     damage_type: str | None = Field(None, max_length=40)
+    # Chi porta a 0 PF con un attacco in mischia può tramortire invece di abbattere (2014 stabile a 0, 2024 a 1 PF).
+    knock_out: bool = False
 
 
 class HPUndoRequest(BaseModel):

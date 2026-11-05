@@ -14,7 +14,7 @@ describe('effectiveDamageMods', () => {
     }
     expect(damageMultiplier(effectiveDamageMods(char), 'slashing')).toBe('half')
     expect(damageMultiplier(effectiveDamageMods(char), 'poison')).toBe('immune')
-    expect(damageMultiplier(effectiveDamageMods(char), 'fire')).toBe('none')
+    expect(damageMultiplier(effectiveDamageMods(char), 'fire')).toBe('half_double')
     expect(effectiveDamageMods({ damage_modifiers: { resistances: ['fire'] } })).toEqual({ resistances: ['fire'] })
   })
 })
@@ -27,6 +27,7 @@ describe('applyDamageModifier', () => {
     [15, null, 15],
     [15, 'none', 15],
     [15, 'immune', 0],
+    [25, 'half_double', 24],
   ])('applyDamageModifier(%i, %s) = %i', (value, mod, expected) => {
     expect(applyDamageModifier(value, mod)).toBe(expected)
   })
@@ -62,8 +63,8 @@ describe('damageMultiplier', () => {
     expect(damageMultiplier(undefined, 'fire')).toBe('none')
     expect(damageMultiplier(mods, null)).toBe('none')
   })
-  it('resistance + vulnerability cancel; immunity wins', () => {
-    expect(damageMultiplier({ resistances: ['fire'], vulnerabilities: ['Fuoco'] }, 'fire')).toBe('none')
+  it('resistance then vulnerability apply in order; immunity wins', () => {
+    expect(damageMultiplier({ resistances: ['fire'], vulnerabilities: ['Fuoco'] }, 'fire')).toBe('half_double')
     expect(damageMultiplier({ resistances: ['fire'], immunities: ['fire'] }, 'fire')).toBe('immune')
   })
 })

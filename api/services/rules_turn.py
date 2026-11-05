@@ -16,7 +16,7 @@ def _default() -> dict:
         "action_used": False, "bonus_used": False, "reaction_used": False,
         "attacks_made": 0, "extra_actions": 0, "once_per_turn": [],
         "spell_slot_cast": False, "bonus_spell_cast": False, "free_interaction_used": False,
-        "damaged": False,
+        "damaged": False, "surprised": False,
     }
 
 
@@ -106,6 +106,13 @@ def set_damaged(char, value: bool = True) -> None:
     st = get_turn(char)
     if st["damaged"] != value:
         _save(char, {**st, "damaged": value})
+
+
+def set_surprised(char, value: bool = True) -> None:
+    """2014: il turno in corso è quello della sorpresa (nessuna azione, movimento o reazione)."""
+    st = get_turn(char)
+    if st["surprised"] != value:
+        _save(char, {**st, "surprised": value})
 
 
 def refuse_if_incapacitated(char) -> None:

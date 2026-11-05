@@ -104,6 +104,6 @@ describe('MenuScreen', () => {
     await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
     expect(restSpy).not.toHaveBeenCalled()
     await userEvent.click(screen.getByText('confirm:character.quick_actions.rest_long'))
-    expect(restSpy).toHaveBeenCalledWith(7, 'long')
+    expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.any(Object))
   })
 })

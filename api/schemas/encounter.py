@@ -41,6 +41,7 @@ class CombatantPatchRequest(BaseModel):
     ac: Optional[int] = Field(default=None, ge=1, le=30)
     conditions: Optional[dict[str, Any]] = None
     is_dead: Optional[bool] = None
+    surprised: Optional[bool] = None
 
 
 class ExpiryIn(BaseModel):
@@ -105,6 +106,7 @@ class CombatantLive(BaseModel):
     initiative_mod: int = 0
     sort_order: Optional[int] = None
     is_dead: bool = False
+    surprised: bool = False
     conditions: dict[str, Any] = {}
     current_hp: Optional[int] = None
     max_hp: Optional[int] = None

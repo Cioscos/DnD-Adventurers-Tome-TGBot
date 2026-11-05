@@ -183,6 +183,13 @@ class TradeRequest(BaseModel):
     coins: Optional[dict[str, int]] = None
 
 
+class InspirationGiveRequest(BaseModel):
+    """2024: chi ha già l'Ispirazione Eroica la cede a un personaggio del gruppo che ne è privo."""
+
+    from_character_id: int
+    to_user_id: int
+
+
 class StashPutRequest(BaseModel):
     from_character_id: int
     item_id: Optional[int] = None

@@ -17,7 +17,8 @@ import SubclassSelect from '@/pages/multiclass/SubclassSelect'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
-import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
+import { multiclassWarnings, type AbilityKey } from '@/data/multiclassPrereqs'
+import { classKey } from '@/lib/classProgression'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
@@ -242,13 +243,14 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     },
   })
 
-  // Non-blocking multiclass prerequisite advisory for the currently picked class.
+  // Avviso non bloccante (D2): requisiti della classe scelta e di ogni classe già posseduta.
   const pickerUnmet = useMemo(() => {
     if (!pickerKey || pickerKey === CUSTOM_KEY) return []
     const scoreOf = (ability: AbilityKey) =>
       (char.ability_scores ?? []).find((s) => s.name === ability)?.value ?? 0
-    return unmetPrereqGroups(pickerKey, scoreOf)
-  }, [pickerKey, char.ability_scores])
+    const owned = entries.map((e) => (e.kind === 'new' ? (e.classKey === CUSTOM_KEY ? null : e.classKey) : classKey(e.className)))
+    return multiclassWarnings(pickerKey, owned, scoreOf)
+  }, [pickerKey, char.ability_scores, entries])
 
   // Portal: dentro il contenitore animato della pagina il `fixed` resta sotto l'header e viene tagliato.
   return createPortal(
@@ -469,14 +471,15 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                       </p>
                     </div>
                     <ul className="text-xs text-dnd-text-muted font-body space-y-0.5">
-                      {pickerUnmet.map((g, i) => (
-                        <li key={i}>
+                      {pickerUnmet.flatMap((w) => w.groups.map((g, i) => (
+                        <li key={`${w.classKey}-${i}`}>
+                          <span className="text-dnd-text">{t(`dnd.classes.${w.classKey}`)}</span>:{' '}
                           {g.abilities
                             .map((a) => t(`character.ability.${a}_short`))
                             .join(` ${t('character.multiclass.prereq_or')} `)}{' '}
                           ≥ {g.min}
                         </li>
-                      ))}
+                      )))}
                     </ul>
                     <p className="text-xs text-dnd-text-faint font-body italic">
                       {t('character.multiclass.prereq_can_proceed')}

@@ -42,6 +42,7 @@ from api.schemas.character import (
     CharacterSummary,
     CharacterUpdate,
     ConditionsUpdate,
+    HideRequest,
     InspirationUpdate,
     SkillsUpdate,
     SavingThrowsUpdate,
@@ -65,6 +66,7 @@ from api.services.rules_options import (
     use_options,
 )
 from api.services.effects import cap_current_hp
+from core.rules.edition import character_edition
 from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
@@ -478,6 +480,26 @@ async def update_conditions(
     # The CharacterHistory side-effect rows added above are exactly the kind
     # of mutation that triggers autoflush → column expiration during response
     # serialization.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/hide", response_model=CharacterFull)
+async def hide(
+    char_id: int,
+    body: HideRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Azione Nascondersi 2024: con una prova di Furtività di almeno 15 (con le condizioni confermate dal giocatore)
+    si è Invisibili; il totale è la CD per trovarti. Nel 2014 l'esito lo decide il DM e non c'è uno stato."""
+    char = await _get_owned(char_id, user_id, session, full=True)
+    if character_edition(char) != "2024":
+        raise HTTPException(status_code=422, detail={"code": "hide_2024_only"})
+    if body.total < 15:
+        raise HTTPException(status_code=409, detail={"code": "hide_failed"})
+    await apply_conditions(session, char, {"invisible": True})
+    char.settings = {**(char.settings or {}), "hiding": {"dc": body.total}}
     char = await _refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 

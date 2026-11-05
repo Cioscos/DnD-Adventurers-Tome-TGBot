@@ -62,6 +62,7 @@ export default function HP() {
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
+  const [knockOut, setKnockOut] = useState(false)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [damageType, setDamageType] = useState('')
   const [instantDeathOpen, setInstantDeathOpen] = useState(false)
@@ -103,7 +104,7 @@ export default function HP() {
   const hpMutation = useMutation({
     mutationFn: async ({ op, val, wasCritical, modifier }: {
       op: HPOp; val: number; wasCritical?: boolean
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; knock_out?: boolean }
     }) => {
       const choice = op === 'damage'
         ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type }, 'damage_in')
@@ -125,6 +126,7 @@ export default function HP() {
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setValue('')
       setCrit(false)
+      setKnockOut(false)
       setDamageModifier(null)
       setDamageType('')
       haptic.success()
@@ -238,14 +240,18 @@ export default function HP() {
   // Il modificatore vale solo per il danno: `val` è già il valore applicato, il grezzo
   // viaggia come annotazione.
   const runHpMutation = (op: HPOp, raw: number, wasCritical: boolean) => {
-    const type = damageType ? { damage_type: damageType } : {}
+    // Tramortire vale per il solo danno che porta a 0 PF: il server lo ignora altrimenti.
+    const type = {
+      ...(damageType ? { damage_type: damageType } : {}),
+      ...(op === 'damage' && knockOut ? { knock_out: true } : {}),
+    }
     if (op === 'damage' && damageModifier) {
       // Override dell'utente: il client applica il moltiplicatore, il server annota (e azzera se immune).
       hpMutation.mutate({
         op, val: applyDamageModifier(raw, damageModifier), wasCritical,
         modifier: { damage_modifier: damageModifier, raw_value: raw, ...type },
       })
-    } else if (op === 'damage' && damageType) {
+    } else if (op === 'damage' && (damageType || knockOut)) {
       // Nessun override: il server applica le resistenze del personaggio al tipo.
       hpMutation.mutate({ op, val: raw, wasCritical, modifier: type })
     } else {
@@ -430,6 +436,9 @@ export default function HP() {
           atZero={atZero}
           crit={crit}
           setCrit={setCrit}
+          knockOut={knockOut}
+          setKnockOut={setKnockOut}
+          canKnockOut={char.current_hit_points > 0}
           damageModifier={damageModifier}
           setDamageModifier={setDamageModifier}
           damageType={damageType}

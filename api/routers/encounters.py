@@ -34,6 +34,7 @@ from api.schemas.encounter import (
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
+from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, modifiers_for
 from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
@@ -45,7 +46,7 @@ from api.services.rules_targets import (
     activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
     pc_char as _pc_char, set_condition as _set_condition,
 )
-from api.services.rules_turn import reset_turn
+from api.services.rules_turn import reset_turn, set_surprised
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -363,6 +364,7 @@ async def roll_initiative(
     if body.options and comb.owner_user_id != user_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not your combatant")
     applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    _surprise_disadvantage(comb, char, applied)
     opts = AppliedOptions() if char is None else use_options(db, char, "initiative", body, ability="dexterity")
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
@@ -449,6 +451,8 @@ async def start_encounter(
         first_char = await db.get(Character, first.character_id)
         if first_char is not None:
             reset_turn(first_char)  # il primo turno non passa da process_edge
+            if first.surprised and character_edition(first_char) == "2014":
+                set_surprised(first_char)
     await db.flush()
     if first is not None:
         await _notify_turn(enc, first)
@@ -583,6 +587,8 @@ async def patch_combatant(
         await clear_effects_for(db, ("combatant", comb.id), switched_off)
     if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
         comb.is_dead = body.is_dead
+    if body.surprised is not None:
+        comb.surprised = body.surprised
 
     _touch(session)
     await db.flush()
@@ -619,9 +625,19 @@ async def _pc_for_initiative(db: AsyncSession, comb: Combatant) -> Character | N
     )).scalar_one_or_none()
 
 
+def _surprise_disadvantage(comb: Combatant, char: Character | None, applied: Applied) -> None:
+    """2024: chi è colto di sorpresa tira l'iniziativa con svantaggio. Il 2014 salta il turno (process_edge); i mostri
+    non hanno edizione e li decide il GM (D7)."""
+    if comb.surprised and char is not None and character_edition(char) == "2024":
+        applied.disadvantage = True
+        applied.notes.append("condition:surprised")
+
+
 async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
     char = await _pc_for_initiative(db, comb)
-    return Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    _surprise_disadvantage(comb, char, applied)
+    return applied
 
 
 async def _notify_gm_condition(

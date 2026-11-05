@@ -12,6 +12,7 @@ import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
+import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
@@ -41,6 +42,8 @@ export default function Turn() {
   const [skillRoll, setSkillRoll] = useState<{ result: RollResult; skill: string } | null>(null)
   const [otherOpen, setOtherOpen] = useState(false)
   const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
+  // Totale della prova di Furtività dell'azione Nascondersi (2024): da qui si conferma l'Invisibilità.
+  const [hideTotal, setHideTotal] = useState<number | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -63,15 +66,24 @@ export default function Turn() {
     onError: () => qc.invalidateQueries({ queryKey: ['turn-state', charId] }),
   })
   const newTurn = useMutation({ mutationFn: () => api.characters.turnNew(charId), onSuccess: setBlock })
+  const setProne = useMutation({
+    mutationFn: (prone: boolean) => api.characters.updateConditions(charId, { prone }),
+    onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
+  })
+  const hide = useMutation({
+    mutationFn: (total: number) => api.characters.hide(charId, total),
+    onSuccess: (updated) => { qc.setQueryData(['character', charId], updated); setHideTotal(null) },
+  })
   const otherTurn = useMutation({ mutationFn: () => api.characters.turnOther(charId), onSuccess: setBlock })
   const rollD20 = useD20Roll()
   const skillMutation = useMutation({
-    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean }) => {
+    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean; hide?: boolean }) => {
       const choice = await askRollOptions(charId, { roll: 'skill', skill })
       return { result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode), choice)), skill }
     },
-    onSuccess: ({ result, skill }, { spendsAttack }) => {
+    onSuccess: ({ result, skill }, { spendsAttack, hide }) => {
       if (spendsAttack) useSlot.mutate({ slot: 'attack' })
+      if (hide) setHideTotal(result.total)
       refreshAfterOptions(qc, charId, result.option_result)
       setSkillRoll({ result: { ...result, description: undefined }, skill })
     },
@@ -119,7 +131,7 @@ export default function Turn() {
           {(std?.skills?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {std?.skills?.map((sk) => (
-                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode, spendsAttack: std.spends_attack })}
+                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode, spendsAttack: std.spends_attack, hide: std.id === 'hide' })}
                   pending={skillMutation.isPending && skillMutation.variables?.skill === sk}
                   ariaLabel={t(`character.skills.${sk}`)}
                   className={`${BTN} border-dnd-border text-dnd-text`}>
@@ -127,6 +139,22 @@ export default function Turn() {
                 </RollButton>
               ))}
             </div>
+          )}
+          {e.id === 'hide' && c.rules_edition === '2024' && hideTotal !== null && (
+            hideTotal >= 15 ? (
+              <Button size="sm" variant="secondary" className="mt-2" loading={hide.isPending} onClick={() => hide.mutate(hideTotal)}>
+                {t('character.turn.hide_confirm', { total: hideTotal })}
+              </Button>
+            ) : (
+              <p className="mt-2 text-xs text-dnd-text-muted">{t('character.turn.hide_failed', { total: hideTotal })}</p>
+            )
+          )}
+          {(e.id === 'stand_up' || e.id === 'drop_prone') && (
+            <Button size="sm" variant="secondary" className="mt-2" loading={setProne.isPending}
+              disabled={e.id === 'stand_up' ? !c.conditions?.prone || c.computed?.speed === 0 : !!c.conditions?.prone}
+              onClick={() => setProne.mutate(e.id === 'drop_prone')}>
+              {t(e.id === 'stand_up' ? 'character.turn.stand_up' : 'character.turn.drop_prone')}
+            </Button>
           )}
           {(e.id === 'use_object') && (
             <Button size="sm" variant="secondary" className="mt-2" disabled={busy || !!block?.free_interaction_used}
@@ -295,7 +323,9 @@ export default function Turn() {
       <ActiveStatesBar char={char} />
 
       {char.computed?.incapacitated && (
-        <p role="status" className="px-1 text-sm font-body text-dnd-crimson-bright">{t('character.turn.incapacitated')}</p>
+        <p role="status" className="px-1 text-sm font-body text-dnd-crimson-bright">
+          {t(char.computed.surprised ? 'character.turn.surprised' : 'character.turn.incapacitated')}
+        </p>
       )}
 
       {/* `fieldset disabled` spegne ogni pulsante delle azioni. */}
@@ -330,6 +360,8 @@ export default function Turn() {
           </fieldset>
         )}
       </section>
+
+      <GiveInspirationRow char={char} />
 
       {skillRoll && (
         <RollResultModal result={skillRoll.result} title={t(`character.skills.${skillRoll.skill}`)}

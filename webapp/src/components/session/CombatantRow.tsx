@@ -158,6 +158,11 @@ export default function CombatantRow({
                 {t('session.combat.dead_label')}
               </span>
             )}
+            {c.surprised && !c.is_dead && (
+              <span className="shrink-0 rounded-full border border-dnd-amber/60 bg-dnd-amber/10 px-2 py-0.5 text-xs font-body text-dnd-amber whitespace-nowrap">
+                {t('session.combat.surprised')}
+              </span>
+            )}
           </div>
 
           {!collapsed && showExactPc && snapshot && (

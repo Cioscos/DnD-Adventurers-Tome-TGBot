@@ -77,7 +77,51 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
             char.death_saves = {"successes": 0, "failures": 0, "stable": False}
             _add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
+    await sync_zero_hp(session, char, was_at_zero)
+    if amount > 0:
+        await end_knock_out(session, char)
     return {"old": old, "new": char.current_hit_points, "healed": healed, "firing": firing}
+
+
+async def sync_zero_hp(session: AsyncSession, char: Character, was_at_zero: bool) -> None:
+    """A 0 PF, ancora vivo, il personaggio è Privo di sensi e Prono; risalendo sopra 0 la prima condizione cade.
+
+    Prono resta: ci si rialza spendendo movimento (Turno). Da chiamare dopo ogni scrittura dei PF correnti."""
+    if char.is_dead or char.hit_points <= 0:  # senza massimo non c'è «0 PF»
+        return
+    conditions = char.conditions or {}
+    if char.current_hit_points == 0:
+        new = {c: True for c in ("unconscious", "prone") if not conditions.get(c)}
+        if new:
+            await apply_conditions(session, char, new)
+    elif was_at_zero and conditions.get("unconscious"):
+        await apply_conditions(session, char, {"unconscious": False})
+
+
+def end_hide(session: AsyncSession, char: Character) -> None:
+    """2024: nascosti si è Invisibili finché non si fa rumore, un nemico ti trova, si tira per colpire o si lancia un
+    incantesimo con componente Verbale. Chi chiama sa che è accaduto uno di questi."""
+    settings = char.settings or {}
+    if "hiding" not in settings:
+        return
+    char.settings = {k: v for k, v in settings.items() if k != "hiding"}
+    char.conditions = {**(char.conditions or {}), "invisible": False}
+    _add_history(session, char.id, "condition_change", "Non sei più nascosto: l'Invisibilità finisce",
+                 meta={"slug": "invisible", "active": False})
+
+
+def casts_verbally(spell) -> bool:
+    return "V" in {c.strip().upper() for c in (spell.components or "").replace(";", ",").split(",")}
+
+
+async def end_knock_out(session: AsyncSession, char: Character) -> None:
+    """2024: il colpo per tramortire dura finché non c'è una cura, un riposo o un tocco di primo soccorso."""
+    settings = dict(char.settings or {})
+    if not settings.pop("knocked_out", None):
+        return
+    char.settings = settings
+    if (char.conditions or {}).get("unconscious"):
+        await apply_conditions(session, char, {"unconscious": False})
 
 
 async def apply_conditions(session: AsyncSession, char: Character,
@@ -90,6 +134,9 @@ async def apply_conditions(session: AsyncSession, char: Character,
     current = dict(old_conditions)
     current.update(changes)
     char.conditions = current
+    for flag, slug in (("knocked_out", "unconscious"), ("hiding", "invisible")):
+        if changes.get(slug, True) is False and (char.settings or {}).get(flag):
+            char.settings = {k: v for k, v in char.settings.items() if k != flag}  # tolta a mano: finito
     from api.services.rules_states import on_conditions  # import locale: rules_states usa apply_heal
     from api.services.durations import end_concentration, is_concentrating  # import locale: durations importa effects
     on_conditions(char, changes)

@@ -14,7 +14,8 @@ from api.services.condition_effects import (
 )
 from api.services.effects import _add_history
 from api.services.rules_states import end_states, tick_states
-from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged
+from core.rules.edition import character_edition
+from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
 
 
 def is_concentrating(char: Character) -> bool:
@@ -151,6 +152,9 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "start":
         reset_turn(char)
+        if combatant.surprised and character_edition(char) == "2014":  # niente azioni né movimento fino a fine turno
+            set_surprised(char)
+            undo.surprise_started.append(char.id)
         expired += tick_states(char)
         entry, ended = _tick_concentration(db, char)
         if entry is not None:
@@ -159,6 +163,12 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             expired.append("Concentrazione")
             expired += await release_concentration_effects(
                 db, char, entry["released_effects"])
+
+    if edge == "end" and combatant.surprised:  # la sorpresa dura il primo turno del combattente
+        combatant.surprised = False
+        undo.surprise_ended.append(combatant.id)
+        if char is not None:
+            set_surprised(char, False)
 
     if char is not None and edge == "end":
         st = get_turn(char)

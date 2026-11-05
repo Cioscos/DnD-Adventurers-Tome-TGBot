@@ -32,6 +32,12 @@ _CONDITION_OPTIONS = (
         available=lambda ctx: ctx.edition == "2014" and bool(ctx.char.heroic_inspiration),
     ),
     RollOptionSpec(
+        key="inspiration:reroll_damage", phase="after_damage", rolls=("spell_damage",), reroll_dice=lambda _ctx, _i: 1,
+        on_confirm=_spend_inspiration,
+        label={"it": "Spendi l'Ispirazione Eroica: ritira un dado di danno", "en": "Spend Heroic Inspiration: reroll a damage die"},
+        available=lambda ctx: ctx.edition == "2024" and bool(ctx.char.heroic_inspiration),
+    ),
+    RollOptionSpec(
         key="weapon:heavy_small", phase="before", rolls=("attack",), mode="disadvantage",
         label={"it": "Arma pesante: sei una creatura Piccola?", "en": "Heavy weapon: are you a Small creature?"},
         available=lambda ctx: (ctx.edition == "2014" and ctx.item is not None and has_property(ctx.item, "heavy")

@@ -32,6 +32,7 @@ from api.schemas.spell import (
 )
 from api.routers.items import _roll_dice, _DICE_RE
 from api.services.durations import end_concentration, start_concentration
+from api.services.effects import casts_verbally, end_hide
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
@@ -184,6 +185,8 @@ def _consume_cast(
     else:
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
+    if casts_verbally(spell):
+        end_hide(session, char)
 
     if spell.is_concentration:
         start_concentration(char, spell.id, parse_duration_rounds(spell.duration))
@@ -370,6 +373,7 @@ async def spell_attack(
     if body.with_inspiration:
         text = f"Reroll ispirazione: {text}"
     _add_history(session, char_id, "spell_attack", text)
+    end_hide(session, char)
     record_dice(char, d20_records(outcome))
 
     firing = await dispatch(

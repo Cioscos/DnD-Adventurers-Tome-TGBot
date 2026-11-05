@@ -136,7 +136,7 @@ def test_petrified_resists_all_without_writing_damage_modifiers():
     assert "all" in modifiers_for(c, None).resistances
     assert damage_taken_mode(c, "slashing") == "half"
     assert damage_taken_mode(c, None) == "half"  # danno senza tipo: «tutti i danni»
-    assert damage_taken_mode(c, "fire") == "none"  # resistenza e vulnerabilità: stesso calcolo di oggi
+    assert damage_taken_mode(c, "fire") == "half_double"  # prima la resistenza, poi la vulnerabilità
     assert damage_taken_mode(c, "poison") == "immune"  # 2014
     assert damage_taken_mode(_char({"petrified": True}, edition="2024"), "poison") == "half"
     assert stored == {"resistances": [], "immunities": [], "vulnerabilities": ["fire"]}
