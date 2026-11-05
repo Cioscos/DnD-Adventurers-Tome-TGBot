@@ -49,18 +49,18 @@ async def test_asi_created_when_class_born_above_level_1(client):
 
 async def test_level_down_removes_pending_above_level(client):
     body = await _char(client, xp=14000)  # guerriero livello 6: ASI a 4 e 6
-    assert _pending(body) == [("asi", 4), ("asi", 6)]
+    assert _pending(body, "asi") == [("asi", 4), ("asi", 6)]
     r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 2700})
-    assert _pending(r.json()) == [("asi", 4)]
+    assert _pending(r.json(), "asi") == [("asi", 4)]
 
 
 async def test_resolved_level_is_not_offered_again(client):
     body = await _char(client, xp=2700)
     r = await _resolve(client, body, "asi", {"increases": {"strength": 2}})
-    assert r.status_code == 200 and r.json()["pending_choices"] == []
+    assert r.status_code == 200 and _pending(r.json(), "asi") == []
     await client.patch(f"/characters/{body['id']}/xp", json={"set": 300})  # livello 2
     r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 2700})
-    assert r.json()["pending_choices"] == []
+    assert _pending(r.json(), "asi") == []
 
 
 async def test_2024_level_19_creates_epic_boon_not_asi(client):
@@ -246,7 +246,8 @@ async def test_import_drops_incomplete_class_option(client):
         {"id": "p2", "kind": "asi", "class_key": "Guerriero", "level": 4}]
     r = await client.post("/characters/import", json=exported)
     assert r.status_code in (200, 201), r.text
-    assert [c["id"] for c in r.json()["pending_choices"]] == ["p2"]
+    ids = [c["id"] for c in r.json()["pending_choices"]]
+    assert "p2" in ids and "p1" not in ids  # la scelta incompleta cade; lo stile del Guerriero è una scelta del catalogo, ricreata
 
 
 def test_2024_feat_catalog_is_text_only_and_bounded():

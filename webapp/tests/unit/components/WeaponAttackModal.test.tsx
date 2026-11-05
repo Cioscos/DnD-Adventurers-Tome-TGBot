@@ -193,6 +193,16 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByText('Munizioni esaurite o non equipaggiate: scala tu le munizioni')).toBeInTheDocument()
   })
 
+  it('says which low dice a privilege had rerolled (Great Weapon Fighting)', () => {
+    render(<WeaponAttackModal result={{ ...baseResult, damage_rolls: [4, 6], rerolled: [[1, 4], [2, 6]] }} onClose={() => {}} />)
+    expect(screen.getByTestId('rerolled-dice')).toHaveTextContent('1 → 4, 2 → 6')
+  })
+
+  it('shows no rerolled line when nothing was rerolled', () => {
+    render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
+    expect(screen.queryByTestId('rerolled-dice')).not.toBeInTheDocument()
+  })
+
   it('shows neither line without ammo info', () => {
     render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
     expect(screen.queryByText(/munizion/i)).not.toBeInTheDocument()

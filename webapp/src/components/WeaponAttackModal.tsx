@@ -102,6 +102,11 @@ export default function WeaponAttackModal({
         </p>
       )}
       <RollNotes notes={result.notes} optionResult={result.option_result} charId={charId} />
+      {!!result.rerolled?.length && (
+        <p data-testid="rerolled-dice" className="text-xs font-mono tabular-nums text-dnd-text-muted">
+          {t('character.attack.rerolled', { dice: result.rerolled.map(([from, to]) => `${from} → ${to}`).join(', ') })}
+        </p>
+      )}
       {result.effect && (
         <p data-testid="unarmed-effect" className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3 text-sm font-body text-dnd-text">
           {t(`character.attack.effect_${result.effect}`, { dc: result.save_dc })}

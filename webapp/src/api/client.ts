@@ -259,6 +259,8 @@ export type WeaponAttackResult = {
   ammo?: { item_id: number; name: string; remaining: number } | null
   ammo_missing?: boolean
   option_result?: OptionResult
+  /** Dadi bassi che un privilegio ha fatto ritirare, `[vecchio, nuovo]` (Combattere con Armi Possenti). */
+  rerolled?: [number, number][]
   /** Attacco in sospeso: il danno finale passa da `attackDamage`. */
   attack_id?: string
   /** Colpo a segno per un privilegio, qualunque sia il d20. */
@@ -907,6 +909,15 @@ export const api = {
         method: 'POST',
         body: attackBody(withInspiration, die, choice),
       }),
+    /** Arma Vincolata (Cavaliere Mistico): vincola (con `replaceItemId` si spezza un altro vincolo), spezza, evoca in mano. */
+    bond: (charId: number, itemId: number, replaceItemId?: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/bond`, {
+        method: 'POST', body: JSON.stringify(replaceItemId === undefined ? {} : { replace_item_id: replaceItemId }),
+      }),
+    breakBond: (charId: number, itemId: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/bond`, { method: 'DELETE' }),
+    summon: (charId: number, itemId: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/summon`, { method: 'POST' }),
     attackDamage: (charId: number, attackId: string, choice: RollChoice) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/${attackId}/damage`, {
         method: 'POST',

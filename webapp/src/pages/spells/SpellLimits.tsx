@@ -13,6 +13,7 @@ export default function SpellLimits({ limits }: { limits: Row[] }) {
         ['limit_cantrips', row.cantrips_count, row.cantrips_limit],
         ['limit_known', row.known_count, row.known_limit],
         ['limit_prepared', row.prepared_count, row.prepared_limit],
+        ['limit_off_school', row.school_outside_count ?? 0, row.school_free_limit],
       ] as const).filter(([, , limit]) => limit != null),
     }))
     .filter(({ cells }) => cells.length > 0)
@@ -35,6 +36,11 @@ export default function SpellLimits({ limits }: { limits: Row[] }) {
               </span>
             </span>
           ))}
+          {!!row.school_names?.length && (
+            <span data-testid="school-hint" className="text-xs font-body text-dnd-text-muted">
+              {t('character.spells.school_hint', { schools: row.school_names.map((s) => t(`character.spells.schools.${s}`, { defaultValue: s })).join(' / ') })}
+            </span>
+          )}
         </div>
       ))}
     </div>

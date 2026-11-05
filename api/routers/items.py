@@ -46,6 +46,7 @@ from api.routers._helpers import (
 )
 from api.services.durations import start_concentration
 from api.services.condition_effects import release_concentration_effects
+from api.services import weapon_bond
 from api.services.item_charges import set_item_charges
 from core.game.actions import parse_duration_rounds
 from api.services.equipment import apply_equip_ac, slot_allowed_for_type, swap_slot_occupant
@@ -1125,3 +1126,56 @@ async def cast_from_item(
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
     return await build_character_response(session, char)
+
+
+# ---------------------------------------------------------------------------
+# Arma Vincolata (Cavaliere Mistico 2014)
+# ---------------------------------------------------------------------------
+
+class BondRequest(BaseModel):
+    replace_item_id: int | None = None  # con due armi già vincolate, quella da spezzare per la nuova
+
+
+async def _bond_response(session: AsyncSession, char: Character) -> CharacterFull:
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/items/{item_id}/bond", response_model=CharacterFull)
+async def bond_weapon(
+    char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)], body: Annotated[BondRequest | None, Body()] = None,
+) -> CharacterFull:
+    """Il rituale di un'ora è concluso (l'app non lo cronometra): l'arma è vincolata. Al massimo due."""
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    weapon_bond.bond(char, item, body.replace_item_id if body else None)
+    _add_history(session, char.id, "item_bond", f"Arma vincolata: {item.name}", meta={"item_id": item.id})
+    return await _bond_response(session, char)
+
+
+@router.delete("/{char_id}/items/{item_id}/bond", response_model=CharacterFull)
+async def break_weapon_bond(
+    char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    weapon_bond.break_bond(item)
+    _add_history(session, char.id, "item_bond", f"Vincolo spezzato: {item.name}", meta={"item_id": item.id})
+    return await _bond_response(session, char)
+
+
+@router.post("/{char_id}/items/{item_id}/summon", response_model=CharacterFull)
+async def summon_bonded_weapon(
+    char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Evoca l'arma vincolata nella mano libera come azione bonus (stesso piano di esistenza: lo dichiara il giocatore)."""
+    char = await _get_owned_full(char_id, user_id, session)
+    refuse_if_incapacitated(char)
+    item = await _get_item(session, char_id, item_id)
+    slot = weapon_bond.summon(char, item)
+    _add_history(session, char.id, "item_bond", f"Arma evocata: {item.name} ({slot})", meta={"item_id": item.id})
+    return await _bond_response(session, char)

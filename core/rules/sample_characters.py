@@ -46,6 +46,9 @@ SAMPLE_SPECS: list[dict] = [
     _spec("Ladro CA da Beyond", [("Ladro", 5, None, 8)], base_ac=17, scores={"dexterity": 18},
           settings={"import_source": "dndbeyond"}),
     _spec("Proficienze vuote", [("Guerriero", 5, None, 10)], proficiencies=[]),
+    # le altre due sottoclassi del Guerriero 2014 (il Campione è già in «Guerriero 2014»)
+    _spec("Guerriero Maestro di Battaglia", [("Guerriero", 10, "Maestro di Battaglia", 10)]),
+    _spec("Guerriero Cavaliere Mistico", [("Guerriero", 10, "Cavaliere Mistico", 10)], scores={"intelligence": 16}),
     _spec("Usi spesi", [("Barbaro", 5, "Cammino del Berserker", 12)], spent_uses=("barbarian.rage", "Ira", 3, 1)),
     _spec("Classe custom", [("Cacciatore di Taglie", 5, None, None)]),
 ]

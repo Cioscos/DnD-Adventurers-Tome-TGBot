@@ -19,7 +19,8 @@ from core.db.models import Character, Spell
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.spellcasting import (
-    at_will, caster_stats, can_ritual, granted_ritual_only, known_limits, prepared_limit, prepares, spell_stats,
+    at_will, caster_stats, can_ritual, granted_ritual_only, known_limits, normalize_school, prepared_limit, prepares,
+    school_limit, spell_stats,
 )
 
 
@@ -44,7 +45,12 @@ def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
                 and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))]
         leveled = [s for s in mine if s.level >= 1]
         cap = prepared_limit(edition, key, cls.level, char)
+        school = school_limit(edition, cls)
+        # senza scuola salvata non si sa: non conta come fuori scuola
+        outside = sum(1 for s in leveled if school and (found := normalize_school(s.school)) and found not in school.names)
         out.append(ClassSpellLimits(
+            school_names=list(school.names) if school else None, school_free_limit=school.free if school else None,
+            school_outside_count=outside,
             class_id=cls.id, class_name=cls.class_name,
             cantrips_count=len(mine) - len(leveled), cantrips_limit=limits.cantrips or None,
             known_count=len(leveled), known_limit=limits.spells,

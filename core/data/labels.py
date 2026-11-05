@@ -69,6 +69,9 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "turned": {"it": "Scacciato", "en": "Turned"},
     "thoughts_read": {"it": "Pensieri letti", "en": "Thoughts read"},
     "nature_ward": {"it": "Dissuaso", "en": "Warded off"},
+    "goaded": {"it": "Adescato", "en": "Goaded"},
+    "protection": {"it": "Attacco ostacolato", "en": "Attack hindered"},
+    "eldritch_strike": {"it": "Colpo Mistico", "en": "Eldritch Strike"},
 }
 
 

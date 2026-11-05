@@ -165,6 +165,8 @@ export interface FeatureUseResult {
   notes: string[]
   /** Chiavi con un effetto su altri da applicare (`TargetEffectSheet`), per esempio Presenza Intimidatoria. */
   targets?: string[]
+  /** Valore da dare a un altro, mai scritto sulla scheda (PF temporanei di Incoraggiamento). */
+  given?: number | null
 }
 
 export interface MapEntry {
@@ -361,6 +363,10 @@ export interface SpellcastingInfo {
     known_limit: number | null
     prepared_count: number
     prepared_limit: number | null
+    /** Cavaliere Mistico: scuole ammesse, quanti conosciuti possono essere di altre scuole e quanti lo sono. */
+    school_names?: string[] | null
+    school_free_limit?: number | null
+    school_outside_count?: number
   }[]
 }
 
@@ -1000,6 +1006,8 @@ export interface TurnBlock {
   spell_slot_cast: boolean
   bonus_spell_cast: boolean
   free_interaction_used: boolean
+  /** Livello dell'ultimo incantesimo lanciato con l'azione in questo turno (0: trucchetto). */
+  action_spell_level?: number | null
   pending_attack?: Record<string, unknown> | null
   last_roll?: { roll_id: string; roll?: string; skill?: string | null; total: number; refundable?: Record<string, string[]> } | null
 }

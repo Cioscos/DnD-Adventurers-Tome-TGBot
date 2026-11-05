@@ -16,6 +16,7 @@ import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import TargetEffectSheet from '@/components/rules/TargetEffectSheet'
 import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
 import PreserveLifeSheet from '@/components/rules/PreserveLifeSheet'
+import WeaponBondSheet from '@/components/rules/WeaponBondSheet'
 import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import SelectSheet from '@/components/ui/SelectSheet'
@@ -41,7 +42,9 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left']
+/** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
+const USE_NOTES = ['arcane_charge']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -77,8 +80,10 @@ export default function Turn() {
 
   // Lo stato del turno vive sul server: sopravvive a ricarica e cambio pagina.
   const block = turn?.turn
+  // Un'azione in più (Azione Impetuosa) riapre la sezione dell'azione anche se quella normale è già spesa.
+  const extraActions = block?.extra_actions ?? 0
   const used: Record<Bucket, boolean> = {
-    action: !!block?.action_used, bonus_action: !!block?.bonus_used, reaction: !!block?.reaction_used,
+    action: !!block?.action_used && extraActions === 0, bonus_action: !!block?.bonus_used, reaction: !!block?.reaction_used,
   }
   const setBlock = (b: TurnBlock) =>
     qc.setQueryData(['turn-state', charId], (old: TurnState | undefined) => old && { ...old, turn: b })
@@ -87,7 +92,11 @@ export default function Turn() {
     onSuccess: setBlock,
     onError: () => qc.invalidateQueries({ queryKey: ['turn-state', charId] }),
   })
-  const newTurn = useMutation({ mutationFn: () => api.characters.turnNew(charId), onSuccess: setBlock })
+  const newTurn = useMutation({
+    mutationFn: () => api.characters.turnNew(charId),
+    // L'inizio del turno può curare (Sopravvissuto): i PF si rileggono.
+    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['character', charId] }) },
+  })
   const setProne = useMutation({
     mutationFn: (prone: boolean) => api.characters.updateConditions(charId, { prone }),
     onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
@@ -139,6 +148,9 @@ export default function Turn() {
       if (res?.targets?.length) setTargetKey(res.targets[0])
       // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
       if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: res.rolls.join(' + ') })
+      // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
+      if (res?.given != null) toast.info(t('character.turn.use_given', { n: res.given }))
+      for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
     },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
     onError: (err) => {
@@ -153,7 +165,7 @@ export default function Turn() {
   })
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
   const triggerAbility = async (args: { ability: Ability; uses: number; amount?: number }) => {
-    if (args.ability.use_panel === 'preserve_life') {
+    if (args.ability.use_panel === 'preserve_life' || args.ability.use_panel === 'weapon_bond') {
       setPanel(args.ability)
       return
     }
@@ -420,6 +432,9 @@ export default function Turn() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm text-dnd-text font-body tabular-nums">
           {t('character.turn.attacks_made', { made: block?.action_attacks ?? 0, n: attacks })}
+          {extraActions > 0 && (
+            <span data-testid="extra-actions" className="ml-3 text-dnd-gold-bright">{t('character.turn.extra_actions', { n: extraActions })}</span>
+          )}
           {turn?.in_encounter && turn.round != null && (
             <span className="ml-3 text-dnd-text-muted">{t('character.turn.round', { n: turn.round })}</span>
           )}
@@ -502,9 +517,9 @@ export default function Turn() {
       )}
       {weaponFlow.elements}
       {castFlow.elements}
-      {panel && char && (
-        <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />
-      )}
+      {panel && char && (panel.use_panel === 'weapon_bond'
+        ? <WeaponBondSheet char={char} onClose={() => setPanel(null)} />
+        : <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />)}
       {allyPick && (
         <AllyTargetSheet title={allyPick.ability.name} die={allyPick.ability.feature_key === 'bard.bardic_inspiration'} allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
           onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />

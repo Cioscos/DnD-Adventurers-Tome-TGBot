@@ -679,4 +679,95 @@ describe('Turn page', () => {
       expect(screen.queryByText('character.turn.other_turn')).toBeNull()
     })
   })
+
+  describe('Guerriero (Task 23)', () => {
+    // Azione Impetuosa non è né azione né azione bonus: sta nella sezione «Altro», che si apre a richiesta.
+    const openOther = async () => userEvent.click(await screen.findByText('character.turn.section_other'))
+    const surge = (over: Record<string, unknown> = {}) => ({
+      ...char,
+      abilities: [{
+        id: 9, name: 'Azione Impetuosa', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+        feature_key: 'fighter.action_surge', max_uses: 1, uses: 1, action_type: 'special', restoration_type: 'short_rest', ...over,
+      }],
+    })
+
+    it('an extra action from Action Surge keeps the action section open and can really be spent', async () => {
+      server.block = { ...NEW_BLOCK, action_used: true, extra_actions: 1 }
+      getChar.mockResolvedValue(char)
+      renderWithProviders(<Turn />)
+      const toggle = await screen.findByLabelText('character.turn.mark_used: character.turn.section_action')
+      expect(toggle).toHaveAttribute('aria-pressed', 'false')  // l'azione normale è spesa, ma ne resta una in più
+      expect(screen.getByTestId('extra-actions')).toBeInTheDocument()
+      turnUse.mockClear()
+      await userEvent.click(toggle)
+      await waitFor(() => expect(turnUse).toHaveBeenCalledWith(7, 'action', true))
+    })
+
+    it('with the action spent and no extra action the section closes, as before', async () => {
+      server.block = { ...NEW_BLOCK, action_used: true, extra_actions: 0 }
+      getChar.mockResolvedValue(char)
+      renderWithProviders(<Turn />)
+      expect(await screen.findByLabelText('character.turn.mark_used: character.turn.section_action')).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.queryByTestId('extra-actions')).not.toBeInTheDocument()
+    })
+
+    it('sends the Arcane Charge choice and says what the server noted', async () => {
+      getChar.mockResolvedValue(surge({ use_toggles: [{ key: 'arcane_charge', label: { it: 'Carica Arcana', en: 'Arcane Charge' } }] }))
+      featureUse.mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: ['arcane_charge'] })
+      toastInfo.mockClear()
+      renderWithProviders(<Turn />)
+      await openOther()
+      await userEvent.click(await screen.findByRole('switch'))
+      await userEvent.click(screen.getByText('character.turn.use'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'fighter.action_surge', 1, { arcane_charge: true }))
+      await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_notes.arcane_charge'))
+    })
+
+    it('shows the value a maneuver gives to an ally (Rally, Commander Strike) and never writes it anywhere', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [{
+        id: 12, name: 'Incoraggiamento', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+        feature_key: 'fighter.maneuver_rally', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none', spends_left: 3,
+      }] })
+      featureUse.mockResolvedValueOnce({ rolls: [5], healed: 0, state: null, notes: [], given: 7 })
+      toastInfo.mockClear()
+      renderWithProviders(<Turn />)
+      await userEvent.click(within((await screen.findByText('Incoraggiamento')).closest('li') as HTMLElement).getByText('character.turn.use'))
+      await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_given'))
+    })
+
+    it.each(['once_per_turn', 'no_attack_left'])('has a text of its own when the server refuses with %s', async (code) => {
+      const { ApiError } = await import('@/api/client')
+      featureUse.mockRejectedValueOnce(new ApiError(409, { code }))
+      getChar.mockResolvedValue(surge())
+      toastError.mockClear()
+      renderWithProviders(<Turn />)
+      await openOther()
+      await userEvent.click(await screen.findByText('character.turn.use'))
+      await waitFor(() => expect(toastError).toHaveBeenCalledWith(`character.turn.use_errors.${code}`))
+    })
+
+    it('opens the Weapon Bond sheet for a feature that uses a panel of its own', async () => {
+      getChar.mockResolvedValue({
+        ...char, items: [{ id: 3, name: 'Spada del Cavaliere', item_type: 'weapon', is_equipped: false, item_metadata: {} }],
+        abilities: [{
+          id: 10, name: 'Arma Vincolata', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true, use_panel: 'weapon_bond',
+          feature_key: 'fighter.weapon_bond', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none',
+        }],
+      })
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await userEvent.click(await screen.findByText('character.turn.use'))
+      expect(await screen.findByText('Spada del Cavaliere')).toBeInTheDocument()
+      expect(featureUse).not.toHaveBeenCalled()  // il server lo rifiuterebbe: l'uso passa dal pannello
+    })
+
+    it('a new turn reloads the character, because the start of a turn can heal (Survivor)', async () => {
+      getChar.mockResolvedValue(char)
+      renderWithProviders(<Turn />)
+      await screen.findByText('character.turn.new_turn')
+      getChar.mockClear()
+      await userEvent.click(screen.getByText('character.turn.new_turn'))
+      await waitFor(() => expect(getChar).toHaveBeenCalled())
+    })
+  })
 })

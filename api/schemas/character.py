@@ -76,6 +76,10 @@ class ClassSpellLimits(BaseModel):
     known_limit: Optional[int] = None
     prepared_count: int = 0
     prepared_limit: Optional[int] = None
+    # Cavaliere Mistico: scuole ammesse, quanti incantesimi conosciuti possono essere di altre scuole e quanti lo sono
+    school_names: Optional[list[str]] = None
+    school_free_limit: Optional[int] = None
+    school_outside_count: int = 0
 
 
 class SpellcastingInfo(BaseModel):

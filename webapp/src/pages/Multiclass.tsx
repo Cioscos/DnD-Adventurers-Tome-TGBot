@@ -17,6 +17,7 @@ import { levelFromXp } from '@/lib/xpThresholds'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
+import ClassOptionGroups from '@/pages/multiclass/ClassOptionGroups'
 import type { CharacterClass } from '@/types'
 import MulticlassSkeleton from '@/components/skeletons/MulticlassSkeleton'
 
@@ -144,6 +145,8 @@ export default function Multiclass() {
           ))}
         </div>
       )}
+
+      {classes.map((cls) => <ClassOptionGroups key={cls.id} char={char} cls={cls} />)}
 
       {classes.length > 0 && (
         <Button

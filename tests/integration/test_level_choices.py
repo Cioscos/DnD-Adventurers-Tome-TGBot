@@ -10,7 +10,15 @@ async def _fighter(client, level: int = 1, scores: dict | None = None) -> dict:
         body["ability_scores"] = scores
     r = await client.post("/characters", json=body)
     assert r.status_code == 201, r.text
-    return r.json()
+    created = r.json()
+    # Il Guerriero sceglie lo stile di combattimento al 1° livello (Task 23): questi test parlano degli ASI.
+    style = next((c for c in created["pending_choices"] if c.get("group") == "fighting_style"), None)
+    if style is not None:
+        r = await client.post(f"/characters/{created['id']}/choices/{style['id']}/resolve",
+                              json={"kind": "class_option", "options": ["defense"]})
+        assert r.status_code == 200, r.text
+        created = r.json()
+    return created
 
 
 async def _to_level_4(client) -> dict:

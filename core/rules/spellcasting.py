@@ -105,6 +105,36 @@ def prepared_limit(edition: Edition, class_key: str | None, level: int, char: An
     return compute_prepared_cap([_Row(class_key, level, ability)], {ability: effective_ability_mod(char, ability)}) or 0
 
 
+# sottoclasse -> (scuole ammesse, livelli di classe a cui un incantesimo conosciuto può essere di qualsiasi scuola)
+_SCHOOL_RESTRICTED: dict[str, tuple[tuple[str, ...], tuple[int, ...]]] = {
+    "eldritch_knight": (("abjuration", "evocation"), (3, 8, 14, 20)),
+}
+# nomi italiani delle scuole (la scuola salvata è di solito lo slug inglese del compendio)
+_SCHOOL_IT = {"abiurazione": "abjuration", "ammaliamento": "enchantment", "divinazione": "divination",
+              "evocazione": "conjuration", "illusione": "illusion", "invocazione": "evocation",
+              "necromanzia": "necromancy", "trasmutazione": "transmutation"}
+
+
+@dataclass(frozen=True)
+class SchoolLimit:
+    names: tuple[str, ...]  # scuole ammesse
+    free: int  # incantesimi conosciuti che possono essere di un'altra scuola
+
+
+def normalize_school(value: str | None) -> str | None:
+    text = (value or "").strip().lower()
+    return _SCHOOL_IT.get(text, text) or None
+
+
+def school_limit(edition: Edition, row: Any) -> SchoolLimit | None:
+    """Limite di scuola degli incantesimi conosciuti (Cavaliere Mistico 2014): quasi tutti di due scuole, e uno in più ai
+    livelli 3, 8, 14 e 20 di qualsiasi scuola. Solo informativo, come gli altri limiti. ``None``: la classe non ne ha."""
+    rule = _SCHOOL_RESTRICTED.get(getattr(row, "subclass_key", None)) if edition == "2014" else None
+    if rule is None or row.level < min(rule[1]):
+        return None
+    return SchoolLimit(rule[0], sum(1 for level in rule[1] if row.level >= level))
+
+
 def prepares(edition: Edition, row: Any, char: Any) -> bool:
     return prepared_limit(edition, row_class_key(row), row.level, char) > 0
 

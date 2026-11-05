@@ -83,10 +83,40 @@
     }
   },
   "character": {
+    "weapon_bond": {
+      "title": "Arma Vincolata",
+      "hint": "Il rituale dura un'ora e si fa in un riposo breve: qui segni che è concluso. Un'arma vincolata non ti può essere disarmata e la evochi in mano come azione bonus, una per volta.",
+      "empty": "Non hai armi nell'inventario.",
+      "bonded": "Vincolata",
+      "bond": "Vincola",
+      "summon": "Evoca",
+      "in_hand": "In mano",
+      "break": "Spezza",
+      "replace_prompt": "Hai già due armi vincolate. Per vincolare {{name}} devi spezzarne una.",
+      "break_for": "Spezza {{name}}",
+      "summoned": "Arma evocata in mano.",
+      "errors": {
+        "bond_limit": "Hai già due armi vincolate: spezzane una.",
+        "invalid_replacement": "Il vincolo da spezzare non è valido.",
+        "not_a_weapon": "Si vincolano solo le armi.",
+        "bond_unavailable": "Non hai questo privilegio.",
+        "not_bonded": "L'arma non è vincolata.",
+        "already_in_hand": "L'arma è già in mano.",
+        "no_free_hand": "Non hai una mano libera per l'arma.",
+        "turn_slot_used": "Hai già usato l'azione bonus in questo turno.",
+        "incapacitated": "Da incapacitato non puoi evocarla.",
+        "default": "Impossibile completare l'operazione. Riprova."
+      }
+    },
     "level_choice": {
       "waiting_for_skills": "Servono altre competenze: non hai abbastanza abilità per tutte le {{n}} scelte. Aggiungile dalla pagina Abilità e tornerà qui.",
       "partial": "Ne mancano ancora {{n}}: aspettano altre competenze sulla scheda.",
       "already_on_sheet": "Già sulla tua scheda",
+      "groups": {
+        "maneuvers": "Manovre",
+        "weapon_mastery": "Padronanza delle armi",
+        "fighting_style": "Stile di combattimento"
+      },
       "replace_title": "Sostituisci opzione",
       "replace_old": "Opzione da sostituire",
       "replace_new": "Nuova opzione",
@@ -489,6 +519,7 @@
       "ability_dexterity": "Destrezza",
       "grapple": "Afferra",
       "shove": "Spingi",
+      "rerolled": "Dadi ritirati: {{dice}}",
       "effect_grapple": "Afferrare: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce è Afferrato. Serve una mano libera.",
       "effect_shove": "Spingere: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce lo sposti di 1,5 m o lo rendi Prono.",
       "grazed": "Graze: danno sul mancato",
@@ -581,6 +612,8 @@
       "limit_cantrips": "Trucchetti",
       "limit_known": "Conosciuti",
       "limit_prepared": "Preparati",
+      "limit_off_school": "Fuori scuola",
+      "school_hint": "Scuole: {{schools}}",
       "save_dc": "CD {{dc}}",
       "cast_ritual": "Lancia come rituale",
       "ritual_hint": "+10 minuti al tempo di lancio, nessuno slot consumato",
@@ -820,7 +853,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -1220,7 +1253,14 @@
       "amount_less": "Un uso in meno",
       "amount_more": "Un uso in più",
       "use_rolled": "Hai tirato",
+      "use_given": "Da dare a un alleato: {{n}}",
+      "extra_actions": "Azioni in più: {{n}}",
+      "use_notes": {
+        "arcane_charge": "Carica Arcana: ti teletrasporti fino a 9 m in uno spazio libero che vedi, prima o dopo l'azione in più."
+      },
       "use_errors": {
+        "once_per_turn": "Puoi usarlo una sola volta per turno.",
+        "no_attack_left": "Non hai più attacchi dell'azione Attacco a cui rinunciare.",
         "turn_slot_used": "Hai già usato quell'azione in questo turno.",
         "no_uses": "Usi esauriti.",
         "amount_too_high": "Troppi usi in una volta per questo privilegio.",

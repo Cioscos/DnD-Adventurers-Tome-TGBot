@@ -83,10 +83,40 @@
     }
   },
   "character": {
+    "weapon_bond": {
+      "title": "Weapon Bond",
+      "hint": "The ritual takes an hour, during a short rest: here you mark it as done. A bonded weapon can't be disarmed and you summon it to your hand as a bonus action, one at a time.",
+      "empty": "You have no weapons in your inventory.",
+      "bonded": "Bonded",
+      "bond": "Bond",
+      "summon": "Summon",
+      "in_hand": "In hand",
+      "break": "Break",
+      "replace_prompt": "You already have two bonded weapons. To bond {{name}} you must break one.",
+      "break_for": "Break {{name}}",
+      "summoned": "Weapon summoned to your hand.",
+      "errors": {
+        "bond_limit": "You already have two bonded weapons: break one.",
+        "invalid_replacement": "The bond to break is not valid.",
+        "not_a_weapon": "Only weapons can be bonded.",
+        "bond_unavailable": "You don't have this feature.",
+        "not_bonded": "The weapon is not bonded.",
+        "already_in_hand": "The weapon is already in your hand.",
+        "no_free_hand": "You have no free hand for the weapon.",
+        "turn_slot_used": "You have already used your bonus action this turn.",
+        "incapacitated": "You can't summon it while incapacitated.",
+        "default": "Unable to complete the operation. Try again."
+      }
+    },
     "level_choice": {
       "waiting_for_skills": "More proficiencies needed: your sheet has too few skills for all {{n}} picks. Add them on the Skills page and this will come back.",
       "partial": "{{n}} more are still waiting for more proficiencies on the sheet.",
       "already_on_sheet": "Already on your sheet",
+      "groups": {
+        "maneuvers": "Maneuvers",
+        "weapon_mastery": "Weapon Mastery",
+        "fighting_style": "Fighting Style"
+      },
       "replace_title": "Replace option",
       "replace_old": "Option to replace",
       "replace_new": "New option",
@@ -489,6 +519,7 @@
       "ability_dexterity": "Dexterity",
       "grapple": "Grapple",
       "shove": "Shove",
+      "rerolled": "Rerolled dice: {{dice}}",
       "effect_grapple": "Grapple: the target makes a Strength or Dexterity save, DC {{dc}}. On a failure it is Grappled. You need a free hand.",
       "effect_shove": "Shove: the target makes a Strength or Dexterity save, DC {{dc}}. On a failure you move it 5 ft or knock it Prone.",
       "grazed": "Graze: damage on a miss",
@@ -581,6 +612,8 @@
       "limit_cantrips": "Cantrips",
       "limit_known": "Known",
       "limit_prepared": "Prepared",
+      "limit_off_school": "Other schools",
+      "school_hint": "Schools: {{schools}}",
       "save_dc": "DC {{dc}}",
       "cast_ritual": "Cast as ritual",
       "ritual_hint": "+10 minutes casting time, no slot consumed",
@@ -820,7 +853,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -1220,8 +1253,15 @@
       "amount_label": "Uses to spend",
       "amount_less": "One use fewer",
       "amount_more": "One use more",
+      "use_given": "To give to an ally: {{n}}",
+      "extra_actions": "Extra actions: {{n}}",
+      "use_notes": {
+        "arcane_charge": "Arcane Charge: you teleport up to 30 ft to an unoccupied space you can see, before or after the extra action."
+      },
       "use_rolled": "You rolled",
       "use_errors": {
+        "once_per_turn": "You can use it only once per turn.",
+        "no_attack_left": "You have no attack of the Attack action left to give up.",
         "turn_slot_used": "You have already used that action this turn.",
         "no_uses": "No uses left.",
         "amount_too_high": "Too many uses at once for this feature.",
