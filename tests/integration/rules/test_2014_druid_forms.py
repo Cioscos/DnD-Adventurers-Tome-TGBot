@@ -246,3 +246,106 @@ async def test_a_form_saved_without_skills_or_saves_uses_the_normal_calculation(
     await _wolf(client, cid, **extra)
     assert await _skill_bonus(client, cid, "stealth") == 2  # Destrezza 15 della bestia, nessuna competenza
     assert await _save_bonus(client, cid, "constitution") == 1
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, N1: la durata della forma scala con i riposi che attraversa
+# ---------------------------------------------------------------------------
+
+async def _form_rounds(client, cid):
+    state = next((s for s in (await _full(client, cid))["active_states"] if s["key"] == "wild_shape"), None)
+    return state["rounds_left"] if state else None
+
+
+async def test_a_form_that_outlives_short_rests_loses_the_hour_of_each_one(client):
+    cid = await _druid(client, 6)  # 3 ore = 1800 round
+    await _in_form(client, cid)
+    assert await _form_rounds(client, cid) == 1800
+    seen = []
+    for _ in range(3):
+        assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).status_code == 200
+        seen.append(await _form_rounds(client, cid))
+    assert seen == [1200, 600, None]
+    assert (await _full(client, cid))["active_form"] is None
+
+
+async def test_a_form_that_outlives_a_long_rest_loses_its_eight_hours(client):
+    cid = await _druid(client, 18)  # 9 ore = 5400 round
+    await _in_form(client, cid)
+    assert await _form_rounds(client, cid) == 5400
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})).status_code == 200
+    assert await _form_rounds(client, cid) == 600
+
+
+async def test_states_without_a_duration_keep_none_through_a_rest(client):
+    from tests.integration.rules.test_2014_cleric import _cleric
+    other = await _cleric(client, 18)
+    use = await client.post(f"/characters/{other}/features/cleric.divine_intervention/use", json={"params": {}})
+    assert use.status_code == 200, use.text
+    before = [s for s in (await _full(client, other))["active_states"] if s["key"] == "divine_intervention"]
+    assert before and before[0]["rounds_left"] is None
+    await client.post(f"/characters/{other}/rest", json={"rest_type": "short"})
+    after = [s for s in (await _full(client, other))["active_states"] if s["key"] == "divine_intervention"]
+    assert [s["rounds_left"] for s in after] == [None] * len(before)
+
+
+async def test_in_2024_an_interrupted_short_rest_does_nothing_and_an_interrupted_long_one_counts_as_short(client):
+    cid = await _druid(client, 6)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    await _in_form(client, cid)
+    start = await _form_rounds(client, cid)
+    assert start and start > 600
+    await client.post(f"/characters/{cid}/rest", json={"rest_type": "short", "interrupted": True})
+    assert await _form_rounds(client, cid) == start  # niente benefici: la durata non scorre
+    await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "interrupted": True})
+    assert await _form_rounds(client, cid) == start - 600
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, m1: eliminare una forma attiva passa dallo stesso costo del ritorno
+# ---------------------------------------------------------------------------
+
+async def test_deleting_an_active_form_costs_the_bonus_action_or_is_refused(client):
+    cid = await _druid(client, 4)
+    form = await _in_form(client, cid)
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": True})
+    r = await client.delete(f"/characters/{cid}/companions/{form}")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "turn_slot_used"
+    assert len((await client.get(f"/characters/{cid}/companions")).json()) == 1
+    assert (await _full(client, cid))["active_form"] is not None
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": False})
+    assert (await client.delete(f"/characters/{cid}/companions/{form}")).status_code == 204
+    assert (await _turn(client, cid))["bonus_used"] is True
+    assert (await _full(client, cid))["active_form"] is None
+
+
+async def test_deleting_an_inactive_form_costs_nothing(client):
+    cid = await _druid(client, 4)
+    form = await _form(client, cid)
+    assert (await client.delete(f"/characters/{cid}/companions/{form}")).status_code == 204
+    assert (await _turn(client, cid)).get("bonus_used") is not True
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, m4: il danno dalla scheda della forma restituisce il TS di concentrazione
+# ---------------------------------------------------------------------------
+
+async def test_damage_from_the_form_sheet_that_ends_it_returns_the_concentration_save(client):
+    cid = await _druid(client, 4)
+    spell = await client.post(f"/characters/{cid}/spells", json={"name": "Benedizione", "level": 1, "is_concentration": True,
+                                                                  "is_prepared": True})
+    assert spell.status_code == 201, spell.text
+    use = await client.post(f"/characters/{cid}/spells/{spell.json()['id']}/use", json={"slot_level": 1})
+    assert use.status_code == 200, use.text
+    form = await _in_form(client, cid, hp=10)
+    r = await client.patch(f"/characters/{cid}/companions/{form}/hp", json={"op": "damage", "value": 14})
+    assert r.status_code == 200, r.text
+    save = r.json()["concentration_save"]
+    assert save is not None and save["dc"] == 10 and "lost_concentration" in save
+
+
+async def test_damage_absorbed_by_the_form_has_no_concentration_save(client):
+    cid = await _druid(client, 4)
+    form = await _in_form(client, cid, hp=10)
+    r = await client.patch(f"/characters/{cid}/companions/{form}/hp", json={"op": "damage", "value": 3})
+    assert r.json().get("concentration_save") is None

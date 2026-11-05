@@ -420,7 +420,7 @@ async def _add_spell(client, cid, name, level, **extra):
 async def test_magical_secrets_pick_any_spell_up_to_the_castable_level(client):
     cid = await _bard(client, 10)
     choice = _choice(await _full(client, cid), "magical_secrets")
-    assert choice["count"] == 2 and choice["spell_pick"] == {"free": False, "max_level": 5}
+    assert choice["count"] == 2 and choice["spell_pick"] == {"free": False, "max_level": 5, "list": None}
     too_high = await _add_spell(client, cid, "Disintegrazione", 6, pick_id=choice["id"])
     assert too_high.status_code == 422 and too_high.json()["detail"]["code"] == "spell_pick_level"
     one = await _add_spell(client, cid, "Palla di fuoco", 3, pick_id=choice["id"])
@@ -566,7 +566,7 @@ async def test_peerless_skill_on_the_initiative_and_without_uses(client):
 async def test_additional_magical_secrets_do_not_count_among_the_known_spells(client):
     cid = await _bard(client, 6, LORE)
     choice = _choice(await _full(client, cid), "additional_secrets")
-    assert choice["count"] == 2 and choice["spell_pick"] == {"free": True, "max_level": 3}
+    assert choice["count"] == 2 and choice["spell_pick"] == {"free": True, "max_level": 3, "list": None}
     await _add_spell(client, cid, "Incantesimo base", 1)
     assert (await _add_spell(client, cid, "Palla di fuoco", 3, pick_id=choice["id"])).status_code == 201
     left = _choice(await _full(client, cid), "additional_secrets")

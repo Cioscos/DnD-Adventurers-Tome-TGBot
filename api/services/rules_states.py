@@ -39,15 +39,21 @@ def end_states(char, *reasons: str, within: int | None = None) -> list[str]:
     states = get_states(char)
     kept = [s for s in states if not set(s["ends_on"]) & set(reasons)
             and not (within is not None and s["rounds_left"] is not None and s["rounds_left"] <= within)]
-    if len(kept) != len(states):
-        char.active_states = kept  # nuova lista: SQLAlchemy non vede le mutazioni in place
+    # chi sopravvive a un riposo ne ha attraversato la durata: gli stati a tempo la perdono (durano più del riposo, quindi restano > 0)
+    left = [{**s, "rounds_left": s["rounds_left"] - within} if within is not None and s["rounds_left"] is not None else s
+            for s in kept]
+    if len(kept) != len(states) or left != kept:
+        char.active_states = left  # nuova lista: SQLAlchemy non vede le mutazioni in place
         settle_closed(char, [s for s in states if s not in kept])
     return [s["key"] for s in states if s not in kept]
 
 
 def end_states_on_rest(char, rest: str) -> list[str]:
     """Il riposo chiude gli stati che lo nominano e quelli che durano meno di lui: un'ora per il riposo breve, otto per il
-    lungo. Restano gli stati senza durata (a mano) e quelli che durano oltre, come i sette giorni di Intervento Divino."""
+    lungo. Restano gli stati senza durata (a mano, come i sette giorni di Intervento Divino) e quelli a tempo che durano
+    oltre, ai quali il riposo toglie la sua durata (600 round il breve, 4800 il lungo). ``rest`` è il riposo che vale
+    davvero: un riposo interrotto che non dà benefici non arriva qui (2014 lungo, 2024 breve), il lungo 2024 interrotto
+    vale un breve e arriva come ``short``."""
     closed = (end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS) if rest == "long"
               else end_states(char, "rest_short", within=SHORT_REST_ROUNDS))
     # la concentrazione legata a uno stato chiuso finisce con lui (quella degli incantesimi resta, D8)

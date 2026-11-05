@@ -278,7 +278,10 @@ async def delete_companion(
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
     if comp.is_active:
-        end_form(char, comp)
+        if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
+            end_form(char, comp)
+        else:
+            return_to_normal(char, comp)  # 2014: azione bonus; già spesa = 409 e la forma resta, non si elimina
     await session.delete(comp)
 
 
@@ -296,9 +299,10 @@ async def companion_hp(
     active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
     if body.op == "damage" and active is not None and active.id == comp.id and form_own_hp(char):
         # il danno alla forma attiva ha un solo percorso, quello di PATCH /hp: PF temporanei, chiusura a 0 PF, eccesso al personaggio
-        await update_hp(char_id, HPUpdate(op=HPOp.DAMAGE, value=body.value), user_id, session, lang)
+        full = await update_hp(char_id, HPUpdate(op=HPOp.DAMAGE, value=body.value), user_id, session, lang)
         out = _read(char, comp)
         out.down = comp.current_hp == 0
+        out.concentration_save = full.concentration_save  # il TS di PATCH /hp, se l'eccesso l'ha fatto tirare
         return out
     if body.op == "damage":
         absorbed = min(comp.temp_hp, body.value)

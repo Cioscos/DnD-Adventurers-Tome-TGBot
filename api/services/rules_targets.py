@@ -19,7 +19,7 @@ from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combata
 from api.services.effects import _add_history, apply_conditions
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
-from core.rules.states import add_target_immunity, is_target_immune
+from core.rules.states import add_target_immunity, immune_conditions, is_target_immune
 
 
 async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
@@ -27,6 +27,14 @@ async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
     if "classes" in sa_inspect(char).unloaded:  # le immunità dei privilegi (Interdizione della Natura) vengono dalle classi
+        await db.refresh(char, ["classes"])
+    return char
+
+
+async def pc_char_by_id(db: AsyncSession, char_id: int) -> Character:
+    """Il personaggio con le classi caricate (servono alle immunità dei privilegi)."""
+    char = await db.get(Character, char_id)
+    if "classes" in sa_inspect(char).unloaded:
         await db.refresh(char, ["classes"])
     return char
 
@@ -62,6 +70,8 @@ async def apply_condition_to_combatant(
                                 detail={"code": "source_not_concentrating"})
         spell_id = src_char.concentrating_spell_id
     owner = await pc_char(db, comb) if comb.kind == "pc" else comb
+    if comb.kind == "pc" and body.slug in immune_conditions(owner):
+        return  # respinta per immunità: né condizione, né effetto, né TS di fine turno
     if not (owner.conditions or {}).get(body.slug):  # keep custom:* payloads on re-apply
         await set_condition(db, comb, body.slug, True)
     target = ("character", comb.character_id) if comb.kind == "pc" else ("combatant", comb.id)
@@ -122,7 +132,11 @@ async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> Non
     for other in others:  # un solo effetto per condizione, come in ``upsert_effect``
         await _delete_effect(db, other)
     if eff.character_id is not None:
-        char = await db.get(Character, eff.character_id)
+        char = await pc_char_by_id(db, eff.character_id)
+        if eff.slug in immune_conditions(char):  # immune: il TS fallito non porta nulla, l'effetto non resta
+            await _delete_effect(db, eff)
+            await db.flush()
+            return
         if not (char.conditions or {}).get(eff.slug):
             await apply_conditions(db, char, {eff.slug: True})
         target = ("character", eff.character_id)

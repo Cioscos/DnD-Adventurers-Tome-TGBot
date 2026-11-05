@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.rules.companions import COMPANION_FEATURES
-from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
+from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
 DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -100,6 +100,7 @@ class CompanionRead(BaseModel):
     attack_bonus_extra: int = 0  # compagno di privilegio: si somma al bonus dello statblock
     damage_bonus_extra: int = 0
     down: bool = False  # set by the hp endpoint: 0 HP means "a terra" (no death saves)
+    concentration_save: Optional[ConcentrationSaveResult] = None  # danno alla forma attiva: il TS del personaggio
 
 
 class CompanionActivate(BaseModel):

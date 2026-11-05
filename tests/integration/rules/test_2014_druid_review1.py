@@ -273,3 +273,29 @@ async def test_a_pick_from_any_class_names_no_list(client):
     from tests.integration.rules.test_2014_bard import _bard
     secrets = _choice(await _full(client, await _bard(client, 10)), "magical_secrets")
     assert secrets["spell_pick"]["list"] is None
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, m3: una condizione respinta per immunita non lascia effetti ne TS
+# ---------------------------------------------------------------------------
+
+async def test_a_rich_condition_refused_by_the_ward_leaves_no_effect_and_no_save(client, test_session_factory):
+    from core.db.models import ConditionEffect, PendingSave
+    sid, cid, comb = await _druid_at_the_table(client, test_session_factory)
+    body = {"slug": "poisoned", "expiry": {"anchor": "owner", "edge": "end", "count": 3},
+            "save": {"ability": "constitution", "dc": 14, "edge": "end"}}
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{comb}/conditions", json=body)
+    assert r.status_code == 200, r.text
+    assert not (await _full(client, cid))["conditions"].get("poisoned")
+    async with test_session_factory() as s:
+        assert (await s.execute(select(ConditionEffect))).scalars().all() == []
+        assert (await s.execute(select(PendingSave))).scalars().all() == []
+
+
+async def test_a_rich_condition_the_druid_can_suffer_still_leaves_its_effect(client, test_session_factory):
+    from core.db.models import ConditionEffect
+    sid, cid, comb = await _druid_at_the_table(client, test_session_factory)
+    body = {"slug": "prone", "expiry": {"anchor": "owner", "edge": "end", "count": 3}}
+    assert (await client.post(f"/sessions/{sid}/encounter/combatants/{comb}/conditions", json=body)).status_code == 200
+    async with test_session_factory() as s:
+        assert len((await s.execute(select(ConditionEffect))).scalars().all()) == 1
