@@ -12,7 +12,7 @@ from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_armor_proficient
-from core.rules.states import immune_conditions
+from core.rules.states import exhaustion_level, immune_conditions
 from core.rules.types import Edition, Modifier, RuleContext
 from core.rules.weapons import ability_score, has_property, small_race
 
@@ -60,11 +60,6 @@ def has_state(ctx: RuleContext, key: str) -> bool:
     return any(s.get("key") == key for s in ctx.char.active_states or [])
 
 
-def exhaustion_level(char: Any) -> int:
-    level = (char.conditions or {}).get("exhaustion", 0)
-    return int(level) if isinstance(level, (int, bool)) else 0
-
-
 def surprised_turn(char: Any) -> bool:
     """2014: è il turno della sorpresa, la creatura non agisce né si muove né reagisce (``turn_state``, scritto dal turno).
     Un privilegio con ``acts_when_surprised`` (Istinto Ferino) la toglie finché ha lo stato richiesto (Ira)."""
@@ -73,6 +68,24 @@ def surprised_turn(char: Any) -> bool:
     return not any(spec.acts_when_surprised and any(s.get("key") == spec.acts_when_surprised
                                                     for s in char.active_states or [])
                    for spec, _row in active_features(char))
+
+
+def surprise_exit_features(char: Any) -> list[str]:
+    """Con il turno da sorpreso in corso: i privilegi il cui «Usa» avvia lo stato che permette di agire (Ira per
+    l'Istinto Ferino). Restano utilizzabili anche se la scheda è incapacitata (la UI non li spegne)."""
+    if not surprised_turn(char):
+        return []
+    wanted = {spec.acts_when_surprised for spec, _row in active_features(char) if spec.acts_when_surprised}
+    out: list[str] = []
+    for spec, row in active_features(char):
+        use = spec.on_use
+        if use is None or use.state is None:
+            continue
+        ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
+        state = use.state(ctx, {}) if callable(use.state) else use.state
+        if state.key in wanted and (use.available is None or use.available(ctx)):
+            out.append(spec.key)
+    return out
 
 
 def is_incapacitated(char: Any) -> bool:

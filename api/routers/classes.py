@@ -149,13 +149,9 @@ async def create_class_for_character(
     if cls not in char.classes:
         char.classes.append(cls)
     sync_level_choices(char, cls, 0, cls.level)  # classe nata sopra il livello 1: scelte dei livelli già raggiunti
-    await sync_class_feature_abilities(session, char, cls, lang=lang)
 
-    # Competenze della classe per edizione: TS solo dalla prima, il resto dalla tabella multiclasse.
-    # Sempre additive: non toglie né sovrascrive quanto l'utente ha già.
-    merge_grant(char, grant, lang, tuple(chosen))
-    mark_seeded(char)
-
+    # PF prima del sync: un privilegio che alza la COS (Campione Primordiale) ne somma poi la differenza ai PF già
+    # calcolati; con i PF ancora a 0 il sync li porterebbe a un valore parziale e il calcolo sotto verrebbe saltato.
     settings = char.settings or {}
     auto_calc = settings.get("hp_auto_calc", True)
     if is_first_class and char.hit_points == 0 and auto_calc and hit_die:
@@ -164,6 +160,13 @@ async def create_class_for_character(
         char.hit_points = hp
         char.current_hit_points = hp
         await session.flush()
+
+    await sync_class_feature_abilities(session, char, cls, lang=lang)
+
+    # Competenze della classe per edizione: TS solo dalla prima, il resto dalla tabella multiclasse.
+    # Sempre additive: non toglie né sovrascrive quanto l'utente ha già.
+    merge_grant(char, grant, lang, tuple(chosen))
+    mark_seeded(char)
 
     return cls
 

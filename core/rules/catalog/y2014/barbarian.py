@@ -26,9 +26,15 @@ def rage_damage(level: int) -> int:
     return 2 if level < 9 else 3 if level < 16 else 4
 
 
+def in_rage(ctx: RuleContext) -> bool:
+    """Lo stato dell'Ira è attivo. I totem che il manuale non lega all'armatura (Orso 3, Aquila 14, Lupo 14) chiedono solo questo."""
+    return state_on(ctx, "rage")
+
+
 def raging(ctx: RuleContext) -> bool:
-    """In ira e senza armatura pesante: l'armatura pesante annulla i benefici (e quelli dei totem)."""
-    return state_on(ctx, "rage") and not heavy_armor(ctx.char)
+    """In ira e senza armatura pesante: l'armatura pesante annulla i benefici dell'Ira e quelli che il manuale
+    lega a entrambe le cose (Aquila 3)."""
+    return in_rage(ctx) and not heavy_armor(ctx.char)
 
 
 def _melee_strength(ctx: RuleContext) -> bool:
@@ -46,14 +52,16 @@ def _rage_state(ctx: RuleContext, params: dict) -> StateSpec:
     others: list[str] = []  # privilegi che agiscono su altri: sono mostrati sotto lo stato (D1)
     if row.subclass_key == "totem_warrior":
         spirit = _chosen(row, "totem_spirit")
-        others += [f"{CK}.totem_{a}" for a in ("eagle", "wolf") if a in spirit]
+        # Aquila 3 vale «senza armatura pesante»; Lupo 3 no
+        others += [f"{CK}.totem_{a}" for a in ("eagle", "wolf")
+                   if a in spirit and (a != "eagle" or not heavy_armor(ctx.char))]
         if level >= 14 and "bear" in _chosen(row, "totem_attunement"):
             others.append(f"{CK}.attunement_bear")
     frenzy = berserker and bool(params.get("frenzy"))
     # Ira Persistente (15): resta solo la perdita dei sensi; prima finisce anche a fine turno senza aver attaccato.
     ends = ("unconscious", "rest_short", "rest_long") + (() if level >= 15 else ("turn_end_inactive",))
     return StateSpec(
-        "rage", rounds=10, ends_on=ends, blocks_casting=True, exhaustion_on_end=1 if frenzy else 0,
+        "rage", rounds=10, ends_on=ends, blocks_casting=True, exhaustion_on_end=1 if frenzy else 0, end_slot="bonus",
         immune_conditions=("charmed", "frightened") if berserker and level >= 6 else (),
         data={"damage": rage_damage(level), "frenzy": frenzy, "others": others},
     )
@@ -121,7 +129,7 @@ WOLF_KNOCK = RollOptionSpec(
     key="barbarian.attunement_wolf_knock", phase="after_hit", rolls=("attack",), slot="bonus",
     label={"it": "Lupo: abbatti il bersaglio (Grande o più piccolo)?",
            "en": "Wolf: knock the target prone (Large or smaller)?"},
-    available=lambda c: raging(c) and c.attack_mode == "melee",
+    available=lambda c: in_rage(c) and c.attack_mode == "melee",
     target_effect=lambda _c, _i: TargetEffect(condition="prone"),
 )
 
@@ -139,6 +147,7 @@ def _intimidation(ctx: RuleContext, _params: dict) -> TargetEffect:
         condition="frightened", save_ability="wisdom",
         save_dc=8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "charisma"),
         ends_at={"anchor": "source", "edge": "end", "count": 1},
+        extends=True, immune_on_success=True,  # prolungamento con un'azione, senza nuovo TS; chi supera il TS è immune 24 ore
     )
 
 
@@ -167,17 +176,18 @@ FEATURES = (
     feature("hit_points", CK, ED, 1, ("Punti Ferita / Hit Points (Barbaro 1, pag. 47)"),
             ("Punti Ferita", "Hit Points"),
             ("Dado vita d12; al 1° livello 12 + Costituzione, poi d12 (o 7) + Costituzione.",
-             "Hit die d12; level 1 gives 12 + Constitution, then d12 (or 7) + Constitution."), no_row=True),
+             "Hit die d12; level 1 gives 12 + Constitution, then d12 (or 7) + Constitution."), no_row=True,
+            covered_by="api/routers/classes.py create_class_for_character e total_base_hp; test_hit_points_use_the_d12_and_follow_constitution"),
     feature("proficiencies", CK, ED, 1, ("Competenze / Proficiencies (Barbaro 1, pag. 47)"),
             ("Competenze", "Proficiencies"),
             ("Armature leggere e medie, scudi, armi semplici e da guerra, TS Forza e Costituzione, 2 abilità.",
              "Light and medium armor, shields, simple and martial weapons, Strength and Constitution saves, 2 skills."),
-            no_row=True),
+            no_row=True, covered_by="core/rules/proficiencies.py (class_proficiencies) e la scelta ClassSkillChoice"),
     feature("equipment", CK, ED, 1, ("Equipaggiamento / Equipment (Barbaro 1, pag. 48)"),
             ("Equipaggiamento", "Equipment"),
             ("Dotazione iniziale: ascia bipenne o arma da guerra, due asce o arma semplice, 4 giavellotti, pacco.",
              "Starting gear: greataxe or martial melee weapon, two handaxes or a simple weapon, 4 javelins, pack."),
-            no_row=True),
+            no_row=True, covered_by="lavori-successivi"),
     feature("rage", CK, ED, 1, ("Ira / Rage (Barbaro 1, pag. 48)"), ("Ira", "Rage"),
             ("Azione bonus: 1 minuto di ira. Vantaggio a prove e TS di Forza, danno in mischia con Forza, "
              "resistenza a danni fisici. Niente incantesimi né armatura pesante.",
@@ -215,12 +225,14 @@ FEATURES = (
     feature("primal_path", CK, ED, 3, ("Cammino Primordiale / Primal Path (Barbaro 3, pag. 48)"),
             ("Cammino Primordiale", "Primal Path"),
             ("Al 3° livello si sceglie il Cammino del Berserker o del Combattente Totemico.",
-             "At level 3 you choose the Path of the Berserker or of the Totem Warrior."), no_row=True),
+             "At level 3 you choose the Path of the Berserker or of the Totem Warrior."), no_row=True,
+            covered_by="core/rules/subclasses.py (match_subclass) e il campo sottoclasse della classe"),
     feature("ability_score_improvement", CK, ED, 4,
             ("Aumento dei Punteggi di Caratteristica / Ability Score Improvement (Barbaro 4, 8, 12, 16, 19, pag. 49)"),
             ("Aumento dei Punteggi di Caratteristica", "Ability Score Improvement"),
             ("Ai livelli 4, 8, 12, 16 e 19: +2 a un punteggio o +1 a due, oppure un talento; massimo 20.",
-             "At levels 4, 8, 12, 16 and 19: +2 to one score or +1 to two, or a feat; maximum 20."), no_row=True),
+             "At levels 4, 8, 12, 16 and 19: +2 to one score or +1 to two, or a feat; maximum 20."), no_row=True,
+            covered_by="core/rules/level_choices.py (scelta asi); test_asi_choice_is_pending_at_each_asi_level"),
     feature("extra_attack", CK, ED, 5, ("Attacco Extra / Extra Attack (Barbaro 5, pag. 49)"),
             ("Attacco Extra", "Extra Attack"),
             ("Due attacchi con l'azione Attacco; non si somma ad altri Attacco Extra.",
@@ -299,7 +311,8 @@ FEATURES = (
     feature("totem_spirit", CK, ED, 3, ("Spirito Totemico / Totem Spirit (Combattente Totemico 3, pag. 50)"),
             ("Spirito Totemico", "Totem Spirit"),
             ("Scegli un animale totemico: Aquila, Lupo o Orso.", "Choose a totem animal: Eagle, Wolf or Bear."),
-            subclass="totem_warrior", choices=(_beast_choice("totem_spirit", 3),), no_row=True),
+            subclass="totem_warrior", choices=(_beast_choice("totem_spirit", 3),), no_row=True,
+           covered_by="ChoiceSpec totem_spirit di questa riga; test_totem_choices_are_pending_at_3_6_and_14"),
     _totem("totem", "eagle", 3, ("Aquila / Eagle (Combattente Totemico 3, pag. 50)"),
            ("Aquila (Spirito Totemico)", "Eagle (Totem Spirit)"),
            ("In ira, senza armatura pesante: attacchi di opportunità contro di te con svantaggio; Scatto come azione bonus.",
@@ -313,14 +326,15 @@ FEATURES = (
            ("Orso (Spirito Totemico)", "Bear (Totem Spirit)"),
            ("In ira hai resistenza a tutti i danni tranne lo psichico.",
             "While raging you resist all damage except psychic."),
-           modifiers=tuple(Modifier(f"resistance:{t}", 1, when=raging, source="feature:barbarian.totem_bear")
+           modifiers=tuple(Modifier(f"resistance:{t}", 1, when=in_rage, source="feature:barbarian.totem_bear")
                            for t in DAMAGE_TYPES if t != "psychic")),
     feature("aspect_of_the_beast", CK, ED, 6,
             ("Aspetto della Bestia / Aspect of the Beast (Combattente Totemico 6, pag. 50)"),
             ("Aspetto della Bestia", "Aspect of the Beast"),
             ("Scegli un animale totemico, anche diverso: ne ottieni il beneficio, che non richiede l'ira.",
              "Choose a totem animal, even a different one: you gain its benefit, which needs no rage."),
-            subclass="totem_warrior", choices=(_beast_choice("totem_aspect", 6),), no_row=True),
+            subclass="totem_warrior", choices=(_beast_choice("totem_aspect", 6),), no_row=True,
+           covered_by="ChoiceSpec totem_aspect di questa riga; test_totem_choices_are_pending_at_3_6_and_14"),
     _totem("aspect", "eagle", 6, ("Aquila / Eagle (Combattente Totemico 6, pag. 50)"),
            ("Aquila (Aspetto della Bestia)", "Eagle (Aspect of the Beast)"),
            ("Vista a 1,5 km, dettagli a 30 m; la luce fioca non dà svantaggio a Percezione.",
@@ -343,12 +357,13 @@ FEATURES = (
             ("Sintonia Totemica", "Totemic Attunement"),
             ("Scegli un animale totemico, anche ripetuto: ne ottieni il beneficio.",
              "Choose a totem animal, even a repeat: you gain its benefit."),
-            subclass="totem_warrior", choices=(_beast_choice("totem_attunement", 14),), no_row=True),
+            subclass="totem_warrior", choices=(_beast_choice("totem_attunement", 14),), no_row=True,
+           covered_by="ChoiceSpec totem_attunement di questa riga; test_totem_choices_are_pending_at_3_6_and_14"),
     _totem("attunement", "eagle", 14, ("Aquila / Eagle (Combattente Totemico 14, pag. 50)"),
            ("Aquila (Sintonia Totemica)", "Eagle (Totemic Attunement)"),
            ("In ira hai velocità di volo pari a quella a terra; se finisci il turno in aria senza sostegno, cadi.",
             "While raging you have a flying speed equal to your walking speed; you fall if you end your turn in the air."),
-           modifiers=(Modifier("fly_speed", 1, when=raging, source="feature:barbarian.attunement_eagle"),)),
+           modifiers=(Modifier("fly_speed", 1, when=in_rage, source="feature:barbarian.attunement_eagle"),)),
     _totem("attunement", "wolf", 14, ("Lupo / Wolf (Combattente Totemico 14, pag. 50)"),
            ("Lupo (Sintonia Totemica)", "Wolf (Totemic Attunement)"),
            ("In ira, azione bonus: butti a terra una creatura Grande o più piccola colpita in mischia.",
@@ -363,5 +378,5 @@ FEATURES = (
             ("Multiclasse: Barbaro", "Multiclassing: Barbarian"),
             ("Requisito Forza 13. Da multiclasse: scudi, armi semplici e da guerra; Attacco Extra non si somma.",
              "Requires Strength 13. As a multiclass: shields, simple and martial weapons; Extra Attack does not stack."),
-            no_row=True),
+            no_row=True, covered_by="core/rules/proficiencies.py (as_multiclass) e webapp/src/data/multiclassPrereqs.ts (D2)"),
 )

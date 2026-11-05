@@ -19,6 +19,7 @@ from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combata
 from api.services.effects import _add_history, apply_conditions
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
+from core.rules.states import add_target_immunity, is_target_immune
 
 
 async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
@@ -96,7 +97,14 @@ async def _delete_effect(db: AsyncSession, eff: ConditionEffect) -> None:
 
 
 async def drop_pending_effect(db: AsyncSession, eff: ConditionEffect) -> None:
-    """TS superato: l'effetto non è mai esistito sul bersaglio, ciò che aveva già resta com'è."""
+    """TS superato: l'effetto non è mai esistito sul bersaglio, ciò che aveva già resta com'è. Se l'effetto lo prevede
+    (``immune_on_success``), chi l'ha usato non può più colpire quel bersaglio fino al suo prossimo riposo lungo."""
+    if eff.immunity_key and eff.source_character_id is not None:
+        source = await db.get(Character, eff.source_character_id)
+        if source is not None:
+            add_target_immunity(source, eff.immunity_key,
+                                f"character:{eff.character_id}" if eff.character_id is not None
+                                else f"combatant:{eff.combatant_id}")
     await _delete_effect(db, eff)
     await db.flush()
 
@@ -142,8 +150,17 @@ async def apply_target_effect(
 
     Con un TS la condizione non c'è ancora: nasce un effetto ``pending`` e il TS ne decide la sorte."""
     effect = pending_target_effect(char, effect_key)
+    if effect.get("immune_on_success") and is_target_immune(char, effect_key, target):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "target_immune"})
     slug = effect.get("condition")
     with_save = bool(slug and effect.get("save_ability") and effect.get("on_failure_only", True))
+    extending = bool(with_save and effect.get("extends") and (await db.execute(select(ConditionEffect.id).where(
+        ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
+        ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
+        ConditionEffect.slug == slug, ConditionEffect.pending.is_(False),
+        ConditionEffect.source_character_id == char.id))).first())
+    if extending:
+        with_save = False  # prolungamento: la condizione c'è già da parte nostra, la durata si rinnova senza un nuovo TS
     if with_save and (await db.execute(select(ConditionEffect.id).where(
             ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
             ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
@@ -158,7 +175,8 @@ async def apply_target_effect(
     if not with_save:
         await apply_condition_to_combatant(db, enc, target, GmConditionApply(
             slug=slug, expiry=expiry, source_combatant_id=mine.id), applied_by_gm=False)
-        _add_history(db, char.id, "condition_change", f"{condition_label(slug)} su {target.name}")
+        _add_history(db, char.id, "condition_change",
+                     f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))
         return True, None
     now = datetime.utcnow().isoformat(timespec="seconds")
     eff = ConditionEffect(
@@ -166,7 +184,8 @@ async def apply_target_effect(
         combatant_id=target.id if target.kind == "monster" else None, slug=slug, pending=True,
         expiry_anchor=expiry["anchor"] if expiry else None, expiry_edge=expiry["edge"] if expiry else None,
         expiry_count=expiry["count"] if expiry else None, source_combatant_id=mine.id, source_character_id=char.id,
-        applied_by_gm=False, encounter_id=enc.id, created_at=now)
+        applied_by_gm=False, encounter_id=enc.id, created_at=now,
+        immunity_key=effect_key if effect.get("immune_on_success") else None)
     db.add(eff)
     await db.flush()
     save = PendingSave(

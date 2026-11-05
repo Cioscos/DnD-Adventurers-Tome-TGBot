@@ -88,6 +88,21 @@ class ReorderRequest(BaseModel):
     combatant_ids: list[int] = Field(min_length=1)
 
 
+class PublicStateOther(BaseModel):
+    """Un privilegio che agisce su altri (Lupo, Orso, Attacco Irruento), col testo che il GM e il gruppo devono vedere."""
+    key: str
+    name: str
+    text: str
+
+
+class PublicState(BaseModel):
+    """Stato attivo di un PG visibile a GM e gruppo (D1/R36): solo gli stati che portano effetti su altri."""
+    key: str
+    name: str
+    rounds_left: Optional[int] = None
+    others: list[PublicStateOther] = []
+
+
 class CombatantLive(BaseModel):
     """Viewer-redacted combatant row.
 
@@ -113,6 +128,7 @@ class CombatantLive(BaseModel):
     ac: Optional[int] = None
     hp_bucket: Optional[str] = None
     condition_effects: list[ConditionEffectRead] = []   # monsters only
+    active_states: list[PublicState] = []               # PCs only: stati con effetti su altri (R36)
     pending_saves: list[PendingSaveRead] = []           # monsters, GM viewer only
 
 

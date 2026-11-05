@@ -34,8 +34,9 @@ from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
-from core.rules.feature_sync import ARCHIVED_FEATURES, GRANTED_SPELL_KEYS
-from core.game.stats import hit_points_for_level
+from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS
+from core.rules.states import TARGET_IMMUNITY, ZERO_HP_USES
+from core.game.stats import hit_points_for_level, roll_ability_mod
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -83,7 +84,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
-                         GRANTED_SPELL_KEYS)
+                         GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -732,6 +733,61 @@ async def roll_skill(
     )
     remember_roll(char, "skill", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
                   skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Ability check roll (prova di caratteristica pura, R35)
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/ability_checks/{ability}/roll", response_model=RollResult)
+async def roll_ability_check(
+    char_id: int,
+    ability: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[D20RollSubmission | None, Body()] = None,
+) -> RollResult:
+    """Prova di caratteristica senza abilità (spingere, sollevare, spezzare): modificatore, nessuna competenza, stessi
+    modi, opzioni al tiro e cronologia di ``skills/roll``. Per il catalogo il tiro è ``ability``."""
+    if ability not in ABILITY_NAMES:
+        raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
+    char = await _get_owned(char_id, user_id, session, full=True)
+
+    if body and body.with_inspiration:
+        spend_inspiration_reroll(char)
+
+    applied = modifiers_for(char, "ability", ability=ability)
+    bonus = roll_ability_mod(char, ability) + applied.flat
+    opts = use_options(session, char, "ability", body, ability=ability)
+    merge_options(applied, opts)
+    outcome = resolve_body(body, applied)
+    die = outcome.kept
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    raw_total = die + bonus + option_total
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
+    is_crit = die == 20 and not applied.auto_fail
+    is_fumble = die == 1
+
+    history_msg = (
+        f"Prova di {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
+    )
+    if body and body.with_inspiration:
+        history_msg = f"Reroll ispirazione: {history_msg}"
+    _add_history(session, char.id, "skill_roll", history_msg)
+    record_dice(char, d20_records(outcome))
+    await prune_history(session, char)
+
+    result = RollResult(
+        die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
+        auto_fail=applied.auto_fail, bonus=bonus, total=total, is_critical=is_crit, is_fumble=is_fumble,
+        description=ability, option_result=option_result(opts, option_rolls, option_total),
+    )
+    remember_roll(char, "ability", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  ability=ability)
     return result
 
 

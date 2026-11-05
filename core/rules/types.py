@@ -67,7 +67,9 @@ class StateSpec:
     ``rounds``: durata in round, ``None`` = senza scadenza. ``blocks_casting``: finché dura non si lanciano
     incantesimi (conferma al lancio). ``exhaustion_on_end``: livelli di spossatezza quando lo stato finisce, per
     qualunque via. ``immune_conditions``: condizioni che non si possono aggiungere finché dura; quelle già presenti
-    sono sospese (restano sulla scheda ma non hanno effetto)."""
+    sono sospese (restano sulla scheda ma non hanno effetto). ``end_slot``: slot di turno che costa terminarlo a mano
+    (``bonus`` per l'Ira): se è già speso lo stato finisce lo stesso, così un tocco sbagliato si corregge; le fini
+    automatiche (perdita dei sensi, durata, riposo) non costano nulla."""
     key: str
     rounds: int | None = None
     ends_on: tuple[str, ...] = ("manual",)
@@ -75,11 +77,14 @@ class StateSpec:
     blocks_casting: bool = False
     exhaustion_on_end: int = 0
     immune_conditions: tuple[str, ...] = ()
+    end_slot: str | None = None
 
     def __post_init__(self) -> None:
         unknown = set(self.ends_on) - ENDS_ON
         if unknown:
             raise ValueError(f"ends_on sconosciuto: {sorted(unknown)}")
+        if self.end_slot is not None and self.end_slot not in TURN_FLAGS:
+            raise ValueError(f"end_slot sconosciuto: {self.end_slot}")
 
 
 @dataclass(frozen=True)
@@ -90,7 +95,10 @@ class TargetEffect:
     si applica subito. ``on_failure_only=False``: si applica comunque e il TS non lo toglie (resta solo il risultato).
     Durata: ``ends_at`` = ``{"anchor": "owner"|"source", "edge": "start"|"end", "count": n}`` (stesso formato di
     ``ExpirySpec``, ``source`` = chi usa il privilegio); altrimenti ``rounds`` round sul turno del bersaglio; senza
-    nessuno dei due dura finché non viene tolta. ``damage_dice``: danno dell'effetto, mostrato nell'esito."""
+    nessuno dei due dura finché non viene tolta. ``damage_dice``: danno dell'effetto, mostrato nell'esito.
+    ``extends``: se il bersaglio porta già la condizione da chi usa il privilegio, la durata si rinnova senza un nuovo TS
+    (prolungamento). ``immune_on_success``: chi supera il TS non è più bersaglio di questo effetto fino al prossimo
+    riposo lungo di chi lo usa (le «24 ore» delle schede)."""
     condition: str | None = None
     save_ability: str | None = None
     save_dc: int | None = None
@@ -98,6 +106,8 @@ class TargetEffect:
     ends_at: dict | None = None
     on_failure_only: bool = True
     damage_dice: str | None = None
+    extends: bool = False
+    immune_on_success: bool = False
 
 
 @dataclass(frozen=True)
@@ -327,6 +337,9 @@ class FeatureSpec:
     ability_bonus: dict[str, int] | None = None
     ability_cap: int = 20
     no_row: bool = False  # solo catalogo: nessuna riga Ability sulla scheda (regole generali, scelte di livello)
+    # dove è coperta una riga senza `Ability` che la mappatura vuole da implementare o correggere: `lavori-successivi`
+    # (fuori dai cataloghi, R32) oppure il punto del codice o del test; `check_catalog` lo pretende insieme a `no_row`
+    covered_by: str | None = None
 
 
 @dataclass(frozen=True)

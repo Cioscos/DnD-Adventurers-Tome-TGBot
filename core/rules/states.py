@@ -19,7 +19,7 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
     state = {"key": spec.key, "feature_key": feature_key, "rounds_left": spec.rounds,
              "ends_on": list(spec.ends_on), "data": dict(spec.data), "name": name,
              "blocks_casting": spec.blocks_casting, "exhaustion_on_end": spec.exhaustion_on_end,
-             "immune_conditions": list(spec.immune_conditions)}
+             "immune_conditions": list(spec.immune_conditions), "end_slot": spec.end_slot}
     char.active_states = [*(s for s in get_states(char) if s["key"] != spec.key), state]
     return state
 
@@ -48,7 +48,44 @@ def charge_exhaustion(char: Any, closed: list[dict]) -> None:
         char.is_dead = True
 
 
+def exhaustion_level(char: Any) -> int:
+    """Livello di spossatezza della scheda (0 se assente o non numerico)."""
+    value = (char.conditions or {}).get("exhaustion", 0)
+    return int(value) if isinstance(value, (int, bool)) else 0
+
+
+def restore_exhaustion(char: Any, level: int) -> None:
+    """Rimette la spossatezza com'era prima di un'operazione annullata."""
+    conditions = {k: v for k, v in (char.conditions or {}).items() if k != "exhaustion"}
+    char.conditions = {**conditions, "exhaustion": level} if level else conditions
+
+
 ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
+
+
+TARGET_IMMUNITY = "target_immunity"  # settings: {chiave dell'effetto: ["combatant:3", "character:7"]}
+
+
+def target_key(combatant: Any) -> str:
+    return f"character:{combatant.character_id}" if combatant.kind == "pc" else f"combatant:{combatant.id}"
+
+
+def is_target_immune(char: Any, effect_key: str, combatant: Any) -> bool:
+    return target_key(combatant) in ((char.settings or {}).get(TARGET_IMMUNITY) or {}).get(effect_key, [])
+
+
+def add_target_immunity(char: Any, effect_key: str, target: str) -> None:
+    immune = {k: list(v) for k, v in ((char.settings or {}).get(TARGET_IMMUNITY) or {}).items()}
+    if target not in immune.setdefault(effect_key, []):
+        immune[effect_key].append(target)
+    char.settings = {**(char.settings or {}), TARGET_IMMUNITY: immune}
+
+
+def reset_target_immunity(char: Any) -> None:
+    """Il riposo lungo chiude le «24 ore» delle immunità di un effetto su altri."""
+    settings = char.settings or {}
+    if settings.get(TARGET_IMMUNITY):
+        char.settings = {k: v for k, v in settings.items() if k != TARGET_IMMUNITY}
 
 
 def reset_zero_hp_uses(char: Any) -> None:

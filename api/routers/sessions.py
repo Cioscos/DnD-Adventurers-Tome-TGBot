@@ -57,7 +57,7 @@ from api.services.homebrew.dispatcher import dispatch
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
 from api.services.condition_effects import character_effect_payload
 from api.services.rules_turn import attacks_allowed, get_turn
-from api.services.encounter_view import build_encounter_block
+from api.services.encounter_view import build_encounter_block, public_states
 from core.db.models import (
     Campaign,
     CampaignMember,
@@ -232,6 +232,7 @@ async def _load_live_characters(
         .options(
             selectinload(Character.classes),
             selectinload(Character.items),
+            selectinload(Character.abilities),
         )
         .where(Character.id.in_(char_ids))
     )
@@ -267,6 +268,7 @@ async def _load_live_characters(
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
             is_concentrating=char.concentrating_spell_id is not None,
+            active_states=public_states(char),
         )
     return out
 
@@ -527,6 +529,7 @@ async def get_session_live(
                 last_roll=raw["last_roll"],
                 hp_bucket=raw["hp_bucket"],
                 armor_category=raw["armor_category"],
+                active_states=raw["active_states"],
             ))
         else:
             snapshots.append(CharacterLiveSnapshot(
@@ -548,6 +551,7 @@ async def get_session_live(
                 last_roll=raw["last_roll"],
                 hp_bucket=raw["hp_bucket"],
                 armor_category=None,
+                active_states=raw["active_states"],
             ))
 
     if session.status == SessionStatus.ACTIVE:

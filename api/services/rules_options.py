@@ -147,3 +147,8 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
 
 def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionRead]:
     return [option_read(o, lang) for o in roll_options_for(roll_context(char, roll, **kw))]
+
+
+def reaction_offers(char: Any, lang: str) -> list[RollOptionRead]:
+    """Le reazioni d'attacco che il danno appena subito ha aperto e che si possono ancora fare (Ritorsione)."""
+    return [o for o in list_options(char, "attack", lang, attack_mode="melee", grip="one") if o.slot == "reaction"]

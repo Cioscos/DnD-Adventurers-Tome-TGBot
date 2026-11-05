@@ -17,7 +17,11 @@ from api.services.wild_shape import start_form
 from api.version import APP_VERSION
 from core.game.containers import is_container
 from core.game.stats import migrate_character_ac
-from core.rules.feature_sync import ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, clean_archive, clean_granted_keys
+from core.rules.feature_sync import (
+    ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, clean_ability_bonus, clean_archive, clean_granted_keys,
+    clean_target_immunity, clean_zero_hp_uses,
+)
+from core.rules.states import TARGET_IMMUNITY, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
@@ -261,6 +265,10 @@ async def import_character(
         char.settings = {**char.settings, ARCHIVED_FEATURES: clean_archive(char.settings[ARCHIVED_FEATURES])}
     if GRANTED_SPELL_KEYS in (char.settings or {}):
         char.settings = {**char.settings, GRANTED_SPELL_KEYS: clean_granted_keys(char.settings[GRANTED_SPELL_KEYS])}
+    for key, clean in ((ABILITY_BONUS_KEY, clean_ability_bonus), (ZERO_HP_USES, clean_zero_hp_uses),
+                       (TARGET_IMMUNITY, clean_target_immunity)):
+        if key in (char.settings or {}):
+            char.settings = {**char.settings, key: clean(char.settings[key])}
 
     for sp, row in zip(data.spells, spells):
         row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None

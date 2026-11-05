@@ -118,7 +118,7 @@ async def _create_from(session: AsyncSession, user_id: int, data: CharacterExpor
     char = await import_character(session, user_id, data, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])[kind])
     char = await _refresh_char_full(session, char.id, user_id)
     if "rules_edition" in data.character.model_fields_set:  # un file vecchio resta com'è
-        await sync_cataloged_features(session, char, lang)
+        await sync_cataloged_features(session, char, lang, retrofit=True)  # i punteggi del file sono già quelli finali (R34)
         char = await _refresh_char_full(session, char.id, user_id)
     return await build_character_response(session, char)
 
@@ -171,7 +171,7 @@ async def import_ddb_character(
     _apply_class_options(char, class_option_names(ddb), report, lang)
     for cls in char.classes:
         if class_table_key(cls.class_name) is not None:
-            await sync_class_feature_abilities(session, char, cls, lang=lang)
+            await sync_class_feature_abilities(session, char, cls, lang=lang, retrofit=True)  # Beyond somma già i modificatori di classe
     await _apply_feature_uses(session, char, feature_uses)
     await recalc_spell_slots(session, char)
     char = await _refresh_char_full(session, char.id, user_id)

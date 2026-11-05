@@ -86,6 +86,16 @@ async def lifespan(_app: FastAPI):
     except Exception as exc:  # non-fatal: never block startup on a data backfill
         logger.warning("backfill_ability_action_types failed (non-fatal): %s", exc)
 
+    # Passaggio una tantum dei personaggi esistenti ai cataloghi di classe (R33): errori registrati, mai bloccanti.
+    from api.database import AsyncSessionLocal as _CatalogSessions
+    from api.services.catalog_migration import migrate_catalog
+    try:
+        migrated = await migrate_catalog(_CatalogSessions)
+        if migrated:
+            logger.info("Catalog migration: %d character(s) synced", migrated)
+    except Exception as exc:  # non-fatal: l'avvio non dipende dal sync
+        logger.warning("catalog migration failed (non-fatal): %s", exc)
+
     # Cleanup best-effort delle condivisioni scadute (snapshot + file audio)
     from api.services.content_shares import cleanup_expired
     try:

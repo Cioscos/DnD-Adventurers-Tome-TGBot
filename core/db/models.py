@@ -941,6 +941,9 @@ class ConditionEffect(Base):
     # True: effetto di un privilegio in attesa del TS del bersaglio. La condizione non è sulla scheda e la durata non
     # decorre; un TS fallito lo attiva, uno superato lo elimina.
     pending: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Chiave dell'effetto di un privilegio (`TargetEffect.immune_on_success`): un TS superato rende il bersaglio immune a
+    # quell'effetto per chi l'ha usato (`source_character_id`) fino al suo prossimo riposo lungo.
+    immunity_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 

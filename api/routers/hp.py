@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.services.d20 import d20_records, resolve_applied, resolve_body
 from api.services.dice_stats import record_dice
@@ -50,6 +50,7 @@ from core.rules.roll_options import refund_spent, scale_damage
 from api.services.rules_options import (
     merge_options,
     option_result,
+    reaction_offers,
     remember_roll,
     roll_option_dice,
     use_options,
@@ -59,7 +60,9 @@ from api.routers._helpers import (
 )
 from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
-from core.rules.states import ZERO_HP_USES, has_state, reset_zero_hp_uses
+from core.rules.states import (
+    ZERO_HP_USES, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+)
 from core.rules.types import RuleContext
 from api.services.character_response import build_character_response
 
@@ -160,7 +163,8 @@ def _zero_conditions(char: Character) -> dict:
     """Ciò che i PF a 0 scrivono da soli: l'annullamento lo rimette com'era."""
     conditions = char.conditions or {}
     return {"unconscious": bool(conditions.get("unconscious")), "prone": bool(conditions.get("prone")),
-            "knocked_out": bool((char.settings or {}).get("knocked_out"))}
+            "knocked_out": bool((char.settings or {}).get("knocked_out")),
+            "exhaustion": exhaustion_level(char)}  # lo addebita la fine di uno stato (Frenesia)
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +206,7 @@ async def update_hp(
     body: HPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
@@ -461,6 +466,8 @@ async def update_hp(
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
+    if body.op == HPOp.DAMAGE and char.current_hit_points > 0:  # privo di sensi non si reagisce
+        result.reactions = reaction_offers(char, lang)
     result.option_result = option_block
     if conc_result is not None:
         result.concentration_save = conc_result
@@ -534,11 +541,13 @@ async def undo_hp(
     char.settings = settings
     zero, zero_after = snap.get("zero_before"), snap.get("zero_after")
     if zero and zero_after:  # solo ciò che l'operazione ha scritto torna com'era; il resto è di chi l'ha messo
-        changed = {k for k in zero if zero[k] != zero_after[k]}
+        changed = {k for k in zero if zero[k] != zero_after.get(k, zero[k])}
         conditions = dict(char.conditions or {})
         for k in changed & {"unconscious", "prone"}:
             conditions[k] = zero[k]
         char.conditions = conditions
+        if "exhaustion" in changed:  # si toglie solo ciò che l'operazione ha addebitato
+            restore_exhaustion(char, max(0, exhaustion_level(char) - (zero_after["exhaustion"] - zero["exhaustion"])))
         if "knocked_out" in changed:
             settings = {k: v for k, v in (char.settings or {}).items() if k != "knocked_out"}
             char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
@@ -677,6 +686,7 @@ async def rest(
     if rest_type == "long":
         char.last_long_rest_at = _now()
         char.temp_hp = 0
+        reset_target_immunity(char)  # le «24 ore» di un effetto su altri
         # Break concentration
         end_concentration(char)
         end_states(char, "rest_short", "rest_long")

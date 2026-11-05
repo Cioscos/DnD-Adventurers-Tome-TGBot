@@ -98,12 +98,15 @@ class TargetEffectRead(BaseModel):
     ends_at: dict | None = None
     on_failure_only: bool = True
     damage_dice: str | None = None
+    extends: bool = False
+    immune_on_success: bool = False
 
 
 class TargetCandidate(BaseModel):
     id: int
     name: str
     kind: str
+    immune: bool = False  # ha superato questo effetto: fino al prossimo riposo lungo non si può colpire di nuovo
 
 
 class TargetEffectPreview(BaseModel):

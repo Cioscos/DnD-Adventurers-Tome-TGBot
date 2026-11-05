@@ -32,11 +32,13 @@ async def sync_class_feature_abilities(
     cls: CharacterClass,
     *,
     lang: str = "it",
+    retrofit: bool = False,
 ) -> None:
     """Crea/aggiorna le Ability auto-generate dalla classe ``cls``.
 
     Richiede che ``char.abilities``, ``char.classes``, ``char.ability_scores`` e
-    ``char.items`` siano già caricati (selectinload).
+    ``char.items`` siano già caricati (selectinload). ``retrofit``: personaggio che esisteva prima del catalogo o
+    importato (R34): i bonus ai punteggi che ha già diritto ad avere si segnano come applicati senza toccare i punteggi.
     """
     edition = character_edition(char)
     if features_for(edition, class_key(cls)):
@@ -49,29 +51,34 @@ async def sync_class_feature_abilities(
             _sync_from_catalog(session, char, other, lang)
     reconcile_choices(char)
     apply_feature_grants(char, lang)
-    _sync_ability_bonuses(char)
+    _sync_ability_bonuses(char, retrofit=retrofit)
     await _sync_granted_spells(session, char, lang)
 
 
-async def sync_cataloged_features(session: AsyncSession, char: Character, lang: str = "it") -> None:
-    """Cambio di edizione, sottoclasse, caratteristica o import: tocca solo le classi a catalogo."""
+async def sync_cataloged_features(
+    session: AsyncSession, char: Character, lang: str = "it", *, retrofit: bool = False,
+) -> None:
+    """Cambio di edizione, sottoclasse, caratteristica o import: tocca solo le classi a catalogo (``retrofit``: vedi sopra)."""
     edition = character_edition(char)
     for cls in char.classes:
         if features_for(edition, class_key(cls)):
             _sync_from_catalog(session, char, cls, lang)
     reconcile_choices(char)
     apply_feature_grants(char, lang)
-    _sync_ability_bonuses(char)
+    _sync_ability_bonuses(char, retrofit=retrofit)
     await _sync_granted_spells(session, char, lang)
     await session.flush()
 
 
-def _sync_ability_bonuses(char: Character) -> None:
+def _sync_ability_bonuses(char: Character, *, retrofit: bool = False) -> None:
     """Punteggi dei privilegi con ``ability_bonus`` (Campione Primordiale): scritti sul punteggio una volta sola, con il
     massimo del privilegio, e tolti se il privilegio non è più attivo. I punti davvero aggiunti stanno in
-    ``settings``, così un punteggio già al massimo non perde nulla quando il privilegio sparisce."""
+    ``settings``, così un punteggio già al massimo non perde nulla quando il privilegio sparisce.
+
+    R34: con ``retrofit`` (personaggio esistente al primo sync dopo l'arrivo del catalogo, import) il bonus si segna come
+    già applicato senza punti: i punteggi sono quelli che il giocatore ha scritto. Chi sale di livello lo riceve."""
     wanted = {spec.key: spec for spec, _row in active_features(char) if spec.ability_bonus}
-    applied = {k: dict(v) for k, v in ((char.settings or {}).get(ABILITY_BONUS_KEY) or {}).items()}
+    applied = clean_ability_bonus((char.settings or {}).get(ABILITY_BONUS_KEY))
     if not wanted and not applied:
         return
     scores = {a.name: a for a in char.ability_scores}
@@ -86,6 +93,9 @@ def _sync_ability_bonuses(char: Character) -> None:
         if key in applied:
             continue
         applied[key] = {}
+        if retrofit:
+            changed = True
+            continue
         for ability, bonus in spec.ability_bonus.items():
             row = scores.get(ability)
             if row is None:
@@ -137,6 +147,29 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         spell.class_id = spell.class_id or owner.id
     if set(owned) != set(previous):
         char.settings = {**(char.settings or {}), GRANTED_SPELL_KEYS: owned}
+
+
+def clean_ability_bonus(raw: object) -> dict[str, dict[str, int]]:
+    """Da un file importato o da un PATCH tiene solo `{str: {str: int >= 0}}`; il resto è scartato."""
+    if not isinstance(raw, dict):
+        return {}
+    return {key: {a: p for a, p in points.items() if isinstance(a, str) and type(p) is int and p >= 0}
+            for key, points in raw.items() if isinstance(key, str) and isinstance(points, dict)}
+
+
+def clean_zero_hp_uses(raw: object) -> dict[str, int]:
+    """Da un file importato tiene solo `{str: int >= 0}`."""
+    if not isinstance(raw, dict):
+        return {}
+    return {key: n for key, n in raw.items() if isinstance(key, str) and type(n) is int and n >= 0}
+
+
+def clean_target_immunity(raw: object) -> dict[str, list[str]]:
+    """Da un file importato tiene solo `{str: [str]}`."""
+    if not isinstance(raw, dict):
+        return {}
+    return {key: [t for t in targets if isinstance(t, str)] for key, targets in raw.items()
+            if isinstance(key, str) and isinstance(targets, list)}
 
 
 def clean_granted_keys(raw: object) -> list[str]:

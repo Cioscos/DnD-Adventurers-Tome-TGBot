@@ -90,12 +90,21 @@ def extend_state(char, key: str, rounds: int) -> None:
     char.active_states = [{**s, "rounds_left": rounds} if s["key"] == key else s for s in states]
 
 
-def remove_state(char, key: str) -> None:
+def remove_state(char, key: str, *, by_player: bool = False) -> None:
+    """Chiude lo stato. ``by_player``: lo chiude il giocatore, e se lo stato dichiara ``end_slot`` ne spende lo slot;
+    con lo slot già speso lo stato finisce lo stesso (un tocco sbagliato si corregge)."""
     states = get_states(char)
     if all(s["key"] != key for s in states):
         raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
+    closed = [s for s in states if s["key"] == key]
     char.active_states = [s for s in states if s["key"] != key]
-    charge_exhaustion(char, [s for s in states if s["key"] == key])
+    charge_exhaustion(char, closed)
+    slot = closed[0].get("end_slot")
+    if by_player and slot:
+        try:
+            spend(char, slot)
+        except HTTPException:
+            pass  # già speso: nessun costo in più
 
 
 def start_state(char, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:

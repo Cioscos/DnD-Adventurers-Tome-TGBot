@@ -43,6 +43,7 @@ def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
 _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("combatants", "surprised", "BOOLEAN NOT NULL", "0"),
     ("condition_effects", "pending", "BOOLEAN NOT NULL", "0"),
+    ("condition_effects", "immunity_key", "VARCHAR(100)", None),
     # Spell extended properties
     ("spells", "casting_time", "VARCHAR(100)", None),
     ("spells", "range_area", "VARCHAR(100)", None),

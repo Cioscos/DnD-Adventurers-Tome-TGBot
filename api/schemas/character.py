@@ -25,6 +25,7 @@ from api.schemas.common import (
 from core.rules.types import Edition
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.container import CoinLocationRead
+from api.schemas.rules import RollOptionRead
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
 
@@ -49,6 +50,7 @@ class ComputedStats(BaseModel):
     immunities: list[str] = []
     incapacitated: bool = False
     surprised: bool = False  # 2014: è il turno della sorpresa
+    surprise_exit_features: list[str] = []  # da sorpreso: i privilegi il cui «Usa» permette di agire (Ira)
     save_flat: dict[str, int] = {}
     fly_speed: Optional[int] = None  # volo uguale alla velocità a terra, concesso da un privilegio (Aquila in ira)
 
@@ -213,6 +215,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by PATCH /hp: id dell'operazione annullabile via POST /hp/undo
     hp_undo_id: Optional[str] = None
+
+    # Populated only by PATCH /hp dopo un danno: le reazioni che il danno ha aperto (Ritorsione), da proporre subito
+    reactions: list[RollOptionRead] = []
 
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None

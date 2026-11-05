@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
-from api.schemas.encounter import EncounterLive
+from api.schemas.encounter import EncounterLive, PublicState
 from api.schemas.item import ItemCreate
 
 
@@ -65,6 +65,8 @@ class CharacterLiveSnapshot(BaseModel):
     condition_effects: list[ConditionEffectRead] = []
     has_pending_save: bool = False
     is_concentrating: bool = False
+    # Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti (R36)
+    active_states: list[PublicState] = []
 
 
 class SessionParticipantRead(BaseModel):

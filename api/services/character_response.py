@@ -27,7 +27,7 @@ from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext
 from core.rules.modifiers import (
-    effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprised_turn,
+    effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
 from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import initiative_bonus
@@ -150,6 +150,7 @@ async def build_character_response(
         immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),
         incapacitated=is_incapacitated(char),
         surprised=surprised_turn(char),
+        surprise_exit_features=surprise_exit_features(char),
         save_flat={a: modifiers_for(char, "save", ability=a).flat for a in ABILITY_NAMES},
     )
     return response

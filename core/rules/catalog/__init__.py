@@ -6,6 +6,10 @@ from typing import Any
 from core.rules.edition import character_edition, class_key
 from core.rules.types import FeatureSpec
 
+# Aumenta ogni task che aggiunge o cambia un catalogo di classe (R33): all'avvio dell'API, se la versione salvata in
+# `app_meta` è diversa, i personaggi esistenti passano una volta dal sync (`api/services/catalog_migration.py`).
+CATALOG_VERSION = 19
+
 _REGISTRY: dict[tuple[str, str], tuple[FeatureSpec, ...]] = {}
 
 

@@ -24,6 +24,7 @@ from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.rules_states import remove_state, use_feature
+from core.rules.states import is_target_immune
 from api.services.rules_turn import clear_once_per_turn, get_turn, release, reset_turn, spend
 from api.services.durations import is_concentrating
 from core.db.models import Character, Combatant, Encounter, GameSession
@@ -124,7 +125,8 @@ async def turn_other(
 @turn_router.get("/{char_id}/roll-options", response_model=list[RollOptionRead])
 async def roll_options(
     char_id: int,
-    roll: Literal["attack", "spell_damage", "weapon_damage", "skill", "save", "initiative", "death_save", "damage_taken", "cast"],
+    roll: Literal["attack", "spell_damage", "weapon_damage", "skill", "ability", "save", "initiative", "death_save",
+                  "damage_taken", "cast"],
     user_id: Annotated[int, Depends(get_current_user)],
     lang: Annotated[str, Depends(get_current_lang)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -161,7 +163,7 @@ def _refuse(code: str, **extra: str) -> HTTPException:
     return HTTPException(status.HTTP_409_CONFLICT, detail={"code": code, **extra})
 
 
-_HISTORY_EVENT = {"skill": "skill_roll", "save": "saving_throw", "attack": "attack_roll", "initiative": "dice_roll",
+_HISTORY_EVENT = {"skill": "skill_roll", "ability": "skill_roll", "save": "saving_throw", "attack": "attack_roll", "initiative": "dice_roll",
                   "death_save": "death_save"}
 
 
@@ -332,7 +334,7 @@ async def end_active_state(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[dict]:
     char = await _get_owned_full(char_id, user_id, db)
-    remove_state(char, key)
+    remove_state(char, key, by_player=True)
     return char.active_states
 
 
@@ -356,9 +358,11 @@ async def target_effect_preview(
 ) -> TargetEffectPreview:
     char = await _owned_char(db, char_id, user_id)
     found = await _active_encounter(db, char_id)
+    effect = pending_target_effect(char, effect_key)
     return TargetEffectPreview(
-        result=TargetEffectRead(**pending_target_effect(char, effect_key)),
-        combatants=[TargetCandidate(id=c.id, name=c.name, kind=c.kind)
+        result=TargetEffectRead(**effect),
+        combatants=[TargetCandidate(id=c.id, name=c.name, kind=c.kind,
+                                    immune=bool(effect.get("immune_on_success")) and is_target_immune(char, effect_key, c))
                     for c in sorted(found[0].combatants, key=lambda c: c.sort_order or 0) if not c.is_dead] if found else [],
     )
 

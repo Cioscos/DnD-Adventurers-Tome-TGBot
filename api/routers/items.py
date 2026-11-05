@@ -58,7 +58,7 @@ from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptio
 from core.game.attacks import martial_arts_die
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
-from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage
+from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, uses_own_slot
 from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
 
 router = APIRouter(prefix="/characters", tags=["items"])
@@ -533,8 +533,9 @@ def _set_pending_attack(char: Character, pending: dict | None) -> None:
 
 
 def _check_attack_limit(char: Character, body: AttackSubmission | None) -> None:
-    """Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito."""
-    if body and (body.with_inspiration or body.confirm_extra_attack):
+    """Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito.
+    Non vale per un attacco con un'opzione che ha uno slot proprio (Frenesia, Ritorsione): non è un attacco dell'azione."""
+    if body and (body.with_inspiration or body.confirm_extra_attack or uses_own_slot(char, body.options or [])):
         return
     made, allowed = get_turn(char)["attacks_made"], attacks_allowed(char)
     if made >= allowed:

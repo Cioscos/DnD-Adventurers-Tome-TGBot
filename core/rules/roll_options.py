@@ -194,8 +194,19 @@ def roll_options_for(ctx: RuleContext) -> list[RollOption]:
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         for option in spec.roll_options:
             found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
+    # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
+    kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
     return [o for o in found.values()
-            if ctx.roll in o.spec.rolls and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec)]
+            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec)]
+
+
+def uses_own_slot(char: Any, keys: list[str]) -> bool:
+    """Una delle opzioni indicate ha uno slot di turno proprio (azione bonus, reazione): un attacco così non pesa sul
+    limite dell'azione Attacco. Il server ricontrolla poi disponibilità e costo di ogni opzione."""
+    specs = {s.key: s for s in _CONDITION_OPTIONS}
+    for feature, _row in active_features(char):
+        specs.update({o.key: o for o in feature.roll_options})
+    return any(specs[k].slot for k in keys if k in specs)
 
 
 def _slot_level(char: Any, spec: RollOptionSpec, inputs: dict) -> int:

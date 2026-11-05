@@ -701,7 +701,10 @@ async def test_eagle_attunement_flies_at_walking_speed_only_while_raging(client)
     await _rage(client, cid)
     assert (await _full(client, cid))["computed"]["fly_speed"] == 40
     await _armor(client, cid, "heavy")
-    assert (await _full(client, cid))["computed"]["fly_speed"] is None
+    # Il manuale lega l'armatura pesante all'Ira e all'Aquila 3, non a questo privilegio: vola alla velocità a terra
+    # di quel momento (30: Movimento Veloce cede all'armatura pesante).
+    full = await _full(client, cid)
+    assert full["computed"]["fly_speed"] == full["computed"]["speed"] == 30
 
 
 async def test_wolf_attunement_offers_a_prone_effect_after_a_melee_hit_in_rage(client):

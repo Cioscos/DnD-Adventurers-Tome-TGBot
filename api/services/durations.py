@@ -7,6 +7,7 @@ from typing import Literal
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from api.services.condition_effects import (
@@ -15,6 +16,7 @@ from api.services.condition_effects import (
 from api.services.effects import _add_history
 from api.services.rules_states import end_states, tick_states
 from core.rules.edition import character_edition
+from core.rules.states import exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
 
 
@@ -109,7 +111,9 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
                        edge: Literal["start", "end"], undo: UndoLog) -> list[str]:
     """One turn edge (spec §2): expiries anchored on ``combatant`` first, then the
     PC's concentration (start only), then repeated saves for effects on it."""
-    char = (await db.get(Character, combatant.character_id)
+    # Con le abilità caricate: uno stato che scade ne legge il nome (`state_name`), e fuori da una richiesta non c'è lazy load.
+    char = ((await db.execute(select(Character).options(selectinload(Character.abilities))
+                              .where(Character.id == combatant.character_id))).scalar_one_or_none()
             if combatant.kind == "pc" and combatant.character_id else None)
     on_x = (ConditionEffect.character_id == char.id if char is not None
             else ConditionEffect.combatant_id == combatant.id)
@@ -133,7 +137,8 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None:  # prima di ogni modifica: l'annullamento li rimette com'erano
         undo.char_states.setdefault(str(char.id), {
-            "active_states": list(char.active_states or []), "damaged": get_turn(char)["damaged"]})
+            "active_states": list(char.active_states or []), "damaged": get_turn(char)["damaged"],
+            "exhaustion": exhaustion_level(char), "is_dead": bool(char.is_dead)})  # lo stato che scade la addebita
 
     expired: list[str] = []
     rows = (await db.execute(select(ConditionEffect).where(
