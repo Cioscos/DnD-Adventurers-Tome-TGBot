@@ -106,7 +106,8 @@ async def turn_new(
     char_id: int, user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
-    return reset_turn(await _owned_char(db, char_id, user_id))
+    char = await _owned_char(db, char_id, user_id)
+    return reset_turn(char, keep_surprise=await active_encounter_row(db, char_id) is not None)
 
 
 @turn_router.post("/{char_id}/turn/other", response_model=TurnBlock)

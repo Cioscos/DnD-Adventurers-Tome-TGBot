@@ -804,6 +804,8 @@ export interface RollDamageResult {
   main_rolls: number[]
   extra_kind: string | null
   extra_rolls: number[]
+  /** `[lati, valore]` dei dadi ritirabili (anche quelli delle opzioni), con l'indice del server. */
+  reroll_dice?: [number, number][]
 }
 
 export interface TradeRequest {
@@ -986,6 +988,8 @@ export interface CompanionAttackResult {
   damage_total: number
   damage_type: string | null
   option_result?: OptionResult
+  /** `[lati, valore]` dei dadi ritirabili, con l'indice del server. */
+  reroll_dice?: [number, number][]
 }
 
 // Import da D&D Beyond (POST /characters/import/ddb)

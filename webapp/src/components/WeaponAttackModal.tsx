@@ -1,5 +1,6 @@
 import RollNotes from '@/components/rules/RollNotes'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import { rerollDiceOf } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -158,7 +159,7 @@ export default function WeaponAttackModal({
         <AfterDamageOptions
           charId={charId}
           query={{ roll: 'weapon_damage' }}
-          dice={damage_rolls.map((value, index) => ({ value, index, sides: dieSides }))}
+          dice={result.reroll_dice ? rerollDiceOf(result.reroll_dice) : damage_rolls.map((value, index) => ({ value, index, sides: dieSides }))}
           onResult={(r) => setRerolled({ base: attack, value: r as WeaponAttackResult })}
         />
       )}

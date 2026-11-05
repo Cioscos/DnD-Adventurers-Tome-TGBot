@@ -189,4 +189,5 @@ class RollDamageResult(BaseModel):
     extra_kind: str | None = None   # "d4" or None
     extra_rolls: list[int] = []     # [] if no extra_dice
     option_result: OptionResult | None = absent_when_none()
+    reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
     model_config = {"from_attributes": True}

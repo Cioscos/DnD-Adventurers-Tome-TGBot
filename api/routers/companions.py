@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -19,8 +20,9 @@ from api.routers.hp import _get_owned_full
 from api.routers.items import _option_damage
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
+from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, use_options
-from api.services.rules_turn import refuse_if_incapacitated, spend
+from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import deactivate_other_forms, end_form, form_limits, start_form
 from core.db.models import Ability, Character, CharacterHistory, Companion
 from core.rules.companions import companion_stats
@@ -297,8 +299,9 @@ async def companion_attack(
     option_rolls: list[int] = []
     option_total = 0
     total = 0
+    mod = flat + (stats.damage_bonus if stats else 0)
     if m and not is_fumble:
-        base = max(0, sum(rolls) + flat + (stats.damage_bonus if stats else 0))
+        base = max(0, sum(rolls) + mod)
         option_rolls, option_total, total = _option_damage(char, opts, is_critical, base)
 
     _history(
@@ -308,9 +311,22 @@ async def companion_attack(
         + (f" | Danno: {total}" if m else ""),
     )
     record_dice(char, d20_records(outcome) + ([(f"d{m.group(2)}", r) for r in rolls] if m and not is_fumble else []))
-    return CompanionAttackResult(
+    result = CompanionAttackResult(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
         dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,
         damage_total=total, damage_type=action.get("damage_type"),
         option_result=option_result(opts, option_rolls, option_total),
     )
+    turn = get_turn(char)  # i dadi di questo colpo si possono ritirare, come per l'arma
+    turn.pop("last_damage", None)
+    if m and rolls and not is_fumble:
+        dice = [[int(m.group(2)), v] for v in rolls] + pairs(opts.rolled_dice)
+        result.reroll_dice = dice
+        turn["last_damage"] = {
+            "kind": "companion", "roll_id": uuid.uuid4().hex, "name": comp.name, "dice": dice, "main": len(rolls),
+            "base": len(rolls), "added": [], "multiplier": opts.multiplier, "mod": mod,
+            "flat": opts.damage_unscaled - base - sum(v for _, v in opts.rolled_dice),
+            "result": result.model_dump(mode="json"),
+        }
+    char.turn_state = turn
+    return result

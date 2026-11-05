@@ -45,7 +45,7 @@ export default function Turn() {
   const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
   // Influenzare 2024: CD scelta dal giocatore (15 di base) e totale dell'ultima prova, per mostrare l'esito.
   const [influenceDc, setInfluenceDc] = useState('15')
-  const [influenceTotal, setInfluenceTotal] = useState<number | null>(null)
+  const [influenceRolled, setInfluenceRolled] = useState(false)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -85,7 +85,7 @@ export default function Turn() {
     },
     onSuccess: ({ result, skill }, { spendsAttack, influence }) => {
       if (spendsAttack) useSlot.mutate({ slot: 'attack' })
-      if (influence) setInfluenceTotal(result.total)
+      if (influence) setInfluenceRolled(true)
       // Nascondersi legge il totale dal tiro salvato dal server: il turno lo riporta.
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       refreshAfterOptions(qc, charId, result.option_result)
@@ -121,6 +121,9 @@ export default function Turn() {
   // Ultima prova di Furtività, salvata dal server (anche dopo un ritiro o un dado in più).
   const lastRoll = block?.last_roll
   const hideTotal = lastRoll?.roll === 'skill' && lastRoll.skill === 'stealth' ? lastRoll.total : null
+  // Stesso tiro per Influenzare: il totale è quello del server, che segue le opzioni scelte dopo il tiro.
+  const influenceSkills = standardActionsFor(char.rules_edition).find((s) => s.id === 'influence')?.skills ?? []
+  const influenceTotal = influenceRolled && lastRoll?.roll === 'skill' && influenceSkills.includes(lastRoll.skill ?? '') ? lastRoll.total : null
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const attacks = turn?.attacks_allowed ?? char.attacks_per_action ?? 1
   const stdActions = standardActionsFor(char.rules_edition)
@@ -160,6 +163,9 @@ export default function Turn() {
             </div>
           )}
           {e.id === 'hide' && c.rules_edition === '2024' && hideTotal !== null && (
+            c.hiding_dc != null ? (
+              <p className="mt-2 text-xs text-dnd-text-muted">{t('character.turn.hiding', { dc: c.hiding_dc })}</p>
+            ) : 
             hideTotal >= 15 ? (
               <Button size="sm" variant="secondary" className="mt-2" loading={hide.isPending} onClick={() => hide.mutate()}>
                 {t('character.turn.hide_confirm', { total: hideTotal })}

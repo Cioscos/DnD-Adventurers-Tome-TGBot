@@ -1,7 +1,7 @@
 import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
-import { sidesOf } from '@/lib/rollOptions'
+import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import type { OptionResult } from '@/api/client'
 import { useState, useEffect } from 'react'
@@ -304,7 +304,7 @@ export default function SpellDamageSheet({
           <AfterDamageOptions
             charId={charId}
             query={{ roll: 'spell_damage', spell_id: spell.id }}
-            dice={[
+            dice={result.reroll_dice ? rerollDiceOf(result.reroll_dice) : [
               ...(result.main_rolls ?? []).map((value, index) => ({ value, index, sides: sidesOf(result.main_kind) })),
               ...(result.extra_rolls ?? []).map((value, i) => ({ value, index: (result.main_rolls ?? []).length + i, sides: sidesOf(result.extra_kind) })),
             ]}

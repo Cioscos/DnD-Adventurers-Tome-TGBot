@@ -502,7 +502,9 @@ async def hide(
     total = last["total"]
     if total < 15:
         raise HTTPException(status_code=409, detail={"code": "hide_failed"})
-    was_invisible = bool((char.conditions or {}).get("invisible"))
+    # Nascondersi di nuovo mentre ci si nasconde già: l'Invisibilità di prima è del nascondiglio, non di un'altra fonte.
+    hiding = (char.settings or {}).get("hiding")
+    was_invisible = hiding["was_invisible"] if hiding else bool((char.conditions or {}).get("invisible"))
     await apply_conditions(session, char, {"invisible": True})
     char.settings = {**(char.settings or {}), "hiding": {"dc": total, "was_invisible": was_invisible}}
     char = await _refresh_char_full(session, char_id, user_id)
@@ -547,6 +549,21 @@ async def update_inspiration(
     char.settings = settings
     char.heroic_inspiration = body.heroic_inspiration
     # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
+
+
+@router.delete("/{char_id}/inspiration/extra", response_model=CharacterFull)
+async def discard_extra_inspiration(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Scarta l'Ispirazione ricevuta in più che non si vuole cedere: quella propria resta."""
+    char = await _get_owned(char_id, user_id, session, full=True)
+    if not (char.settings or {}).get("inspiration_extra"):
+        raise HTTPException(status_code=409, detail={"code": "no_extra_inspiration"})
+    char.settings = {k: v for k, v in char.settings.items() if k != "inspiration_extra"}
     char = await _refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 

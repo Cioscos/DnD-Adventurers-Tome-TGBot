@@ -21,6 +21,9 @@ def _on(condition: str):
 
 def _spend_inspiration(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     ctx.char.heroic_inspiration = False
+    settings = ctx.char.settings or {}
+    if settings.get("inspiration_extra"):  # nessuna da cedere, adesso
+        ctx.char.settings = {k: v for k, v in settings.items() if k != "inspiration_extra"}
 
 
 # Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
@@ -113,6 +116,7 @@ class AppliedOptions:
     keep_rolled: bool = False
     cancels: list[str] = field(default_factory=list)  # fonti di vantaggio/svantaggio che l'opzione toglie
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
+    rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
 
     @property
     def mode(self) -> str | None:

@@ -11,7 +11,7 @@ import { useTradePartners } from '@/hooks/useTradePartners'
 import type { CharacterFull } from '@/types'
 
 /** Ispirazione Eroica 2024: se ne ha una sola. Quando ne arriva un'altra a chi ce l'ha già, quella in più si cede a un
- *  compagno di sessione che ne è privo (o si perde); chi cede tiene la propria. */
+ *  compagno di sessione che ne è privo o si scarta; chi cede tiene la propria. 2014: si cede la propria e la si perde. */
 export default function GiveInspirationRow({ char }: { char: CharacterFull }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -30,6 +30,10 @@ export default function GiveInspirationRow({ char }: { char: CharacterFull }) {
       if (updated.inspiration_extra) openSheet()
     },
   })
+  const discard = useMutation({
+    mutationFn: () => api.characters.discardExtraInspiration(char.id),
+    onSuccess: (updated) => qc.setQueryData(['character', char.id], updated),
+  })
   const give = useMutation({
     mutationFn: () => api.sessions.giveInspiration(trade!.sessionId, { from_character_id: char.id, to_user_id: to! }),
     onSuccess: (updated) => {
@@ -43,17 +47,23 @@ export default function GiveInspirationRow({ char }: { char: CharacterFull }) {
     },
   })
 
-  if (char.rules_edition !== '2024' || !char.heroic_inspiration || partners.length === 0) return null
+  if (!char.heroic_inspiration || partners.length === 0) return null
+  const own = char.rules_edition !== '2024'
   return (
     <>
       <Button size="sm" variant="secondary" loading={receive.isPending}
-        onClick={() => (char.inspiration_extra ? openSheet() : receive.mutate())}>
-        {t(char.inspiration_extra ? 'character.inspiration.give' : 'character.inspiration.received_another')}
+        onClick={() => (own || char.inspiration_extra ? openSheet() : receive.mutate())}>
+        {t(own ? 'character.inspiration.give_own' : char.inspiration_extra ? 'character.inspiration.give' : 'character.inspiration.received_another')}
       </Button>
+      {!own && char.inspiration_extra && (
+        <Button size="sm" variant="ghost" loading={discard.isPending} onClick={() => discard.mutate()}>
+          {t('character.inspiration.discard')}
+        </Button>
+      )}
       {open && (
         <Sheet open onClose={() => setOpen(false)} title={t('character.inspiration.give')}>
           <div className="p-5 space-y-3">
-            <p className="text-sm text-dnd-text-muted font-body">{t('character.inspiration.give_hint')}</p>
+            <p className="text-sm text-dnd-text-muted font-body">{t(own ? 'character.inspiration.give_hint_own' : 'character.inspiration.give_hint')}</p>
             <PartnerPicker partners={partners} value={to} onChange={setTo} />
             <div className="flex gap-2 pt-1">
               <Button variant="secondary" fullWidth onClick={() => setOpen(false)}>{t('common.cancel')}</Button>

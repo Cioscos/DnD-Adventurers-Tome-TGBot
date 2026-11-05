@@ -14,7 +14,8 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import { askRollOptions, refreshAfterOptions, rerollDiceOf } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
 import { haptic } from '@/auth/telegram'
 import type { Companion, CompanionAction, CompanionAttackResult } from '@/types'
@@ -185,6 +186,14 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
           {' · '}{result.r.damage_total} {result.r.damage_type ?? ''}
           <RollNotes notes={result.r.notes} className="mt-1" />
         </p>
+      )}
+      {result?.r.reroll_dice && (
+        <AfterDamageOptions
+          charId={charId}
+          query={{ roll: 'weapon_damage' }}
+          dice={rerollDiceOf(result.r.reroll_dice)}
+          onResult={(r) => setResult({ name: result.name, r: r as CompanionAttackResult })}
+        />
       )}
 
       {comp.kind === 'wild_shape' && (

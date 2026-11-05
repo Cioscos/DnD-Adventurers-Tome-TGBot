@@ -256,6 +256,8 @@ export type WeaponAttackResult = {
   /** Colpo senz'armi 2024: niente tiro per colpire, il bersaglio fa un TS contro `save_dc`. */
   effect?: 'grapple' | 'shove'
   save_dc?: number
+  /** `[lati, valore]` dei dadi ritirabili (arma e dadi delle opzioni), con l'indice con cui il server li conosce. */
+  reroll_dice?: [number, number][]
 }
 
 /** Il tiro dopo un privilegio usato a esito noto. */
@@ -620,9 +622,9 @@ export const api = {
       ),
     lastRollOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; mode: RollMode; dice?: number[] }) =>
       request<LastRollResult>(`/characters/${id}/last-roll/options`, { method: 'POST', body: JSON.stringify(body) }),
-    /** Privilegi sui dadi di danno già tirati: `reroll` sono le posizioni in `main_rolls` + `extra_rolls`. */
+    /** Privilegi sui dadi di danno già tirati: `reroll` sono le posizioni in `reroll_dice` del tiro. */
     lastDamageOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; reroll: number[] }) =>
-      request<RollDamageResult | WeaponAttackResult>(`/characters/${id}/last-damage/options`, { method: 'POST', body: JSON.stringify(body) }),
+      request<RollDamageResult | WeaponAttackResult | CompanionAttackResult>(`/characters/${id}/last-damage/options`, { method: 'POST', body: JSON.stringify(body) }),
     /** Risponde a «Il tiro è riuscito?»: `succeeded` tiene il pagamento, altrimenti torna. */
     lastRollRefund: (id: number, succeeded: boolean = false) =>
       request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST', body: JSON.stringify({ succeeded }) }),
@@ -654,6 +656,9 @@ export const api = {
     },
     /** Nascondersi 2024: il server legge il totale dall'ultima prova di Furtività. */
     hide: (id: number) => request<CharacterFull>(`/characters/${id}/hide`, { method: 'POST' }),
+    /** Scarta l'Ispirazione ricevuta in più (quella propria resta). */
+    discardExtraInspiration: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/inspiration/extra`, { method: 'DELETE' }),
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',

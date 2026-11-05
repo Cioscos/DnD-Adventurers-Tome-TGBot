@@ -1,6 +1,0 @@
-import{r as d,j as s}from"./react-vendor-BGC0LuHo.js";import{c as l,g as u,i as m,j as a,m as p,k as f}from"./index-Kr5Lv-J4.js";/**
- * @license lucide-react v1.11.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const _=[["path",{d:"m6 9 6 6 6-6",key:"qrunsl"}]],g=l("chevron-down",_),x=new Set(["d4","d6","d8","d10","d12","d20"]);function y(){const n=u(),e=m(i=>i.animate3d),t=a();return d.useCallback(async(i,o)=>!e||t||!x.has(i)?void 0:(await n.playAndCollect([{kind:i,count:o}])).map(r=>r.value),[e,n,t])}function A({open:n,size:e=16,className:t="text-dnd-gold-dim"}){const i=a();return s.jsx(p.span,{"aria-hidden":!0,className:`inline-flex shrink-0 ${t}`,animate:{rotate:n?180:0},transition:i?{duration:0}:f.snappy,children:s.jsx(g,{size:e})})}function c(n){var t;const e=(t=n.settings)==null?void 0:t.concentration_item_spell;return e&&typeof e=="object"&&e.name?e:null}function D(n){return!!n.concentrating_spell_id||!!c(n)}function E(n){var e,t,i;return n.concentrating_spell_id?(t=(e=n.spells)==null?void 0:e.find(o=>o.id===n.concentrating_spell_id))==null?void 0:t.name:(i=c(n))==null?void 0:i.name}export{g as C,A as E,c as a,E as c,D as i,y as u};

@@ -39,7 +39,9 @@ from api.routers._helpers import collect_homebrew_notifications, roll_concentrat
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_body, spend_inspiration_reroll
 from core.rules.modifiers import modifiers_for
+from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
+from api.services.last_damage import last_damage_total, pairs
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
@@ -597,34 +599,37 @@ async def roll_spell_damage(
         extra_kind=extra_kind,
         extra_rolls=extra_rolls,
     )
-    # shortcut: i dadi delle opzioni restano nel fisso, non si ritirano; separarli se un privilegio lo richiede.
+    # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
+    base_dice = [[sides, v] for v in main_rolls] + [[extra_sides, v] for v in extra_rolls]
+    dice = base_dice + pairs(opts.rolled_dice)
+    result.reroll_dice = dice
     turn = get_turn(char)
     turn["last_damage"] = {
-        "roll_id": uuid.uuid4().hex, "spell_id": spell.id,
-        "dice": [[sides, v] for v in main_rolls] + [[extra_sides, v] for v in extra_rolls],
-        "main": len(main_rolls), "added": [], "multiplier": opts.multiplier,
-        "flat": base_bonus + extra_bonus + option_total + opts.bonus,
+        "roll_id": uuid.uuid4().hex, "spell_id": spell.id, "dice": dice,
+        "main": len(main_rolls), "base": len(base_dice), "added": [], "multiplier": opts.multiplier, "mod": 0,
+        "flat": base_bonus + extra_bonus + option_total - sum(v for _, v in opts.rolled_dice) + opts.bonus,
         "result": result.model_dump(mode="json"),
     }
     char.turn_state = turn
     return result
 
 
-@router.post("/{char_id}/last-damage/options", response_model=RollDamageResult | WeaponAttackResult)
+@router.post("/{char_id}/last-damage/options",
+             response_model=RollDamageResult | WeaponAttackResult | CompanionAttackResult)
 async def last_damage_options(
     char_id: int,
     body: LastDamageBody,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> RollDamageResult | WeaponAttackResult:
-    """Privilegi usati dopo aver visto i dadi di danno (incantesimo o arma). Il tiro è quello salvato dal server."""
+) -> RollDamageResult | WeaponAttackResult | CompanionAttackResult:
+    """Privilegi usati dopo aver visto i dadi di danno (incantesimo, arma o compagno). Il tiro è quello salvato dal server."""
     char = await _get_owned_full(char_id, user_id, session)
     last = get_turn(char).get("last_damage")
-    weapon = bool(last) and last.get("kind") == "weapon"
-    spell = next((s for s in char.spells if last and not weapon and s.id == last["spell_id"]), None)
-    if not last or (not weapon and spell is None):
+    kind = (last or {}).get("kind", "spell")
+    spell = next((s for s in char.spells if last and kind == "spell" and s.id == last["spell_id"]), None)
+    if not last or (kind == "spell" and spell is None):
         raise HTTPException(status_code=409, detail={"code": "no_last_damage"})
-    opts = use_options(session, char, "weapon_damage" if weapon else "spell_damage", body, phase="after_damage",
+    opts = use_options(session, char, "spell_damage" if kind == "spell" else "weapon_damage", body, phase="after_damage",
                        spell=spell)
 
     dice = [list(d) for d in last["dice"]]
@@ -645,31 +650,34 @@ async def last_damage_options(
             dice[i][1] = v
 
     values = [v for _, v in dice]
-    total = scale_damage(sum(values) + flat, last["multiplier"])
+    total = last_damage_total(values, {**last, "flat": flat})
+    base = last.get("base", len(values))
     old = last["result"]
-    if weapon:
-        previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
-        result = WeaponAttackResult(**{
-            **old, "damage_rolls": values + added, "damage_total": total, "attack_id": None,
-            "option_result": option_result(opts, [v for _, v in rolled], 0, previous=previous),
-        })
+    previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
+    block = option_result(opts, [v for _, v in rolled], 0, previous=previous)
+    if kind == "weapon":
+        result = WeaponAttackResult(**{**old, "damage_rolls": values[:base] + added, "damage_total": total,
+                                       "attack_id": None, "reroll_dice": dice, "option_result": block})
         label = result.weapon_name
+    elif kind == "companion":
+        result = CompanionAttackResult(**{**old, "damage_rolls": values[:base] + added, "damage_total": total,
+                                          "reroll_dice": dice, "option_result": block})
+        label = last.get("name") or "Compagno"
     else:
-        main, extra = values[:last["main"]], values[last["main"]:]
+        main, extra = values[:last["main"]], values[last["main"]:base]
         parts = [f"{len(main)}{old['main_kind']}={main}"]
         if extra:
             parts.append(f"+{len(extra)}{old['extra_kind']}={extra}")
         if flat:
             parts.append(f"{flat:+d}")
-        previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
         result = RollDamageResult(**{
-            **old, "rolls": values + added, "main_rolls": main, "extra_rolls": extra, "total": total,
-            "half_damage": total // 2, "breakdown": " ".join(parts) + f" = {total}",
-            "option_result": option_result(opts, [v for _, v in rolled], 0, previous=previous),
+            **old, "rolls": values[:base] + added, "main_rolls": main, "extra_rolls": extra, "total": total,
+            "half_damage": total // 2, "breakdown": " ".join(parts) + f" = {total}", "reroll_dice": dice,
+            "option_result": block,
         })
         label = f"{spell.name} = {total}"
-    _add_history(session, char_id, "attack_roll" if weapon else "spell_damage",
-                 f"Dopo il danno ({', '.join(opts.keys)}): {label}" + (f" = {total}" if weapon else ""))
+    _add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",
+                 f"Dopo il danno ({', '.join(opts.keys)}): {label}" + (f" = {total}" if kind != "spell" else ""))
     turn = get_turn(char)  # il pagamento ha riscritto il turno
     turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json")}
     char.turn_state = turn

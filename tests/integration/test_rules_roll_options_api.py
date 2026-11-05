@@ -211,6 +211,7 @@ async def test_no_options_keeps_old_response_shape(client, rules_catalog):
         "weapon_name", "to_hit_die", "dice", "mode", "mode_applied", "notes", "to_hit_bonus", "to_hit_total",
         "is_critical", "is_fumble", "damage_dice", "damage_rolls", "damage_bonus", "damage_total",
         "homebrew_notifications", "ammo", "ammo_missing", "magic_bonus", "proficiency_warning",
+        "reroll_dice",  # i dadi ritirabili, con i loro lati: l'unico campo aggiunto
     }
     skill = (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()
     assert set(skill) == {"die", "dice", "mode", "mode_applied", "notes", "auto_fail", "bonus", "total",

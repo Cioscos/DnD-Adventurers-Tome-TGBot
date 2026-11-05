@@ -225,6 +225,15 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByText('11')).toBeInTheDocument()  // il danno ritirato sostituisce quello del tiro
   })
 
+  it('offers the damage reroll when the second step handed over the final damage, option dice included', () => {
+    // Dopo POST /attack/{id}/damage il server non manda piu `attack_id` e dice i dadi con i loro lati.
+    render(<WeaponAttackModal result={{
+      ...baseResult, damage_dice: '1d8', damage_rolls: [3], damage_total: 12,
+      reroll_dice: [[8, 3], [6, 5], [6, 1]],
+    }} charId={7} onClose={() => {}} />)
+    expect(screen.getByTestId('after-damage')).toHaveAttribute('data-dice', '3/d8,5/d6,1/d6')
+  })
+
   it('has no damage reroll without a character, on a miss, on a flat damage or while the damage is pending', () => {
     const { rerender } = render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
     expect(screen.queryByTestId('after-damage')).toBeNull()

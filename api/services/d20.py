@@ -25,7 +25,14 @@ def spend_inspiration_reroll(char) -> None:
         raise HTTPException(status_code=409, detail="inspiration_before_roll")
     if not char.heroic_inspiration:
         raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+    spend_inspiration(char)
+
+
+def spend_inspiration(char) -> None:
+    """Spesa l'Ispirazione, cade anche quella «in più» da cedere: non ce n'è più nessuna."""
     char.heroic_inspiration = False
+    if (char.settings or {}).get("inspiration_extra"):
+        char.settings = {k: v for k, v in char.settings.items() if k != "inspiration_extra"}
 
 
 def resolve_d20(mode: RollMode, dice: list[int] | None, die: int | None) -> D20Outcome:

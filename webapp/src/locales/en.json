@@ -1001,8 +1001,11 @@
       "give": "Give the extra one",
       "give_hint": "You received another one while already holding Heroic Inspiration: the extra goes to a party member who has none. You keep yours.",
       "give_confirm": "Give",
+      "give_own": "Give your Inspiration",
+      "give_hint_own": "You give it to a party member who has none: you lose it.",
+      "discard": "Discard the extra one",
       "give_errors": {
-        "inspiration_give_2024_only": "Giving only applies in 2024.",
+        "no_inspiration": "You have no Inspiration to give.",
         "no_extra_inspiration": "There is no extra Inspiration to give.",
         "recipient_has_inspiration": "The ally already has Inspiration.",
         "generic": "Could not give it."
@@ -1079,6 +1082,7 @@
       "influence_failure": "Total {{total}} against DC {{dc}}: the monster holds out.",
       "hide_confirm": "You are hidden: become Invisible (DC {{total}})",
       "hide_failed": "Total {{total}}: under 15, you are not hidden.",
+      "hiding": "You are hidden (DC {{dc}}): until you make noise or attack.",
       "stand_up": "Stand up",
       "drop_prone": "Drop prone",
       "free_interaction": "Free interaction",

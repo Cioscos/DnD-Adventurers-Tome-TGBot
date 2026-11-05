@@ -30,6 +30,7 @@ from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.modifiers import modifiers_for
 from api.services.dice_stats import record_dice
+from api.services.last_damage import pairs
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
@@ -556,10 +557,10 @@ def _settle_attack(
         pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
                    "attack_mode": attack_mode, "grip": grip, "offhand": offhand,
                    "options": result.option_result.keys if result.option_result else [],
-                   "result": result.model_dump(mode="json")}
+                   "option_dice": pairs(opts.rolled_dice), "result": result.model_dump(mode="json")}
     _set_pending_attack(char, pending)
     if pending is None:
-        remember_weapon_damage(char, result, opts)
+        remember_weapon_damage(char, result, opts, opts.rolled_dice)
     remember_roll(char, "attack", opts, {
         "die": result.to_hit_die, "dice": result.dice, "mode": result.mode, "bonus": result.to_hit_bonus,
         "total": result.to_hit_total, "notes": result.notes, "auto_fail": False, "description": "",
@@ -571,22 +572,29 @@ def _settle_attack(
 _DIE = re.compile(r"(\d+)d(\d+)")
 
 
-def remember_weapon_damage(char: Character, result: WeaponAttackResult, opts: AppliedOptions) -> None:
+def remember_weapon_damage(
+    char: Character, result: WeaponAttackResult, opts: AppliedOptions, option_dice: list, extra_bonus: int = 0,
+) -> None:
     """Dadi del danno finale in ``turn_state["last_damage"]``, come per gli incantesimi: l'Ispirazione Eroica ne ritira uno.
 
-    Senza dadi (danno fisso, 1 naturale, mancato) non c'è nulla da ritirare. Il totale si ricalcola da dadi, fisso e
-    moltiplicatore salvati; shortcut: con due moltiplicatori in fasi diverse (prima del tiro e dopo il colpo) il fisso
-    include il primo già applicato, da rivedere se una regola li combina."""
+    Valgono anche i dadi aggiunti dalle opzioni (``option_dice``). Senza dadi (danno fisso, 1 naturale, mancato) non c'è
+    nulla da ritirare. ``extra_bonus``: bonus arrivato dopo il colpo, che sta nel fisso e non nel modificatore.
+
+    shortcut: con due moltiplicatori in fasi diverse (prima del tiro e dopo il colpo) conta solo quello dell'ultima fase;
+    nessuna opzione di ``core/rules`` ne dichiara uno, da rivedere con i task di classe che lo faranno."""
     turn = get_turn(char)
     turn.pop("last_damage", None)
     die = _DIE.search(result.damage_dice or "")
     if die and not (result.is_fumble or result.grazed or result.effect) and opts.damage_unscaled is not None:
         sides = int(die[2])
+        mod = result.damage_bonus - extra_bonus
+        base = len(result.damage_rolls)
+        dice = [[sides, v] for v in result.damage_rolls] + pairs(option_dice)
+        flat = opts.damage_unscaled - max(0, sum(result.damage_rolls) + mod) - sum(v for _, v in option_dice)
+        result.reroll_dice = dice
         turn["last_damage"] = {
-            "kind": "weapon", "roll_id": uuid.uuid4().hex,
-            "dice": [[sides, v] for v in result.damage_rolls], "main": len(result.damage_rolls), "added": [],
-            "multiplier": opts.multiplier, "flat": opts.damage_unscaled - sum(result.damage_rolls),
-            "result": result.model_dump(mode="json"),
+            "kind": "weapon", "roll_id": uuid.uuid4().hex, "dice": dice, "main": base, "base": base, "added": [],
+            "multiplier": opts.multiplier, "mod": mod, "flat": flat, "result": result.model_dump(mode="json"),
         }
     char.turn_state = turn
 
@@ -597,11 +605,13 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
     # da rivedere se una regola homebrew deve reagire all'esito finale, rinviando il dispatch al danno o al «Mancato».
     result = WeaponAttackResult(**pending["result"])
     block = roll["option_result"]
+    option_dice = pending.get("option_dice", [])
     if (result.is_critical, result.is_fumble) != (roll["is_critical"], roll["is_fumble"]):
         before = AppliedOptions(**applied)
         extra_rolls, extra_total = [], 0
         if roll["is_fumble"]:
             result.damage_rolls, result.damage_bonus, result.damage_total = [0], 0, 0
+            option_dice = []
         else:
             item = next((i for i in char.items if i.id == pending["item_id"]), None)
             ability_mod = (weapon_attack_profile(char, item, pending["attack_mode"], pending["ability"]) if item
@@ -613,6 +623,7 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
             extra_rolls, extra_total, result.damage_total = _option_damage(
                 char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus))
+            option_dice = pairs(before.rolled_dice)
         if block and before.keys:  # i dadi delle opzioni prima del tiro sono stati ritirati col danno
             block = block.model_copy(update={"extra_rolls": extra_rolls, "extra_total": extra_total,
                                              "separate_rolls": before.separate_rolls,
@@ -624,7 +635,7 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
     result.forced_hit = roll["forced_hit"] or None
     result.notes = roll["notes"]
     result.option_result = block
-    _set_pending_attack(char, {**pending, "options": block.keys if block else [],
+    _set_pending_attack(char, {**pending, "options": block.keys if block else [], "option_dice": option_dice,
                                "result": result.model_dump(mode="json")})
     return result
 
@@ -693,13 +704,14 @@ async def deferred_attack_damage(
                        attack_mode=pending["attack_mode"], grip=pending["grip"], offhand=pending.get("offhand", False))
     result = WeaponAttackResult(**pending["result"])
     result.homebrew_notifications = None  # già consegnate col tiro per colpire
+    result.attack_id = None  # il danno è definitivo: da qui si può ritirare un dado
     second = _second_attack(char, opts, pending, item, result.to_hit_bonus) if opts.second_attack else {}
     rolls, extra, result.damage_total = _option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
     result.damage_bonus += opts.bonus
     result.option_result = option_result(opts, rolls, extra, previous=result.option_result, **second)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
     _set_pending_attack(char, None)
-    remember_weapon_damage(char, result, opts)
+    remember_weapon_damage(char, result, opts, [*pending.get("option_dice", []), *opts.rolled_dice], opts.bonus)
     turn = get_turn(char)
     if turn.get("last_roll"):  # il danno dice che il colpo è andato a segno: niente più da rimborsare
         char.turn_state = {**turn, "last_roll": {**turn["last_roll"], "refundable": {}}}

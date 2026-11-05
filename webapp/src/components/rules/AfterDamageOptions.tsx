@@ -9,10 +9,11 @@ import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import type { RollDamageResult } from '@/types'
 import type { WeaponAttackResult } from '@/api/client'
+import type { CompanionAttackResult } from '@/types'
 
 export type DamageDie = { value: number; index: number; sides: number }
 /** Il tiro rifatto dal server: lo stesso tipo del tiro che si è ritirato. */
-export type DamageReroll = RollDamageResult | WeaponAttackResult
+export type DamageReroll = RollDamageResult | WeaponAttackResult | CompanionAttackResult
 
 /** Privilegi usati dopo aver visto i dadi di danno: si scelgono i dadi, il server li ritira dal tiro che ha salvato. */
 export default function AfterDamageOptions({ charId, query, dice: allDice, onResult }: {

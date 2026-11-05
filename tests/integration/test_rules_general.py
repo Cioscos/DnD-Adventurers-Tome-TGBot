@@ -421,7 +421,8 @@ async def test_cannot_give_without_having_received_an_extra(client, test_session
 
 
 @pytest.mark.parametrize("edition,sender,recipient,status,code", [
-    ("2014", True, False, 422, "inspiration_give_2024_only"),
+    ("2014", False, False, 409, "no_inspiration"),
+    ("2014", True, True, 409, "recipient_has_inspiration"),
     ("2024", False, False, 409, "no_extra_inspiration"),
     ("2024", True, True, 409, "recipient_has_inspiration"),
 ])
@@ -432,7 +433,7 @@ async def test_give_inspiration_refusals(client, test_session_factory, edition, 
         await _receive_extra(client, cid)
     r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": cid, "to_user_id": other})
     assert r.status_code == status and r.json()["detail"]["code"] == code
-    if code == "recipient_has_inspiration":  # l'extra resta a chi non ha potuto cederla
+    if code == "recipient_has_inspiration" and edition == "2024":  # l'extra resta a chi non ha potuto cederla
         assert (await client.get(f"/characters/{cid}")).json()["inspiration_extra"] is True
 
 
@@ -797,3 +798,189 @@ async def test_a_miss_or_a_flat_unarmed_strike_has_no_damage_to_reroll(client):
     r = await client.post(f"/characters/{cid}/last-damage/options",
                           json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_last_damage"
+
+
+# --- Giro 2 ---------------------------------------------------------------------------------------------------------
+
+async def test_closing_the_session_frees_the_surprised_character(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    await _start(client, sid, pc, monster, 20, 1)
+    assert (await _me(client, cid))["surprised"] is True
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/close")
+    assert r.status_code == 204, r.text
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/turn/new")
+    assert r.status_code == 200, r.text
+    me = await _me(client, cid)
+    assert me["surprised"] is False and me["incapacitated"] is False
+
+
+async def test_new_turn_outside_an_encounter_drops_a_leftover_surprise(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/end")
+    from api.services.rules_turn import set_surprised
+    from core.db.models import Character
+    async with test_session_factory() as s:  # un residuo di prima della correzione
+        char = await s.get(Character, cid)
+        set_surprised(char)
+        await s.commit()
+    assert (await _me(client, cid))["surprised"] is True
+    as_user(PLAYER_ID)
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _me(client, cid))["surprised"] is False
+
+
+async def test_deferred_damage_result_has_no_attack_id_so_it_can_be_rerolled(client):
+    cid = await _weapon_char(client)
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": "Spada", "item_type": "weapon", "is_equipped": True,
+        "item_metadata": {"damage_dice": "2d6", "weapon_type": "melee", "properties": []}})
+    item = next(i for i in r.json()["items"] if i["name"] == "Spada")
+    r = await client.post(f"/characters/{cid}/items/{item['id']}/attack", json={"die": 15, "defer_damage": True})
+    pending = r.json()
+    assert pending["attack_id"]
+    r = await client.post(f"/characters/{cid}/attack/{pending['attack_id']}/damage", json={})
+    assert r.status_code == 200, r.text
+    assert r.json().get("attack_id") is None
+    assert [d[0] for d in r.json()["reroll_dice"]] == [6, 6]
+
+
+async def test_hiding_twice_does_not_make_the_invisibility_permanent(client):
+    cid = await _char(client, edition="2024")
+    await _stealth(client, cid, 18)
+    await client.post(f"/characters/{cid}/hide")
+    await client.post(f"/characters/{cid}/hide")
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12})
+    assert r.status_code == 200, r.text
+    assert not (await _full(client, cid))["conditions"].get("invisible")
+
+
+async def test_hiding_twice_keeps_a_spell_invisibility(client):
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True}})
+    await _stealth(client, cid, 18)
+    await client.post(f"/characters/{cid}/hide")
+    await client.post(f"/characters/{cid}/hide")
+    await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12})
+    assert (await _full(client, cid))["conditions"]["invisible"] is True
+
+
+def test_last_damage_total_cuts_the_base_at_zero_and_counts_option_dice():
+    from api.services.last_damage import last_damage_total
+    last = {"base": 1, "mod": -2, "flat": 1, "multiplier": 1}
+    assert last_damage_total([1], last) == 1  # max(0, 1 - 2) + 1
+    assert last_damage_total([4], last) == 3
+    assert last_damage_total([1, 5], {**last, "flat": 0}) == 5  # un dado di opzione dopo il taglio
+    assert last_damage_total([3], {**last, "flat": 0, "multiplier": 2}) == 2
+
+
+async def _weak_weapon_hit(client, monkeypatch, first):
+    cid = await _weapon_char(client)
+    r = await client.patch(f"/characters/{cid}/ability_scores/strength", json={"value": 6})
+    assert r.status_code == 200, r.text
+    monkeypatch.setattr("api.routers.items.random.randint", lambda _a, _b: first)
+    hit = await _weapon_hit(client, cid, 15, damage_dice="1d4")
+    return cid, hit
+
+
+async def test_weapon_reroll_keeps_the_zero_cut_of_a_negative_modifier(client, monkeypatch):
+    cid, hit = await _weak_weapon_hit(client, monkeypatch, 1)
+    assert hit["damage_total"] == 0  # 1 - 2, tagliato a 0
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 4)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 200, r.text
+    assert r.json()["damage_total"] == 2  # 4 - 2: il taglio non si è mangiato niente
+
+
+async def test_weapon_reroll_never_goes_below_zero(client, monkeypatch):
+    cid, hit = await _weak_weapon_hit(client, monkeypatch, 3)
+    assert hit["damage_total"] == 1
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 1)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.json()["damage_total"] == 0
+
+
+async def test_option_dice_are_listed_and_rerollable(client, rules_catalog, monkeypatch):
+    from dataclasses import replace
+
+    from tests.integration.test_rules_roll_options_api import SNEAK, _deferred, _feature, _weapon
+    rules_catalog(replace(_feature(SNEAK), edition="2024"))
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    item = await _weapon(client, cid)
+    hit = await _deferred(client, cid, item, die=10)
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["sneak"]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    sides = [d[0] for d in body["reroll_dice"]]
+    assert len(sides) == 1 + len(body["option_result"]["extra_rolls"]) and sides[0] == 8
+    assert all(s != 8 for s in sides[1:])  # i dadi dell'opzione hanno i propri lati
+    before = body["damage_total"]
+    old = body["reroll_dice"][1][1]
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 6)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [1]})
+    assert r.status_code == 200, r.text
+    assert r.json()["damage_total"] == before - old + 6
+    assert r.json()["reroll_dice"][1][1] == 6
+
+
+async def test_option_dice_survive_a_critical_and_the_modifier(client, rules_catalog, monkeypatch):
+    from dataclasses import replace
+
+    from tests.integration.test_rules_roll_options_api import SNEAK, _deferred, _feature, _weapon
+    rules_catalog(replace(_feature(SNEAK), edition="2024"))
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    item = await _weapon(client, cid)
+    hit = await _deferred(client, cid, item, die=20)
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["sneak"]})
+    body = r.json()
+    n = len(body["reroll_dice"])
+    assert n == 2 + len(body["option_result"]["extra_rolls"])  # critico: 2 dadi dell'arma
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 1)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [n - 1]})
+    assert r.status_code == 200, r.text
+    again = r.json()
+    assert len(again["reroll_dice"]) == n
+    assert again["damage_total"] == sum(v for _, v in again["reroll_dice"]) + body["damage_bonus"]
+
+
+async def test_spending_inspiration_drops_the_extra_flag(client, test_session_factory, monkeypatch):
+    sid, cid, friend, other = await _two_players(test_session_factory)
+    as_user(PLAYER_ID)
+    await _receive_extra(client, cid)
+    await _weapon_hit(client, cid, 15)
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 3)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 200, r.text
+    body = await _full(client, cid)
+    assert body["heroic_inspiration"] is False and body["inspiration_extra"] is False
+
+
+async def test_the_player_can_discard_the_extra_inspiration(client, test_session_factory):
+    sid, cid, friend, other = await _two_players(test_session_factory)
+    as_user(PLAYER_ID)
+    r = await client.delete(f"/characters/{cid}/inspiration/extra")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_extra_inspiration"
+    await _receive_extra(client, cid)
+    r = await client.delete(f"/characters/{cid}/inspiration/extra")
+    assert r.status_code == 200, r.text
+    assert r.json()["heroic_inspiration"] is True and r.json()["inspiration_extra"] is False  # la propria resta
+
+
+async def test_giving_2014_inspiration_loses_it_without_needing_an_extra(client, test_session_factory):
+    sid, cid, friend, other = await _two_players(test_session_factory, "2014")
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": cid, "to_user_id": other})
+    assert r.status_code == 200, r.text
+    assert r.json()["heroic_inspiration"] is False
+    as_user(other)
+    assert (await client.get(f"/characters/{friend}")).json()["heroic_inspiration"] is True

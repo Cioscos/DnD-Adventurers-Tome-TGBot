@@ -21,6 +21,7 @@ from sqlalchemy.orm import selectinload
 from api.services import telegram_notify
 from api.services.telegram_notify import recipient_lang
 from api.services.campaigns import STASH_USER_ID
+from api.services.rules_turn import set_surprised
 from core.data.labels import condition_label
 from core.db.models import (
     BotUser, Campaign, CampaignMember, Character, CharacterHistory, Combatant, Encounter,
@@ -253,6 +254,16 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
     }
 
 
+async def free_surprised(db: AsyncSession, gs: GameSession) -> None:
+    """La sorpresa 2014 è del combattimento: chiusa la sessione nessun GM può più toglierla, quindi cade qui."""
+    ids = (await db.execute(select(SessionParticipant.character_id).where(
+        SessionParticipant.session_id == gs.id, SessionParticipant.character_id.is_not(None)))).scalars().all()
+    if not ids:
+        return
+    for char in (await db.execute(select(Character).where(Character.id.in_(ids)))).scalars():
+        set_surprised(char, False)
+
+
 async def close_game_session(db: AsyncSession, gs: GameSession) -> None:
     """Close an active session, snapshot its recap, commit, then message the table."""
     if gs.status != SessionStatus.ACTIVE:
@@ -266,6 +277,7 @@ async def close_game_session(db: AsyncSession, gs: GameSession) -> None:
     gs.status = SessionStatus.CLOSED
     gs.closed_at = ended_at
     gs.recap = recap
+    await free_surprised(db, gs)
     await db.commit()
     try:
         await send_recap_messages(db, gs)

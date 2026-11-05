@@ -201,6 +201,30 @@ describe('Turn page', () => {
     expect(within(row).queryByText('character.turn.hide_confirm')).toBeNull()
   })
 
+  it('in 2024 Hide is not offered again while the character is already hiding', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024', hiding_dc: 17 })
+    server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'stealth', total: 17 } }
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Nascondersi').closest('li') as HTMLElement
+    await userEvent.click(within(row).getByText('character.skills.stealth'))
+    await waitFor(() => expect(rollSkill).toHaveBeenCalled())
+    expect(within(row).queryByText('character.turn.hide_confirm')).toBeNull()
+  })
+
+  it('in 2024 Influence follows the total the server saved, not the first one the roll showed', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Influenzare').closest('li') as HTMLElement
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 13, notes: [] })
+    server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'persuasion', total: 16 } }  // Ispirazione dopo il tiro
+    await userEvent.click(within(row).getByText('character.skills.persuasion'))
+    expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
+  })
+
   it('in 2024 Influence has an editable DC of 15 and tells the player how the roll went', async () => {
     getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
     renderWithProviders(<Turn />)
@@ -210,6 +234,7 @@ describe('Turn page', () => {
     const dc = within(row).getByDisplayValue('15') as HTMLInputElement
     expect(dc.value).toBe('15')
     rollSkill.mockResolvedValueOnce({ die: 10, total: 17, notes: [] })
+    server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'persuasion', total: 17 } }
     await userEvent.click(within(row).getByText('character.skills.persuasion'))
     expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
     await userEvent.clear(dc)

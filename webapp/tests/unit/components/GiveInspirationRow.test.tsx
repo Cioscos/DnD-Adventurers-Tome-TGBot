@@ -5,13 +5,14 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 
-const { giveInspiration, updateInspiration, partners } = vi.hoisted(() => ({
+const { giveInspiration, updateInspiration, discardExtra, partners } = vi.hoisted(() => ({
   updateInspiration: vi.fn(),
+  discardExtra: vi.fn().mockResolvedValue({ id: 7, heroic_inspiration: true, inspiration_extra: false }),
   giveInspiration: vi.fn().mockResolvedValue({ id: 7, heroic_inspiration: false }),
   partners: { current: null as null | { sessionId: number; partners: { user_id: number }[]; stash: boolean } },
 }))
 vi.mock('@/api/client', () => ({
-  api: { sessions: { giveInspiration }, characters: { updateInspiration } },
+  api: { sessions: { giveInspiration }, characters: { updateInspiration, discardExtraInspiration: discardExtra } },
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('@/hooks/useTradePartners', () => ({ useTradePartners: () => partners.current }))
@@ -66,12 +67,33 @@ describe('GiveInspirationRow', () => {
   })
 
   it.each([
-    ['in 2014', { rules_edition: '2014' }, true],
     ['without Inspiration', { heroic_inspiration: false }, true],
     ['outside a session', {}, false],
   ])('shows nothing %s', (_name, over, inSession) => {
     if (!inSession) partners.current = null
     const { container } = renderWithProviders(<GiveInspirationRow char={{ ...(char as object), ...over } as never} />)
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('lets the player discard the extra one he does not want to give, keeping his own', async () => {
+    const { container } = renderWithProviders(<GiveInspirationRow char={{ ...(char as object), inspiration_extra: true } as never} />)
+    await userEvent.click(screen.getByText('character.inspiration.discard'))
+    await waitFor(() => expect(discardExtra).toHaveBeenCalledWith(7))
+    expect(container).not.toBeEmptyDOMElement()
+  })
+
+  it('offers no discard until an extra one arrived', () => {
+    renderWithProviders(<GiveInspirationRow char={char} />)
+    expect(screen.queryByText('character.inspiration.discard')).toBeNull()
+  })
+
+  it('in 2014 gives your own Inspiration straight away, with no "received another" step', async () => {
+    renderWithProviders(<GiveInspirationRow char={{ ...(char as object), rules_edition: '2014' } as never} />)
+    expect(screen.queryByText('character.inspiration.received_another')).toBeNull()
+    await userEvent.click(screen.getByText('character.inspiration.give_own'))
+    await userEvent.click(screen.getByText('pick'))
+    await userEvent.click(screen.getByText('character.inspiration.give_confirm'))
+    await waitFor(() => expect(giveInspiration).toHaveBeenCalledWith(3, { from_character_id: 7, to_user_id: 55 }))
+    expect(updateInspiration).not.toHaveBeenCalled()
   })
 })

@@ -1000,8 +1000,11 @@
       "give": "Cedi quella in più",
       "give_hint": "Ne hai ricevuta un'altra avendo già l'Ispirazione Eroica: quella in più va a un personaggio del gruppo che ne è privo. Tu tieni la tua.",
       "give_confirm": "Cedi",
+      "give_own": "Cedi la tua Ispirazione",
+      "give_hint_own": "La cedi a un personaggio del gruppo che ne è privo: tu la perdi.",
+      "discard": "Scarta quella in più",
       "give_errors": {
-        "inspiration_give_2024_only": "La cessione vale solo nel 2024.",
+        "no_inspiration": "Non hai l'Ispirazione da cedere.",
         "no_extra_inspiration": "Non c'è un'Ispirazione in più da cedere.",
         "recipient_has_inspiration": "L'alleato ha già l'Ispirazione.",
         "generic": "Cessione non riuscita."
@@ -1078,6 +1081,7 @@
       "influence_failure": "Totale {{total}} contro CD {{dc}}: il mostro resiste.",
       "hide_confirm": "Sei nascosto: diventa Invisibile (CD {{total}})",
       "hide_failed": "Totale {{total}}: sotto 15, non sei nascosto.",
+      "hiding": "Sei nascosto (CD {{dc}}): finché non fai rumore o attacchi.",
       "stand_up": "Rialzati",
       "drop_prone": "Gettati a terra",
       "free_interaction": "Interazione gratuita",

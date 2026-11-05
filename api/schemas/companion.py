@@ -130,3 +130,4 @@ class CompanionAttackResult(BaseModel):
     damage_total: int
     damage_type: Optional[str] = None
     option_result: OptionResult | None = absent_when_none()
+    reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server

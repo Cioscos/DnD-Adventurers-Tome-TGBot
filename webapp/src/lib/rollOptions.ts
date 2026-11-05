@@ -171,5 +171,8 @@ export function refreshAfterOptions(qc: QueryClient, charId: number, result?: Op
   qc.invalidateQueries({ queryKey: ['turn-state', charId] })
 }
 
+/** I dadi ritirabili come li dice il server (`[lati, valore]`, l'indice è la posizione). */
+export const rerollDiceOf = (dice: [number, number][]) => dice.map(([sides, value], index) => ({ value, index, sides }))
+
 /** Facce di un dado dal tipo `d8` -> 8 (`main_kind` del danno). */
 export const sidesOf = (kind: string | null | undefined): number => Number((kind ?? '').slice(1))
