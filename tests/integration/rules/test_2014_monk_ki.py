@@ -350,6 +350,26 @@ async def test_the_throw_back_is_ranged_so_it_never_offers_the_stunning_strike(c
     assert (await _damage(client, cid, hit)).status_code == 200
 
 
+async def test_the_throw_back_has_no_invented_damage_type_and_is_not_a_magic_strike(client, monkeypatch):
+    cid = await _monk(client, 6, dexterity=16)  # dal 6° i colpi senz'armi sono magici: il proiettile no
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
+    _fixed(monkeypatch, 10)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5, "damage_type": "piercing", "options": [DEFLECT]})
+    body = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "options": [THROW]})).json()
+    assert body.get("damage_type") is None and not body.get("is_magic")
+    plain = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "confirm_extra_attack": True})).json()
+    assert plain["damage_type"] == "bludgeoning" and plain["is_magic"] is True  # il colpo senz'armi resta com'era
+
+
+async def test_the_listing_of_a_thrown_unarmed_attack_is_ranged(client, monkeypatch):
+    cid = await _monk(client, 5, dexterity=16)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
+    assert STUN in await _roll_keys(client, cid, "attack")
+    assert STUN not in await _roll_keys(client, cid, "attack", attack_mode="thrown")  # il Colpo Stordente è solo in mischia
+
+
 async def test_the_throw_back_with_a_sword_in_hand_ignores_the_sword(client, monkeypatch):
     cid = await _monk(client, 5, strength=8, dexterity=16)
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})

@@ -160,8 +160,9 @@ async def roll_options(
     attack: dict = {}
     if roll == "attack" and spell is None:
         if item is None:
-            _, _, ability = unarmed_attack_profile(char)
-            attack = {"attack_mode": "melee", "grip": "one"}
+            throw = attack_mode == "thrown"  # il lancio a distanza senz'armi (Deviare Proiettili)
+            _, _, ability = unarmed_attack_profile(char, throw)
+            attack = {"attack_mode": "ranged" if throw else "melee", "grip": "one"}
         else:
             _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, ability)
             attack = {"attack_mode": resolved_mode, "grip": grip, "offhand": attack_mode == "offhand"}

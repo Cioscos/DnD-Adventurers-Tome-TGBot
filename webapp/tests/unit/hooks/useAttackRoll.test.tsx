@@ -77,6 +77,20 @@ describe('useAttackRoll', () => {
     expect(attackDamage).toHaveBeenCalledWith(1, 'a1', expect.objectContaining({ options: ['sneak'] }))
   })
 
+  it('the ranged unarmed throw asks the after-hit options as a ranged attack: no melee option such as Stunning Strike', async () => {
+    const thrown = { ...sneak, key: 'throw', phase: 'before', ranged_unarmed: true, slot: null } as RollOption
+    rollOptions.mockResolvedValue([thrown, sneak])
+    attackUnarmed.mockResolvedValue(hit)
+    attackDamage.mockResolvedValue({ damage_total: 7 })
+    renderWithProviders(<RollOptionsHost />)
+    const { result } = renderHook(() => useAttackRoll())
+    const done = result.current.roll(1, null, 'normal', false, undefined, ['throw'])
+    await userEvent.click(await screen.findByText('character.roll_options.damage'))
+    await done
+    // la prima lista serve a riconoscere la scelta; da lì in poi (dopo il colpo) la domanda è quella del lancio
+    expect(rollOptions).toHaveBeenLastCalledWith(1, { roll: 'attack', attack_mode: 'thrown' })
+  })
+
   it('a declared miss ends the attack without a damage call', async () => {
     attack.mockResolvedValue(hit)
     const done = start()

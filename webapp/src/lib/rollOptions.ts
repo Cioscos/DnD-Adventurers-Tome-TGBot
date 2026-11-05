@@ -154,9 +154,10 @@ export async function askRollOptions(
     : []
   // Una scelta con uno slot di turno proprio (azione bonus, reazione) non è un attacco dell'azione Attacco.
   const withSlot = (chosen: string[]): { own_slot?: true } => (listed.some((o) => chosen.includes(o.key) && o.slot) ? { own_slot: true } : {})
+  const withRanged = (chosen: string[]): { ranged?: true } => (listed.some((o) => chosen.includes(o.key) && o.ranged_unarmed) ? { ranged: true } : {})
   if (context?.preset) {
     const chosen = context.preset.filter((k) => options.some((o) => o.key === k))
-    return { ...base, options: chosen, ...withSlot(chosen) }
+    return { ...base, options: chosen, ...withSlot(chosen), ...withRanged(chosen) }
   }
   if (options.length === 0 && afterRoll.length === 0 && !context?.keepOpen) return base
   return new Promise((resolve) => {
@@ -165,7 +166,7 @@ export async function askRollOptions(
         options, afterRoll, phase, context,
         answer: (answer) => {
           usePromptStore.setState({ request: null })
-          resolve({ ...answer, ...(defer ? { defer_damage: true } : {}), ...withSlot(answer.options) })
+          resolve({ ...answer, ...(defer ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options) })
         },
       },
     })

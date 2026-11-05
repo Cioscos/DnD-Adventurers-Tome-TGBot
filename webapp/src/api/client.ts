@@ -161,6 +161,8 @@ export type RollChoice = {
   after_option?: RollOption
   /** Solo lato client (mai inviato): una delle opzioni scelte ha uno slot di turno proprio (Frenesia, Ritorsione). */
   own_slot?: boolean
+  /** Solo lato client: una delle opzioni scelte è il lancio a distanza senz'armi (le opzioni da mischia non valgono). */
+  ranged?: boolean
 }
 
 export type TargetEffect = {

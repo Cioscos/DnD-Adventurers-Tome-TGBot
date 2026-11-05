@@ -55,9 +55,9 @@ export function useAttackRoll() {
     return true
   }
 
-  const flow = (charId: number, itemId: number | null, choice?: WeaponChoice, confirm?: { confirm_extra_attack?: true }) => {
+  const flow = (charId: number, itemId: number | null, choice?: WeaponChoice, confirm?: { confirm_extra_attack?: true }, ranged?: boolean) => {
     const query: RollOptionsQuery = itemId === null
-      ? { roll: 'attack' }
+      ? { roll: 'attack', ...(ranged ? { attack_mode: 'thrown' } : {}) }
       : { roll: 'attack', item_id: itemId, attack_mode: choice?.attack_mode, grip: choice?.grip, ability: choice?.ability }
     const confirmed = confirm?.confirm_extra_attack ? confirm : undefined
     const post = (reroll: boolean, roll: D20Roll | undefined) => (itemId === null
@@ -120,10 +120,10 @@ export function useAttackRoll() {
       const offhand = choice?.attack_mode === 'offhand'
       // Prima le opzioni: una con uno slot proprio (Frenesia, Ritorsione) non pesa sul limite dell'azione Attacco.
       const { query: optionsQuery } = flow(charId, itemId, choice)
-      const { own_slot, ...before } = await askRollOptions(charId, optionsQuery, 'before', preset ? { preset } : undefined)
+      const { own_slot, ranged, ...before } = await askRollOptions(charId, optionsQuery, 'before', preset ? { preset } : undefined)
       const confirm = offhand || own_slot ? {} : await limitConfirmation(charId)
       if (!confirm) return null
-      const { post, secondStep } = flow(charId, itemId, choice, confirm)
+      const { post, secondStep } = flow(charId, itemId, choice, confirm, ranged)
       const dice = await rollD20(mode)
       let first: WeaponAttackResult
       try {
