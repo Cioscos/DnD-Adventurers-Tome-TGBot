@@ -171,4 +171,69 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
         'raise-dead', {"it": 'Rianimare morti', "en": 'Raise Dead'}, 5, '1 ora', 'Contatto', 'Istantanea'),
     'light': GrantedSpell(
         'light', {"it": 'Luce', "en": 'Light'}, 0, '1 azione', 'Contatto', '1 ora'),
+    # Druido 2014: incantesimi dei territori del Circolo della Terra e Mille Forme (Circolo della Luna)
+    'hold-person': GrantedSpell(
+        'hold-person', {"it": 'Bloccare persone', "en": 'Hold Person'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'slow': GrantedSpell(
+        'slow', {"it": 'Lentezza', "en": 'Slow'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'cone-of-cold': GrantedSpell(
+        'cone-of-cold', {"it": 'Cono di freddo', "en": 'Cone of Cold'}, 5, '1 azione', 'Personale', 'Istantanea', attack_save='SAVE', damage_dice='8d8', damage_type='cold', higher_levels_dice='1d8'),
+    'misty-step': GrantedSpell(
+        'misty-step', {"it": 'Passo velato', "en": 'Misty Step'}, 2, '1 azione bonus', 'Personale', 'Istantanea'),
+    'water-walk': GrantedSpell(
+        'water-walk', {"it": "Camminare sull'acqua", "en": 'Water Walk'}, 3, '1 azione', '9 m', '1 ora', is_ritual=True),
+    'water-breathing': GrantedSpell(
+        'water-breathing', {"it": "Respirare sott'acqua", "en": 'Water Breathing'}, 3, '1 azione', '9 m', '24 ore', is_ritual=True),
+    'conjure-elemental': GrantedSpell(
+        'conjure-elemental', {"it": 'Evocare elementale', "en": 'Conjure Elemental'}, 5, '1 minuto', '27 m', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'blur': GrantedSpell(
+        'blur', {"it": 'Annebbiare', "en": 'Blur'}, 2, '1 azione', 'Personale', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'silence': GrantedSpell(
+        'silence', {"it": 'Silenzio', "en": 'Silence'}, 2, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, is_ritual=True),
+    'create-food-and-water': GrantedSpell(
+        'create-food-and-water', {"it": 'Creare cibo e acqua', "en": 'Create Food and Water'}, 3, '1 azione', '9 m', 'Istantanea'),
+    'protection-from-energy': GrantedSpell(
+        'protection-from-energy', {"it": "Protezione dall'energia", "en": 'Protection From Energy'}, 3, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'blight': GrantedSpell(
+        'blight', {"it": 'Avvizzire', "en": 'Blight'}, 4, '1 azione', '9 m', 'Istantanea', attack_save='SAVE', damage_dice='8d8', damage_type='necrotic', higher_levels_dice='1d8'),
+    'hallucinatory-terrain': GrantedSpell(
+        'hallucinatory-terrain', {"it": 'Terreno illusorio', "en": 'Hallucinatory Terrain'}, 4, '10 minuti', '90 m', '24 ore'),
+    'wall-of-stone': GrantedSpell(
+        'wall-of-stone', {"it": 'Muro di pietra', "en": 'Wall of Stone'}, 5, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'spider-climb': GrantedSpell(
+        'spider-climb', {"it": 'Movimento del ragno', "en": 'Spider Climb'}, 2, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'divination': GrantedSpell(
+        'divination', {"it": 'Divinazione', "en": 'Divination'}, 4, '1 azione', 'Personale', 'Istantanea', is_ritual=True),
+    'invisibility': GrantedSpell(
+        'invisibility', {"it": 'Invisibilità', "en": 'Invisibility'}, 2, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'haste': GrantedSpell(
+        'haste', {"it": 'Velocità', "en": 'Haste'}, 3, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'dream': GrantedSpell(
+        'dream', {"it": 'Sogno', "en": 'Dream'}, 5, '1 minuto', 'Speciale', '8 ore'),
+    'meld-into-stone': GrantedSpell(
+        'meld-into-stone', {"it": 'Fondersi nella pietra', "en": 'Meld Into Stone'}, 3, '1 azione', 'Contatto', '8 ore', is_ritual=True),
+    'lightning-bolt': GrantedSpell(
+        'lightning-bolt', {"it": 'Fulmine', "en": 'Lightning Bolt'}, 3, '1 azione', 'Personale', 'Istantanea', attack_save='SAVE', damage_dice='8d6', damage_type='lightning', higher_levels_dice='1d6'),
+    'stone-shape': GrantedSpell(
+        'stone-shape', {"it": 'Foggiare la pietra', "en": 'Stone Shape'}, 4, '1 azione', 'Contatto', 'Istantanea'),
+    'passwall': GrantedSpell(
+        'passwall', {"it": 'Passapareti', "en": 'Passwall'}, 5, '1 azione', '9 m', '1 ora'),
+    'acid-arrow': GrantedSpell(
+        'acid-arrow', {"it": 'Freccia acida di Melf', "en": 'Acid Arrow'}, 2, '1 azione', '27 m', 'Istantanea', attack_save='ATK', damage_dice='4d4', damage_type='acid', higher_levels_dice='1d4'),
+    'darkness': GrantedSpell(
+        'darkness', {"it": 'Oscurità', "en": 'Darkness'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'stinking-cloud': GrantedSpell(
+        'stinking-cloud', {"it": 'Nube maleodorante', "en": 'Stinking Cloud'}, 3, '1 azione', '27 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'locate-creature': GrantedSpell(
+        'locate-creature', {"it": 'Localizzare creatura', "en": 'Locate Creature'}, 4, '1 azione', 'Personale', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'web': GrantedSpell(
+        'web', {"it": 'Ragnatela', "en": 'Web'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 1 ora', is_concentration=True, attack_save='SAVE'),
+    'gaseous-form': GrantedSpell(
+        'gaseous-form', {"it": 'Forma gassosa', "en": 'Gaseous Form'}, 3, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'greater-invisibility': GrantedSpell(
+        'greater-invisibility', {"it": 'Invisibilità superiore', "en": 'Greater Invisibility'}, 4, '1 azione', 'Contatto', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'cloudkill': GrantedSpell(
+        'cloudkill', {"it": 'Nube mortale', "en": 'Cloudkill'}, 5, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='5d8', damage_type='poison', higher_levels_dice='1d8'),
+    'alter-self': GrantedSpell(
+        'alter-self', {"it": 'Alterare se stessi', "en": 'Alter Self'}, 2, '1 azione', 'Personale', 'Concentrazione, fino a 1 ora', is_concentration=True),
 }
