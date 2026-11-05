@@ -24,6 +24,8 @@ from api.schemas.spell import (
     LastDamageBody,
     RollDamageRequest,
     RollDamageResult,
+    RollHealingRequest,
+    RollHealingResult,
     SpellAttackRequest,
     SpellCreate,
     SpellRead,
@@ -51,6 +53,7 @@ from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
 from core.game.stats import cantrip_dice_multiplier
+from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
 from core.rules.spellcasting import can_ritual, cast_warnings, caster_stats, casting_kind, spell_stats
 
 
@@ -631,6 +634,67 @@ async def roll_spell_damage(
     }
     char.turn_state = turn
     return result
+
+
+@router.post("/{char_id}/spells/{spell_id}/roll_healing", response_model=RollHealingResult)
+async def roll_spell_healing(
+    char_id: int,
+    spell_id: int,
+    body: RollHealingRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> RollHealingResult:
+    """PF che un incantesimo di cura restituisce (R41): dadi allo slot scelto, modificatore da incantatore e privilegi
+    (Discepolo della Vita, Guarigione Suprema). Il server tira e somma; con ``apply_to_self`` li aggiunge a chi lancia."""
+    from api.services.effects import apply_heal  # import locale: effects importa il router degli incantesimi
+    char = await _get_owned_full(char_id, user_id, session)
+    spell = next((s for s in char.spells if s.id == spell_id), None)
+    if spell is None:
+        raise HTTPException(status_code=404, detail="Spell not found")
+    healing = SPELL_HEALING.get(spell.srd_index or "")
+    if healing is None:
+        raise HTTPException(status_code=400, detail={"code": "not_a_healing_spell"})
+    level = body.casting_level if body.casting_level is not None else spell.level
+    if level < spell.level or level > 9:
+        raise HTTPException(status_code=400, detail="invalid casting_level")
+    count, sides = healing_dice(healing, spell.level, level)
+    if body.main_rolls is not None:
+        if len(body.main_rolls) != count or any(v < 1 or v > sides for v in body.main_rolls):
+            raise HTTPException(status_code=400, detail="main_rolls do not match the dice")
+        main_rolls = list(body.main_rolls)
+    else:
+        main_rolls = [random.randint(1, sides) for _ in range(count)]
+
+    opts = use_options(session, char, "spell_healing", body, spell=spell, casting_level=level)
+    applied = modifiers_for(char, "spell_healing", spell=spell, casting_level=level)
+    maximized = bool(main_rolls) and (applied.maximize_healing or opts.maximize)
+    if maximized:
+        main_rolls = [sides] * len(main_rolls)
+    option_rolls, option_total = roll_option_dice(char, opts)
+    modifier = healing_fixed(healing, spell.level, level)
+    if healing.add_mod:
+        from core.game.stats import effective_ability_mod  # import locale
+        caster = spell_stats(char, spell)
+        modifier += effective_ability_mod(char, caster.ability) if caster else 0
+    total = max(0, sum(main_rolls) + modifier + applied.flat + opts.bonus + option_total)
+    record_dice(char, [(f"d{sides}", v) for v in main_rolls])
+    parts = [f"{count}d{sides}={main_rolls}" if count else "fisso"]
+    if modifier:
+        parts.append(f"{modifier:+d}")
+    if applied.flat:
+        parts.append(f"{applied.flat:+d}")
+    breakdown = " ".join(parts) + f" = {total}"
+    healed = 0
+    if body.apply_to_self:
+        healed = (await apply_heal(session, char, total))["healed"]
+    self_healed = 0
+    if opts.self_heal:
+        self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]
+    _add_history(session, char_id, "spell_healing", f"{spell.name}: cura {breakdown}")
+    return RollHealingResult(
+        rolls=main_rolls, total=total, breakdown=breakdown, casting_level=level, main_kind=f"d{sides}" if count else None,
+        main_rolls=main_rolls, modifier=modifier, bonus=applied.flat + opts.bonus, maximized=maximized, healed=healed,
+        self_healed=self_healed, option_result=option_result(opts, option_rolls, option_total))
 
 
 @router.post("/{char_id}/last-damage/options",

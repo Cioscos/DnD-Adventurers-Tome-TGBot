@@ -65,6 +65,8 @@ import type {
   NoteCampaign,
   ParticipantIdentity,
   RollDamageRequest,
+  RollHealingRequest,
+  RollHealingResult,
   RollDamageResult,
   SpellAttackRequest,
   SpellAttackResult,
@@ -123,7 +125,8 @@ export type RollOption = {
 }
 
 export type RollOptionsQuery = {
-  roll: 'attack' | 'spell_damage' | 'weapon_damage' | 'skill' | 'ability' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
+  casting_level?: number
+  roll: 'attack' | 'spell_damage' | 'spell_healing' | 'weapon_damage' | 'skill' | 'ability' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
   item_id?: number
   attack_mode?: string
   grip?: string
@@ -826,6 +829,11 @@ export const api = {
       }),
     rollDamage: (charId: number, spellId: number, body: RollDamageRequest): Promise<RollDamageResult> =>
       request<RollDamageResult>(`/characters/${charId}/spells/${spellId}/roll_damage`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    rollHealing: (charId: number, spellId: number, body: RollHealingRequest): Promise<RollHealingResult> =>
+      request<RollHealingResult>(`/characters/${charId}/spells/${spellId}/roll_healing`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),

@@ -613,6 +613,16 @@
       "chip_damage": "DANNO",
       "chip_attack_save": "Attacco / Tiro Salvezza",
       "chip_higher_level": "Livelli Superiori",
+      "roll_healing": {
+        "title": "Cura: {{name}}",
+        "casting_level": "Livello di casting",
+        "on_self": "Curo me stesso con questo incantesimo",
+        "roll_button": "Tira la cura",
+        "total": "PF restituiti",
+        "maximized": "Dadi al massimo",
+        "healed_self": "PF aggiunti a te: {{n}}",
+        "self_healed": "Recuperi {{n}} PF per un privilegio"
+      },
       "roll_damage": {
         "title": "Tiro danni: {{name}}",
         "button": "Rolla danni",

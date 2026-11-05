@@ -301,6 +301,7 @@ class RollOptionSpec:
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
+    self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (solo ``spell_healing``)
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)
 
@@ -333,6 +334,8 @@ class RollOptionSpec:
             raise ValueError("after_damage non chiede input: il client manda sempre option_inputs vuoto")
         if self.keep_rolled and self.reroll_dice is None:
             raise ValueError("keep_rolled riguarda reroll_dice")
+        if self.self_heal and "spell_healing" not in self.rolls:
+            raise ValueError("self_heal vale solo per la cura di un incantesimo")
         if self.maximize and (self.phase != "before" or "spell_damage" not in self.rolls):
             raise ValueError("maximize vale solo prima del danno di un incantesimo")
         if self.dice_cost and not self.needs:
@@ -408,4 +411,5 @@ class RuleContext:
     attack_mode: Any = None  # solo attacchi: `melee`, `thrown` o `ranged`
     grip: Any = None  # solo attacchi: `one` o `two`
     offhand: bool = False  # solo attacchi: l'attacco extra della proprietà Leggera
+    casting_level: int | None = None  # solo ``spell_healing``: il livello dello slot con cui si lancia
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo

@@ -176,6 +176,30 @@ class LastDamageBody(RollOptionsBody):
     reroll: list[int] = Field(default_factory=list, max_length=30)
 
 
+class RollHealingRequest(RollOptionsBody):
+    """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali. ``main_rolls`` sono i
+    valori letti dai dadi 3D, validati come per il danno. ``apply_to_self``: chi lancia è anche il bersaglio."""
+    casting_level: int | None = None
+    main_rolls: list[int] | None = None
+    apply_to_self: bool = False
+
+
+class RollHealingResult(BaseModel):
+    rolls: list[int]
+    total: int
+    breakdown: str
+    casting_level: int
+    main_kind: str | None = None
+    main_rolls: list[int] = []
+    modifier: int = 0           # modificatore da incantatore, più i fissi della cura
+    bonus: int = 0              # fisso dei privilegi (Discepolo della Vita)
+    maximized: bool = False
+    healed: int = 0             # PF davvero aggiunti a chi lancia (``apply_to_self``)
+    self_healed: int = 0        # PF che chi lancia recupera per un privilegio (Guaritore Benedetto)
+    option_result: OptionResult | None = absent_when_none()
+    model_config = {"from_attributes": True}
+
+
 class RollDamageResult(BaseModel):
     rolls: list[int]
     total: int

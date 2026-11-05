@@ -128,7 +128,7 @@ async def turn_other(
 async def roll_options(
     char_id: int,
     roll: Literal["attack", "spell_damage", "weapon_damage", "skill", "ability", "save", "initiative", "death_save",
-                  "damage_taken", "cast"],
+                  "damage_taken", "cast", "spell_healing"],
     user_id: Annotated[int, Depends(get_current_user)],
     lang: Annotated[str, Depends(get_current_lang)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -139,6 +139,7 @@ async def roll_options(
     damage_type: str | None = None,
     attack_mode: Literal["melee", "thrown", "offhand"] = "melee",
     grip: Literal["one", "two"] = "one",
+    casting_level: int | None = None,
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
     char = await _get_owned_full(char_id, user_id, db)
@@ -157,7 +158,7 @@ async def roll_options(
         else:
             _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, ability)
             attack = {"attack_mode": resolved_mode, "grip": grip, "offhand": attack_mode == "offhand"}
-    return list_options(char, roll, lang, item=item, spell=spell, skill=skill, **attack,
+    return list_options(char, roll, lang, item=item, spell=spell, skill=skill, casting_level=casting_level, **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type))
 
 

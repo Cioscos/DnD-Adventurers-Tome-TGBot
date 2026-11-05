@@ -613,6 +613,16 @@
       "chip_damage": "DAMAGE",
       "chip_attack_save": "Attack / Save",
       "chip_higher_level": "Higher Levels",
+      "roll_healing": {
+        "title": "Healing: {{name}}",
+        "casting_level": "Casting level",
+        "on_self": "I heal myself with this spell",
+        "roll_button": "Roll the healing",
+        "total": "HP restored",
+        "maximized": "Dice at maximum",
+        "healed_self": "HP added to you: {{n}}",
+        "self_healed": "You regain {{n}} HP from a feature"
+      },
       "roll_damage": {
         "title": "Damage roll: {{name}}",
         "button": "Roll damage",

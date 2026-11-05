@@ -26,9 +26,10 @@ _STR_DEX = {"strength", "dexterity"}
 _FLAT_TARGET = {
     "attack": "attack", "damage": "damage", "ac": "ac", "speed": "speed", "hp_max": "hp_max",
     "initiative": "initiative", "passive": "passive", "skill": "skill", "ability": "skill",
-    "save": "save", "death_save": "save", "concentration": "save",
+    "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
 }
-_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed"}
+_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed",
+          "maximize_healing"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
 
 
@@ -51,6 +52,7 @@ class Applied:
     crit_dice: int = 0  # dadi dell'arma in più al critico (Critico Brutale)
     carry_double: bool = False
     fly_speed: bool = False
+    maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
 

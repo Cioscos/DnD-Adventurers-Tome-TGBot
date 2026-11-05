@@ -225,6 +225,17 @@ DUPLICITY_ADVANTAGE = RollOptionSpec(
            "en": "Duplicity: are you and the illusion within 5 ft of a target that sees it?"},
     available=lambda c: state_on(c, "invoke_duplicity"))
 
+def _healing_roll(ctx: RuleContext) -> bool:
+    return ctx.roll == "spell_healing" and (ctx.casting_level or 0) >= 1
+
+
+BLESSED_HEALER = RollOptionSpec(
+    key=f"{CK}.blessed_healer", phase="before", rolls=("spell_healing",),
+    self_heal=lambda c, _i: 2 + (c.casting_level or 0),
+    label={"it": "Guaritore Benedetto: il bersaglio è un'altra creatura? Ti curi di 2 + livello dell'incantesimo",
+           "en": "Blessed Healer: is the target another creature? You regain 2 + the spell's level"},
+    available=lambda c: (c.casting_level or 0) >= 1)
+
 AVATAR_OF_BATTLE = RollOptionSpec(
     key=f"{CK}.avatar_of_battle", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
     label={"it": "Avatar della Battaglia: il colpo è di un'arma non magica?",
@@ -592,6 +603,23 @@ FEATURES = (
             ("Competenza Bonus (Vita)", "Bonus Proficiency (Life)"),
             ("Competenza in armature pesanti.", "Proficiency with heavy armor."),
             subclass="life", proficiency_grants={"armor": ("heavy",)}),
+    feature("disciple_of_life", CK, ED, 1, "Discepolo della Vita / Disciple of Life (Vita 1, pag. 63)",
+            ("Discepolo della Vita", "Disciple of Life"),
+            ("Un incantesimo di cura di 1° livello o superiore restituisce 2 PF più il livello dello slot in più.",
+             "A healing spell of 1st level or higher restores 2 extra HP plus the slot's level."),
+            subclass="life",
+            modifiers=(Modifier("healing", lambda c: 2 + (c.casting_level or 0), when=_healing_roll,
+                                source=f"feature:{CK}.disciple_of_life"),)),
+    feature("blessed_healer", CK, ED, 6, "Guaritore Benedetto / Blessed Healer (Vita 6, pag. 63)",
+            ("Guaritore Benedetto", "Blessed Healer"),
+            ("Quando curi un'altra creatura con un incantesimo di 1° livello o superiore, recuperi 2 PF più il livello dell'incantesimo.",
+             "When you heal another creature with a spell of 1st level or higher, you regain 2 HP plus the spell's level."),
+            subclass="life", roll_options=(BLESSED_HEALER,)),
+    feature("supreme_healing", CK, ED, 17, "Guarigione Suprema / Supreme Healing (Vita 17, pag. 63)",
+            ("Guarigione Suprema", "Supreme Healing"),
+            ("I dadi di un incantesimo di cura valgono sempre il massimo.", "The dice of a healing spell always count as their maximum."),
+            subclass="life", modifiers=(Modifier("maximize_healing", 1, when=lambda c: c.roll == "spell_healing",
+                                                 source=f"feature:{CK}.supreme_healing"),)),
     feature("divine_strike_life", CK, ED, 8, "Colpo Divino / Divine Strike (Vita 8, pag. 63)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni radiosi in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra radiant damage."),
