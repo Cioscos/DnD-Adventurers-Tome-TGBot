@@ -121,7 +121,7 @@ async def test_form_expires_and_ends_on_rest(client, test_session_factory):
     comp = await _form(client, cid)
     await _activate(client, cid, comp)
     state = next(s for s in (await _full(client, cid))["active_states"] if s["key"] == "wild_shape")
-    assert state["rounds_left"] == 1200 and "rest_short" in state["ends_on"] and "unconscious" in state["ends_on"]
+    assert state["rounds_left"] == 1200 and "rest_short" not in state["ends_on"] and "unconscious" in state["ends_on"]
     assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
     assert next(s for s in (await _full(client, cid))["active_states"] if s["key"] == "wild_shape")["rounds_left"] == 1199
     async with test_session_factory() as s:
@@ -135,8 +135,7 @@ async def test_form_expires_and_ends_on_rest(client, test_session_factory):
     await _activate(client, cid, comp)
     assert (await _full(client, cid))["active_form"] is not None
     assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).status_code == 200
-    assert (await _full(client, cid))["active_form"] is None
-    await _activate(client, cid, comp)
+    assert (await _full(client, cid))["active_form"] is not None  # 2 ore: un riposo breve (1 ora) non la chiude
     assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})).status_code == 200
     assert (await _full(client, cid))["active_form"] is None
 

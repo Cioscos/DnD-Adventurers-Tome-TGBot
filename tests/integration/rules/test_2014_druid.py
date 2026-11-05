@@ -245,9 +245,9 @@ async def test_ending_the_form_early_costs_the_bonus_action_but_never_blocks(cli
     assert r.status_code == 200 and r.json()["is_active"] is False
 
 
-async def test_a_short_rest_ends_the_form(client):
-    cid = await _druid(client, 6, "land")
-    await _activate(client, cid, await _form(client, cid, _beast(0.5)))
+async def test_a_short_rest_ends_a_form_lasting_one_hour(client):
+    cid = await _druid(client, 2, "land")
+    await _activate(client, cid, await _form(client, cid, _beast(0.25)))
     await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})
     assert (await _full(client, cid))["active_form"] is None
 

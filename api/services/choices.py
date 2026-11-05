@@ -42,7 +42,10 @@ def _choice_spec(char: Character, cls: CharacterClass, group: str | None):
 
 
 def _entries(char: Character, cls: CharacterClass, group: str, keys: list[str], owned: frozenset = frozenset()) -> list[dict]:
-    specs = {s.option_key: s for s in features_for(character_edition(char), class_key(cls)) if s.option_group == group}
+    specs: dict = {}
+    for s in features_for(character_edition(char), class_key(cls)):
+        if s.option_group == group:
+            specs.setdefault(s.option_key, s)  # la prima riga (livello più basso) è quella che si sceglie
     choice = _choice_spec(char, cls, group)
     labelled = choice.label if choice and choice.label else None
 
@@ -150,6 +153,7 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     free = list((char.settings or {}).get(FREE_KNOWN_KEY) or [])
     if (not ids or len(ids) > count or len(set(ids)) != len(ids) or not set(ids) <= set(owned)
             or any((owned[i].srd_index or owned[i].name) in taken for i in ids)
+            or any(owned[i].level > _pick_cap(char, cls, ch) for i in ids)  # un trucchetto resta un trucchetto
             or (ch.spell_pick == "known" and any(i in free for i in ids))):
         raise _bad("spell_not_known")
     cls.options = {**(cls.options or {}), ch.group: [*taken, *(owned[i].srd_index or owned[i].name for i in ids)]}
@@ -181,12 +185,13 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
     ch = _choice_spec(char, cls, choice.get("group")) if cls else None
     if ch is None or not ch.spell_pick:
         return None
-    info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch)}
+    info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch), "list": ch.spell_list}
     if choice.get("retrofit"):  # R39: gli incantesimi che il personaggio ha già e può dichiarare «già sulla scheda»
         taken = (cls.options or {}).get(ch.group, [])
         free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
         info["owned"] = [{"id": sp.id, "name": sp.name, "level": sp.level} for sp in sorted(char.spells, key=lambda x: (x.level, x.name))
                          if sp.class_id in (None, cls.id) and (sp.srd_index or sp.name) not in taken
+                         and sp.level <= info["max_level"]
                          and not (ch.spell_pick == "known" and sp.id in free)]
     return info
 

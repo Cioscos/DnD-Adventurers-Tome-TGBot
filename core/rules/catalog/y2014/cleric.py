@@ -573,7 +573,7 @@ FEATURES = (
             choices=(ChoiceSpec(group="nature_skill", levels={1: 1},
                                 options=lambda _c: ["animal_handling", "nature", "survival"],
                                 label=skill_label, grants="proficient"),
-                     ChoiceSpec(group="nature_cantrip", levels={1: 1}, options=_no_options, spell_pick="extra", spell_level=0))),
+                     ChoiceSpec(group="nature_cantrip", levels={1: 1}, options=_no_options, spell_pick="extra", spell_level=0, spell_list="druid"))),
     feature("nature_bonus_proficiency", CK, ED, 1, "Competenza Bonus / Bonus Proficiency (Natura 1, pag. 62)",
             ("Competenza Bonus (Natura)", "Bonus Proficiency (Nature)"),
             ("Competenza in armature pesanti.", "Proficiency with heavy armor."),

@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.encounter import GmConditionApply
@@ -26,6 +26,8 @@ async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
     char = await db.get(Character, comb.character_id) if comb.character_id else None
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+    if "classes" in sa_inspect(char).unloaded:  # le immunità dei privilegi (Interdizione della Natura) vengono dalle classi
+        await db.refresh(char, ["classes"])
     return char
 
 

@@ -33,7 +33,8 @@ class ChoiceSpec:
     ``extra`` no: Segreti Magici Aggiuntivi); ``options`` non si usa.
     ``owned(ctx)``: abilità che il giocatore ha già sulla scheda e che, per un personaggio esistente prima del catalogo
     (scelta con ``retrofit``, R39), si possono dichiarare «già sulla scheda» invece di aggiungerne altre.
-    ``spell_level``: con ``spell_pick``, il livello massimo dell'incantesimo scelto (0: un trucchetto).
+    ``spell_level``: con ``spell_pick``, il livello massimo dell'incantesimo scelto (0: un trucchetto). ``spell_list``: la
+    classe del cui elenco si pesca (``druid``); il client restringe il catalogo, il server non ha gli elenchi.
     """
     group: str
     levels: dict[int, int]
@@ -44,6 +45,7 @@ class ChoiceSpec:
     spell_pick: Literal["known", "extra"] | None = None
     owned: Callable[["RuleContext"], list[str]] | None = None
     spell_level: int | None = None
+    spell_list: str | None = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language"):

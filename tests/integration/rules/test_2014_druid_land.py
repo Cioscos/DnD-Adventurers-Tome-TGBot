@@ -310,9 +310,8 @@ async def test_a_short_rest_without_recovery_leaves_the_slots_alone(client):
     assert (await _used(client, cid))[1] == 2 and (await _ability(client, cid, "druid.natural_recovery"))["uses"] == 1
 
 
-def test_a_character_read_without_classes_keeps_only_the_immunities_of_its_states():
-    """Un altro PG su cui si applica un effetto è letto senza classi: le immunità dei privilegi non si leggono (né si carica nulla)."""
+def test_the_immunities_of_a_character_with_classes_come_from_states_and_features():
     from types import SimpleNamespace
     from core.rules.states import immune_conditions
-    char = SimpleNamespace(active_states=[{"immune_conditions": ["frightened"]}])
+    char = SimpleNamespace(active_states=[{"immune_conditions": ["frightened"]}], classes=[])
     assert immune_conditions(char) == {"frightened"}

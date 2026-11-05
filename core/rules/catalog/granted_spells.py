@@ -4,7 +4,7 @@ La chiave è l'indice SRD quando esiste: un incantesimo che il giocatore ha già
 I Task 19-42 riempiono il dizionario e lo citano in ``FeatureSpec.granted_spells``."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,8 @@ class GrantedSpell:
     # Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso)
     extra_damage_dice: str | None = None
     extra_damage_type: str | None = None
+    # Componenti («V, S, M»): servono ai controlli di lancio (Incantesimi Bestiali). Le riempie ``_COMPONENTS``.
+    components: str | None = None
 
 
 GRANTED_SPELLS: dict[str, GrantedSpell] = {
@@ -237,3 +239,109 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'alter-self': GrantedSpell(
         'alter-self', {"it": 'Alterare se stessi', "en": 'Alter Self'}, 2, '1 azione', 'Personale', 'Concentrazione, fino a 1 ora', is_concentration=True),
 }
+
+
+# Componenti di ogni incantesimo concesso: dato meccanico («V, S, M»), non testo dei manuali.
+_COMPONENTS: dict[str, str] = {
+    "beast-sense": "S",
+    "speak-with-animals": "V, S",
+    "commune-with-nature": "V, S",
+    "command": "V",
+    "identify": "V, S, M",
+    "augury": "V, S, M",
+    "suggestion": "V, M",
+    "nondetection": "V, S, M",
+    "speak-with-dead": "V, S, M",
+    "confusion": "V, S, M",
+    "arcane-eye": "V, S, M",
+    "legend-lore": "V, S, M",
+    "scrying": "V, S, M",
+    "divine-favor": "V, S",
+    "shield-of-faith": "V, S, M",
+    "magic-weapon": "V, S",
+    "spiritual-weapon": "V, S",
+    "spirit-guardians": "V, S, M",
+    "crusaders-mantle": "V",
+    "freedom-of-movement": "V, S, M",
+    "stoneskin": "V, S, M",
+    "hold-monster": "V, S, M",
+    "flame-strike": "V, S, M",
+    "disguise-self": "V, S",
+    "charm-person": "V, S",
+    "mirror-image": "V, S",
+    "pass-without-trace": "V, S, M",
+    "dispel-magic": "V, S",
+    "blink": "V, S",
+    "polymorph": "V, S, M",
+    "dimension-door": "V",
+    "dominate-person": "V, S",
+    "modify-memory": "V, S",
+    "burning-hands": "V, S",
+    "faerie-fire": "V",
+    "scorching-ray": "V, S",
+    "flaming-sphere": "V, S, M",
+    "daylight": "V, S",
+    "fireball": "V, S, M",
+    "guardian-of-faith": "V",
+    "wall-of-fire": "V, S, M",
+    "animal-friendship": "V, S, M",
+    "barkskin": "V, S, M",
+    "spike-growth": "V, S, M",
+    "plant-growth": "V, S",
+    "wind-wall": "V, S, M",
+    "dominate-beast": "V, S",
+    "grasping-vine": "V, S",
+    "insect-plague": "V, S, M",
+    "tree-stride": "V, S",
+    "fog-cloud": "V, S",
+    "thunderwave": "V, S",
+    "gust-of-wind": "V, S, M",
+    "shatter": "V, S, M",
+    "call-lightning": "V, S",
+    "sleet-storm": "V, S, M",
+    "control-water": "V, S, M",
+    "ice-storm": "V, S, M",
+    "destructive-wave": "V",
+    "bless": "V, S, M",
+    "cure-wounds": "V, S",
+    "lesser-restoration": "V, S",
+    "beacon-of-hope": "V, S",
+    "revivify": "V, S, M",
+    "death-ward": "V, S",
+    "mass-cure-wounds": "V, S",
+    "raise-dead": "V, S, M",
+    "light": "V, M",
+    "hold-person": "V, S, M",
+    "slow": "V, S, M",
+    "cone-of-cold": "V, S, M",
+    "misty-step": "V",
+    "water-walk": "V, S, M",
+    "water-breathing": "V, S, M",
+    "conjure-elemental": "V, S, M",
+    "blur": "V",
+    "silence": "V, S",
+    "create-food-and-water": "V, S",
+    "protection-from-energy": "V, S",
+    "blight": "V, S",
+    "hallucinatory-terrain": "V, S, M",
+    "wall-of-stone": "V, S, M",
+    "spider-climb": "V, S, M",
+    "divination": "V, S, M",
+    "invisibility": "V, S, M",
+    "haste": "V, S, M",
+    "dream": "V, S, M",
+    "meld-into-stone": "V, S",
+    "lightning-bolt": "V, S, M",
+    "stone-shape": "V, S, M",
+    "passwall": "V, S, M",
+    "acid-arrow": "V, S, M",
+    "darkness": "V, M",
+    "stinking-cloud": "V, S, M",
+    "locate-creature": "V, S, M",
+    "web": "V, S, M",
+    "gaseous-form": "V, S, M",
+    "greater-invisibility": "V, S",
+    "cloudkill": "V, S",
+    "alter-self": "V, S",
+}
+GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key)) for key, spell in GRANTED_SPELLS.items()}

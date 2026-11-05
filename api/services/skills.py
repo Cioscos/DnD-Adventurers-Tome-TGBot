@@ -7,7 +7,7 @@ from core.game.stats import roll_ability_mod
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import Character
-from core.game.skills import jack_of_all_trades_part, skill_proficiency_part
+from core.game.skills import jack_of_all_trades_part, skill_roll_part
 from core.rules.modifiers import modifiers_for, passive_adjustment
 
 
@@ -17,8 +17,7 @@ async def check_bonus(session: AsyncSession, char: Character, ability: str, skil
     if skill is None:
         return roll_ability_mod(char, ability) + jack_of_all_trades_part(char) + modifiers_for(char, "ability", ability=ability).flat
     return (
-        roll_ability_mod(char, ability)
-        + skill_proficiency_part(char, skill)
+        skill_roll_part(char, skill, ability)
         + await get_passive_modifiers(session, char, f"character.skill.{skill}")
         + modifiers_for(char, "skill", skill=skill, ability=ability).flat
     )

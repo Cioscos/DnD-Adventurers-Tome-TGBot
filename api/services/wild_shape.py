@@ -5,7 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.rules_states import get_states, remove_state, start_state
+from api.services.rules_turn import spend
 from core.db.models import Character, Companion
+from core.data.skills import SKILL_ABILITY_MAP
 from core.game.stats import effective_ability_mod
 from core.rules.edition import character_edition, class_key
 from core.rules.forms import FormLimits, FormRules
@@ -13,6 +15,15 @@ from core.rules.types import StateSpec
 
 STATE_KEY = "wild_shape"
 _PHYSICAL = {"str": "strength", "dex": "dexterity", "con": "constitution"}
+_ABILITY_FULL = {"str": "strength", "dex": "dexterity", "con": "constitution", "int": "intelligence", "wis": "wisdom",
+                 "cha": "charisma"}
+
+
+def _numbers(raw: object, allowed) -> dict[str, int]:
+    """Solo le voci note con un numero intero: un dato salvato male si scarta, il calcolo normale resta."""
+    if not isinstance(raw, dict):
+        return {}
+    return {k: v for k, v in raw.items() if k in allowed and type(v) is int}
 
 
 def form_limits(char: Character) -> FormLimits | None:
@@ -64,19 +75,31 @@ def end_form(char: Character, form: Companion) -> None:
         remove_state(char, STATE_KEY)
 
 
+def return_to_normal(char: Character, form: Companion) -> None:
+    """Ritorno volontario alla forma normale: nel 2014 costa l'azione bonus (409 ``turn_slot_used`` se è già spesa, la forma
+    resta). Unico punto per «Termina» da Extra e da Turno; le fini automatiche (0 PF, durata, riposo) usano ``end_form``."""
+    if character_edition(char) == "2014" and form_limits(char) is not None:
+        spend(char, "bonus")
+    end_form(char, form)
+
+
 def start_form(char: Character, form: Companion, grant: bool = True) -> None:
     """Avvia lo stato della forma: durata e fine per edizione; nel 2024 i PF temporanei e la CA del Circolo della Luna."""
     limits = form_limits(char)
     edition = character_edition(char)
-    ends = ["rest_short", "rest_long", "unconscious", "manual", *(["incapacitated"] if edition == "2024" else [])]
+    rounds = limits.rounds or None if limits else None
+    # i riposi chiudono la forma in base alla durata (`end_states_on_rest`); senza durata (non druido) la chiudono sempre
+    ends = ["unconscious", "manual", *(["incapacitated"] if edition == "2024" else []),
+            *(["rest_short", "rest_long"] if rounds is None else [])]
     sb = form.statblock or {}
     abilities = {full: sb["abilities"][short] for short, full in _PHYSICAL.items()
                  if isinstance(sb.get("abilities"), dict) and short in sb["abilities"]}
     own_hp = limits is None or limits.own_hp
-    start_state(char, StateSpec(
-        key=STATE_KEY, rounds=limits.rounds or None if limits else None, ends_on=tuple(ends),
-        data={"companion_id": form.id, "abilities": abilities, "mode": "replace" if own_hp else "max", "own_hp": own_hp},
-    ), "druid.wild_shape")
+    data = {"companion_id": form.id, "abilities": abilities, "mode": "replace" if own_hp else "max", "own_hp": own_hp}
+    if limits is not None and own_hp:  # 2014: il druido acquisisce le competenze della bestia (abilità e TS)
+        data["skills"] = _numbers(sb.get("skills"), SKILL_ABILITY_MAP)
+        data["saves"] = {_ABILITY_FULL[k]: v for k, v in _numbers(sb.get("saves"), _ABILITY_FULL).items()}
+    start_state(char, StateSpec(key=STATE_KEY, rounds=rounds, ends_on=tuple(ends), data=data), "druid.wild_shape")
     if grant and limits is not None and not limits.own_hp:
         char.temp_hp = max(char.temp_hp or 0, limits.temp_hp)  # i PF temporanei non si sommano: vale il maggiore
         if limits.ac_wisdom:

@@ -62,6 +62,15 @@ LANDS_STRIDE = RollOptionSpec(
            "en": "Land's Stride: is the save against a plant magically created or manipulated to impede movement?"})
 
 
+def _territory_summary(key: str) -> tuple[str, str]:
+    """Gli incantesimi del territorio per livello da druido, con i nomi del catalogo degli incantesimi concessi."""
+    from core.rules.catalog.granted_spells import GRANTED_SPELLS
+    tiers = list(zip((3, 5, 7, 9), TERRITORY_SPELLS[key]))
+    lead = {"it": "Livello da druido ", "en": "Druid level "}
+    return tuple(lead[lang] + "; ".join(f"{level}: " + ", ".join(GRANTED_SPELLS[s].name[lang] for s in spells)
+                                        for level, spells in tiers) for lang in ("it", "en"))
+
+
 def _territory_rows() -> list[FeatureSpec]:
     """Una riga per territorio (al 2° livello, quando si sceglie) e, senza riga propria, gli incantesimi ai livelli 3, 5, 7, 9."""
     rows: list[FeatureSpec] = []
@@ -69,9 +78,7 @@ def _territory_rows() -> list[FeatureSpec]:
         title = f"{it} / {en} (Circolo della Terra 2, pag. 68)"
         rows.append(feature(
             f"territory_{key}", CK, ED, 2, title, (f"{it} (territorio)", f"{en} (land)"),
-            ("Territorio scelto: al 3°, 5°, 7° e 9° livello ricevi due incantesimi del circolo, sempre preparati e fuori dal limite.",
-             "Chosen land: at levels 3, 5, 7 and 9 you gain two circle spells, always prepared and outside the limit."),
-            subclass="land", option_group="territory", option_key=key))
+            _territory_summary(key), subclass="land", option_group="territory", option_key=key))
         for level, spells in zip((3, 5, 7, 9), TERRITORY_SPELLS[key]):
             rows.append(feature(
                 f"territory_{key}_{level}", CK, ED, level, title, (f"{it} (territorio)", f"{en} (land)"),
@@ -157,7 +164,7 @@ FEATURES = (
             ("Impari un trucchetto da druido in più, fuori dal limite dei trucchetti.",
              "You learn one extra druid cantrip, outside the cantrip limit."),
             subclass="land",
-            choices=(ChoiceSpec(group="bonus_cantrip", levels={2: 1}, options=_no_options, spell_pick="extra", spell_level=0),)),
+            choices=(ChoiceSpec(group="bonus_cantrip", levels={2: 1}, options=_no_options, spell_pick="extra", spell_level=0, spell_list="druid"),)),
     feature("natural_recovery", CK, ED, 2, "Recupero Naturale / Natural Recovery (Circolo della Terra 2, pag. 68)",
             ("Recupero Naturale", "Natural Recovery"),
             ("Durante un riposo breve recuperi slot spesi per un livello totale fino a metà del livello da druido (per eccesso), nessuno di 6° o più. Un uso per riposo lungo.",

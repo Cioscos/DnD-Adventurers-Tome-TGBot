@@ -10,20 +10,23 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
 from api.database import get_db
+from api.schemas.common import HPOp, HPUpdate
 from api.schemas.companion import (
     DICE_RE, MAX_COMPANIONS, CompanionActivate, CompanionAttack, CompanionAttackResult, CompanionCreate,
     CompanionHp, CompanionRead, CompanionUpdate, WildHealRequest, WildHealResult,
 )
-from api.routers.hp import _get_owned_full
+from api.routers.hp import _get_owned_full, update_hp
 from api.routers.items import _option_damage
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, use_options
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
-from api.services.wild_shape import deactivate_other_forms, end_form, form_limits, start_form
+from api.services.wild_shape import (
+    deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
+)
 from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
 from core.rules.companions import companion_stats
 from core.rules.edition import character_edition
@@ -143,7 +146,9 @@ async def update_companion(
     if comp.is_active and comp.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     comp.current_hp = min(comp.current_hp, _effective_max_hp(char, comp))
-    if comp.is_active and not was_active:
+    if comp.is_active and comp.current_hp == 0 and form_own_hp(char):  # a 0 PF la forma finisce, anche se corretta a mano
+        end_form(char, comp)
+    elif comp.is_active and not was_active:
         await deactivate_other_forms(session, char_id, comp.id)
         start_form(char, comp)
     elif was_active and not comp.is_active:
@@ -169,6 +174,8 @@ async def activate_wild_shape(
         raise HTTPException(status_code=409, detail="character_down")
     force = bool(body and body.force)
     limits = form_limits(char)
+    if limits is not None:
+        refuse_if_incapacitated(char)  # chi non può agire non si trasforma
     # Forma Selvatica Elementale (2014): un elementale costa due usi e ha regole sue
     elemental = character_edition(char) == "2014" and is_elemental_form(comp.statblock or {}, comp.srd_index)
     reasons: list[str] = []
@@ -213,12 +220,9 @@ async def deactivate_wild_shape(
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
     if comp.is_active:
-        if character_edition(char) == "2014" and form_limits(char) is not None:
-            try:
-                spend(char, "bonus")  # tornare normali è un'azione bonus; se è già spesa si torna lo stesso
-            except HTTPException:
-                pass
-        end_form(char, comp)
+        if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
+            return _read(char, comp)
+        return_to_normal(char, comp)  # 2014: azione bonus; già spesa = 409 e la forma resta
         _history(session, char_id, "companion_hp", "Forma selvatica terminata")
     return _read(char, comp)
 
@@ -235,7 +239,8 @@ async def wild_heal(
     forma di 1d8 per livello dello slot. Il server tira; lo slot si prende con un UPDATE condizionato."""
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
-    if comp.kind != "wild_shape" or not comp.is_active:
+    active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
+    if active is None or active.id != comp.id:  # lo stato attivo è la verità, non il flag della riga
         raise HTTPException(status_code=409, detail={"code": "form_not_active"})
     if not any(spec.key == "druid.combat_wild_shape" for spec, _row in active_features(char)):
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
@@ -244,6 +249,8 @@ async def wild_heal(
     if not candidates:
         raise HTTPException(status_code=409, detail={"code": "no_slot"})
     refuse_if_incapacitated(char)
+    if comp.current_hp >= _effective_max_hp(char, comp):  # non si spende nulla per curare chi è già pieno
+        raise HTTPException(status_code=409, detail={"code": "form_full_hp"})
     spend(char, "bonus")  # 409 turn_slot_used: la risposta annulla tutto, nulla è ancora speso
     taken = await session.execute(
         update(SpellSlot).where(SpellSlot.id == candidates[0].id, SpellSlot.used < SpellSlot.total)
@@ -282,9 +289,17 @@ async def companion_hp(
     body: CompanionHp,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
+    active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
+    if body.op == "damage" and active is not None and active.id == comp.id and form_own_hp(char):
+        # il danno alla forma attiva ha un solo percorso, quello di PATCH /hp: PF temporanei, chiusura a 0 PF, eccesso al personaggio
+        await update_hp(char_id, HPUpdate(op=HPOp.DAMAGE, value=body.value), user_id, session, lang)
+        out = _read(char, comp)
+        out.down = comp.current_hp == 0
+        return out
     if body.op == "damage":
         absorbed = min(comp.temp_hp, body.value)
         comp.temp_hp -= absorbed

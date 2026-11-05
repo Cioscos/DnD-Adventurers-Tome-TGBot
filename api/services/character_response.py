@@ -22,7 +22,7 @@ from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
 from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats
 from core.game.item_bonuses import item_bonus_total
-from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
+from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_part
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext
@@ -31,7 +31,6 @@ from core.rules.modifiers import (
 )
 from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import initiative_bonus
-from core.game.stats import roll_ability_mod
 
 
 async def build_character_response(
@@ -129,7 +128,7 @@ async def build_character_response(
         if val:
             response.skills_homebrew_modifiers[slug] = val
         response.skill_bonuses[slug] = (
-            roll_ability_mod(char, ability) + skill_proficiency_part(char, slug) + val
+            skill_roll_part(char, slug, ability) + val
             + modifiers_for(char, "skill", skill=slug, ability=ability).flat
         )
     for slug in PASSIVE_SKILLS:

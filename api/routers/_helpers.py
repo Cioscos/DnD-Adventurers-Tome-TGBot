@@ -19,6 +19,7 @@ from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
+from core.game.skills import save_roll_part
 from core.game.stats import effective_ability_mod, roll_ability_mod
 from core.rules.edition import character_edition
 from core.rules.spellcasting import concentration_dc
@@ -144,10 +145,8 @@ async def initiative_bonus(session: AsyncSession, char: Character) -> int:
 async def saving_throw_bonus(session: AsyncSession, char: Character, ability: str, roll: str = "save") -> int:
     """Saving throw bonus as the sheet shows it: effective modifier,
     proficiency, homebrew passive modifiers and rule modifiers."""
-    proficient = bool((char.saving_throws or {}).get(ability, False))
     return (
-        roll_ability_mod(char, ability)
-        + (char.proficiency_bonus if proficient else 0)
+        save_roll_part(char, ability)
         + await get_passive_modifiers(session, char, f"character.saving_throw.{ability}")
         + item_bonus_total(char.items, f"save.{ability}")
         + modifiers_for(char, roll, ability=ability).flat

@@ -78,6 +78,7 @@ async def test_the_heal_needs_an_active_form_a_slot_and_a_free_bonus_action(clie
     assert r.status_code == 409 and r.json()["detail"]["code"] == "form_not_active"
     await _activate(client, cid, form)
     await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": False})
+    await _hurt(client, cid, form, 5)
     r = await _heal(client, cid, form, 3)  # al 4° livello non ha slot di 3° livello
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_slot"
     assert (await _slots(client, cid)) == {1: 0, 2: 0}
