@@ -20,7 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
-from api.services.rules_states import end_states, on_damage
+from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.rules_turn import get_turn, set_damaged
 from api.services.condition_effects import release_concentration_effects
@@ -693,7 +693,7 @@ async def rest(
         reset_target_immunity(char)  # le «24 ore» di un effetto su altri
         # Break concentration
         end_concentration(char)
-        end_states(char, "rest_short", "rest_long")
+        end_states_on_rest(char, "long")
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
@@ -736,7 +736,7 @@ async def rest(
 
     else:
         # D8: il riposo breve non interrompe la concentrazione.
-        end_states(char, "rest_short")
+        end_states_on_rest(char, "short")
         # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
         for slot in char.spell_slots:
             if slot.is_pact:

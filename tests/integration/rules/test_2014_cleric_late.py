@@ -152,8 +152,8 @@ async def test_cloak_of_shadows_ends_when_you_cast(client):
     cid = await _cleric(client, 6, "trickery")
     await _use(client, cid, "cleric.cloak_of_shadows")
     spell = await _spell(client, cid, "Dardo", "force", 1, "1d4")
-    assert "cleric.cloak_cast" in await _roll_keys(client, cid, "cast", spell_id=spell)
-    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 1, "options": ["cleric.cloak_cast"]})
+    assert "cleric.cloak_cast" not in await _roll_keys(client, cid, "cast", spell_id=spell)  # il server chiude lo stato da solo
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 1})
     assert r.status_code == 200, r.text
     assert await _states(client, cid) == []
 

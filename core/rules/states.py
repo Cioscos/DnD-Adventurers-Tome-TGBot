@@ -20,6 +20,12 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
              "ends_on": list(spec.ends_on), "data": dict(spec.data), "name": name,
              "blocks_casting": spec.blocks_casting, "exhaustion_on_end": spec.exhaustion_on_end,
              "immune_conditions": list(spec.immune_conditions), "end_slot": spec.end_slot}
+    if spec.condition:
+        # rinnovare lo stato non cambia di chi era l'invisibilità: la prima volta ricorda se c'era già
+        previous = next((s for s in get_states(char) if s["key"] == spec.key and s.get("condition")), None)
+        was_on = previous["condition_was_on"] if previous else bool((char.conditions or {}).get(spec.condition))
+        state.update(condition=spec.condition, condition_was_on=was_on)
+        char.conditions = {**(char.conditions or {}), spec.condition: True}
     char.active_states = [*(s for s in get_states(char) if s["key"] != spec.key), state]
     return state
 
@@ -38,6 +44,15 @@ def immune_conditions(char: Any) -> set[str]:
 
 def casting_blocked_by(char: Any) -> bool:
     return any(s.get("blocks_casting") for s in char.active_states or [])
+
+
+def settle_closed(char: Any, closed: list[dict]) -> None:
+    """Ciò che lasciano gli stati appena chiusi: la spossatezza dichiarata e la fine della condizione che imponevano."""
+    charge_exhaustion(char, closed)
+    gone = {s["condition"] for s in closed if s.get("condition") and not s.get("condition_was_on")}
+    gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
+    if gone:
+        char.conditions = {**(char.conditions or {}), **{c: False for c in gone}}
 
 
 def charge_exhaustion(char: Any, closed: list[dict]) -> None:

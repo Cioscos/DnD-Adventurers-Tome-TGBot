@@ -13,7 +13,7 @@ from api.services.session_allies import ally_target
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
-from core.rules.states import begin_state, charge_exhaustion
+from core.rules.states import begin_state, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 
 
@@ -29,14 +29,33 @@ def get_states(char) -> list[dict]:
     return list(char.active_states or [])
 
 
-def end_states(char, *reasons: str) -> list[str]:
-    """Chiude gli stati che finiscono per uno dei ``reasons``. Restituisce le chiavi chiuse."""
+SHORT_REST_ROUNDS = 600  # un'ora, a 6 secondi per round
+LONG_REST_ROUNDS = 4800  # otto ore
+
+
+def end_states(char, *reasons: str, within: int | None = None) -> list[str]:
+    """Chiude gli stati che finiscono per uno dei ``reasons`` e, con ``within``, quelli che hanno a tempo al più ``within``
+    round da vivere. Restituisce le chiavi chiuse."""
     states = get_states(char)
-    kept = [s for s in states if not set(s["ends_on"]) & set(reasons)]
+    kept = [s for s in states if not set(s["ends_on"]) & set(reasons)
+            and not (within is not None and s["rounds_left"] is not None and s["rounds_left"] <= within)]
     if len(kept) != len(states):
         char.active_states = kept  # nuova lista: SQLAlchemy non vede le mutazioni in place
-        charge_exhaustion(char, [s for s in states if s not in kept])
+        settle_closed(char, [s for s in states if s not in kept])
     return [s["key"] for s in states if s not in kept]
+
+
+def end_states_on_rest(char, rest: str) -> list[str]:
+    """Il riposo chiude gli stati che lo nominano e quelli che durano meno di lui: un'ora per il riposo breve, otto per il
+    lungo. Restano gli stati senza durata (a mano) e quelli che durano oltre, come i sette giorni di Intervento Divino."""
+    if rest == "long":
+        return end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS)
+    return end_states(char, "rest_short", within=SHORT_REST_ROUNDS)
+
+
+def end_on_action(char, action: str) -> None:
+    """Chi attacca (``attack``) o lancia (``cast``) chiude gli stati che finiscono così (Manto di Ombre)."""
+    end_states(char, action)
 
 
 def state_name(char, state: dict) -> str:
@@ -59,7 +78,7 @@ def tick_states(char) -> list[str]:
             closed.append(s)
     if any(s["rounds_left"] is not None for s in get_states(char)):
         char.active_states = states
-        charge_exhaustion(char, closed)
+        settle_closed(char, closed)
     return expired
 
 
@@ -101,7 +120,7 @@ def remove_state(char, key: str, *, by_player: bool = False) -> None:
     if by_player and any((s.get("data") or {}).get("internal") for s in closed):  # un segno interno non è del giocatore
         raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
     char.active_states = [s for s in states if s["key"] != key]
-    charge_exhaustion(char, closed)
+    settle_closed(char, closed)
     slot = closed[0].get("end_slot")
     if by_player and slot:
         try:
@@ -126,6 +145,8 @@ async def _swap_exclusive_target(session: AsyncSession, char, feature_key: str, 
         if old is not None:
             old.active_states = [s for s in old.active_states or [] if s.get("feature_key") != feature_key]
     if target is not None:
+        # lo stato ora sta sull'alleato: la nota che lo stesso privilegio aveva lasciato su chi lo usa cade
+        char.active_states = [s for s in char.active_states or [] if s.get("feature_key") != feature_key]
         held[feature_key] = target.id
     else:
         held.pop(feature_key, None)
@@ -213,13 +234,16 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         spell_state = on_use.state(ctx, {}) if callable(on_use.state) else on_use.state
         start_concentration(char, None, spell_state.rounds if spell_state else None,
                             {"feature_key": feature_key, "name": spec.name["it"]})
+    if on_use.ends_concentration or on_use.concentration:  # come /spells/{id}/use: cadono gli effetti dell'incantesimo di prima
+        from api.services.condition_effects import release_concentration_effects  # import locale
+        await release_concentration_effects(session, char)
     if on_use.ally_exclusive:
         await _swap_exclusive_target(session, char, feature_key, target)
     if on_use.state:
         own = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
         name = (own.name if own is not None and own.name else None) or spec.name["it"]
         # `rolled`: il tiro del privilegio, per chi decide lo stato dall'esito (Intervento Divino); mai dal client
-        given = {**(params or {}), "rolled": sum(result.rolls)}
+        given = {**(params or {}), "rolled": sum(result.rolls), "maximized": maximize}
         state_spec = on_use.state(ctx, given) if callable(on_use.state) else on_use.state
         result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
     if on_use.target_effect:

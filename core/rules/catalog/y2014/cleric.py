@@ -110,7 +110,7 @@ def _radiance_state(ctx: RuleContext, _params: dict) -> StateSpec:
 def _wrath_state(ctx: RuleContext, params: dict) -> StateSpec:
     return StateSpec("wrath_of_the_storm", rounds=1, ends_on=("manual", "new_turn"),
                      data={"dc": spell_dc(ctx), "save": "dexterity", "damage_type": params.get("damage_type"),
-                           "maximized": bool(params.get("destructive")), "others": [WRATH_OF_THE_STORM]})
+                           "maximized": bool(params.get("maximized")), "others": [WRATH_OF_THE_STORM]})
 
 
 def _wrath_maximized(ctx: RuleContext, params: dict) -> bool:
@@ -124,7 +124,7 @@ def _flare_state(ctx: RuleContext, _params: dict) -> StateSpec:
 
 
 def _corona_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec("corona_of_light", rounds=10, ends_on=("incapacitated", "manual"), end_slot="action",
+    return StateSpec("corona_of_light", rounds=10, ends_on=("manual",), end_slot="action",
                      data={"others": [f"{CK}.corona_of_light"]})
 
 
@@ -170,8 +170,8 @@ def _ages_bonus(ctx: RuleContext) -> int:
 def _read_thoughts_state(ctx: RuleContext, _params: dict) -> StateSpec:
     """Il bersaglio ha fallito il TS (lo segna il GM, D1): per 1 minuto leggi i suoi pensieri, e un'azione chiude lo stato
     lanciando suggestione senza slot (R43). Chi ha superato il TS non è più bersaglio per un giorno: lo dice l'esito."""
-    return StateSpec("read_thoughts", rounds=10, ends_on=("incapacitated", "manual"),
-                     data={"dc": spell_dc(ctx), "save": "wisdom", "free_cast": "suggestion",
+    return StateSpec("read_thoughts", rounds=10, ends_on=("manual",),
+                     data={"dc": spell_dc(ctx), "save": "wisdom", "free_cast": "suggestion", "ends_on_passed_save": True,
                            "others": [f"{CK}.read_thoughts"]})
 
 
@@ -198,11 +198,8 @@ def _trickster_state(_ctx: RuleContext, params: dict) -> StateSpec:
 
 
 def _cloak_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec("cloak_of_shadows", rounds=2, ends_on=("incapacitated", "manual"), data={"others": [f"{CK}.cloak_of_shadows"]})
-
-
-def _end_cloak(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    ctx.char.active_states = [s for s in ctx.char.active_states or [] if s.get("key") != "cloak_of_shadows"]
+    return StateSpec("cloak_of_shadows", rounds=2, ends_on=("attack", "cast", "manual"), condition="invisible",
+                     data={"others": [f"{CK}.cloak_of_shadows"]})
 
 
 # ---------------------------------------------------------------------------
@@ -254,13 +251,8 @@ THUNDERBOLT_STRIKE = RollOptionSpec(
     effect=lambda _c, _i: {"it": "Il bersaglio è spinto di 3 m lontano da te.", "en": "The target is pushed 10 ft away from you."})
 
 CLOAK_ATTACK = RollOptionSpec(
-    key=f"{CK}.cloak_attack", phase="before", rolls=("attack",), mode="advantage", on_confirm=_end_cloak,
+    key=f"{CK}.cloak_attack", phase="before", rolls=("attack",), mode="advantage",
     label={"it": "Manto di Ombre: attacchi da invisibile (l'invisibilità finisce)", "en": "Cloak of Shadows: attack while invisible (it ends)"},
-    available=lambda c: state_on(c, "cloak_of_shadows"))
-
-CLOAK_CAST = RollOptionSpec(
-    key=f"{CK}.cloak_cast", phase="before", rolls=("cast",), on_confirm=_end_cloak,
-    label={"it": "Manto di Ombre: lanci un incantesimo (l'invisibilità finisce)", "en": "Cloak of Shadows: cast a spell (it ends)"},
     available=lambda c: state_on(c, "cloak_of_shadows"))
 
 DUPLICITY_ADVANTAGE = RollOptionSpec(
@@ -511,7 +503,7 @@ FEATURES = (
             ("Manto di Ombre", "Cloak of Shadows"),
             ("Azione: spendi un uso e sei invisibile fino alla fine del tuo prossimo turno; finisce se attacchi o lanci un incantesimo.",
              "Action: spend a use and be invisible until the end of your next turn; it ends if you attack or cast a spell."),
-            "action", subclass="trickery", roll_options=(CLOAK_ATTACK, CLOAK_CAST),
+            "action", subclass="trickery", roll_options=(CLOAK_ATTACK,),
             on_use=OnUse(slot="action", spends=POOL, state=_cloak_state)),
     feature("invoke_duplicity", CK, ED, 2,
             "Incanalare Divinità: Invocare Duplicato / Channel Divinity: Invoke Duplicity (Inganno 2, pag. 61)",

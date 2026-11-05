@@ -54,6 +54,7 @@ from api.schemas.container import ItemMoveRequest
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions, end_hide
+from api.services.rules_states import end_on_action
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
 from core.game.attacks import martial_arts_die
 from core.rules.edition import character_edition
@@ -832,6 +833,7 @@ async def attack_with_weapon(
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
     end_hide(session, char)
+    end_on_action(char, "attack")
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
     if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
         if not offhand:
@@ -981,6 +983,7 @@ async def attack_unarmed(
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
     end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio
+    end_on_action(char, "attack")
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
     if not (body and body.with_inspiration):
         spend(char, "attack", own_slot=_own_slot_attack(char, body))  # il rilancio con ispirazione è lo stesso attacco

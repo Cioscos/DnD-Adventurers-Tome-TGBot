@@ -105,6 +105,9 @@ async def drop_pending_effect(db: AsyncSession, eff: ConditionEffect) -> None:
             add_target_immunity(source, eff.immunity_key,
                                 f"character:{eff.character_id}" if eff.character_id is not None
                                 else f"combatant:{eff.combatant_id}")
+            # il TS superato toglie lo stato che autorizzava il seguito, se lo dichiara (Lettura del Pensiero: il lancio gratuito)
+            source.active_states = [s for s in source.active_states or []
+                                    if not (s.get("feature_key") == eff.immunity_key and (s.get("data") or {}).get("ends_on_passed_save"))]
     await _delete_effect(db, eff)
     await db.flush()
 
