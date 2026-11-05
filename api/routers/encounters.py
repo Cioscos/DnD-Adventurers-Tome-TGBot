@@ -47,6 +47,7 @@ from api.services.rules_targets import (
     pc_char as _pc_char, set_condition as _set_condition,
 )
 from api.services.rules_turn import reset_turn, set_surprised
+from api.services.turn_start import apply_turn_start
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -458,6 +459,7 @@ async def start_encounter(
         first_char = await db.get(Character, first.character_id)
         if first_char is not None:
             reset_turn(first_char)  # il primo turno non passa da process_edge
+            await apply_turn_start(db, first_char)
 
     await db.flush()
     if first is not None:

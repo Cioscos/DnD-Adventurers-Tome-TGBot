@@ -77,6 +77,22 @@ def grant_action(char) -> dict:
     return st
 
 
+def once_used(char, key: str) -> bool:
+    """L'effetto «una volta per turno» ``key`` è già stato usato in questo turno."""
+    return key in get_turn(char)["once_per_turn"]
+
+
+def forgo_attack(char) -> dict:
+    """Rinuncia a un attacco dell'azione Attacco (Colpo del Comandante): conta fra quelli dell'azione, non fra quelli fatti
+    (l'Ira 2014 guarda gli attacchi fatti). 409 ``no_attack_left`` se non ne restano."""
+    st = get_turn(char)
+    if st["action_attacks"] >= attacks_allowed(char):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "no_attack_left"})
+    st["action_attacks"] += 1
+    _save(char, st)
+    return st
+
+
 def mark_once(char, key: str) -> bool:
     """Registra un effetto «una volta per turno»; False se era già stato usato."""
     st = get_turn(char)

@@ -162,6 +162,7 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     if kind == "action":  # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale)
         casters = caster_stats(char)
         turn["action_spell_class"] = spell.class_id or (casters[0].class_id if len(casters) == 1 else None)
+        turn["action_spell_level"] = spell.level  # Magia da Guerra: 0 è un trucchetto
     char.turn_state = turn
 
 

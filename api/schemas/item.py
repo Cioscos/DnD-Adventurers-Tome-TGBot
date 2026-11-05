@@ -249,4 +249,5 @@ class WeaponAttackResult(BaseModel):
     grazed: bool | None = absent_when_none()  # mancato, con il danno di un'opzione (Graze)
     effect: str | None = absent_when_none()  # colpo senz'armi 2024: `grapple` o `shove`, senza tiro per colpire
     save_dc: int | None = absent_when_none()  # ... e la CD del TS del bersaglio
+    rerolled: list[list[int]] | None = absent_when_none()  # [vecchio, nuovo] dei dadi bassi ritirati da un privilegio (Armi Possenti)
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server

@@ -133,6 +133,9 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
         if pc is not None:
             pc.active_states = list(snap["active_states"])
             set_damaged(pc, snap["damaged"])
+            healed = snap.get("healed")  # la cura d'inizio turno: si toglie solo se i PF sono ancora quelli che ha dato
+            if healed and pc.current_hit_points == healed["after"]:
+                pc.current_hit_points = healed["before"]
             if "exhaustion" in snap:  # la spossatezza addebitata dagli stati chiusi dall'avanzamento
                 restore_exhaustion(pc, snap["exhaustion"])
                 if not snap["is_dead"] and pc.is_dead and snap["exhaustion"] < 6:

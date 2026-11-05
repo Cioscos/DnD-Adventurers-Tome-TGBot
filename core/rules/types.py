@@ -180,6 +180,11 @@ class OnUse:
     ``maximize_if(ctx, params)``: i dadi tirati dall'uso valgono il massimo e l'uso spende anche un uso di ``maximize_cost``
     (Collera Distruttiva su Collera della Tempesta); senza usi sufficienti l'uso è rifiutato prima di spendere (409 ``no_uses``).
     ``choices``: scelte da fare all'uso, validate prima di spendere qualcosa (422 ``invalid_choice``).
+    ``once_per_turn``: l'uso vale una volta per turno anche con più usi disponibili (Azione Impetuosa dal 17°); il secondo è
+    rifiutato (409 ``once_per_turn``) prima di spendere. ``forgoes_attack``: l'uso rinuncia a un attacco dell'azione Attacco
+    (Colpo del Comandante) e senza attacchi ancora disponibili è rifiutato (409 ``no_attack_left``). ``notes(ctx, params) ->
+    [chiave]``: esiti da mostrare, come chiavi che il client traduce (Carica Arcana). ``gives(ctx, tirato) -> n``: valore
+    da dare a un altro (PF temporanei di Incoraggiamento): l'app lo mostra e non scrive nulla sulla scheda altrui.
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
     ``state``: uno ``StateSpec`` oppure ``f(ctx, params) -> StateSpec`` quando dipende dal livello o da una scelta fatta
@@ -206,6 +211,10 @@ class OnUse:
     maximize_if: "Callable[[RuleContext, dict], bool] | None" = None
     maximize_cost: str | None = None
     choices: "tuple[UseChoice, ...]" = ()
+    once_per_turn: bool = False
+    forgoes_attack: bool = False
+    notes: "Callable[[RuleContext, dict], list[str]] | None" = None
+    gives: "Callable[[RuleContext, int], int] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -222,7 +231,8 @@ class Modifier:
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
     ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
-    ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
+    ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
+    Possenti); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
     ``fly_speed`` (velocità di volo pari a quella a terra).
     ``when`` limita l'effetto (di solito su ``ctx.roll``); senza, vale sempre."""
     target: str
@@ -408,6 +418,8 @@ class FeatureSpec:
     at_will_spells: tuple[str, ...] = ()  # ``srd_index`` degli incantesimi lanciabili a volontà, senza slot (Mille Forme)
     acts_when_surprised: str | None = None  # 2014: con quello stato attivo il turno da sorpreso non toglie le azioni
     zero_hp_save: ZeroHpSave | None = None
+    # PF che il privilegio cura all'inizio di ogni turno di chi lo ha (Sopravvissuto); 0 se la condizione non c'è
+    turn_start_heal: "Callable[[RuleContext], int] | None" = None
     # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce
     ability_bonus: dict[str, int] | None = None
     ability_cap: int = 20

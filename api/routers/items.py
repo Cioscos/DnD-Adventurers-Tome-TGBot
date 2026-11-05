@@ -626,9 +626,11 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
                            else unarmed_attack_profile(char))[0]
             if pending.get("offhand"):
                 ability_mod = min(ability_mod, 0)
+            rerolled: list[list[int]] = []
             result.damage_rolls, result.damage_bonus = _base_damage(
                 char, item, result.damage_dice, pending["ability"], ability_mod, result.magic_bonus, roll["is_critical"],
-                pending["attack_mode"])
+                pending["attack_mode"], pending["grip"], bool(pending.get("offhand")), rerolled)
+            result.rerolled = rerolled or None
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
             extra_rolls, extra_total, result.damage_total = _option_damage(
                 char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus))
@@ -670,13 +672,16 @@ def _second_attack(char: Character, opts: AppliedOptions, pending: dict, item: I
 
 def _base_damage(
     char: Character, item: Item | None, damage_dice_str: str, ability: str, ability_mod: int, magic_bonus: int,
-    is_critical: bool, attack_mode: str | None = None,
+    is_critical: bool, attack_mode: str | None = None, grip: str = "one", offhand: bool = False,
+    rerolled: list[list[int]] | None = None,
 ) -> tuple[list[int], int]:
     """Dadi e bonus del danno dell'arma o del colpo senz'armi. Il danno piatto '1' non ha dadi da raddoppiare.
 
-    ``attack_mode``: i privilegi che valgono solo in mischia (Ira, Critico Brutale) lo leggono dal contesto."""
+    ``attack_mode``, ``grip``, ``offhand``: i privilegi che valgono solo in certe condizioni (Ira e Critico Brutale in
+    mischia, Duellare con una mano, Combattere con Due Armi con l'altra) li leggono dal contesto. ``rerolled`` riceve
+    ``[vecchio, nuovo]`` per ogni dado che un privilegio ha fatto ritirare (Combattere con Armi Possenti)."""
     dice_bonus = 0
-    applied = modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode)
+    applied = modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand)
     if damage_dice_str == "1":
         damage_rolls = [1]
     else:
@@ -686,6 +691,12 @@ def _base_damage(
             # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
             if applied.crit_dice and (die := _DICE_RE.match(damage_dice_str.strip())):
                 damage_rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
+        if applied.damage_reroll and (die := _DICE_RE.match(damage_dice_str.strip())):
+            for i, value in enumerate(damage_rolls):  # una volta sola: il nuovo risultato vale anche se è ancora basso
+                if value <= applied.damage_reroll:
+                    damage_rolls[i] = random.randint(1, int(die.group(2)))
+                    if rerolled is not None:
+                        rerolled.append([value, damage_rolls[i]])
     return damage_rolls, (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
                           + applied.flat)
 
@@ -814,13 +825,15 @@ async def attack_with_weapon(
     # Damage roll
     option_rolls: list[int] = []
     option_total = 0
+    rerolled: list[list[int]] = []
     if is_fumble:
         damage_rolls = [0]
         damage_bonus = 0
         damage_total = 0
     else:
         damage_rolls, damage_bonus = _base_damage(
-            char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical, resolved_mode)
+            char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical, resolved_mode, grip, offhand,
+            rerolled)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
@@ -909,6 +922,7 @@ async def attack_with_weapon(
         damage_rolls=damage_rolls,
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
+        rerolled=rerolled or None,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
     ), item, ability, resolved_mode, grip, opts, offhand)
@@ -952,7 +966,7 @@ async def attack_unarmed(
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
-    applied = modifiers_for(char, "attack", ability=ability)
+    applied = modifiers_for(char, "attack", ability=ability, attack_mode="melee")
     opts = use_options(session, char, "attack", body, ability=ability, attack_mode="melee", grip="one")
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)

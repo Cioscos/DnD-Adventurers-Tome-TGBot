@@ -240,6 +240,7 @@ class TurnBlock(BaseModel):
     bonus_spell_cast: bool = False
     free_interaction_used: bool = False
     damaged: bool = False
+    action_spell_level: Optional[int] = None  # livello dell'ultimo incantesimo lanciato con l'azione in questo turno (0: trucchetto)
     pending_attack: Optional[dict] = None
     last_roll: Optional[dict] = None  # la domanda «Riuscito?» resta finché ``refundable`` non è vuoto
 

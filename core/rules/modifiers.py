@@ -50,6 +50,7 @@ class Applied:
     replace_die: int | None = None  # d20 dichiarato (Portento): nessun dado si tira
     min_total: int | None = None  # totale minimo di una prova (Potenza Indomabile)
     crit_dice: int = 0  # dadi dell'arma in più al critico (Critico Brutale)
+    damage_reroll: int = 0  # i dadi dell'arma che mostrano al più questo valore si ritirano una volta (Armi Possenti)
     carry_double: bool = False
     fly_speed: bool = False
     maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
@@ -248,6 +249,9 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             counted = True
         elif m.target == "crit_dice":
             out.crit_dice += m.value(mctx) if callable(m.value) else m.value
+            counted = True
+        elif m.target == "damage_reroll":
+            out.damage_reroll = max(out.damage_reroll, m.value(mctx) if callable(m.value) else m.value)
             counted = True
         elif m.target == "crit_min":
             out.crit_min = min(out.crit_min, m.value(mctx) if callable(m.value) else m.value)

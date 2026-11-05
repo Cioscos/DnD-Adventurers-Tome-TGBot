@@ -8,7 +8,9 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
-from api.services.rules_turn import grant_action, set_damaged, spend
+from api.services.rules_turn import (
+    attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
+)
 from api.services.session_allies import ally_target
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
@@ -171,6 +173,7 @@ class UseResult:
     state: dict | None = None
     notes: list[str] = field(default_factory=list)
     targets: list[str] = field(default_factory=list)  # chiavi per ``POST /target-effects``
+    given: int | None = None  # valore da dare a un altro (``OnUse.gives``): l'app lo mostra e non scrive nulla
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -186,6 +189,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         raise _err(status.HTTP_409_CONFLICT, "needs_panel")
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
+    if on_use.once_per_turn and once_used(char, feature_key):
+        raise _err(status.HTTP_409_CONFLICT, "once_per_turn")
+    if on_use.forgoes_attack and get_turn(char)["action_attacks"] >= attacks_allowed(char):
+        raise _err(status.HTTP_409_CONFLICT, "no_attack_left")
     if on_use.available and not on_use.available(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)):
         raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
@@ -215,6 +222,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
     if on_use.slot:
         spend(char, on_use.slot)  # 409 turn_slot_used prima di toccare gli usi
+    if on_use.once_per_turn:
+        mark_once(char, feature_key)
+    if on_use.forgoes_attack:
+        forgo_attack(char)
     if ability is not None and ability.max_uses is not None and ability.uses is not None:
         ability.uses -= cost
     if maximize and extra.max_uses is not None and extra.uses is not None:
@@ -234,6 +245,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             grant_action(char)
     if dice:
         record_dice(char, [(f"d{dice[1]}", r) for r in result.rolls])
+    if on_use.gives:
+        result.given = max(0, on_use.gives(ctx, sum(result.rolls)))
+    if on_use.notes:
+        result.notes += on_use.notes(ctx, params or {})
     if on_use.heal:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]

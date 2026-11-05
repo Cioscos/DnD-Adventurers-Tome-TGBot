@@ -242,7 +242,8 @@ async def update_hp(
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
             rolls, reduction = roll_option_dice(char, opts)
-            option_after = max(0, scale_damage(raw, opts.multiplier) - reduction - opts.bonus)
+            # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
+            option_after = max(0, scale_damage(raw, opts.multiplier) - max(0, reduction + opts.bonus))
             option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after)
             # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
             raw = option_after

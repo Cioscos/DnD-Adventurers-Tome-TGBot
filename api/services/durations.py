@@ -15,6 +15,7 @@ from api.services.condition_effects import (
 )
 from api.services.effects import _add_history
 from api.services.rules_states import end_states, tick_states
+from api.services.turn_start import apply_turn_start
 from core.rules.edition import character_edition
 from core.rules.states import exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
@@ -157,6 +158,9 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "start":
         reset_turn(char)
+        before_hp = char.current_hit_points
+        if await apply_turn_start(db, char):  # Sopravvissuto: la cura d'inizio turno si annulla con l'avanzamento
+            undo.char_states[str(char.id)]["healed"] = {"before": before_hp, "after": char.current_hit_points}
         expired += tick_states(char)
         entry, ended = _tick_concentration(db, char)
         if entry is not None:
