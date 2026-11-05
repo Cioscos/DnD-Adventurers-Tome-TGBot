@@ -36,6 +36,11 @@ class SpellRead(BaseModel):
     school: Optional[str] = None
     srd_index: Optional[str] = None
     higher_levels_dice: Optional[str] = None
+    class_id: Optional[int] = None
+    always_prepared: bool = False
+    # CD e attacco della classe dell'incantesimo; li riempie il server dove serve la scheda.
+    save_dc: Optional[int] = None
+    attack_bonus: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
@@ -59,6 +64,8 @@ class SpellCreate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    class_id: Optional[int] = None
+    always_prepared: bool = False
 
 
 class SpellUpdate(BaseModel):
@@ -80,18 +87,28 @@ class SpellUpdate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    class_id: Optional[int] = None
+    always_prepared: Optional[bool] = None
 
 
-class SpellUseRequest(BaseModel):
-    # slot_level è obbligatorio per il lancio normale (validato nel router con
-    # 400, non 422, per coerenza con gli altri errori di dominio dell'endpoint).
+class SpellUseRequest(RollOptionsBody):
+    """Le opzioni sono quelle di ``roll="cast"``. ``slot_id`` sceglie il pool; ``slot_level`` da solo prende il primo
+    con posto. Uno dei due è obbligatorio per un incantesimo di livello (400, non 422, come gli altri errori di
+    dominio dell'endpoint). ``confirm``: avvisi di ``cast_warnings`` accettati dal giocatore."""
+    slot_id: int | None = None
     slot_level: int | None = None
     as_ritual: bool = False
+    confirm: list[str] = Field(default_factory=list, max_length=10)
 
 
 class SpellAttackRequest(RollOptionsBody):
+    """``options``: ``roll="attack"``; ``cast_options``: ``roll="cast"``."""
+    slot_id: int | None = None
     slot_level: int | None = None
     ritual: bool = False
+    confirm: list[str] = Field(default_factory=list, max_length=10)
+    cast_options: list[str] = Field(default_factory=list, max_length=30)
+    cast_option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
     die: int | None = Field(None, ge=1, le=20)
     with_inspiration: bool = False
     mode: RollMode = "normal"
@@ -150,6 +167,11 @@ class RollDamageRequest(RollOptionsBody):
                 f"(e.g. '2d6', '1d8+3'), got {v!r}"
             )
         return v.strip()
+
+
+class LastDamageBody(RollOptionsBody):
+    """``reroll``: posizioni dei dadi di danno (in ``main_rolls`` + ``extra_rolls``) da ritirare."""
+    reroll: list[int] = Field(default_factory=list, max_length=30)
 
 
 class RollDamageResult(BaseModel):

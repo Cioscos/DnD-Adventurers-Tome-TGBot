@@ -21,6 +21,7 @@ from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_mod
 from core.rules.edition import character_edition
+from core.rules.spellcasting import concentration_dc
 from core.rules.modifiers import modifiers_for
 from core.rules.weapons import has_property, martial_arts_level
 
@@ -226,7 +227,7 @@ async def roll_concentration_save(
     mode: RollMode = "normal",
     dice: list[int] | None = None,
 ) -> ConcentrationSaveResult:
-    """Roll a CON save vs DC=max(10, damage//2). RAW: natural 20 and 1 have
+    """Roll a CON save vs ``concentration_dc`` (2024: capped at 30). RAW: natural 20 and 1 have
     no special effect on saving throws, only the total counts.
 
     Side effects:
@@ -236,7 +237,7 @@ async def roll_concentration_save(
     Returns a ConcentrationSaveResult with die, bonus, total, is_critical,
     is_fumble, description, dc, success, lost_concentration.
     """
-    dc = max(10, damage // 2)
+    dc = concentration_dc(character_edition(char), damage)
     con_mod = await saving_throw_bonus(session, char, "constitution", "concentration")
 
     applied = modifiers_for(char, "concentration", ability="constitution")

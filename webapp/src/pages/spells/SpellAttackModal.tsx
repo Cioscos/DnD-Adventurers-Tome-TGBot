@@ -13,6 +13,8 @@ import D20Faces from '@/components/ui/D20Faces'
 import type { SpellAttackResult } from '@/types'
 
 type Props = {
+  /** Serve al bersaglio delle opzioni del lancio. */
+  charId?: number
   result: SpellAttackResult
   /** L'incantesimo ha un dado del danno: mostra "Tira danni" (mai su un 1 naturale). */
   canRollDamage: boolean
@@ -28,6 +30,7 @@ type Props = {
 
 /** Esito del tiro per colpire di un incantesimo d'attacco (modellato su WeaponAttackModal). */
 export default function SpellAttackModal({
+  charId,
   result,
   canRollDamage,
   onRollDamage,
@@ -108,7 +111,7 @@ export default function SpellAttackModal({
           {t('character.roll_options.forced_hit')}
         </p>
       )}
-      <RollNotes notes={result.notes} />
+      <RollNotes notes={result.notes} charId={charId} optionResult={result.cast_option_result} />
       <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
         initial={{ opacity: 0, y: 10 }}

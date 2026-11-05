@@ -7,11 +7,13 @@ non si perdono: una riga tolta lascia il suo stato in ``settings["archived_featu
 """
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
-from core.db.models import Ability, Character, CharacterClass, RestorationType
+from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
+from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices
 from core.rules.proficiencies import apply_feature_grants
@@ -44,6 +46,7 @@ async def sync_class_feature_abilities(
             _sync_from_catalog(session, char, other, lang)
     reconcile_choices(char)
     apply_feature_grants(char, lang)
+    await _sync_granted_spells(session, char, lang)
 
 
 async def sync_cataloged_features(session: AsyncSession, char: Character, lang: str = "it") -> None:
@@ -54,7 +57,34 @@ async def sync_cataloged_features(session: AsyncSession, char: Character, lang: 
             _sync_from_catalog(session, char, cls, lang)
     reconcile_choices(char)
     apply_feature_grants(char, lang)
+    await _sync_granted_spells(session, char, lang)
     await session.flush()
+
+
+async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
+    """Incantesimi dei privilegi attivi: sempre preparati. Mai cancellati: se il privilegio sparisce (cambio di
+    edizione, livello) l'incantesimo resta e torna a contare come gli altri."""
+    if not GRANTED_SPELLS:
+        return
+    granted = {key: row for spec, row in active_features(char) for key in spec.granted_spells}
+    # Query e non `char.spells`: non tutti i chiamanti caricano la relazione.
+    rows = (await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars().all()
+    have = {s.srd_index: s for s in rows if s.srd_index in GRANTED_SPELLS}
+    for key, spell in have.items():
+        if key not in granted:
+            spell.always_prepared = False
+    for key, owner in granted.items():
+        spell = have.get(key)
+        if spell is None:
+            data = GRANTED_SPELLS[key]
+            spell = Spell(character_id=char.id, name=data.name.get(lang) or data.name["it"], level=data.level,
+                          casting_time=data.casting_time, range_area=data.range_area, duration=data.duration,
+                          is_concentration=data.is_concentration, is_ritual=data.is_ritual,
+                          attack_save=data.attack_save, damage_dice=data.damage_dice, damage_type=data.damage_type,
+                          higher_levels_dice=data.higher_levels_dice, srd_index=key)
+            session.add(spell)
+        spell.always_prepared = spell.is_prepared = True
+        spell.class_id = spell.class_id or owner.id
 
 
 def clean_archive(raw: object) -> dict[str, dict]:

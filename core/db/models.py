@@ -370,6 +370,12 @@ class Spell(Base):
     # Backfill legacy a True in _MIGRATIONS; i nuovi incantesimi nascono False
     # (default in SpellCreate). Ignorata per i known caster.
     is_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Classe di CD e attacco; NULL (tutti i personaggi esistenti) = la classe migliore.
+    class_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("character_classes.id", ondelete="SET NULL"), nullable=True
+    )
+    # Fuori dal limite dei preparati e non togliibile con «non preparare».
+    always_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
 
     character: Mapped["Character"] = relationship(
         back_populates="spells", foreign_keys=[character_id]

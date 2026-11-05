@@ -98,6 +98,8 @@ class AppliedOptions:
     effects: list[dict[str, str]] = field(default_factory=list)  # {"it", "en"}: esiti da mostrare
     second_attack: bool = False
     targets: list[str] = field(default_factory=list)  # chiavi con un ``target_effect`` da applicare
+    reroll_limit: int = 0  # ``after_damage``: dadi di danno ritirabili
+    keep_rolled: bool = False
 
     @property
     def mode(self) -> str | None:
@@ -272,6 +274,9 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         out.reroll = out.reroll or spec.after == "reroll"
         out.succeed = out.succeed or spec.after == "succeed"
         out.second_attack = out.second_attack or spec.second_attack
+        if spec.reroll_dice:
+            out.reroll_limit += spec.reroll_dice(option.ctx, given)
+            out.keep_rolled = out.keep_rolled or spec.keep_rolled
         if spec.miss_damage:
             out.miss_damage = max(0, spec.miss_damage(option.ctx))
         if spec.effect:

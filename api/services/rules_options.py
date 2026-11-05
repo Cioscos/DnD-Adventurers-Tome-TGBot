@@ -132,6 +132,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         needs=None if spec.needs in ctx.confirmed else spec.needs, group=spec.group, dice_cost=spec.dice_cost,
         requires_input=spec.requires_input, input_options=slots, auto_fail=spec.auto_fail,
         after=spec.after, pay_if_success=spec.pay_if_success,
+        reroll_limit=spec.reroll_dice(ctx, {}) if spec.reroll_dice else None, keep_rolled=spec.keep_rolled,
         saved_dice=saved_dice(ctx.char, spec.key) if spec.replace_die else [],
         cost=RollOptionCost(feature_key=spec.cost.feature_key, amount=spec.cost.amount,
                             spell_slot_min=spec.cost.spell_slot_min) if spec.cost else None,

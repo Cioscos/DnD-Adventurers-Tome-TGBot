@@ -334,7 +334,7 @@ async def test_list_is_localized_and_describes_the_option(client, rules_catalog)
         "key": "focus", "phase": "before", "label": "Applica?", "source": "feature:fighter.prova",
         "dice": None, "bonus": None, "mode": "advantage", "multiplier": None, "once_per_turn": False, "slot": None,
         "needs": None, "group": None, "dice_cost": 0, "requires_input": None, "input_options": [],
-        "auto_fail": False, "after": None, "pay_if_success": False, "saved_dice": [],
+        "auto_fail": False, "after": None, "pay_if_success": False, "saved_dice": [], "reroll_limit": None, "keep_rolled": False,
         "cost": {"feature_key": "fighter.prova", "amount": 1, "spell_slot_min": None},
     }]
     guide = await client.get(f"/characters/{cid}/roll-options", params={"roll": "skill", "skill": "stealth"})

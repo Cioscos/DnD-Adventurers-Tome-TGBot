@@ -8,7 +8,7 @@ interface CastSpellModalProps {
   availableSlots: SpellSlot[]
   /** True se l'incantesimo è rituale E il PG ha una classe con Ritual Casting. */
   canRitual: boolean
-  onCast: (slotLevel: number) => void
+  onCast: (slot: SpellSlot) => void
   onCastRitual: () => void
   onCreateSlot: (level: number) => void
   onCancel: () => void
@@ -59,10 +59,13 @@ export default function CastSpellModal({
                 key={slot.id}
                 variant="secondary"
                 fullWidth
-                onClick={() => onCast(slot.level)}
+                onClick={() => onCast(slot)}
                 disabled={isPending}
               >
-                <span className="flex-1 text-left">{t('character.slots.level', { level: slot.level })}</span>
+                <span className="flex-1 text-left">
+                  {t('character.slots.level', { level: slot.level })}
+                  {slot.is_pact && ` · ${t('character.slots.pact_badge')}`}
+                </span>
                 {/* Stessa convenzione dei pallini nella pagina Incantesimi: dorato = usato. */}
                 <span className="flex gap-1" aria-hidden>
                   {Array.from({ length: slot.total }).map((_, i) => (

@@ -3,62 +3,68 @@
 Funzione sincrona e senza query: richiede ``char.classes``,
 ``char.ability_scores`` e ``char.spells`` già caricati — vero per ogni chiamante
 di ``build_character_response`` (le stesse relazioni sono serializzate da
-``CharacterFull.model_validate``).
-
-Il tetto usa i modificatori BASE delle caratteristiche (non gli effective con
-bonus da oggetti): approssimazione documentata, compensabile con l'override
-manuale (``settings.prepared_cap_mode = 'manual'``).
+``CharacterFull.model_validate``). Le regole sono in ``core.rules.spellcasting``.
 """
 
 from __future__ import annotations
 
-from api.routers._helpers import effective_ability_mod
-from api.schemas.character import SpellCasterStats, SpellcastingInfo
-from core.data.spellcasting import (
-    compute_prepared_cap,
-    has_preparing_class,
-    has_ritual_caster,
-    has_wizard,
-)
-from core.db.models import Character
-from core.game.item_bonuses import item_bonus_total
+from dataclasses import asdict
+from typing import Iterable
+
+from api.schemas.character import ClassSpellLimits, SpellCasterStats, SpellcastingInfo
+from api.schemas.spell import SpellRead
+from core.data.spell_slots import caster_kind
+from core.data.spellcasting import has_wizard
+from core.db.models import Character, Spell
+from core.rules.edition import character_edition, class_key
+from core.rules.spellcasting import caster_stats, can_ritual, known_limits, prepared_limit, prepares, spell_stats
 
 
-def _caster_stats(char: Character) -> list[SpellCasterStats]:
-    pb = char.proficiency_bonus
-    out: list[SpellCasterStats] = []
-    for cls in char.classes:
-        ability = (cls.spellcasting_ability or "").strip().lower()
-        if not ability:
-            continue
-        mod = effective_ability_mod(char, ability)
-        dc_item = item_bonus_total(char.items, "spell_dc")
-        atk_item = item_bonus_total(char.items, "spell_attack")
-        out.append(
-            SpellCasterStats(
-                class_id=cls.id,
-                class_name=cls.class_name,
-                ability=ability,
-                save_dc=8 + pb + mod + dc_item,
-                attack_bonus=pb + mod + atk_item,
-            )
-        )
+def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
+    for spell in spells:
+        stats = spell_stats(char, spell)
+        if stats:
+            spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
+
+
+def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
+    edition = character_edition(char)
+    casters = [c for c in char.classes if class_key(c) and caster_kind(c, edition)]
+    out: list[ClassSpellLimits] = []
+    for cls in casters:
+        key = class_key(cls)
+        limits = known_limits(edition, key, cls.level)
+        # Non assegnati: appartengono all'unica classe che lancia incantesimi, altrimenti solo al totale.
+        mine = [s for s in char.spells if not s.always_prepared
+                and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))]
+        leveled = [s for s in mine if s.level >= 1]
+        cap = prepared_limit(edition, key, cls.level, char)
+        out.append(ClassSpellLimits(
+            class_id=cls.id, class_name=cls.class_name,
+            cantrips_count=len(mine) - len(leveled), cantrips_limit=limits.cantrips or None,
+            known_count=len(leveled), known_limit=limits.spells,
+            prepared_count=sum(1 for s in leveled if s.is_prepared),
+            prepared_limit=cap if cap and not manual_cap else None,
+        ))
     return out
 
 
-def best_caster(char: Character) -> SpellCasterStats | None:
-    """Caster con il bonus di attacco più alto (il primo in caso di parità)."""
-    best: SpellCasterStats | None = None
-    for c in _caster_stats(char):
-        if best is None or c.attack_bonus > best.attack_bonus:
-            best = c
-    return best
+def prepared_class_room(char: Character, class_id: int) -> tuple[int, int] | None:
+    """(preparati, limite) di una classe; ``None`` se il limite per classe non vale (classe assente, tetto a mano)."""
+    manual = (char.settings or {}).get("prepared_cap_mode") == "manual"
+    row = next((x for x in _class_limits(char, manual) if x.class_id == class_id), None)
+    if row is None or row.prepared_limit is None:
+        return None
+    count = sum(1 for s in char.spells if s.class_id == class_id and s.level >= 1 and s.is_prepared and not s.always_prepared)
+    return count, row.prepared_limit
 
 
 def build_spellcasting_info(char: Character) -> SpellcastingInfo:
     classes = char.classes
     settings = char.settings or {}
-    preparing = has_preparing_class(classes)
+    edition = character_edition(char)
+    preparing_rows = [c for c in classes if prepares(edition, c, char)]
+    preparing = bool(preparing_rows)
     cap_mode = settings.get("prepared_cap_mode") or "auto"
 
     cap: int | None = None
@@ -66,17 +72,21 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         if cap_mode == "manual":
             cap = max(0, int(settings.get("prepared_cap_value") or 0))
         else:
-            modifiers = {a.name: effective_ability_mod(char, a.name) for a in char.ability_scores}
-            cap = compute_prepared_cap(classes, modifiers)
+            cap = sum(prepared_limit(edition, class_key(c), c.level, char) for c in preparing_rows)
 
-    count = sum(1 for s in char.spells if s.level >= 1 and s.is_prepared)
+    count = sum(1 for s in char.spells if counts_as_prepared(s))
 
     return SpellcastingInfo(
         has_preparing_class=preparing,
         prepared_cap=cap,
         prepared_count=count,
         cap_mode=cap_mode if preparing else "auto",
-        has_ritual_caster=has_ritual_caster(classes),
+        has_ritual_caster=can_ritual(char),
         has_wizard=has_wizard(classes),
-        casters=_caster_stats(char),
+        casters=[SpellCasterStats(**asdict(c)) for c in caster_stats(char)],
+        limits=_class_limits(char, cap_mode == "manual"),
     )
+
+
+def counts_as_prepared(spell: Spell) -> bool:
+    return spell.level >= 1 and bool(spell.is_prepared) and not spell.always_prepared

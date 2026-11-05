@@ -120,7 +120,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
              "ref": item_ref[i.id], "container_ref": item_ref.get(i.container_id)}
             for i in sorted_items
         ],
-        "spells": [{**s.__dict__, "export_key": spell_key[s.id]} for s in spells],
+        "spells": [{**s.__dict__, "export_key": spell_key[s.id], "source_class_key": class_key.get(s.class_id)}
+                   for s in spells],
         "concentrating_spell_key": spell_key.get(char.concentrating_spell_id),
         "spell_slots": [s.__dict__ for s in sorted(char.spell_slots, key=lambda s: (s.is_pact, s.level))],
         "abilities": [
@@ -186,6 +187,8 @@ async def import_character(
     for a in data.abilities:
         if a.source_class_key is not None and a.source_class_key not in class_keys:
             raise _unprocessable("Unknown source_class_key")
+    if any(sp.source_class_key is not None and sp.source_class_key not in class_keys for sp in data.spells):
+        raise _unprocessable("Unknown source_class_key")
     if sum(1 for it in data.items if is_attuned(it)) > 3:
         raise _unprocessable("attunement_limit")
     for h in data.homebrew_resources:
@@ -212,7 +215,7 @@ async def import_character(
         spell_slots_mode=SpellSlotsMode(data.character.spell_slots_mode), **cols,
     )
     classes = [CharacterClass(**c.model_dump()) for c in data.classes]
-    spells = [Spell(**sp.model_dump(exclude={"export_key"})) for sp in data.spells]
+    spells = [Spell(**sp.model_dump(exclude={"export_key", "source_class_key"})) for sp in data.spells]
     seen_slots: set = set()
     items = []
     for it in data.items:  # un contenitore e' sempre singolo: la quantita' si normalizza a 1, il contenuto (monete incluse) resta
@@ -256,6 +259,8 @@ async def import_character(
     if ARCHIVED_FEATURES in (char.settings or {}):  # server-owned: il client non potrebbe più ripararlo
         char.settings = {**char.settings, ARCHIVED_FEATURES: clean_archive(char.settings[ARCHIVED_FEATURES])}
 
+    for sp, row in zip(data.spells, spells):
+        row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None
     for a in data.abilities:
         src = classes[int(a.source_class_key[1:])].id if a.source_class_key else None
         session.add(Ability(

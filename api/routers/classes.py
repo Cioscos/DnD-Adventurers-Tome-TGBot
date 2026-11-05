@@ -382,6 +382,9 @@ async def remove_class(
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
 
+    for spell in char.spells:  # la FK lo fa nel DB, ma queste righe restano in sessione
+        if spell.class_id == cls.id:
+            spell.class_id = None
     await session.delete(cls)
     await session.flush()
     session.expire(char)

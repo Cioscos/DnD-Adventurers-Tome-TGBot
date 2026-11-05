@@ -59,6 +59,8 @@ class RollOptionRead(BaseModel):
     after: str | None = None
     pay_if_success: bool = False
     saved_dice: list[int] = []
+    reroll_limit: int | None = None
+    keep_rolled: bool = False
     input_options: list[RollOptionSlot] = []
     auto_fail: bool = False
     cost: RollOptionCost | None = None

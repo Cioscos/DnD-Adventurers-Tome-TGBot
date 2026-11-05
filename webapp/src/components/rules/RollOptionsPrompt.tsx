@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RollOption } from '@/api/client'
-import { optionHints, useAttackLimitStore, usePromptStore, type PromptRequest } from '@/lib/rollOptions'
+import { optionHints, useAttackLimitStore, useCastConfirmStore, usePromptStore, type PromptRequest } from '@/lib/rollOptions'
 import { AfterRollButton } from '@/components/rules/AfterRollOptions'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -12,10 +12,12 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 export function RollOptionsHost() {
   const request = usePromptStore((s) => s.request)
   const limit = useAttackLimitStore((s) => s.request)
+  const castConfirm = useCastConfirmStore((s) => s.request)
   return (
     <>
       {request && <RollOptionsPrompt key={[...request.options, ...request.afterRoll].map((o) => o.key).join()} request={request} />}
       {limit && <AttackLimitPrompt {...limit} />}
+      {castConfirm && <CastConfirmPrompt {...castConfirm} />}
     </>
   )
 }
@@ -29,6 +31,21 @@ function AttackLimitPrompt({ made, allowed, answer }: { made: number; allowed: n
         <div className="flex gap-2">
           <Button variant="secondary" fullWidth onClick={() => answer(false)}>{t('character.attack.limit_cancel')}</Button>
           <Button variant="primary" fullWidth onClick={() => answer(true)}>{t('character.attack.limit_confirm')}</Button>
+        </div>
+      </div>
+    </Sheet>
+  )
+}
+
+function CastConfirmPrompt({ code, answer }: { code: string; answer: (go: boolean) => void }) {
+  const { t } = useTranslation()
+  return (
+    <Sheet open onClose={() => answer(false)} zClassName="z-[70]" title={t(`character.spells.cast_confirm.${code}_title`)}>
+      <div className="p-5 space-y-3">
+        <p className="text-sm font-body text-dnd-text">{t(`character.spells.cast_confirm.${code}_body`)}</p>
+        <div className="flex gap-2">
+          <Button variant="secondary" fullWidth onClick={() => answer(false)}>{t('common.cancel')}</Button>
+          <Button variant="primary" fullWidth onClick={() => answer(true)}>{t('character.spells.cast_anyway')}</Button>
         </div>
       </div>
     </Sheet>
@@ -68,7 +85,7 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   const close = (outcome: 'miss' | 'reroll') => answer({ options: [], option_inputs: {}, outcome })
 
   return (
-    <Sheet open onClose={() => undefined} dismissible={false} zClassName="z-[70]" title={t(`character.roll_options.title_${phase}`)}>
+    <Sheet open onClose={() => undefined} dismissible={false} zClassName="z-[70]" title={t(context?.cast ? 'character.roll_options.title_cast' : `character.roll_options.title_${phase}`)}>
       <div className="p-5 space-y-3">
         {context?.summary && (
           <p className="text-sm text-dnd-text font-mono tabular-nums text-center" data-testid="roll-options-summary">
@@ -106,7 +123,7 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
           )}
           {!context?.fumble && (
             <Button variant="primary" fullWidth onClick={confirm}>
-              {t(`character.roll_options.${{ before: 'roll', after_hit: 'damage', damage_in: 'apply' }[phase]}`)}
+              {t(context?.cast ? 'character.roll_options.cast' : `character.roll_options.${{ before: 'roll', after_hit: 'damage', damage_in: 'apply' }[phase]}`)}
             </Button>
           )}
         </div>

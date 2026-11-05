@@ -663,6 +663,7 @@ def _spells(c: _Ctx) -> None:
                "is_ritual": bool(d.get("ritual")), "school": _str(d.get("school"), 30).lower() or None,
                "srd_index": _slug(name)[:80] or None,
                "is_prepared": bool(always or sp.get("prepared") or sp.get("alwaysPrepared") or level == 0),
+               "always_prepared": bool(level > 0 and (always or sp.get("alwaysPrepared"))),
                **_spell_fields(d)}
         m = c.model(ExportSpell, obj, "spells", name)
         if m:

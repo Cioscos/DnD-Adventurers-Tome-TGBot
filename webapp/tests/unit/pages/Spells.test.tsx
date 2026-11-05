@@ -131,10 +131,10 @@ vi.mock('@/pages/spells/SpellForm', async () => {
 vi.mock('@/pages/spells/CastSpellModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: { level: number }; availableSlots: { id: number; level: number }[]; onCast?: (l: number) => void; onCreateSlot?: (l: number) => void }) =>
+    default: (p: { spell: { level: number }; availableSlots: { id: number; level: number }[]; onCast?: (s: { id: number; level: number }) => void; onCreateSlot?: (l: number) => void }) =>
       React.createElement('div', { 'data-testid': 'cast-modal' }, [
         ...p.availableSlots.map((s) =>
-          React.createElement('button', { key: `cast-${s.id}`, onClick: () => p.onCast?.(s.level) }, `cast-slot-${s.level}`)),
+          React.createElement('button', { key: `cast-${s.id}`, onClick: () => p.onCast?.(s) }, `cast-slot-${s.level}`)),
         React.createElement('button', { key: 'create', onClick: () => p.onCreateSlot?.(p.spell.level) }, `create-slot-${p.spell.level}`),
       ]),
   }
@@ -198,8 +198,8 @@ describe('Spells page', () => {
     renderWithProviders(<Spells />)
     await userEvent.click(await screen.findByText('use-Bless'))
     await userEvent.click(await screen.findByText('cast-slot-1'))
-    await waitFor(() => expect(useSpy).toHaveBeenCalledWith(9, 102, 1))
-    await waitFor(() => expect(concSpy).toHaveBeenCalledWith(9, 102)) // Bless is_concentration
+    await waitFor(() => expect(useSpy).toHaveBeenCalledWith(9, 102, expect.objectContaining({ slot_level: 1 })))
+    expect(concSpy).not.toHaveBeenCalled() // il lancio avvia la concentrazione col suo contatore
   })
 
   it('casting a leveled damage spell defers to the damage sheet (no slot consumed yet)', async () => {
@@ -222,12 +222,12 @@ describe('Spells page', () => {
     expect(sheet).toHaveAttribute('data-slot', '0')
   })
 
-  it('using a concentration cantrip toggles concentration without a slot', async () => {
+  it('using a concentration cantrip casts it without a slot', async () => {
     getChar.mockResolvedValue(manualChar())
-    concSpy.mockResolvedValue(manualChar())
+    useSpy.mockResolvedValue(manualChar())
     renderWithProviders(<Spells />)
     await userEvent.click(await screen.findByText('use-Guidance'))
-    await waitFor(() => expect(concSpy).toHaveBeenCalledWith(9, 104))
+    await waitFor(() => expect(useSpy).toHaveBeenCalledWith(9, 104, expect.objectContaining({ slot_level: null })))
   })
 
   // gems[0..2] = level-1 slot (used 1): index 0 lit, indices 1-2 available.
@@ -293,6 +293,7 @@ describe('Spells page', () => {
         school: 'evocation',
         srd_index: 'magic-missile',
         is_pinned: false,
+        class_id: null,
       }),
     )
   })

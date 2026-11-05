@@ -52,20 +52,24 @@ describe('SpellDamageSheet', () => {
 
   it('a cantrip roll posts to rollDamage and shows the total (no slot consumed)', async () => {
     rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
     renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={null} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 1, expect.objectContaining({ casting_level: 0, is_critical: false })))
-    expect(useSpell).not.toHaveBeenCalled()
+    expect(useSpell).toHaveBeenCalledTimes(1)  // il lancio passa dal server: conferme e opzioni, nessuno slot
+    expect(useSpell.mock.calls[0][2].slot_id).toBeUndefined()
     expect(await screen.findByText('14')).toBeInTheDocument()
   })
 
   it('a leveled spell consumes the slot (api.spells.use) on the first roll', async () => {
     useSpell.mockResolvedValue({ id: 7 })
     rollDamage.mockResolvedValue(result)
-    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)
+    const concentrating = { ...leveled, is_concentration: true }
+    renderWithProviders(<SpellDamageSheet charId={7} spell={concentrating} slotLevel={3} slotId={21} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
-    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 2, 3))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 2, expect.objectContaining({ slot_id: 21, slot_level: 3 })))
     await waitFor(() => expect(rollDamage).toHaveBeenCalled())
+    expect(updateConc).not.toHaveBeenCalled()  // il contatore dei round resta quello del lancio
   })
 
   it('a save spell shows the half-damage cell in the result', async () => {

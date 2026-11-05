@@ -179,7 +179,12 @@ function SpellItemInner({
                   {attackSaveLabel(spell.attack_save) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Shield size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{attackSaveLabel(spell.attack_save)}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">
+                        {attackSaveLabel(spell.attack_save)}
+                        {spell.attack_save?.trim().toUpperCase() === 'SAVE' && spell.save_dc != null && (
+                          <span className="tabular-nums"> · {t('character.spells.save_dc', { dc: spell.save_dc })}</span>
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -247,6 +252,13 @@ function SpellItemInner({
                       ? t('character.spells.prepared')
                       : t('character.spells.prepare')}
                   </Pressable>
+                )}
+
+                {spell.always_prepared && (
+                  <span className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 text-dnd-gold-bright">
+                    <BookmarkCheck size={12} />
+                    {t('character.spells.always_prepared')}
+                  </span>
                 )}
 
                 {spell.is_concentration && (

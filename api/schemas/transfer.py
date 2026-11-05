@@ -175,6 +175,8 @@ class ExportSpell(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=r"^\d+d\d+([+-]\d+)?$")
+    always_prepared: bool = False
+    source_class_key: Optional[str] = Field(default=None, max_length=20)
 
 
 class ExportSpellSlot(BaseModel):

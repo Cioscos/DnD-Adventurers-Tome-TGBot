@@ -60,6 +60,19 @@ class SpellCasterStats(BaseModel):
     attack_bonus: int
 
 
+class ClassSpellLimits(BaseModel):
+    """Limiti di una classe e quanti ne ha assegnati. ``None``: il limite non vale per questa classe."""
+
+    class_id: int
+    class_name: str
+    cantrips_count: int = 0
+    cantrips_limit: Optional[int] = None
+    known_count: int = 0
+    known_limit: Optional[int] = None
+    prepared_count: int = 0
+    prepared_limit: Optional[int] = None
+
+
 class SpellcastingInfo(BaseModel):
     """Blocco derivato: preparazione incantesimi + capacità rituali (spec 2026-06-10)."""
 
@@ -70,6 +83,7 @@ class SpellcastingInfo(BaseModel):
     has_ritual_caster: bool = False
     has_wizard: bool = False
     casters: list[SpellCasterStats] = []
+    limits: list[ClassSpellLimits] = []
 
 
 class CharacterSummary(BaseModel):
@@ -419,5 +433,6 @@ class SpellAttackResult(BaseModel):
     is_critical: bool
     is_fumble: bool
     caster_class: Optional[str] = None
+    cast_option_result: OptionResult | None = absent_when_none()
     character: CharacterFull
     homebrew_notifications: Optional[list[dict]] = None

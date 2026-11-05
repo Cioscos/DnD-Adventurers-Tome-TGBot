@@ -89,7 +89,7 @@ function d20Fields(roll: D20Roll | undefined): Record<string, unknown> {
 }
 
 // Conferma al tiro (GET /characters/{id}/roll-options)
-export type RollOptionPhase = 'before' | 'after_roll' | 'after_hit' | 'damage_in'
+export type RollOptionPhase = 'before' | 'after_roll' | 'after_hit' | 'after_damage' | 'damage_in'
 
 export type RollOption = {
   key: string
@@ -117,10 +117,13 @@ export type RollOption = {
   pay_if_success?: boolean
   /** Portento: il d20 si sceglie fra questi valori salvati. */
   saved_dice?: number[]
+  /** Solo `after_damage`: quanti dadi di danno ritirare; `keep_rolled`: solo al massimo, il nuovo si somma. */
+  reroll_limit?: number | null
+  keep_rolled?: boolean
 }
 
 export type RollOptionsQuery = {
-  roll: 'attack' | 'spell_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken' | 'death_save'
+  roll: 'attack' | 'spell_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
   item_id?: number
   attack_mode?: string
   grip?: string
@@ -128,6 +131,14 @@ export type RollOptionsQuery = {
   ability?: string
   skill?: string
   damage_type?: string
+}
+
+/** Corpo di POST /spells/{id}/use: `slot_id` sceglie il pool, `confirm` le regole accettate dal giocatore. */
+export type SpellUseBody = Partial<RollChoice> & {
+  slot_id?: number
+  slot_level?: number | null
+  as_ritual?: boolean
+  confirm?: string[]
 }
 
 export type RollChoice = {
@@ -609,6 +620,9 @@ export const api = {
       ),
     lastRollOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; mode: RollMode; dice?: number[] }) =>
       request<LastRollResult>(`/characters/${id}/last-roll/options`, { method: 'POST', body: JSON.stringify(body) }),
+    /** Privilegi sui dadi di danno già tirati: `reroll` sono le posizioni in `main_rolls` + `extra_rolls`. */
+    lastDamageOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; reroll: number[] }) =>
+      request<RollDamageResult>(`/characters/${id}/last-damage/options`, { method: 'POST', body: JSON.stringify(body) }),
     /** Risponde a «Il tiro è riuscito?»: `succeeded` tiene il pagamento, altrimenti torna. */
     lastRollRefund: (id: number, succeeded: boolean = false) =>
       request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST', body: JSON.stringify({ succeeded }) }),
@@ -758,11 +772,14 @@ export const api = {
       }),
     remove: (charId: number, spellId: number) =>
       request<void>(`/characters/${charId}/spells/${spellId}`, { method: 'DELETE' }),
-    use: (charId: number, spellId: number, slotLevel: number | null, asRitual = false) =>
+    use: (charId: number, spellId: number, body: SpellUseBody) =>
       request<CharacterFull>(`/characters/${charId}/spells/${spellId}/use`, {
         method: 'POST',
-        body: JSON.stringify({ slot_level: slotLevel, as_ritual: asRitual }),
+        body: JSON.stringify(body),
       }),
+    /** Regole che il lancio violerebbe, da confermare prima di tirare i dadi. */
+    castCheck: (charId: number, spellId: number, ritual: boolean) =>
+      request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}`),
     updateConcentration: (charId: number, spellId: number | null) =>
       request<CharacterFull>(`/characters/${charId}/concentration`, {
         method: 'PATCH',

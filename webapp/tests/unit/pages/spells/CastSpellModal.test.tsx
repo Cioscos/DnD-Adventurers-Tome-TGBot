@@ -22,7 +22,19 @@ describe('CastSpellModal', () => {
     const slots = [{ id: 10, level: 3, available: 2, used: 1, total: 3 }] as SpellSlot[]
     render(<CastSpellModal spell={spell} availableSlots={slots} onCast={onCast} onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
     await userEvent.click(screen.getByText('character.slots.available_count'))
-    expect(onCast).toHaveBeenCalledWith(3)
+    expect(onCast).toHaveBeenCalledWith(slots[0])
+  })
+
+  it('tells the two pools of the same level apart and casts from the chosen one', async () => {
+    const onCast = vi.fn()
+    const slots = [
+      { id: 10, level: 3, available: 2, used: 0, total: 2, is_pact: false },
+      { id: 11, level: 3, available: 1, used: 1, total: 2, is_pact: true },
+    ] as SpellSlot[]
+    render(<CastSpellModal spell={spell} availableSlots={slots} onCast={onCast} onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
+    await userEvent.click(screen.getByRole('button', { name: /character.slots.pact_badge/ }))
+    expect(onCast).toHaveBeenCalledWith(slots[1])
+    expect(screen.getAllByText(/character.slots.pact_badge/)).toHaveLength(1)
   })
 
   it('with no slots, prompts to create one at the spell level', async () => {

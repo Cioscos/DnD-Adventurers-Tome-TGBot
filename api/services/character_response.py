@@ -16,7 +16,7 @@ from api.services.choices import option_catalog
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
-from api.services.spellcasting import build_spellcasting_info
+from api.services.spellcasting import build_spellcasting_info, fill_spell_stats
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
@@ -58,6 +58,7 @@ async def build_character_response(
     response.unarmored_formula = list(formula) if formula else None
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
+    fill_spell_stats(char, response.spells)
     response.attacks_per_action = attacks_per_action(char.classes)
     form = await get_active_form(session, char.id)
     if form is not None:

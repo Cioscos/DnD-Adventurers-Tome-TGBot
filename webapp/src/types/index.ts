@@ -155,6 +155,11 @@ export interface Spell {
   school?: string | null
   srd_index?: string | null
   higher_levels_dice?: string | null
+  class_id?: number | null
+  always_prepared?: boolean
+  /** CD e attacco della classe dell'incantesimo. */
+  save_dc?: number | null
+  attack_bonus?: number | null
 }
 
 export interface SpellSlot {
@@ -288,6 +293,17 @@ export interface SpellcastingInfo {
   has_ritual_caster: boolean
   has_wizard: boolean
   casters: { class_id: number; class_name: string; ability: string; save_dc: number; attack_bonus: number }[]
+  /** Limiti per classe; `null`: quel limite non vale per la classe. */
+  limits?: {
+    class_id: number
+    class_name: string
+    cantrips_count: number
+    cantrips_limit: number | null
+    known_count: number
+    known_limit: number | null
+    prepared_count: number
+    prepared_limit: number | null
+  }[]
 }
 
 // Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
@@ -748,12 +764,17 @@ export interface SpellAttackResult {
   is_critical: boolean
   is_fumble: boolean
   caster_class: string | null
+  cast_option_result?: OptionResult
   character: CharacterFull
   homebrew_notifications?: Array<Record<string, unknown>> | null
 }
 
 export interface SpellAttackRequest extends Partial<RollChoice> {
+  slot_id?: number
   slot_level: number | null
+  confirm?: string[]
+  cast_options?: string[]
+  cast_option_inputs?: RollChoice['option_inputs']
   ritual?: boolean
   die?: number
   dice?: number[]

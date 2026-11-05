@@ -42,13 +42,15 @@ export type SpellFormData = {
   school: string
   srd_index: string
   higher_levels_dice: string
+  class_id: string
+  always_prepared: boolean
 }
 
 const emptyForm: SpellFormData = {
   name: '', level: '0', description: '', casting_time: '', range_area: '',
   components: '', duration: '', is_concentration: false, is_ritual: false,
   damage_dice: '', damage_type: '', attack_save: '',
-  higher_level: '', school: '', srd_index: '', higher_levels_dice: '',
+  higher_level: '', school: '', srd_index: '', higher_levels_dice: '', class_id: '', always_prepared: false,
 }
 
 const COMPONENT_TOKENS: readonly ComponentToken[] = ['V', 'S', 'M']
@@ -58,9 +60,11 @@ interface SpellFormProps {
   onSubmit: (data: SpellFormData) => void
   onCancel: () => void
   isPending: boolean
+  /** Classi che lanciano incantesimi: con almeno due si sceglie quella di CD e attacco. */
+  casters?: { class_id: number; class_name: string }[]
 }
 
-export default function SpellForm({ initialData, onSubmit, onCancel, isPending }: SpellFormProps) {
+export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [] }: SpellFormProps) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const unitSystem = useUnitSettings((s) => s.system)
@@ -95,6 +99,8 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
         school: initialData.school || '',
         srd_index: initialData.srd_index || '',
         higher_levels_dice: initialData.higher_levels_dice || '',
+        class_id: initialData.class_id != null ? String(initialData.class_id) : '',
+        always_prepared: !!initialData.always_prepared,
       })
       const parsed = parseComponents(initialData.components || '')
       setMaterialDraft(parsed.material)
@@ -288,6 +294,31 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
             </>
           )}
         </div>
+
+        {casters.length >= 2 && (
+          <ChipSelect
+            label={t('character.spells.class_label')}
+            options={[
+              { value: '', label: t('character.spells.class_auto') },
+              ...casters.map((c) => ({
+                value: String(c.class_id),
+                label: t(`dnd.classes.${c.class_name.toLowerCase()}`, { defaultValue: c.class_name }),
+              })),
+            ]}
+            value={form.class_id}
+            onChange={(v) => setForm((f) => ({ ...f, class_id: v }))}
+          />
+        )}
+
+        {form.level !== '0' && (
+          <SwitchToggle
+            checked={form.always_prepared}
+            onChange={(on) => setForm((f) => ({ ...f, always_prepared: on }))}
+            label={t('character.spells.always_prepared')}
+            hint={t('character.spells.always_prepared_hint')}
+            aria-label={t('character.spells.always_prepared')}
+          />
+        )}
 
         <ChipSelect
           label={t('character.spells.attack_save.label')}

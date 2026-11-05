@@ -1,4 +1,8 @@
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
+import { notifyMutationError } from '@/lib/mutationError'
+import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import RollNotes from '@/components/rules/RollNotes'
+import type { OptionResult } from '@/api/client'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -37,6 +41,8 @@ interface SpellDamageSheetProps {
   charId: number
   spell: Spell | null
   slotLevel: number | null
+  /** Il pool scelto: patto e normali possono avere lo stesso livello. */
+  slotId?: number
   /** Lancio rituale: nessuno slot consumato al Roll (spec 2026-06-10). */
   asRitual?: boolean
   /** Slot/rituale/concentrazione già consumati dal tiro per colpire: il Roll non li tocca. */
@@ -52,6 +58,7 @@ export default function SpellDamageSheet({
   charId,
   spell,
   slotLevel,
+  slotId,
   asRitual = false,
   slotAlreadyConsumed = false,
   initialCritical = false,
@@ -64,6 +71,7 @@ export default function SpellDamageSheet({
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [slotConsumed, setSlotConsumed] = useState(false)
+  const [castNotes, setCastNotes] = useState<OptionResult | undefined>(undefined)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
 
   // Reset the form whenever a different spell is opened (identity tracked by id).
@@ -73,6 +81,7 @@ export default function SpellDamageSheet({
       setExtraDice('')
       setResult(null)
       setSlotConsumed(slotAlreadyConsumed)
+      setCastNotes(undefined)
       setShowNoSlotWarning(false)
     }
   }, [spellId, slotAlreadyConsumed])
@@ -87,25 +96,16 @@ export default function SpellDamageSheet({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
 
-      if (slotAlreadyConsumed) {
-        // Il tiro per colpire (/attack) ha già consumato slot o rituale.
-      } else if (asRitual && !slotConsumed) {
-        // Rituale: nessuno slot, il BE registra il lancio e attiva la concentrazione.
-        const updated = await api.spells.use(charId, spell.id, null, true)
+      // Il tiro per colpire (/attack) ha già fatto il lancio; altrimenti lo fa il primo tiro, una volta sola.
+      // Slot, rituale o trucchetto: il server consuma il dovuto e avvia la concentrazione col suo contatore.
+      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || (slotLevel != null && slotLevel >= 1))) {
+        const updated = await castSpell(charId, spell.id, asRitual
+          ? { as_ritual: true, slot_level: null }
+          : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
         qc.setQueryData(['character', charId], updated)
-        setSlotConsumed(true)
-      } else if (slotLevel != null && slotLevel >= 1 && !slotConsumed) {
-        // Consume the spell slot only on the first successful roll for leveled spells.
-        let updated: CharacterFull = await api.spells.use(charId, spell.id, slotLevel)
-        if (spell.is_concentration) {
-          updated = await api.spells.updateConcentration(charId, spell.id)
-        }
-        qc.setQueryData(['character', charId], updated)
-        setSlotConsumed(true)
-      } else if (slotLevel === 0 && spell.level === 0 && spell.is_concentration && !slotConsumed) {
-        // Cantrip with concentration: still flip concentration on first roll, no slot consumed.
-        const updated = await api.spells.updateConcentration(charId, spell.id)
-        qc.setQueryData(['character', charId], updated)
+        qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+        refreshAfterOptions(qc, charId, updated.option_result)
+        setCastNotes(updated.option_result ?? undefined)
         setSlotConsumed(true)
       }
 
@@ -158,6 +158,9 @@ export default function SpellDamageSheet({
       refreshAfterOptions(qc, charId, data.option_result)
       setResult(data)
     },
+    onError: (err) => {
+      if (!(err instanceof CastCancelled)) notifyMutationError()
+    },
   })
 
   if (!spell) return null
@@ -187,7 +190,7 @@ export default function SpellDamageSheet({
       return
     }
     const character = qc.getQueryData<CharacterFull>(['character', charId])
-    const slot = character?.spell_slots?.find((s) => s.level === slotLevel)
+    const slot = character?.spell_slots?.find((s) => (slotId != null ? s.id === slotId : s.level === slotLevel))
     const hasSlot = !!slot && slot.available > 0
     if (hasSlot) {
       // Allow the next roll to consume a fresh slot.
@@ -296,6 +299,8 @@ export default function SpellDamageSheet({
               </div>
             )}
           </div>
+          <RollNotes charId={charId} optionResult={castNotes} />
+          <AfterDamageOptions charId={charId} spellId={spell.id} result={result} onResult={setResult} />
           {showNoSlotWarning && slotLevel != null && slotLevel >= 1 && (
             <div className="rounded-xl border border-dnd-crimson/40 bg-dnd-crimson/10 p-3 space-y-1.5">
               <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">

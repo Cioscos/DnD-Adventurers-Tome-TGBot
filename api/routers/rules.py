@@ -123,7 +123,7 @@ async def turn_other(
 @turn_router.get("/{char_id}/roll-options", response_model=list[RollOptionRead])
 async def roll_options(
     char_id: int,
-    roll: Literal["attack", "spell_damage", "skill", "save", "initiative", "death_save", "damage_taken"],
+    roll: Literal["attack", "spell_damage", "skill", "save", "initiative", "death_save", "damage_taken", "cast"],
     user_id: Annotated[int, Depends(get_current_user)],
     lang: Annotated[str, Depends(get_current_lang)],
     db: Annotated[AsyncSession, Depends(get_db)],

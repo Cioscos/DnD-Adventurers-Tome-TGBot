@@ -135,9 +135,10 @@ class Cost:
 class RollOptionSpec:
     """Conferma al tiro: ciò che l'app non vede lo dichiara il giocatore, il calcolo resta al server.
 
-    ``phase``: ``before`` (prima del d20 o del danno da incantesimo), ``after_hit`` (dopo il colpo, solo attacchi),
-    ``damage_in`` (danno subito). ``rolls``: ``attack``, ``spell_damage``, ``skill``, ``save``, ``initiative``,
-    ``damage_taken``. ``available(ctx)``: ciò che l'app sa già (arma, livello, stati).
+    ``phase``: ``before`` (prima del d20, del danno da incantesimo o del lancio), ``after_hit`` (dopo il colpo, solo
+    attacchi), ``after_damage`` (dadi di danno già visti di ``spell_damage``), ``damage_in`` (danno subito).
+    ``rolls``: ``attack``, ``spell_damage``, ``skill``, ``save``, ``initiative``, ``damage_taken``, ``cast`` (il lancio:
+    ``/use`` e ``cast_options`` di ``/attack``, ``ctx.spell`` è l'incantesimo). ``available(ctx)``: ciò che l'app sa già.
 
     ``extra_dice(ctx, inputs) -> "2d6"`` e ``bonus(ctx, inputs) -> int``, dove ``inputs`` è ciò che il giocatore ha
     scelto per l'opzione. Effetto per fase: ``before`` su un attacco, ``bonus`` al colpire e dadi al danno, che
@@ -163,9 +164,11 @@ class RollOptionSpec:
     in ``turn_state["target_effects"][key]`` finché il giocatore lo applica (``POST /characters/{id}/target-effects``).
     ``second_attack``: i dadi ``separate_damage`` valgono per un secondo tiro per colpire, fatto dal server (Cleave).
     ``pay_if_success``: si rimborsa se il tiro resta fallito. ``replace_die`` (solo ``before``): il d20 è uno dei
-    valori di ``Character.settings["saved_dice"][key]``, dichiarato con ``{"die": n}`` e consumato."""
+    valori di ``Character.settings["saved_dice"][key]``, dichiarato con ``{"die": n}`` e consumato.
+    ``reroll_dice(ctx, inputs) -> n`` (obbligatorio in ``after_damage``): quanti dadi di danno ritirare, scelti dal
+    giocatore. ``keep_rolled``: solo dadi al massimo, il nuovo si somma invece di sostituire (Bombardamento Magico)."""
     key: str
-    phase: Literal["before", "after_roll", "after_hit", "damage_in"]
+    phase: Literal["before", "after_roll", "after_hit", "after_damage", "damage_in"]
     rolls: tuple[str, ...]
     label: dict[str, str]
     available: "Callable[[RuleContext], bool]" = lambda _ctx: True
@@ -192,9 +195,11 @@ class RollOptionSpec:
     effect: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
     second_attack: bool = False
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
+    reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
+    keep_rolled: bool = False
 
     def __post_init__(self) -> None:
-        if self.phase not in ("before", "after_roll", "after_hit", "damage_in"):
+        if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
             raise ValueError(f"fase sconosciuta: {self.phase}")
         if (self.phase == "after_roll") != (self.after in ("add", "reroll", "succeed", "miss")):
             raise ValueError("after è obbligatorio in after_roll e vale solo lì")
@@ -216,6 +221,10 @@ class RollOptionSpec:
             raise ValueError("after='miss' e miss_damage vanno insieme")
         if self.second_attack and not self.separate_damage:
             raise ValueError("second_attack riguarda i dadi separate_damage")
+        if (self.phase == "after_damage") != (self.reroll_dice is not None):
+            raise ValueError("after_damage e reroll_dice vanno insieme")
+        if self.keep_rolled and self.reroll_dice is None:
+            raise ValueError("keep_rolled riguarda reroll_dice")
         if self.dice_cost and not self.needs:
             raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
 
@@ -246,6 +255,7 @@ class FeatureSpec:
     # categoria (`armor`/`weapons`/`tools`) -> id di `core.rules.proficiencies.LABELS`, concesse una volta sola
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
     unarmored: UnarmoredAc | None = None
+    granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
 
 
 @dataclass(frozen=True)

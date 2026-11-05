@@ -35,6 +35,28 @@ vi.mock('@/components/ui/Button', async () => {
 })
 
 describe('SpellForm', () => {
+  const casters = [{ class_id: 1, class_name: 'wizard' }, { class_id: 2, class_name: 'cleric' }]
+
+  it('asks for the class only with two casters, and sends it', async () => {
+    const onSubmit = vi.fn()
+    const { unmount } = render(<SpellForm onSubmit={onSubmit} onCancel={() => {}} isPending={false} casters={casters.slice(0, 1)} />)
+    expect(screen.queryByText('character.spells.class_label')).not.toBeInTheDocument()
+    unmount()
+    render(<SpellForm onSubmit={onSubmit} onCancel={() => {}} isPending={false} casters={casters} />)
+    fireEvent.change(screen.getByLabelText('character.spells.name'), { target: { value: 'Scudo' } })
+    await userEvent.click(screen.getByRole('radio', { name: /cleric/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.add' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ class_id: '2' }))
+  })
+
+  it('an unassigned spell stays unassigned, and a saved class is kept', async () => {
+    const onSubmit = vi.fn()
+    const saved = { id: 1, name: 'Scudo', level: 1, class_id: 2, always_prepared: true, is_concentration: false, is_ritual: false } as Spell
+    render(<SpellForm initialData={saved} onSubmit={onSubmit} onCancel={() => {}} isPending={false} casters={casters} />)
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ class_id: '2', always_prepared: true }))
+  })
+
   it('add mode: title, name-gated submit, emits the form', async () => {
     const onSubmit = vi.fn()
     render(<SpellForm onSubmit={onSubmit} onCancel={() => {}} isPending={false} />)

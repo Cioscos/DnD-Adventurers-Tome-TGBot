@@ -1,4 +1,5 @@
 import CasterStats from '@/pages/spells/CasterStats'
+import SpellLimits from '@/pages/spells/SpellLimits'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -116,6 +117,8 @@ export default function Spells() {
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || undefined,
         is_pinned: false,
+        class_id: data.class_id ? Number(data.class_id) : null,
+        always_prepared: data.always_prepared,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -145,6 +148,8 @@ export default function Spells() {
         school: data.school || undefined,
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || null,
+        class_id: data.class_id ? Number(data.class_id) : null,
+        always_prepared: data.always_prepared,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -341,6 +346,7 @@ export default function Spells() {
   return (
     <Layout title={t('character.spells.title')} backTo={`/char/${charId}`} group="magic" page="spells">
       <CasterStats casters={spellcasting?.casters ?? []} />
+      <SpellLimits limits={spellcasting?.limits ?? []} />
 
       <SpellFilter
         search={search}
@@ -380,7 +386,8 @@ export default function Spells() {
 
       {/* Contatore di preparazione: etichetta in Cinzel, numeri mono tabulari
           (Tabular Numerics). Rosso solo oltre il tetto (legacy grandfathered). */}
-      {spellcasting?.has_preparing_class && spells.length > 0 && (
+      {spellcasting?.has_preparing_class && spells.length > 0
+        && (spellcasting.limits?.length !== 1 || spellcasting.cap_mode === 'manual') && (
         <div className="flex items-center justify-end gap-1.5 px-1">
           <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
             {t('character.spells.prepared_counter')}
@@ -468,7 +475,7 @@ export default function Spells() {
           />
         )}
         {sortedLevels.map((level) => {
-          const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
+          const slots = level > 0 ? spellSlots.filter((s) => s.level === level && s.total > 0) : []
           return (
             <div key={level} className="mb-4">
               {/* -top-4 compensa il p-4 del contenitore di scroll del Layout
@@ -488,8 +495,11 @@ export default function Spells() {
                     {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
                   </span>
                 </Pressable>
-                {slot && slot.total > 0 && (
-                  <div className="flex gap-1 items-center shrink-0">
+                {slots.map((slot) => (
+                  <div key={slot.id} className="flex gap-1 items-center shrink-0">
+                    {slot.is_pact && slots.length > 1 && (
+                      <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">{t('character.slots.pact_badge')}</span>
+                    )}
                     {Array.from({ length: slot.total }).map((_, i) => (
                       <Pressable
                         key={i}
@@ -518,7 +528,7 @@ export default function Spells() {
                       />
                     ))}
                   </div>
-                )}
+                ))}
               </div>
               <AnimatePresence>
                 {!collapsedLevels.has(level) && (
@@ -550,7 +560,7 @@ export default function Spells() {
                             onRemove={() => setConfirmForget(spell)}
                             concentratingSpellId={concentratingId ?? null}
                             usePending={castFlow.isSpellPending(spell.id)}
-                            showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1}
+                            showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.always_prepared}
                             onPreparedToggle={() => handlePreparedToggle(spell)}
                             preparedPending={preparedMutation.isPending && preparedMutation.variables?.spellId === spell.id}
                             concentrationPending={
@@ -591,6 +601,7 @@ export default function Spells() {
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
+          casters={spellcasting?.casters ?? []}
         />
       )}
 

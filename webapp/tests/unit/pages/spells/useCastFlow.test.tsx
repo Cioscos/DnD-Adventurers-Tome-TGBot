@@ -4,9 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
+import { useCastConfirmStore } from '@/lib/rollOptions'
 import type { CharacterFull, Spell } from '@/types'
 
-const { attack, useSpell, updateConc, toastSuccess, rollDice } = vi.hoisted(() => ({
+const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError } = vi.hoisted(() => ({
+  toastError: vi.fn(),
+  castCheck: vi.fn(),
   attack: vi.fn(),
   useSpell: vi.fn(),
   updateConc: vi.fn(),
@@ -16,9 +19,9 @@ const { attack, useSpell, updateConc, toastSuccess, rollDice } = vi.hoisted(() =
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc } } }
+  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck } } }
 })
-vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: vi.fn(), error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: vi.fn(), error: toastError, warning: vi.fn() } }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   const t = (k: string, o?: Record<string, unknown>) =>
@@ -48,9 +51,9 @@ vi.mock('@/components/ui/ConfirmSheet', async () => {
 vi.mock('@/pages/spells/CastSpellModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { onCast: (l: number) => void; onCastRitual: () => void }) =>
+    default: (p: { onCast: (s: { id: number; level: number }) => void; onCastRitual: () => void }) =>
       React.createElement('div', null,
-        React.createElement('button', { onClick: () => p.onCast(3) }, 'cast-slot-3'),
+        React.createElement('button', { onClick: () => p.onCast({ id: 1, level: 3 }) }, 'cast-slot-3'),
         React.createElement('button', { onClick: p.onCastRitual }, 'cast-ritual'),
       ),
   }
@@ -122,7 +125,7 @@ function renderFlow(spell: Spell) {
   return renderWithProviders(<Harness spell={spell} />, { client })
 }
 
-afterEach(() => { vi.clearAllMocks() })
+afterEach(() => { vi.clearAllMocks(); castCheck.mockReset() })
 
 describe('useCastFlow attack spells', () => {
   it('rolls the d20 for an attack spell and shows the total', async () => {
@@ -143,7 +146,7 @@ describe('useCastFlow attack spells', () => {
     await userEvent.click(screen.getByText('begin'))
     expect(attack).not.toHaveBeenCalled()
     await userEvent.click(screen.getByText('cast-slot-3'))
-    await waitFor(() => expect(attack).toHaveBeenCalledWith(7, 2, { slot_level: 3, ritual: false, die: undefined }))
+    await waitFor(() => expect(attack).toHaveBeenCalledWith(7, 2, expect.objectContaining({ slot_id: 1, slot_level: 3, ritual: false })))
     expect(useSpell).not.toHaveBeenCalled()
     expect(await screen.findByText('total:14')).toBeInTheDocument()
   })
@@ -212,10 +215,12 @@ describe('useCastFlow single cast sheet', () => {
 })
 
 describe('useCastFlow damageless casts', () => {
-  it('confirms a damageless cantrip with a toast', async () => {
+  it('confirms a damageless cantrip with a toast, through the server', async () => {
+    useSpell.mockResolvedValue(char)
     renderFlow(light)
     await userEvent.click(screen.getByText('begin'))
-    expect(toastSuccess).toHaveBeenCalledWith('character.spells.cast_done(name=Luce)')
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('character.spells.cast_done(name=Luce)'))
+    expect(useSpell).toHaveBeenCalledWith(7, 3, expect.objectContaining({ as_ritual: false }))
   })
 
   it('confirms a damageless levelled spell with slot and concentration', async () => {
@@ -229,5 +234,31 @@ describe('useCastFlow damageless casts', () => {
       + 'character.spells.cast_done_slot(level=3)'
       + 'character.spells.cast_done_concentration',
     ))
+    expect(useSpell).toHaveBeenCalledWith(7, 4, expect.objectContaining({ slot_id: 1, slot_level: 3 }))
+    // Il lancio avvia la concentrazione col contatore: un secondo PATCH lo azzerava (§19 n. 10).
+    expect(updateConc).not.toHaveBeenCalled()
+  })
+
+  it('a refused confirmation casts nothing and shows no error', async () => {
+    castCheck.mockResolvedValue(['armor'])
+    renderFlow(bless)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('armor'))
+    useCastConfirmStore.getState().request!.answer(false)
+    await waitFor(() => expect(useCastConfirmStore.getState().request).toBeNull())
+    expect(useSpell).not.toHaveBeenCalled()
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('sends what the player confirmed', async () => {
+    castCheck.mockResolvedValue(['one_slot_per_turn'])
+    useSpell.mockResolvedValue(char)
+    renderFlow(bless)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('one_slot_per_turn'))
+    useCastConfirmStore.getState().request!.answer(true)
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 4, expect.objectContaining({ confirm: ['one_slot_per_turn'] })))
   })
 })

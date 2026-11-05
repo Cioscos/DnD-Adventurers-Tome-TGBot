@@ -1,5 +1,5 @@
 import { notifyMutationError } from '@/lib/mutationError'
-import { canRerollInspiration, askRollOptions } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -8,8 +8,11 @@ import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { isAttackSpell } from '@/lib/spellType'
 import { m, AnimatePresence } from 'framer-motion'
+import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
+import RollNotes from '@/components/rules/RollNotes'
+import type { OptionResult } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
@@ -25,7 +28,7 @@ const STEP_VARIANTS = {
   exit: (dir: number) => ({ opacity: 0, x: -32 * dir }),
 }
 
-type AttackCast = { spell: Spell; slotLevel: number | null; ritual: boolean; mode: RollMode }
+type AttackCast = { spell: Spell; slot: SpellSlot | null; ritual: boolean; mode: RollMode }
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }
 
 export interface CastFlow {
@@ -54,9 +57,12 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
   const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
+  const [pendingSlotId, setPendingSlotId] = useState<number | undefined>(undefined)
+  // Esito delle opzioni di un lancio senza danno: effetti e bersaglio da mostrare.
+  const [castNotes, setCastNotes] = useState<OptionResult | null>(null)
   const [pendingRitual, setPendingRitual] = useState(false)
   const [confirmCast, setConfirmCast] = useState<
-    { spell: Spell; slotLevel: number | null; ritual: boolean } | null
+    { spell: Spell; slot: SpellSlot } | null
   >(null)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   // Danno dopo il tiro per colpire: slot già consumato, critico preimpostato.
@@ -74,59 +80,45 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     toast.success(msg)
   }, [t])
 
-  const concentrationMutation = useMutation({
-    mutationFn: (spell: Spell) => api.spells.updateConcentration(charId, spell.id),
-    onSuccess: (updated, spell) => {
-      qc.setQueryData(['character', charId], updated)
-      haptic.success()
-      confirmCastDone(spell, null, false)
-    },
-  })
-
+  // Lancio senza dadi: slot, rituale o trucchetto. Il server avvia anche la concentrazione col suo contatore.
   const castMutation = useMutation({
-    mutationFn: async ({ spell, slotLevel }: { spell: Spell; slotLevel: number }) => {
-      const updated = await api.spells.use(charId, spell.id, slotLevel)
-      if (spell.is_concentration) {
-        const conc = await api.spells.updateConcentration(charId, spell.id)
-        return { updated: conc, spell }
-      }
-      return { updated, spell }
-    },
-    onSuccess: ({ updated, spell }, { slotLevel }) => {
+    mutationFn: ({ spell, slot, ritual = false }: { spell: Spell; slot?: SpellSlot; ritual?: boolean }) =>
+      castSpell(charId, spell.id, { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual }),
+    onSuccess: (updated, { spell, slot, ritual = false }) => {
       qc.setQueryData(['character', charId], updated)
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       setCastingSpell(null)
       haptic.success()
-      confirmCastDone(spell, slotLevel, false)
+      confirmCastDone(spell, slot?.level ?? null, ritual)
+      refreshAfterOptions(qc, charId, updated.option_result)
+      if (updated.option_result?.effects?.length || updated.option_result?.targets?.length) setCastNotes(updated.option_result)
     },
-  })
-
-  const castRitualMutation = useMutation({
-    mutationFn: (spell: Spell) => api.spells.use(charId, spell.id, null, true),
-    onSuccess: (updated, spell) => {
-      qc.setQueryData(['character', charId], updated)
-      setCastingSpell(null)
-      haptic.success()
-      confirmCastDone(spell, null, true)
+    onError: (err) => {
+      if (!(err instanceof CastCancelled)) notifyMutationError()
     },
   })
 
   // Tiro per colpire: il BE consuma slot/rituale e attiva la concentrazione come /use.
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
+      const prepared = await prepareCast(charId, cast.spell.id, cast.ritual)
       const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id })
       const roll = d20Arg(cast.mode, await rollD20(cast.mode), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
-        slot_level: cast.slotLevel, ritual: cast.ritual,
+        slot_id: cast.slot?.id, slot_level: cast.slot?.level ?? null, ritual: cast.ritual, confirm: prepared.confirm,
+        cast_options: prepared.options, cast_option_inputs: prepared.option_inputs,
         ...(typeof roll === 'object' ? roll : { die: roll }),
       })
       return { cast, result }
     },
     onSuccess: ({ cast, result }) => {
       qc.setQueryData(['character', charId], result.character)
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       setAttackState({ ...cast, result, wasRerolled: false })
       haptic.success()
     },
     onError: (err) => {
+      if (err instanceof CastCancelled) return
       if (err instanceof ApiError && (err.detail as { code?: string } | null)?.code === 'incapacitated') {
         toast.error(t('character.attack.incapacitated'))
       } else {
@@ -169,7 +161,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           settings: { ...(char?.settings ?? {}), spell_slots_mode: 'manual' },
         })
       }
-      const existing = (char?.spell_slots ?? []).find((s) => s.level === level)
+      const existing = (char?.spell_slots ?? []).find((s) => s.level === level && !s.is_pact)
       if (existing) {
         return api.spellSlots.update(charId, existing.id, { total: existing.total + 1 })
       }
@@ -194,78 +186,71 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     if (spell.level === 0) {
       // Trucchetto — nessuno slot; la concentrazione si gestisce nello sheet danni se presente.
       if (isAttackSpell(spell)) {
-        beginAttack({ spell, slotLevel: null, ritual: false, mode })
+        beginAttack({ spell, slot: null, ritual: false, mode })
         return
       }
       if (spell.damage_dice) {
         setPendingRitual(false)
         setPendingSlotLevel(0)
+        setPendingSlotId(undefined)
         setRollDamageSpell(spell)
         return
       }
-      if (spell.is_concentration) {
-        concentrationMutation.mutate(spell)
-      } else {
-        haptic.success()
-        confirmCastDone(spell, null, false)
-      }
+      castMutation.mutate({ spell })
       return
     }
     // Livellato — prima si sceglie lo slot.
     setCastingSpell(spell)
-  }, [beginAttack, concentrationMutation, confirmCastDone])
+  }, [beginAttack, castMutation])
 
   const needsUnpreparedWarn = useCallback((spell: Spell) =>
     !!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.is_prepared,
   [spellcasting])
 
-  const proceedSlotCast = useCallback((spell: Spell, slotLevel: number) => {
+  const proceedSlotCast = useCallback((spell: Spell, slot: SpellSlot) => {
     if (isAttackSpell(spell)) {
-      beginAttack({ spell, slotLevel, ritual: false, mode: castMode })
+      beginAttack({ spell, slot, ritual: false, mode: castMode })
       return
     }
     if (spell.damage_dice) {
       // Consumo slot differito al bottone Roll dello sheet danni.
       setPendingRitual(false)
-      setPendingSlotLevel(slotLevel)
+      setPendingSlotLevel(slot.level)
+      setPendingSlotId(slot.id)
       setRollDamageSpell(spell)
       return
     }
-    castMutation.mutate({ spell, slotLevel })
+    castMutation.mutate({ spell, slot })
   }, [beginAttack, castMutation, castMode])
 
   const proceedRitualCast = useCallback((spell: Spell) => {
     if (isAttackSpell(spell)) {
-      beginAttack({ spell, slotLevel: null, ritual: true, mode: castMode })
+      beginAttack({ spell, slot: null, ritual: true, mode: castMode })
       return
     }
     if (spell.damage_dice) {
       setPendingRitual(true)
       setPendingSlotLevel(null)
+      setPendingSlotId(undefined)
       setRollDamageSpell(spell)
       return
     }
-    castRitualMutation.mutate(spell)
-  }, [beginAttack, castRitualMutation, castMode])
+    castMutation.mutate({ spell, ritual: true })
+  }, [beginAttack, castMutation, castMode])
 
-  const handleCastSlot = useCallback((slotLevel: number) => {
+  const handleCastSlot = useCallback((slot: SpellSlot) => {
     if (!castingSpell) return
     if (needsUnpreparedWarn(castingSpell)) {
-      setConfirmCast({ spell: castingSpell, slotLevel, ritual: false })
+      setConfirmCast({ spell: castingSpell, slot })
       return
     }
-    proceedSlotCast(castingSpell, slotLevel)
+    proceedSlotCast(castingSpell, slot)
   }, [castingSpell, needsUnpreparedWarn, proceedSlotCast])
 
+  // La preparazione di un rituale la giudica il server, per edizione e classe (`prepareCast`).
   const handleCastRitual = useCallback(() => {
-    if (!castingSpell) return
-    // RAW: il Mago rituala dal libro anche se non preparato, niente avviso.
-    if (needsUnpreparedWarn(castingSpell) && !spellcasting?.has_wizard) {
-      setConfirmCast({ spell: castingSpell, slotLevel: null, ritual: true })
-      return
-    }
-    proceedRitualCast(castingSpell)
-  }, [castingSpell, needsUnpreparedWarn, spellcasting, proceedRitualCast])
+    if (castingSpell) proceedRitualCast(castingSpell)
+  }, [castingSpell, proceedRitualCast])
 
   const availableSlotsFor = (spellLevel: number) =>
     spellSlots
@@ -273,15 +258,16 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       .sort((a, b) => a.level - b.level)
 
   const isSpellPending = useCallback((spellId: number) =>
-    (concentrationMutation.isPending && concentrationMutation.variables?.id === spellId)
+    (castMutation.isPending && castMutation.variables?.spell.id === spellId)
     || (attackMutation.isPending && attackMutation.variables?.spell.id === spellId),
-  [concentrationMutation.isPending, concentrationMutation.variables,
+  [castMutation.isPending, castMutation.variables,
     attackMutation.isPending, attackMutation.variables])
 
   const openDamageAfterAttack = () => {
     if (!attackState) return
     setPendingRitual(attackState.ritual)
-    setPendingSlotLevel(attackState.slotLevel ?? 0)
+    setPendingSlotLevel(attackState.slot?.level ?? 0)
+    setPendingSlotId(attackState.slot?.id)
     setDamageAfterAttack({ critical: attackState.result.is_critical })
     setRollDamageSpell(attackState.spell)
     setAttackState(null)
@@ -290,6 +276,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const closeDamage = () => {
     setRollDamageSpell(null)
     setPendingSlotLevel(null)
+    setPendingSlotId(undefined)
     setPendingRitual(false)
     setDamageAfterAttack(null)
   }
@@ -330,7 +317,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 onCastRitual={handleCastRitual}
                 onCreateSlot={(level) => createSlotMutation.mutate(level)}
                 onCancel={closeCastSheet}
-                isPending={castMutation.isPending || castRitualMutation.isPending}
+                isPending={castMutation.isPending}
                 isCreatingSlot={createSlotMutation.isPending}
               />
             )}
@@ -339,6 +326,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 charId={charId}
                 spell={rollDamageSpell}
                 slotLevel={pendingSlotLevel}
+                slotId={pendingSlotId}
                 asRitual={pendingRitual}
                 slotAlreadyConsumed={damageAfterAttack !== null}
                 initialCritical={damageAfterAttack?.critical ?? false}
@@ -359,17 +347,24 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           : undefined}
         confirmLabel={t('character.spells.cast_anyway')}
         cancelLabel={t('common.cancel')}
-        loading={castMutation.isPending || castRitualMutation.isPending}
+        loading={castMutation.isPending}
         onConfirm={() => {
           if (!confirmCast) return
-          if (confirmCast.ritual) proceedRitualCast(confirmCast.spell)
-          else if (confirmCast.slotLevel !== null) proceedSlotCast(confirmCast.spell, confirmCast.slotLevel)
+          proceedSlotCast(confirmCast.spell, confirmCast.slot)
           setConfirmCast(null)
         }}
       />
 
+      <Sheet open={castNotes !== null} onClose={() => setCastNotes(null)} title={t('character.roll_options.title_cast')}>
+        <div className="p-5 space-y-3">
+          <RollNotes charId={charId} optionResult={castNotes ?? undefined} />
+          <Button variant="secondary" fullWidth onClick={() => setCastNotes(null)}>{t('common.close')}</Button>
+        </div>
+      </Sheet>
+
       {attackState && (
         <SpellAttackModal
+          charId={charId}
           result={attackState.result}
           canRollDamage={!!attackState.spell.damage_dice && !attackState.result.is_fumble}
           onRollDamage={openDamageAfterAttack}
