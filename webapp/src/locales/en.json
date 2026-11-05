@@ -532,6 +532,8 @@
         "armor_body": "You are wearing something you have no training with: normally you can't cast spells like this.",
         "one_slot_per_turn_title": "Second slot this turn",
         "one_slot_per_turn_body": "You already spent a slot this turn and the rule allows only one. If this is a new turn, go ahead.",
+        "wild_shape_title": "Spells in Wild Shape",
+        "wild_shape_body": "You cannot cast spells in Wild Shape unless a feature allows it. Cast it anyway?",
         "bonus_spell_title": "Bonus action spell",
         "bonus_spell_body": "With a bonus action spell, the other spell in the same turn can only be an action cantrip. If this is a new turn, go ahead.",
         "ritual_unprepared_title": "Ritual not prepared",
@@ -1026,6 +1028,15 @@
       "force_confirm": "Activate anyway",
       "delete_title": "Delete {{name}}?",
       "limit": "Limit of 30 entries reached.",
+      "known_forms_limit": "You already know the maximum number of forms: delete one to replace it.",
+      "form_not_allowed_title": "Form not allowed",
+      "reasons": {
+        "no_wild_shape": "Wild Shape starts at druid level 2.",
+        "not_beast": "It must be a beast.",
+        "cr": "The CR is above the limit for your level.",
+        "fly": "Flying is allowed from level 8.",
+        "swim": "Swimming is allowed from level 4."
+      },
       "critical": "critical",
       "statblock": "Statblock",
       "kinds": {
@@ -4919,7 +4930,6 @@
       "custom_action": "custom action: imported as a feature, with dice and damage in the description",
       "half_proficiency": "half proficiency: not supported by the app, the skill is imported without proficiency",
       "creature_group": "creature from a group the app does not distinguish: imported as a generic companion",
-      "wild_shape_2024": "2024 wild shape: in the app the form has its own hit points, as in the 2014 rules",
       "section_failed": "section unreadable, skipped",
       "not_supported": "not supported yet",
       "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",

@@ -141,7 +141,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     {lostSave && <ConcentrationSaveDialog result={lostSave} onClose={() => setLostSave(null)} afterRoll={{ charId: char.id }} />}
     <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
-        {char.active_form && (
+        {char.active_form?.own_hp !== false && char.active_form && (
           <div className="text-center space-y-1.5">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{char.active_form.name}</p>
             <p data-testid="form-hp-primary" className="font-mono tabular-nums">

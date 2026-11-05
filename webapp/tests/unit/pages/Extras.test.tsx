@@ -78,8 +78,8 @@ describe('Extras page', () => {
 })
 
 describe('Extras con nomi di classe italiani', () => {
-  it('Druido / Circolo della Luna danno gli stessi valori di druid / Moon', async () => {
-    getChar.mockResolvedValue({ ...char, classes: [{ id: 1, class_name: 'Druido', level: 6, subclass: 'Circolo della Luna' }] })
+  it('Druido / Circolo della Luna (subclass_key moon) danno gli stessi valori di druid / Moon', async () => {
+    getChar.mockResolvedValue({ ...char, classes: [{ id: 1, class_name: 'Druido', level: 6, subclass: 'Circolo della Luna', subclass_key: 'moon' }] })
     listComp.mockResolvedValue([])
     renderWithProviders(<Extras />)
     await userEvent.click(await screen.findByText('character.extras.add'))

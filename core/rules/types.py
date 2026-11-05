@@ -250,6 +250,7 @@ class FeatureSpec:
     roll_options: tuple = ()
     on_use: Any = None
     passive: bool = False
+    cast_in_form: bool = False  # in Forma Selvatica si lanciano incantesimi senza conferma (Incantesimi Bestiali)
     attacks_per_action: int = 0
     target_effect: Any = None
     # categoria (`armor`/`weapons`/`tools`) -> id di `core.rules.proficiencies.LABELS`, concesse una volta sola

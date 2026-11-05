@@ -33,6 +33,7 @@ export default function Extras() {
     onSuccess: () => { haptic.success(); setAdding(false); qc.invalidateQueries({ queryKey: ['companions', charId] }) },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 422 && err.detail === 'companion_limit') toast.error(t('character.extras.limit'))
+      else if (err instanceof ApiError && err.status === 422 && err.detail === 'known_forms_limit') toast.error(t('character.extras.known_forms_limit'))
       else notifyMutationError()
     },
   })
@@ -44,7 +45,8 @@ export default function Extras() {
 
   const druid = char.classes.find((c) => classKey(c.class_name) === 'druid')
   const druidLevel = druid?.level ?? 0
-  const isMoon = /moon|luna/i.test(druid?.subclass ?? '')
+  const isMoon = druid?.subclass_key === 'moon'
+  const edition = char.rules_edition ?? '2014'
   const ws = char.abilities.find((a) => a.feature_key === 'druid.wild_shape')
   const wsUses = ws && ws.max_uses != null ? ws.uses ?? 0 : null // illimitata: come senza contatore
 
@@ -63,13 +65,14 @@ export default function Extras() {
               <h2 className="text-xs font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim">
                 {t(`character.extras.kinds.${kind}`)}
               </h2>
-              {rows.map((c) => <CompanionCard key={c.id} charId={charId} comp={c} wildShapeUses={wsUses} />)}
+              {rows.map((c) => <CompanionCard key={c.id} charId={charId} comp={c} wildShapeUses={wsUses}
+                formHasNoHp={edition === '2024' && druidLevel > 0} />)}
             </section>
           )
         })}
       </div>
       {adding && (
-        <CompanionForm druidLevel={druidLevel} isMoon={isMoon} pending={create.isPending}
+        <CompanionForm druidLevel={druidLevel} isMoon={isMoon} edition={edition} pending={create.isPending}
           onSubmit={(b) => create.mutate(b)} onClose={() => setAdding(false)} />
       )}
     </Layout>

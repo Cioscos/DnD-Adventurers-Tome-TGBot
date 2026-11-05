@@ -16,18 +16,21 @@ export function familiarWarning(entry: Pick<MonsterEntry, 'index'>): string | nu
   return FAMILIAR_FORMS.has(entry.index) ? null : 'character.extras.warn.familiar_form'
 }
 
-/** Highest CR a druid can assume (Moon circle: 1 at level 2, level/3 from 6). */
-export function wildShapeMaxCr(druidLevel: number, isMoon: boolean): number {
-  if (isMoon) return druidLevel < 6 ? 1 : Math.floor(druidLevel / 3)
+/** Highest CR a druid can assume: mirrors `core/rules/forms.py` (the server blocks what breaks it).
+ * 2014 Moon: 1 up to level 5, then level/3; 2024 Moon: level/3 from level 3. */
+export function wildShapeMaxCr(druidLevel: number, isMoon: boolean, edition: string = '2014'): number {
+  if (isMoon && edition !== '2024') return druidLevel < 6 ? 1 : Math.floor(druidLevel / 3)
+  if (isMoon && druidLevel >= 3) return Math.floor(druidLevel / 3)
   return druidLevel < 4 ? 0.25 : druidLevel < 8 ? 0.5 : 1
 }
 
-/** i18n key of the first broken Wild Shape limit, or null. Advisory only. */
-export function wildShapeWarning(entry: Rule, druidLevel: number, isMoon: boolean): string | null {
+/** i18n key of the first broken Wild Shape limit, or null. Advisory: the server asks to confirm on activation. */
+export function wildShapeWarning(entry: Rule, druidLevel: number, isMoon: boolean, edition: string = '2014'): string | null {
   if (entry.type !== 'beast') return 'character.extras.warn.not_beast'
-  if (entry.challenge_rating > wildShapeMaxCr(druidLevel, isMoon)) return 'character.extras.warn.cr'
+  if (entry.challenge_rating > wildShapeMaxCr(druidLevel, isMoon, edition)) return 'character.extras.warn.cr'
   if ((entry.speed.fly_ft ?? 0) > 0 && druidLevel < 8) return 'character.extras.warn.fly'
-  if ((entry.speed.swim_ft ?? 0) > 0 && druidLevel < 4) return 'character.extras.warn.swim'
+  // 2024 limits only CR and flying: swimming is free
+  if (edition !== '2024' && (entry.speed.swim_ft ?? 0) > 0 && druidLevel < 4) return 'character.extras.warn.swim'
   return null
 }
 

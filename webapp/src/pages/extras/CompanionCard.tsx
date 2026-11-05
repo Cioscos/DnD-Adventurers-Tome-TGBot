@@ -14,6 +14,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
 import { haptic } from '@/auth/telegram'
 import type { Companion, CompanionAction, CompanionAttackResult } from '@/types'
@@ -32,9 +33,11 @@ interface Props {
   comp: Companion
   /** Remaining Wild Shape uses (null when the character has no such ability). */
   wildShapeUses: number | null
+  /** 2024: la forma non ha PF propri (sono quelli del druido con i temporanei): niente barra né pulsanti PF. */
+  formHasNoHp?: boolean
 }
 
-export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
+export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
@@ -43,6 +46,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [forceAsk, setForceAsk] = useState(false)
+  const [formReasons, setFormReasons] = useState<string[] | null>(null)
   const [result, setResult] = useState<{ name: string; r: CompanionAttackResult } | null>(null)
 
   const refresh = () => {
@@ -58,10 +62,12 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
 
   const attack = useMutation({
     mutationFn: async ({ idx, mode }: { idx: number; mode: RollMode }) => {
+      const choice = await askRollOptions(charId, { roll: 'attack' })
       const dice = await rollD20(mode)
-      return api.companions.attack(charId, comp.id, idx, mode, dice)
+      return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs })
     },
     onSuccess: (r, { idx }) => {
+      refreshAfterOptions(qc, charId, r.option_result)
       setResult({ name: comp.statblock.actions?.[idx]?.name ?? '', r })
       haptic.success()
       refresh()
@@ -77,9 +83,11 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
 
   const activate = useMutation({
     mutationFn: (force: boolean) => api.companions.activate(charId, comp.id, force),
-    onSuccess: () => { setForceAsk(false); haptic.success(); refresh() },
+    onSuccess: () => { setForceAsk(false); setFormReasons(null); haptic.success(); refresh() },
     onError: (err) => {
-      if (err instanceof ApiError && err.status === 409 && err.detail === 'no_wild_shape_uses') setForceAsk(true)
+      const detail = err instanceof ApiError ? (err.detail as { code?: string; reasons?: string[] } | string | null) : null
+      if (typeof detail === 'object' && detail?.code === 'form_not_allowed') setFormReasons(detail.reasons ?? [])
+      else if (err instanceof ApiError && err.status === 409 && err.detail === 'no_wild_shape_uses') setForceAsk(true)
       else if (err instanceof ApiError && err.status === 409 && err.detail === 'character_down') toast.error(t('character.extras.character_down'))
       else notifyMutationError()
     },
@@ -122,6 +130,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
         </div>
       </div>
 
+      {!(formHasNoHp && comp.is_active) && <>
       <div>
         <div className="flex justify-between text-sm font-mono tabular-nums mb-1">
           <span className="text-dnd-text font-bold">{comp.current_hp}/{comp.max_hp}</span>
@@ -143,6 +152,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
         <Button variant="primary" className="min-h-11" disabled={!amountOk} loading={hp.isPending && hp.variables === 'heal'}
           onClick={() => hp.mutate('heal')}>{t('character.hp.quick_heal')}</Button>
       </div>
+      </>}
 
       {attacks.length > 0 && (
         <ul className="space-y-1.5">
@@ -151,7 +161,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
               <span className="flex-1 min-w-0 text-sm font-body text-dnd-text break-words">
                 {a.name}
                 <span className="block text-xs font-mono text-dnd-text-muted tabular-nums">
-                  {a.attack_bonus! >= 0 ? '+' : ''}{a.attack_bonus}{a.damage_dice ? ` · ${a.damage_dice}` : ''}
+                  {a.attack_bonus! + (comp.attack_bonus_extra ?? 0) >= 0 ? '+' : ''}{a.attack_bonus! + (comp.attack_bonus_extra ?? 0)}
+                  {a.damage_dice ? ` · ${a.damage_dice}${comp.damage_bonus_extra ? `+${comp.damage_bonus_extra}` : ''}` : ''}
                 </span>
               </span>
               <RollButton
@@ -210,6 +221,10 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
         title={t('character.extras.delete_title', { name: comp.name })} confirmLabel={t('common.delete')} loading={remove.isPending} />
       <ConfirmSheet open={forceAsk} onClose={() => setForceAsk(false)} onConfirm={() => activate.mutate(true)}
         title={t('character.extras.force_title')} body={t('character.extras.force_body')}
+        confirmLabel={t('character.extras.force_confirm')} confirmVariant="primary" loading={activate.isPending} />
+      <ConfirmSheet open={formReasons !== null} onClose={() => setFormReasons(null)} onConfirm={() => activate.mutate(true)}
+        title={t('character.extras.form_not_allowed_title')}
+        body={(formReasons ?? []).map((r) => t(`character.extras.reasons.${r}`)).join(' ')}
         confirmLabel={t('character.extras.force_confirm')} confirmVariant="primary" loading={activate.isPending} />
     </Surface>
   )

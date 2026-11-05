@@ -23,7 +23,7 @@ from api.services.durations import end_concentration, is_concentrating
 from api.services.rules_states import end_states, on_damage
 from api.services.rules_turn import get_turn, set_damaged
 from api.services.condition_effects import release_concentration_effects
-from api.services.wild_shape import absorb_damage, deactivate_other_forms, get_active_form
+from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
@@ -143,7 +143,10 @@ def _hp_state(char: Character, form=None) -> dict:
         "death_saves": dict(char.death_saves or {}),
         "is_dead": char.is_dead,
         "concentrating_spell_id": char.concentrating_spell_id,
-        "active_states": list(char.active_states or []),
+        # lo stato della forma sta a parte: attivare un'altra forma dopo l'operazione non impedisce l'annullamento
+        "active_states": [s for s in char.active_states or [] if s["key"] != "wild_shape"],
+        "form_state": next((s for s in char.active_states or []
+                            if s["key"] == "wild_shape" and form is not None and s["data"].get("companion_id") == form.id), None),
         "damaged": get_turn(char)["damaged"],
         **{k: (char.settings or {}).get(k) for k in _CONC_SETTINGS},
     }
@@ -167,6 +170,8 @@ async def update_hp(
     if body.options and body.op != HPOp.DAMAGE:
         raise HTTPException(status_code=422, detail={"code": "options_only_on_damage"})
     form = await get_active_form(session, char.id)  # the form involved in this op, if any
+    if form is not None and not form_own_hp(char):
+        form = None  # 2024: la forma non ha PF propri, i danni vanno ai temporanei e ai PF del druido
     before = _hp_state(char, form)
     option_block = None
     conc_result: ConcentrationSaveResult | None = None
@@ -210,7 +215,7 @@ async def update_hp(
             overflow = absorb_damage(form, applied)
             if overflow > 0:
                 form_overflow = overflow
-                form.is_active = False
+                end_form(char, form)
                 _add_history(session, char.id, "companion_hp",
                              f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
                 applied = conc_damage = overflow
@@ -220,7 +225,7 @@ async def update_hp(
                 _add_history(session, char.id, "companion_hp",
                              f"{form.name}: -{conc_damage} → PF {form.current_hp}/{form.max_hp}, temp {form.temp_hp}")
                 if form.current_hp == 0:  # 5e: the form ends at 0 HP, even with no overflow
-                    form.is_active = False
+                    end_form(char, form)
                     _add_history(session, char.id, "companion_hp",
                                  f"Forma selvatica terminata: {form.name} (PF a 0)")
         amount = applied
@@ -374,7 +379,7 @@ async def update_hp(
         and form is not None
         and form.is_active
     ):
-        form.is_active = False
+        end_form(char, form)
         _add_history(session, char.id, "companion_hp",
                      f"Forma selvatica terminata: {form.name} (PF a 0)")
 
@@ -442,7 +447,12 @@ async def undo_hp(
     if spell_id is not None and not any(s.id == spell_id for s in char.spells):
         spell_id = None
     char.concentrating_spell_id = spell_id
+    now_form_state = next((s for s in char.active_states or [] if s["key"] == "wild_shape"), None)
     char.active_states = list(before.get("active_states") or [])
+    if before.get("form_state"):
+        char.active_states = [*char.active_states, before["form_state"]]
+    elif now_form_state is not None:  # un'altra forma attivata dopo l'operazione resta
+        char.active_states = [*char.active_states, now_form_state]
     set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
     refund_spent(char, snap.get("spent") or [])

@@ -19,7 +19,7 @@ from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
-from core.game.stats import effective_ability_mod
+from core.game.stats import effective_ability_mod, roll_ability_mod
 from core.rules.edition import character_edition
 from core.rules.spellcasting import concentration_dc
 from core.rules.modifiers import modifiers_for
@@ -111,7 +111,7 @@ def weapon_attack_profile(
 
     ``chosen`` vale solo dove la regola lascia la scelta (Accurata, armi da monaco); senza, la migliore."""
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    mods = {a: effective_ability_mod(char, a) for a in ("strength", "dexterity")}
+    mods = {a: roll_ability_mod(char, a) for a in ("strength", "dexterity")}
     is_ranged = meta.get("weapon_type", "melee") == "ranged" and attack_mode != "thrown"
     if has_property(item, "finesse") or martial_arts_level(char, item):
         best = "dexterity" if mods["dexterity"] > mods["strength"] else "strength"
@@ -123,8 +123,8 @@ def weapon_attack_profile(
 
 def unarmed_attack_profile(char: Character) -> tuple[int, str, str]:
     """Modificatore, dadi di danno e caratteristica del colpo senz'armi."""
-    str_mod = effective_ability_mod(char, "strength")
-    dex_mod = effective_ability_mod(char, "dexterity")
+    str_mod = roll_ability_mod(char, "strength")
+    dex_mod = roll_ability_mod(char, "dexterity")
     ability_mod, damage_dice = unarmed_strike_profile(str_mod, dex_mod, martial_arts_level(char), character_edition(char))
     return ability_mod, damage_dice, "strength" if ability_mod == str_mod else "dexterity"
 
@@ -132,7 +132,7 @@ def unarmed_attack_profile(char: Character) -> tuple[int, str, str]:
 async def initiative_bonus(session: AsyncSession, char: Character) -> int:
     """Bonus d'iniziativa come sulla scheda: Destrezza effettiva, oggetti, homebrew e regole."""
     return (
-        effective_ability_mod(char, "dexterity")
+        roll_ability_mod(char, "dexterity")
         + item_bonus_total(char.items, "initiative")
         + await get_passive_modifiers(session, char, "character.initiative")
         + modifiers_for(char, "initiative", ability="dexterity").flat
@@ -144,7 +144,7 @@ async def saving_throw_bonus(session: AsyncSession, char: Character, ability: st
     proficiency, homebrew passive modifiers and rule modifiers."""
     proficient = bool((char.saving_throws or {}).get(ability, False))
     return (
-        effective_ability_mod(char, ability)
+        roll_ability_mod(char, ability)
         + (char.proficiency_bonus if proficient else 0)
         + await get_passive_modifiers(session, char, f"character.saving_throw.{ability}")
         + item_bonus_total(char.items, f"save.{ability}")

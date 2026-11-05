@@ -31,6 +31,13 @@ describe('wildShapeWarning', () => {
     expect(wildShapeWarning(beast(0.25, { walk_ft: 10, swim_ft: 30 }), 2, false)).toBe('character.extras.warn.swim')
     expect(wildShapeWarning(beast(0.25, { walk_ft: 10, swim_ft: 30 }), 4, false)).toBeNull()
   })
+  it('2024: swimming is free, Moon CR is level/3 from level 3', () => {
+    expect(wildShapeWarning(beast(0.25, { walk_ft: 10, swim_ft: 30 }), 2, false, '2024')).toBeNull()
+    expect(wildShapeWarning(beast(0.25, { walk_ft: 10, fly_ft: 60 }), 6, false, '2024')).toBe('character.extras.warn.fly')
+    expect(wildShapeMaxCr(3, true, '2024')).toBe(1)
+    expect(wildShapeMaxCr(2, true, '2024')).toBe(0.25)
+    expect(wildShapeMaxCr(6, true, '2024')).toBe(2)
+  })
   it('requires a beast', () => {
     expect(wildShapeWarning(beast(0.25, { walk_ft: 30 }, 'monstrosity'), 8, false)).toBe('character.extras.warn.not_beast')
   })

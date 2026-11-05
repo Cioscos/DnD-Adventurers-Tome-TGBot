@@ -8,6 +8,7 @@ from core.data.spell_slots import THIRD_SUBCLASSES, caster_kind, compute_pact_sl
 from core.data.spellcasting import PREPARING_CLASSES, compute_prepared_cap, has_ritual_caster, has_wizard
 from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_mod
+from core.rules.catalog import active_features
 from core.rules.edition import character_edition, class_key as row_class_key
 from core.rules.proficiencies import is_armor_proficient
 from core.rules.types import Edition
@@ -185,6 +186,12 @@ def _armor_block(char: Any) -> bool:
     return any(i.is_equipped and i.item_type in kinds and not is_armor_proficient(char, i) for i in char.items)
 
 
+def _form_block(char: Any) -> bool:
+    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali)."""
+    return (any(s.get("key") == "wild_shape" for s in char.active_states or [])
+            and not any(spec.cast_in_form for spec, _row in active_features(char)))
+
+
 def _turn_warning(char: Any, spell: Any) -> str | None:
     kind = casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
@@ -200,6 +207,8 @@ def _turn_warning(char: Any, spell: Any) -> str | None:
 def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
     """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
     out = ["armor"] if _armor_block(char) else []
+    if _form_block(char):
+        out.append("wild_shape")
     if ritual:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
     warning = _turn_warning(char, spell)

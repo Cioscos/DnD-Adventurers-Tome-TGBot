@@ -249,6 +249,7 @@ class ExportCompanion(BaseModel):
     armor_class: Annotated[int, _rng(0, 100)] = 10
     notes: Optional[str] = None
     is_active: bool = False
+    feature_key: Optional[str] = Field(default=None, max_length=80)
 
     @field_validator("statblock")
     @classmethod

@@ -1,0 +1,62 @@
+"""Forma Selvatica per edizione: limiti per livello e circolo, PF temporanei e durata (nessun import da `api/`)."""
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+from core.rules.types import Edition
+
+ROUNDS_PER_HOUR = 600
+
+
+@dataclass(frozen=True)
+class FormLimits:
+    """``max_cr`` ``None``: sotto il 2° livello nessuna forma. ``known_forms`` ``None``: nessun limite (2014).
+    ``temp_hp``: PF temporanei all'attivazione (2024). ``own_hp``: la forma ha PF propri (2014)."""
+    max_cr: float | None
+    fly: bool
+    swim: bool
+    known_forms: int | None
+    rounds: int
+    temp_hp: int
+    own_hp: bool
+    ac_wisdom: bool = False  # 2024, Circolo della Luna: CA minima 13 + modificatore di Saggezza
+
+
+def FormRules(edition: Edition, level: int, subclass_key: str | None) -> FormLimits:  # noqa: N802
+    """Limiti della forma di un druido di `level` (livello da druido, non totale)."""
+    moon = subclass_key == "moon"
+    cr = None if level < 2 else 0.25 if level < 4 else 0.5 if level < 8 else 1
+    if edition == "2014":
+        if moon and cr is not None:
+            cr = 1 if level < 6 else level // 3
+        return FormLimits(max_cr=cr, fly=level >= 8, swim=level >= 4, known_forms=None,
+                          rounds=level // 2 * ROUNDS_PER_HOUR, temp_hp=0, own_hp=True)
+    if moon and level >= 3:
+        cr = level // 3
+    known = None if level < 2 else 4 if level < 4 else 6 if level < 8 else 8
+    return FormLimits(max_cr=cr, fly=level >= 8, swim=True, known_forms=known, rounds=level // 2 * ROUNDS_PER_HOUR,
+                      temp_hp=level * (3 if moon and level >= 3 else 1), own_hp=False, ac_wisdom=moon and level >= 3)
+
+
+def form_violations(limits: FormLimits, statblock: dict) -> list[str]:
+    """Quali limiti la bestia rompe: ``no_wild_shape``, ``not_beast``, ``cr``, ``fly``, ``swim``."""
+    if limits.max_cr is None:
+        return ["no_wild_shape"]
+    speed = statblock.get("speed") or {}
+    out = []
+    if statblock.get("type") != "beast":
+        out.append("not_beast")
+    if float(statblock.get("challenge_rating") or 0) > limits.max_cr:
+        out.append("cr")
+    if (speed.get("fly_ft") or 0) > 0 and not limits.fly:
+        out.append("fly")
+    if (speed.get("swim_ft") or 0) > 0 and not limits.swim:
+        out.append("swim")
+    return out
+
+
+def beast_proficiency(challenge_rating: object) -> int:
+    """Bonus di competenza di una creatura dal suo GS (2 fino al GS 4, poi +1 ogni quattro)."""
+    cr = float(challenge_rating or 0)
+    return 2 + max(0, math.ceil(cr) - 1) // 4

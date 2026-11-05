@@ -14,7 +14,7 @@ from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
 from api.services.choices import option_catalog
 from api.services.condition_effects import character_effect_payload
-from api.services.wild_shape import get_active_form
+from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats
 from core.data.skills import SKILL_ABILITY_MAP
@@ -28,7 +28,8 @@ from core.rules.modifiers import (
     effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment,
 )
 from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
-from api.routers._helpers import effective_ability_mod, initiative_bonus
+from api.routers._helpers import initiative_bonus
+from core.game.stats import roll_ability_mod
 
 
 async def build_character_response(
@@ -64,7 +65,8 @@ async def build_character_response(
     if form is not None:
         response.active_form = ActiveForm(
             companion_id=form.id, name=form.name, current_hp=form.current_hp,
-            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class)
+            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class,
+            own_hp=form_own_hp(char))
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
     response.ac_breakdown = AcBreakdown(
@@ -104,7 +106,7 @@ async def build_character_response(
         if val:
             response.skills_homebrew_modifiers[slug] = val
         response.skill_bonuses[slug] = (
-            effective_ability_mod(char, ability) + skill_proficiency_part(char, slug) + val
+            roll_ability_mod(char, ability) + skill_proficiency_part(char, slug) + val
             + modifiers_for(char, "skill", skill=slug, ability=ability).flat
         )
     for slug in PASSIVE_SKILLS:

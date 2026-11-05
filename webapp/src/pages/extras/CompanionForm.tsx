@@ -15,13 +15,14 @@ const DICE = /^\d+d\d+([+-]\d+)?$/i
 interface Props {
   druidLevel: number
   isMoon: boolean
+  edition: string
   pending?: boolean
   onSubmit: (body: CompanionPayload) => void
   onClose: () => void
 }
 
 /** Creation sheet: pick a monster from the SRD catalogue or type the stats by hand. Warnings are advisory. */
-export default function CompanionForm({ druidLevel, isMoon, pending, onSubmit, onClose }: Props) {
+export default function CompanionForm({ druidLevel, isMoon, edition, pending, onSubmit, onClose }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [kind, setKind] = useState<CompanionKind>('familiar')
@@ -37,7 +38,7 @@ export default function CompanionForm({ druidLevel, isMoon, pending, onSubmit, o
 
   const warnKey = !entry ? null
     : kind === 'familiar' ? familiarWarning(entry)
-      : kind === 'wild_shape' ? wildShapeWarning(entry, druidLevel, isMoon) : null
+      : kind === 'wild_shape' ? wildShapeWarning(entry, druidLevel, isMoon, edition) : null
 
   const pick = (e: MonsterEntry) => {
     setEntry(e)
@@ -83,7 +84,7 @@ export default function CompanionForm({ druidLevel, isMoon, pending, onSubmit, o
           )}
           {warnKey && (
             <p role="status" className="text-sm font-body px-3 py-2 rounded-xl border border-dnd-amber/50 bg-dnd-amber/10 text-dnd-amber">
-              {t(warnKey, { cr: formatCr(wildShapeMaxCr(druidLevel, isMoon)) })}
+              {t(warnKey, { cr: formatCr(wildShapeMaxCr(druidLevel, isMoon, edition)) })}
             </p>
           )}
           <Input label={t('character.extras.name')} value={name} onChange={setName} />

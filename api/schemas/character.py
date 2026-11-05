@@ -117,6 +117,7 @@ class ActiveForm(BaseModel):
     max_hp: int
     temp_hp: int
     armor_class: int
+    own_hp: bool = True  # 2014: la forma ha PF propri; 2024: PF del druido con i temporanei
 
 
 class CharacterFull(BaseModel):

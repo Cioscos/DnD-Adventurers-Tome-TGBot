@@ -923,9 +923,9 @@ export const api = {
       request<void>(`/characters/${charId}/companions/${id}`, { method: 'DELETE' }),
     hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number) =>
       request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value }) }),
-    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[]) =>
+    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[], choice?: Pick<RollChoice, 'options' | 'option_inputs'>) =>
       request<CompanionAttackResult>(`/characters/${charId}/companions/${id}/attack`, {
-        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice }),
+        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice, ...choice }),
       }),
     activate: (charId: number, id: number, force = false) =>
       request<Companion>(`/characters/${charId}/companions/${id}/activate`, { method: 'POST', body: JSON.stringify({ force }) }),

@@ -157,6 +157,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("character_classes", "hit_dice_used", "INTEGER NOT NULL", "0"),
     # Snapshot per annullare l'ultimo avanzamento di turno
     ("encounters", "last_advance_undo", "JSON", None),
+    # Compagno concesso da un privilegio (PF e bonus dal livello)
+    ("companions", "feature_key", "VARCHAR(80)", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)

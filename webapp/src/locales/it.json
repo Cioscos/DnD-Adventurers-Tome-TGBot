@@ -532,6 +532,8 @@
         "armor_body": "Indossi qualcosa per cui non hai addestramento: di norma così non si lanciano incantesimi.",
         "one_slot_per_turn_title": "Secondo slot nel turno",
         "one_slot_per_turn_body": "Hai già speso uno slot in questo turno: la regola ne ammette uno solo. Se è un nuovo turno, lancia pure.",
+        "wild_shape_title": "Incantesimi in Forma Selvatica",
+        "wild_shape_body": "In Forma Selvatica non si lanciano incantesimi, a meno di un privilegio che lo consenta. Lanciarlo comunque?",
         "bonus_spell_title": "Incantesimo con azione bonus",
         "bonus_spell_body": "Con un incantesimo ad azione bonus, nello stesso turno l'altro può essere solo un trucchetto ad azione. Se è un nuovo turno, lancia pure.",
         "ritual_unprepared_title": "Rituale non preparato",
@@ -1025,6 +1027,15 @@
       "force_confirm": "Attiva comunque",
       "delete_title": "Eliminare {{name}}?",
       "limit": "Limite di 30 elementi raggiunto.",
+      "known_forms_limit": "Conosci già il massimo di forme: eliminane una per sostituirla.",
+      "form_not_allowed_title": "Forma non ammessa",
+      "reasons": {
+        "no_wild_shape": "Forma Selvatica dal 2° livello da druido.",
+        "not_beast": "Serve una bestia.",
+        "cr": "Il GS supera il limite del tuo livello.",
+        "fly": "Il volo è ammesso dall'8° livello.",
+        "swim": "Il nuoto è ammesso dal 4° livello."
+      },
       "critical": "critico",
       "statblock": "Scheda mostro",
       "kinds": {
@@ -4918,7 +4929,6 @@
       "custom_action": "azione personalizzata: importata come privilegio, con dadi e danno nella descrizione",
       "half_proficiency": "mezza competenza: l'app non la gestisce, l'abilità è importata senza competenza",
       "creature_group": "creatura di un gruppo che l'app non distingue: importata come compagno generico",
-      "wild_shape_2024": "forma selvatica 2024: nell'app la forma ha punti ferita propri, come nelle regole 2014",
       "section_failed": "sezione non leggibile, saltata",
       "not_supported": "non ancora supportato",
       "no_free_slot": "equipaggiato ma senza slot libero: non compare sul manichino, sistemalo a mano",

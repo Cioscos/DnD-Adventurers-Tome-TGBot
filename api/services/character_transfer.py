@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
+from api.services.wild_shape import start_form
 from api.version import APP_VERSION
 from core.game.containers import is_container
 from core.game.stats import migrate_character_ac
@@ -282,17 +283,23 @@ async def import_character(
             restoration_type=RestorationType(h.restoration_type),
             **h.model_dump(exclude={"rule_index", "restoration_type"}),
         ))
-    active_seen = False
+    active_seen, active_form = False, None
     for c in data.companions:  # al massimo una forma attiva, solo per wild_shape
         active = c.is_active and c.kind == "wild_shape" and not active_seen
         active_seen = active_seen or active
-        session.add(Companion(
+        comp = Companion(
             character_id=char.id, created_at=now,
             **c.model_dump(exclude={"is_active", "current_hp"}),
             current_hp=min(c.current_hp, c.max_hp), is_active=active,
-        ))
+        )
+        session.add(comp)
+        if active:
+            active_form = comp
     if data.concentrating_spell_key is not None:
         char.concentrating_spell_id = spells[spell_keys.index(data.concentrating_spell_key)].id
     migrate_character_ac(char)  # file vecchi: valore del file, Destrezza già inclusa, altra scheda
     await session.flush()
+    if active_form is not None:  # la forma attiva del file riprende con il suo stato (senza nuovi PF temporanei)
+        await session.refresh(char, attribute_names=["classes"])
+        start_form(char, active_form, grant=False)
     return char

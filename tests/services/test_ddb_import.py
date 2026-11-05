@@ -536,9 +536,7 @@ def test_creatures_become_companions():  # famigli (gruppo 2) e forme selvatiche
     assert [(c.kind, c.name) for c in exp.companions] == [
         ("familiar", "Cat"), ("familiar", "Cat"), ("wild_shape", "Giant Wolf Spider"), ("wild_shape", "Dire Wolf")]
     assert not [e for e in rep.skipped if e.section == "creatures"]
-    # 2024: si tengono i propri PF; l'app usa i PF della forma (regola 2014) -> segnalato
-    assert [e.name for e in rep.approximated if e.reason == "ddb.reason.wild_shape_2024"] == [
-        "Giant Wolf Spider", "Dire Wolf"]
+    assert not [e for e in rep.approximated if e.section == "creatures"]  # la forma 2024 ha i suoi PF temporanei
 
 
 def test_creature_statblock_2024():

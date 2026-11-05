@@ -915,6 +915,8 @@ export interface ActiveForm {
   max_hp: number
   temp_hp: number
   armor_class: number
+  /** 2014: la forma ha PF propri; 2024: i PF sono del druido, con i temporanei. */
+  own_hp?: boolean
 }
 
 export type CompanionKind = 'familiar' | 'companion' | 'mount' | 'summon' | 'wild_shape'
@@ -955,10 +957,14 @@ export interface Companion {
   is_active: boolean
   created_at: string
   down: boolean
+  feature_key?: string | null
+  /** Compagno di privilegio: si somma al bonus dello statblock. */
+  attack_bonus_extra?: number
+  damage_bonus_extra?: number
 }
 
 export type CompanionPayload = Partial<Pick<Companion,
-  'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active'>>
+  'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active' | 'feature_key'>>
 
 export interface CompanionAttackResult {
   notes?: string[]
@@ -971,6 +977,7 @@ export interface CompanionAttackResult {
   damage_rolls: number[]
   damage_total: number
   damage_type: string | null
+  option_result?: OptionResult
 }
 
 // Import da D&D Beyond (POST /characters/import/ddb)

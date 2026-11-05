@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from core.game.item_bonuses import item_meta
-from core.game.stats import effective_ability_mod, effective_ability_score
+from core.game.stats import effective_ability_score, roll_ability_mod
 from core.rules.edition import character_edition, class_key
 from core.rules.proficiencies import is_weapon_proficient
 from core.rules.types import ChoiceSpec, RollOptionSpec, RuleContext, TargetEffect
@@ -184,7 +184,7 @@ def _has(prop: str):
 
 
 def _modifier(ctx: RuleContext) -> int:
-    return effective_ability_mod(ctx.char, ctx.ability) if ctx.ability else 0
+    return roll_ability_mod(ctx.char, ctx.ability) if ctx.ability else 0
 
 
 def _graze_available(ctx: RuleContext) -> bool:

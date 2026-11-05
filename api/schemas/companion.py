@@ -6,7 +6,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from api.schemas.common import D20Dice, RollMode
+from core.rules.companions import COMPANION_FEATURES
+from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
 DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -46,11 +47,19 @@ class CompanionCreate(BaseModel):
     armor_class: int = Field(default=10, ge=0, le=100)
     notes: Optional[str] = Field(default=None, max_length=5000)
     is_active: bool = False
+    feature_key: Optional[str] = Field(default=None, max_length=80)  # compagno di privilegio: PF e bonus dal livello
 
     @field_validator("statblock", mode="before")
     @classmethod
     def _sb(cls, v):
         return validate_statblock(v)
+
+    @field_validator("feature_key")
+    @classmethod
+    def _feature(cls, v):
+        if v is not None and v not in COMPANION_FEATURES:
+            raise ValueError("unknown feature_key")
+        return v
 
 
 class CompanionUpdate(BaseModel):
@@ -87,6 +96,9 @@ class CompanionRead(BaseModel):
     notes: Optional[str] = None
     is_active: bool
     created_at: str
+    feature_key: Optional[str] = None
+    attack_bonus_extra: int = 0  # compagno di privilegio: si somma al bonus dello statblock
+    damage_bonus_extra: int = 0
     down: bool = False  # set by the hp endpoint: 0 HP means "a terra" (no death saves)
 
 
@@ -99,7 +111,7 @@ class CompanionHp(BaseModel):
     value: int = Field(ge=0, le=100_000)
 
 
-class CompanionAttack(BaseModel):
+class CompanionAttack(RollOptionsBody):
     action_index: int = Field(ge=0)
     mode: RollMode = "normal"
     dice: D20Dice | None = None
@@ -117,3 +129,4 @@ class CompanionAttackResult(BaseModel):
     damage_rolls: list[int]
     damage_total: int
     damage_type: Optional[str] = None
+    option_result: OptionResult | None = absent_when_none()

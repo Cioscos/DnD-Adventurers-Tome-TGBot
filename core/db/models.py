@@ -1065,6 +1065,7 @@ class Companion(Base):
     armor_class: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    feature_key: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
     character: Mapped["Character"] = relationship(back_populates="companions")

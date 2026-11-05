@@ -828,8 +828,6 @@ def _creatures(c: _Ctx) -> None:
         kind = CREATURE_KIND.get(group, "companion")
         if group not in CREATURE_KIND:  # Battle Smith, sidekick, infusione...: generico
             c.approx("creatures", name, "ddb.reason.creature_group")
-        elif group == 13:  # 2024: il druido tiene i suoi PF, l'app dà alla forma PF propri (2014)
-            c.approx("creatures", name, "ddb.reason.wild_shape_2024")
         stats = {ABILITIES[_int(s.get("statId")) - 1][:3]: _clamp(_int(s.get("value"), 10), 1, 30)
                  for s in map(_d, _l(d.get("stats"))) if 1 <= _int(s.get("statId")) <= 6}
         speed = {f"{MOVEMENT[_int(m.get('movementId'))]}_ft": _clamp(_int(m.get("speed")), 0, 1000)

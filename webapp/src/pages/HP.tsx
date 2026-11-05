@@ -284,7 +284,7 @@ export default function HP() {
   const hbHp = char.hp_max_homebrew_modifier ?? 0
   const hpMax = char.computed?.hp_max_effective ?? char.hit_points + hbHp
   // In forma selvatica il numero grande e la barra sono quelli della forma (come in Eroe).
-  const form = char.active_form ?? null
+  const form = char.active_form?.own_hp === false ? null : char.active_form ?? null // 2024: i PF sono del druido
   const shownHp = form ? form.current_hp : char.current_hit_points
   const shownMax = form ? form.max_hp : hpMax
   const shownTemp = form ? form.temp_hp : char.temp_hp
