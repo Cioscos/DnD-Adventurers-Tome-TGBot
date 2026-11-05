@@ -1027,6 +1027,7 @@
       "force_confirm": "Attiva comunque",
       "delete_title": "Eliminare {{name}}?",
       "limit": "Limite di 30 elementi raggiunto.",
+      "action_used": "Azione già usata in questo turno.",
       "known_forms_limit": "Conosci già il massimo di forme: eliminane una per sostituirla.",
       "form_not_allowed_title": "Forma non ammessa",
       "reasons": {

@@ -1,7 +1,6 @@
 """Forma Selvatica per edizione: limiti per livello e circolo, PF temporanei e durata (nessun import da `api/`)."""
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 from core.rules.types import Edition
@@ -55,8 +54,3 @@ def form_violations(limits: FormLimits, statblock: dict) -> list[str]:
         out.append("swim")
     return out
 
-
-def beast_proficiency(challenge_rating: object) -> int:
-    """Bonus di competenza di una creatura dal suo GS (2 fino al GS 4, poi +1 ogni quattro)."""
-    cr = float(challenge_rating or 0)
-    return 2 + max(0, math.ceil(cr) - 1) // 4

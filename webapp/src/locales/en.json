@@ -1028,6 +1028,7 @@
       "force_confirm": "Activate anyway",
       "delete_title": "Delete {{name}}?",
       "limit": "Limit of 30 entries reached.",
+      "action_used": "Action already used this turn.",
       "known_forms_limit": "You already know the maximum number of forms: delete one to replace it.",
       "form_not_allowed_title": "Form not allowed",
       "reasons": {

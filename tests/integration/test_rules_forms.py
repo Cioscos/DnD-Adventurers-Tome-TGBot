@@ -255,13 +255,16 @@ async def test_activation_spends_action_or_bonus_action(client):
         assert r.status_code == 200, r.text
         turn = await _turn(client, cid)
         assert turn[slot] is True and turn[other] is False, kw
+        uses = lambda full: next(a["uses"] for a in full["abilities"] if a["feature_key"] == "druid.wild_shape")  # noqa: E731
+        spent = uses(await _full(client, cid))
         other_form = await _form(client, cid, name="Gatto")
         r = await client.post(f"/characters/{cid}/companions/{other_form}/activate", json={})
-        assert r.status_code == 409 and r.json()["detail"]["code"] == "turn_slot_used"
+        assert r.status_code == 409 and r.json()["detail"] == {"code": "turn_slot_used", "slot": "action" if slot == "action_used" else "bonus"}
+        assert uses(await _full(client, cid)) == spent  # il rifiuto non spende usi
         assert (await _full(client, cid))["active_form"]["companion_id"] == comp  # nessun uso né cambio di forma
 
 
-async def test_form_proficiency_in_attacks_is_2024_only(client):
+async def test_form_attack_bonus_is_the_beasts_in_both_editions(client):
     for edition in ("2014", "2024"):  # druido liv. 9: PB +4, bestia GS 1/4: PB +2
         cid = await _druid(client, 9, edition=edition)
         comp = await _form(client, cid, cr=0.25)
@@ -269,7 +272,7 @@ async def test_form_proficiency_in_attacks_is_2024_only(client):
         r = await client.post(f"/characters/{cid}/companions/{comp}/attack",
                               json={"action_index": 0, "mode": "normal", "dice": [10], "damage_rolls": [3]})
         assert r.status_code == 200, r.text
-        assert r.json()["to_hit_bonus"] == (4 if edition == "2014" else 6), edition
+        assert r.json()["to_hit_bonus"] == 4, edition  # druido liv. 9 (PB +4): resta il bonus della bestia
 
 
 async def test_undo_damage_to_zero_restores_the_form(client):
