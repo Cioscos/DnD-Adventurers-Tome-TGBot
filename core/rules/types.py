@@ -65,6 +65,24 @@ class StateSpec:
 
 
 @dataclass(frozen=True)
+class TargetEffect:
+    """Effetto di un privilegio su un altro combattente dell'incontro (D1: nessun modello di posizioni o bersagli).
+
+    ``condition``: slug applicato (anche ``custom:*``). ``save_ability``/``save_dc``: TS del bersaglio; senza, l'effetto
+    si applica subito. ``on_failure_only=False``: si applica comunque e il TS non lo toglie (resta solo il risultato).
+    Durata: ``ends_at`` = ``{"anchor": "owner"|"source", "edge": "start"|"end", "count": n}`` (stesso formato di
+    ``ExpirySpec``, ``source`` = chi usa il privilegio); altrimenti ``rounds`` round sul turno del bersaglio; senza
+    nessuno dei due dura finché non viene tolta. ``damage_dice``: danno dell'effetto, mostrato nell'esito."""
+    condition: str | None = None
+    save_ability: str | None = None
+    save_dc: int | None = None
+    rounds: int | None = None
+    ends_at: dict | None = None
+    on_failure_only: bool = True
+    damage_dice: str | None = None
+
+
+@dataclass(frozen=True)
 class OnUse:
     """Cosa fa il pulsante «Usa» di un privilegio oltre a spendere ``cost`` usi.
 
@@ -76,6 +94,7 @@ class OnUse:
     state: StateSpec | None = None
     grants_action: bool = False
     rolls: str | None = None
+    target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
 
 
 @dataclass(frozen=True)
@@ -140,6 +159,8 @@ class RollOptionSpec:
     valgono su quello), ``succeed`` porta prova o TS a 20 e fa di un attacco un colpo a segno non critico,
     ``miss`` chiude un attacco mancato con il danno ``miss_damage(ctx)`` (Graze).
     ``effect(ctx, inputs) -> {"it": ..., "en": ...}``: esito da mostrare al giocatore (CD, durata).
+    ``target_effect(ctx, inputs) -> TargetEffect``: effetto sul combattente scelto; confermata l'opzione, il server lo tiene
+    in ``turn_state["target_effects"][key]`` finché il giocatore lo applica (``POST /characters/{id}/target-effects``).
     ``second_attack``: i dadi ``separate_damage`` valgono per un secondo tiro per colpire, fatto dal server (Cleave).
     ``pay_if_success``: si rimborsa se il tiro resta fallito. ``replace_die`` (solo ``before``): il d20 è uno dei
     valori di ``Character.settings["saved_dice"][key]``, dichiarato con ``{"die": n}`` e consumato."""
@@ -170,6 +191,7 @@ class RollOptionSpec:
     miss_damage: "Callable[[RuleContext], int] | None" = None
     effect: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
     second_attack: bool = False
+    target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "damage_in"):

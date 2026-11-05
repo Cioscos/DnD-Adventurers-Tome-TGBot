@@ -110,7 +110,7 @@ def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: 
         keys=[*before.keys, *opts.keys], extra_rolls=[*before.extra_rolls, *rolls],
         extra_total=before.extra_total + total, bonus=before.bonus + opts.bonus,
         separate_rolls=[*before.separate_rolls, *opts.separate_rolls],
-        separate_total=before.separate_total + opts.separate_total, effects=[*before.effects, *opts.effects],
+        separate_total=before.separate_total + opts.separate_total, effects=[*before.effects, *opts.effects], targets=[*before.targets, *opts.targets],
         multiplier=before.multiplier * opts.multiplier, spent=[*before.spent, *opts.spent], **extra,
     )
 

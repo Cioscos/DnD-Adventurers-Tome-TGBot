@@ -139,6 +139,28 @@ export type RollChoice = {
   after_option?: RollOption
 }
 
+export type TargetEffect = {
+  condition: string | null
+  save_ability: string | null
+  save_dc: number | null
+  rounds: number | null
+  ends_at: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number } | null
+  on_failure_only: boolean
+  damage_dice: string | null
+}
+
+export type TargetEffectPreview = {
+  result: TargetEffect
+  combatants: { id: number; name: string; kind: 'pc' | 'monster' }[]
+}
+
+export type TargetEffectResult = {
+  applied: boolean
+  result: TargetEffect
+  target_name: string | null
+  pending_save_id: number | null
+}
+
 export type OptionResult = {
   keys: string[]
   extra_rolls: number[]
@@ -151,6 +173,8 @@ export type OptionResult = {
   separate_total?: number
   /** Esiti da mostrare al giocatore (CD, durata). */
   effects?: { it: string; en: string }[]
+  /** Opzioni con un effetto da applicare a un combattente dell'incontro. */
+  targets?: string[]
   /** Secondo tiro per colpire dell'opzione, fatto dal server. */
   second_die?: number | null
   second_total?: number | null
@@ -588,6 +612,13 @@ export const api = {
     /** Risponde a «Il tiro è riuscito?»: `succeeded` tiene il pagamento, altrimenti torna. */
     lastRollRefund: (id: number, succeeded: boolean = false) =>
       request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST', body: JSON.stringify({ succeeded }) }),
+    /** Effetto confermato col tiro (Topple, Sap...) e combattenti a cui applicarlo. */
+    targetEffectPreview: (id: number, effectKey: string) =>
+      request<TargetEffectPreview>(`/characters/${id}/target-effects/${encodeURIComponent(effectKey)}`),
+    targetEffectApply: (id: number, effectKey: string, combatantId: number) =>
+      request<TargetEffectResult>(`/characters/${id}/target-effects`, {
+        method: 'POST', body: JSON.stringify({ effect_key: effectKey, combatant_id: combatantId }),
+      }),
     featureUse: (id: number, featureKey: string, amount: number = 1) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
         method: 'POST', body: JSON.stringify({ amount }),

@@ -13,7 +13,7 @@ from core.game.item_bonuses import item_meta
 from core.game.stats import effective_ability_mod, effective_ability_score
 from core.rules.edition import character_edition, class_key
 from core.rules.proficiencies import is_weapon_proficient
-from core.rules.types import ChoiceSpec, RollOptionSpec, RuleContext
+from core.rules.types import ChoiceSpec, RollOptionSpec, RuleContext, TargetEffect
 
 MASTERY_GROUP = "weapon_mastery"  # `CharacterClass.options[...]`: le armi scelte col privilegio
 
@@ -209,6 +209,15 @@ def _topple_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
             "en": f"Topple: DC {dc} Constitution save, on a failure the target is Prone."}
 
 
+def _topple_target(ctx: RuleContext, _inputs: dict) -> TargetEffect:
+    return TargetEffect(condition="prone", save_ability="constitution", save_dc=8 + _modifier(ctx) + ctx.char.proficiency_bonus)
+
+
+def _until_my_turn(slug: str):
+    """Sap e Slow: fino all'inizio del turno di chi colpisce, senza TS."""
+    return lambda _ctx, _inputs: TargetEffect(condition=slug, ends_at={"anchor": "source", "edge": "start", "count": 1})
+
+
 def _note(it: str, en: str):
     return lambda _ctx, _inputs: {"it": it, "en": en}
 
@@ -232,7 +241,7 @@ def _after_hit(key: str, it: str, en: str, **fields: Any) -> RollOptionSpec:
 NICK_OPTION = "mastery_nick"  # chi la conferma non spende l'azione bonus
 
 # Da mettere in `FeatureSpec.roll_options` del privilegio (Weapon Mastery di ogni classe).
-# shortcut: Sap, Slow, Push e Topple mostrano solo esito e CD; il Task 14 li collega al combattente con `target_effect`.
+# Push è solo esito: spostare il bersaglio richiederebbe posizioni, che l'app non ha (D1).
 MASTERY_OPTIONS: tuple[RollOptionSpec, ...] = (
     RollOptionSpec(
         key="mastery_graze", phase="after_roll", after="miss", rolls=("attack",), available=_graze_available,
@@ -263,12 +272,15 @@ MASTERY_OPTIONS: tuple[RollOptionSpec, ...] = (
     _after_hit("sap", "Sap: svantaggio al prossimo attacco del bersaglio",
                "Sap: disadvantage on the target's next attack",
                effect=_note("Sap: svantaggio al prossimo attacco del bersaglio, fino all'inizio del tuo turno.",
-                            "Sap: disadvantage on the target's next attack, until the start of your turn.")),
+                            "Sap: disadvantage on the target's next attack, until the start of your turn."),
+               target_effect=_until_my_turn("custom:sap")),
     _after_hit("slow", "Slow: velocità del bersaglio ridotta di 3 m", "Slow: target's speed reduced by 10 ft",
                effect=_note("Slow: velocità del bersaglio -3 m fino all'inizio del tuo turno, non cumulabile.",
-                            "Slow: target's speed -10 ft until the start of your turn, doesn't stack.")),
+                            "Slow: target's speed -10 ft until the start of your turn, doesn't stack."),
+               target_effect=_until_my_turn("custom:slow")),
     _after_hit("topple", "Topple: TS su Costituzione o il bersaglio cade Prono",
-               "Topple: Constitution save or the target falls Prone", effect=_topple_effect),
+               "Topple: Constitution save or the target falls Prone", effect=_topple_effect,
+               target_effect=_topple_target),
     _after_hit("vex", "Vex: vantaggio al prossimo attacco contro il bersaglio",
                "Vex: advantage on your next attack against the target", on_confirm=_arm_vex,
                effect=_note("Vex: vantaggio al prossimo attacco contro il bersaglio, entro la fine del tuo prossimo turno.",

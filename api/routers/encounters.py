@@ -37,11 +37,11 @@ from api.services.d20 import resolve_body
 from core.rules.modifiers import Applied, modifiers_for
 from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
-    ExpirySpec, SaveSpec, UndoLog, clear_effects_for, undo_last_advance, upsert_effect,
+    UndoLog, clear_effects_for, undo_last_advance,
 )
-from api.services.effects import apply_conditions
 from api.services.durations import process_edge
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
+from api.services.rules_targets import apply_condition_to_combatant, pc_char as _pc_char, set_condition as _set_condition
 from api.services.rules_turn import reset_turn
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -621,23 +621,6 @@ async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied
     return Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
 
 
-async def _pc_char(db: AsyncSession, comb: Combatant) -> Character:
-    char = await db.get(Character, comb.character_id) if comb.character_id else None
-    if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
-    return char
-
-
-async def _set_condition(db: AsyncSession, comb: Combatant, slug: str, value) -> None:
-    """Write one slug on the target's map; a falsy value drops the slug's effect."""
-    if comb.kind == "pc":
-        await apply_conditions(db, await _pc_char(db, comb), {slug: value})
-        return
-    comb.conditions = {**(comb.conditions or {}), slug: value}
-    if not value:
-        await clear_effects_for(db, ("combatant", comb.id), [slug])
-
-
 async def _notify_gm_condition(
     session_id: int, user_id: int, comb: Combatant, db: AsyncSession, text: str,
 ) -> None:
@@ -665,36 +648,7 @@ async def gm_apply_condition(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
-    if body.value is not None:
-        await _set_condition(db, comb, body.slug, body.value)
-    else:
-        src = None
-        if body.source_combatant_id is not None:
-            src = next((c for c in enc.combatants if c.id == body.source_combatant_id), None)
-            if src is None:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                    detail="source_combatant_id not in this encounter")
-        src_char = await _pc_char(db, src) if src is not None and src.kind == "pc" else None
-        spell_id = None
-        if body.ends_with_concentration:
-            if src_char is None or src_char.concentrating_spell_id is None:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                    detail={"code": "source_not_concentrating"})
-            spell_id = src_char.concentrating_spell_id
-        owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
-        if not (owner.conditions or {}).get(body.slug):  # keep custom:* payloads on re-apply
-            await _set_condition(db, comb, body.slug, True)
-        target = ("character", comb.character_id) if comb.kind == "pc" else ("combatant", comb.id)
-        await upsert_effect(
-            db, target, body.slug,
-            expiry=ExpirySpec(**body.expiry.model_dump()) if body.expiry else None,
-            save=SaveSpec(**body.save.model_dump()) if body.save else None,
-            source_combatant_id=src.id if src else None,
-            source_character_id=src_char.id if src_char else None,
-            source_spell_id=spell_id,
-            ends_with_concentration=body.ends_with_concentration,
-            applied_by_gm=True, encounter=enc,
-        )
+    await apply_condition_to_combatant(db, enc, comb, body)
     _touch(session)
     await db.flush()
     await _notify_gm_condition(

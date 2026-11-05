@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.services.rules_turn import grant_action, set_damaged, spend
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.roll_options import keep_target_effect
 from core.rules.types import RuleContext, StateSpec
 
 _DICE = re.compile(r"^(\d+)d(\d+)$")
@@ -97,6 +98,7 @@ class UseResult:
     healed: int = 0
     state: dict | None = None
     notes: list[str] = field(default_factory=list)
+    targets: list[str] = field(default_factory=list)  # chiavi per ``POST /target-effects``
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -132,4 +134,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.state = start_state(char, on_use.state, feature_key)
     if on_use.grants_action:
         grant_action(char)
+    if on_use.target_effect:
+        ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
+        keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
+        result.targets.append(feature_key)
     return result

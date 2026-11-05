@@ -828,6 +828,7 @@ export default function QuickActions({ char }: Props) {
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}
+          charId={char.id}
           onClose={() => setAttackState(null)}
           inspirationAvailable={inspiration}
           isRerolling={attackRerollMutation.isPending}

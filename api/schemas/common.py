@@ -287,6 +287,7 @@ class OptionResult(BaseModel):
     multiplier: float = 1
     spent: list[str] = []
     effects: list[dict[str, str]] = []  # {"it", "en"}: esiti da mostrare (CD, durata)
+    targets: list[str] = []  # opzioni con un effetto da applicare a un combattente (target-effects)
     second_die: int | None = None  # secondo tiro per colpire di un'opzione (Cleave)
     second_total: int | None = None
     damage_before: int | None = None  # solo danno subito

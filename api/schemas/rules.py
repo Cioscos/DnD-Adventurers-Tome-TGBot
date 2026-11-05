@@ -85,3 +85,38 @@ class LastRollResult(RollResult):
 class LastRollRefund(BaseModel):
     """``succeeded``: il giocatore dichiara il tiro riuscito, il pagamento resta e la domanda si chiude."""
     succeeded: bool = False
+
+
+class TargetEffectRead(BaseModel):
+    """L'effetto tenuto dal server alla conferma dell'opzione (``core.rules.types.TargetEffect``)."""
+    condition: str | None = None
+    save_ability: str | None = None
+    save_dc: int | None = None
+    rounds: int | None = None
+    ends_at: dict | None = None
+    on_failure_only: bool = True
+    damage_dice: str | None = None
+
+
+class TargetCandidate(BaseModel):
+    id: int
+    name: str
+    kind: str
+
+
+class TargetEffectPreview(BaseModel):
+    """Effetto e combattenti a cui applicarlo (vuoti fuori da un incontro attivo)."""
+    result: TargetEffectRead
+    combatants: list[TargetCandidate] = []
+
+
+class TargetEffectBody(BaseModel):
+    effect_key: str
+    combatant_id: int | None = None  # senza incontro non serve
+
+
+class TargetEffectResult(BaseModel):
+    applied: bool
+    result: TargetEffectRead
+    target_name: str | None = None
+    pending_save_id: int | None = None

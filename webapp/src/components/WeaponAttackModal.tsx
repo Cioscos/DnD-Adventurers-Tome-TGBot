@@ -14,6 +14,8 @@ export type { WeaponAttackResult }
 
 type Props = {
   result: WeaponAttackResult
+  /** Con il personaggio, l'esito offre di applicare gli effetti ai combattenti. */
+  charId?: number
   onClose: () => void
   inspirationAvailable?: boolean
   isRerolling?: boolean
@@ -23,6 +25,7 @@ type Props = {
 
 export default function WeaponAttackModal({
   result,
+  charId,
   onClose,
   inspirationAvailable = false,
   isRerolling = false,
@@ -89,7 +92,7 @@ export default function WeaponAttackModal({
           {t('character.roll_options.forced_hit')}
         </p>
       )}
-      <RollNotes notes={result.notes} optionResult={result.option_result} />
+      <RollNotes notes={result.notes} optionResult={result.option_result} charId={charId} />
       {result.effect && (
         <p data-testid="unarmed-effect" className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3 text-sm font-body text-dnd-text">
           {t(`character.attack.effect_${result.effect}`, { dc: result.save_dc })}

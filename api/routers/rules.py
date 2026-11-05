@@ -15,7 +15,11 @@ from api.routers._helpers import retouch_concentration
 from api.routers.characters import _add_history, close_pending_save, open_failed_save
 from api.routers.hp import _get_owned_full, death_state, retouch_death_save
 from api.routers.items import close_grazed_attack, retouch_pending_attack
-from api.routers.sessions import _touch
+from api.routers.encounters import _notify_saves
+from api.routers.sessions import _touch, active_encounter_row
+from api.services.rules_targets import apply_target_effect, pending_target_effect
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
 from api.services.dice_stats import record_dice
@@ -30,6 +34,11 @@ from api.schemas.rules import (
     ProficiencyGrantRead,
     RollOptionRead,
     SubclassRead,
+    TargetCandidate,
+    TargetEffectBody,
+    TargetEffectPreview,
+    TargetEffectRead,
+    TargetEffectResult,
 )
 from api.services.rules_options import list_options, merge_options, option_result, roll_option_dice, use_options
 from core.data.damage_types import canonical_damage_type
@@ -300,6 +309,7 @@ class FeatureUseResult(BaseModel):
     healed: int = 0
     state: dict | None = None
     notes: list[str] = []
+    targets: list[str] = []
 
 
 @turn_router.post("/{char_id}/features/{feature_key}/use", response_model=FeatureUseResult)
@@ -309,7 +319,7 @@ async def feature_use(
 ) -> FeatureUseResult:
     char = await _get_owned_full(char_id, user_id, db)
     res = await use_feature(db, char, feature_key, body.amount, body.params)
-    return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes)
+    return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets)
 
 
 @turn_router.delete("/{char_id}/active-states/{key}", response_model=list[dict])
@@ -320,3 +330,54 @@ async def end_active_state(
     char = await _get_owned_full(char_id, user_id, db)
     remove_state(char, key)
     return char.active_states
+
+
+# ---------------------------------------------------------------------------
+# Effetti su altri combattenti (D1)
+# ---------------------------------------------------------------------------
+
+async def _active_encounter(db: AsyncSession, char_id: int) -> tuple[Encounter, Combatant] | None:
+    row = await active_encounter_row(db, char_id)
+    if row is None:
+        return None
+    enc = (await db.execute(select(Encounter).options(selectinload(Encounter.combatants))
+                            .where(Encounter.id == row[0].id))).scalar_one()
+    return enc, next(c for c in enc.combatants if c.id == row[1])
+
+
+@turn_router.get("/{char_id}/target-effects/{effect_key}", response_model=TargetEffectPreview)
+async def target_effect_preview(
+    char_id: int, effect_key: str, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TargetEffectPreview:
+    char = await _owned_char(db, char_id, user_id)
+    found = await _active_encounter(db, char_id)
+    return TargetEffectPreview(
+        result=TargetEffectRead(**pending_target_effect(char, effect_key)),
+        combatants=[TargetCandidate(id=c.id, name=c.name, kind=c.kind)
+                    for c in sorted(found[0].combatants, key=lambda c: c.sort_order or 0) if not c.is_dead] if found else [],
+    )
+
+
+@turn_router.post("/{char_id}/target-effects", response_model=TargetEffectResult)
+async def target_effect_apply(
+    char_id: int, body: TargetEffectBody, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TargetEffectResult:
+    """Applica al combattente scelto l'effetto confermato col tiro. Fuori da un incontro attivo restituisce solo l'esito."""
+    char = await _owned_char(db, char_id, user_id)
+    result = TargetEffectRead(**pending_target_effect(char, body.effect_key))
+    found = await _active_encounter(db, char_id)
+    if found is None:
+        return TargetEffectResult(applied=False, result=result)
+    enc, mine = found
+    target = next((c for c in enc.combatants if c.id == body.combatant_id), None)
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+    applied, save = await apply_target_effect(db, char, enc, mine, target, body.effect_key)
+    _touch(await db.get(GameSession, enc.session_id))
+    await db.flush()
+    if save is not None:
+        await _notify_saves(db, [save.id])
+    return TargetEffectResult(applied=applied, result=result, target_name=target.name,
+                              pending_save_id=save.id if save else None)

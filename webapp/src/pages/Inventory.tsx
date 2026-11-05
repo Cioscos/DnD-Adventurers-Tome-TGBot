@@ -925,6 +925,7 @@ export default function Inventory() {
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}
+          charId={char?.id}
           inspirationAvailable={canRerollInspiration(char)}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}

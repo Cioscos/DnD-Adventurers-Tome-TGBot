@@ -222,6 +222,7 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   const elements = attackState && (
     <WeaponAttackModal
       result={attackState.result}
+      charId={charId}
       onClose={() => setAttackState(null)}
       inspirationAvailable={inspiration}
       isRerolling={rerollAttack.isPending}

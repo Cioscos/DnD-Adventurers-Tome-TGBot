@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 from typing import Any
 
@@ -97,6 +97,7 @@ class AppliedOptions:
     miss_damage: int | None = None
     effects: list[dict[str, str]] = field(default_factory=list)  # {"it", "en"}: esiti da mostrare
     second_attack: bool = False
+    targets: list[str] = field(default_factory=list)  # chiavi con un ``target_effect`` da applicare
 
     @property
     def mode(self) -> str | None:
@@ -104,6 +105,13 @@ class AppliedOptions:
         if not self.modes:
             return None
         return self.modes[0] if len(set(self.modes)) == 1 else "normal"
+
+
+def keep_target_effect(char: Any, key: str, effect: Any) -> None:
+    """Tiene l'effetto deciso dal server fino a quando il giocatore sceglie il combattente (si consuma una volta)."""
+    turn = _turn(char)
+    turn["target_effects"] = {**turn.get("target_effects", {}), key: asdict(effect)}
+    char.turn_state = turn
 
 
 def _turn(char: Any) -> dict:
@@ -268,6 +276,9 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.miss_damage = max(0, spec.miss_damage(option.ctx))
         if spec.effect:
             out.effects.append(spec.effect(option.ctx, given))
+        if spec.target_effect:
+            keep_target_effect(ctx.char, key, spec.target_effect(option.ctx, given))
+            out.targets.append(key)
         if spec.extra_dice:
             dice[key] = spec.extra_dice(option.ctx, given)
         if spec.bonus:

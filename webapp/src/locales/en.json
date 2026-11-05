@@ -732,6 +732,21 @@
       "inspiration": "Inspiration",
       "armor_untrained": "Armor without training"
     },
+    "target_effect": {
+      "open": "Apply to a combatant",
+      "title": "Effect on the target",
+      "save": "{{ability}} save DC {{dc}}",
+      "no_save": "No saving throw: applies right away",
+      "until_my_turn": "Until the start of your turn",
+      "until_turn_end": "For {{count}} round(s)",
+      "no_duration": "Until removed",
+      "pick": "On whom?",
+      "no_encounter": "No active encounter: the outcome is just to remember.",
+      "applied": "Applied to {{name}}",
+      "applied_save": "Applied to {{name}}: the save is pending",
+      "nothing": "Nothing to apply",
+      "custom": { "sap": "Sap", "slow": "Slow" }
+    },
     "roll_options": {
         "second_attack": "Second creature, to hit: {{die}} = {{total}}",
         "title_before": "Before the roll",

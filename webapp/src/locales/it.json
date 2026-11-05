@@ -732,6 +732,21 @@
       "inspiration": "Ispirazione",
       "armor_untrained": "Armatura senza addestramento"
     },
+    "target_effect": {
+      "open": "Applica a un combattente",
+      "title": "Effetto sul bersaglio",
+      "save": "TS {{ability}} CD {{dc}}",
+      "no_save": "Nessun tiro salvezza: si applica subito",
+      "until_my_turn": "Fino all'inizio del tuo turno",
+      "until_turn_end": "Per {{count}} round",
+      "no_duration": "Finché non viene tolta",
+      "pick": "Su chi?",
+      "no_encounter": "Nessun incontro attivo: l'esito è solo da ricordare.",
+      "applied": "Applicato a {{name}}",
+      "applied_save": "Applicato a {{name}}: il TS è in attesa",
+      "nothing": "Niente da applicare",
+      "custom": { "sap": "Sap", "slow": "Slow" }
+    },
     "roll_options": {
         "second_attack": "Seconda creatura, colpire: {{die}} = {{total}}",
         "title_before": "Prima del tiro",
