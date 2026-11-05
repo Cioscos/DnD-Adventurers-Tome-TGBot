@@ -13,7 +13,7 @@ from api.services.rules_options import remember_roll
 from core.rules.roll_options import AppliedOptions
 from api.services.dice_stats import record_dice
 from api.services.durations import end_concentration, is_concentrating
-from api.services.effects import cap_current_hp
+from api.services.effects import cap_current_hp, sync_zero_hp
 from api.services.condition_effects import release_concentration_effects, restore_released
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
@@ -99,9 +99,11 @@ async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
     if (char.settings or {}).get("hp_auto_calc", True):
         delta = (effective_con_mod(char) - old_con_mod) * char.total_level
         if delta != 0:
+            was_at_zero = char.current_hit_points == 0
             char.hit_points = max(0, char.hit_points + delta)
             char.current_hit_points = max(0, min(char.current_hit_points + delta, char.hit_points))
             await cap_current_hp(session, char)
+            await sync_zero_hp(session, char, was_at_zero)
 
 
 def weapon_attack_profile(

@@ -93,11 +93,12 @@ def clear_once_per_turn(char) -> list[str]:
 def reset_turn(char) -> dict:
     """Nuovo turno: tutto a zero (anche reazione, azioni extra e attacco in sospeso).
 
-    ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014). ``vex`` arriva fino alla
+    ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014). ``surprised`` resta: lo
+    toglie la fine del primo turno del combattente, non «Nuovo turno». ``vex`` arriva fino alla
     fine del turno seguente a quello del colpo."""
     previous = get_turn(char)
     vex = {"vex": previous["vex"] - 1} if previous.get("vex", 0) > 1 else {}
-    _save(char, {**_default(), "damaged": previous["damaged"], **vex})
+    _save(char, {**_default(), "damaged": previous["damaged"], "surprised": previous["surprised"], **vex})
     return char.turn_state
 
 

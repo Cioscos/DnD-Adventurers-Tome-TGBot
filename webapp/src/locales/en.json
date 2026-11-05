@@ -997,12 +997,13 @@
     },
     "inspiration": {
       "title": "Heroic Inspiration",
-      "give": "Give to an ally",
-      "give_hint": "You already have Heroic Inspiration: you can only have one, so you can give it to a party member who has none.",
+      "received_another": "I received another one",
+      "give": "Give the extra one",
+      "give_hint": "You received another one while already holding Heroic Inspiration: the extra goes to a party member who has none. You keep yours.",
       "give_confirm": "Give",
       "give_errors": {
         "inspiration_give_2024_only": "Giving only applies in 2024.",
-        "inspiration_unavailable": "You have no Inspiration.",
+        "no_extra_inspiration": "There is no extra Inspiration to give.",
         "recipient_has_inspiration": "The ally already has Inspiration.",
         "generic": "Could not give it."
       },
@@ -1073,6 +1074,9 @@
       "title": "Turn",
       "round": "Round {{n}}",
       "attacks_made": "Attacks: {{made}}/{{n}}",
+      "influence_dc": "DC",
+      "influence_success": "Total {{total}} against DC {{dc}}: the monster is swayed.",
+      "influence_failure": "Total {{total}} against DC {{dc}}: the monster holds out.",
       "hide_confirm": "You are hidden: become Invisible (DC {{total}})",
       "hide_failed": "Total {{total}}: under 15, you are not hidden.",
       "stand_up": "Stand up",

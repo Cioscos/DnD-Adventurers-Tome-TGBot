@@ -1,6 +1,7 @@
 import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import { sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import type { OptionResult } from '@/api/client'
 import { useState, useEffect } from 'react'
@@ -300,7 +301,15 @@ export default function SpellDamageSheet({
             )}
           </div>
           <RollNotes charId={charId} optionResult={castNotes} />
-          <AfterDamageOptions charId={charId} spellId={spell.id} result={result} onResult={setResult} />
+          <AfterDamageOptions
+            charId={charId}
+            query={{ roll: 'spell_damage', spell_id: spell.id }}
+            dice={[
+              ...(result.main_rolls ?? []).map((value, index) => ({ value, index, sides: sidesOf(result.main_kind) })),
+              ...(result.extra_rolls ?? []).map((value, i) => ({ value, index: (result.main_rolls ?? []).length + i, sides: sidesOf(result.extra_kind) })),
+            ]}
+            onResult={(r) => setResult(r as RollDamageResult)}
+          />
           {showNoSlotWarning && slotLevel != null && slotLevel >= 1 && (
             <div className="rounded-xl border border-dnd-crimson/40 bg-dnd-crimson/10 p-3 space-y-1.5">
               <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">

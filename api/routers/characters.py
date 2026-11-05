@@ -42,7 +42,6 @@ from api.schemas.character import (
     CharacterSummary,
     CharacterUpdate,
     ConditionsUpdate,
-    HideRequest,
     InspirationUpdate,
     SkillsUpdate,
     SavingThrowsUpdate,
@@ -65,8 +64,9 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from api.services.effects import cap_current_hp
+from api.services.effects import cap_current_hp, sync_zero_hp
 from core.rules.edition import character_edition
+from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
@@ -487,19 +487,24 @@ async def update_conditions(
 @router.post("/{char_id}/hide", response_model=CharacterFull)
 async def hide(
     char_id: int,
-    body: HideRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
-    """Azione Nascondersi 2024: con una prova di Furtività di almeno 15 (con le condizioni confermate dal giocatore)
-    si è Invisibili; il totale è la CD per trovarti. Nel 2014 l'esito lo decide il DM e non c'è uno stato."""
+    """Azione Nascondersi 2024: l'ultima prova di Furtività, salvata dal server, di almeno 15 (con le condizioni
+    confermate dal giocatore) rende Invisibili; il totale è la CD per trovarti. Nel 2014 l'esito lo decide il DM."""
     char = await _get_owned(char_id, user_id, session, full=True)
     if character_edition(char) != "2024":
         raise HTTPException(status_code=422, detail={"code": "hide_2024_only"})
-    if body.total < 15:
+    refuse_if_incapacitated(char)
+    last = get_turn(char).get("last_roll") or {}
+    if last.get("roll") != "skill" or last.get("skill") != "stealth":
+        raise HTTPException(status_code=409, detail={"code": "no_stealth_roll"})
+    total = last["total"]
+    if total < 15:
         raise HTTPException(status_code=409, detail={"code": "hide_failed"})
+    was_invisible = bool((char.conditions or {}).get("invisible"))
     await apply_conditions(session, char, {"invisible": True})
-    char.settings = {**(char.settings or {}), "hiding": {"dc": body.total}}
+    char.settings = {**(char.settings or {}), "hiding": {"dc": total, "was_invisible": was_invisible}}
     char = await _refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
@@ -534,6 +539,12 @@ async def update_inspiration(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
+    settings = dict(char.settings or {})
+    if body.heroic_inspiration and char.heroic_inspiration and character_edition(char) == "2024":
+        settings["inspiration_extra"] = True  # se ne ha una sola: questa è da cedere a chi ne è privo, o persa
+    else:
+        settings.pop("inspiration_extra", None)
+    char.settings = settings
     char.heroic_inspiration = body.heroic_inspiration
     # See _refresh_char_full() for why expunge + re-SELECT is required here.
     char = await _refresh_char_full(session, char_id, user_id)
@@ -604,9 +615,11 @@ async def update_xp(
                         total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
 
     if total_hp_gained > 0:
+        was_at_zero = char.current_hit_points == 0
         char.hit_points += total_hp_gained
         char.current_hit_points += total_hp_gained
         await cap_current_hp(session, char)
+        await sync_zero_hp(session, char, was_at_zero)
 
     # Notifica best-effort: solo all'attraversamento di soglia (categoria level_up)
     old_level_from_xp = xp_to_level(old_xp)

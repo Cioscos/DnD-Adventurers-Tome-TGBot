@@ -62,7 +62,7 @@ class UndoLog:
     once_per_turn: dict[str, list[str]] = field(default_factory=dict)
     # Sorpresa: combattenti a cui il turno finito l'ha tolta; PG 2014 a cui il turno iniziato l'ha imposta
     surprise_ended: list[int] = field(default_factory=list)
-    surprise_started: list[int] = field(default_factory=list)
+    surprise_started: list[int] = field(default_factory=list)  # non più scritto: il PG è segnato quando il GM lo segna
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -143,10 +143,6 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             pc = await db.get(Character, comb.character_id) if comb.character_id else None
             if pc is not None and character_edition(pc) == "2014":
                 set_surprised(pc)
-    for char_id in log.surprise_started:
-        pc = await db.get(Character, char_id)
-        if pc is not None:
-            set_surprised(pc, False)
     for eid in log.skip_cleared:
         eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
         if eff is not None:

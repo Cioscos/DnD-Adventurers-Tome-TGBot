@@ -123,7 +123,7 @@ export type RollOption = {
 }
 
 export type RollOptionsQuery = {
-  roll: 'attack' | 'spell_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
+  roll: 'attack' | 'spell_damage' | 'weapon_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
   item_id?: number
   attack_mode?: string
   grip?: string
@@ -622,7 +622,7 @@ export const api = {
       request<LastRollResult>(`/characters/${id}/last-roll/options`, { method: 'POST', body: JSON.stringify(body) }),
     /** Privilegi sui dadi di danno già tirati: `reroll` sono le posizioni in `main_rolls` + `extra_rolls`. */
     lastDamageOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; reroll: number[] }) =>
-      request<RollDamageResult>(`/characters/${id}/last-damage/options`, { method: 'POST', body: JSON.stringify(body) }),
+      request<RollDamageResult | WeaponAttackResult>(`/characters/${id}/last-damage/options`, { method: 'POST', body: JSON.stringify(body) }),
     /** Risponde a «Il tiro è riuscito?»: `succeeded` tiene il pagamento, altrimenti torna. */
     lastRollRefund: (id: number, succeeded: boolean = false) =>
       request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST', body: JSON.stringify({ succeeded }) }),
@@ -652,8 +652,8 @@ export const api = {
       dismiss: (id: number, saveId: number) =>
         request<void>(`/characters/${id}/pending-saves/${saveId}/dismiss`, { method: 'POST' }),
     },
-    hide: (id: number, total: number) =>
-      request<CharacterFull>(`/characters/${id}/hide`, { method: 'POST', body: JSON.stringify({ total }) }),
+    /** Nascondersi 2024: il server legge il totale dall'ultima prova di Furtività. */
+    hide: (id: number) => request<CharacterFull>(`/characters/${id}/hide`, { method: 'POST' }),
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',

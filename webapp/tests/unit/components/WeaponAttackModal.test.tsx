@@ -60,6 +60,20 @@ vi.mock('@/components/InspirationRerollButton', async () => {
   }
 })
 
+// Le opzioni dopo il danno hanno il loro test: qui conta cosa riceve e come aggiorna l'esito.
+vi.mock('@/components/rules/AfterDamageOptions', async () => {
+  const React = await import('react')
+  return {
+    default: (p: { query: { roll: string }; dice: { value: number; sides: number }[]; onResult: (r: unknown) => void }) =>
+      React.createElement('button', {
+        'data-testid': 'after-damage',
+        'data-roll': p.query.roll,
+        'data-dice': p.dice.map((d) => `${d.value}/d${d.sides}`).join(','),
+        onClick: () => p.onResult({ ...baseResult, damage_rolls: [8], damage_total: 11 }),
+      }, 'reroll-damage'),
+  }
+})
+
 const baseResult: WeaponAttackResult = {
   weapon_name: 'Longsword',
   to_hit_die: 14,
@@ -200,5 +214,23 @@ describe('WeaponAttackModal', () => {
       damage_dice: '2d6', damage_rolls: [], damage_bonus: 3, damage_total: 3, grazed: true,
     }} />)
     expect(screen.getByTestId('grazed-damage')).toHaveTextContent('3')
+  })
+
+  it('offers the damage reroll with the weapon dice and shows the rerolled damage', async () => {
+    render(<WeaponAttackModal result={{ ...baseResult, damage_dice: '2d8', damage_rolls: [3, 4], damage_total: 10 }} charId={7} onClose={() => {}} />)
+    const reroll = screen.getByTestId('after-damage')
+    expect(reroll).toHaveAttribute('data-roll', 'weapon_damage')
+    expect(reroll).toHaveAttribute('data-dice', '3/d8,4/d8')
+    await userEvent.click(reroll)
+    expect(screen.getByText('11')).toBeInTheDocument()  // il danno ritirato sostituisce quello del tiro
+  })
+
+  it('has no damage reroll without a character, on a miss, on a flat damage or while the damage is pending', () => {
+    const { rerender } = render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
+    expect(screen.queryByTestId('after-damage')).toBeNull()
+    for (const over of [{ is_fumble: true }, { damage_dice: '1', damage_rolls: [1] }, { attack_id: 'a' }] as const) {
+      rerender(<WeaponAttackModal result={{ ...baseResult, ...over }} charId={7} onClose={() => {}} />)
+      expect(screen.queryByTestId('after-damage')).toBeNull()
+    }
   })
 })

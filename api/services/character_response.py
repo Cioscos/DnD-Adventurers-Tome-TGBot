@@ -61,6 +61,8 @@ async def build_character_response(
     response.spellcasting = build_spellcasting_info(char)
     fill_spell_stats(char, response.spells)
     response.attacks_per_action = attacks_per_action(char.classes)
+    response.inspiration_extra = bool((char.settings or {}).get("inspiration_extra"))
+    response.hiding_dc = ((char.settings or {}).get("hiding") or {}).get("dc")
     form = await get_active_form(session, char.id)
     if form is not None:
         response.active_form = ActiveForm(

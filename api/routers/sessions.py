@@ -1069,7 +1069,8 @@ async def give_inspiration(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
-    """Ispirazione Eroica 2024: la si ha una sola volta, quella in più va a chi ne è privo."""
+    """Ispirazione Eroica 2024: se ne ha una sola. Ricevendone un'altra (``PATCH /inspiration`` con una già in mano)
+    quella in più si può dare a un compagno che ne è privo; chi cede tiene la propria."""
     session_obj = await _load_session(session_id, db)
     if session_obj.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
@@ -1084,11 +1085,13 @@ async def give_inspiration(
     recipient = await _load_char_full(db, other.character_id)
     if character_edition(sender) != "2024":
         raise HTTPException(status_code=422, detail={"code": "inspiration_give_2024_only"})
-    if not sender.heroic_inspiration:
-        raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
+    if not ((sender.settings or {}).get("inspiration_extra") and sender.heroic_inspiration):
+        raise HTTPException(status_code=409, detail={"code": "no_extra_inspiration"})
     if recipient.heroic_inspiration:
         raise HTTPException(status_code=409, detail={"code": "recipient_has_inspiration"})
-    sender.heroic_inspiration, recipient.heroic_inspiration = False, True
+    # Chi cede conserva la propria: si cede quella ricevuta in più.
+    sender.settings = {k: v for k, v in sender.settings.items() if k != "inspiration_extra"}
+    recipient.heroic_inspiration = True
     for char, text in ((sender, f"Ispirazione Eroica ceduta a {recipient.name}"),
                        (recipient, f"Ispirazione Eroica ricevuta da {sender.name}")):
         db.add(CharacterHistory(character_id=char.id, timestamp=_now(), event_type="other", description=text))

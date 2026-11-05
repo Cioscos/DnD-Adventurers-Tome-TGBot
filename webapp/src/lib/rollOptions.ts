@@ -170,3 +170,6 @@ export function refreshAfterOptions(qc: QueryClient, charId: number, result?: Op
   qc.invalidateQueries({ queryKey: ['character', charId] })
   qc.invalidateQueries({ queryKey: ['turn-state', charId] })
 }
+
+/** Facce di un dado dal tipo `d8` -> 8 (`main_kind` del danno). */
+export const sidesOf = (kind: string | null | undefined): number => Number((kind ?? '').slice(1))

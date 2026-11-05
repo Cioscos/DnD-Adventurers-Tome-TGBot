@@ -165,6 +165,7 @@ class RollOptionSpec:
     ``second_attack``: i dadi ``separate_damage`` valgono per un secondo tiro per colpire, fatto dal server (Cleave).
     ``pay_if_success``: si rimborsa se il tiro resta fallito. ``replace_die`` (solo ``before``): il d20 è uno dei
     valori di ``Character.settings["saved_dice"][key]``, dichiarato con ``{"die": n}`` e consumato.
+    ``cancels``: la conferma toglie il vantaggio o lo svantaggio dato da quelle fonti, lasciando le altre.
     ``reroll_dice(ctx, inputs) -> n`` (obbligatorio in ``after_damage``): quanti dadi di danno ritirare, scelti dal
     giocatore. ``keep_rolled``: solo dadi al massimo, il nuovo si somma invece di sostituire (Bombardamento Magico)."""
     key: str
@@ -197,6 +198,7 @@ class RollOptionSpec:
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
+    cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):

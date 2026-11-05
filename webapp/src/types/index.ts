@@ -234,6 +234,10 @@ export interface CharacterSummary {
   total_level: number
   class_summary: string
   heroic_inspiration: boolean
+  /** 2024: ricevuta un'altra Ispirazione avendone già una: da cedere. */
+  inspiration_extra?: boolean
+  /** 2024: CD per trovare il personaggio nascosto. */
+  hiding_dc?: number | null
   experience_points: number
   hp_max_homebrew_modifier: number
   hp_max_effective?: number | null
@@ -897,7 +901,7 @@ export interface TurnBlock {
   bonus_spell_cast: boolean
   free_interaction_used: boolean
   pending_attack?: Record<string, unknown> | null
-  last_roll?: { roll_id: string; total: number; refundable?: Record<string, string[]> } | null
+  last_roll?: { roll_id: string; roll?: string; skill?: string | null; total: number; refundable?: Record<string, string[]> } | null
 }
 
 export type TurnSlot = 'action' | 'bonus' | 'reaction' | 'free_interaction' | 'spell_slot' | 'bonus_spell' | 'attack'

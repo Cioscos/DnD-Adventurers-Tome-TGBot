@@ -288,6 +288,8 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     char.current_hit_points = max(0, char.current_hit_points - amount)
     from api.services.rules_states import on_damage  # import locale: evita il ciclo fra servizi
     on_damage(char, gross)
+    from api.services.effects import sync_zero_hp  # import locale: effects importa il dispatcher homebrew
+    await sync_zero_hp(session, char, before == 0)
     await session.flush()
 
     # Re-emit events with depth+1; existing stack + this rule's id.
@@ -328,6 +330,8 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     if before == 0 and char.current_hit_points > 0:
         char.death_save_successes = 0
         char.death_save_failures = 0
+    from api.services.effects import sync_zero_hp  # import locale: effects importa il dispatcher homebrew
+    await sync_zero_hp(session, char, before == 0)
 
     await session.flush()
 

@@ -996,12 +996,13 @@
     },
     "inspiration": {
       "title": "Ispirazione Eroica",
-      "give": "Cedi a un alleato",
-      "give_hint": "Hai già l'Ispirazione Eroica: se ne ha una sola, quella in più va a un personaggio del gruppo che ne è privo.",
+      "received_another": "Ne ho ricevuta un'altra",
+      "give": "Cedi quella in più",
+      "give_hint": "Ne hai ricevuta un'altra avendo già l'Ispirazione Eroica: quella in più va a un personaggio del gruppo che ne è privo. Tu tieni la tua.",
       "give_confirm": "Cedi",
       "give_errors": {
         "inspiration_give_2024_only": "La cessione vale solo nel 2024.",
-        "inspiration_unavailable": "Non hai l'Ispirazione.",
+        "no_extra_inspiration": "Non c'è un'Ispirazione in più da cedere.",
         "recipient_has_inspiration": "L'alleato ha già l'Ispirazione.",
         "generic": "Cessione non riuscita."
       },
@@ -1072,6 +1073,9 @@
       "title": "Turno",
       "round": "Round {{n}}",
       "attacks_made": "Attacchi: {{made}}/{{n}}",
+      "influence_dc": "CD",
+      "influence_success": "Totale {{total}} contro CD {{dc}}: il mostro si lascia convincere.",
+      "influence_failure": "Totale {{total}} contro CD {{dc}}: il mostro resiste.",
       "hide_confirm": "Sei nascosto: diventa Invisibile (CD {{total}})",
       "hide_failed": "Totale {{total}}: sotto 15, non sei nascosto.",
       "stand_up": "Rialzati",

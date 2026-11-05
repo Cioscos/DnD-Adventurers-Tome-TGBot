@@ -46,6 +46,8 @@ class Applied:
     speed_half: bool = False
     hp_half: bool = False
     replace_die: int | None = None  # d20 dichiarato (Portento): nessun dado si tira
+    advantage_from: list[str] = field(default_factory=list)
+    disadvantage_from: list[str] = field(default_factory=list)
 
 
 def has_state(ctx: RuleContext, key: str) -> bool:
@@ -208,6 +210,8 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             counted = True
         elif m.target in _FLAGS:
             setattr(out, m.target, True)
+            if m.target in ("advantage", "disadvantage"):
+                getattr(out, f"{m.target}_from").append(source)
             counted = m.target in ("advantage", "disadvantage", "auto_fail")
         elif m.target in _FLAG_FIELD:
             setattr(out, _FLAG_FIELD[m.target], True)

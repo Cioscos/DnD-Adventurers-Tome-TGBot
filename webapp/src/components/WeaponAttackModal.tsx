@@ -1,4 +1,6 @@
 import RollNotes from '@/components/rules/RollNotes'
+import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import { useState } from 'react'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -24,7 +26,7 @@ type Props = {
 }
 
 export default function WeaponAttackModal({
-  result,
+  result: attack,
   charId,
   onClose,
   inspirationAvailable = false,
@@ -33,6 +35,11 @@ export default function WeaponAttackModal({
   onInspirationReroll,
 }: Props) {
   const { t } = useTranslation()
+  // Il danno ritirato con l'Ispirazione sostituisce quello del tiro, finché il tiro è lo stesso.
+  const [rerolled, setRerolled] = useState<{ base: WeaponAttackResult; value: WeaponAttackResult } | null>(null)
+  const result = rerolled?.base === attack ? rerolled.value : attack
+  const dieSides = Number(/\d+d(\d+)/.exec(result.damage_dice ?? '')?.[1])
+  const canRerollDamage = !!charId && !!dieSides && !result.attack_id && !result.is_fumble && !result.grazed && !result.effect
   const {
     weapon_name, to_hit_die, dice, mode, magic_bonus, proficiency_warning, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
@@ -146,6 +153,14 @@ export default function WeaponAttackModal({
             {damage_total}
           </p>
         </m.div>
+      )}
+      {canRerollDamage && (
+        <AfterDamageOptions
+          charId={charId}
+          query={{ roll: 'weapon_damage' }}
+          dice={damage_rolls.map((value, index) => ({ value, index, sides: dieSides }))}
+          onResult={(r) => setRerolled({ base: attack, value: r as WeaponAttackResult })}
+        />
       )}
 
       {proficiency_warning && (

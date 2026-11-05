@@ -32,7 +32,7 @@ _CONDITION_OPTIONS = (
         available=lambda ctx: ctx.edition == "2014" and bool(ctx.char.heroic_inspiration),
     ),
     RollOptionSpec(
-        key="inspiration:reroll_damage", phase="after_damage", rolls=("spell_damage",), reroll_dice=lambda _ctx, _i: 1,
+        key="inspiration:reroll_damage", phase="after_damage", rolls=("spell_damage", "weapon_damage"), reroll_dice=lambda _ctx, _i: 1,
         on_confirm=_spend_inspiration,
         label={"it": "Spendi l'Ispirazione Eroica: ritira un dado di danno", "en": "Spend Heroic Inspiration: reroll a damage die"},
         available=lambda ctx: ctx.edition == "2024" and bool(ctx.char.heroic_inspiration),
@@ -54,7 +54,7 @@ _CONDITION_OPTIONS = (
         available=lambda ctx: ctx.edition == "2024" and _on("grappled")(ctx),
     ),
     RollOptionSpec(
-        key="condition:invisible", phase="before", rolls=("attack",), mode="disadvantage",
+        key="condition:invisible", phase="before", rolls=("attack",), cancels=("condition:invisible",),
         label={"it": "Invisibile: un nemico ti vede?", "en": "Invisible: can an enemy see you?"},
         available=lambda ctx: ctx.edition == "2024" and _on("invisible")(ctx),
     ),
@@ -111,6 +111,8 @@ class AppliedOptions:
     targets: list[str] = field(default_factory=list)  # chiavi con un ``target_effect`` da applicare
     reroll_limit: int = 0  # ``after_damage``: dadi di danno ritirabili
     keep_rolled: bool = False
+    cancels: list[str] = field(default_factory=list)  # fonti di vantaggio/svantaggio che l'opzione toglie
+    damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
 
     @property
     def mode(self) -> str | None:
@@ -301,6 +303,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.bonus += spec.bonus(option.ctx, given)
         if spec.mode:
             out.modes.append(spec.mode)
+        out.cancels += spec.cancels
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail

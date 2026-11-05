@@ -181,21 +181,40 @@ describe('Turn page', () => {
     await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(7, { prone: true }))
   })
 
-  it('in 2024 a Hide check of 15 or more offers the Invisible state, a lower one only says so', async () => {
+  it('in 2024 Hide offers the Invisible state from the total the server saved, a lower one only says so', async () => {
     getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
-    rollSkill.mockResolvedValueOnce({ die: 10, total: 17, notes: [] })
     hide.mockResolvedValueOnce({ ...char, rules_edition: '2024' })
+    const saved = (total: number) => {
+      server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'stealth', total } }
+    }
     renderWithProviders(<Turn />)
     await screen.findByText('character.turn.unarmed')
     await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
     const row = screen.getByText('Nascondersi').closest('li') as HTMLElement
+    saved(17)
     await userEvent.click(within(row).getByText('character.skills.stealth'))
     await userEvent.click(await within(row).findByText('character.turn.hide_confirm'))
-    await waitFor(() => expect(hide).toHaveBeenCalledWith(7, 17))
-    rollSkill.mockResolvedValueOnce({ die: 3, total: 9, notes: [] })
+    await waitFor(() => expect(hide).toHaveBeenCalledWith(7))  // nessun totale dal client
+    saved(9)  // un ritiro o un dado in piu cambiano il totale: la UI segue quello del server
     await userEvent.click(within(row).getByText('character.skills.stealth'))
     expect(await within(row).findByText('character.turn.hide_failed')).toBeInTheDocument()
     expect(within(row).queryByText('character.turn.hide_confirm')).toBeNull()
+  })
+
+  it('in 2024 Influence has an editable DC of 15 and tells the player how the roll went', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Influenzare').closest('li') as HTMLElement
+    const dc = within(row).getByDisplayValue('15') as HTMLInputElement
+    expect(dc.value).toBe('15')
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 17, notes: [] })
+    await userEvent.click(within(row).getByText('character.skills.persuasion'))
+    expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
+    await userEvent.clear(dc)
+    await userEvent.type(dc, '20')
+    expect(await within(row).findByText('character.turn.influence_failure')).toBeInTheDocument()
   })
 
   it('leaves actions enabled when not incapacitated', async () => {

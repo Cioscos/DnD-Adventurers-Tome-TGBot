@@ -39,6 +39,7 @@ from api.routers._helpers import collect_homebrew_notifications, roll_concentrat
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_body, spend_inspiration_reroll
 from core.rules.modifiers import modifiers_for
+from api.schemas.item import WeaponAttackResult
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
@@ -609,20 +610,22 @@ async def roll_spell_damage(
     return result
 
 
-@router.post("/{char_id}/last-damage/options", response_model=RollDamageResult)
+@router.post("/{char_id}/last-damage/options", response_model=RollDamageResult | WeaponAttackResult)
 async def last_damage_options(
     char_id: int,
     body: LastDamageBody,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> RollDamageResult:
-    """Privilegi usati dopo aver visto i dadi di danno. Il tiro è quello salvato dal server, non quello del client."""
+) -> RollDamageResult | WeaponAttackResult:
+    """Privilegi usati dopo aver visto i dadi di danno (incantesimo o arma). Il tiro è quello salvato dal server."""
     char = await _get_owned_full(char_id, user_id, session)
     last = get_turn(char).get("last_damage")
-    spell = next((s for s in char.spells if last and s.id == last["spell_id"]), None)
-    if spell is None:
+    weapon = bool(last) and last.get("kind") == "weapon"
+    spell = next((s for s in char.spells if last and not weapon and s.id == last["spell_id"]), None)
+    if not last or (not weapon and spell is None):
         raise HTTPException(status_code=409, detail={"code": "no_last_damage"})
-    opts = use_options(session, char, "spell_damage", body, phase="after_damage", spell=spell)
+    opts = use_options(session, char, "weapon_damage" if weapon else "spell_damage", body, phase="after_damage",
+                       spell=spell)
 
     dice = [list(d) for d in last["dice"]]
     picked = list(dict.fromkeys(body.reroll))
@@ -642,21 +645,31 @@ async def last_damage_options(
             dice[i][1] = v
 
     values = [v for _, v in dice]
-    main, extra = values[:last["main"]], values[last["main"]:]
     total = scale_damage(sum(values) + flat, last["multiplier"])
     old = last["result"]
-    parts = [f"{len(main)}{old['main_kind']}={main}"]
-    if extra:
-        parts.append(f"+{len(extra)}{old['extra_kind']}={extra}")
-    if flat:
-        parts.append(f"{flat:+d}")
-    previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
-    result = RollDamageResult(**{
-        **old, "rolls": values + added, "main_rolls": main, "extra_rolls": extra, "total": total,
-        "half_damage": total // 2, "breakdown": " ".join(parts) + f" = {total}",
-        "option_result": option_result(opts, [v for _, v in rolled], 0, previous=previous),
-    })
-    _add_history(session, char_id, "spell_damage", f"Dopo il danno ({', '.join(opts.keys)}): {spell.name} = {total}")
+    if weapon:
+        previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
+        result = WeaponAttackResult(**{
+            **old, "damage_rolls": values + added, "damage_total": total, "attack_id": None,
+            "option_result": option_result(opts, [v for _, v in rolled], 0, previous=previous),
+        })
+        label = result.weapon_name
+    else:
+        main, extra = values[:last["main"]], values[last["main"]:]
+        parts = [f"{len(main)}{old['main_kind']}={main}"]
+        if extra:
+            parts.append(f"+{len(extra)}{old['extra_kind']}={extra}")
+        if flat:
+            parts.append(f"{flat:+d}")
+        previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
+        result = RollDamageResult(**{
+            **old, "rolls": values + added, "main_rolls": main, "extra_rolls": extra, "total": total,
+            "half_damage": total // 2, "breakdown": " ".join(parts) + f" = {total}",
+            "option_result": option_result(opts, [v for _, v in rolled], 0, previous=previous),
+        })
+        label = f"{spell.name} = {total}"
+    _add_history(session, char_id, "attack_roll" if weapon else "spell_damage",
+                 f"Dopo il danno ({', '.join(opts.keys)}): {label}" + (f" = {total}" if weapon else ""))
     turn = get_turn(char)  # il pagamento ha riscritto il turno
     turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json")}
     char.turn_state = turn

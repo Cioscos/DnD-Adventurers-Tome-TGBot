@@ -8,6 +8,7 @@ import { api, type RollMode } from '@/api/client'
 import { isUnlimitedFeature } from '@/lib/abilityUses'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
@@ -42,8 +43,9 @@ export default function Turn() {
   const [skillRoll, setSkillRoll] = useState<{ result: RollResult; skill: string } | null>(null)
   const [otherOpen, setOtherOpen] = useState(false)
   const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
-  // Totale della prova di Furtività dell'azione Nascondersi (2024): da qui si conferma l'Invisibilità.
-  const [hideTotal, setHideTotal] = useState<number | null>(null)
+  // Influenzare 2024: CD scelta dal giocatore (15 di base) e totale dell'ultima prova, per mostrare l'esito.
+  const [influenceDc, setInfluenceDc] = useState('15')
+  const [influenceTotal, setInfluenceTotal] = useState<number | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -71,19 +73,21 @@ export default function Turn() {
     onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
   })
   const hide = useMutation({
-    mutationFn: (total: number) => api.characters.hide(charId, total),
-    onSuccess: (updated) => { qc.setQueryData(['character', charId], updated); setHideTotal(null) },
+    mutationFn: () => api.characters.hide(charId),
+    onSuccess: (updated) => { qc.setQueryData(['character', charId], updated); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
   })
   const otherTurn = useMutation({ mutationFn: () => api.characters.turnOther(charId), onSuccess: setBlock })
   const rollD20 = useD20Roll()
   const skillMutation = useMutation({
-    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean; hide?: boolean }) => {
+    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean; influence?: boolean }) => {
       const choice = await askRollOptions(charId, { roll: 'skill', skill })
       return { result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode), choice)), skill }
     },
-    onSuccess: ({ result, skill }, { spendsAttack, hide }) => {
+    onSuccess: ({ result, skill }, { spendsAttack, influence }) => {
       if (spendsAttack) useSlot.mutate({ slot: 'attack' })
-      if (hide) setHideTotal(result.total)
+      if (influence) setInfluenceTotal(result.total)
+      // Nascondersi legge il totale dal tiro salvato dal server: il turno lo riporta.
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       refreshAfterOptions(qc, charId, result.option_result)
       setSkillRoll({ result: { ...result, description: undefined }, skill })
     },
@@ -114,6 +118,9 @@ export default function Turn() {
   }
 
   const groups = groupForTurn(char)
+  // Ultima prova di Furtività, salvata dal server (anche dopo un ritiro o un dado in più).
+  const lastRoll = block?.last_roll
+  const hideTotal = lastRoll?.roll === 'skill' && lastRoll.skill === 'stealth' ? lastRoll.total : null
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const attacks = turn?.attacks_allowed ?? char.attacks_per_action ?? 1
   const stdActions = standardActionsFor(char.rules_edition)
@@ -131,7 +138,7 @@ export default function Turn() {
           {(std?.skills?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {std?.skills?.map((sk) => (
-                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode, spendsAttack: std.spends_attack, hide: std.id === 'hide' })}
+                <RollButton key={sk} onRoll={(mode) => skillMutation.mutate({ skill: sk, mode, spendsAttack: std.spends_attack, influence: std.id === 'influence' })}
                   pending={skillMutation.isPending && skillMutation.variables?.skill === sk}
                   ariaLabel={t(`character.skills.${sk}`)}
                   className={`${BTN} border-dnd-border text-dnd-text`}>
@@ -140,9 +147,21 @@ export default function Turn() {
               ))}
             </div>
           )}
+          {e.id === 'influence' && (
+            <div className="pt-2 space-y-1">
+              <Input label={t('character.turn.influence_dc')} type="number" inputMode="numeric" min={1} max={40}
+                value={influenceDc} onChange={setInfluenceDc} className="w-28 text-center font-mono" />
+              {influenceTotal !== null && Number(influenceDc) > 0 && (
+                <p role="status" className="text-sm font-body text-dnd-text">
+                  {t(influenceTotal >= Number(influenceDc) ? 'character.turn.influence_success' : 'character.turn.influence_failure',
+                    { total: influenceTotal, dc: Number(influenceDc) })}
+                </p>
+              )}
+            </div>
+          )}
           {e.id === 'hide' && c.rules_edition === '2024' && hideTotal !== null && (
             hideTotal >= 15 ? (
-              <Button size="sm" variant="secondary" className="mt-2" loading={hide.isPending} onClick={() => hide.mutate(hideTotal)}>
+              <Button size="sm" variant="secondary" className="mt-2" loading={hide.isPending} onClick={() => hide.mutate()}>
                 {t('character.turn.hide_confirm', { total: hideTotal })}
               </Button>
             ) : (

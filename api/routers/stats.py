@@ -18,7 +18,7 @@ from core.game.stats import sync_base_ac
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
 from api.routers._helpers import effective_con_mod
-from api.services.effects import cap_current_hp
+from api.services.effects import cap_current_hp, sync_zero_hp
 from api.services.character_response import build_character_response
 from pydantic import BaseModel
 from typing import Optional
@@ -56,12 +56,14 @@ async def apply_ability_change(session: AsyncSession, char: Character, ability: 
     if ability == "constitution" and (char.settings or {}).get("hp_auto_calc", True):
         delta = effective_con_mod(char) - old_con_mod
         if delta != 0:
+            was_at_zero = char.current_hit_points == 0
             char.hit_points = max(0, char.hit_points + delta * char.total_level)
             char.current_hit_points = max(
                 0,
                 min(char.current_hit_points + delta * char.total_level, char.hit_points),
             )
             await cap_current_hp(session, char)
+            await sync_zero_hp(session, char, was_at_zero)
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:

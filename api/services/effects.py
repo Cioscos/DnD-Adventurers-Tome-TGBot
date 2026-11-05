@@ -105,6 +105,8 @@ def end_hide(session: AsyncSession, char: Character) -> None:
     if "hiding" not in settings:
         return
     char.settings = {k: v for k, v in settings.items() if k != "hiding"}
+    if settings["hiding"].get("was_invisible"):
+        return  # era già Invisibile per un'altra fonte: finisce solo il nascondiglio
     char.conditions = {**(char.conditions or {}), "invisible": False}
     _add_history(session, char.id, "condition_change", "Non sei più nascosto: l'Invisibilità finisce",
                  meta={"slug": "invisible", "active": False})

@@ -152,9 +152,6 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "start":
         reset_turn(char)
-        if combatant.surprised and character_edition(char) == "2014":  # niente azioni né movimento fino a fine turno
-            set_surprised(char)
-            undo.surprise_started.append(char.id)
         expired += tick_states(char)
         entry, ended = _tick_concentration(db, char)
         if entry is not None:

@@ -77,6 +77,11 @@ def remember_roll(char: Any, roll: str, opts: AppliedOptions, fields: dict, **wh
 
 def merge_options(applied: Applied, opts: AppliedOptions) -> None:
     """Il modo confermato passa dalle stesse regole di quelli automatici (i due opposti si annullano)."""
+    if opts.cancels:  # «un nemico ti vede»: cade solo la fonte indicata, le altre restano
+        applied.advantage_from = [s for s in applied.advantage_from if s not in opts.cancels]
+        applied.disadvantage_from = [s for s in applied.disadvantage_from if s not in opts.cancels]
+        applied.advantage, applied.disadvantage = bool(applied.advantage_from), bool(applied.disadvantage_from)
+        applied.notes[:] = [n for n in applied.notes if n not in opts.cancels]
     applied.advantage = applied.advantage or opts.mode in ("advantage", "normal")
     applied.disadvantage = applied.disadvantage or opts.mode in ("disadvantage", "normal")
     applied.auto_fail = applied.auto_fail or opts.auto_fail

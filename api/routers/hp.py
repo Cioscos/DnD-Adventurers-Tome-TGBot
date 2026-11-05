@@ -389,6 +389,8 @@ async def update_hp(
         _add_history(session, char.id, "hp_change",
                      f"HP correnti impostati: {old} → {char.current_hit_points}",
                      meta={"op": "SET_CURRENT"})
+        if char.current_hit_points > old:
+            await end_knock_out(session, char)  # il tramortito 2024 sta a 1 PF: salire lo sveglia
 
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
@@ -417,7 +419,8 @@ async def update_hp(
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
-                    "spent": option_block.spent if option_block else [], "zero_before": zero_before}
+                    "spent": option_block.spent if option_block else [], "zero_before": zero_before,
+                    "zero_after": _zero_conditions(char)}
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
@@ -490,11 +493,16 @@ async def undo_hp(
         else:
             settings[k] = before[k]
     char.settings = settings
-    zero = snap.get("zero_before")
-    if zero:  # Privo di sensi, Prono e tramortito scritti dall'operazione tornano come prima
-        char.conditions = {**(char.conditions or {}), "unconscious": zero["unconscious"], "prone": zero["prone"]}
-        settings = {k: v for k, v in (char.settings or {}).items() if k != "knocked_out"}
-        char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
+    zero, zero_after = snap.get("zero_before"), snap.get("zero_after")
+    if zero and zero_after:  # solo ciò che l'operazione ha scritto torna com'era; il resto è di chi l'ha messo
+        changed = {k for k in zero if zero[k] != zero_after[k]}
+        conditions = dict(char.conditions or {})
+        for k in changed & {"unconscious", "prone"}:
+            conditions[k] = zero[k]
+        char.conditions = conditions
+        if "knocked_out" in changed:
+            settings = {k: v for k, v in (char.settings or {}).items() if k != "knocked_out"}
+            char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
     char.hp_undo = None
 
     _add_history(session, char.id, "hp_change",
@@ -995,12 +1003,14 @@ async def recalc_hp(
     new_max = total_base_hp(char.classes, con_mod, stored_rolls(char))
 
     old_max = char.hit_points
+    was_at_zero = char.current_hit_points == 0
     char.hit_points = new_max
     if new_max > old_max:
         char.current_hit_points = max(0, char.current_hit_points + (new_max - old_max))
     else:
         char.current_hit_points = min(char.current_hit_points, new_max)
     await cap_current_hp(session, char)
+    await sync_zero_hp(session, char, was_at_zero)
 
     _add_history(session, char.id, "hp_change",
                  f"HP ricalcolati da formula: {old_max} → {new_max}",

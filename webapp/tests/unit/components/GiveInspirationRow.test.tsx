@@ -5,12 +5,13 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 
-const { giveInspiration, partners } = vi.hoisted(() => ({
+const { giveInspiration, updateInspiration, partners } = vi.hoisted(() => ({
+  updateInspiration: vi.fn(),
   giveInspiration: vi.fn().mockResolvedValue({ id: 7, heroic_inspiration: false }),
   partners: { current: null as null | { sessionId: number; partners: { user_id: number }[]; stash: boolean } },
 }))
 vi.mock('@/api/client', () => ({
-  api: { sessions: { giveInspiration } },
+  api: { sessions: { giveInspiration }, characters: { updateInspiration } },
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('@/hooks/useTradePartners', () => ({ useTradePartners: () => partners.current }))
@@ -40,17 +41,28 @@ const char = { id: 7, rules_edition: '2024', heroic_inspiration: true } as never
 
 beforeEach(() => {
   giveInspiration.mockClear()
+  updateInspiration.mockReset()
   partners.current = { sessionId: 3, partners: [{ user_id: 55 }, { user_id: 66 }], stash: false }
 })
 
 describe('GiveInspirationRow', () => {
-  it('lets a 2024 character with Inspiration give it to a party member', async () => {
+  it('asks to give only after the server says an extra Inspiration arrived, and keeps yours', async () => {
+    updateInspiration.mockResolvedValue({ ...(char as object), inspiration_extra: true })
     renderWithProviders(<GiveInspirationRow char={char} />)
-    await userEvent.click(screen.getByText('character.inspiration.give'))
-    expect(screen.getByText('character.inspiration.give_confirm').closest('button')).toBeDisabled()
+    expect(screen.queryByText('character.inspiration.give_confirm')).toBeNull()  // nessuna cessione senza un'altra ricevuta
+    await userEvent.click(screen.getByText('character.inspiration.received_another'))
+    await waitFor(() => expect(updateInspiration).toHaveBeenCalledWith(7, true))
+    expect(await screen.findByText('character.inspiration.give_confirm')).toBeInTheDocument()
     await userEvent.click(screen.getByText('pick'))
     await userEvent.click(screen.getByText('character.inspiration.give_confirm'))
     await waitFor(() => expect(giveInspiration).toHaveBeenCalledWith(3, { from_character_id: 7, to_user_id: 55 }))
+  })
+
+  it('offers the pending extra again when the sheet was closed', async () => {
+    renderWithProviders(<GiveInspirationRow char={{ ...(char as object), inspiration_extra: true } as never} />)
+    await userEvent.click(screen.getByText('character.inspiration.give'))
+    expect(screen.getByText('character.inspiration.give_confirm')).toBeInTheDocument()
+    expect(updateInspiration).not.toHaveBeenCalled()
   })
 
   it.each([

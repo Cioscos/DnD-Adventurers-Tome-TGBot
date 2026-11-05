@@ -189,6 +189,8 @@ class CharacterFull(BaseModel):
     # Meta
     experience_points: int = 0
     heroic_inspiration: bool = False
+    inspiration_extra: bool = False  # 2024: ricevuta un'altra mentre se ne aveva già una, da cedere o persa
+    hiding_dc: Optional[int] = None  # 2024: CD per trovarlo mentre è nascosto (totale di Furtività)
     spell_slots_mode: str = "manual"
     rules_edition: Edition = "2014"
     concentrating_spell_id: Optional[int] = None
@@ -406,11 +408,6 @@ class ConditionsUpdate(BaseModel):
     conditions: dict[str, Any]
     # slug -> rounds left; None removes the duration
     durations: Optional[dict[str, Optional[int]]] = None
-
-
-class HideRequest(BaseModel):
-    """Totale della prova di Furtività dell'azione Nascondersi."""
-    total: int
 
 
 class InspirationUpdate(BaseModel):

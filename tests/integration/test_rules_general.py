@@ -386,31 +386,60 @@ async def _two_players(factory, edition="2024", sender_has=True, recipient_has=F
         return sid, cid, friend.id, other
 
 
-async def test_give_inspiration_to_an_ally(client, test_session_factory):
+async def _receive_extra(client, cid) -> dict:
+    """Il percorso che concede: l'Ispirazione arriva a chi ce l'ha già."""
+    r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def test_a_second_inspiration_2024_is_a_pending_extra_not_a_second_one(client, test_session_factory):
     sid, cid, friend, other = await _two_players(test_session_factory)
     as_user(PLAYER_ID)
+    body = await _receive_extra(client, cid)
+    assert body["heroic_inspiration"] is True and body["inspiration_extra"] is True
+    r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": False})
+    assert r.json()["inspiration_extra"] is False  # spesa: nessuna in più da cedere
+
+
+async def test_give_the_extra_inspiration_keeps_your_own(client, test_session_factory):
+    sid, cid, friend, other = await _two_players(test_session_factory)
+    as_user(PLAYER_ID)
+    await _receive_extra(client, cid)
     r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": cid, "to_user_id": other})
     assert r.status_code == 200, r.text
-    assert r.json()["heroic_inspiration"] is False
+    assert r.json()["heroic_inspiration"] is True and r.json()["inspiration_extra"] is False
     as_user(other)
     assert (await client.get(f"/characters/{friend}")).json()["heroic_inspiration"] is True
 
 
+async def test_cannot_give_without_having_received_an_extra(client, test_session_factory):
+    sid, cid, friend, other = await _two_players(test_session_factory)
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": cid, "to_user_id": other})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_extra_inspiration"
+
+
 @pytest.mark.parametrize("edition,sender,recipient,status,code", [
     ("2014", True, False, 422, "inspiration_give_2024_only"),
-    ("2024", False, False, 409, "inspiration_unavailable"),
+    ("2024", False, False, 409, "no_extra_inspiration"),
     ("2024", True, True, 409, "recipient_has_inspiration"),
 ])
 async def test_give_inspiration_refusals(client, test_session_factory, edition, sender, recipient, status, code):
     sid, cid, friend, other = await _two_players(test_session_factory, edition, sender, recipient)
     as_user(PLAYER_ID)
+    if edition == "2024" and sender:
+        await _receive_extra(client, cid)
     r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": cid, "to_user_id": other})
     assert r.status_code == status and r.json()["detail"]["code"] == code
+    if code == "recipient_has_inspiration":  # l'extra resta a chi non ha potuto cederla
+        assert (await client.get(f"/characters/{cid}")).json()["inspiration_extra"] is True
 
 
 async def test_give_inspiration_only_from_your_own_character_to_a_player(client, test_session_factory):
     sid, cid, friend, other = await _two_players(test_session_factory)
     as_user(PLAYER_ID)
+    await _receive_extra(client, cid)
     r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": friend, "to_user_id": other})
     assert r.status_code == 403
     r = await client.post(f"/sessions/{sid}/inspiration/give", json={"from_character_id": cid, "to_user_id": GM_ID})
@@ -419,11 +448,54 @@ async def test_give_inspiration_only_from_your_own_character_to_a_player(client,
 
 # --- Azione Nascondersi 2024 --------------------------------------------------------------------------------------
 
+async def _stealth(client, cid, die) -> dict:
+    r = await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": die})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def test_hide_2024_reads_the_total_from_the_server_roll(client):
+    cid = await _char(client, edition="2024")
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_stealth_roll"
+    await _stealth(client, cid, 3)
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "hide_failed"
+    total = (await _stealth(client, cid, 17))["total"]
+    r = await client.post(f"/characters/{cid}/hide", json={"total": 3})  # un totale del client non conta
+    assert r.status_code == 200, r.text
+    assert r.json()["conditions"]["invisible"] is True
+    assert r.json()["hiding_dc"] == total
+
+
+async def test_hide_uses_the_latest_roll_not_the_first_one(client):
+    cid = await _char(client, edition="2024")
+    await _stealth(client, cid, 17)
+    await _stealth(client, cid, 4)  # il tiro nuovo sostituisce il precedente
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "hide_failed"
+
+
+async def test_hide_needs_a_stealth_roll_and_not_another_roll(client):
+    cid = await _char(client, edition="2024")
+    r = await client.post(f"/characters/{cid}/skills/athletics/roll", json={"die": 20})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_stealth_roll"
+
+
+async def test_hide_is_refused_when_incapacitated(client):
+    cid = await _char(client, edition="2024")
+    await _stealth(client, cid, 18)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "incapacitated"
+
+
 async def test_hide_2024_makes_invisible_and_breaks_on_attack(client):
     cid = await _char(client, edition="2024")
-    r = await client.post(f"/characters/{cid}/hide", json={"total": 14})
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "hide_failed"
-    r = await client.post(f"/characters/{cid}/hide", json={"total": 17})
+    await _stealth(client, cid, 17)
+    r = await client.post(f"/characters/{cid}/hide")
     assert r.status_code == 200, r.text
     assert r.json()["conditions"]["invisible"] is True
     r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12})
@@ -434,7 +506,8 @@ async def test_hide_2024_makes_invisible_and_breaks_on_attack(client):
 
 async def test_hide_2014_is_only_the_stealth_check(client):
     cid = await _char(client)
-    r = await client.post(f"/characters/{cid}/hide", json={"total": 20})
+    await _stealth(client, cid, 20)
+    r = await client.post(f"/characters/{cid}/hide")
     assert r.status_code == 422 and r.json()["detail"]["code"] == "hide_2024_only"
 
 
@@ -442,7 +515,8 @@ async def test_hide_ends_on_verbal_spell_but_not_on_somatic_only(client):
     cid = await _char(client, edition="2024", cls="wizard")
     mute = await client.post(f"/characters/{cid}/spells", json={"name": "Gesto", "level": 0, "components": "S"})
     loud = await client.post(f"/characters/{cid}/spells", json={"name": "Parola", "level": 0, "components": "V, S"})
-    await client.post(f"/characters/{cid}/hide", json={"total": 18})
+    await _stealth(client, cid, 18)
+    await client.post(f"/characters/{cid}/hide")
     r = await client.post(f"/characters/{cid}/spells/{mute.json()['id']}/use", json={})
     assert r.status_code == 200, r.text
     assert (await _full(client, cid))["conditions"]["invisible"] is True
@@ -453,12 +527,22 @@ async def test_hide_ends_on_verbal_spell_but_not_on_somatic_only(client):
 
 async def test_hide_removed_by_hand_does_not_linger(client):
     cid = await _char(client, edition="2024")
-    await client.post(f"/characters/{cid}/hide", json={"total": 18})
+    await _stealth(client, cid, 18)
+    await client.post(f"/characters/{cid}/hide")
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": False}})
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True}})  # un incantesimo vero
     r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12})
     assert r.status_code == 200, r.text
     assert (await _full(client, cid))["conditions"]["invisible"] is True
+
+
+async def test_hide_does_not_switch_off_an_invisibility_that_was_already_there(client):
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True}})  # un incantesimo
+    await _stealth(client, cid, 18)
+    await client.post(f"/characters/{cid}/hide")
+    await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12})
+    assert (await _full(client, cid))["conditions"]["invisible"] is True  # solo il nascondiglio è finito
 
 
 # --- Invisibile 2024: chi ti vede annulla il beneficio -------------------------------------------------------------
@@ -478,3 +562,238 @@ async def test_invisible_2014_has_no_such_question(client):
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True}})
     listed = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})
     assert all(o["key"] != "condition:invisible" for o in listed.json())
+
+
+async def test_invisible_seen_by_an_enemy_keeps_the_other_sources(client):
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"invisible": True, "poisoned": True}})
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 12, "options": ["condition:invisible"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode_applied"] == "disadvantage"  # resta lo svantaggio dell'avvelenato
+
+
+# --- Sorpresa 2014: reazioni bloccate prima del primo turno, stato sincronizzato ---------------------------------------
+
+async def test_surprise_2014_blocks_reactions_before_the_first_turn(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    assert (await _me(client, cid))["surprised"] is True  # già nella preparazione
+    await _start(client, sid, pc, monster, 1, 20)  # il mostro apre: il PG non può reagire
+    assert (await _me(client, cid))["surprised"] is True
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/next-turn")  # turno del PG
+    assert (await _me(client, cid))["surprised"] is True
+    await client.post(f"/sessions/{sid}/encounter/next-turn")  # fine del suo turno
+    assert (await _me(client, cid))["surprised"] is False
+
+
+async def test_surprise_2024_never_marks_the_character(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2024")
+    await _surprise(client, sid, pc["id"])
+    assert (await _me(client, cid))["surprised"] is False
+
+
+async def test_gm_clearing_the_flag_frees_the_character(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    await _start(client, sid, pc, monster, 20, 1)
+    await _surprise(client, sid, pc["id"], False)
+    me = await _me(client, cid)
+    assert me["surprised"] is False and me["incapacitated"] is False
+
+
+async def test_ending_the_encounter_frees_the_surprised_character(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    await _start(client, sid, pc, monster, 20, 1)
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/end")
+    assert r.status_code == 200, r.text
+    assert next(c for c in r.json()["combatants"] if c["id"] == pc["id"])["surprised"] is False
+    me = await _me(client, cid)
+    assert me["surprised"] is False and me["incapacitated"] is False
+
+
+async def test_removing_the_surprised_combatant_frees_the_character(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    as_user(GM_ID)
+    r = await client.delete(f"/sessions/{sid}/encounter/combatants/{pc['id']}")
+    assert r.status_code == 200, r.text
+    assert (await _me(client, cid))["surprised"] is False
+
+
+async def test_new_turn_keeps_the_surprise_during_the_encounter(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    await _start(client, sid, pc, monster, 20, 1)
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/turn/new")
+    assert r.status_code == 200, r.text
+    assert (await _me(client, cid))["surprised"] is True
+
+
+# --- Annulla PF: solo ciò che l'operazione ha cambiato --------------------------------------------------------------
+
+async def test_hp_undo_leaves_conditions_the_operation_did_not_touch(client):
+    cid = await _char(client)
+    await _hp(client, cid, "set_max", 20)
+    await _hp(client, cid, "set_current", 20)
+    body = await _hp(client, cid, "damage", 5)  # in piedi, nessuna condizione scritta
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"prone": True, "unconscious": True}})
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": body["hp_undo_id"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] == 20
+    assert r.json()["conditions"]["prone"] and r.json()["conditions"]["unconscious"]
+
+
+async def test_hp_undo_reverts_only_the_written_condition(client):
+    cid = await _char(client)
+    await _hp(client, cid, "set_max", 20)
+    await _hp(client, cid, "set_current", 20)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"prone": True}})  # già a terra
+    body = await _hp(client, cid, "damage", 25)  # scrive solo Privo di sensi
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": body["hp_undo_id"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["conditions"]["prone"] and not r.json()["conditions"].get("unconscious")
+
+
+# --- Privo di sensi: ogni scrittura dei PF ---------------------------------------------------------------------------
+
+async def test_homebrew_damage_to_zero_knocks_out_and_homebrew_heal_wakes_up(client, test_session_factory):
+    from api.services.homebrew.actions import execute_damage_character, execute_heal_character
+    from api.services.homebrew.types import ExecutionContext, RuleFiringResult
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from core.db.models import Character
+    cid = await _char(client)
+    await _hp(client, cid, "set_max", 20)
+    await _hp(client, cid, "set_current", 6)
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": cid})
+
+    async def run(action, fn):
+        async with test_session_factory() as s:
+            char = (await s.execute(select(Character).options(selectinload(Character.classes), selectinload(Character.items))
+                                    .where(Character.id == cid))).scalar_one()
+            await fn(action, ctx, rfr, s, char)
+            await s.commit()
+
+    await run({"action": "damage_character", "amount": 6}, execute_damage_character)
+    assert (await _full(client, cid))["conditions"]["unconscious"] is True
+    await run({"action": "heal_character", "amount": 4}, execute_heal_character)
+    full = await _full(client, cid)
+    assert full["current_hit_points"] == 4 and not full["conditions"].get("unconscious")
+
+
+async def test_level_up_con_change_and_recalc_from_zero_wake_up(client):
+    cid = await _char(client)
+    await _hp(client, cid, "set_max", 12)
+    await _hp(client, cid, "set_current", 0)
+    assert (await _full(client, cid))["conditions"]["unconscious"]
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 300})  # sale di livello: nuovi PF
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] > 0 and not r.json()["conditions"].get("unconscious")
+
+
+async def test_constitution_gain_and_recalc_from_zero_wake_up(client):
+    cid = await _char(client, level=3)
+    await _hp(client, cid, "set_current", 0)
+    assert (await _full(client, cid))["conditions"]["unconscious"]
+    await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 18})
+    full = await _full(client, cid)
+    assert full["current_hit_points"] > 0 and not full["conditions"].get("unconscious")
+    await _hp(client, cid, "set_current", 0)
+    await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 20})
+    assert not (await _full(client, cid))["conditions"].get("unconscious")
+    await _hp(client, cid, "set_max", 5)
+    await _hp(client, cid, "set_current", 0)
+    r = await client.post(f"/characters/{cid}/hp/recalc")
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] > 0 and not r.json()["conditions"].get("unconscious")
+
+
+# --- Tramortito 2024 e SET_CURRENT -------------------------------------------------------------------------------------
+
+async def test_set_current_above_one_ends_a_2024_knock_out(client):
+    cid = await _char(client, edition="2024")
+    await _hp(client, cid, "set_max", 20)
+    await _hp(client, cid, "set_current", 20)
+    await _hp(client, cid, "damage", 25, knock_out=True)
+    body = await _hp(client, cid, "set_current", 10)
+    assert not body["conditions"].get("unconscious")
+
+
+# --- Rilancio con Ispirazione dei dadi di danno dell'arma ---------------------------------------------------------------
+
+async def _weapon_hit(client, cid, die, damage_dice="2d6"):
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": "Spada", "item_type": "weapon", "is_equipped": True,
+        "item_metadata": {"damage_dice": damage_dice, "weapon_type": "melee", "properties": []}})
+    assert r.status_code == 201, r.text
+    item = next(i for i in r.json()["items"] if i["name"] == "Spada")
+    r = await client.post(f"/characters/{cid}/items/{item['id']}/attack", json={"die": die})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _weapon_char(client, edition="2024"):
+    cid = await _char(client, edition=edition)
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    return cid
+
+
+async def test_inspiration_2024_rerolls_a_weapon_damage_die(client, monkeypatch):
+    cid = await _weapon_char(client)
+    hit = await _weapon_hit(client, cid, 15)
+    listed = await client.get(f"/characters/{cid}/roll-options", params={"roll": "weapon_damage"})
+    assert any(o["key"] == "inspiration:reroll_damage" and o["reroll_limit"] == 1 for o in listed.json())
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 6)
+    first = hit["damage_rolls"]
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["damage_rolls"] == [6, first[1]]
+    assert body["damage_total"] == 6 + first[1] + hit["damage_bonus"]
+    assert body["weapon_name"] == "Spada"
+    assert (await _full(client, cid))["heroic_inspiration"] is False
+
+
+async def test_weapon_damage_reroll_on_a_critical_keeps_every_die_and_the_modifier(client, monkeypatch):
+    cid = await _weapon_char(client)
+    hit = await _weapon_hit(client, cid, 20)
+    assert hit["is_critical"] and len(hit["damage_rolls"]) == 4
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 5)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [3]})
+    assert r.status_code == 200, r.text
+    rolls = r.json()["damage_rolls"]
+    assert rolls == [*hit["damage_rolls"][:3], 5]
+    assert r.json()["damage_total"] == sum(rolls) + hit["damage_bonus"]  # il modificatore una volta sola
+
+
+async def test_weapon_damage_reroll_bad_requests_and_edition(client):
+    cid = await _weapon_char(client)
+    await _weapon_hit(client, cid, 15)
+    for reroll in ([], [9], [0, 1]):
+        r = await client.post(f"/characters/{cid}/last-damage/options",
+                              json={"options": ["inspiration:reroll_damage"], "reroll": reroll})
+        assert r.status_code == 409 and r.json()["detail"]["code"] == "bad_reroll"
+    assert (await _full(client, cid))["heroic_inspiration"] is True  # rifiutato: non spesa
+    old = await _weapon_char(client, "2014")
+    await _weapon_hit(client, old, 15)
+    listed = await client.get(f"/characters/{old}/roll-options", params={"roll": "weapon_damage"})
+    assert all(o["key"] != "inspiration:reroll_damage" for o in listed.json())
+
+
+async def test_a_miss_or_a_flat_unarmed_strike_has_no_damage_to_reroll(client):
+    cid = await _weapon_char(client)
+    await _weapon_hit(client, cid, 1)  # 1 naturale: nessun danno
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_last_damage"
+    await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 15})  # danno fisso, nessun dado
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_last_damage"

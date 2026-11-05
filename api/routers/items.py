@@ -558,12 +558,37 @@ def _settle_attack(
                    "options": result.option_result.keys if result.option_result else [],
                    "result": result.model_dump(mode="json")}
     _set_pending_attack(char, pending)
+    if pending is None:
+        remember_weapon_damage(char, result, opts)
     remember_roll(char, "attack", opts, {
         "die": result.to_hit_die, "dice": result.dice, "mode": result.mode, "bonus": result.to_hit_bonus,
         "total": result.to_hit_total, "notes": result.notes, "auto_fail": False, "description": "",
         "option_result": result.option_result.model_dump(mode="json") if result.option_result else None,
     }, item_id=item_id, ability=ability)
     return result
+
+
+_DIE = re.compile(r"(\d+)d(\d+)")
+
+
+def remember_weapon_damage(char: Character, result: WeaponAttackResult, opts: AppliedOptions) -> None:
+    """Dadi del danno finale in ``turn_state["last_damage"]``, come per gli incantesimi: l'Ispirazione Eroica ne ritira uno.
+
+    Senza dadi (danno fisso, 1 naturale, mancato) non c'è nulla da ritirare. Il totale si ricalcola da dadi, fisso e
+    moltiplicatore salvati; shortcut: con due moltiplicatori in fasi diverse (prima del tiro e dopo il colpo) il fisso
+    include il primo già applicato, da rivedere se una regola li combina."""
+    turn = get_turn(char)
+    turn.pop("last_damage", None)
+    die = _DIE.search(result.damage_dice or "")
+    if die and not (result.is_fumble or result.grazed or result.effect) and opts.damage_unscaled is not None:
+        sides = int(die[2])
+        turn["last_damage"] = {
+            "kind": "weapon", "roll_id": uuid.uuid4().hex,
+            "dice": [[sides, v] for v in result.damage_rolls], "main": len(result.damage_rolls), "added": [],
+            "multiplier": opts.multiplier, "flat": opts.damage_unscaled - sum(result.damage_rolls),
+            "result": result.model_dump(mode="json"),
+        }
+    char.turn_state = turn
 
 
 def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: dict) -> WeaponAttackResult:
@@ -642,6 +667,7 @@ def _base_damage(
 def _option_damage(char: Character, opts: AppliedOptions, is_critical: bool, damage: int) -> tuple[list[int], int, int]:
     """Dadi delle opzioni al danno: (valori, loro totale, danno finale)."""
     rolls, total = roll_option_dice(char, opts, is_critical)
+    opts.damage_unscaled = damage + total
     return rolls, total, scale_damage(damage + total, opts.multiplier)
 
 
@@ -673,6 +699,7 @@ async def deferred_attack_damage(
     result.option_result = option_result(opts, rolls, extra, previous=result.option_result, **second)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
     _set_pending_attack(char, None)
+    remember_weapon_damage(char, result, opts)
     turn = get_turn(char)
     if turn.get("last_roll"):  # il danno dice che il colpo è andato a segno: niente più da rimborsare
         char.turn_state = {**turn, "last_roll": {**turn["last_roll"], "refundable": {}}}

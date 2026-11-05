@@ -451,8 +451,7 @@ async def start_encounter(
         first_char = await db.get(Character, first.character_id)
         if first_char is not None:
             reset_turn(first_char)  # il primo turno non passa da process_edge
-            if first.surprised and character_edition(first_char) == "2014":
-                set_surprised(first_char)
+
     await db.flush()
     if first is not None:
         await _notify_turn(enc, first)
@@ -589,6 +588,7 @@ async def patch_combatant(
         comb.is_dead = body.is_dead
     if body.surprised is not None:
         comb.surprised = body.surprised
+        await _sync_surprise(db, comb)
 
     _touch(session)
     await db.flush()
@@ -623,6 +623,20 @@ async def _pc_for_initiative(db: AsyncSession, comb: Combatant) -> Character | N
                                   selectinload(Character.abilities), selectinload(Character.spell_slots))
         .where(Character.id == comb.character_id)
     )).scalar_one_or_none()
+
+
+async def _sync_surprise(db: AsyncSession, comb: Combatant, released: bool = False) -> None:
+    """2014: il PG sorpreso non agisce, non si muove e non reagisce finché il suo primo turno non finisce, anche se
+    prima agiscono altri. Il flag del turno del PG segue quello del combattente (o cade, se ``released``)."""
+    if comb.kind != "pc" or comb.character_id is None:
+        return
+    char = await db.get(Character, comb.character_id)
+    if char is None:
+        return
+    if released or not comb.surprised:
+        set_surprised(char, False)
+    elif character_edition(char) == "2014":
+        set_surprised(char)
 
 
 def _surprise_disadvantage(comb: Combatant, char: Character | None, applied: Applied) -> None:
@@ -779,6 +793,7 @@ async def delete_combatant(
         _move_pointer_off(enc, list(enc.combatants), comb.id)
     # SQLite FK cascade is not guaranteed: drop the monster's effects explicitly
     await clear_effects_for(db, ("combatant", comb.id), (comb.conditions or {}).keys())
+    await _sync_surprise(db, comb, released=True)
     await db.delete(comb)
     _touch(session)
     await db.flush()
@@ -828,6 +843,10 @@ async def end_encounter(
     enc = await _require_open_encounter(session_id, db)
     enc.status = "ended"
     enc.ended_at = _now()
+    for c in enc.combatants:  # la sorpresa è del combattimento: finito quello, non resta sulla scheda
+        if c.surprised:
+            c.surprised = False
+        await _sync_surprise(db, c, released=True)
     await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     _touch(session)

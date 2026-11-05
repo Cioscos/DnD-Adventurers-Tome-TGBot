@@ -8,21 +8,25 @@ import { AfterRollButton } from '@/components/rules/AfterRollOptions'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import type { RollDamageResult } from '@/types'
+import type { WeaponAttackResult } from '@/api/client'
 
-const sidesOf = (kind: string | null | undefined) => Number((kind ?? '').slice(1))
+export type DamageDie = { value: number; index: number; sides: number }
+/** Il tiro rifatto dal server: lo stesso tipo del tiro che si è ritirato. */
+export type DamageReroll = RollDamageResult | WeaponAttackResult
 
 /** Privilegi usati dopo aver visto i dadi di danno: si scelgono i dadi, il server li ritira dal tiro che ha salvato. */
-export default function AfterDamageOptions({ charId, spellId, result, onResult }: {
+export default function AfterDamageOptions({ charId, query, dice: allDice, onResult }: {
   charId: number
-  spellId: number
-  result: RollDamageResult
-  onResult: (result: RollDamageResult) => void
+  /** Come per `GET /roll-options`: `spell_damage` con l'incantesimo, `weapon_damage` per l'arma. */
+  query: { roll: 'spell_damage'; spell_id: number } | { roll: 'weapon_damage' }
+  /** Dadi del danno già visti, con l'indice con cui il server li conosce. */
+  dice: DamageDie[]
+  onResult: (result: DamageReroll) => void
 }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [option, setOption] = useState<RollOption | null>(null)
   const [picked, setPicked] = useState<number[]>([])
-  const query = { roll: 'spell_damage', spell_id: spellId } as const
   const { data } = useQuery({
     queryKey: ['roll-options', charId, query],
     queryFn: () => api.characters.rollOptions(charId, query),
@@ -53,10 +57,7 @@ export default function AfterDamageOptions({ charId, spellId, result, onResult }
   }
 
   const limit = option.reroll_limit ?? 0
-  const dice = [
-    ...result.main_rolls.map((value, index) => ({ value, index, sides: sidesOf(result.main_kind) })),
-    ...result.extra_rolls.map((value, i) => ({ value, index: result.main_rolls.length + i, sides: sidesOf(result.extra_kind) })),
-  ].filter((d) => !option.keep_rolled || d.value === d.sides)
+  const dice = allDice.filter((d) => !option.keep_rolled || d.value === d.sides)
   const toggle = (index: number) =>
     setPicked((p) => (p.includes(index) ? p.filter((i) => i !== index) : [...p, index]))
 
