@@ -16,7 +16,7 @@ from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
 from core.game.containers import is_container
 from core.game.stats import migrate_character_ac
-from core.rules.feature_sync import ARCHIVED_FEATURES, clean_archive
+from core.rules.feature_sync import ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, clean_archive, clean_granted_keys
 from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
@@ -258,6 +258,8 @@ async def import_character(
 
     if ARCHIVED_FEATURES in (char.settings or {}):  # server-owned: il client non potrebbe più ripararlo
         char.settings = {**char.settings, ARCHIVED_FEATURES: clean_archive(char.settings[ARCHIVED_FEATURES])}
+    if GRANTED_SPELL_KEYS in (char.settings or {}):
+        char.settings = {**char.settings, GRANTED_SPELL_KEYS: clean_granted_keys(char.settings[GRANTED_SPELL_KEYS])}
 
     for sp, row in zip(data.spells, spells):
         row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None

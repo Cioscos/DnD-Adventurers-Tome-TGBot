@@ -94,6 +94,10 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
     return char
 
 
+def _prepared_cap_error(count: int, cap: int, per_class: bool) -> HTTPException:
+    return HTTPException(status_code=400, detail={"code": "prepared_cap", "n": count, "cap": cap, "per_class": per_class})
+
+
 def _ensure_prepare_capacity(char: Character, class_id: int | None = None) -> None:
     """400 se il PG ha classi preparanti e il tetto, o quello della classe dell'incantesimo, è già raggiunto.
 
@@ -102,16 +106,10 @@ def _ensure_prepare_capacity(char: Character, class_id: int | None = None) -> No
     """
     room = prepared_class_room(char, class_id) if class_id else None
     if room and room[0] >= room[1]:
-        raise HTTPException(status_code=400, detail=f"Prepared spell cap reached ({room[0]}/{room[1]})")
+        raise _prepared_cap_error(room[0], room[1], True)
     info = build_spellcasting_info(char)
     if info.has_preparing_class and info.prepared_count >= (info.prepared_cap or 0):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Prepared spell cap reached "
-                f"({info.prepared_count}/{info.prepared_cap or 0})"
-            ),
-        )
+        raise _prepared_cap_error(info.prepared_count, info.prepared_cap or 0, False)
 
 
 def _check_class(char: Character, class_id: int | None) -> None:

@@ -523,6 +523,7 @@
       "not_prepared": "Not prepared",
       "prepared_counter": "Prepared",
       "prepared_cap_reached": "Cap reached ({{n}}/{{cap}}): unprepare a spell or raise the cap in settings",
+      "prepared_cap_class_reached": "Class cap reached ({{n}}/{{cap}}): unprepare a spell of this class",
       "unprepared_cast_title": "Spell not prepared",
       "unprepared_cast_body": "{{name}} is not among your prepared spells. Cast it anyway?",
       "cast_anyway": "Cast anyway",

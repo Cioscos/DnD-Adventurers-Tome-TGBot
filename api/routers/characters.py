@@ -34,7 +34,7 @@ from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
-from core.rules.feature_sync import ARCHIVED_FEATURES
+from core.rules.feature_sync import ARCHIVED_FEATURES, GRANTED_SPELL_KEYS
 from core.game.stats import hit_points_for_level
 from api.schemas.character import (
     CharacterCreate,
@@ -80,7 +80,8 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
-                         "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES)
+                         "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
+                         GRANTED_SPELL_KEYS)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {

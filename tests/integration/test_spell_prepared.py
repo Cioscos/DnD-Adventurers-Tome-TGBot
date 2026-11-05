@@ -114,7 +114,7 @@ async def test_prepare_up_to_cap_then_400(client):
     assert (await _prepare(client, cid, ids[1])).status_code == 200
     r = await _prepare(client, cid, ids[2])
     assert r.status_code == 400, r.text
-    assert "cap" in r.json()["detail"].lower()
+    assert r.json()["detail"] == {"code": "prepared_cap", "n": 2, "cap": 2, "per_class": False}
 
 
 async def test_unprepare_always_allowed_even_over_cap(client):

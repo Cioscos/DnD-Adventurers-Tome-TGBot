@@ -1,8 +1,11 @@
 """Incantesimi per classe ed edizione attraverso l'API: pool, classe, limiti, conferme, fasi `cast` e `after_damage`."""
 from __future__ import annotations
 
+import pytest
+
 from core.rules.catalog import granted_spells
 from core.rules.catalog.granted_spells import GrantedSpell
+from core.rules.feature_sync import GRANTED_SPELL_KEYS, clean_granted_keys
 from core.rules.types import Cost, FeatureSpec, RollOptionSpec, Uses
 
 _LABEL = {"it": "Applica?", "en": "Apply?"}
@@ -255,6 +258,7 @@ async def test_prepared_cap_per_class_when_assigned(client):
     s = await _spell(client, cid, name="C4", class_id=cleric["id"])
     r = await client.patch(f"/characters/{cid}/spells/{s['id']}", json={"is_prepared": True})
     assert r.status_code == 400  # il tetto di quella classe, anche se il totale ha posto
+    assert r.json()["detail"] == {"code": "prepared_cap", "n": 4, "cap": 4, "per_class": True}
     limits = {x["class_id"]: x for x in (await _full(client, cid))["spellcasting"]["limits"]}
     assert limits[cleric["id"]]["prepared_count"] == 4
 
@@ -607,6 +611,91 @@ async def test_granted_spell_reuses_the_one_the_player_already_has(client, rules
     found = [s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso"]
     assert [s["id"] for s in found] == [mine["id"]]
     assert (found[0]["description"], found[0]["always_prepared"]) == ("Mie note", True)
+
+
+async def test_granted_spell_loses_only_the_mark_the_feature_gave(client, rules_catalog, monkeypatch):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    rules_catalog(_feature(granted_spells=("prova-concesso",)))
+    cid = await _char(client, ("wizard", 3))
+    r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})  # perso: il segno era del privilegio
+    assert next(s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso")["always_prepared"] is False
+    assert not r.json()["settings"].get(GRANTED_SPELL_KEYS)
+
+
+async def test_manual_mark_survives_sync_without_the_feature(client, monkeypatch):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    cid = await _char(client, ("wizard", 3))
+    await _spell(client, cid, name="A mano", srd_index="prova-concesso", always_prepared=True)
+    r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    assert r.status_code == 200, r.text
+    assert next(s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso")["always_prepared"] is True
+
+
+async def test_manual_mark_survives_a_feature_gained_and_lost(client, rules_catalog, monkeypatch):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    cid = await _char(client, ("wizard", 3))
+    await _spell(client, cid, name="A mano", srd_index="prova-concesso", always_prepared=True)
+    rules_catalog(_feature(granted_spells=("prova-concesso",)))
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})  # concesso: il segno resta dell'utente
+    r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    assert next(s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso")["always_prepared"] is True
+
+
+async def test_imported_mark_survives_the_import_sync(client, monkeypatch):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    cid = await _char(client, ("wizard", 3))
+    await _spell(client, cid, name="Da file", srd_index="prova-concesso", always_prepared=True)
+    data = (await client.get(f"/characters/{cid}/export")).json()
+    r = await client.post("/characters/import", json=data)  # stessa strada dell'import DDB: import_character
+    assert r.status_code == 201, r.text
+    assert next(s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso")["always_prepared"] is True
+
+
+async def test_export_import_keeps_the_feature_mark_removable(client, rules_catalog, monkeypatch):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    rules_catalog(_feature(granted_spells=("prova-concesso",)))
+    cid = await _char(client, ("wizard", 3))
+    data = (await client.get(f"/characters/{cid}/export")).json()
+    assert data["character"]["settings"][GRANTED_SPELL_KEYS] == ["prova-concesso"]
+    new_id = (await client.post("/characters/import", json=data)).json()["id"]
+    r = await client.patch(f"/characters/{new_id}", json={"rules_edition": "2024"})
+    assert next(s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso")["always_prepared"] is False
+
+
+def test_clean_granted_keys_keeps_only_strings_of_a_list():
+    assert clean_granted_keys([1, None, ["y"], "ok"]) == ["ok"]
+    assert clean_granted_keys("x") == clean_granted_keys({"a": 1}) == []
+
+
+@pytest.mark.parametrize("raw", ["x", {"a": 1}, [1, None, ["y"]], ["prova-concesso", {"a": 1}]])
+async def test_import_discards_malformed_granted_keys(client, monkeypatch, raw):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    cid = await _char(client, ("wizard", 3))
+    data = (await client.get(f"/characters/{cid}/export")).json()
+    data["character"]["settings"][GRANTED_SPELL_KEYS] = raw
+    r = await client.post("/characters/import", json=data)
+    assert r.status_code == 201, r.text
+    new_id = r.json()["id"]
+    settings = (await client.get(f"/characters/{new_id}/export")).json()["character"]["settings"]
+    assert settings.get(GRANTED_SPELL_KEYS) in (None, [])  # il sync dell'import riallinea ai privilegi attivi: nessuno
+    assert (await client.patch(f"/characters/{new_id}", json={"rules_edition": "2024"})).status_code == 200
+
+
+async def test_client_cannot_write_the_granted_keys(client, monkeypatch):
+    monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-concesso", GrantedSpell(
+        key="prova-concesso", name={"it": "Concesso", "en": "Granted"}, level=1))
+    cid = await _char(client, ("wizard", 3))
+    await _spell(client, cid, name="A mano", srd_index="prova-concesso", always_prepared=True)
+    r = await client.patch(f"/characters/{cid}", json={"settings": {GRANTED_SPELL_KEYS: ["prova-concesso"]}})
+    assert GRANTED_SPELL_KEYS not in r.json()["settings"]
+    r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    assert next(s for s in r.json()["spells"] if s["srd_index"] == "prova-concesso")["always_prepared"] is True
 
 
 # --- Migrazione -----------------------------------------------------------------------------------------------------

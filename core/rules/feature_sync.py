@@ -21,6 +21,7 @@ from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
 
 ARCHIVED_FEATURES = "archived_features"
+GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
 
 
 async def sync_class_feature_abilities(
@@ -63,16 +64,19 @@ async def sync_cataloged_features(session: AsyncSession, char: Character, lang: 
 
 async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
     """Incantesimi dei privilegi attivi: sempre preparati. Mai cancellati: se il privilegio sparisce (cambio di
-    edizione, livello) l'incantesimo resta e torna a contare come gli altri."""
+    edizione, livello) l'incantesimo resta e torna a contare come gli altri. Si toglie solo il segno messo da un
+    privilegio: quello dato a mano o dall'import resta dell'utente."""
     if not GRANTED_SPELLS:
         return
     granted = {key: row for spec, row in active_features(char) for key in spec.granted_spells}
     # Query e non `char.spells`: non tutti i chiamanti caricano la relazione.
     rows = (await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars().all()
     have = {s.srd_index: s for s in rows if s.srd_index in GRANTED_SPELLS}
+    previous = (char.settings or {}).get(GRANTED_SPELL_KEYS) or []
     for key, spell in have.items():
-        if key not in granted:
+        if key in previous and key not in granted:
             spell.always_prepared = False
+    owned: list[str] = []
     for key, owner in granted.items():
         spell = have.get(key)
         if spell is None:
@@ -83,8 +87,17 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
                           attack_save=data.attack_save, damage_dice=data.damage_dice, damage_type=data.damage_type,
                           higher_levels_dice=data.higher_levels_dice, srd_index=key)
             session.add(spell)
+        if key in previous or not spell.always_prepared:
+            owned.append(key)
         spell.always_prepared = spell.is_prepared = True
         spell.class_id = spell.class_id or owner.id
+    if set(owned) != set(previous):
+        char.settings = {**(char.settings or {}), GRANTED_SPELL_KEYS: owned}
+
+
+def clean_granted_keys(raw: object) -> list[str]:
+    """Da un file importato tiene solo le stringhe di una lista; il resto è scartato."""
+    return [key for key in raw if isinstance(key, str)] if isinstance(raw, list) else []
 
 
 def clean_archive(raw: object) -> dict[str, dict]:

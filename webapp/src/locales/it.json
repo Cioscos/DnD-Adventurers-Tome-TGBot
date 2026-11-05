@@ -523,6 +523,7 @@
       "not_prepared": "Non preparato",
       "prepared_counter": "Preparati",
       "prepared_cap_reached": "Tetto raggiunto ({{n}}/{{cap}}): libera una preparazione o alza il tetto nelle impostazioni",
+      "prepared_cap_class_reached": "Tetto della classe raggiunto ({{n}}/{{cap}}): libera una preparazione di questa classe",
       "unprepared_cast_title": "Incantesimo non preparato",
       "unprepared_cast_body": "{{name}} non è tra i tuoi incantesimi preparati. Lanciarlo comunque?",
       "cast_anyway": "Lancia comunque",

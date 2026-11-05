@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Ban, ChevronRight, FilterX } from 'lucide-react'
 import { GiPotionBall as FlaskConical, GiSparkles as Sparkles } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
+import { notifyMutationError } from '@/lib/mutationError'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -97,6 +98,18 @@ export default function Spells() {
 
   const castFlow = useCastFlow(charId, char)
 
+  const onPrepareError = (e: unknown) => {
+    const detail = e instanceof ApiError ? e.detail as { code?: string; n?: number; cap?: number; per_class?: boolean } : null
+    if (detail?.code !== 'prepared_cap') {
+      notifyMutationError()
+      return
+    }
+    haptic.warning()
+    toast.warning(t(`character.spells.${detail.per_class ? 'prepared_cap_class_reached' : 'prepared_cap_reached'}`, {
+      n: detail.n, cap: detail.cap,
+    }))
+  }
+
   const addMutation = useMutation({
     mutationFn: (data: SpellFormData) =>
       api.spells.add(charId, {
@@ -126,6 +139,7 @@ export default function Spells() {
       setEditingSpell(null)
       haptic.success()
     },
+    onError: onPrepareError,
   })
 
   const updateMutation = useMutation({
@@ -184,10 +198,7 @@ export default function Spells() {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.light()
     },
-    onError: (e) => {
-      haptic.error()
-      toast.error(e instanceof Error ? e.message : String(e))
-    },
+    onError: onPrepareError,
   })
 
   const handlePreparedToggle = useCallback((spell: Spell) => {

@@ -5,7 +5,7 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Spells from '@/pages/Spells'
 
 const {
-  getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo,
+  getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo, toastWarning, toastError, ApiError,
 } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateChar: vi.fn(),
@@ -17,9 +17,15 @@ const {
   slotUpdateSpy: vi.fn(),
   slotAddSpy: vi.fn(),
   toastInfo: vi.fn(),
+  toastWarning: vi.fn(),
+  toastError: vi.fn(),
+  ApiError: class extends Error {
+    constructor(public status: number, public detail: unknown) { super(`API ${status}: ${JSON.stringify(detail)}`) }
+  },
 }))
 
 vi.mock('@/api/client', () => ({
+  ApiError,
   api: {
     characters: { get: getChar, update: updateChar },
     spells: { add: addSpy, update: updateSpy, remove: removeSpy, use: useSpy, updateConcentration: concSpy },
@@ -53,9 +59,9 @@ vi.mock('framer-motion', async () => {
   }
 })
 
-vi.mock('sonner', () => ({ toast: { info: toastInfo, error: vi.fn(), success: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { info: toastInfo, warning: toastWarning, error: toastError, success: vi.fn() } }))
 vi.mock('@/auth/telegram', () => ({
-  haptic: { light: () => {}, medium: () => {}, success: () => {}, error: () => {} },
+  haptic: { light: () => {}, medium: () => {}, success: () => {}, error: () => {}, warning: () => {} },
 }))
 
 const passthrough = vi.hoisted(() => async () => {
@@ -108,12 +114,13 @@ vi.mock('@/pages/spells/SpellFilter', async () => {
 vi.mock('@/pages/spells/SpellItem', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: { name: string }; onUse?: (mode: string) => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void }) =>
+    default: (p: { spell: { name: string }; onUse?: (mode: string) => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void; onPreparedToggle?: () => void }) =>
       React.createElement('div', null, [
         React.createElement('span', { key: 'n' }, p.spell.name),
         React.createElement('button', { key: 'u', onClick: () => p.onUse?.('normal') }, `use-${p.spell.name}`),
         React.createElement('button', { key: 'c', onClick: p.onConcentrationToggle }, `conc-${p.spell.name}`),
         React.createElement('button', { key: 'r', onClick: p.onRemove }, `remove-${p.spell.name}`),
+        React.createElement('button', { key: 'p', onClick: p.onPreparedToggle }, `prepare-${p.spell.name}`),
       ]),
   }
 })
@@ -172,10 +179,45 @@ const manualChar = () => ({
 })
 
 afterEach(() => {
-  for (const s of [getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo]) s.mockReset()
+  for (const s of [getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo, toastWarning, toastError]) s.mockReset()
 })
 
 describe('Spells page', () => {
+  const preparingChar = () => ({
+    ...manualChar(),
+    spellcasting: { has_preparing_class: true, prepared_cap: 8, prepared_count: 4, cap_mode: 'auto', limits: [] },
+  })
+  const capError = (per_class: boolean) => new ApiError(400, { code: 'prepared_cap', n: 4, cap: 4, per_class })
+
+  it('toggle: the class cap of a multiclass reaches the player translated, without the technical text', async () => {
+    getChar.mockResolvedValue(preparingChar())
+    updateSpy.mockRejectedValue(capError(true))
+    renderWithProviders(<Spells />)
+    await userEvent.click(await screen.findByText('prepare-Bless'))
+    await waitFor(() => expect(toastWarning).toHaveBeenCalledWith('character.spells.prepared_cap_class_reached'))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('adding a spell over the total cap shows the translated total message', async () => {
+    getChar.mockResolvedValue(preparingChar())
+    addSpy.mockRejectedValue(capError(false))
+    renderWithProviders(<Spells />)
+    await userEvent.click(await screen.findByText('add-spell'))
+    await userEvent.click(await screen.findByText('submit-spell'))
+    await waitFor(() => expect(toastWarning).toHaveBeenCalledWith('character.spells.prepared_cap_reached'))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('another toggle failure never shows the technical message', async () => {
+    getChar.mockResolvedValue(preparingChar())
+    updateSpy.mockRejectedValue(new ApiError(500, 'boom'))
+    renderWithProviders(<Spells />)
+    await userEvent.click(await screen.findByText('prepare-Bless'))
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(toastError.mock.calls[0][0]).not.toContain('API 500')
+    expect(toastWarning).not.toHaveBeenCalled()
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Spells />)
