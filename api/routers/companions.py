@@ -18,6 +18,7 @@ from api.schemas.companion import (
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from core.rules.modifiers import Applied, modifiers_for
 from api.services.dice_stats import record_dice
+from api.services.rules_turn import refuse_if_incapacitated
 from api.services.wild_shape import deactivate_other_forms
 from core.db.models import Ability, Character, CharacterHistory, Companion
 
@@ -221,6 +222,7 @@ async def companion_attack(
     applied = Applied()
     if comp.kind == "wild_shape" and comp.is_active:
         await session.refresh(char, attribute_names=["classes", "items"])
+        refuse_if_incapacitated(char)
         applied = modifiers_for(char, "attack", ability="strength")
     outcome = resolve_applied(body.mode, body.dice, None, applied)
     bonus = int(action["attack_bonus"]) + applied.flat

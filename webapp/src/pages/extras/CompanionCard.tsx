@@ -66,7 +66,13 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
       haptic.success()
       refresh()
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      if (err instanceof ApiError && (err.detail as { code?: string } | null)?.code === 'incapacitated') {
+        toast.error(t('character.attack.incapacitated'))
+      } else {
+        notifyMutationError()
+      }
+    },
   })
 
   const activate = useMutation({

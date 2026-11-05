@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import select
 
 from core.db.models import CharacterClass
-from core.rules.types import FeatureSpec, Modifier
+from core.rules.types import FeatureSpec, Modifier, OnUse, Uses
 from core.rules.weapons import MASTERY_OPTIONS, mastery_choice, weapon_mastery
 
 
@@ -243,6 +243,7 @@ async def test_heavy_2014_depends_on_small_size(client):
     ("Pugnale", {}, "nick"), ("Balestra a mano", {}, "vex"), ("Balestra pesante", {}, "push"),
     ("Lama di famiglia", {}, None), ("Lama di famiglia", {"base_weapon": "greataxe"}, "cleave"),
     ("Spadone", {"base_weapon": "non_esiste"}, "graze"),
+    ("Glaive", {}, "graze"), ("Falcione", {}, "graze"), ("Gliaia", {}, "graze"), ("Gliaia +1", {}, "graze"),
 ])
 def test_weapon_mastery_table(name, meta, expected):
     assert weapon_mastery(SimpleNamespace(name=name, item_metadata=meta)) == expected
@@ -482,6 +483,53 @@ async def test_attack_count_enforced_with_confirm(client):
     assert (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 5})).status_code == 409
     await client.post(f"/characters/{cid}/turn/new")
     assert (await _attack(client, cid, wid)).status_code == 200
+
+
+_SURGE = {"uses": Uses(table={1: 2}), "restoration": "long_rest", "on_use": OnUse(grants_action=True)}
+
+
+async def _allowed(client, cid) -> int:
+    return (await client.get(f"/characters/{cid}/turn-state")).json()["attacks_allowed"]
+
+
+async def _surge(client, cid) -> None:
+    r = await client.post(f"/characters/{cid}/features/fighter.prova/use", json={})
+    assert r.status_code == 200, r.text
+
+
+async def test_extra_action_attacks_need_no_confirmation(client, rules_catalog):
+    await _feature_with(rules_catalog, **_SURGE)
+    cid = await _char(client, level=5)  # due attacchi per azione
+    wid = await _weapon(client, cid)
+    for _ in range(2):
+        assert (await _attack(client, cid, wid)).status_code == 200
+    assert (await _attack(client, cid, wid)).status_code == 409
+    await _surge(client, cid)
+    assert await _allowed(client, cid) == 4
+    for _ in range(2):
+        r = await _attack(client, cid, wid)
+        assert r.status_code == 200, r.text
+    r = await _attack(client, cid, wid)
+    assert r.json()["detail"] == {"code": "attack_limit", "made": 4, "allowed": 4}
+    await client.post(f"/characters/{cid}/turn/new")
+    assert await _allowed(client, cid) == 2
+
+
+async def test_extra_action_multiplies_the_best_attack_count_once(client, rules_catalog):
+    await _feature_with(rules_catalog, attacks_per_action=3, **_SURGE)
+    cid = await _char(client, level=5)  # la classe ne dà 2, il privilegio 3: vale il massimo
+    await _surge(client, cid)
+    assert await _allowed(client, cid) == 6
+
+
+async def test_extra_action_spent_elsewhere_no_longer_counts(client, rules_catalog):
+    await _feature_with(rules_catalog, **_SURGE)
+    cid = await _char(client, level=5)
+    await _surge(client, cid)
+    for _ in range(2):  # l'azione, poi quella in più
+        r = await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": True})
+        assert r.status_code == 200, r.text
+    assert await _allowed(client, cid) == 2
 
 
 @pytest.mark.parametrize("condition", ["incapacitated", "stunned", "unconscious", "paralyzed", "petrified"])

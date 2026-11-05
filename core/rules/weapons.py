@@ -75,10 +75,12 @@ WEAPONS: dict[str, Weapon] = {
     "pistol": _w("Pistol", "Pistola", "martial", "vex", "ranged"),
 }
 
+# Altri nomi italiani in uso: l'app e il compendio dicono «Falcione», il documento delle regole «Gliaia».
+_ALIASES = (("glaive", "Gliaia"),)
 # Il nome più lungo vince: «Lancia da cavaliere» prima di «Lancia».
 _NAMES = sorted(
     ((re.compile(rf"\b{re.escape(name.lower())}\b"), key)
-     for key, w in WEAPONS.items() for name in (w.en, w.it)),
+     for key, name in (*((k, n) for k, w in WEAPONS.items() for n in (w.en, w.it)), *_ALIASES)),
     key=lambda pair: -len(pair[0].pattern),
 )
 _PROPERTY_WORDS = {

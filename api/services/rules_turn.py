@@ -115,8 +115,9 @@ def refuse_if_incapacitated(char) -> None:
 
 
 def attacks_allowed(char) -> int:
-    """Attacchi per azione Attacco: massimo fra 1 e i privilegi attivi, mai somma fra classi."""
-    return max(
+    """Attacchi del turno: per azione il massimo fra 1 e i privilegi attivi, mai somma fra classi, per le azioni disponibili."""
+    per_action = max(
         attacks_per_action(char.classes),
         *(spec.attacks_per_action for spec, _ in active_features(char)), 1,
     )
+    return per_action * (1 + get_turn(char)["extra_actions"])

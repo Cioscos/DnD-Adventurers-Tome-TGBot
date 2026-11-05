@@ -98,6 +98,19 @@ async def test_attack_validation(client, test_session_factory):
     assert (await client.post(url, json={"action_index": 0, "dice": [10], "damage_rolls": [1, 1]})).status_code == 422
 
 
+async def test_wild_shape_attack_refused_while_incapacitated(client, test_session_factory):
+    cid = await _char(test_session_factory)
+    form = await _add(client, cid, kind="wild_shape", is_active=True)
+    familiar = await _add(client, cid)
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/companions/{form['id']}/attack", json={"action_index": 0})
+    assert (r.status_code, r.json()["detail"]) == (409, {"code": "incapacitated"})
+    # Un compagno è un altro combattente: lo stordimento del padrone non lo ferma.
+    r = await client.post(f"/characters/{cid}/companions/{familiar['id']}/attack", json={"action_index": 0})
+    assert r.status_code == 200, r.text
+
+
 async def test_companion_limit_422(client, test_session_factory):
     cid = await _char(test_session_factory)
     for _ in range(30):
