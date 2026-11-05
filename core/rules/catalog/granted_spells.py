@@ -238,6 +238,15 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
         'cloudkill', {"it": 'Nube mortale', "en": 'Cloudkill'}, 5, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='5d8', damage_type='poison', higher_levels_dice='1d8'),
     'alter-self': GrantedSpell(
         'alter-self', {"it": 'Alterare se stessi', "en": 'Alter Self'}, 2, '1 azione', 'Personale', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    # Monaco 2014: Arti dell'Ombra, Corpo Vuoto e le discipline dei Quattro Elementi (si lanciano col ki)
+    'darkvision': GrantedSpell(
+        'darkvision', {"it": 'Scurovisione', "en": 'Darkvision'}, 2, '1 azione', 'Contatto', '8 ore'),
+    'minor-illusion': GrantedSpell(
+        'minor-illusion', {"it": 'Illusione minore', "en": 'Minor Illusion'}, 0, '1 azione', '9 m', '1 minuto'),
+    'fly': GrantedSpell(
+        'fly', {"it": 'Volare', "en": 'Fly'}, 3, '1 azione', 'Contatto', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'astral-projection': GrantedSpell(
+        'astral-projection', {"it": 'Proiezione astrale', "en": 'Astral Projection'}, 9, '1 ora', '3 m', 'Speciale'),
 }
 
 
@@ -343,5 +352,9 @@ _COMPONENTS: dict[str, str] = {
     "greater-invisibility": "V, S",
     "cloudkill": "V, S",
     "alter-self": "V, S",
+    "darkvision": "V, S, M",
+    "minor-illusion": "S, M",
+    "fly": "V, S, M",
+    "astral-projection": "V, S, M",
 }
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key)) for key, spell in GRANTED_SPELLS.items()}
