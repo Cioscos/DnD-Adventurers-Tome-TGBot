@@ -34,7 +34,7 @@ from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import check_bonus, skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
-from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS
+from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
 from core.rules.states import TARGET_IMMUNITY, ZERO_HP_USES
 from core.game.stats import hit_points_for_level, roll_ability_mod
@@ -84,7 +84,8 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
-                         GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY)
+                         GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
+                         RETROFIT_DONE)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {

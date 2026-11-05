@@ -54,7 +54,7 @@ _CONDITION_OPTIONS = (
     # Dado di Ispirazione Bardica ricevuto (R38): vale per ogni scheda, qualunque sia la sua edizione. Il dado si perde
     # comunque dopo l'uso: lo stato si chiude, e un rimborso dei gettoni lo rimette.
     RollOptionSpec(
-        key="bardic_die:add", phase="after_roll", after="add", rolls=("skill", "attack", "save", "initiative"),
+        key="bardic_die:add", phase="after_roll", after="add", rolls=("skill", "attack", "save", "initiative", "death_save"),
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Dado di Ispirazione Bardica: somma il dado al tiro", "en": "Bardic Inspiration die: add the die to the roll"},
         available=lambda ctx: _bardic_state(ctx) is not None,

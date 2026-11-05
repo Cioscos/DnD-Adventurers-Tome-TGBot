@@ -80,11 +80,13 @@ def sync_level_choices(char: Any, cls: Any, old_level: int, new_level: int) -> N
     reconcile_choices(char)
 
 
-def seed_from_sheet(char: Any) -> None:
+def seed_from_sheet(char: Any, class_ids: set[int] | None = None) -> None:
     """R39, personaggio esistente prima del catalogo o importato: una scelta che si deduce dalla scheda si semina con ciò
     che c'è già (le abilità con maestria riempiono Maestria, fino al limite), così non viene chiesta una seconda volta."""
     claimed: set[str] = set()
     for cls in char.classes:
+        if class_ids is not None and cls.id not in class_ids:
+            continue
         for ch in active_choice_specs(char, cls):
             if ch.grants != "expert" or (cls.options or {}).get(ch.group):
                 continue
@@ -96,10 +98,11 @@ def seed_from_sheet(char: Any) -> None:
                 claimed.update(have)
 
 
-def reconcile_choices(char: Any, retrofit: bool = False) -> None:
+def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
     """Riporta in linea Doni Epici e opzioni di classe con lo stato attuale, potando le orfane.
 
-    ``retrofit`` (R39): le scelte di opzioni portano ``retrofit: true``, e ammettono ciò che è già sulla scheda."""
+    ``retrofit`` (R39): le scelte di opzioni portano ``retrofit: true``, e ammettono ciò che è già sulla scheda; un
+    insieme di id di classe lo limita a quelle classi."""
     edition = character_edition(char)
     pending = list(char.pending_choices or [])
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
@@ -119,7 +122,8 @@ def reconcile_choices(char: Any, retrofit: bool = False) -> None:
             existing = [c for c in mine if c.get("kind") == "class_option" and c.get("group") == ch.group]
             if needed <= 0:
                 continue
-            flag = {"retrofit": True} if retrofit or any(c.get("retrofit") for c in existing) else {}
+            retro = retrofit is True or (isinstance(retrofit, set) and cls.id in retrofit)
+            flag = {"retrofit": True} if retro or any(c.get("retrofit") for c in existing) else {}
             if sum(c.get("count", 0) for c in existing) == needed:
                 out.extend({**c, **flag} for c in existing)
             else:  # la scelta resta la stessa (stesso id) con meno opzioni da prendere

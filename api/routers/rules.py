@@ -27,7 +27,7 @@ from api.services.dice_stats import record_dice
 from api.services.rules_states import remove_state, use_feature
 from api.services.session_allies import seated_allies
 from core.rules.states import is_target_immune
-from api.services.rules_turn import clear_once_per_turn, get_turn, release, reset_turn, spend
+from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
 from api.services.durations import is_concentrating
 from core.db.models import Character, Combatant, Encounter, GameSession
 from api.schemas.rules import (
@@ -333,6 +333,7 @@ async def feature_use(
 class AllyRead(BaseModel):
     id: int
     name: str
+    die: int | None = None  # il dado di Ispirazione che ha già: darne un altro lo sostituisce
 
 
 @turn_router.get("/{char_id}/session-allies", response_model=list[AllyRead])
@@ -341,7 +342,12 @@ async def session_allies(
 ) -> list[AllyRead]:
     """Gli altri personaggi seduti alla stessa serata attiva: a chi dare il dado di Ispirazione. Vuoto fuori serata."""
     char = await _owned_char(db, char_id, user_id)
-    return [AllyRead(id=a.id, name=a.name) for a in await seated_allies(db, char)]
+    def held(a: Character) -> int | None:
+        state = next((s for s in a.active_states or [] if s.get("key") == BARDIC_DIE), None)
+        die = ((state or {}).get("data") or {}).get("die")
+        return die if isinstance(die, int) else None
+
+    return [AllyRead(id=a.id, name=a.name, die=held(a)) for a in await seated_allies(db, char)]
 
 
 class BardicDieAc(BaseModel):
@@ -356,6 +362,7 @@ async def bardic_die_ac(
     """Ispirazione in Combattimento (Collegio del Valore): in reazione, il dado ricevuto si somma alla CA contro un attacco.
     Spende la reazione e il dado; il valore da sommare lo dice la risposta. Con la reazione già spesa non perde il dado."""
     char = await _get_owned_full(char_id, user_id, db)
+    refuse_if_incapacitated(char)
     state = next((s for s in char.active_states or [] if s.get("key") == BARDIC_DIE), None)
     if state is None or not (state.get("data") or {}).get("combat"):
         raise _refuse("not_available")

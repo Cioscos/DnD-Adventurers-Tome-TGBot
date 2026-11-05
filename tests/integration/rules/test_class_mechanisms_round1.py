@@ -116,7 +116,7 @@ async def test_migration_marks_the_bonus_as_applied_without_touching_the_scores(
     cid = await _fighter(client, 5, strength=16)  # il giocatore aveva già scritto il +4: 16 è il punteggio finale
     async with test_session_factory() as s:  # lo stato di prima: nessuna traccia del bonus
         char = (await s.execute(select(Character).where(Character.id == cid))).scalar_one()
-        char.settings = {k: v for k, v in (char.settings or {}).items() if k != ABILITY_BONUS_KEY}
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (ABILITY_BONUS_KEY, "retrofit_done")}
         await s.commit()
     assert await migrate_catalog(test_session_factory) == 1
     assert (await _scores(client, cid))["strength"] == 16
@@ -467,7 +467,7 @@ async def _marked_fighter(client, factory) -> tuple[int, int]:
     cid = await _fighter(client, 5, strength=16)
     async with factory() as s:
         char = (await s.execute(select(Character).where(Character.id == cid))).scalar_one()
-        char.settings = {k: v for k, v in (char.settings or {}).items() if k != ABILITY_BONUS_KEY}
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (ABILITY_BONUS_KEY, "retrofit_done")}
         await s.commit()
     await migrate_catalog(factory)
     assert (await _full(client, cid))["settings"][ABILITY_BONUS_KEY][KEY] == {}

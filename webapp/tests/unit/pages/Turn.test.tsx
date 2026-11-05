@@ -340,6 +340,16 @@ describe('Turn page', () => {
       await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.bardic_inspiration', 1, { target_character_id: 32 }))
     })
 
+    it('uses it without a target for a creature that has no sheet at the table', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [inspiration] })
+      sessionAllies.mockResolvedValueOnce([{ id: 31, name: 'Brun', die: null }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await useIt()
+      await userEvent.click(await screen.findByText('character.turn.ally_other'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.bardic_inspiration'))
+    })
+
     it('uses it straight away when nobody else sits at the table', async () => {
       getChar.mockResolvedValue({ ...char, abilities: [inspiration] })
       sessionAllies.mockResolvedValueOnce([])

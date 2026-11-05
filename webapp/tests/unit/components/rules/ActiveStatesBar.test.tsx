@@ -54,6 +54,15 @@ describe('ActiveStatesBar', () => {
     await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.bardic_die_ac_result', { description: '+4' }))
   })
 
+  it('names the received die in the language of the viewer, not the bard one', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'bardic_die', feature_key: 'bard.bardic_inspiration', rounds_left: 100, ends_on: ['manual'], name: 'Ispirazione Bardica', data: { die: 6 } }],
+      [],
+    )} />)
+    expect(screen.getByText('character.turn.bardic_die_name')).toBeInTheDocument()
+    expect(screen.queryByText('Ispirazione Bardica')).not.toBeInTheDocument()
+  })
+
   it('offers no armor class use for a die without Combat Inspiration', () => {
     renderWithProviders(<ActiveStatesBar char={char(
       [{ key: 'bardic_die', feature_key: 'bard.bardic_inspiration', rounds_left: 100, ends_on: ['manual'], name: 'Ispirazione Bardica', data: { die: 6 } }],

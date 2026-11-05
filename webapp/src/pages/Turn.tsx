@@ -482,7 +482,7 @@ export default function Turn() {
       {castFlow.elements}
       {allyPick && (
         <AllyTargetSheet allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
-          onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, allyId })} />
+          onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />
       )}
       {targetKey && <TargetEffectSheet charId={charId} effectKey={targetKey} onClose={() => setTargetKey(null)} />}
     </Layout>

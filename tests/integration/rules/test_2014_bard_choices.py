@@ -69,6 +69,7 @@ async def _existing_bard(client, test_session_factory, level, subclass=LORE, exp
     async with test_session_factory() as s:
         char = (await s.execute(select(Character).options(selectinload(Character.classes)).where(Character.id == cid))).scalar_one()
         char.pending_choices = [c for c in char.pending_choices if c["kind"] != "class_option"]
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k != "retrofit_done"}  # mai passato dal catalogo
         for cls in char.classes:
             cls.options = {}
         await s.commit()

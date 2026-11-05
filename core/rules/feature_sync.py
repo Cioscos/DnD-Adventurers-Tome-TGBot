@@ -23,7 +23,27 @@ from core.rules.uses import max_uses
 
 ARCHIVED_FEATURES = "archived_features"
 ABILITY_BONUS_KEY = "feature_ability_bonus"  # settings: {feature_key: {ability: punti realmente aggiunti}}
+RETROFIT_DONE = "retrofit_done"  # settings: chiavi di classe già passate dal retrofit (una volta per classe, N7)
 GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
+
+
+def _retro_ids(char: Character, retrofit: bool) -> set[int]:
+    """Classi a catalogo che il retrofit (R34, R39) riguarda: solo quelle mai passate di qui. Una classe che entra con un
+    catalogo successivo ci passa per quel catalogo, le altre non tornano ``retrofit`` a ogni versione."""
+    if not retrofit:
+        return set()
+    edition = character_edition(char)
+    done = set((char.settings or {}).get(RETROFIT_DONE) or [])
+    return {c.id for c in char.classes if features_for(edition, class_key(c)) and class_key(c) not in done}
+
+
+def _mark_retrofitted(char: Character) -> None:
+    """Ogni classe a catalogo sincronizzata (anche alla creazione) non è più da retrofit."""
+    edition = character_edition(char)
+    done = list((char.settings or {}).get(RETROFIT_DONE) or [])
+    new = [class_key(c) for c in char.classes if features_for(edition, class_key(c)) and class_key(c) not in done]
+    if new:
+        char.settings = {**(char.settings or {}), RETROFIT_DONE: [*done, *dict.fromkeys(new)]}
 
 
 async def sync_class_feature_abilities(
@@ -41,6 +61,7 @@ async def sync_class_feature_abilities(
     importato (R34): i bonus ai punteggi che ha già diritto ad avere si segnano come applicati senza toccare i punteggi.
     """
     edition = character_edition(char)
+    retro = _retro_ids(char, retrofit)
     if features_for(edition, class_key(cls)):
         _sync_from_catalog(session, char, cls, lang)
     else:
@@ -49,11 +70,11 @@ async def sync_class_feature_abilities(
     for other in char.classes:
         if other is not cls and features_for(edition, class_key(other)):
             _sync_from_catalog(session, char, other, lang)
-    if retrofit:
-        seed_from_sheet(char)
-    reconcile_choices(char, retrofit)
+    seed_from_sheet(char, retro)
+    reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
-    _sync_ability_bonuses(char, retrofit=retrofit)
+    _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
+    _mark_retrofitted(char)
     await _sync_granted_spells(session, char, lang)
 
 
@@ -62,19 +83,20 @@ async def sync_cataloged_features(
 ) -> None:
     """Cambio di edizione, sottoclasse, caratteristica o import: tocca solo le classi a catalogo (``retrofit``: vedi sopra)."""
     edition = character_edition(char)
+    retro = _retro_ids(char, retrofit)
     for cls in char.classes:
         if features_for(edition, class_key(cls)):
             _sync_from_catalog(session, char, cls, lang)
-    if retrofit:
-        seed_from_sheet(char)
-    reconcile_choices(char, retrofit)
+    seed_from_sheet(char, retro)
+    reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
-    _sync_ability_bonuses(char, retrofit=retrofit)
+    _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
+    _mark_retrofitted(char)
     await _sync_granted_spells(session, char, lang)
     await session.flush()
 
 
-def _sync_ability_bonuses(char: Character, *, retrofit: bool = False) -> None:
+def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids: set[int] | None = None) -> None:
     """Punteggi dei privilegi con ``ability_bonus`` (Campione Primordiale): scritti sul punteggio una volta sola, con il
     massimo del privilegio, e tolti se il privilegio non è più attivo. I punti davvero aggiunti stanno in
     ``settings``, così un punteggio già al massimo non perde nulla quando il privilegio sparisce.
@@ -82,6 +104,8 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False) -> None:
     R34: con ``retrofit`` (personaggio esistente al primo sync dopo l'arrivo del catalogo, import) il bonus si segna come
     già applicato senza punti: i punteggi sono quelli che il giocatore ha scritto. Chi sale di livello lo riceve."""
     wanted = {spec.key: spec for spec, _row in active_features(char) if spec.ability_bonus}
+    owner = {spec.key: row.id for spec, row in active_features(char) if spec.ability_bonus}
+    retro_ids = _retro_ids(char, retrofit) if retro_ids is None else retro_ids
     applied = clean_ability_bonus((char.settings or {}).get(ABILITY_BONUS_KEY))
     if not wanted and not applied:
         return
@@ -97,7 +121,7 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False) -> None:
         if key in applied:
             continue
         applied[key] = {}
-        if retrofit:
+        if retrofit and owner[key] in retro_ids:
             changed = True
             continue
         for ability, bonus in spec.ability_bonus.items():
