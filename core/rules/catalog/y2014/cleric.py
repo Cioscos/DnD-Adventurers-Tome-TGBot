@@ -8,9 +8,11 @@ from __future__ import annotations
 from typing import Any
 
 from core.data.damage_types import canonical_damage_type
+from core.data.skills import SKILLS
 from core.rules.catalog._common import attacks_made, feature, skill_label, state_on
 from core.rules.types import (
-    ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses,
+    TRICKSTER_BLESSING, WAR_GODS_BLESSING, ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext,
+    StateSpec, TargetEffect, UseChoice, Uses,
 )
 
 ED, CK = "2014", "cleric"
@@ -120,6 +122,35 @@ def _duplicity_state(ctx: RuleContext, _params: dict) -> StateSpec:
     """Un duplicato (quattro dal 17° livello); dura un minuto finché si mantiene la concentrazione."""
     return StateSpec("invoke_duplicity", rounds=10, ends_on=("concentration_end", "incapacitated", "manual"),
                      data={"duplicates": 4 if ctx.class_level >= 17 else 1, "others": [INVOKE_DUPLICITY]})
+
+
+def _ages_state(_ctx: RuleContext, params: dict) -> StateSpec:
+    return StateSpec("knowledge_of_the_ages", rounds=100, ends_on=("manual",), data={"skill": params.get("skill")})
+
+
+def _ages_bonus(ctx: RuleContext) -> int:
+    """Competenza in più per l'abilità scelta, solo se non l'hai già: chi è competente o esperto non la somma due volte."""
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "knowledge_of_the_ages"), None)
+    if state is None or (state.get("data") or {}).get("skill") != ctx.skill or (ctx.char.skills or {}).get(ctx.skill):
+        return 0
+    return ctx.char.proficiency_bonus
+
+
+def _war_blessing_state(_ctx: RuleContext, params: dict) -> StateSpec:
+    """+10 al tiro per colpire di un'altra creatura. Con un alleato della serata lo stato sta sul ricevente, che lo spende
+    dalla propria scheda; senza (una creatura del GM) resta su chi lo usa come promemoria per il gruppo (D1)."""
+    ends = ("rest_short", "rest_long", "manual")
+    if params.get("target_character_id") is None:
+        return StateSpec("war_gods_blessing_note", ends_on=ends, data={"attack_bonus": 10, "others": [f"{CK}.war_gods_blessing"]})
+    return StateSpec(WAR_GODS_BLESSING, ends_on=ends, data={"attack_bonus": 10})
+
+
+def _trickster_state(_ctx: RuleContext, params: dict) -> StateSpec:
+    """Vantaggio a Furtività per 1 ora (600 round) a una creatura consenziente: stessa regola dell'alleato di sopra."""
+    ends = ("rest_long", "manual")
+    if params.get("target_character_id") is None:
+        return StateSpec("trickster_blessing_note", rounds=600, ends_on=ends, data={"others": [f"{CK}.blessing_of_the_trickster"]})
+    return StateSpec(TRICKSTER_BLESSING, rounds=600, ends_on=ends)
 
 
 def _cloak_state(_ctx: RuleContext, _params: dict) -> StateSpec:
@@ -330,6 +361,17 @@ FEATURES = (
             choices=(ChoiceSpec(group="knowledge_skills", levels={1: 2},
                                 options=lambda _c: ["arcana", "nature", "religion", "history"],
                                 label=skill_label, grants="expert"),)),
+    feature("knowledge_of_the_ages", CK, ED, 2,
+            "Incanalare Divinità: Conoscenze Secolari / Channel Divinity: Knowledge of the Ages (Conoscenza 2, pag. 60)",
+            ("Conoscenze Secolari", "Knowledge of the Ages"),
+            ("Azione: spendi un uso e scegli un'abilità: per 10 minuti ne hai la competenza.",
+             "Action: spend a use and choose a skill: you are proficient in it for 10 minutes."),
+            "action", subclass="knowledge",
+            modifiers=(Modifier("skill", _ages_bonus, when=lambda c: c.roll == "skill" and _ages_bonus(c) > 0,
+                                source=f"feature:{CK}.knowledge_of_the_ages"),),
+            on_use=OnUse(slot="action", spends=POOL, state=_ages_state, choices=(
+                UseChoice("skill", {"it": "Abilità", "en": "Skill"}, lambda _c: [s for s, _a in SKILLS],
+                          lambda s: skill_label(s)["name"]),))),
     feature("potent_spellcasting_knowledge", CK, ED, 8, "Incantesimi Potenti / Potent Spellcasting (Conoscenza 8, pag. 60)",
             ("Incantesimi Potenti", "Potent Spellcasting"),
             ("Ai danni di ogni tuo trucchetto da chierico si somma il modificatore di Saggezza.",
@@ -370,6 +412,13 @@ FEATURES = (
             ("Dopo un tiro per colpire, spendi un uso e somma 10 al tiro.",
              "After an attack roll, spend a use and add 10 to the roll."),
             subclass="war", roll_options=(GUIDED_STRIKE,)),
+    feature("war_gods_blessing", CK, ED, 6,
+            "Incanalare Divinità: Benedizione del Dio della Guerra / Channel Divinity: War God's Blessing (Guerra 6, pag. 60)",
+            ("Benedizione del Dio della Guerra", "War God's Blessing"),
+            ("Reazione: spendi un uso e una creatura entro 9 m che tira per colpire somma 10 al tiro, anche dopo averlo visto.",
+             "Reaction: spend a use and a creature within 30 ft making an attack roll adds 10 to it, even after seeing it."),
+            "reaction", subclass="war",
+            on_use=OnUse(slot="reaction", spends=POOL, ally_state=True, state=_war_blessing_state)),
     feature("divine_strike_war", CK, ED, 8, "Colpo Divino / Divine Strike (Guerra 8, pag. 60)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni in più, dello stesso tipo dell'arma.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra damage of the weapon's type."),
@@ -383,6 +432,11 @@ FEATURES = (
     # Dominio dell'Inganno
     *_domain_spells("trickery", "Incantesimi del Dominio dell'Inganno / Trickery Domain Spells (Inganno 1, pag. 61)",
                     ("Incantesimi del Dominio dell'Inganno", "Trickery Domain Spells"), DOMAIN_SPELLS["trickery"]),
+    feature("blessing_of_the_trickster", CK, ED, 1, "Benedizione dell'Ingannatore / Blessing of the Trickster (Inganno 1, pag. 61)",
+            ("Benedizione dell'Ingannatore", "Blessing of the Trickster"),
+            ("Azione: una creatura consenziente, non tu, ha vantaggio alle prove di Furtività per 1 ora o finché non la usi di nuovo.",
+             "Action: a willing creature other than you has advantage on Stealth checks for 1 hour or until you use this again."),
+            "action", subclass="trickery", on_use=OnUse(slot="action", ally_state=True, state=_trickster_state)),
     feature("divine_strike_trickery", CK, ED, 8, "Colpo Divino / Divine Strike (Inganno 8, pag. 61)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni da veleno in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra poison damage."),

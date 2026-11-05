@@ -138,6 +138,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.available and not on_use.available(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)):
         raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
+    for choice in on_use.choices:  # prima di spendere: un valore fuori elenco non costa nulla
+        ctx_choice = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
+        if (params or {}).get(choice.key) not in choice.options(ctx_choice):
+            raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     target = None
     if on_use.ally_state and (params or {}).get("target_character_id") is not None:
         target = await ally_target(session, char, params["target_character_id"])

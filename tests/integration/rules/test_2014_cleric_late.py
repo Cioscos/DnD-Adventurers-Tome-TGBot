@@ -222,3 +222,112 @@ async def test_object_and_area_reading_are_text_only_rows(client):
     for key in ("cleric.object_reading", "cleric.area_reading"):
         row = await _ability(client, cid, key)
         assert row["is_passive"] is True and row["max_uses"] is None
+
+
+# ---------------------------------------------------------------------------
+# Effetti dati a un alleato: Benedizione del Dio della Guerra e Benedizione dell'Ingannatore
+# ---------------------------------------------------------------------------
+
+async def _table(client, test_session_factory, level, domain):
+    from tests.integration._encounter_helpers import GM_ID, as_user, seed_session
+    from tests.integration.rules.test_2014_bard_inspiration import _seat
+    sid, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cleric = await _cleric(client, level, domain, wisdom=16)
+    await _seat(test_session_factory, cleric)
+    return sid, cleric, hero
+
+
+async def _give(client, cleric, hero, key):
+    return await client.post(f"/characters/{cleric}/features/{key}/use", json={"params": {"target_character_id": hero}})
+
+
+async def test_war_gods_blessing_goes_to_the_ally_and_adds_ten_to_the_attack(client, test_session_factory):
+    from tests.integration._encounter_helpers import PLAYER_ID, as_user
+    sid, cleric, hero = await _table(client, test_session_factory, 6, "war")
+    key = "cleric.war_gods_blessing"
+    r = await _give(client, cleric, hero, key)
+    assert r.status_code == 200, r.text
+    assert (await _ability(client, cleric, POOL))["uses"] == 1 and (await _turn(client, cleric))["reaction_used"] is True
+    assert await _states(client, cleric) == []  # lo stato sta sul ricevente
+    as_user(PLAYER_ID)
+    assert [s["key"] for s in await _states(client, hero)] == ["war_gods_blessing"]
+    assert "war_blessing:add" in await _roll_keys(client, hero, "attack")
+    assert "war_blessing:add" not in await _roll_keys(client, hero, "skill", skill="stealth")
+    sword = await _weapon(client, hero, "Spada", damage_dice="1d8")
+    first = (await client.post(f"/characters/{hero}/items/{sword}/attack", json={"die": 8, "defer_damage": True})).json()
+    r = await client.post(f"/characters/{hero}/last-roll/options", json={"options": ["war_blessing:add"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == first["to_hit_total"] + 10
+    assert await _states(client, hero) == []  # speso
+    assert (await client.post(f"/characters/{hero}/last-roll/options", json={"options": ["war_blessing:add"]})).status_code == 409
+
+
+async def test_war_gods_blessing_without_an_ally_stays_as_a_note_for_the_gm_creature(client):
+    cid = await _cleric(client, 6, "war")
+    r = await _use(client, cid, "cleric.war_gods_blessing")
+    assert r.status_code == 200 and r.json()["state"]["key"] == "war_gods_blessing_note"
+    assert "war_blessing:add" not in await _roll_keys(client, cid, "attack")  # non è un bonus per chi lo ha dato
+
+
+async def test_war_gods_blessing_is_refused_for_someone_not_at_the_table(client, test_session_factory):
+    sid, cleric, hero = await _table(client, test_session_factory, 6, "war")
+    r = await _give(client, cleric, hero + 99, "cleric.war_gods_blessing")
+    assert r.status_code == 422 and (await _ability(client, cleric, POOL))["uses"] == 2
+
+
+async def test_trickster_blessing_gives_the_ally_advantage_on_stealth_only(client, test_session_factory):
+    from tests.integration._encounter_helpers import PLAYER_ID, as_user
+    sid, cleric, hero = await _table(client, test_session_factory, 1, "trickery")
+    assert (await _give(client, cleric, hero, "cleric.blessing_of_the_trickster")).status_code == 200
+    assert (await _turn(client, cleric))["action_used"] is True
+    as_user(PLAYER_ID)
+    [state] = await _states(client, hero)
+    assert state["key"] == "trickster_blessing" and state["rounds_left"] == 600
+    assert "trickster:advantage" in await _roll_keys(client, hero, "skill", skill="stealth")
+    assert "trickster:advantage" not in await _roll_keys(client, hero, "skill", skill="perception")
+    r = await client.post(f"/characters/{hero}/skills/stealth/roll", json={"options": ["trickster:advantage"], "die": 7})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode"] == "advantage"
+    assert len(await _states(client, hero)) == 1  # dura un'ora: non si spende
+
+
+# ---------------------------------------------------------------------------
+# Conoscenze Secolari
+# ---------------------------------------------------------------------------
+
+AGES = "cleric.knowledge_of_the_ages"
+
+
+async def test_knowledge_of_the_ages_lists_the_skills_to_choose_from(client):
+    cid = await _cleric(client, 2, "knowledge")
+    row = await _ability(client, cid, AGES)
+    [choice] = row["use_choices"]
+    assert choice["key"] == "skill" and {o["key"] for o in choice["options"]} >= {"arcana", "stealth", "survival"}
+    assert next(o for o in choice["options"] if o["key"] == "arcana")["label"] == {"it": "Arcana", "en": "Arcana"}
+
+
+async def test_knowledge_of_the_ages_rejects_a_missing_or_unknown_skill_before_spending(client):
+    cid = await _cleric(client, 2, "knowledge")
+    for params in ({}, {"skill": "pottery"}):
+        r = await client.post(f"/characters/{cid}/features/{AGES}/use", json={"params": params})
+        assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"
+    assert (await _ability(client, cid, POOL))["uses"] == 1 and (await _turn(client, cid))["action_used"] is False
+
+
+async def test_knowledge_of_the_ages_adds_proficiency_to_the_chosen_skill_only(client):
+    cid = await _cleric(client, 2, "knowledge")  # competenza +2, Destrezza 10
+    plain = (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()["total"]
+    r = await client.post(f"/characters/{cid}/features/{AGES}/use", json={"params": {"skill": "stealth"}})
+    assert r.status_code == 200, r.text
+    assert r.json()["state"]["rounds_left"] == 100 and r.json()["state"]["data"] == {"skill": "stealth"}
+    assert (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()["total"] == plain + 2
+    assert (await client.post(f"/characters/{cid}/skills/athletics/roll", json={"die": 10})).json()["total"] == 10
+
+
+async def test_knowledge_of_the_ages_does_not_stack_on_a_skill_you_already_have(client):
+    cid = await _cleric(client, 2, "knowledge")
+    await client.patch(f"/characters/{cid}/skills", json={"skills": {"stealth": True}})
+    before = (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()["total"]
+    await client.post(f"/characters/{cid}/features/{AGES}/use", json={"params": {"skill": "stealth"}})
+    assert (await client.post(f"/characters/{cid}/skills/stealth/roll", json={"die": 10})).json()["total"] == before

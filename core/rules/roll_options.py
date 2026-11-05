@@ -10,8 +10,8 @@ from typing import Any
 
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
-from core.rules.states import immune_conditions
-from core.rules.types import BARDIC_DIE, TURN_FLAGS, Cost, RollOptionSpec, RuleContext
+from core.rules.states import has_state, immune_conditions
+from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
 
 _DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
@@ -64,6 +64,18 @@ _CONDITION_OPTIONS = (
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
         available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
+    ),
+    # Effetti dati da un chierico a chi li riceve: valgono per ogni scheda, come il dado di Ispirazione Bardica.
+    RollOptionSpec(
+        key="war_blessing:add", phase="after_roll", after="add", rolls=("attack",), bonus=lambda _c, _i: 10,
+        cost=Cost(state_key=WAR_GODS_BLESSING),
+        label={"it": "Benedizione del Dio della Guerra: somma 10 al tiro per colpire", "en": "War God's Blessing: add 10 to the attack roll"},
+        available=lambda ctx: has_state(ctx.char, WAR_GODS_BLESSING),
+    ),
+    RollOptionSpec(
+        key="trickster:advantage", phase="before", rolls=("skill",), mode="advantage",
+        label={"it": "Benedizione dell'Ingannatore: vantaggio a Furtività", "en": "Blessing of the Trickster: advantage on Stealth"},
+        available=lambda ctx: ctx.skill == "stealth" and has_state(ctx.char, TRICKSTER_BLESSING),
     ),
     RollOptionSpec(
         key="weapon:heavy_small", phase="before", rolls=("attack",), mode="disadvantage",

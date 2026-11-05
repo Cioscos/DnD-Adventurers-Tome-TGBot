@@ -74,6 +74,8 @@ ENDS_ON = frozenset({
 })
 
 BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
+WAR_GODS_BLESSING = "war_gods_blessing"  # stato sul ricevente del +10 al tiro per colpire (Benedizione del Dio della Guerra)
+TRICKSTER_BLESSING = "trickster_blessing"  # stato sul ricevente del vantaggio a Furtività (Benedizione dell'Ingannatore)
 
 
 @dataclass(frozen=True)
@@ -138,6 +140,16 @@ class UseToggle:
 
 
 @dataclass(frozen=True)
+class UseChoice:
+    """Scelta fra più valori all'uso di un privilegio (Conoscenze Secolari: quale abilità): ``params[key]`` ne contiene uno.
+    ``options(ctx)`` elenca le chiavi ammesse, ``option_label(key)`` dà il nome bilingue."""
+    key: str
+    label: dict[str, str]
+    options: "Callable[[RuleContext], list[str]]"
+    option_label: "Callable[[str], dict[str, str]]"
+
+
+@dataclass(frozen=True)
 class OnUse:
     """Cosa fa il pulsante «Usa» di un privilegio oltre a spendere ``cost`` usi.
 
@@ -153,6 +165,7 @@ class OnUse:
     ``invalid_target``) prima di spendere qualcosa. Senza bersaglio lo stato è di chi lo usa.
     ``concentration``: l'uso avvia una concentrazione che non è di un incantesimo (Invocare Duplicato), per la durata
     dello stato; gli stati con ``concentration_end`` finiscono con lei.
+    ``choices``: scelte da fare all'uso, validate prima di spendere qualcosa (422 ``invalid_choice``).
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
     ``state``: uno ``StateSpec`` oppure ``f(ctx, params) -> StateSpec`` quando dipende dal livello o da una scelta fatta
@@ -174,6 +187,7 @@ class OnUse:
     spends: str | None = None
     ally_state: bool = False
     concentration: bool = False
+    choices: "tuple[UseChoice, ...]" = ()
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):

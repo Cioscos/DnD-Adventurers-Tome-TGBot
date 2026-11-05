@@ -108,9 +108,12 @@ async def build_character_response(
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
-        if on_use and on_use.toggles:
+        if on_use and (on_use.toggles or on_use.choices):
             ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.use_toggles = [{"key": t.key, "label": dict(t.label)} for t in on_use.toggles if t.available(ctx)]
+            ab.use_choices = [{"key": c.key, "label": dict(c.label),
+                               "options": [{"key": o, "label": c.option_label(o)} for o in c.options(ctx)]}
+                              for c in on_use.choices]
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
