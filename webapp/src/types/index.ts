@@ -110,6 +110,8 @@ export interface Ability {
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null
+  /** Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira), già filtrate per questo personaggio. */
+  use_toggles?: { key: string; label: { it: string; en: string } }[]
 }
 
 /** Stato avviato da un privilegio (Ira...): finisce per round, riposo, svenimento o a mano. */
@@ -121,6 +123,17 @@ export interface ActiveState {
   rounds_left: number | null
   ends_on: string[]
   data: Record<string, unknown>
+}
+
+export interface ZeroHpSaveResult {
+  feature_key: string
+  ability: string
+  die: number
+  bonus: number
+  total: number
+  dc: number
+  success: boolean
+  hp: number
 }
 
 export interface FeatureUseResult {
@@ -292,6 +305,8 @@ export interface ComputedStats {
   incapacitated: boolean
   surprised?: boolean
   save_flat: Record<string, number>
+  /** Volo pari alla velocità a terra, da un privilegio (Aquila in ira). */
+  fly_speed?: number | null
 }
 
 /** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */
@@ -301,6 +316,8 @@ export interface SpellcastingInfo {
   prepared_count: number
   cap_mode: 'auto' | 'manual'
   has_ritual_caster: boolean
+  /** Incantesimi concessi da un privilegio come soli rituali (Cercatore di Spiriti). */
+  ritual_only_spell_ids?: number[]
   has_wizard: boolean
   casters: { class_id: number; class_name: string; ability: string; save_dc: number; attack_bonus: number }[]
   /** Limiti per classe; `null`: quel limite non vale per la classe. */
@@ -401,6 +418,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   /** Scelte di livello in sospeso (aumento caratteristiche / talento). */
   pending_choices?: PendingChoice[] | null
   concentration_save?: ConcentrationSaveResult | null
+  /** TS automatico a 0 PF di un privilegio (Ira Implacabile): se riesce resta in piedi. */
+  zero_hp_save?: ZeroHpSaveResult | null
   /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
   hp_undo_id?: string | null
   homebrew_notifications?: Array<Record<string, unknown>> | null

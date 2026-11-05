@@ -621,7 +621,8 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
             if pending.get("offhand"):
                 ability_mod = min(ability_mod, 0)
             result.damage_rolls, result.damage_bonus = _base_damage(
-                char, item, result.damage_dice, pending["ability"], ability_mod, result.magic_bonus, roll["is_critical"])
+                char, item, result.damage_dice, pending["ability"], ability_mod, result.magic_bonus, roll["is_critical"],
+                pending["attack_mode"])
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
             extra_rolls, extra_total, result.damage_total = _option_damage(
                 char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus))
@@ -663,18 +664,24 @@ def _second_attack(char: Character, opts: AppliedOptions, pending: dict, item: I
 
 def _base_damage(
     char: Character, item: Item | None, damage_dice_str: str, ability: str, ability_mod: int, magic_bonus: int,
-    is_critical: bool,
+    is_critical: bool, attack_mode: str | None = None,
 ) -> tuple[list[int], int]:
-    """Dadi e bonus del danno dell'arma o del colpo senz'armi. Il danno piatto '1' non ha dadi da raddoppiare."""
+    """Dadi e bonus del danno dell'arma o del colpo senz'armi. Il danno piatto '1' non ha dadi da raddoppiare.
+
+    ``attack_mode``: i privilegi che valgono solo in mischia (Ira, Critico Brutale) lo leggono dal contesto."""
     dice_bonus = 0
+    applied = modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode)
     if damage_dice_str == "1":
         damage_rolls = [1]
     else:
         damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
         if is_critical:
             damage_rolls = damage_rolls + _roll_dice(damage_dice_str)[0]
+            # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
+            if applied.crit_dice and (die := _DICE_RE.match(damage_dice_str.strip())):
+                damage_rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
     return damage_rolls, (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
-                          + modifiers_for(char, "damage", ability=ability, item=item).flat)
+                          + applied.flat)
 
 
 def _option_damage(char: Character, opts: AppliedOptions, is_critical: bool, damage: int) -> tuple[list[int], int, int]:
@@ -807,7 +814,7 @@ async def attack_with_weapon(
         damage_total = 0
     else:
         damage_rolls, damage_bonus = _base_damage(
-            char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical)
+            char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical, resolved_mode)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
@@ -955,7 +962,7 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, ability, ability_mod, 0, is_critical)
+        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, ability, ability_mod, 0, is_critical, "melee")
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 

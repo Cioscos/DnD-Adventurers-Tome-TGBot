@@ -64,11 +64,17 @@ class StateSpec:
 
     ``ends_on`` (insieme chiuso ``ENDS_ON``): ``turn_end_inactive`` = a fine turno senza aver attaccato né subito
     danno dall'ultimo turno (Ira 2014); ``incapacitated`` = condizione che toglie le azioni o 0 PF.
-    ``rounds``: durata in round, ``None`` = senza scadenza."""
+    ``rounds``: durata in round, ``None`` = senza scadenza. ``blocks_casting``: finché dura non si lanciano
+    incantesimi (conferma al lancio). ``exhaustion_on_end``: livelli di spossatezza quando lo stato finisce, per
+    qualunque via. ``immune_conditions``: condizioni che non si possono aggiungere finché dura; quelle già presenti
+    sono sospese (restano sulla scheda ma non hanno effetto)."""
     key: str
     rounds: int | None = None
     ends_on: tuple[str, ...] = ("manual",)
     data: dict = field(default_factory=dict)
+    blocks_casting: bool = False
+    exhaustion_on_end: int = 0
+    immune_conditions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         unknown = set(self.ends_on) - ENDS_ON
@@ -95,6 +101,14 @@ class TargetEffect:
 
 
 @dataclass(frozen=True)
+class UseToggle:
+    """Scelta sì/no all'uso di un privilegio: ``params[key]`` vale ``True`` se il giocatore l'ha attivata."""
+    key: str
+    label: dict[str, str]
+    available: "Callable[[RuleContext], bool]" = lambda _ctx: True
+
+
+@dataclass(frozen=True)
 class OnUse:
     """Cosa fa il pulsante «Usa» di un privilegio oltre a spendere ``cost`` usi.
 
@@ -103,11 +117,18 @@ class OnUse:
     azione extra. Con ``amount`` = N (pool come Imposizione delle Mani) l'effetto per unità si ripete N volte: tiri, cura
     e azioni extra; lo stato e l'effetto sul bersaglio si avviano una volta sola.
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
-    ``max_amount``: tetto per un uso solo."""
+    ``max_amount``: tetto per un uso solo.
+    ``state``: uno ``StateSpec`` oppure ``f(ctx, params) -> StateSpec`` quando dipende dal livello o da una scelta fatta
+    all'uso. ``ends_concentration``: l'uso interrompe la concentrazione. ``available(ctx)``: l'uso è possibile solo se
+    vero (409 ``feature_unavailable``), per esempio solo con uno stato attivo. ``toggles``: scelte facoltative da
+    fare all'uso (Frenesia), mostrate come interruttori e lette dal privilegio in ``params``."""
     cost: int = 1
     slot: str | None = None
     heal: Callable[["RuleContext", int], int] | None = None
-    state: StateSpec | None = None
+    state: "StateSpec | Callable[[RuleContext, dict], StateSpec] | None" = None
+    ends_concentration: bool = False
+    available: "Callable[[RuleContext], bool] | None" = None
+    toggles: "tuple[UseToggle, ...]" = ()
     grants_action: bool = False
     rolls: str | None = None
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
@@ -127,8 +148,10 @@ class Modifier:
 
     ``target``: ``attack``, ``damage``, ``ac``, ``speed``, ``initiative``, ``save``, ``skill``, ``passive``,
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
-    ``min_d20``, ``crit_min`` (soglie); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
-    ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``.
+    ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
+    al critico); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
+    ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
+    ``fly_speed`` (velocità di volo pari a quella a terra).
     ``when`` limita l'effetto (di solito su ``ctx.roll``); senza, vale sempre."""
     target: str
     value: "Callable[[RuleContext], int] | int"
@@ -258,6 +281,19 @@ class RollOptionSpec:
 
 
 @dataclass(frozen=True)
+class ZeroHpSave:
+    """A 0 PF senza morte istantanea, con lo stato ``state`` attivo, tiro salvezza automatico (Ira Implacabile).
+
+    CD = ``base_dc`` + ``step`` per ogni uso già fatto; se riesce i PF tornano a ``hp(ctx)``. Gli usi si azzerano con un
+    riposo (breve o lungo)."""
+    state: str
+    ability: str = "constitution"
+    base_dc: int = 10
+    step: int = 5
+    hp: "Callable[[RuleContext], int]" = lambda _ctx: 1
+
+
+@dataclass(frozen=True)
 class FeatureSpec:
     key: str
     class_key: str
@@ -285,6 +321,12 @@ class FeatureSpec:
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
     unarmored: UnarmoredAc | None = None
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
+    acts_when_surprised: str | None = None  # 2014: con quello stato attivo il turno da sorpreso non toglie le azioni
+    zero_hp_save: ZeroHpSave | None = None
+    # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce
+    ability_bonus: dict[str, int] | None = None
+    ability_cap: int = 20
+    no_row: bool = False  # solo catalogo: nessuna riga Ability sulla scheda (regole generali, scelte di livello)
 
 
 @dataclass(frozen=True)

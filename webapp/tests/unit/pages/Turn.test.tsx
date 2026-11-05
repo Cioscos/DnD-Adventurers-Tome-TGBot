@@ -273,6 +273,39 @@ describe('Turn page', () => {
     expect(screen.queryByText('character.turn.use')).not.toBeInTheDocument()
   })
 
+  it('lets an unlimited feature with a real effect be used, and a feature with no counter too', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [
+      { id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+        feature_key: 'barbarian.rage', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'long_rest' },
+      { id: 6, name: 'Presenza Intimidatoria', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+        feature_key: 'barbarian.intimidating_presence', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none' },
+    ] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('Ira (character.abilities.unlimited)')).toBeInTheDocument()
+    expect(screen.getByText('Presenza Intimidatoria')).toBeInTheDocument()
+    expect(screen.getAllByText('character.turn.use')).toHaveLength(2)
+    await userEvent.click(within(screen.getByText('Presenza Intimidatoria').closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence'))
+  })
+
+  it('sends the switches chosen when using a feature, such as Frenzy when entering the rage', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'barbarian.rage', max_uses: 3, uses: 3, action_type: 'bonus_action', restoration_type: 'long_rest',
+      use_toggles: [{ key: 'frenzy', label: { it: 'Frenesia', en: 'Frenzy' } }],
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByRole('switch'))
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage', 1, { frenzy: true }))
+    featureUse.mockClear()
+    await userEvent.click(screen.getByRole('switch'))  // spenta di nuovo
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage', 1, { frenzy: false }))
+  })
+
   it('does not call unlimited an active feature that simply has no counter', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 6, name: 'Azione Scaltra', is_passive: false, is_active: true, is_class_feature: true,

@@ -30,3 +30,15 @@ def active_features(char: Any) -> list[tuple[FeatureSpec, Any]]:
     edition = character_edition(char)
     return [(spec, row) for row in char.classes
             for spec in features_for(edition, class_key(row)) if _applies(spec, row)]
+
+
+def _register() -> None:
+    """Carica i cataloghi di classe a mano a mano che i Task 19-42 li scrivono."""
+    from core.rules.catalog.y2014 import barbarian as barbarian_2014
+
+    for module in (barbarian_2014,):
+        for spec in module.FEATURES:
+            _REGISTRY[(spec.edition, spec.class_key)] = _REGISTRY.get((spec.edition, spec.class_key), ()) + (spec,)
+
+
+_register()

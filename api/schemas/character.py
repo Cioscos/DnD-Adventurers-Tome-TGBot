@@ -14,6 +14,7 @@ from api.schemas.common import (
     CharacterClassCreate,
     CharacterClassRead,
     ConcentrationSaveResult,
+    ZeroHpSaveResult,
     ConsumableUseResult,
     OptionResult,
     absent_when_none,
@@ -49,6 +50,7 @@ class ComputedStats(BaseModel):
     incapacitated: bool = False
     surprised: bool = False  # 2014: è il turno della sorpresa
     save_flat: dict[str, int] = {}
+    fly_speed: Optional[int] = None  # volo uguale alla velocità a terra, concesso da un privilegio (Aquila in ira)
 
 
 class SpellCasterStats(BaseModel):
@@ -82,6 +84,7 @@ class SpellcastingInfo(BaseModel):
     prepared_count: int = 0
     cap_mode: str = "auto"
     has_ritual_caster: bool = False
+    ritual_only_spell_ids: list[int] = []  # concessi da un privilegio come soli rituali (Cercatore di Spiriti)
     has_wizard: bool = False
     casters: list[SpellCasterStats] = []
     limits: list[ClassSpellLimits] = []
@@ -201,6 +204,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
+
+    # Populated only by PATCH /hp when the damage brings the character to 0 HP under a ``zero_hp_save`` feature
+    zero_hp_save: Optional[ZeroHpSaveResult] = None
 
     # Active wild shape form (populated by build_character_response); FE shows its AC/HP.
     active_form: Optional[ActiveForm] = None

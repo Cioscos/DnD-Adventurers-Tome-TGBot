@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
+import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import type { CharacterFull } from '@/types'
 
 interface HpQuickSheetProps {
@@ -113,6 +114,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         qc.setQueryData(['character', char.id], updated)
         qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
         haptic.success()
+        const zeroSave = zeroHpSaveMessage(updated, t)
+        if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
         const conc = updated.concentration_save
         if (conc?.lost_concentration) {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })

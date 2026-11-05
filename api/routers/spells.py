@@ -165,7 +165,7 @@ def _consume_cast(
         # Lancio rituale: +10 min, nessuno slot. Richiede il tag ritual e chi può celebrarlo per edizione.
         if not spell.is_ritual:
             raise HTTPException(status_code=400, detail="Spell is not a ritual")
-        if not can_ritual(char):
+        if not can_ritual(char, spell):
             raise HTTPException(
                 status_code=400, detail="No class with Ritual Casting"
             )

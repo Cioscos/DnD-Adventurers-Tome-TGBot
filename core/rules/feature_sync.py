@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
+from core.game.stats import effective_ability_mod, sync_base_ac
 from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
@@ -21,6 +22,7 @@ from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
 
 ARCHIVED_FEATURES = "archived_features"
+ABILITY_BONUS_KEY = "feature_ability_bonus"  # settings: {feature_key: {ability: punti realmente aggiunti}}
 GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
 
 
@@ -47,6 +49,7 @@ async def sync_class_feature_abilities(
             _sync_from_catalog(session, char, other, lang)
     reconcile_choices(char)
     apply_feature_grants(char, lang)
+    _sync_ability_bonuses(char)
     await _sync_granted_spells(session, char, lang)
 
 
@@ -58,8 +61,49 @@ async def sync_cataloged_features(session: AsyncSession, char: Character, lang: 
             _sync_from_catalog(session, char, cls, lang)
     reconcile_choices(char)
     apply_feature_grants(char, lang)
+    _sync_ability_bonuses(char)
     await _sync_granted_spells(session, char, lang)
     await session.flush()
+
+
+def _sync_ability_bonuses(char: Character) -> None:
+    """Punteggi dei privilegi con ``ability_bonus`` (Campione Primordiale): scritti sul punteggio una volta sola, con il
+    massimo del privilegio, e tolti se il privilegio non è più attivo. I punti davvero aggiunti stanno in
+    ``settings``, così un punteggio già al massimo non perde nulla quando il privilegio sparisce."""
+    wanted = {spec.key: spec for spec, _row in active_features(char) if spec.ability_bonus}
+    applied = {k: dict(v) for k, v in ((char.settings or {}).get(ABILITY_BONUS_KEY) or {}).items()}
+    if not wanted and not applied:
+        return
+    scores = {a.name: a for a in char.ability_scores}
+    old_con = effective_ability_mod(char, "constitution")
+    changed = False
+    for key in [k for k in applied if k not in wanted]:
+        for ability, points in applied.pop(key).items():
+            if ability in scores:
+                scores[ability].value -= points
+        changed = True
+    for key, spec in wanted.items():
+        if key in applied:
+            continue
+        applied[key] = {}
+        for ability, bonus in spec.ability_bonus.items():
+            row = scores.get(ability)
+            if row is None:
+                continue
+            points = max(0, min(row.value + bonus, max(spec.ability_cap, row.value)) - row.value)
+            row.value += points
+            if points:
+                applied[key][ability] = points
+        changed = True
+    if not changed:
+        return
+    char.settings = {**(char.settings or {}), ABILITY_BONUS_KEY: applied}
+    char.recalculate_carry_capacity()
+    sync_base_ac(char)
+    delta = effective_ability_mod(char, "constitution") - old_con
+    if delta and (char.settings or {}).get("hp_auto_calc", True):
+        char.hit_points = max(0, char.hit_points + delta * char.total_level)
+        char.current_hit_points = max(0, min(char.current_hit_points + delta * char.total_level, char.hit_points))
 
 
 async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
@@ -162,7 +206,7 @@ def _sync_from_catalog(session: AsyncSession, char: Character, cls: CharacterCla
     due: set[str] = set()
 
     for spec, owner in active_features(char):
-        if owner is not cls:
+        if owner is not cls or spec.no_row:
             continue
         new_max = max_uses(spec, ctx)
         if new_max == 0:

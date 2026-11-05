@@ -219,6 +219,8 @@ class AbilityRead(BaseModel):
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None
+    # Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira): `[{key, label: {it, en}}]`, già filtrate per questo personaggio
+    use_toggles: list[dict[str, Any]] = []
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
@@ -437,6 +439,18 @@ class RollResult(BaseModel):
     is_fumble: bool = False
     description: str = ""
     option_result: OptionResult | None = absent_when_none()
+
+
+class ZeroHpSaveResult(BaseModel):
+    """TS automatico a 0 PF di un privilegio (Ira Implacabile): se riesce, il personaggio resta in piedi."""
+    feature_key: str
+    ability: str
+    die: int
+    bonus: int
+    total: int
+    dc: int
+    success: bool
+    hp: int = 0  # PF a cui torna se riesce
 
 
 class D20RollSubmission(RollOptionsBody):

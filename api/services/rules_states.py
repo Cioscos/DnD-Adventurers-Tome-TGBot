@@ -12,6 +12,7 @@ from api.services.rules_turn import grant_action, set_damaged, spend
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
+from core.rules.states import begin_state, charge_exhaustion
 from core.rules.types import RuleContext, StateSpec, parse_dice
 
 
@@ -33,6 +34,7 @@ def end_states(char, *reasons: str) -> list[str]:
     kept = [s for s in states if not set(s["ends_on"]) & set(reasons)]
     if len(kept) != len(states):
         char.active_states = kept  # nuova lista: SQLAlchemy non vede le mutazioni in place
+        charge_exhaustion(char, [s for s in states if s not in kept])
     return [s["key"] for s in states if s not in kept]
 
 
@@ -45,7 +47,7 @@ def state_name(char, state: dict) -> str:
 
 def tick_states(char) -> list[str]:
     """Un round: scala ``rounds_left``; gli stati a 0 finiscono. Restituisce i nomi degli stati scaduti."""
-    states, expired = [], []
+    states, expired, closed = [], [], []
     for s in get_states(char):
         if s["rounds_left"] is None:
             states.append(s)
@@ -53,8 +55,10 @@ def tick_states(char) -> list[str]:
             states.append({**s, "rounds_left": s["rounds_left"] - 1})
         else:
             expired.append(state_name(char, s))
+            closed.append(s)
     if any(s["rounds_left"] is not None for s in get_states(char)):
         char.active_states = states
+        charge_exhaustion(char, closed)
     return expired
 
 
@@ -91,14 +95,12 @@ def remove_state(char, key: str) -> None:
     if all(s["key"] != key for s in states):
         raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
     char.active_states = [s for s in states if s["key"] != key]
+    charge_exhaustion(char, [s for s in states if s["key"] == key])
 
 
 def start_state(char, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
     """Avvia lo stato; se la chiave è già attiva lo rinnova. ``name``: come lo chiama il giocatore (``None``: nome generico)."""
-    state = {"key": spec.key, "feature_key": feature_key, "rounds_left": spec.rounds,
-             "ends_on": list(spec.ends_on), "data": dict(spec.data), "name": name}
-    char.active_states = [*(s for s in get_states(char) if s["key"] != spec.key), state]
-    return state
+    return begin_state(char, spec, feature_key, name)
 
 
 @dataclass
@@ -121,6 +123,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     on_use = spec.on_use
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
+    if on_use.available and not on_use.available(
+            RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)):
+        raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost * amount
     if spec.uses is not None:
@@ -148,9 +153,13 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.heal:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]
+    if on_use.ends_concentration:
+        from api.services.durations import end_concentration  # import locale: durations importa questo modulo
+        end_concentration(char)
     if on_use.state:
         name = (ability.name if ability is not None and ability.name else None) or spec.name["it"]
-        result.state = start_state(char, on_use.state, feature_key, name)
+        state_spec = on_use.state(ctx, params or {}) if callable(on_use.state) else on_use.state
+        result.state = start_state(char, state_spec, feature_key, name)
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
         result.targets.append(feature_key)

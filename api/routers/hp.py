@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from api.services.d20 import d20_records, resolve_body
+from api.services.d20 import d20_records, resolve_applied, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
@@ -54,8 +54,13 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
-from api.schemas.common import ConcentrationSaveResult
+from api.routers._helpers import (
+    collect_homebrew_notifications, effective_con_mod, roll_concentration_save, saving_throw_bonus,
+)
+from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
+from core.rules.catalog import active_features
+from core.rules.states import ZERO_HP_USES, has_state, reset_zero_hp_uses
+from core.rules.types import RuleContext
 from api.services.character_response import build_character_response
 
 
@@ -162,6 +167,35 @@ def _zero_conditions(char: Character) -> dict:
 # HP update
 # ---------------------------------------------------------------------------
 
+async def _zero_hp_save(session: AsyncSession, char: Character) -> ZeroHpSaveResult | None:
+    """Sceso a 0 PF senza morire sul colpo: il privilegio con ``zero_hp_save`` (Ira Implacabile) tira il suo TS.
+    Se riesce i PF tornano al valore del privilegio e il personaggio non è né a terra né privo di sensi."""
+    found = next(((s, r) for s, r in active_features(char) if s.zero_hp_save and has_state(char, s.zero_hp_save.state)), None)
+    if found is None:
+        return None
+    spec, row = found
+    rule = spec.zero_hp_save
+    uses = dict((char.settings or {}).get(ZERO_HP_USES) or {})
+    done = uses.get(spec.key, 0)
+    dc = rule.base_dc + rule.step * done
+    bonus = await saving_throw_bonus(session, char, rule.ability)
+    applied = modifiers_for(char, "save", ability=rule.ability)
+    outcome = resolve_applied("normal", None, None, applied)
+    record_dice(char, d20_records(outcome))
+    total = outcome.kept + bonus
+    success = total >= dc and not applied.auto_fail
+    char.settings = {**(char.settings or {}), ZERO_HP_USES: {**uses, spec.key: done + 1}}
+    hp = max(1, rule.hp(RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)))
+    if success:
+        char.current_hit_points = min(hp, effective_hp_max(char))
+    name = spec.name["it"]
+    _add_history(session, char.id, "death_save",
+                 f"{name}: TS {rule.ability} CD {dc}, {outcome.kept}{bonus:+d} = {total} "
+                 f"({'riuscito: resta in piedi' if success else 'fallito'})")
+    return ZeroHpSaveResult(feature_key=spec.key, ability=rule.ability, die=outcome.kept, bonus=bonus, total=total,
+                            dc=dc, success=success, hp=char.current_hit_points if success else 0)
+
+
 @router.patch("/{char_id}/hp", response_model=CharacterFull)
 async def update_hp(
     char_id: int,
@@ -182,6 +216,7 @@ async def update_hp(
     zero_before = _zero_conditions(char)
     option_block = None
     conc_result: ConcentrationSaveResult | None = None
+    zero_save: ZeroHpSaveResult | None = None
     notifications: list[dict] = []
 
     was_at_zero = char.current_hit_points == 0
@@ -291,6 +326,8 @@ async def update_hp(
                                  f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)",
                                  meta={"ds": "failure", "n": inc})
                 char.death_saves = ds
+            elif (zero_save := await _zero_hp_save(session, char)) is not None and zero_save.success:
+                pass  # Ira Implacabile: resta in piedi, nessuna morte da tracciare
             else:
                 # old>0 ridotto a 0 senza sforamento massiccio -> privo di sensi/
                 # morente con tracker fresco. L'azzeramento esplicito ripulisce
@@ -427,6 +464,8 @@ async def update_hp(
     result.option_result = option_block
     if conc_result is not None:
         result.concentration_save = conc_result
+    if zero_save is not None:
+        result.zero_hp_save = zero_save
     if notifications:
         result.homebrew_notifications = notifications
     return result
@@ -634,6 +673,7 @@ async def rest(
         _add_history(session, char.id, "item_charges",
                      f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
+    reset_zero_hp_uses(char)
     if rest_type == "long":
         char.last_long_rest_at = _now()
         char.temp_hp = 0

@@ -17,6 +17,7 @@ from api.services.condition_effects import clear_effects_for, release_concentrat
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
+from core.rules.states import immune_conditions
 
 
 def _now() -> str:
@@ -133,6 +134,9 @@ async def apply_conditions(session: AsyncSession, char: Character,
     all other conditions are booleans. Returns {"changed": bool}.
     """
     old_conditions = dict(char.conditions or {})
+    # Uno stato attivo (Ira Incontenibile) impedisce di aggiungere quelle condizioni; toglierle resta possibile.
+    immune = immune_conditions(char)
+    changes = {c: v for c, v in changes.items() if not (v and c in immune)}
     current = dict(old_conditions)
     current.update(changes)
     char.conditions = current

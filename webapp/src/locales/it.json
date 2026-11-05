@@ -301,6 +301,8 @@
       "confirm_rest": "Riposa",
       "concentration_active": "In concentrazione",
       "concentration_lost": "Concentrazione persa!",
+      "zero_save_ok": "{{name}}: TS {{total}} contro CD {{dc}}, resti in piedi con {{hp}} PF",
+      "zero_save_fail": "{{name}}: TS {{total}} contro CD {{dc}}, fallito",
       "knock_out": "Tramortisci (mischia)",
       "critical_hit": "Colpo critico",
       "modifier_half": "½ Resistenza",
@@ -540,7 +542,11 @@
         "bonus_spell_title": "Incantesimo con azione bonus",
         "bonus_spell_body": "Con un incantesimo ad azione bonus, nello stesso turno l'altro può essere solo un trucchetto ad azione. Se è un nuovo turno, lancia pure.",
         "ritual_unprepared_title": "Rituale non preparato",
-        "ritual_unprepared_body": "Come rituale si lancia un incantesimo preparato, e questo non lo è."
+        "ritual_unprepared_body": "Come rituale si lancia un incantesimo preparato, e questo non lo è.",
+        "state_blocks_casting_title": "Incantesimi durante un effetto attivo",
+        "state_blocks_casting_body": "Un effetto attivo (per esempio l'Ira) impedisce di lanciare incantesimi. Lanciarlo comunque?",
+        "ritual_only_title": "Solo come rituale",
+        "ritual_only_body": "Questo incantesimo ti è concesso da un privilegio e si lancia solo come rituale."
       },
       "class_label": "Classe dell'incantesimo",
       "class_auto": "Migliore",
@@ -1117,6 +1123,7 @@
         "no_uses": "Usi esauriti.",
         "amount_too_high": "Troppi usi in una volta per questo privilegio.",
         "feature_not_usable": "Questo privilegio non si può usare ora.",
+        "feature_unavailable": "Ora non puoi usarlo (per esempio serve essere in ira, senza armatura pesante).",
         "default": "Impossibile usare il privilegio. Riprova."
       },
       "banner": "È il tuo turno",

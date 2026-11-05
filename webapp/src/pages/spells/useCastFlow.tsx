@@ -312,7 +312,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
               <CastSpellModal
                 spell={castingSpell}
                 availableSlots={availableSlotsFor(castingSpell.level)}
-                canRitual={!!castingSpell.is_ritual && !!spellcasting?.has_ritual_caster}
+                canRitual={!!castingSpell.is_ritual && (!!spellcasting?.has_ritual_caster || !!spellcasting?.ritual_only_spell_ids?.includes(castingSpell.id))}
                 onCast={handleCastSlot}
                 onCastRitual={handleCastRitual}
                 onCreateSlot={(level) => createSlotMutation.mutate(level)}

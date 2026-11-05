@@ -21,15 +21,24 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
     <ul className="mt-3 flex flex-col gap-2">
       {states.map((s) => {
         const name = char.abilities.find((a) => a.feature_key === s.feature_key)?.name ?? s.name ?? t('character.turn.state_generic')
+        // Privilegi che agiscono su altri (Lupo, Orso, Attacco Irruento): il testo sta sotto lo stato, il GM li applica (D1).
+        const others = ((s.data?.others as string[] | undefined) ?? [])
+          .map((k) => char.abilities.find((a) => a.feature_key === k))
+          .filter((a): a is NonNullable<typeof a> => !!a)
         return (
           <li key={s.key} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
             <GiLightningTrio size={16} aria-hidden className="shrink-0 text-dnd-gold-bright" />
-            <p className="flex-1 min-w-0 text-sm font-body text-dnd-text break-words">
-              {name}
-              {s.rounds_left != null && (
-                <span className="ml-2 text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
-              )}
-            </p>
+            <div className="flex-1 min-w-0 text-sm font-body text-dnd-text break-words">
+              <p>
+                {name}
+                {s.rounds_left != null && (
+                  <span className="ml-2 text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
+                )}
+              </p>
+              {others.map((a) => (
+                <p key={a.id} className="mt-0.5 text-xs text-dnd-text-muted">{a.name}: {a.description}</p>
+              ))}
+            </div>
             <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
               loading={end.isPending && end.variables === s.key} onClick={() => end.mutate(s.key)}>
               {t('character.turn.end_state')}

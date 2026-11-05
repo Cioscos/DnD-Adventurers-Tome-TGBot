@@ -24,6 +24,8 @@ from core.game.containers import COINS, carried_weight, coin_locations, containe
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
 from core.rules.catalog import active_features
+from core.rules.edition import character_edition
+from core.rules.types import RuleContext
 from core.rules.modifiers import (
     effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprised_turn,
 )
@@ -96,12 +98,16 @@ async def build_character_response(
         {**c, "options": option_catalog(char, c)} if c.get("kind") == "class_option" else c
         for c in (char.pending_choices or [])]
 
-    usable = {spec.key: spec.on_use for spec, _ in active_features(char) if spec.on_use}
+    usable = {spec.key: (spec.on_use, row) for spec, row in active_features(char) if spec.on_use}
+    edition = character_edition(char)
     for ab in response.abilities:
-        on_use = usable.get(ab.feature_key)
+        on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.has_on_use = on_use is not None
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
+        if on_use and on_use.toggles:
+            ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
+            ab.use_toggles = [{"key": t.key, "label": dict(t.label)} for t in on_use.toggles if t.available(ctx)]
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
@@ -130,11 +136,15 @@ async def build_character_response(
 
     rule_damage = modifiers_for(char, None)
     stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}
+    walk = effective_speed(char, (
+        char.speed + response.speed_homebrew_modifier + response.speed_items_modifier
+        - response.speed_encumbrance_penalty_ft
+    ))
+    if rule_damage.carry_double:
+        response.carry_capacity *= 2
     response.computed = ComputedStats(
-        speed=effective_speed(char, (
-            char.speed + response.speed_homebrew_modifier + response.speed_items_modifier
-            - response.speed_encumbrance_penalty_ft
-        )),
+        speed=walk,
+        fly_speed=walk if rule_damage.fly_speed else None,
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
         resistances=sorted({*(stored.get("resistances") or []), *rule_damage.resistances}),
         immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),
@@ -181,6 +191,8 @@ def _apply_encumbrance(char: Character, response: CharacterFull) -> None:
     strength, _ = effective_ability_score(
         "strength", row.value if row else 10, [i for i in char.items if i.is_equipped]
     )
+    if modifiers_for(char, None).carry_double:  # capacità di carico doppia (Orso)
+        strength *= 2
     if total > strength * 10:
         response.encumbrance_level, response.speed_encumbrance_penalty_ft = "heavily", 20
     elif total > strength * 5:

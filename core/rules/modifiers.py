@@ -12,6 +12,7 @@ from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_armor_proficient
+from core.rules.states import immune_conditions
 from core.rules.types import Edition, Modifier, RuleContext
 from core.rules.weapons import ability_score, has_property, small_race
 
@@ -27,7 +28,7 @@ _FLAT_TARGET = {
     "initiative": "initiative", "passive": "passive", "skill": "skill", "ability": "skill",
     "save": "save", "death_save": "save", "concentration": "save",
 }
-_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half"}
+_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
 
 
@@ -46,6 +47,10 @@ class Applied:
     speed_half: bool = False
     hp_half: bool = False
     replace_die: int | None = None  # d20 dichiarato (Portento): nessun dado si tira
+    min_total: int | None = None  # totale minimo di una prova (Potenza Indomabile)
+    crit_dice: int = 0  # dadi dell'arma in più al critico (Critico Brutale)
+    carry_double: bool = False
+    fly_speed: bool = False
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
 
@@ -61,8 +66,13 @@ def exhaustion_level(char: Any) -> int:
 
 
 def surprised_turn(char: Any) -> bool:
-    """2014: è il turno della sorpresa, la creatura non agisce né si muove né reagisce (``turn_state``, scritto dal turno)."""
-    return bool((getattr(char, "turn_state", None) or {}).get("surprised"))
+    """2014: è il turno della sorpresa, la creatura non agisce né si muove né reagisce (``turn_state``, scritto dal turno).
+    Un privilegio con ``acts_when_surprised`` (Istinto Ferino) la toglie finché ha lo stato richiesto (Ira)."""
+    if not (getattr(char, "turn_state", None) or {}).get("surprised"):
+        return False
+    return not any(spec.acts_when_surprised and any(s.get("key") == spec.acts_when_surprised
+                                                    for s in char.active_states or [])
+                   for spec, _row in active_features(char))
 
 
 def is_incapacitated(char: Any) -> bool:
@@ -72,7 +82,7 @@ def is_incapacitated(char: Any) -> bool:
 def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> list[Modifier]:
     """Effetti sui tiri del personaggio. Quelli degli attacchi subiti sono del pannello Combat (Task 14)."""
     on = {k for k, v in (char.conditions or {}).items()
-          if v and k != "exhaustion" and not k.startswith("custom:")}
+          if v and k != "exhaustion" and not k.startswith("custom:")} - immune_conditions(char)
     if "petrified" in on:
         on.discard("poisoned")  # 2014 veleno sospeso, 2024 immune alla condizione
     level = exhaustion_level(char)
@@ -217,6 +227,12 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             setattr(out, _FLAG_FIELD[m.target], True)
         elif m.target == "min_d20":
             out.min_d20 = max(out.min_d20 or 0, m.value(mctx) if callable(m.value) else m.value)
+            counted = True
+        elif m.target == "min_total":
+            out.min_total = max(out.min_total or 0, m.value(mctx) if callable(m.value) else m.value)
+            counted = True
+        elif m.target == "crit_dice":
+            out.crit_dice += m.value(mctx) if callable(m.value) else m.value
             counted = True
         elif m.target == "crit_min":
             out.crit_min = min(out.crit_min, m.value(mctx) if callable(m.value) else m.value)

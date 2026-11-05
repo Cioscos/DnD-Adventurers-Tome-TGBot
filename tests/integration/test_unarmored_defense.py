@@ -12,10 +12,12 @@ ac_breakdown.base / ac / unarmored_defense_ability / base_armor_class_override.
 from __future__ import annotations
 
 
-async def _barbarian(client) -> int:
+async def _character(client) -> int:
+    # Un Guerriero: il Barbaro 2014 ha la Difesa Senza Armatura automatica dal catalogo (Task 19), che l'interruttore
+    # manuale non può spegnere. Qui si prova l'interruttore, che vale per chi la ottiene da una fonte esterna.
     r = await client.post(
         "/characters",
-        json={"name": "Unarmored", "initial_class": {"class_name": "Barbaro", "level": 1, "hit_die": 12}},
+        json={"name": "Unarmored", "initial_class": {"class_name": "Guerriero", "level": 1, "hit_die": 10}},
     )
     assert r.status_code == 201, r.text
     return r.json()["id"]
@@ -28,7 +30,7 @@ async def _set_ability(client, cid: int, ability: str, value: int):
 
 
 async def test_enable_sets_base_ac_from_dex_and_second_ability(client):
-    cid = await _barbarian(client)
+    cid = await _character(client)
     await _set_ability(client, cid, "dexterity", 16)     # +3
     await _set_ability(client, cid, "constitution", 14)  # +2
 
@@ -41,7 +43,7 @@ async def test_enable_sets_base_ac_from_dex_and_second_ability(client):
 
 
 async def test_dex_change_resyncs_base_while_active(client):
-    cid = await _barbarian(client)
+    cid = await _character(client)
     r = await client.post(f"/characters/{cid}/ac/unarmored-defense", json={"ability": "constitution"})
     assert r.status_code == 200, r.text
     assert r.json()["ac_breakdown"]["base"] == 10        # default DEX/CON mods 0
@@ -51,7 +53,7 @@ async def test_dex_change_resyncs_base_while_active(client):
 
 
 async def test_enable_clears_manual_base_override(client):
-    cid = await _barbarian(client)
+    cid = await _character(client)
     # Manually pin base AC to 99 (sets the override flag).
     r = await client.patch(f"/characters/{cid}/ac", json={"base": 99})
     assert r.status_code == 200, r.text
@@ -66,7 +68,7 @@ async def test_enable_clears_manual_base_override(client):
 
 
 async def test_disable_reverts_base_to_ten_plus_dex_when_unarmored(client):
-    cid = await _barbarian(client)
+    cid = await _character(client)
     await _set_ability(client, cid, "dexterity", 16)
     await _set_ability(client, cid, "constitution", 14)
     r = await client.post(f"/characters/{cid}/ac/unarmored-defense", json={"ability": "constitution"})
@@ -80,6 +82,6 @@ async def test_disable_reverts_base_to_ten_plus_dex_when_unarmored(client):
 
 
 async def test_invalid_second_ability_is_400(client):
-    cid = await _barbarian(client)
+    cid = await _character(client)
     r = await client.post(f"/characters/{cid}/ac/unarmored-defense", json={"ability": "strength"})
     assert r.status_code == 400, r.text

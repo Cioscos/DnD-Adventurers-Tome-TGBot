@@ -14,6 +14,7 @@ import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import AmountStepper from '@/components/rules/AmountStepper'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
@@ -36,7 +37,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -53,6 +54,8 @@ export default function Turn() {
   const [influenceRolled, setInfluenceRolled] = useState(false)
   // Usi da spendere per i privilegi a pool (per id della riga); senza scelta si spende 1.
   const [amounts, setAmounts] = useState<Record<number, number>>({})
+  // Scelte sì/no all'uso di un privilegio (Frenesia), per riga di privilegio.
+  const [toggles, setToggles] = useState<Record<number, Record<string, boolean>>>({})
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -108,7 +111,10 @@ export default function Turn() {
   const abilityUse = useMutation({
     mutationFn: async ({ ability, uses, amount }: { ability: Ability; uses: number; amount?: number }) => {
       if (ability.has_on_use && ability.feature_key) {
-        if (amount) await api.characters.featureUse(charId, ability.feature_key, amount)
+        const chosen = toggles[ability.id]
+        const params = ability.use_toggles?.length ? Object.fromEntries(ability.use_toggles.map((x) => [x.key, !!chosen?.[x.key]])) : undefined
+        if (params) await api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
+        else if (amount) await api.characters.featureUse(charId, ability.feature_key, amount)
         else await api.characters.featureUse(charId, ability.feature_key)
       } else await api.abilities.update(charId, ability.id, { uses })
     },
@@ -143,6 +149,16 @@ export default function Turn() {
   const stdActions = standardActionsFor(char.rules_edition)
   // Richieste in serie dallo stesso dispositivo: il server fa read-modify-write sul JSON.
   const busy = useSlot.isPending || newTurn.isPending
+
+  /** Interruttori scelti all'uso (Frenesia): il server li legge in `params`. */
+  const renderToggles = (ab: Ability) => (ab.use_toggles?.length ? (
+    <div className="pt-1 text-sm">
+      {ab.use_toggles.map((x) => (
+        <SwitchToggle key={x.key} label={x.label[lang]} checked={!!toggles[ab.id]?.[x.key]}
+          onChange={(on) => setToggles((s) => ({ ...s, [ab.id]: { ...s[ab.id], [x.key]: on } }))} />
+      ))}
+    </div>
+  ) : null)
 
   const renderEntry = (e: TurnEntry, c: CharacterFull) => {
     const key = `${e.kind}:${e.id}`
@@ -262,6 +278,7 @@ export default function Turn() {
         const amount = Math.min(amounts[ab.id] ?? 1, cap)
         label = `${e.label} (${left}/${ab.max_uses})`
         if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
+        else if (left > 0) extra = renderToggles(ab)
         control = (
           <Button size="sm" variant="secondary" disabled={left <= 0}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
@@ -269,8 +286,18 @@ export default function Turn() {
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
-      } else if (ab && isUnlimitedFeature(ab)) {
-        label = `${e.label} (${t('character.abilities.unlimited')})`
+      } else if (ab && (isUnlimitedFeature(ab) || ab.has_on_use)) {
+        // Senza contatore (Presenza Intimidatoria) o illimitato (Ira al 20°): il «Usa» c'è se il privilegio ha un effetto.
+        if (isUnlimitedFeature(ab)) label = `${e.label} (${t('character.abilities.unlimited')})`
+        if (ab.has_on_use) {
+          extra = renderToggles(ab)
+          control = (
+            <Button size="sm" variant="secondary" loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
+              onClick={() => abilityUse.mutate({ ability: ab, uses: 0 })}>
+              {t('character.turn.use')}
+            </Button>
+          )
+        }
       }
     }
     return (

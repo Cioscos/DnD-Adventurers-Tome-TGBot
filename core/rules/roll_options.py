@@ -9,6 +9,7 @@ from typing import Any
 
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
+from core.rules.states import immune_conditions
 from core.rules.types import TURN_FLAGS, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
 
@@ -16,7 +17,8 @@ _DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
 
 
 def _on(condition: str):
-    return lambda ctx: bool((ctx.char.conditions or {}).get(condition))
+    """La condizione c'è e non è sospesa da uno stato (Ira Incontenibile)."""
+    return lambda ctx: bool((ctx.char.conditions or {}).get(condition)) and condition not in immune_conditions(ctx.char)
 
 
 def _spend_inspiration(_session: Any, ctx: RuleContext, _inputs: dict) -> None:

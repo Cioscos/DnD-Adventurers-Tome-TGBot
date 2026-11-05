@@ -38,6 +38,7 @@ import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
+import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
@@ -131,6 +132,8 @@ export default function HP() {
       setDamageType('')
       haptic.success()
       maybeShowInstantDeath(updated)
+      const zeroSave = zeroHpSaveMessage(updated, t)
+      if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
       const conc = updated.concentration_save
       if (conc) {
         setConcSaveResult(conc)

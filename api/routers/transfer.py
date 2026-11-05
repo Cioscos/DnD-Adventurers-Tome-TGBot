@@ -194,7 +194,7 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
         ctx = RuleContext(char=char, edition=edition, class_row=cls, class_level=cls.level)
         specs = features_for(edition, class_key(cls))
         chosen: dict[str, list[str]] = {}
-        matched: set[str] = set()
+        free = list(wanted)  # ogni nome sulla scheda DDB riempie un posto solo (l'Aquila scelta due volte sono due nomi)
         for ch in active_choice_specs(char, cls):
             reached = [lvl for lvl in ch.levels if lvl <= cls.level]
             limit = ch.levels[max(reached)] if reached else 0
@@ -205,16 +205,15 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
                         names.update({_norm_name(n): key for n in spec.name.values()})
                 if ch.label is not None:
                     names[_norm_name(ch.label(key).get("name", ""))] = key
-            for name in wanted:
+            for name in list(free):
                 key = names.get(_norm_name(name))
                 if key is not None and key not in chosen.get(ch.group, []) and len(chosen.get(ch.group, [])) < limit:
                     chosen.setdefault(ch.group, []).append(key)
-                    matched.add(name)
+                    free.remove(name)
         if chosen:
             cls.options = {**(cls.options or {}), **chosen}
-        for name in wanted:
-            if name not in matched:
-                report.approximated.append(ReportEntry(section="options", name=name, reason="ddb.reason.option_unknown"))
+        for name in free:
+            report.approximated.append(ReportEntry(section="options", name=name, reason="ddb.reason.option_unknown"))
 
 
 def _find_feature(char, cls_id: int, slug: str):

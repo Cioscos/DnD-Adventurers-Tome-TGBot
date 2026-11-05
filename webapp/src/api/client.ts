@@ -635,9 +635,9 @@ export const api = {
       request<TargetEffectResult>(`/characters/${id}/target-effects`, {
         method: 'POST', body: JSON.stringify({ effect_key: effectKey, combatant_id: combatantId }),
       }),
-    featureUse: (id: number, featureKey: string, amount: number = 1) =>
+    featureUse: (id: number, featureKey: string, amount: number = 1, params?: Record<string, boolean>) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
-        method: 'POST', body: JSON.stringify({ amount }),
+        method: 'POST', body: JSON.stringify(params ? { amount, params } : { amount }),
       }),
     endActiveState: (id: number, key: string) =>
       request<ActiveState[]>(`/characters/${id}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),

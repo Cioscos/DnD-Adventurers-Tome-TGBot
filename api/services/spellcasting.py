@@ -17,7 +17,7 @@ from core.data.spell_slots import caster_kind
 from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.rules.edition import character_edition, class_key
-from core.rules.spellcasting import caster_stats, can_ritual, known_limits, prepared_limit, prepares, spell_stats
+from core.rules.spellcasting import caster_stats, can_ritual, granted_ritual_only, known_limits, prepared_limit, prepares, spell_stats
 
 
 def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
@@ -82,6 +82,7 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         prepared_count=count,
         cap_mode=cap_mode if preparing else "auto",
         has_ritual_caster=can_ritual(char),
+        ritual_only_spell_ids=[sp.id for sp in char.spells if granted_ritual_only(char, sp)],
         has_wizard=has_wizard(classes),
         casters=[SpellCasterStats(**asdict(c)) for c in caster_stats(char)],
         limits=_class_limits(char, cap_mode == "manual"),

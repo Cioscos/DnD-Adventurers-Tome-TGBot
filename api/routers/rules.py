@@ -215,6 +215,9 @@ async def last_roll_options(
     if opts.succeed and not is_attack:
         total += 20 - die
         die = 20
+    raw_total = total  # il tiro salvato non porta il minimo (Potenza Indomabile): si rimette ogni volta sul totale
+    if applied.min_total is not None:
+        total = max(total, applied.min_total)
     is_fumble = die == 1 and not forced_hit
     is_critical = (die >= applied.crit_min or (AppliedOptions(**last["applied"]).force_crit and not is_fumble)
                    if is_attack else die == 20)
@@ -262,7 +265,7 @@ async def last_roll_options(
             refundable = {}
 
     turn = get_turn(char)  # pagamenti e attacco in sospeso hanno riscritto il turno
-    turn["last_roll"] = {**last, "die": die, "dice": dice, "mode": mode, "bonus": bonus, "total": total, "notes": notes,
+    turn["last_roll"] = {**last, "die": die, "dice": dice, "mode": mode, "bonus": bonus, "total": raw_total, "notes": notes,
                          "forced_hit": forced_hit, "refundable": refundable, "concentration": conc, "death": death,
                          "after_used": [*last.get("after_used", []), *opts.keys],
                          "option_result": block.model_dump(mode="json") if block else None}

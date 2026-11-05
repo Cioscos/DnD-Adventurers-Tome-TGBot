@@ -699,7 +699,9 @@ async def roll_skill(
     die = outcome.kept
     option_rolls, option_total = roll_option_dice(char, opts)
     bonus += opts.bonus
-    total = die + bonus + option_total
+    raw_total = die + bonus + option_total
+    # Totale minimo (Potenza Indomabile): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
     is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
@@ -728,7 +730,7 @@ async def roll_skill(
         description=skill_name,
         option_result=option_result(opts, option_rolls, option_total),
     )
-    remember_roll(char, "skill", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS),
+    remember_roll(char, "skill", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
                   skill=skill_name, ability=_SKILL_ABILITY[skill_name])
     return result
 

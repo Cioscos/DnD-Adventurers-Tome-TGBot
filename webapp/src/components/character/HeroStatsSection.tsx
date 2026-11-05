@@ -63,8 +63,13 @@ export default function HeroStatsSection({ char }: Props) {
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
   const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
-  const otherSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
+  const storedSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
+  // Il volo dato da un privilegio (Aquila in ira) vale la velocità a terra, salvo un volo già scritto più alto.
+  const grantedFly = char.computed?.fly_speed ?? 0
+  const otherSpeeds = grantedFly > 0 && !storedSpeeds.some((s) => s.type === 'fly' && s.range_ft >= grantedFly)
+    ? [...storedSpeeds.filter((s) => s.type !== 'fly'), { type: 'fly', range_ft: grantedFly }]
+    : storedSpeeds
 
   const speedTotal = char.computed?.speed ?? (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)

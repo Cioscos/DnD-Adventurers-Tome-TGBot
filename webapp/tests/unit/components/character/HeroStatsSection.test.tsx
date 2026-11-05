@@ -115,6 +115,13 @@ describe('HeroStatsSection', () => {
     expect(screen.getByText(/character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
   })
 
+  it('shows the flying speed a feature grants, unless a higher one is already written', () => {
+    renderHero(char({ computed: { fly_speed: 40 } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.fly 40 ft/)).toBeInTheDocument()
+    renderHero(char({ computed: { fly_speed: 40 }, settings: { speeds: [{ type: 'fly', range_ft: 60 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.fly 60 ft/)).toBeInTheDocument()
+  })
+
   it('lists the other speeds', () => {
     renderHero(char({ settings: { speeds: [{ type: 'fly', range_ft: 60 }, { type: 'swim', range_ft: 0 }] } } as Partial<CharacterFull>))
     expect(screen.getByText(/character\.speeds\.fly 60 ft/)).toBeInTheDocument()

@@ -12,7 +12,9 @@ from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_mod
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition, class_key as row_class_key
+from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.proficiencies import is_armor_proficient
+from core.rules.states import casting_blocked_by
 from core.rules.types import Edition
 
 
@@ -159,9 +161,19 @@ def _has_ritual_feat(char: Any) -> bool:
                for a in char.abilities)
 
 
-def can_ritual(char: Any) -> bool:
-    """2014: Lancio Rituale di classe o talento. 2024: chiunque abbia incantesimi preparati."""
+def granted_ritual_only(char: Any, spell: Any) -> bool:
+    """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), alla
+    classe a cui è assegnato: chi lo ha da un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri."""
+    return any(spell.srd_index == key and GRANTED_SPELLS[key].ritual_only and spell.class_id == row.id
+               for spec, row in active_features(char) for key in spec.granted_spells if key in GRANTED_SPELLS)
+
+
+def can_ritual(char: Any, spell: Any = None) -> bool:
+    """2014: Lancio Rituale di classe o talento. 2024: chiunque abbia incantesimi preparati. Un incantesimo concesso
+    come rituale si lancia anche senza."""
     edition = character_edition(char)
+    if spell is not None and granted_ritual_only(char, spell):
+        return True
     if _has_ritual_feat(char):
         return True
     if edition == "2014":
@@ -216,6 +228,10 @@ def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char):
         out.append("wild_shape")
+    if casting_blocked_by(char):
+        out.append("state_blocks_casting")
+    if not ritual and spell.level > 0 and granted_ritual_only(char, spell):
+        out.append("ritual_only")
     if ritual:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
     warning = _turn_warning(char, spell)

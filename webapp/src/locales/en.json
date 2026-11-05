@@ -301,6 +301,8 @@
       "confirm_rest": "Rest",
       "concentration_active": "Concentrating",
       "concentration_lost": "Concentration lost!",
+      "zero_save_ok": "{{name}}: save {{total}} vs DC {{dc}}, you stay up with {{hp}} HP",
+      "zero_save_fail": "{{name}}: save {{total}} vs DC {{dc}}, failed",
       "knock_out": "Knock out (melee)",
       "critical_hit": "Critical hit",
       "modifier_half": "½ Resistance",
@@ -540,7 +542,11 @@
         "bonus_spell_title": "Bonus action spell",
         "bonus_spell_body": "With a bonus action spell, the other spell in the same turn can only be an action cantrip. If this is a new turn, go ahead.",
         "ritual_unprepared_title": "Ritual not prepared",
-        "ritual_unprepared_body": "A ritual is cast from a prepared spell, and this one isn't."
+        "ritual_unprepared_body": "A ritual is cast from a prepared spell, and this one isn't.",
+        "state_blocks_casting_title": "Spells during an active effect",
+        "state_blocks_casting_body": "An active effect (such as Rage) stops you from casting spells. Cast it anyway?",
+        "ritual_only_title": "Ritual only",
+        "ritual_only_body": "A feature grants you this spell and it can only be cast as a ritual."
       },
       "class_label": "Spell's class",
       "class_auto": "Best",
@@ -1118,6 +1124,7 @@
         "no_uses": "No uses left.",
         "amount_too_high": "Too many uses at once for this feature.",
         "feature_not_usable": "This feature cannot be used right now.",
+        "feature_unavailable": "You cannot use it now (for example you must be raging, without heavy armor).",
         "default": "Could not use the feature. Try again."
       },
       "banner": "It's your turn",
