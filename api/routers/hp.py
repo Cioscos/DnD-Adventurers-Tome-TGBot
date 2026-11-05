@@ -145,8 +145,7 @@ def _hp_state(char: Character, form=None) -> dict:
         "concentrating_spell_id": char.concentrating_spell_id,
         # lo stato della forma sta a parte: attivare un'altra forma dopo l'operazione non impedisce l'annullamento
         "active_states": [s for s in char.active_states or [] if s["key"] != "wild_shape"],
-        "form_state": next((s for s in char.active_states or []
-                            if s["key"] == "wild_shape" and form is not None and s["data"].get("companion_id") == form.id), None),
+        "form_state": next((s for s in char.active_states or [] if s["key"] == "wild_shape"), None),
         "damaged": get_turn(char)["damaged"],
         **{k: (char.settings or {}).get(k) for k in _CONC_SETTINGS},
     }
@@ -424,7 +423,7 @@ async def undo_hp(
     if (
         not snap
         or snap.get("op_id") != body.op_id
-        or _hp_state(char, form) != snap.get("after")
+        or {**_hp_state(char, form), "form_state": None} != {**snap.get("after", {}), "form_state": None}
     ):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
 
@@ -449,8 +448,12 @@ async def undo_hp(
     char.concentrating_spell_id = spell_id
     now_form_state = next((s for s in char.active_states or [] if s["key"] == "wild_shape"), None)
     char.active_states = list(before.get("active_states") or [])
-    if before.get("form_state"):
+    if before.get("form_state"):  # anche nel 2024, dove `form` è None: la forma torna con lo stato e i PF temporanei
         char.active_states = [*char.active_states, before["form_state"]]
+        restored = await session.get(Companion, before["form_state"]["data"].get("companion_id"))
+        if restored is not None and restored.character_id == char.id:
+            restored.is_active = True
+            await deactivate_other_forms(session, char.id, restored.id)
     elif now_form_state is not None:  # un'altra forma attivata dopo l'operazione resta
         char.active_states = [*char.active_states, now_form_state]
     set_damaged(char, before.get("damaged", False))

@@ -20,10 +20,11 @@ from api.routers.items import _option_damage
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.rules_options import merge_options, option_result, use_options
-from api.services.rules_turn import refuse_if_incapacitated
+from api.services.rules_turn import refuse_if_incapacitated, spend
 from api.services.wild_shape import deactivate_other_forms, end_form, form_limits, start_form
 from core.db.models import Ability, Character, CharacterHistory, Companion
 from core.rules.companions import companion_stats
+from core.rules.edition import character_edition
 from core.rules.forms import beast_proficiency, form_violations
 from core.rules.modifiers import Applied, modifiers_for
 
@@ -43,6 +44,10 @@ def _history(session: AsyncSession, char_id: int, event_type: str, description: 
 
 async def _get_char(session: AsyncSession, char_id: int, user_id: int) -> Character:
     return await _get_owned_full(char_id, user_id, session)
+
+
+def form_limits_moon(char: Character) -> bool:
+    return any(c.subclass_key == "moon" for c in char.classes)
 
 
 def _read(char: Character, comp: Companion) -> CompanionRead:
@@ -164,6 +169,8 @@ async def activate_wild_shape(
     reasons = form_violations(limits, comp.statblock or {}) if limits is not None else []
     if reasons and not force:  # la forma rompe i limiti di livello e circolo: si ammette solo confermando
         raise HTTPException(status_code=409, detail={"code": "form_not_allowed", "reasons": reasons})
+    if limits is not None:  # 2014 azione (Luna: bonus), 2024 azione bonus; 409 turn_slot_used prima di spendere usi
+        spend(char, "bonus" if character_edition(char) == "2024" or form_limits_moon(char) else "action")
     ability = (await session.execute(
         select(Ability).where(Ability.character_id == char_id, Ability.feature_key == "druid.wild_shape")
     )).scalars().first()
@@ -262,8 +269,9 @@ async def companion_attack(
     merge_options(applied, opts)
     outcome = resolve_applied(body.mode, body.dice, None, applied)
     stats = companion_stats(char, comp)
-    # in forma vale il bonus di competenza più alto fra la bestia (dal GS) e il druido
-    pb_extra = max(0, char.proficiency_bonus - beast_proficiency((comp.statblock or {}).get("challenge_rating"))) if in_form else 0
+    # 2024: negli attacchi in forma vale il bonus di competenza più alto fra la bestia (dal GS) e il druido; il 2014 lo prevede per prove e TS
+    pb_extra = (max(0, char.proficiency_bonus - beast_proficiency((comp.statblock or {}).get("challenge_rating")))
+                if in_form and character_edition(char) == "2024" else 0)
     bonus = int(action["attack_bonus"]) + applied.flat + opts.bonus + pb_extra + (stats.attack_bonus if stats else 0)
     is_fumble = outcome.kept == 1
     is_critical = outcome.kept >= applied.crit_min or (opts.force_crit and not is_fumble)

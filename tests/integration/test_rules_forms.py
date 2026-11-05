@@ -38,6 +38,7 @@ async def _form(client, cid, name="Lupo", hp=11, **sb) -> int:
 
 
 async def _activate(client, cid, comp_id, **body):
+    await client.post(f"/characters/{cid}/turn/new")  # ogni attivazione spende l'azione del turno: un turno nuovo
     return await client.post(f"/characters/{cid}/companions/{comp_id}/activate", json=body)
 
 
@@ -239,3 +240,50 @@ async def test_primal_companion_2024_uses_wisdom_and_level(client):
     read = await _read(client, cid, comp["id"])
     assert read["max_hp"] == 20 and read["armor_class"] == 16 and read["attack_bonus_extra"] == 5  # PB + SAG, lo statblock tiene 0
     assert read["damage_bonus_extra"] == 3
+
+
+async def _turn(client, cid) -> dict:
+    return (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]
+
+
+async def test_activation_spends_action_or_bonus_action(client):
+    for kw, slot, other in (({}, "action_used", "bonus_used"), ({"subclass": "Circolo della Luna"}, "bonus_used", "action_used"),
+                            ({"edition": "2024"}, "bonus_used", "action_used")):
+        cid = await _druid(client, 4, **kw)
+        comp = await _form(client, cid)
+        r = await client.post(f"/characters/{cid}/companions/{comp}/activate", json={})
+        assert r.status_code == 200, r.text
+        turn = await _turn(client, cid)
+        assert turn[slot] is True and turn[other] is False, kw
+        other_form = await _form(client, cid, name="Gatto")
+        r = await client.post(f"/characters/{cid}/companions/{other_form}/activate", json={})
+        assert r.status_code == 409 and r.json()["detail"]["code"] == "turn_slot_used"
+        assert (await _full(client, cid))["active_form"]["companion_id"] == comp  # nessun uso né cambio di forma
+
+
+async def test_form_proficiency_in_attacks_is_2024_only(client):
+    for edition in ("2014", "2024"):  # druido liv. 9: PB +4, bestia GS 1/4: PB +2
+        cid = await _druid(client, 9, edition=edition)
+        comp = await _form(client, cid, cr=0.25)
+        assert (await _activate(client, cid, comp, force=True)).status_code == 200
+        r = await client.post(f"/characters/{cid}/companions/{comp}/attack",
+                              json={"action_index": 0, "mode": "normal", "dice": [10], "damage_rolls": [3]})
+        assert r.status_code == 200, r.text
+        assert r.json()["to_hit_bonus"] == (4 if edition == "2014" else 6), edition
+
+
+async def test_undo_damage_to_zero_restores_the_form(client):
+    for edition in ("2014", "2024"):
+        cid = await _druid(client, 4, edition=edition)
+        await _activate(client, cid, await _form(client, cid, hp=5))
+        before = await _full(client, cid)
+        # 2014: la forma assorbe 5 e il resto (25) azzera il druido; 2024: temp 4, poi 26 oltre i 30 PF
+        r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 40})
+        body = r.json()
+        assert body["current_hit_points"] == 0 and body["active_form"] is None and not body["active_states"], edition
+        undo = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": body["hp_undo_id"]})
+        assert undo.status_code == 200, undo.text
+        after = undo.json()
+        assert after["current_hit_points"] == before["current_hit_points"] and after["temp_hp"] == before["temp_hp"], edition
+        assert after["active_form"] is not None and [s["key"] for s in after["active_states"]] == ["wild_shape"], edition
+        assert after["active_form"]["own_hp"] is (edition == "2014")

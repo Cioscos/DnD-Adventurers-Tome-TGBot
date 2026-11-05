@@ -87,6 +87,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
     onError: (err) => {
       const detail = err instanceof ApiError ? (err.detail as { code?: string; reasons?: string[] } | string | null) : null
       if (typeof detail === 'object' && detail?.code === 'form_not_allowed') setFormReasons(detail.reasons ?? [])
+      else if (typeof detail === 'object' && detail?.code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))
       else if (err instanceof ApiError && err.status === 409 && err.detail === 'no_wild_shape_uses') setForceAsk(true)
       else if (err instanceof ApiError && err.status === 409 && err.detail === 'character_down') toast.error(t('character.extras.character_down'))
       else notifyMutationError()
