@@ -513,6 +513,19 @@ describe('HP page — reactions opened by the damage', () => {
     expect(attackUnarmedSpy).toHaveBeenCalledWith('normal', ['barbarian.retaliation'])
   })
 
+  it('takes the proposal away when the damage is undone', async () => {
+    getChar.mockResolvedValue(withReaction())
+    updateHpSpy.mockResolvedValue(withReaction({ reactions: [retaliation], hp_undo_id: 'op1' }))
+    undoHpSpy.mockResolvedValue(withReaction())
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'op1'))
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
   it('offers nothing when the damage opens no reaction', async () => {
     getChar.mockResolvedValue(withReaction())
     updateHpSpy.mockResolvedValue(withReaction({ reactions: [], hp_undo_id: 'op1' }))

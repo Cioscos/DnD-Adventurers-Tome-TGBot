@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,6 +7,7 @@ import HpQuickSheet from '@/components/character/HpQuickSheet'
 import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
+const flowElements = vi.hoisted(() => vi.fn(() => null as unknown))
 const { updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({
   attackWeaponSpy: vi.fn(),
   attackUnarmedSpy: vi.fn(),
@@ -31,7 +33,7 @@ vi.mock('react-i18next', async (orig) => {
 vi.mock('@/hooks/useWeaponAttackFlow', () => ({
   useWeaponAttackFlow: () => ({
     attackWeapon: attackWeaponSpy, attackUnarmed: attackUnarmedSpy, attackUnarmedEffect: vi.fn(),
-    isWeaponPending: () => false, isUnarmedPending: false, elements: null,
+    isWeaponPending: () => false, isUnarmedPending: false, elements: flowElements(),
   }),
 }))
 vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: showUndoToastSpy }))
@@ -185,6 +187,35 @@ describe('HpQuickSheet reactions opened by the damage', () => {
     await userEvent.click(screen.getByText('character.hp.reaction_attack'))
     expect(attackWeaponSpy).toHaveBeenCalledWith(31, 'normal', ['barbarian.retaliation'])
     await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('takes the proposal away when the damage is undone', async () => {
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [retaliation], hp_undo_id: 'op1' })
+    undoHpSpy.mockResolvedValue(armed)
+    renderWithProviders(<HpQuickSheet char={armed} open onClose={() => {}} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(42, 'op1'))
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('keeps the outcome of the attack when the sheet is closed while it runs', async () => {
+    flowElements.mockReturnValue(<div>esito-attacco</div>)
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [retaliation], hp_undo_id: 'op1' })
+    function Harness() {
+      const [open, setOpen] = useState(true)
+      return <><button onClick={() => setOpen(false)}>chiudi-esterno</button><HpQuickSheet char={armed} open={open} onClose={() => setOpen(false)} /></>
+    }
+    renderWithProviders(<Harness />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    await screen.findByText('Ritorsione: ti ha colpito?')
+    await userEvent.click(screen.getByText('chiudi-esterno'))
+    expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull()
+    expect(screen.getByText('esito-attacco')).toBeInTheDocument()
+    flowElements.mockReturnValue(null)
   })
 
   it('closes as before when the damage opens no reaction', async () => {

@@ -39,7 +39,7 @@ import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
-import ReactionOffers from '@/components/character/ReactionOffers'
+import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
@@ -85,6 +85,9 @@ export default function HP() {
   const { data: char } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
+  })
+  const offers = useReactionOffers({
+    charId, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
   })
   // Pop del valore solo quando CAMBIA, non all'ingresso nella pagina.
   const isFirstValue = useIsFirstValue(char)
@@ -172,6 +175,7 @@ export default function HP() {
       // I dialog raccontavano l'operazione appena annullata.
       setInstantDeathOpen(false)
       setConcSaveResult(null)
+      setReactions([])  // la reazione era del danno annullato
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
@@ -454,7 +458,7 @@ export default function HP() {
         />
       )}
 
-      {char && <ReactionOffers char={char} reactions={reactions} onSpent={(key) => setReactions((all) => all.filter((r) => r.key !== key))} />}
+      {offers.card}
 
       {/* Rest buttons — nascosti da morto */}
       {!isDead && (
@@ -541,6 +545,7 @@ export default function HP() {
           afterRoll={{ charId }}
         />
       )}
+      {offers.elements}
       <InstantDeathDialog open={instantDeathOpen} onClose={() => setInstantDeathOpen(false)} />
     </Layout>
   )

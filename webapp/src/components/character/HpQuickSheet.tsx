@@ -15,7 +15,7 @@ import DamageTypeControls from '@/components/ui/DamageTypeControls'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import HpQuickChips from '@/components/character/HpQuickChips'
-import ReactionOffers from '@/components/character/ReactionOffers'
+import { useReactionOffers } from '@/components/character/ReactionOffers'
 import {
   applyDamageModifier, damageMultiplier, damagePreviewText, effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
@@ -51,6 +51,10 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   // Reazioni che il danno ha aperto (Ritorsione): la scheda resta aperta per proporle.
   const [reactions, setReactions] = useState<RollOption[]>([])
 
+  const offers = useReactionOffers({
+    charId: char.id, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
+  })
+
   const hpMutation = useMutation({
     mutationFn: async ({ op, value, modifier }: {
       op: 'damage' | 'heal'; value: number
@@ -80,6 +84,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     onSuccess: (u) => {
       qc.setQueryData(['character', char.id], u)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
+      setReactions([])  // la reazione era del danno annullato
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
@@ -146,10 +151,11 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
 
   return (
     <>
+    {offers.elements}
     {lostSave && <ConcentrationSaveDialog result={lostSave} onClose={() => setLostSave(null)} afterRoll={{ charId: char.id }} />}
     <Sheet open={open} onClose={() => { setReactions([]); onClose() }} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
-        <ReactionOffers char={char} reactions={reactions} onSpent={(key) => setReactions((all) => all.filter((r) => r.key !== key))} />
+        {offers.card}
         {char.active_form?.own_hp !== false && char.active_form && (
           <div className="text-center space-y-1.5">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{char.active_form.name}</p>
