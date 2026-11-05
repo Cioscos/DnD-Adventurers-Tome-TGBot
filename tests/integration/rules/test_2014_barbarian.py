@@ -192,7 +192,8 @@ async def test_rage_damage_not_on_thrown_ranged_or_dexterity_attacks(client):
     assert after == before
 
 
-async def test_rage_gives_no_benefit_in_heavy_armor(client):
+async def test_rage_gives_no_benefit_in_heavy_armor(client, monkeypatch):
+    monkeypatch.setattr("api.services.d20.random.randint", lambda a, b: 10)  # svantaggio: il secondo d20 è fisso, il colpo riesce
     cid = await _barbarian(client, 5, strength=16)
     sword = await _weapon(client, cid)
     await _armor(client, cid, "heavy")

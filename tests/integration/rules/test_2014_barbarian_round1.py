@@ -37,7 +37,8 @@ async def test_bear_resistance_and_the_14th_level_totems_work_in_heavy_armor(cli
     assert "barbarian.attunement_wolf_knock" in await _keys(client, wolf, "attack", item_id=sword)  # Lupo 14
 
 
-async def test_eagle_dash_and_rage_benefits_still_need_no_heavy_armor(client):
+async def test_eagle_dash_and_rage_benefits_still_need_no_heavy_armor(client, monkeypatch):
+    monkeypatch.setattr("api.services.d20.random.randint", lambda a, b: 10)  # svantaggio: il secondo d20 è fisso, il colpo riesce
     cid = await _totem_barbarian(client, 14, spirit="eagle", strength=18)
     await _armor(client, cid, "heavy")
     await _rage(client, cid)
