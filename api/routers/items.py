@@ -532,12 +532,16 @@ def _set_pending_attack(char: Character, pending: dict | None) -> None:
     char.turn_state = turn
 
 
+def _own_slot_attack(char: Character, body: AttackSubmission | None) -> bool:
+    return bool(body and uses_own_slot(char, body.options or []))
+
+
 def _check_attack_limit(char: Character, body: AttackSubmission | None) -> None:
     """Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito.
     Non vale per un attacco con un'opzione che ha uno slot proprio (Frenesia, Ritorsione): non è un attacco dell'azione."""
-    if body and (body.with_inspiration or body.confirm_extra_attack or uses_own_slot(char, body.options or [])):
+    if body and (body.with_inspiration or body.confirm_extra_attack or _own_slot_attack(char, body)):
         return
-    made, allowed = get_turn(char)["attacks_made"], attacks_allowed(char)
+    made, allowed = get_turn(char)["action_attacks"], attacks_allowed(char)
     if made >= allowed:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "attack_limit", "made": made, "allowed": allowed})
 
@@ -831,7 +835,7 @@ async def attack_with_weapon(
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
     if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
         if not offhand:
-            spend(char, "attack")
+            spend(char, "attack", own_slot=_own_slot_attack(char, body))
         elif NICK_OPTION not in opts.keys:
             spend(char, "bonus")
 
@@ -979,7 +983,7 @@ async def attack_unarmed(
     end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
     if not (body and body.with_inspiration):
-        spend(char, "attack")  # il rilancio con ispirazione è lo stesso attacco
+        spend(char, "attack", own_slot=_own_slot_attack(char, body))  # il rilancio con ispirazione è lo stesso attacco
 
     firing_results = await dispatch(
         session, char, "attack_rolled",

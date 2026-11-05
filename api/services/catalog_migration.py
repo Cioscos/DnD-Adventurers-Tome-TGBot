@@ -18,7 +18,6 @@ from core.db.models import AppMeta, BotUser, Character
 from core.rules.catalog import CATALOG_VERSION, features_for
 from core.rules.edition import character_edition, class_key
 from core.rules.feature_sync import sync_cataloged_features
-from api.services.spell_slots import recalc_spell_slots
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,6 @@ async def migrate_catalog(session_factory: async_sessionmaker) -> int:
                 if char is None or not _has_catalog(char):
                     continue
                 await sync_cataloged_features(session, char, await _lang(session, char.user_id), retrofit=True)
-                await recalc_spell_slots(session, char)
                 await session.commit()
                 synced += 1
         except Exception:  # un personaggio rotto non ferma gli altri né l'avvio

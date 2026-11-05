@@ -68,6 +68,20 @@ async def test_migration_runs_again_when_the_catalog_version_changes(client, tes
     assert (await _rage_row(client, cid))["name"] == "Ira"
 
 
+async def test_migration_never_deletes_spell_slot_rows(client, test_session_factory):
+    from api.services.catalog_migration import migrate_catalog
+    from core.db.models import SpellSlot
+    cid = (await client.post("/characters", json=BARBARIAN_BODY)).json()["id"]
+    async with test_session_factory() as s:  # dati vecchi: slot messi direttamente su un non incantatore
+        s.add(SpellSlot(character_id=cid, level=1, total=2, used=1))
+        await s.commit()
+    await _age(test_session_factory, cid)
+    assert await migrate_catalog(test_session_factory) == 1
+    async with test_session_factory() as s:
+        rows = (await s.execute(select(SpellSlot).where(SpellSlot.character_id == cid))).scalars().all()
+    assert [(r.level, r.total, r.used) for r in rows] == [(1, 2, 1)]  # R33 non prevede di toccare gli slot
+
+
 async def test_migration_failure_of_one_character_does_not_block_the_others(client, test_session_factory, monkeypatch):
     from api.services.catalog_migration import migrate_catalog
     first = (await client.post("/characters", json=BARBARIAN_BODY)).json()["id"]
@@ -441,3 +455,112 @@ async def test_damage_response_offers_the_reactions_it_has_opened(client, rules_
     assert hit["reactions"][0]["label"] == "Reagisci"
     heal = (await client.patch(f"/characters/{cid}/hp", json={"op": "heal", "value": 2})).json()
     assert heal["reactions"] == []  # solo il danno le apre
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, N1 / N2: il segno «già applicato» non si perde mai
+# ---------------------------------------------------------------------------
+
+async def _marked_fighter(client, factory) -> tuple[int, int]:
+    """Un 5° che aveva già scritto il +4 a mano (16), segnato dal passaggio al catalogo: marcatore `{}`."""
+    from api.services.catalog_migration import migrate_catalog
+    cid = await _fighter(client, 5, strength=16)
+    async with factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == cid))).scalar_one()
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k != ABILITY_BONUS_KEY}
+        await s.commit()
+    await migrate_catalog(factory)
+    assert (await _full(client, cid))["settings"][ABILITY_BONUS_KEY][KEY] == {}
+    return cid, (await _full(client, cid))["classes"][0]["id"]
+
+
+async def test_marked_character_keeps_its_scores_across_an_edition_round_trip(client, rules_catalog, test_session_factory):
+    rules_catalog(_spec(**BONUS))
+    cid, _ = await _marked_fighter(client, test_session_factory)
+    for edition in ("2024", "2014"):
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
+    assert (await _scores(client, cid))["strength"] == 16
+
+
+async def test_marked_character_keeps_its_scores_when_the_level_goes_down_and_up(client, rules_catalog, test_session_factory):
+    rules_catalog(_spec(**BONUS))
+    cid, cls = await _marked_fighter(client, test_session_factory)
+    for level in (4, 5):
+        await client.patch(f"/characters/{cid}/classes/{cls}", json={"level": level})
+    assert (await _scores(client, cid))["strength"] == 16
+
+
+async def test_old_file_without_edition_counts_the_bonus_as_applied(client, rules_catalog):
+    rules_catalog(_spec(**BONUS))
+    cid = await _fighter(client, 5, strength=16)
+    exported = (await client.get(f"/characters/{cid}/export")).json()
+    exported["character"]["settings"].pop(ABILITY_BONUS_KEY, None)
+    exported["character"].pop("rules_edition", None)  # un file di prima delle edizioni
+    r = await client.post("/characters/import", json=exported)
+    assert r.status_code == 201, r.text
+    new = r.json()["id"]
+    assert (await _scores(client, new))["strength"] == 16
+    await client.patch(f"/characters/{new}/ability_scores/dexterity", json={"value": 12})  # un altro sync
+    assert (await _scores(client, new))["strength"] == 16
+    assert KEY in (await _full(client, new))["settings"][ABILITY_BONUS_KEY]
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, N3: il combattente mostra il testo del catalogo, mai le note del giocatore
+# ---------------------------------------------------------------------------
+
+async def test_live_never_shows_the_players_notes_and_speaks_the_viewers_language(client, test_session_factory, rules_catalog, monkeypatch):
+    from api.auth import get_current_lang
+    from api.main import app
+    install_fake_telegram(monkeypatch)
+    from dataclasses import replace
+    rules_catalog(replace(_spec(on_use=OnUse(state=StateSpec("prova", rounds=3, data={"others": [KEY]}))),
+                          summary={"it": "Testo italiano", "en": "English text"}))
+    previous = app.dependency_overrides[get_current_lang]
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    pc = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"][0]
+    cid = pc["character_id"]
+    as_user(PLAYER_ID)
+    await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 5, "hit_die": 10})
+    await _use(client, cid)
+    row = next(a for a in (await _full(client, cid))["abilities"] if a["feature_key"] == KEY)
+    secret = "NOTA PRIVATA: odio il GM"
+    r = await client.patch(f"/characters/{cid}/abilities/{row['id']}", json={"description": secret})
+    assert r.status_code == 200, r.text
+    try:
+        for lang, text in (("it", "Testo italiano"), ("en", "English text")):
+            app.dependency_overrides[get_current_lang] = lambda lang=lang: lang
+            for viewer in (GM_ID, PLAYER_ID):
+                as_user(viewer)
+                raw = (await client.get(f"/sessions/{sid}/live")).text
+                assert secret not in raw, (viewer, lang)
+                live = (await client.get(f"/sessions/{sid}/live")).json()
+                mine = next(c for c in live["encounter"]["combatants"] if c["kind"] == "pc")
+                assert mine["active_states"][0]["others"][0]["text"] == text, (viewer, lang)
+                snap = next(c for c in live["live_characters"] if c["id"] == cid)
+                assert snap["active_states"][0]["others"][0]["text"] == text, (viewer, lang)
+    finally:
+        app.dependency_overrides[get_current_lang] = previous
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, N4: la prova pura usa la stessa formula del bonus delle abilità
+# ---------------------------------------------------------------------------
+
+async def test_pure_ability_check_adds_jack_of_all_trades_like_the_skills_do(client):
+    cid = (await client.post("/characters", json={"name": "Bardo"})).json()["id"]
+    await client.post(f"/characters/{cid}/classes", json={"class_name": "bard", "level": 5, "hit_die": 8})
+    await client.patch(f"/characters/{cid}/ability_scores/strength", json={"value": 10})
+    full = await _full(client, cid)
+    assert full["skill_bonuses"]["athletics"] == 1  # Factotum: 3 // 2, senza competenza
+    pure = (await client.post(f"/characters/{cid}/ability_checks/strength/roll", json={"die": 7})).json()
+    assert pure["bonus"] == full["skill_bonuses"]["athletics"] and pure["total"] == 8
+    proficient = await _fighter(client, 5, strength=10)  # senza Factotum: solo il modificatore
+    assert (await client.post(f"/characters/{proficient}/ability_checks/strength/roll", json={"die": 7})).json()["bonus"] == 0
+
+
+async def test_pure_ability_check_of_someone_elses_character_is_refused(client):
+    cid = await _fighter(client)
+    as_user(987654)
+    r = await client.post(f"/characters/{cid}/ability_checks/strength/roll", json={"die": 7})
+    assert r.status_code in (403, 404)

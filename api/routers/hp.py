@@ -135,7 +135,7 @@ async def _get_owned_full(
     return char
 
 
-_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell")
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES)  # + il conteggio di Ira Implacabile
 
 
 def _hp_state(char: Character, form=None) -> dict:

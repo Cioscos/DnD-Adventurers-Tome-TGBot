@@ -233,6 +233,7 @@ class TurnBlock(BaseModel):
     bonus_used: bool = False
     reaction_used: bool = False
     attacks_made: int = 0
+    action_attacks: int = 0  # solo quelli dell'azione Attacco: gli attacchi con slot proprio non contano
     extra_actions: int = 0
     once_per_turn: list[str] = []
     spell_slot_cast: bool = False

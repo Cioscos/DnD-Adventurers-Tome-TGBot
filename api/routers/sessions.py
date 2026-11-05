@@ -214,6 +214,7 @@ async def _load_live_characters(
     char_ids: list[int],
     db: AsyncSession,
     joined_at_by_char: Optional[dict[int, str]] = None,
+    lang: str = "it",
 ) -> dict[int, dict]:
     """Return raw snapshot dicts keyed by character id.
 
@@ -268,7 +269,7 @@ async def _load_live_characters(
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
             is_concentrating=char.concentrating_spell_id is not None,
-            active_states=public_states(char),
+            active_states=public_states(char, lang),
         )
     return out
 
@@ -492,6 +493,7 @@ async def get_session_live(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> GameSessionLiveRead:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -502,7 +504,7 @@ async def get_session_live(
         for p in session.participants
         if p.character_id is not None
     }
-    raw_map = await _load_live_characters(char_ids, db, joined_at_by_char)
+    raw_map = await _load_live_characters(char_ids, db, joined_at_by_char, lang)
     viewer_is_gm = (user_id == session.gm_user_id)
 
     snapshots: list[CharacterLiveSnapshot] = []
@@ -564,7 +566,7 @@ async def get_session_live(
     )
     open_encounter = enc_result.scalars().first()
     encounter_block = (
-        await build_encounter_block(db, open_encounter, viewer_is_gm=viewer_is_gm)
+        await build_encounter_block(db, open_encounter, viewer_is_gm=viewer_is_gm, lang=lang)
         if open_encounter is not None
         else None
     )

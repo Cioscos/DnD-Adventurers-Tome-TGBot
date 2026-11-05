@@ -12,7 +12,7 @@ from api.schemas.rules import RollOptionCost, RollOptionRead, RollOptionSlot
 from api.services.dice_stats import record_dice
 from api.services.rules_turn import get_turn
 from core.rules.edition import character_edition
-from core.rules.modifiers import Applied
+from core.rules.modifiers import Applied, is_incapacitated
 from core.rules.roll_options import (
     AppliedOptions,
     OptionUnavailable,
@@ -150,5 +150,8 @@ def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionR
 
 
 def reaction_offers(char: Any, lang: str) -> list[RollOptionRead]:
-    """Le reazioni d'attacco che il danno appena subito ha aperto e che si possono ancora fare (Ritorsione)."""
+    """Le reazioni d'attacco che il danno appena subito ha aperto e che si possono ancora fare (Ritorsione).
+    Chi è incapacitato, sorpreso o a terra non reagisce."""
+    if is_incapacitated(char):
+        return []
     return [o for o in list_options(char, "attack", lang, attack_mode="melee", grip="one") if o.slot == "reaction"]

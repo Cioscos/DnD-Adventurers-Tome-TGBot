@@ -31,7 +31,7 @@ from core.db.models import (
 from core.data.xp_thresholds import xp_to_level
 from core.rules.subclasses import sync_subclass_keys
 from core.data.skills import SKILL_ABILITY_MAP
-from api.services.skills import skill_bonus
+from api.services.skills import check_bonus, skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS
@@ -758,7 +758,7 @@ async def roll_ability_check(
         spend_inspiration_reroll(char)
 
     applied = modifiers_for(char, "ability", ability=ability)
-    bonus = roll_ability_mod(char, ability) + applied.flat
+    bonus = await check_bonus(session, char, ability)
     opts = use_options(session, char, "ability", body, ability=ability)
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)

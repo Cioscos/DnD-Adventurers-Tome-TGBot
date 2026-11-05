@@ -267,3 +267,72 @@ async def test_surprised_barbarian_is_told_which_features_let_it_act(client, tes
     assert (await _full(client, early))["computed"]["surprise_exit_features"] == []  # senza Istinto Ferino non c'è via d'uscita
     await _rage(client, feral)
     assert (await _full(client, feral))["computed"]["surprise_exit_features"] == []  # già in ira: sorpresa tolta
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, N5: gli attacchi con slot proprio non consumano quelli dell'azione
+# ---------------------------------------------------------------------------
+
+async def _berserker_5(client):
+    cid = await _barbarian(client, 5, BERSERKER, strength=16)
+    sword = await _weapon(client, cid)
+    await _rage(client, cid, frenzy=True)
+    await client.post(f"/characters/{cid}/turn/new")
+    return cid, f"/characters/{cid}/items/{sword}/attack"
+
+
+async def test_frenzy_attack_between_the_two_attacks_of_the_action_asks_no_question(client):
+    cid, url = await _berserker_5(client)
+    assert (await client.post(url, json={"die": 10})).status_code == 200
+    assert (await client.post(url, json={"die": 10, "options": ["barbarian.frenzy_attack"]})).status_code == 200
+    second = await client.post(url, json={"die": 10})  # il secondo dei due dell'azione
+    assert second.status_code == 200, second.text
+    turn = await _turn(client, cid)
+    assert turn["attacks_made"] == 3 and turn["action_attacks"] == 2  # l'Ira vede tutti, il limite solo l'azione
+    assert (await client.post(url, json={"die": 10})).status_code == 409  # il terzo dell'azione sì
+
+
+async def test_frenzy_first_and_then_both_attacks_of_the_action(client):
+    cid, url = await _berserker_5(client)
+    assert (await client.post(url, json={"die": 10, "options": ["barbarian.frenzy_attack"]})).status_code == 200
+    for _ in range(2):
+        assert (await client.post(url, json={"die": 10})).status_code == 200
+    assert (await client.post(url, json={"die": 10})).status_code == 409
+
+
+async def test_retaliation_in_your_own_turn_leaves_the_attacks_of_the_action(client):
+    cid = await _barbarian(client, 14, BERSERKER, strength=16)
+    sword = await _weapon(client, cid)
+    url = f"/characters/{cid}/items/{sword}/attack"
+    await _hp(client, cid)
+    await _hit(client, cid, 3)
+    assert (await client.post(url, json={"die": 10, "options": ["barbarian.retaliation"]})).status_code == 200
+    for _ in range(2):
+        r = await client.post(url, json={"die": 10})
+        assert r.status_code == 200, r.text
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, M2 e M5: Ira Implacabile annullata, Ritorsione solo a chi può reagire
+# ---------------------------------------------------------------------------
+
+async def test_undoing_the_hit_takes_back_the_relentless_rage_count(client, monkeypatch):
+    monkeypatch.setattr("api.services.d20.random.randint", lambda a, b: 20)
+    cid = await _barbarian(client, 11, constitution=14)
+    await _hp(client, cid)
+    await _rage(client, cid)
+    body = await _hit(client, cid, 45)
+    assert body["zero_hp_save"]["dc"] == 10
+    assert (await client.post(f"/characters/{cid}/hp/undo", json={"op_id": body["hp_undo_id"]})).status_code == 200
+    again = await _hit(client, cid, 45)
+    assert again["zero_hp_save"]["dc"] == 10  # il colpo annullato non conta
+
+
+async def test_retaliation_is_not_offered_to_someone_who_cannot_react(client):
+    cid = await _barbarian(client, 14, BERSERKER)
+    await _hp(client, cid)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})
+    assert (await _hit(client, cid, 3))["reactions"] == []
+    healthy = await _barbarian(client, 14, BERSERKER)
+    await _hp(client, healthy)
+    assert [r["key"] for r in (await _hit(client, healthy, 3))["reactions"]] == ["barbarian.retaliation"]

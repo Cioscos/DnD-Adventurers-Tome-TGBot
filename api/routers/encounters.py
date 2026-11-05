@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from core.game.item_bonuses import item_bonus_total
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.routers.sessions import _assert_participant, _load_session, _now, _touch
 from api.schemas.encounter import (
@@ -263,6 +263,7 @@ async def create_encounter(
     body: EncounterCreateRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -284,7 +285,7 @@ async def create_encounter(
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     await _notify_encounter_opened(session, user_id, db)
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post(
@@ -297,6 +298,7 @@ async def add_combatants(
     body: CombatantAddRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -327,7 +329,7 @@ async def add_combatants(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post(
@@ -340,6 +342,7 @@ async def roll_initiative(
     body: InitiativeRollRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -379,7 +382,7 @@ async def roll_initiative(
         }, ability="dexterity", combatant_id=comb.id)
     _touch(session)
     await db.flush()
-    live = await build_encounter_block(db, enc, viewer_is_gm=is_gm)
+    live = await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
     live.initiative_roll = InitiativeRollInfo(mode_applied=outcome.mode, notes=applied.notes,
                                               option_result=option_result(opts, option_rolls, option_total))
     return live
@@ -390,6 +393,7 @@ async def sync_pcs(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -406,7 +410,7 @@ async def sync_pcs(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post("/{session_id}/encounter/start", response_model=EncounterLive)
@@ -415,6 +419,7 @@ async def start_encounter(
     body: EncounterStartRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -457,11 +462,11 @@ async def start_encounter(
     await db.flush()
     if first is not None:
         await _notify_turn(enc, first)
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 async def _turn_endpoint(
-    session_id: int, user_id: int, db: AsyncSession, *, backward: bool
+    session_id: int, user_id: int, db: AsyncSession, lang: str, *, backward: bool
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -507,7 +512,7 @@ async def _turn_endpoint(
         await _notify_saves(db, undo.created_saves)
     if moved is not None:
         await _notify_turn(enc, moved)
-    return await build_encounter_block(db, enc, viewer_is_gm=is_gm)
+    return await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
 
 
 @router.post("/{session_id}/encounter/next-turn", response_model=EncounterLive)
@@ -515,8 +520,9 @@ async def next_turn(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    return await _turn_endpoint(session_id, user_id, db, backward=False)
+    return await _turn_endpoint(session_id, user_id, db, lang, backward=False)
 
 
 @router.post("/{session_id}/encounter/prev-turn", response_model=EncounterLive)
@@ -524,8 +530,9 @@ async def prev_turn(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    return await _turn_endpoint(session_id, user_id, db, backward=True)
+    return await _turn_endpoint(session_id, user_id, db, lang, backward=True)
 
 
 @router.patch(
@@ -538,6 +545,7 @@ async def patch_combatant(
     body: CombatantPatchRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -595,7 +603,7 @@ async def patch_combatant(
     _touch(session)
     await db.flush()
 
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 # ---------------------------------------------------------------------------
@@ -681,6 +689,7 @@ async def gm_apply_condition(
     body: GmConditionApply,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
     await apply_condition_to_combatant(db, enc, comb, body)
@@ -690,7 +699,7 @@ async def gm_apply_condition(
         session_id, user_id, comb, db,
         f"🌀 Il GM ha applicato {condition_label(body.slug)} a {comb.name}",
     )
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.delete(
@@ -703,6 +712,7 @@ async def gm_remove_condition(
     slug: str,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
     owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
@@ -715,7 +725,7 @@ async def gm_remove_condition(
             session_id, user_id, comb, db,
             f"🌀 Il GM ha rimosso {condition_label(slug)} da {comb.name}",
         )
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post(
@@ -728,6 +738,7 @@ async def gm_resolve_monster_save(
     body: PendingSaveResolve,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -755,7 +766,7 @@ async def gm_resolve_monster_save(
         await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 def _move_pointer_off(enc: Encounter, combatants: list[Combatant], removed_id: int) -> None:
@@ -782,6 +793,7 @@ async def delete_combatant(
     combatant_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -800,7 +812,7 @@ async def delete_combatant(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post("/{session_id}/encounter/reorder", response_model=EncounterLive)
@@ -809,6 +821,7 @@ async def reorder_combatants(
     body: ReorderRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -829,7 +842,7 @@ async def reorder_combatants(
         c.sort_order = position[c.id]
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post("/{session_id}/encounter/end", response_model=EncounterLive)
@@ -837,6 +850,7 @@ async def end_encounter(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -853,4 +867,4 @@ async def end_encounter(
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)

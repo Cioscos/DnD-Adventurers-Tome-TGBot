@@ -19,6 +19,7 @@ from api.schemas.transfer import CharacterExport
 from api.services.character_response import build_character_response
 from api.services.character_transfer import build_export, import_character, load_for_export
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
+from core.rules.feature_sync import mark_ability_bonuses
 from api.services.ddb_import import (
     DdbImportError, ImportReport, ReportEntry, class_option_names, convert, fetch_ddb, parse_ddb_id,
 )
@@ -117,9 +118,12 @@ async def _import_body(request: Request) -> bytes:
 async def _create_from(session: AsyncSession, user_id: int, data: CharacterExport, lang: str, kind: str) -> CharacterFull:
     char = await import_character(session, user_id, data, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])[kind])
     char = await _refresh_char_full(session, char.id, user_id)
-    if "rules_edition" in data.character.model_fields_set:  # un file vecchio resta com'è
+    if "rules_edition" in data.character.model_fields_set:
         await sync_cataloged_features(session, char, lang, retrofit=True)  # i punteggi del file sono già quelli finali (R34)
-        char = await _refresh_char_full(session, char.id, user_id)
+    else:  # un file vecchio resta com'è, ma i bonus ai punteggi si segnano comunque come applicati
+        mark_ability_bonuses(char)
+        await session.flush()
+    char = await _refresh_char_full(session, char.id, user_id)
     return await build_character_response(session, char)
 
 

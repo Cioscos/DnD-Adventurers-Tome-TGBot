@@ -15,6 +15,11 @@ def has_jack_of_all_trades(char: Character) -> bool:
     )
 
 
+def jack_of_all_trades_part(char: Character) -> int:
+    """Factotum: metà del bonus di competenza su ogni prova in cui non si è competenti (abilità o prova pura)."""
+    return char.proficiency_bonus // 2 if has_jack_of_all_trades(char) else 0
+
+
 def skill_proficiency_part(char: Character, skill: str) -> int:
     """PB x {expert 2, proficient 1}; Jack of All Trades adds floor(PB/2) when not proficient."""
     level = (char.skills or {}).get(skill)
@@ -23,4 +28,4 @@ def skill_proficiency_part(char: Character, skill: str) -> int:
         return 2 * pb
     if level is True or level == 1:
         return pb
-    return pb // 2 if has_jack_of_all_trades(char) else 0
+    return jack_of_all_trades_part(char)

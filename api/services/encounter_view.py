@@ -13,22 +13,28 @@ from sqlalchemy.orm import selectinload
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.encounter import CombatantLive, EncounterLive, PublicState, PublicStateOther
 from api.services.condition_effects import effect_reads, pending_read
-from api.services.rules_states import state_name
+from api.services.rules_states import GENERIC_STATE_NAME
+from core.rules.catalog import active_features
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from core.utils.session_view import hp_bucket_from_ratio
 
 
-def public_states(char: Character) -> list[PublicState]:
-    """Gli stati attivi che portano effetti su altri, col testo dei privilegi: gli altri sono privati del giocatore."""
+def public_states(char: Character, lang: str = "it") -> list[PublicState]:
+    """Gli stati attivi che portano effetti su altri. Nome e testo vengono dal catalogo, nella lingua di chi guarda:
+    mai da ``Ability.name``/``description``, che il giocatore può modificare e sono privati."""
+    specs = {spec.key: spec for spec, _row in active_features(char)}
     out: list[PublicState] = []
     for state in char.active_states or []:
         others = [
-            PublicStateOther(key=a.feature_key, name=a.name or "", text=a.description or "")
+            PublicStateOther(key=key, name=spec.name.get(lang) or spec.name["it"],
+                             text=spec.summary.get(lang) or spec.summary["it"])
             for key in (state.get("data") or {}).get("others") or []
-            for a in char.abilities if a.feature_key == key
+            if (spec := specs.get(key)) is not None
         ]
         if others:
-            out.append(PublicState(key=state["key"], name=state_name(char, state),
+            owner = specs.get(state.get("feature_key"))
+            name = (owner.name.get(lang) or owner.name["it"]) if owner is not None else state.get("name") or GENERIC_STATE_NAME
+            out.append(PublicState(key=state["key"], name=name,
                                    rounds_left=state.get("rounds_left"), others=others))
     return out
 
@@ -66,7 +72,7 @@ def combatant_payload(
 
 
 async def build_encounter_block(
-    db: AsyncSession, enc: Encounter, *, viewer_is_gm: bool,
+    db: AsyncSession, enc: Encounter, *, viewer_is_gm: bool, lang: str = "it",
 ) -> EncounterLive:
     combs = list(enc.combatants)
     # Monster effects live on the combatant; PC effects are on the sheet (live_characters).
@@ -86,10 +92,10 @@ async def build_encounter_block(
     pc_ids = [c.character_id for c in combs if c.kind == "pc" and c.character_id]
     states: dict[int, list[PublicState]] = {}
     if pc_ids:
-        for ch in (await db.execute(select(Character).options(selectinload(Character.abilities))
+        for ch in (await db.execute(select(Character).options(selectinload(Character.classes))
                                     .where(Character.id.in_(pc_ids)))).scalars():
             if ch.active_states:
-                states[ch.id] = public_states(ch)
+                states[ch.id] = public_states(ch, lang)
     if enc.status == "setup":
         combs.sort(key=lambda c: (c.created_at, c.id))
     else:

@@ -84,7 +84,7 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False) -> None:
     scores = {a.name: a for a in char.ability_scores}
     old_con = effective_ability_mod(char, "constitution")
     changed = False
-    for key in [k for k in applied if k not in wanted]:
+    for key in [k for k in applied if k not in wanted and applied[k]]:  # `{}`: nessun punto dato, il segno resta (R34)
         for ability, points in applied.pop(key).items():
             if ability in scores:
                 scores[ability].value -= points
@@ -147,6 +147,12 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         spell.class_id = spell.class_id or owner.id
     if set(owned) != set(previous):
         char.settings = {**(char.settings or {}), GRANTED_SPELL_KEYS: owned}
+
+
+def mark_ability_bonuses(char: Character) -> None:
+    """Import di un file senza ``rules_edition``: niente sync del catalogo, ma i bonus che il personaggio ha già diritto
+    ad avere si segnano comunque come applicati (R34), altrimenti il primo sync li ridarebbe."""
+    _sync_ability_bonuses(char, retrofit=True)
 
 
 def clean_ability_bonus(raw: object) -> dict[str, dict[str, int]]:
