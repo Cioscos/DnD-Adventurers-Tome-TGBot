@@ -147,8 +147,8 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
         slug = x["slug"]
         owner = await db.get(Character if kind == "character" else Combatant, tid)
         if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
-                select(ConditionEffect.id).where(_target_filter((kind, tid)),
-                                                 ConditionEffect.slug == slug))).first():
+                select(ConditionEffect.id).where(_target_filter((kind, tid)), ConditionEffect.slug == slug,
+                                                 ConditionEffect.pending.is_(False)))).first():
             continue
         owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
         eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
@@ -225,8 +225,9 @@ async def clear_effects_for(db: AsyncSession, target: Target, slugs: Iterable[st
     slugs = list(slugs)
     if not slugs:
         return
+    # Un effetto ``pending`` (TS in attesa di un privilegio) non è una condizione attiva: non si tocca.
     rows = (await db.execute(select(ConditionEffect).where(
-        _target_filter(target), ConditionEffect.slug.in_(slugs)))).scalars().all()
+        _target_filter(target), ConditionEffect.slug.in_(slugs), ConditionEffect.pending.is_(False)))).scalars().all()
     for row in rows:
         # Explicit delete of pendings: SQLite FK cascade is not guaranteed to be enabled.
         for ps in (await db.execute(select(PendingSave).where(

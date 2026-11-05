@@ -224,3 +224,56 @@ async def test_ending_the_encounter_drops_pending_effects(client, test_session_f
     async with test_session_factory() as s:
         assert (await s.execute(select(ConditionEffect))).first() is None
         assert (await s.execute(select(PendingSave))).first() is None
+
+
+async def _pending_prone(client, factory) -> tuple[int, int]:
+    """Un PG con un effetto Prono ancora in attesa del TS (come lo lascia un privilegio): (char_id, save_id)."""
+    cid = (await client.post("/characters", json={"name": "Bersaglio"})).json()["id"]
+    async with factory() as s:
+        eff = ConditionEffect(character_id=cid, slug="prone", pending=True, expiry_anchor="owner", expiry_edge="end",
+                              expiry_count=2, created_at="2026-11-05T10:00:00")
+        s.add(eff)
+        await s.flush()
+        ps = PendingSave(effect_id=eff.id, character_id=cid, ability="constitution", dc=13, status="pending",
+                         created_at="2026-11-05T10:00:00")
+        s.add(ps)
+        await s.commit()
+        return cid, ps.id
+
+
+async def _still_pending(factory, cid: int, psid: int) -> None:
+    async with factory() as s:
+        [eff] = (await s.execute(select(ConditionEffect).where(ConditionEffect.character_id == cid))).scalars().all()
+        assert (eff.pending, eff.slug, eff.expiry_count) == (True, "prone", 2)
+        assert (await s.get(PendingSave, psid)).status == "pending"
+
+
+async def test_pending_effect_survives_removing_and_reapplying_the_condition(client, test_session_factory):
+    cid, psid = await _pending_prone(client, test_session_factory)
+    for value in (False, True, False):  # il bersaglio era già Prono o lo diventa: l'effetto in attesa non c'entra
+        r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"prone": value}})
+        assert r.status_code == 200, r.text
+        await _still_pending(test_session_factory, cid, psid)
+
+
+async def test_pending_effect_survives_apply_conditions_and_a_rest(client, test_session_factory):
+    from api.services.effects import apply_conditions
+    from core.db.models import Character
+    cid, psid = await _pending_prone(client, test_session_factory)
+    async with test_session_factory() as s:
+        await apply_conditions(s, await s.get(Character, cid), {"prone": False})
+        await s.commit()
+    await _still_pending(test_session_factory, cid, psid)
+    for kind in ("short", "long"):
+        r = await client.post(f"/characters/{cid}/rest", json={"rest_type": kind, "confirm_early": True})
+        assert r.status_code == 200, r.text
+        await _still_pending(test_session_factory, cid, psid)
+
+
+async def test_failed_save_still_applies_after_the_condition_was_cleared(client, test_session_factory):
+    cid, psid = await _pending_prone(client, test_session_factory)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"prone": False}})
+    r = await client.post(f"/characters/{cid}/pending-saves/{psid}/roll", json={"die": 1})
+    assert r.status_code == 200 and r.json()["passed"] is False, r.text
+    sheet = (await client.get(f"/characters/{cid}")).json()
+    assert sheet["conditions"].get("prone") and [e["slug"] for e in sheet["condition_effects"]] == ["prone"]
