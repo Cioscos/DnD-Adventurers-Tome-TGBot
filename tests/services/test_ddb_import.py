@@ -394,11 +394,11 @@ def multi() -> dict:
 
 
 def test_multiclass_saves_only_from_starting_class():  # DDB: availableToMulticlass=false sulla classe aggiunta
-    assert convert(multi())[0].character.saving_throws == {"intelligence": True, "wisdom": True}
+    assert convert(multi(), edition="2024")[0].character.saving_throws == {"intelligence": True, "wisdom": True}
 
 
 def test_multiclass_classes_and_slots():
-    exp, _, _ = convert(multi())
+    exp, _, _ = convert(multi(), edition="2024")
     assert [(c.class_name, c.level, c.subclass) for c in exp.classes] == [
         ("Mago", 17, "School of Necromancy (PHB)"), ("Warlock", 3, "The Fiend")]
     used = {(s.level, s.is_pact): s.used for s in exp.spell_slots}

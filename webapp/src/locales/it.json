@@ -4916,6 +4916,10 @@
     "link_label": "Link della scheda",
     "placeholder": "https://www.dndbeyond.com/characters/…",
     "submit": "Importa",
+    "edition_title": "Quali regole segue il personaggio?",
+    "edition_body": "Le sue classi vengono da edizioni diverse. Scegli le regole di classe da applicare a tutto il personaggio: potrai cambiarle poi nelle impostazioni.",
+    "edition_2014": "Regole 2014",
+    "edition_2024": "Regole 2024",
     "open": "Apri personaggio",
     "summary_title": "Import completato",
     "imported": "Importati",
@@ -4942,6 +4946,7 @@
       "currency": "Monete",
       "defenses": "Difese",
       "creatures": "Creature",
+      "options": "Opzioni di classe",
       "conditions": "Condizioni",
       "speed": "Velocità",
       "other": "Altro"
@@ -4963,7 +4968,8 @@
       "not_supported": "non ancora supportato",
       "no_free_slot": "equipaggiato ma senza slot libero: non compare sul manichino, sistemalo a mano",
       "container_quantity": "un contenitore con più copie resta un oggetto semplice: crea il contenitore a mano",
-      "identity_partial": "alcuni dati d'identità non sono stati importati"
+      "identity_partial": "alcuni dati d'identità non sono stati importati",
+      "option_unknown": "opzione di classe non riconosciuta per queste regole: non è stata scelta, aggiungila a mano"
     }
   }
 }

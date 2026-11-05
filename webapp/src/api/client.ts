@@ -518,10 +518,10 @@ export const api = {
     },
     duplicate: (id: number) =>
       request<CharacterFull>(`/characters/${id}/duplicate`, { method: 'POST' }),
-    importDdb: (url: string) =>
+    importDdb: (url: string, rules_edition?: '2014' | '2024') =>
       request<DdbImportResult>('/characters/import/ddb', {
         method: 'POST',
-        body: JSON.stringify({ url }),
+        body: JSON.stringify(rules_edition ? { url, rules_edition } : { url }),
       }),
 
     // HP

@@ -4917,6 +4917,10 @@
     "link_label": "Sheet link",
     "placeholder": "https://www.dndbeyond.com/characters/…",
     "submit": "Import",
+    "edition_title": "Which rules does the character follow?",
+    "edition_body": "Its classes come from different editions. Pick the class rules to apply to the whole character: you can change them later in settings.",
+    "edition_2014": "2014 rules",
+    "edition_2024": "2024 rules",
     "open": "Open character",
     "summary_title": "Import complete",
     "imported": "Imported",
@@ -4943,6 +4947,7 @@
       "currency": "Coins",
       "defenses": "Defenses",
       "creatures": "Creatures",
+      "options": "Class options",
       "conditions": "Conditions",
       "speed": "Speed",
       "other": "Other"
@@ -4964,7 +4969,8 @@
       "not_supported": "not supported yet",
       "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",
       "container_quantity": "a container with several copies stays a plain item: create the container by hand",
-      "identity_partial": "some identity data was not imported"
+      "identity_partial": "some identity data was not imported",
+      "option_unknown": "class option not recognised for these rules: it was not chosen, add it by hand"
     }
   }
 }

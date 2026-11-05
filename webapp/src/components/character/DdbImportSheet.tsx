@@ -10,7 +10,7 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import type { DdbImportResult, DdbReportEntry } from '@/types'
 
-const ERROR_CODES = ['invalid_link', 'ddb_private', 'ddb_not_found', 'ddb_unreachable', 'ddb_invalid']
+const ERROR_CODES = ['invalid_link', 'ddb_private', 'ddb_not_found', 'ddb_unreachable', 'ddb_invalid', 'edition_required']
 
 function errorCode(e: unknown): string | null {
   if (!(e instanceof ApiError)) return null
@@ -26,13 +26,16 @@ export default function DdbImportSheet({ open, onClose }: { open: boolean; onClo
   const [result, setResult] = useState<DdbImportResult | null>(null)
 
   const mutation = useMutation({
-    mutationFn: (link: string) => api.characters.importDdb(link),
+    mutationFn: ({ link, edition }: { link: string; edition?: '2014' | '2024' }) =>
+      api.characters.importDdb(link, edition),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['characters'] })
       haptic.success()
       setResult(res)
     },
-    onError: () => haptic.error(),
+    onError: (e) => {
+      if (errorCode(e) !== 'edition_required') haptic.error()
+    },
   })
 
   const close = () => {
@@ -44,7 +47,9 @@ export default function DdbImportSheet({ open, onClose }: { open: boolean; onClo
   }
 
   const code = mutation.isError ? errorCode(mutation.error) : null
-  const error = mutation.isError
+  // Classi di edizioni diverse: la scelta non è un errore del link, si chiede sotto il campo.
+  const needsEdition = code === 'edition_required'
+  const error = mutation.isError && !needsEdition
     ? (code ? t(`ddb_import.errors.${code}`) : t('character.select.import_failed'))
     : undefined
 
@@ -60,7 +65,7 @@ export default function DdbImportSheet({ open, onClose }: { open: boolean; onClo
           className="px-5 py-5 space-y-4"
           onSubmit={(e) => {
             e.preventDefault()
-            if (url.trim()) mutation.mutate(url.trim())
+            if (url.trim()) mutation.mutate({ link: url.trim() })
           }}
         >
           <ol className="list-decimal pl-5 space-y-1.5 font-body text-sm text-dnd-text">
@@ -80,15 +85,37 @@ export default function DdbImportSheet({ open, onClose }: { open: boolean; onClo
             error={error}
             disabled={mutation.isPending}
           />
-          <Button
-            type="submit"
-            fullWidth
-            icon={<Link2 size={16} />}
-            loading={mutation.isPending}
-            disabled={!url.trim()}
-          >
-            {t('ddb_import.submit')}
-          </Button>
+          {needsEdition ? (
+            <div className="space-y-2" role="group" aria-label={t('ddb_import.edition_title')}>
+              <p className="font-cinzel uppercase tracking-wider text-xs text-dnd-text-muted">
+                {t('ddb_import.edition_title')}
+              </p>
+              <p className="font-body text-sm text-dnd-text">{t('ddb_import.edition_body')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['2014', '2024'] as const).map((ed) => (
+                  <Button
+                    key={ed}
+                    variant="secondary"
+                    loading={mutation.isPending && mutation.variables?.edition === ed}
+                    disabled={mutation.isPending}
+                    onClick={() => mutation.mutate({ link: url.trim(), edition: ed })}
+                  >
+                    {t(`ddb_import.edition_${ed}`)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              fullWidth
+              icon={<Link2 size={16} />}
+              loading={mutation.isPending}
+              disabled={!url.trim()}
+            >
+              {t('ddb_import.submit')}
+            </Button>
+          )}
         </form>
       ) : (
         <div className="px-5 py-5 space-y-4">
