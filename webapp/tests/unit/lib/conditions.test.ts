@@ -50,7 +50,7 @@ describe('conditionLabel', () => {
 
   it('names a catalog custom condition by its translated label, never by the key', () => {
     expect(conditionLabel('custom:thoughts_read', t)).toBe('Pensieri letti')
-    expect(conditionLabel('custom:unknown', t)).toBe('unknown')  // senza prefisso, mai "custom:"
+    expect(conditionLabel('custom:Sanguinamento', t)).toBe('Sanguinamento')  // scritta dal giocatore: il suo nome, senza prefisso
   })
 
   it('names a standard condition through the conditions dictionary', () => {

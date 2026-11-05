@@ -29,3 +29,9 @@ def test_every_custom_condition_of_the_catalog_has_a_label_in_both_languages():
         for lang in ("it", "en"):
             names = json.loads((LOCALES / f"{lang}.json").read_text(encoding="utf-8"))["character"]["target_effect"]["custom"]
             assert names.get(slug) == CUSTOM_CONDITION_LABELS[slug][lang], (lang, slug)
+
+
+def test_the_client_helper_translates_every_custom_condition_of_the_catalog():
+    source = (ROOT / "webapp" / "src" / "lib" / "conditions.ts").read_text(encoding="utf-8")
+    listed = set(re.findall(r"'(\w+)'", re.search(r"CATALOG_CUSTOM = \[(.*?)\]", source).group(1)))
+    assert _catalog_customs() <= listed
