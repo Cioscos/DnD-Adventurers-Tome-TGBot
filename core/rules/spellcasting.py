@@ -164,7 +164,7 @@ def _has_ritual_feat(char: Any) -> bool:
 def granted_ritual_only(char: Any, spell: Any) -> bool:
     """L'incantesimo è stato concesso da un privilegio che lo permette solo come rituale (Cercatore di Spiriti), alla
     classe a cui è assegnato: chi lo ha da un'altra fonte (o da un'altra classe) lo lancia come tutti gli altri."""
-    return any(spell.srd_index == key and GRANTED_SPELLS[key].ritual_only and spell.class_id == row.id
+    return any(spell.srd_index == key and spec.granted_ritual_only and spell.class_id == row.id
                for spec, row in active_features(char) for key in spec.granted_spells if key in GRANTED_SPELLS)
 
 

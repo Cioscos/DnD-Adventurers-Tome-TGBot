@@ -176,10 +176,17 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.ends_concentration:
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)
+    if on_use.concentration:
+        from api.services.durations import start_concentration  # import locale, come sopra
+        spell_state = on_use.state(ctx, {}) if callable(on_use.state) else on_use.state
+        start_concentration(char, None, spell_state.rounds if spell_state else None,
+                            {"feature_key": feature_key, "name": spec.name["it"]})
     if on_use.state:
         own = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
         name = (own.name if own is not None and own.name else None) or spec.name["it"]
-        state_spec = on_use.state(ctx, params or {}) if callable(on_use.state) else on_use.state
+        # `rolled`: il tiro del privilegio, per chi decide lo stato dall'esito (Intervento Divino); mai dal client
+        given = {**(params or {}), "rolled": sum(result.rolls)}
+        state_spec = on_use.state(ctx, given) if callable(on_use.state) else on_use.state
         result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))

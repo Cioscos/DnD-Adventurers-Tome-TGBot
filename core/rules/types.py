@@ -151,6 +151,8 @@ class OnUse:
     ``ally_state``: con ``params["target_character_id"]`` lo stato non va a chi usa il privilegio ma a quell'altro
     personaggio della stessa serata (Ispirazione Bardica, R38); un bersaglio non valido è rifiutato (422
     ``invalid_target``) prima di spendere qualcosa. Senza bersaglio lo stato è di chi lo usa.
+    ``concentration``: l'uso avvia una concentrazione che non è di un incantesimo (Invocare Duplicato), per la durata
+    dello stato; gli stati con ``concentration_end`` finiscono con lei.
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
     ``state``: uno ``StateSpec`` oppure ``f(ctx, params) -> StateSpec`` quando dipende dal livello o da una scelta fatta
@@ -171,6 +173,7 @@ class OnUse:
     max_amount: int | None = None
     spends: str | None = None
     ally_state: bool = False
+    concentration: bool = False
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -285,6 +288,7 @@ class RollOptionSpec:
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
+    maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -315,6 +319,8 @@ class RollOptionSpec:
             raise ValueError("after_damage non chiede input: il client manda sempre option_inputs vuoto")
         if self.keep_rolled and self.reroll_dice is None:
             raise ValueError("keep_rolled riguarda reroll_dice")
+        if self.maximize and (self.phase != "before" or "spell_damage" not in self.rolls):
+            raise ValueError("maximize vale solo prima del danno di un incantesimo")
         if self.dice_cost and not self.needs:
             raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
 
@@ -360,6 +366,7 @@ class FeatureSpec:
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
     unarmored: UnarmoredAc | None = None
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
+    granted_ritual_only: bool = False  # gli incantesimi concessi si lanciano solo come rituale (Cercatore di Spiriti)
     acts_when_surprised: str | None = None  # 2014: con quello stato attivo il turno da sorpreso non toglie le azioni
     zero_hp_save: ZeroHpSave | None = None
     # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce

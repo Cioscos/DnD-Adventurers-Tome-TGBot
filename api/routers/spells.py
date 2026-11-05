@@ -514,6 +514,9 @@ async def roll_spell_damage(
             # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
             base_bonus += int(um.group(3) or 0) * (casting_level - spell.level)
 
+    # Privilegi che aggiungono un fisso ai danni di un incantesimo (Incantesimi Potenti)
+    base_bonus += modifiers_for(char, "damage", spell=spell).flat
+
     # Apply critical (double dice count, not the flat bonus)
     dice_count = base_count * 2 if body.is_critical else base_count
     if body.main_rolls is not None:
@@ -558,6 +561,9 @@ async def roll_spell_damage(
                 extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
 
     opts = use_options(session, char, "spell_damage", body, spell=spell)
+    if opts.maximize:  # Collera Distruttiva: i dadi dell'incantesimo valgono il massimo
+        main_rolls = [sides] * len(main_rolls)
+        extra_rolls = [extra_sides] * len(extra_rolls)
     option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
     total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
     total = scale_damage(total, opts.multiplier)

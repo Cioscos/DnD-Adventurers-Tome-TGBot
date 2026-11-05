@@ -170,8 +170,8 @@ async def test_zero_hp_save_is_not_asked_without_its_state_or_when_already_at_ze
 
 async def test_ritual_only_granted_spell_casts_as_ritual_and_warns_otherwise(client, rules_catalog, monkeypatch):
     monkeypatch.setitem(granted_spells.GRANTED_SPELLS, "prova-rituale", GrantedSpell(
-        "prova-rituale", {"it": "Rituale di prova", "en": "Test ritual"}, 1, is_ritual=True, ritual_only=True))
-    rules_catalog(_spec(granted_spells=("prova-rituale",)))
+        "prova-rituale", {"it": "Rituale di prova", "en": "Test ritual"}, 1, is_ritual=True))
+    rules_catalog(_spec(granted_spells=("prova-rituale",), granted_ritual_only=True))
     cid = await _fighter(client)  # il Guerriero non ha il Lancio Rituale
     spell = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] == "Rituale di prova")
     assert (await client.get(f"/characters/{cid}/spells/{spell['id']}/cast-check")).json() == ["ritual_only"]

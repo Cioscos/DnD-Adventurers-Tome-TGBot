@@ -21,18 +21,148 @@ class GrantedSpell:
     damage_dice: str | None = None
     damage_type: str | None = None
     higher_levels_dice: str | None = None
-    ritual_only: bool = False  # si lancia solo come rituale, anche da chi non ha il Lancio Rituale
 
 
 GRANTED_SPELLS: dict[str, GrantedSpell] = {
     # Combattente Totemico 2014 (Cercatore di Spiriti, Viandante Spirituale): solo come rituali
     "beast-sense": GrantedSpell(
         "beast-sense", {"it": "Percezione delle bestie", "en": "Beast Sense"}, 2, "1 azione", "Contatto",
-        "Concentrazione, fino a 1 ora", is_concentration=True, is_ritual=True, ritual_only=True),
+        "Concentrazione, fino a 1 ora", is_concentration=True, is_ritual=True),
     "speak-with-animals": GrantedSpell(
         "speak-with-animals", {"it": "Parlare con gli animali", "en": "Speak with Animals"}, 1, "1 azione",
-        "Personale", "10 minuti", is_ritual=True, ritual_only=True),
+        "Personale", "10 minuti", is_ritual=True),
     "commune-with-nature": GrantedSpell(
         "commune-with-nature", {"it": "Comunione con la natura", "en": "Commune with Nature"}, 5, "1 minuto",
-        "Personale", "Istantanea", is_ritual=True, ritual_only=True),
+        "Personale", "Istantanea", is_ritual=True),
+    # Domini del Chierico 2014: gli incantesimi di dominio, sempre preparati (D4)
+    'command': GrantedSpell(
+        'command', {"it": 'Comando', "en": 'Command'}, 1, '1 azione', '18 m', '1 round', attack_save='SAVE'),
+    'identify': GrantedSpell(
+        'identify', {"it": 'Identificare', "en": 'Identify'}, 1, '1 minuto', 'Contatto', 'Istantanea', is_ritual=True),
+    'augury': GrantedSpell(
+        'augury', {"it": 'Auspicio', "en": 'Augury'}, 2, '1 minuto', 'Personale', 'Istantanea', is_ritual=True),
+    'suggestion': GrantedSpell(
+        'suggestion', {"it": 'Suggestione', "en": 'Suggestion'}, 2, '1 azione', '9 m', 'Concentrazione, fino a 8 ore', is_concentration=True, attack_save='SAVE'),
+    'nondetection': GrantedSpell(
+        'nondetection', {"it": 'Anti-individuazione', "en": 'Nondetection'}, 3, '1 azione', 'Contatto', '8 ore'),
+    'speak-with-dead': GrantedSpell(
+        'speak-with-dead', {"it": 'Parlare con i morti', "en": 'Speak with Dead'}, 3, '1 azione', '3 m', '10 minuti'),
+    'confusion': GrantedSpell(
+        'confusion', {"it": 'Confusione', "en": 'Confusion'}, 4, '1 azione', '27 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'arcane-eye': GrantedSpell(
+        'arcane-eye', {"it": 'Occhio arcano', "en": 'Arcane Eye'}, 4, '1 azione', '9 m', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'legend-lore': GrantedSpell(
+        'legend-lore', {"it": 'Conoscenza delle leggende', "en": 'Legend Lore'}, 5, '10 minuti', 'Personale', 'Istantanea'),
+    'scrying': GrantedSpell(
+        'scrying', {"it": 'Scrutare', "en": 'Scrying'}, 5, '10 minuti', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE'),
+    'divine-favor': GrantedSpell(
+        'divine-favor', {"it": 'Favore divino', "en": 'Divine Favor'}, 1, '1 azione bonus', 'Personale', 'Concentrazione, fino a 1 minuto', is_concentration=True, damage_dice='1d4', damage_type='radiant'),
+    'shield-of-faith': GrantedSpell(
+        'shield-of-faith', {"it": 'Scudo della fede', "en": 'Shield of Faith'}, 1, '1 azione bonus', '18 m', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'magic-weapon': GrantedSpell(
+        'magic-weapon', {"it": 'Arma magica', "en": 'Magic Weapon'}, 2, '1 azione bonus', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'spiritual-weapon': GrantedSpell(
+        'spiritual-weapon', {"it": 'Arma spirituale', "en": 'Spiritual Weapon'}, 2, '1 azione bonus', '18 m', '1 minuto', attack_save='ATK', damage_dice='1d8', damage_type='force'),
+    'spirit-guardians': GrantedSpell(
+        'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'crusaders-mantle': GrantedSpell(
+        'crusaders-mantle', {"it": 'Manto del crociato', "en": "Crusader's Mantle"}, 3, '1 azione', 'Personale (raggio 9 m)', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'freedom-of-movement': GrantedSpell(
+        'freedom-of-movement', {"it": 'Libertà di movimento', "en": 'Freedom of Movement'}, 4, '1 azione', 'Contatto', '1 ora'),
+    'stoneskin': GrantedSpell(
+        'stoneskin', {"it": 'Pelle di pietra', "en": 'Stoneskin'}, 4, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'hold-monster': GrantedSpell(
+        'hold-monster', {"it": 'Bloccare mostri', "en": 'Hold Monster'}, 5, '1 azione', '27 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'flame-strike': GrantedSpell(
+        'flame-strike', {"it": 'Colpo infuocato', "en": 'Flame Strike'}, 5, '1 azione', '18 m', 'Istantanea', attack_save='SAVE', damage_dice='4d6', damage_type='fire', higher_levels_dice='1d6'),
+    'disguise-self': GrantedSpell(
+        'disguise-self', {"it": 'Camuffare se stesso', "en": 'Disguise Self'}, 1, '1 azione', 'Personale', '1 ora'),
+    'charm-person': GrantedSpell(
+        'charm-person', {"it": 'Charme su persone', "en": 'Charm Person'}, 1, '1 azione', '9 m', '1 ora', attack_save='SAVE'),
+    'mirror-image': GrantedSpell(
+        'mirror-image', {"it": 'Immagine speculare', "en": 'Mirror Image'}, 2, '1 azione', 'Personale', '1 minuto'),
+    'pass-without-trace': GrantedSpell(
+        'pass-without-trace', {"it": 'Passare senza tracce', "en": 'Pass Without Trace'}, 2, '1 azione', 'Personale', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'dispel-magic': GrantedSpell(
+        'dispel-magic', {"it": 'Dissolvi magie', "en": 'Dispel Magic'}, 3, '1 azione', '36 m', 'Istantanea'),
+    'blink': GrantedSpell(
+        'blink', {"it": 'Intermittenza', "en": 'Blink'}, 3, '1 azione', 'Personale', '1 minuto'),
+    'polymorph': GrantedSpell(
+        'polymorph', {"it": 'Metamorfosi', "en": 'Polymorph'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 ora', is_concentration=True, attack_save='SAVE'),
+    'dimension-door': GrantedSpell(
+        'dimension-door', {"it": 'Porta dimensionale', "en": 'Dimension Door'}, 4, '1 azione', '150 m', 'Istantanea', damage_dice='4d6', damage_type='force'),
+    'dominate-person': GrantedSpell(
+        'dominate-person', {"it": 'Dominare persone', "en": 'Dominate Person'}, 5, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'modify-memory': GrantedSpell(
+        'modify-memory', {"it": 'Modificare memoria', "en": 'Modify Memory'}, 5, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'burning-hands': GrantedSpell(
+        'burning-hands', {"it": 'Mani brucianti', "en": 'Burning Hands'}, 1, '1 azione', 'Personale', 'Istantanea', attack_save='SAVE', damage_dice='3d6', damage_type='fire', higher_levels_dice='1d6'),
+    'faerie-fire': GrantedSpell(
+        'faerie-fire', {"it": 'Fuoco fatato', "en": 'Faerie Fire'}, 1, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'scorching-ray': GrantedSpell(
+        'scorching-ray', {"it": 'Raggio rovente', "en": 'Scorching Ray'}, 2, '1 azione', '36 m', 'Istantanea', damage_dice='2d6', damage_type='fire'),
+    'flaming-sphere': GrantedSpell(
+        'flaming-sphere', {"it": 'Sfera infuocata', "en": 'Flaming Sphere'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, damage_dice='2d6', damage_type='fire', higher_levels_dice='1d6'),
+    'daylight': GrantedSpell(
+        'daylight', {"it": 'Luce diurna', "en": 'Daylight'}, 3, '1 azione', '18 m', '1 ora'),
+    'fireball': GrantedSpell(
+        'fireball', {"it": 'Palla di fuoco', "en": 'Fireball'}, 3, '1 azione', '45 m', 'Istantanea', attack_save='SAVE', damage_dice='8d6', damage_type='fire', higher_levels_dice='1d6'),
+    'guardian-of-faith': GrantedSpell(
+        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore', attack_save='SAVE', damage_dice='20', damage_type='radiant'),
+    'wall-of-fire': GrantedSpell(
+        'wall-of-fire', {"it": 'Muro di fuoco', "en": 'Wall of Fire'}, 4, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='5d8', damage_type='fire', higher_levels_dice='1d8'),
+    'animal-friendship': GrantedSpell(
+        'animal-friendship', {"it": 'Amicizia con gli animali', "en": 'Animal Friendship'}, 1, '1 azione', '9 m', '24 ore', attack_save='SAVE'),
+    'barkskin': GrantedSpell(
+        'barkskin', {"it": 'Pelle coriacea', "en": 'Barkskin'}, 2, '1 azione', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'spike-growth': GrantedSpell(
+        'spike-growth', {"it": 'Crescita di spine', "en": 'Spike Growth'}, 2, '1 azione', '45 m', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'plant-growth': GrantedSpell(
+        'plant-growth', {"it": 'Crescita vegetale', "en": 'Plant Growth'}, 3, '1 azione', '45 m', 'Istantanea'),
+    'wind-wall': GrantedSpell(
+        'wind-wall', {"it": 'Muro di vento', "en": 'Wind Wall'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='3d8', damage_type='bludgeoning'),
+    'dominate-beast': GrantedSpell(
+        'dominate-beast', {"it": 'Dominare bestie', "en": 'Dominate Beast'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'grasping-vine': GrantedSpell(
+        'grasping-vine', {"it": 'Rampicante afferrante', "en": 'Grasping Vine'}, 4, '1 azione bonus', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'insect-plague': GrantedSpell(
+        'insect-plague', {"it": 'Piaga di insetti', "en": 'Insect Plague'}, 5, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='4d10', damage_type='piercing', higher_levels_dice='1d10'),
+    'tree-stride': GrantedSpell(
+        'tree-stride', {"it": 'Passo arboreo', "en": 'Tree Stride'}, 5, '1 azione', 'Personale', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'fog-cloud': GrantedSpell(
+        'fog-cloud', {"it": 'Nube di nebbia', "en": 'Fog Cloud'}, 1, '1 azione', '36 m', 'Concentrazione, fino a 1 ora', is_concentration=True),
+    'thunderwave': GrantedSpell(
+        'thunderwave', {"it": 'Onda tonante', "en": 'Thunderwave'}, 1, '1 azione', 'Personale', 'Istantanea', attack_save='SAVE', damage_dice='2d8', damage_type='thunder', higher_levels_dice='1d8'),
+    'gust-of-wind': GrantedSpell(
+        'gust-of-wind', {"it": 'Folata di vento', "en": 'Gust of Wind'}, 2, '1 azione', 'Personale', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'shatter': GrantedSpell(
+        'shatter', {"it": 'Frantumare', "en": 'Shatter'}, 2, '1 azione', '18 m', 'Istantanea', attack_save='SAVE', damage_dice='3d8', damage_type='thunder', higher_levels_dice='1d8'),
+    'call-lightning': GrantedSpell(
+        'call-lightning', {"it": 'Invocare fulmine', "en": 'Call Lightning'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, damage_dice='3d10', damage_type='lightning', higher_levels_dice='1d10'),
+    'sleet-storm': GrantedSpell(
+        'sleet-storm', {"it": 'Tempesta di nevischio', "en": 'Sleet Storm'}, 3, '1 azione', '45 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'control-water': GrantedSpell(
+        'control-water', {"it": 'Controllare acqua', "en": 'Control Water'}, 4, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning'),
+    'ice-storm': GrantedSpell(
+        'ice-storm', {"it": 'Tempesta di ghiaccio', "en": 'Ice Storm'}, 4, '1 azione', '90 m', 'Istantanea', attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning', higher_levels_dice='1d8'),
+    'destructive-wave': GrantedSpell(
+        'destructive-wave', {"it": 'Onda distruttiva', "en": 'Destructive Wave'}, 5, '1 azione', 'Personale (raggio 9 m)', 'Istantanea', attack_save='SAVE', damage_dice='5d6', damage_type='thunder'),
+    'bless': GrantedSpell(
+        'bless', {"it": 'Benedizione', "en": 'Bless'}, 1, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'cure-wounds': GrantedSpell(
+        'cure-wounds', {"it": 'Cura ferite', "en": 'Cure Wounds'}, 1, '1 azione', 'Contatto', 'Istantanea'),
+    'lesser-restoration': GrantedSpell(
+        'lesser-restoration', {"it": 'Ristorare inferiore', "en": 'Lesser Restoration'}, 2, '1 azione', 'Contatto', 'Istantanea'),
+    'beacon-of-hope': GrantedSpell(
+        'beacon-of-hope', {"it": 'Faro di speranza', "en": 'Beacon of Hope'}, 3, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+    'revivify': GrantedSpell(
+        'revivify', {"it": 'Rivivificare', "en": 'Revivify'}, 3, '1 azione', 'Contatto', 'Istantanea'),
+    'death-ward': GrantedSpell(
+        'death-ward', {"it": 'Interdizione alla morte', "en": 'Death Ward'}, 4, '1 azione', 'Contatto', '8 ore'),
+    'mass-cure-wounds': GrantedSpell(
+        'mass-cure-wounds', {"it": 'Cura ferite di massa', "en": 'Mass Cure Wounds'}, 5, '1 azione', '18 m', 'Istantanea'),
+    'raise-dead': GrantedSpell(
+        'raise-dead', {"it": 'Rianimare morti', "en": 'Raise Dead'}, 5, '1 ora', 'Contatto', 'Istantanea'),
+    'light': GrantedSpell(
+        'light', {"it": 'Luce', "en": 'Light'}, 0, '1 azione', 'Contatto', '1 ora'),
 }

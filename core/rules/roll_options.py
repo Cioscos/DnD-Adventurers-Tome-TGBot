@@ -140,6 +140,7 @@ class AppliedOptions:
     reroll_limit: int = 0  # ``after_damage``: dadi di danno ritirabili
     keep_rolled: bool = False
     cancels: list[str] = field(default_factory=list)  # fonti di vantaggio/svantaggio che l'opzione toglie
+    maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
 
@@ -358,6 +359,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail
+        out.maximize = out.maximize or spec.maximize
         out.force_crit = out.force_crit or spec.force_crit
         if option.source not in out.notes:
             out.notes.append(option.source)
