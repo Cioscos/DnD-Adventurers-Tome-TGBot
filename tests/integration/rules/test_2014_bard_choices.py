@@ -148,3 +148,48 @@ async def test_a_new_bard_cannot_resolve_a_spell_pick_with_existing_spells(clien
     r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve",
                           json={"kind": "class_option", "options": [str(known["id"])]})
     assert r.status_code == 422  # la scorciatoia vale solo per chi esisteva prima del catalogo
+
+
+# Giro 2, N1: gli incantesimi di un Bardo salvato hanno `class_id` nullo
+
+async def _spell_classes(client, cid) -> dict[str, int | None]:
+    return {s["name"]: s["class_id"] for s in (await client.get(f"/characters/{cid}/spells")).json()}
+
+
+async def test_a_saved_bard_with_unassigned_spells_can_declare_them_as_secrets(client, test_session_factory):
+    cid = await _existing_bard(client, test_session_factory, 10, subclass=None)
+    a = (await _add_spell(client, cid, "Palla di fuoco", 3)).json()
+    b = (await _add_spell(client, cid, "Volare", 3)).json()
+    assert a["class_id"] is None
+    choice = _choice(await _full(client, cid), "magical_secrets")
+    assert {o["id"] for o in choice["spell_pick"]["owned"]} == {a["id"], b["id"]}
+    r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve",
+                          json={"kind": "class_option", "options": [str(a["id"]), str(b["id"])]})
+    assert r.status_code == 200, r.text
+    assert _choice(r.json(), "magical_secrets") is None
+    assert len(await _spell_classes(client, cid)) == 2  # nessun duplicato
+    bard_class = (await _full(client, cid))["classes"][0]["id"]
+    assert set((await _spell_classes(client, cid)).values()) == {bard_class}  # la dichiarazione assegna la classe
+
+
+async def test_an_unassigned_spell_is_free_for_an_additional_secret(client, test_session_factory):
+    cid = await _existing_bard(client, test_session_factory, 6)
+    known = (await _add_spell(client, cid, "Palla di fuoco", 3)).json()
+    choice = _choice(await _full(client, cid), "additional_secrets")
+    r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve",
+                          json={"kind": "class_option", "options": [str(known["id"])]})
+    assert r.status_code == 200, r.text
+    assert _choice(r.json(), "additional_secrets")["count"] == 1
+
+
+async def test_in_a_multiclass_a_spell_of_another_class_stays_excluded(client, test_session_factory):
+    cid = await _existing_bard(client, test_session_factory, 10, subclass=None)
+    await client.post(f"/characters/{cid}/classes", json={"class_name": "wizard", "level": 3, "hit_die": 6})
+    wizard = next(c["id"] for c in (await _full(client, cid))["classes"] if c["class_name"] == "wizard")
+    mine = (await _add_spell(client, cid, "Volare", 3)).json()
+    other = (await _add_spell(client, cid, "Dardo magico", 1, class_id=wizard)).json()
+    choice = _choice(await _full(client, cid), "magical_secrets")
+    assert {o["id"] for o in choice["spell_pick"]["owned"]} == {mine["id"]}
+    r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve",
+                          json={"kind": "class_option", "options": [str(other["id"])]})
+    assert r.status_code == 422

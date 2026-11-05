@@ -145,7 +145,7 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
         ids = [int(p) for p in picked]
     except ValueError:
         raise _bad("spell_not_known") from None
-    owned = {s.id: s for s in char.spells if s.class_id == cls.id}
+    owned = {s.id: s for s in char.spells if s.class_id in (None, cls.id)}  # nullo: salvato prima delle classi sugli incantesimi
     taken = (cls.options or {}).get(ch.group, [])
     free = list((char.settings or {}).get(FREE_KNOWN_KEY) or [])
     if (not ids or len(ids) > count or len(set(ids)) != len(ids) or not set(ids) <= set(owned)
@@ -153,6 +153,8 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
             or (ch.spell_pick == "known" and any(i in free for i in ids))):
         raise _bad("spell_not_known")
     cls.options = {**(cls.options or {}), ch.group: [*taken, *(owned[i].srd_index or owned[i].name for i in ids)]}
+    for i in ids:
+        owned[i].class_id = cls.id  # la dichiarazione assegna la classe
     if ch.spell_pick == "extra":
         char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: [*free, *(i for i in ids if i not in free)]}
     _history(session, char, f"{ch.group}: {', '.join(owned[i].name for i in ids)}")
@@ -178,7 +180,7 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
         taken = (cls.options or {}).get(ch.group, [])
         free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
         info["owned"] = [{"id": sp.id, "name": sp.name, "level": sp.level} for sp in sorted(char.spells, key=lambda x: (x.level, x.name))
-                         if sp.class_id == cls.id and (sp.srd_index or sp.name) not in taken
+                         if sp.class_id in (None, cls.id) and (sp.srd_index or sp.name) not in taken
                          and not (ch.spell_pick == "known" and sp.id in free)]
     return info
 
