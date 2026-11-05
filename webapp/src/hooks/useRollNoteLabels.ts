@@ -1,6 +1,7 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { api } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 /** Traduce le note di un tiro: `condition:<slug>`, `armor:untrained`, `armor:stealth`, `weapon:heavy`, `inspiration:advantage`, `feature:<chiave>`.
@@ -9,7 +10,13 @@ export function useRollNoteLabels(charId?: number): (notes: string[]) => string[
   const { t } = useTranslation()
   const qc = useQueryClient()
   const { id } = useParams<{ id: string }>()
-  const edition = qc.getQueryData<CharacterFull>(['character', charId ?? Number(id)])?.rules_edition
+  const cid = charId ?? (id ? Number(id) : undefined)
+  const edition = qc.getQueryData<CharacterFull>(['character', cid])?.rules_edition
+  // Fuori da /char/:id (la sessione) il personaggio può non essere in cache: serve per il nome dei privilegi nelle note.
+  useQuery({
+    queryKey: ['character', cid], queryFn: () => api.characters.get(cid!), retry: false,
+    enabled: cid != null && Number.isFinite(cid) && !qc.getQueryData(['character', cid]),
+  })
 
   const featureName = (key: string): string => {
     for (const [, char] of qc.getQueriesData<CharacterFull>({ queryKey: ['character'] })) {

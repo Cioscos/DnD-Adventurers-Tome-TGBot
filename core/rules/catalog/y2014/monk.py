@@ -129,18 +129,14 @@ DEFLECT_OPTION = RollOptionSpec(
            "en": "Deflect Missiles: did a ranged weapon attack hit you? Reaction, reduces the damage by 1d10 + Dexterity + level"})
 
 
-def _throw_bonus(ctx: RuleContext, _inputs: dict) -> int:
-    """Il lancio di ritorno è sempre con competenza, qualunque sia l'arma."""
-    from core.rules.proficiencies import is_weapon_proficient  # import locale: proficiencies usa il catalogo
-    return 0 if is_weapon_proficient(ctx.char, ctx.item) else ctx.char.proficiency_bonus
-
-
 DEFLECT_THROW = RollOptionSpec(
     key=f"{CK}.deflect_missiles_throw", phase="before", rolls=("attack",), outside_action=True,
-    cost=Cost(feature_key=KI, state_key=MISSILE_STATE), offered_on_damage=True, bonus=_throw_bonus,
-    available=lambda c: c.roll == "attack" and c.spell is None and c.item is not None and state_on(c, MISSILE_STATE),
-    effect=_say("Attacco a distanza con il proiettile afferrato, con competenza: gittata 6 m, lunga 18 m. Conta come arma da monaco.",
-                "Ranged attack with the caught missile, with proficiency: range 20 ft, long range 60 ft. It counts as a monk weapon."),
+    cost=Cost(feature_key=KI, state_key=MISSILE_STATE), offered_on_damage=True, ranged_unarmed=True,
+    available=lambda c: c.roll == "attack" and c.spell is None and c.item is None and state_on(c, MISSILE_STATE),
+    effect=_say("Attacco a distanza con il proiettile afferrato, senza arma in mano: Destrezza, dado di Arti Marziali e competenza; "
+                "gittata 6 m, lunga 18 m. Conta come arma da monaco.",
+                "Ranged attack with the caught missile, no weapon in hand: Dexterity, Martial Arts die and proficiency; "
+                "range 20 ft, long range 60 ft. It counts as a monk weapon."),
     label={"it": "Deviare Proiettili: rilancia il proiettile afferrato (1 ki, nella stessa reazione)",
            "en": "Deflect Missiles: throw back the caught missile (1 ki, as part of the same reaction)"})
 
@@ -279,7 +275,7 @@ PALM_START = RollOptionSpec(
 
 
 def _tranquility_state(ctx: RuleContext) -> StateSpec:
-    return StateSpec("tranquility", ends_on=("attack", "cast", "rest_long"), data={"dc": _ki_dc(ctx), "others": [f"{CK}.tranquility"]})
+    return StateSpec("tranquility", ends_on=("attack", "cast", "rest_long"), data={"dc": _ki_dc(ctx), "save": "wisdom", "others": [f"{CK}.tranquility"]})
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +317,15 @@ SPELL_DISCIPLINES = (
     ("breath_of_winter", "Soffio dell'Inverno", "Breath of Winter", 17, "cone-of-cold", 6, ("Cono di freddo", "Cone of Cold")),
     ("rush_of_the_gale_spirits", "Spiriti della Burrasca Impetuosa", "Rush of the Gale Spirits", 3, "gust-of-wind", 2, ("Folata di vento", "Gust of Wind")),
 )
+# Il manuale ammette i ki in più solo se l'incantesimo «possiede un effetto potenziato» («Ai Livelli Superiori»): non
+# l'hanno Pelle di pietra, Muro di pietra, Forma gassosa e Folata di vento; Volare lo ha, ma solo per creature in più
+# e Cavalcare il Vento lo lancia su di te soltanto.
+NO_UPCAST = frozenset({"ride_the_wind", "eternal_mountain_defense", "wave_of_rolling_earth", "mist_stance", "rush_of_the_gale_spirits"})
+ONLY_YOURSELF = {
+    "ride_the_wind": ("Volare su te stesso", "Fly on yourself"),
+    "eternal_mountain_defense": ("Pelle di pietra su te stesso", "Stoneskin on yourself"),
+    "mist_stance": ("Forma gassosa su te stesso", "Gaseous Form on yourself"),
+}
 OTHER_DISCIPLINE_LEVELS = {"shape_the_flowing_river": 3, "water_whip": 3, "fist_of_unbroken_air": 3, "fangs_of_the_fire_snake": 3}
 DISCIPLINE_LEVELS = {**{d[0]: d[3] for d in SPELL_DISCIPLINES}, **OTHER_DISCIPLINE_LEVELS}
 
@@ -332,15 +337,32 @@ def _discipline_options(ctx: RuleContext) -> list[str]:
 def _spell_discipline(key: str, it: str, en: str, level: int, spell: str, cost: int, names: tuple[str, str]):
     return feature(
         f"discipline_{key}", CK, ED, level, f"{it} / {en} {SUFFIX}", (it, en),
-        (f"Con {cost} ki lanci {names[0]}, senza componenti materiali. Dal 5° livello ki extra ne alzano il livello, entro il tetto.",
-         f"With {cost} ki you cast {names[1]}, without material components. From 5th level extra ki raise its level, up to the cap."),
+        (f"Con {cost} ki lanci {ONLY_YOURSELF.get(key, (names[0],))[0]}, senza componenti materiali."
+         + ("" if key in NO_UPCAST else " Dal 5° livello ki extra ne alzano il livello, entro il tetto."),
+         f"With {cost} ki you cast {ONLY_YOURSELF.get(key, (None, names[1]))[1]}, without material components."
+         + ("" if key in NO_UPCAST else " From 5th level extra ki raise its level, up to the cap.")),
         subclass="four_elements", option_group=GROUP, option_key=key, passive=True, granted_spells=(spell,),
-        ki_spells=(KiSpell(spell, cost, upcast=True),))
+        ki_spells=(KiSpell(spell, cost, upcast=key not in NO_UPCAST, self_only=key in ONLY_YOURSELF),))
+
+
+_WHIP_EFFECTS = {"prone": {"it": "Prono", "en": "Prone"}, "pull": {"it": "Tirato fino a 7,5 m verso di te", "en": "Pulled up to 25 ft toward you"}}
+
+
+def _whip_effect(ctx: RuleContext, params: dict) -> TargetEffect:
+    """Frusta d'Acqua: se il TS fallisce il giocatore sceglie prono o tirato; tirato non è una condizione."""
+    return TargetEffect(condition="prone" if params.get("effect") == "prone" else None, save_ability="dexterity", save_dc=_ki_dc(ctx))
 
 
 def _ki_attack(ability: str) -> OnUse:
-    """Frusta d'Acqua e Pugno dell'Aria Inviolabile: azione, 2 ki più extra, 3d10 più 1d10 per ki extra, TS del bersaglio (CD ki)."""
+    """Frusta d'Acqua e Pugno dell'Aria Inviolabile: azione, 2 ki più extra, 3d10 più 1d10 per ki extra, TS del bersaglio (CD ki).
+    L'esito (contundenti, metà danni se supera, traino o spinta) lo dice la nota ``notes`` del privilegio."""
+    if ability == "dexterity":
+        return OnUse(slot="action", spends=KI, choose_amount=True, min_amount=2, rolls_by_amount=lambda _ctx, n: f"{n + 1}d10",
+                     notes=lambda _c, _p: ["water_whip"], target_effect=_whip_effect,
+                     choices=(UseChoice("effect", {"it": "Se il TS fallisce", "en": "On a failed save"},
+                                        lambda _c: list(_WHIP_EFFECTS), lambda k: _WHIP_EFFECTS[k]),))
     return OnUse(slot="action", spends=KI, choose_amount=True, min_amount=2, rolls_by_amount=lambda _ctx, n: f"{n + 1}d10",
+                 notes=lambda _c, _p: ["fist_of_unbroken_air"],
                  target_effect=lambda ctx, _p: TargetEffect(condition="prone", save_ability=ability, save_dc=_ki_dc(ctx)))
 
 
@@ -482,9 +504,9 @@ FEATURES = (
              "You cannot be aged magically and no longer need food or water."),
             passive=True),
     feature("empty_body", CK, ED, 18, "Corpo Vuoto / Empty Body (Monaco 18, pag. 92)", ("Corpo Vuoto", "Empty Body"),
-            ("Azione e 4 ki: invisibile per 1 minuto, con resistenza a ogni danno tranne la forza. Con 8 ki lanci proiezione astrale.",
-             "Action and 4 ki: invisible for 1 minute, resisting all damage except force. With 8 ki you cast astral projection."),
-            "action", granted_spells=("astral-projection",), ki_spells=(KiSpell("astral-projection", 8),),
+            ("Azione e 4 ki: invisibile per 1 minuto, con resistenza a ogni danno tranne la forza. Con 8 ki lanci proiezione astrale, senza portare con te altre creature.",
+             "Action and 4 ki: invisible for 1 minute, resisting all damage except force. With 8 ki you cast astral projection, without bringing other creatures along."),
+            "action", granted_spells=("astral-projection",), ki_spells=(KiSpell("astral-projection", 8, self_only=True),),
             modifiers=tuple(Modifier(f"resistance:{t}", 1, when=lambda c: state_on(c, "empty_body"),
                                      source=f"feature:{CK}.empty_body") for t in DAMAGE_TYPES if t != "force"),
             on_use=OnUse(slot="action", cost=4, spends=KI, state=_empty_body_state)),
@@ -513,9 +535,9 @@ FEATURES = (
             ("Dopo un colpo senz'armi a segno, 3 ki avviano vibrazioni per giorni pari al livello. Con un'azione le termini: TS Costituzione, a 0 PF o 10d10 necrotici.",
              "After an unarmed hit, 3 ki start vibrations for days equal to your level. As an action you end them: Constitution save, 0 HP or 10d10 necrotic."),
             "action", subclass="open_hand", roll_options=(PALM_START,),
-            on_use=OnUse(slot="action", rolls="10d10", ends_state="quivering_palm",
+            on_use=OnUse(slot="action", rolls="10d10", ends_state="quivering_palm", notes=lambda _c, _p: ["quivering_palm"],
                          available=lambda c: state_on(c, "quivering_palm"),
-                         target_effect=lambda ctx, _p: TargetEffect(save_ability="constitution", save_dc=_ki_dc(ctx), damage_dice="10d10"))),
+                         target_effect=lambda ctx, _p: TargetEffect(save_ability="constitution", save_dc=_ki_dc(ctx), on_failure_only=False, damage_dice="10d10"))),
 
     # Via dell'Ombra
     feature("shadow_arts", CK, ED, 3, "Arti dell'Ombra / Shadow Arts (Monaco 3, pag. 93)", ("Arti dell'Ombra", "Shadow Arts"),

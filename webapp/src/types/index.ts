@@ -214,7 +214,7 @@ export interface Spell {
   /** Un privilegio lo concede a volontà: si lancia senza slot (Mille Forme). */
   at_will?: boolean
   /** Si lancia anche coi punti ki (Arti dell'Ombra, discipline dei Quattro Elementi): costo base, ki in più ammessi, ki rimasti. */
-  ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string } | null
+  ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string; self_only?: boolean } | null
 }
 
 export interface SpellSlot {

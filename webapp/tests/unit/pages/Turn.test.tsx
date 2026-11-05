@@ -328,7 +328,20 @@ describe('Turn page', () => {
     toastInfo.mockClear()
     renderWithProviders(<Turn />)
     await userEvent.click(within((await screen.findByText('Parole Taglienti')).closest('li') as HTMLElement).getByText('character.turn.use'))
-    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_rolled', { description: '5' }))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_rolled', { description: '5 = 5' }))
+  })
+
+  it('says the total of the dice and the full outcome of a ki attack (Water Whip)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 9, name: "Frusta d'Acqua", is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'monk.discipline_water_whip', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+    }] })
+    featureUse.mockResolvedValueOnce({ rolls: [4, 3, 10], healed: 0, state: null, notes: ['water_whip'] })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(within((await screen.findByText("Frusta d'Acqua")).closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_rolled', { description: '4 + 3 + 10 = 17' }))
+    expect(toastInfo).toHaveBeenCalledWith('character.turn.use_notes.water_whip')
   })
 
   it('says nothing about dice when the feature rolled none', async () => {

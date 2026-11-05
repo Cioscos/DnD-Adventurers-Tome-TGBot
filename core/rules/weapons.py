@@ -146,8 +146,9 @@ def is_monk_weapon(item: Any, edition: str) -> bool:
     return category == "simple" and not has_property(item, "two_handed") and not has_property(item, "heavy")
 
 
-def martial_arts_level(char: Any, item: Any = None) -> int:
-    """Livello da Monaco se Arti Marziali vale ora: niente armatura né scudo, solo armi da monaco. Altrimenti 0."""
+def martial_arts_level(char: Any, item: Any = None, ignore_held: bool = False) -> int:
+    """Livello da Monaco se Arti Marziali vale ora: niente armatura né scudo, solo armi da monaco. Altrimenti 0.
+    ``ignore_held``: per un attacco che non usa ciò che si impugna (il proiettile rilanciato) contano solo armatura e scudo."""
     level = next((c.level for c in char.classes if class_key(c) == "monk"), 0)
     if not level:
         return 0
@@ -155,6 +156,8 @@ def martial_arts_level(char: Any, item: Any = None) -> int:
     worn = [i for i in char.items if i.is_equipped]
     if any(i.item_type in ("armor", "shield") for i in worn):
         return 0
+    if ignore_held:
+        return level
     held = [i for i in worn if i.item_type == "weapon"] + ([item] if item is not None else [])
     return level if all(is_monk_weapon(w, edition) for w in held) else 0
 

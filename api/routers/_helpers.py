@@ -124,11 +124,15 @@ def weapon_attack_profile(
     return mods[ability], ability, "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
 
 
-def unarmed_attack_profile(char: Character) -> tuple[int, str, str]:
-    """Modificatore, dadi di danno e caratteristica del colpo senz'armi."""
+def unarmed_attack_profile(char: Character, ranged: bool = False) -> tuple[int, str, str]:
+    """Modificatore, dadi di danno e caratteristica del colpo senz'armi. ``ranged``: il lancio di un proiettile
+    (Deviare Proiettili) è sempre con Destrezza, con il dado di Arti Marziali."""
     str_mod = roll_ability_mod(char, "strength")
     dex_mod = roll_ability_mod(char, "dexterity")
-    ability_mod, damage_dice = unarmed_strike_profile(str_mod, dex_mod, martial_arts_level(char), character_edition(char))
+    ability_mod, damage_dice = unarmed_strike_profile(
+        str_mod, dex_mod, martial_arts_level(char, ignore_held=ranged), character_edition(char))
+    if ranged:
+        return dex_mod, damage_dice, "dexterity"
     return ability_mod, damage_dice, "strength" if ability_mod == str_mod else "dexterity"
 
 

@@ -21,11 +21,12 @@ export function useReactionOffers({ charId, char, reactions, onSpent }: Reaction
   const { t } = useTranslation()
   const weaponFlow = useWeaponAttackFlow(charId, char)
 
-  /** La reazione è un attacco in mischia: arma impugnata (la principale per prima) o colpo senz'armi, con l'opzione già scelta. */
+  /** La reazione è un attacco in mischia: arma impugnata (la principale per prima) o colpo senz'armi, con l'opzione già scelta.
+   *  Il lancio del proiettile afferrato (`ranged_unarmed`) è sempre senz'armi: il profilo non è quello dell'arma in mano. */
   const reactWith = (reaction: RollOption) => {
     const weapons = (char?.items ?? []).filter((i) => i.item_type === 'weapon' && i.is_equipped)
     const weapon = weapons.find((i) => i.equipment_slot === 'main_hand') ?? weapons[0]
-    if (weapon) weaponFlow.attackWeapon(weapon.id, 'normal', [reaction.key])
+    if (weapon && !reaction.ranged_unarmed) weaponFlow.attackWeapon(weapon.id, 'normal', [reaction.key])
     else weaponFlow.attackUnarmed('normal', [reaction.key])
     onSpent(reaction.key)
   }

@@ -30,6 +30,7 @@ from core.data.spell_slots import normalize_class_name
 from core.db.models import EquipmentSlot
 from core.data.equipment_slots import EQUIPMENT_SLOT_COMPAT
 from core.game.stats import ability_modifier
+from core.rules.catalog import features_for
 from core.rules.edition import EDITIONS
 from core.rules.proficiencies import LABELS, SEEDED_FLAG
 from core.rules.subclasses import match_subclass
@@ -327,8 +328,19 @@ def _senses(c: _Ctx) -> list[dict]:
     return [{"type": k, "range_ft": _clamp(v, 0, 1000)} for k, v in found.items() if v > 0]
 
 
+def _catalog_computes_speed(c: _Ctx) -> bool:
+    """R45: il catalogo dell'edizione calcola già un bonus alla velocità per una classe del PG (Movimento Senza
+    Armatura, Movimento Veloce): importarlo anche nella base lo sommerebbe due volte."""
+    for cl in _l(c.out.get("_raw_classes")):
+        key = normalize_class_name(_str(_d(_d(cl).get("definition")).get("name"), 100))
+        if any(m.target == "speed" for spec in features_for(c.edition, key) for m in spec.modifiers):
+            return True
+    return False
+
+
 def _speed(c: _Ctx, walk: int) -> tuple[int, list[dict]]:
     """(a piedi, altre) come la scheda DDB: base razza/lignaggio + bonus (l'app non li calcola)."""
+    own_bonus = _catalog_computes_speed(c)
     armored = any(isinstance(it, dict) and it.get("equipped")
                   and 1 <= _int(_d(it.get("definition")).get("armorTypeId")) <= 4  # 4 = scudo
                   for it in _l(c.data.get("inventory")))
@@ -341,6 +353,9 @@ def _speed(c: _Ctx, walk: int) -> tuple[int, list[dict]]:
             kind = OTHER_SPEEDS[sub]
             # value null = "pari alla velocità a piedi" (es. Stormborn del Chierico della Tempesta)
             other[kind] = None if m.get("value") is None else max(other.get(kind) or 0, val)
+        elif own_bonus and m["_src"] == "class" and m.get("type") == "bonus" and sub in (
+                "speed", "speed-walking", "unarmored-movement"):
+            continue  # R45: lo calcola il catalogo
         elif m.get("type") == "bonus" and (sub in ("speed", "speed-walking")
                                            or (sub == "unarmored-movement" and not armored)):
             bonus += val

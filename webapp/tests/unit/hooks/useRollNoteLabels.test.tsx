@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useRollNoteLabels } from '@/hooks/useRollNoteLabels'
 
@@ -14,6 +14,8 @@ vi.mock('react-i18next', async (orig) => {
     }),
   }
 })
+const { getSpy } = vi.hoisted(() => ({ getSpy: vi.fn() }))
+vi.mock('@/api/client', () => ({ api: { characters: { get: getSpy } } }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useParams: () => ({ id: '7' }) }
@@ -42,5 +44,14 @@ describe('useRollNoteLabels', () => {
     expect(labels(['condition:poisoned', 'armor:untrained', 'feature:monk.ki'])).toEqual([
       'character.conditions.poisoned', 'character.roll_notes.armor_untrained', 'Ki',
     ])
+  })
+
+  it('names a feature of a character that is not in the cache yet (session pages never load it)', async () => {
+    getSpy.mockResolvedValue({ rules_edition: '2014', abilities: [{ feature_key: 'monk.perfect_self', name: 'Perfezione Interiore' }] })
+    const qc = new QueryClient()
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    const { result } = renderHook(() => useRollNoteLabels(11), { wrapper })
+    await waitFor(() => expect(result.current(['feature:monk.perfect_self'])).toEqual(['Perfezione Interiore']))
+    expect(getSpy).toHaveBeenCalledWith(11)
   })
 })

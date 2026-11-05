@@ -5,17 +5,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import InitiativeCta from '@/pages/session/InitiativeCta'
 import type { CombatantLive } from '@/types'
 
-const { rollSpy, rollOptionsSpy, lastRollSpy } = vi.hoisted(() => ({ rollSpy: vi.fn(), rollOptionsSpy: vi.fn(), lastRollSpy: vi.fn() }))
+const { rollSpy, rollOptionsSpy, lastRollSpy, infoSpy, getSpy } = vi.hoisted(() => ({
+  rollSpy: vi.fn(), rollOptionsSpy: vi.fn(), lastRollSpy: vi.fn(), infoSpy: vi.fn(), getSpy: vi.fn(),
+}))
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
 })
 vi.mock('@/api/client', () => ({
-  api: { characters: { rollOptions: rollOptionsSpy, lastRollOptions: lastRollSpy }, sessions: { encounter: { rollInitiative: rollSpy } } },
+  api: { characters: { rollOptions: rollOptionsSpy, lastRollOptions: lastRollSpy, get: getSpy }, sessions: { encounter: { rollInitiative: rollSpy } } },
 }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: infoSpy } }))
 // animazione 3D disattivata nel test -> die undefined, niente overlay
 vi.mock('@/store/diceSettings', () => ({
   useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }),
@@ -47,6 +49,9 @@ beforeEach(() => {
   rollOptionsSpy.mockReset()
   rollOptionsSpy.mockResolvedValue([])
   lastRollSpy.mockReset()
+  infoSpy.mockReset()
+  getSpy.mockReset()
+  getSpy.mockResolvedValue({ rules_edition: '2014', abilities: [{ feature_key: 'monk.perfect_self', name: 'Perfezione Interiore' }] })
 })
 
 describe('InitiativeCta', () => {
@@ -55,6 +60,17 @@ describe('InitiativeCta', () => {
     renderCta(combatant())
     await userEvent.click(screen.getByText('session.combat.roll_initiative'))
     await waitFor(() => expect(rollSpy).toHaveBeenCalledWith(42, 5, undefined))
+  })
+
+  it('dopo il tiro dice il nome del privilegio e che cosa ha fatto (Perfezione Interiore: 4 ki), non la chiave', async () => {
+    rollSpy.mockResolvedValue({ initiative_roll: {
+      mode_applied: 'normal', notes: ['feature:monk.perfect_self'],
+      option_result: { keys: [], effects: [{ it: 'Perfezione Interiore: recuperi 4 punti ki.', en: 'Perfect Self: you regain 4 ki points.' }] },
+    } })
+    renderCta(combatant())
+    await waitFor(() => expect(getSpy).toHaveBeenCalledWith(7))  // la pagina di sessione non ha caricato il personaggio
+    await userEvent.click(screen.getByText('session.combat.roll_initiative'))
+    await waitFor(() => expect(infoSpy).toHaveBeenCalledWith('Perfezione Interiore · Perfezione Interiore: recuperi 4 punti ki.'))
   })
 
   it('già tirata: mostra il riepilogo, niente bottone', () => {

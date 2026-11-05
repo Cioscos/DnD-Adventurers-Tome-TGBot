@@ -17,7 +17,8 @@ interface Props {
 }
 
 export default function InitiativeCta({ sessionId, combatant }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
   const noteLabels = useRollNoteLabels(combatant.character_id ?? undefined)
@@ -31,7 +32,10 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
     },
     onSuccess: (live) => {
       haptic.success()
-      if (live.initiative_roll?.notes.length) toast.info(noteLabels(live.initiative_roll.notes).join(' · '))
+      // Le note dicono quali privilegi hanno contato, gli esiti che cosa è successo (Perfezione Interiore: recuperi 4 ki).
+      const roll = live.initiative_roll
+      const said = [...noteLabels(roll?.notes ?? []), ...(roll?.option_result?.effects ?? []).map((e) => e[lang])]
+      if (said.length) toast.info(said.join(' · '))
       if (combatant.character_id != null) refreshAfterOptions(qc, combatant.character_id, live.initiative_roll?.option_result)
       qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
     },

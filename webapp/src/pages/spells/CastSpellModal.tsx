@@ -100,6 +100,9 @@ export default function CastSpellModal({
             <p className="text-xs text-dnd-text-muted font-body italic text-center">
               {t('character.spells.cast_ki_hint', { left: kiCast.ki_left })}
             </p>
+            {kiCast.self_only && (
+              <p className="text-xs text-dnd-text-muted font-body text-center">{t('character.spells.cast_ki_self_only')}</p>
+            )}
             {kiCast.max_extra > 0 && (
               <AmountStepper value={kiExtra} min={0} max={kiCast.max_extra} label={t('character.spells.cast_ki_extra')} onChange={setKiExtra} />
             )}

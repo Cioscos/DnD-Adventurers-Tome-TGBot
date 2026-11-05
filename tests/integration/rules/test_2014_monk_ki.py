@@ -301,41 +301,65 @@ async def test_deflect_missiles_never_goes_below_zero_damage(client, monkeypatch
     assert r.json()["current_hit_points"] == 60 and r.json()["option_result"]["damage_after"] == 0
 
 
-async def test_the_throw_back_needs_a_missile_caught_at_zero_damage_and_costs_one_ki(client, monkeypatch):
+async def test_the_throw_back_needs_a_missile_caught_at_zero_damage_and_is_an_unarmed_throw(client, monkeypatch):
     cid = await _monk(client, 5, dexterity=16)
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
     bow = await _bow(client, cid)
-    assert THROW not in await _roll_keys(client, cid, "attack", item_id=bow)
+    assert THROW not in await _roll_keys(client, cid, "attack")
     _fixed(monkeypatch, 3)
     await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 40, "damage_type": "piercing", "options": [DEFLECT]})
-    assert THROW not in await _roll_keys(client, cid, "attack", item_id=bow)  # il danno non è sceso a 0
+    assert THROW not in await _roll_keys(client, cid, "attack")  # il danno non è sceso a 0
     await client.post(f"/characters/{cid}/turn/new")
     _fixed(monkeypatch, 10)
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5, "damage_type": "piercing", "options": [DEFLECT]})
-    assert [o["key"] for o in r.json()["reactions"]] == [THROW]
+    offers = r.json()["reactions"]  # con l'arco impugnato la proposta c'è lo stesso: il lancio non usa l'arma
+    assert [o["key"] for o in offers] == [THROW] and offers[0]["ranged_unarmed"] is True
     assert "deflected_missile" in await _states(client, cid)
-    assert THROW in await _roll_keys(client, cid, "attack", item_id=bow)
+    assert THROW in await _roll_keys(client, cid, "attack")
+    assert THROW not in await _roll_keys(client, cid, "attack", item_id=bow)  # mai con l'oggetto impugnato
 
 
-async def test_the_throw_back_is_always_proficient_is_an_extra_attack_and_spends_the_ki_once(client, monkeypatch):
+async def test_the_throw_back_has_its_own_profile_dexterity_martial_arts_die_proficiency_and_costs_one_ki(client, monkeypatch):
+    cid = await _monk(client, 5, strength=8, dexterity=16)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
+    _fixed(monkeypatch, 10)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5, "damage_type": "piercing", "options": [DEFLECT]})
+    ki = await _ki(client, cid)
+    # senz'armi, e con FOR 8: Destrezza +3 e competenza +3 al colpire, 1d6 +3 al danno
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "options": [THROW]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert (body["to_hit_bonus"], body["damage_dice"], body["damage_bonus"]) == (3 + 3, "1d6", 3)
+    assert not body.get("proficiency_warning") and await _ki(client, cid) == ki - 1
+    assert "deflected_missile" not in await _states(client, cid)
+    assert (await _turn(client, cid))["action_attacks"] == 0  # non è un attacco dell'azione Attacco
+    again = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "options": [THROW]})
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "option_unavailable"
+
+
+async def test_the_throw_back_is_ranged_so_it_never_offers_the_stunning_strike(client, monkeypatch):
     cid = await _monk(client, 5, dexterity=16)
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
     _fixed(monkeypatch, 10)
     await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5, "damage_type": "piercing", "options": [DEFLECT]})
-    bow = await _bow(client, cid)
-    plain = (await client.post(f"/characters/{cid}/items/{bow}/attack", json={"die": 10})).json()
-    assert plain["proficiency_warning"] is True and plain["to_hit_bonus"] == 3  # il monaco non ha l'arco lungo
-    await client.post(f"/characters/{cid}/turn/new")
+    hit = await _hit(client, cid, options=[THROW])
+    assert (await _damage(client, cid, hit, STUN)).status_code == 409  # il Colpo Stordente vale solo in mischia
+    assert (await _damage(client, cid, hit)).status_code == 200
+
+
+async def test_the_throw_back_with_a_sword_in_hand_ignores_the_sword(client, monkeypatch):
+    cid = await _monk(client, 5, strength=8, dexterity=16)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 60})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
+    await _equip(client, cid, slot="main_hand", name="Spada lunga", item_type="weapon", item_metadata={
+        "damage_dice": "1d8", "weapon_type": "melee", "properties": ["versatile"], "weapon_category": "martial"})
+    _fixed(monkeypatch, 10)
     await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5, "damage_type": "piercing", "options": [DEFLECT]})
-    ki = await _ki(client, cid)
-    r = await client.post(f"/characters/{cid}/items/{bow}/attack", json={"die": 10, "options": [THROW]})
-    assert r.status_code == 200, r.text
-    assert r.json()["to_hit_bonus"] == 3 + 3 and await _ki(client, cid) == ki - 1  # competenza +3
-    assert "deflected_missile" not in await _states(client, cid)
-    again = await client.post(f"/characters/{cid}/items/{bow}/attack", json={"die": 10, "options": [THROW]})
-    assert again.status_code == 409 and again.json()["detail"]["code"] == "option_unavailable"
+    body = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "options": [THROW]})).json()
+    assert (body["to_hit_bonus"], body["damage_dice"], body["damage_bonus"]) == (6, "1d6", 3)
 
 
 async def test_the_throw_back_is_refused_without_ki(client, monkeypatch):
@@ -345,8 +369,7 @@ async def test_the_throw_back_is_refused_without_ki(client, monkeypatch):
     _fixed(monkeypatch, 10)
     await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5, "damage_type": "piercing", "options": [DEFLECT]})
     await _set_ki(client, cid, 0)
-    bow = await _bow(client, cid)
-    assert THROW not in await _roll_keys(client, cid, "attack", item_id=bow)
+    assert THROW not in await _roll_keys(client, cid, "attack")
 
 
 async def test_slow_fall_cuts_five_times_the_level_and_spends_the_reaction(client):
@@ -638,7 +661,7 @@ async def test_empty_body_casts_astral_projection_for_eight_ki_and_no_action_of_
     cid = await _monk(client, 18)
     spells = {s["name"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}
     astral = spells["Proiezione astrale"]
-    assert astral["ki_cast"]["cost"] == 8 and astral["ki_cast"]["max_extra"] == 0 and astral["level"] == 9
+    assert astral["ki_cast"]["cost"] == 8 and astral["ki_cast"]["max_extra"] == 0 and astral["level"] == 9 and astral["ki_cast"]["self_only"] is True
     r = await client.post(f"/characters/{cid}/spells/{astral['id']}/use", json={"ki": True})
     assert r.status_code == 200, r.text
     assert await _ki(client, cid) == 10 and not (await _turn(client, cid))["action_used"]  # dura un'ora: non è un'azione del turno

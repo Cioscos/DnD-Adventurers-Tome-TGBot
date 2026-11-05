@@ -313,6 +313,7 @@ class KiCast:
     ki_left: int
     dc: int
     upcast: bool
+    self_only: bool = False
 
 
 def ki_cast_info(char: Any, spell: Any) -> KiCast | None:
@@ -330,5 +331,5 @@ def ki_cast_info(char: Any, spell: Any) -> KiCast | None:
             cap = ki_spell_cap(row.level) if ks.upcast else None
             extra = max(0, min(cap - ks.cost, left - ks.cost)) if cap is not None else 0
             dc = 8 + char.proficiency_bonus + effective_ability_mod(char, "wisdom")
-            return KiCast(spec.key, ks.pool, ks.cost, extra, left, dc, ks.upcast)
+            return KiCast(spec.key, ks.pool, ks.cost, extra, left, dc, ks.upcast, ks.self_only)
     return None

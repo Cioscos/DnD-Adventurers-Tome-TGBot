@@ -122,7 +122,9 @@ async def test_martial_arts_is_a_passive_row_from_level_1(client):
     assert row is not None and row["is_passive"] is True
 
 
-async def test_unarmed_strike_uses_dexterity_and_armor_or_shield_cancel_the_die(client):
+async def test_unarmed_strike_uses_dexterity_and_armor_or_shield_cancel_the_die(client, monkeypatch):
+    # con lo scudo il monaco non è competente: svantaggio, e il d20 mancante si tira a caso (un 1 è un fumble)
+    monkeypatch.setattr("random.randint", lambda a, b: min(10, b))
     cid = await _monk(client, 5, strength=8, dexterity=16)
     body = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).json()
     assert body["to_hit_bonus"] == 3 + 3 and body["damage_bonus"] == 3
@@ -368,6 +370,33 @@ async def test_beyond_option_names_find_the_elemental_disciplines(test_session_f
         # al 6° livello sono due: la terza è fuori limite e la quarta (11°) non è ancora disponibile; il resto resta nel report
         assert char.classes[0].options["elemental_disciplines"] == ["fist_of_four_thunders", "gong_of_the_summit"]
         assert [e.name for e in report.approximated] == ["Water Whip", "Ride the Wind", "Dragon Slayer"]
+
+
+def _import_fixture(monkeypatch, name: str) -> None:
+    import json
+    from pathlib import Path
+    import api.routers.transfer as transfer
+
+    data = json.loads((Path(__file__).parents[2] / "fixtures" / "ddb" / name).read_text(encoding="utf-8"))
+
+    async def fake(_char_id: int) -> dict:
+        return data
+    monkeypatch.setattr(transfer, "fetch_ddb", fake)
+
+
+@pytest.mark.parametrize("fixture,edition,base,computed", [
+    ("monk20_2024.json", "2014", 35, 65),      # R45: il +30 lo calcola il catalogo 2014, la base resta del lignaggio
+    ("monk20_2024.json", "2024", 65, 65),      # senza catalogo 2024 il bonus resta nella base com'era
+    ("barbarian20_2024.json", "2014", 30, 40),  # Movimento Veloce: stesso errore possibile, stessa regola
+    ("barbarian20_2024.json", "2024", 40, 40),
+])
+async def test_the_beyond_import_does_not_add_the_speed_bonus_the_catalog_computes_again(
+        client, monkeypatch, fixture, edition, base, computed):
+    _import_fixture(monkeypatch, fixture)
+    r = await client.post("/characters/import/ddb", json={"url": "https://www.dndbeyond.com/characters/1", "rules_edition": edition})
+    assert r.status_code == 201, r.text
+    character = r.json()["character"]
+    assert (character["speed"], character["computed"]["speed"]) == (base, computed)
 
 
 async def test_migration_keeps_the_spent_ki_and_replaces_the_old_name_and_description(client, test_session_factory):

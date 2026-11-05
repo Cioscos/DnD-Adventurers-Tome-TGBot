@@ -133,7 +133,7 @@ async def test_tranquility_starts_at_the_end_of_a_long_rest_with_the_ki_dc(clien
     assert "tranquility" not in await _states(client, cid)
     await _rest(client, cid, "long")
     state = (await _states(client, cid))["tranquility"]
-    assert state["data"]["dc"] == 8 + 4 + 3 and state["rounds_left"] is None and state["data"]["others"] == [TRANQUILITY]
+    assert state["data"]["dc"] == 8 + 4 + 3 and state["data"]["save"] == "wisdom" and state["rounds_left"] is None and state["data"]["others"] == [TRANQUILITY]
     assert {"attack", "cast", "rest_long"} <= set(state["ends_on"])
 
 
@@ -208,9 +208,10 @@ async def test_ending_the_vibrations_is_an_action_with_a_constitution_save_and_t
     await client.post(f"/characters/{cid}/turn/new")
     r = await _use(client, cid, PALM)
     assert r.status_code == 200, r.text
-    assert len(r.json()["rolls"]) == 10 and r.json()["targets"] == [PALM]
+    assert len(r.json()["rolls"]) == 10 and r.json()["targets"] == [PALM] and r.json()["notes"] == ["quivering_palm"]
     effect = (await client.get(f"/characters/{cid}/target-effects/{PALM}")).json()["result"]
     assert (effect["save_ability"], effect["save_dc"], effect["damage_dice"]) == ("constitution", 8 + 6 + 3, "10d10")
+    assert effect["on_failure_only"] is False and effect["condition"] is None  # il danno c'è comunque: non è un effetto «se fallisce»
     assert "quivering_palm" not in await _states(client, cid) and (await _turn(client, cid))["action_used"] is True
     assert await _ki(client, cid) == 14  # la fine non costa ki
 

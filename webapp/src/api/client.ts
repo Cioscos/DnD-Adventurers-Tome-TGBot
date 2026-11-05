@@ -123,6 +123,8 @@ export type RollOption = {
   /** Solo `after_damage`: quanti dadi di danno ritirare; `keep_rolled`: solo al massimo, il nuovo si somma. */
   reroll_limit?: number | null
   keep_rolled?: boolean
+  /** Lancio a distanza senz'armi (Deviare Proiettili): mai con l'arma impugnata. */
+  ranged_unarmed?: boolean
 }
 
 export type RollOptionsQuery = {

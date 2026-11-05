@@ -662,6 +662,7 @@
       "cast_ki": "Cast with ki ({{cost}})",
       "cast_ki_hint": "Spend ki points instead of a slot. Ki left: {{left}}.",
       "cast_ki_extra": "Extra ki (+1 level each)",
+      "cast_ki_self_only": "For you alone: you cannot bring other creatures along.",
       "cast_ki_none": "You do not have enough ki.",
       "cast_done_ki": " · ki spent: {{n}}",
       "cast_free": "Cast without a slot",
@@ -1265,7 +1266,10 @@
       "use_given": "To give to an ally: {{n}}",
       "extra_actions": "Extra actions: {{n}}",
       "use_notes": {
-        "arcane_charge": "Arcane Charge: you teleport up to 30 ft to an unoccupied space you can see, before or after the extra action."
+        "arcane_charge": "Arcane Charge: you teleport up to 30 ft to an unoccupied space you can see, before or after the extra action.",
+        "quivering_palm": "Constitution save: on a failure the target drops to 0 hit points; on a success it takes the necrotic damage rolled. The vibrations end.",
+        "water_whip": "Dexterity save: on a failure it takes the bludgeoning damage and, your choice, is knocked prone or pulled up to 25 ft toward you; on a success, half damage and nothing else.",
+        "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else."
       },
       "use_rolled": "You rolled",
       "use_errors": {

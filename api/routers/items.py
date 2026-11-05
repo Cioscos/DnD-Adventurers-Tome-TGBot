@@ -61,7 +61,7 @@ from core.game.attacks import martial_arts_die
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
-from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, uses_own_slot
+from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
 from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
 
 router = APIRouter(prefix="/characters", tags=["items"])
@@ -635,7 +635,7 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
         else:
             item = next((i for i in char.items if i.id == pending["item_id"]), None)
             ability_mod = (weapon_attack_profile(char, item, pending["attack_mode"], pending["ability"]) if item
-                           else unarmed_attack_profile(char))[0]
+                           else unarmed_attack_profile(char, pending["attack_mode"] == "ranged"))[0]
             if pending.get("offhand"):
                 ability_mod = min(ability_mod, 0)
             rerolled: list[list[int]] = []
@@ -971,7 +971,9 @@ async def attack_unarmed(
     refuse_if_incapacitated(char)
     _check_attack_limit(char, body)
 
-    ability_mod, damage_dice_str, ability = unarmed_attack_profile(char)
+    throw = bool(body and throws_unarmed(char, body.options or []))  # il proiettile afferrato: a distanza, con Destrezza
+    mode = "ranged" if throw else "melee"
+    ability_mod, damage_dice_str, ability = unarmed_attack_profile(char, throw)
     pb = char.proficiency_bonus
     if body and body.effect != "damage":
         return _unarmed_effect(session, char, body.effect, 8 + ability_mod + pb)
@@ -979,8 +981,8 @@ async def attack_unarmed(
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
-    applied = modifiers_for(char, "attack", ability=ability, attack_mode="melee")
-    opts = use_options(session, char, "attack", body, ability=ability, attack_mode="melee", grip="one")
+    applied = modifiers_for(char, "attack", ability=ability, attack_mode=mode)
+    opts = use_options(session, char, "attack", body, ability=ability, attack_mode=mode, grip="one")
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
@@ -996,7 +998,7 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, ability, ability_mod, 0, is_critical, "melee")
+        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, ability, ability_mod, 0, is_critical, mode)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
@@ -1049,7 +1051,7 @@ async def attack_unarmed(
         is_magic=True if any(spec.magic_unarmed for spec, _row in active_features(char)) else None,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
-    ), None, ability, "melee", "one", opts)
+    ), None, ability, mode, "one", opts)
 
 
 # ---------------------------------------------------------------------------

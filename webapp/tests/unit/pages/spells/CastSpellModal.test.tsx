@@ -65,6 +65,13 @@ describe('CastSpellModal', () => {
       expect(onCastKi).toHaveBeenCalledWith(0)
     })
 
+    it('reminds that a discipline works on the caster alone (Ride the Wind)', () => {
+      const { rerender } = render(<CastSpellModal {...common} kiCast={ki} onCastKi={vi.fn()} />)
+      expect(screen.queryByText('character.spells.cast_ki_self_only')).not.toBeInTheDocument()
+      rerender(<CastSpellModal {...common} kiCast={{ ...ki, self_only: true }} onCastKi={vi.fn()} />)
+      expect(screen.getByText('character.spells.cast_ki_self_only')).toBeInTheDocument()
+    })
+
     it('lets the player add extra ki up to the allowed maximum and sends it', async () => {
       const onCastKi = vi.fn()
       render(<CastSpellModal {...common} kiCast={{ ...ki, max_extra: 1 }} onCastKi={onCastKi} />)

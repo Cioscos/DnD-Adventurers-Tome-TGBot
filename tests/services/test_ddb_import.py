@@ -629,3 +629,19 @@ def test_container_capacity_junk_and_id_zero():
     exp, _, _ = convert(d)
     pack = next(i for i in exp.items if i.name == "Backpack")
     assert "container" not in pack.item_metadata and pack.ref is None
+
+
+# --- R45: la velocità calcolata dal catalogo non entra nella base ---------------------------
+
+def test_monk_2014_speed_base_has_no_unarmored_movement():
+    ch = convert(monk(), edition="2014")[0].character
+    assert ch.speed == 35  # solo il lignaggio: il +30 lo calcola il catalogo 2014
+
+
+def test_monk_2024_speed_keeps_unarmored_movement_in_base():
+    assert convert(monk(), edition="2024")[0].character.speed == 65  # nessun catalogo 2024: resta com'è
+
+
+def test_barbarian_2014_speed_base_has_no_fast_movement():
+    base = convert(barb(), edition="2024")[0].character.speed
+    assert convert(barb(), edition="2014")[0].character.speed == base - 10

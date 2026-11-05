@@ -33,7 +33,8 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         spell.at_will = at_will(char, spell)
         ki = ki_cast_info(char, spell)
         if ki is not None:
-            spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key}
+            spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,
+                             **({"self_only": True} if ki.self_only else {})}
             if not stats:  # chi lancia solo col ki ha la CD del ki, non quella di un incantatore
                 spell.save_dc, spell.attack_bonus = ki.dc, char.proficiency_bonus + effective_ability_mod(char, "wisdom")
 

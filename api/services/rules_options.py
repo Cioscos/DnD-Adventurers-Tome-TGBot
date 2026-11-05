@@ -135,7 +135,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         dice=spec.extra_dice(ctx, {}) if fixed and spec.extra_dice else None,
         bonus=spec.bonus(ctx, {}) if fixed and spec.bonus else None,
         mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
-        offered_on_damage=spec.offered_on_damage,
+        offered_on_damage=spec.offered_on_damage, ranged_unarmed=True if spec.ranged_unarmed else None,
         needs=None if spec.needs in ctx.confirmed else spec.needs, group=spec.group, dice_cost=spec.dice_cost,
         requires_input=spec.requires_input, input_options=slots, auto_fail=spec.auto_fail,
         after=spec.after, pay_if_success=spec.pay_if_success,
@@ -153,15 +153,8 @@ def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionR
 def reaction_offers(char: Any, lang: str) -> list[RollOptionRead]:
     """Le reazioni d'attacco che il danno appena subito ha aperto e che si possono ancora fare (Ritorsione).
     Chi è incapacitato, sorpreso o a terra non reagisce. Un'opzione che lo dichiara (``offered_on_damage``) si
-    valuta con l'arma che la reazione userebbe: quella principale impugnata, o la prima."""
+    valuta come un colpo senz'armi (il lancio di ritorno non usa l'arma impugnata)."""
     if is_incapacitated(char):
         return []
-    offers = [o for o in list_options(char, "attack", lang, attack_mode="melee", grip="one")
-              if o.offered_on_damage is None and o.slot == "reaction"]
-    weapons = [i for i in char.items or [] if i.item_type == "weapon" and i.is_equipped]
-    weapon = (next((i for i in weapons if getattr(i.equipment_slot, "value", i.equipment_slot) == "main_hand"), None)
-              or (weapons[0] if weapons else None))
-    if weapon is not None:
-        offers += [o for o in list_options(char, "attack", lang, item=weapon, attack_mode="melee", grip="one")
-                   if o.offered_on_damage]
-    return offers
+    return [o for o in list_options(char, "attack", lang, attack_mode="melee", grip="one")
+            if (o.offered_on_damage is None and o.slot == "reaction") or o.offered_on_damage]

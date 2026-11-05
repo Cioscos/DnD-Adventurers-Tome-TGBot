@@ -64,6 +64,7 @@ class RollOptionRead(BaseModel):
     input_options: list[RollOptionSlot] = []
     auto_fail: bool = False
     cost: RollOptionCost | None = None
+    ranged_unarmed: bool | None = absent_when_none()  # l'attacco è un lancio a distanza senz'armi: mai con l'arma impugnata
     offered_on_damage: bool | None = absent_when_none()  # la propone l'app dopo un danno subito; assente: sì se ha lo slot reazione
 
 

@@ -158,6 +158,36 @@ async def test_the_extra_ki_follows_the_cap_of_the_level(client, level, extra):
     assert info["max_extra"] == extra and info["ki_left"] == level
 
 
+# Il manuale ammette i ki in più solo per un incantesimo con «Ai Livelli Superiori»; Volare lo ha, ma Cavalcare il Vento lo
+# lancia su te stesso: nessuna creatura in più da pagare.
+HIGHER_LEVELS = {
+    "sweeping_cinder_strike": True, "fist_of_four_thunders": True, "gong_of_the_summit": True, "clench_of_the_north_wind": True,
+    "flames_of_the_phoenix": True, "river_of_hungry_flame": True, "breath_of_winter": True,
+    "rush_of_the_gale_spirits": False, "ride_the_wind": False, "mist_stance": False, "eternal_mountain_defense": False,
+    "wave_of_rolling_earth": False,
+}
+
+
+def test_only_the_disciplines_with_an_enhanced_effect_accept_extra_ki():
+    from core.rules.catalog import features_for
+    found = {s.option_key: s.ki_spells[0].upcast for s in features_for("2014", "monk") if s.option_group == GROUP and s.ki_spells}
+    assert found == HIGHER_LEVELS and len(found) == len(SPELL_DISCIPLINES)
+
+
+async def test_a_discipline_without_an_enhanced_effect_shows_no_extra_ki(client):
+    cid = await _disciple(client, 17, "eternal_mountain_defense")
+    info = (await _spells(client, cid))["Pelle di pietra"]["ki_cast"]
+    assert info["cost"] == 5 and info["max_extra"] == 0 and info["ki_left"] == 17  # il tetto lascerebbe 1 livello
+
+
+@pytest.mark.parametrize("discipline,spell,flag", [
+    ("ride_the_wind", "Volare", True), ("eternal_mountain_defense", "Pelle di pietra", True), ("mist_stance", "Forma gassosa", True),
+    ("sweeping_cinder_strike", "Mani brucianti", None), ("river_of_hungry_flame", "Muro di fuoco", None)])
+async def test_the_self_only_disciplines_say_so_on_the_cast_sheet(client, discipline, spell, flag):
+    cid = await _disciple(client, 17, discipline)
+    assert (await _spells(client, cid))[spell]["ki_cast"].get("self_only") is flag
+
+
 async def test_a_ki_cast_spends_the_cost_and_the_action_and_no_slot(client):
     cid = await _disciple(client, 5, "sweeping_cinder_strike", wisdom=16)
     spell = (await _spells(client, cid))["Mani brucianti"]
@@ -228,28 +258,55 @@ async def test_shape_the_flowing_river_is_an_action_for_one_ki(client):
     assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used" and await _ki(client, cid) == 2
 
 
-@pytest.mark.parametrize("discipline,ability,dice_sides", [("water_whip", "dexterity", 10), ("fist_of_unbroken_air", "strength", 10)])
-async def test_the_ki_attacks_roll_3d10_plus_1d10_per_extra_ki_and_show_the_ki_dc(client, discipline, ability, dice_sides):
+WHIP = _key("water_whip")
+
+
+@pytest.mark.parametrize("discipline,ability,dice_sides,params", [
+    ("water_whip", "dexterity", 10, {"effect": "prone"}), ("fist_of_unbroken_air", "strength", 10, None)])
+async def test_the_ki_attacks_roll_3d10_plus_1d10_per_extra_ki_and_show_the_ki_dc(client, discipline, ability, dice_sides, params):
     cid = await _disciple(client, 5, discipline, wisdom=16)  # competenza +3, Saggezza +3
     row = await _ability(client, cid, _key(discipline))
     assert row["choose_amount"] is True and row["min_amount"] == 2
-    r = await _use(client, cid, _key(discipline), amount=2)
+    r = await _use(client, cid, _key(discipline), amount=2, params=params)
     assert r.status_code == 200, r.text
     assert len(r.json()["rolls"]) == 3 and all(1 <= v <= dice_sides for v in r.json()["rolls"])
     assert await _ki(client, cid) == 3 and r.json()["targets"] == [_key(discipline)]
     effect = (await client.get(f"/characters/{cid}/target-effects/{_key(discipline)}")).json()["result"]
     assert (effect["condition"], effect["save_ability"], effect["save_dc"]) == ("prone", ability, 14)
     await client.post(f"/characters/{cid}/turn/new")
-    r = await _use(client, cid, _key(discipline), amount=3)
+    r = await _use(client, cid, _key(discipline), amount=3, params=params)
     assert len(r.json()["rolls"]) == 4 and await _ki(client, cid) == 0
+
+
+@pytest.mark.parametrize("discipline,params,note", [
+    ("water_whip", {"effect": "prone"}, "water_whip"), ("fist_of_unbroken_air", None, "fist_of_unbroken_air")])
+async def test_the_ki_attacks_say_their_full_outcome(client, discipline, params, note):
+    """Contundenti, metà danni se supera e spostamento: il testo vive nella nota, tradotta dalla pagina Turno."""
+    cid = await _disciple(client, 5, discipline)
+    r = await _use(client, cid, _key(discipline), amount=2, params=params)
+    assert r.json()["notes"] == [note]
+
+
+async def test_the_water_whip_lets_the_player_choose_prone_or_pulled_before_anything_is_applied(client):
+    cid = await _disciple(client, 5, "water_whip", wisdom=16)
+    for params in (None, {"effect": "fly"}):
+        r = await _use(client, cid, WHIP, amount=2, params=params)
+        assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"
+    assert await _ki(client, cid) == 5 and not (await _turn(client, cid))["action_used"]
+    assert (await _use(client, cid, WHIP, amount=2, params={"effect": "pull"})).status_code == 200
+    effect = (await client.get(f"/characters/{cid}/target-effects/{WHIP}")).json()["result"]
+    assert effect["condition"] is None and (effect["save_ability"], effect["save_dc"]) == ("dexterity", 14)  # tirato: niente prono
+    await client.post(f"/characters/{cid}/turn/new")
+    await _use(client, cid, WHIP, amount=2, params={"effect": "prone"})
+    assert (await client.get(f"/characters/{cid}/target-effects/{WHIP}")).json()["result"]["condition"] == "prone"
 
 
 async def test_the_ki_attacks_need_at_least_two_ki_and_the_action(client):
     cid = await _disciple(client, 5, "water_whip")
-    r = await _use(client, cid, _key("water_whip"), amount=1)
+    r = await _use(client, cid, WHIP, amount=1, params={"effect": "prone"})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "amount_too_low" and await _ki(client, cid) == 5
     await _set_ki(client, cid, 1)
-    r = await _use(client, cid, _key("water_whip"), amount=2)
+    r = await _use(client, cid, WHIP, amount=2, params={"effect": "prone"})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_uses"
     assert not (await _turn(client, cid))["action_used"]
 

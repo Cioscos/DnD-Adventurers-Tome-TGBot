@@ -146,11 +146,13 @@ class KiSpell:
     """Incantesimo che un privilegio fa lanciare spendendo punti di una riserva invece di uno slot (Arti dell'Ombra, discipline
     dei Quattro Elementi). ``spell``: ``srd_index``, anche chiave di ``GRANTED_SPELLS``. ``cost``: punti del lancio base.
     ``upcast``: dal 5° livello di classe i punti in più alzano il livello dell'incantesimo di 1 ciascuno, entro il tetto
-    per livello (``ki_spell_cap``). ``pool``: la riga ``Ability`` da cui si spende."""
+    per livello (``ki_spell_cap``). ``pool``: la riga ``Ability`` da cui si spende. ``self_only``: il lancio vale solo per
+    chi lo fa, senza altre creature (Cavalcare il Vento, Proiezione Astrale)."""
     spell: str
     cost: int
     upcast: bool = False
     pool: str = "monk.ki"
+    self_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -363,6 +365,9 @@ class RollOptionSpec:
     # Dopo un danno subito l'app propone questa reazione d'attacco? ``None``: sì se ha lo slot ``reaction`` (Ritorsione,
     # Replica); ``False`` per le reazioni che nascono da un altro evento (Opportunista).
     offered_on_damage: bool | None = None
+    # L'attacco è un lancio a distanza senz'armi con il profilo dell'artista marziale (Destrezza, dado di Arti Marziali):
+    # il proiettile afferrato con Deviare Proiettili. Sceglierla cambia la modalità del colpo senz'armi.
+    ranged_unarmed: bool = False
     # Con ``damage_in``: chiamata se, applicata l'opzione, il danno scende a 0 (il proiettile deviato si afferra)
     on_zero_damage: "Callable[[Any, RuleContext], None] | None" = None
 

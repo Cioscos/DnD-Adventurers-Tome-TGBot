@@ -189,6 +189,19 @@ describe('HpQuickSheet reactions opened by the damage', () => {
     await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
   })
 
+  it('throws the caught missile unarmed even with a weapon in hand', async () => {
+    attackWeaponSpy.mockClear()
+    attackUnarmedSpy.mockClear()
+    const throwBack = { key: 'monk.deflect_missiles_throw', label: 'Deviare Proiettili: rilancia', phase: 'before', slot: null, ranged_unarmed: true }
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [throwBack], hp_undo_id: 'op1' })
+    renderWithProviders(<HpQuickSheet char={armed} open onClose={() => {}} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    await userEvent.click(await screen.findByText('character.hp.reaction_attack'))
+    expect(attackUnarmedSpy).toHaveBeenCalledWith('normal', ['monk.deflect_missiles_throw'])
+    expect(attackWeaponSpy).not.toHaveBeenCalled()
+  })
+
   it('takes the proposal away when the damage is undone', async () => {
     updateHpSpy.mockResolvedValue({ ...armed, reactions: [retaliation], hp_undo_id: 'op1' })
     undoHpSpy.mockResolvedValue(armed)

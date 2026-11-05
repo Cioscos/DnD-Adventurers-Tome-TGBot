@@ -241,13 +241,24 @@ def roll_options_for(ctx: RuleContext) -> list[RollOption]:
             if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec)]
 
 
-def uses_own_slot(char: Any, keys: list[str]) -> bool:
-    """Una delle opzioni indicate ha uno slot di turno proprio (azione bonus, reazione): un attacco così non pesa sul
-    limite dell'azione Attacco. Il server ricontrolla poi disponibilità e costo di ogni opzione."""
+def _specs_by_key(char: Any) -> dict[str, RollOptionSpec]:
     specs = {s.key: s for s in _CONDITION_OPTIONS}
     for feature, _row in active_features(char):
         specs.update({o.key: o for o in feature.roll_options})
+    return specs
+
+
+def uses_own_slot(char: Any, keys: list[str]) -> bool:
+    """Una delle opzioni indicate ha uno slot di turno proprio (azione bonus, reazione): un attacco così non pesa sul
+    limite dell'azione Attacco. Il server ricontrolla poi disponibilità e costo di ogni opzione."""
+    specs = _specs_by_key(char)
     return any(specs[k].slot or specs[k].outside_action for k in keys if k in specs)
+
+
+def throws_unarmed(char: Any, keys: list[str]) -> bool:
+    """Una delle opzioni indicate è il lancio a distanza senz'armi (``ranged_unarmed``). Il server la ricontrolla poi."""
+    specs = _specs_by_key(char)
+    return any(specs[k].ranged_unarmed for k in keys if k in specs)
 
 
 def _spend_state_token(char: Any, key: str) -> str:

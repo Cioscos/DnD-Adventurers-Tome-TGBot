@@ -44,7 +44,7 @@ const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bon
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
 const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
-const USE_NOTES = ['arcane_charge']
+const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -147,7 +147,7 @@ export default function Turn() {
     onSuccess: (res) => {
       if (res?.targets?.length) setTargetKey(res.targets[0])
       // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
-      if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: res.rolls.join(' + ') })
+      if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: `${res.rolls.join(' + ')} = ${res.rolls.reduce((a, b) => a + b, 0)}` })
       // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
       if (res?.given != null) toast.info(t('character.turn.use_given', { n: res.given }))
       for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
