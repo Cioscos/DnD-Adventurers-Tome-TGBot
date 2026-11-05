@@ -1,4 +1,4 @@
-import type { OptionResult, RollChoice } from '@/api/client'
+import type { OptionResult, RollChoice, RollOption } from '@/api/client'
 
 /** TypeScript types mirroring the FastAPI Pydantic schemas. */
 
@@ -141,6 +141,8 @@ export interface FeatureUseResult {
   healed: number
   state: ActiveState | null
   notes: string[]
+  /** Chiavi con un effetto su altri da applicare (`TargetEffectSheet`), per esempio Presenza Intimidatoria. */
+  targets?: string[]
 }
 
 export interface MapEntry {
@@ -304,6 +306,8 @@ export interface ComputedStats {
   immunities: string[]
   incapacitated: boolean
   surprised?: boolean
+  /** Da sorpreso (2014): i privilegi il cui «Usa» permette di agire, Ira per l'Istinto Ferino. */
+  surprise_exit_features?: string[]
   save_flat: Record<string, number>
   /** Volo pari alla velocità a terra, da un privilegio (Aquila in ira). */
   fly_speed?: number | null
@@ -422,6 +426,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   zero_hp_save?: ZeroHpSaveResult | null
   /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
   hp_undo_id?: string | null
+  /** Solo da PATCH /hp dopo un danno: le reazioni che il danno ha aperto (Ritorsione). */
+  reactions?: RollOption[] | null
   homebrew_notifications?: Array<Record<string, unknown>> | null
   rolls_history?: DiceRollResult[]
   /** Raw dal BE: valore stringa legacy oppure dict {body, created_at, updated_at, tags}. */
@@ -680,6 +686,8 @@ export interface CharacterLiveSnapshot {
   condition_effects?: ConditionEffect[]
   has_pending_save?: boolean
   is_concentrating?: boolean
+  /** Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti. */
+  active_states?: PublicState[]
 }
 
 export type EncounterMode = 'light' | 'full'
@@ -705,6 +713,15 @@ export interface CombatantLive {
   hp_bucket: HpBucket | null
   condition_effects?: ConditionEffect[]
   pending_saves?: PendingSave[]
+  /** PG: stati attivi con effetti su altri (Lupo, Orso, Attacco Irruento), per il GM e il gruppo. */
+  active_states?: PublicState[]
+}
+
+export interface PublicState {
+  key: string
+  name: string
+  rounds_left: number | null
+  others: { key: string; name: string; text: string }[]
 }
 
 export interface GmConditionApply {

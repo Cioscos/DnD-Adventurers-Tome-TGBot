@@ -19,8 +19,9 @@ type UnarmedEffect = 'grapple' | 'shove'
 type AttackState = { result: WeaponAttackResult; source: AttackSource; wasRerolled: boolean }
 
 export interface WeaponAttackFlow {
-  attackWeapon: (itemId: number, mode: RollMode) => void
-  attackUnarmed: (mode: RollMode) => void
+  /** `preset`: opzioni già scelte (reazione in un tocco), senza passare dal prompt. */
+  attackWeapon: (itemId: number, mode: RollMode, preset?: string[]) => void
+  attackUnarmed: (mode: RollMode, preset?: string[]) => void
   /** Colpo senz'armi 2024: afferrare o spingere, senza tiro per colpire. */
   attackUnarmedEffect: (effect: UnarmedEffect) => void
   isWeaponPending: (itemId: number) => boolean
@@ -114,12 +115,15 @@ export function useAttackRoll() {
   return {
     roll: async (
       charId: number, itemId: number | null, mode: RollMode, inspiration: boolean, choice?: WeaponChoice,
+      preset?: string[],
     ): Promise<WeaponAttackResult | null> => {
       const offhand = choice?.attack_mode === 'offhand'
-      const confirm = offhand ? {} : await limitConfirmation(charId)
+      // Prima le opzioni: una con uno slot proprio (Frenesia, Ritorsione) non pesa sul limite dell'azione Attacco.
+      const { query: optionsQuery } = flow(charId, itemId, choice)
+      const { own_slot, ...before } = await askRollOptions(charId, optionsQuery, 'before', preset ? { preset } : undefined)
+      const confirm = offhand || own_slot ? {} : await limitConfirmation(charId)
       if (!confirm) return null
-      const { query, post, secondStep } = flow(charId, itemId, choice, confirm)
-      const before = await askRollOptions(charId, query)
+      const { post, secondStep } = flow(charId, itemId, choice, confirm)
       const dice = await rollD20(mode)
       let first: WeaponAttackResult
       try {
@@ -165,9 +169,9 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
 
   const weaponAttack = useMutation({
     // La scelta usata per il rilancio è quella del tiro: l'altra mano si spegne dopo il primo.
-    onMutate: ({ itemId }: { itemId: number; mode: RollMode }) => ({ choice: choiceOf(choices, itemId) }),
-    mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      attack.roll(charId, itemId, mode, inspiration, choiceOf(choices, itemId)),
+    onMutate: ({ itemId }: { itemId: number; mode: RollMode; preset?: string[] }) => ({ choice: choiceOf(choices, itemId) }),
+    mutationFn: ({ itemId, mode, preset }: { itemId: number; mode: RollMode; preset?: string[] }) =>
+      attack.roll(charId, itemId, mode, inspiration, choiceOf(choices, itemId), preset),
     onSuccess: (result, { itemId }, context) => {
       if (result) {
         setAttackState({
@@ -181,7 +185,8 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   })
 
   const unarmedAttack = useMutation({
-    mutationFn: (mode: RollMode) => attack.roll(charId, null, mode, inspiration),
+    mutationFn: ({ mode, preset }: { mode: RollMode; preset?: string[] }) =>
+      attack.roll(charId, null, mode, inspiration, undefined, preset),
     onSuccess: (result) => {
       if (result) setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -232,8 +237,8 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   )
 
   return {
-    attackWeapon: (itemId, mode) => weaponAttack.mutate({ itemId, mode }),
-    attackUnarmed: (mode) => unarmedAttack.mutate(mode),
+    attackWeapon: (itemId, mode, preset) => weaponAttack.mutate({ itemId, mode, preset }),
+    attackUnarmed: (mode, preset) => unarmedAttack.mutate({ mode, preset }),
     attackUnarmedEffect: (effect) => unarmedEffect.mutate(effect),
     isWeaponPending: (itemId) => weaponAttack.isPending && weaponAttack.variables?.itemId === itemId,
     isUnarmedPending: unarmedAttack.isPending,

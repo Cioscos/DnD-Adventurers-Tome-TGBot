@@ -123,7 +123,7 @@ export type RollOption = {
 }
 
 export type RollOptionsQuery = {
-  roll: 'attack' | 'spell_damage' | 'weapon_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
+  roll: 'attack' | 'spell_damage' | 'weapon_damage' | 'skill' | 'ability' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
   item_id?: number
   attack_mode?: string
   grip?: string
@@ -148,6 +148,8 @@ export type RollChoice = {
   /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato, ritira con l'ispirazione o usa un'opzione. */
   outcome?: 'miss' | 'reroll' | 'after_roll'
   after_option?: RollOption
+  /** Solo lato client (mai inviato): una delle opzioni scelte ha uno slot di turno proprio (Frenesia, Ritorsione). */
+  own_slot?: boolean
 }
 
 export type TargetEffect = {
@@ -158,11 +160,15 @@ export type TargetEffect = {
   ends_at: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number } | null
   on_failure_only: boolean
   damage_dice: string | null
+  /** Se il bersaglio porta già la condizione da te, la durata si rinnova senza un nuovo TS. */
+  extends?: boolean
+  /** Chi supera il TS non è più bersaglio di questo effetto fino al tuo prossimo riposo lungo. */
+  immune_on_success?: boolean
 }
 
 export type TargetEffectPreview = {
   result: TargetEffect
-  combatants: { id: number; name: string; kind: 'pc' | 'monster' }[]
+  combatants: { id: number; name: string; kind: 'pc' | 'monster'; immune?: boolean }[]
 }
 
 export type TargetEffectResult = {
@@ -678,6 +684,20 @@ export const api = {
       withInspiration: boolean = false,
     ) =>
       request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
+        method: 'POST',
+        body:
+          die != null || withInspiration
+            ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
+            : undefined,
+      }),
+    /** Prova di caratteristica pura (senza abilità), con i modi e le opzioni al tiro di `rollSkill`. */
+    rollAbilityCheck: (
+      id: number,
+      ability: string,
+      die?: D20Roll,
+      withInspiration: boolean = false,
+    ) =>
+      request<RollResult>(`/characters/${id}/ability_checks/${encodeURIComponent(ability)}/roll`, {
         method: 'POST',
         body:
           die != null || withInspiration

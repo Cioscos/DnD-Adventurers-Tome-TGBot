@@ -39,6 +39,20 @@ describe('TargetEffectSheet', () => {
     await waitFor(() => expect(success).toHaveBeenCalled())
   })
 
+  it('disables a combatant that already passed the effect and explains the extension and the immunity', async () => {
+    preview.mockResolvedValue({
+      result: { ...topple, extends: true, immune_on_success: true },
+      combatants: [{ id: 5, name: 'Goblin 1', kind: 'monster', immune: true }, { id: 6, name: 'Goblin 2', kind: 'monster', immune: false }],
+    })
+    renderWithProviders(<RollNotes charId={3} optionResult={opts} />)
+    await userEvent.click(screen.getByText('character.target_effect.open'))
+    expect(await screen.findByText('character.target_effect.extends_note')).toBeInTheDocument()
+    expect(screen.getByText('character.target_effect.immune_note')).toBeInTheDocument()
+    expect(screen.getByText('Goblin 1').closest('button')).toBeDisabled()
+    expect(screen.getByText('character.target_effect.immune')).toBeInTheDocument()
+    expect(screen.getByText('Goblin 2').closest('button')).toBeEnabled()
+  })
+
   it('only shows the outcome without an encounter', async () => {
     preview.mockResolvedValue({ result: topple, combatants: [] })
     renderWithProviders(<RollNotes charId={3} optionResult={opts} />)

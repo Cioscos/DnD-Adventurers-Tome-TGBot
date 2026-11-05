@@ -7,6 +7,7 @@ import {
 } from 'react-icons/gi'
 import ConditionBadge from '@/components/ui/ConditionBadge'
 import Pressable from '@/components/ui/Pressable'
+import PublicStates from '@/components/session/PublicStates'
 import { formatCondition } from '@/lib/conditions'
 import type {
   CharacterLiveSnapshot,
@@ -208,6 +209,8 @@ export default function CombatantRow({
               ))}
             </div>
           )}
+
+          {isPc && <PublicStates states={c.active_states?.length ? c.active_states : snapshot?.active_states} />}
 
           {monsterSaves.map((ps) => (
             <div

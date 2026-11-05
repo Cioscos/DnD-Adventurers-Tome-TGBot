@@ -255,6 +255,40 @@ describe('useAttackRoll', () => {
       expect(attack).toHaveBeenCalledWith(1, 3, false, undefined, { ...CHOICE, confirm_extra_attack: true })
     })
 
+    it('an option with its own slot (Frenzy, Retaliation) is not an attack of the Attack action: no limit question', async () => {
+      const frenzy = { ...sneak, key: 'barbarian.frenzy_attack', phase: 'before', label: 'Frenesia', slot: 'bonus', once_per_turn: false } as RollOption
+      rollOptions.mockResolvedValue([frenzy])
+      const done = start()
+      await userEvent.click(await screen.findByRole('switch', { name: 'Frenesia' }))
+      await userEvent.click(screen.getByText('character.roll_options.roll'))
+      await done
+      expect(screen.queryByText('character.attack.limit_confirm')).toBeNull()
+      expect(attack.mock.calls[0][3]).toMatchObject({ options: ['barbarian.frenzy_attack'] })
+      expect(attack.mock.calls[0][3]).not.toHaveProperty('confirm_extra_attack')
+      expect(attack.mock.calls[0][4]).not.toHaveProperty('confirm_extra_attack')
+    })
+
+    it('still asks when the options chosen have no slot of their own', async () => {
+      const plain = { ...sneak, key: 'plain', phase: 'before', label: 'Semplice', slot: null, once_per_turn: false } as RollOption
+      rollOptions.mockResolvedValue([plain])
+      const done = start()
+      await userEvent.click(await screen.findByRole('switch', { name: 'Semplice' }))
+      await userEvent.click(screen.getByText('character.roll_options.roll'))
+      await userEvent.click(await screen.findByText('character.attack.limit_cancel'))
+      await expect(done).resolves.toBeNull()
+    })
+
+    it('a preset option (one-tap reaction) skips the prompt and the limit question', async () => {
+      const retaliation = { ...sneak, key: 'barbarian.retaliation', phase: 'before', label: 'Ritorsione', slot: 'reaction', once_per_turn: false } as RollOption
+      rollOptions.mockResolvedValue([retaliation])
+      renderWithProviders(<RollOptionsHost />)
+      const { result } = renderHook(() => useAttackRoll())
+      await result.current.roll(1, 3, 'normal', false, CHOICE, ['barbarian.retaliation'])
+      expect(screen.queryByRole('switch')).toBeNull()
+      expect(screen.queryByText('character.attack.limit_confirm')).toBeNull()
+      expect(attack.mock.calls[0][3]).toMatchObject({ options: ['barbarian.retaliation'] })
+    })
+
     it('cancelling does not attack', async () => {
       const done = start()
       await userEvent.click(await screen.findByText('character.attack.limit_cancel'))

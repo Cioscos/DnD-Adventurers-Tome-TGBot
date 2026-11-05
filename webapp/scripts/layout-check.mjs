@@ -2,6 +2,8 @@
 //   npm run check:layout                      → tutte le route del personaggio 4
 //   npm run check:layout -- /char/4/currency  → solo le route indicate
 // Env: CHAR (id personaggio, default 4), BASE (default http://localhost:5173), SHOTS=dir per gli screenshot.
+//      SETUP=file.mjs: modulo con `export default async (route, page, width)` che porta la pagina in uno stato (foglio aperto,
+//      esito di un tiro...) prima del controllo. La route può portare una query (`/char/4/hp?stato=x`): il router la ignora.
 //
 // Segnala ciò che i test jsdom non vedono (nessun layout) e che è sfuggito sul telefono:
 //  - SFORA: un elemento esce dal box del genitore (es. "Converti" oltre il bordo a 360px);
@@ -10,6 +12,8 @@
 //  - COPERTO: a fine pagina un comando resta sotto il FAB dei dadi e non si può toccare.
 // Gira a 360 e 412px (i telefoni Android più comuni) e in tema scuro (quello di Telegram).
 import { chromium } from 'playwright'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const CHAR = process.env.CHAR ?? '4'
 const BASE = process.env.BASE ?? 'http://localhost:5173'
@@ -19,6 +23,7 @@ const ALL = ['/', C, ...['hp', 'ac', 'turn', 'extras', 'stats', 'skills', 'saves
   'dice/stats', 'identity', 'settings', 'homebrew', 'homebrew/new'].map((p) => `${C}/${p}`), '/session', '/session/join']
 const routes = process.argv.slice(2).length ? process.argv.slice(2) : ALL
 const WIDTHS = [360, 412]
+const setup = process.env.SETUP ? (await import(pathToFileURL(resolve(process.env.SETUP)).href)).default : null
 
 function audit() {
   const INTERACTIVE = 'button, a[href], [role=button], [role=tab], [role=switch], input:not([type=hidden]), select, textarea'
@@ -124,8 +129,9 @@ for (const width of WIDTHS) {
     await page.goto(`${BASE}/#${r}`)
     await page.evaluate(() => document.documentElement.classList.remove('light'))
     await page.waitForTimeout(1500)
+    if (setup) await setup(r, page, width)
     const found = await page.evaluate(audit)
-    if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${width}${r.replace(/\//g, '_')}.png`, fullPage: true })
+    if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${width}${r.replace(/[\/?=&]/g, '_')}.png`, fullPage: true })
     found.push(...await coveredAtEnd(page))
     if (r === C) {
       for (const screen of ['equipaggiamento', 'menu']) {

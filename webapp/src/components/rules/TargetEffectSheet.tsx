@@ -43,6 +43,8 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
               <li className="text-dnd-text-muted">{t(`character.target_effect.custom_note.${fx.condition.slice(7)}`, { defaultValue: '' })}</li>
             )}
             {fx.damage_dice && <li className="tabular-nums">{fx.damage_dice}</li>}
+            {fx.extends && <li className="text-xs text-dnd-text-muted">{t('character.target_effect.extends_note')}</li>}
+            {fx.immune_on_success && <li className="text-xs text-dnd-text-muted">{t('character.target_effect.immune_note')}</li>}
           </ul>
           {data.combatants.length === 0 ? (
             <p className="text-sm font-body text-dnd-text-muted">{t('character.target_effect.no_encounter')}</p>
@@ -53,10 +55,11 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
                 {data.combatants.map((c) => (
                   <Button
                     key={c.id} variant="secondary" className="justify-start break-words text-left"
-                    loading={apply.isPending && apply.variables === c.id} disabled={apply.isPending}
+                    loading={apply.isPending && apply.variables === c.id} disabled={apply.isPending || !!c.immune}
                     onClick={() => apply.mutate(c.id)}
                   >
                     {c.name}
+                    {c.immune && <span className="ml-2 text-xs font-normal text-dnd-text-muted">{t('character.target_effect.immune')}</span>}
                   </Button>
                 ))}
               </div>

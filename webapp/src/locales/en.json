@@ -285,6 +285,8 @@
     },
     "hp": {
       "title": "Hit Points",
+      "reaction_title": "You can react",
+      "reaction_attack": "Attack",
       "current": "Current",
       "max": "Maximum",
       "temp": "Temporary",
@@ -375,6 +377,7 @@
     },
     "stats": {
       "title": "Ability Scores",
+      "check_title": "Ability check",
       "strength": "Strength",
       "dexterity": "Dexterity",
       "constitution": "Constitution",
@@ -766,6 +769,9 @@
     },
     "target_effect": {
       "open": "Apply to a combatant",
+      "immune": "Immune: it passed this effect",
+      "immune_note": "A creature that passes the save is immune to this effect until your next long rest.",
+      "extends_note": "If the creature is already under this effect from you, its duration extends with no new save.",
       "title": "Effect on the target",
       "save": "{{ability}} save DC {{dc}}",
       "no_save": "No saving throw: applies right away",
@@ -1103,6 +1109,7 @@
       "standard_actions": "Standard actions ({{n}})",
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
       "surprised": "You are surprised: this turn you can't act, move or react.",
+      "surprised_exit": "To act you must first do this:",
       "new_turn": "New turn",
       "other_turn": "Someone else's turn",
       "end_round": "End of round (−1)",

@@ -13,6 +13,7 @@ import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
+import TargetEffectSheet from '@/components/rules/TargetEffectSheet'
 import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
@@ -56,6 +57,8 @@ export default function Turn() {
   const [amounts, setAmounts] = useState<Record<number, number>>({})
   // Scelte sì/no all'uso di un privilegio (Frenesia), per riga di privilegio.
   const [toggles, setToggles] = useState<Record<number, Record<string, boolean>>>({})
+  // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
+  const [targetKey, setTargetKey] = useState<string | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -113,11 +116,14 @@ export default function Turn() {
       if (ability.has_on_use && ability.feature_key) {
         const chosen = toggles[ability.id]
         const params = ability.use_toggles?.length ? Object.fromEntries(ability.use_toggles.map((x) => [x.key, !!chosen?.[x.key]])) : undefined
-        if (params) await api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
-        else if (amount) await api.characters.featureUse(charId, ability.feature_key, amount)
-        else await api.characters.featureUse(charId, ability.feature_key)
-      } else await api.abilities.update(charId, ability.id, { uses })
+        if (params) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
+        if (amount) return api.characters.featureUse(charId, ability.feature_key, amount)
+        return api.characters.featureUse(charId, ability.feature_key)
+      }
+      await api.abilities.update(charId, ability.id, { uses })
+      return null
     },
+    onSuccess: (res) => { if (res?.targets?.length) setTargetKey(res.targets[0]) },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
     onError: (err) => {
       const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
@@ -138,6 +144,11 @@ export default function Turn() {
   }
 
   const groups = groupForTurn(char)
+  // Da sorpreso (2014) tutto è spento tranne ciò che permette di agire (Ira per l'Istinto Ferino): sta fuori dal `fieldset`.
+  const exitKeys = char.computed?.incapacitated ? char.computed.surprise_exit_features ?? [] : []
+  const exitIds = new Set((char.abilities ?? []).filter((a) => a.feature_key && exitKeys.includes(a.feature_key)).map((a) => String(a.id)))
+  const exitEntries: TurnEntry[] = Object.values(groups).flat().filter((e) => e.kind === 'ability' && exitIds.has(e.id))
+  const withoutExit = (entries: TurnEntry[]) => entries.filter((e) => !(e.kind === 'ability' && exitIds.has(e.id)))
   // Ultima prova di Furtività, salvata dal server (anche dopo un ritiro o un dado in più).
   const lastRoll = block?.last_roll
   const hideTotal = lastRoll?.roll === 'skill' && lastRoll.skill === 'stealth' ? lastRoll.total : null
@@ -398,6 +409,15 @@ export default function Turn() {
         </p>
       )}
 
+      {exitEntries.length > 0 && (
+        <section data-testid="turn-surprise-exit">
+          <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.turn.surprised_exit')}</h2>
+          <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
+            {exitEntries.map((e) => renderEntry(e, char))}
+          </ul>
+        </section>
+      )}
+
       {/* `fieldset disabled` spegne ogni pulsante delle azioni. */}
       <fieldset disabled={!!char.computed?.incapacitated}
         className={`min-w-0 space-y-3 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
@@ -405,12 +425,12 @@ export default function Turn() {
       <section>
         <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.turn.section_attacks')}</h2>
         <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
-          {groups.attacks.map((e) => renderEntry(e, char))}
+          {withoutExit(groups.attacks).map((e) => renderEntry(e, char))}
         </ul>
       </section>
 
       {BUCKETS.map((b) => (
-        <div key={b}>{section(t(`character.turn.section_${b}`), groups[b], b)}</div>
+        <div key={b}>{section(t(`character.turn.section_${b}`), withoutExit(groups[b]), b)}</div>
       ))}
       </fieldset>
 
@@ -426,7 +446,7 @@ export default function Turn() {
         {otherOpen && (
           <fieldset data-testid="turn-other" disabled={!!char.computed?.incapacitated}
             className={`min-w-0 pt-2 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
-            {sectionBody(t('character.turn.section_other'), groups.other)}
+            {sectionBody(t('character.turn.section_other'), withoutExit(groups.other))}
           </fieldset>
         )}
       </section>
@@ -440,6 +460,7 @@ export default function Turn() {
       )}
       {weaponFlow.elements}
       {castFlow.elements}
+      {targetKey && <TargetEffectSheet charId={charId} effectKey={targetKey} onClose={() => setTargetKey(null)} />}
     </Layout>
   )
 }

@@ -21,6 +21,8 @@ export type PromptContext = {
   keepOpen?: boolean
   /** Opzioni del lancio, non di un tiro: cambiano titolo e pulsante. */
   cast?: boolean
+  /** Opzioni già scelte (reazione in un tocco): nessun prompt, il server le ricontrolla comunque. */
+  preset?: string[]
 }
 
 export type PromptRequest = {
@@ -150,6 +152,12 @@ export async function askRollOptions(
     ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !context?.used?.includes(o.key)
         && !(context?.fumble && o.after === 'add'))
     : []
+  // Una scelta con uno slot di turno proprio (azione bonus, reazione) non è un attacco dell'azione Attacco.
+  const withSlot = (chosen: string[]): { own_slot?: true } => (listed.some((o) => chosen.includes(o.key) && o.slot) ? { own_slot: true } : {})
+  if (context?.preset) {
+    const chosen = context.preset.filter((k) => options.some((o) => o.key === k))
+    return { ...base, options: chosen, ...withSlot(chosen) }
+  }
   if (options.length === 0 && afterRoll.length === 0 && !context?.keepOpen) return base
   return new Promise((resolve) => {
     usePromptStore.setState({
@@ -157,7 +165,7 @@ export async function askRollOptions(
         options, afterRoll, phase, context,
         answer: (answer) => {
           usePromptStore.setState({ request: null })
-          resolve({ ...answer, ...(defer ? { defer_damage: true } : {}) })
+          resolve({ ...answer, ...(defer ? { defer_damage: true } : {}), ...withSlot(answer.options) })
         },
       },
     })

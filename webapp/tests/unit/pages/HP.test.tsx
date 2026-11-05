@@ -78,6 +78,13 @@ vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCo
 vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }) }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
 vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: showUndoToastSpy }))
+const { attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({ attackWeaponSpy: vi.fn(), attackUnarmedSpy: vi.fn() }))
+vi.mock('@/hooks/useWeaponAttackFlow', () => ({
+  useWeaponAttackFlow: () => ({
+    attackWeapon: attackWeaponSpy, attackUnarmed: attackUnarmedSpy, attackUnarmedEffect: vi.fn(),
+    isWeaponPending: () => false, isUnarmedPending: false, elements: null,
+  }),
+}))
 
 // Hoisted so the (also hoisted) vi.mock factories below can use it.
 const makePassthrough = vi.hoisted(() => (testid?: string) => async () => {
@@ -475,5 +482,44 @@ describe('HP page', () => {
       await userEvent.click(screen.getByTestId('hp-tab-heal'))
       expect(screen.getByTestId('hp-mod-state')).toHaveTextContent('null')
     })
+  })
+})
+
+describe('HP page — reactions opened by the damage', () => {
+  const retaliation = { key: 'barbarian.retaliation', label: 'Ritorsione: ti ha colpito?', phase: 'before', slot: 'reaction' }
+  const sword = { id: 31, name: 'Ascia', item_type: 'weapon', is_equipped: true, equipment_slot: 'main_hand' }
+  const withReaction = (over: Record<string, unknown> = {}) => ({ ...aliveChar, items: [sword], ...over })
+
+  it('proposes the reaction after a hit and attacks with the main-hand weapon in one tap', async () => {
+    getChar.mockResolvedValue(withReaction())
+    updateHpSpy.mockResolvedValue(withReaction({ reactions: [retaliation], hp_undo_id: 'op1' }))
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    expect(screen.getByText('character.hp.reaction_title')).toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.hp.reaction_attack'))
+    expect(attackWeaponSpy).toHaveBeenCalledWith(31, 'normal', ['barbarian.retaliation'])
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('without a weapon in hand the reaction is an unarmed strike', async () => {
+    getChar.mockResolvedValue(withReaction({ items: [] }))
+    updateHpSpy.mockResolvedValue(withReaction({ items: [], reactions: [retaliation], hp_undo_id: 'op1' }))
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await userEvent.click(await screen.findByText('character.hp.reaction_attack'))
+    expect(attackUnarmedSpy).toHaveBeenCalledWith('normal', ['barbarian.retaliation'])
+  })
+
+  it('offers nothing when the damage opens no reaction', async () => {
+    getChar.mockResolvedValue(withReaction())
+    updateHpSpy.mockResolvedValue(withReaction({ reactions: [], hp_undo_id: 'op1' }))
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalled())
+    expect(screen.queryByText('character.hp.reaction_title')).toBeNull()
   })
 })

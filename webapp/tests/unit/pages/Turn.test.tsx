@@ -86,6 +86,10 @@ vi.mock('@/components/ui/RollButton', async () => {
 })
 vi.mock('@/components/RollResultModal', () => ({ default: () => null }))
 vi.mock('@/components/WeaponChoiceRow', () => ({ default: () => null }))
+vi.mock('@/components/rules/TargetEffectSheet', async () => {
+  const React = await import('react')
+  return { default: (p: { effectKey: string }) => React.createElement('div', { 'data-testid': 'target-sheet' }, p.effectKey) }
+})
 vi.mock('@/components/skeletons/ActionsSkeleton', () => ({ default: () => null }))
 vi.mock('@/components/ui/Pressable', async () => {
   const React = await import('react')
@@ -304,6 +308,56 @@ describe('Turn page', () => {
     await userEvent.click(screen.getByRole('switch'))  // spenta di nuovo
     await userEvent.click(screen.getByText('character.turn.use'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage', 1, { frenzy: false }))
+  })
+
+  it('opens the target sheet for a feature whose use leaves an effect on others (Intimidating Presence)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 6, name: 'Presenza Intimidatoria', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'barbarian.intimidating_presence', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+    }] })
+    featureUse.mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: [], targets: ['barbarian.intimidating_presence'] })
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    expect(await screen.findByTestId('target-sheet')).toHaveTextContent('barbarian.intimidating_presence')
+  })
+
+  it('does not open the target sheet when the use leaves no effect on others', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'barbarian.rage', max_uses: 3, uses: 3, action_type: 'bonus_action', restoration_type: 'long_rest',
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalled())
+    expect(screen.queryByTestId('target-sheet')).toBeNull()
+  })
+
+  it('a surprised barbarian can still press the rage button, everything else stays off (Feral Instinct)', async () => {
+    getChar.mockResolvedValue({ ...char, computed: { incapacitated: true, surprised: true, surprise_exit_features: ['barbarian.rage'] },
+      abilities: [
+        { id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+          feature_key: 'barbarian.rage', max_uses: 3, uses: 3, action_type: 'bonus_action', restoration_type: 'long_rest' },
+        { id: 6, name: 'Tocco', action_type: 'bonus_action', uses: 1, max_uses: 1, feature_key: 'x.touch', has_on_use: true },
+      ] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const exit = await screen.findByTestId('turn-surprise-exit')
+    const use = within(exit).getByText('character.turn.use').closest('button') as HTMLButtonElement
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage'))
+    expect(screen.getByLabelText('character.turn.mark_used: character.turn.section_action')).toBeDisabled()
+    expect(screen.getAllByText(/^Ira/)).toHaveLength(1)  // non compare due volte
+    const other = screen.getByText('Tocco (1/1)').closest('li') as HTMLElement
+    expect(within(other).getByText('character.turn.use').closest('button')).toBeDisabled()
+  })
+
+  it('shows no surprise block when the character is not incapacitated', async () => {
+    getChar.mockResolvedValue({ ...char, computed: { incapacitated: false, surprise_exit_features: ['barbarian.rage'] }, abilities: [] })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.section_action')
+    expect(screen.queryByTestId('turn-surprise-exit')).toBeNull()
   })
 
   it('does not call unlimited an active feature that simply has no counter', async () => {

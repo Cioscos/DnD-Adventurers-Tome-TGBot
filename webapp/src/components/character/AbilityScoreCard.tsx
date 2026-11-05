@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { Pencil } from 'lucide-react'
 import { haptic } from '@/auth/telegram'
 import ExpandChevron from '@/components/ui/ExpandChevron'
+import DiceIcon from '@/components/ui/DiceIcon'
 import Pressable from '@/components/ui/Pressable'
+import RollButton from '@/components/ui/RollButton'
+import type { RollMode } from '@/hooks/useD20Roll'
 import { LEDGER_LABEL } from '@/styles/ledger'
 import type { AbilityScore } from '@/types'
 
@@ -11,9 +14,12 @@ interface Props {
   expanded: boolean
   onToggle: () => void
   onEdit: () => void
+  /** Prova di caratteristica pura (senza abilità): spingere, sollevare, spezzare. */
+  onRoll: (mode: RollMode) => void
+  rolling?: boolean
 }
 
-export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: Props) {
+export default function AbilityScoreCard({ score, expanded, onToggle, onEdit, onRoll, rolling = false }: Props) {
   const { t } = useTranslation()
   const hasBonus = (score.modifiers_applied?.length ?? 0) > 0
   const fullName = t(`character.stats.${score.name}`, { defaultValue: score.name })
@@ -44,6 +50,10 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
       >
         <Pencil size={15} />
       </Pressable>
+      <RollButton onRoll={onRoll} pending={rolling} ariaLabel={`${t('character.skills.roll')}: ${fullName}`}
+        className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center">
+        <DiceIcon sides={20} size={26} className="text-dnd-gold" />
+      </RollButton>
     </div>
   )
 }
