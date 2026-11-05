@@ -377,6 +377,24 @@ describe('Turn page', () => {
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage', 1, { frenzy: false }))
   })
 
+  it('asks for the skill before using Knowledge of the Ages and sends it in the params', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 8, name: 'Conoscenze Secolari', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'cleric.knowledge_of_the_ages', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+      use_choices: [{ key: 'skill', label: { it: 'Abilità', en: 'Skill' }, options: [
+        { key: 'arcana', label: { it: 'Arcana', en: 'Arcana' } }, { key: 'stealth', label: { it: 'Furtività', en: 'Stealth' } }] }],
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeDisabled()  // senza scelta non si usa
+    await userEvent.click(screen.getByText('character.turn.choose'))
+    await userEvent.click(await screen.findByText('Furtività'))
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'cleric.knowledge_of_the_ages', 1, { skill: 'stealth' }))
+  })
+
   it('opens the target sheet for a feature whose use leaves an effect on others (Intimidating Presence)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 6, name: 'Presenza Intimidatoria', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

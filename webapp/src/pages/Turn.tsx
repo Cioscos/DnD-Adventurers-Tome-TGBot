@@ -17,6 +17,7 @@ import TargetEffectSheet from '@/components/rules/TargetEffectSheet'
 import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
 import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
+import SelectSheet from '@/components/ui/SelectSheet'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
@@ -58,6 +59,7 @@ export default function Turn() {
   const [amounts, setAmounts] = useState<Record<number, number>>({})
   // Scelte sì/no all'uso di un privilegio (Frenesia), per riga di privilegio.
   const [toggles, setToggles] = useState<Record<number, Record<string, boolean>>>({})
+  const [useChoices, setUseChoices] = useState<Record<number, Record<string, string>>>({})
   // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
   const [targetKey, setTargetKey] = useState<string | null>(null)
   // Privilegio che dà lo stato a un alleato della serata (Ispirazione Bardica): prima si sceglie a chi (R38).
@@ -119,7 +121,11 @@ export default function Turn() {
       if (ability.has_on_use && ability.feature_key) {
         if (allyId !== undefined) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, { target_character_id: allyId })
         const chosen = toggles[ability.id]
-        const params = ability.use_toggles?.length ? Object.fromEntries(ability.use_toggles.map((x) => [x.key, !!chosen?.[x.key]])) : undefined
+        const picked = useChoices[ability.id]
+        const params = ability.use_toggles?.length || ability.use_choices?.length ? {
+          ...Object.fromEntries((ability.use_toggles ?? []).map((x) => [x.key, !!chosen?.[x.key]])),
+          ...Object.fromEntries((ability.use_choices ?? []).map((x) => [x.key, picked?.[x.key]])),
+        } : undefined
         if (params) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
         if (amount) return api.characters.featureUse(charId, ability.feature_key, amount)
         return api.characters.featureUse(charId, ability.feature_key)
@@ -181,15 +187,22 @@ export default function Turn() {
   // Richieste in serie dallo stesso dispositivo: il server fa read-modify-write sul JSON.
   const busy = useSlot.isPending || newTurn.isPending
 
-  /** Interruttori scelti all'uso (Frenesia): il server li legge in `params`. */
-  const renderToggles = (ab: Ability) => (ab.use_toggles?.length ? (
+  /** Interruttori e scelte fatti all'uso (Frenesia, abilità di Conoscenze Secolari): il server li legge in `params`. */
+  const renderToggles = (ab: Ability) => (ab.use_toggles?.length || ab.use_choices?.length ? (
     <div className="pt-1 text-sm">
-      {ab.use_toggles.map((x) => (
+      {ab.use_toggles?.map((x) => (
         <SwitchToggle key={x.key} label={x.label[lang]} checked={!!toggles[ab.id]?.[x.key]}
           onChange={(on) => setToggles((s) => ({ ...s, [ab.id]: { ...s[ab.id], [x.key]: on } }))} />
       ))}
+      {ab.use_choices?.map((x) => (
+        <SelectSheet key={x.key} label={x.label[lang]} placeholder={t('character.turn.choose')} value={useChoices[ab.id]?.[x.key] ?? ''}
+          options={x.options.map((o) => ({ value: o.key, label: o.label[lang] }))}
+          onChange={(v) => setUseChoices((s) => ({ ...s, [ab.id]: { ...s[ab.id], [x.key]: v } }))} />
+      ))}
     </div>
   ) : null)
+  /** Il «Usa» resta spento finché non è fatta ogni scelta obbligatoria. */
+  const missingChoice = (ab: Ability) => (ab.use_choices ?? []).some((x) => !useChoices[ab.id]?.[x.key])
 
   const renderEntry = (e: TurnEntry, c: CharacterFull) => {
     const key = `${e.kind}:${e.id}`
@@ -311,7 +324,7 @@ export default function Turn() {
         if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
         else if (left > 0) extra = renderToggles(ab)
         control = (
-          <Button size="sm" variant="secondary" disabled={left <= 0}
+          <Button size="sm" variant="secondary" disabled={left <= 0 || missingChoice(ab)}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
             {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
@@ -323,7 +336,8 @@ export default function Turn() {
         if (ab.has_on_use) {
           extra = renderToggles(ab)
           control = (
-            <Button size="sm" variant="secondary" loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
+            <Button size="sm" variant="secondary" disabled={missingChoice(ab)}
+              loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
               onClick={() => triggerAbility({ ability: ab, uses: 0 })}>
               {t('character.turn.use')}
             </Button>

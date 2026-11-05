@@ -125,6 +125,8 @@ export interface Ability {
   max_amount?: number | null
   /** Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira), già filtrate per questo personaggio. */
   use_toggles?: { key: string; label: { it: string; en: string } }[]
+  /** Scelte fra più valori da fare all'uso (l'abilità di Conoscenze Secolari). */
+  use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[] }[]
 }
 
 /** Stato avviato da un privilegio (Ira...): finisce per round, riposo, svenimento o a mano. */

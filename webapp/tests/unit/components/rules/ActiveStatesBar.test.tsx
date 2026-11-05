@@ -76,4 +76,24 @@ describe('ActiveStatesBar', () => {
     expect(screen.getByText('Ira')).toBeInTheDocument()
     expect(screen.queryByText(/:/)).not.toBeInTheDocument()
   })
+
+  it('shows the DC, the challenge rating and the fixed bonus a state carries (Turn Undead, Radiance of the Dawn)', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'turn_undead', feature_key: 'cleric.turn_undead', rounds_left: 10, ends_on: ['manual'], name: 'Scacciare Non Morti',
+         data: { dc: 14, save: 'wisdom', cr: '1', bonus: 6 } }],
+      [],
+    )} />)
+    expect(screen.getByText(/character\.turn\.state_dc/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_cr/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_bonus/)).toBeInTheDocument()
+  })
+
+  it('tells the outcome of a Divine Intervention', () => {
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'divine_intervention', feature_key: 'cleric.divine_intervention', rounds_left: null, ends_on: ['rest_long', 'manual'],
+         name: 'Intervento Divino', data: { roll: 40, level: 12, success: false } }],
+      [],
+    )} />)
+    expect(screen.getByText(/character\.turn\.divine_failure/)).toBeInTheDocument()
+  })
 })
