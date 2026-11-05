@@ -268,7 +268,8 @@ async def test_song_of_rest_die_follows_the_level(client, level, die):
     r = await _use(client, cid, SONG)
     assert r.status_code == 200, r.text
     assert r.json()["state"]["data"]["die"] == die
-    assert set((await _states(client, cid))[0]["ends_on"]) >= {"rest_short", "rest_long"}
+    ends = set((await _states(client, cid))[0]["ends_on"])
+    assert ends == {"rest_long", "new_turn", "manual"}  # il riposo breve del bardo non lo chiude (I6)
 
 
 async def _hurt(test_session_factory, cid, hp=5, maximum=40):
@@ -339,7 +340,8 @@ async def test_countercharm_is_an_action_that_lasts_until_the_end_of_the_next_tu
     assert r.status_code == 200, r.text
     state = r.json()["state"]
     assert (state["key"], state["rounds_left"]) == ("countercharm", 2)
-    assert set(state["ends_on"]) == {"incapacitated", "manual"} and state["data"]["others"] == ["bard.countercharm"]
+    assert set(state["ends_on"]) == {"incapacitated", "rest_short", "rest_long", "manual"}  # M3: un riposo lo chiude
+    assert state["data"]["others"] == ["bard.countercharm"]
     again = await _use(client, cid, "bard.countercharm")
     assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used"
 

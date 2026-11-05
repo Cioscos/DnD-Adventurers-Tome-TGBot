@@ -1,6 +1,7 @@
 """Cataloghi delle regole di classe (sola lettura)."""
 from __future__ import annotations
 
+import random
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -24,6 +25,7 @@ from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.rules_states import remove_state, use_feature
+from api.services.session_allies import seated_allies
 from core.rules.states import is_target_immune
 from api.services.rules_turn import clear_once_per_turn, get_turn, release, reset_turn, spend
 from api.services.durations import is_concentrating
@@ -49,7 +51,7 @@ from core.rules.modifiers import modifiers_for
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
 from core.rules.roll_options import AppliedOptions, refund_spent
 from core.rules.subclasses import subclasses_for
-from core.rules.types import Edition
+from core.rules.types import BARDIC_DIE, Edition
 
 router = APIRouter(prefix="/rules", tags=["rules"])
 
@@ -326,6 +328,44 @@ async def feature_use(
     char = await _get_owned_full(char_id, user_id, db)
     res = await use_feature(db, char, feature_key, body.amount, body.params)
     return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets)
+
+
+class AllyRead(BaseModel):
+    id: int
+    name: str
+
+
+@turn_router.get("/{char_id}/session-allies", response_model=list[AllyRead])
+async def session_allies(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[AllyRead]:
+    """Gli altri personaggi seduti alla stessa serata attiva: a chi dare il dado di Ispirazione. Vuoto fuori serata."""
+    char = await _owned_char(db, char_id, user_id)
+    return [AllyRead(id=a.id, name=a.name) for a in await seated_allies(db, char)]
+
+
+class BardicDieAc(BaseModel):
+    die: int
+    roll: int
+
+
+@turn_router.post("/{char_id}/bardic-die/ac", response_model=BardicDieAc)
+async def bardic_die_ac(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+) -> BardicDieAc:
+    """Ispirazione in Combattimento (Collegio del Valore): in reazione, il dado ricevuto si somma alla CA contro un attacco.
+    Spende la reazione e il dado; il valore da sommare lo dice la risposta. Con la reazione già spesa non perde il dado."""
+    char = await _get_owned_full(char_id, user_id, db)
+    state = next((s for s in char.active_states or [] if s.get("key") == BARDIC_DIE), None)
+    if state is None or not (state.get("data") or {}).get("combat"):
+        raise _refuse("not_available")
+    spend(char, "reaction")
+    die = int(state["data"]["die"])
+    roll = random.randint(1, die)
+    record_dice(char, [(f"d{die}", roll)])
+    remove_state(char, BARDIC_DIE)
+    _add_history(db, char.id, "dice_roll", f"Ispirazione in Combattimento: +{roll} alla CA (d{die})")
+    return BardicDieAc(die=die, roll=roll)
 
 
 @turn_router.delete("/{char_id}/active-states/{key}", response_model=list[dict])

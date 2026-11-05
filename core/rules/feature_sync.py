@@ -16,7 +16,7 @@ from core.db.models import Ability, Character, CharacterClass, RestorationType, 
 from core.rules.catalog import active_features, features_for
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.edition import EDITIONS, character_edition, class_key
-from core.rules.level_choices import reconcile_choices
+from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
 from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
@@ -49,7 +49,9 @@ async def sync_class_feature_abilities(
     for other in char.classes:
         if other is not cls and features_for(edition, class_key(other)):
             _sync_from_catalog(session, char, other, lang)
-    reconcile_choices(char)
+    if retrofit:
+        seed_from_sheet(char)
+    reconcile_choices(char, retrofit)
     apply_feature_grants(char, lang)
     _sync_ability_bonuses(char, retrofit=retrofit)
     await _sync_granted_spells(session, char, lang)
@@ -63,7 +65,9 @@ async def sync_cataloged_features(
     for cls in char.classes:
         if features_for(edition, class_key(cls)):
             _sync_from_catalog(session, char, cls, lang)
-    reconcile_choices(char)
+    if retrofit:
+        seed_from_sheet(char)
+    reconcile_choices(char, retrofit)
     apply_feature_grants(char, lang)
     _sync_ability_bonuses(char, retrofit=retrofit)
     await _sync_granted_spells(session, char, lang)

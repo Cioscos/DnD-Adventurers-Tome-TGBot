@@ -87,8 +87,9 @@ async def resolve_choice(
         await apply_ability_change(session, char, ability, old_con_mod)
     if changed:
         await sync_cataloged_features(session, char, lang)
-    mark_resolved(char, choice)
-    char.pending_choices = [c for c in choices if c["id"] != choice_id]
+    if not isinstance(body, ClassOptionResolve):  # le scelte di opzioni le riconcilia il sync, anche il resto che aspetta
+        mark_resolved(char, choice)
+        char.pending_choices = [c for c in choices if c["id"] != choice_id]
     char = await _refresh_char_full(char_id, user_id, session)
     return await build_character_response(session, char)
 

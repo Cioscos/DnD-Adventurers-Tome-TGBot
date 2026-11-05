@@ -30,6 +30,8 @@ class ChoiceSpec:
     (maestria); un'abilità già ``expert`` non scende mai. ``spell_pick``: le scelte non sono opzioni di un elenco ma
     incantesimi di qualsiasi classe, aggiunti dalla pagina degli incantesimi (``known`` conta fra i conosciuti,
     ``extra`` no: Segreti Magici Aggiuntivi); ``options`` non si usa.
+    ``owned(ctx)``: abilità che il giocatore ha già sulla scheda e che, per un personaggio esistente prima del catalogo
+    (scelta con ``retrofit``, R39), si possono dichiarare «già sulla scheda» invece di aggiungerne altre.
     """
     group: str
     levels: dict[int, int]
@@ -38,6 +40,7 @@ class ChoiceSpec:
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert"] | None = None
     spell_pick: Literal["known", "extra"] | None = None
+    owned: Callable[["RuleContext"], list[str]] | None = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert"):
@@ -67,7 +70,10 @@ def parse_dice(text: str) -> tuple[int, int] | None:
 
 ENDS_ON = frozenset({
     "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
+    "new_turn",
 })
+
+BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
 
 
 @dataclass(frozen=True)
@@ -75,7 +81,8 @@ class StateSpec:
     """Stato attivo avviato da un privilegio (Ira, Forma Selvatica...).
 
     ``ends_on`` (insieme chiuso ``ENDS_ON``): ``turn_end_inactive`` = a fine turno senza aver attaccato né subito
-    danno dall'ultimo turno (Ira 2014); ``incapacitated`` = condizione che toglie le azioni o 0 PF.
+    danno dall'ultimo turno (Ira 2014); ``incapacitated`` = condizione che toglie le azioni o 0 PF; ``new_turn`` = al
+    prossimo «Nuovo turno» di chi lo porta (Canto di Riposo).
     ``rounds``: durata in round, ``None`` = senza scadenza. ``blocks_casting``: finché dura non si lanciano
     incantesimi (conferma al lancio). ``exhaustion_on_end``: livelli di spossatezza quando lo stato finisce, per
     qualunque via. ``immune_conditions``: condizioni che non si possono aggiungere finché dura; quelle già presenti
@@ -141,6 +148,9 @@ class OnUse:
     ``rolls`` può essere anche ``f(ctx) -> "NdM"`` quando il dado dipende dal livello (Parole Taglienti).
     ``spends``: chiave di un altro privilegio i cui usi si spendono (``cost``), invece degli usi di questo; senza usi
     sufficienti l'uso è rifiutato (409 ``no_uses``) prima di toccare il turno.
+    ``ally_state``: con ``params["target_character_id"]`` lo stato non va a chi usa il privilegio ma a quell'altro
+    personaggio della stessa serata (Ispirazione Bardica, R38); un bersaglio non valido è rifiutato (422
+    ``invalid_target``) prima di spendere qualcosa. Senza bersaglio lo stato è di chi lo usa.
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
     ``state``: uno ``StateSpec`` oppure ``f(ctx, params) -> StateSpec`` quando dipende dal livello o da una scelta fatta
@@ -160,6 +170,7 @@ class OnUse:
     choose_amount: bool = False
     max_amount: int | None = None
     spends: str | None = None
+    ally_state: bool = False
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -198,10 +209,12 @@ TURN_FLAGS = {
 
 @dataclass(frozen=True)
 class Cost:
-    """Costo di un'opzione al tiro: usi della riga ``feature_key`` e/o uno slot di livello almeno ``spell_slot_min``."""
+    """Costo di un'opzione al tiro: usi della riga ``feature_key``, uno slot di livello almeno ``spell_slot_min`` e/o lo
+    stato attivo ``state_key``, che si chiude (e il rimborso rimette com'era)."""
     feature_key: str | None = None
     amount: int = 1
     spell_slot_min: int | None = None
+    state_key: str | None = None
 
 
 @dataclass(frozen=True)

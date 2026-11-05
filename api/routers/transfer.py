@@ -28,7 +28,7 @@ from api.services.telegram_notify import bot_token_configured, send_telegram_doc
 from core.data.classes import class_table_key
 from core.rules.catalog import features_for
 from core.rules.edition import character_edition, class_key
-from core.rules.level_choices import active_choice_specs
+from core.rules.level_choices import active_choice_specs, apply_grants
 from core.rules.types import RuleContext
 
 router = APIRouter(prefix="/characters", tags=["transfer"])
@@ -218,6 +218,8 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
                     free.remove(name)
         if chosen:
             cls.options = {**(cls.options or {}), **chosen}
+            for ch in active_choice_specs(char, cls):
+                apply_grants(char, ch, chosen.get(ch.group, []))
         for name in free:
             report.approximated.append(ReportEntry(section="options", name=name, reason="ddb.reason.option_unknown"))
 

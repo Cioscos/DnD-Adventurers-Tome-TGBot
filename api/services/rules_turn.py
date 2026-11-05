@@ -103,6 +103,8 @@ def reset_turn(char, keep_surprise: bool = True) -> dict:
     toglie la fine del primo turno del combattente, non «Nuovo turno», ma solo se c'è un incontro attivo
     (``keep_surprise``): fuori da un incontro non c'è nessuno che la tolga. ``vex`` arriva fino alla
     fine del turno seguente a quello del colpo."""
+    from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
+    end_states(char, "new_turn")  # il Canto di Riposo del bardo finisce al prossimo «Nuovo turno»
     previous = get_turn(char)
     vex = {"vex": previous["vex"] - 1} if previous.get("vex", 0) > 1 else {}
     _save(char, {**_default(), "damaged": previous["damaged"],

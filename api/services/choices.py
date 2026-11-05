@@ -16,7 +16,7 @@ from core.data.feats_2024 import ALL_FEATS as FEATS
 from core.db.models import Ability, Character, CharacterClass, CharacterHistory, HomebrewRule, RestorationType
 from core.rules.catalog import features_for
 from core.rules.level_choices import (  # noqa: F401
-    FREE_KNOWN_KEY, active_choice_specs, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
+    FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
 )
 from core.rules.edition import character_edition, class_key
 from core.rules.spellcasting import slots_for
@@ -41,30 +41,58 @@ def _choice_spec(char: Character, cls: CharacterClass, group: str | None):
     return next((ch for ch in active_choice_specs(char, cls) if ch.group == group), None)
 
 
-def _entries(char: Character, cls: CharacterClass, group: str, keys: list[str]) -> list[dict]:
+def _entries(char: Character, cls: CharacterClass, group: str, keys: list[str], owned: frozenset = frozenset()) -> list[dict]:
     specs = {s.option_key: s for s in features_for(character_edition(char), class_key(cls)) if s.option_group == group}
     choice = _choice_spec(char, cls, group)
     labelled = choice.label if choice and choice.label else None
 
     def entry(k: str) -> dict:
         if labelled and k not in specs:
-            return {"key": k, **labelled(k)}
-        return {"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
-                "summary": specs[k].summary if k in specs else {"it": "", "en": ""}}
+            base = {"key": k, **labelled(k)}
+        else:
+            base = {"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
+                    "summary": specs[k].summary if k in specs else {"it": "", "en": ""}}
+        return {**base, "owned": True} if k in owned else base
     return [entry(k) for k in keys]
 
 
-def _available(char: Character, cls: CharacterClass, ch) -> list[str]:
+def _available(char: Character, cls: CharacterClass, ch, retrofit: bool = False) -> tuple[list[str], list[str]]:
+    """Opzioni scegliibili e, solo per una scelta di un personaggio esistente prima del catalogo (``retrofit``, R39), quelle
+    «già sulla scheda» che si possono dichiarare invece di sceglierne altre."""
     ctx = RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)
     chosen = (cls.options or {}).get(ch.group, [])
-    return [k for k in ch.options(ctx) if k not in chosen]
+    fresh = [k for k in ch.options(ctx) if k not in chosen]
+    owned = [k for k in (ch.owned(ctx) if retrofit and ch.owned else []) if k not in chosen and k not in fresh]
+    return fresh, owned
 
 
 def option_catalog(char: Character, choice: dict) -> list[dict]:
     """Opzioni ancora scegliibili di una scelta `class_option`: `{key, name, summary}` bilingui."""
     cls = _class_by_key(char, choice.get("class_key"))
     ch = _choice_spec(char, cls, choice.get("group")) if cls else None
-    return _entries(char, cls, ch.group, _available(char, cls, ch)) if ch else []
+    if not ch:
+        return []
+    fresh, owned = _available(char, cls, ch, bool(choice.get("retrofit")))
+    return _entries(char, cls, ch.group, [*fresh, *owned], frozenset(owned))
+
+
+def pick_count(char: Character, choice: dict) -> int | None:
+    """Quante opzioni si prendono adesso: con ``grants`` (abilità) meno di ``count`` se la scheda non ne ha abbastanza (R39,
+    il resto aspetta). ``None`` per gli incantesimi, che si scelgono dalla loro pagina."""
+    if choice.get("kind") != "class_option":
+        return None
+    cls = _class_by_key(char, choice.get("class_key"))
+    ch = _choice_spec(char, cls, choice.get("group")) if cls else None
+    if ch is None or ch.spell_pick:
+        return None
+    count = int(choice.get("count") or 0)
+    return min(count, len(option_catalog(char, choice))) if ch.grants else count
+
+
+def is_resolvable(char: Character, choice: dict) -> bool:
+    """Una scelta senza opzioni in elenco non blocca le successive (R39)."""
+    picks = pick_count(char, choice)
+    return True if picks is None else picks > 0
 
 
 def class_options_state(char: Character, cls: CharacterClass, group: str) -> dict:
@@ -73,7 +101,7 @@ def class_options_state(char: Character, cls: CharacterClass, group: str) -> dic
         raise HTTPException(404, "Option group not found")
     return {"replaceable": ch.replaceable,
             "chosen": _entries(char, cls, group, list((cls.options or {}).get(group, []))),
-            "available": _entries(char, cls, group, _available(char, cls, ch))}
+            "available": _entries(char, cls, group, _available(char, cls, ch)[0])}
 
 
 def replace_class_option(session: AsyncSession, char: Character, cls: CharacterClass,
@@ -83,7 +111,7 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
     chosen = list((cls.options or {}).get(group, []))
     if ch is None or not ch.replaceable:
         raise _bad("option_not_replaceable")
-    if old_key not in chosen or new_key not in _available(char, cls, ch):
+    if old_key not in chosen or new_key not in _available(char, cls, ch)[0]:
         raise _bad("invalid_replacement")
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
@@ -95,24 +123,45 @@ def resolve_class_option(session: AsyncSession, char: Character, choice: dict, p
     group, count = choice.get("group"), choice.get("count")
     ch = _choice_spec(char, cls, group) if cls else None
     if ch is not None and ch.spell_pick:  # gli incantesimi si scelgono dalla pagina degli incantesimi
-        raise _bad("spell_pick_via_spells")
+        if not choice.get("retrofit"):
+            raise _bad("spell_pick_via_spells")
+        return _resolve_known_spells(session, char, cls, ch, count, picked)
     valid = {o["key"] for o in option_catalog(char, choice)}
-    if (cls is None or not group or not count or len(picked) != count
+    need = pick_count(char, choice)
+    if (cls is None or not group or not count or not need or len(picked) != need
             or len(set(picked)) != len(picked) or not set(picked) <= valid):
-        raise _bad(f"Pick exactly {count} distinct valid options")
+        raise _bad(f"Pick exactly {need or count} distinct valid options")
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
-    if ch is not None and ch.grants:  # abilità: competenza o maestria, senza mai abbassare una maestria
-        skills = dict(char.skills or {})
-        for key in picked:
-            if not (ch.grants == "proficient" and skills.get(key) == "expert"):
-                skills[key] = "expert" if ch.grants == "expert" else True
-        char.skills = skills
+    if ch is not None:
+        apply_grants(char, ch, picked)
     _history(session, char, f"{group}: {', '.join(picked)}")
 
 
-def max_pick_level(char: Character) -> int:
-    """Livello più alto che il personaggio può lanciare secondo la tabella degli slot."""
-    regular = slots_for(character_edition(char), char.classes).regular
+def _resolve_known_spells(session: AsyncSession, char: Character, cls: CharacterClass, ch, count: int,
+                          picked: list[str]) -> None:
+    """R39: un personaggio esistente prima del catalogo dichiara «già sulla scheda» incantesimi che conosce: nessuno è
+    aggiunto né duplicato. Un Segreto Magico resta fra i conosciuti; uno Aggiuntivo esce dal loro conteggio."""
+    try:
+        ids = [int(p) for p in picked]
+    except ValueError:
+        raise _bad("spell_not_known") from None
+    owned = {s.id: s for s in char.spells if s.class_id == cls.id}
+    taken = (cls.options or {}).get(ch.group, [])
+    free = list((char.settings or {}).get(FREE_KNOWN_KEY) or [])
+    if (not ids or len(ids) > count or len(set(ids)) != len(ids) or not set(ids) <= set(owned)
+            or any((owned[i].srd_index or owned[i].name) in taken for i in ids)
+            or (ch.spell_pick == "known" and any(i in free for i in ids))):
+        raise _bad("spell_not_known")
+    cls.options = {**(cls.options or {}), ch.group: [*taken, *(owned[i].srd_index or owned[i].name for i in ids)]}
+    if ch.spell_pick == "extra":
+        char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: [*free, *(i for i in ids if i not in free)]}
+    _history(session, char, f"{ch.group}: {', '.join(owned[i].name for i in ids)}")
+
+
+def max_pick_level(char: Character, cls: CharacterClass) -> int:
+    """Livello più alto che la classe ``cls`` lancia secondo la sua tabella degli slot: in multiclasse la scheda dice
+    «per classe», non la tabella sommata."""
+    regular = slots_for(character_edition(char), [cls]).regular
     return max((level for level, total in regular.items() if total > 0), default=0)
 
 
@@ -124,7 +173,14 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
     ch = _choice_spec(char, cls, choice.get("group")) if cls else None
     if ch is None or not ch.spell_pick:
         return None
-    return {"free": ch.spell_pick == "extra", "max_level": max_pick_level(char)}
+    info = {"free": ch.spell_pick == "extra", "max_level": max_pick_level(char, cls)}
+    if choice.get("retrofit"):  # R39: gli incantesimi che il personaggio ha già e può dichiarare «già sulla scheda»
+        taken = (cls.options or {}).get(ch.group, [])
+        free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
+        info["owned"] = [{"id": sp.id, "name": sp.name, "level": sp.level} for sp in sorted(char.spells, key=lambda x: (x.level, x.name))
+                         if sp.class_id == cls.id and (sp.srd_index or sp.name) not in taken
+                         and not (ch.spell_pick == "known" and sp.id in free)]
+    return info
 
 
 def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int | None, name: str,
@@ -137,7 +193,7 @@ def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int |
         raise HTTPException(404, detail={"code": "choice_not_found"})
     if class_id is not None and class_id != cls.id:
         raise HTTPException(400, detail={"code": "bad_class"})
-    if level > max_pick_level(char):
+    if level > max_pick_level(char, cls):
         raise HTTPException(422, detail={"code": "spell_pick_level"})
     lowered = name.strip().lower()
     if any((srd_index and s.srd_index == srd_index) or s.name.strip().lower() == lowered for s in char.spells):
@@ -153,6 +209,26 @@ def consume_spell_pick(session: AsyncSession, char: Character, cls: CharacterCla
         char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: free}
     _history(session, char, f"{ch.group}: {spell.name}")
     reconcile_choices(char)
+
+
+def release_spell_pick(char: Character, spell) -> bool:
+    """L'incantesimo sta per essere cancellato: se era una scelta (Segreti Magici) la scelta torna da fare, e il suo id esce
+    dagli incantesimi che non contano fra i conosciuti (SQLite riassegna gli id). ``True`` se qualcosa è cambiato."""
+    changed = False
+    free = list((char.settings or {}).get(FREE_KNOWN_KEY) or [])
+    if spell.id in free:
+        char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: [i for i in free if i != spell.id]}
+        changed = True
+    key = spell.srd_index or spell.name
+    for cls in char.classes:
+        for ch in active_choice_specs(char, cls):
+            taken = list((cls.options or {}).get(ch.group, []))
+            if ch.spell_pick and key in taken:
+                taken.remove(key)
+                cls.options = {**(cls.options or {}), ch.group: taken}
+                changed = True
+                break
+    return changed
 
 
 def _check_feat(char: Character, spec, boon: bool) -> None:

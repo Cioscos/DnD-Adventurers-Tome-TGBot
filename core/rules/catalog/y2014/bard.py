@@ -9,7 +9,7 @@ from typing import Any
 from core.data.skills import SKILLS
 from core.rules.catalog._common import feature, skill_label, state_on
 from core.rules.types import (
-    ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses,
+    BARDIC_DIE, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses,
 )
 
 ED, CK = "2014", "bard"
@@ -32,19 +32,23 @@ def _inspiration_formula(ctx: RuleContext) -> str:
     return f"1d{inspiration_die(ctx.class_level)}"
 
 
-def _inspiration_state(ctx: RuleContext, _params: dict) -> StateSpec:
-    """Il dado dato a un'altra creatura: dieci minuti, uno solo alla volta. Sotto lo stato il gruppo legge cosa può farne
-    (D1); il Collegio del Valore aggiunge l'uso in combattimento."""
-    others = [BI]
-    if ctx.class_row.subclass_key == "valor" and ctx.class_level >= 3:
-        others.append(COMBAT_INSPIRATION)
-    return StateSpec("bardic_inspiration", rounds=100, ends_on=("rest_short", "rest_long", "manual"),
-                     data={"die": inspiration_die(ctx.class_level), "others": others})
+def _inspiration_state(ctx: RuleContext, params: dict) -> StateSpec:
+    """Il dado dato a un'altra creatura: dieci minuti, uno solo per creatura (R38). Con un alleato della serata lo stato
+    ``bardic_die`` sta sul ricevente, che lo spende dalla propria scheda; senza, resta sul bardo come promemoria per il
+    gruppo (D1). Il Collegio del Valore aggiunge l'uso in combattimento."""
+    valor = ctx.class_row.subclass_key == "valor" and ctx.class_level >= 3
+    others = [BI, COMBAT_INSPIRATION] if valor else [BI]
+    data = {"die": inspiration_die(ctx.class_level), "others": others}
+    if params.get("target_character_id") is None:
+        return StateSpec("bardic_inspiration", rounds=100, ends_on=("rest_short", "rest_long", "manual"), data=data)
+    return StateSpec(BARDIC_DIE, rounds=100, ends_on=("rest_short", "rest_long", "manual"), data={**data, "combat": valor})
 
 
 def _song_state(ctx: RuleContext, _params: dict) -> StateSpec:
-    """Il Canto di Riposo dura finché il bardo si esibisce, cioè fino al riposo; il dado extra lo legge `hit_dice/spend`."""
-    return StateSpec("song_of_rest", ends_on=("rest_short", "rest_long", "manual"), data={"die": song_die(ctx.class_level)})
+    """Il Canto di Riposo dura finché il bardo si esibisce. Il riposo breve del bardo non lo chiude, altrimenti chi spende
+    Dadi Vita dopo di lui perderebbe il dado: finisce al riposo lungo, a mano o al prossimo «Nuovo turno». Il dado extra
+    lo legge `hit_dice/spend`."""
+    return StateSpec("song_of_rest", ends_on=("rest_long", "new_turn", "manual"), data={"die": song_die(ctx.class_level)})
 
 
 def _inspiration_row(char: Any) -> Any:
@@ -72,6 +76,11 @@ def _expertise_options(ctx: RuleContext) -> list[str]:
 
 def _untrained_skills(ctx: RuleContext) -> list[str]:
     return [s for s in ALL_SKILLS if not _skill_proficient(ctx, s)]
+
+
+def _proficient_skills(ctx: RuleContext) -> list[str]:
+    """Abilità già competenti: un Bardo salvato prima del catalogo le dichiara «già sulla scheda» (R39)."""
+    return [s for s in ALL_SKILLS if _skill_proficient(ctx, s)]
 
 
 def _no_options(_ctx: RuleContext) -> list[str]:
@@ -120,8 +129,9 @@ FEATURES = (
     feature("proficiencies", CK, ED, 1, "Competenze / Proficiencies (Bardo 1, pag. 52)", ("Competenze", "Proficiencies"),
             ("Armature leggere, armi semplici, balestra a mano, spada corta, spada lunga, stocco, TS Destrezza e Carisma, 3 abilità.",
              "Light armor, simple weapons, hand crossbow, shortsword, longsword, rapier, Dexterity and Charisma saves, 3 skills."),
-            no_row=True, covered_by="core/rules/proficiencies.py (class_proficiencies) e la scelta ClassSkillChoice; "
-                                    "gli strumenti musicali: lavori-successivi"),
+            # Armi, armature, TS e abilità: core/rules/proficiencies.py (class_proficiencies) e ClassSkillChoice. I 3 strumenti
+            # musicali a scelta no: l'app non ha prove con strumento (R40), restano in lavori-successivi.
+            no_row=True, covered_by="lavori-successivi"),
     feature("equipment", CK, ED, 1, "Equipaggiamento / Equipment (Bardo 1, pag. 52)", ("Equipaggiamento", "Equipment"),
             ("Dotazione iniziale: arma a scelta, dotazione da diplomatico o intrattenitore, strumento, armatura di cuoio e pugnale.",
              "Starting gear: a weapon, a diplomat's or entertainer's pack, an instrument, leather armor and a dagger."),
@@ -138,7 +148,7 @@ FEATURES = (
              "Bonus action: another creature that hears you gets a die (d6, d8, d10, d12) to add once to a check, attack or save "
              "within 10 minutes."),
             "bonus_action", uses=Uses(ability="charisma", minimum=1), restoration={1: "long_rest", 5: "short_rest"},
-            on_use=OnUse(slot="bonus", state=_inspiration_state)),
+            on_use=OnUse(slot="bonus", state=_inspiration_state, ally_state=True)),
     feature("jack_of_all_trades", CK, ED, 2, "Factotum / Jack of All Trades (Bardo 2, pag. 54)",
             ("Factotum", "Jack of All Trades"),
             ("Metà competenza (per difetto) a ogni prova di caratteristica senza competenza: abilità, iniziativa, prove pure.",
@@ -155,6 +165,14 @@ FEATURES = (
             ("Al 3° livello si sceglie il Collegio della Sapienza o del Valore.",
              "At level 3 you choose the College of Lore or the College of Valor."), no_row=True,
             covered_by="core/rules/subclasses.py (match_subclass) e il campo sottoclasse della classe"),
+    # Prima di Maestria (R39): le tre abilità di Sapienza sono quelle che la rendono scegliibile a chi nasce al 10°
+    feature("lore_bonus_proficiencies", CK, ED, 3, "Competenze Bonus / Bonus Proficiencies (Collegio della Sapienza 3, pag. 54)",
+            ("Competenze Bonus (Sapienza)", "Bonus Proficiencies (Lore)"),
+            ("Tre abilità a tua scelta, non ancora competenti, diventano competenti.",
+             "Three skills of your choice that you are not proficient in become proficient."),
+            subclass="lore",
+            choices=(ChoiceSpec(group="lore_skills", levels={3: 3}, options=_untrained_skills, label=skill_label,
+                                grants="proficient", owned=_proficient_skills),)),
     feature("expertise", CK, ED, 3, "Maestria / Expertise (Bardo 3, pag. 54)", ("Maestria", "Expertise"),
             ("Al 3° e al 10° livello due abilità già competenti passano a maestria (doppia competenza).",
              "At levels 3 and 10 two skills you are already proficient in gain expertise (double proficiency)."),
@@ -177,7 +195,7 @@ FEATURES = (
              "being charmed or frightened."),
             "action", roll_options=(COUNTERCHARM_SAVE,),
             on_use=OnUse(slot="action", state=StateSpec(
-                "countercharm", rounds=2, ends_on=("incapacitated", "manual"), data={"others": [COUNTERCHARM]}))),
+                "countercharm", rounds=2, ends_on=("incapacitated", "rest_short", "rest_long", "manual"), data={"others": [COUNTERCHARM]}))),
     feature("magical_secrets", CK, ED, 10, "Segreti Magici / Magical Secrets (Bardo 10, pag. 54)",
             ("Segreti Magici", "Magical Secrets"),
             ("Al 10°, 14° e 18° livello due incantesimi di qualsiasi classe (o trucchetti) contano come da bardo e fra i conosciuti.",
@@ -191,13 +209,6 @@ FEATURES = (
             roll_options=(SUPERIOR_INSPIRATION,)),
 
     # Collegio della Sapienza
-    feature("lore_bonus_proficiencies", CK, ED, 3, "Competenze Bonus / Bonus Proficiencies (Collegio della Sapienza 3, pag. 54)",
-            ("Competenze Bonus (Sapienza)", "Bonus Proficiencies (Lore)"),
-            ("Tre abilità a tua scelta, non ancora competenti, diventano competenti.",
-             "Three skills of your choice that you are not proficient in become proficient."),
-            subclass="lore",
-            choices=(ChoiceSpec(group="lore_skills", levels={3: 3}, options=_untrained_skills, label=skill_label,
-                                grants="proficient"),)),
     feature("cutting_words", CK, ED, 3, "Parole Taglienti / Cutting Words (Collegio della Sapienza 3, pag. 54)",
             ("Parole Taglienti", "Cutting Words"),
             ("Reazione: spendi un uso di Ispirazione Bardica e tiri il dado da sottrarre al tiro di una creatura entro 18 m.",
@@ -242,5 +253,7 @@ FEATURES = (
             ("Multiclasse: Bardo", "Multiclassing: Bard"),
             ("Requisito Carisma 13. Da multiclasse: armature leggere, 1 abilità e 1 strumento; gli slot sommano i livelli interi.",
              "Requires Charisma 13. As a multiclass: light armor, 1 skill and 1 tool; spell slots add up full levels."),
-            no_row=True, covered_by="core/rules/proficiencies.py (as_multiclass) e webapp/src/data/multiclassPrereqs.ts (D2)"),
+            # Armatura leggera, 1 abilità e requisito Carisma 13: core/rules/proficiencies.py (as_multiclass) e
+            # webapp/src/data/multiclassPrereqs.ts (D2). Lo strumento musicale a scelta no (R40): lavori-successivi.
+            no_row=True, covered_by="lavori-successivi"),
 )

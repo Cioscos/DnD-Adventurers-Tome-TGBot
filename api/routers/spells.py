@@ -45,7 +45,8 @@ from api.services.last_damage import last_damage_total, pairs
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
-from api.services.choices import consume_spell_pick, spell_pick_target
+from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
+from core.rules.level_choices import reconcile_choices
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
@@ -296,6 +297,8 @@ async def remove_spell(
         end_concentration(char)
         await session.flush()
         await release_concentration_effects(session, char)
+    if release_spell_pick(char, spell):
+        reconcile_choices(char)  # la scelta torna in coda: un errore di battitura si recupera
     await session.delete(spell)
 
 

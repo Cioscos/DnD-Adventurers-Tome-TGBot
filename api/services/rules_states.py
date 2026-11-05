@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
 from api.services.rules_turn import grant_action, set_damaged, spend
+from api.services.session_allies import ally_target
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
@@ -97,6 +98,8 @@ def remove_state(char, key: str, *, by_player: bool = False) -> None:
     if all(s["key"] != key for s in states):
         raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
     closed = [s for s in states if s["key"] == key]
+    if by_player and any((s.get("data") or {}).get("internal") for s in closed):  # un segno interno non è del giocatore
+        raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
     char.active_states = [s for s in states if s["key"] != key]
     charge_exhaustion(char, closed)
     slot = closed[0].get("end_slot")
@@ -135,6 +138,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.available and not on_use.available(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)):
         raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
+    target = None
+    if on_use.ally_state and (params or {}).get("target_character_id") is not None:
+        target = await ally_target(session, char, params["target_character_id"])
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost * amount
     if on_use.spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
@@ -174,7 +180,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         own = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
         name = (own.name if own is not None and own.name else None) or spec.name["it"]
         state_spec = on_use.state(ctx, params or {}) if callable(on_use.state) else on_use.state
-        result.state = start_state(char, state_spec, feature_key, name)
+        result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
         result.targets.append(feature_key)

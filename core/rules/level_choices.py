@@ -46,6 +46,18 @@ def active_choice_specs(char: Any, cls: Any) -> list:
             for ch in spec.choices]
 
 
+def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
+    """Le opzioni scelte di una ``ChoiceSpec`` con ``grants`` sono abilità: competenza o maestria, mai una maestria che
+    scende. Unico punto per la risoluzione di una scelta e per l'import."""
+    if not ch.grants:
+        return
+    skills = dict(char.skills or {})
+    for key in keys:
+        if not (ch.grants == "proficient" and skills.get(key) == "expert"):
+            skills[key] = "expert" if ch.grants == "expert" else True
+    char.skills = skills
+
+
 def sync_level_choices(char: Any, cls: Any, old_level: int, new_level: int) -> None:
     """ASI dei livelli attraversati (mai duplicati né già risolti), poi riconciliazione.
 
@@ -68,8 +80,26 @@ def sync_level_choices(char: Any, cls: Any, old_level: int, new_level: int) -> N
     reconcile_choices(char)
 
 
-def reconcile_choices(char: Any) -> None:
-    """Riporta in linea Doni Epici e opzioni di classe con lo stato attuale, potando le orfane."""
+def seed_from_sheet(char: Any) -> None:
+    """R39, personaggio esistente prima del catalogo o importato: una scelta che si deduce dalla scheda si semina con ciò
+    che c'è già (le abilità con maestria riempiono Maestria, fino al limite), così non viene chiesta una seconda volta."""
+    claimed: set[str] = set()
+    for cls in char.classes:
+        for ch in active_choice_specs(char, cls):
+            if ch.grants != "expert" or (cls.options or {}).get(ch.group):
+                continue
+            reached = [lvl for lvl in ch.levels if lvl <= cls.level]
+            limit = ch.levels[max(reached)] if reached else 0
+            have = [k for k, v in (char.skills or {}).items() if v == "expert" and k not in claimed][:limit]
+            if have:
+                cls.options = {**(cls.options or {}), ch.group: have}
+                claimed.update(have)
+
+
+def reconcile_choices(char: Any, retrofit: bool = False) -> None:
+    """Riporta in linea Doni Epici e opzioni di classe con lo stato attuale, potando le orfane.
+
+    ``retrofit`` (R39): le scelte di opzioni portano ``retrofit: true``, e ammettono ciò che è già sulla scheda."""
     edition = character_edition(char)
     pending = list(char.pending_choices or [])
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
@@ -89,9 +119,10 @@ def reconcile_choices(char: Any) -> None:
             existing = [c for c in mine if c.get("kind") == "class_option" and c.get("group") == ch.group]
             if needed <= 0:
                 continue
+            flag = {"retrofit": True} if retrofit or any(c.get("retrofit") for c in existing) else {}
             if sum(c.get("count", 0) for c in existing) == needed:
-                out.extend(existing)
+                out.extend({**c, **flag} for c in existing)
             else:  # la scelta resta la stessa (stesso id) con meno opzioni da prendere
                 out.append({"id": existing[0]["id"] if existing else uuid.uuid4().hex, "kind": "class_option", "class_key": key,
-                            "level": max(reached), "group": ch.group, "count": needed, "created_at": _now()})
+                            "level": max(reached), "group": ch.group, "count": needed, "created_at": _now(), **flag})
     char.pending_choices = out

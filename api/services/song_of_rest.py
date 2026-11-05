@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import random
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
+from api.services.session_allies import seated_allies
+from core.db.models import Character
 from core.rules.states import begin_state, has_state
 from core.rules.types import StateSpec
 
@@ -25,12 +25,7 @@ async def song_die(session: AsyncSession, char: Character) -> int | None:
     """Taglia del dado che `char` può ricevere: il suo Canto di Riposo o quello di un bardo seduto alla sua stessa serata."""
     if (own := _die(char)) is not None:
         return own
-    mine = select(SessionParticipant.session_id).join(GameSession, GameSession.id == SessionParticipant.session_id).where(
-        SessionParticipant.user_id == char.user_id, GameSession.status == SessionStatus.ACTIVE)
-    friends = (await session.execute(
-        select(Character).join(SessionParticipant, SessionParticipant.character_id == Character.id)
-        .where(SessionParticipant.session_id.in_(mine), Character.id != char.id))).scalars().all()
-    return max((d for d in map(_die, friends) if d is not None), default=None)
+    return max((d for d in map(_die, await seated_allies(session, char)) if d is not None), default=None)
 
 
 async def roll_song_of_rest(session: AsyncSession, char: Character) -> tuple[int | None, list[int]]:
@@ -40,5 +35,6 @@ async def roll_song_of_rest(session: AsyncSession, char: Character) -> tuple[int
     die = await song_die(session, char)
     if die is None:
         return None, []
-    begin_state(char, StateSpec(RECEIVED, ends_on=("rest_short", "rest_long")), FEATURE, "Canto di Riposo")
+    begin_state(char, StateSpec(RECEIVED, ends_on=("rest_short", "rest_long"), data={"internal": True}),
+                FEATURE, "Canto di Riposo")
     return die, [random.randint(1, die)]

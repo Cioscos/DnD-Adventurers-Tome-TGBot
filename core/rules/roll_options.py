@@ -1,6 +1,7 @@
 """Conferma al tiro: quali opzioni offrire per un tiro e cosa comportano. Il giudizio è del giocatore, il calcolo qui."""
 from __future__ import annotations
 
+import json
 import random
 import re
 from dataclasses import asdict, dataclass, field, replace
@@ -10,7 +11,7 @@ from typing import Any
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
 from core.rules.states import immune_conditions
-from core.rules.types import TURN_FLAGS, RollOptionSpec, RuleContext
+from core.rules.types import BARDIC_DIE, TURN_FLAGS, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
 
 _DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
@@ -28,6 +29,14 @@ def _spend_inspiration(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
         ctx.char.settings = {k: v for k, v in settings.items() if k != "inspiration_extra"}
 
 
+def _bardic_state(ctx: RuleContext) -> dict | None:
+    return next((s for s in ctx.char.active_states or [] if s.get("key") == BARDIC_DIE), None)
+
+
+def _bardic_dice(ctx: RuleContext, _inputs: dict) -> str:
+    return f"1d{((_bardic_state(ctx) or {}).get('data') or {}).get('die') or 6}"
+
+
 # Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
 _CONDITION_OPTIONS = (
     RollOptionSpec(
@@ -41,6 +50,20 @@ _CONDITION_OPTIONS = (
         on_confirm=_spend_inspiration,
         label={"it": "Spendi l'Ispirazione Eroica: ritira un dado di danno", "en": "Spend Heroic Inspiration: reroll a damage die"},
         available=lambda ctx: ctx.edition == "2024" and bool(ctx.char.heroic_inspiration),
+    ),
+    # Dado di Ispirazione Bardica ricevuto (R38): vale per ogni scheda, qualunque sia la sua edizione. Il dado si perde
+    # comunque dopo l'uso: lo stato si chiude, e un rimborso dei gettoni lo rimette.
+    RollOptionSpec(
+        key="bardic_die:add", phase="after_roll", after="add", rolls=("skill", "attack", "save", "initiative"),
+        extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
+        label={"it": "Dado di Ispirazione Bardica: somma il dado al tiro", "en": "Bardic Inspiration die: add the die to the roll"},
+        available=lambda ctx: _bardic_state(ctx) is not None,
+    ),
+    RollOptionSpec(
+        key="bardic_die:damage", phase="after_hit", rolls=("attack",), crit_doubles=False,
+        extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
+        label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
+        available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
     ),
     RollOptionSpec(
         key="weapon:heavy_small", phase="before", rolls=("attack",), mode="disadvantage",
@@ -184,6 +207,8 @@ def _affordable(char: Any, spec: RollOptionSpec) -> bool:
     cost = spec.cost
     if cost and cost.feature_key and _ability_row(char, cost.feature_key, cost.amount) is None:
         return False
+    if cost and cost.state_key and not any(s.get("key") == cost.state_key for s in char.active_states or []):
+        return False
     return not (cost and cost.spell_slot_min is not None and not slot_choices(char, cost.spell_slot_min))
 
 
@@ -207,6 +232,13 @@ def uses_own_slot(char: Any, keys: list[str]) -> bool:
     for feature, _row in active_features(char):
         specs.update({o.key: o for o in feature.roll_options})
     return any(specs[k].slot for k in keys if k in specs)
+
+
+def _spend_state_token(char: Any, key: str) -> str:
+    """Chiude lo stato ``key`` e restituisce il gettone che ``refund_spent`` usa per rimetterlo com'era."""
+    state = next(s for s in char.active_states or [] if s.get("key") == key)
+    char.active_states = [s for s in char.active_states if s.get("key") != key]
+    return f"state:{key}:{json.dumps(state)}"
 
 
 def _slot_level(char: Any, spec: RollOptionSpec, inputs: dict) -> int:
@@ -242,6 +274,8 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
         if row.max_uses is not None:
             row.uses = (row.uses or 0) - cost.amount
         spent.append(f"feature:{cost.feature_key}:{cost.amount}")
+    if cost and cost.state_key:
+        spent.append(_spend_state_token(char, cost.state_key))
     if spec.requires_input == "slot":
         level = _slot_level(char, spec, inputs)
         slot = next(s for s in char.spell_slots if s.level == level and s.available > 0)
@@ -257,7 +291,7 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     if spent:
         session.add(CharacterHistory(
             character_id=char.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-            event_type="roll_option", description=f"{spec.label['it']} ({', '.join(spent)})",
+            event_type="roll_option", description=f"{spec.label['it']} ({', '.join(t.split(':{')[0] for t in spent)})",
         ))
     if spec.on_confirm:
         spec.on_confirm(session, option.ctx, inputs)
@@ -368,6 +402,9 @@ def refund_spent(char: Any, spent: list[str]) -> None:
                          if s.level == int(level) and bool(s.is_pact) == bool(pact) and s.used > 0), None)
             if slot is not None:
                 slot.used -= 1
+        elif kind == "state":
+            key, _, blob = rest.partition(":")
+            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), json.loads(blob)]
         elif kind == "die":
             key, _, value = rest.rpartition(":")
             _store_saved_dice(char, key, [*saved_dice(char, key), int(value)])

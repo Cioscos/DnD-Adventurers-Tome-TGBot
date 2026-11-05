@@ -216,6 +216,8 @@ class AbilityRead(BaseModel):
     action_type: Optional[str] = None
     # Il privilegio a catalogo ha un effetto reale al «Usa» (POST /features/{key}/use); popolato da build_character_response
     has_on_use: bool = False
+    # Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): il client chiede a chi (R38)
+    gives_to_ally: bool = False
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None

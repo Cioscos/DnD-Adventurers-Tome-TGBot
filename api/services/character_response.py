@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
-from api.services.choices import option_catalog, spell_pick_info
+from api.services.choices import is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
@@ -95,7 +95,8 @@ async def build_character_response(
     _apply_encumbrance(char, response)
     _apply_containers(char, response)
     response.pending_choices = [
-        {**c, "options": option_catalog(char, c), **({"spell_pick": pick} if (pick := spell_pick_info(char, c)) else {})}
+        {**c, "options": option_catalog(char, c), "pick_count": pick_count(char, c), "resolvable": is_resolvable(char, c),
+         **({"spell_pick": pick} if (pick := spell_pick_info(char, c)) else {})}
         if c.get("kind") == "class_option" else c
         for c in (char.pending_choices or [])]
 
@@ -104,6 +105,7 @@ async def build_character_response(
     for ab in response.abilities:
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.has_on_use = on_use is not None
+        ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
         if on_use and on_use.toggles:
