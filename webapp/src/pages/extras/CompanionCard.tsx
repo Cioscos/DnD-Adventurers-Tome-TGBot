@@ -19,8 +19,9 @@ import { askRollOptions, refreshAfterOptions, rerollDiceOf } from '@/lib/rollOpt
 import { notifyMutationError } from '@/lib/mutationError'
 import { bonusSpentOnReturn } from '@/lib/formReturn'
 import { haptic } from '@/auth/telegram'
+import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import WildHealSheet, { type HealSlot } from '@/pages/extras/WildHealSheet'
-import type { Companion, CompanionAction, CompanionAttackResult } from '@/types'
+import type { Companion, CompanionAction, CompanionAttackResult, ConcentrationSaveResult } from '@/types'
 
 function EnBadge() {
   const { t } = useTranslation()
@@ -52,6 +53,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [forceAsk, setForceAsk] = useState(false)
   const [healing, setHealing] = useState(false)
+  const [concSave, setConcSave] = useState<ConcentrationSaveResult | null>(null)
   const [formReasons, setFormReasons] = useState<string[] | null>(null)
   const [result, setResult] = useState<{ name: string; r: CompanionAttackResult } | null>(null)
 
@@ -62,7 +64,10 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
 
   const hp = useMutation({
     mutationFn: (op: 'damage' | 'heal') => api.companions.hp(charId, comp.id, op, Number(amount)),
-    onSuccess: () => { setAmount(''); haptic.success(); refresh() },
+    onSuccess: (updated) => {
+      setAmount(''); haptic.success(); refresh()
+      if (updated.concentration_save) setConcSave(updated.concentration_save)
+    },
     onError: () => notifyMutationError(),
   })
 
@@ -245,6 +250,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
 
       <ConfirmSheet open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={() => remove.mutate()}
         title={t('character.extras.delete_title', { name: comp.name })} confirmLabel={t('common.delete')} loading={remove.isPending} />
+      {concSave && <ConcentrationSaveDialog result={concSave} onClose={() => setConcSave(null)} afterRoll={{ charId }} />}
       {healing && healSlots && <WildHealSheet charId={charId} comp={comp} slots={healSlots} onClose={() => setHealing(false)} />}
       <ConfirmSheet open={forceAsk} onClose={() => setForceAsk(false)} onConfirm={() => activate.mutate(true)}
         title={t('character.extras.force_title')} body={t('character.extras.force_body')}

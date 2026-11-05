@@ -1072,6 +1072,8 @@ export interface Companion {
   /** Compagno di privilegio: si somma al bonus dello statblock. */
   attack_bonus_extra?: number
   damage_bonus_extra?: number
+  /** Danno alla forma attiva: il TS di concentrazione che il personaggio ha tirato per l'eccesso. */
+  concentration_save?: ConcentrationSaveResult | null
 }
 
 export type CompanionPayload = Partial<Pick<Companion,

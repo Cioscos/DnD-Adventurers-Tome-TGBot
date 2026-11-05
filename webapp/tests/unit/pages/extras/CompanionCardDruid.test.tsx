@@ -6,12 +6,12 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import CompanionCard from '@/pages/extras/CompanionCard'
 import type { Companion } from '@/types'
 
-const { attack, deactivate, toastError, notifyMutationError } = vi.hoisted(() => ({
-  attack: vi.fn(), deactivate: vi.fn(), toastError: vi.fn(), notifyMutationError: vi.fn(),
+const { attack, hp, deactivate, toastError, notifyMutationError } = vi.hoisted(() => ({
+  attack: vi.fn(), hp: vi.fn(), deactivate: vi.fn(), toastError: vi.fn(), notifyMutationError: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
-  api: { companions: { attack, hp: vi.fn(), deactivate, activate: vi.fn() } },
+  api: { companions: { attack, hp, deactivate, activate: vi.fn() } },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('react-i18next', async (orig) => ({
@@ -21,6 +21,10 @@ vi.mock('react-i18next', async (orig) => ({
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn().mockResolvedValue([12]) }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/pages/hp/ConcentrationSaveDialog', async () => {
+  const React = await import('react')
+  return { default: (p: { result: { dc: number } }) => React.createElement('div', { 'data-testid': 'conc-dialog' }, `dc ${p.result.dc}`) }
+})
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/lib/rollOptions', async (orig) => ({
   ...((await orig()) as Record<string, unknown>),
@@ -57,6 +61,14 @@ describe('CompanionCard druid features', () => {
     expect(screen.queryByText('character.extras.wild_heal')).toBeNull()
     renderWithProviders(<CompanionCard charId={7} comp={form(false)} wildShapeUses={1} healSlots={[{ level: 1, left: 1 }]} />)
     expect(screen.queryByText('character.extras.wild_heal')).toBeNull()
+  })
+
+  it('shows the concentration save that damage to the active form made the character roll', async () => {
+    hp.mockResolvedValueOnce({ ...form(false), concentration_save: { dc: 10, die: 4, total: 6, success: false, lost_concentration: true } })
+    renderWithProviders(<CompanionCard charId={7} comp={form(true)} wildShapeUses={1} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '14')
+    await userEvent.click(screen.getByText('character.hp.quick_damage'))
+    expect(await screen.findByTestId('conc-dialog')).toHaveTextContent('dc 10')
   })
 
   it('ending the form with the bonus action spent says why, without the generic warning', async () => {
