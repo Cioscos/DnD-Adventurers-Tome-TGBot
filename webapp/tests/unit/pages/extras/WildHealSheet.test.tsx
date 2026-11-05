@@ -56,4 +56,13 @@ describe('WildHealSheet (Combat Wild Shape)', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.extras.wild_heal_no_slot'))
     expect(notifyMutationError).not.toHaveBeenCalled()
   })
+
+  it('says the form is already at full hit points, without the technical message', async () => {
+    const { ApiError } = await import('@/api/client')
+    wildHeal.mockRejectedValueOnce(new ApiError(409, { code: 'form_full_hp' }))
+    renderWithProviders(<WildHealSheet charId={7} comp={comp} slots={slots} onClose={() => {}} />)
+    await userEvent.click(screen.getByText(/wild_heal_slot.*"level":1/))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.extras.wild_heal_full'))
+    expect(notifyMutationError).not.toHaveBeenCalled()
+  })
 })

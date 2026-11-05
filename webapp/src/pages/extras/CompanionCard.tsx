@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/useToast'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { askRollOptions, refreshAfterOptions, rerollDiceOf } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
+import { bonusSpentOnReturn } from '@/lib/formReturn'
 import { haptic } from '@/auth/telegram'
 import WildHealSheet, { type HealSlot } from '@/pages/extras/WildHealSheet'
 import type { Companion, CompanionAction, CompanionAttackResult } from '@/types'
@@ -102,7 +103,10 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const deactivate = useMutation({
     mutationFn: () => api.companions.deactivate(charId, comp.id),
     onSuccess: refresh,
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
+      else notifyMutationError()
+    },
   })
 
   const remove = useMutation({

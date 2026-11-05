@@ -38,6 +38,7 @@ export default function WildHealSheet({ charId, comp, slots, onClose }: Props) {
       const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
       if (code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))
       else if (code === 'no_slot') toast.error(t('character.extras.wild_heal_no_slot'))
+      else if (code === 'form_full_hp') toast.error(t('character.extras.wild_heal_full'))
       else notifyMutationError()
       qc.invalidateQueries({ queryKey: ['character', charId] })
     },

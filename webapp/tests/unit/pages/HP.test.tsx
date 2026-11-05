@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import HP from '@/pages/HP'
@@ -72,7 +72,7 @@ vi.mock('framer-motion', async () => {
 })
 
 vi.mock('sonner', () => ({ toast: { warning: toastWarning, error: vi.fn(), success: vi.fn() } }))
-vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {} } }))
+vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {}, light: () => {} } }))
 vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }) }))
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect }) }))
 vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }) }))
@@ -166,9 +166,10 @@ vi.mock('@/pages/hp/DeathSaves', async () => {
 vi.mock('@/pages/hp/HitDiceModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { classes: { id: number }[]; onSpend: (cid: number, n: number) => void; onConfirmRest: () => void }) =>
+    default: (p: { classes: { id: number }[]; onSpend: (cid: number, n: number) => void; onConfirmRest: () => void; preview?: unknown }) =>
       React.createElement('div', { 'data-testid': 'hit-dice-modal' },
         React.createElement('button', { 'data-testid': 'hd-spend', onClick: () => p.onSpend(p.classes[0].id, 2) }, 'spend'),
+        p.preview,
         React.createElement('button', { 'data-testid': 'hd-rest', onClick: p.onConfirmRest }, 'rest'),
       ),
   }
@@ -204,6 +205,17 @@ const aliveChar = {
   classes: [{ id: 1, class_name: 'fighter', level: 5 }],
   hp_max_homebrew_modifier: 5,
   concentration_save: null,
+}
+
+const landDruid = {
+  ...aliveChar,
+  classes: [{ id: 1, class_name: 'Druido', level: 5 }],
+  active_states: [],
+  abilities: [{ id: 9, feature_key: 'druid.natural_recovery', uses: 1, max_uses: 1 }],
+  spell_slots: [
+    { id: 1, level: 1, total: 4, used: 3, available: 1, is_pact: false },
+    { id: 2, level: 2, total: 3, used: 0, available: 3, is_pact: false },
+  ],
 }
 const dyingChar = { ...aliveChar, current_hit_points: 0, death_saves: { successes: 0, failures: 0, stable: false } }
 const deadChar = { ...aliveChar, is_dead: true, current_hit_points: 0, death_saves: { successes: 0, failures: 3, stable: false } }
@@ -381,6 +393,27 @@ describe('HP page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
     await userEvent.click(await screen.findByTestId('confirm-ok'))
     await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long'))
+  })
+
+  it('offers Natural Recovery in the short rest and sends the chosen slots with it', async () => {
+    getChar.mockResolvedValue(landDruid)
+    restSpy.mockResolvedValue(landDruid)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.short_rest' }))
+    expect(await screen.findByTestId('natural-recovery')).toBeInTheDocument()
+    await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
+    await userEvent.click(screen.getByTestId('hd-rest'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', { natural_recovery: { 1: 1 } }))
+  })
+
+  it('does not offer Natural Recovery to a character without the feature', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.short_rest' }))
+    await screen.findByTestId('hd-rest')
+    expect(screen.queryByTestId('natural-recovery')).toBeNull()
   })
 
   it('when dying shows DeathSaves: roll → rollDeathSave(id, undefined); action → updateDeathSaves(id, action)', async () => {

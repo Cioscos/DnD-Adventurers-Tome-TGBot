@@ -134,7 +134,8 @@ vi.mock('@/pages/spells/SpellForm', async () => {
     components: '', duration: '', is_concentration: false, is_ritual: false,
     damage_dice: '3d4+3', damage_type: 'force', higher_level: '', school: 'evocation', srd_index: 'magic-missile', higher_levels_dice: '',
   }
-  return { default: (p: { onSubmit?: (d: unknown) => void }) => React.createElement('button', { onClick: () => p.onSubmit?.(FORM_DATA) }, 'submit-spell') }
+  return { default: (p: { onSubmit?: (d: unknown) => void; pickFilter?: { max_level: number; list?: string | null } }) =>
+    React.createElement('button', { onClick: () => p.onSubmit?.(FORM_DATA), 'data-pick-list': p.pickFilter ? `${p.pickFilter.max_level}:${p.pickFilter.list ?? ''}` : '' }, 'submit-spell') }
 })
 // CastSpellModal → a cast button per available slot + a create-slot button.
 vi.mock('@/pages/spells/CastSpellModal', async () => {
@@ -256,6 +257,15 @@ describe('Spells page', () => {
       const banner = await screen.findByTestId('spell-pick-banner')
       expect(banner).toHaveTextContent('character.spells.pick_cantrip_banner')
       expect(banner).not.toHaveTextContent('character.spells.pick_banner')
+    })
+
+    it('hands the form the level limit and the spell list of the pick, and nothing without a pick', async () => {
+      const base = pickChar(true)
+      getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'bonus_cantrip', count: 1,
+        spell_pick: { free: true, max_level: 0, list: 'druid' } }] })
+      renderPick()
+      await userEvent.click(await screen.findByText('add-spell'))
+      expect(await screen.findByText('submit-spell')).toHaveAttribute('data-pick-list', '0:druid')
     })
 
     it('says an extra secret does not count among the known spells', async () => {

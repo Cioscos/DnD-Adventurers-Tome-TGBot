@@ -5,9 +5,15 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import type { CharacterFull } from '@/types'
 
-const { bardicDieAc, toastInfo } = vi.hoisted(() => ({ bardicDieAc: vi.fn(), toastInfo: vi.fn() }))
-vi.mock('@/api/client', () => ({ api: { characters: { endActiveState: vi.fn(), bardicDieAc } } }))
-vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: vi.fn(), success: vi.fn() }) }))
+const { bardicDieAc, toastInfo, toastError, endActiveState, notifyMutationError } = vi.hoisted(() => ({
+  bardicDieAc: vi.fn(), toastInfo: vi.fn(), toastError: vi.fn(), endActiveState: vi.fn(), notifyMutationError: vi.fn(),
+}))
+vi.mock('@/api/client', () => ({
+  api: { characters: { endActiveState, bardicDieAc } },
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
+}))
+vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: toastError, success: vi.fn() }) }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -17,6 +23,17 @@ const rage = { key: 'rage', feature_key: 'barbarian.rage', rounds_left: 4, ends_
 const char = (states: unknown[], abilities: unknown[]) => ({ id: 7, active_states: states, abilities } as unknown as CharacterFull)
 
 describe('ActiveStatesBar', () => {
+  it('says that returning to the normal form needs the bonus action when it is already spent', async () => {
+    const { ApiError } = await import('@/api/client')
+    endActiveState.mockRejectedValueOnce(new ApiError(409, { code: 'turn_slot_used' }))
+    renderWithProviders(<ActiveStatesBar char={char(
+      [{ key: 'wild_shape', feature_key: 'druid.wild_shape', rounds_left: 1200, ends_on: ['manual'], data: {} }], [],
+    )} />)
+    await userEvent.click(screen.getByText('character.turn.end_state'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.extras.return_bonus_used'))
+    expect(notifyMutationError).not.toHaveBeenCalled()
+  })
+
   it('lists under a state the features that act on others, with their text', () => {
     renderWithProviders(<ActiveStatesBar char={char(
       [{ ...rage, data: { others: ['barbarian.totem_wolf', 'barbarian.gone'] } }],

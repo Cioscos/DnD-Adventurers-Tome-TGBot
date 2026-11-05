@@ -45,6 +45,8 @@ export function formatCr(cr: number): string {
 
 const loc = (f: Parameters<typeof localized>[0], lang: Lang) => localized(f, lang)
 
+const nonEmpty = (o?: Record<string, number>) => !!o && Object.keys(o).length > 0
+
 /** Catalogue monster -> companion statblock; flat damage ("1") becomes "1d1" for the server's NdX rule. */
 export function monsterToStatblock(e: MonsterEntry, lang: Lang): CompanionStatblock {
   const convert = (name: MonsterEntry['traits'][number]['name'], desc: MonsterEntry['traits'][number]['desc']) => {
@@ -60,6 +62,9 @@ export function monsterToStatblock(e: MonsterEntry, lang: Lang): CompanionStatbl
   }))
   return {
     size: e.size, type: e.type, speed: e.speed, abilities: e.abilities, challenge_rating: e.challenge_rating,
+    // competenze della creatura (bonus totali): il server le dà al druido in Forma Selvatica
+    ...(nonEmpty(e.skills) ? { skills: e.skills } : {}),
+    ...(nonEmpty(e.saves) ? { saves: e.saves } : {}),
     traits: e.traits.map((tr) => convert(tr.name, tr.desc)),
     actions,
   }

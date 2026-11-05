@@ -544,7 +544,8 @@
       "not_prepared": "Non preparato",
       "prepared_counter": "Preparati",
       "pick_banner": "Segreti Magici: ancora {{count}} da scegliere fra gli incantesimi di qualsiasi classe, fino al livello {{max}} (anche trucchetti). Aggiungili uno alla volta.",
-      "pick_cantrip_banner": "Scegli {{count}} trucchetto fra quelli che ti concede il privilegio. Aggiungilo dal catalogo.",
+      "pick_cantrip_banner": "Scegli {{count}} trucchetto dall'elenco del druido. Aggiungilo dal catalogo.",
+      "pick_filter_note": "Il catalogo mostra solo ciò che questa scelta ammette. Per un incantesimo che non c'è, compila il modulo a mano.",
       "pick_free": "Questi incantesimi non contano fra quelli conosciuti.",
       "spell_pick_level": "Livello troppo alto: non puoi ancora lanciare incantesimi di questo livello.",
       "spell_already_known": "Conosci già questo incantesimo: scegline un altro.",
@@ -571,7 +572,7 @@
         "form_materials_title": "Materiali in forma bestiale",
         "form_materials_body": "In forma bestiale non puoi fornire componenti materiali: l'incantesimo ne richiede. Lanciarlo comunque?",
         "form_materials_cost_title": "Materiale in forma bestiale",
-        "form_materials_cost_body": "Come Arcidruido ignori i materiali senza costo, ma in forma bestiale non fornisci gli altri. Questo materiale ha un costo?"
+        "form_materials_cost_body": "Come Arcidruido ignori i materiali senza costo, ma in forma bestiale non puoi fornire quelli che ne hanno uno. Se il materiale di questo incantesimo ha un costo, lanciarlo comunque?"
       },
       "class_label": "Classe dell'incantesimo",
       "class_auto": "Migliore",
@@ -1115,6 +1116,8 @@
       },
       "magical": "magico",
       "wild_heal": "Cura la forma con uno slot",
+      "return_bonus_used": "Per tornare alla forma normale serve l'azione bonus, e in questo turno l'hai già usata.",
+      "wild_heal_full": "La forma è già a tutti i suoi PF: nessuno slot speso.",
       "wild_heal_title": "Forma Selvatica da Combattimento",
       "wild_heal_hint": "Azione bonus: spendi uno slot e {{name}} recupera 1d8 PF per livello dello slot.",
       "wild_heal_slot": "Slot di livello {{level}} ({{left}} rimasti): {{dice}}",

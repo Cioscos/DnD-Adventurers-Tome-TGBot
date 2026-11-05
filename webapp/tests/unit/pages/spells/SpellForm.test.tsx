@@ -19,7 +19,10 @@ const FIREBALL = {
 }
 vi.mock('@/components/catalog/CatalogPicker', async () => {
   const React = await import('react')
-  return { default: (p: { onPick: (e: unknown) => void }) => React.createElement('button', { onClick: () => p.onPick(FIREBALL) }, 'pick-fireball') }
+  return { default: (p: { onPick: (e: unknown) => void; note?: string; filters?: (e: unknown) => boolean }) =>
+    React.createElement('div', { 'data-filtered': p.filters ? 'yes' : 'no' },
+      p.note && React.createElement('p', null, p.note),
+      React.createElement('button', { onClick: () => p.onPick(FIREBALL) }, 'pick-fireball')) }
 })
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
@@ -55,6 +58,20 @@ describe('SpellForm', () => {
     render(<SpellForm initialData={saved} onSubmit={onSubmit} onCancel={() => {}} isPending={false} casters={casters} />)
     await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ class_id: '2', always_prepared: true }))
+  })
+
+  it('a cantrip pick narrows the catalogue and says how to add a spell that is not listed', async () => {
+    render(<SpellForm onSubmit={() => {}} onCancel={() => {}} isPending={false} pickFilter={{ max_level: 0, list: 'druid' }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.from_catalog' }))
+    expect(screen.getByText('character.spells.pick_filter_note')).toBeInTheDocument()
+    expect(screen.getByText('pick-fireball').parentElement).toHaveAttribute('data-filtered', 'yes')
+  })
+
+  it('without a pick the catalogue is whole and has no note', async () => {
+    render(<SpellForm onSubmit={() => {}} onCancel={() => {}} isPending={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.from_catalog' }))
+    expect(screen.queryByText('character.spells.pick_filter_note')).toBeNull()
+    expect(screen.getByText('pick-fireball').parentElement).toHaveAttribute('data-filtered', 'no')
   })
 
   it('add mode: title, name-gated submit, emits the form', async () => {

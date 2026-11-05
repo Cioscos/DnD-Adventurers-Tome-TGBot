@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import QuickActions from '@/components/character/QuickActions'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, update, notifyMutationError, toastError, charges } = vi.hoisted(() => ({
+const { spendHitDice, update, notifyMutationError, toastError, charges, rest } = vi.hoisted(() => ({
   charges: vi.fn(),
+  rest: vi.fn(),
   spendHitDice: vi.fn(),
   update: vi.fn(),
   notifyMutationError: vi.fn(),
@@ -15,7 +16,7 @@ const { spendHitDice, update, notifyMutationError, toastError, charges } = vi.ho
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { characters: { spendHitDice, update }, items: { charges } } }
+  return { ...actual, api: { characters: { spendHitDice, update, rest }, items: { charges } } }
 })
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
@@ -56,6 +57,7 @@ vi.mock('@/components/ui/ConfirmSheet', async () => {
   }
 })
 vi.mock('@/pages/hp/HitDiceResultDialog', () => ({ default: () => null }))
+vi.mock('@/components/character/RestPreviewList', () => ({ default: () => null }))
 vi.mock('@/components/RollResultModal', () => ({ default: () => null }))
 vi.mock('@/components/WeaponAttackModal', () => ({ default: () => null }))
 
@@ -234,5 +236,32 @@ describe('QuickActions item charges', () => {
     expect(screen.getByText('Bacchetta')).toBeTruthy()
     await userEvent.click(screen.getByLabelText('Bacchetta -1'))
     await waitFor(() => expect(charges).toHaveBeenCalledWith(7, 5, -1))
+  })
+})
+
+describe('QuickActions short rest with Natural Recovery', () => {
+  const landDruid = {
+    id: 7, settings: { quick_actions: [{ type: 'rest', rest: 'short' }] }, items: [], spells: [], active_states: [],
+    classes: [{ id: 1, class_name: 'Druido', level: 5, hit_die: 8, hit_dice_used: 0 }],
+    abilities: [{ id: 9, feature_key: 'druid.natural_recovery', uses: 1, max_uses: 1 }],
+    spell_slots: [{ id: 1, level: 1, total: 4, used: 3, available: 1, is_pact: false }],
+  } as unknown as CharacterFull
+
+  it('offers the picker and sends the chosen slots with the rest', async () => {
+    rest.mockResolvedValue(landDruid)
+    renderQC(landDruid)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_short'))
+    expect(screen.getByTestId('natural-recovery')).toBeTruthy()
+    await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
+    await userEvent.click(screen.getByText('character.hp.confirm_rest'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', { natural_recovery: { 1: 1 } }))
+  })
+
+  it('rests without the field when nothing was chosen', async () => {
+    rest.mockResolvedValue(landDruid)
+    renderQC(landDruid)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_short'))
+    await userEvent.click(screen.getByText('character.hp.confirm_rest'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short'))
   })
 })

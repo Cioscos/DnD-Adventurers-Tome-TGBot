@@ -12,6 +12,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import DamageDiceBuilder from '@/pages/inventory/DamageDiceBuilder'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
+import { spellPickFilter } from '@/lib/spellPick'
 import { loadCatalog, spellToForm, type Lang, type SpellEntry } from '@/lib/srd/catalog'
 import { useUnitSettings } from '@/store/unitSettings'
 import { parseComponents, serializeComponents, type ComponentToken } from './spellComponents'
@@ -62,9 +63,11 @@ interface SpellFormProps {
   isPending: boolean
   /** Classi che lanciano incantesimi: con almeno due si sceglie quella di CD e attacco. */
   casters?: { class_id: number; class_name: string }[]
+  /** Scelta di incantesimi in corso: il catalogo mostra solo ciò che ammette (il modulo manuale resta per il resto). */
+  pickFilter?: { max_level: number; list?: string | null }
 }
 
-export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [] }: SpellFormProps) {
+export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter }: SpellFormProps) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const unitSystem = useUnitSettings((s) => s.system)
@@ -378,6 +381,8 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
       {pickerOpen && (
         <CatalogPicker
           kind="spells"
+          filters={pickFilter ? spellPickFilter(pickFilter) : undefined}
+          note={pickFilter ? t('character.spells.pick_filter_note') : undefined}
           onClose={() => setPickerOpen(false)}
           onPick={(e) => { applyEntry(e); setPickerOpen(false) }}
         />

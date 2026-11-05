@@ -646,6 +646,7 @@ export default function Spells() {
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
           casters={spellcasting?.casters ?? []}
+          pickFilter={pick?.spell_pick ? { max_level: pick.spell_pick.max_level, list: pick.spell_pick.list } : undefined}
         />
       )}
 

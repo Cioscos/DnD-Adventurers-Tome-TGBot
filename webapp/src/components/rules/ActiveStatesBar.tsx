@@ -4,6 +4,7 @@ import { GiLightningTrio } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import { notifyMutationError } from '@/lib/mutationError'
+import { bonusSpentOnReturn } from '@/lib/formReturn'
 import { useToast } from '@/hooks/useToast'
 import type { CharacterFull } from '@/types'
 
@@ -36,8 +37,14 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
   const toast = useToast()
   const end = useMutation({
     mutationFn: (key: string) => api.characters.endActiveState(char.id, key),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', char.id] }),
-    onError: () => notifyMutationError(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['companions', char.id] })  // chiudere la Forma Selvatica la chiude anche nei compagni
+    },
+    onError: (err) => {
+      if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
+      else notifyMutationError()
+    },
   })
   // Dado di Ispirazione in Combattimento alla CA: in reazione, il valore da sommare lo dice il server.
   const acBoost = useMutation({

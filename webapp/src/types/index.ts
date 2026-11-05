@@ -92,8 +92,9 @@ export interface PendingChoice {
   /** Personaggio salvato prima del catalogo o importato: ammette ciò che ha già sulla scheda (R39). */
   retrofit?: boolean
   /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti.
+   *  `list`: la classe del cui elenco si pesca (trucchetto del druido), `null` per qualsiasi classe.
    *  `owned`: con `retrofit`, gli incantesimi già conosciuti che si possono dichiarare «già sulla scheda». */
-  spell_pick?: { free: boolean; max_level: number; owned?: { id: number; name: string; level: number }[] }
+  spell_pick?: { free: boolean; max_level: number; list?: string | null; owned?: { id: number; name: string; level: number }[] }
 }
 
 export type ResolveChoiceBody =
@@ -1043,6 +1044,9 @@ export interface CompanionStatblock {
   type?: string
   speed?: Record<string, number>
   abilities?: Record<string, number>
+  /** Bonus totali di abilità e TS della creatura (sul druido in Forma Selvatica valgono se più alti dei suoi). */
+  skills?: Record<string, number>
+  saves?: Record<string, number>
   traits?: CompanionAction[]
   actions?: CompanionAction[]
   challenge_rating?: number

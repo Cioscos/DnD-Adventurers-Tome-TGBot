@@ -65,4 +65,21 @@ describe('monsterToStatblock', () => {
     expect(sb.actions?.[0]).toMatchObject({ name: 'Morso', damage_dice: '1d1' })
     expect(sb.actions?.[0].en).toBeUndefined()
   })
+
+  it('carries the skill and saving throw bonuses of the creature (the server gives them to a druid in beast form)', () => {
+    const wolf = {
+      index: 'wolf', size: 'medium', type: 'beast', speed: {}, abilities: { dex: 15 }, challenge_rating: 0.25,
+      name: { en: 'Wolf' }, armor_class: 13, hit_points: 11, traits: [], actions: [],
+      skills: { perception: 3, stealth: 4 }, saves: { con: 6 },
+    } as unknown as MonsterEntry
+    expect(monsterToStatblock(wolf, 'it')).toMatchObject({ skills: { perception: 3, stealth: 4 }, saves: { con: 6 } })
+  })
+
+  it('leaves them out when the creature has none', () => {
+    const bat = { index: 'bat', size: 'tiny', type: 'beast', speed: {}, abilities: {}, challenge_rating: 0, name: { en: 'Bat' },
+      armor_class: 12, hit_points: 1, traits: [], actions: [], skills: {}, saves: {} } as unknown as MonsterEntry
+    const sb = monsterToStatblock(bat, 'it')
+    expect(sb.skills).toBeUndefined()
+    expect(sb.saves).toBeUndefined()
+  })
 })

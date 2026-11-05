@@ -33,6 +33,8 @@ export interface SpellEntry extends BaseEntry {
   damage_dice: string | null
   damage_type: string | null
   higher_levels_dice: string | null
+  /** Classi che hanno l'incantesimo nel loro elenco (chiavi inglesi minuscole). */
+  classes?: string[]
 }
 
 export interface EquipmentEntry extends BaseEntry {
@@ -78,6 +80,8 @@ export interface MonsterEntry extends BaseEntry {
   hit_points: number
   speed: Record<string, number>
   abilities: Record<string, number>
+  skills?: Record<string, number>
+  saves?: Record<string, number>
   challenge_rating: number
   traits: { name: LocalizedField; desc: LocalizedField }[]
   actions: MonsterAction[]

@@ -20,6 +20,7 @@ import StatPill from '@/components/ui/StatPill'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
+import NaturalRecoveryPicker from '@/components/character/NaturalRecoveryPicker'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
@@ -76,6 +77,7 @@ export default function HP() {
   const savingRef = useRef(false)
 
   const [showShortRest, setShowShortRest] = useState(false)
+  const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
@@ -190,7 +192,9 @@ export default function HP() {
 
   const restMutation = useMutation({
     mutationFn: (restType: 'long' | 'short') =>
-      api.characters.rest(charId, restType),
+      restType === 'short' && Object.keys(recovery).length > 0
+        ? api.characters.rest(charId, restType, { natural_recovery: recovery })
+        : api.characters.rest(charId, restType),
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
       if (detail === 'rest_needs_hp') toast.error(t('character.quick_actions.rest_needs_hp'))
@@ -198,6 +202,7 @@ export default function HP() {
       else notifyMutationError()
     },
     onSuccess: (updated) => {
+      setRecovery({})
       qc.setQueryData(['character', charId], updated)
       // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
@@ -512,7 +517,7 @@ export default function HP() {
       {showShortRest && (
         <HitDiceModal
           classes={classes}
-          preview={<SongOfRestToggle char={char} />}
+          preview={<><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /></>}
           onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
           onConfirmRest={() => {
             restMutation.mutate('short')

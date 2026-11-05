@@ -544,7 +544,8 @@
       "not_prepared": "Not prepared",
       "prepared_counter": "Prepared",
       "pick_banner": "Magical Secrets: {{count}} left to choose among the spells of any class, up to level {{max}} (cantrips too). Add them one at a time.",
-      "pick_cantrip_banner": "Choose {{count}} cantrip granted by the feature. Add it from the catalog.",
+      "pick_cantrip_banner": "Choose {{count}} cantrip from the druid list. Add it from the catalog.",
+      "pick_filter_note": "The catalog only shows what this choice allows. For a spell that is not listed, fill in the form by hand.",
       "pick_free": "These spells do not count among your known spells.",
       "spell_pick_level": "Level too high: you cannot cast spells of this level yet.",
       "spell_already_known": "You already know this spell: pick another.",
@@ -571,7 +572,7 @@
         "form_materials_title": "Materials in beast shape",
         "form_materials_body": "In beast shape you cannot provide material components, and this spell needs some. Cast it anyway?",
         "form_materials_cost_title": "Material in beast shape",
-        "form_materials_cost_body": "As Archdruid you ignore costless materials, but in beast shape you cannot provide the others. Does this material have a cost?"
+        "form_materials_cost_body": "As Archdruid you ignore costless materials, but in beast shape you cannot provide those that have a cost. If this spell's material has a cost, cast it anyway?"
       },
       "class_label": "Spell's class",
       "class_auto": "Best",
@@ -1116,6 +1117,8 @@
       },
       "magical": "magical",
       "wild_heal": "Heal the form with a slot",
+      "return_bonus_used": "Returning to your normal form takes a bonus action, and you have already used it this turn.",
+      "wild_heal_full": "The form is already at full hit points: no slot was spent.",
       "wild_heal_title": "Combat Wild Shape",
       "wild_heal_hint": "Bonus action: spend a slot and {{name}} regains 1d8 HP per slot level.",
       "wild_heal_slot": "Level {{level}} slot ({{left}} left): {{dice}}",

@@ -22,6 +22,11 @@ describe('CatalogPicker', () => {
     expect(spellToForm(entry, 'it', 'imperial').srd_index).toBe('fireball')
   })
 
+  it('shows the note under the search box', async () => {
+    render(<CatalogPicker kind="spells" onPick={() => {}} onClose={() => {}} note="solo trucchetti" />)
+    expect(await screen.findByText('solo trucchetti')).toBeInTheDocument()
+  })
+
   it('applies the filters prop', async () => {
     render(<CatalogPicker kind="monsters" onPick={() => {}} onClose={() => {}} filters={(e) => e.index === 'aboleth'} />)
     await waitFor(() => expect(screen.getByText('Aboleth')).toBeInTheDocument())

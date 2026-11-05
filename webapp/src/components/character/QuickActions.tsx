@@ -16,6 +16,7 @@ import IconButton from '@/components/ui/IconButton'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
+import NaturalRecoveryPicker from '@/components/character/NaturalRecoveryPicker'
 import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
@@ -96,6 +97,7 @@ export default function QuickActions({ char }: Props) {
   const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
   const [confirmLongRest, setConfirmLongRest] = useState(false)
   const [shortRestOpen, setShortRestOpen] = useState(false)
+  const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [confirmRestore, setConfirmRestore] = useState(false)
   const [orderDraft, setOrderDraft] = useState<string[] | null>(null)
   const orderRef = useRef<string[] | null>(null)
@@ -301,7 +303,10 @@ export default function QuickActions({ char }: Props) {
   })
 
   const restMutation = useMutation({
-    mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
+    mutationFn: (restType: 'long' | 'short') =>
+      restType === 'short' && Object.keys(recovery).length > 0
+        ? api.characters.rest(char.id, restType, { natural_recovery: recovery })
+        : api.characters.rest(char.id, restType),
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
       if (detail === 'rest_needs_hp') toast.error(t('character.quick_actions.rest_needs_hp'))
@@ -309,6 +314,7 @@ export default function QuickActions({ char }: Props) {
       else notifyMutationError()
     },
     onSuccess: (updated) => {
+      setRecovery({})
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
       setConfirmLongRest(false)
@@ -884,7 +890,7 @@ export default function QuickActions({ char }: Props) {
           classes={char.classes ?? []}
           onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
           onConfirmRest={() => restMutation.mutate('short')}
-          preview={<><RestPreviewList charId={char.id} restType="short" /><SongOfRestToggle char={char} /></>}
+          preview={<><RestPreviewList charId={char.id} restType="short" /><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /></>}
           onClose={() => setShortRestOpen(false)}
           isPending={hitDieMutation.isPending}
           pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}

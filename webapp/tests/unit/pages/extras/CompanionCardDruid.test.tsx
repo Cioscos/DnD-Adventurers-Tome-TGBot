@@ -6,18 +6,21 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import CompanionCard from '@/pages/extras/CompanionCard'
 import type { Companion } from '@/types'
 
-const { attack } = vi.hoisted(() => ({ attack: vi.fn() }))
+const { attack, deactivate, toastError, notifyMutationError } = vi.hoisted(() => ({
+  attack: vi.fn(), deactivate: vi.fn(), toastError: vi.fn(), notifyMutationError: vi.fn(),
+}))
 
 vi.mock('@/api/client', () => ({
-  api: { companions: { attack, hp: vi.fn(), deactivate: vi.fn(), activate: vi.fn() } },
-  ApiError: class ApiError extends Error {},
+  api: { companions: { attack, hp: vi.fn(), deactivate, activate: vi.fn() } },
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('react-i18next', async (orig) => ({
   ...((await orig()) as Record<string, unknown>),
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }),
 }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn().mockResolvedValue([12]) }))
-vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: vi.fn(), info: vi.fn(), success: vi.fn() }) }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
+vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/lib/rollOptions', async (orig) => ({
   ...((await orig()) as Record<string, unknown>),
@@ -54,6 +57,15 @@ describe('CompanionCard druid features', () => {
     expect(screen.queryByText('character.extras.wild_heal')).toBeNull()
     renderWithProviders(<CompanionCard charId={7} comp={form(false)} wildShapeUses={1} healSlots={[{ level: 1, left: 1 }]} />)
     expect(screen.queryByText('character.extras.wild_heal')).toBeNull()
+  })
+
+  it('ending the form with the bonus action spent says why, without the generic warning', async () => {
+    const { ApiError } = await import('@/api/client')
+    deactivate.mockRejectedValueOnce(new ApiError(409, { code: 'turn_slot_used' }))
+    renderWithProviders(<CompanionCard charId={7} comp={form(true)} wildShapeUses={1} />)
+    await userEvent.click(screen.getByText('character.extras.end_form'))
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith('character.extras.return_bonus_used'))
+    expect(notifyMutationError).not.toHaveBeenCalled()
   })
 
   it('Primal Strike: an attack in beast form says it is magical, a plain one does not', async () => {
