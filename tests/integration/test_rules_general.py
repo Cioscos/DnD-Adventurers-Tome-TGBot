@@ -984,3 +984,92 @@ async def test_giving_2014_inspiration_loses_it_without_needing_an_extra(client,
     assert r.json()["heroic_inspiration"] is False
     as_user(other)
     assert (await client.get(f"/characters/{friend}")).json()["heroic_inspiration"] is True
+
+
+# --- Giro 3 ---------------------------------------------------------------------------------------------------------
+
+async def test_new_turn_during_setup_cannot_split_the_badge_from_the_state(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    await _surprise(client, sid, pc["id"])
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/turn/new")  # in preparazione l'incontro non è ancora attivo
+    assert r.status_code == 200, r.text
+    await _start(client, sid, pc, monster, 1, 20)  # il mostro apre
+    me = await _me(client, cid)
+    assert me["surprised"] is True and me["incapacitated"] is True
+
+
+async def test_start_clears_a_surprise_the_gm_never_marked(client, test_session_factory):
+    sid, cid, pc, monster = await _surprise_setup(client, test_session_factory, "2014")
+    from api.services.rules_turn import set_surprised
+    from core.db.models import Character
+    async with test_session_factory() as s:  # un residuo sulla scheda, senza flag sul combattente
+        set_surprised(await s.get(Character, cid))
+        await s.commit()
+    await _start(client, sid, pc, monster, 20, 1)
+    assert (await _me(client, cid))["surprised"] is False
+
+
+async def test_rerolled_option_dice_replace_the_old_ones_in_the_notes(client, rules_catalog, monkeypatch):
+    from dataclasses import replace
+
+    from tests.integration.test_rules_roll_options_api import SNEAK, _deferred, _feature, _weapon
+    rules_catalog(replace(_feature(SNEAK), edition="2024"))
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    item = await _weapon(client, cid)
+    hit = await _deferred(client, cid, item, die=10)
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["sneak"]})
+    block = r.json()["option_result"]
+    first, rest = block["extra_rolls"][0], block["extra_rolls"][1:]
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 6)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [1]})
+    assert r.status_code == 200, r.text
+    after = r.json()["option_result"]
+    assert after["extra_rolls"] == [6, *rest]  # non si accoda: il dado ritirato prende il posto del vecchio
+    assert after["extra_total"] == block["extra_total"] - first + 6
+    assert after["keys"] == [*block["keys"], "inspiration:reroll_damage"]
+
+
+async def test_rerolling_a_weapon_die_leaves_no_phantom_extra_dice(client):
+    cid = await _weapon_char(client)
+    hit = await _weapon_hit(client, cid, 15)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 200, r.text
+    block = r.json()["option_result"]
+    assert block["extra_rolls"] == [] and block["extra_total"] == 0
+
+
+async def test_hide_accepts_an_old_shaped_hiding_record(client, test_session_factory):
+    cid = await _char(client, edition="2024")
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.settings = {**(char.settings or {}), "hiding": {"dc": 17}}
+        await s.commit()
+    await _stealth(client, cid, 18)
+    r = await client.post(f"/characters/{cid}/hide")
+    assert r.status_code == 200, r.text
+
+
+async def test_option_dice_stay_rerollable_on_a_fixed_base_damage(client, rules_catalog, monkeypatch):
+    from dataclasses import replace
+
+    from core.rules.types import RollOptionSpec
+    from tests.integration.test_rules_roll_options_api import _LABEL, _feature
+    spark = RollOptionSpec(key="spark", phase="before", rolls=("attack",), label=_LABEL,
+                           extra_dice=lambda _c, _i: "1d6")
+    rules_catalog(replace(_feature(spark), edition="2024"))
+    cid = await _char(client, edition="2024")
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 15, "options": ["spark"]})
+    assert r.status_code == 200, r.text
+    hit = r.json()
+    assert len(hit["reroll_dice"]) == 1 and hit["reroll_dice"][0][0] == 6  # solo il dado dell'opzione
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 6)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 200, r.text
+    assert r.json()["damage_total"] == hit["damage_total"] - hit["reroll_dice"][0][1] + 6

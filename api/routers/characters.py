@@ -504,7 +504,7 @@ async def hide(
         raise HTTPException(status_code=409, detail={"code": "hide_failed"})
     # Nascondersi di nuovo mentre ci si nasconde già: l'Invisibilità di prima è del nascondiglio, non di un'altra fonte.
     hiding = (char.settings or {}).get("hiding")
-    was_invisible = hiding["was_invisible"] if hiding else bool((char.conditions or {}).get("invisible"))
+    was_invisible = bool(hiding.get("was_invisible")) if hiding else bool((char.conditions or {}).get("invisible"))
     await apply_conditions(session, char, {"invisible": True})
     char.settings = {**(char.settings or {}), "hiding": {"dc": total, "was_invisible": was_invisible}}
     char = await _refresh_char_full(session, char_id, user_id)

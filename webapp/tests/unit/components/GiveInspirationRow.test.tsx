@@ -24,7 +24,7 @@ vi.mock('react-i18next', async (orig) => ({
 }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
-  return { default: (p: { children?: ReactNode }) => React.createElement('div', null, p.children) }
+  return { default: (p: { title?: string; children?: ReactNode }) => React.createElement('div', null, React.createElement('h2', null, p.title), p.children) }
 })
 vi.mock('@/pages/inventory/GiveSheet', async () => {
   const React = await import('react')
@@ -91,6 +91,7 @@ describe('GiveInspirationRow', () => {
     renderWithProviders(<GiveInspirationRow char={{ ...(char as object), rules_edition: '2014' } as never} />)
     expect(screen.queryByText('character.inspiration.received_another')).toBeNull()
     await userEvent.click(screen.getByText('character.inspiration.give_own'))
+    expect(screen.getByRole('heading')).toHaveTextContent('character.inspiration.give_own')  // il foglio non dice «quella in più»
     await userEvent.click(screen.getByText('pick'))
     await userEvent.click(screen.getByText('character.inspiration.give_confirm'))
     await waitFor(() => expect(giveInspiration).toHaveBeenCalledWith(3, { from_character_id: 7, to_user_id: 55 }))

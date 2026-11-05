@@ -380,7 +380,7 @@ export default function Turn() {
         </Pressable>
         {otherOpen && (
           <fieldset data-testid="turn-other" disabled={!!char.computed?.incapacitated}
-            className={`min-w-0 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
+            className={`min-w-0 pt-2 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
             {sectionBody(t('character.turn.section_other'), groups.other)}
           </fieldset>
         )}

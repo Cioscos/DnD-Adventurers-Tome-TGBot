@@ -585,12 +585,14 @@ def remember_weapon_damage(
     turn = get_turn(char)
     turn.pop("last_damage", None)
     die = _DIE.search(result.damage_dice or "")
-    if die and not (result.is_fumble or result.grazed or result.effect) and opts.damage_unscaled is not None:
-        sides = int(die[2])
-        mod = result.damage_bonus - extra_bonus
-        base = len(result.damage_rolls)
-        dice = [[sides, v] for v in result.damage_rolls] + pairs(option_dice)
-        flat = opts.damage_unscaled - max(0, sum(result.damage_rolls) + mod) - sum(v for _, v in option_dice)
+    # Un danno base fisso (colpo senz'armi "1") non ha dadi, ma quelli delle opzioni si ritirano lo stesso.
+    if (die or option_dice) and not (result.is_fumble or result.grazed or result.effect) and opts.damage_unscaled is not None:
+        fixed = 0 if die else sum(result.damage_rolls)
+        rolls = result.damage_rolls if die else []
+        mod = result.damage_bonus - extra_bonus + fixed
+        base = len(rolls)
+        dice = [[int(die[2]), v] for v in rolls] + pairs(option_dice)
+        flat = opts.damage_unscaled - max(0, sum(rolls) + mod) - sum(v for _, v in option_dice)
         result.reroll_dice = dice
         turn["last_damage"] = {
             "kind": "weapon", "roll_id": uuid.uuid4().hex, "dice": dice, "main": base, "base": base, "added": [],

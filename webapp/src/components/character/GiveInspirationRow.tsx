@@ -51,6 +51,7 @@ export default function GiveInspirationRow({ char }: { char: CharacterFull }) {
   const own = char.rules_edition !== '2024'
   return (
     <>
+      <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" variant="secondary" loading={receive.isPending}
         onClick={() => (own || char.inspiration_extra ? openSheet() : receive.mutate())}>
         {t(own ? 'character.inspiration.give_own' : char.inspiration_extra ? 'character.inspiration.give' : 'character.inspiration.received_another')}
@@ -60,8 +61,9 @@ export default function GiveInspirationRow({ char }: { char: CharacterFull }) {
           {t('character.inspiration.discard')}
         </Button>
       )}
+      </div>
       {open && (
-        <Sheet open onClose={() => setOpen(false)} title={t('character.inspiration.give')}>
+        <Sheet open onClose={() => setOpen(false)} title={t(own ? 'character.inspiration.give_own' : 'character.inspiration.give')}>
           <div className="p-5 space-y-3">
             <p className="text-sm text-dnd-text-muted font-body">{t(own ? 'character.inspiration.give_hint_own' : 'character.inspiration.give_hint')}</p>
             <PartnerPicker partners={partners} value={to} onChange={setTo} />

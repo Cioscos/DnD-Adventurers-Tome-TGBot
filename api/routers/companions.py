@@ -319,7 +319,7 @@ async def companion_attack(
     )
     turn = get_turn(char)  # i dadi di questo colpo si possono ritirare, come per l'arma
     turn.pop("last_damage", None)
-    if m and rolls and not is_fumble:
+    if m and (rolls or opts.rolled_dice) and not is_fumble:
         dice = [[int(m.group(2)), v] for v in rolls] + pairs(opts.rolled_dice)
         result.reroll_dice = dice
         turn["last_damage"] = {

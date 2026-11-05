@@ -447,6 +447,8 @@ async def start_encounter(
     enc.active_combatant_id = first.id if first else None
     db.add(_system_feed_message(session, "⚔️ Combattimento iniziato"))
     _touch(session)
+    for c in enc.combatants:  # badge e stato del PG partono allineati, qualunque cosa sia successo in preparazione
+        await _sync_surprise(db, c)
     if first is not None and first.kind == "pc" and first.character_id:
         first_char = await db.get(Character, first.character_id)
         if first_char is not None:

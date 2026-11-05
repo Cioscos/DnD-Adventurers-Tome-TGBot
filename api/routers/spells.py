@@ -654,7 +654,13 @@ async def last_damage_options(
     base = last.get("base", len(values))
     old = last["result"]
     previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
-    block = option_result(opts, [v for _, v in rolled], 0, previous=previous)
+    block = option_result(opts, [], 0, previous=previous)
+    if block is not None:  # i dadi delle opzioni sono quelli di adesso, non si accodano ai vecchi
+        old_values, new_values = [v for _, v in last["dice"][base:]], values[base:]
+        newly = added[len(last["added"]):]
+        block = block.model_copy(update={
+            "extra_rolls": [*new_values, *added],
+            "extra_total": block.extra_total - sum(old_values) + sum(new_values) + sum(newly)})
     if kind == "weapon":
         result = WeaponAttackResult(**{**old, "damage_rolls": values[:base] + added, "damage_total": total,
                                        "attack_id": None, "reroll_dice": dice, "option_result": block})
