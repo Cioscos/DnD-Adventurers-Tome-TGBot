@@ -745,7 +745,11 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow" }
+      "custom": { "sap": "Sap", "slow": "Slow" },
+      "custom_note": {
+        "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
+        "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
+      }
     },
     "roll_options": {
         "second_attack": "Second creature, to hit: {{die}} = {{total}}",

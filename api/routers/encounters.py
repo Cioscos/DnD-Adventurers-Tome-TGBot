@@ -41,7 +41,10 @@ from api.services.condition_effects import (
 )
 from api.services.durations import process_edge
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
-from api.services.rules_targets import apply_condition_to_combatant, pc_char as _pc_char, set_condition as _set_condition
+from api.services.rules_targets import (
+    activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
+    pc_char as _pc_char, set_condition as _set_condition,
+)
 from api.services.rules_turn import reset_turn
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -710,10 +713,14 @@ async def gm_resolve_monster_save(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Save already resolved")
     ps.status = "passed" if body.passed else "failed"
     ps.resolved_at = _now()
-    if body.passed:
-        eff = await db.get(ConditionEffect, ps.effect_id)
-        if eff is not None:
-            await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
+    eff = await db.get(ConditionEffect, ps.effect_id)
+    if eff is not None and eff.pending:  # effetto di un privilegio: il TS decide se la condizione esiste
+        if body.passed:
+            await drop_pending_effect(db, eff)
+        else:
+            await activate_pending_effect(db, eff)
+    elif body.passed and eff is not None:
+        await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
     _touch(session)
     await db.flush()
     return await build_encounter_block(db, enc, viewer_is_gm=True)
@@ -805,6 +812,7 @@ async def end_encounter(
     enc = await _require_open_encounter(session_id, db)
     enc.status = "ended"
     enc.ended_at = _now()
+    await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     _touch(session)
     await db.flush()

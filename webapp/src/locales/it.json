@@ -745,7 +745,11 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow" }
+      "custom": { "sap": "Sap", "slow": "Slow" },
+      "custom_note": {
+        "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
+        "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
+      }
     },
     "roll_options": {
         "second_attack": "Seconda creatura, colpire: {{die}} = {{total}}",

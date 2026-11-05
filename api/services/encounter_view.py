@@ -51,13 +51,14 @@ async def build_encounter_block(
     combs = list(enc.combatants)
     # Monster effects live on the combatant; PC effects are on the sheet (live_characters).
     mon_ids = [c.id for c in combs if c.kind == "monster"]
-    rows = list((await db.execute(select(ConditionEffect).where(
+    all_rows = list((await db.execute(select(ConditionEffect).where(
         ConditionEffect.combatant_id.in_(mon_ids)).order_by(ConditionEffect.id))).scalars())
+    rows = [r for r in all_rows if not r.pending]  # i pending non sono ancora sul mostro
     effects: dict[int, list[ConditionEffectRead]] = {}
     for row, read in zip(rows, await effect_reads(db, rows)):
         effects.setdefault(row.combatant_id, []).append(read)
     pending: dict[int, list[PendingSaveRead]] = {}
-    slugs = {r.id: r.slug for r in rows}
+    slugs = {r.id: r.slug for r in all_rows}
     for p in (await db.execute(select(PendingSave).where(
             PendingSave.combatant_id.in_(mon_ids), PendingSave.character_id.is_(None),
             PendingSave.status == "pending").order_by(PendingSave.id))).scalars():

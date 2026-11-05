@@ -51,6 +51,7 @@ from api.schemas.common import D20RollSubmission, RollResult
 from api.schemas.condition_effects import PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
+from api.services.rules_targets import activate_pending_effect, drop_pending_effect
 from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
@@ -761,6 +762,13 @@ async def close_pending_save(
     ps.last_roll = {**roll, "passed": passed}
     # Build the read model before apply_conditions deletes the effect and its saves.
     save_read = pending_read(ps, effect.slug)
+    if effect.pending:  # effetto di un privilegio: il TS decide se la condizione esiste, nulla di preesistente si tocca
+        if passed:
+            await drop_pending_effect(session, effect)
+        else:
+            await activate_pending_effect(session, effect)
+            _add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
+        return save_read, passed
     if passed:
         _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
         await apply_conditions(session, char, {effect.slug: False})
@@ -794,7 +802,7 @@ async def roll_pending_save(
     reroll = bool(body and body.with_inspiration)
 
     effect = await session.get(ConditionEffect, ps.effect_id)
-    if effect is None or not (char.conditions or {}).get(effect.slug):
+    if effect is None or not (effect.pending or (char.conditions or {}).get(effect.slug)):
         ps.dismissed = True
         await session.commit()  # persist before the 409 (get_db rolls back on errors)
         raise HTTPException(status_code=409, detail={"code": "condition_gone"})

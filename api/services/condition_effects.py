@@ -284,8 +284,10 @@ async def upsert_effect(
 
 
 async def effects_for_character(db: AsyncSession, char_id: int) -> list[ConditionEffect]:
+    """Gli effetti attivi: quelli ancora in attesa del TS (``pending``) non sono sulla scheda."""
     return list((await db.execute(select(ConditionEffect).where(
-        ConditionEffect.character_id == char_id).order_by(ConditionEffect.id))).scalars())
+        ConditionEffect.character_id == char_id, ConditionEffect.pending.is_(False),
+    ).order_by(ConditionEffect.id))).scalars())
 
 
 async def open_pending_saves(db: AsyncSession, char_id: int) -> list[PendingSave]:
@@ -325,7 +327,8 @@ async def character_effect_payload(
 ) -> tuple[list[ConditionEffectRead], list[PendingSaveRead]]:
     """Read models for CharacterFull (source names resolved)."""
     effects = await effects_for_character(db, char_id)
-    slugs = {e.id: e.slug for e in effects}
+    slugs = dict((await db.execute(select(ConditionEffect.id, ConditionEffect.slug).where(
+        ConditionEffect.character_id == char_id))).all())  # anche i pending: i loro TS vanno mostrati
     pendings = [pending_read(p, slugs.get(p.effect_id, ""))
                 for p in await open_pending_saves(db, char_id)]
     return await effect_reads(db, effects), pendings

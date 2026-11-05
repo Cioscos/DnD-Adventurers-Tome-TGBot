@@ -137,6 +137,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
     expired: list[str] = []
     rows = (await db.execute(select(ConditionEffect).where(
         ConditionEffect.expiry_edge == edge, ConditionEffect.expiry_count.is_not(None),
+        ConditionEffect.pending.is_(False),
         or_(on_x, ConditionEffect.source_combatant_id == combatant.id),
     ).order_by(ConditionEffect.id))).scalars().all()
     for eff in rows:

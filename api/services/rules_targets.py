@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.encounter import GmConditionApply
-from api.services.condition_effects import ExpirySpec, SaveSpec, clear_effects_for, upsert_effect
+from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, upsert_effect
 from api.services.effects import _add_history, apply_conditions
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
@@ -88,36 +88,91 @@ def _expiry(effect: dict) -> dict | None:
     return {"anchor": "owner", "edge": "end", "count": effect["rounds"]} if effect.get("rounds") else None
 
 
+async def _delete_effect(db: AsyncSession, eff: ConditionEffect) -> None:
+    """Elimina l'effetto e i suoi TS (la cascata di SQLite non è garantita)."""
+    for ps in (await db.execute(select(PendingSave).where(PendingSave.effect_id == eff.id))).scalars():
+        await db.delete(ps)
+    await db.delete(eff)
+
+
+async def drop_pending_effect(db: AsyncSession, eff: ConditionEffect) -> None:
+    """TS superato: l'effetto non è mai esistito sul bersaglio, ciò che aveva già resta com'è."""
+    await _delete_effect(db, eff)
+    await db.flush()
+
+
+async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> None:
+    """TS fallito: la condizione va sulla scheda o sul mostro e la durata decorre da ora."""
+    others = (await db.execute(select(ConditionEffect).where(
+        ConditionEffect.character_id == eff.character_id, ConditionEffect.combatant_id == eff.combatant_id,
+        ConditionEffect.slug == eff.slug, ConditionEffect.id != eff.id))).scalars().all()
+    for other in others:  # un solo effetto per condizione, come in ``upsert_effect``
+        await _delete_effect(db, other)
+    if eff.character_id is not None:
+        char = await db.get(Character, eff.character_id)
+        if not (char.conditions or {}).get(eff.slug):
+            await apply_conditions(db, char, {eff.slug: True})
+        target = ("character", eff.character_id)
+    else:
+        comb = await db.get(Combatant, eff.combatant_id)
+        if not (comb.conditions or {}).get(eff.slug):
+            comb.conditions = {**(comb.conditions or {}), eff.slug: True}
+        target = ("combatant", eff.combatant_id)
+    eff.pending = False
+    enc = await db.get(Encounter, eff.encounter_id) if eff.encounter_id else None
+    if enc is not None and enc.status == "active" and enc.active_combatant_id and eff.expiry_edge == "end"             and eff.expiry_count is not None:
+        anchor = eff.source_combatant_id if eff.expiry_anchor == "source" else await _target_combatant_id(db, target, enc)
+        if anchor == enc.active_combatant_id:  # come ``upsert_effect``: dura un turno in più
+            eff.expiry_count += 1
+    await db.flush()
+
+
+async def drop_pending_effects(db: AsyncSession, encounter_id: int) -> None:
+    """A fine incontro i TS in attesa non servono più: la condizione non è mai esistita."""
+    for eff in (await db.execute(select(ConditionEffect).where(
+            ConditionEffect.encounter_id == encounter_id, ConditionEffect.pending.is_(True)))).scalars().all():
+        await _delete_effect(db, eff)
+    await db.flush()
+
+
 async def apply_target_effect(
     db: AsyncSession, char: Character, enc: Encounter, mine: Combatant, target: Combatant, effect_key: str,
 ) -> tuple[bool, PendingSave | None]:
     """Applica l'effetto tenuto per ``effect_key``: (applicato, TS in sospeso). Lo consuma.
 
-    La condizione si applica subito; con un TS ne nasce uno in sospeso che la toglie se riesce."""
+    Con un TS la condizione non c'è ancora: nasce un effetto ``pending`` e il TS ne decide la sorte."""
     effect = pending_target_effect(char, effect_key)
+    slug = effect.get("condition")
+    with_save = bool(slug and effect.get("save_ability") and effect.get("on_failure_only", True))
+    if with_save and (await db.execute(select(ConditionEffect.id).where(
+            ConditionEffect.character_id == (target.character_id if target.kind == "pc" else None),
+            ConditionEffect.combatant_id == (target.id if target.kind == "monster" else None),
+            ConditionEffect.slug == slug, ConditionEffect.pending.is_(True)))).first():
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "target_effect_pending"})
     turn = dict(char.turn_state or {})
     turn["target_effects"] = {k: v for k, v in turn["target_effects"].items() if k != effect_key}
     char.turn_state = turn
-    slug = effect.get("condition")
     if not slug:
         return False, None
-    await apply_condition_to_combatant(db, enc, target, GmConditionApply(
-        slug=slug, expiry=_expiry(effect), source_combatant_id=mine.id), applied_by_gm=False)
-    _add_history(db, char.id, "condition_change", f"{condition_label(slug)} su {target.name}")
-    save = None
-    if effect.get("save_ability") and effect.get("on_failure_only", True):
-        eff = await _effect_row(db, target, slug)
-        save = PendingSave(
-            effect_id=eff.id, character_id=target.character_id if target.kind == "pc" else None,
-            combatant_id=target.id if target.kind == "monster" else None,
-            ability=effect["save_ability"], dc=effect["save_dc"], status="pending",
-            created_at=datetime.utcnow().isoformat(timespec="seconds"))
-        db.add(save)
-        await db.flush()
+    expiry = _expiry(effect)
+    if not with_save:
+        await apply_condition_to_combatant(db, enc, target, GmConditionApply(
+            slug=slug, expiry=expiry, source_combatant_id=mine.id), applied_by_gm=False)
+        _add_history(db, char.id, "condition_change", f"{condition_label(slug)} su {target.name}")
+        return True, None
+    now = datetime.utcnow().isoformat(timespec="seconds")
+    eff = ConditionEffect(
+        character_id=target.character_id if target.kind == "pc" else None,
+        combatant_id=target.id if target.kind == "monster" else None, slug=slug, pending=True,
+        expiry_anchor=expiry["anchor"] if expiry else None, expiry_edge=expiry["edge"] if expiry else None,
+        expiry_count=expiry["count"] if expiry else None, source_combatant_id=mine.id, source_character_id=char.id,
+        applied_by_gm=False, encounter_id=enc.id, created_at=now)
+    db.add(eff)
+    await db.flush()
+    save = PendingSave(
+        effect_id=eff.id, character_id=eff.character_id, combatant_id=eff.combatant_id,
+        ability=effect["save_ability"], dc=effect["save_dc"], status="pending", created_at=now)
+    db.add(save)
+    await db.flush()
+    _add_history(db, char.id, "condition_change", f"{condition_label(slug)} su {target.name}: TS in attesa")
     return True, save
-
-
-async def _effect_row(db: AsyncSession, target: Combatant, slug: str):
-    col = ConditionEffect.character_id if target.kind == "pc" else ConditionEffect.combatant_id
-    return (await db.execute(select(ConditionEffect).where(
-        col == (target.character_id if target.kind == "pc" else target.id), ConditionEffect.slug == slug))).scalar_one()

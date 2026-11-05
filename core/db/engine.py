@@ -41,6 +41,7 @@ def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
 
 # Columns to ensure on existing tables: (table, column, DDL type, default)
 _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
+    ("condition_effects", "pending", "BOOLEAN NOT NULL", "0"),
     # Spell extended properties
     ("spells", "casting_time", "VARCHAR(100)", None),
     ("spells", "range_area", "VARCHAR(100)", None),

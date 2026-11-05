@@ -39,6 +39,9 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
               ? t('character.target_effect.save', { ability: t(`common.abilities.${fx.save_ability}`), dc: fx.save_dc })
               : t('character.target_effect.no_save')}</li>
             <li className="text-dnd-text-muted">{durationText(t, fx)}</li>
+            {fx.condition?.startsWith('custom:') && (
+              <li className="text-dnd-text-muted">{t(`character.target_effect.custom_note.${fx.condition.slice(7)}`, { defaultValue: '' })}</li>
+            )}
             {fx.damage_dice && <li className="tabular-nums">{fx.damage_dice}</li>}
           </ul>
           {data.combatants.length === 0 ? (

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from core.db.models import CharacterClass, ConditionEffect
+from core.db.models import CharacterClass, ConditionEffect, PendingSave
 from core.rules.types import FeatureSpec, OnUse, RollOptionSpec, TargetEffect
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
 from tests.integration._telegram_stub import install_fake_telegram
@@ -86,14 +86,18 @@ async def test_player_effect_creates_pending_save_for_monster(client, test_sessi
     goblin = (await _gm_view(client, sid))[g1]
     [save] = goblin["pending_saves"]
     assert (save["ability"], save["dc"], save["status"], save["slug"]) == ("constitution", 13, "pending", "prone")
-    assert goblin["conditions"] == {"prone": True}
+    assert not goblin["conditions"].get("prone") and goblin["condition_effects"] == []  # prima del TS non c'è nulla
 
 
 async def test_gm_resolve_failed_applies_condition_and_duration(client, test_session_factory, rules_catalog, monkeypatch):
     sid, cid, _, g1, _ = await _ready(client, test_session_factory, rules_catalog, monkeypatch)
     await _confirm(client, cid, "Spada", "1d8", "test_hex")
     assert (await _target(client, cid, g1, "test_hex")).status_code == 200
-    [save] = (await _gm_view(client, sid))[g1]["pending_saves"]
+    goblin = (await _gm_view(client, sid))[g1]
+    [save] = goblin["pending_saves"]
+    assert goblin["conditions"] == {}
+    for _ in range(3):  # il GM tarda un giro intero: la durata non è decorsa
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
     r = await client.post(f"/sessions/{sid}/encounter/pending-saves/{save['id']}/resolve", json={"passed": False})
     assert r.status_code == 200, r.text
     goblin = (await _gm_view(client, sid))[g1]
@@ -166,9 +170,57 @@ async def test_pc_target_rolls_save_alone(client, test_session_factory, rules_ca
     await _confirm(client, cid, "Maglio", "2d6", "mastery_topple")
     r = await _target(client, cid, pc, "mastery_topple")  # il PG è bersaglio valido come un alleato: stesso percorso
     assert r.status_code == 200, r.text
-    [save] = (await client.get(f"/characters/{cid}")).json()["pending_saves"]
+    sheet = (await client.get(f"/characters/{cid}")).json()
+    [save] = sheet["pending_saves"]
     assert (save["ability"], save["dc"], save["slug"]) == ("constitution", 13, "prone")
-    r = await client.post(f"/characters/{cid}/pending-saves/{save['id']}/roll")
-    assert r.status_code == 200, r.text
-    sheet = (await client.get(f"/characters/{cid}")).json()  # superato: la condizione cade; fallito: resta
-    assert bool(sheet["conditions"].get("prone")) is (not r.json()["passed"])
+    assert not sheet["conditions"].get("prone") and sheet["condition_effects"] == []  # prima del TS non c'è nulla
+    r = await client.post(f"/characters/{cid}/pending-saves/{save['id']}/roll", json={"die": 1})
+    assert r.status_code == 200 and r.json()["passed"] is False, r.text
+    sheet = (await client.get(f"/characters/{cid}")).json()
+    assert sheet["conditions"].get("prone") and [e["slug"] for e in sheet["condition_effects"]] == ["prone"]
+
+
+async def test_pc_target_passed_save_leaves_nothing(client, test_session_factory, rules_catalog, monkeypatch):
+    _, cid, pc, _, _ = await _ready(client, test_session_factory, rules_catalog, monkeypatch, "maul")
+    await _confirm(client, cid, "Maglio", "2d6", "mastery_topple")
+    await _target(client, cid, pc, "mastery_topple")
+    [save] = (await client.get(f"/characters/{cid}")).json()["pending_saves"]
+    r = await client.post(f"/characters/{cid}/pending-saves/{save['id']}/roll", json={"die": 20})
+    assert r.status_code == 200 and r.json()["passed"] is True, r.text
+    sheet = (await client.get(f"/characters/{cid}")).json()
+    assert not sheet["conditions"].get("prone") and sheet["condition_effects"] == [] and sheet["pending_saves"] == []
+
+
+async def test_passed_save_keeps_a_condition_the_target_already_had(client, test_session_factory, rules_catalog, monkeypatch):
+    sid, cid, _, g1, _ = await _ready(client, test_session_factory, rules_catalog, monkeypatch, "maul")
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/combatants/{g1}/conditions", json={"slug": "prone"})
+    as_user(PLAYER_ID)
+    await _confirm(client, cid, "Maglio", "2d6", "mastery_topple")
+    await _target(client, cid, g1, "mastery_topple")
+    [save] = (await _gm_view(client, sid))[g1]["pending_saves"]
+    await client.post(f"/sessions/{sid}/encounter/pending-saves/{save['id']}/resolve", json={"passed": True})
+    goblin = (await _gm_view(client, sid))[g1]
+    assert goblin["conditions"] == {"prone": True} and [e["slug"] for e in goblin["condition_effects"]] == ["prone"]
+
+
+async def test_second_pending_effect_on_same_target_is_refused(client, test_session_factory, rules_catalog, monkeypatch):
+    _, cid, _, g1, _ = await _ready(client, test_session_factory, rules_catalog, monkeypatch, "maul")
+    await _confirm(client, cid, "Maglio", "2d6", "mastery_topple")
+    assert (await _target(client, cid, g1, "mastery_topple")).status_code == 200
+    await client.post(f"/characters/{cid}/turn/new")  # un solo attacco per azione
+    await _confirm(client, cid, "Maglio 2", "2d6", "mastery_topple")
+    r = await _target(client, cid, g1, "mastery_topple")
+    assert (r.status_code, r.json()["detail"]["code"]) == (409, "target_effect_pending")
+    assert (await _target(client, cid, g1, "mastery_topple")).status_code == 409  # l'effetto non è stato consumato
+
+
+async def test_ending_the_encounter_drops_pending_effects(client, test_session_factory, rules_catalog, monkeypatch):
+    sid, cid, _, g1, _ = await _ready(client, test_session_factory, rules_catalog, monkeypatch, "maul")
+    await _confirm(client, cid, "Maglio", "2d6", "mastery_topple")
+    await _target(client, cid, g1, "mastery_topple")
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    async with test_session_factory() as s:
+        assert (await s.execute(select(ConditionEffect))).first() is None
+        assert (await s.execute(select(PendingSave))).first() is None

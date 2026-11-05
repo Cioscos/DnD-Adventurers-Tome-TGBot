@@ -930,6 +930,9 @@ class ConditionEffect(Base):
     encounter_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("encounters.id", ondelete="SET NULL"), nullable=True
     )
+    # True: effetto di un privilegio in attesa del TS del bersaglio. La condizione non è sulla scheda e la durata non
+    # decorre; un TS fallito lo attiva, uno superato lo elimina.
+    pending: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
