@@ -76,8 +76,8 @@ async def test_a_class_that_enters_with_a_later_catalog_is_retrofitted_for_that_
     await client.post(f"/characters/{cid}/classes", json={"class_name": "barbarian", "level": 3, "hit_die": 12})
     async with test_session_factory() as s:  # il Barbaro non aveva ancora il catalogo: nessun segno, e una scelta salvata
         char = (await s.execute(select(Character).options(selectinload(Character.classes)).where(Character.id == cid))).scalar_one()
-        marks = [m for m in (char.settings or {}).get("retrofit_done", []) if m != "barbarian"]
-        assert "bard" in marks  # il Bardo è segnato dal sync che l'ha creato
+        marks = [m for m in (char.settings or {}).get("retrofit_done", []) if m != "2014:barbarian"]
+        assert "2014:bard" in marks  # il Bardo è segnato dal sync che l'ha creato
         char.settings = {**char.settings, "retrofit_done": marks}
         await s.commit()
     await _bump(test_session_factory)
@@ -86,15 +86,15 @@ async def test_a_class_that_enters_with_a_later_catalog_is_retrofitted_for_that_
     assert not _choice(full, "lore_skills").get("retrofit")  # il Bardo non torna retrofit
     async with test_session_factory() as s:
         done = (await s.get(Character, cid)).settings["retrofit_done"]
-    assert set(done) == {"bard", "barbarian"}  # ora segnati entrambi
+    assert set(done) == {"2014:bard", "2014:barbarian"}  # ora segnati entrambi
 
 
 async def test_the_retrofit_mark_is_server_owned(client):
     cid = await _bard(client, 3, LORE)
     full = await _full(client, cid)
-    assert "bard" in full["settings"]["retrofit_done"]
+    assert "2014:bard" in full["settings"]["retrofit_done"]
     await client.patch(f"/characters/{cid}", json={"settings": {**full["settings"], "retrofit_done": []}})
-    assert "bard" in (await _full(client, cid))["settings"]["retrofit_done"]
+    assert "2014:bard" in (await _full(client, cid))["settings"]["retrofit_done"]
 
 
 async def test_an_imported_character_is_retrofitted_again(client):

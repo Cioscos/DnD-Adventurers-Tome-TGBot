@@ -27,6 +27,11 @@ RETROFIT_DONE = "retrofit_done"  # settings: chiavi di classe già passate dal r
 GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
 
 
+def _mark(edition: str, cls: object) -> str:
+    """Chiave del segno: edizione e classe, perché un catalogo 2024 che arriva dopo non eredita il segno del 2014 (R34)."""
+    return f"{edition}:{class_key(cls)}"
+
+
 def _retro_ids(char: Character, retrofit: bool) -> set[int]:
     """Classi a catalogo che il retrofit (R34, R39) riguarda: solo quelle mai passate di qui. Una classe che entra con un
     catalogo successivo ci passa per quel catalogo, le altre non tornano ``retrofit`` a ogni versione."""
@@ -34,14 +39,14 @@ def _retro_ids(char: Character, retrofit: bool) -> set[int]:
         return set()
     edition = character_edition(char)
     done = set((char.settings or {}).get(RETROFIT_DONE) or [])
-    return {c.id for c in char.classes if features_for(edition, class_key(c)) and class_key(c) not in done}
+    return {c.id for c in char.classes if features_for(edition, class_key(c)) and _mark(edition, c) not in done}
 
 
 def _mark_retrofitted(char: Character) -> None:
     """Ogni classe a catalogo sincronizzata (anche alla creazione) non è più da retrofit."""
     edition = character_edition(char)
     done = list((char.settings or {}).get(RETROFIT_DONE) or [])
-    new = [class_key(c) for c in char.classes if features_for(edition, class_key(c)) and class_key(c) not in done]
+    new = [_mark(edition, c) for c in char.classes if features_for(edition, class_key(c)) and _mark(edition, c) not in done]
     if new:
         char.settings = {**(char.settings or {}), RETROFIT_DONE: [*done, *dict.fromkeys(new)]}
 
@@ -179,7 +184,12 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
 
 def mark_ability_bonuses(char: Character) -> None:
     """Import di un file senza ``rules_edition``: niente sync del catalogo, ma i bonus che il personaggio ha già diritto
-    ad avere si segnano comunque come applicati (R34), altrimenti il primo sync li ridarebbe."""
+    ad avere si segnano comunque come applicati (R34), altrimenti il primo sync li ridarebbe. Anche le scelte di livello
+    passano dal retrofit (R39): il segno resta assente, così non si perde al primo sync normale."""
+    edition = character_edition(char)
+    retro = {c.id for c in char.classes if features_for(edition, class_key(c))}
+    seed_from_sheet(char, retro)
+    reconcile_choices(char, retro)
     _sync_ability_bonuses(char, retrofit=True)
 
 
