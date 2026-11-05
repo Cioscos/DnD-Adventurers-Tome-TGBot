@@ -117,7 +117,12 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const remove = useMutation({
     mutationFn: () => api.companions.remove(charId, comp.id),
     onSuccess: () => { setConfirmDelete(false); refresh() },
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      setConfirmDelete(false)  // rifiutata: la scheda e la forma restano dove sono
+      if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
+      else notifyMutationError()
+      refresh()
+    },
   })
 
   const amountOk = Number(amount) > 0

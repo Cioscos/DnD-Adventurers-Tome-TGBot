@@ -6,12 +6,12 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import CompanionCard from '@/pages/extras/CompanionCard'
 import type { Companion } from '@/types'
 
-const { attack, hp, deactivate, toastError, notifyMutationError } = vi.hoisted(() => ({
-  attack: vi.fn(), hp: vi.fn(), deactivate: vi.fn(), toastError: vi.fn(), notifyMutationError: vi.fn(),
+const { attack, hp, remove, deactivate, toastError, notifyMutationError } = vi.hoisted(() => ({
+  attack: vi.fn(), hp: vi.fn(), remove: vi.fn(), deactivate: vi.fn(), toastError: vi.fn(), notifyMutationError: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
-  api: { companions: { attack, hp, deactivate, activate: vi.fn() } },
+  api: { companions: { attack, hp, remove, deactivate, activate: vi.fn() } },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('react-i18next', async (orig) => ({
@@ -35,6 +35,11 @@ vi.mock('@/components/ui/RollButton', async () => {
   const React = await import('react')
   return { default: (p: { children?: ReactNode; onRoll: (m: string) => void }) =>
     React.createElement('button', { onClick: () => p.onRoll('normal') }, p.children) }
+})
+vi.mock('@/components/ui/ConfirmSheet', async () => {
+  const React = await import('react')
+  return { default: (p: { open: boolean; title: string; onConfirm: () => void }) =>
+    p.open ? React.createElement('button', { onClick: p.onConfirm }, `confirm:${p.title}`) : null }
 })
 vi.mock('@/pages/extras/WildHealSheet', async () => {
   const React = await import('react')
@@ -78,6 +83,17 @@ describe('CompanionCard druid features', () => {
     await userEvent.click(screen.getByText('character.extras.end_form'))
     await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith('character.extras.return_bonus_used'))
     expect(notifyMutationError).not.toHaveBeenCalled()
+  })
+
+  it('deleting the active form with the bonus action spent says why and keeps the card with its form', async () => {
+    const { ApiError } = await import('@/api/client')
+    remove.mockRejectedValueOnce(new ApiError(409, { code: 'turn_slot_used' }))
+    renderWithProviders(<CompanionCard charId={7} comp={form(true)} wildShapeUses={1} />)
+    await userEvent.click(screen.getByText('common.delete'))
+    await userEvent.click(screen.getByText(/^confirm:/))
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith('character.extras.return_bonus_used'))
+    expect(notifyMutationError).not.toHaveBeenCalled()
+    expect(screen.getByText('character.extras.end_form')).toBeInTheDocument()
   })
 
   it('Primal Strike: an attack in beast form says it is magical, a plain one does not', async () => {

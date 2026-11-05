@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from core.db.models import Character
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.catalog.y2014.druid import TERRITORY_SPELLS
-from tests.integration._encounter_helpers import GM_ID, as_user, seed_session
+from tests.integration._encounter_helpers import GM_ID, NOW, as_user, seed_session
 from tests.integration.rules.test_2014_bard import _full, _spells
 from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_druid import _activate, _beast, _druid, _form, _turn
@@ -299,3 +299,21 @@ async def test_a_rich_condition_the_druid_can_suffer_still_leaves_its_effect(cli
     assert (await client.post(f"/sessions/{sid}/encounter/combatants/{comb}/conditions", json=body)).status_code == 200
     async with test_session_factory() as s:
         assert len((await s.execute(select(ConditionEffect))).scalars().all()) == 1
+
+
+async def test_a_failed_save_for_a_condition_the_druid_is_immune_to_leaves_no_effect(client, test_session_factory):
+    from api.services.rules_targets import activate_pending_effect
+    from core.db.models import ConditionEffect
+    cid = await _druid(client, 10, "land")
+    async with test_session_factory() as s:
+        s.add(ConditionEffect(character_id=cid, slug="poisoned", pending=True, created_at=NOW))
+        s.add(ConditionEffect(character_id=cid, slug="prone", pending=True, created_at=NOW))
+        await s.commit()
+        for eff in (await s.execute(select(ConditionEffect).order_by(ConditionEffect.id))).scalars().all():
+            await activate_pending_effect(s, eff)
+        await s.commit()
+    async with test_session_factory() as s:
+        left = [e.slug for e in (await s.execute(select(ConditionEffect))).scalars().all()]
+    assert left == ["prone"]
+    conditions = (await _full(client, cid))["conditions"]
+    assert conditions.get("prone") is True and not conditions.get("poisoned")
