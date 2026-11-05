@@ -1006,6 +1006,8 @@ export interface TurnBlock {
   spell_slot_cast: boolean
   bonus_spell_cast: boolean
   free_interaction_used: boolean
+  /** Cure ricevute all'inizio di questo turno da un privilegio (Sopravvissuto): quanto e perché. */
+  start_heal?: { feature_key: string; name: { it: string; en: string }; amount: number }[]
   /** Livello dell'ultimo incantesimo lanciato con l'azione in questo turno (0: trucchetto). */
   action_spell_level?: number | null
   pending_attack?: Record<string, unknown> | null

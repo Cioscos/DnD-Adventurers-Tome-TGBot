@@ -386,7 +386,7 @@ def _maneuver_rows() -> list:
                                    "Bonus action and a die: advantage on your next attack against a creature within 5 ft, +die to damage on a hit."),
                   "bonus_action", roll_options=(FEINT_STRIKE,),
                   on_use=OnUse(slot="bonus", spends=SD, state=StateSpec(
-                      "feinting_attack", rounds=1, ends_on=("attack", "new_turn", "manual")))),
+                      "feinting_attack", rounds=1, ends_on=("new_turn", "manual")))),
         _maneuver("maneuvering", ("Dopo un colpo con arma, +dado al danno; un alleato usa la reazione per muoversi di metà velocità senza provocare.",
                                       "After a weapon hit, +die to damage; an ally uses their reaction to move half speed without provoking."),
                   roll_options=(MANEUVERING,)),
@@ -475,8 +475,9 @@ IMPROVED_WAR_MAGIC = RollOptionSpec(
 
 
 def _strike_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    begin_state(ctx.char, StateSpec("eldritch_strike", rounds=1, ends_on=("new_turn", "manual")), f"{CK}.eldritch_strike",
-                "Colpo Mistico")
+    # Vale fino alla fine del turno che segue il colpo: salta il «nuovo turno» che lo apre e finisce alla fine di quello.
+    begin_state(ctx.char, StateSpec("eldritch_strike", ends_on=("new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"),
+                                    data={"skip_new_turns": 1}), f"{CK}.eldritch_strike", "Colpo Mistico")
 
 
 ELDRITCH_STRIKE = RollOptionSpec(

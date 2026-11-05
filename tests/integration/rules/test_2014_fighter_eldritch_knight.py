@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 
 from tests.integration.rules.test_2014_bard import _ability, _full, _roll_keys, _use
-from tests.integration.rules.test_2014_fighter import _attack, _fighter, _turn, AS
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration.rules.test_2014_fighter import (
+    _attack, _champion_in_session, _fighter, _start, _turn, AS,
+)
 
 SLOTS = {3: (2,), 4: (3,), 5: (3,), 6: (3,), 7: (4, 2), 8: (4, 2), 9: (4, 2), 10: (4, 3), 11: (4, 3), 12: (4, 3),
          13: (4, 3, 2), 14: (4, 3, 2), 15: (4, 3, 2), 16: (4, 3, 3), 17: (4, 3, 3), 18: (4, 3, 3), 19: (4, 3, 3, 1),
@@ -233,6 +236,73 @@ async def test_eldritch_strike_gives_the_next_save_spell_a_note_and_is_used_up(c
     assert "svantaggio" in r.json()["option_result"]["effects"][0]["it"]
     assert STRIKE_CAST not in await _roll_keys(client, cid, "cast", spell_id=saver)
     assert not [s for s in (await _full(client, cid))["active_states"] if s["key"] == "eldritch_strike"]
+
+
+async def _strike_then_a_save_spell(client, cid) -> int:
+    """Un colpo con Colpo Mistico in questo turno; restituisce una Ragnatela da lanciare."""
+    hit = await _hit(client, cid, await _sword(client, cid))
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": [STRIKE]})
+    assert r.status_code == 200, r.text
+    return await _spell(client, cid, "Ragnatela", 2, attack_save="DEX")
+
+
+def _strike_on(full: dict) -> bool:
+    return any(s["key"] == "eldritch_strike" for s in full["active_states"])
+
+
+async def test_eldritch_strike_still_works_at_the_next_turn_out_of_an_encounter(client):
+    cid = await _knight(client, 10)
+    web = await _strike_then_a_save_spell(client, cid)
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200  # comincia il turno dopo
+    assert _strike_on(await _full(client, cid)) and STRIKE_CAST in await _roll_keys(client, cid, "cast", spell_id=web)
+    r = await _cast(client, cid, web, slot_level=2, options=[STRIKE_CAST])
+    assert r.status_code == 200, r.text
+    assert "svantaggio" in r.json()["option_result"]["effects"][0]["it"]
+
+
+async def test_eldritch_strike_ends_with_the_turn_after_the_blow_out_of_an_encounter(client):
+    cid = await _knight(client, 10)
+    web = await _strike_then_a_save_spell(client, cid)
+    await client.post(f"/characters/{cid}/turn/new")
+    await client.post(f"/characters/{cid}/turn/new")  # il turno in cui valeva è finito
+    assert not _strike_on(await _full(client, cid)) and STRIKE_CAST not in await _roll_keys(client, cid, "cast", spell_id=web)
+
+
+async def test_the_new_turn_button_inside_an_encounter_does_not_use_up_the_eldritch_strike_turn(client, test_session_factory):
+    sid, cid = await _champion_in_session(client, test_session_factory, 10, "Cavaliere Mistico")
+    await _start(client, sid)
+    as_user(PLAYER_ID)
+    web = await _strike_then_a_save_spell(client, cid)
+    await client.post(f"/characters/{cid}/turn/new")  # in un incontro il turno lo fa avanzare il GM
+    await client.post(f"/characters/{cid}/turn/new")
+    assert _strike_on(await _full(client, cid)) and STRIKE_CAST in await _roll_keys(client, cid, "cast", spell_id=web)
+
+
+async def test_eldritch_strike_lasts_the_whole_next_turn_of_an_encounter_and_ends_with_it(client, test_session_factory):
+    sid, cid = await _champion_in_session(client, test_session_factory, 10, "Cavaliere Mistico")
+    await _start(client, sid)
+    as_user(PLAYER_ID)
+    web = await _strike_then_a_save_spell(client, cid)
+    as_user(GM_ID)
+    for _ in range(2):  # fine del turno del PG, turno del goblin, di nuovo il PG
+        assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200
+    as_user(PLAYER_ID)
+    assert _strike_on(await _full(client, cid)) and STRIKE_CAST in await _roll_keys(client, cid, "cast", spell_id=web)
+    r = await _cast(client, cid, web, slot_level=2, options=[STRIKE_CAST])
+    assert r.status_code == 200, r.text
+    assert "svantaggio" in r.json()["option_result"]["effects"][0]["it"]
+
+
+async def test_eldritch_strike_not_used_ends_at_the_end_of_the_next_turn_of_an_encounter(client, test_session_factory):
+    sid, cid = await _champion_in_session(client, test_session_factory, 10, "Cavaliere Mistico")
+    await _start(client, sid)
+    as_user(PLAYER_ID)
+    web = await _strike_then_a_save_spell(client, cid)
+    as_user(GM_ID)
+    for _ in range(3):  # turno del goblin, secondo turno del PG, e ora ne finisce
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+    as_user(PLAYER_ID)
+    assert not _strike_on(await _full(client, cid)) and STRIKE_CAST not in await _roll_keys(client, cid, "cast", spell_id=web)
 
 
 async def test_eldritch_strike_is_not_offered_to_other_subclasses_or_before_level_10(client):

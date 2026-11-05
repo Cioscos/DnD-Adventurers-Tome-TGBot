@@ -35,11 +35,19 @@ SHORT_REST_ROUNDS = 600  # un'ora, a 6 secondi per round
 LONG_REST_ROUNDS = 4800  # otto ore
 
 
-def end_states(char, *reasons: str, within: int | None = None) -> list[str]:
+COUNTED_TURNS = "skip_new_turns"  # data dello stato: quanti «nuovi turni» deve ancora attraversare prima di poter finire
+
+
+def _turns_to_skip(state: dict) -> int | None:
+    """Turni che lo stato deve ancora attraversare; ``None`` se non è uno stato che li conta."""
+    return (state.get("data") or {}).get(COUNTED_TURNS)
+
+
+def end_states(char, *reasons: str, within: int | None = None, keep: set[str] = frozenset()) -> list[str]:
     """Chiude gli stati che finiscono per uno dei ``reasons`` e, con ``within``, quelli che hanno a tempo al più ``within``
-    round da vivere. Restituisce le chiavi chiuse."""
+    round da vivere; gli stati con la chiave in ``keep`` restano. Restituisce le chiavi chiuse."""
     states = get_states(char)
-    kept = [s for s in states if not set(s["ends_on"]) & set(reasons)
+    kept = [s for s in states if s["key"] in keep or not set(s["ends_on"]) & set(reasons)
             and not (within is not None and s["rounds_left"] is not None and s["rounds_left"] <= within)]
     # chi sopravvive a un riposo ne ha attraversato la durata: gli stati a tempo la perdono (durano più del riposo, quindi restano > 0)
     left = [{**s, "rounds_left": s["rounds_left"] - within} if within is not None and s["rounds_left"] is not None else s
@@ -48,6 +56,25 @@ def end_states(char, *reasons: str, within: int | None = None) -> list[str]:
         char.active_states = left  # nuova lista: SQLAlchemy non vede le mutazioni in place
         settle_closed(char, [s for s in states if s not in kept])
     return [s["key"] for s in states if s not in kept]
+
+
+def end_on_new_turn(char, *, advances: bool = True) -> list[str]:
+    """Comincia un turno nuovo: finiscono gli stati di ``new_turn``. Quelli che contano i turni (Colpo Mistico) ne saltano
+    uno: il primo «nuovo turno» li fa scalare, il successivo li chiude. ``advances`` è falso per il pulsante «Nuovo turno»
+    dentro un incontro, dove il turno lo fa avanzare il GM: non tocca gli stati che contano i turni."""
+    counted = {s["key"]: _turns_to_skip(s) for s in get_states(char)
+               if _turns_to_skip(s) is not None and "new_turn" in s["ends_on"]}
+    if advances and any(counted.values()):
+        char.active_states = [{**s, "data": {**s["data"], COUNTED_TURNS: counted[s["key"]] - 1}} if counted.get(s["key"]) else s
+                              for s in get_states(char)]
+    keep = set(counted) if not advances else {k for k, left in counted.items() if left}
+    return end_states(char, "new_turn", keep=keep)
+
+
+def end_counted_at_turn_end(char) -> list[str]:
+    """Fine del turno di chi porta lo stato: chiude quelli che contano i turni e li hanno già attraversati tutti."""
+    waiting = {s["key"] for s in get_states(char) if _turns_to_skip(s)}
+    return end_states(char, "turn_end_counted", keep=waiting)
 
 
 def end_states_on_rest(char, rest: str) -> list[str]:

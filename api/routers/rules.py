@@ -113,9 +113,10 @@ async def turn_new(
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     in_encounter = await active_encounter_row(db, char_id) is not None
-    turn = reset_turn(char, keep_surprise=in_encounter)
+    turn = reset_turn(char, keep_surprise=in_encounter, advances=not in_encounter)
     if not in_encounter:  # in un incontro l'inizio del turno lo dà il passaggio di turno, non questo pulsante
         await apply_turn_start(db, char)
+        turn = get_turn(char)  # con l'avviso della cura d'inizio turno
     return turn
 
 

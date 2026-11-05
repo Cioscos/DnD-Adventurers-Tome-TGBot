@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.data.labels import condition_label
 from core.rules.edition import character_edition
 from core.rules.states import restore_exhaustion
-from api.services.rules_turn import get_turn, set_damaged, set_surprised
+from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
     Character, Combatant, ConditionEffect, Encounter, PendingSave,
@@ -136,6 +136,7 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             healed = snap.get("healed")  # la cura d'inizio turno: si toglie solo se i PF sono ancora quelli che ha dato
             if healed and pc.current_hit_points == healed["after"]:
                 pc.current_hit_points = healed["before"]
+                set_start_heal(pc, [])
             if "exhaustion" in snap:  # la spossatezza addebitata dagli stati chiusi dall'avanzamento
                 restore_exhaustion(pc, snap["exhaustion"])
                 if not snap["is_dead"] and pc.is_dead and snap["exhaustion"] < 6:

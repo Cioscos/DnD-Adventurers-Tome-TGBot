@@ -458,6 +458,12 @@ export default function Turn() {
         </div>
       </div>
 
+      {(block?.start_heal ?? []).map((n) => (
+        <p key={n.feature_key} role="status" data-testid="start-heal" className="px-1 text-sm font-body text-dnd-gold-bright">
+          {t('character.turn.start_heal', { name: n.name[lang], amount: n.amount })}
+        </p>
+      ))}
+
       <ActiveStatesBar char={char} />
 
       {char.computed?.incapacitated && (

@@ -493,11 +493,11 @@ async def test_survivor_is_not_available_before_level_18(client, test_session_fa
     assert await _hp(client, cid) == 5
 
 
-async def _champion_in_session(client, test_session_factory):
+async def _champion_in_session(client, test_session_factory, level=18, subclass="Campione"):
     sid, cid = await seed_session(test_session_factory)
     as_user(PLAYER_ID)
     r = await client.post(f"/characters/{cid}/classes", json={
-        "class_name": "fighter", "level": 18, "hit_die": 10, "subclass": "Campione"})
+        "class_name": "fighter", "level": level, "hit_die": 10, "subclass": subclass})
     assert r.status_code == 201, r.text
     as_user(GM_ID)
     r = await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})
@@ -550,6 +550,55 @@ async def test_survivor_heals_at_the_first_turn_of_the_encounter(client, test_se
     await _hurt(test_session_factory, cid, 10)
     await _start(client, sid)
     assert await _player_hp(client, cid) == 15
+
+
+def _start_heal(turn: dict) -> list[dict]:
+    return turn.get("start_heal") or []
+
+
+async def test_survivor_says_how_much_it_healed_with_the_new_turn_button(client, test_session_factory):
+    cid = await _fighter(client, 18, "champion", constitution=14)
+    maximum = (await _full(client, cid))["hit_points"]
+    await _hurt(test_session_factory, cid, maximum // 2)
+    r = await client.post(f"/characters/{cid}/turn/new")
+    assert r.status_code == 200, r.text
+    (notice,) = _start_heal(r.json())
+    assert (notice["feature_key"], notice["amount"]) == ("fighter.survivor", 7)
+    assert notice["name"]["it"] == "Sopravvissuto" and notice["name"]["en"] == "Survivor"
+    assert _start_heal(await _turn(client, cid)) == [notice]  # resta sul turno finché non ne comincia un altro
+    r = await client.post(f"/characters/{cid}/turn/new")  # ora ha più della metà: niente da dire
+    assert _start_heal(r.json()) == []
+
+
+async def test_survivor_says_nothing_when_it_does_not_heal(client, test_session_factory):
+    cid = await _fighter(client, 18, "champion")
+    r = await client.post(f"/characters/{cid}/turn/new")
+    assert _start_heal(r.json()) == []
+    other = await _fighter(client, 18, "battle_master")
+    await _hurt(test_session_factory, other, 3)
+    assert _start_heal((await client.post(f"/characters/{other}/turn/new")).json()) == []
+
+
+async def test_survivor_tells_the_player_at_each_turn_of_an_encounter(client, test_session_factory):
+    sid, cid = await _champion_in_session(client, test_session_factory)
+    await _hurt(test_session_factory, cid, 10)
+    await _start(client, sid)  # primo turno: cura
+    as_user(PLAYER_ID)
+    assert [n["amount"] for n in _start_heal(await _turn(client, cid))] == [5]
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/next-turn")  # tocca al goblin: l'avviso è ancora quello del turno finito
+    await client.post(f"/sessions/{sid}/encounter/next-turn")  # di nuovo il PG: 15 PF, cura ancora
+    as_user(PLAYER_ID)
+    assert [n["amount"] for n in _start_heal(await _turn(client, cid))] == [5]
+    as_user(GM_ID)
+    as_user(PLAYER_ID)
+    maximum = (await _full(client, cid))["hit_points"]
+    as_user(GM_ID)
+    await _hurt(test_session_factory, cid, maximum)  # sopra la metà: il prossimo turno non cura e l'avviso sparisce
+    await client.post(f"/sessions/{sid}/encounter/next-turn")
+    await client.post(f"/sessions/{sid}/encounter/next-turn")
+    as_user(PLAYER_ID)
+    assert _start_heal(await _turn(client, cid)) == []
 
 
 # ---------------------------------------------------------------------------

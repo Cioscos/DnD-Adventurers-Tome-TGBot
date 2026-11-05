@@ -324,15 +324,23 @@ async def test_feinting_attack_is_a_bonus_action_then_gives_advantage_and_the_di
     assert _key("feinting_strike") not in await _roll_keys(client, cid, "attack", item_id=sword)  # vale per un attacco
 
 
-async def test_feinting_attack_ends_with_the_first_attack_or_the_turn(client):
+async def test_feinting_attack_survives_an_attack_on_another_creature_and_ends_with_the_turn(client):
     cid = await _master(client, 7, "feinting")
     sword = await _sword(client, cid)
     await _use(client, cid, _key("feinting"))
-    await _attack(client, cid, sword, confirm_extra_attack=True)  # senza dichiararla: la finta è finita lo stesso
+    await _attack(client, cid, sword, confirm_extra_attack=True)  # contro un'altra creatura: non dichiara la finta
+    assert _key("feinting_strike") in await _roll_keys(client, cid, "attack", item_id=sword)  # vale ancora per l'attacco giusto
+    await client.post(f"/characters/{cid}/turn/new")
     assert _key("feinting_strike") not in await _roll_keys(client, cid, "attack", item_id=sword)
-    await client.post(f"/characters/{cid}/turn/new")
+
+
+async def test_feinting_attack_is_used_up_by_the_attack_that_declares_it(client):
+    cid = await _master(client, 7, "feinting")
+    sword = await _sword(client, cid)
     await _use(client, cid, _key("feinting"))
-    await client.post(f"/characters/{cid}/turn/new")
+    await _attack(client, cid, sword, confirm_extra_attack=True)  # un altro bersaglio
+    body = (await _attack(client, cid, sword, confirm_extra_attack=True, options=[_key("feinting_strike")])).json()
+    assert body["mode_applied"] == "advantage"
     assert _key("feinting_strike") not in await _roll_keys(client, cid, "attack", item_id=sword)
 
 

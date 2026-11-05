@@ -112,20 +112,29 @@ def clear_once_per_turn(char) -> list[str]:
     return used
 
 
-def reset_turn(char, keep_surprise: bool = True) -> dict:
+def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     """Nuovo turno: tutto a zero (anche reazione, azioni extra e attacco in sospeso).
 
     ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014). ``surprised`` resta: lo
     toglie la fine del primo turno del combattente, non «Nuovo turno», ma solo se c'è un incontro attivo
     (``keep_surprise``): fuori da un incontro non c'è nessuno che la tolga. ``vex`` arriva fino alla
-    fine del turno seguente a quello del colpo."""
-    from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
-    end_states(char, "new_turn")  # il Canto di Riposo del bardo finisce al prossimo «Nuovo turno»
+    fine del turno seguente a quello del colpo. ``advances`` è falso per il pulsante «Nuovo turno» dentro un incontro:
+    il turno lo fa avanzare il GM e gli stati che contano i turni non scalano."""
+    from api.services.rules_states import end_on_new_turn  # import locale: rules_states importa questo modulo
+    end_on_new_turn(char, advances=advances)  # il Canto di Riposo del bardo finisce al prossimo «Nuovo turno»
     previous = get_turn(char)
     vex = {"vex": previous["vex"] - 1} if previous.get("vex", 0) > 1 else {}
+    notice = {} if advances or not previous.get("start_heal") else {"start_heal": previous["start_heal"]}
     _save(char, {**_default(), "damaged": previous["damaged"],
-                 "surprised": previous["surprised"] and keep_surprise, **vex})
+                 "surprised": previous["surprised"] and keep_surprise, **vex, **notice})
     return char.turn_state
+
+
+def set_start_heal(char, notices: list[dict]) -> None:
+    """Avviso della cura d'inizio turno (Sopravvissuto): resta sul turno fino al prossimo ``reset_turn``."""
+    st = get_turn(char)
+    if st.get("start_heal", []) != notices:
+        _save(char, {**st, "start_heal": notices})
 
 
 def set_damaged(char, value: bool = True) -> None:

@@ -137,6 +137,27 @@ describe('Turn page', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'false'))
   })
 
+  it('tells the player what a start-of-turn heal gave and why, and says nothing when there was none', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.section_action')
+    expect(screen.queryByTestId('start-heal')).not.toBeInTheDocument()
+    server.block = { ...NEW_BLOCK, start_heal: [{ feature_key: 'fighter.survivor', name: { it: 'Sopravvissuto', en: 'Survivor' }, amount: 7 }] }
+    turnNew.mockImplementationOnce(async () => server.block)
+    await userEvent.click(screen.getByText('character.turn.new_turn'))
+    expect(await screen.findByTestId('start-heal')).toHaveTextContent('character.turn.start_heal')
+    server.block = { ...NEW_BLOCK }
+    await userEvent.click(screen.getByText('character.turn.new_turn'))
+    await waitFor(() => expect(screen.queryByTestId('start-heal')).not.toBeInTheDocument())
+  })
+
+  it('shows the start-of-turn heal that the server kept on the turn, as when the GM moved the encounter on', async () => {
+    getChar.mockResolvedValue(char)
+    server.block = { ...NEW_BLOCK, start_heal: [{ feature_key: 'fighter.survivor', name: { it: 'Sopravvissuto', en: 'Survivor' }, amount: 5 }] }
+    renderWithProviders(<Turn />)
+    expect(await screen.findByTestId('start-heal')).toBeInTheDocument()
+  })
+
   it('disables every action while incapacitated but keeps the new turn button', async () => {
     getChar.mockResolvedValue({ ...char, computed: { incapacitated: true } })
     renderWithProviders(<Turn />)

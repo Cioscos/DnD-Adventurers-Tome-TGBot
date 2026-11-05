@@ -1209,6 +1209,7 @@
       "surprised": "You are surprised: this turn you can't act, move or react.",
       "surprised_exit": "To act you must first do this:",
       "new_turn": "New turn",
+      "start_heal": "{{name}}: you regained {{amount}} HP at the start of the turn.",
       "other_turn": "Someone else's turn",
       "end_round": "End of round (−1)",
       "empty": "Nothing here",
