@@ -100,6 +100,20 @@ describe('WeaponAttackModal', () => {
     expect(dialog).toHaveAttribute('data-pulse', 'false')
   })
 
+  it('names the damage type of an unarmed strike and says when it counts as magical (Ki-Empowered Strikes)', () => {
+    const { rerender } = render(<WeaponAttackModal result={{ ...baseResult, damage_type: 'bludgeoning' }} onClose={() => {}} />)
+    expect(screen.getByTestId('damage-type')).toHaveTextContent('Contundente')
+    expect(screen.queryByText(/Colpo magico/)).not.toBeInTheDocument()
+    rerender(<WeaponAttackModal result={{ ...baseResult, damage_type: 'fire', is_magic: true }} onClose={() => {}} />)
+    expect(screen.getByTestId('damage-type')).toHaveTextContent('Fuoco')
+    expect(screen.getByTestId('damage-type')).toHaveTextContent('Colpo magico')
+  })
+
+  it('shows no damage type line for a weapon attack', () => {
+    render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
+    expect(screen.queryByTestId('damage-type')).not.toBeInTheDocument()
+  })
+
   it('shows the CRITICO banner, gold accent + pulse, and a "(critico)" damage label', () => {
     const crit: WeaponAttackResult = {
       ...baseResult,

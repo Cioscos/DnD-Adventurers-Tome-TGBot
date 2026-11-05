@@ -251,3 +251,5 @@ class WeaponAttackResult(BaseModel):
     save_dc: int | None = absent_when_none()  # ... e la CD del TS del bersaglio
     rerolled: list[list[int]] | None = absent_when_none()  # [vecchio, nuovo] dei dadi bassi ritirati da un privilegio (Armi Possenti)
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
+    damage_type: str | None = absent_when_none()  # tipo di danno del colpo senz'armi (contundente, o quello di un privilegio)
+    is_magic: bool | None = absent_when_none()  # il colpo senz'armi conta come magico (Colpi Ki Potenziati)

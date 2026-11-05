@@ -29,7 +29,7 @@ from core.rules.types import RuleContext
 from core.rules.modifiers import (
     effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
-from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
+from core.game.stats import effective_ability_mod, effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import initiative_bonus
 
 
@@ -102,9 +102,12 @@ async def build_character_response(
     usable = {spec.key: (spec.on_use, row) for spec, row in active_features(char) if spec.on_use}
     edition = character_edition(char)
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
+    dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
     for ab in response.abilities:
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.is_pool = ab.feature_key in pools
+        if ab.feature_key in dc_of:
+            ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.use_panel = on_use.panel if on_use else None
@@ -113,6 +116,7 @@ async def build_character_response(
             ab.spends_left = (pool.uses or 0) if pool is not None and pool.max_uses is not None else None
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
+        ab.min_amount = on_use.min_amount if on_use and on_use.choose_amount else 1
         if on_use and (on_use.toggles or on_use.choices):
             ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.use_toggles = [{"key": t.key, "label": dict(t.label)} for t in on_use.toggles if t.available(ctx)]

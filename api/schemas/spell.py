@@ -44,6 +44,8 @@ class SpellRead(BaseModel):
     save_dc: Optional[int] = None
     attack_bonus: Optional[int] = None
     at_will: bool = False  # un privilegio lo concede a volontà: si lancia senza slot (Mille Forme)
+    # Lancio coi punti ki (Arti dell'Ombra, Quattro Elementi): `{cost, max_extra, ki_left, feature_key}`; `None` se non vale
+    ki_cast: Optional[dict] = None
 
     model_config = {"from_attributes": True}
 
@@ -104,6 +106,8 @@ class SpellUseRequest(RollOptionsBody):
     slot_level: int | None = None
     as_ritual: bool = False
     free_cast: bool = False  # senza slot, autorizzato da uno stato attivo (Lettura del Pensiero, R43)
+    ki: bool = False  # senza slot, coi punti ki di un privilegio (Arti dell'Ombra, discipline dei Quattro Elementi)
+    ki_extra: int = Field(0, ge=0, le=9)  # punti ki in più: uno per livello dell'incantesimo in più
     confirm: list[str] = Field(default_factory=list, max_length=10)
 
 

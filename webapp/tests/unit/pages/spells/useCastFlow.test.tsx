@@ -51,21 +51,23 @@ vi.mock('@/components/ui/ConfirmSheet', async () => {
 vi.mock('@/pages/spells/CastSpellModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { onCast: (s: { id: number; level: number }) => void; onCastRitual: () => void }) =>
+    default: (p: { onCast: (s: { id: number; level: number }) => void; onCastRitual: () => void; onCastKi?: (extra: number) => void }) =>
       React.createElement('div', null,
         React.createElement('button', { onClick: () => p.onCast({ id: 1, level: 3 }) }, 'cast-slot-3'),
         React.createElement('button', { onClick: p.onCastRitual }, 'cast-ritual'),
+        p.onCastKi ? React.createElement('button', { onClick: () => p.onCastKi?.(1) }, 'cast-ki-1') : null,
       ),
   }
 })
 vi.mock('@/pages/spells/SpellDamageSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: Spell | null; slotLevel: number | null; slotAlreadyConsumed?: boolean; initialCritical?: boolean; onBack?: () => void }) =>
+    default: (p: { spell: Spell | null; slotLevel: number | null; kiExtra?: number | null; slotAlreadyConsumed?: boolean; initialCritical?: boolean; onBack?: () => void }) =>
       p.spell
         ? React.createElement('div', {
             'data-testid': 'damage-sheet',
             'data-slot': String(p.slotLevel),
+            'data-ki': String(p.kiExtra ?? 'none'),
             'data-consumed': String(!!p.slotAlreadyConsumed),
             'data-critical': String(!!p.initialCritical),
           }, p.onBack ? React.createElement('button', { onClick: p.onBack }, 'damage-back') : null)
@@ -246,6 +248,29 @@ describe('useCastFlow damageless casts', () => {
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({
       free_cast: true, slot_level: null, as_ritual: false })))
     expect(screen.queryByText('cast-slot-3')).toBeNull()  // nessuna scelta dello slot
+  })
+
+  it('a ki cast without dice is sent at once with the extra ki and no slot', async () => {
+    useSpell.mockResolvedValue(char)
+    const darkness = { id: 9, name: 'Oscurità', level: 2, srd_index: 'darkness', is_concentration: true, is_ritual: false, is_prepared: true,
+      ki_cast: { cost: 2, max_extra: 1, ki_left: 4, feature_key: 'monk.shadow_arts' } } as Spell
+    renderFlow(darkness)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(await screen.findByText('cast-ki-1'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 9, expect.objectContaining({
+      ki: true, ki_extra: 1, slot_level: null, as_ritual: false })))
+  })
+
+  it('a ki cast with damage dice waits for the first roll, at the level the extra ki reach', async () => {
+    const burning = { id: 10, name: 'Mani brucianti', level: 1, srd_index: 'burning-hands', damage_dice: '3d6', is_concentration: false,
+      is_ritual: false, is_prepared: true, ki_cast: { cost: 2, max_extra: 2, ki_left: 5, feature_key: 'monk.discipline_sweeping_cinder_strike' } } as Spell
+    renderFlow(burning)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(await screen.findByText('cast-ki-1'))
+    const sheet = await screen.findByTestId('damage-sheet')
+    expect(sheet).toHaveAttribute('data-ki', '1')
+    expect(sheet).toHaveAttribute('data-slot', '2')  // 1° livello + 1 ki in più
+    expect(useSpell).not.toHaveBeenCalled()
   })
 
   it('a spell that is not at will still asks for the slot', async () => {

@@ -292,3 +292,43 @@ def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
     warning = _turn_warning(char, spell)
     return [*out, warning] if warning else out
+
+
+# --- Lanci col ki (Arti dell'Ombra, discipline dei Quattro Elementi) ------------------------------------------------
+
+def ki_spell_cap(level: int) -> int | None:
+    """Massimo di punti ki per un solo incantesimo, costo base incluso: 3 dal 5° livello di monaco, 4 al 9°, 5 al 13°, 6 al 17°."""
+    caps = [(17, 6), (13, 5), (9, 4), (5, 3)]
+    return next((cap for lv, cap in caps if level >= lv), None)
+
+
+@dataclass(frozen=True)
+class KiCast:
+    """Come un incantesimo si lancia coi punti: costo base, punti in più ammessi (0 se l'incantesimo non si alza), punti rimasti
+    nella riserva, la riga ``Ability`` della riserva e la CD del ki."""
+    feature_key: str
+    pool: str
+    cost: int
+    max_extra: int
+    ki_left: int
+    dc: int
+    upcast: bool
+
+
+def ki_cast_info(char: Any, spell: Any) -> KiCast | None:
+    key = getattr(spell, "srd_index", None)
+    if not key:
+        return None
+    for spec, row in active_features(char):
+        for ks in spec.ki_spells:
+            if ks.spell != key:
+                continue
+            pool = next((a for a in char.abilities if a.feature_key == ks.pool), None)
+            if pool is None or pool.max_uses is None:
+                return None
+            left = pool.uses or 0
+            cap = ki_spell_cap(row.level) if ks.upcast else None
+            extra = max(0, min(cap - ks.cost, left - ks.cost)) if cap is not None else 0
+            dc = 8 + char.proficiency_bonus + effective_ability_mod(char, "wisdom")
+            return KiCast(spec.key, ks.pool, ks.cost, extra, left, dc, ks.upcast)
+    return None

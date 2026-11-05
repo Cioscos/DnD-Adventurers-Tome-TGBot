@@ -60,6 +60,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
   const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
   const [pendingSlotId, setPendingSlotId] = useState<number | undefined>(undefined)
+  // Lancio coi punti ki: i ki in più scelti (uno per livello dell'incantesimo in più), al posto di slot e rituale.
+  const [pendingKi, setPendingKi] = useState<number | null>(null)
   // Esito delle opzioni di un lancio senza danno: effetti e bersaglio da mostrare.
   const [castNotes, setCastNotes] = useState<OptionResult | null>(null)
   const [pendingRitual, setPendingRitual] = useState(false)
@@ -77,9 +79,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const spellSlots: SpellSlot[] = char?.spell_slots ?? []
 
   // Conferma dei lanci senza danno: nome + slot/rituale + concentrazione.
-  const confirmCastDone = useCallback((spell: Spell, slotLevel: number | null, ritual: boolean) => {
+  const confirmCastDone = useCallback((spell: Spell, slotLevel: number | null, ritual: boolean, ki: number | null = null) => {
     let msg = t('character.spells.cast_done', { name: spell.name })
     if (slotLevel != null && slotLevel >= 1) msg += t('character.spells.cast_done_slot', { level: slotLevel })
+    if (ki != null && spell.ki_cast) msg += t('character.spells.cast_done_ki', { n: spell.ki_cast.cost + ki })
     if (ritual) msg += t('character.spells.cast_done_ritual')
     if (spell.is_concentration) msg += t('character.spells.cast_done_concentration')
     toast.success(msg)
@@ -87,16 +90,18 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Lancio senza dadi: slot, rituale o trucchetto. Il server avvia anche la concentrazione col suo contatore.
   const castMutation = useMutation({
-    mutationFn: ({ spell, slot, ritual = false, free = false }: { spell: Spell; slot?: SpellSlot; ritual?: boolean; free?: boolean }) =>
-      castSpell(charId, spell.id, free
-        ? { slot_level: null, as_ritual: false, free_cast: true }
-        : { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual }),
-    onSuccess: (updated, { spell, slot, ritual = false }) => {
+    mutationFn: ({ spell, slot, ritual = false, free = false, ki = null }: { spell: Spell; slot?: SpellSlot; ritual?: boolean; free?: boolean; ki?: number | null }) =>
+      castSpell(charId, spell.id, ki != null
+        ? { slot_level: null, as_ritual: false, ki: true, ki_extra: ki }
+        : free
+          ? { slot_level: null, as_ritual: false, free_cast: true }
+          : { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual }),
+    onSuccess: (updated, { spell, slot, ritual = false, ki = null }) => {
       qc.setQueryData(['character', charId], updated)
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       setCastingSpell(null)
       haptic.success()
-      confirmCastDone(spell, slot?.level ?? null, ritual)
+      confirmCastDone(spell, slot?.level ?? null, ritual, ki)
       refreshAfterOptions(qc, charId, updated.option_result)
       if (updated.option_result?.effects?.length || updated.option_result?.targets?.length) setCastNotes(updated.option_result)
     },
@@ -250,6 +255,19 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     castMutation.mutate({ spell, ritual: true })
   }, [beginAttack, castMutation, castMode])
 
+  // Coi punti ki: il costo è del privilegio, il server lo ricontrolla. Con i dadi, il lancio avviene al primo tiro (come uno slot).
+  const proceedKiCast = useCallback((spell: Spell, extra: number) => {
+    if (spell.damage_dice) {
+      setPendingRitual(false)
+      setPendingSlotLevel(spell.level + extra)
+      setPendingSlotId(undefined)
+      setPendingKi(extra)
+      setRollDamageSpell(spell)
+      return
+    }
+    castMutation.mutate({ spell, ki: extra })
+  }, [castMutation])
+
   const handleCastSlot = useCallback((slot: SpellSlot) => {
     if (!castingSpell) return
     if (needsUnpreparedWarn(castingSpell)) {
@@ -289,6 +307,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     setRollDamageSpell(null)
     setPendingSlotLevel(null)
     setPendingSlotId(undefined)
+    setPendingKi(null)
     setPendingRitual(false)
     setDamageAfterAttack(null)
   }
@@ -329,6 +348,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 onCastRitual={handleCastRitual}
                 canFreeCast={freeCastFor(castingSpell)}
                 onCastFree={() => castMutation.mutate({ spell: castingSpell, free: true })}
+                kiCast={castingSpell.ki_cast}
+                onCastKi={(extra) => proceedKiCast(castingSpell, extra)}
                 onCreateSlot={(level) => createSlotMutation.mutate(level)}
                 onCancel={closeCastSheet}
                 isPending={castMutation.isPending}
@@ -352,6 +373,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 spell={rollDamageSpell}
                 slotLevel={pendingSlotLevel}
                 slotId={pendingSlotId}
+                kiExtra={pendingKi}
                 asRitual={pendingRitual}
                 slotAlreadyConsumed={damageAfterAttack !== null}
                 initialCritical={damageAfterAttack?.critical ?? false}

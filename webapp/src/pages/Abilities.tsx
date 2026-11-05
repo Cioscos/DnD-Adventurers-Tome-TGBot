@@ -360,6 +360,7 @@ export default function Abilities() {
               </span>
             )}
             {isUnlimitedFeature(ab) && <span>{t('character.abilities.unlimited')}</span>}
+            {ab.dc != null && <span data-testid="ability-dc" className="font-mono font-bold tabular-nums">{t('character.abilities.dc', { dc: ab.dc })}</span>}
           </div>
           <ExpandChevron open={isOpen} />
         </Pressable>

@@ -221,6 +221,7 @@ class AbilityRead(BaseModel):
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None
+    min_amount: int = 1  # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki)
     # Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira): `[{key, label: {it, en}}]`, già filtrate per questo personaggio
     use_toggles: list[dict[str, Any]] = []
     use_choices: list[dict[str, Any]] = []
@@ -229,6 +230,8 @@ class AbilityRead(BaseModel):
     spends_left: Optional[int] = None
     # Riga di riserva a catalogo (Incanalare Divinita): solo contatore, l'uso passa dai privilegi che la spendono
     is_pool: bool = False
+    # CD dei tiri salvezza del privilegio (ki del Monaco: 8 + competenza + Saggezza), calcolata dal server
+    dc: Optional[int] = None
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).

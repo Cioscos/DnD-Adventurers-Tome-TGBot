@@ -72,6 +72,7 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "goaded": {"it": "Adescato", "en": "Goaded"},
     "protection": {"it": "Attacco ostacolato", "en": "Attack hindered"},
     "eldritch_strike": {"it": "Colpo Mistico", "en": "Eldritch Strike"},
+    "no_reactions": {"it": "Senza reazioni", "en": "No reactions"},
 }
 
 

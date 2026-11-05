@@ -216,6 +216,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         raise _err(status.HTTP_409_CONFLICT, "needs_panel")
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
+    if amount < on_use.min_amount:
+        raise _err(status.HTTP_409_CONFLICT, "amount_too_low")
     if on_use.once_per_turn and once_used(char, feature_key):
         raise _err(status.HTTP_409_CONFLICT, "once_per_turn")
     if on_use.forgoes_attack and get_turn(char)["action_attacks"] >= attacks_allowed(char):
@@ -261,9 +263,12 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     result = UseResult()
     ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
     healed = 0
-    formula = on_use.rolls(ctx) if callable(on_use.rolls) else on_use.rolls
+    if on_use.rolls_by_amount:  # i dadi dipendono da quanto si spende e non si ripetono per unità
+        formula = on_use.rolls_by_amount(ctx, amount)
+    else:
+        formula = on_use.rolls(ctx) if callable(on_use.rolls) else on_use.rolls
     dice = parse_dice(formula) if formula else None
-    for _ in range(amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
+    for _ in range(1 if on_use.rolls_by_amount else amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
         rolled = ([dice[1]] * dice[0] if maximize else [random.randint(1, dice[1]) for _ in range(dice[0])]) if dice else []
         result.rolls += rolled
         if on_use.heal:
@@ -299,6 +304,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         given = {**(params or {}), "rolled": sum(result.rolls), "maximized": maximize}
         state_spec = on_use.state(ctx, given) if callable(on_use.state) else on_use.state
         result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
+    if on_use.clears_condition:  # Mente Lucida: la condizione scelta cade, con i suoi effetti e i suoi TS
+        from api.services.effects import apply_conditions  # import locale: effects richiama on_conditions
+        await apply_conditions(session, char, {params[on_use.clears_condition]: False})
+    if on_use.ends_state:
+        remove_state(char, on_use.ends_state)
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
         result.targets.append(feature_key)

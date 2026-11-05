@@ -144,6 +144,9 @@ export type SpellUseBody = Partial<RollChoice> & {
   as_ritual?: boolean
   /** Senza slot: lo autorizza uno stato attivo sul server (Lettura del Pensiero). */
   free_cast?: boolean
+  /** Coi punti ki di un privilegio invece di uno slot; `ki_extra` ne aggiunge, uno per livello dell'incantesimo in più. */
+  ki?: boolean
+  ki_extra?: number
   confirm?: string[]
 }
 
@@ -270,6 +273,9 @@ export type WeaponAttackResult = {
   /** Colpo senz'armi 2024: niente tiro per colpire, il bersaglio fa un TS contro `save_dc`. */
   effect?: 'grapple' | 'shove'
   save_dc?: number
+  /** Tipo di danno del colpo senz'armi e se conta come magico (Colpi Ki Potenziati). */
+  damage_type?: string
+  is_magic?: boolean
   /** `[lati, valore]` dei dadi ritirabili (arma e dadi delle opzioni), con l'indice con cui il server li conosce. */
   reroll_dice?: [number, number][]
 }

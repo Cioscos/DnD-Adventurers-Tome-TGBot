@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import random
+import re
 import uuid
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -58,7 +59,9 @@ from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
 from core.game.stats import cantrip_dice_multiplier
 from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
-from core.rules.spellcasting import at_will, can_ritual, cast_warnings, caster_stats, casting_kind, spell_stats
+from core.rules.spellcasting import (
+    at_will, can_ritual, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
+)
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -166,14 +169,34 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     char.turn_state = turn
 
 
+_LONG_CASTING = re.compile(r"minut|minute|\bor[ae]\b|hour", re.IGNORECASE)
+
+
+def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, extra: int) -> tuple[Any, int]:
+    """Lancio coi punti ki: la riserva e quanto costa. Ogni rifiuto viene prima di spendere qualcosa."""
+    info = ki_cast_info(char, spell)
+    if info is None or ritual or free_cast:
+        raise HTTPException(status_code=409, detail={"code": "ki_cast_unavailable"})
+    if extra and not info.upcast:
+        raise HTTPException(status_code=409, detail={"code": "ki_extra_not_allowed"})
+    if extra > info.max_extra and info.ki_left >= info.cost + extra:
+        raise HTTPException(status_code=409, detail={"code": "ki_cap", "max_extra": info.max_extra})
+    pool = next(a for a in char.abilities if a.feature_key == info.pool)
+    total = info.cost + extra
+    if (pool.uses or 0) < total:
+        raise HTTPException(status_code=409, detail={"code": "no_uses"})
+    return pool, total
+
+
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
-    confirm: list[str] | None = None, free_cast: bool = False,
+    confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
 ) -> None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
     Condiviso da /use e /attack. Una regola violata e non confermata risponde 409 ``cast_confirm`` prima di spendere.
     """
+    ki_pool, ki_total = _ki_payment(char, spell, ritual, free_cast, ki_extra) if ki else (None, 0)
     free_state = None
     free_at_will = False
     if free_cast:  # R43: serve uno stato attivo (o un privilegio a volontà) per questo incantesimo; costa l'azione, non uno slot
@@ -189,12 +212,18 @@ def _consume_cast(
             raise HTTPException(
                 status_code=400, detail="No class with Ritual Casting"
             )
-    slot = None if ritual or free_cast or spell.level == 0 else _pick_slot(char, spell, slot_id, slot_level)
+    slot = None if ritual or free_cast or ki or spell.level == 0 else _pick_slot(char, spell, slot_id, slot_level)
     missing = [w for w in cast_warnings(char, spell, ritual) if w not in (confirm or [])]
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
-    if free_at_will:
+    if ki_pool is not None:
+        if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
+            spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
+        ki_pool.uses = (ki_pool.uses or 0) - ki_total
+        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} con {ki_total} ki",
+                     meta={"ki": ki_total, "slot_level": spell.level + ki_extra})
+    elif free_at_will:
         spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
     elif free_state is not None:
@@ -343,7 +372,8 @@ async def use_spell(
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
 
-    _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast)
+    _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
+                  body.ki, body.ki_extra)
     opts = use_options(session, char, "cast", body, spell=spell)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)

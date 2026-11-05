@@ -134,6 +134,10 @@ export interface Ability {
   /** Riserva a catalogo (Incanalare Divinità): solo contatore, senza «Usa». */
   is_pool?: boolean
   use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[] }[]
+  /** CD dei tiri salvezza del privilegio, calcolata dal server (il ki del Monaco: 8 + competenza + Saggezza). */
+  dc?: number | null
+  /** Usi minimi da spendere insieme (Frusta d'Acqua: 2 ki). */
+  min_amount?: number
 }
 
 /** Stato avviato da un privilegio (Ira...): finisce per round, riposo, svenimento o a mano. */
@@ -209,6 +213,8 @@ export interface Spell {
   attack_bonus?: number | null
   /** Un privilegio lo concede a volontà: si lancia senza slot (Mille Forme). */
   at_will?: boolean
+  /** Si lancia anche coi punti ki (Arti dell'Ombra, discipline dei Quattro Elementi): costo base, ki in più ammessi, ki rimasti. */
+  ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string } | null
 }
 
 export interface SpellSlot {

@@ -52,6 +52,46 @@ describe('CastSpellModal', () => {
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
+  describe('ki cast (Shadow Arts, Four Elements disciplines)', () => {
+    const common = { spell, availableSlots: [] as SpellSlot[], onCast: vi.fn(), onCreateSlot: noop, onCancel: noop, isPending: false, isCreatingSlot: false }
+    const ki = { cost: 2, max_extra: 0, ki_left: 5, feature_key: 'monk.discipline_sweeping_cinder_strike' }
+
+    it('casts with the ki and, with no slots at all, hides the invitation to create one', async () => {
+      const onCastKi = vi.fn()
+      render(<CastSpellModal {...common} kiCast={ki} onCastKi={onCastKi} />)
+      expect(screen.queryByText('character.spells.no_slots')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'character.spells.go_create_slot' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'character.spells.cast_ki' }))
+      expect(onCastKi).toHaveBeenCalledWith(0)
+    })
+
+    it('lets the player add extra ki up to the allowed maximum and sends it', async () => {
+      const onCastKi = vi.fn()
+      render(<CastSpellModal {...common} kiCast={{ ...ki, max_extra: 1 }} onCastKi={onCastKi} />)
+      const more = screen.getByLabelText('character.turn.amount_more')
+      await userEvent.click(more)
+      await userEvent.click(more)
+      expect(screen.getByTestId('use-amount')).toHaveTextContent('1')  // mai oltre il tetto
+      await userEvent.click(screen.getByRole('button', { name: 'character.spells.cast_ki' }))
+      expect(onCastKi).toHaveBeenCalledWith(1)
+    })
+
+    it('shows no extra selector when the spell cannot be raised, and turns the cast off without enough ki', () => {
+      const { rerender } = render(<CastSpellModal {...common} kiCast={ki} onCastKi={vi.fn()} />)
+      expect(screen.queryByTestId('use-amount')).not.toBeInTheDocument()
+      rerender(<CastSpellModal {...common} kiCast={{ ...ki, ki_left: 1 }} onCastKi={vi.fn()} />)
+      expect(screen.getByRole('button', { name: 'character.spells.cast_ki' })).toBeDisabled()
+      expect(screen.getByText('character.spells.cast_ki_none')).toBeInTheDocument()
+    })
+
+    it('keeps the slots when the character has some, next to the ki cast', async () => {
+      const slots = [{ id: 10, level: 3, available: 2, used: 0, total: 2 }] as SpellSlot[]
+      render(<CastSpellModal {...common} availableSlots={slots} kiCast={ki} onCastKi={vi.fn()} />)
+      expect(screen.getByText('character.slots.available_count')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'character.spells.cast_ki' })).toBeInTheDocument()
+    })
+  })
+
   it('offers the free cast only when an active effect allows it, even with no slots left', async () => {
     const onCastFree = vi.fn()
     const common = { spell, availableSlots: [] as SpellSlot[], onCast: vi.fn(), onCreateSlot: noop, onCancel: noop, isPending: false, isCreatingSlot: false }

@@ -614,6 +614,52 @@ describe('Turn page', () => {
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 3))
   })
 
+  it('starts the selector at the feature minimum and never goes below it (Water Whip, 2 ki)', async () => {
+    getChar.mockResolvedValue(pool({ min_amount: 2, max_uses: 5, uses: 5 }))
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const less = await screen.findByLabelText('character.turn.amount_less')
+    expect(screen.getByTestId('use-amount')).toHaveTextContent('2')
+    expect(less).toBeDisabled()
+    await userEvent.click(screen.getByLabelText('character.turn.amount_more'))
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 3))
+  })
+
+  it('lets the player choose how many points of the pool a feature without counter spends, from its minimum (Water Whip)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 9, name: 'Frusta d\'Acqua', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'monk.discipline_water_whip', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+      choose_amount: true, min_amount: 2, max_amount: null, spends_left: 5,
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const more = await screen.findByLabelText('character.turn.amount_more')
+    expect(screen.getByTestId('use-amount')).toHaveTextContent('2')
+    for (let i = 0; i < 6; i++) await userEvent.click(more)
+    expect(screen.getByTestId('use-amount')).toHaveTextContent('5')  // mai oltre i ki rimasti
+    await userEvent.click(screen.getByLabelText('character.turn.amount_less'))
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'monk.discipline_water_whip', 4))
+  })
+
+  it('turns off a feature without counter when its pool has fewer points than its minimum', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 9, name: 'Frusta d\'Acqua', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'monk.discipline_water_whip', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+      choose_amount: true, min_amount: 2, max_amount: null, spends_left: 1,
+    }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.no_uses')).toBeInTheDocument()
+    expect(screen.queryByTestId('use-amount')).toBeNull()
+  })
+
+  it('turns off the Use of a feature that needs more uses than are left', async () => {
+    getChar.mockResolvedValue(pool({ min_amount: 2, max_uses: 5, uses: 1 }))
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.no_uses')).toBeInTheDocument()
+  })
+
   it('caps the pool selector at the feature own max_amount', async () => {
     getChar.mockResolvedValue(pool({ max_amount: 2 }))
     renderWithProviders(<Turn />)

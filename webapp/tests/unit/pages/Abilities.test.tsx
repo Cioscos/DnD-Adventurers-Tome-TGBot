@@ -177,6 +177,15 @@ describe('Abilities page', () => {
     expect(screen.queryByRole('button', { pressed: false })).not.toBeInTheDocument()
   })
 
+  it('shows the save DC the server computed on the ability row, and nothing on the others', async () => {
+    const ki = { ...classFeature, id: 6, name: 'Ki', max_uses: 5, uses: 5, dc: 14 }
+    getChar.mockResolvedValue(char([ki, classFeature]))
+    renderWithProviders(<Abilities />)
+    await screen.findByText('Ki')
+    expect(screen.getAllByTestId('ability-dc')).toHaveLength(1)
+    expect(screen.getByTestId('ability-dc')).toHaveTextContent('character.abilities.dc')
+  })
+
   it('add wizard: applies the detected restoration and posts the AbilityCreate contract', async () => {
     getChar.mockResolvedValue(char([]))
     addSpy.mockResolvedValue({ id: 9 })

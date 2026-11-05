@@ -115,7 +115,8 @@
       "groups": {
         "maneuvers": "Manovre",
         "weapon_mastery": "Padronanza delle armi",
-        "fighting_style": "Stile di combattimento"
+        "fighting_style": "Stile di combattimento",
+        "elemental_disciplines": "Discipline elementali"
       },
       "replace_title": "Sostituisci opzione",
       "replace_old": "Opzione da sostituire",
@@ -535,6 +536,7 @@
       "mode_melee": "Mischia",
       "mode_thrown": "Lancio",
       "magic_bonus": "Bonus magico +{{n}}",
+      "magic_strike": "Colpo magico",
       "proficiency_warning": "Arma senza competenza: bonus di competenza non applicato",
       "to_hit": "Per colpire",
       "damage": "Danno",
@@ -657,6 +659,11 @@
       "chip_damage": "DANNO",
       "chip_attack_save": "Attacco / Tiro Salvezza",
       "chip_higher_level": "Livelli Superiori",
+      "cast_ki": "Lancia con il ki ({{cost}})",
+      "cast_ki_hint": "Spendi punti ki invece di uno slot. Ki rimasti: {{left}}.",
+      "cast_ki_extra": "Ki in più (+1 livello ciascuno)",
+      "cast_ki_none": "Non hai ki a sufficienza.",
+      "cast_done_ki": " · ki spesi: {{n}}",
       "cast_free": "Lancia senza slot",
       "free_cast_hint": "Un effetto attivo ti permette di lanciarlo senza slot, con la tua azione.",
       "roll_healing": {
@@ -687,7 +694,8 @@
         "close": "Chiudi",
         "reroll": "Nuovo tiro",
         "no_slots_warning_title": "Nessuno slot disponibile",
-        "no_slots_warning_body": "Non hai più slot di livello {{level}}. Non puoi rilanciare l'incantesimo."
+        "no_slots_warning_body": "Non hai più slot di livello {{level}}. Non puoi rilanciare l'incantesimo.",
+        "no_ki_warning_body": "Non hai ki a sufficienza per lanciarlo di nuovo."
       },
       "empty_hint": "Tocca + Aggiungi per il tuo primo trucchetto.",
       "concentration_break_warn": "Romperai la concentrazione su {{spell}}.",
@@ -853,7 +861,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -1265,6 +1273,7 @@
         "turn_slot_used": "Hai già usato quell'azione in questo turno.",
         "no_uses": "Usi esauriti.",
         "amount_too_high": "Troppi usi in una volta per questo privilegio.",
+        "amount_too_low": "Servono più usi in una volta per questo privilegio.",
         "feature_not_usable": "Questo privilegio non si può usare ora.",
         "feature_unavailable": "Ora non puoi usarlo (per esempio serve essere in ira, senza armatura pesante).",
         "default": "Impossibile usare il privilegio. Riprova."
@@ -1707,6 +1716,7 @@
       "add": "Aggiungi abilità",
       "uses_left": "{{current}}/{{max}} usi",
       "unlimited": "illimitato",
+      "dc": "CD {{dc}}",
       "passive": "Passiva",
       "active": "Attiva",
       "use": "Usa",

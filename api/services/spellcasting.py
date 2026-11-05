@@ -16,11 +16,12 @@ from api.schemas.spell import SpellRead
 from core.data.spell_slots import caster_kind
 from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
+from core.game.stats import effective_ability_mod
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.spellcasting import (
-    at_will, caster_stats, can_ritual, granted_ritual_only, known_limits, normalize_school, prepared_limit, prepares,
-    school_limit, spell_stats,
+    at_will, caster_stats, can_ritual, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    prepares, school_limit, spell_stats,
 )
 
 
@@ -30,6 +31,11 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if stats:
             spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
         spell.at_will = at_will(char, spell)
+        ki = ki_cast_info(char, spell)
+        if ki is not None:
+            spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key}
+            if not stats:  # chi lancia solo col ki ha la CD del ki, non quella di un incantatore
+                spell.save_dc, spell.attack_bonus = ki.dc, char.proficiency_bonus + effective_ability_mod(char, "wisdom")
 
 
 def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:

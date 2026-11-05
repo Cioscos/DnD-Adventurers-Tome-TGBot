@@ -142,6 +142,18 @@ class TargetEffect:
 
 
 @dataclass(frozen=True)
+class KiSpell:
+    """Incantesimo che un privilegio fa lanciare spendendo punti di una riserva invece di uno slot (Arti dell'Ombra, discipline
+    dei Quattro Elementi). ``spell``: ``srd_index``, anche chiave di ``GRANTED_SPELLS``. ``cost``: punti del lancio base.
+    ``upcast``: dal 5° livello di classe i punti in più alzano il livello dell'incantesimo di 1 ciascuno, entro il tetto
+    per livello (``ki_spell_cap``). ``pool``: la riga ``Ability`` da cui si spende."""
+    spell: str
+    cost: int
+    upcast: bool = False
+    pool: str = "monk.ki"
+
+
+@dataclass(frozen=True)
 class UseToggle:
     """Scelta sì/no all'uso di un privilegio: ``params[key]`` vale ``True`` se il giocatore l'ha attivata."""
     key: str
@@ -217,10 +229,20 @@ class OnUse:
     forgoes_attack: bool = False
     notes: "Callable[[RuleContext, dict], list[str]] | None" = None
     gives: "Callable[[RuleContext, int], int] | None" = None
+    # chiave del parametro (una ``UseChoice``) che contiene la condizione da togliere a chi usa il privilegio (Mente Lucida)
+    clears_condition: str | None = None
+    # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki) e dadi che dipendono da quanti se ne spendono: la formula
+    # ``f(ctx, spesi) -> "NdM"`` sostituisce ``rolls`` e non si ripete per unità
+    min_amount: int = 1
+    rolls_by_amount: "Callable[[RuleContext, int], str] | None" = None
+    # chiave dello stato che l'uso chiude (Palmo Tremante: le vibrazioni finiscono)
+    ends_state: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
             raise ValueError("max_amount (>= 1) vale solo con choose_amount")
+        if self.min_amount > 1 and not self.choose_amount:
+            raise ValueError("min_amount (> 1) vale solo con choose_amount")
         if isinstance(self.rolls, str) and not parse_dice(self.rolls):
             raise ValueError(f"rolls non valido: {self.rolls!r} (atteso NdM, per esempio 1d10)")
 
@@ -335,6 +357,14 @@ class RollOptionSpec:
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)
     maximize_types: tuple[str, ...] = ()  # tipi di danno che la massimizzazione tocca; vuoto = tutti (i dadi a mano mai)
+    # L'attacco che l'opzione apre non è dell'azione Attacco, anche senza uno slot proprio (i colpi della Raffica di Colpi,
+    # pagati da uno stato): non pesa sul limite di attacchi dell'azione.
+    outside_action: bool = False
+    # Dopo un danno subito l'app propone questa reazione d'attacco? ``None``: sì se ha lo slot ``reaction`` (Ritorsione,
+    # Replica); ``False`` per le reazioni che nascono da un altro evento (Opportunista).
+    offered_on_damage: bool | None = None
+    # Con ``damage_in``: chiamata se, applicata l'opzione, il danno scende a 0 (il proiettile deviato si afferra)
+    on_zero_damage: "Callable[[Any, RuleContext], None] | None" = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -371,6 +401,10 @@ class RollOptionSpec:
             raise ValueError("maximize vale solo prima del danno di un incantesimo")
         if self.dice_cost and not self.needs:
             raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
+        if self.on_zero_damage and self.phase != "damage_in":
+            raise ValueError("on_zero_damage vale solo per il danno subito")
+        if self.outside_action and self.phase != "before":
+            raise ValueError("outside_action vale solo prima del tiro: apre un attacco")
 
 
 @dataclass(frozen=True)
@@ -425,6 +459,12 @@ class FeatureSpec:
     # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce
     ability_bonus: dict[str, int] | None = None
     ability_cap: int = 20
+    # caratteristica della CD dei tiri salvezza del privilegio (8 + competenza + modificatore): la riga la mostra (ki del Monaco)
+    dc_ability: str | None = None
+    magic_unarmed: bool = False  # i colpi senz'armi contano come magici (Colpi Ki Potenziati)
+    ki_spells: tuple = ()  # ``KiSpell`` che il privilegio fa lanciare coi punti invece degli slot
+    # Fine di un riposo lungo: lo stato che il privilegio avvia da solo (Tranquillità); ``f(ctx) -> StateSpec | None``
+    long_rest_state: "Callable[[RuleContext], StateSpec | None] | None" = None
     no_row: bool = False  # solo catalogo: nessuna riga Ability sulla scheda (regole generali, scelte di livello)
     # dove è coperta una riga senza `Ability` che la mappatura vuole da implementare o correggere: `lavori-successivi`
     # (fuori dai cataloghi, R32) oppure il punto del codice o del test; `check_catalog` lo pretende insieme a `no_row`

@@ -58,6 +58,7 @@ from api.services.effects import apply_heal, apply_conditions, end_hide
 from api.services.rules_states import end_on_action
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
 from core.game.attacks import martial_arts_die
+from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
 from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, uses_own_slot
@@ -538,6 +539,16 @@ def _own_slot_attack(char: Character, body: AttackSubmission | None) -> bool:
     return bool(body and uses_own_slot(char, body.options or []))
 
 
+def _note_martial_attack(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
+    """Arti Marziali: l'azione Attacco è stata fatta con un colpo senz'armi o un'arma da monaco, senza armatura né scudo.
+    Solo così il colpo senz'armi extra con l'azione bonus è ammesso (``turn_state["martial_attack"]``)."""
+    if _own_slot_attack(char, body) or not martial_arts_level(char, item):
+        return
+    turn = get_turn(char)
+    if not turn.get("martial_attack"):
+        char.turn_state = {**turn, "martial_attack": True}
+
+
 def _check_attack_limit(char: Character, body: AttackSubmission | None) -> None:
     """Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito.
     Non vale per un attacco con un'opzione che ha uno slot proprio (Frenesia, Ritorsione): non è un attacco dell'azione."""
@@ -852,6 +863,7 @@ async def attack_with_weapon(
     if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
         if not offhand:
             spend(char, "attack", own_slot=_own_slot_attack(char, body))
+            _note_martial_attack(char, item, body)
         elif NICK_OPTION not in opts.keys:
             spend(char, "bonus")
 
@@ -1002,6 +1014,7 @@ async def attack_unarmed(
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
     if not (body and body.with_inspiration):
         spend(char, "attack", own_slot=_own_slot_attack(char, body))  # il rilancio con ispirazione è lo stesso attacco
+        _note_martial_attack(char, None, body)
 
     firing_results = await dispatch(
         session, char, "attack_rolled",
@@ -1031,6 +1044,9 @@ async def attack_unarmed(
         damage_rolls=damage_rolls,
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
+        damage_type=next((s["data"]["unarmed_damage_type"] for s in char.active_states or []
+                          if (s.get("data") or {}).get("unarmed_damage_type")), "bludgeoning"),
+        is_magic=True if any(spec.magic_unarmed for spec, _row in active_features(char)) else None,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
     ), None, ability, "melee", "one", opts)

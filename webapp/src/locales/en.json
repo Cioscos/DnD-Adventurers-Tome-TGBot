@@ -115,7 +115,8 @@
       "groups": {
         "maneuvers": "Maneuvers",
         "weapon_mastery": "Weapon Mastery",
-        "fighting_style": "Fighting Style"
+        "fighting_style": "Fighting Style",
+        "elemental_disciplines": "Elemental disciplines"
       },
       "replace_title": "Replace option",
       "replace_old": "Option to replace",
@@ -535,6 +536,7 @@
       "mode_melee": "Melee",
       "mode_thrown": "Thrown",
       "magic_bonus": "Magic bonus +{{n}}",
+      "magic_strike": "Magical strike",
       "proficiency_warning": "Not proficient with this weapon: proficiency bonus not applied",
       "to_hit": "To hit",
       "damage": "Damage",
@@ -657,6 +659,11 @@
       "chip_damage": "DAMAGE",
       "chip_attack_save": "Attack / Save",
       "chip_higher_level": "Higher Levels",
+      "cast_ki": "Cast with ki ({{cost}})",
+      "cast_ki_hint": "Spend ki points instead of a slot. Ki left: {{left}}.",
+      "cast_ki_extra": "Extra ki (+1 level each)",
+      "cast_ki_none": "You do not have enough ki.",
+      "cast_done_ki": " · ki spent: {{n}}",
       "cast_free": "Cast without a slot",
       "free_cast_hint": "An active effect lets you cast it without a slot, using your action.",
       "roll_healing": {
@@ -687,7 +694,8 @@
         "close": "Close",
         "reroll": "Roll again",
         "no_slots_warning_title": "No slots available",
-        "no_slots_warning_body": "No level {{level}} slots remaining. You cannot recast this spell."
+        "no_slots_warning_body": "No level {{level}} slots remaining. You cannot recast this spell.",
+        "no_ki_warning_body": "You do not have enough ki to cast it again."
       },
       "empty_hint": "Tap + Add to learn your first cantrip.",
       "concentration_break_warn": "You'll break concentration on {{spell}}.",
@@ -853,7 +861,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -1266,6 +1274,7 @@
         "turn_slot_used": "You have already used that action this turn.",
         "no_uses": "No uses left.",
         "amount_too_high": "Too many uses at once for this feature.",
+        "amount_too_low": "This feature needs more uses at once.",
         "feature_not_usable": "This feature cannot be used right now.",
         "feature_unavailable": "You cannot use it now (for example you must be raging, without heavy armor).",
         "default": "Could not use the feature. Try again."
@@ -1708,6 +1717,7 @@
       "add": "Add ability",
       "uses_left": "{{current}}/{{max}} uses",
       "unlimited": "unlimited",
+      "dc": "DC {{dc}}",
       "passive": "Passive",
       "active": "Active",
       "use": "Use",

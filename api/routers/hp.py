@@ -48,7 +48,7 @@ from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
 from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.roll_options import refund_spent, scale_damage
+from core.rules.roll_options import refund_spent, run_zero_damage_hooks, scale_damage
 from api.services.rules_options import (
     merge_options,
     option_result,
@@ -63,7 +63,7 @@ from api.routers._helpers import (
 from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    ZERO_HP_USES, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    ZERO_HP_USES, begin_state, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext
 from api.services.character_response import build_character_response
@@ -248,6 +248,8 @@ async def update_hp(
             # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
             raw = option_after
             applied = apply_damage_mode(raw, mod)
+            if option_after == 0:  # il proiettile deviato si afferra (Deviare Proiettili)
+                run_zero_damage_hooks(session, char, opts.keys)
         if mod is None:
             # Senza tipo conta solo una resistenza a tutti i danni (Pietrificato).
             mod = damage_taken_mode(char, slug)
@@ -739,6 +741,11 @@ async def rest(
         char.current_hit_points = effective_hp_max(char, hb_hp_bonus)
         _add_history(session, char.id, "rest", "Riposo lungo completato",
                      meta={"kind": "long"})
+        for spec, row in active_features(char):  # alla fine del riposo lungo certi privilegi avviano un loro stato (Tranquillità)
+            if spec.long_rest_state:
+                started = spec.long_rest_state(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level))
+                if started is not None:
+                    begin_state(char, started, spec.key, spec.name["it"])
 
         firing = await dispatch(session, char, "long_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))

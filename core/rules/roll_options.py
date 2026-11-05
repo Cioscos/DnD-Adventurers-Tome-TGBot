@@ -10,6 +10,7 @@ from typing import Any
 
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
+from core.rules.edition import character_edition
 from core.rules.states import has_state, immune_conditions
 from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
@@ -246,14 +247,28 @@ def uses_own_slot(char: Any, keys: list[str]) -> bool:
     specs = {s.key: s for s in _CONDITION_OPTIONS}
     for feature, _row in active_features(char):
         specs.update({o.key: o for o in feature.roll_options})
-    return any(specs[k].slot for k in keys if k in specs)
+    return any(specs[k].slot or specs[k].outside_action for k in keys if k in specs)
 
 
 def _spend_state_token(char: Any, key: str) -> str:
-    """Chiude lo stato ``key`` e restituisce il gettone che ``refund_spent`` usa per rimetterlo com'era."""
+    """Chiude lo stato ``key`` (o, se ha più ``data["charges"]``, ne scala una) e restituisce il gettone che
+    ``refund_spent`` usa per rimetterlo com'era."""
     state = next(s for s in char.active_states or [] if s.get("key") == key)
-    char.active_states = [s for s in char.active_states if s.get("key") != key]
+    rest = [s for s in char.active_states if s.get("key") != key]
+    charges = (state.get("data") or {}).get("charges")
+    if type(charges) is int and charges > 1:
+        rest.append({**state, "data": {**state["data"], "charges": charges - 1}})
+    char.active_states = rest
     return f"state:{key}:{json.dumps(state)}"
+
+
+def run_zero_damage_hooks(session: Any, char: Any, keys: list[str]) -> None:
+    """Il danno subito è sceso a 0 con queste opzioni: le loro ``on_zero_damage`` scrivono ciò che ne segue."""
+    for spec, row in active_features(char):
+        for option in spec.roll_options:
+            if option.key in keys and option.on_zero_damage:
+                option.on_zero_damage(session, RuleContext(char=char, edition=character_edition(char), class_row=row,
+                                                           class_level=row.level))
 
 
 def _slot_level(char: Any, spec: RollOptionSpec, inputs: dict) -> int:

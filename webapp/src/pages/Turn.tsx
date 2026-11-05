@@ -42,7 +42,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
@@ -336,30 +336,43 @@ export default function Turn() {
       if (ab && (ab.max_uses ?? 0) > 0) {
         const left = ab.uses ?? 0
         const pickable = !!(ab.has_on_use && ab.choose_amount)
-        const cap = Math.max(1, Math.min(left, ab.max_amount ?? left))
-        const amount = Math.min(amounts[ab.id] ?? 1, cap)
+        const floor = ab.min_amount ?? 1
+        const cap = Math.max(floor, Math.min(left, ab.max_amount ?? left))
+        const amount = Math.min(Math.max(amounts[ab.id] ?? floor, floor), cap)
         label = `${e.label} (${left}/${ab.max_uses})`
-        if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
+        if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} min={floor} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
         else if (left > 0) extra = renderToggles(ab)
         // Una riserva a catalogo (`is_pool`, dal server: Incanalare Divinità) mostra solo il contatore, l'uso passa dai privilegi
         // che la spendono. Le righe automatiche di classe (Secondo Vento...) e quelle a mano conservano il «Usa».
         if (!ab.is_pool || ab.has_on_use) control = (
-          <Button size="sm" variant="secondary" disabled={left <= 0 || missingChoice(ab)}
+          <Button size="sm" variant="secondary" disabled={left < (ab.min_amount ?? 1) || missingChoice(ab)}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
-            {left <= 0 ? t('character.turn.no_uses') : t('character.turn.use')}
+            {left < (ab.min_amount ?? 1) ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
       } else if (ab && (isUnlimitedFeature(ab) || ab.has_on_use)) {
         // Senza contatore (Presenza Intimidatoria) o illimitato (Ira al 20°): il «Usa» c'è se il privilegio ha un effetto.
         if (isUnlimitedFeature(ab)) label = `${e.label} (${t('character.abilities.unlimited')})`
         if (ab.has_on_use) {
-          extra = renderToggles(ab)
+          // Quanti punti della riserva spendere (Frusta d'Acqua: 2 ki più extra): il tetto sono i punti rimasti a quella riserva.
+          const floor = ab.min_amount ?? 1
+          const pickable = !!ab.choose_amount
+          const poolLeft = ab.spends_left ?? Number.MAX_SAFE_INTEGER
+          const cap = Math.max(floor, Math.min(poolLeft, ab.max_amount ?? Number.MAX_SAFE_INTEGER))
+          const amount = Math.min(Math.max(amounts[ab.id] ?? floor, floor), cap)
+          const short = ab.spends_left != null && (ab.spends_left === 0 || (pickable && ab.spends_left < floor))
+          extra = (
+            <>
+              {renderToggles(ab)}
+              {pickable && !short && <div className="pt-2"><AmountStepper value={amount} min={floor} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>}
+            </>
+          )
           control = (
-            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || ab.spends_left === 0}
+            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || short}
               loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
-              onClick={() => triggerAbility({ ability: ab, uses: 0 })}>
-              {ab.spends_left === 0 ? t('character.turn.no_uses') : t('character.turn.use')}
+              onClick={() => triggerAbility({ ability: ab, uses: 0, amount: pickable ? amount : undefined })}>
+              {short ? t('character.turn.no_uses') : t('character.turn.use')}
             </Button>
           )
         }

@@ -47,6 +47,8 @@ interface SpellDamageSheetProps {
   slotLevel: number | null
   /** Il pool scelto: patto e normali possono avere lo stesso livello. */
   slotId?: number
+  /** Lancio coi punti ki: i ki in più scelti. Il primo tiro spende i ki, non uno slot; `slotLevel` è il livello raggiunto. */
+  kiExtra?: number | null
   /** Lancio rituale: nessuno slot consumato al Roll (spec 2026-06-10). */
   asRitual?: boolean
   /** Slot/rituale/concentrazione già consumati dal tiro per colpire: il Roll non li tocca. */
@@ -63,6 +65,7 @@ export default function SpellDamageSheet({
   spell,
   slotLevel,
   slotId,
+  kiExtra = null,
   asRitual = false,
   slotAlreadyConsumed = false,
   initialCritical = false,
@@ -108,10 +111,12 @@ export default function SpellDamageSheet({
 
       // Il tiro per colpire (/attack) ha già fatto il lancio; altrimenti lo fa il primo tiro, una volta sola.
       // Slot, rituale o trucchetto: il server consuma il dovuto e avvia la concentrazione col suo contatore.
-      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || (slotLevel != null && slotLevel >= 1))) {
-        const updated = await castSpell(charId, spell.id, asRitual
-          ? { as_ritual: true, slot_level: null }
-          : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
+      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || kiExtra != null || (slotLevel != null && slotLevel >= 1))) {
+        const updated = await castSpell(charId, spell.id, kiExtra != null
+          ? { ki: true, ki_extra: kiExtra, slot_level: null, as_ritual: false }
+          : asRitual
+            ? { as_ritual: true, slot_level: null }
+            : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
         qc.setQueryData(['character', charId], updated)
         if (updated.damage_unrollable) throw new DamageUnrollable()  // lanciato, ma questi dadi il server non li sa tirare
         qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -206,6 +211,17 @@ export default function SpellDamageSheet({
   }
 
   const handleReroll = () => {
+    if (kiExtra != null && !slotAlreadyConsumed) {
+      // Un nuovo lancio spende altri ki: serve che ne restino (il server li ricontrolla comunque).
+      const info = qc.getQueryData<CharacterFull>(['character', charId])?.spells?.find((s) => s.id === spell?.id)?.ki_cast
+      if (info && info.ki_left >= info.cost + kiExtra) {
+        setSlotConsumed(false)
+        reset()
+      } else {
+        setShowNoSlotWarning(true)
+      }
+      return
+    }
     if (slotAlreadyConsumed || asRitual || slotLevel == null || slotLevel === 0) {
       // Dopo un tiro per colpire, rituale o trucchetto: nessuno slot coinvolto.
       reset()
@@ -371,7 +387,9 @@ export default function SpellDamageSheet({
                 {t('character.spells.roll_damage.no_slots_warning_title')}
               </p>
               <p className="text-sm text-dnd-text-muted font-body">
-                {t('character.spells.roll_damage.no_slots_warning_body', { level: slotLevel })}
+                {kiExtra != null
+                  ? t('character.spells.roll_damage.no_ki_warning_body')
+                  : t('character.spells.roll_damage.no_slots_warning_body', { level: slotLevel })}
               </p>
               <Button
                 variant="ghost"
