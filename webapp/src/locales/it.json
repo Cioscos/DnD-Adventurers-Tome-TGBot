@@ -613,6 +613,8 @@
       "chip_damage": "DANNO",
       "chip_attack_save": "Attacco / Tiro Salvezza",
       "chip_higher_level": "Livelli Superiori",
+      "cast_free": "Lancia senza slot",
+      "free_cast_hint": "Un effetto attivo ti permette di lanciarlo senza slot, con la tua azione.",
       "roll_healing": {
         "title": "Cura: {{name}}",
         "casting_level": "Livello di casting",

@@ -24,6 +24,13 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
     return state
 
 
+def free_cast_state(char: Any, spell: Any) -> dict | None:
+    """Lo stato attivo che autorizza a lanciare ``spell`` senza slot (``data["free_cast"]`` = ``srd_index``): R43.
+    L'autorizzazione sta sul server e si chiude col lancio."""
+    key = getattr(spell, "srd_index", None)
+    return next((s for s in char.active_states or [] if key and (s.get("data") or {}).get("free_cast") == key), None)
+
+
 def immune_conditions(char: Any) -> set[str]:
     """Condizioni che gli stati attivi impediscono (e sospendono se già presenti)."""
     return {c for s in char.active_states or [] for c in s.get("immune_conditions") or []}

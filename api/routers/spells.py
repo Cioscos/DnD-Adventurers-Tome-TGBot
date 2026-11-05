@@ -46,7 +46,9 @@ from api.schemas.item import WeaponAttackResult
 from api.services.last_damage import last_damage_total, pairs
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
-from api.services.rules_turn import get_turn, refuse_if_incapacitated
+from api.services.rules_states import remove_state
+from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
+from core.rules.states import free_cast_state
 from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
 from api.services.dice_stats import record_dice
@@ -163,12 +165,17 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
 
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
-    confirm: list[str] | None = None,
+    confirm: list[str] | None = None, free_cast: bool = False,
 ) -> None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
     Condiviso da /use e /attack. Una regola violata e non confermata risponde 409 ``cast_confirm`` prima di spendere.
     """
+    free_state = None
+    if free_cast:  # R43: serve uno stato attivo per questo incantesimo; costa l'azione, non uno slot
+        free_state = free_cast_state(char, spell)
+        if free_state is None or ritual:
+            raise HTTPException(status_code=409, detail={"code": "free_cast_unavailable"})
     if ritual:
         # Lancio rituale: +10 min, nessuno slot. Richiede il tag ritual e chi può celebrarlo per edizione.
         if not spell.is_ritual:
@@ -177,12 +184,16 @@ def _consume_cast(
             raise HTTPException(
                 status_code=400, detail="No class with Ritual Casting"
             )
-    slot = None if ritual or spell.level == 0 else _pick_slot(char, spell, slot_id, slot_level)
+    slot = None if ritual or free_cast or spell.level == 0 else _pick_slot(char, spell, slot_id, slot_level)
     missing = [w for w in cast_warnings(char, spell, ritual) if w not in (confirm or [])]
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
-    if ritual:
+    if free_state is not None:
+        spend(char, "action")  # 409 turn_slot_used: nulla è ancora scritto
+        remove_state(char, free_state["key"])
+        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")
+    elif ritual:
         _add_history(
             session, char.id, "spell_ritual_cast",
             f"Lancio rituale: {spell.name}",
@@ -323,7 +334,7 @@ async def use_spell(
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
 
-    _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm)
+    _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast)
     opts = use_options(session, char, "cast", body, spell=spell)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)

@@ -10,6 +10,9 @@ interface CastSpellModalProps {
   canRitual: boolean
   onCast: (slot: SpellSlot) => void
   onCastRitual: () => void
+  /** Autorizzato da uno stato attivo (Lettura del Pensiero): costa l'azione, non uno slot. */
+  canFreeCast?: boolean
+  onCastFree?: () => void
   onCreateSlot: (level: number) => void
   onCancel: () => void
   isPending: boolean
@@ -22,6 +25,8 @@ export default function CastSpellModal({
   canRitual,
   onCast,
   onCastRitual,
+  canFreeCast = false,
+  onCastFree,
   onCreateSlot,
   onCancel,
   isPending,
@@ -81,6 +86,14 @@ export default function CastSpellModal({
             ))
           )}
         </div>
+        {canFreeCast && (
+          <div className="pt-3 border-t border-dnd-border/60 space-y-2">
+            <p className="text-xs text-dnd-text-muted font-body italic text-center">{t('character.spells.free_cast_hint')}</p>
+            <Button variant="secondary" fullWidth icon={<Sparkles size={14} />} onClick={onCastFree} disabled={isPending}>
+              {t('character.spells.cast_free')}
+            </Button>
+          </div>
+        )}
         {/* Rituale: visibile anche a slot esauriti, un rituale non li richiede. */}
         {canRitual && (
           <div className="pt-3 border-t border-dnd-border/60 space-y-2">

@@ -100,6 +100,7 @@ class SpellUseRequest(RollOptionsBody):
     slot_id: int | None = None
     slot_level: int | None = None
     as_ritual: bool = False
+    free_cast: bool = False  # senza slot, autorizzato da uno stato attivo (Lettura del Pensiero, R43)
     confirm: list[str] = Field(default_factory=list, max_length=10)
 
 

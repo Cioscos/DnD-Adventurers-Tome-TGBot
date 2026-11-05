@@ -141,6 +141,8 @@ export type SpellUseBody = Partial<RollChoice> & {
   slot_id?: number
   slot_level?: number | null
   as_ritual?: boolean
+  /** Senza slot: lo autorizza uno stato attivo sul server (Lettura del Pensiero). */
+  free_cast?: boolean
   confirm?: string[]
 }
 

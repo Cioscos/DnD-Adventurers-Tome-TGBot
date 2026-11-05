@@ -136,6 +136,19 @@ def _ages_bonus(ctx: RuleContext) -> int:
     return ctx.char.proficiency_bonus
 
 
+def _read_thoughts_state(ctx: RuleContext, _params: dict) -> StateSpec:
+    """Il bersaglio ha fallito il TS (lo segna il GM, D1): per 1 minuto leggi i suoi pensieri, e un'azione chiude lo stato
+    lanciando suggestione senza slot (R43). Chi ha superato il TS non è più bersaglio per un giorno: lo dice l'esito."""
+    return StateSpec("read_thoughts", rounds=10, ends_on=("incapacitated", "manual"),
+                     data={"dc": spell_dc(ctx), "save": "wisdom", "free_cast": "suggestion",
+                           "others": [f"{CK}.read_thoughts"]})
+
+
+def _read_thoughts_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
+    return TargetEffect(condition="custom:thoughts_read", save_ability="wisdom", save_dc=spell_dc(ctx), rounds=10,
+                        immune_on_success=True)
+
+
 def _war_blessing_state(_ctx: RuleContext, params: dict) -> StateSpec:
     """+10 al tiro per colpire di un'altra creatura. Con un alleato della serata lo stato sta sul ricevente, che lo spende
     dalla propria scheda; senza (una creatura del GM) resta su chi lo usa come promemoria per il gruppo (D1)."""
@@ -383,6 +396,13 @@ FEATURES = (
             on_use=OnUse(slot="action", spends=POOL, state=_ages_state, choices=(
                 UseChoice("skill", {"it": "Abilità", "en": "Skill"}, lambda _c: [s for s, _a in SKILLS],
                           lambda s: skill_label(s)["name"]),))),
+    feature("read_thoughts", CK, ED, 6,
+            "Incanalare Divinità: Lettura del Pensiero / Channel Divinity: Read Thoughts (Conoscenza 6, pag. 60)",
+            ("Lettura del Pensiero", "Read Thoughts"),
+            ("Azione: spendi un uso; una creatura entro 18 m fa un TS Saggezza o ne leggi i pensieri per 1 minuto. Un'azione chiude lo stato e lancia suggestione su di lei senza slot.",
+             "Action: spend a use; a creature within 60 ft makes a Wisdom save or you read its thoughts for 1 minute. An action ends it and casts suggestion on it with no slot."),
+            "action", subclass="knowledge",
+            on_use=OnUse(slot="action", spends=POOL, state=_read_thoughts_state, target_effect=_read_thoughts_effect)),
     feature("potent_spellcasting_knowledge", CK, ED, 8, "Incantesimi Potenti / Potent Spellcasting (Conoscenza 8, pag. 60)",
             ("Incantesimi Potenti", "Potent Spellcasting"),
             ("Ai danni di ogni tuo trucchetto da chierico si somma il modificatore di Saggezza.",

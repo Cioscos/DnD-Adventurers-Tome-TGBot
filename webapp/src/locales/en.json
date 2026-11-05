@@ -613,6 +613,8 @@
       "chip_damage": "DAMAGE",
       "chip_attack_save": "Attack / Save",
       "chip_higher_level": "Higher Levels",
+      "cast_free": "Cast without a slot",
+      "free_cast_hint": "An active effect lets you cast it without a slot, using your action.",
       "roll_healing": {
         "title": "Healing: {{name}}",
         "casting_level": "Casting level",

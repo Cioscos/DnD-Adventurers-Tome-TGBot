@@ -51,4 +51,14 @@ describe('CastSpellModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
+
+  it('offers the free cast only when an active effect allows it, even with no slots left', async () => {
+    const onCastFree = vi.fn()
+    const common = { spell, availableSlots: [] as SpellSlot[], onCast: vi.fn(), onCreateSlot: noop, onCancel: noop, isPending: false, isCreatingSlot: false }
+    const { rerender } = render(<CastSpellModal {...common} />)
+    expect(screen.queryByText('character.spells.cast_free')).not.toBeInTheDocument()
+    rerender(<CastSpellModal {...common} canFreeCast onCastFree={onCastFree} />)
+    await userEvent.click(screen.getByText('character.spells.cast_free'))
+    expect(onCastFree).toHaveBeenCalledTimes(1)
+  })
 })
