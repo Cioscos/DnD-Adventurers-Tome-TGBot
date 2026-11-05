@@ -231,6 +231,8 @@ class CharacterFull(BaseModel):
     # Populated only by POST /items/{id}/use (consumable use result).
     consumable_use: Optional[ConsumableUseResult] = None
     option_result: OptionResult | None = absent_when_none()
+    # POST /spells/{id}/use: l'incantesimo ha dadi di danno che il server non sa tirare (si lancia lo stesso, senza danno)
+    damage_unrollable: bool = False
 
     has_custom_silhouette: bool = False
 

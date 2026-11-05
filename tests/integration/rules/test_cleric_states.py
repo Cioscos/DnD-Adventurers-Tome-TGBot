@@ -17,7 +17,7 @@ from tests.integration.rules.test_2014_cleric_late import _spell, _table
 
 
 def _char(*states: dict):
-    return SimpleNamespace(active_states=list(states), conditions={}, is_dead=False)
+    return SimpleNamespace(active_states=list(states), conditions={}, is_dead=False, settings={}, concentrating_spell_id=None)
 
 
 def _state(key, rounds, ends=("manual",)):
@@ -192,3 +192,15 @@ async def test_the_wrath_state_says_maximized_only_when_the_server_maximised(cli
     r = await _use(client, cid, "cleric.wrath_of_the_storm", params={"damage_type": "thunder", "destructive": True})
     assert r.status_code == 200, r.text
     assert r.json()["state"]["data"]["maximized"] is False  # a 1° livello Collera Distruttiva non c'è: nessuna spesa
+
+
+def test_the_concentration_of_a_closed_state_ends_with_it_but_not_that_of_a_spell():
+    from api.services.rules_states import end_states_on_rest
+    held = _char(_state("invoke_duplicity", 10))
+    held.settings = {"concentration_item_spell": {"feature_key": "x", "name": "Duplicato"}, "concentration_rounds_left": 5}
+    end_states_on_rest(held, "short")
+    assert held.settings == {}
+    spell = _char()
+    spell.settings, spell.concentrating_spell_id = {"concentration_rounds_left": 5}, 3
+    end_states_on_rest(spell, "short")
+    assert spell.concentrating_spell_id == 3 and spell.settings == {"concentration_rounds_left": 5}

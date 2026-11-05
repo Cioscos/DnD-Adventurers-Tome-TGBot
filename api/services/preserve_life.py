@@ -32,7 +32,6 @@ class Healed:
     character_id: int
     name: str
     healed: int
-    current_hit_points: int
 
 
 def pool_for(level: int) -> int:
@@ -135,5 +134,5 @@ async def preserve_life(session: AsyncSession, char: Character, allocations: lis
     for cid, amount in allocations:
         target = receivers[cid]
         result = await apply_heal(session, target, amount)
-        done.append(Healed(cid, target.name, result["healed"], target.current_hit_points))
+        done.append(Healed(cid, target.name, result["healed"]))
     return pool, done

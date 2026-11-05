@@ -633,6 +633,8 @@
         "increase_level": "Aumenta livello",
         "extra_dice": "Dadi extra",
         "extra_dice_placeholder": "es. 2d6",
+        "second_part": "Più {{dice}} di {{type}}",
+        "unrollable": "Incantesimo lanciato, ma i dadi di danno non sono scritti in un formato che l'app sa tirare (per esempio 2d6). Correggi i dadi nella scheda dell'incantesimo.",
         "critical": "Colpo critico: i dadi raddoppiano",
         "roll_button": "Rolla",
         "full_damage": "Pieno",

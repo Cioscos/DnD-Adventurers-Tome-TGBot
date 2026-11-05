@@ -1088,6 +1088,7 @@ async def cast_from_item(
         raise HTTPException(status_code=409, detail="not_enough_charges")
     if cost:
         set_item_charges(item, current - cost)
+    end_on_action(char, "cast")  # come ogni lancio: il Manto di Ombre finisce
 
     if spell.get("is_concentration"):
         # Match by srd_index (when both set), then by case-insensitive name.

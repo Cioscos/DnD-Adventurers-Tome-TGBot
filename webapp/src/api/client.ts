@@ -659,7 +659,7 @@ export const api = {
     preserveLifeInfo: (id: number) =>
       request<{ pool: number; uses_left: number | null; targets: { id: number; name: string; cap: number; self: boolean }[] }>(`/characters/${id}/preserve-life`),
     preserveLife: (id: number, body: { allocations: { character_id: number; amount: number }[]; confirm_living: boolean }) =>
-      request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number; current_hit_points: number }[] }>(
+      request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number }[] }>(
         `/characters/${id}/preserve-life`, { method: 'POST', body: JSON.stringify(body) }),
     /** Ispirazione in Combattimento alla CA: spende la reazione e il dado, restituisce il valore da sommare. */
     bardicDieAc: (id: number) => request<{ die: number; roll: number }>(`/characters/${id}/bardic-die/ac`, { method: 'POST' }),

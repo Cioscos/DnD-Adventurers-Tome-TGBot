@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
@@ -7,7 +7,10 @@ import type { Spell, RollDamageResult } from '@/types'
 
 const { rollDamage, useSpell, updateConc } = vi.hoisted(() => ({ rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn() }))
 
-vi.mock('@/api/client', () => ({ api: { spells: { rollDamage, use: useSpell, updateConcentration: updateConc } } }))
+vi.mock('@/api/client', () => ({
+  api: { spells: { rollDamage, use: useSpell, updateConcentration: updateConc } },
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
+}))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -72,13 +75,52 @@ describe('SpellDamageSheet', () => {
     expect(updateConc).not.toHaveBeenCalled()  // il contatore dei round resta quello del lancio
   })
 
-  it('a spell with a second damage part sends it as the extra dice, so the 3D dice and the server roll the same', async () => {
+  it('shows the second damage part before the roll, and the dice typed by hand do not replace it', async () => {
     rollDamage.mockResolvedValue(result)
     useSpell.mockResolvedValue({ id: 7 })
     const strike = { ...leveled, damage_dice: '4d6', extra_damage_dice: '4d6', extra_damage_type: 'radiant' } as Spell
     renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={5} onClose={() => {}} />)
+    expect(screen.getByText(/character.spells.roll_damage.second_part/)).toBeInTheDocument()
+    // il mock di framer-motion rimonta l'Input a ogni render: si scrive con un solo evento
+    fireEvent.change(screen.getByPlaceholderText('character.spells.roll_damage.extra_dice_placeholder'), { target: { value: '1d4' } })
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
-    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_dice: '4d6' })))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_dice: '1d4' })))
+  })
+
+  it('lets the player choose the type of a second part that has two (radiant or necrotic)', async () => {
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    const wave = { ...leveled, damage_dice: '5d6', damage_type: 'thunder', extra_damage_dice: '5d6', extra_damage_type: 'radiant|necrotic' } as Spell
+    renderWithProviders(<SpellDamageSheet charId={7} spell={wave} slotLevel={5} onClose={() => {}} />)
+    await userEvent.click(screen.getByText('character.inventory.damage_types.dmg_necrotic'))
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_damage_type: 'necrotic' })))
+  })
+
+  it('names each group of dice by its damage type in the result', async () => {
+    rollDamage.mockResolvedValue({ ...result, parts: [
+      { label: 'main', type: 'fire', kind: 'd6', rolls: [1, 2] }, { label: 'second', type: 'radiant', kind: 'd6', rolls: [3, 4] }] })
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={5} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText(/dmg_radiant/)).toBeInTheDocument()
+    expect(screen.getByText(/dmg_fire/)).toBeInTheDocument()
+  })
+
+  it('says the dice cannot be rolled, in plain words, when the spell is cast but its damage is not computable', async () => {
+    useSpell.mockResolvedValue({ id: 7, damage_unrollable: true })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotId={21} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('character.spells.roll_damage.unrollable')).toBeInTheDocument()
+    expect(rollDamage).not.toHaveBeenCalled()
+  })
+
+  it('says it too when the server refuses the dice after an attack roll', async () => {
+    const { ApiError } = await import('@/api/client')
+    rollDamage.mockRejectedValue(new ApiError(422, { code: 'bad_damage_dice' }))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('character.spells.roll_damage.unrollable')).toBeInTheDocument()
   })
 
   it('a save spell shows the half-damage cell in the result', async () => {

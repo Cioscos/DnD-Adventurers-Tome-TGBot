@@ -26,7 +26,7 @@ const info = (targets: { id: number; name: string; cap: number; self: boolean }[
 describe('PreserveLifeSheet', () => {
   it('sends the allocations only after the player confirms the targets are living', async () => {
     preserveLifeInfo.mockResolvedValue(info([{ id: 7, name: 'Tu', cap: 10, self: true }, { id: 9, name: 'Eroe', cap: 15, self: false }]))
-    preserveLife.mockResolvedValue({ pool: 25, spent: 12, healed: [{ character_id: 9, name: 'Eroe', healed: 12, current_hit_points: 17 }] })
+    preserveLife.mockResolvedValue({ pool: 25, spent: 12, healed: [{ character_id: 9, name: 'Eroe', healed: 12 }] })
     renderWithProviders(<PreserveLifeSheet char={char} onClose={() => {}} />)
     await waitFor(() => expect(screen.getAllByPlaceholderText('0')).toHaveLength(2))  // chi usa e un alleato
     const inputs = screen.getAllByPlaceholderText('0')

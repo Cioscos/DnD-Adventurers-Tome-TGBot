@@ -152,7 +152,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
         extra_damage_dice='4d6', extra_damage_type='cold'),
     'destructive-wave': GrantedSpell(
         'destructive-wave', {"it": 'Onda distruttiva', "en": 'Destructive Wave'}, 5, '1 azione', 'Personale (raggio 9 m)', 'Istantanea', attack_save='SAVE', damage_dice='5d6', damage_type='thunder',
-        extra_damage_dice='5d6', extra_damage_type='radiant'),
+        extra_damage_dice='5d6', extra_damage_type='radiant|necrotic'),
     'bless': GrantedSpell(
         'bless', {"it": 'Benedizione', "en": 'Bless'}, 1, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'cure-wounds': GrantedSpell(

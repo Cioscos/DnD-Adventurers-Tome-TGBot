@@ -329,9 +329,9 @@ export default function Turn() {
         label = `${e.label} (${left}/${ab.max_uses})`
         if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
         else if (left > 0) extra = renderToggles(ab)
-        // Un privilegio a catalogo con usi ma senza effetto proprio è una riserva (Incanalare Divinità): solo il contatore,
-        // l'uso passa dai privilegi che la spendono. Il «Usa» che scala il contatore a vuoto resta alle abilità scritte a mano.
-        if (!ab.feature_key || ab.has_on_use) control = (
+        // Una riserva a catalogo (`is_pool`, dal server: Incanalare Divinità) mostra solo il contatore, l'uso passa dai privilegi
+        // che la spendono. Le righe automatiche di classe (Secondo Vento...) e quelle a mano conservano il «Usa».
+        if (!ab.is_pool || ab.has_on_use) control = (
           <Button size="sm" variant="secondary" disabled={left <= 0 || missingChoice(ab)}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>

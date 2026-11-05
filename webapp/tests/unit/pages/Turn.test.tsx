@@ -604,13 +604,17 @@ describe('Turn page', () => {
   it('shows a catalog feature with uses and no effect of its own as a counter, with no button to spend it (the pool)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [
       { id: 5, name: 'Incanalare Divinità', is_passive: false, is_active: true, is_class_feature: true, has_on_use: false,
-        feature_key: 'cleric.channel_divinity', max_uses: 2, uses: 2, action_type: 'action', restoration_type: 'short_rest' },
+        is_pool: true, feature_key: 'cleric.channel_divinity', max_uses: 2, uses: 2, action_type: 'action', restoration_type: 'short_rest' },
+      { id: 7, name: 'Secondo Vento', is_passive: false, is_active: true, is_class_feature: true, has_on_use: false,
+        is_pool: false, feature_key: 'fighter.second_wind', max_uses: 1, uses: 1, action_type: 'bonus_action', restoration_type: 'short_rest' },
       { id: 6, name: 'Mio contatore', is_passive: false, is_active: true, is_class_feature: false, has_on_use: false,
         feature_key: null, max_uses: 3, uses: 3, action_type: 'action', restoration_type: 'long_rest' },
     ] })
     renderWithProviders(<Turn />)
     const pool = (await screen.findByText('Incanalare Divinità (2/2)')).closest('li') as HTMLElement
     expect(within(pool).queryByRole('button')).toBeNull()
+    // una riga automatica di classe (fuori catalogo) ha la stessa chiave ma non è una riserva: conserva il «Usa»
+    expect(within((await screen.findByText('Secondo Vento (1/1)')).closest('li') as HTMLElement).getByText('character.turn.use')).toBeInTheDocument()
     // un'abilità scritta a mano non ha un effetto da chiamare: il contatore resta suo
     expect(within(screen.getByText('Mio contatore (3/3)').closest('li') as HTMLElement).getByText('character.turn.use')).toBeInTheDocument()
   })

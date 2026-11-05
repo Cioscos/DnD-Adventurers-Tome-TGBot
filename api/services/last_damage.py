@@ -23,3 +23,19 @@ def last_damage_total(values: list[int], last: dict[str, Any]) -> int:
 
 def pairs(rolled: list[tuple[int, int]] | list[list[int]]) -> list[list[int]]:
     return [[int(sides), int(value)] for sides, value in rolled]
+
+
+def damage_parts(groups: list[tuple[str, str | None, int, list[int]]]) -> list[dict[str, Any]]:
+    """I gruppi di dadi del danno di un incantesimo, ognuno col suo tipo: principale, seconda parte, dadi a mano.
+    Un gruppo senza dadi non compare (il principale resta sempre)."""
+    return [{"label": label, "type": kind, "kind": f"d{sides}", "rolls": list(rolls)}
+            for i, (label, kind, sides, rolls) in enumerate(groups) if rolls or i == 0]
+
+
+def regroup(groups: list[list[Any]], values: list[int]) -> list[dict[str, Any]]:
+    """Le stesse parti dopo un rilancio: ``groups`` = ``[etichetta, tipo, dado, quanti]`` salvati col danno."""
+    out, at = [], 0
+    for label, kind, die, count in groups:
+        out.append({"label": label, "type": kind, "kind": die, "rolls": values[at:at + count]})
+        at += count
+    return out

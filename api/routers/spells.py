@@ -45,7 +45,7 @@ from api.services.d20 import d20_records, d20_history_label, resolve_body, spend
 from core.rules.modifiers import modifiers_for
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
-from api.services.last_damage import last_damage_total, pairs
+from api.services.last_damage import damage_parts, last_damage_total, pairs, regroup
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_states import remove_state
@@ -173,9 +173,6 @@ def _consume_cast(
 
     Condiviso da /use e /attack. Una regola violata e non confermata risponde 409 ``cast_confirm`` prima di spendere.
     """
-    for dice in (spell.damage_dice, spell.extra_damage_dice):  # prima di spendere: un danno che non si può tirare non costa lo slot
-        if dice and not _DICE_RE.match(dice.strip()):
-            raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
     free_state = None
     if free_cast:  # R43: serve uno stato attivo per questo incantesimo; costa l'azione, non uno slot
         free_state = free_cast_state(char, spell)
@@ -346,6 +343,8 @@ async def use_spell(
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
     response.option_result = option_result(opts, rolls, total)
+    # Dadi che il server non sa tirare: l'incantesimo si lancia lo stesso, senza danno, e la scheda lo dice
+    response.damage_unrollable = any(d and not _DICE_RE.match(d.strip()) for d in (spell.damage_dice, spell.extra_damage_dice))
     return response
 
 
@@ -517,10 +516,7 @@ async def roll_spell_damage(
     # Parse spell.damage_dice using shared regex
     m = _DICE_RE.match(spell.damage_dice.strip())
     if not m:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid spell.damage_dice format: {spell.damage_dice!r}",
-        )
+        raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
     base_count = int(m.group(1))
     if spell.level == 0:
         base_count *= cantrip_dice_multiplier(char.total_level)
@@ -555,33 +551,50 @@ async def roll_spell_damage(
     else:
         main_rolls = [random.randint(1, sides) for _ in range(dice_count)]
 
-    # Seconda parte del danno: quella dell'incantesimo (di un altro tipo) se il giocatore non ne ha scelta una sua
-    extra_expr = (body.extra_dice or spell.extra_damage_dice or "").strip()
-    own_extra = bool(spell.extra_damage_dice) and extra_expr == spell.extra_damage_dice
-    extra_rolls: list[int] = []
+    # Seconda parte del danno dell'incantesimo (di un altro tipo; il giocatore sceglie fra i tipi se ce n'e' piu' di uno)
+    second_count = second_sides = 0
+    second_type: str | None = None
+    if spell.extra_damage_dice:
+        sm = _DICE_RE.match(spell.extra_damage_dice.strip())
+        if not sm:
+            raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
+        second_sides = int(sm.group(2))
+        second_count = int(sm.group(1)) * (2 if body.is_critical else 1)
+        types = [t for t in (spell.extra_damage_type or "").split("|") if t]
+        if body.extra_damage_type is not None and body.extra_damage_type not in types:
+            raise HTTPException(status_code=422, detail={"code": "invalid_damage_type"})
+        second_type = body.extra_damage_type or (types[0] if types else None)
+
+    # Dadi extra scritti dal giocatore: si sommano, di tipo ignoto
     extra_bonus = 0
     extra_sides = 0
-    if extra_expr:
-        em = _DICE_RE.match(extra_expr)
+    extra_count = 0
+    if body.extra_dice:
+        em = _DICE_RE.match(body.extra_dice)
         if em:
-            e_count = int(em.group(1))
             extra_sides = int(em.group(2))
             extra_bonus = int(em.group(3)) if em.group(3) else 0
-            extra_dice_count = e_count * 2 if body.is_critical else e_count
-            if body.extra_rolls is not None:
-                if len(body.extra_rolls) != extra_dice_count:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"extra_rolls length {len(body.extra_rolls)} != expected {extra_dice_count}",
-                    )
-                if any(v < 1 or v > extra_sides for v in body.extra_rolls):
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"extra_rolls values must be in [1, {extra_sides}]",
-                    )
-                extra_rolls = list(body.extra_rolls)
-            else:
-                extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
+            extra_count = int(em.group(1)) * (2 if body.is_critical else 1)
+    groups = [("second", second_count, second_sides), ("extra", extra_count, extra_sides)]
+    extra_total = second_count + extra_count
+    if body.extra_rolls is not None and extra_total:
+        if len(body.extra_rolls) != extra_total:
+            raise HTTPException(
+                status_code=400,
+                detail=f"extra_rolls length {len(body.extra_rolls)} != expected {extra_total}",
+            )
+        at = 0
+        for _, count, group_sides in groups:
+            if any(v < 1 or v > group_sides for v in body.extra_rolls[at:at + count]):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"extra_rolls values must be in [1, {group_sides}]",
+                )
+            at += count
+        all_extra = list(body.extra_rolls)
+    else:
+        all_extra = [random.randint(1, group_sides) for _, count, group_sides in groups for _ in range(count)]
+    second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
     opts = use_options(session, char, "spell_damage", body, spell=spell)
     if opts.maximize:  # Collera Distruttiva: valgono il massimo i dadi dei tipi che l'opzione tocca, mai quelli messi a mano
@@ -589,16 +602,18 @@ async def roll_spell_damage(
             return opts.maximize_types is None or canonical_damage_type(kind) in opts.maximize_types
         if maximized(spell.damage_type):
             main_rolls = [sides] * len(main_rolls)
-        if own_extra and maximized(spell.extra_damage_type):
-            extra_rolls = [extra_sides] * len(extra_rolls)
+        if second_rolls and maximized(second_type):
+            second_rolls = [second_sides] * len(second_rolls)
     option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
-    total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
+    total = (sum(main_rolls) + sum(second_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus)
     total = scale_damage(total, opts.multiplier)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
-    breakdown_parts = [f"{dice_count}d{sides}={main_rolls}"]
-    if extra_rolls:
-        breakdown_parts.append(f"+{len(extra_rolls)}d{extra_sides}={extra_rolls}")
+    parts = damage_parts([("main", spell.damage_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
+                          ("extra", None, extra_sides, extra_rolls)])
+    breakdown_parts = [f"{len(main_rolls)}d{sides}={main_rolls}"]
+    for part in parts[1:]:
+        breakdown_parts.append(f"+{len(part['rolls'])}{part['kind']}={part['rolls']}")
     if base_bonus:
         breakdown_parts.append(f"{'+' if base_bonus >= 0 else ''}{base_bonus}")
     if extra_bonus:
@@ -610,6 +625,7 @@ async def roll_spell_damage(
     record_dice(
         char,
         [(f"d{sides}", v) for v in main_rolls]
+        + [(f"d{second_sides}", v) for v in second_rolls]
         + [(f"d{extra_sides}", v) for v in extra_rolls],
     )
 
@@ -617,7 +633,7 @@ async def roll_spell_damage(
     history_entry = {
         "type": "spell_damage",
         "spell_name": spell.name,
-        "rolls": main_rolls + extra_rolls,
+        "rolls": main_rolls + second_rolls + extra_rolls,
         "total": total,
         "damage_type": spell.damage_type,
         "casting_level": casting_level,
@@ -627,11 +643,11 @@ async def roll_spell_damage(
         char.rolls_history.append(history_entry)
         await session.commit()
 
-    main_kind = f"d{sides}"
-    extra_kind = f"d{extra_sides}" if extra_rolls else None
+    all_extra = second_rolls + extra_rolls
+    extra_kind = f"d{second_sides}" if second_rolls else (f"d{extra_sides}" if extra_rolls else None)
 
     result = RollDamageResult(
-        rolls=main_rolls + extra_rolls,
+        rolls=main_rolls + all_extra,
         total=total,
         half_damage=half_damage,
         damage_type=spell.damage_type,
@@ -639,15 +655,17 @@ async def roll_spell_damage(
         casting_level=casting_level,
         is_critical=bool(body.is_critical),
         scaled_dice=f"{base_count}d{sides}",
-        main_kind=main_kind,
+        main_kind=f"d{sides}",
         main_rolls=main_rolls,
         option_result=option_result(opts, option_rolls, option_total),
         extra_kind=extra_kind,
-        extra_rolls=extra_rolls,
-        extra_damage_type=spell.extra_damage_type if own_extra and extra_rolls else None,
+        extra_rolls=all_extra,
+        extra_damage_type=second_type if second_rolls else None,
+        parts=parts,
     )
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
-    base_dice = [[sides, v] for v in main_rolls] + [[extra_sides, v] for v in extra_rolls]
+    base_dice = ([[sides, v] for v in main_rolls] + [[second_sides, v] for v in second_rolls]
+                 + [[extra_sides, v] for v in extra_rolls])
     dice = base_dice + pairs(opts.rolled_dice)
     result.reroll_dice = dice
     turn = get_turn(char)
@@ -655,6 +673,7 @@ async def roll_spell_damage(
         "roll_id": uuid.uuid4().hex, "spell_id": spell.id, "dice": dice,
         "main": len(main_rolls), "base": len(base_dice), "added": [], "multiplier": opts.multiplier, "mod": 0,
         "flat": base_bonus + extra_bonus + option_total - sum(v for _, v in opts.rolled_dice) + opts.bonus,
+        "groups": [[p["label"], p["type"], p["kind"], len(p["rolls"])] for p in parts],
         "result": result.model_dump(mode="json"),
     }
     char.turn_state = turn
@@ -776,15 +795,15 @@ async def last_damage_options(
         label = last.get("name") or "Compagno"
     else:
         main, extra = values[:last["main"]], values[last["main"]:base]
-        parts = [f"{len(main)}{old['main_kind']}={main}"]
-        if extra:
-            parts.append(f"+{len(extra)}{old['extra_kind']}={extra}")
+        shown = regroup(last.get("groups"), values[:base]) if last.get("groups") else old.get("parts") or []
+        text = [f"{len(main)}{old['main_kind']}={main}"]
+        text += [f"+{len(p['rolls'])}{p['kind']}={p['rolls']}" for p in shown[1:]]
         if flat:
-            parts.append(f"{flat:+d}")
+            text.append(f"{flat:+d}")
         result = RollDamageResult(**{
             **old, "rolls": values[:base] + added, "main_rolls": main, "extra_rolls": extra, "total": total,
-            "half_damage": total // 2, "breakdown": " ".join(parts) + f" = {total}", "reroll_dice": dice,
-            "option_result": block,
+            "half_damage": total // 2, "breakdown": " ".join(text) + f" = {total}", "reroll_dice": dice,
+            "option_result": block, "parts": shown,
         })
         label = f"{spell.name} = {total}"
     _add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",

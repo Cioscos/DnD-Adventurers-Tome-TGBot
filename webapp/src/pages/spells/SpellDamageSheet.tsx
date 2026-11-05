@@ -11,7 +11,7 @@ import {
   GiPerspectiveDiceSixFacesRandom as Dices, GiCrossedSwords as Swords,
   GiCheckedShield as Shield,
 } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -30,6 +30,9 @@ const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
   typeof k === 'string' && (ALLOWED_DICE_KINDS as string[]).includes(k)
 
 const DICE_RE = /^(\d+)d(\d+)([+-]\d+)?$/i
+
+/** Il lancio è andato, ma i dadi di danno dell'incantesimo non sono tirabili dal server. */
+class DamageUnrollable extends Error {}
 
 function parseDice(notation: string | null | undefined): { count: number; sides: number } | null {
   if (!notation) return null
@@ -69,6 +72,10 @@ export default function SpellDamageSheet({
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [extraDice, setExtraDice] = useState('')
+  // Seconda parte del danno dell'incantesimo (Colpo infuocato: fuoco e radioso); se ha più tipi, sceglie il giocatore.
+  const secondTypes = (spell?.extra_damage_type ?? '').split('|').filter(Boolean)
+  const [secondType, setSecondType] = useState('')
+  const [unrollable, setUnrollable] = useState(false)
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [slotConsumed, setSlotConsumed] = useState(false)
@@ -80,6 +87,8 @@ export default function SpellDamageSheet({
   useEffect(() => {
     if (spellId != null) {
       setExtraDice('')
+      setSecondType('')
+      setUnrollable(false)
       setResult(null)
       setSlotConsumed(slotAlreadyConsumed)
       setCastNotes(undefined)
@@ -104,6 +113,7 @@ export default function SpellDamageSheet({
           ? { as_ritual: true, slot_level: null }
           : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
         qc.setQueryData(['character', charId], updated)
+        if (updated.damage_unrollable) throw new DamageUnrollable()  // lanciato, ma questi dadi il server non li sa tirare
         qc.invalidateQueries({ queryKey: ['turn-state', charId] })
         refreshAfterOptions(qc, charId, updated.option_result)
         setCastNotes(updated.option_result ?? undefined)
@@ -117,7 +127,8 @@ export default function SpellDamageSheet({
 
       if (useAnimation) {
         const main = parseDice(spell.damage_dice)
-        const extra = parseDice(body.extra_dice ?? null)
+        const second = parseDice(spell.extra_damage_dice)
+        const manual = parseDice(body.extra_dice ?? null)
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
           const cached = qc.getQueryData<CharacterFull>(['character', charId])
           const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count)
@@ -126,10 +137,15 @@ export default function SpellDamageSheet({
           const groups: { kind: DiceKind; count: number }[] = [
             { kind: `d${main.sides}` as DiceKind, count: mainCount },
           ]
+          // Dopo i dadi principali: prima la seconda parte dell'incantesimo, poi i dadi scritti a mano (stesso ordine del server).
           let extraCount = 0
-          if (extra && isAllowedDiceKind(`d${extra.sides}`)) {
-            extraCount = body.is_critical ? extra.count * 2 : extra.count
-            groups.push({ kind: `d${extra.sides}` as DiceKind, count: extraCount })
+          let extraOk = true
+          for (const part of [second, manual]) {
+            if (!part) continue
+            if (!isAllowedDiceKind(`d${part.sides}`)) { extraOk = false; continue }
+            const count = body.is_critical ? part.count * 2 : part.count
+            extraCount += count
+            groups.push({ kind: `d${part.sides}` as DiceKind, count: count })
           }
           // I dadi 3D sono sopra gli sheet (z-[90]): lo sheet resta aperto sotto.
           const detected = await dice.playAndCollect(groups)
@@ -139,8 +155,9 @@ export default function SpellDamageSheet({
               detected.filter((d) => d.groupIndex === groupIndex).map((d) => d.value),
             )
           main_rolls = valuesOf(0)
-          if (extraCount > 0) {
-            extra_rolls = valuesOf(1)
+          if (extraCount > 0 && extraOk) {
+            extra_rolls = []
+            for (let g = 1; g < groups.length; g++) extra_rolls.push(...valuesOf(g))
           }
           if (main_rolls.length !== mainCount) main_rolls = undefined
           if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined
@@ -160,7 +177,9 @@ export default function SpellDamageSheet({
       setResult(data)
     },
     onError: (err) => {
-      if (!(err instanceof CastCancelled)) notifyMutationError()
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (err instanceof DamageUnrollable || code === 'bad_damage_dice') setUnrollable(true)  // un testo suo, non «controlla la connessione»
+      else if (!(err instanceof CastCancelled)) notifyMutationError()
     },
   })
 
@@ -174,8 +193,9 @@ export default function SpellDamageSheet({
   const handleRoll = () => {
     mutation.mutate({
       casting_level: effectiveCastingLevel,
-      // la seconda parte del danno dell'incantesimo (Colpo infuocato: fuoco e radioso) si tira se il giocatore non ne ha scelta una sua
-      extra_dice: extraDice || spell.extra_damage_dice || undefined,
+      // i dadi scritti a mano si sommano alla seconda parte dell'incantesimo, che il server tira da sé
+      extra_dice: extraDice || undefined,
+      ...(secondTypes.length > 1 ? { extra_damage_type: secondType || secondTypes[0] } : {}),
       is_critical: isCritical,
     })
   }
@@ -215,7 +235,12 @@ export default function SpellDamageSheet({
   // Corpo del passo "danni" dello sheet di lancio (lo sheet lo monta useCastFlow).
   return (
     <>
-      {!result ? (
+      {unrollable ? (
+        <div className="space-y-4 p-5">
+          <p className="text-sm text-center font-body text-dnd-text">{t('character.spells.roll_damage.unrollable')}</p>
+          <Button variant="secondary" fullWidth onClick={handleClose}>{t('character.spells.roll_damage.close')}</Button>
+        </div>
+      ) : !result ? (
         <div className="space-y-4 p-5">
           {!isCantrip && (
             <div>
@@ -232,6 +257,26 @@ export default function SpellDamageSheet({
             <p className="text-sm text-dnd-text-muted font-body italic text-center">
               {t('character.spells.upcast_auto', { dice: spell.higher_levels_dice })}
             </p>
+          )}
+
+          {spell.extra_damage_dice && (
+            <div className="space-y-2">
+              <p className="text-sm text-center font-body text-dnd-text">
+                {t('character.spells.roll_damage.second_part', {
+                  dice: spell.extra_damage_dice,
+                  type: secondTypes.map((x) => t(`character.inventory.damage_types.dmg_${x}`, { defaultValue: x })).join(' / '),
+                })}
+              </p>
+              {secondTypes.length > 1 && (
+                <div className="flex gap-2">
+                  {secondTypes.map((x) => (
+                    <Button key={x} variant={(secondType || secondTypes[0]) === x ? 'primary' : 'secondary'} fullWidth onClick={() => setSecondType(x)}>
+                      {t(`character.inventory.damage_types.dmg_${x}`, { defaultValue: x })}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <Input
@@ -269,7 +314,16 @@ export default function SpellDamageSheet({
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
               {result.breakdown}
             </p>
-            {result.damage_type && (
+            {(result.parts?.length ?? 0) > 1 ? (
+              <ul className="mb-3 space-y-0.5 text-sm italic text-dnd-text-muted">
+                {result.parts!.map((p) => (
+                  <li key={p.label}>
+                    {p.type ? t(`character.inventory.damage_types.dmg_${p.type}`, { defaultValue: p.type }) : t('character.spells.roll_damage.extra_dice')}
+                    {' '}({p.rolls.join(' + ')})
+                  </li>
+                ))}
+              </ul>
+            ) : result.damage_type && (
               <p className="text-sm italic text-dnd-text-muted mb-3">
                 {t(`character.inventory.damage_types.dmg_${result.damage_type}`, { defaultValue: result.damage_type })}
               </p>

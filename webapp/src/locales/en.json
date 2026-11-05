@@ -633,6 +633,8 @@
         "increase_level": "Increase level",
         "extra_dice": "Extra dice",
         "extra_dice_placeholder": "e.g. 2d6",
+        "second_part": "Plus {{dice}} {{type}}",
+        "unrollable": "Spell cast, but its damage dice are not in a format the app can roll (for example 2d6). Fix the dice on the spell sheet.",
         "critical": "Critical hit: dice are doubled",
         "roll_button": "Roll",
         "full_damage": "Full",

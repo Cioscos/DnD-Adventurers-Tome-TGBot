@@ -102,8 +102,10 @@ async def build_character_response(
 
     usable = {spec.key: (spec.on_use, row) for spec, row in active_features(char) if spec.on_use}
     edition = character_edition(char)
+    pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
     for ab in response.abilities:
         on_use, owner = usable.get(ab.feature_key, (None, None))
+        ab.is_pool = ab.feature_key in pools
         ab.has_on_use = on_use is not None
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.use_panel = on_use.panel if on_use else None

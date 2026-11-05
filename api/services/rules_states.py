@@ -48,9 +48,14 @@ def end_states(char, *reasons: str, within: int | None = None) -> list[str]:
 def end_states_on_rest(char, rest: str) -> list[str]:
     """Il riposo chiude gli stati che lo nominano e quelli che durano meno di lui: un'ora per il riposo breve, otto per il
     lungo. Restano gli stati senza durata (a mano) e quelli che durano oltre, come i sette giorni di Intervento Divino."""
-    if rest == "long":
-        return end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS)
-    return end_states(char, "rest_short", within=SHORT_REST_ROUNDS)
+    closed = (end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS) if rest == "long"
+              else end_states(char, "rest_short", within=SHORT_REST_ROUNDS))
+    # la concentrazione legata a uno stato chiuso finisce con lui (quella degli incantesimi resta, D8)
+    held = ((char.settings or {}).get("concentration_item_spell") or {}).get("feature_key")
+    if held and held not in {s.get("feature_key") for s in get_states(char)}:
+        from api.services.durations import end_concentration  # import locale: durations importa questo modulo
+        end_concentration(char)
+    return closed
 
 
 def end_on_action(char, action: str) -> None:

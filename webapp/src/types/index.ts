@@ -130,6 +130,8 @@ export interface Ability {
   use_panel?: string | null
   /** Usi che restano al privilegio di cui questo spende gli usi (la riserva di Incanalare Divinità). */
   spends_left?: number | null
+  /** Riserva a catalogo (Incanalare Divinità): solo contatore, senza «Usa». */
+  is_pool?: boolean
   use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[] }[]
 }
 
@@ -473,6 +475,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   items: Item[]
   consumable_use?: ConsumableUse | null
   option_result?: OptionResult
+  /** Lanciato, ma i dadi di danno dell'incantesimo non sono tirabili dal server. */
+  damage_unrollable?: boolean
   currency?: Currency
   abilities: Ability[]
   maps: MapEntry[]
@@ -820,6 +824,8 @@ export interface RollDamageRequest extends Partial<RollChoice> {
   is_critical?: boolean
   main_rolls?: number[]
   extra_rolls?: number[]
+  /** Tipo della seconda parte, se l'incantesimo ne offre più d'uno (radioso o necrotico). */
+  extra_damage_type?: string
 }
 
 export interface RollHealingRequest extends Partial<RollChoice> {
@@ -890,6 +896,8 @@ export interface RollDamageResult {
   extra_rolls: number[]
   /** Tipo della seconda parte di danno dell'incantesimo, se c'è. */
   extra_damage_type?: string | null
+  /** I gruppi di dadi, ciascuno col suo tipo: principale, seconda parte, dadi a mano. */
+  parts?: { label: 'main' | 'second' | 'extra'; type: string | null; kind: string; rolls: number[] }[]
   /** `[lati, valore]` dei dadi ritirabili (anche quelli delle opzioni), con l'indice del server. */
   reroll_dice?: [number, number][]
 }

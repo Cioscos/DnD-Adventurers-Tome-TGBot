@@ -44,7 +44,7 @@ async def test_it_heals_the_caster_and_an_ally_and_spends_one_use_and_the_action
     assert r.status_code == 200, r.text
     body = r.json()
     assert (body["pool"], body["spent"]) == (25, 20)
-    assert {h["character_id"]: (h["healed"], h["current_hit_points"]) for h in body["healed"]} == {cleric: (8, 18), hero: (12, 17)}
+    assert {h["character_id"]: h["healed"] for h in body["healed"]} == {cleric: 8, hero: 12}
     assert (await _ability(client, cleric, POOL))["uses"] == 0 and (await _turn(client, cleric))["action_used"] is True
     as_user(PLAYER_ID)
     assert (await _full(client, hero))["current_hit_points"] == 17
@@ -104,7 +104,7 @@ async def test_the_half_cap_limits_each_receiver(client, test_session_factory):
     sid, cleric, hero = await _scene(client, test_session_factory, hero_hp=15)  # fino a 20: restano 5
     assert (await _go(client, cleric, [(hero, 6)])).status_code == 422
     r = await _go(client, cleric, [(hero, 5)])
-    assert r.status_code == 200 and r.json()["healed"][0]["current_hit_points"] == 20
+    assert r.status_code == 200 and r.json()["healed"][0]["healed"] == 5 and "current_hit_points" not in r.json()["healed"][0]
 
 
 async def test_a_receiver_at_zero_is_healed_and_the_death_saves_are_cleared(client, test_session_factory):

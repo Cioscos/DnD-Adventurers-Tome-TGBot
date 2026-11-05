@@ -159,7 +159,9 @@ class RollDamageRequest(RollOptionsBody):
     # Optional client-supplied face values from 3D physics. When present, the
     # server validates count/range and uses them instead of random.randint.
     main_rolls: list[int] | None = None
-    extra_rolls: list[int] | None = None
+    extra_rolls: list[int] | None = None  # prima i dadi della seconda parte dell'incantesimo, poi quelli a mano
+    # Tipo della seconda parte, se l'incantesimo ne offre piu' d'uno (Onda distruttiva: radioso o necrotico)
+    extra_damage_type: str | None = None
 
     @field_validator("extra_dice")
     @classmethod
@@ -202,6 +204,13 @@ class RollHealingResult(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DamagePart(BaseModel):
+    label: str   # main, second, extra
+    type: str | None = None
+    kind: str    # d6
+    rolls: list[int]
+
+
 class RollDamageResult(BaseModel):
     rolls: list[int]
     total: int
@@ -217,6 +226,7 @@ class RollDamageResult(BaseModel):
     extra_kind: str | None = None   # "d4" or None
     extra_rolls: list[int] = []     # [] if no extra_dice
     extra_damage_type: str | None = None  # tipo della seconda parte di danno dell'incantesimo, se c'è
+    parts: list[DamagePart] = []  # i gruppi di dadi, ciascuno col suo tipo
     option_result: OptionResult | None = absent_when_none()
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
     model_config = {"from_attributes": True}
