@@ -662,7 +662,9 @@ async def last_damage_options(
             "extra_rolls": [*new_values, *added],
             "extra_total": block.extra_total - sum(old_values) + sum(new_values) + sum(newly)})
     if kind == "weapon":
-        result = WeaponAttackResult(**{**old, "damage_rolls": values[:base] + added, "damage_total": total,
+        # Danno base fisso ("1"): senza dadi di base il fisso già mostrato resta nell'elenco.
+        result = WeaponAttackResult(**{**old, "damage_rolls": (values[:base] if base else old["damage_rolls"]) + added,
+                                       "damage_total": total,
                                        "attack_id": None, "reroll_dice": dice, "option_result": block})
         label = result.weapon_name
     elif kind == "companion":

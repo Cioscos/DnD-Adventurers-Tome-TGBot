@@ -129,3 +129,27 @@ async def test_unmatched_options_stay_in_report(client, monkeypatch):
     rep = (await _post(client)).json()["report"]
     names = {e["name"] for e in rep["approximated"] if e["section"] == "options"}
     assert names == {"Quickened Spell", "Extended Spell"}
+
+
+def _strip_sources(data: dict, sources) -> None:
+    for cl in data["classes"]:
+        cl["definition"]["sources"] = sources
+        cl["definition"]["sourceId"] = None
+
+
+async def test_unknown_or_missing_source_id_asks_for_the_edition_not_500(client, monkeypatch):
+    for sources in ([{"sourceId": 9999}], [], None):
+        _serve(monkeypatch, "fighter20_2024.json", lambda d, s=sources: _strip_sources(d, s))
+        r = await _post(client)
+        assert r.status_code == 409 and r.json()["detail"] == {"code": "edition_required"}, (sources, r.text)
+    r = await _post(client, rules_edition="2024")
+    assert r.status_code == 201 and r.json()["character"]["rules_edition"] == "2024"
+
+
+async def test_null_rules_edition_means_detect_it(client, monkeypatch):
+    _serve(monkeypatch, "fighter20_2024.json")
+    r = await _post(client, rules_edition=None)
+    assert r.status_code == 201, r.text
+    assert r.json()["character"]["rules_edition"] == "2024"
+    _serve(monkeypatch, "wizard17_warlock3_multi.json")
+    assert (await _post(client, rules_edition=None)).status_code == 409

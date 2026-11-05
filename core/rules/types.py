@@ -1,6 +1,7 @@
 """Tipi condivisi delle regole di classe."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
@@ -39,6 +40,17 @@ class UnarmoredAc:
     abilities: tuple[str, ...]
     base: int = 10
     no_shield: bool = False
+
+
+_DICE = re.compile(r"(\d+)d(\d+)")
+
+
+def parse_dice(text: str) -> tuple[int, int] | None:
+    """``"2d6"`` -> ``(2, 6)``; ``None`` se non è esattamente ``NdM`` con N >= 1 e M >= 2."""
+    m = _DICE.fullmatch(text)
+    if m is None or int(m[1]) < 1 or int(m[2]) < 2:
+        return None
+    return int(m[1]), int(m[2])
 
 
 ENDS_ON = frozenset({
@@ -87,7 +99,9 @@ class OnUse:
     """Cosa fa il pulsante «Usa» di un privilegio oltre a spendere ``cost`` usi.
 
     ``slot``: slot di turno da spendere (``action``, ``bonus``, ``reaction``...). ``rolls``: dado tirato
-    (``1d10``); ``heal(ctx, tirato) -> PF`` converte il tiro in cura. ``grants_action``: +1 azione extra."""
+    (``1d10``, validato alla definizione); ``heal(ctx, tirato) -> PF`` converte il tiro in cura. ``grants_action``: +1
+    azione extra. Con ``amount`` = N (pool come Imposizione delle Mani) l'effetto per unità si ripete N volte: tiri, cura
+    e azioni extra; lo stato e l'effetto sul bersaglio si avviano una volta sola."""
     cost: int = 1
     slot: str | None = None
     heal: Callable[["RuleContext", int], int] | None = None
@@ -95,6 +109,10 @@ class OnUse:
     grants_action: bool = False
     rolls: str | None = None
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
+
+    def __post_init__(self) -> None:
+        if self.rolls is not None and not parse_dice(self.rolls):
+            raise ValueError(f"rolls non valido: {self.rolls!r} (atteso NdM, per esempio 1d10)")
 
 
 @dataclass(frozen=True)
@@ -225,6 +243,8 @@ class RollOptionSpec:
             raise ValueError("second_attack riguarda i dadi separate_damage")
         if (self.phase == "after_damage") != (self.reroll_dice is not None):
             raise ValueError("after_damage e reroll_dice vanno insieme")
+        if self.phase == "after_damage" and self.requires_input:
+            raise ValueError("after_damage non chiede input: il client manda sempre option_inputs vuoto")
         if self.keep_rolled and self.reroll_dice is None:
             raise ValueError("keep_rolled riguarda reroll_dice")
         if self.dice_cost and not self.needs:

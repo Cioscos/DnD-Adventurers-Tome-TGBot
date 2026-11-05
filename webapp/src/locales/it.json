@@ -1108,6 +1108,13 @@
       "no_uses": "Usi esauriti",
       "state_rounds_left": "{{n}} round",
       "end_state": "Termina",
+      "state_generic": "Effetto attivo",
+      "use_errors": {
+        "turn_slot_used": "Hai già usato quell'azione in questo turno.",
+        "no_uses": "Usi esauriti.",
+        "feature_not_usable": "Questo privilegio non si può usare ora.",
+        "default": "Impossibile usare il privilegio. Riprova."
+      },
       "banner": "È il tuo turno",
       "banner_cta": "Apri la vista Turno"
     },
@@ -4917,7 +4924,7 @@
     "placeholder": "https://www.dndbeyond.com/characters/…",
     "submit": "Importa",
     "edition_title": "Quali regole segue il personaggio?",
-    "edition_body": "Le sue classi vengono da edizioni diverse. Scegli le regole di classe da applicare a tutto il personaggio: potrai cambiarle poi nelle impostazioni.",
+    "edition_body": "Non riesco a stabilire l'edizione delle sue classi: vengono da edizioni diverse oppure da una fonte che non riconosco (anche homebrew). Scegli le regole di classe da applicare a tutto il personaggio: potrai cambiarle poi nelle impostazioni.",
     "edition_2014": "Regole 2014",
     "edition_2024": "Regole 2024",
     "open": "Apri personaggio",

@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
-import { api, type RollMode } from '@/api/client'
+import { api, ApiError, type RollMode } from '@/api/client'
 import { isUnlimitedFeature } from '@/lib/abilityUses'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
@@ -19,6 +19,7 @@ import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
 import { useTickRound } from '@/hooks/useTickRound'
 import { useTurnState } from '@/hooks/useTurnState'
+import { useToast } from '@/hooks/useToast'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
@@ -33,6 +34,8 @@ import type { CharacterFull } from '@/types'
 type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
+/** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -40,6 +43,7 @@ export default function Turn() {
   const charId = Number(id)
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const toast = useToast()
   const [skillRoll, setSkillRoll] = useState<{ result: RollResult; skill: string } | null>(null)
   const [otherOpen, setOtherOpen] = useState(false)
   const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
@@ -102,6 +106,11 @@ export default function Turn() {
     mutationFn: async ({ ability, uses }: { ability: Ability; uses: number }) => {
       if (ability.has_on_use && ability.feature_key) await api.characters.featureUse(charId, ability.feature_key)
       else await api.abilities.update(charId, ability.id, { uses })
+    },
+    // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
+    onError: (err) => {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      toast.error(t(`character.turn.use_errors.${code && ABILITY_USE_ERRORS.includes(code) ? code : 'default'}`))
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })

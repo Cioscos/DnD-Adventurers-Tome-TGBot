@@ -4,7 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from core.data.spell_slots import THIRD_SUBCLASSES, caster_kind, compute_pact_slots, compute_regular_slots
+from core.data.spell_slots import (
+    THIRD_SUBCLASSES, caster_kind, compute_pact_slots, compute_regular_slots, normalize_class_name,
+)
 from core.data.spellcasting import PREPARING_CLASSES, compute_prepared_cap, has_ritual_caster, has_wizard
 from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_mod
@@ -112,10 +114,15 @@ def caster_ability(row: Any) -> str:
 
 def caster_stats(char: Any) -> list[CasterStats]:
     out: list[CasterStats] = []
+    edition = character_edition(char)
     pb = char.proficiency_bonus
     for row in char.classes:
         ability = caster_ability(row)
         if not ability:
+            continue
+        # Una classe del catalogo che nella sua edizione non lancia (Guerriero 2024 Campione) non è un incantatore,
+        # anche con una caratteristica salvata; una classe custom conserva la propria.
+        if normalize_class_name(row.class_name) is not None and caster_kind(row, edition) is None:
             continue
         mod = effective_ability_mod(char, ability)
         out.append(CasterStats(row.id, row.class_name, ability, 8 + pb + mod + item_bonus_total(char.items, "spell_dc"),

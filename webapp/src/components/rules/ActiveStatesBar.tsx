@@ -20,7 +20,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
   return (
     <ul className="mt-3 flex flex-col gap-2">
       {states.map((s) => {
-        const name = char.abilities.find((a) => a.feature_key === s.feature_key)?.name ?? s.key
+        const name = char.abilities.find((a) => a.feature_key === s.feature_key)?.name ?? s.name ?? t('character.turn.state_generic')
         return (
           <li key={s.key} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
             <GiLightningTrio size={16} aria-hidden className="shrink-0 text-dnd-gold-bright" />

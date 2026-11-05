@@ -113,6 +113,8 @@ export interface Ability {
 export interface ActiveState {
   key: string
   feature_key: string
+  /** Come lo chiama il giocatore; assente negli stati avviati prima che il server lo salvasse. */
+  name?: string
   rounds_left: number | null
   ends_on: string[]
   data: Record<string, unknown>

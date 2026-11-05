@@ -1109,6 +1109,13 @@
       "no_uses": "No uses left",
       "state_rounds_left": "{{n}} rounds",
       "end_state": "End",
+      "state_generic": "Active effect",
+      "use_errors": {
+        "turn_slot_used": "You have already used that action this turn.",
+        "no_uses": "No uses left.",
+        "feature_not_usable": "This feature cannot be used right now.",
+        "default": "Could not use the feature. Try again."
+      },
       "banner": "It's your turn",
       "banner_cta": "Open the Turn view"
     },
@@ -4918,7 +4925,7 @@
     "placeholder": "https://www.dndbeyond.com/characters/…",
     "submit": "Import",
     "edition_title": "Which rules does the character follow?",
-    "edition_body": "Its classes come from different editions. Pick the class rules to apply to the whole character: you can change them later in settings.",
+    "edition_body": "I can't tell which edition its classes follow: they come from different editions or from a source I don't recognise (homebrew included). Pick the class rules to apply to the whole character: you can change them later in settings.",
     "edition_2014": "2014 rules",
     "edition_2024": "2024 rules",
     "open": "Open character",

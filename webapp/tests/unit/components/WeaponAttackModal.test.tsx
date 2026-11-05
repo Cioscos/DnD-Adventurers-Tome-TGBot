@@ -234,6 +234,14 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByTestId('after-damage')).toHaveAttribute('data-dice', '3/d8,5/d6,1/d6')
   })
 
+  it('offers the damage reroll on a flat base damage ("1") through the dice the server lists', () => {
+    // Senza facce nel testo del danno (`dieSides` sarebbe NaN) i dadi ritirabili sono quelli di `reroll_dice`.
+    render(<WeaponAttackModal result={{
+      ...baseResult, damage_dice: '1', damage_rolls: [1], damage_total: 6, reroll_dice: [[6, 4]],
+    }} charId={7} onClose={() => {}} />)
+    expect(screen.getByTestId('after-damage')).toHaveAttribute('data-dice', '4/d6')
+  })
+
   it('has no damage reroll without a character, on a miss, on a flat damage or while the damage is pending', () => {
     const { rerender } = render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
     expect(screen.queryByTestId('after-damage')).toBeNull()

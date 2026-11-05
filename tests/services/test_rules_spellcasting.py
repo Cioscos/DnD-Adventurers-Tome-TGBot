@@ -27,7 +27,7 @@ def _score(name, value):
 
 def _char(*classes, edition="2014", scores=(), items=(), abilities=(), profs=None, settings=None):
     return NS(rules_edition=edition, classes=list(classes), ability_scores=list(scores), items=list(items),
-              proficiency_bonus=3, abilities=list(abilities), general_proficiencies=profs, turn_state=None,
+              proficiency_bonus=3, abilities=list(abilities), general_proficiencies=profs, active_states=[], turn_state=None,
               settings={"proficiencies_seeded": True} if settings is None else settings, spell_slots=[], conditions={})
 
 
@@ -209,3 +209,15 @@ def test_granted_spells_are_a_mechanical_minimum():
     assert isinstance(GRANTED_SPELLS, dict)
     spell = GrantedSpell(key="prova", name={"it": "Prova", "en": "Test"}, level=1)
     assert (spell.is_concentration, spell.is_ritual, spell.damage_dice) == (False, False, None)
+
+
+def test_caster_stats_skips_a_class_that_does_not_cast_in_its_edition():
+    from core.rules.spellcasting import caster_stats
+    scores = (_score("intelligence", 16),)
+    champion = _cls("fighter", 5, ability="intelligence", sub="champion")
+    knight = _cls("fighter", 5, ability="intelligence", sub="eldritch_knight", id=2)
+    custom = _cls("Artificiere Homebrew", 5, ability="intelligence", id=3)
+    stats = caster_stats(_char(champion, knight, custom, edition="2024", scores=scores))
+    assert [s.class_id for s in stats] == [2, 3]
+    # 2014: la caratteristica salvata tiene gli slot dei personaggi esistenti, e con loro CD e select (stessa regola)
+    assert [s.class_id for s in caster_stats(_char(champion, edition="2014", scores=scores))] == [1]

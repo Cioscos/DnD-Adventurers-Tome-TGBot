@@ -2,19 +2,17 @@
 from __future__ import annotations
 
 import random
-import re
 from dataclasses import dataclass, field
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.services.dice_stats import record_dice
 from api.services.rules_turn import grant_action, set_damaged, spend
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
-from core.rules.types import RuleContext, StateSpec
-
-_DICE = re.compile(r"^(\d+)d(\d+)$")
+from core.rules.types import RuleContext, StateSpec, parse_dice
 
 
 def _err(code: int, name: str) -> HTTPException:
@@ -34,8 +32,14 @@ def end_states(char, *reasons: str) -> list[str]:
     return [s["key"] for s in states if s not in kept]
 
 
+def state_name(char, state: dict) -> str:
+    """Nome da mostrare: quello della riga del privilegio (come lo vede il giocatore), poi quello salvato nello stato."""
+    ability = next((a for a in char.abilities if a.feature_key == state.get("feature_key")), None)
+    return (ability.name if ability is not None and ability.name else None) or state.get("name") or state["key"]
+
+
 def tick_states(char) -> list[str]:
-    """Un round: scala ``rounds_left``; gli stati a 0 finiscono. Restituisce le chiavi scadute."""
+    """Un round: scala ``rounds_left``; gli stati a 0 finiscono. Restituisce i nomi degli stati scaduti."""
     states, expired = [], []
     for s in get_states(char):
         if s["rounds_left"] is None:
@@ -43,7 +47,7 @@ def tick_states(char) -> list[str]:
         elif s["rounds_left"] > 1:
             states.append({**s, "rounds_left": s["rounds_left"] - 1})
         else:
-            expired.append(s["key"])
+            expired.append(state_name(char, s))
     if any(s["rounds_left"] is not None for s in get_states(char)):
         char.active_states = states
     return expired
@@ -84,10 +88,10 @@ def remove_state(char, key: str) -> None:
     char.active_states = [s for s in states if s["key"] != key]
 
 
-def start_state(char, spec: StateSpec, feature_key: str) -> dict:
-    """Avvia lo stato; se la chiave è già attiva lo rinnova."""
+def start_state(char, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
+    """Avvia lo stato; se la chiave è già attiva lo rinnova. ``name``: come lo chiama il giocatore."""
     state = {"key": spec.key, "feature_key": feature_key, "rounds_left": spec.rounds,
-             "ends_on": list(spec.ends_on), "data": dict(spec.data)}
+             "ends_on": list(spec.ends_on), "data": dict(spec.data), "name": name or spec.key}
     char.active_states = [*(s for s in get_states(char) if s["key"] != spec.key), state]
     return state
 
@@ -122,20 +126,25 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         ability.uses -= cost
 
     result = UseResult()
-    if on_use.rolls:
-        m = _DICE.match(on_use.rolls)
-        result.rolls = [random.randint(1, int(m[2])) for _ in range(int(m[1]))]
+    ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
+    healed = 0
+    dice = parse_dice(on_use.rolls) if on_use.rolls else None
+    for _ in range(amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
+        rolled = [random.randint(1, dice[1]) for _ in range(dice[0])] if dice else []
+        result.rolls += rolled
+        if on_use.heal:
+            healed += max(0, on_use.heal(ctx, sum(rolled)))
+        if on_use.grants_action:
+            grant_action(char)
+    if dice:
+        record_dice(char, [(f"d{dice[1]}", r) for r in result.rolls])
     if on_use.heal:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
-        ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
-        amount_hp = max(0, on_use.heal(ctx, sum(result.rolls)))
-        result.healed = (await apply_heal(session, char, amount_hp))["healed"]
+        result.healed = (await apply_heal(session, char, healed))["healed"]
     if on_use.state:
-        result.state = start_state(char, on_use.state, feature_key)
-    if on_use.grants_action:
-        grant_action(char)
+        name = (ability.name if ability is not None and ability.name else None) or spec.name["it"]
+        result.state = start_state(char, on_use.state, feature_key, name)
     if on_use.target_effect:
-        ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
         result.targets.append(feature_key)
     return result

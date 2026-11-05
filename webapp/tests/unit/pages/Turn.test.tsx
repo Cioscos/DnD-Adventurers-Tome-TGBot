@@ -49,7 +49,11 @@ vi.mock('@/api/client', () => ({
     sessions: { me: sessionMe },
     abilities: { update: vi.fn() },
   },
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    constructor(public status = 0, public detail: unknown = null) {
+      super(`API ${status}`)
+    }
+  },
 }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -73,6 +77,8 @@ vi.mock('@/hooks/useWeaponAttackFlow', () => ({
     attackWeapon: vi.fn(), attackUnarmed: vi.fn(), attackUnarmedEffect, isWeaponPending: () => false, isUnarmedPending: false, elements: null,
   }),
 }))
+const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
 vi.mock('@/hooks/useTickRound', () => ({ useTickRound: () => ({ mutate: vi.fn(), isPending: false }) }))
 vi.mock('@/components/ui/RollButton', async () => {
   const React = await import('react')
@@ -368,6 +374,41 @@ describe('Turn page', () => {
     expect(screen.getByText('character.turn.state_rounds_left')).toBeInTheDocument()
     await userEvent.click(screen.getByText('character.turn.end_state'))
     await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'rage'))
+  })
+
+  it.each([
+    ['turn_slot_used', 'character.turn.use_errors.turn_slot_used'],
+    ['no_uses', 'character.turn.use_errors.no_uses'],
+    ['something_else', 'character.turn.use_errors.default'],
+  ])('tells the player why a feature could not be used (%s), never the technical message', async (code, key) => {
+    const { ApiError } = await import('@/api/client')
+    featureUse.mockRejectedValueOnce(new ApiError(409, { code }))
+    getChar.mockResolvedValue({
+      ...char,
+      abilities: [{
+        id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+        feature_key: 'barbarian.rage', max_uses: 2, uses: 2, action_type: 'bonus_action', restoration_type: 'long_rest',
+      }],
+    })
+    toastError.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(key))
+  })
+
+  it('names an active state by the saved name, never by its raw key', async () => {
+    getChar.mockResolvedValue({
+      ...char,
+      active_states: [
+        { key: 'rage', feature_key: 'barbarian.rage', name: 'Ira', rounds_left: null, ends_on: ['manual'], data: {} },
+        { key: 'wild', feature_key: 'druid.wild', rounds_left: null, ends_on: ['manual'], data: {} },
+      ],
+    })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('Ira')).toBeInTheDocument()
+    expect(screen.getByText('character.turn.state_generic')).toBeInTheDocument()
+    expect(screen.queryByText('rage')).toBeNull()
+    expect(screen.queryByText('wild')).toBeNull()
   })
 
   describe('another character turn', () => {

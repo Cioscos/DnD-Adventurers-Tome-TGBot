@@ -40,7 +40,8 @@ export default function WeaponAttackModal({
   const [rerolled, setRerolled] = useState<{ base: WeaponAttackResult; value: WeaponAttackResult } | null>(null)
   const result = rerolled?.base === attack ? rerolled.value : attack
   const dieSides = Number(/\d+d(\d+)/.exec(result.damage_dice ?? '')?.[1])
-  const canRerollDamage = !!charId && !!dieSides && !result.attack_id && !result.is_fumble && !result.grazed && !result.effect
+  // Con un danno base fisso ("1") non ci sono facce nel testo: i dadi ritirabili li dice il server.
+  const canRerollDamage = !!charId && (!!result.reroll_dice?.length || !!dieSides) && !result.attack_id && !result.is_fumble && !result.grazed && !result.effect
   const {
     weapon_name, to_hit_die, dice, mode, magic_bonus, proficiency_warning, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
