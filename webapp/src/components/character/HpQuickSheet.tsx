@@ -1,5 +1,5 @@
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
-import type { ConcentrationSaveResult } from '@/api/client'
+import type { ConcentrationSaveResult, RollOption } from '@/api/client'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -15,6 +15,7 @@ import DamageTypeControls from '@/components/ui/DamageTypeControls'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import HpQuickChips from '@/components/character/HpQuickChips'
+import ReactionOffers from '@/components/character/ReactionOffers'
 import {
   applyDamageModifier, damageMultiplier, damagePreviewText, effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
@@ -47,6 +48,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [pendingChip, setPendingChip] = useState<number | null>(null)
   const [lostSave, setLostSave] = useState<ConcentrationSaveResult | null>(null)
+  // Reazioni che il danno ha aperto (Ritorsione): la scheda resta aperta per proporle.
+  const [reactions, setReactions] = useState<RollOption[]>([])
 
   const hpMutation = useMutation({
     mutationFn: async ({ op, value, modifier }: {
@@ -134,7 +137,9 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         setAmount('')
         setDamageType('')
         setDamageModifier(null)
-        onClose()
+        const offered = op === 'damage' ? updated.reactions ?? [] : []
+        setReactions(offered)
+        if (!offered.length) onClose()
       },
     })
   }
@@ -142,8 +147,9 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   return (
     <>
     {lostSave && <ConcentrationSaveDialog result={lostSave} onClose={() => setLostSave(null)} afterRoll={{ charId: char.id }} />}
-    <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
+    <Sheet open={open} onClose={() => { setReactions([]); onClose() }} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
+        <ReactionOffers char={char} reactions={reactions} onSpent={(key) => setReactions((all) => all.filter((r) => r.key !== key))} />
         {char.active_form?.own_hp !== false && char.active_form && (
           <div className="text-center space-y-1.5">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{char.active_form.name}</p>

@@ -938,6 +938,7 @@ export interface TurnBlock {
   bonus_used: boolean
   reaction_used: boolean
   attacks_made: number
+  action_attacks: number
   extra_actions: number
   once_per_turn: string[]
   spell_slot_cast: boolean

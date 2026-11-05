@@ -6,7 +6,7 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Turn from '@/pages/Turn'
 
 const NEW_BLOCK = {
-  action_used: false, bonus_used: false, reaction_used: false, attacks_made: 0, extra_actions: 0,
+  action_used: false, bonus_used: false, reaction_used: false, attacks_made: 0, action_attacks: 0, extra_actions: 0,
   once_per_turn: [], spell_slot_cast: false, bonus_spell_cast: false, free_interaction_used: false,
 }
 // Il server finto tiene lo stato del turno fra una richiesta e l'altra, come quello vero.

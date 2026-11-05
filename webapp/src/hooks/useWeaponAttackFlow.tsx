@@ -41,8 +41,8 @@ export function useAttackRoll() {
   /** Oltre il limite dell'azione Attacco si passa solo confermando. `null`: il giocatore ha rinunciato. */
   const limitConfirmation = async (charId: number): Promise<{ confirm_extra_attack?: true } | null> => {
     const state = await api.characters.turnState(charId).catch(() => null)
-    if (!state || state.turn.attacks_made < state.attacks_allowed) return {}
-    return (await askAttackLimit(state.turn.attacks_made, state.attacks_allowed)) ? { confirm_extra_attack: true } : null
+    if (!state || state.turn.action_attacks < state.attacks_allowed) return {}
+    return (await askAttackLimit(state.turn.action_attacks, state.attacks_allowed)) ? { confirm_extra_attack: true } : null
   }
 
   /** Il server può rifiutare ciò che la pagina non aveva ancora visto: lo si dice, senza errori muti. */

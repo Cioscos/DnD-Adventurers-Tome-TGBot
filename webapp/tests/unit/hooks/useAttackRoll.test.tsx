@@ -55,7 +55,7 @@ describe('useAttackRoll', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     rollOptions.mockResolvedValue([sneak])
-    turnState.mockResolvedValue({ attacks_allowed: 1, turn: { attacks_made: 0 } })
+    turnState.mockResolvedValue({ attacks_allowed: 1, turn: { attacks_made: 0, action_attacks: 0 } })
   })
 
   it('without options the attack call stays the legacy one', async () => {
@@ -245,7 +245,7 @@ describe('useAttackRoll', () => {
     beforeEach(() => {
       rollOptions.mockResolvedValue([])
       attack.mockResolvedValue({ damage_total: 5 })
-      turnState.mockResolvedValue({ attacks_allowed: 1, turn: { attacks_made: 1 } })
+      turnState.mockResolvedValue({ attacks_allowed: 1, turn: { attacks_made: 1, action_attacks: 1 } })
     })
 
     it('asks before rolling and sends the confirmation', async () => {
@@ -253,6 +253,14 @@ describe('useAttackRoll', () => {
       await userEvent.click(await screen.findByText('character.attack.limit_confirm'))
       await done
       expect(attack).toHaveBeenCalledWith(1, 3, false, undefined, { ...CHOICE, confirm_extra_attack: true })
+    })
+
+    it('counts only the attacks of the Attack action: a Frenzy attack made before does not make the next one extra', async () => {
+      turnState.mockResolvedValue({ attacks_allowed: 2, turn: { attacks_made: 2, action_attacks: 1 } })
+      const done = start()
+      await done
+      expect(screen.queryByText('character.attack.limit_confirm')).toBeNull()
+      expect(attack).toHaveBeenCalled()
     })
 
     it('an option with its own slot (Frenzy, Retaliation) is not an attack of the Attack action: no limit question', async () => {

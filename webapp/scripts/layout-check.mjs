@@ -131,7 +131,7 @@ for (const width of WIDTHS) {
     await page.waitForTimeout(1500)
     if (setup) await setup(r, page, width)
     const found = await page.evaluate(audit)
-    if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${width}${r.replace(/[\/?=&]/g, '_')}.png`, fullPage: true })
+    if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${width}${r.replace(/[/?=&]/g, '_')}.png`, fullPage: true })
     found.push(...await coveredAtEnd(page))
     if (r === C) {
       for (const screen of ['equipaggiamento', 'menu']) {

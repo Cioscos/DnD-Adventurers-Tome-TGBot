@@ -377,7 +377,7 @@ export default function Turn() {
     <Layout title={t('character.turn.title')} backTo={`/char/${charId}`} group="combat" page="turn">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-sm text-dnd-text font-body tabular-nums">
-          {t('character.turn.attacks_made', { made: block?.attacks_made ?? 0, n: attacks })}
+          {t('character.turn.attacks_made', { made: block?.action_attacks ?? 0, n: attacks })}
           {turn?.in_encounter && turn.round != null && (
             <span className="ml-3 text-dnd-text-muted">{t('character.turn.round', { n: turn.round })}</span>
           )}
