@@ -172,7 +172,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
                           casting_time=data.casting_time, range_area=data.range_area, duration=data.duration,
                           is_concentration=data.is_concentration, is_ritual=data.is_ritual,
                           attack_save=data.attack_save, damage_dice=data.damage_dice, damage_type=data.damage_type,
-                          higher_levels_dice=data.higher_levels_dice, srd_index=key)
+                          higher_levels_dice=data.higher_levels_dice, srd_index=key,
+                          extra_damage_dice=data.extra_damage_dice, extra_damage_type=data.extra_damage_type)
             session.add(spell)
         if key in previous or not spell.always_prepared:
             owned.append(key)

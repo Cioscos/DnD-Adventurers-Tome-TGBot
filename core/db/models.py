@@ -366,6 +366,9 @@ class Spell(Base):
     school: Mapped[Optional[str]] = mapped_column(String(30))
     srd_index: Mapped[Optional[str]] = mapped_column(String(80))
     higher_levels_dice: Mapped[Optional[str]] = mapped_column(String(20))
+    # Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso); si tira insieme alla prima.
+    extra_damage_dice: Mapped[Optional[str]] = mapped_column(String(20))
+    extra_damage_type: Mapped[Optional[str]] = mapped_column(String(100))
     # Preparazione (solo classi che preparano: Chierico/Druido/Paladino/Mago).
     # Backfill legacy a True in _MIGRATIONS; i nuovi incantesimi nascono False
     # (default in SpellCreate). Ignorata per i known caster.

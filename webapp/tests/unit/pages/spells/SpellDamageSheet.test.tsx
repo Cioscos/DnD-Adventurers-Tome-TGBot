@@ -72,6 +72,15 @@ describe('SpellDamageSheet', () => {
     expect(updateConc).not.toHaveBeenCalled()  // il contatore dei round resta quello del lancio
   })
 
+  it('a spell with a second damage part sends it as the extra dice, so the 3D dice and the server roll the same', async () => {
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    const strike = { ...leveled, damage_dice: '4d6', extra_damage_dice: '4d6', extra_damage_type: 'radiant' } as Spell
+    renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={5} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_dice: '4d6' })))
+  })
+
   it('a save spell shows the half-damage cell in the result', async () => {
     rollDamage.mockResolvedValue(result)
     renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)

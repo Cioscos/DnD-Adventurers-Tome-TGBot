@@ -57,6 +57,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "school", "VARCHAR(30)", None),
     ("spells", "srd_index", "VARCHAR(80)", None),
     ("spells", "higher_levels_dice", "VARCHAR(20)", None),
+    ("spells", "extra_damage_dice", "VARCHAR(20)", None),
+    ("spells", "extra_damage_type", "VARCHAR(100)", None),
     # Character concentration tracking
     ("characters", "concentrating_spell_id", "INTEGER REFERENCES spells(id) ON DELETE SET NULL", None),
     # CharacterClass subclass

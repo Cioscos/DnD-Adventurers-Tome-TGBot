@@ -34,6 +34,7 @@ from api.schemas.spell import (
 )
 from api.routers.items import _roll_dice, _DICE_RE
 from api.services.durations import end_concentration, start_concentration
+from core.data.damage_types import canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_effects import release_concentration_effects
@@ -172,6 +173,9 @@ def _consume_cast(
 
     Condiviso da /use e /attack. Una regola violata e non confermata risponde 409 ``cast_confirm`` prima di spendere.
     """
+    for dice in (spell.damage_dice, spell.extra_damage_dice):  # prima di spendere: un danno che non si può tirare non costa lo slot
+        if dice and not _DICE_RE.match(dice.strip()):
+            raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
     free_state = None
     if free_cast:  # R43: serve uno stato attivo per questo incantesimo; costa l'azione, non uno slot
         free_state = free_cast_state(char, spell)
@@ -551,12 +555,14 @@ async def roll_spell_damage(
     else:
         main_rolls = [random.randint(1, sides) for _ in range(dice_count)]
 
-    # Optional extra_dice
+    # Seconda parte del danno: quella dell'incantesimo (di un altro tipo) se il giocatore non ne ha scelta una sua
+    extra_expr = (body.extra_dice or spell.extra_damage_dice or "").strip()
+    own_extra = bool(spell.extra_damage_dice) and extra_expr == spell.extra_damage_dice
     extra_rolls: list[int] = []
     extra_bonus = 0
     extra_sides = 0
-    if body.extra_dice:
-        em = _DICE_RE.match(body.extra_dice)
+    if extra_expr:
+        em = _DICE_RE.match(extra_expr)
         if em:
             e_count = int(em.group(1))
             extra_sides = int(em.group(2))
@@ -578,9 +584,13 @@ async def roll_spell_damage(
                 extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
 
     opts = use_options(session, char, "spell_damage", body, spell=spell)
-    if opts.maximize:  # Collera Distruttiva: i dadi dell'incantesimo valgono il massimo
-        main_rolls = [sides] * len(main_rolls)
-        extra_rolls = [extra_sides] * len(extra_rolls)
+    if opts.maximize:  # Collera Distruttiva: valgono il massimo i dadi dei tipi che l'opzione tocca, mai quelli messi a mano
+        def maximized(kind: str | None) -> bool:
+            return opts.maximize_types is None or canonical_damage_type(kind) in opts.maximize_types
+        if maximized(spell.damage_type):
+            main_rolls = [sides] * len(main_rolls)
+        if own_extra and maximized(spell.extra_damage_type):
+            extra_rolls = [extra_sides] * len(extra_rolls)
     option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
     total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
     total = scale_damage(total, opts.multiplier)
@@ -634,6 +644,7 @@ async def roll_spell_damage(
         option_result=option_result(opts, option_rolls, option_total),
         extra_kind=extra_kind,
         extra_rolls=extra_rolls,
+        extra_damage_type=spell.extra_damage_type if own_extra and extra_rolls else None,
     )
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
     base_dice = [[sides, v] for v in main_rolls] + [[extra_sides, v] for v in extra_rolls]
@@ -672,12 +683,7 @@ async def roll_spell_healing(
     if level < spell.level or level > 9:
         raise HTTPException(status_code=400, detail="invalid casting_level")
     count, sides = healing_dice(healing, spell.level, level)
-    if body.main_rolls is not None:
-        if len(body.main_rolls) != count or any(v < 1 or v > sides for v in body.main_rolls):
-            raise HTTPException(status_code=400, detail="main_rolls do not match the dice")
-        main_rolls = list(body.main_rolls)
-    else:
-        main_rolls = [random.randint(1, sides) for _ in range(count)]
+    main_rolls = [random.randint(1, sides) for _ in range(count)]
 
     opts = use_options(session, char, "spell_healing", body, spell=spell, casting_level=level)
     applied = modifiers_for(char, "spell_healing", spell=spell, casting_level=level)

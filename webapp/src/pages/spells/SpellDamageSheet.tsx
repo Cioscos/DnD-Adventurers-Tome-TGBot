@@ -174,7 +174,8 @@ export default function SpellDamageSheet({
   const handleRoll = () => {
     mutation.mutate({
       casting_level: effectiveCastingLevel,
-      extra_dice: extraDice || undefined,
+      // la seconda parte del danno dell'incantesimo (Colpo infuocato: fuoco e radioso) si tira se il giocatore non ne ha scelta una sua
+      extra_dice: extraDice || spell.extra_damage_dice || undefined,
       is_critical: isCritical,
     })
   }

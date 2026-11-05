@@ -16,7 +16,13 @@ async def _heal_spell(client, cid, index="cure-wounds", level=1, name="Cura feri
 
 
 async def _roll(client, cid, spell, **body):
-    return await client.post(f"/characters/{cid}/spells/{spell}/roll_healing", json=body)
+    """``main_rolls``: i dadi che il server tira (il client non li sceglie), fissati qui per il test."""
+    from unittest.mock import patch
+    rolls = body.pop("main_rolls", None)
+    if rolls is None:
+        return await client.post(f"/characters/{cid}/spells/{spell}/roll_healing", json=body)
+    with patch("api.routers.spells.random.randint", side_effect=list(rolls)):
+        return await client.post(f"/characters/{cid}/spells/{spell}/roll_healing", json=body)
 
 
 async def test_cure_wounds_rolls_the_dice_and_adds_the_casting_modifier(client):
@@ -36,11 +42,13 @@ async def test_the_server_rolls_when_the_client_sends_no_dice(client):
     assert totals <= {1, 2, 3, 4} and len(totals) > 1  # 1d4, modificatore 0
 
 
-@pytest.mark.parametrize("rolls", [[], [1, 2], [9]])
-async def test_dice_that_do_not_match_are_refused(client, rolls):
-    cid = await _cleric(client, 5)
-    spell = await _heal_spell(client, cid)
-    assert (await _roll(client, cid, spell, main_rolls=rolls)).status_code == 400
+async def test_the_dice_sent_by_the_client_are_ignored(client):
+    cid = await _cleric(client, 5, wisdom=10)
+    spell = await _heal_spell(client, cid, "healing-word", 1, "Parola curativa")
+    from api.schemas.spell import RollHealingRequest
+    assert "main_rolls" not in RollHealingRequest.model_fields
+    r = await client.post(f"/characters/{cid}/spells/{spell}/roll_healing", json={"main_rolls": [4]})
+    assert r.status_code == 200 and r.json()["total"] in {1, 2, 3, 4}
 
 
 async def test_a_spell_that_does_not_heal_is_refused_and_the_level_is_checked(client):
@@ -111,3 +119,14 @@ async def test_blessed_healer_is_not_offered_before_level_6_or_to_other_domains(
         assert "cleric.blessed_healer" not in await _roll_keys(client, cid, "spell_healing", spell_id=spell, casting_level=1)
         r = await _roll(client, cid, spell, main_rolls=[2], options=["cleric.blessed_healer"])
         assert r.status_code == 409
+
+
+@pytest.mark.parametrize("index,level,base", [("revivify", 3, 1), ("raise-dead", 5, 1), ("goodberry", 1, 1), ("mass-heal", 9, 700)])
+async def test_disciple_of_life_covers_every_spell_of_first_level_or_more_that_restores_hit_points(client, index, level, base):
+    life = await _cleric(client, 1, "life", wisdom=10)
+    spell = await _heal_spell(client, life, index, level, index)
+    r = await _roll(client, life, spell)
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == base + 2 + level and r.json()["main_rolls"] == []
+    war = await _cleric(client, 1, "war", wisdom=10)
+    assert (await _roll(client, war, await _heal_spell(client, war, index, level, index))).json()["total"] == base

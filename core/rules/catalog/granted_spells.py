@@ -21,6 +21,9 @@ class GrantedSpell:
     damage_dice: str | None = None
     damage_type: str | None = None
     higher_levels_dice: str | None = None
+    # Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso)
+    extra_damage_dice: str | None = None
+    extra_damage_type: str | None = None
 
 
 GRANTED_SPELLS: dict[str, GrantedSpell] = {
@@ -56,7 +59,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'scrying': GrantedSpell(
         'scrying', {"it": 'Scrutare', "en": 'Scrying'}, 5, '10 minuti', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE'),
     'divine-favor': GrantedSpell(
-        'divine-favor', {"it": 'Favore divino', "en": 'Divine Favor'}, 1, '1 azione bonus', 'Personale', 'Concentrazione, fino a 1 minuto', is_concentration=True, damage_dice='1d4', damage_type='radiant'),
+        'divine-favor', {"it": 'Favore divino', "en": 'Divine Favor'}, 1, '1 azione bonus', 'Personale', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'shield-of-faith': GrantedSpell(
         'shield-of-faith', {"it": 'Scudo della fede', "en": 'Shield of Faith'}, 1, '1 azione bonus', '18 m', 'Concentrazione, fino a 10 minuti', is_concentration=True),
     'magic-weapon': GrantedSpell(
@@ -74,7 +77,8 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'hold-monster': GrantedSpell(
         'hold-monster', {"it": 'Bloccare mostri', "en": 'Hold Monster'}, 5, '1 azione', '27 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'flame-strike': GrantedSpell(
-        'flame-strike', {"it": 'Colpo infuocato', "en": 'Flame Strike'}, 5, '1 azione', '18 m', 'Istantanea', attack_save='SAVE', damage_dice='4d6', damage_type='fire', higher_levels_dice='1d6'),
+        'flame-strike', {"it": 'Colpo infuocato', "en": 'Flame Strike'}, 5, '1 azione', '18 m', 'Istantanea', attack_save='SAVE', damage_dice='4d6', damage_type='fire', higher_levels_dice='1d6',
+        extra_damage_dice='4d6', extra_damage_type='radiant'),
     'disguise-self': GrantedSpell(
         'disguise-self', {"it": 'Camuffare se stesso', "en": 'Disguise Self'}, 1, '1 azione', 'Personale', '1 ora'),
     'charm-person': GrantedSpell(
@@ -90,7 +94,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'polymorph': GrantedSpell(
         'polymorph', {"it": 'Metamorfosi', "en": 'Polymorph'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 ora', is_concentration=True, attack_save='SAVE'),
     'dimension-door': GrantedSpell(
-        'dimension-door', {"it": 'Porta dimensionale', "en": 'Dimension Door'}, 4, '1 azione', '150 m', 'Istantanea', damage_dice='4d6', damage_type='force'),
+        'dimension-door', {"it": 'Porta dimensionale', "en": 'Dimension Door'}, 4, '1 azione', '150 m', 'Istantanea'),
     'dominate-person': GrantedSpell(
         'dominate-person', {"it": 'Dominare persone', "en": 'Dominate Person'}, 5, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'modify-memory': GrantedSpell(
@@ -100,15 +104,15 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'faerie-fire': GrantedSpell(
         'faerie-fire', {"it": 'Fuoco fatato', "en": 'Faerie Fire'}, 1, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'scorching-ray': GrantedSpell(
-        'scorching-ray', {"it": 'Raggio rovente', "en": 'Scorching Ray'}, 2, '1 azione', '36 m', 'Istantanea', damage_dice='2d6', damage_type='fire'),
+        'scorching-ray', {"it": 'Raggio rovente', "en": 'Scorching Ray'}, 2, '1 azione', '36 m', 'Istantanea', attack_save='ATK', damage_dice='2d6', damage_type='fire'),
     'flaming-sphere': GrantedSpell(
-        'flaming-sphere', {"it": 'Sfera infuocata', "en": 'Flaming Sphere'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, damage_dice='2d6', damage_type='fire', higher_levels_dice='1d6'),
+        'flaming-sphere', {"it": 'Sfera infuocata', "en": 'Flaming Sphere'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='2d6', damage_type='fire', higher_levels_dice='1d6'),
     'daylight': GrantedSpell(
         'daylight', {"it": 'Luce diurna', "en": 'Daylight'}, 3, '1 azione', '18 m', '1 ora'),
     'fireball': GrantedSpell(
         'fireball', {"it": 'Palla di fuoco', "en": 'Fireball'}, 3, '1 azione', '45 m', 'Istantanea', attack_save='SAVE', damage_dice='8d6', damage_type='fire', higher_levels_dice='1d6'),
     'guardian-of-faith': GrantedSpell(
-        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore', attack_save='SAVE', damage_dice='20', damage_type='radiant'),
+        'guardian-of-faith', {"it": 'Guardiano della fede', "en": 'Guardian of Faith'}, 4, '1 azione', '9 m', '8 ore'),
     'wall-of-fire': GrantedSpell(
         'wall-of-fire', {"it": 'Muro di fuoco', "en": 'Wall of Fire'}, 4, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='5d8', damage_type='fire', higher_levels_dice='1d8'),
     'animal-friendship': GrantedSpell(
@@ -124,7 +128,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'dominate-beast': GrantedSpell(
         'dominate-beast', {"it": 'Dominare bestie', "en": 'Dominate Beast'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
     'grasping-vine': GrantedSpell(
-        'grasping-vine', {"it": 'Rampicante afferrante', "en": 'Grasping Vine'}, 4, '1 azione bonus', '18 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
+        'grasping-vine', {"it": 'Rampicante afferrante', "en": 'Grasping Vine'}, 4, '1 azione bonus', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'insect-plague': GrantedSpell(
         'insect-plague', {"it": 'Piaga di insetti', "en": 'Insect Plague'}, 5, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='4d10', damage_type='piercing', higher_levels_dice='1d10'),
     'tree-stride': GrantedSpell(
@@ -138,15 +142,17 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'shatter': GrantedSpell(
         'shatter', {"it": 'Frantumare', "en": 'Shatter'}, 2, '1 azione', '18 m', 'Istantanea', attack_save='SAVE', damage_dice='3d8', damage_type='thunder', higher_levels_dice='1d8'),
     'call-lightning': GrantedSpell(
-        'call-lightning', {"it": 'Invocare fulmine', "en": 'Call Lightning'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, damage_dice='3d10', damage_type='lightning', higher_levels_dice='1d10'),
+        'call-lightning', {"it": 'Invocare fulmine', "en": 'Call Lightning'}, 3, '1 azione', '36 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='3d10', damage_type='lightning', higher_levels_dice='1d10'),
     'sleet-storm': GrantedSpell(
         'sleet-storm', {"it": 'Tempesta di nevischio', "en": 'Sleet Storm'}, 3, '1 azione', '45 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'control-water': GrantedSpell(
         'control-water', {"it": 'Controllare acqua', "en": 'Control Water'}, 4, '1 azione', '90 m', 'Concentrazione, fino a 10 minuti', is_concentration=True, attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning'),
     'ice-storm': GrantedSpell(
-        'ice-storm', {"it": 'Tempesta di ghiaccio', "en": 'Ice Storm'}, 4, '1 azione', '90 m', 'Istantanea', attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning', higher_levels_dice='1d8'),
+        'ice-storm', {"it": 'Tempesta di ghiaccio', "en": 'Ice Storm'}, 4, '1 azione', '90 m', 'Istantanea', attack_save='SAVE', damage_dice='2d8', damage_type='bludgeoning', higher_levels_dice='1d8',
+        extra_damage_dice='4d6', extra_damage_type='cold'),
     'destructive-wave': GrantedSpell(
-        'destructive-wave', {"it": 'Onda distruttiva', "en": 'Destructive Wave'}, 5, '1 azione', 'Personale (raggio 9 m)', 'Istantanea', attack_save='SAVE', damage_dice='5d6', damage_type='thunder'),
+        'destructive-wave', {"it": 'Onda distruttiva', "en": 'Destructive Wave'}, 5, '1 azione', 'Personale (raggio 9 m)', 'Istantanea', attack_save='SAVE', damage_dice='5d6', damage_type='thunder',
+        extra_damage_dice='5d6', extra_damage_type='radiant'),
     'bless': GrantedSpell(
         'bless', {"it": 'Benedizione', "en": 'Bless'}, 1, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'cure-wounds': GrantedSpell(

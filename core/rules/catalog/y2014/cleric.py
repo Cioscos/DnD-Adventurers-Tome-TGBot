@@ -239,6 +239,7 @@ def _spell_damage_in(ctx: RuleContext, *types: str) -> bool:
 
 DESTRUCTIVE_WRATH = RollOptionSpec(
     key=f"{CK}.destructive_wrath", phase="before", rolls=("spell_damage",), maximize=True, cost=Cost(feature_key=POOL),
+    maximize_types=("lightning", "thunder"),
     label={"it": "Collera Distruttiva: spendi Incanalare Divinità, i dadi valgono il massimo",
            "en": "Destructive Wrath: spend Channel Divinity, the dice deal maximum damage"},
     available=lambda c: _spell_damage_in(c, "lightning", "thunder"))

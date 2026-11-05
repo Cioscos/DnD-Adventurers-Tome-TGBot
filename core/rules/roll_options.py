@@ -153,6 +153,7 @@ class AppliedOptions:
     keep_rolled: bool = False
     cancels: list[str] = field(default_factory=list)  # fonti di vantaggio/svantaggio che l'opzione toglie
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo
+    maximize_types: frozenset[str] | None = None  # solo questi tipi di danno; None = tutti
     self_heal: int = 0  # PF che chi lancia una cura recupera
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
@@ -372,7 +373,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail
-        out.maximize = out.maximize or spec.maximize
+        if spec.maximize:
+            types = frozenset(spec.maximize_types) if spec.maximize_types else None
+            out.maximize_types = types if not out.maximize else (None if None in (types, out.maximize_types) else out.maximize_types | types)
+            out.maximize = True
         if spec.self_heal:
             out.self_heal += max(0, spec.self_heal(option.ctx, given))
         out.force_crit = out.force_crit or spec.force_crit

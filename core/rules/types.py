@@ -318,6 +318,7 @@ class RollOptionSpec:
     self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (solo ``spell_healing``)
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)
+    maximize_types: tuple[str, ...] = ()  # tipi di danno che la massimizzazione tocca; vuoto = tutti (i dadi a mano mai)
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):

@@ -36,6 +36,8 @@ class SpellRead(BaseModel):
     school: Optional[str] = None
     srd_index: Optional[str] = None
     higher_levels_dice: Optional[str] = None
+    extra_damage_dice: Optional[str] = None
+    extra_damage_type: Optional[str] = None
     class_id: Optional[int] = None
     always_prepared: bool = False
     # CD e attacco della classe dell'incantesimo; li riempie il server dove serve la scheda.
@@ -178,10 +180,9 @@ class LastDamageBody(RollOptionsBody):
 
 
 class RollHealingRequest(RollOptionsBody):
-    """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali. ``main_rolls`` sono i
-    valori letti dai dadi 3D, validati come per il danno. ``apply_to_self``: chi lancia è anche il bersaglio."""
+    """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali né dadi.
+    ``apply_to_self``: chi lancia è anche il bersaglio."""
     casting_level: int | None = None
-    main_rolls: list[int] | None = None
     apply_to_self: bool = False
 
 
@@ -215,6 +216,7 @@ class RollDamageResult(BaseModel):
     main_rolls: list[int]    # only main dice (not extras)
     extra_kind: str | None = None   # "d4" or None
     extra_rolls: list[int] = []     # [] if no extra_dice
+    extra_damage_type: str | None = None  # tipo della seconda parte di danno dell'incantesimo, se c'è
     option_result: OptionResult | None = absent_when_none()
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
     model_config = {"from_attributes": True}

@@ -194,6 +194,9 @@ export interface Spell {
   school?: string | null
   srd_index?: string | null
   higher_levels_dice?: string | null
+  /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */
+  extra_damage_dice?: string | null
+  extra_damage_type?: string | null
   class_id?: number | null
   always_prepared?: boolean
   /** CD e attacco della classe dell'incantesimo. */
@@ -885,6 +888,8 @@ export interface RollDamageResult {
   main_rolls: number[]
   extra_kind: string | null
   extra_rolls: number[]
+  /** Tipo della seconda parte di danno dell'incantesimo, se c'è. */
+  extra_damage_type?: string | null
   /** `[lati, valore]` dei dadi ritirabili (anche quelli delle opzioni), con l'indice del server. */
   reroll_dice?: [number, number][]
 }
