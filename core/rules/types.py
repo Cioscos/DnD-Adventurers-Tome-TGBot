@@ -165,6 +165,8 @@ class OnUse:
     ``invalid_target``) prima di spendere qualcosa. Senza bersaglio lo stato è di chi lo usa.
     ``concentration``: l'uso avvia una concentrazione che non è di un incantesimo (Invocare Duplicato), per la durata
     dello stato; gli stati con ``concentration_end`` finiscono con lei.
+    ``panel``: l'uso passa da un pannello e da un endpoint propri (Preservare Vita): ``POST /features/{key}/use`` lo
+    rifiuta (409 ``needs_panel``) e la scheda dice quale pannello aprire in ``use_panel``.
     ``choices``: scelte da fare all'uso, validate prima di spendere qualcosa (422 ``invalid_choice``).
     ``choose_amount``: il giocatore sceglie quanti usi spendere (selettore in «Turno», massimo gli usi rimasti);
     ``max_amount``: tetto per un uso solo.
@@ -187,6 +189,7 @@ class OnUse:
     spends: str | None = None
     ally_state: bool = False
     concentration: bool = False
+    panel: str | None = None
     choices: "tuple[UseChoice, ...]" = ()
 
     def __post_init__(self) -> None:

@@ -126,6 +126,8 @@ export interface Ability {
   /** Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira), già filtrate per questo personaggio. */
   use_toggles?: { key: string; label: { it: string; en: string } }[]
   /** Scelte fra più valori da fare all'uso (l'abilità di Conoscenze Secolari). */
+  /** L'uso passa da un pannello proprio (Preservare Vita), non da `POST /features/{key}/use`. */
+  use_panel?: string | null
   use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[] }[]
 }
 

@@ -106,6 +106,7 @@ async def build_character_response(
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.has_on_use = on_use is not None
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
+        ab.use_panel = on_use.panel if on_use else None
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
         if on_use and (on_use.toggles or on_use.choices):

@@ -652,7 +652,10 @@ export const api = {
         method: 'POST', body: JSON.stringify(params ? { amount, params } : { amount }),
       }),
     /** Gli altri personaggi seduti alla stessa serata attiva (vuoto fuori serata). */
-    sessionAllies: (id: number) => request<{ id: number; name: string }[]>(`/characters/${id}/session-allies`),
+    sessionAllies: (id: number) => request<{ id: number; name: string; hp?: number; hp_max?: number }[]>(`/characters/${id}/session-allies`),
+    preserveLife: (id: number, body: { allocations: { character_id: number; amount: number }[]; confirm_living: boolean }) =>
+      request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number; current_hit_points: number }[] }>(
+        `/characters/${id}/preserve-life`, { method: 'POST', body: JSON.stringify(body) }),
     /** Ispirazione in Combattimento alla CA: spende la reazione e il dado, restituisce il valore da sommare. */
     bardicDieAc: (id: number) => request<{ die: number; roll: number }>(`/characters/${id}/bardic-die/ac`, { method: 'POST' }),
     endActiveState: (id: number, key: string) =>

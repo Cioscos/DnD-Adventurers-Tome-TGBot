@@ -224,6 +224,7 @@ class AbilityRead(BaseModel):
     # Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira): `[{key, label: {it, en}}]`, già filtrate per questo personaggio
     use_toggles: list[dict[str, Any]] = []
     use_choices: list[dict[str, Any]] = []
+    use_panel: Optional[str] = None
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).

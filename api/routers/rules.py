@@ -331,9 +331,39 @@ async def feature_use(
     return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets)
 
 
+class PreserveLifeBody(BaseModel):
+    allocations: list[dict[str, int]] = Field(min_length=1, max_length=12)  # [{character_id, amount}]
+    confirm_living: bool = False  # il giocatore dichiara che nessuno è un costrutto né un non morto
+
+
+class PreserveLifeResult(BaseModel):
+    pool: int
+    spent: int
+    healed: list[dict]
+
+
+@turn_router.post("/{char_id}/preserve-life", response_model=PreserveLifeResult)
+async def preserve_life_endpoint(
+    char_id: int, body: PreserveLifeBody, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PreserveLifeResult:
+    """Preservare Vita (R42): distribuisce 5 × livello PF fra chi usa il privilegio e gli altri partecipanti della serata."""
+    from dataclasses import asdict
+    from api.services.preserve_life import preserve_life
+    char = await _get_owned_full(char_id, user_id, db)
+    try:
+        allocations = [(int(a["character_id"]), int(a["amount"])) for a in body.allocations]
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "bad_allocation"})
+    pool, done = await preserve_life(db, char, allocations, body.confirm_living)
+    return PreserveLifeResult(pool=pool, spent=sum(a for _, a in allocations), healed=[asdict(h) for h in done])
+
+
 class AllyRead(BaseModel):
     id: int
     name: str
+    hp: int = 0
+    hp_max: int = 0
     die: int | None = None  # il dado di Ispirazione che ha già: darne un altro lo sostituisce
 
 
@@ -348,7 +378,8 @@ async def session_allies(
         die = ((state or {}).get("data") or {}).get("die")
         return die if isinstance(die, int) else None
 
-    return [AllyRead(id=a.id, name=a.name, die=held(a)) for a in await seated_allies(db, char)]
+    return [AllyRead(id=a.id, name=a.name, hp=a.current_hit_points, hp_max=a.hit_points, die=held(a))
+            for a in await seated_allies(db, char)]
 
 
 class BardicDieAc(BaseModel):

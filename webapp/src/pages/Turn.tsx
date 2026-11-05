@@ -15,6 +15,7 @@ import RollButton from '@/components/ui/RollButton'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import TargetEffectSheet from '@/components/rules/TargetEffectSheet'
 import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
+import PreserveLifeSheet from '@/components/rules/PreserveLifeSheet'
 import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import SelectSheet from '@/components/ui/SelectSheet'
@@ -59,6 +60,7 @@ export default function Turn() {
   const [amounts, setAmounts] = useState<Record<number, number>>({})
   // Scelte sì/no all'uso di un privilegio (Frenesia), per riga di privilegio.
   const [toggles, setToggles] = useState<Record<number, Record<string, boolean>>>({})
+  const [panel, setPanel] = useState<Ability | null>(null)
   const [useChoices, setUseChoices] = useState<Record<number, Record<string, string>>>({})
   // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
   const [targetKey, setTargetKey] = useState<string | null>(null)
@@ -151,6 +153,10 @@ export default function Turn() {
   })
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
   const triggerAbility = async (args: { ability: Ability; uses: number; amount?: number }) => {
+    if (args.ability.use_panel === 'preserve_life') {
+      setPanel(args.ability)
+      return
+    }
     if (args.ability.gives_to_ally) {
       const allies = await api.characters.sessionAllies(charId).catch(() => [])
       if (allies.length > 0) {
@@ -494,6 +500,10 @@ export default function Turn() {
       )}
       {weaponFlow.elements}
       {castFlow.elements}
+      {panel && char && (
+        <PreserveLifeSheet char={char} pool={5 * (char.classes.find((cl) => cl.id === panel.source_class_id)?.level ?? 0)}
+          onClose={() => setPanel(null)} />
+      )}
       {allyPick && (
         <AllyTargetSheet allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
           onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />

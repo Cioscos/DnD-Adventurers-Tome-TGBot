@@ -133,6 +133,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         raise _err(status.HTTP_404_NOT_FOUND, "feature_not_usable")
     spec, row = found
     on_use = spec.on_use
+    if on_use.panel:
+        raise _err(status.HTTP_409_CONFLICT, "needs_panel")
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
     if on_use.available and not on_use.available(
