@@ -1170,6 +1170,18 @@
       "preserve_others": "{{n}} HP are left for creatures outside the app: tell the GM.",
       "preserve_living": "None is a construct or an undead",
       "preserve_go": "Heal",
+      "preserve_errors": {
+        "over_half": "Someone would go above half their maximum HP: lower the numbers.",
+        "over_pool": "You split more HP than the pool.",
+        "no_uses": "No Channel Divinity uses left.",
+        "turn_slot_used": "You already used your action this turn.",
+        "invalid_target": "A creature is not at your table.",
+        "target_dead": "A creature is dead and cannot be healed.",
+        "confirm_required": "Confirm that no one is a construct or an undead.",
+        "bad_allocation": "The numbers are not valid.",
+        "feature_not_usable": "You cannot use this feature now.",
+        "default": "Could not heal. Try again."
+      },
       "preserve_done": "Preserve Life",
       "end_state": "End",
       "state_generic": "Active effect",

@@ -359,11 +359,34 @@ async def preserve_life_endpoint(
     return PreserveLifeResult(pool=pool, spent=sum(a for _, a in allocations), healed=[asdict(h) for h in done])
 
 
+class PreserveTarget(BaseModel):
+    id: int
+    name: str
+    cap: int  # PF ancora curabili (metà dei massimi), mai oltre la riserva
+    self: bool
+
+
+class PreserveLifeInfo(BaseModel):
+    pool: int
+    uses_left: int | None
+    targets: list[PreserveTarget]
+
+
+@turn_router.get("/{char_id}/preserve-life", response_model=PreserveLifeInfo)
+async def preserve_life_info(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+) -> PreserveLifeInfo:
+    """Per il pannello di Preservare Vita: la riserva e il tetto di ciascun destinatario, calcolati dal server e solo
+    per chi può usare il privilegio adesso."""
+    from dataclasses import asdict
+    from api.services.preserve_life import info
+    res = await info(db, await _get_owned_full(char_id, user_id, db))
+    return PreserveLifeInfo(pool=res.pool, uses_left=res.uses_left, targets=[asdict(t) for t in res.targets])
+
+
 class AllyRead(BaseModel):
     id: int
     name: str
-    hp: int = 0
-    hp_max: int = 0
     die: int | None = None  # il dado di Ispirazione che ha già: darne un altro lo sostituisce
 
 
@@ -378,7 +401,7 @@ async def session_allies(
         die = ((state or {}).get("data") or {}).get("die")
         return die if isinstance(die, int) else None
 
-    return [AllyRead(id=a.id, name=a.name, hp=a.current_hit_points, hp_max=a.hit_points, die=held(a))
+    return [AllyRead(id=a.id, name=a.name, die=held(a))
             for a in await seated_allies(db, char)]
 
 

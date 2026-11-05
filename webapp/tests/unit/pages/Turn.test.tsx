@@ -601,6 +601,31 @@ describe('Turn page', () => {
     expect(screen.getByTestId('use-amount')).toHaveTextContent('2')
   })
 
+  it('shows a catalog feature with uses and no effect of its own as a counter, with no button to spend it (the pool)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [
+      { id: 5, name: 'Incanalare Divinità', is_passive: false, is_active: true, is_class_feature: true, has_on_use: false,
+        feature_key: 'cleric.channel_divinity', max_uses: 2, uses: 2, action_type: 'action', restoration_type: 'short_rest' },
+      { id: 6, name: 'Mio contatore', is_passive: false, is_active: true, is_class_feature: false, has_on_use: false,
+        feature_key: null, max_uses: 3, uses: 3, action_type: 'action', restoration_type: 'long_rest' },
+    ] })
+    renderWithProviders(<Turn />)
+    const pool = (await screen.findByText('Incanalare Divinità (2/2)')).closest('li') as HTMLElement
+    expect(within(pool).queryByRole('button')).toBeNull()
+    // un'abilità scritta a mano non ha un effetto da chiamare: il contatore resta suo
+    expect(within(screen.getByText('Mio contatore (3/3)').closest('li') as HTMLElement).getByText('character.turn.use')).toBeInTheDocument()
+  })
+
+  it('turns off the Use of a feature that spends the pool when the pool has no uses left', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [
+      { id: 6, name: 'Preservare Vita', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true, use_panel: 'preserve_life',
+        spends_left: 0, feature_key: 'cleric.preserve_life', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none' },
+    ] })
+    renderWithProviders(<Turn />)
+    const row = (await screen.findByText('Preservare Vita')).closest('li') as HTMLElement
+    expect(within(row).getByRole('button')).toBeDisabled()
+    expect(within(row).getByText('character.turn.no_uses')).toBeInTheDocument()
+  })
+
   it('shows no amount selector for an ordinary feature, which keeps spending one use', async () => {
     getChar.mockResolvedValue(pool({ choose_amount: false }))
     featureUse.mockClear()

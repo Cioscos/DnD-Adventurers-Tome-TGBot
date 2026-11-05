@@ -329,7 +329,9 @@ export default function Turn() {
         label = `${e.label} (${left}/${ab.max_uses})`
         if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
         else if (left > 0) extra = renderToggles(ab)
-        control = (
+        // Un privilegio a catalogo con usi ma senza effetto proprio è una riserva (Incanalare Divinità): solo il contatore,
+        // l'uso passa dai privilegi che la spendono. Il «Usa» che scala il contatore a vuoto resta alle abilità scritte a mano.
+        if (!ab.feature_key || ab.has_on_use) control = (
           <Button size="sm" variant="secondary" disabled={left <= 0 || missingChoice(ab)}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
@@ -342,10 +344,10 @@ export default function Turn() {
         if (ab.has_on_use) {
           extra = renderToggles(ab)
           control = (
-            <Button size="sm" variant="secondary" disabled={missingChoice(ab)}
+            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || ab.spends_left === 0}
               loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
               onClick={() => triggerAbility({ ability: ab, uses: 0 })}>
-              {t('character.turn.use')}
+              {ab.spends_left === 0 ? t('character.turn.no_uses') : t('character.turn.use')}
             </Button>
           )
         }
@@ -501,8 +503,7 @@ export default function Turn() {
       {weaponFlow.elements}
       {castFlow.elements}
       {panel && char && (
-        <PreserveLifeSheet char={char} pool={5 * (char.classes.find((cl) => cl.id === panel.source_class_id)?.level ?? 0)}
-          onClose={() => setPanel(null)} />
+        <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />
       )}
       {allyPick && (
         <AllyTargetSheet allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}

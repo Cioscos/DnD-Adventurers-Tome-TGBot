@@ -256,6 +256,8 @@ export interface Ability {
 
   /** L'uso passa da un pannello proprio (Preservare Vita), non da `POST /features/{key}/use`. */
   use_panel?: string | null
+  /** Usi che restano al privilegio di cui questo spende gli usi (la riserva di Incanalare Divinità). */
+  spends_left?: number | null
   use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[] }[]
 
 }

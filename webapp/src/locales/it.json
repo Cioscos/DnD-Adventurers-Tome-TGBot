@@ -1169,6 +1169,18 @@
       "preserve_others": "{{n}} PF restano per creature fuori dall'app: dillo al GM.",
       "preserve_living": "Nessuno è un costrutto né un non morto",
       "preserve_go": "Cura",
+      "preserve_errors": {
+        "over_half": "Qualcuno supera la metà dei PF massimi: abbassa le cifre.",
+        "over_pool": "Hai distribuito più PF della riserva.",
+        "no_uses": "Usi di Incanalare Divinità esauriti.",
+        "turn_slot_used": "Hai già usato l'azione in questo turno.",
+        "invalid_target": "Una creatura non siede alla tua serata.",
+        "target_dead": "Una creatura è morta: non si può curare.",
+        "confirm_required": "Conferma che nessuno è un costrutto né un non morto.",
+        "bad_allocation": "Le cifre non sono valide.",
+        "feature_not_usable": "Questo privilegio non si può usare ora.",
+        "default": "Impossibile curare. Riprova."
+      },
       "preserve_done": "Preservare Vita",
       "end_state": "Termina",
       "state_generic": "Effetto attivo",

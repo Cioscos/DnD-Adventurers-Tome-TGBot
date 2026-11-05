@@ -107,6 +107,9 @@ async def build_character_response(
         ab.has_on_use = on_use is not None
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.use_panel = on_use.panel if on_use else None
+        if on_use and on_use.spends:
+            pool = next((a for a in response.abilities if a.feature_key == on_use.spends), None)
+            ab.spends_left = (pool.uses or 0) if pool is not None and pool.max_uses is not None else None
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
         if on_use and (on_use.toggles or on_use.choices):
