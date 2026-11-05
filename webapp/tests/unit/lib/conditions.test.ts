@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { TFunction } from 'i18next'
-import { CONDITION_ICONS, formatCondition } from '@/lib/conditions'
+import { CONDITION_ICONS, conditionLabel, formatCondition } from '@/lib/conditions'
 
 // The 14 standard 5e conditions + exhaustion that the hero chips and the
 // /conditions page render. Kept here as an explicit contract: if the lookup
@@ -42,5 +42,18 @@ describe('formatCondition', () => {
     expect(t).toHaveBeenCalledWith('character.conditions.exhaustion')
     // Never forwards the { level } option on the no-level branch.
     expect(t).not.toHaveBeenCalledWith('character.conditions.exhaustion', expect.anything())
+  })
+})
+
+describe('conditionLabel', () => {
+  const t = ((key: string, opts?: { defaultValue?: string }) => (key.endsWith('.thoughts_read') ? 'Pensieri letti' : opts?.defaultValue ?? key)) as unknown as TFunction
+
+  it('names a catalog custom condition by its translated label, never by the key', () => {
+    expect(conditionLabel('custom:thoughts_read', t)).toBe('Pensieri letti')
+    expect(conditionLabel('custom:unknown', t)).toBe('unknown')  // senza prefisso, mai "custom:"
+  })
+
+  it('names a standard condition through the conditions dictionary', () => {
+    expect(conditionLabel('charmed', t)).toBe('charmed')
   })
 })

@@ -15,7 +15,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
-import { CONDITION_ICONS } from '@/lib/conditions'
+import { CONDITION_ICONS, conditionLabel } from '@/lib/conditions'
 import CustomConditionCard from '@/components/homebrew/CustomConditionCard'
 import {
   showHomebrewNotifications,
@@ -450,7 +450,7 @@ export default function Conditions() {
             {effectRows.map(({ e, expiry, save }) => (
               <li key={e.slug} className="text-sm font-body">
                 <span className="font-semibold text-dnd-text">
-                  {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : e.slug}
+                  {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : conditionLabel(e.slug, t)}
                 </span>
                 {e.applied_by_gm && (
                   <span className="ml-2 text-xs uppercase tracking-wider text-dnd-amber">

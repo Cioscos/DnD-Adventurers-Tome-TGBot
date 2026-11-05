@@ -64,6 +64,13 @@ ABILITY_LABELS_IT: dict[str, str] = {
 }
 
 
+# Condizioni ``custom:<slug>`` che il catalogo dei privilegi imposta su altri (un'etichetta con durata, non una regola)
+CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
+    "turned": {"it": "Scacciato", "en": "Turned"},
+    "thoughts_read": {"it": "Pensieri letti", "en": "Thoughts read"},
+}
+
+
 def _fallback(slug: str) -> str:
     """Human-readable fallback for an unknown slug (e.g. 'sleight_of_hand')."""
     return slug.replace("_", " ").title()
@@ -80,7 +87,8 @@ def condition_label(slug: str) -> str:
     Homebrew conditions are keyed ``custom:<name>``: the prefix is internal and
     must not leak into user-facing text (history showed "Custom:Sanguinamento").
     """
-    return CONDITION_LABELS_IT.get(slug, _fallback(slug.removeprefix("custom:")))
+    custom = CUSTOM_CONDITION_LABELS.get(slug.removeprefix("custom:")) if slug.startswith("custom:") else None
+    return CONDITION_LABELS_IT.get(slug) or (custom["it"] if custom else _fallback(slug.removeprefix("custom:")))
 
 
 def ability_label(slug: str) -> str:

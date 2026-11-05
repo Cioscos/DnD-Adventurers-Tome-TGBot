@@ -28,6 +28,15 @@ export const CONDITION_ICONS: Record<string, IconType> = {
   exhaustion:    GiFlame,
 }
 
+/** Nome di una condizione per slug, anche `custom:<nome>` (le etichette con durata dei privilegi): mai la chiave grezza. */
+export function conditionLabel(slug: string, t: TFunction): string {
+  if (slug.startsWith('custom:')) {
+    const name = slug.slice('custom:'.length)
+    return t(`character.target_effect.custom.${name}`, { defaultValue: name })
+  }
+  return t(`character.conditions.${slug}`, { defaultValue: slug })
+}
+
 /**
  * Localise a condition label for display in a pill / list.
  *
@@ -43,5 +52,5 @@ export function formatCondition(
   if (key === 'exhaustion' && typeof val === 'number' && val > 0) {
     return t('character.conditions.exhaustion', { level: val, context: edition })
   }
-  return t(`character.conditions.${key}`)
+  return key.startsWith('custom:') ? conditionLabel(key, t) : t(`character.conditions.${key}`)
 }

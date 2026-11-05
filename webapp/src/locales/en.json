@@ -807,7 +807,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -1112,13 +1112,13 @@
     "turn": {
       "bardic_die_ac": "Add to AC",
       "bardic_die_ac_result": "Inspiration die: add to your AC",
-      "ally_title": "Bardic Inspiration",
       "ally_other": "Another creature",
       "ally_has_die": "{{name}} already holds a d{{die}}: the new die replaces it and still costs a use.",
       "ally_replace": "Replace the die",
       "ally_back": "Back",
       "bardic_die_name": "Bardic Inspiration",
       "ally_pick": "Who gets the die?",
+      "ally_pick_effect": "Who gets it?",
       "title": "Turn",
       "round": "Round {{n}}",
       "attacks_made": "Attacks: {{made}}/{{n}}",

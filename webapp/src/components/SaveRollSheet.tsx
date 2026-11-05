@@ -2,6 +2,7 @@ import { canRerollInspiration, askRollOptions } from '@/lib/rollOptions'
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { conditionLabel } from '@/lib/conditions'
 import { api, ApiError, type RollMode } from '@/api/client'
 import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -99,7 +100,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
   }
 
   if (!active) return null
-  const cond = t(`character.conditions.${active.slug}`, { defaultValue: active.slug })
+  const cond = conditionLabel(active.slug, t)
   const n = Math.min(done.length + 1, Math.max(total.current, done.length + 1))
 
   return (

@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { conditionLabel } from '@/lib/conditions'
 import { Share2 } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
@@ -64,7 +65,7 @@ function CharacterCard({ c }: { c: SessionRecapCharacter }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {c.conditions.map((slug) => (
             <span key={slug} className="rounded-full border border-dnd-border px-2 py-0.5 text-xs text-dnd-text-muted">
-              {slug.startsWith('custom:') ? slug.slice(7) : t(`character.conditions.${slug}`, { defaultValue: slug })}
+              {conditionLabel(slug, t)}
             </span>
           ))}
         </div>

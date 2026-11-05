@@ -506,7 +506,7 @@ export default function Turn() {
         <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />
       )}
       {allyPick && (
-        <AllyTargetSheet allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
+        <AllyTargetSheet title={allyPick.ability.name} die={allyPick.ability.feature_key === 'bard.bardic_inspiration'} allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
           onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />
       )}
       {targetKey && <TargetEffectSheet charId={charId} effectKey={targetKey} onClose={() => setTargetKey(null)} />}

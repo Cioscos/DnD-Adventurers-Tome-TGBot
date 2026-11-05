@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
+import { conditionLabel } from '@/lib/conditions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type TargetEffect } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
@@ -74,9 +76,7 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
 type T = (key: string, opts?: Record<string, unknown>) => string
 
 function conditionName(t: T, slug: string): string {
-  return slug.startsWith('custom:')
-    ? t(`character.target_effect.custom.${slug.slice(7)}`, { defaultValue: slug.slice(7) })
-    : t(`character.conditions.${slug}`, { defaultValue: slug })
+  return conditionLabel(slug, t as unknown as TFunction)
 }
 
 function durationText(t: T, fx: TargetEffect): string {

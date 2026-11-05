@@ -807,7 +807,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -1111,13 +1111,13 @@
     "turn": {
       "bardic_die_ac": "Aggiungi alla CA",
       "bardic_die_ac_result": "Dado di Ispirazione: somma alla CA",
-      "ally_title": "Ispirazione Bardica",
       "ally_other": "Un'altra creatura",
       "ally_has_die": "{{name}} ha già un d{{die}}: il nuovo dado lo sostituisce e consuma comunque un uso.",
       "ally_replace": "Sostituisci il dado",
       "ally_back": "Indietro",
       "bardic_die_name": "Ispirazione Bardica",
       "ally_pick": "A chi dai il dado?",
+      "ally_pick_effect": "A chi lo dai?",
       "title": "Turno",
       "round": "Round {{n}}",
       "attacks_made": "Attacchi: {{made}}/{{n}}",
