@@ -107,7 +107,7 @@ async def test_every_row_with_a_title_has_a_summary_in_both_languages():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("level,mode,hours,gold", [
-    (1, "copy", 2, 50), (3, "copy", 6, 150), (9, "copy", 18, 450), (1, "backup", 1, 10), (4, "backup", 4, 40), (2, "retranscribe", 4, 100)])
+    (1, "copy", 2, 50), (3, "copy", 6, 150), (9, "copy", 18, 450), (1, "backup", 1, 10), (4, "backup", 4, 40), (2, "retranscribe", 2, 20)])
 async def test_the_copy_cost_is_per_spell_level(client, level, mode, hours, gold):
     cid = await _wizard(client, 17)
     r = await client.get(f"/characters/{cid}/spellbook/cost", params={"level": level, "mode": mode})
@@ -188,7 +188,7 @@ async def test_a_lost_book_is_rewritten_only_for_prepared_spells(client):
     money = await _purse(client, cid)
     done = await client.post(f"/characters/{cid}/spells/{prepared}/copy", json={"mode": "retranscribe"})
     assert done.status_code == 200, done.text
-    assert (await _spells(client, cid))["Scudo"]["in_spellbook"] is True and await _purse(client, cid) == money - 50
+    assert (await _spells(client, cid))["Scudo"]["in_spellbook"] is True and await _purse(client, cid) == money - 10
 
 
 async def test_a_lost_book_comes_back_from_the_backup_copy(client):

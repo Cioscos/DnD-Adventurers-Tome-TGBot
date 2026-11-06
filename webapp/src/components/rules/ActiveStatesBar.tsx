@@ -109,10 +109,13 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
                 {t('character.turn.bardic_die_ac')}
               </Button>
             )}
-            <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
-              loading={end.isPending && end.variables === s.key} onClick={() => end.mutate(s.key)}>
-              {t('character.turn.end_state')}
-            </Button>
+            {/* L'interdizione e la Saturazione Magica le chiude solo il riposo lungo: il server rifiuta, qui non si offre */}
+            {s.data?.locked !== true && (
+              <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
+                loading={end.isPending && end.variables === s.key} onClick={() => end.mutate(s.key)}>
+                {t('character.turn.end_state')}
+              </Button>
+            )}
           </li>
         )
       })}

@@ -2,7 +2,7 @@
 
 Funzioni pure sul personaggio, senza scrivere nulla: chi copia (``api/routers/spellbook.py``) controlla e spende.
 Costi dalla scheda ``docs/superpowers/rules/2014/classes/wizard.md``: copia nel libro 2 ore e 50 mo per livello
-dell'incantesimo, copia di riserva 1 ora e 10 mo per livello; i «Sapienti» delle scuole dimezzano tempo e costo.
+dell'incantesimo, copia di riserva e ritrascrizione 1 ora e 10 mo per livello; i «Sapienti» dimezzano solo la copia nel libro.
 """
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from core.rules.schools import normalize_school
 from core.rules.spellcasting import slots_for
 
 MODES = ("copy", "backup", "retranscribe")  # retranscribe: il libro è andato perso, si ritrascrive un incantesimo preparato
-_HOURS = {"copy": 2, "retranscribe": 2, "backup": 1}
-_GOLD = {"copy": 50, "retranscribe": 50, "backup": 10}
+_HOURS = {"copy": 2, "retranscribe": 1, "backup": 1}
+_GOLD = {"copy": 50, "retranscribe": 10, "backup": 10}
 
 
 @dataclass(frozen=True)
@@ -46,7 +46,7 @@ def copy_halved(char: Any, school: str | None) -> bool:
 
 
 def copy_cost(char: Any, level: int, school: str | None, mode: str = "copy") -> CopyCost:
-    halved = copy_halved(char, school)
+    halved = mode == "copy" and copy_halved(char, school)  # «vale solo per la copia nel libro»
     hours, gold = _HOURS[mode] * level, _GOLD[mode] * level
     return CopyCost(hours / 2 if halved else float(hours), gold // 2 if halved else gold, halved)
 

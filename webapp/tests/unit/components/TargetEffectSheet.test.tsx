@@ -53,6 +53,13 @@ describe('TargetEffectSheet', () => {
     expect(screen.getByText('Goblin 2').closest('button')).toBeEnabled()
   })
 
+  it('names every condition of an effect that brings two (Hypnotic Gaze)', async () => {
+    preview.mockResolvedValue({ result: { ...topple, condition: 'charmed', also: ['incapacitated'] }, combatants: [] })
+    renderWithProviders(<RollNotes charId={3} optionResult={opts} />)
+    await userEvent.click(screen.getByText('character.target_effect.open'))
+    expect(await screen.findByText(/charmed.*\+.*incapacitated|incapacitated.*\+/i)).toBeInTheDocument()
+  })
+
   it('says when the save is repeated at the end of the target turn (Collera della Natura)', async () => {
     preview.mockResolvedValue({ result: { ...topple, condition: 'restrained', repeat_save: 'end' }, combatants: [] })
     renderWithProviders(<RollNotes charId={3} optionResult={opts} />)

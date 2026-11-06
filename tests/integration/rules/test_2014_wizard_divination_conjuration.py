@@ -62,7 +62,7 @@ async def test_portent_belongs_to_the_diviner_from_level_2(client, monkeypatch):
 
 
 @pytest.mark.parametrize("roll,query", [("attack", {}), ("save", {"ability": "dexterity"}), ("skill", {"skill": "arcana"}),
-                                         ("initiative", {}), ("ability", {"ability": "intelligence"})])
+                                         ("initiative", {}), ("ability", {"ability": "intelligence"}), ("death_save", {})])
 async def test_portent_is_offered_on_attacks_saves_and_checks_with_the_saved_dice(client, monkeypatch, roll, query):
     cid = await _wizard(client, 6, "divination")
     assert PORTENT not in await _roll_keys(client, cid, roll, **query)  # nessun dado salvato

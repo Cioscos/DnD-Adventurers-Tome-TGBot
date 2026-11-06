@@ -124,6 +124,27 @@ async def drop_pending_effect(db: AsyncSession, eff: ConditionEffect) -> None:
     await db.flush()
 
 
+async def _activate_also(db: AsyncSession, eff: ConditionEffect, target: tuple[str, int]) -> None:
+    """Le altre condizioni dello stesso effetto (``TargetEffect.also``) arrivano col TS fallito, con durata e fonte uguali."""
+    for slug in filter(None, (eff.also_slugs or "").split(",")):
+        if target[0] == "character":
+            char = await pc_char_by_id(db, target[1])
+            if slug in immune_conditions(char):
+                continue
+            if not (char.conditions or {}).get(slug):
+                await apply_conditions(db, char, {slug: True})
+        else:
+            comb = await db.get(Combatant, target[1])
+            if not (comb.conditions or {}).get(slug):
+                comb.conditions = {**(comb.conditions or {}), slug: True}
+        await clear_effects_for(db, target, [slug])
+        db.add(ConditionEffect(
+            character_id=eff.character_id, combatant_id=eff.combatant_id, slug=slug, expiry_anchor=eff.expiry_anchor,
+            expiry_edge=eff.expiry_edge, expiry_count=eff.expiry_count, source_combatant_id=eff.source_combatant_id,
+            source_character_id=eff.source_character_id, applied_by_gm=False, encounter_id=eff.encounter_id,
+            created_at=eff.created_at))
+
+
 async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> None:
     """TS fallito: la condizione va sulla scheda o sul mostro e la durata decorre da ora."""
     others = (await db.execute(select(ConditionEffect).where(
@@ -151,6 +172,7 @@ async def activate_pending_effect(db: AsyncSession, eff: ConditionEffect) -> Non
         anchor = eff.source_combatant_id if eff.expiry_anchor == "source" else await _target_combatant_id(db, target, enc)
         if anchor == enc.active_combatant_id:  # come ``upsert_effect``: dura un turno in più
             eff.expiry_count += 1
+    await _activate_also(db, eff, target)
     await db.flush()
 
 
@@ -192,8 +214,9 @@ async def apply_target_effect(
         return False, None
     expiry = _expiry(effect)
     if not with_save:
-        await apply_condition_to_combatant(db, enc, target, GmConditionApply(
-            slug=slug, expiry=expiry, source_combatant_id=mine.id), applied_by_gm=False)
+        for each in (slug, *effect.get("also", ())):
+            await apply_condition_to_combatant(db, enc, target, GmConditionApply(
+                slug=each, expiry=expiry, source_combatant_id=mine.id), applied_by_gm=False)
         _add_history(db, char.id, "condition_change",
                      f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))
         return True, None
@@ -205,6 +228,7 @@ async def apply_target_effect(
         expiry_count=expiry["count"] if expiry else None, source_combatant_id=mine.id, source_character_id=char.id,
         applied_by_gm=False, encounter_id=enc.id, created_at=now,
         immunity_key=effect_key if effect.get("immune_on_success") else None,
+        also_slugs=",".join(effect.get("also", ())) or None,
         # TS ripetuto (Collera della Natura): lo porta la condizione, comincia a contare quando il primo TS è fallito
         save_ability=effect["save_ability"] if effect.get("repeat_save") else None,
         save_dc=effect["save_dc"] if effect.get("repeat_save") else None, save_edge=effect.get("repeat_save"))

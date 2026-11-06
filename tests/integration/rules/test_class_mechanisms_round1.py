@@ -564,3 +564,26 @@ async def test_pure_ability_check_of_someone_elses_character_is_refused(client):
     as_user(987654)
     r = await client.post(f"/characters/{cid}/ability_checks/strength/roll", json={"die": 7})
     assert r.status_code in (403, 404)
+
+
+async def test_an_effect_with_two_conditions_puts_both_on_the_target_after_one_failed_save(client, test_session_factory, rules_catalog, monkeypatch):
+    install_fake_telegram(monkeypatch)
+    rules_catalog(_spec(on_use=OnUse(slot="action", target_effect=lambda _c, _p: TargetEffect(
+        condition="charmed", also=("incapacitated",), save_ability="wisdom", save_dc=12,
+        ends_at={"anchor": "source", "edge": "end", "count": 1}))))
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    pc, g1, g2 = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"]
+    cid = pc["character_id"]
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 5, "hit_die": 10})).status_code == 201
+    for target, passed in ((g1["id"], False), (g2["id"], True)):
+        await client.post(f"/characters/{cid}/turn/new")
+        assert (await _use(client, cid)).status_code == 200
+        r = await client.post(f"/characters/{cid}/target-effects", json={"combatant_id": target, "effect_key": KEY})
+        assert r.json()["pending_save_id"] is not None
+        assert (await _goblin(client, sid, target))["conditions"] == {}  # finché il TS non è tirato non c'è nulla
+        await _resolve(client, sid, target, passed=passed)
+    hit, saved = await _goblin(client, sid, g1["id"]), await _goblin(client, sid, g2["id"])
+    assert hit["conditions"] == {"charmed": True, "incapacitated": True}
+    assert sorted(e["slug"] for e in hit["condition_effects"]) == ["charmed", "incapacitated"]
+    assert saved["conditions"] == {} and saved["condition_effects"] == []

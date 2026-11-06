@@ -51,7 +51,7 @@ async def test_each_savant_halves_the_copy_only_for_its_own_school(client, own):
         r = await client.get(f"/characters/{cid}/spellbook/cost", params={"level": 2, "school": school})
         assert r.json() == ({"hours": 2, "gold": 50, "halved": True} if school == own else {"hours": 4, "gold": 100, "halved": False})
     back = await client.get(f"/characters/{cid}/spellbook/cost", params={"level": 3, "school": own, "mode": "backup"})
-    assert back.json() == {"hours": 1.5, "gold": 15, "halved": True}
+    assert back.json() == {"hours": 3, "gold": 30, "halved": False}
 
 
 async def test_the_savant_also_understands_the_italian_school_names(client):
@@ -305,3 +305,11 @@ async def test_spell_resistance_halves_the_damage_of_a_spell_once(client):
     resisted = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20, "damage_type": "fire", "damage_modifier": "half",
                                                                   "raw_value": 40, "options": [RESISTANCE_DAMAGE]})
     assert resisted.json()["current_hit_points"] == 80  # già resistente: la resistenza conta una volta
+
+
+async def test_the_player_cannot_end_the_ward_by_hand(client):
+    cid = await _wizard(client, 6, "abjuration", intelligence=16)
+    await _cast_at(client, cid, await _abjuration(client, cid))
+    r = await client.delete(f"/characters/{cid}/active-states/arcane_ward")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "state_locked"
+    assert _ward(await _full(client, cid)) is not None

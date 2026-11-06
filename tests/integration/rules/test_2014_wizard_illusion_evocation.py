@@ -287,3 +287,32 @@ async def test_a_long_rest_resets_the_overchannel_count(client, monkeypatch):
     hp = (await _full(client, cid))["current_hit_points"]
     await _overchannel(client, cid, spell, 1)
     assert (await _full(client, cid))["current_hit_points"] == hp  # di nuovo il primo uso
+
+
+async def test_overchannel_self_damage_uses_the_slot_level_of_the_cast(client, monkeypatch):
+    cid = await _wizard(client, 14, "evocation")
+    await _hp(client, cid, 1000)
+    ball = await _evocation(client, cid, "Palla di fuoco", 3)
+    monkeypatch.setattr(random, "randint", lambda a, b: b)
+    await _overchannel(client, cid, ball, 5)
+    result = await _overchannel(client, cid, ball, 5)
+    assert result.status_code == 200, result.text
+    assert (await _full(client, cid))["current_hit_points"] == 1000 - 12 * 2 * 5  # 2d12 per livello di lancio (5), non del 3
+
+
+async def test_overchannel_is_not_offered_when_the_cast_level_is_six_or_more(client):
+    cid = await _wizard(client, 14, "evocation")
+    spell = await _evocation(client, cid, "Palla di fuoco", 3)
+    assert OVERCHANNEL in await _roll_keys(client, cid, "spell_damage", spell_id=spell, casting_level=5)
+    assert OVERCHANNEL not in await _roll_keys(client, cid, "spell_damage", spell_id=spell, casting_level=6)
+
+
+async def test_the_player_cannot_end_the_overchannel_count_by_hand(client, monkeypatch):
+    cid = await _wizard(client, 14, "evocation")
+    await _hp(client, cid, 1000)
+    spell = await _evocation(client, cid, "Prova", 1)
+    monkeypatch.setattr(random, "randint", lambda a, b: b)
+    await _overchannel(client, cid, spell, 1)
+    r = await client.delete(f"/characters/{cid}/active-states/overchannel")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "state_locked"
+    assert (await _states(client, cid))["overchannel"]["data"]["uses"] == 1

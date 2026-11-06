@@ -953,6 +953,8 @@ class ConditionEffect(Base):
     # Chiave dell'effetto di un privilegio (`TargetEffect.immune_on_success`): un TS superato rende il bersaglio immune a
     # quell'effetto per chi l'ha usato (`source_character_id`) fino al suo prossimo riposo lungo.
     immunity_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Altre condizioni dello stesso effetto (`TargetEffect.also`), separate da virgola: arrivano insieme alla prima col TS fallito.
+    also_slugs: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 

@@ -36,7 +36,7 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
       {fx && (
         <div className="flex flex-col gap-3 px-4 pb-4">
           <ul className="flex flex-col gap-1 text-sm font-body text-dnd-text">
-            {fx.condition && <li className="font-bold">{conditionName(t, fx.condition)}</li>}
+            {fx.condition && <li className="font-bold">{[fx.condition, ...(fx.also ?? [])].map((c) => conditionName(t, c)).join(' + ')}</li>}
             <li>{fx.save_ability && fx.save_dc != null
               ? t('character.target_effect.save', { ability: t(`common.abilities.${fx.save_ability}`), dc: fx.save_dc })
               : t('character.target_effect.no_save')}</li>

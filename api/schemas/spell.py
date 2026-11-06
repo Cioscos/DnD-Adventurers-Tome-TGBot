@@ -115,18 +115,6 @@ class SpellCopyCost(BaseModel):
     halved: bool = False  # un «Sapiente» della scuola ha dimezzato tempo e costo
 
 
-class SpellCopyRequest(BaseModel):
-    """Copia nel Libro del Mago: ``copy`` (incantesimo trovato), ``backup`` (copia di riserva di uno già nel libro),
-    ``retranscribe`` (libro perso: si riscrive un incantesimo preparato)."""
-    mode: Literal["copy", "backup", "retranscribe"] = "copy"
-
-
-class SpellCopyCost(BaseModel):
-    hours: float
-    gold: int
-    halved: bool = False  # un «Sapiente» della scuola ha dimezzato tempo e costo
-
-
 class SpellUseRequest(RollOptionsBody):
     """Le opzioni sono quelle di ``roll="cast"``. ``slot_id`` sceglie il pool; ``slot_level`` da solo prende il primo
     con posto. Uno dei due è obbligatorio per un incantesimo di livello (400, non 422, come gli altri errori di

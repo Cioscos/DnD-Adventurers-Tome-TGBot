@@ -89,18 +89,18 @@ def _count_overchannel(_session, ctx: RuleContext, _inputs: dict) -> None:
     from core.rules.states import begin_state  # import locale
     state = _overchannel_state(ctx.char)
     uses = int(((state or {}).get("data") or {}).get("uses") or 0) + 1
-    begin_state(ctx.char, StateSpec(OVERCHANNEL_STATE, ends_on=("rest_long",), data={"uses": uses}), OVERCHANNEL, "Saturazione Magica")
+    begin_state(ctx.char, StateSpec(OVERCHANNEL_STATE, ends_on=("rest_long",), data={"uses": uses, "locked": True}), OVERCHANNEL, "Saturazione Magica")
 
 
 def _overchannel_hurt(ctx: RuleContext, _inputs: dict) -> str | None:
     """Dal secondo uso: 2d12 per livello dell'incantesimo, e 1d12 per livello in più a ogni uso successivo."""
     uses = int(((_overchannel_state(ctx.char) or {}).get("data") or {}).get("uses") or 0)
-    return f"{uses * ctx.spell.level}d12" if uses >= 2 else None
+    return f"{uses * (ctx.casting_level or ctx.spell.level)}d12" if uses >= 2 else None
 
 
 OVERCHANNEL_OPTION = RollOptionSpec(
     key=OVERCHANNEL, phase="before", rolls=("spell_damage",), maximize=True, on_confirm=_count_overchannel, self_damage=_overchannel_hurt,
-    available=lambda c: c.spell is not None and 1 <= c.spell.level <= 5 and bool(c.spell.damage_dice),
+    available=lambda c: c.spell is not None and 1 <= (c.casting_level or c.spell.level) <= 5 and bool(c.spell.damage_dice),
     label={"it": "Saturazione Magica: i dadi di danno valgono il massimo (dal secondo uso subisci danni necrotici)",
            "en": "Overchannel: damage dice are maximized (from the second use you take necrotic damage)"})
 

@@ -150,6 +150,8 @@ class TargetEffect:
     save_dc: int | None = None
     rounds: int | None = None
     ends_at: dict | None = None
+    # Altre condizioni che arrivano insieme a ``condition`` con lo stesso TS, la stessa durata e la stessa fonte (Sguardo Ipnotico)
+    also: tuple[str, ...] = ()
     on_failure_only: bool = True
     damage_dice: str | None = None
     extends: bool = False

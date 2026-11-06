@@ -100,7 +100,7 @@ def _till_my_next_turn() -> dict:
 GAZE_USE = OnUse(
     cost=0, slot="action",
     target_effect=lambda ctx, _p: TargetEffect(
-        condition="incapacitated", save_ability="wisdom", save_dc=_dc(ctx), ends_at=_till_my_next_turn(), extends=True,
+        condition="charmed", also=("incapacitated",), save_ability="wisdom", save_dc=_dc(ctx), ends_at=_till_my_next_turn(), extends=True,
         immune_on_success=True, note="hypnotic_gaze"))
 CHARM_USE = OnUse(
     cost=0, slot="reaction",

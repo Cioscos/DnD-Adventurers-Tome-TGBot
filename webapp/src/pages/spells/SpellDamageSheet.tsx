@@ -394,6 +394,7 @@ export default function SpellDamageSheet({
             </div>
           )}
           <RollNotes charId={charId} optionResult={castNotes} />
+          <RollNotes charId={charId} optionResult={result.option_result} />  {/* ciò che è avvenuto col danno (Saturazione Magica: i necrotici a sé) */}
           <AfterDamageOptions
             charId={charId}
             query={{ roll: 'spell_damage', spell_id: spell.id }}

@@ -48,6 +48,13 @@ describe('ActiveStatesBar', () => {
     expect(screen.getAllByText(/character\.turn\.state_radius/).length).toBeGreaterThanOrEqual(3)
   })
 
+  it('does not offer to end a state that only a long rest closes (ward, Overchannel)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'arcane_ward', feature_key: 'wizard.arcane_ward', rounds_left: null, ends_on: ['rest_long'], data: { hp: 5, max: 10, locked: true } },
+    ], [])} />)
+    expect(screen.queryByText('character.turn.end_state')).not.toBeInTheDocument()
+  })
+
   it('lists under a state the features that act on others, with their text', () => {
     renderWithProviders(<ActiveStatesBar char={char(
       [{ ...rage, data: { others: ['barbarian.totem_wolf', 'barbarian.gone'] } }],

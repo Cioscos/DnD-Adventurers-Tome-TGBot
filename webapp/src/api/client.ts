@@ -204,6 +204,8 @@ export type TargetEffect = {
   ends_at: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number } | null
   on_failure_only: boolean
   damage_dice: string | null
+  /** Altre condizioni che arrivano insieme alla prima, con lo stesso TS e la stessa durata (Sguardo Ipnotico). */
+  also?: string[]
   /** Se il bersaglio porta già la condizione da te, la durata si rinnova senza un nuovo TS. */
   extends?: boolean
   /** Chi supera il TS non è più bersaglio di questo effetto fino al tuo prossimo riposo lungo. */

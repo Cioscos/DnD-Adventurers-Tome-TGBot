@@ -123,6 +123,16 @@ describe('SpellDamageSheet', () => {
     expect(await screen.findByText('character.spells.roll_damage.unrollable')).toBeInTheDocument()
   })
 
+  it('shows what the damage did to the caster, written by the server in the option result (Overchannel)', async () => {
+    rollDamage.mockResolvedValue({ ...result, option_result: {
+      keys: ['wizard.overchannel'], extra_rolls: [], extra_total: 0, bonus: 0, multiplier: 1, spent: [], targets: [],
+      effects: [{ it: 'Subisci 24 danni necrotici', en: 'You take 24 necrotic damage' }] } })
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={null} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('Subisci 24 danni necrotici')).toBeInTheDocument()
+  })
+
   it('a save spell shows the half-damage cell in the result', async () => {
     rollDamage.mockResolvedValue(result)
     renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)

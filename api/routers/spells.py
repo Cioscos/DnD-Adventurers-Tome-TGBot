@@ -783,7 +783,7 @@ async def roll_spell_damage(
         all_extra = [random.randint(1, group_sides) for _, count, group_sides in groups for _ in range(count)]
     second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
-    opts = use_options(session, char, "spell_damage", body, spell=spell)
+    opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level)
     if opts.maximize:  # Collera Distruttiva: valgono il massimo i dadi dei tipi che l'opzione tocca, mai quelli messi a mano
         def maximized(kind: str | None) -> bool:
             return opts.maximize_types is None or canonical_damage_type(kind) in opts.maximize_types

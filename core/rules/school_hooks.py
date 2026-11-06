@@ -21,7 +21,7 @@ def _ward(char: Any, row: Any, spec: FeatureSpec, spell: Any, school: str | None
         return
 
     def begin(hp: int, maximum: int) -> None:
-        begin_state(char, StateSpec(arcane_ward.KEY, ends_on=("rest_long",), data={"hp": hp, "max": maximum}), spec.key, spec.name["it"])
+        begin_state(char, StateSpec(arcane_ward.KEY, ends_on=("rest_long",), data={"hp": hp, "max": maximum, "locked": True}), spec.key, spec.name["it"])
     arcane_ward.on_abjuration(char, row, spell.level, begin)
 
 

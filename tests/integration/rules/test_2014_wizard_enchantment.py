@@ -41,7 +41,8 @@ async def test_hypnotic_gaze_charms_and_incapacitates_with_a_wisdom_save_against
     cid = await _wizard(client, 6, "enchantment", intelligence=16)  # competenza +3, Int +3
     await _use(client, cid, GAZE)
     effect = await _effect(client, cid, GAZE)
-    assert (effect["condition"], effect["save_ability"], effect["save_dc"]) == ("incapacitated", "wisdom", 8 + 3 + 3)
+    assert (effect["condition"], effect["save_ability"], effect["save_dc"]) == ("charmed", "wisdom", 8 + 3 + 3)
+    assert effect["also"] == ["incapacitated"]
     assert effect["ends_at"] == {"anchor": "source", "edge": "end", "count": 1}  # fino alla fine del prossimo turno del mago
     assert effect["extends"] is True and effect["immune_on_success"] is True and effect["note"] == "hypnotic_gaze"
 

@@ -94,6 +94,7 @@ class LastRollRefund(BaseModel):
 class TargetEffectRead(BaseModel):
     """L'effetto tenuto dal server alla conferma dell'opzione (``core.rules.types.TargetEffect``)."""
     condition: str | None = None
+    also: list[str] = []  # altre condizioni insieme a ``condition``, stesso TS e stessa durata
     save_ability: str | None = None
     save_dc: int | None = None
     rounds: int | None = None

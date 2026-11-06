@@ -162,6 +162,8 @@ def remove_state(char, key: str, *, by_player: bool = False) -> None:
     closed = [s for s in states if s["key"] == key]
     if by_player and any((s.get("data") or {}).get("internal") for s in closed):  # un segno interno non è del giocatore
         raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
+    if by_player and any((s.get("data") or {}).get("locked") for s in closed):  # il conto lo chiude solo il riposo lungo
+        raise _err(status.HTTP_409_CONFLICT, "state_locked")
     char.active_states = [s for s in states if s["key"] != key]
     settle_closed(char, closed)
     slot = closed[0].get("end_slot")
