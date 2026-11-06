@@ -478,6 +478,7 @@
     "senses": {
       "darkvision": "Darkvision",
       "blindsight": "Blindsight",
+      "blindsense": "Blindsense",
       "truesight": "Truesight",
       "tremorsense": "Tremorsense"
     },

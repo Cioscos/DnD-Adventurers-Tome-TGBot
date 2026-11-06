@@ -116,11 +116,12 @@ describe('HeroStatsSection', () => {
   })
 
   it('lists the sense a feature grants, and keeps the longer range of the same sense', () => {
-    renderHero(char({ computed: { senses: [{ type: 'blindsight', range_ft: 10 }] } } as Partial<CharacterFull>))
-    expect(screen.getByText(/character\.senses\.blindsight 10 ft/)).toBeInTheDocument()
-    renderHero(char({ computed: { senses: [{ type: 'blindsight', range_ft: 10 }] },
+    renderHero(char({ computed: { senses: [{ type: 'blindsense', range_ft: 10 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.senses\.blindsense 10 ft/)).toBeInTheDocument()
+    // la Percezione Cieca non si fonde con la vista cieca scritta a mano: sono due sensi
+    renderHero(char({ computed: { senses: [{ type: 'blindsense', range_ft: 10 }] },
       settings: { senses: [{ type: 'blindsight', range_ft: 30 }, { type: 'darkvision', range_ft: 60 }] } } as Partial<CharacterFull>))
-    expect(screen.getByText(/character\.senses\.blindsight 30 ft · character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.senses\.blindsight 30 ft · character\.senses\.darkvision 60 ft · character\.senses\.blindsense 10 ft/)).toBeInTheDocument()
   })
 
   it('shows the running long jump bonus only for who has the feature, even when it is zero', () => {

@@ -57,7 +57,8 @@ async def test_level_up_creates_choice_via_distribute(client):
     r = await client.patch(f"/characters/{ch['id']}/classes/distribute", json={"classes": [
         {"class_id": ch["classes"][0]["id"], "level": 4}, {"class_id": rogue, "level": 1}]})
     assert r.status_code == 200, r.text
-    assert [(c["class_key"], c["level"]) for c in r.json()["pending_choices"]] == [("Guerriero", 4)]
+    # il Ladro di 1° livello porta la Maestria (Task 27), non un ASI
+    assert sorted((c["class_key"], c["level"]) for c in r.json()["pending_choices"]) == [("Guerriero", 4), ("Ladro", 1)]
 
 
 async def test_fighter_has_extra_asi_at_6(client):
@@ -72,7 +73,9 @@ async def test_choices_offered_on_creation_and_add_class_above_level_1(client):
     assert [c["level"] for c in ch["pending_choices"]] == [4, 6, 8]
     r = await client.post(f"/characters/{ch['id']}/classes",
                           json={"class_name": "Ladro", "level": 8, "hit_die": 8})
-    assert [(c["class_key"], c["level"]) for c in r.json()["pending_choices"]][3:] == [("Ladro", 4), ("Ladro", 8)]
+    # ASI al 4 e all'8; la Maestria (Task 27) al 6°
+    assert sorted((c["class_key"], c["level"]) for c in r.json()["pending_choices"] if c["class_key"] == "Ladro") == [
+        ("Ladro", 4), ("Ladro", 6), ("Ladro", 8)]
 
 
 async def test_resolve_asi_caps_20(client):

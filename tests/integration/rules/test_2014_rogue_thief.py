@@ -186,3 +186,38 @@ async def test_going_back_a_turn_at_the_end_of_round_1_keeps_the_second_turn(cli
     assert r.status_code == 200, r.text
     live = r.json()
     assert live["round"] == 1 and _active(live)["name"].startswith("Goblin")
+
+
+# ---------------------------------------------------------------------------
+# Comandi del GM sulla riga del secondo turno: vanno al PG
+# ---------------------------------------------------------------------------
+
+def _rows(live: dict) -> tuple[dict, dict]:
+    extra = next(c for c in live["combatants"] if "Riflessi" in c["name"])
+    pc = next(c for c in live["combatants"] if c["kind"] == "pc" and c["character_id"])
+    return pc, extra
+
+
+async def test_a_condition_applied_on_the_second_turn_row_goes_to_the_character(client, test_session_factory):
+    sid, cid, live = await _reflexes_encounter(client, test_session_factory)
+    _pc, extra = _rows(live)
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{extra['id']}/conditions", json={"slug": "prone"})
+    assert r.status_code == 200, r.text
+    as_user(PLAYER_ID)
+    assert (await _full(client, cid))["conditions"].get("prone")
+    as_user(GM_ID)
+    r = await client.delete(f"/sessions/{sid}/encounter/combatants/{extra['id']}/conditions/prone")
+    assert r.status_code == 200, r.text
+    as_user(PLAYER_ID)
+    assert not (await _full(client, cid))["conditions"].get("prone")
+
+
+async def test_gm_edits_on_the_second_turn_row_are_applied_to_the_character_row(client, test_session_factory):
+    sid, _cid, live = await _reflexes_encounter(client, test_session_factory)
+    pc, extra = _rows(live)
+    as_user(GM_ID)
+    r = await client.patch(f"/sessions/{sid}/encounter/combatants/{extra['id']}", json={"initiative": 15})
+    assert r.status_code == 200, r.text
+    pc, extra = _rows(r.json())
+    assert pc["initiative"] == 15 and extra["initiative"] == 5  # la riga extra segue: meno 10

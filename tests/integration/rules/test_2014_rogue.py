@@ -347,18 +347,18 @@ async def test_reliable_talent_does_not_apply_to_a_pure_ability_check(client):
 async def test_blindsense_adds_the_sense_from_level_14_and_needs_hearing(client):
     assert not (await _full(client, await _rogue(client, 13)))["computed"]["senses"]
     cid = await _rogue(client, 14)
-    assert (await _full(client, cid))["computed"]["senses"] == [{"type": "blindsight", "range_ft": 10}]
+    assert (await _full(client, cid))["computed"]["senses"] == [{"type": "blindsense", "range_ft": 10}]
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"deafened": True}})
     assert not (await _full(client, cid))["computed"]["senses"]
 
 
-async def test_blindsense_does_not_replace_a_longer_sense_written_by_hand(client):
+async def test_blindsense_is_a_sense_of_its_own_and_does_not_merge_with_blindsight(client):
     cid = await _rogue(client, 14)
     r = await client.patch(f"/characters/{cid}", json={"settings": {"senses": [{"type": "blindsight", "range_ft": 30}]}})
     assert r.status_code == 200, r.text
     full = await _full(client, cid)
     assert full["settings"]["senses"] == [{"type": "blindsight", "range_ft": 30}]
-    assert full["computed"]["senses"] == [{"type": "blindsight", "range_ft": 10}]
+    assert full["computed"]["senses"] == [{"type": "blindsense", "range_ft": 10}]
 
 
 async def test_slippery_mind_gives_wisdom_saves_proficiency_from_level_15_and_not_twice(client):

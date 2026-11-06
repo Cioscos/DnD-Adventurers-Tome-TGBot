@@ -478,6 +478,7 @@
     "senses": {
       "darkvision": "Scurovisione",
       "blindsight": "Vista cieca",
+      "blindsense": "Percezione Cieca",
       "truesight": "Vista pura",
       "tremorsense": "Percezione tellurica"
     },

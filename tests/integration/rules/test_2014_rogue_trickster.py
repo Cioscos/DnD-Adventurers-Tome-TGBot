@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 
 from core.rules.spellcasting import known_limits
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration.rules.test_2014_barbarian_round1 import _in_encounter
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _roll_keys, _use
 from tests.integration.rules.test_2014_fighter_eldritch_knight import KNOWN, SLOTS, _cast, _spell
 from tests.integration.rules.test_2014_paladin import _new_turn, _turn
@@ -175,6 +177,21 @@ async def test_versatile_trickster_gives_advantage_on_attacks_until_the_end_of_t
     assert VERSATILE_ADV in await _roll_keys(client, cid, "attack", item_id=wid)  # vale per ogni attacco del turno
     await _new_turn(client, cid)
     assert VERSATILE_ADV not in await _roll_keys(client, cid, "attack", item_id=wid)
+
+
+async def test_versatile_trickster_ends_with_the_turn_of_whoever_acts_in_an_encounter(client, test_session_factory, monkeypatch):
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 13, "hit_die": 8,
+                                                              "subclass": "Mistificatore Arcano"})
+    assert r.status_code == 201, r.text
+    await _with_hand(client, cid)
+    wid = await _rapier(client, cid)
+    assert (await _use(client, cid, VERSATILE)).status_code == 200
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # finisce il turno del ladro
+    as_user(PLAYER_ID)
+    assert VERSATILE_ADV not in await _roll_keys(client, cid, "attack", item_id=wid)
+    assert "versatile_trickster" not in {s["key"] for s in (await _full(client, cid))["active_states"] or []}
 
 
 async def test_versatile_trickster_needs_mage_hand(client):

@@ -561,6 +561,7 @@ async def patch_combatant(
     comb = next((c for c in enc.combatants if c.id == combatant_id), None)
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+    comb = _primary_row(enc, comb)
 
     if body.conditions is not None and comb.kind == "pc":
         raise HTTPException(
@@ -584,6 +585,8 @@ async def patch_combatant(
     if body.initiative is not None:
         comb.initiative = body.initiative
         comb.initiative_die = None       # valore manuale: nessuna faccia da mostrare
+        for extra in [c for c in enc.combatants if comb.character_id and c.extra_turn_of == comb.character_id]:
+            extra.initiative = body.initiative - 10  # il secondo turno segue il PG
     if body.ac is not None:
         comb.ac = body.ac
     if body.max_hp is not None:
@@ -616,6 +619,13 @@ async def patch_combatant(
 # GM conditions (spec §3): PC -> sheet via apply_conditions, monster -> Combatant
 # ---------------------------------------------------------------------------
 
+def _primary_row(enc: Encounter, comb: Combatant) -> Combatant:
+    """Il secondo turno dei Riflessi da Furfante è una riga di comodo: i comandi del GM valgono per la riga del PG."""
+    if comb.extra_turn_of is None:
+        return comb
+    return next((c for c in enc.combatants if c.character_id == comb.extra_turn_of), comb)
+
+
 async def _gm_combatant(
     session_id: int, combatant_id: int, user_id: int, db: AsyncSession,
 ) -> tuple[GameSession, Encounter, Combatant]:
@@ -627,7 +637,7 @@ async def _gm_combatant(
     comb = next((c for c in enc.combatants if c.id == combatant_id), None)
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
-    return session, enc, comb
+    return session, enc, _primary_row(enc, comb)
 
 
 async def _pc_for_initiative(db: AsyncSession, comb: Combatant) -> Character | None:
