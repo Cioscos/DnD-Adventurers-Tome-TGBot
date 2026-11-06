@@ -16,6 +16,7 @@ from api.services.rules_turn import refuse_if_incapacitated, spend
 from api.services.session_allies import load_receiver as _load, seated_allies
 from core.db.models import Ability, Character
 from core.rules.catalog import active_features
+from core.rules.edition import character_edition
 from core.rules.modifiers import effective_hp_max
 from core.rules.uses import pool_key
 
@@ -56,6 +57,7 @@ class Info:
     pool: int
     uses_left: int | None
     targets: list[Target]
+    needs_confirm: bool  # solo il 2014 esclude costrutti e non morti: lo dichiara il giocatore
 
 
 def _usable(char: Character):
@@ -78,7 +80,8 @@ async def info(session: AsyncSession, char: Character) -> Info:
     if row is None or (row.max_uses is not None and (row.uses or 0) < 1):
         raise _refuse(status.HTTP_409_CONFLICT, "no_uses")
     people = [char, *[await _load(session, a.id) for a in await seated_allies(session, char)]]
-    return Info(pool, row.uses, [Target(p.id, p.name, min(half_cap(p), pool), p.id == char.id) for p in people if not p.is_dead])
+    return Info(pool, row.uses, [Target(p.id, p.name, min(half_cap(p), pool), p.id == char.id) for p in people if not p.is_dead],
+                needs_confirm=character_edition(char) == "2014")
 
 
 async def preserve_life(session: AsyncSession, char: Character, allocations: list[tuple[int, int]],
@@ -87,7 +90,7 @@ async def preserve_life(session: AsyncSession, char: Character, allocations: lis
     UPDATE condizionato, che prende la scrittura prima di rileggere i PF dei riceventi, così due richieste insieme o due
     chierici sullo stesso ricevente non superano né la riserva né la metà dei PF."""
     pool = pool_for(_usable(char)[1].level)
-    if not confirm_living:  # non su costrutti né non morti: lo dichiara il giocatore
+    if character_edition(char) == "2014" and not confirm_living:  # 2014: non su costrutti né non morti, lo dichiara il giocatore
         raise _refuse(status.HTTP_422_UNPROCESSABLE_ENTITY, "confirm_required")
     ids = [cid for cid, _ in allocations]
     if not allocations or len(set(ids)) != len(ids) or any(type(a) is not int or a < 1 for _, a in allocations):

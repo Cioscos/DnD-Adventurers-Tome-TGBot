@@ -42,6 +42,9 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   if (s.key === 'divine_intervention') {
     out.push(t(d.success ? 'character.turn.divine_success' : 'character.turn.divine_failure', { roll: d.roll ?? '-', level: d.level }))
   }
+  if (s.key === 'greater_divine_intervention' && Array.isArray(d.roll)) {
+    out.push(t('character.turn.wish_lock', { roll: d.roll.join('+'), n: d.rests_left }))
+  }
   return out
 }
 

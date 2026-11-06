@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import random
 import uuid
+from dataclasses import replace
 from typing import Any
 
 from core.rules.catalog._common import feature, state_on
@@ -179,7 +180,7 @@ def _di_effect(ctx: RuleContext, params: dict) -> None:
                                     data={"stolen_spell": tag, "free_cast": tag}), DIVINE_INTERVENTION, "Intervento Divino")
     if wish:
         dice = [random.randint(1, 4), random.randint(1, 4)]
-        begin_state(ctx.char, StateSpec(WISH_LOCK, ends_on=("manual",), data={"roll": dice, "rests_left": sum(dice)}),
+        begin_state(ctx.char, StateSpec(WISH_LOCK, ends_on=("manual",), data={"roll": dice, "rests_left": sum(dice), "locked": True}),
                     DIVINE_INTERVENTION, "Intervento Divino")
 
 
@@ -315,13 +316,25 @@ def _trickster_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
 def _duplicity_state(ctx: RuleContext, _params: dict) -> StateSpec:
     """1 minuto, senza Concentrazione: finisce se congedato (a mano) o se il chierico è Incapacitato."""
     others = [INVOKE_DUPLICITY] + ([f"{CK}.improved_duplicity"] if ctx.class_level >= 17 else [])
-    return StateSpec("invoke_duplicity", rounds=10, ends_on=("incapacitated", "manual"), data={"others": others})
+    data: dict[str, Any] = {"others": others}
+    if ctx.class_level >= 17:  # a qualunque fine dell'illusione resta l'offerta della cura (``settle_closed``)
+        data["on_close"] = {"key": ILLUSION_ENDED, "ends_on": ["manual", "rest_short", "rest_long"], "name": "Duplicato Migliorato"}
+    return StateSpec("invoke_duplicity", rounds=10, ends_on=("incapacitated", "manual"), data=data)
+
+
+ILLUSION_ENDED = "improved_duplicity_ready"  # l'illusione è finita e la cura di Duplicato Migliorato non è ancora stata presa
+
+
+def _illusion_offer_taken(ctx: RuleContext, _params: dict) -> None:
+    """La cura si prende una volta sola: usarla (con l'illusione in piedi o già finita) toglie anche l'offerta lasciata dalla fine."""
+    ctx.char.active_states = [s for s in ctx.char.active_states or [] if s.get("key") != ILLUSION_ENDED]
 
 
 _ILLUSION_HEAL = {"self": {"it": "Tu", "en": "You"},
                   "ally": {"it": "Una creatura entro 1,5 m dall'illusione", "en": "A creature within 5 ft of the illusion"}}
 IMPROVED_DUPLICITY_USE = OnUse(
-    cost=0, available=lambda c: state_on(c, "invoke_duplicity"), ends_state="invoke_duplicity",
+    cost=0, available=lambda c: state_on(c, "invoke_duplicity") or state_on(c, ILLUSION_ENDED), ends_state="invoke_duplicity",
+    effect=_illusion_offer_taken,
     heal=lambda c, _r: c.class_level, heal_when=lambda _c, p: p.get("mode") == "self", ally_modes=("ally",),
     heal_ally_when=lambda _c, p: p.get("mode") == "ally",
     choices=(UseChoice("mode", {"it": "Chi recupera i PF", "en": "Who regains the HP"}, lambda _c: list(_ILLUSION_HEAL),
@@ -368,6 +381,13 @@ GUIDED_STRIKE_ALLY = OnUse(
     message=lambda _c, _p: {"it": "Una creatura entro 9 m ha mancato: somma 10 al suo tiro per colpire (puoi farlo dopo aver visto l'esito).",
                             "en": "A creature within 30 ft missed: add 10 to its attack roll (you can do it after seeing the result)."})
 
+# 2014: «tu e il duplicato siete entro 1,5 m dal bersaglio»; dal 17° basta il bersaglio accanto all'illusione
+_ADVANTAGE_BASE = replace(DUPLICITY_ADVANTAGE, available=lambda c: state_on(c, "invoke_duplicity") and c.class_level < 17)
+_ADVANTAGE_17 = replace(
+    DUPLICITY_ADVANTAGE, key=f"{CK}.duplicity_advantage_improved", available=lambda c: state_on(c, "invoke_duplicity") and c.class_level >= 17,
+    label={"it": "Duplicato Migliorato: il bersaglio è entro 1,5 m dall'illusione?",
+           "en": "Improved Duplicity: is the target within 5 ft of the illusion?"})
+
 DOMAIN_FEATURES = (
     # Dominio della Vita
     *_domain_spells("life", "Incantesimi del Dominio della Vita / Life Domain Spells (Vita 3, pag. 73)",
@@ -412,8 +432,8 @@ DOMAIN_FEATURES = (
              "Uses also return on a short rest; each use gives the attack's target 2d6 + Wisdom temporary HP."),
             subclass="light", passive=True),
     feature("corona_of_light", CK, ED, 17, "Corona di Luce / Corona of Light (Luce 17, pag. 75)", ("Corona di Luce", "Corona of Light"),
-            ("Azione Magia: 1 minuto di luce solare (18 m, fioca altri 9 m); i nemici nella luce intensa hanno svantaggio ai TS. Usi pari a Saggezza.",
-             "Magic action: 1 minute of sunlight (60 ft, dim 30 ft more); enemies in the bright light have disadvantage on saves. Uses equal Wisdom."),
+            ("Azione Magia: 1 minuto di luce solare (18 m, fioca altri 9 m); i nemici nella luce intensa hanno svantaggio ai TS contro Fulgore dell'Alba e incantesimi con danni da fuoco o radiosi. Usi: Saggezza.",
+             "Magic action: 1 minute of sunlight (60 ft, dim 30 ft more); enemies in bright light have disadvantage on saves against Radiance of the Dawn and fire or radiant spells. Uses equal Wisdom."),
             "action", subclass="light", uses=Uses(ability="wisdom", minimum=1), restoration="long_rest", on_use=CORONA_USE),
 
     # Dominio dell'Inganno
@@ -429,7 +449,7 @@ DOMAIN_FEATURES = (
     feature("invoke_duplicity", CK, ED, 3, "Invocare Duplicato / Invoke Duplicity (Inganno 3, pag. 75)", ("Invocare Duplicato", "Invoke Duplicity"),
             ("Azione bonus, un uso: illusione di te per 1 minuto, congedabile; vantaggio agli attacchi se siete entrambi entro 1,5 m dal bersaglio.",
              "Bonus action, one use: an illusion of you for 1 minute, dismissable; advantage on attacks if you are both within 5 ft of the target."),
-            "bonus_action", subclass="trickery", roll_options=(DUPLICITY_ADVANTAGE,),
+            "bonus_action", subclass="trickery", roll_options=(_ADVANTAGE_BASE, _ADVANTAGE_17),
             on_use=OnUse(slot="bonus", spends=POOL, state=_duplicity_state, available=lambda c: not state_on(c, "invoke_duplicity"))),
     feature("invoke_duplicity_move", CK, ED, 3, "Invocare Duplicato / Invoke Duplicity (Inganno 3, pag. 75)",
             ("Muovere il Duplicato", "Move the Duplicate"),

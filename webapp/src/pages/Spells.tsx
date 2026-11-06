@@ -401,7 +401,7 @@ export default function Spells() {
                 : pick.spell_pick.exact
                   ? t('character.spells.pick_exact_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
                   : pick.spell_pick.max_level === 0
-                    ? t(pick.spell_pick.list ? 'character.spells.pick_cantrip_banner' : 'character.spells.pick_cantrip_any_banner', { count: pick.count ?? 0 })
+                    ? t(pick.spell_pick.list ? 'character.spells.pick_cantrip_banner' : 'character.spells.pick_cantrip_any_banner', { count: pick.count ?? 0, list: t(`dnd.classes.${pick.spell_pick.list}`) })
                     : t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
             </p>
             {pick.spell_pick.free && (

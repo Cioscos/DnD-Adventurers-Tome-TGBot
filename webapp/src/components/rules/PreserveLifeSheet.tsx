@@ -25,6 +25,7 @@ export default function PreserveLifeSheet({ char, onClose }: { char: CharacterFu
   const rows = (info.data?.targets ?? []).map((x) => ({ ...x, name: x.self ? t('character.turn.preserve_self') : x.name }))
   const cap = (r: { cap: number }) => r.cap
   const value = (id: number) => Math.max(0, parseInt(amounts[id] ?? '0', 10) || 0)
+  const needsConfirm = info.data?.needs_confirm ?? true  // il server lo impone solo al 2014; finché non risponde si chiede
   const total = rows.reduce((n, r) => n + value(r.id), 0)
   const over = total > pool || rows.some((r) => value(r.id) > cap(r))
 
@@ -59,8 +60,8 @@ export default function PreserveLifeSheet({ char, onClose }: { char: CharacterFu
           </div>
         ))}
         <p className="text-xs text-dnd-text-muted font-body">{t('character.turn.preserve_others', { n: Math.max(0, pool - total) })}</p>
-        <SwitchToggle label={t('character.turn.preserve_living')} checked={living} onChange={setLiving} />
-        <Button variant="primary" disabled={total < 1 || over || !living} loading={go.isPending} onClick={() => go.mutate()}>
+        {needsConfirm && <SwitchToggle label={t('character.turn.preserve_living')} checked={living} onChange={setLiving} />}
+        <Button variant="primary" disabled={total < 1 || over || (needsConfirm && !living)} loading={go.isPending} onClick={() => go.mutate()}>
           {t('character.turn.preserve_go')}
         </Button>
       </div>

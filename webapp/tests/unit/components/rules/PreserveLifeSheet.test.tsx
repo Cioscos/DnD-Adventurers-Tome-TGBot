@@ -21,7 +21,7 @@ vi.mock('react-i18next', async (orig) => {
 })
 
 const char = { id: 7 } as unknown as CharacterFull
-const info = (targets: { id: number; name: string; cap: number; self: boolean }[]) => ({ pool: 25, uses_left: 1, targets })
+const info = (targets: { id: number; name: string; cap: number; self: boolean }[], needs_confirm = true) => ({ pool: 25, uses_left: 1, targets, needs_confirm })
 
 describe('PreserveLifeSheet', () => {
   it('sends the allocations only after the player confirms the targets are living', async () => {
@@ -37,6 +37,19 @@ describe('PreserveLifeSheet', () => {
     expect(go).toBeEnabled()
     await userEvent.click(go)
     await waitFor(() => expect(preserveLife).toHaveBeenCalledWith(7, { allocations: [{ character_id: 9, amount: 12 }], confirm_living: true }))
+  })
+
+  it('asks no confirmation when the server does not need one (2024 has no construct or undead exclusion)', async () => {
+    preserveLifeInfo.mockResolvedValue(info([{ id: 7, name: 'Tu', cap: 10, self: true }], false))
+    preserveLife.mockResolvedValue({ pool: 25, spent: 5, healed: [{ character_id: 7, name: 'Tu', healed: 5 }] })
+    renderWithProviders(<PreserveLifeSheet char={char} onClose={() => {}} />)
+    await waitFor(() => expect(screen.getAllByPlaceholderText('0')).toHaveLength(1))
+    await userEvent.type(screen.getAllByPlaceholderText('0')[0], '5')
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    const go = screen.getByText('character.turn.preserve_go').closest('button') as HTMLButtonElement
+    expect(go).toBeEnabled()
+    await userEvent.click(go)
+    await waitFor(() => expect(preserveLife).toHaveBeenCalledWith(7, { allocations: [{ character_id: 7, amount: 5 }], confirm_living: false }))
   })
 
   it('refuses to send more than the pool or more than half of the maximum', async () => {

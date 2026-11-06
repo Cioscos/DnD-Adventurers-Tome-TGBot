@@ -74,7 +74,8 @@ async def test_domain_spells_arrive_at_3_5_7_and_9_outside_the_prepared_cap(clie
 async def test_every_domain_title_of_the_mapping_has_its_row(domain):
     titles = {f.source_title for f in features_for("2024", "cleric") if f.subclass == domain}
     assert any(t.startswith("Incantesimi del Dominio") for t in titles)
-    assert len(titles) >= 5 or domain == "trickery"
+    # la riga degli incantesimi e i quattro privilegi del dominio (Invocare Duplicato e Muovere il Duplicato dividono il titolo)
+    assert len(titles) == 5, titles
 
 
 # ---------------------------------------------------------------------------
@@ -337,8 +338,8 @@ async def test_guided_strike_for_another_creature_is_a_reaction_that_spends_the_
     assert r.json()["message"]["it"]
 
 
-@pytest.mark.parametrize("spell,concentration", [("shield-of-faith", True), ("spiritual-weapon", False)])
-async def test_war_gods_blessing_casts_the_spell_free_without_concentration_for_a_minute(client, spell, concentration):
+@pytest.mark.parametrize("spell", ["shield-of-faith", "spiritual-weapon"])
+async def test_war_gods_blessing_casts_the_spell_free_without_concentration_for_a_minute(client, spell):
     cid = await _dom(client, 6, "war")
     r = await _use(client, cid, "cleric.war_gods_blessing", params={"spell": spell})
     assert r.status_code == 200, r.text
@@ -407,3 +408,136 @@ async def test_the_2014_life_cleric_keeps_its_spent_pool_when_it_becomes_2024(cl
     keys = await _keys_of(client, cid)
     assert {"cleric.preserve_life", "cleric.disciple_of_life", POOL} <= keys
     assert "cleric.life_bonus_proficiency" not in keys  # riga solo 2014 (Competenza Bonus)
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1
+# ---------------------------------------------------------------------------
+
+async def _illusion_ready(client, cid) -> bool:
+    return any(s["key"] == "improved_duplicity_ready" for s in await _states(client, cid))
+
+
+async def _heal_from_ended_illusion(client, cid):
+    assert not [s for s in await _states(client, cid) if s["key"] == "invoke_duplicity"]
+    r = await _use(client, cid, "cleric.improved_duplicity", params={"mode": "self"})
+    assert r.status_code == 200, r.text
+    assert r.json()["healed"] == 17
+    assert not await _illusion_ready(client, cid)
+    assert (await _use(client, cid, "cleric.improved_duplicity", params={"mode": "self"})).status_code == 409  # una volta sola
+
+
+async def _illusion(client):
+    cid = await _dom(client, 17, "trickery")
+    await _hp(client, cid, 10, 200)
+    assert (await _use(client, cid, "cleric.invoke_duplicity")).status_code == 200
+    return cid
+
+
+async def test_the_healing_of_the_ended_illusion_is_offered_when_the_player_ends_the_state(client):
+    cid = await _illusion(client)
+    assert (await client.delete(f"/characters/{cid}/active-states/invoke_duplicity")).status_code == 200
+    await _heal_from_ended_illusion(client, cid)
+
+
+async def test_the_healing_of_the_ended_illusion_is_offered_when_the_ten_rounds_run_out(client):
+    cid = await _illusion(client)
+    for _ in range(10):
+        assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+    await _heal_from_ended_illusion(client, cid)
+
+
+async def test_the_healing_of_the_ended_illusion_is_offered_when_the_cleric_is_incapacitated(client):
+    cid = await _illusion(client)
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"incapacitated": True}})
+    assert r.status_code == 200, r.text
+    await _heal_from_ended_illusion(client, cid)
+
+
+async def test_using_the_healing_while_the_illusion_lasts_leaves_no_second_offer(client):
+    cid = await _illusion(client)
+    assert (await _use(client, cid, "cleric.improved_duplicity", params={"mode": "self"})).status_code == 200
+    assert not await _illusion_ready(client, cid)
+
+
+async def test_the_unused_offer_for_the_ended_illusion_goes_away_with_a_long_rest(client):
+    cid = await _illusion(client)
+    await client.delete(f"/characters/{cid}/active-states/invoke_duplicity")
+    assert await _illusion_ready(client, cid)
+    await _rest(client, cid, "long")
+    assert not await _illusion_ready(client, cid)
+
+
+async def _advantage_label(client, level) -> str:
+    cid = await _dom(client, level, "trickery", strength=14)
+    sword = await _weapon(client, cid, "Mazza", damage_dice="1d6")
+    await _use(client, cid, "cleric.invoke_duplicity")
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": sword})
+    found = [o for o in r.json() if o["key"].startswith("cleric.duplicity_advantage")]
+    assert len(found) == 1, found  # una sola conferma per volta
+    return found[0]["label"]
+
+
+async def test_the_duplicity_advantage_asks_about_the_target_next_to_the_illusion_from_level_17(client):
+    assert "tu e il duplicato" in await _advantage_label(client, 6)
+    improved = await _advantage_label(client, 17)
+    assert "dall'illusione" in improved and "tu e il duplicato" not in improved
+
+
+def test_the_corona_of_light_text_limits_the_disadvantage_to_dawn_radiance_and_fire_or_radiant_spells():
+    spec = next(f for f in features_for("2024", "cleric") if f.key == "cleric.corona_of_light")
+    for lang, words in (("it", ("Fulgore dell'Alba", "fuoco", "radios")), ("en", ("Radiance of the Dawn", "fire", "radiant"))):
+        assert all(w in spec.summary[lang] for w in words), spec.summary[lang]
+        assert len(spec.summary[lang]) <= 200
+
+
+async def test_a_new_use_of_the_trickster_blessing_replaces_the_previous_one_whoever_it_was_on(client, test_session_factory):
+    sid, cleric, hero = await _table(client, test_session_factory, 3, "trickery")
+
+    async def keys(cid):
+        return sorted(s["key"] for s in await _states(client, cid) if s["key"].startswith("trickster_blessing") or s["key"] == "trickster:advantage")
+
+    async def bless(**params):
+        await client.post(f"/characters/{cleric}/turn/new")
+        r = await _use(client, cleric, "cleric.blessing_of_the_trickster", params=params)
+        assert r.status_code == 200, r.text
+
+    await bless(self=True)
+    await bless()  # una creatura del GM: resta la nota, il vantaggio su di te cade
+    assert await keys(cleric) == ["trickster_blessing_note"]
+    await bless(self=True)
+    assert await keys(cleric) == ["trickster_blessing"]
+    await bless(target_character_id=hero)
+    as_user(PLAYER_ID)
+    assert await keys(hero) == ["trickster_blessing"]
+    as_user(GM_ID)
+    assert await keys(cleric) == []
+    await bless()  # dopo un alleato: cade anche il suo
+    assert await keys(cleric) == ["trickster_blessing_note"]
+    as_user(PLAYER_ID)
+    assert await keys(hero) == []
+    as_user(GM_ID)
+
+
+async def _life_cleric(client, edition):
+    cid = await _dom(client, 5, "life")
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
+    await _hp(client, cid, 10)
+    return cid
+
+
+async def test_preserve_life_2024_needs_no_confirmation_about_constructs_or_undead(client):
+    cid = await _life_cleric(client, "2024")
+    info = (await client.get(f"/characters/{cid}/preserve-life")).json()
+    assert info["needs_confirm"] is False
+    r = await client.post(f"/characters/{cid}/preserve-life", json={"allocations": [{"character_id": cid, "amount": 5}]})
+    assert r.status_code == 200, r.text
+
+
+async def test_preserve_life_2014_still_asks_to_confirm_that_nobody_is_a_construct_or_undead(client):
+    cid = await _life_cleric(client, "2014")
+    assert (await client.get(f"/characters/{cid}/preserve-life")).json()["needs_confirm"] is True
+    body = {"allocations": [{"character_id": cid, "amount": 5}]}
+    refused = await client.post(f"/characters/{cid}/preserve-life", json=body)
+    assert refused.status_code == 422 and refused.json()["detail"]["code"] == "confirm_required"
+    assert (await client.post(f"/characters/{cid}/preserve-life", json={**body, "confirm_living": True})).status_code == 200

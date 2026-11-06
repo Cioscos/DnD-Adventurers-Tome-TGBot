@@ -401,6 +401,7 @@ class PreserveLifeInfo(BaseModel):
     pool: int
     uses_left: int | None
     targets: list[PreserveTarget]
+    needs_confirm: bool
 
 
 @turn_router.get("/{char_id}/preserve-life", response_model=PreserveLifeInfo)
@@ -412,7 +413,8 @@ async def preserve_life_info(
     from dataclasses import asdict
     from api.services.preserve_life import info
     res = await info(db, await _get_owned_full(char_id, user_id, db))
-    return PreserveLifeInfo(pool=res.pool, uses_left=res.uses_left, targets=[asdict(t) for t in res.targets])
+    return PreserveLifeInfo(pool=res.pool, uses_left=res.uses_left, targets=[asdict(t) for t in res.targets],
+                            needs_confirm=res.needs_confirm)
 
 
 class SurgeBody(BaseModel):

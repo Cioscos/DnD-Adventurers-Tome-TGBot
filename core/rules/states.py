@@ -74,6 +74,10 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     incantesimi che avevano portato."""
     charge_exhaustion(char, closed)
     drop_stolen_spells(char, closed)
+    for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
+        offer = (s.get("data") or {}).get("on_close")
+        if offer:
+            begin_state(char, StateSpec(offer["key"], ends_on=tuple(offer["ends_on"])), s["feature_key"], offer.get("name"))
     gone = {s["condition"] for s in closed if s.get("condition") and not s.get("condition_was_on")}
     gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
     if gone:

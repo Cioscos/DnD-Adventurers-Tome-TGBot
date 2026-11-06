@@ -374,7 +374,7 @@ async def test_wish_blocks_divine_intervention_for_2d4_long_rests_and_counts_the
     r = await _use(client, cid, DI, params={"wish": True})
     assert r.status_code == 200, r.text
     lock = next(s for s in await _states(client, cid) if s["key"] == "greater_divine_intervention")
-    assert lock["data"] == {"roll": [1, 1], "rests_left": 2}
+    assert lock["data"] == {"roll": [1, 1], "rests_left": 2, "locked": True}
     spell = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["level"] == 9)
     assert spell["name"] == "Desiderio"
     for expected_locked in (True, False):
@@ -423,3 +423,18 @@ async def test_a_2014_domain_without_a_2024_twin_keeps_its_text_and_its_rows(cli
     assert full["classes"][0]["subclass"] == "Dominio della Conoscenza"
     # sottoclasse non riconosciuta nel 2024: nessuna perdita, le righe restano (feature_sync) e il Conoscenza non si trasforma
     assert "cleric.knowledge_spells" in await _keys_of(client, cid)
+
+
+async def test_the_wish_lock_shows_roll_and_count_and_the_player_cannot_end_it(client, monkeypatch):
+    monkeypatch.setattr("core.rules.catalog.y2024.cleric.random.randint", lambda a, b: 2)
+    cid = await _cleric24(client, 20, wisdom=16)
+    assert (await _use(client, cid, DI, params={"wish": True})).status_code == 200
+    lock = next(s for s in await _states(client, cid) if s["key"] == "greater_divine_intervention")
+    assert lock["data"]["locked"] is True and lock["data"]["roll"] == [2, 2]
+    r = await client.delete(f"/characters/{cid}/active-states/greater_divine_intervention")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "state_locked"
+    r = await _use(client, cid, DI, params={"spell": "Cura ferite", "spell_level": "1"})
+    assert r.status_code == 409  # ancora bloccato
+    await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})
+    lock = next(s for s in await _states(client, cid) if s["key"] == "greater_divine_intervention")
+    assert lock["data"]["rests_left"] == 3  # il riposo lungo lo scala anche se è chiuso a mano

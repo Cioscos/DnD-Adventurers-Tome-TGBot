@@ -17,7 +17,7 @@ from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
-from core.rules.states import begin_state, settle_closed
+from core.rules.states import begin_state, has_state, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
 
@@ -214,9 +214,9 @@ async def _swap_exclusive_target(session: AsyncSession, char, feature_key: str, 
         old = await session.get(Character, previous)
         if old is not None:
             old.active_states = [s for s in old.active_states or [] if s.get("feature_key") != feature_key]
+    # ciò che lo stesso privilegio aveva lasciato su chi lo usa cade: lo stato nuovo sta su un alleato o lo rimpiazza (nota, su di sé)
+    char.active_states = [s for s in char.active_states or [] if s.get("feature_key") != feature_key]
     if target is not None:
-        # lo stato ora sta sull'alleato: la nota che lo stesso privilegio aveva lasciato su chi lo usa cade
-        char.active_states = [s for s in char.active_states or [] if s.get("feature_key") != feature_key]
         held[feature_key] = target.id
     else:
         held.pop(feature_key, None)
@@ -421,7 +421,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.clears_condition and (params or {}).get(on_use.clears_condition) is not None:  # Mente Lucida: la condizione scelta cade
         from api.services.effects import apply_conditions  # import locale: effects richiama on_conditions
         await apply_conditions(session, char, {params[on_use.clears_condition]: False})
-    if on_use.ends_state:
+    if on_use.ends_state and has_state(char, on_use.ends_state):  # già finito (Duplicato Migliorato dopo la fine): niente da chiudere
         remove_state(char, on_use.ends_state)
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))

@@ -55,6 +55,15 @@ describe('ActiveStatesBar', () => {
     expect(screen.queryByText('character.turn.end_state')).not.toBeInTheDocument()
   })
 
+  it('shows the Wish lock roll and the rests left, and does not offer to end it', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'greater_divine_intervention', feature_key: 'cleric.divine_intervention', rounds_left: null, ends_on: ['manual'], name: 'Intervento Divino',
+        data: { roll: [2, 3], rests_left: 4, locked: true } },
+    ], [])} />)
+    expect(screen.getByText(/character\.turn\.wish_lock/)).toBeInTheDocument()
+    expect(screen.queryByText('character.turn.end_state')).not.toBeInTheDocument()
+  })
+
   it('lists under a state the features that act on others, with their text', () => {
     renderWithProviders(<ActiveStatesBar char={char(
       [{ ...rage, data: { others: ['barbarian.totem_wolf', 'barbarian.gone'] } }],

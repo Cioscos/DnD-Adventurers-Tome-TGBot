@@ -37,7 +37,7 @@ vi.mock('@/api/client', () => ({
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { list?: string }) => (o?.list ? `${k}[${o.list}]` : k), i18n: { language: 'it' } }) }
 })
 
 // react-router-dom: pin the id; keep the real useSearchParams (MemoryRouter provides it).
@@ -255,8 +255,16 @@ describe('Spells page', () => {
         spell_pick: { free: true, max_level: 0, list: 'druid' } }] })
       renderPick()
       const banner = await screen.findByTestId('spell-pick-banner')
-      expect(banner).toHaveTextContent('character.spells.pick_cantrip_banner')
+      expect(banner).toHaveTextContent('character.spells.pick_cantrip_banner[dnd.classes.druid]')
       expect(banner).not.toHaveTextContent('character.spells.pick_banner')
+    })
+
+    it('a cleric Thaumaturge cantrip pick names the cleric list, not the druid one', async () => {
+      const base = pickChar(true)
+      getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'thaumaturge_cantrip', count: 1,
+        spell_pick: { free: true, max_level: 0, list: 'cleric' } }] })
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_cantrip_banner[dnd.classes.cleric]')
     })
 
     it('a cantrip pick from any list (Pact of the Tome), a ritual pick and an exact-level pick (Arcanum) say what they ask', async () => {
