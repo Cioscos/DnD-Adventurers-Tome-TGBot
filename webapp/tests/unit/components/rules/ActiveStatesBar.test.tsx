@@ -154,6 +154,7 @@ describe('ActiveStatesBar, rage extension', () => {
     renderWithProviders(<ActiveStatesBar char={char([{ ...rage, data: {} }], [extendable])} />)
     await userEvent.click(screen.getByText('character.turn.extend_rage_save'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage', 1, { extend_via: 'save' }))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.extend_rage_done'))
   })
 
   it('offers nothing when the server does not list the extension choice (level 15 or another class)', () => {

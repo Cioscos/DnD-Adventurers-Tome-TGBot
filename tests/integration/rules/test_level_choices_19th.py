@@ -16,7 +16,7 @@ async def _wipe_choices(factory, cid: int) -> None:
     async with factory() as s:
         char = await s.get(Character, cid)
         char.pending_choices = []
-        char.settings = {k: v for k, v in (char.settings or {}).items() if k != "resolved_choices"}
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k != "resolved_choice_levels"}
         await s.commit()
 
 

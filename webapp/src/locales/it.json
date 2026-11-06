@@ -1435,6 +1435,7 @@
       },
       "end_state": "Termina",
       "extend_rage_save": "Prolunga: TS imposto",
+      "extend_rage_done": "Ira prolungata fino alla fine del turno seguente.",
       "state_generic": "Effetto attivo",
       "amount_label": "Usi da spendere",
       "amount_less": "Un uso in meno",

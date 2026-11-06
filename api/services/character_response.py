@@ -117,10 +117,7 @@ async def build_character_response(
         # parametri (il livello dello slot) che qui non ci sono: non sono un uso libero.
         if on_use and on_use.cost_by and owner is not None and any(s.get("feature_key") == ab.feature_key for s in char.active_states or []):
             free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
-            try:
-                ab.free_use = on_use.cost_by(free_ctx, {}) == 0 and (on_use.available is None or bool(on_use.available(free_ctx)))
-            except KeyError:
-                ab.free_use = False
+            ab.free_use = on_use.cost_by(free_ctx, {}) == 0 and (on_use.available is None or bool(on_use.available(free_ctx)))
         if on_use and on_use.spends:
             held = pool_key(char, on_use.spends)
             pool = next((a for a in response.abilities if a.feature_key == held), None)

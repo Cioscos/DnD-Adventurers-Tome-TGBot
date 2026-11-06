@@ -769,7 +769,7 @@ FEATURES = (
             on_use=OnUse(slot="reaction", spends=RAGE, available=_in_form,
                           # R42/R46, come l'Imposizione delle Mani: la cura va a un partecipante della serata (verificato dal server)
                           heal=lambda c, _r: c.class_level, heal_when=lambda _c, _p: False,
-                          heal_ally_when=lambda _c, _p: True, ally_modes=("other",),
+                          heal_ally_when=lambda _c, _p: True, heal_ally_to=True, ally_modes=("other",),
                           notes=lambda _c, p: ["revivification_other"] if p.get("target_character_id") is None else [],
                           choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: ["other"],
                                              lambda _k: _both("Un'altra creatura", "Another creature")),))),

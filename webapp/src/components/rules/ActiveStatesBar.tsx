@@ -77,6 +77,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
+      toast.info(t('character.turn.extend_rage_done'))
     },
     onError: () => notifyMutationError(),
   })

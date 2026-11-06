@@ -376,6 +376,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             result.given = healed_ally
         else:
             from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
+            if on_use.heal_ally_to:
+                healed_ally = max(0, healed_ally - target.current_hit_points)
             got = (await apply_heal(session, target, healed_ally))["healed"]
             result.received = {"name": target.name, "healed": got}
     if on_use.clears:

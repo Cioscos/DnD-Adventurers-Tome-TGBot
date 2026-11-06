@@ -48,6 +48,25 @@ async def test_revivification_brings_a_seated_ally_up_to_the_barbarian_level_and
     assert any(e.event_type == "hp_change" and "+14" in e.description for e in events)
 
 
+async def test_revivification_brings_the_hit_points_to_the_level_it_does_not_add_to_them(client, test_session_factory):
+    cid, hero = await _table(client, test_session_factory)
+    async with test_session_factory() as s:
+        (await s.get(Character, hero)).current_hit_points = 7
+        await s.commit()
+    r = await _revive(client, cid, hero)
+    assert r.json()["received"] == {"name": "Eroe", "healed": 7}  # 7 -> 14, non 21 (M1)
+    assert (await _hero(test_session_factory, hero)).current_hit_points == 14
+
+
+async def test_revivification_never_lowers_an_ally_already_above_the_level(client, test_session_factory):
+    cid, hero = await _table(client, test_session_factory)
+    async with test_session_factory() as s:
+        (await s.get(Character, hero)).current_hit_points = 30
+        await s.commit()
+    r = await _revive(client, cid, hero)
+    assert r.json()["received"]["healed"] == 0 and (await _hero(test_session_factory, hero)).current_hit_points == 30
+
+
 async def test_revivification_refuses_someone_not_at_the_table_and_spends_nothing(client, test_session_factory):
     cid, hero = await _table(client, test_session_factory)
     async with test_session_factory() as s:
