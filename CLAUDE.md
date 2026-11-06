@@ -126,6 +126,12 @@ A partial test suite **and** a frontend linter are configured. Coverage is curre
 - **Frontend lint (ESLint)** — `cd webapp && npm run lint` (`eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0`).
 - No backend linter/formatter (ruff/black/mypy) is configured.
 
+## Code Navigation (LSP)
+
+Language servers are configured for this project: Pyright for `.py` and typescript-language-server for `.ts`/`.tsx`/`.js`/`.jsx`. Use the `LSP` tool for code intelligence instead of grep when the question is about symbols: `goToDefinition`, `findReferences` (every caller before changing a function), `hover` (types and signatures), `documentSymbol`, `workspaceSymbol`, `incomingCalls`/`outgoingCalls`. Use grep for text, strings, i18n keys and config. Subagents should do the same.
+
+Local setup (Windows): the plugins are `pyright-node-lsp@local-lsp` and `typescript-node-lsp@local-lsp` (local marketplace in `~/.claude-personal/local-lsp`), which start the servers through `node` because Claude Code cannot launch npm's `.cmd` shims. The official `pyright-lsp` and `typescript-lsp` are disabled for that reason. The TypeScript server uses its own TypeScript 5.9 copy in `local-lsp/tsserver`, since the global TypeScript 7 has no `tsserver.js`. If the `LSP` tool says "not found or is in an unsafe location", check that these plugins are enabled and run `/reload-plugins`.
+
 ## Architecture Overview
 
 Four-package system:
