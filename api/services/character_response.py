@@ -170,6 +170,7 @@ async def build_character_response(
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
         resistances=sorted({*(stored.get("resistances") or []), *rule_damage.resistances}),
         immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),
+        vulnerabilities=sorted({*(stored.get("vulnerabilities") or []), *rule_damage.vulnerabilities}),
         incapacitated=is_incapacitated(char),
         surprised=surprised_turn(char),
         surprise_exit_features=surprise_exit_features(char),

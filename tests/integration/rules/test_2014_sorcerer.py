@@ -239,3 +239,68 @@ async def test_converting_is_a_bonus_action(client):
 
 def test_every_row_of_the_catalog_is_for_the_2014_sorcerer():
     assert features_for("2014", "sorcerer") and all(f.edition == "2014" and f.class_key == "sorcerer" for f in features_for("2014", "sorcerer"))
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1: spesa atomica (I6), chiavi degli slot creati (M3), PF della Resilienza Draconica (I5)
+# ---------------------------------------------------------------------------
+
+async def test_two_simultaneous_creations_pay_for_one_slot_only(client):
+    import asyncio
+    cid = await _sorcerer(client, 10)
+    await _set_points(client, cid, 5)
+    before = (await _slots(client, cid))[3][0]
+    first, second = await asyncio.gather(*(_use(client, cid, CREATE, params={"slot_level": "3"}) for _ in range(2)))
+    assert sorted((first.status_code, second.status_code)) == [200, 409], (first.text, second.text)
+    assert await _points(client, cid) == 0 and (await _slots(client, cid))[3][0] == before + 1
+
+
+@pytest.mark.parametrize("raw,kept", [({"12": 1}, {}), ({"23": 1, "2345": 2}, {}), ({"3": 1, "6": 1, "0": 1, "": 1}, {"3": 1}),
+                                      ({"1": 1, "5": 2}, {"1": 1, "5": 2})])
+def test_created_slot_keys_are_levels_one_to_five_only(raw, kept):
+    from core.rules.created_slots import clean_created_slots
+    assert clean_created_slots(raw) == kept
+
+
+async def test_a_new_draconic_sorcerer_starts_at_the_effective_maximum(client):
+    for level in (1, 18):
+        cid = await _sorcerer(client, level, "draconic")
+        full = await _full(client, cid)
+        assert full["current_hit_points"] == full["computed"]["hp_max_effective"] > full["hit_points"]
+
+
+async def test_a_draconic_sorcerer_at_full_health_stays_full_when_levelling_up(client):
+    cid = await _sorcerer(client, 1, "draconic")
+    klass = (await _full(client, cid))["classes"][0]
+    for level in (2, 3, 4):
+        r = await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": level})
+        assert r.status_code == 200, r.text
+        full = await _full(client, cid)
+        assert full["current_hit_points"] == full["computed"]["hp_max_effective"], level
+
+
+async def test_a_wounded_draconic_sorcerer_keeps_the_same_proportion_when_levelling_up(client):
+    cid = await _sorcerer(client, 4, "draconic")
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 10})
+    klass = (await _full(client, cid))["classes"][0]
+    await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 5})
+    full = await _full(client, cid)
+    assert 0 < full["current_hit_points"] < full["computed"]["hp_max_effective"]
+
+
+async def test_the_first_catalog_sync_fills_a_draconic_sorcerer_who_was_at_full_health_and_leaves_a_wounded_one(client, test_session_factory):
+    from core.db.models import Character
+    from core.rules.feature_sync import RETROFIT_DONE
+    from sqlalchemy import select
+    healthy, wounded = await _sorcerer(client, 5, "draconic"), await _sorcerer(client, 5, "draconic")
+    async with test_session_factory() as s:  # come un personaggio nato prima del catalogo: PF scritti a mano, nessun segno di retrofit
+        for cid, current in ((healthy, None), (wounded, 12)):
+            char = (await s.execute(select(Character).where(Character.id == cid))).scalar_one()
+            char.current_hit_points = char.hit_points if current is None else current
+            char.settings = {k: v for k, v in (char.settings or {}).items() if k != RETROFIT_DONE}
+        await s.commit()
+    from api.services.catalog_migration import migrate_catalog
+    assert await migrate_catalog(test_session_factory) >= 2
+    full = await _full(client, healthy)
+    assert full["current_hit_points"] == full["computed"]["hp_max_effective"]
+    assert (await _full(client, wounded))["current_hit_points"] == 12

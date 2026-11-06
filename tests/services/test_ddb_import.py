@@ -645,3 +645,33 @@ def test_monk_2024_speed_keeps_unarmored_movement_in_base():
 def test_barbarian_2014_speed_base_has_no_fast_movement():
     base = convert(barb(), edition="2024")[0].character.speed
     assert convert(barb(), edition="2014")[0].character.speed == base - 10
+
+
+# --- I5 (Task 28): la Resilienza Draconica la calcola il catalogo, non la somma l'import --------
+
+def _draconic_sorcerer(*, per_level: int, removed: int = 0) -> dict:
+    d = sorc()
+    d["classes"][0]["subclassDefinition"]["name"] = "Draconic Bloodline"
+    d["removedHitPoints"] = removed
+    d["modifiers"]["class"].append({"type": "bonus", "subType": "hit-points-per-level", "value": per_level, "componentId": 1,
+                                    "availableToMulticlass": True})
+    return d
+
+
+def test_draconic_resilience_is_not_counted_twice_in_the_2014_import():
+    base = convert(_draconic_sorcerer(per_level=0), edition="2014")[0].character
+    with_bonus = convert(_draconic_sorcerer(per_level=1), edition="2014")[0].character
+    assert with_bonus.hit_points == base.hit_points  # il +1 per livello lo calcola il catalogo 2014
+
+
+def test_the_imported_current_hit_points_keep_the_distance_from_the_sheet_maximum():
+    base = convert(_draconic_sorcerer(per_level=0), edition="2014")[0].character
+    full = convert(_draconic_sorcerer(per_level=1), edition="2014")[0].character
+    hurt = convert(_draconic_sorcerer(per_level=1, removed=7), edition="2014")[0].character
+    assert full.current_hit_points == base.hit_points + 5  # il massimo effettivo: base + 1 per livello da stregone
+    assert hurt.current_hit_points == full.current_hit_points - 7
+
+
+def test_other_editions_without_the_catalog_keep_the_bonus_in_the_base():
+    base = convert(_draconic_sorcerer(per_level=0), edition="2024")[0].character
+    assert convert(_draconic_sorcerer(per_level=1), edition="2024")[0].character.hit_points > base.hit_points

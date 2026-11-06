@@ -113,7 +113,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   // Tiro per colpire: il BE consuma slot/rituale e attiva la concentrazione come /use.
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
-      const prepared = await prepareCast(charId, cast.spell.id, cast.ritual)
+      const prepared = await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
       const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id })
       const roll = d20Arg(cast.mode, await rollD20(cast.mode), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {

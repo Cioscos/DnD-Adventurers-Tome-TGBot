@@ -140,6 +140,7 @@ export type WildSurgeResult = {
   options: WildSurgeEntry[]
   applied: (WildSurgeEntry & {
     healed: number
+    ignored?: boolean
     slot_level: number | null
     points: boolean
     extra_action: boolean
@@ -704,8 +705,8 @@ export const api = {
     preserveLife: (id: number, body: { allocations: { character_id: number; amount: number }[]; confirm_living: boolean }) =>
       request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number }[] }>(
         `/characters/${id}/preserve-life`, { method: 'POST', body: JSON.stringify(body) }),
-    /** Impulso di Magia Selvaggia: d20 (una volta per turno) e, con 1, la tabella; `tides` salta il d20 dopo Onde di Caos. */
-    wildMagicSurge: (id: number, body: { die?: number; percentile?: number[]; tides?: boolean }) =>
+    /** Impulso di Magia Selvaggia: d20 (una volta per turno) e, con 1, la tabella; `tides` salta il d20 dopo Onde di Caos, `repeat` lo salta durante l'impulso 01-02. */
+    wildMagicSurge: (id: number, body: { die?: number; percentile?: number[]; tides?: boolean; repeat?: boolean }) =>
       request<WildSurgeResult>(`/characters/${id}/wild-magic/surge`, { method: 'POST', body: JSON.stringify(body) }),
     /** Caos Controllato: sceglie fra i due risultati tirati. */
     wildMagicChoose: (id: number, index: number) =>

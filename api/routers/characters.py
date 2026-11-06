@@ -70,7 +70,7 @@ from api.services.effects import cap_current_hp, sync_zero_hp
 from core.rules.edition import character_edition
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import attach_party_auras
-from core.rules.modifiers import effective_hp_max, modifiers_for
+from core.rules.modifiers import effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
@@ -594,6 +594,7 @@ async def update_xp(
     auto_calc = settings.get("hp_auto_calc", True)
 
     total_hp_gained = 0
+    old_hp_bonus = rule_hp_bonus(char)  # Resilienza Draconica: sale con il livello da stregone
 
     # Milestone mode: level-ups go through classes/distribute, never from XP.
     milestone = settings.get("advancement") == "milestone"
@@ -624,7 +625,7 @@ async def update_xp(
                     for lvl in range(new_level + 1, old_level + 1)
                 )
                 char.hit_points = max(1, char.hit_points - lost)
-                char.current_hit_points = min(char.current_hit_points, char.hit_points)
+                char.current_hit_points = min(char.current_hit_points, effective_hp_max(char))
             if auto_calc and cls.hit_die and new_level > old_level:
                 for lvl in range(old_level + 1, new_level + 1):
                     if body.hp_rolls:
@@ -634,10 +635,14 @@ async def update_xp(
                         # level 1 was handled at character creation; always use level 2+ formula
                         total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
 
-    if total_hp_gained > 0:
+    if auto_calc and rule_hp_bonus(char) > old_hp_bonus:  # come i PF del livello, il massimo in più si aggiunge anche ai correnti
+        total_hp_gained_current = total_hp_gained + rule_hp_bonus(char) - old_hp_bonus
+    else:
+        total_hp_gained_current = total_hp_gained
+    if total_hp_gained_current > 0:
         was_at_zero = char.current_hit_points == 0
         char.hit_points += total_hp_gained
-        char.current_hit_points += total_hp_gained
+        char.current_hit_points += total_hp_gained_current
         await cap_current_hp(session, char)
         await sync_zero_hp(session, char, was_at_zero)
 

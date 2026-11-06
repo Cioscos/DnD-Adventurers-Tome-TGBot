@@ -91,6 +91,24 @@ describe('SpellAttackModal', () => {
     expect(screen.getByText('common.close')).toBeInTheDocument()
   })
 
+  const second = { die: 14, dice: [14], mode: 'normal', total: 20, is_critical: false, is_fumble: false }
+
+  it('still offers the damage when the first target fumbles but the twinned second target does not', () => {
+    renderModal({ to_hit_die: 1, to_hit_total: 7, is_fumble: true, twinned_attack: second })
+    expect(screen.getByText('character.spells.attack_roll_damage')).toBeInTheDocument()
+  })
+
+  it('offers no damage when both twinned targets fumble', () => {
+    renderModal({ to_hit_die: 1, to_hit_total: 7, is_fumble: true, twinned_attack: { ...second, die: 1, dice: [1], total: 7, is_fumble: true } })
+    expect(screen.queryByText('character.spells.attack_roll_damage')).toBeNull()
+    expect(screen.getAllByText('character.dice.fumble_banner')).toHaveLength(2)
+  })
+
+  it('shows the critical of the twinned second target on its own', () => {
+    renderModal({ twinned_attack: { ...second, die: 20, dice: [20], total: 26, is_critical: true } })
+    expect(screen.getByText('character.dice.critical_banner')).toBeInTheDocument()
+  })
+
   it('offers no damage when the spell has no damage dice', () => {
     renderModal({}, { canRollDamage: false })
     expect(screen.queryByText('character.spells.attack_roll_damage')).toBeNull()

@@ -316,7 +316,7 @@ class Modifier:
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
     ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``jump_bonus`` (piedi in più al
     salto in lungo con rincorsa, si sommano); ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
-    al critico); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
+    al critico); ``resistance:<tipo>``, ``immunity:<tipo>``, ``vulnerability:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
     Possenti); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
     ``fly_speed`` (velocità di volo pari a quella a terra); ``fly_speed_value`` (velocità di volo fissa, in piedi: vale la
@@ -589,6 +589,6 @@ class RuleContext:
     attack_mode: Any = None  # solo attacchi: `melee`, `thrown` o `ranged`
     grip: Any = None  # solo attacchi: `one` o `two`
     offhand: bool = False  # solo attacchi: l'attacco extra della proprietà Leggera
-    casting_level: int | None = None  # solo ``spell_healing``: il livello dello slot con cui si lancia
+    casting_level: int | None = None  # ``spell_healing`` e ``cast``: il livello dello slot con cui si lancia
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo
     damage: int | None = None  # solo ``damage_taken``: il danno che il giocatore sta per inserire, se lo sa

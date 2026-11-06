@@ -48,6 +48,7 @@ class ComputedStats(BaseModel):
     hp_max_effective: int = 0
     resistances: list[str] = []
     immunities: list[str] = []
+    vulnerabilities: list[str] = []
     incapacitated: bool = False
     surprised: bool = False  # 2014: è il turno della sorpresa
     surprise_exit_features: list[str] = []  # da sorpreso: i privilegi il cui «Usa» permette di agire (Ira)

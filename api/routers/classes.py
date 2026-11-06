@@ -35,6 +35,7 @@ from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import total_base_hp
+from core.rules.modifiers import effective_hp_max, rule_hp_bonus
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
@@ -154,7 +155,8 @@ async def create_class_for_character(
     # calcolati; con i PF ancora a 0 il sync li porterebbe a un valore parziale e il calcolo sotto verrebbe saltato.
     settings = char.settings or {}
     auto_calc = settings.get("hp_auto_calc", True)
-    if is_first_class and char.hit_points == 0 and auto_calc and hit_die:
+    fresh_hp = is_first_class and char.hit_points == 0 and auto_calc and bool(hit_die)
+    if fresh_hp:
         # Classe nata sopra il livello 1: PF di tutti i livelli, con la COS effettiva.
         hp = total_base_hp([cls], effective_con_mod(char))
         char.hit_points = hp
@@ -162,6 +164,8 @@ async def create_class_for_character(
         await session.flush()
 
     await sync_class_feature_abilities(session, char, cls, lang=lang)
+    if fresh_hp:  # un personaggio nuovo parte a PF pieni, anche se un privilegio alza il massimo (Resilienza Draconica)
+        char.current_hit_points = max(char.current_hit_points, effective_hp_max(char))
 
     # Competenze della classe per edizione: TS solo dalla prima, il resto dalla tabella multiclasse.
     # Sempre additive: non toglie né sovrascrive quanto l'utente ha già.
@@ -171,15 +175,18 @@ async def create_class_for_character(
     return cls
 
 
-def _recalc_max_hp(char, old_total_hp: int, old_current_hp: int) -> int:
+def _recalc_max_hp(char, old_total_hp: int, old_current_hp: int, old_bonus: int = 0) -> int:
     """Recompute max HP (rolled values included), ratio-scale current HP.
+    ``old_bonus``: ciò che i privilegi aggiungevano al massimo prima (Resilienza Draconica): la proporzione è sul massimo
+    effettivo, così chi era a PF pieni resta a PF pieni.
     Returns the positive max-HP delta; no-op when hp_auto_calc is off."""
     if not (char.settings or {}).get("hp_auto_calc", True):
         return 0
     new_total_hp = total_base_hp(char.classes, effective_con_mod(char), stored_rolls(char))
-    new_current = round(old_current_hp / old_total_hp * new_total_hp) if old_total_hp > 0 else old_current_hp
+    old_effective, new_effective = old_total_hp + old_bonus, new_total_hp + rule_hp_bonus(char)
+    new_current = round(old_current_hp / old_effective * new_effective) if old_effective > 0 else old_current_hp
     char.hit_points = new_total_hp
-    char.current_hit_points = max(0, min(new_current, new_total_hp))
+    char.current_hit_points = max(0, min(new_current, new_effective))
     return max(0, new_total_hp - old_total_hp)
 
 
@@ -196,10 +203,10 @@ async def add_class(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
-    old_total_hp, old_current_hp = char.hit_points or 0, char.current_hit_points or 0
+    old_total_hp, old_current_hp, old_bonus = char.hit_points or 0, char.current_hit_points or 0, rule_hp_bonus(char)
     await create_class_for_character(char, body, session, lang=lang)
     if len(char.classes) > 1:  # la prima classe imposta i PF da sé
-        _recalc_max_hp(char, old_total_hp, old_current_hp)
+        _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus)
     await session.flush()  # expire() scarta anche le modifiche del sync sulle abilità (cascade "all")
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
@@ -251,6 +258,7 @@ async def distribute_class_levels(
     # Snapshot old total HP for ratio scaling
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
+    old_bonus = rule_hp_bonus(char)
 
     classes_by_id = {c.id: c for c in char.classes}
     gained_total = sum(max(0, e.level - classes_by_id[e.class_id].level) for e in body.classes)
@@ -275,7 +283,7 @@ async def distribute_class_levels(
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
-    hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp)
+    hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus)
 
     # Re-fetch so newly-inserted ClassResource rows (e.g. Punti Ki on a fresh
     # Monaco level) appear in the response — otherwise the FE multiclass card
@@ -316,6 +324,7 @@ async def update_class(
         raise HTTPException(status_code=422, detail="hp_rolls requires a level change")
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
+    old_bonus = rule_hp_bonus(char)
     for field, value in data.items():
         setattr(cls, field, value)
     if "subclass" in data:
@@ -337,7 +346,7 @@ async def update_class(
     # has not been called").
     await session.flush()
     await session.refresh(char, attribute_names=["classes"])
-    hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp) if level_changed else 0
+    hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus) if level_changed else 0
 
     # Emit level_up event for installed homebrew rules.
     # DEVIATION FROM PLAN LITERAL: plan says `if new_level != old_level`, which

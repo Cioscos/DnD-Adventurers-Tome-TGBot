@@ -44,10 +44,13 @@ export type DamageModifiersMap = Record<string, string[] | undefined> | null | u
 /** Quelle salvate più le temporanee di condizioni e privilegi (`computed`, `all` = ogni tipo). */
 export function effectiveDamageMods(char: {
   damage_modifiers?: DamageModifiersMap
-  computed?: { resistances: string[]; immunities: string[] }
+  computed?: { resistances: string[]; immunities: string[]; vulnerabilities?: string[] }
 }): DamageModifiersMap {
   if (!char.computed) return char.damage_modifiers
-  return { ...char.damage_modifiers, resistances: char.computed.resistances, immunities: char.computed.immunities }
+  return {
+    ...char.damage_modifiers, resistances: char.computed.resistances, immunities: char.computed.immunities,
+    ...(char.computed.vulnerabilities ? { vulnerabilities: char.computed.vulnerabilities } : {}),
+  }
 }
 
 /** Specchio di `damage_multiplier` lato server: l'immunità prevale,

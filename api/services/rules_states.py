@@ -305,10 +305,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.forgoes_attack:
         forgo_attack(char)
     if ability is not None and ability.max_uses is not None and ability.uses is not None:
-        if heals_ally and target is not None:
-            await _spend_atomically(session, ability, cost)
-        else:
-            ability.uses -= cost
+        await _spend_atomically(session, ability, cost)  # UPDATE condizionato: un doppio tocco non spende due volte gli stessi usi
     if heals_ally and target is not None:  # dopo la spesa atomica il bersaglio si rilegge: i suoi PF sono quelli veri
         target = await load_receiver(session, target.id)
         if target.is_dead:

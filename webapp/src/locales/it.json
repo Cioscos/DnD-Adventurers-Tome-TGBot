@@ -1333,6 +1333,8 @@
         "confirm": "Il GM richiede l'impulso",
         "roll": "Tira il d20",
         "tides": "Onde di Caos spese: tira la tabella",
+        "repeat": "Ripetizione in corso: tira la tabella di questo turno",
+        "ignored": "Risultato 01-02 ignorato: la ripetizione continua.",
         "no_surge": "d20: {{n}}. Nessun impulso.",
         "table_roll": "d100 {{n}} ({{label}})",
         "choose_title": "Caos Controllato: scegli uno dei due risultati.",
@@ -1349,6 +1351,7 @@
         "tides_back": "Onde di Caos è di nuovo disponibile.",
         "errors": {
           "once_per_turn": "Il d20 dell'impulso si tira una volta per turno.",
+          "no_repeat": "Non c'è nessuna ripetizione in corso.",
           "tides_not_spent": "Onde di Caos non è stata spesa.",
           "no_pending_surge": "Non c'è nessun impulso da scegliere.",
           "feature_not_usable": "Questo privilegio non si può usare ora.",

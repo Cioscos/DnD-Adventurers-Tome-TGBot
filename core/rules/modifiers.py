@@ -43,6 +43,7 @@ class Applied:
     crit_min: int = 20
     resistances: set[str] = field(default_factory=set)
     immunities: set[str] = field(default_factory=set)
+    vulnerabilities: set[str] = field(default_factory=set)
     notes: list[str] = field(default_factory=list)
     speed_zero: bool = False
     speed_half: bool = False
@@ -273,6 +274,8 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             out.resistances.add(m.target.split(":", 1)[1])
         elif m.target.startswith("immunity:"):
             out.immunities.add(m.target.split(":", 1)[1])
+        elif m.target.startswith("vulnerability:"):
+            out.vulnerabilities.add(m.target.split(":", 1)[1])
         if counted and source and source not in out.notes:
             out.notes.append(source)
     if half_prof:
@@ -291,6 +294,11 @@ def final_mode(player_mode: str, applied: Applied) -> str:
     if advantage == disadvantage:
         return "normal"
     return "advantage" if advantage else "disadvantage"
+
+
+def rule_hp_bonus(char: Any) -> int:
+    """Quanto i privilegi alzano il massimo dei PF (Resilienza Draconica): chi sale di livello o nasce li ha pieni."""
+    return modifiers_for(char, "hp_max").flat
 
 
 def effective_hp_max(char: Any, homebrew_bonus: int = 0, exhaustion: int | None = None) -> int:
@@ -335,8 +343,11 @@ def damage_taken_mode(char: Any, slug: str | None) -> str:
     resistances = [*(mods.get("resistances") or []), *applied.resistances]
     if "all" in applied.resistances:
         resistances.append(slug)
+    vulnerabilities = [*(mods.get("vulnerabilities") or []), *applied.vulnerabilities]
+    if "all" in applied.vulnerabilities:
+        vulnerabilities.append(slug)
     return damage_multiplier({
         "immunities": [*(mods.get("immunities") or []), *applied.immunities],
         "resistances": resistances,
-        "vulnerabilities": mods.get("vulnerabilities") or [],
+        "vulnerabilities": vulnerabilities,
     }, slug)

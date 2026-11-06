@@ -24,9 +24,10 @@ const entry = (lo: number, name: string) => ({ roll: lo, lo, hi: lo + 1, label: 
 const applied = (lo: number, name: string, extra: Record<string, unknown> = {}) => ({
   ...entry(lo, name), healed: 0, slot_level: null, points: false, extra_action: false, dc: null, state: null, damage: null, extra_roll: null, ...extra,
 })
-const char = (tidesUses?: number) => ({
+const char = (tidesUses?: number, repeating = false) => ({
   id: 7,
   abilities: tidesUses === undefined ? [] : [{ id: 1, feature_key: 'sorcerer.tides_of_chaos', max_uses: 1, uses: tidesUses }],
+  active_states: repeating ? [{ key: 'wild_repeat', rounds_left: 10 }] : [],
 }) as unknown as CharacterFull
 
 describe('WildMagicSheet', () => {
@@ -83,5 +84,16 @@ describe('WildMagicSheet', () => {
     await userEvent.click(screen.getByRole('switch'))
     await userEvent.click(screen.getByText('character.turn.wild.roll'))
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.wild.errors.once_per_turn'))
+  })
+
+  it('offers the table at each turn only while the repeat surge lasts, and says when a new repeat is ignored', async () => {
+    wildMagicSurge.mockResolvedValue({ die: null, triggered: true, pending: false, options: [entry(1, 'Ripetizione')], applied: applied(1, 'Ripetizione', { ignored: true }), tides_restored: false })
+    const { unmount } = renderWithProviders(<WildMagicSheet char={char()} onClose={() => {}} />)
+    expect(screen.queryByText('character.turn.wild.repeat')).not.toBeInTheDocument()
+    unmount()
+    renderWithProviders(<WildMagicSheet char={char(undefined, true)} onClose={() => {}} />)
+    await userEvent.click(screen.getByText('character.turn.wild.repeat'))
+    await waitFor(() => expect(wildMagicSurge).toHaveBeenCalledWith(7, { repeat: true }))
+    expect(await screen.findByText('character.turn.wild.ignored')).toBeInTheDocument()
   })
 })

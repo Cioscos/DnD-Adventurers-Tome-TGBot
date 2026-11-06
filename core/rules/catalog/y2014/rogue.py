@@ -12,9 +12,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from core.rules.catalog._common import feature, skill_label, state_on
+from core.rules.catalog._common import feature, save_spell as _save_spell, skill_label, state_on
 from core.rules.catalog.y2014.bard import _expertise_options
-from core.rules.catalog.y2014.fighter import _save_spell, _weapon_in_hand
+from core.rules.catalog.y2014.fighter import _weapon_in_hand
 from core.rules.states import STOLEN_SPELL, begin_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseChoice, UseText,

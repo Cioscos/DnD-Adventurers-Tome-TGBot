@@ -4,19 +4,20 @@ from __future__ import annotations
 from core.db.models import Character, SpellSlot
 
 
+_LEVELS = {"1", "2", "3", "4", "5"}
 CREATED_SLOTS = "created_slots"  # settings: {"3": 1} = slot creati con Incantesimi Flessibili, per livello (scritto dal server)
 
 
 def _created(char: Character) -> dict[int, int]:
     raw = (char.settings or {}).get(CREATED_SLOTS)
-    return {int(k): v for k, v in raw.items() if str(k).isdigit() and type(v) is int and v > 0} if isinstance(raw, dict) else {}
+    return {int(k): v for k, v in raw.items() if str(k) in _LEVELS and type(v) is int and v > 0} if isinstance(raw, dict) else {}
 
 
 def clean_created_slots(value: object) -> dict[str, int]:
     """Da un file importato: solo i livelli 1-5, con un conteggio ragionevole."""
     if not isinstance(value, dict):
         return {}
-    return {str(k): v for k, v in value.items() if str(k) in "12345" and type(v) is int and 0 < v <= 20}
+    return {str(k): v for k, v in value.items() if str(k) in _LEVELS and type(v) is int and 0 < v <= 20}
 
 
 def add_created_slot(char: Character, level: int) -> None:

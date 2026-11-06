@@ -14,8 +14,8 @@ from typing import Any
 from core.data.damage_types import canonical_damage_type
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.actions import parse_casting_time, parse_duration_rounds
-from core.rules.catalog._common import feature, state_on
-from core.rules.catalog.y2014.fighter import _save_spell
+from core.rules.catalog._common import feature, save_spell, state_on
+from core.rules.states import begin_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
 )
@@ -188,7 +188,10 @@ def _twinned_ok(ctx: RuleContext) -> bool:
 
 
 def _twinned_cost(ctx: RuleContext) -> int:
-    return max(1, ctx.spell.level) if ctx.spell is not None else 1
+    """Il livello a cui l'incantesimo è lanciato (quello dello slot), 1 per un trucchetto."""
+    if ctx.spell is None:
+        return 1
+    return max(1, ctx.casting_level or 0, ctx.spell.level)
 
 
 def _mark_twinned(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
@@ -229,16 +232,16 @@ EXTENDED = _cast_option(
 HEIGHTENED = _cast_option(
     "heightened", {"it": "Incantesimo Intensificato: un bersaglio ha svantaggio al suo primo TS contro l'incantesimo (3 punti)",
                    "en": "Heightened Spell: one target has disadvantage on its first save against the spell (3 points)"},
-    cost=3, available=lambda c: c.spell is not None and _save_spell(c.spell),
+    cost=3, available=lambda c: c.spell is not None and save_spell(c.spell),
     effect=_say("Un bersaglio a tua scelta ha svantaggio al primo TS contro questo incantesimo.",
                 "One target of your choice has disadvantage on its first saving throw against this spell."),
     target_effect=lambda _c, _i: TargetEffect(condition="custom:heightened_spell"))
 CAREFUL = _cast_option(
     "careful", {"it": "Incantesimo Preciso: alcune creature superano da sole il TS (1 punto)",
                 "en": "Careful Spell: some creatures automatically pass the save (1 point)"},
-    available=lambda c: c.spell is not None and _save_spell(c.spell),
-    effect=lambda c, _i: {"it": f"Fino a {max(1, _cha(c))} creature a tua scelta superano da sole il TS e non subiscono danni.",
-                          "en": f"Up to {max(1, _cha(c))} creatures of your choice automatically pass the save and take no damage."})
+    available=lambda c: c.spell is not None and save_spell(c.spell),
+    effect=lambda c, _i: {"it": f"Fino a {max(1, _cha(c))} creature a tua scelta superano da sole il TS contro questo incantesimo.",
+                          "en": f"Up to {max(1, _cha(c))} creatures of your choice automatically pass their saving throw against this spell."})
 TWINNED = _cast_option(
     "twinned", {"it": "Incantesimo Raddoppiato: l'incantesimo ha un solo bersaglio e non può mirarne di più a questo livello?",
                 "en": "Twinned Spell: does the spell target only one creature and cannot target more at this level?"},
@@ -294,16 +297,31 @@ AFFINITY_BONUS = RollOptionSpec(
            "en": "Elemental Affinity: add your Charisma modifier to damage of your ancestor's type"})
 
 
-def _affinity_state(ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec("elemental_resistance", rounds=600, ends_on=("manual", "rest_short", "rest_long"),
-                     data={"damage_type": _ancestor_type(ctx), "others": [f"{CK}.elemental_affinity_resistance"]})
+def _affinity_spell(ctx: RuleContext) -> bool:
+    """L'incantesimo che si lancia fa danni del tipo dell'antenato."""
+    return ctx.spell is not None and _ancestor_type(ctx) is not None and canonical_damage_type(ctx.spell.damage_type) == _ancestor_type(ctx)
+
+
+def _start_resistance(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    """Un'ora di resistenza: finisce a tempo o a mano, non con un riposo (il riposo breve dura già un'ora)."""
+    begin_state(ctx.char, StateSpec("elemental_resistance", rounds=600, ends_on=("manual",),
+                                    data={"damage_type": _ancestor_type(ctx), "others": [f"{CK}.elemental_affinity"]}),
+                f"{CK}.elemental_affinity", "Affinità Elementale: resistenza")
+
+
+AFFINITY_RESISTANCE = RollOptionSpec(
+    key=f"{CK}.elemental_affinity_resistance", phase="before", rolls=("cast",), cost=Cost(feature_key=SP), available=_affinity_spell,
+    on_confirm=_start_resistance,
+    label={"it": "Affinità Elementale: resistenza al tipo di danno del tuo antenato per 1 ora (1 punto)",
+           "en": "Elemental Affinity: resistance to your ancestor's damage type for 1 hour (1 point)"},
+    effect=_say("Hai resistenza al tipo di danno del tuo antenato per 1 ora.", "You have resistance to your ancestor's damage type for 1 hour."))
 
 
 def _affinity_resistance(damage_type: str) -> Modifier:
     def active(ctx: RuleContext) -> bool:
         state = next((s for s in ctx.char.active_states or [] if s.get("key") == "elemental_resistance"), None)
         return state is not None and (state.get("data") or {}).get("damage_type") == damage_type
-    return Modifier(f"resistance:{damage_type}", 1, when=active, source=f"feature:{CK}.elemental_affinity_resistance")
+    return Modifier(f"resistance:{damage_type}", 1, when=active, source=f"feature:{CK}.elemental_affinity")
 
 
 def _wears_armor(ctx: RuleContext) -> bool:
@@ -390,8 +408,8 @@ _OPTION_SUMMARIES = {
                   "After the damage, 1 point: reroll up to Charisma dice (minimum 1). It adds to another option."),
     "careful": ("Al lancio, 1 punto: fino a Carisma creature (minimo 1) superano da sole il TS dell'incantesimo.",
                 "On the cast, 1 point: up to Charisma creatures (minimum 1) automatically pass the spell's save."),
-    "twinned": ("Al lancio, punti pari al livello dell'incantesimo (1 se trucchetto): un secondo bersaglio per un incantesimo a bersaglio singolo.",
-                "On the cast, points equal to the spell's level (1 for a cantrip): a second target for a single-target spell."),
+    "twinned": ("Al lancio, punti pari al livello a cui è lanciato (1 se trucchetto): un secondo bersaglio per un incantesimo a bersaglio singolo.",
+                "On the cast, points equal to the level it is cast at (1 for a cantrip): a second target for a single-target spell."),
     "quickened": ("Al lancio, 2 punti: un incantesimo di 1 azione si lancia con un'azione bonus.",
                   "On the cast, 2 points: a spell with a casting time of 1 action is cast as a bonus action."),
 }
@@ -475,15 +493,9 @@ FEATURES = (
               unarmored=UnarmoredAc(("dexterity",), base=13), passive=True),
     _draconic("elemental_affinity", 6, "Affinità Elementale / Elemental Affinity (Discendenza Draconica 6, pag. 111)",
               ("Affinità Elementale", "Elemental Affinity"),
-              ("Con un incantesimo del tipo del tuo antenato aggiungi Carisma a un tiro di danno. 1 punto: resistenza a quel tipo per 1 ora.",
-               "With a spell of your ancestor's type add Charisma to one damage roll. 1 point: resistance to that type for 1 hour."),
-              roll_options=(AFFINITY_BONUS,), passive=True),
-    _draconic("elemental_affinity_resistance", 6, "Affinità Elementale / Elemental Affinity (Discendenza Draconica 6, pag. 111)",
-              ("Affinità Elementale: Resistenza", "Elemental Affinity: Resistance"),
-              ("Spendi 1 punto stregoneria: resistenza al tipo di danno del tuo antenato per 1 ora.",
-               "Spend 1 sorcery point: resistance to your ancestor's damage type for 1 hour."),
-              "special", on_use=OnUse(spends=SP, cost=1, state=_affinity_state,
-                                      available=lambda c: _ancestor_type(c) is not None),
+              ("Con un incantesimo del tipo del tuo antenato aggiungi Carisma a un tiro di danno; allo stesso lancio puoi spendere 1 punto per la resistenza a quel tipo per 1 ora.",
+               "With a spell of your ancestor's type add Charisma to one damage roll; on the same cast you can spend 1 point for resistance to that type for 1 hour."),
+              roll_options=(AFFINITY_BONUS, AFFINITY_RESISTANCE), passive=True,
               modifiers=tuple(_affinity_resistance(t) for t in ("cold", "lightning", "acid", "fire", "poison"))),
     _draconic("dragon_wings", 14, "Ali di Drago / Dragon Wings (Discendenza Draconica 14, pag. 111)", ("Ali di Drago", "Dragon Wings"),
               ("Azione bonus: ali con velocità di volo pari alla velocità attuale, finché non le congedi (azione bonus). Non con un'armatura indossata.",
@@ -503,7 +515,10 @@ FEATURES = (
            "When the GM asks after a spell of 1st level or higher: a d20 once per turn; on a 1 you roll the 50-result table and the app applies the effects."),
           "special", on_use=OnUse(panel="wild_magic"), turn_start_heal=_regeneration, dc_ability="charisma",
           modifiers=(Modifier("ac", 2, when=lambda c: state_on(c, "wild_shield"), source=f"feature:{CK}.wild_magic_surge"),
-                     Modifier("resistance:all", 1, when=lambda c: state_on(c, "wild_resistance"), source=f"feature:{CK}.wild_magic_surge"))),
+                     Modifier("resistance:all", 1, when=lambda c: state_on(c, "wild_resistance"), source=f"feature:{CK}.wild_magic_surge"),
+                     Modifier("vulnerability:all", 1, when=lambda c: state_on(c, "wild_vulnerable_all"), source=f"feature:{CK}.wild_magic_surge"),
+                     Modifier("vulnerability:piercing", 1, when=lambda c: state_on(c, "wild_vulnerable_piercing"),
+                              source=f"feature:{CK}.wild_magic_surge"))),
     _wild("tides_of_chaos", 1, "Onde di Caos / Tides of Chaos (Magia Selvaggia 1, pag. 111)", ("Onde di Caos", "Tides of Chaos"),
           ("Un uso: un attacco, una prova o un TS con vantaggio. Torna con un riposo lungo, o quando il GM ti fa tirare un impulso.",
            "One use: an attack, check or save with advantage. It returns on a long rest, or when the GM has you roll a surge."),

@@ -376,7 +376,8 @@ async def use_spell(
 
     _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
                   body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []))
-    opts = use_options(session, char, "cast", body, spell=spell)
+    _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
+    opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual))
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
@@ -425,7 +426,9 @@ async def spell_attack(
         _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                       silent=SUBTLE_KEY in (body.cast_options or []))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
-        cast_opts = use_options(session, char, "cast", cast_body, spell=spell)
+        _close_twinned(char)
+        cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
+                                casting_level=_cast_level(spell, body.slot_level, body.ritual))
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
     await release_concentration_effects(session, char)
@@ -467,7 +470,7 @@ async def spell_attack(
         "notes": applied.notes, "auto_fail": False, "description": "",
     }, spell_id=spell.id)
 
-    twinned = _twinned_attack(char, spell, body.mode, applied, bonus)
+    twinned = _twinned_attack(char, spell, body.mode, applied, bonus, keep=body.with_inspiration)
     return SpellAttackResult(
         twinned_attack=twinned,
         spell_name=spell.name,
@@ -487,20 +490,37 @@ async def spell_attack(
     )
 
 
-def _twinned_attack(char: Character, spell: Spell, mode: RollMode, applied: Any, bonus: int) -> dict | None:
+def _cast_level(spell: Spell, slot_level: int | None, ritual: bool = False) -> int:
+    """Il livello a cui si lancia: quello dello slot (un incantesimo di livello superiore «assume il livello superiore»),
+    il proprio se è un trucchetto, un rituale o un lancio senza slot."""
+    return slot_level if slot_level and slot_level >= spell.level and not ritual else spell.level
+
+
+def _close_twinned(char: Character) -> None:
+    """Il segno di Incantesimo Raddoppiato vale per un solo lancio: un lancio nuovo lo chiude, l'opzione lo riapre."""
+    turn = get_turn(char)
+    if turn.pop(TWINNED_TURN_KEY, None) is not None:
+        char.turn_state = turn
+
+
+def _twinned_attack(char: Character, spell: Spell, mode: RollMode, applied: Any, bonus: int, keep: bool = False) -> dict | None:
     """Incantesimo Raddoppiato: il secondo bersaglio ha il suo tiro per colpire, con lo stesso modo e lo stesso bonus. Il
-    critico resta sul turno per il danno del secondo bersaglio."""
+    critico (o il 1 naturale) resta sul turno per il danno del secondo bersaglio. Il rilancio dell'altro bersaglio non
+    tocca il suo tiro: ``keep`` restituisce quello già fatto."""
     twin = (char.turn_state or {}).get(TWINNED_TURN_KEY)
     if not twin or twin.get("spell_id") != spell.id:
         return None
+    if keep and twin.get("attack"):
+        return twin["attack"]
     outcome = resolve_applied(mode, None, None, applied)
     record_dice(char, d20_records(outcome))
     critical = outcome.kept >= applied.crit_min
+    result = {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "total": outcome.kept + bonus,
+              "is_critical": critical, "is_fumble": outcome.kept == 1}
     turn = get_turn(char)
-    turn[TWINNED_TURN_KEY] = {**twin, "is_critical": critical}
+    turn[TWINNED_TURN_KEY] = {**twin, "is_critical": critical, "is_fumble": result["is_fumble"], "attack": result}
     char.turn_state = turn
-    return {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "total": outcome.kept + bonus,
-            "is_critical": critical, "is_fumble": outcome.kept == 1}
+    return result
 
 
 @router.patch("/{char_id}/concentration", response_model=CharacterFull)
@@ -746,7 +766,7 @@ def _twinned_damage(char: Character, spell: Spell, count: int, sides: int, bonus
     if not twin or twin.get("spell_id") != spell.id:
         return None
     char.turn_state = turn
-    if (spell.attack_save or "").strip().upper() != "ATK":
+    if (spell.attack_save or "").strip().upper() != "ATK" or twin.get("is_fumble"):  # il 1 naturale manca: nessun danno
         return None
     rolls = [random.randint(1, sides) for _ in range(count * (2 if twin.get("is_critical") else 1))]
     record_dice(char, [(f"d{sides}", v) for v in rolls])

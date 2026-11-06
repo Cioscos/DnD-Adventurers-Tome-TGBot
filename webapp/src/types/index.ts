@@ -347,6 +347,7 @@ export interface ComputedStats {
   hp_max_effective: number
   resistances: string[]
   immunities: string[]
+  vulnerabilities?: string[]
   incapacitated: boolean
   surprised?: boolean
   /** Da sorpreso (2014): i privilegi il cui «Usa» permette di agire, Ira per l'Istinto Ferino. */

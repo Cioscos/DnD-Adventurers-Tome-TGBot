@@ -46,7 +46,8 @@ export default function SpellAttackModal({
 
   const bonusStr = `${to_hit_bonus >= 0 ? '+' : '-'}${Math.abs(to_hit_bonus)}`
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
-  const showDamage = canRollDamage && !is_fumble
+  // Raddoppiato: il 1 naturale di un bersaglio non toglie il tiro dei danni all'altro.
+  const showDamage = canRollDamage && (!is_fumble || (!!result.twinned_attack && !result.twinned_attack.is_fumble))
   const showInspirationButton = inspirationAvailable && !wasRerolled && onInspirationReroll != null
   const toHitColor = is_critical
     ? 'text-dnd-gold-bright'
@@ -136,7 +137,15 @@ export default function SpellAttackModal({
           <p className="text-xs text-dnd-text-muted font-body tabular-nums">
             <D20Faces die={result.twinned_attack.die} dice={result.twinned_attack.dice} mode={(result.twinned_attack.mode ?? 'normal') as typeof mode} /> {bonusStr}
           </p>
-          <p className="text-2xl font-black font-display mt-1 tabular-nums text-dnd-text">{result.twinned_attack.total}</p>
+          <p className={`text-2xl font-black font-display mt-1 tabular-nums ${result.twinned_attack.is_critical ? 'text-dnd-gold-bright' : result.twinned_attack.is_fumble ? 'text-dnd-crimson-bright' : 'text-dnd-text'}`}>
+            {result.twinned_attack.total}
+          </p>
+          {result.twinned_attack.is_critical && (
+            <p className="text-xs font-bold font-cinzel uppercase tracking-wider text-dnd-gold-bright">{t('character.dice.critical_banner')}</p>
+          )}
+          {result.twinned_attack.is_fumble && (
+            <p className="text-xs font-bold font-cinzel uppercase tracking-wider text-dnd-crimson-bright">{t('character.dice.fumble_banner')}</p>
+          )}
         </div>
       )}
     </ResultDialog>

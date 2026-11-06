@@ -43,6 +43,16 @@ def _retro_ids(char: Character, retrofit: bool) -> set[int]:
     return {c.id for c in char.classes if features_for(edition, class_key(c)) and _mark(edition, c) not in done}
 
 
+def _fill_hp_bonus(char: Character, retro: set[int]) -> None:
+    """R34: un personaggio che esisteva prima del catalogo e stava a PF pieni sul vecchio massimo segue il nuovo (Resilienza
+    Draconica alza il massimo, non ferisce chi non lo era). Chi era ferito non cambia: i suoi PF correnti sono quelli scritti."""
+    if not retro or not (char.settings or {}).get("hp_auto_calc", True) or char.hit_points <= 0:
+        return
+    if char.current_hit_points >= char.hit_points:
+        from core.rules.modifiers import effective_hp_max  # import locale: modifiers usa il catalogo
+        char.current_hit_points = max(char.current_hit_points, effective_hp_max(char))
+
+
 def _mark_retrofitted(char: Character) -> None:
     """Ogni classe a catalogo sincronizzata (anche alla creazione) non è più da retrofit."""
     edition = character_edition(char)
@@ -80,6 +90,7 @@ async def sync_class_feature_abilities(
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
     _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
+    _fill_hp_bonus(char, retro)
     _mark_retrofitted(char)
     _sync_permanent_states(char)
     _end_unwielded_states(char)
@@ -99,6 +110,7 @@ async def sync_cataloged_features(
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
     _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
+    _fill_hp_bonus(char, retro)
     _mark_retrofitted(char)
     _sync_permanent_states(char)
     _end_unwielded_states(char)

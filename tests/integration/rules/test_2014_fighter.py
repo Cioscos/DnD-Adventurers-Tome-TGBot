@@ -648,3 +648,10 @@ async def test_migration_keeps_spent_uses_and_does_not_duplicate_the_automatic_r
         mine = [a for a in rows if a["feature_key"] == key]
         assert len(mine) == 1 and mine[0]["name"] == name and mine[0]["uses"] == 0  # un solo uso speso resta speso
     assert SD not in await _keys_of(client, champion)  # non è un Maestro di Battaglia: la riga se ne va
+
+
+async def test_two_simultaneous_uses_of_action_surge_spend_the_single_use_once(client):  # Task 28, I6: spesa comune
+    import asyncio
+    cid = await _fighter(client, 2)
+    r = await asyncio.gather(*(client.post(f"/characters/{cid}/features/{AS}/use", json={}) for _ in range(2)))
+    assert sorted(x.status_code for x in r) == [200, 409], [x.text for x in r]

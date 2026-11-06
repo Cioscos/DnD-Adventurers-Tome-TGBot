@@ -73,18 +73,20 @@ async function castWarnings(charId: number, spellId: number, ritual: boolean): P
 }
 
 /** Prima dei dadi: conferme delle regole violate, poi opzioni del lancio. `CastCancelled` se il giocatore rinuncia. */
-export async function prepareCast(charId: number, spellId: number, ritual: boolean) {
+export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null) {
   const confirm = await castWarnings(charId, spellId, ritual)
   for (const code of confirm) {
     if (!(await askCastConfirm(code))) throw new CastCancelled()
   }
-  const choice = await askRollOptions(charId, { roll: 'cast', spell_id: spellId }, 'before', { cast: true })
+  const choice = await askRollOptions(
+    charId, { roll: 'cast', spell_id: spellId, ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}) }, 'before', { cast: true },
+  )
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
 
 /** Il lancio senza tiro per colpire: `/use`. */
 export async function castSpell(charId: number, spellId: number, body: SpellUseBody): Promise<CharacterFull> {
-  return api.spells.use(charId, spellId, { ...body, ...(await prepareCast(charId, spellId, !!body.as_ritual)) })
+  return api.spells.use(charId, spellId, { ...body, ...(await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level)) })
 }
 
 /** Il rilancio è del 2024: nel 2014 l'Ispirazione si spende prima del tiro, come opzione. */

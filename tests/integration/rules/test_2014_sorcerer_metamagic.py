@@ -375,3 +375,61 @@ async def test_beyond_metamagic_options_find_the_catalog_choices(test_session_fa
                              report, "it")
         assert char.classes[0].options == {"metamagic": ["careful", "twinned", "quickened"]}
         assert [e.name for e in report.approximated] == ["Mystery"]
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1
+# ---------------------------------------------------------------------------
+
+async def _cost_offered(client, cid, spell, **params) -> int:
+    options = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "cast", "spell_id": spell, **params})).json()
+    return next(o for o in options if o["key"] == TWINNED)["cost"]["amount"]
+
+
+async def test_twinned_spell_costs_the_level_it_is_cast_at_not_the_base_level(client):  # I1, R31
+    cid = await _caster(client, 10, "twinned")
+    await _set_points(client, cid, 10)
+    spell = await _spell(client, cid, "Globo", 1, range_area="18 m")
+    assert await _cost_offered(client, cid, spell) == 1 and await _cost_offered(client, cid, spell, casting_level=3) == 3
+    assert (await _use_spell(client, cid, spell, TWINNED, slot_level=3)).status_code == 200
+    assert await _points(client, cid) == 7
+
+
+async def test_twinned_spell_with_an_attack_roll_pays_the_cast_level_too(client):  # I1, percorso /attack
+    cid = await _caster(client, 10, "twinned")
+    await _set_points(client, cid, 10)
+    spell = await _spell(client, cid, "Raggio", 1, attack_save="ATK", damage_dice="2d8", damage_type="cold", range_area="18 m")
+    r = await client.post(f"/characters/{cid}/spells/{spell}/attack", json={"die": 12, "slot_level": 4, "cast_options": [TWINNED], "cast_option_inputs": {}})
+    assert r.status_code == 200, r.text
+    assert await _points(client, cid) == 6
+
+
+async def test_careful_spell_says_the_creatures_pass_the_save_and_still_take_the_half_damage_of_the_2014_rules(client):  # I2
+    cid = await _caster(client, 5, "careful")
+    spell = await _spell(client, cid, "Palla di fuoco", 3, attack_save="DEX")
+    r = await _use_spell(client, cid, spell, CAREFUL, slot_level=3)
+    text = r.json()["option_result"]["effects"][0]
+    assert "non subiscono" not in text["it"] and "take no damage" not in text["en"]
+    assert "superano" in text["it"] and "automatically pass" in text["en"]
+
+
+async def test_the_sign_of_a_twinned_cast_does_not_survive_a_new_attack_with_the_same_spell(client):  # I7
+    cid = await _caster(client, 10, "twinned")
+    spell = await _spell(client, cid, "Raggio di gelo", 0, attack_save="ATK", damage_dice="1d8", damage_type="cold", range_area="18 m")
+    first = await client.post(f"/characters/{cid}/spells/{spell}/attack", json={"die": 12, "cast_options": [TWINNED], "cast_option_inputs": {}})
+    assert first.json()["twinned_attack"] is not None
+    points = await _points(client, cid)
+    again = await client.post(f"/characters/{cid}/spells/{spell}/attack", json={"die": 12})  # un nuovo lancio, senza l'opzione
+    assert again.status_code == 200 and again.json().get("twinned_attack") is None
+    assert "twinned_damage" not in await _damage(client, cid, spell) and await _points(client, cid) == points
+
+
+async def test_a_natural_one_on_the_second_target_gives_it_no_damage_roll_but_the_first_still_has_one(client, monkeypatch):  # I7
+    cid = await _caster(client, 10, "twinned")
+    spell = await _spell(client, cid, "Raggio di gelo", 0, attack_save="ATK", damage_dice="1d8", damage_type="cold", range_area="18 m")
+    monkeypatch.setattr("random.randint", lambda a, b: 1 if b == 20 else a)
+    body = (await client.post(f"/characters/{cid}/spells/{spell}/attack", json={"die": 12, "cast_options": [TWINNED], "cast_option_inputs": {}})).json()
+    assert body["twinned_attack"]["is_fumble"] is True
+    assert body["twinned_attack"]["is_critical"] is False
+    damage = await _damage(client, cid, spell)
+    assert "twinned_damage" not in damage and damage["main_rolls"]

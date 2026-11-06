@@ -287,14 +287,29 @@ def _scores(c: _Ctx) -> None:
     c.ok("ability_scores")
 
 
+def _catalog_computes_hp(c: _Ctx) -> bool:
+    """R45: il catalogo dell'edizione calcola già un bonus ai PF massimi per una classe del PG (Resilienza Draconica):
+    importarlo anche nella base lo sommerebbe due volte."""
+    for cl in _l(c.out.get("_raw_classes")):
+        key = normalize_class_name(_str(_d(_d(cl).get("definition")).get("name"), 100))
+        if any(m.target == "hp_max" for spec in features_for(c.edition, key) for m in spec.modifiers):
+            return True
+    return False
+
+
 def _hp(c: _Ctx) -> dict:
     d = c.data
+    kept = 0  # ciò che la scheda conta e il catalogo ricalcola: serve ai PF correnti, non al massimo
     if d.get("overrideHitPoints") is not None:
         mx = _int(d.get("overrideHitPoints"))
     else:
         per_level = 0
+        own_bonus = _catalog_computes_hp(c)
         for m in _modifiers(d):
             if m.get("type") == "bonus" and m.get("subType") == "hit-points-per-level":
+                if own_bonus and m["_src"] == "class":
+                    kept += _int(m.get("value")) * c.total_level  # R45: lo calcola il catalogo
+                    continue
                 per_level += _int(m.get("value"))
                 if m["_src"] not in ("race", "feat"):
                     c.approx("hp", "", "ddb.reason.hp_recomputed")
@@ -302,7 +317,7 @@ def _hp(c: _Ctx) -> dict:
               + (c.mod("constitution") + per_level) * c.total_level)
     mx = _clamp(mx, 1, 1_000_000)
     c.ok("hp")
-    return {"hit_points": mx, "current_hit_points": _clamp(mx - _int(d.get("removedHitPoints")), 0, mx),
+    return {"hit_points": mx, "current_hit_points": _clamp(mx + kept - _int(d.get("removedHitPoints")), 0, mx + kept),
             "temp_hp": max(0, _int(d.get("temporaryHitPoints")))}
 
 

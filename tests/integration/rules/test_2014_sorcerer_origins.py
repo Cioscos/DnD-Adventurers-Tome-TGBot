@@ -122,25 +122,6 @@ async def test_elemental_affinity_starts_at_level_6_and_needs_the_draconic_blood
     assert AFFINITY not in await _roll_keys(client, cid, "spell_damage", spell_id=spell)
 
 
-async def test_elemental_affinity_resistance_costs_one_point_and_lasts_one_hour(client):
-    cid = await _draconic(client, 6, "blue")
-    r = await _use(client, cid, AFFINITY_USE)
-    assert r.status_code == 200, r.text
-    full = await _full(client, cid)
-    state = next(s for k, s in _states(full).items() if s["feature_key"] == AFFINITY_USE)
-    assert state["rounds_left"] == 600 and await _points(client, cid) == 5
-    assert "lightning" in full["computed"]["resistances"] and "fire" not in full["computed"]["resistances"]
-    await _rest(client, cid, "short")
-    assert "lightning" not in (await _full(client, cid))["computed"]["resistances"]
-
-
-async def test_elemental_affinity_resistance_needs_a_point(client):
-    cid = await _draconic(client, 6, "blue")
-    await _set_points(client, cid, 0)
-    r = await _use(client, cid, AFFINITY_USE)
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_uses"
-
-
 # ---------------------------------------------------------------------------
 # Ali di Drago
 # ---------------------------------------------------------------------------
@@ -459,3 +440,95 @@ async def test_spell_bombardment_starts_at_level_18(client):
     cid = await _wild(client, 17)
     spell = await _spell(client, cid, "Dardo", 1, attack_save="DEX", damage_dice="3d6", damage_type="fire")
     assert BOMBARD not in await _roll_keys(client, cid, "spell_damage", spell_id=spell)
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1: Affinità Elementale al lancio (I3), condizioni degli impulsi (I4)
+# ---------------------------------------------------------------------------
+
+AFFINITY_CAST = "sorcerer.elemental_affinity_resistance"
+
+
+async def _cast_keys(client, cid, spell) -> list[str]:
+    return await _roll_keys(client, cid, "cast", spell_id=spell)
+
+
+async def test_the_resistance_is_a_cast_option_offered_only_for_a_spell_of_the_ancestor_type(client):  # I3
+    cid = await _draconic(client, 6, "blue")
+    lightning = await _spell(client, cid, "Fulmine", 3, attack_save="DEX", damage_dice="8d6", damage_type="lightning")
+    fire = await _spell(client, cid, "Dardo", 1, attack_save="DEX", damage_dice="2d6", damage_type="fire")
+    assert AFFINITY_CAST in await _cast_keys(client, cid, lightning) and AFFINITY_CAST not in await _cast_keys(client, cid, fire)
+    assert AFFINITY_USE not in await _keys_of(client, cid)  # non c'è più un «Usa» slegato dal lancio
+
+
+async def test_casting_with_the_option_pays_a_point_and_gives_resistance_for_an_hour_without_ending_on_rests(client):  # I3
+    cid = await _draconic(client, 6, "blue")
+    spell = await _spell(client, cid, "Fulmine", 3, attack_save="DEX", damage_dice="8d6", damage_type="lightning")
+    r = await _use_spell(client, cid, spell, AFFINITY_CAST, slot_level=3)
+    assert r.status_code == 200, r.text
+    full = await _full(client, cid)
+    state = _states(full)["elemental_resistance"]
+    assert state["rounds_left"] == 600 and "rest_short" not in state["ends_on"] and "rest_long" not in state["ends_on"]
+    assert "lightning" in full["computed"]["resistances"] and await _points(client, cid) == 5
+
+
+async def test_the_resistance_option_is_refused_for_another_damage_type_and_costs_nothing(client):  # I3
+    cid = await _draconic(client, 6, "blue")
+    fire = await _spell(client, cid, "Dardo", 1, attack_save="DEX", damage_dice="2d6", damage_type="fire")
+    r = await _use_spell(client, cid, fire, AFFINITY_CAST, slot_level=1)
+    assert r.status_code == 409 and await _points(client, cid) == 6 and "elemental_resistance" not in _states(await _full(client, cid))
+
+
+async def _surge_state(client, cid, percentile):
+    await _new_turn(client, cid)
+    body = await _surge(client, cid, percentile=(percentile,))
+    return body, await _full(client, cid)
+
+
+async def test_the_plant_surge_makes_you_incapacitated_and_vulnerable_to_everything_until_the_next_turn(client):  # I4
+    cid = await _wild(client, 6)
+    _, full = await _surge_state(client, cid, 41)
+    assert full["conditions"]["incapacitated"] is True and "all" in full["computed"]["vulnerabilities"]
+    await _new_turn(client, cid)
+    full = await _full(client, cid)
+    assert not full["conditions"].get("incapacitated") and "all" not in full["computed"]["vulnerabilities"]
+
+
+async def test_the_fear_surge_frightens_you_until_the_next_turn(client):  # I4
+    cid = await _wild(client, 6)
+    _, full = await _surge_state(client, cid, 67)
+    assert full["conditions"]["frightened"] is True
+    await _new_turn(client, cid)
+    assert not (await _full(client, cid))["conditions"].get("frightened")
+
+
+async def test_the_silent_invisibility_surge_makes_you_invisible_for_a_minute(client):  # I4
+    cid = await _wild(client, 6)
+    _, full = await _surge_state(client, cid, 89)
+    assert full["conditions"]["invisible"] is True and _states(full)["wild_invisible"]["rounds_left"] == 10
+
+
+async def test_the_vulnerability_surge_makes_you_vulnerable_to_piercing_damage_only(client):  # I4
+    cid = await _wild(client, 6)
+    _, full = await _surge_state(client, cid, 95)
+    assert full["computed"]["vulnerabilities"] == ["piercing"]
+
+
+async def test_the_repeat_surge_lets_you_roll_the_table_at_each_turn_for_a_minute_once_per_turn(client):  # I4
+    cid = await _wild(client, 6)
+    await _surge(client, cid, percentile=(1,))
+    assert _states(await _full(client, cid))["wild_repeat"]["rounds_left"] == 10
+    await _new_turn(client, cid)
+    again = await client.post(f"/characters/{cid}/wild-magic/surge", json={"repeat": True, "percentile": [39]})
+    assert again.status_code == 200 and again.json()["die"] is None and again.json()["applied"]["lo"] == 39
+    twice = await client.post(f"/characters/{cid}/wild-magic/surge", json={"repeat": True, "percentile": [39]})
+    assert twice.status_code == 409 and twice.json()["detail"]["code"] == "once_per_turn"
+    await _new_turn(client, cid)
+    ignored = await client.post(f"/characters/{cid}/wild-magic/surge", json={"repeat": True, "percentile": [2]})
+    assert ignored.status_code == 200 and ignored.json()["applied"]["ignored"] is True
+
+
+async def test_the_repeat_roll_needs_the_repeat_state(client):  # I4
+    cid = await _wild(client, 6)
+    r = await client.post(f"/characters/{cid}/wild-magic/surge", json={"repeat": True, "percentile": [39]})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_repeat"

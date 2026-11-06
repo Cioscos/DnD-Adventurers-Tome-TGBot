@@ -9,7 +9,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import { useToast } from '@/hooks/useToast'
 import type { CharacterFull } from '@/types'
 
-const ERRORS = ['once_per_turn', 'tides_not_spent', 'no_pending_surge', 'feature_not_usable', 'invalid_choice']
+const ERRORS = ['once_per_turn', 'tides_not_spent', 'no_repeat', 'no_pending_surge', 'feature_not_usable', 'invalid_choice']
 const TIDES = 'sorcerer.tides_of_chaos'
 
 /** Impulso di Magia Selvaggia (Stregone 2014): il GM lo chiede dopo un incantesimo, il server tira il d20 (una volta per turno)
@@ -25,6 +25,8 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
   // Onde di Caos spesa: il GM può far tirare la tabella senza il d20 e l'uso torna.
   const tides = (char.abilities ?? []).find((a) => a.feature_key === TIDES)
   const tidesSpent = !!tides && tides.max_uses != null && (tides.uses ?? 0) < tides.max_uses
+  // Impulso 01-02 in corso: a ogni turno si tira la tabella senza d20.
+  const repeating = (char.active_states ?? []).some((s) => s.key === 'wild_repeat')
 
   const done = (res: WildSurgeResult) => {
     setResult(res)
@@ -36,7 +38,11 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
     toast.error(t(`character.turn.wild.errors.${code && ERRORS.includes(code) ? code : 'default'}`))
     qc.invalidateQueries({ queryKey: ['character', char.id] })
   }
-  const surge = useMutation({ mutationFn: (viaTides: boolean) => api.characters.wildMagicSurge(char.id, { tides: viaTides }), onSuccess: done, onError: fail })
+  const surge = useMutation({
+    mutationFn: (mode: 'd20' | 'tides' | 'repeat') =>
+      api.characters.wildMagicSurge(char.id, mode === 'repeat' ? { repeat: true } : { tides: mode === 'tides' }),
+    onSuccess: done, onError: fail,
+  })
   const choose = useMutation({ mutationFn: (index: number) => api.characters.wildMagicChoose(char.id, index), onSuccess: done, onError: fail })
 
   const entryCard = (e: WildSurgeEntry, action?: ReactNode) => (
@@ -49,6 +55,7 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
 
   const applied = result?.applied
   const details = applied ? [
+    applied.ignored && t('character.turn.wild.ignored'),
     applied.healed > 0 && t('character.turn.wild.healed', { n: applied.healed }),
     applied.slot_level != null && t('character.turn.wild.slot', { n: applied.slot_level }),
     applied.points && t('character.turn.wild.points'),
@@ -67,12 +74,17 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
           <>
             <p className="text-sm font-body text-dnd-text-muted">{t('character.turn.wild.intro')}</p>
             <SwitchToggle label={t('character.turn.wild.confirm')} checked={asked} onChange={setAsked} />
-            <Button variant="primary" disabled={!asked} loading={surge.isPending} onClick={() => surge.mutate(false)}>
+            <Button variant="primary" disabled={!asked} loading={surge.isPending} onClick={() => surge.mutate('d20')}>
               {t('character.turn.wild.roll')}
             </Button>
             {tidesSpent && (
-              <Button variant="secondary" loading={surge.isPending} onClick={() => surge.mutate(true)}>
+              <Button variant="secondary" loading={surge.isPending} onClick={() => surge.mutate('tides')}>
                 {t('character.turn.wild.tides')}
+              </Button>
+            )}
+            {repeating && (
+              <Button variant="secondary" loading={surge.isPending} onClick={() => surge.mutate('repeat')}>
+                {t('character.turn.wild.repeat')}
               </Button>
             )}
           </>

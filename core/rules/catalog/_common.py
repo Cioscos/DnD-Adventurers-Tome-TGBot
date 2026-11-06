@@ -25,6 +25,11 @@ def cannot_perceive_or_act(char: Any) -> bool:
     return any(conditions.get(c) for c in ("blinded", "deafened", *INCAPACITATING))
 
 
+def save_spell(spell: Any) -> bool:
+    """L'incantesimo fa fare un TS al bersaglio (non un tiro per colpire e non senza tiri)."""
+    return (spell.attack_save or "").strip().upper() not in ("", "ATK")
+
+
 def once_used(char: Any, key: str) -> bool:
     return key in ((getattr(char, "turn_state", None) or {}).get("once_per_turn") or [])
 

@@ -1334,6 +1334,8 @@
         "confirm": "The GM asks for the surge",
         "roll": "Roll the d20",
         "tides": "Tides of Chaos spent: roll the table",
+        "repeat": "Repeat in progress: roll the table for this turn",
+        "ignored": "A 01-02 result is ignored: the repeat goes on.",
         "no_surge": "d20: {{n}}. No surge.",
         "table_roll": "d100 {{n}} ({{label}})",
         "choose_title": "Controlled Chaos: choose one of the two results.",
@@ -1350,6 +1352,7 @@
         "tides_back": "Tides of Chaos is available again.",
         "errors": {
           "once_per_turn": "The surge d20 is rolled once per turn.",
+          "no_repeat": "There is no repeat in progress.",
           "tides_not_spent": "Tides of Chaos has not been spent.",
           "no_pending_surge": "There is no surge to choose.",
           "feature_not_usable": "This feature cannot be used now.",

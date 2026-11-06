@@ -10,7 +10,7 @@ from typing import Any
 
 from core.data.damage_types import LABELS_IT, canonical_damage_type
 from core.game.item_bonuses import item_meta
-from core.rules.catalog._common import feature, state_on, style_options
+from core.rules.catalog._common import feature, save_spell as _save_spell, state_on, style_options
 from core.rules.states import begin_state, has_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseToggle,
@@ -487,11 +487,6 @@ ELDRITCH_STRIKE = RollOptionSpec(
     effect=_say("Il bersaglio ha svantaggio al prossimo TS contro un tuo incantesimo, fino alla fine del tuo prossimo turno.",
                 "The target has disadvantage on its next save against a spell of yours, until the end of your next turn."),
     target_effect=lambda _c, _i: TargetEffect(condition="custom:eldritch_strike", ends_at=_till_my_next_turn()))
-def _save_spell(spell: Any) -> bool:
-    """L'incantesimo fa fare un TS al bersaglio (non un tiro per colpire e non senza tiri)."""
-    return (spell.attack_save or "").strip().upper() not in ("", "ATK")
-
-
 ELDRITCH_STRIKE_CAST = RollOptionSpec(
     key=f"{CK}.eldritch_strike_cast", phase="before", rolls=("cast",), cost=Cost(state_key="eldritch_strike"),
     available=lambda c: c.spell is not None and state_on(c, "eldritch_strike") and _save_spell(c.spell),

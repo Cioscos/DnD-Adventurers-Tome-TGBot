@@ -2,7 +2,7 @@
 
 Scheda ``docs/superpowers/rules/2014/classes/sorcerer.md``; i testi sono nostri, brevi, mai quelli del manuale. Ogni risultato dice
 cosa l'app applica da sola (``heal``, ``heal_each_turn``, ``slot``, ``points``, ``action``, ``ac``, ``resist_all``) e cosa tira e
-mostra (``damage``, ``roll``, ``dc``); il resto è testo con un timer (``rounds``) quando dura un minuto o fino al turno seguente.
+mostra (``damage``, ``roll``, ``dc``); le condizioni su di sé (``condition``) e le vulnerabilità (``vulnerable``) le applica lo stato; il resto è testo con un timer (``rounds``) quando dura un minuto o fino al turno seguente.
 """
 from __future__ import annotations
 
@@ -27,6 +27,10 @@ class Surge:
     damage: tuple[str, str] | None = None  # (dadi, tipo): tirati e mostrati
     roll: str | None = None  # un dado tirato e mostrato (altezza, età, giorni, ore)
     dc: bool = False  # l'effetto è un incantesimo con TS: si mostra la CD dello stregone
+    state_key: str | None = None  # chiave dello stato, se non è quella delle altre regole (condizione, vulnerabilità, ripetizione)
+    condition: str | None = None  # condizione che lo stato imposta finché dura (incapacitato, spaventato, invisibile)
+    vulnerable: str | None = None  # ``all`` o un tipo di danno: vulnerabilità finché dura lo stato
+    ends_on_act: bool = False  # lo stato finisce se chi lo porta attacca o lancia un incantesimo
     key: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -45,7 +49,7 @@ MINUTE = 10  # round
 
 SURGES: tuple[Surge, ...] = (
     _s(1, "Ripetizione", "Repeat", "Per un minuto tiri sulla tabella all'inizio di ogni tuo turno, ignorando questo risultato.",
-       "For one minute you roll on the table at the start of each of your turns, ignoring this result.", rounds=MINUTE),
+       "For one minute you roll on the table at the start of each of your turns, ignoring this result.", rounds=MINUTE, state_key="wild_repeat"),
     _s(3, "Vista dell'invisibile", "See invisible", "Per un minuto vedi le creature invisibili in linea di vista.",
        "For one minute you see invisible creatures in line of sight.", rounds=MINUTE),
     _s(5, "Modron", "Modron", "Un modron scelto dal GM compare entro 1,5 m e svanisce dopo un minuto.",
@@ -83,7 +87,8 @@ SURGES: tuple[Surge, ...] = (
        "1d6 flumphs appear within 60 ft, frightened of you; they vanish after one minute.", rounds=MINUTE, roll="1d6"),
     _s(39, "Cura", "Healing", "Recuperi 2d10 punti ferita.", "You regain 2d10 hit points.", heal="2d10"),
     _s(41, "Pianta in vaso", "Potted plant", "Diventi una pianta in vaso fino all'inizio del tuo prossimo turno: incapacitato e vulnerabile a ogni danno.",
-       "You become a potted plant until the start of your next turn: incapacitated and vulnerable to all damage.", rounds=2, next_turn=True),
+       "You become a potted plant until the start of your next turn: incapacitated and vulnerable to all damage.", rounds=2, next_turn=True,
+       state_key="wild_vulnerable_all", condition="incapacitated", vulnerable="all"),
     _s(43, "Passo breve", "Short step", "Per un minuto puoi teletrasportarti di 6 m con un'azione bonus a ogni turno.",
        "For one minute you can teleport 20 ft as a bonus action on each of your turns.", rounds=MINUTE),
     _s(45, "Levitazione", "Levitation", "Lanci levitazione su di te.", "You cast levitate on yourself."),
@@ -105,7 +110,8 @@ SURGES: tuple[Surge, ...] = (
     _s(65, "Fulmini", "Lightning", "Fino a tre creature entro 9 m subiscono 4d10 danni da fulmine.",
        "Up to three creatures within 30 ft take 4d10 lightning damage.", damage=("4d10", "lightning")),
     _s(67, "Paura", "Fear", "Sei spaventato dalla creatura più vicina fino alla fine del tuo prossimo turno.",
-       "You are frightened of the nearest creature until the end of your next turn.", rounds=2, next_turn=True),
+       "You are frightened of the nearest creature until the end of your next turn.", rounds=2, next_turn=True,
+       state_key="wild_frightened", condition="frightened"),
     _s(69, "Invisibilità di gruppo", "Group invisibility", "Ogni creatura entro 9 m è invisibile per un minuto: finisce se attacca o lancia incantesimi.",
        "Each creature within 30 ft is invisible for one minute; it ends if it attacks or casts a spell.", rounds=MINUTE),
     _s(71, "Resistenza", "Resistance", "Per un minuto hai resistenza a tutti i danni.", "For one minute you have resistance to all damage.",
@@ -124,13 +130,15 @@ SURGES: tuple[Surge, ...] = (
     _s(85, "Immagine speculare", "Mirror image", "Lanci immagine speculare.", "You cast mirror image."),
     _s(87, "Volo altrui", "Borrowed flight", "Lanci volare su una creatura a caso entro 18 m.", "You cast fly on a random creature within 60 ft."),
     _s(89, "Silenzio invisibile", "Silent invisibility", "Per un minuto sei invisibile e non udibile: finisce se attacchi o lanci incantesimi.",
-       "For one minute you are invisible and inaudible; it ends if you attack or cast a spell.", rounds=MINUTE),
+       "For one minute you are invisible and inaudible; it ends if you attack or cast a spell.", rounds=MINUTE,
+       state_key="wild_invisible", condition="invisible", ends_on_act=True),
     _s(91, "Ritorno in vita", "Return to life", "Se muori entro un minuto torni in vita come con reincarnazione.",
        "If you die within one minute you return to life as if by reincarnate.", rounds=MINUTE),
     _s(93, "Taglia maggiore", "Larger size", "Per un minuto la tua taglia aumenta di una categoria.",
        "For one minute your size increases by one category.", rounds=MINUTE),
     _s(95, "Vulnerabilità", "Vulnerability", "Per un minuto tu e le creature entro 9 m siete vulnerabili ai danni perforanti.",
-       "For one minute you and creatures within 30 ft are vulnerable to piercing damage.", rounds=MINUTE),
+       "For one minute you and creatures within 30 ft are vulnerable to piercing damage.", rounds=MINUTE,
+       state_key="wild_vulnerable_piercing", vulnerable="piercing"),
     _s(97, "Musica eterea", "Ethereal music", "Per un minuto una debole musica eterea ti segue.", "For one minute faint ethereal music follows you.",
        rounds=MINUTE),
     _s(99, "Punti ritrovati", "Points regained", "Recuperi tutti i punti stregoneria spesi.", "You regain all spent sorcery points.", points=True),
