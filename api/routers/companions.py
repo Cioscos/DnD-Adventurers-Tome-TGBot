@@ -24,12 +24,12 @@ from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, use_options
-from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
+from api.services.rules_turn import forgo_attack, get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import (
     deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
 )
 from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
-from core.rules.companions import BEAST_BONUS_ORDERS, BEAST_COMPANION, companion_stats
+from core.rules.companions import BEAST_BONUS_ORDERS, BEAST_COMPANION, MAX_MULTIATTACK, companion_stats, stat_int
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
 from core.rules.forms import elemental_violations, form_violations, is_elemental_form
@@ -147,6 +147,11 @@ async def update_companion(
     for required in ("kind", "name", "statblock", "max_hp", "armor_class", "temp_hp", "is_active", "current_hp"):
         if required in changes and changes[required] is None:
             raise HTTPException(status_code=422, detail=f"{required}_required")
+    if changes.get("statblock") is not None:  # i Dadi Vita spesi sono del server: un PATCH non li azzera né li inventa
+        kept = (comp.statblock or {}).get("hit_dice_spent")
+        changes["statblock"] = {k: v for k, v in changes["statblock"].items() if k != "hit_dice_spent"}
+        if kept is not None:
+            changes["statblock"]["hit_dice_spent"] = kept
     for k, v in changes.items():
         setattr(comp, k, v)
     if comp.is_active and comp.kind != "wild_shape":
@@ -350,7 +355,7 @@ def _beast_attacks(char: Character, comp: Companion) -> int:
     """Attacchi dell'ordine di Attacco: uno; con Furia Bestiale due, o il Multiattacco della bestia se lo possiede."""
     if not any(spec.key == "ranger.bestial_fury" for spec, _row in active_features(char)):
         return 1
-    return max(2, int((comp.statblock or {}).get("multiattack") or 0))
+    return max(2, stat_int(comp.statblock, "multiattack", high=MAX_MULTIATTACK))
 
 
 @router.post("/{char_id}/companions/{comp_id}/command", response_model=CompanionCommandResult)
@@ -384,6 +389,8 @@ async def command_companion(
         if body.command == "attack" and beast.get("bonus_order"):
             raise HTTPException(status_code=409, detail={"code": "beast_not_attacking"})
         spend(char, "action")  # 409 turn_slot_used
+        if body.command == "attack":
+            forgo_attack(char)  # l'ordine è l'azione Attacco e ne consuma un attacco; 409 no_attack_left senza
         beast = {**beast, "id": comp.id, "attacks_left": _beast_attacks(char, comp) if body.command == "attack" else 0}
     _save_beast_state(char, {**beast, "commands": [*beast.get("commands", []), body.command]})
     _history(session, char_id, "companion_hp", f"{comp.name}: ordine {body.command}")
@@ -412,7 +419,7 @@ async def spend_beast_hit_dice(
     sb = dict(comp.statblock or {})
     dice = DICE_RE.match(str(sb.get("hit_dice") or ""))
     total, sides = (int(dice.group(1)), int(dice.group(2))) if dice else (0, 0)
-    spent = int(sb.get("hit_dice_spent") or 0)
+    spent = stat_int(sb, "hit_dice_spent")
     if not sides or total - spent < body.count:
         raise HTTPException(status_code=409, detail={"code": "no_hit_dice"})
     con = (sb.get("abilities") or {}).get("con")

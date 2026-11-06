@@ -30,6 +30,16 @@ def _primal_companion(_hp: int, _ac: int, level: int, pb: int, wis: int, statblo
 
 BEAST_COMPANION = "ranger.rangers_companion"  # il compagno del Signore delle Bestie 2014: agisce solo se il ranger glielo ordina
 BEAST_ORDERS = ("attack", "help", "disengage", "dash", "dodge")
+MAX_MULTIATTACK, MAX_HIT_DICE = 6, 40  # tetti dei numeri dello statblock che il server legge (validati al salvataggio)
+
+
+def stat_int(statblock: dict, key: str, default: int = 0, *, high: int = 10_000) -> int:
+    """Numero dello statblock letto in modo difensivo: un dato salvato prima della validazione (testo, bool, negativo,
+    enorme) vale ``default`` invece di far cadere la richiesta con un 500."""
+    value = (statblock or {}).get(key)
+    return value if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= high else default
+
+
 BEAST_BONUS_ORDERS = ("help", "disengage", "dash", "dodge")  # Addestramento Straordinario: tutti tranne l'attacco
 
 

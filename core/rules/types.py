@@ -77,7 +77,7 @@ def parse_dice(text: str) -> tuple[int, int] | None:
 
 ENDS_ON = frozenset({
     "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
-    "new_turn", "attack", "cast", "turn_end_counted",
+    "new_turn", "attack", "cast", "turn_end_counted", "turn_end",
 })
 
 BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
@@ -90,7 +90,8 @@ class StateSpec:
     """Stato attivo avviato da un privilegio (Ira, Forma Selvatica...).
 
     ``ends_on`` (insieme chiuso ``ENDS_ON``): ``turn_end_inactive`` = a fine turno senza aver attaccato né subito
-    danno dall'ultimo turno (Ira 2014); ``incapacitated`` = condizione che toglie le azioni o 0 PF; ``new_turn`` = al
+    danno dall'ultimo turno (Ira 2014); ``incapacitated`` = condizione che toglie le azioni o 0 PF; ``turn_end`` = alla fine del turno di chiunque in un incontro (fuori incontro vale ``new_turn``);
+    ``new_turn`` = al
     prossimo «Nuovo turno» di chi lo porta (Canto di Riposo); ``turn_end_counted`` = alla fine del turno che comincia dopo
     quello in cui è nato, con ``data["skip_new_turns"]`` = 1 (Colpo Mistico): ``new_turn`` lo fa scalare invece di
     chiuderlo e fuori da un incontro lo chiude al «Nuovo turno» seguente; ``attack`` / ``cast`` = quando chi lo porta attacca o lancia

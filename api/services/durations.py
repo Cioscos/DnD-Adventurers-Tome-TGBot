@@ -14,7 +14,7 @@ from api.services.condition_effects import (
     UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
 from api.services.effects import _add_history
-from api.services.rules_states import end_counted_at_turn_end, end_states, tick_states
+from api.services.rules_states import end_counted_at_turn_end, end_states, get_states, tick_states
 from api.services.turn_start import apply_turn_start
 from core.rules.edition import character_edition
 from core.rules.states import exhaustion_level
@@ -136,10 +136,13 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             if used:
                 undo.once_per_turn[str(pc.id)] = used
 
-    if char is not None:  # prima di ogni modifica: l'annullamento li rimette com'erano
-        undo.char_states.setdefault(str(char.id), {
-            "active_states": list(char.active_states or []), "damaged": get_turn(char)["damaged"],
-            "exhaustion": exhaustion_level(char), "is_dead": bool(char.is_dead)})  # lo stato che scade la addebita
+    def remember(pc: Character) -> None:  # prima di ogni modifica: l'annullamento li rimette com'erano
+        undo.char_states.setdefault(str(pc.id), {
+            "active_states": list(pc.active_states or []), "damaged": get_turn(pc)["damaged"],
+            "exhaustion": exhaustion_level(pc), "is_dead": bool(pc.is_dead)})  # lo stato che scade la addebita
+
+    if char is not None:
+        remember(char)
 
     expired: list[str] = []
     rows = (await db.execute(select(ConditionEffect).where(
@@ -169,6 +172,14 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             expired.append("Concentrazione")
             expired += await release_concentration_effects(
                 db, char, entry["released_effects"])
+
+    if edge == "end":  # fine del turno di chiunque: finiscono gli stati «fino alla fine del turno» (Difesa dal Multiattacco)
+        pcs = (await db.execute(select(Character).join(Combatant, Combatant.character_id == Character.id).where(
+            Combatant.encounter_id == enc.id, Combatant.kind == "pc"))).scalars().all()
+        for pc in pcs:
+            if any("turn_end" in st["ends_on"] for st in get_states(pc)):
+                remember(pc)
+                end_states(pc, "turn_end")
 
     if edge == "end" and combatant.surprised:  # la sorpresa dura il primo turno del combattente
         combatant.surprised = False

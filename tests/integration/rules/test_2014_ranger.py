@@ -410,6 +410,22 @@ async def test_primeval_awareness_needs_the_action_of_the_turn(client):
     assert {s["level"]: s["used"] for s in (await _full(client, cid))["spell_slots"]} == {1: 1}
 
 
+async def test_two_requests_cannot_spend_the_last_slot_twice(client, test_session_factory):
+    import asyncio
+    from sqlalchemy import select
+    from core.db.models import Character, SpellSlot
+    cid = await _ranger(client, 3)  # 3 slot di 1° livello
+    async with test_session_factory() as s:
+        for slot in (await s.execute(select(SpellSlot).where(SpellSlot.character_id == cid))).scalars():
+            slot.used = slot.total - 1  # ne resta uno solo
+        char = await s.get(Character, cid)
+        char.turn_state = {"extra_actions": 5}  # le azioni non sono il limite: lo è lo slot
+        await s.commit()
+    rs = await asyncio.gather(*(_use(client, cid, AWARENESS, params={"slot_level": "1"}) for _ in range(3)))
+    assert sorted(r.status_code for r in rs)[0] == 200 and [r.status_code for r in rs].count(200) == 1, [r.text for r in rs]
+    assert {s["level"]: (s["used"], s["total"]) for s in (await _full(client, cid))["spell_slots"]} == {1: (3, 3)}
+
+
 async def test_primeval_awareness_can_use_a_pact_slot(client, test_session_factory):
     from sqlalchemy import select
     from core.db.models import SpellSlot
@@ -512,6 +528,24 @@ async def test_feral_senses_is_asked_on_attacks_from_level_18(client):
     body = await _attack(client, cid, wid, options=[FERAL])
     assert "Sensi Ferini" in body["option_result"]["effects"][0]["it"]
     assert "Feral Senses" in body["option_result"]["effects"][0]["en"]
+
+
+async def _conditions(client, cid, **conditions):
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": conditions})
+    assert r.status_code == 200, r.text
+
+
+async def test_feral_senses_removes_the_disadvantage_of_blinded_and_nothing_else(client):
+    cid = await _ranger(client, 18)
+    wid = await _sword(client, cid, equip="main_hand")
+    await _conditions(client, cid, blinded=True)
+    assert (await _attack(client, cid, wid, dice=[3, 17]))["mode_applied"] == "disadvantage"
+    freed = await _attack(client, cid, wid, options=[FERAL])  # un solo d20
+    assert freed["mode_applied"] == "normal" and "condition:blinded" not in freed["notes"]
+    await _conditions(client, cid, blinded=True, poisoned=True)  # Avvelenato non dipende dalla vista
+    still = await _attack(client, cid, wid, dice=[3, 17], options=[FERAL])
+    assert still["mode_applied"] == "disadvantage" and "condition:poisoned" in still["notes"]
+    assert "condition:blinded" not in still["notes"]
 
 
 # ---------------------------------------------------------------------------

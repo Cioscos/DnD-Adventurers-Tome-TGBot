@@ -186,9 +186,9 @@ HIDE_STEALTH = RollOptionSpec(
            "en": "Hide in Plain Sight: are you still against a solid surface, without moving or acting? +10 to Stealth"})
 
 FERAL_SENSES = RollOptionSpec(
-    key=f"{CK}.feral_senses", phase="before", rolls=("attack",),
-    label={"it": "Sensi Ferini: attacchi una creatura che non vedi? Non vederla non ti dà svantaggio",
-           "en": "Feral Senses: are you attacking a creature you cannot see? Not seeing it gives no disadvantage"},
+    key=f"{CK}.feral_senses", phase="before", rolls=("attack",), cancels=("condition:blinded",),
+    label={"it": "Sensi Ferini: attacchi una creatura entro 9 m che non vedi? Non vederla non ti dà svantaggio",
+           "en": "Feral Senses: are you attacking a creature within 30 ft that you cannot see? Not seeing it gives no disadvantage"},
     effect=_say("Sensi Ferini: non vedere il bersaglio non ti dà svantaggio al tiro per colpire. Le altre fonti di svantaggio restano: "
                 "non scegliere svantaggio solo per questo.",
                 "Feral Senses: not seeing the target gives no disadvantage on the attack roll. Other sources of disadvantage "
@@ -239,7 +239,7 @@ HORDE_BREAKER = RollOptionSpec(
                 "An extra attack outside the Attack action: a different target within 5 ft of the first, with the same weapon and within its range."))
 
 GIANT_KILLER = RollOptionSpec(
-    key=f"{CK}.giant_killer", phase="before", rolls=("attack",), slot="reaction", offered_on_damage=False, available=_melee_weapon,
+    key=f"{CK}.giant_killer", phase="before", rolls=("attack",), slot="reaction", offered_on_damage=False, available=_weapon_attack,
     label={"it": "Uccisore di Giganti: una creatura Grande o più grande entro 1,5 m, che vedi, ti ha colpito o mancato? Reazione: attaccala",
            "en": "Giant Killer: did a Large or larger creature you can see within 5 ft hit or miss you? Reaction: attack it"})
 
@@ -247,7 +247,7 @@ MULTIATTACK_DEFENSE_ID = f"{CK}.multiattack_defense"
 
 
 def _multiattack_defense_started(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    begin_state(ctx.char, StateSpec("multiattack_defense", rounds=1, ends_on=("new_turn", "manual"),
+    begin_state(ctx.char, StateSpec("multiattack_defense", rounds=1, ends_on=("new_turn", "turn_end", "manual"),
                                     data={"ac_bonus": 4, "others": [MULTIATTACK_DEFENSE_ID]}), MULTIATTACK_DEFENSE_ID,
                 "Difesa dal Multiattacco")
 

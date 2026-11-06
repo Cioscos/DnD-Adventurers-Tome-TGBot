@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from core.rules.companions import COMPANION_FEATURES
+from core.rules.companions import COMPANION_FEATURES, MAX_HIT_DICE, MAX_MULTIATTACK
 from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
@@ -33,6 +33,16 @@ def validate_statblock(sb: Any) -> dict:
         dt = a.get("damage_type")
         if dt is not None and not isinstance(dt, str):
             raise ValueError("damage_type must be a string")
+    # numeri che il server legge per la bestia del ranger (ordini, Dadi Vita): mai fidarsi del tipo
+    hd = sb.get("hit_dice")
+    if hd is not None:
+        m = DICE_RE.match(hd.strip()) if isinstance(hd, str) else None
+        if m is None or not 1 <= int(m.group(1)) <= MAX_HIT_DICE or not 2 <= int(m.group(2)) <= 100:
+            raise ValueError("hit_dice must be NdM")
+    for key, high in (("hit_dice_spent", MAX_HIT_DICE), ("multiattack", MAX_MULTIATTACK)):
+        v = sb.get(key)
+        if v is not None and (isinstance(v, bool) or not isinstance(v, int) or not 0 <= v <= high):
+            raise ValueError(f"{key} must be an integer between 0 and {high}")
     return sb
 
 

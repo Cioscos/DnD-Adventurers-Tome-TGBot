@@ -8,7 +8,7 @@ from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _r
 from tests.integration.rules.test_2014_fighter_styles import _item
 from tests.integration.rules.test_2014_paladin import _new_turn, _turn
 from tests.integration.rules.test_2014_ranger import _choice, _ranger, _resolve, _states
-from tests.integration._encounter_helpers import GM_ID, PLAYER_ID
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 
 COLOSSUS, HORDE, GIANT = "ranger.colossus_slayer", "ranger.horde_breaker", "ranger.giant_killer"
 ESCAPE, MULTI_DEF, STEEL = "ranger.escape_the_horde", "ranger.multiattack_defense", "ranger.steel_will"
@@ -170,7 +170,7 @@ async def test_horde_breaker_does_not_use_the_reaction_or_the_bonus_action(clien
 # Uccisore di Giganti
 # ---------------------------------------------------------------------------
 
-async def test_giant_killer_is_a_melee_reaction_attack_outside_the_attack_action(client):
+async def test_giant_killer_is_a_weapon_reaction_attack_outside_the_attack_action(client):
     cid = await _hunter(client, 3, (PREY, "giant_killer"))
     wid = await _sword(client, cid, equip="main_hand")
     bow = await _bow(client, cid)
@@ -185,7 +185,9 @@ async def test_giant_killer_is_a_melee_reaction_attack_outside_the_attack_action
     assert again.status_code == 409 and again.json()["detail"]["code"] == "option_unavailable"
     await _new_turn(client, cid)
     assert (await _turn(client, cid))["reaction_used"] is False and GIANT in await _roll_keys(client, cid, "attack", item_id=wid)
-    assert (await _attack(client, cid, bow, options=[GIANT])).status_code == 409  # un'arma a distanza non è un attacco in mischia
+    # il manuale dice «attaccare la creatura», senza «in mischia» (R31): anche l'arco
+    assert GIANT in await _roll_keys(client, cid, "attack", item_id=bow)
+    assert (await _attack(client, cid, bow, extra=False, options=[GIANT])).status_code == 200
 
 
 async def test_giant_killer_is_not_offered_after_taking_damage(client):
@@ -229,6 +231,30 @@ async def test_multiattack_defense_adds_four_to_ac_after_a_hit_until_the_turn_ch
     await _new_turn(client, cid)
     assert (await _full(client, cid))["ac"] == base and not any(
         s["key"] == "multiattack_defense" for s in await _states(client, cid))
+
+
+async def test_multiattack_defense_ends_with_the_turn_of_the_attacker_in_an_encounter(client, test_session_factory, monkeypatch):
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "ranger", "level": 7, "hit_die": 10,
+                                                              "subclass": "Cacciatore"})
+    assert r.status_code == 201, r.text
+    await _resolve(client, cid, PREY, "colossus_slayer")
+    await _resolve(client, cid, TACTICS, "multiattack_defense")
+    await _full_hp(client, cid)
+    base = (await _full(client, cid))["ac"]
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # tocca al primo goblin
+    as_user(PLAYER_ID)
+    assert (await _hurt(client, cid, 5, MULTI_DEF)).status_code == 200
+    assert (await _full(client, cid))["ac"] == base + 4
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # finisce il turno del goblin
+    as_user(PLAYER_ID)
+    assert (await _full(client, cid))["ac"] == base and "multiattack_defense" not in {s["key"] for s in await _states(client, cid)}
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200  # l'annullamento la rimette
+    as_user(PLAYER_ID)
+    assert (await _full(client, cid))["ac"] == base + 4
 
 
 async def test_multiattack_defense_is_only_for_the_hunter_who_chose_it(client):

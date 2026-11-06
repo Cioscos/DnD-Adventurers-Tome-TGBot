@@ -109,8 +109,10 @@ async def sync_cataloged_features(
 def _end_unwielded_states(char: Character) -> None:
     """Gli stati legati a un'arma (``data["bound_item"]``, Arma Consacrata) finiscono quando quell'arma non è più impugnata:
     tolta, riposta, sostituita o eliminata. Rimetterla in mano non li riavvia."""
-    wielded = {i.id for i in char.items or [] if i.is_equipped}
     states = list(char.active_states or [])
+    if not any((s.get("data") or {}).get("bound_item") is not None for s in states):
+        return  # nessuno stato legato a un'arma: non serve nemmeno caricare gli oggetti (lazy load fuori da greenlet)
+    wielded = {i.id for i in char.items or [] if i.is_equipped}
     closed = [s for s in states if (s.get("data") or {}).get("bound_item") not in (None, *wielded)]
     if closed:
         char.active_states = [s for s in states if s not in closed]

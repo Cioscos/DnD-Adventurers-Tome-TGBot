@@ -8,6 +8,7 @@ from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _r
 from tests.integration.rules.test_2014_fighter_styles import _item
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
 from tests.integration.rules.test_2014_ranger import _ranger, _states
+from core.db.models import Companion
 from tests.integration.test_rules_forms import beast
 
 COMPANION, TRAINING, FURY, SHARE = ("ranger.rangers_companion", "ranger.exceptional_training", "ranger.bestial_fury",
@@ -172,6 +173,44 @@ async def test_extra_attack_lets_the_ranger_attack_while_the_beast_does(client):
     assert (await _bite(client, cid, comp)).status_code == 200
 
 
+async def _weapon_attack(client, cid, wid):
+    return await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})
+
+
+async def test_the_attack_order_is_the_attack_action_and_costs_one_of_its_attacks(client):
+    cid, comp = await _beast(client, 3)  # senza Attacco Extra l'azione ha un solo attacco: è quello della bestia
+    wid = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[], equip="main_hand")
+    assert (await _order(client, cid, comp, "attack")).status_code == 200
+    assert (await _turn(client, cid))["action_attacks"] == 1
+    refused = await _weapon_attack(client, cid, wid)
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "attack_limit"
+    assert (await _bite(client, cid, comp)).status_code == 200  # la bestia attacca comunque
+
+
+async def test_with_extra_attack_the_ranger_has_one_weapon_attack_while_the_beast_attacks(client):
+    cid, comp = await _beast(client, 5)
+    wid = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[], equip="main_hand")
+    assert (await _order(client, cid, comp, "attack")).status_code == 200
+    assert (await _weapon_attack(client, cid, wid)).status_code == 200
+    second = await _weapon_attack(client, cid, wid)
+    assert second.status_code == 409 and second.json()["detail"]["code"] == "attack_limit"
+
+
+async def test_the_attack_order_after_the_weapon_attacks_needs_an_attack_left(client):
+    cid, comp = await _beast(client, 5)
+    wid = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[], equip="main_hand")
+    assert (await _weapon_attack(client, cid, wid)).status_code == 200
+    assert (await _order(client, cid, comp, "attack")).status_code == 200  # il secondo attacco dell'azione è dell'ordine
+    assert (await _weapon_attack(client, cid, wid)).status_code == 409
+    again = await _beast(client, 5)
+    wid2 = await _item(client, again[0], "Spada", damage_dice="1d8", weapon_type="melee", properties=[], equip="main_hand")
+    for _ in range(2):
+        assert (await _weapon_attack(client, again[0], wid2)).status_code == 200
+    refused = await _order(client, *again, "attack")  # gli attacchi dell'azione sono già finiti
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "no_attack_left"
+    assert (await _turn(client, again[0]))["action_used"] is False  # il rifiuto non costa l'azione
+
+
 # ---------------------------------------------------------------------------
 # Addestramento Straordinario e Furia Bestiale
 # ---------------------------------------------------------------------------
@@ -286,6 +325,55 @@ async def test_a_dead_beast_stays_dead_after_a_long_rest(client):
     await _wound(client, cid, comp, 100)
     await _rest(client, cid, "long")
     assert (await _read(client, cid, comp))["current_hp"] == 0
+
+
+async def _patch_statblock(client, cid, comp, **fields):
+    sb = {**_panther(), **fields}
+    return await client.patch(f"/characters/{cid}/companions/{comp}", json={"statblock": sb})
+
+
+@pytest.mark.parametrize("field,value", [
+    ("multiattack", "tre"), ("multiattack", 40), ("multiattack", True), ("hit_dice", "molti"), ("hit_dice", "99d8"),
+    ("hit_dice_spent", "x"), ("hit_dice_spent", -1), ("hit_dice_spent", 1.5)])
+async def test_the_statblock_numbers_the_server_reads_are_validated_on_save(client, field, value):
+    cid, comp = await _beast(client)
+    r = await _patch_statblock(client, cid, comp, **{field: value})
+    assert r.status_code == 422, r.text
+    created = await _companion(client, cid, statblock={**_panther(), field: value})
+    assert created.status_code == 422, created.text
+
+
+async def test_a_patch_cannot_reset_the_hit_dice_the_beast_has_spent(client):
+    cid, comp = await _beast(client)
+    await _wound(client, cid, comp, 8)
+    assert (await client.post(f"/characters/{cid}/companions/{comp}/hit-dice", json={"count": 2})).status_code == 200
+    for sent in ({}, {"hit_dice_spent": 0}):  # senza il campo o con un valore del client: resta quello del server
+        r = await _patch_statblock(client, cid, comp, **sent)
+        assert r.status_code == 200, r.text
+        assert r.json()["statblock"]["hit_dice_spent"] == 2
+
+
+async def test_an_old_statblock_with_bad_numbers_does_not_break_orders_hit_dice_or_the_long_rest(client, test_session_factory):
+    cid, comp = await _beast(client, 11)  # Furia Bestiale legge `multiattack`
+    async with test_session_factory() as s:
+        row = await s.get(Companion, comp)
+        row.statblock = {**_panther(), "multiattack": "tre", "hit_dice_spent": "x"}
+        await s.commit()
+    await _wound(client, cid, comp, 8)
+    assert (await _order(client, cid, comp, "attack")).json()["attacks_left"] == 2
+    ok = await client.post(f"/characters/{cid}/companions/{comp}/hit-dice", json={"count": 1})
+    assert ok.status_code == 200, ok.text
+    await _rest(client, cid, "long")  # il riposo lungo del personaggio non va in 500
+    assert (await _read(client, cid, comp))["current_hp"] == (await _read(client, cid, comp))["max_hp"]
+
+
+async def test_a_long_rest_gives_back_at_least_one_hit_die(client):
+    cid, comp = await _beast(client)
+    await _patch_statblock(client, cid, comp, hit_dice="1d8")
+    await _wound(client, cid, comp, 8)
+    assert (await client.post(f"/characters/{cid}/companions/{comp}/hit-dice", json={"count": 1})).status_code == 200
+    await _rest(client, cid, "long")
+    assert (await _read(client, cid, comp))["statblock"]["hit_dice_spent"] == 0
 
 
 # ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, Companion
-from core.rules.companions import BEAST_COMPANION, companion_stats
+from core.rules.companions import BEAST_COMPANION, companion_stats, stat_int
 
 
 async def long_rest_beast(session: AsyncSession, char: Character) -> None:
@@ -21,6 +21,6 @@ async def long_rest_beast(session: AsyncSession, char: Character) -> None:
         comp.current_hp = stats.max_hp if stats is not None and stats.max_hp is not None else comp.max_hp
         sb = dict(comp.statblock or {})
         total = re.match(r"(\d+)d\d+", str(sb.get("hit_dice") or ""))
-        spent = int(sb.get("hit_dice_spent") or 0)
+        spent = stat_int(sb, "hit_dice_spent")
         if total and spent:
             comp.statblock = {**sb, "hit_dice_spent": max(0, spent - max(1, int(total.group(1)) // 2))}
