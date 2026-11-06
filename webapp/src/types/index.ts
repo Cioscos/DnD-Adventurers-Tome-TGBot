@@ -133,7 +133,7 @@ export interface Ability {
   spends_left?: number | null
   /** Riserva a catalogo (Incanalare Divinità): solo contatore, senza «Usa». */
   is_pool?: boolean
-  use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[] }[]
+  use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[]; optional?: boolean }[]
   /** CD dei tiri salvezza del privilegio, calcolata dal server (il ki del Monaco: 8 + competenza + Saggezza). */
   dc?: number | null
   /** Usi minimi da spendere insieme (Frusta d'Acqua: 2 ki). */

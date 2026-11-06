@@ -363,7 +363,7 @@ FEATURES = (
             ("Incanalare Divinità", "Channel Divinity"),
             ("Usi: 1 al 2°, 2 al 6°, 3 al 18°, tornano a ogni riposo breve o lungo. Ogni effetto (Scacciare Non Morti e quelli del dominio) ne spende uno.",
              "Uses: 1 at 2nd, 2 at 6th, 3 at 18th, regained on a short or long rest. Each effect (Turn Undead and your domain's) spends one."),
-            "action", uses=Uses(table={2: 1, 6: 2, 18: 3}), restoration="short_rest"),
+            "action", uses=Uses(table={2: 1, 6: 2, 18: 3}), restoration="short_rest", shared_pool="channel_divinity"),
     feature("turn_undead", CK, ED, 2, "Incanalare Divinità: Scacciare Non Morti / Channel Divinity: Turn Undead (Chierico 2, pag. 59)",
             ("Scacciare Non Morti", "Turn Undead"),
             ("Azione: spendi un uso. I non morti entro 9 m fanno un TS Saggezza (CD 8 + competenza + Saggezza) o sono scacciati per 1 minuto o fino al danno.",

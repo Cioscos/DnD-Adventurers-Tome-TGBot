@@ -26,6 +26,7 @@ from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext
+from core.rules.uses import pool_key
 from core.rules.modifiers import (
     effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
@@ -112,7 +113,8 @@ async def build_character_response(
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.use_panel = on_use.panel if on_use else None
         if on_use and on_use.spends:
-            pool = next((a for a in response.abilities if a.feature_key == on_use.spends), None)
+            held = pool_key(char, on_use.spends)
+            pool = next((a for a in response.abilities if a.feature_key == held), None)
             ab.spends_left = (pool.uses or 0) if pool is not None and pool.max_uses is not None else None
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
@@ -121,7 +123,9 @@ async def build_character_response(
             ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.use_toggles = [{"key": t.key, "label": dict(t.label)} for t in on_use.toggles if t.available(ctx)]
             ab.use_choices = [{"key": c.key, "label": dict(c.label),
-                               "options": [{"key": o, "label": c.option_label(o)} for o in c.options(ctx)]}
+                               "options": [{"key": o, "label": c.option_label_ctx(ctx, o) if c.option_label_ctx else c.option_label(o)}
+                                           for o in c.options(ctx)],
+                               **({"optional": True} if c.optional else {})}
                               for c in on_use.choices]
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
@@ -159,7 +163,7 @@ async def build_character_response(
         response.carry_capacity *= 2
     response.computed = ComputedStats(
         speed=walk,
-        fly_speed=walk if rule_damage.fly_speed else None,
+        fly_speed=(max(walk if rule_damage.fly_speed else 0, rule_damage.fly_speed_value) or None),
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
         resistances=sorted({*(stored.get("resistances") or []), *rule_damage.resistances}),
         immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),

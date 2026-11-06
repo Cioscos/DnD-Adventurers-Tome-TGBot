@@ -204,7 +204,10 @@ async def apply_target_effect(
         expiry_anchor=expiry["anchor"] if expiry else None, expiry_edge=expiry["edge"] if expiry else None,
         expiry_count=expiry["count"] if expiry else None, source_combatant_id=mine.id, source_character_id=char.id,
         applied_by_gm=False, encounter_id=enc.id, created_at=now,
-        immunity_key=effect_key if effect.get("immune_on_success") else None)
+        immunity_key=effect_key if effect.get("immune_on_success") else None,
+        # TS ripetuto (Collera della Natura): lo porta la condizione, comincia a contare quando il primo TS è fallito
+        save_ability=effect["save_ability"] if effect.get("repeat_save") else None,
+        save_dc=effect["save_dc"] if effect.get("repeat_save") else None, save_edge=effect.get("repeat_save"))
     db.add(eff)
     await db.flush()
     save = PendingSave(

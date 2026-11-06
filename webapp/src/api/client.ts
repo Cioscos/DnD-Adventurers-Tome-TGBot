@@ -177,6 +177,8 @@ export type TargetEffect = {
   extends?: boolean
   /** Chi supera il TS non è più bersaglio di questo effetto fino al tuo prossimo riposo lungo. */
   immune_on_success?: boolean
+  /** Il TS si ripete a inizio o fine turno del bersaglio (Collera della Natura). */
+  repeat_save?: 'start' | 'end' | null
 }
 
 export type TargetEffectPreview = {

@@ -86,3 +86,31 @@ describe('azioni standard per edizione', () => {
     expect(std({ ...char, rules_edition: '2024' } as CharacterFull)).toEqual(expect.arrayContaining(['influence', 'study']))
   })
 })
+
+describe('Campione degli Antichi', () => {
+  const paladin = {
+    ...char,
+    classes: [{ id: 1, class_name: 'paladin' }, { id: 2, class_name: 'wizard' }],
+    spells: [
+      spell(30, { casting_time: '1 azione', class_id: 1 }),
+      spell(31, { casting_time: '1 azione', class_id: 2 }),
+      spell(32, { casting_time: '1 reazione', class_id: 1 }),
+      spell(33, { casting_time: '1 minuto', class_id: 1 }),
+    ],
+  }
+  const ids = (list: { kind: string; id: string }[]) => list.map((e) => `${e.kind}:${e.id}`)
+
+  it('moves the 1-action paladin spells to the bonus action while the state is on, and only those', () => {
+    const g = groupForTurn({ ...paladin, active_states: [{ key: 'elder_champion' }] } as unknown as CharacterFull)
+    expect(ids(g.bonus_action)).toContain('spell:30')
+    expect(ids(g.action)).toContain('spell:31')
+    expect(ids(g.action)).not.toContain('spell:30')
+    expect(ids(g.reaction)).toContain('spell:32')
+    expect(ids(g.other)).toContain('spell:33')
+  })
+
+  it('leaves everything on the action when the state is off', () => {
+    const g = groupForTurn(paladin as unknown as CharacterFull)
+    expect(ids(g.action)).toEqual(expect.arrayContaining(['spell:30', 'spell:31']))
+  })
+})

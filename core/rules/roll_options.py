@@ -12,6 +12,7 @@ from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.states import has_state, immune_conditions
+from core.rules.uses import pool_key
 from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
 
@@ -36,6 +37,17 @@ def _bardic_state(ctx: RuleContext) -> dict | None:
 
 def _bardic_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"1d{((_bardic_state(ctx) or {}).get('data') or {}).get('die') or 6}"
+
+
+def _ally_aura(kind: str):
+    """Un compagno della serata proietta questa aura e chi tira non ne ha una uguale per conto suo."""
+    from core.rules.auras import has_own_aura, party_auras  # import locale: auras usa il catalogo
+    return lambda ctx: bool(party_auras(ctx.char, kind)) and not has_own_aura(ctx.char, kind)
+
+
+def _ally_aura_bonus(ctx: RuleContext, _inputs: dict) -> int:
+    from core.rules.auras import party_auras  # import locale
+    return max((a["bonus"] for a in party_auras(ctx.char, "protection")), default=0)
 
 
 # Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
@@ -65,6 +77,19 @@ _CONDITION_OPTIONS = (
         extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
         available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
+    ),
+    # Aure dei compagni di serata (Paladino 2014): il giocatore conferma di essere nella gittata (D1)
+    RollOptionSpec(
+        key="aura:protection", phase="before", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
+        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata (3 m, 9 m dal 18°)? Somma il suo Carisma",
+               "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma"},
+        available=_ally_aura("protection"),
+    ),
+    RollOptionSpec(
+        key="aura:warding", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
+        label={"it": "Aura di Interdizione di un compagno paladino: sei entro la sua gittata e il danno viene da un incantesimo? Resistenza",
+               "en": "Aura of Warding of a paladin ally: are you within its range and does the damage come from a spell? Resistance"},
+        available=_ally_aura("warding"),
     ),
     # Effetti dati da un chierico a chi li riceve: valgono per ogni scheda, come il dado di Ispirazione Bardica.
     RollOptionSpec(
@@ -189,7 +214,8 @@ def slot_choices(char: Any, minimum: int) -> dict[int, int]:
 
 def _ability_row(char: Any, feature_key: str, amount: int) -> Any:
     """La riga con usi sufficienti; senza massimo il contatore è illimitato (come ``use_feature``)."""
-    return next((a for a in char.abilities if a.feature_key == feature_key
+    held = pool_key(char, feature_key)
+    return next((a for a in char.abilities if a.feature_key == held
                  and (a.max_uses is None or (a.uses or 0) >= amount)), None)
 
 
@@ -228,8 +254,8 @@ def _affordable(char: Any, spec: RollOptionSpec) -> bool:
     return not (cost and cost.spell_slot_min is not None and not slot_choices(char, cost.spell_slot_min))
 
 
-def roll_options_for(ctx: RuleContext) -> list[RollOption]:
-    """Opzioni da offrire per ``ctx.roll``: disponibili e ancora pagabili. Una chiave di due classi vale una volta."""
+def _candidates(ctx: RuleContext) -> list[RollOption]:
+    """Le opzioni dei privilegi attivi (e quelle generali) valide per ``ctx.roll`` e disponibili adesso, non ancora pagate."""
     found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS}
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
@@ -239,6 +265,17 @@ def roll_options_for(ctx: RuleContext) -> list[RollOption]:
     kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
     return [o for o in found.values()
             if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec)]
+
+
+def roll_options_for(ctx: RuleContext) -> list[RollOption]:
+    """Opzioni da offrire per ``ctx.roll``: disponibili e ancora pagabili. Una chiave di due classi vale una volta.
+    Le opzioni automatiche non si offrono: le applica il server (``automatic_options_for``)."""
+    return [o for o in _candidates(ctx) if not o.spec.automatic]
+
+
+def automatic_options_for(ctx: RuleContext) -> list[RollOption]:
+    """Le opzioni che si applicano da sole a questo tiro (Punizione Divina Migliorata)."""
+    return [o for o in _candidates(ctx) if o.spec.automatic]
 
 
 def _specs_by_key(char: Any) -> dict[str, RollOptionSpec]:
@@ -314,7 +351,7 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
         row = _ability_row(char, cost.feature_key, cost.amount)
         if row.max_uses is not None:
             row.uses = (row.uses or 0) - cost.amount
-        spent.append(f"feature:{cost.feature_key}:{cost.amount}")
+        spent.append(f"feature:{row.feature_key}:{cost.amount}")
     if cost and cost.state_key:
         spent.append(_spend_state_token(char, cost.state_key))
     if spec.requires_input == "slot":
@@ -351,8 +388,9 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
                   phase: str = "before") -> AppliedOptions:
     """Riconvalida e paga le opzioni scelte. ``OptionUnavailable`` lascia pagamenti a metà: il chiamante annulla."""
     inputs = inputs or {}
-    keys = list(dict.fromkeys(keys))
-    usable = {o.spec.key: o for o in roll_options_for(ctx) if o.spec.phase == phase}
+    automatic = [o for o in automatic_options_for(ctx) if o.spec.phase == phase]
+    keys = list(dict.fromkeys([*(o.spec.key for o in automatic), *keys]))  # le automatiche per prime, una volta sola
+    usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
     confirmed = ctx.confirmed if phase != "before" else ()
     out = AppliedOptions()
     dice: dict[str, str] = {}

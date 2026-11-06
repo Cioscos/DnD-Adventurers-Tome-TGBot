@@ -69,6 +69,7 @@ from api.services.rules_options import (
 from api.services.effects import cap_current_hp, sync_zero_hp
 from core.rules.edition import character_edition
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
+from api.services.session_allies import attach_party_auras
 from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
@@ -814,6 +815,7 @@ async def roll_saving_throw(
     bonus = await saving_throw_bonus(session, char, ability)
 
     applied = modifiers_for(char, "save", ability=ability)
+    await attach_party_auras(session, char)
     opts = use_options(session, char, "save", body, ability=ability)
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
@@ -933,6 +935,7 @@ async def roll_pending_save(
 
     bonus = await saving_throw_bonus(session, char, ps.ability)
     applied = modifiers_for(char, "save", ability=ps.ability)
+    await attach_party_auras(session, char)
     opts = use_options(session, char, "save", body, ability=ps.ability)
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)

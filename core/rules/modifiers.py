@@ -53,6 +53,7 @@ class Applied:
     damage_reroll: int = 0  # i dadi dell'arma che mostrano al più questo valore si ritirano una volta (Armi Possenti)
     carry_double: bool = False
     fly_speed: bool = False
+    fly_speed_value: int = 0  # velocità di volo fissa, in piedi (Angelo Vendicatore)
     maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
@@ -246,6 +247,9 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             counted = True
         elif m.target == "min_total":
             out.min_total = max(out.min_total or 0, m.value(mctx) if callable(m.value) else m.value)
+            counted = True
+        elif m.target == "fly_speed_value":
+            out.fly_speed_value = max(out.fly_speed_value, m.value(mctx) if callable(m.value) else m.value)
             counted = True
         elif m.target == "crit_dice":
             out.crit_dice += m.value(mctx) if callable(m.value) else m.value

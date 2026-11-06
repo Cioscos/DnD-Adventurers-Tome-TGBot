@@ -19,6 +19,17 @@ async def seated_allies(session: AsyncSession, char: Character) -> list[Characte
     return list(dict.fromkeys(rows.scalars().all()))
 
 
+async def attach_party_auras(session: AsyncSession, char: Character) -> None:
+    """Mette su ``char`` le aure che i compagni della serata proiettano su di lui (``char.party_auras``, transitorio):
+    le opzioni al tiro `aura:*` le leggono. Fuori serata non ce ne sono."""
+    from core.rules.auras import projected_auras  # import locale: auras usa il catalogo
+    found: list[dict] = []
+    for ally in await seated_allies(session, char):
+        await session.refresh(ally, ["classes", "ability_scores", "items"])
+        found += projected_auras(ally)
+    char.party_auras = found
+
+
 async def ally_target(session: AsyncSession, char: Character, target_id: object) -> Character:
     """Il bersaglio scelto, se siede alla stessa serata e non è ``char``; altrimenti 422 ``invalid_target``."""
     if type(target_id) is int:

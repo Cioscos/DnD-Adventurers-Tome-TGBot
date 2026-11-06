@@ -53,6 +53,13 @@ describe('TargetEffectSheet', () => {
     expect(screen.getByText('Goblin 2').closest('button')).toBeEnabled()
   })
 
+  it('says when the save is repeated at the end of the target turn (Collera della Natura)', async () => {
+    preview.mockResolvedValue({ result: { ...topple, condition: 'restrained', repeat_save: 'end' }, combatants: [] })
+    renderWithProviders(<RollNotes charId={3} optionResult={opts} />)
+    await userEvent.click(screen.getByText('character.target_effect.open'))
+    expect(await screen.findByText('character.target_effect.repeat_save_end')).toBeInTheDocument()
+  })
+
   it('only shows the outcome without an encounter', async () => {
     preview.mockResolvedValue({ result: topple, combatants: [] })
     renderWithProviders(<RollNotes charId={3} optionResult={opts} />)

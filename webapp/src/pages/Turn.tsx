@@ -42,7 +42,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
@@ -220,7 +220,7 @@ export default function Turn() {
     </div>
   ) : null)
   /** Il «Usa» resta spento finché non è fatta ogni scelta obbligatoria. */
-  const missingChoice = (ab: Ability) => (ab.use_choices ?? []).some((x) => !useChoices[ab.id]?.[x.key])
+  const missingChoice = (ab: Ability) => (ab.use_choices ?? []).some((x) => !x.optional && !useChoices[ab.id]?.[x.key])
 
   const renderEntry = (e: TurnEntry, c: CharacterFull) => {
     const key = `${e.kind}:${e.id}`
@@ -340,7 +340,12 @@ export default function Turn() {
         const cap = Math.max(floor, Math.min(left, ab.max_amount ?? left))
         const amount = Math.min(Math.max(amounts[ab.id] ?? floor, floor), cap)
         label = `${e.label} (${left}/${ab.max_uses})`
-        if (pickable && left > 0) extra = <div className="pt-2"><AmountStepper value={amount} min={floor} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
+        if (pickable && left > 0) extra = (
+          <>
+            {renderToggles(ab)}
+            <div className="pt-2"><AmountStepper value={amount} min={floor} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
+          </>
+        )
         else if (left > 0) extra = renderToggles(ab)
         // Una riserva a catalogo (`is_pool`, dal server: Incanalare Divinità) mostra solo il contatore, l'uso passa dai privilegi
         // che la spendono. Le righe automatiche di classe (Secondo Vento...) e quelle a mano conservano il «Usa».

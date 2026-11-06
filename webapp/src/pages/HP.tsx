@@ -42,6 +42,7 @@ import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
+import UndyingSentinelOffer from '@/components/character/UndyingSentinelOffer'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
@@ -395,6 +396,7 @@ export default function HP() {
                 <p className="text-center text-sm font-mono text-dnd-crimson-bright">
                   0 / {hpMax}
                 </p>
+                <UndyingSentinelOffer charId={charId} char={char} />
                 <DeathSaves
                   deathSaves={ds}
                   onRoll={(mode) => deathRollMutation.mutate(mode)}

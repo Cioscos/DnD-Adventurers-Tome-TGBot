@@ -102,6 +102,7 @@ class TargetEffectRead(BaseModel):
     damage_dice: str | None = None
     extends: bool = False
     immune_on_success: bool = False
+    repeat_save: str | None = None  # il TS si ripete a inizio o fine turno del bersaglio (Collera della Natura)
 
 
 class TargetCandidate(BaseModel):

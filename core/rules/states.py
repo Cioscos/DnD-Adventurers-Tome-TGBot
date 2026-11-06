@@ -41,7 +41,15 @@ def immune_conditions(char: Any) -> set[str]:
     """Condizioni che gli stati attivi e i privilegi (Interdizione della Natura) impediscono, sospendendo quelle già presenti."""
     from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
     from_states = {c for s in char.active_states or [] for c in s.get("immune_conditions") or []}
-    return from_states | {c for spec, _row in active_features(char) for c in spec.condition_immunities}
+    specs = [spec for spec, _row in active_features(char)]
+    conscious = is_conscious(char) if any(s.needs_conscious for s in specs) else True
+    return from_states | {c for spec in specs if conscious or not spec.needs_conscious for c in spec.condition_immunities}
+
+
+def is_conscious(char: Any) -> bool:
+    """Cosciente: vivo, con almeno 1 PF e non Privo di sensi (le aure del paladino valgono solo così)."""
+    return (not getattr(char, "is_dead", False) and (char.current_hit_points or 0) > 0
+            and not (char.conditions or {}).get("unconscious"))
 
 
 def casting_blocked_by(char: Any) -> bool:

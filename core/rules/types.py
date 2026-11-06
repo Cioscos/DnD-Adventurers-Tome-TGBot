@@ -139,6 +139,12 @@ class TargetEffect:
     damage_dice: str | None = None
     extends: bool = False
     immune_on_success: bool = False
+    # Con un TS: se fallito, la condizione ripete il TS a ``start`` o ``end`` del turno del bersaglio (Collera della Natura)
+    repeat_save: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.repeat_save not in (None, "start", "end"):
+            raise ValueError(f"repeat_save sconosciuto: {self.repeat_save}")
 
 
 @dataclass(frozen=True)
@@ -166,11 +172,15 @@ class UseToggle:
 @dataclass(frozen=True)
 class UseChoice:
     """Scelta fra più valori all'uso di un privilegio (Conoscenze Secolari: quale abilità): ``params[key]`` ne contiene uno.
-    ``options(ctx)`` elenca le chiavi ammesse, ``option_label(key)`` dà il nome bilingue."""
+    ``options(ctx)`` elenca le chiavi ammesse, ``option_label(key)`` dà il nome bilingue; ``option_label_ctx(ctx, key)`` lo
+    sostituisce quando il nome sta sulla scheda (l'arma di Arma Consacrata). ``optional``: la scelta si può lasciare fuori
+    (Tocco Purificatore: l'effetto può essere su un'altra creatura); se c'è, deve comunque essere ammessa."""
     key: str
     label: dict[str, str]
     options: "Callable[[RuleContext], list[str]]"
     option_label: "Callable[[str], dict[str, str]]"
+    optional: bool = False
+    option_label_ctx: "Callable[[RuleContext, str], dict[str, str]] | None" = None
 
 
 @dataclass(frozen=True)
@@ -239,6 +249,11 @@ class OnUse:
     rolls_by_amount: "Callable[[RuleContext, int], str] | None" = None
     # chiave dello stato che l'uso chiude (Palmo Tremante: le vibrazioni finiscono)
     ends_state: str | None = None
+    # ``heal_when(ctx, params)``: la cura va a chi usa il privilegio solo se vero (Imposizione delle Mani su un'altra creatura
+    # scala la riserva e basta). ``amount_ok(ctx, amount, params)``: quanto si spende è ammesso, altrimenti 409
+    # ``amount_invalid`` prima di spendere (la cura di malattie costa multipli di 5).
+    heal_when: "Callable[[RuleContext, dict], bool] | None" = None
+    amount_ok: "Callable[[RuleContext, int, dict], bool] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -259,7 +274,8 @@ class Modifier:
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
     Possenti); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
-    ``fly_speed`` (velocità di volo pari a quella a terra).
+    ``fly_speed`` (velocità di volo pari a quella a terra); ``fly_speed_value`` (velocità di volo fissa, in piedi: vale la
+    maggiore fra i valori e quella a terra se c'è ``fly_speed``).
     ``when`` limita l'effetto (di solito su ``ctx.roll``); senza, vale sempre."""
     target: str
     value: "Callable[[RuleContext], int] | int"
@@ -370,6 +386,9 @@ class RollOptionSpec:
     ranged_unarmed: bool = False
     # Con ``damage_in``: chiamata se, applicata l'opzione, il danno scende a 0 (il proiettile deviato si afferra)
     on_zero_damage: "Callable[[Any, RuleContext], None] | None" = None
+    # Si applica da sola a ogni tiro in cui è disponibile, senza scelta né costo, e non si elenca al giocatore (Punizione
+    # Divina Migliorata): vale per le fasi che il server percorre da solo, quindi ``before``.
+    automatic: bool = False
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -410,6 +429,8 @@ class RollOptionSpec:
             raise ValueError("on_zero_damage vale solo per il danno subito")
         if self.outside_action and self.phase != "before":
             raise ValueError("outside_action vale solo prima del tiro: apre un attacco")
+        if self.automatic and (self.phase != "before" or self.cost or self.requires_input or self.slot or self.needs):
+            raise ValueError("automatic vale solo prima del tiro e senza costo, input, slot né dipendenze")
 
 
 @dataclass(frozen=True)
@@ -423,6 +444,19 @@ class ZeroHpSave:
     base_dc: int = 10
     step: int = 5
     hp: "Callable[[RuleContext], int]" = lambda _ctx: 1
+
+
+@dataclass(frozen=True)
+class AuraSpec:
+    """Aura che un privilegio proietta sugli alleati seduti alla stessa serata (Aura di Protezione, Aura di Interdizione).
+
+    ``kind``: ``protection`` (bonus ai TS) o ``warding`` (resistenza ai danni degli incantesimi). ``range_ft(ctx)`` e
+    ``bonus(ctx)`` valgono per chi la proietta. ``needs_conscious``: l'aura c'è solo se chi la proietta è cosciente.
+    L'alleato conferma al tiro di essere nella gittata (D1: l'app non conosce le posizioni)."""
+    kind: Literal["protection", "warding"]
+    range_ft: "Callable[[RuleContext], int]"
+    bonus: "Callable[[RuleContext], int]" = lambda _ctx: 0
+    needs_conscious: bool = True
 
 
 @dataclass(frozen=True)
@@ -455,6 +489,7 @@ class FeatureSpec:
     granted_spells: tuple[str, ...] = ()  # chiavi di `core.rules.catalog.granted_spells.GRANTED_SPELLS`
     granted_ritual_only: bool = False  # gli incantesimi concessi si lanciano solo come rituale (Cercatore di Spiriti)
     condition_immunities: tuple[str, ...] = ()  # condizioni che il privilegio impedisce sempre (Interdizione della Natura)
+    needs_conscious: bool = False  # ``condition_immunities`` valgono solo con il personaggio cosciente (Aura di Coraggio)
     ignores_components: bool = False  # Arcidruido: le componenti V, S e M senza costo non servono
     at_will_spells: tuple[str, ...] = ()  # ``srd_index`` degli incantesimi lanciabili a volontà, senza slot (Mille Forme)
     acts_when_surprised: str | None = None  # 2014: con quello stato attivo il turno da sorpreso non toglie le azioni
@@ -470,6 +505,13 @@ class FeatureSpec:
     ki_spells: tuple = ()  # ``KiSpell`` che il privilegio fa lanciare coi punti invece degli slot
     # Fine di un riposo lungo: lo stato che il privilegio avvia da solo (Tranquillità); ``f(ctx) -> StateSpec | None``
     long_rest_state: "Callable[[RuleContext], StateSpec | None] | None" = None
+    # Stato sempre attivo finché il privilegio c'è (Purezza di Spirito): lo mette il sync, che lo toglie se il privilegio sparisce;
+    # il suo ``data`` porta ``permanent: True``
+    permanent_state: "StateSpec | None" = None
+    aura: "AuraSpec | None" = None  # aura proiettata sugli alleati della serata (vedi ``core.rules.auras``)
+    # Riserva che due classi condividono (Incanalare Divinità di Chierico e Paladino): una seconda classe non aggiunge usi, ne
+    # tiene la riga la classe che ne dà di più (a parità la prima); gli effetti di entrambe spendono quella riga
+    shared_pool: str | None = None
     no_row: bool = False  # solo catalogo: nessuna riga Ability sulla scheda (regole generali, scelte di livello)
     # dove è coperta una riga senza `Ability` che la mappatura vuole da implementare o correggere: `lavori-successivi`
     # (fuori dai cataloghi, R32) oppure il punto del codice o del test; `check_catalog` lo pretende insieme a `no_row`

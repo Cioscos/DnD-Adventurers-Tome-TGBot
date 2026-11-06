@@ -247,6 +247,32 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
         'fly', {"it": 'Volare', "en": 'Fly'}, 3, '1 azione', 'Contatto', 'Concentrazione, fino a 10 minuti', is_concentration=True),
     'astral-projection': GrantedSpell(
         'astral-projection', {"it": 'Proiezione astrale', "en": 'Astral Projection'}, 9, '1 ora', '3 m', 'Speciale'),
+    # Paladino 2014: incantesimi di giuramento che gli altri cataloghi non concedono
+    'protection-from-evil-and-good': GrantedSpell(
+        'protection-from-evil-and-good', {"it": 'Protezione dal bene e dal male', "en": 'Protection from Evil and Good'}, 1,
+        '1 azione', 'Contatto', 'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'sanctuary': GrantedSpell(
+        'sanctuary', {"it": 'Santuario', "en": 'Sanctuary'}, 1, '1 azione bonus', '9 m', '1 minuto', attack_save='SAVE'),
+    'zone-of-truth': GrantedSpell(
+        'zone-of-truth', {"it": 'Zona di verità', "en": 'Zone of Truth'}, 2, '1 azione', '18 m', '10 minuti', attack_save='SAVE'),
+    'commune': GrantedSpell(
+        'commune', {"it": 'Comunione', "en": 'Commune'}, 5, '1 minuto', 'Personale', '1 minuto', is_ritual=True),
+    'ensnaring-strike': GrantedSpell(
+        'ensnaring-strike', {"it": 'Colpo intrappolante', "en": 'Ensnaring Strike'}, 1, '1 azione bonus', 'Personale',
+        'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE', damage_dice='1d6',
+        damage_type='piercing', higher_levels_dice='1d6'),
+    'moonbeam': GrantedSpell(
+        'moonbeam', {"it": 'Bagliore lunare', "en": 'Moonbeam'}, 2, '1 azione', '36 m', 'Concentrazione, fino a 1 minuto',
+        is_concentration=True, attack_save='SAVE', damage_dice='2d10', damage_type='radiant', higher_levels_dice='1d10'),
+    'bane': GrantedSpell(
+        'bane', {"it": 'Anatema', "en": 'Bane'}, 1, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True,
+        attack_save='SAVE'),
+    'hunters-mark': GrantedSpell(
+        'hunters-mark', {"it": 'Marchio del cacciatore', "en": "Hunter's Mark"}, 1, '1 azione bonus', '27 m',
+        'Concentrazione, fino a 1 ora', is_concentration=True),
+    'banishment': GrantedSpell(
+        'banishment', {"it": 'Esilio', "en": 'Banishment'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto',
+        is_concentration=True, attack_save='SAVE'),
 }
 
 
@@ -356,5 +382,14 @@ _COMPONENTS: dict[str, str] = {
     "minor-illusion": "S, M",
     "fly": "V, S, M",
     "astral-projection": "V, S, M",
+    "protection-from-evil-and-good": "V, S, M",
+    "sanctuary": "V, S, M",
+    "zone-of-truth": "V, S",
+    "commune": "V, S, M",
+    "ensnaring-strike": "V",
+    "moonbeam": "V, S, M",
+    "bane": "V, S, M",
+    "hunters-mark": "V",
+    "banishment": "V, S, M",
 }
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key)) for key, spell in GRANTED_SPELLS.items()}

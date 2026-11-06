@@ -24,6 +24,7 @@ from api.services.natural_recovery import recover as recover_slots
 from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.rules_turn import get_turn, set_damaged
+from api.services.session_allies import attach_party_auras
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -240,6 +241,7 @@ async def update_hp(
         applied = body.value
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
+            await attach_party_auras(session, char)
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
             rolls, reduction = roll_option_dice(char, opts)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
@@ -931,6 +933,7 @@ async def roll_death_save(
     before = {"death_saves": dict(ds), "hp": char.current_hit_points}
 
     applied = modifiers_for(char, "death_save")
+    await attach_party_auras(session, char)
     opts = use_options(session, char, "death_save", body)
     merge_options(applied, opts)
     d20 = resolve_body(body, applied)

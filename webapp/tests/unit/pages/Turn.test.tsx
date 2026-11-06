@@ -681,6 +681,41 @@ describe('Turn page', () => {
     expect(screen.getByTestId('use-amount')).toHaveTextContent('2')
   })
 
+  it('shows the amount selector and the choice together for a pool feature (Lay on Hands: on whom) and sends both', async () => {
+    getChar.mockResolvedValue(pool({
+      max_uses: 25, uses: 25,
+      use_choices: [{ key: 'mode', label: { it: 'Su chi', en: 'On whom' }, options: [
+        { key: 'self', label: { it: 'Cura te stesso', en: 'Heal yourself' } },
+        { key: 'cure', label: { it: 'Cura malattie', en: 'Cure diseases' } }] }],
+    }))
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(screen.getByTestId('use-amount')).toBeInTheDocument()
+    expect(use).toBeDisabled()  // la scelta «su chi» è obbligatoria
+    await userEvent.click(screen.getByText('character.turn.choose'))
+    await userEvent.click(await screen.findByText('Cura malattie'))
+    for (let i = 0; i < 4; i++) await userEvent.click(screen.getByLabelText('character.turn.amount_more'))
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 5, { mode: 'cure' }))
+  })
+
+  it('lets a feature be used without an optional choice (Cleansing Touch on another creature)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 9, name: 'Tocco Purificatore', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'paladin.cleansing_touch', max_uses: 2, uses: 2, action_type: 'action', restoration_type: 'long_rest',
+      use_choices: [{ key: 'condition', optional: true, label: { it: 'Condizione da terminare su di te', en: 'Condition to end on you' },
+        options: [{ key: 'charmed', label: { it: 'Affascinato', en: 'Charmed' } }] }],
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.cleansing_touch', 1, { condition: undefined }))
+  })
+
   it('shows a catalog feature with uses and no effect of its own as a counter, with no button to spend it (the pool)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [
       { id: 5, name: 'Incanalare Divinità', is_passive: false, is_active: true, is_class_feature: true, has_on_use: false,

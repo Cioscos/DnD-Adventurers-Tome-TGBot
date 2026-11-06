@@ -18,6 +18,7 @@ from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
+from core.rules.states import begin_state, has_state
 from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
 
@@ -80,6 +81,7 @@ async def sync_class_feature_abilities(
     apply_feature_grants(char, lang)
     _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
     _mark_retrofitted(char)
+    _sync_permanent_states(char)
     await _sync_granted_spells(session, char, lang)
 
 
@@ -97,8 +99,21 @@ async def sync_cataloged_features(
     apply_feature_grants(char, lang)
     _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
     _mark_retrofitted(char)
+    _sync_permanent_states(char)
     await _sync_granted_spells(session, char, lang)
     await session.flush()
+
+
+def _sync_permanent_states(char: Character) -> None:
+    """Gli stati sempre attivi dei privilegi (Purezza di Spirito): li avvia se mancano, tolgono quelli di un privilegio che non c'è più."""
+    wanted = {spec.permanent_state.key: spec for spec, _row in active_features(char) if spec.permanent_state}
+    states = list(char.active_states or [])
+    kept = [s for s in states if not (s.get("data") or {}).get("permanent") or s.get("key") in wanted]
+    if len(kept) != len(states):
+        char.active_states = kept
+    for key, spec in wanted.items():
+        if not has_state(char, key):
+            begin_state(char, spec.permanent_state, spec.key, spec.name["it"])
 
 
 def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids: set[int] | None = None) -> None:

@@ -17,6 +17,7 @@ from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
 from core.rules.states import begin_state, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
+from core.rules.uses import pool_key
 
 
 def _err(code: int, name: str) -> HTTPException:
@@ -225,10 +226,15 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.available and not on_use.available(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)):
         raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
+    ctx_choice = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
     for choice in on_use.choices:  # prima di spendere: un valore fuori elenco non costa nulla
-        ctx_choice = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
-        if (params or {}).get(choice.key) not in choice.options(ctx_choice):
+        given = (params or {}).get(choice.key)
+        if choice.optional and given is None:
+            continue
+        if given not in choice.options(ctx_choice):
             raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    if on_use.amount_ok and not on_use.amount_ok(ctx_choice, amount, params or {}):
+        raise _err(status.HTTP_409_CONFLICT, "amount_invalid")
     maximize = False
     if on_use.maximize_if and on_use.maximize_if(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level), params or {}):
@@ -242,7 +248,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost * amount
     if on_use.spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
-        ability = next((a for a in char.abilities if a.feature_key == on_use.spends), None)
+        ability = next((a for a in char.abilities if a.feature_key == pool_key(char, on_use.spends)), None)
         if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
     elif spec.uses is not None:
@@ -271,7 +277,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     for _ in range(1 if on_use.rolls_by_amount else amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
         rolled = ([dice[1]] * dice[0] if maximize else [random.randint(1, dice[1]) for _ in range(dice[0])]) if dice else []
         result.rolls += rolled
-        if on_use.heal:
+        if on_use.heal and (on_use.heal_when is None or on_use.heal_when(ctx, params or {})):
             healed += max(0, on_use.heal(ctx, sum(rolled)))
         if on_use.grants_action:
             grant_action(char)
@@ -304,7 +310,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         given = {**(params or {}), "rolled": sum(result.rolls), "maximized": maximize}
         state_spec = on_use.state(ctx, given) if callable(on_use.state) else on_use.state
         result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
-    if on_use.clears_condition:  # Mente Lucida: la condizione scelta cade, con i suoi effetti e i suoi TS
+    if on_use.clears_condition and (params or {}).get(on_use.clears_condition) is not None:  # Mente Lucida: la condizione scelta cade
         from api.services.effects import apply_conditions  # import locale: effects richiama on_conditions
         await apply_conditions(session, char, {params[on_use.clears_condition]: False})
     if on_use.ends_state:

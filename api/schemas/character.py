@@ -52,7 +52,7 @@ class ComputedStats(BaseModel):
     surprised: bool = False  # 2014: è il turno della sorpresa
     surprise_exit_features: list[str] = []  # da sorpreso: i privilegi il cui «Usa» permette di agire (Ira)
     save_flat: dict[str, int] = {}
-    fly_speed: Optional[int] = None  # volo uguale alla velocità a terra, concesso da un privilegio (Aquila in ira)
+    fly_speed: Optional[int] = None  # volo concesso da un privilegio: pari alla velocità a terra (Aquila in ira) o fisso (Angelo Vendicatore)
 
 
 class SpellCasterStats(BaseModel):
