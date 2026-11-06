@@ -5,6 +5,7 @@ import pytest
 
 from core.rules.catalog.y2014.sorcerer import DRAGONS
 from core.rules.catalog.y2014.sorcerer_wild_magic import SURGES
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration.rules.test_2014_barbarian import _armor
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _roll_keys, _use
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
@@ -499,6 +500,8 @@ async def test_the_fear_surge_frightens_you_until_the_next_turn(client):  # I4
     _, full = await _surge_state(client, cid, 67)
     assert full["conditions"]["frightened"] is True
     await _new_turn(client, cid)
+    assert (await _full(client, cid))["conditions"]["frightened"] is True  # fino alla fine del turno seguente (N1)
+    await _new_turn(client, cid)
     assert not (await _full(client, cid))["conditions"].get("frightened")
 
 
@@ -532,3 +535,67 @@ async def test_the_repeat_roll_needs_the_repeat_state(client):  # I4
     cid = await _wild(client, 6)
     r = await client.post(f"/characters/{cid}/wild-magic/surge", json={"repeat": True, "percentile": [39]})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_repeat"
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 2: durate degli impulsi (N1), ripetizione (N2)
+# ---------------------------------------------------------------------------
+
+async def _wild_in_encounter(client, test_session_factory):
+    from tests.integration._encounter_helpers import seed_session
+    sid, cid = await seed_session(test_session_factory)
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "sorcerer", "level": 6, "hit_die": 6, "subclass": "Magia Selvaggia"})
+    assert r.status_code == 201, r.text
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})).status_code == 201
+    enc = (await client.post(f"/sessions/{sid}/encounter/combatants",
+                             json={"name": "Goblin", "count": 1, "initiative_mod": 0, "max_hp": 7, "ac": 15})).json()
+    pc, goblin = (next(c for c in enc["combatants"] if c["kind"] == k)["id"] for k in ("pc", "monster"))
+    as_user(PLAYER_ID)
+    await client.post(f"/sessions/{sid}/encounter/combatants/{pc}/initiative", json={"die": 20})
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/combatants/{goblin}/initiative", json={"die": 1})
+    assert (await client.post(f"/sessions/{sid}/encounter/start", json={})).status_code == 200
+    as_user(PLAYER_ID)
+    return sid, cid
+
+
+UNTIL_END_OF_NEXT_TURN = [(67, "wild_frightened"), (31, "wild_surge_31")]
+
+
+@pytest.mark.parametrize("percentile,state", UNTIL_END_OF_NEXT_TURN)
+async def test_a_surge_until_the_end_of_the_next_turn_lasts_through_that_whole_turn_out_of_an_encounter(client, percentile, state):  # N1
+    cid = await _wild(client, 6)
+    await _surge(client, cid, percentile=(percentile,))
+    assert state in _states(await _full(client, cid))
+    await _new_turn(client, cid)  # comincia il turno dopo: vale ancora
+    full = await _full(client, cid)
+    assert state in _states(full)
+    if percentile == 67:
+        assert full["conditions"]["frightened"] is True
+    await _new_turn(client, cid)
+    full = await _full(client, cid)
+    assert state not in _states(full) and not full["conditions"].get("frightened")
+
+
+@pytest.mark.parametrize("percentile,state", UNTIL_END_OF_NEXT_TURN)
+async def test_a_surge_until_the_end_of_the_next_turn_lasts_through_that_whole_turn_in_an_encounter(client, test_session_factory, percentile, state):  # N1
+    sid, cid = await _wild_in_encounter(client, test_session_factory)
+    await _surge(client, cid, percentile=(percentile,))
+    as_user(GM_ID)
+    for _ in range(2):  # fine del turno del PG, turno del goblin, di nuovo il PG
+        assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200
+    as_user(PLAYER_ID)
+    assert state in _states(await _full(client, cid))
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/next-turn")  # finisce il secondo turno del PG
+    as_user(PLAYER_ID)
+    assert state not in _states(await _full(client, cid))
+
+
+async def test_the_repeat_roll_starts_at_the_turn_after_the_one_that_opened_the_repeat(client):  # N2
+    cid = await _wild(client, 6)
+    await _surge(client, cid, percentile=(1,))
+    r = await client.post(f"/characters/{cid}/wild-magic/surge", json={"repeat": True, "percentile": [39]})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "once_per_turn"

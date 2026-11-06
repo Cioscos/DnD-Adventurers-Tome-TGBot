@@ -347,6 +347,12 @@ async def update_class(
     await session.flush()
     await session.refresh(char, attribute_names=["classes"])
     hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus) if level_changed else 0
+    if "subclass" in data and not level_changed and (char.settings or {}).get("hp_auto_calc", True):
+        # La scelta o il cambio dell'origine sposta il massimo (Resilienza Draconica): chi era a PF pieni segue il nuovo,
+        # i correnti non superano mai il massimo.
+        new_effective = char.hit_points + rule_hp_bonus(char)
+        was_full = old_total_hp > 0 and old_current_hp >= old_total_hp + old_bonus
+        char.current_hit_points = min(new_effective if was_full else old_current_hp, new_effective)
 
     # Emit level_up event for installed homebrew rules.
     # DEVIATION FROM PLAN LITERAL: plan says `if new_level != old_level`, which

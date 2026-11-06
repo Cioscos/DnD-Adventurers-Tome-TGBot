@@ -288,7 +288,7 @@ async def test_hit_dice_are_limited_to_the_dice_of_the_statblock(client):
     cid, comp = await _beast(client)
     await _wound(client, cid, comp, 8)
     assert (await client.post(f"/characters/{cid}/companions/{comp}/hit-dice", json={"count": 3})).status_code == 200
-    await _wound(client, cid, comp, 12)
+    await _wound(client, cid, comp, (await _read(client, cid, comp))["current_hp"] - 1)  # i dadi tirati variano: si torna a 1 PF
     r = await client.post(f"/characters/{cid}/companions/{comp}/hit-dice", json={"count": 1})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_hit_dice"
 

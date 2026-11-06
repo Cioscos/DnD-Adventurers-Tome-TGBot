@@ -1,7 +1,9 @@
 """Cataloghi delle regole di classe (sola lettura)."""
 from __future__ import annotations
 
+import asyncio
 import random
+from collections import defaultdict
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -336,13 +338,20 @@ class FeatureUseResult(BaseModel):
     received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): name, healed
 
 
+_FEATURE_LOCKS: defaultdict[tuple[int, int], asyncio.Lock] = defaultdict(asyncio.Lock)  # (event loop, personaggio)
+
+
 @turn_router.post("/{char_id}/features/{feature_key}/use", response_model=FeatureUseResult)
 async def feature_use(
     char_id: int, feature_key: str, body: FeatureUse, user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> FeatureUseResult:
-    char = await _get_owned_full(char_id, user_id, db)
-    res = await use_feature(db, char, feature_key, body.amount, body.params)
+    # Un uso alla volta per personaggio: la seconda richiesta rilegge il turno e i totali già scritti dalla prima, così un doppio
+    # tocco non paga due volte ciò che ottiene una (slot creato). shortcut: un solo processo API, con più worker serve un lock nel DB.
+    async with _FEATURE_LOCKS[id(asyncio.get_running_loop()), char_id]:
+        char = await _get_owned_full(char_id, user_id, db)
+        res = await use_feature(db, char, feature_key, body.amount, body.params)
+        await db.commit()
     return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets,
                             given=res.given, received=res.received)
 

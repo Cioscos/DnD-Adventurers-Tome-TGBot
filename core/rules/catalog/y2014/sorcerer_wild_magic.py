@@ -16,7 +16,8 @@ class Surge:
     name: dict[str, str]
     text: dict[str, str]
     rounds: int | None = None  # durata dello stato mostrato (10 round = 1 minuto); ``None`` = nessun timer
-    next_turn: bool = False  # lo stato finisce al «Nuovo turno» seguente invece che a tempo
+    next_turn: bool = False  # lo stato finisce al «Nuovo turno» seguente (inizio del turno dopo) invece che a tempo
+    end_of_next_turn: bool = False  # finisce alla fine del turno seguente (come Colpo Mistico): salta il primo «Nuovo turno»
     heal: str | None = None  # dadi di cura applicati subito
     heal_each_turn: int = 0  # PF recuperati all'inizio di ogni turno finché dura lo stato
     slot: bool = False  # restituisce lo slot speso di livello più basso
@@ -78,7 +79,7 @@ SURGES: tuple[Surge, ...] = (
     _s(29, "Teletrasporto", "Teleport", "Ti teletrasporti fino a 18 m in uno spazio libero che vedi.",
        "You teleport up to 60 ft to an unoccupied space you can see."),
     _s(31, "Piano Astrale", "Astral Plane", "Sei sul Piano Astrale fino alla fine del tuo prossimo turno, poi torni dove eri.",
-       "You are on the Astral Plane until the end of your next turn, then return where you were.", rounds=2, next_turn=True),
+       "You are on the Astral Plane until the end of your next turn, then return where you were.", end_of_next_turn=True),
     _s(33, "Danni massimi", "Maximized damage", "Il prossimo incantesimo a danni che lanci entro un minuto fa il massimo dei danni.",
        "The next damaging spell you cast within one minute deals maximum damage.", rounds=MINUTE),
     _s(35, "Età", "Age", "L'età cambia degli anni del d10: dispari ringiovanisci (minimo 1 anno), pari invecchi.",
@@ -110,7 +111,7 @@ SURGES: tuple[Surge, ...] = (
     _s(65, "Fulmini", "Lightning", "Fino a tre creature entro 9 m subiscono 4d10 danni da fulmine.",
        "Up to three creatures within 30 ft take 4d10 lightning damage.", damage=("4d10", "lightning")),
     _s(67, "Paura", "Fear", "Sei spaventato dalla creatura più vicina fino alla fine del tuo prossimo turno.",
-       "You are frightened of the nearest creature until the end of your next turn.", rounds=2, next_turn=True,
+       "You are frightened of the nearest creature until the end of your next turn.", end_of_next_turn=True,
        state_key="wild_frightened", condition="frightened"),
     _s(69, "Invisibilità di gruppo", "Group invisibility", "Ogni creatura entro 9 m è invisibile per un minuto: finisce se attacca o lancia incantesimi.",
        "Each creature within 30 ft is invisible for one minute; it ends if it attacks or casts a spell.", rounds=MINUTE),

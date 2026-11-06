@@ -63,7 +63,7 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
     applied.damage && t('character.turn.wild.damage', { dice: applied.damage.dice, type: t(`character.inventory.damage_types.dmg_${applied.damage.type}`, { defaultValue: applied.damage.type }), rolls: applied.damage.rolls.join(' + '), total: applied.damage.total }),
     applied.extra_roll && t('character.turn.wild.extra_roll', { dice: applied.extra_roll.dice, rolls: applied.extra_roll.rolls.join(' + '), total: applied.extra_roll.total }),
     applied.dc != null && t('character.turn.wild.dc', { n: applied.dc }),
-    applied.state && t('character.turn.wild.timer', { n: applied.state.rounds_left }),
+    applied.state?.rounds_left != null && t('character.turn.wild.timer', { n: applied.state.rounds_left }),
     result?.tides_restored && t('character.turn.wild.tides_back'),
   ].filter((x): x is string => !!x) : []
 

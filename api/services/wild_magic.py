@@ -61,9 +61,11 @@ def _roll_dice(char, expr: str) -> list[int]:
 
 
 def _state_for(s: Surge) -> StateSpec | None:
-    if s.rounds is None:
+    if s.rounds is None and not s.end_of_next_turn:
         return None
     key = s.state_key or ("wild_regeneration" if s.heal_each_turn else "wild_shield" if s.ac else "wild_resistance" if s.resist_all else s.key)
+    if s.end_of_next_turn:  # salta il «Nuovo turno» che apre il turno dopo e finisce alla fine di quello (Colpo Mistico)
+        return StateSpec(key, ends_on=("new_turn", "turn_end_counted", "manual"), data={"skip_new_turns": 1}, condition=s.condition)
     ends = ("manual", "new_turn") if s.next_turn else ("manual", "attack", "cast") if s.ends_on_act else ("manual",)
     return StateSpec(key, rounds=s.rounds, ends_on=ends, condition=s.condition)
 
@@ -99,6 +101,8 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
     if s.dc:
         out["dc"] = 8 + char.proficiency_bonus + effective_ability_mod(char, "charisma")
     spec = _state_for(s)
+    if s.state_key == REPEAT:  # nato in questo turno: il primo tiro della ripetizione spetta al turno dopo
+        mark_once(char, REPEAT)
     if spec is not None:  # il nome dell'impulso, non quello del privilegio: la barra degli stati mostra cosa è successo
         out["state"] = begin_state(char, spec, f"{SURGE}:{s.lo}", s.name["it"])
     session.add(CharacterHistory(

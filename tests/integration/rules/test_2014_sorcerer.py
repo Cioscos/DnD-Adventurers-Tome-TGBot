@@ -304,3 +304,56 @@ async def test_the_first_catalog_sync_fills_a_draconic_sorcerer_who_was_at_full_
     full = await _full(client, healthy)
     assert full["current_hit_points"] == full["computed"]["hp_max_effective"]
     assert (await _full(client, wounded))["current_hit_points"] == 12
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 2: il flusso del wizard (I5), due Creare Slot insieme (I6)
+# ---------------------------------------------------------------------------
+
+async def _wizard_sorcerer(client, level=1) -> tuple[int, int]:
+    """Come il wizard di creazione: nessuna sottoclasse, che si sceglie dopo con un PATCH della classe."""
+    r = await client.post("/characters", json={"name": "Stregone", "initial_class": {
+        "class_name": "sorcerer", "level": level, "hit_die": 6, "spellcasting_ability": "charisma"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    return cid, (await _full(client, cid))["classes"][0]["id"]
+
+
+async def _origin(client, cid, class_id, name):
+    r = await client.patch(f"/characters/{cid}/classes/{class_id}", json={"subclass": name})
+    assert r.status_code == 200, r.text
+    full = r.json()
+    return full["current_hit_points"], full["computed"]["hp_max_effective"]
+
+
+async def test_choosing_the_draconic_origin_after_creation_keeps_a_full_character_full(client):
+    cid, class_id = await _wizard_sorcerer(client)
+    current, effective = await _origin(client, cid, class_id, ORIGINS["draconic"])
+    assert current == effective == (await _full(client, cid))["hit_points"] + 1
+    await client.patch(f"/characters/{cid}/classes/{class_id}", json={"level": 5})
+    full = await _full(client, cid)
+    assert full["current_hit_points"] == full["computed"]["hp_max_effective"]
+
+
+async def test_choosing_the_draconic_origin_leaves_a_wounded_character_as_it_is(client):
+    cid, class_id = await _wizard_sorcerer(client, 4)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 3})
+    current, effective = await _origin(client, cid, class_id, ORIGINS["draconic"])
+    assert current == 3 and effective > 3
+
+
+async def test_changing_the_origin_away_from_draconic_cuts_the_current_hit_points_to_the_new_maximum(client):
+    cid, class_id = await _wizard_sorcerer(client, 5)
+    await _origin(client, cid, class_id, ORIGINS["draconic"])
+    current, effective = await _origin(client, cid, class_id, ORIGINS["wild_magic"])
+    assert current == effective == (await _full(client, cid))["hit_points"]
+
+
+async def test_two_simultaneous_creations_with_points_for_both_pay_for_one_slot_only(client):
+    import asyncio
+    cid = await _sorcerer(client, 10)
+    await _set_points(client, cid, 10)
+    before = (await _slots(client, cid))[3][0]
+    first, second = await asyncio.gather(*(_use(client, cid, CREATE, params={"slot_level": "3"}) for _ in range(2)))
+    assert sorted((first.status_code, second.status_code)) == [200, 409], (first.text, second.text)
+    assert await _points(client, cid) == 5 and (await _slots(client, cid))[3][0] == before + 1

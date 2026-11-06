@@ -176,6 +176,24 @@ describe('useCastFlow attack spells', () => {
     expect(screen.queryByText('roll-damage')).toBeNull()
   })
 
+  it('still offers the damage after a natural 1 when the twinned second target did not fumble', async () => {
+    rollDice.mockResolvedValue([1])
+    attack.mockResolvedValue({ ...attackResult(1), twinned_attack: { die: 18, dice: [18], mode: 'normal', total: 23, is_critical: false, is_fumble: false } })
+    renderFlow(fireBolt)
+    await userEvent.click(screen.getByText('begin'))
+    expect(await screen.findByText('total:6')).toBeInTheDocument()
+    expect(screen.getByText('roll-damage')).toBeInTheDocument()
+  })
+
+  it('offers no damage when both twinned targets roll a natural 1', async () => {
+    rollDice.mockResolvedValue([1])
+    attack.mockResolvedValue({ ...attackResult(1), twinned_attack: { die: 1, dice: [1], mode: 'normal', total: 6, is_critical: false, is_fumble: true } })
+    renderFlow(fireBolt)
+    await userEvent.click(screen.getByText('begin'))
+    expect(await screen.findByText('total:6')).toBeInTheDocument()
+    expect(screen.queryByText('roll-damage')).toBeNull()
+  })
+
   it('rerolls with inspiration without a slot', async () => {
     rollDice.mockResolvedValueOnce([4]).mockResolvedValueOnce([17])
     attack.mockResolvedValueOnce(attackResult(4)).mockResolvedValueOnce(attackResult(17))

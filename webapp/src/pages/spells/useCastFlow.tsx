@@ -413,7 +413,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
         <SpellAttackModal
           charId={charId}
           result={attackState.result}
-          canRollDamage={!!attackState.spell.damage_dice && !attackState.result.is_fumble}
+          canRollDamage={!!attackState.spell.damage_dice
+            && (!attackState.result.is_fumble || (!!attackState.result.twinned_attack && !attackState.result.twinned_attack.is_fumble))}
           onRollDamage={openDamageAfterAttack}
           onClose={() => setAttackState(null)}
           inspirationAvailable={canRerollInspiration(char)}
