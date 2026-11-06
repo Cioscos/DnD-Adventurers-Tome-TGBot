@@ -986,7 +986,7 @@ async def attack_unarmed(
             ability_mod, ability = dex_mod, "dexterity"
     pb = char.proficiency_bonus
     if body and body.effect != "damage":
-        return _unarmed_effect(session, char, body.effect, 8 + ability_mod + pb)
+        return _unarmed_effect(session, char, body.effect, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
 
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)

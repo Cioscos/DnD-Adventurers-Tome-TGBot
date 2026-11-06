@@ -169,8 +169,8 @@ def _own_row(ctx: RuleContext, key: str) -> Any:
 
 
 def _charm_or_illusion(ctx: RuleContext) -> bool:
-    """Un incantesimo di Ammaliamento o Illusione lanciato con uno slot (un trucchetto non ne spende)."""
-    return ctx.spell is not None and ctx.spell.level >= 1 and normalize_school(ctx.spell.school) in ("enchantment", "illusion")
+    """Un incantesimo di Ammaliamento o Illusione lanciato con uno slot (né un trucchetto, né un lancio gratuito o rituale)."""
+    return ctx.spell is not None and ctx.spell.level >= 1 and not ctx.slotless and normalize_school(ctx.spell.school) in ("enchantment", "illusion")
 
 
 def _beguiled(slug: str, it: str, en: str) -> RollOptionSpec:

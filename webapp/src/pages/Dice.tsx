@@ -315,7 +315,7 @@ export default function Dice() {
                 <D20Faces die={shownInitiative.die} dice={shownInitiative.dice} mode={shownInitiative.mode} />{' '}
                 {shownInitiative.bonus >= 0 ? '+' : ''}{shownInitiative.bonus}
               </p>
-              <RollNotes notes={shownInitiative.notes} autoFail={shownInitiative.auto_fail} className="mt-1" />
+              <RollNotes notes={shownInitiative.notes} autoFail={shownInitiative.auto_fail} optionResult={shownInitiative.option_result} className="mt-1" />
               {!shownInitiative.auto_fail && (
                 <div className="mt-3">
                   <AfterRollOptions charId={charId} query={{ roll: 'initiative' }} rollToken={initiativeResult} onResult={retouchInitiative} />

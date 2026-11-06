@@ -164,6 +164,8 @@ export type WildSurgeResult = {
 
 export type RollOptionsQuery = {
   casting_level?: number
+  /** Solo `cast`: lancio senza slot (gratuito o rituale), dove Magia Ammaliante non vale. */
+  slotless?: boolean
   roll: 'attack' | 'spell_damage' | 'spell_healing' | 'weapon_damage' | 'skill' | 'ability' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
   item_id?: number
   attack_mode?: string

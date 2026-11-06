@@ -34,7 +34,8 @@ async def _keys_of(client, cid) -> set[str]:
 # Berserker
 # ---------------------------------------------------------------------------
 
-async def test_frenzy_adds_rage_damage_in_d6_to_the_first_strength_hit_while_raging_with_reckless_attack(client):
+async def test_frenzy_adds_rage_damage_in_d6_to_the_first_strength_hit_while_raging_with_reckless_attack(client, monkeypatch):
+    monkeypatch.setattr("api.services.d20.random.randint", lambda a, b: min(10, b))  # il secondo d20 dell'Attacco Irruento non è un 20: niente critico
     cid = await _barbarian(client, 3, BERSERKER, strength=16)
     sword = await _weapon(client, cid)
     await _rage(client, cid)

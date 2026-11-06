@@ -151,6 +151,7 @@ async def roll_options(
     attack_mode: Literal["melee", "thrown", "offhand"] = "melee",
     grip: Literal["one", "two"] = "one",
     casting_level: int | None = None,
+    slotless: bool = False,
     damage: int | None = None,
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
@@ -173,7 +174,8 @@ async def roll_options(
         else:
             _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, ability)
             attack = {"attack_mode": resolved_mode, "grip": grip, "offhand": attack_mode == "offhand"}
-    return list_options(char, roll, lang, item=item, spell=spell, skill=skill, casting_level=casting_level, **attack,
+    return list_options(char, roll, lang, item=item, spell=spell, skill=skill, casting_level=casting_level,
+                        slotless=slotless and roll == "cast", **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type),
                         damage=damage if roll == "damage_taken" else None)
 

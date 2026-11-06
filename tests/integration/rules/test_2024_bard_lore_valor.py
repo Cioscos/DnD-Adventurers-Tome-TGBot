@@ -112,7 +112,7 @@ async def test_peerless_skill_adds_the_die_after_a_check_or_an_attack_and_is_onl
     assert r.json()["total"] == first["total"] + extra["extra_total"]
     bi = await _ability(client, cid, BI)
     assert bi["uses"] == bi["max_uses"] - 1
-    assert PEERLESS in r.json()["option_result"]["refundable"] if "refundable" in r.json()["option_result"] else True
+    assert r.json()["option_result"]["spent"] == [f"feature:{BI}:1"]  # il dado speso, rimborsabile sotto
     refund = await client.post(f"/characters/{cid}/last-roll/refund")  # il tiro è fallito comunque
     assert refund.status_code == 200, refund.text
     bi = await _ability(client, cid, BI)

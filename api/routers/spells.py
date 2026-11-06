@@ -489,7 +489,8 @@ async def use_spell(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or [])))
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
-    opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual))
+    opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
+                       slotless=bool(body.free_cast or body.as_ritual))
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
@@ -540,7 +541,7 @@ async def spell_attack(
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
-                                casting_level=_cast_level(spell, body.slot_level, body.ritual))
+                                casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual))
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
     await release_concentration_effects(session, char)

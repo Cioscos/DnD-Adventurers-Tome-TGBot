@@ -276,7 +276,7 @@ async def test_countercharm_offers_the_reroll_with_advantage_for_a_reaction(clie
     assert r.status_code == 200, r.text
     options = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "save", "ability": "wisdom"})).json()
     cc = next(o for o in options if o["key"] == "bard.countercharm")
-    assert (cc["phase"], cc["slot"] if "slot" in cc else "reaction") == ("after_roll", "reaction")
+    assert (cc["phase"], cc["slot"]) == ("after_roll", "reaction")
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["bard.countercharm"]})
     assert r.status_code == 200, r.text
     assert r.json()["mode_applied"] == "advantage"

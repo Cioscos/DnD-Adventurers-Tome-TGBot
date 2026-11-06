@@ -51,6 +51,26 @@ async def test_beguiling_magic_is_offered_after_an_enchantment_or_illusion_cast_
     assert CHARMED not in await _roll_keys(client, lore, "cast", spell_id=lore_charm)
 
 
+async def test_beguiling_magic_is_offered_on_the_real_granted_spells(client):
+    cid = await _bard24(client, 6, GLAMOUR)
+    names = await _spells(client, cid)
+    for name in ("Charme su persone", "Immagine speculare", "Comando"):
+        keys = await _roll_keys(client, cid, "cast", spell_id=names[name]["id"])
+        assert CHARMED in keys and FRIGHTENED in keys, name
+
+
+async def test_beguiling_magic_needs_a_slot_so_not_a_free_cast_or_a_ritual(client):
+    cid = await _bard24(client, 6, GLAMOUR)
+    spell = await _command(client, cid)
+    assert CHARMED in await _roll_keys(client, cid, "cast", spell_id=spell["id"])
+    assert CHARMED not in await _roll_keys(client, cid, "cast", spell_id=spell["id"], slotless="true")
+    await _use(client, cid, MAJESTY)
+    await client.post(f"/characters/{cid}/turn/new")
+    r = await _cast(client, cid, spell["id"], free_cast=True, options=[FRIGHTENED])
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "option_unavailable"
+    assert (await _ability(client, cid, BEGUILING))["uses"] == 1 and await _slot_used(client, cid, 1) == 0
+
+
 async def test_beguiling_magic_asks_for_a_wisdom_save_against_the_spell_dc_and_spends_the_use(client):
     cid = await _bard24(client, 3, GLAMOUR, charisma=16)  # CD 8 + 2 + 3
     charm = await _spell(client, cid, "Charme su persone", 1, school="enchantment")

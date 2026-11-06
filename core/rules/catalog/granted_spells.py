@@ -434,5 +434,6 @@ for _key, _it, _en in (("power-word-heal", "Parola del Potere: Guarigione", "Pow
     _COMPONENTS[_key] = "V, S"
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
-            "power-word-heal": "enchantment", "power-word-kill": "enchantment"}
+            "power-word-heal": "enchantment", "power-word-kill": "enchantment",
+            "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

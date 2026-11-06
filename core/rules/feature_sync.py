@@ -224,6 +224,7 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
             session.add(spell)
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
+        spell.school = spell.school or GRANTED_SPELLS[key].school  # idem per la scuola (Magia Ammaliante)
         if key in previous or not spell.always_prepared:
             owned.append(key)
         spell.always_prepared = spell.is_prepared = True

@@ -24,7 +24,7 @@ async def _unarmed(client, cid, *options, die=10):
 
 @pytest.fixture(autouse=True)
 def _fixed_d20(monkeypatch):
-    """I dadi di danno restano casuali, ma non l'altro d20 di un tiro con vantaggio."""
+    """Ogni dado casuale vale 10 (o il massimo della faccia): d20, dadi di danno e dado di Ispirazione Bardica."""
     monkeypatch.setattr("random.randint", lambda a, b: min(10, b))
 
 
@@ -218,3 +218,11 @@ async def test_the_option_list_tells_the_client_that_agile_strikes_is_outside_th
     options = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()
     by_key = {o["key"]: o for o in options}
     assert by_key[AGILE]["outside_action"] is True and "outside_action" not in by_key[BARDIC_DAMAGE]
+
+
+@pytest.mark.parametrize("effect", ["grapple", "shove"])
+async def test_grapple_and_shove_use_strength_for_the_save_dc_not_the_dexterity_of_the_dance(client, effect):
+    cid = await _bard24(client, 3, DANCE, strength=8, dexterity=16)
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10, "effect": effect})
+    assert r.status_code == 200, r.text
+    assert r.json()["save_dc"] == 8 - 1 + 2  # 8 + FOR + competenza, non DES

@@ -674,5 +674,6 @@ class RuleContext:
     grip: Any = None  # solo attacchi: `one` o `two`
     offhand: bool = False  # solo attacchi: l'attacco extra della proprietà Leggera
     casting_level: int | None = None  # ``spell_healing`` e ``cast``: il livello dello slot con cui si lancia
+    slotless: bool = False  # solo ``cast``: lancio gratuito o rituale, senza slot
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo
     damage: int | None = None  # solo ``damage_taken``: il danno che il giocatore sta per inserire, se lo sa
