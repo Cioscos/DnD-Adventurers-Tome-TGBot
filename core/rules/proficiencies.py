@@ -47,13 +47,15 @@ LABELS: dict[str, tuple[str, str]] = {
     "spear": ("Lancia", "Spear"),
     "thieves_tools": ("Arnesi da scasso", "Thieves' tools"),
     "herbalism_kit": ("Borsa da erborista", "Herbalism kit"),
+    "disguise_kit": ("Kit da camuffamento", "Disguise kit"),
+    "poisoners_kit": ("Kit da avvelenatore", "Poisoner's kit"),
     "thieves_cant": ("Gergo Ladresco", "Thieves' Cant"),
     "druidic": ("Druidico", "Druidic"),
 }
 _ALIAS: dict[str, str] = {label.lower(): pid for pid, labels in LABELS.items() for label in labels}
 
 _ARMOR = {"light", "medium", "heavy", "shields"}
-_TOOLS = {"thieves_tools", "herbalism_kit"}
+_TOOLS = {"thieves_tools", "herbalism_kit", "disguise_kit", "poisoners_kit"}
 _LANGS = {"thieves_cant", "druidic"}
 
 

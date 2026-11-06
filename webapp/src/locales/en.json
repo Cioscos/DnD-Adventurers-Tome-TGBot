@@ -201,6 +201,7 @@
       "none_f": "None",
       "speed_homebrew_label": "Speed · homebrew rule",
       "senses": "Senses",
+      "long_jump_bonus": "Running long jump",
       "speed_items_label": "Speed · magic items",
       "encumbrance_encumbered": "Encumbered (variant)",
       "encumbrance_heavily": "Heavily encumbered (variant)",
@@ -871,7 +872,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "magical_ambush": "Magical Ambush" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -1339,6 +1340,13 @@
         "lay_on_hands_cure_other": "Tell the GM or the player: the poison or disease has to be removed on their side. Not on constructs or undead.",
         "primeval_awareness": "You sense aberrations, celestials, dragons, elementals, fey, fiends and undead within the radius of the state (1 mile, 6 miles in your favored terrain). You do not learn where they are or how many.",
         "vanish_hide": "Vanish: you take the Hide action as a bonus action. Roll Stealth from the Turn view or from Skills.",
+        "cunning_dash": "Cunning Action: Dash as a bonus action.",
+        "cunning_disengage": "Cunning Action: Disengage as a bonus action.",
+        "cunning_hide": "Cunning Action: Hide as a bonus action. Roll Stealth from the Turn view or from Skills.",
+        "cunning_sleight_of_hand": "Fast Hands: a Dexterity (Sleight of Hand) check as a bonus action. Roll it from Skills.",
+        "cunning_thieves_tools": "Fast Hands: you use thieves' tools on a lock or trap as a bonus action.",
+        "cunning_use_object": "Fast Hands: the Use an Object action as a bonus action.",
+        "mage_hand_control": "You control the mage hand with your bonus action. For unnoticed tasks roll Sleight of Hand (Dexterity) against the Perception (Wisdom) of whoever watches.",
         "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else."
       },
       "use_rolled": "You rolled",
@@ -1351,7 +1359,11 @@
         "amount_too_low": "This feature needs more uses at once.",
         "amount_invalid": "This amount does not fit this choice (curing diseases and poisons costs 5 points each).",
         "feature_not_usable": "This feature cannot be used right now.",
-        "feature_unavailable": "You cannot use it now (for example you must be raging, without heavy armor).",
+        "feature_unavailable": "You cannot use it now (for example you must be raging, without heavy armor, or know mage hand).",
+        "insufficient_funds": "You do not have enough gold (purse and containers).",
+        "invalid_text": "Write a name (80 characters at most).",
+        "identity_exists": "You already have an identity with this name in your notes.",
+        "invalid_choice": "Invalid choice: check the spell level.",
         "default": "Could not use the feature. Try again."
       },
       "banner": "It's your turn",

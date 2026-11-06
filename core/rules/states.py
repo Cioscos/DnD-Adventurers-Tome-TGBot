@@ -56,9 +56,24 @@ def casting_blocked_by(char: Any) -> bool:
     return any(s.get("blocks_casting") for s in char.active_states or [])
 
 
+STOLEN_SPELL = "stolen:"  # prefisso dello `srd_index` di un incantesimo rubato (Ladro di Incantesimi); lo stato lo ricorda in `data`
+
+
+def drop_stolen_spells(char: Any, closed: list[dict]) -> None:
+    """Gli incantesimi rubati da uno stato appena chiuso si tolgono dalla scheda (l'eliminazione la fa la cascata sulla
+    relazione). Se gli incantesimi non sono caricati si salta: la sincronizzazione del catalogo li toglie comunque."""
+    tags = {(s.get("data") or {}).get("stolen_spell") for s in closed} - {None}
+    orm = getattr(char, "_sa_instance_state", None)
+    if not tags or (orm is not None and "spells" in orm.unloaded) or getattr(char, "spells", None) is None:
+        return
+    char.spells[:] = [sp for sp in char.spells if sp.srd_index not in tags]
+
+
 def settle_closed(char: Any, closed: list[dict]) -> None:
-    """Ciò che lasciano gli stati appena chiusi: la spossatezza dichiarata e la fine della condizione che imponevano."""
+    """Ciò che lasciano gli stati appena chiusi: la spossatezza dichiarata, la fine della condizione che imponevano e gli
+    incantesimi che avevano portato."""
     charge_exhaustion(char, closed)
+    drop_stolen_spells(char, closed)
     gone = {s["condition"] for s in closed if s.get("condition") and not s.get("condition_was_on")}
     gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
     if gone:

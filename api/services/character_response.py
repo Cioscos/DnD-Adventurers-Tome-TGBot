@@ -120,7 +120,7 @@ async def build_character_response(
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
         ab.min_amount = on_use.min_amount if on_use and on_use.choose_amount else 1
-        if on_use and (on_use.toggles or on_use.choices):
+        if on_use and (on_use.toggles or on_use.choices or on_use.texts):
             ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.use_toggles = [{"key": t.key, "label": dict(t.label)} for t in on_use.toggles if t.available(ctx)]
             ab.use_choices = [{"key": c.key, "label": dict(c.label),
@@ -128,6 +128,8 @@ async def build_character_response(
                                            for o in c.options(ctx)],
                                **({"optional": True} if c.optional else {})}
                               for c in on_use.choices]
+            ab.use_texts = [{"key": t.key, "label": dict(t.label), "max_len": t.max_len, **({"optional": True} if t.optional else {})}
+                            for t in on_use.texts]
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
@@ -172,6 +174,8 @@ async def build_character_response(
         surprised=surprised_turn(char),
         surprise_exit_features=surprise_exit_features(char),
         save_flat={a: modifiers_for(char, "save", ability=a).flat for a in ABILITY_NAMES},
+        senses=[{"type": k, "range_ft": v} for k, v in sorted(rule_damage.senses.items())],
+        long_jump_bonus_ft=rule_damage.jump_bonus_ft,
     )
     return response
 

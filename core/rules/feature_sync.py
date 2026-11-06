@@ -18,7 +18,7 @@ from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
-from core.rules.states import begin_state, has_state, settle_closed
+from core.rules.states import STOLEN_SPELL, begin_state, has_state, settle_closed
 from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
 
@@ -188,6 +188,10 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
     granted = {key: row for spec, row in active_features(char) for key in spec.granted_spells}
     # Query e non `char.spells`: non tutti i chiamanti caricano la relazione.
     rows = (await session.execute(select(Spell).where(Spell.character_id == char.id))).scalars().all()
+    live = {(st.get("data") or {}).get("stolen_spell") for st in char.active_states or []}
+    for row in rows:  # un incantesimo rubato il cui stato non c'è più (chiuso dove le relazioni non erano caricate)
+        if (row.srd_index or "").startswith(STOLEN_SPELL) and row.srd_index not in live:
+            await session.delete(row)
     have = {s.srd_index: s for s in rows if s.srd_index in GRANTED_SPELLS}
     previous = (char.settings or {}).get(GRANTED_SPELL_KEYS) or []
     for key, spell in have.items():

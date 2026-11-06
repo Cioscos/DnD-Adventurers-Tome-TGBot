@@ -56,6 +56,8 @@ class Applied:
     fly_speed_value: int = 0  # velocità di volo fissa, in piedi (Angelo Vendicatore)
     maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
     magic_weapon: bool = False  # l'arma del colpo conta come magica (Arma Consacrata)
+    senses: dict[str, int] = field(default_factory=dict)  # tipo -> portata in piedi (Percezione Cieca)
+    jump_bonus_ft: int | None = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); 0 se il privilegio c'è
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
 
@@ -248,6 +250,13 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             counted = True
         elif m.target == "min_total":
             out.min_total = max(out.min_total or 0, m.value(mctx) if callable(m.value) else m.value)
+            counted = True
+        elif m.target.startswith("sense:"):
+            kind = m.target.split(":", 1)[1]
+            out.senses[kind] = max(out.senses.get(kind, 0), m.value(mctx) if callable(m.value) else m.value)
+            counted = True
+        elif m.target == "jump_bonus":
+            out.jump_bonus_ft = (out.jump_bonus_ft or 0) + (m.value(mctx) if callable(m.value) else m.value)
             counted = True
         elif m.target == "fly_speed_value":
             out.fly_speed_value = max(out.fly_speed_value, m.value(mctx) if callable(m.value) else m.value)

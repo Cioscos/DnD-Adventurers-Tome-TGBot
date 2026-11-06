@@ -190,6 +190,19 @@ class UseChoice:
 
 
 @dataclass(frozen=True)
+class UseText:
+    """Testo libero da scrivere all'uso di un privilegio (il nome di un'identità, di un incantesimo rubato): ``params[key]``
+    è una stringa. Il server la ripulisce e rifiuta (422 ``invalid_text``) una vuota o più lunga di ``max_len``, prima di
+    spendere qualcosa. ``optional``: si può lasciare fuori, ma se c'è deve essere valida. ``required(params)``: la rende
+    obbligatoria solo quando vale (il furto riuscito di Ladro di Incantesimi)."""
+    key: str
+    label: dict[str, str]
+    max_len: int = 80
+    optional: bool = False
+    required: "Callable[[dict], bool] | None" = None
+
+
+@dataclass(frozen=True)
 class OnUse:
     """Cosa fa il pulsante «Usa» di un privilegio oltre a spendere ``cost`` usi.
 
@@ -270,6 +283,16 @@ class OnUse:
     # chiave della ``UseChoice`` che porta il livello di uno slot incantesimo da spendere (Consapevolezza Primordiale): lo slot si prende
     # con un UPDATE condizionato, normali prima del Patto; senza slot libero l'uso è rifiutato (409 ``no_slot``)
     spends_slot: str | None = None
+    # testi liberi da scrivere all'uso (``UseText``)
+    texts: "tuple[UseText, ...]" = ()
+    # monete d'oro da spendere (Maestro Infiltrato): dalla borsa e poi dai contenitori, 409 ``insufficient_funds`` prima di
+    # spendere altro
+    gold_cost: int = 0
+    # ``effect(ctx, params)``: scrive sulla scheda ciò che l'uso comporta e non ha un campo suo (una nota, un incantesimo
+    # rubato). Gira dopo i controlli e i pagamenti, nella stessa transazione.
+    effect: "Callable[[RuleContext, dict], None] | None" = None
+    # ``check(ctx, params)``: rifiuta l'uso prima di spendere qualcosa, con ``(codice_http, nome)`` oppure ``None``
+    check: "Callable[[RuleContext, dict], tuple[int, str] | None] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -286,7 +309,8 @@ class Modifier:
 
     ``target``: ``attack``, ``damage``, ``ac``, ``speed``, ``initiative``, ``save``, ``skill``, ``passive``,
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
-    ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
+    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``jump_bonus`` (piedi in più al
+    salto in lungo con rincorsa, si sommano); ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
     Possenti); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
@@ -534,6 +558,8 @@ class FeatureSpec:
     # Riserva che due classi condividono (Incanalare Divinità di Chierico e Paladino): una seconda classe non aggiunge usi, ne
     # tiene la riga la classe che ne dà di più (a parità la prima); gli effetti di entrambe spendono quella riga
     shared_pool: str | None = None
+    # Il privilegio non vale con il personaggio incapacitato (Inafferrabile): la sua nota per GM e gruppo si nasconde
+    suspended_when_incapacitated: bool = False
     no_row: bool = False  # solo catalogo: nessuna riga Ability sulla scheda (regole generali, scelte di livello)
     # dove è coperta una riga senza `Ability` che la mappatura vuole da implementare o correggere: `lavori-successivi`
     # (fuori dai cataloghi, R32) oppure il punto del codice o del test; `check_catalog` lo pretende insieme a `no_row`

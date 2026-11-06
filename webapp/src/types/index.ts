@@ -138,6 +138,8 @@ export interface Ability {
   /** Riserva a catalogo (Incanalare Divinità): solo contatore, senza «Usa». */
   is_pool?: boolean
   use_choices?: { key: string; label: { it: string; en: string }; options: { key: string; label: { it: string; en: string } }[]; optional?: boolean }[]
+  /** Testi liberi da scrivere all'uso (il nome di un'identità falsa, di un incantesimo rubato). */
+  use_texts?: { key: string; label: { it: string; en: string }; max_len: number; optional?: boolean }[]
   /** CD dei tiri salvezza del privilegio, calcolata dal server (il ki del Monaco: 8 + competenza + Saggezza). */
   dc?: number | null
   /** Usi minimi da spendere insieme (Frusta d'Acqua: 2 ki). */
@@ -352,6 +354,10 @@ export interface ComputedStats {
   save_flat: Record<string, number>
   /** Volo pari alla velocità a terra, da un privilegio (Aquila in ira). */
   fly_speed?: number | null
+  /** Sensi dati da un privilegio (Percezione Cieca): la scheda mostra il maggiore fra questi e i suoi. */
+  senses?: { type: string; range_ft: number }[]
+  /** Piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio. */
+  long_jump_bonus_ft?: number | null
 }
 
 /** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */

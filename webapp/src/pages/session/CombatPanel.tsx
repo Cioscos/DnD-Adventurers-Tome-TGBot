@@ -140,9 +140,9 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   if (!enc) return null
 
   const isActivePhase = enc.status === 'active'
-  const myCombatant = enc.combatants.find(
-    (c) => c.kind === 'pc' && c.owner_user_id === myUserId,
-  )
+  // Il secondo turno dei Riflessi da Furfante è una riga a parte senza `character_id`: la scheda è quella con il PG.
+  const mine = enc.combatants.filter((c) => c.kind === 'pc' && c.owner_user_id === myUserId)
+  const myCombatant = mine.find((c) => c.character_id != null) ?? mine[0]
   const activeCombatant =
     enc.combatants.find((c) => c.id === enc.active_combatant_id) ?? null
   const isMyTurn =

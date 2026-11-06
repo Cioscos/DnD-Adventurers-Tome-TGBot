@@ -201,6 +201,7 @@
       "none_f": "Nessuna",
       "speed_homebrew_label": "Velocità · regola homebrew",
       "senses": "Sensi",
+      "long_jump_bonus": "Salto in lungo con rincorsa",
       "speed_items_label": "Velocità · oggetti magici",
       "encumbrance_encumbered": "Ingombro (variante)",
       "encumbrance_heavily": "Molto ingombrato (variante)",
@@ -871,7 +872,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -1339,6 +1340,13 @@
         "lay_on_hands_cure_other": "Dillo al GM o al giocatore: il veleno o la malattia va tolto da loro. Non vale su costrutti e non morti.",
         "primeval_awareness": "Percepisci aberrazioni, celestiali, draghi, elementali, folletti, immondi e non morti entro il raggio dello stato (1,5 km, 9 km nel terreno prescelto). Non vedi dove sono né quanti.",
         "vanish_hide": "Svanire: usi Nascondersi come azione bonus. Tira Furtività dalla vista Turno o dalle Abilità.",
+        "cunning_dash": "Azione Scaltra: Scatto come azione bonus.",
+        "cunning_disengage": "Azione Scaltra: Disimpegno come azione bonus.",
+        "cunning_hide": "Azione Scaltra: Nascondersi come azione bonus. Tira Furtività dalla vista Turno o dalle Abilità.",
+        "cunning_sleight_of_hand": "Mani Veloci: una prova di Destrezza (Rapidità di Mano) come azione bonus. Tirala dalle Abilità.",
+        "cunning_thieves_tools": "Mani Veloci: usi gli arnesi da scasso su una serratura o una trappola come azione bonus.",
+        "cunning_use_object": "Mani Veloci: l'azione Usare un Oggetto come azione bonus.",
+        "mage_hand_control": "Controlli la mano magica con l'azione bonus. Per i compiti inosservati tira Rapidità di Mano (Destrezza) contro la Percezione (Saggezza) di chi guarda.",
         "fist_of_unbroken_air": "TS Forza: se fallisce, subisce i danni contundenti, è spinto fino a 6 m e cade prono; se supera, metà danni e nessun altro effetto."
       },
       "use_errors": {
@@ -1350,7 +1358,11 @@
         "amount_too_low": "Servono più usi in una volta per questo privilegio.",
         "amount_invalid": "Questa quantità non va bene per questa scelta (la cura di malattie e veleni costa 5 punti ciascuno).",
         "feature_not_usable": "Questo privilegio non si può usare ora.",
-        "feature_unavailable": "Ora non puoi usarlo (per esempio serve essere in ira, senza armatura pesante).",
+        "feature_unavailable": "Ora non puoi usarlo (per esempio serve essere in ira, senza armatura pesante, o conoscere mano magica).",
+        "insufficient_funds": "Non hai abbastanza oro (borsa e contenitori).",
+        "invalid_text": "Scrivi un nome (al massimo 80 caratteri).",
+        "identity_exists": "Hai già un'identità con questo nome fra le note.",
+        "invalid_choice": "Scelta non valida: controlla il livello dell'incantesimo.",
         "default": "Impossibile usare il privilegio. Riprova."
       },
       "banner": "È il tuo turno",

@@ -227,6 +227,8 @@ class AbilityRead(BaseModel):
     # Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira): `[{key, label: {it, en}}]`, già filtrate per questo personaggio
     use_toggles: list[dict[str, Any]] = []
     use_choices: list[dict[str, Any]] = []
+    # Testi liberi da scrivere all'uso (nome di un'identità, di un incantesimo rubato): `[{key, label, max_len, optional}]`
+    use_texts: list[dict[str, Any]] = []
     use_panel: Optional[str] = None
     # Usi che restano al privilegio di cui questo spende gli usi (Preservare Vita: la riserva di Incanalare Divinità)
     spends_left: Optional[int] = None

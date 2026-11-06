@@ -47,6 +47,7 @@ from api.services.rules_targets import (
     pc_char as _pc_char, set_condition as _set_condition,
 )
 from api.services.rules_turn import reset_turn, set_surprised
+from api.services.thiefs_reflexes import add_second_turns
 from api.services.turn_start import apply_turn_start
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -172,7 +173,9 @@ def _advance_turn(
     for step in range(1, n + 1):
         pos = idx - step if backward else idx + step
         cand = rows[pos % n]
-        if cand.is_dead:
+        round_of_cand = enc.round - 1 if backward and pos < 0 else enc.round + 1 if not backward and pos >= n else enc.round
+        # Il secondo turno dei Riflessi da Furfante esiste solo nel primo round
+        if cand.is_dead or (cand.extra_turn_of is not None and round_of_cand > 1):
             continue
         if backward and pos < 0:
             if enc.round <= 1:
@@ -441,6 +444,7 @@ async def start_encounter(
         applied = await _pc_initiative_modifiers(db, c)
         c.initiative_die = resolve_body(None, applied).kept
         c.initiative = c.initiative_die + c.initiative_mod + applied.flat
+    await add_second_turns(db, enc, lang, _now())
     ordered = sorted(
         enc.combatants, key=lambda c: (-(c.initiative or 0), -c.initiative_mod, c.id),
     )
@@ -810,6 +814,11 @@ async def delete_combatant(
     # SQLite FK cascade is not guaranteed: drop the monster's effects explicitly
     await clear_effects_for(db, ("combatant", comb.id), (comb.conditions or {}).keys())
     await _sync_surprise(db, comb, released=True)
+    if comb.character_id is not None:  # il secondo turno dei Riflessi da Furfante non ha senso senza chi lo fa
+        for extra in [c for c in enc.combatants if c.extra_turn_of == comb.character_id]:
+            if enc.active_combatant_id == extra.id:
+                _move_pointer_off(enc, list(enc.combatants), extra.id)
+            await db.delete(extra)
     await db.delete(comb)
     _touch(session)
     await db.flush()

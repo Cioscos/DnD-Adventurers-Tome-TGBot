@@ -43,9 +43,10 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'invalid_choice']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
-const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'primeval_awareness', 'vanish_hide']
+const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'primeval_awareness', 'vanish_hide',
+  'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -66,6 +67,8 @@ export default function Turn() {
   const [toggles, setToggles] = useState<Record<number, Record<string, boolean>>>({})
   const [panel, setPanel] = useState<Ability | null>(null)
   const [useChoices, setUseChoices] = useState<Record<number, Record<string, string>>>({})
+  // Testi liberi all'uso di un privilegio (il nome di un'identità falsa, di un incantesimo rubato), per riga di privilegio.
+  const [useTexts, setUseTexts] = useState<Record<number, Record<string, string>>>({})
   // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
   const [targetKey, setTargetKey] = useState<string | null>(null)
   // Privilegio che dà lo stato a un alleato della serata (Ispirazione Bardica): prima si sceglie a chi (R38).
@@ -133,9 +136,11 @@ export default function Turn() {
       if (ability.has_on_use && ability.feature_key) {
         const chosen = toggles[ability.id]
         const picked = useChoices[ability.id]
-        const choices = ability.use_toggles?.length || ability.use_choices?.length ? {
+        const typed = useTexts[ability.id]
+        const choices = ability.use_toggles?.length || ability.use_choices?.length || ability.use_texts?.length ? {
           ...Object.fromEntries((ability.use_toggles ?? []).map((x) => [x.key, !!chosen?.[x.key]])),
           ...Object.fromEntries((ability.use_choices ?? []).map((x) => [x.key, picked?.[x.key]]).filter(([, v]) => v)),
+          ...Object.fromEntries((ability.use_texts ?? []).map((x) => [x.key, typed?.[x.key]?.trim()]).filter(([, v]) => v)),
         } : undefined
         // Il bersaglio scelto viaggia con le scelte già fatte (Imposizione delle Mani: la modalità decide cosa farne).
         const params = allyId !== undefined ? { ...choices, target_character_id: allyId } : choices
@@ -149,6 +154,7 @@ export default function Turn() {
     onSuccess: (res, { ability }) => {
       // Le scelte valgono per un uso solo: il prossimo riparte vuoto, senza riproporre una condizione già curata.
       setUseChoices((s) => Object.fromEntries(Object.entries(s).filter(([id]) => Number(id) !== ability.id)))
+      setUseTexts((s) => Object.fromEntries(Object.entries(s).filter(([id]) => Number(id) !== ability.id)))
       if (res?.targets?.length) setTargetKey(res.targets[0])
       if (res?.received) toast.info(t('character.turn.use_received', { name: res.received.name, n: res.received.healed }))
       // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
@@ -159,7 +165,9 @@ export default function Turn() {
     },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      // Il codice sta in `detail.code`; l'oro che manca arriva come testo semplice (`insufficient_funds`).
+      const detail = err instanceof ApiError ? err.detail : undefined
+      const code = typeof detail === 'string' ? detail : (detail as { code?: string } | null)?.code
       toast.error(t(`character.turn.use_errors.${code && ABILITY_USE_ERRORS.includes(code) ? code : 'default'}`))
     },
     onSettled: () => {
@@ -213,7 +221,7 @@ export default function Turn() {
   const busy = useSlot.isPending || newTurn.isPending
 
   /** Interruttori e scelte fatti all'uso (Frenesia, abilità di Conoscenze Secolari): il server li legge in `params`. */
-  const renderToggles = (ab: Ability) => (ab.use_toggles?.length || ab.use_choices?.length ? (
+  const renderToggles = (ab: Ability) => (ab.use_toggles?.length || ab.use_choices?.length || ab.use_texts?.length ? (
     <div className="pt-1 text-sm">
       {ab.use_toggles?.map((x) => (
         <SwitchToggle key={x.key} label={x.label[lang]} checked={!!toggles[ab.id]?.[x.key]}
@@ -225,10 +233,15 @@ export default function Turn() {
             ...x.options.map((o) => ({ value: o.key, label: o.label[lang] }))]}
           onChange={(v) => setUseChoices((s) => ({ ...s, [ab.id]: { ...s[ab.id], [x.key]: v } }))} />
       ))}
+      {ab.use_texts?.map((x) => (
+        <Input key={x.key} label={x.label[lang]} value={useTexts[ab.id]?.[x.key] ?? ''} className="mt-2"
+          onChange={(v) => setUseTexts((s) => ({ ...s, [ab.id]: { ...s[ab.id], [x.key]: v.slice(0, x.max_len) } }))} />
+      ))}
     </div>
   ) : null)
   /** Il «Usa» resta spento finché non è fatta ogni scelta obbligatoria. */
   const missingChoice = (ab: Ability) => (ab.use_choices ?? []).some((x) => !x.optional && !useChoices[ab.id]?.[x.key])
+    || (ab.use_texts ?? []).some((x) => !x.optional && !useTexts[ab.id]?.[x.key]?.trim())
 
   const renderEntry = (e: TurnEntry, c: CharacterFull) => {
     const key = `${e.kind}:${e.id}`

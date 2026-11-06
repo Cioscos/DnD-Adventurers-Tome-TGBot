@@ -61,8 +61,17 @@ export default function HeroStatsSection({ char }: Props) {
   const passivePerception =
     char.passives?.perception ??
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
-  const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
+  // I sensi scritti a mano e quelli dati da un privilegio (Percezione Cieca): per ogni tipo vale la portata maggiore.
+  const senses = [...((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? []), ...(char.computed?.senses ?? [])]
     .filter((s) => s.range_ft > 0)
+    .reduce<{ type: string; range_ft: number }[]>((acc, s) => {
+      const seen = acc.find((x) => x.type === s.type)
+      if (seen) seen.range_ft = Math.max(seen.range_ft, s.range_ft)
+      else acc.push({ ...s })
+      return acc
+    }, [])
+  // Bonus al salto in lungo con rincorsa (Lavoro al Secondo Piano): c'è solo con il privilegio.
+  const longJumpBonus = char.computed?.long_jump_bonus_ft
   const storedSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
   // Il volo dato da un privilegio (Aquila in ira) vale la velocità a terra, salvo un volo già scritto più alto.
@@ -216,6 +225,13 @@ export default function HeroStatsSection({ char }: Props) {
           <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.hero.senses')}</span>
           {': '}
           {senses.map((s) => `${t(`character.senses.${s.type}`)} ${formatLength(s.range_ft, unitSystem)}`).join(' · ')}
+        </p>
+      )}
+
+      {longJumpBonus != null && (
+        <p className="mt-1.5 text-xs font-body text-dnd-text-muted text-center">
+          <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.hero.long_jump_bonus')}</span>
+          {': +'}{formatLength(longJumpBonus, unitSystem)}
         </p>
       )}
 

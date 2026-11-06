@@ -113,9 +113,10 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
     """One turn edge (spec §2): expiries anchored on ``combatant`` first, then the
     PC's concentration (start only), then repeated saves for effects on it."""
     # Con le abilità caricate: uno stato che scade ne legge il nome (`state_name`), e fuori da una richiesta non c'è lazy load.
+    owner_id = combatant.character_id or combatant.extra_turn_of  # il secondo turno dei Riflessi da Furfante è del PG
     char = ((await db.execute(select(Character).options(selectinload(Character.abilities))
-                              .where(Character.id == combatant.character_id))).scalar_one_or_none()
-            if combatant.kind == "pc" and combatant.character_id else None)
+                              .where(Character.id == owner_id))).scalar_one_or_none()
+            if combatant.kind == "pc" and owner_id else None)
     on_x = (ConditionEffect.character_id == char.id if char is not None
             else ConditionEffect.combatant_id == combatant.id)
 

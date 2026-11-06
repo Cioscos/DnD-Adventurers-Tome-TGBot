@@ -898,6 +898,9 @@ class Combatant(Base):
     surprised: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sort_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Secondo turno del primo round (Riflessi da Furfante): id del personaggio di cui è il turno. Ha ``character_id`` nullo
+    # (la coppia incontro-personaggio è unica) e dopo il primo round l'ordine di turno lo salta.
+    extra_turn_of: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     encounter: Mapped["Encounter"] = relationship(back_populates="combatants")
 

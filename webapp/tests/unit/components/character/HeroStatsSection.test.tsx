@@ -115,6 +115,26 @@ describe('HeroStatsSection', () => {
     expect(screen.getByText(/character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
   })
 
+  it('lists the sense a feature grants, and keeps the longer range of the same sense', () => {
+    renderHero(char({ computed: { senses: [{ type: 'blindsight', range_ft: 10 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.senses\.blindsight 10 ft/)).toBeInTheDocument()
+    renderHero(char({ computed: { senses: [{ type: 'blindsight', range_ft: 10 }] },
+      settings: { senses: [{ type: 'blindsight', range_ft: 30 }, { type: 'darkvision', range_ft: 60 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.senses\.blindsight 30 ft · character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
+  })
+
+  it('shows the running long jump bonus only for who has the feature, even when it is zero', () => {
+    renderHero(char({ computed: { long_jump_bonus_ft: 3 } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.hero\.long_jump_bonus/).parentElement).toHaveTextContent('+3 ft')
+    renderHero(char({ computed: { long_jump_bonus_ft: 0 } } as Partial<CharacterFull>))
+    expect(screen.getAllByText(/character\.hero\.long_jump_bonus/)).toHaveLength(2)
+  })
+
+  it('does not show the long jump bonus without the feature', () => {
+    renderHero(char({ computed: { long_jump_bonus_ft: null } } as Partial<CharacterFull>))
+    expect(screen.queryByText(/character\.hero\.long_jump_bonus/)).not.toBeInTheDocument()
+  })
+
   it('shows the flying speed a feature grants, unless a higher one is already written', () => {
     renderHero(char({ computed: { fly_speed: 40 } } as Partial<CharacterFull>))
     expect(screen.getByText(/character\.speeds\.fly 40 ft/)).toBeInTheDocument()

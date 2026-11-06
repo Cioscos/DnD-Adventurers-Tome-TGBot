@@ -259,8 +259,21 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             continue
         if given not in choice.options(ctx_choice):
             raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    for text in on_use.texts:  # come le scelte: un testo non valido non costa nulla
+        given = (params or {}).get(text.key)
+        needed = not text.optional or (text.required is not None and text.required(params or {}))
+        if given is None and not needed:
+            continue
+        if not isinstance(given, str) or not given.strip() or len(given.strip()) > text.max_len:
+            raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_text")
+    if on_use.check and (refusal := on_use.check(ctx_choice, params or {})) is not None:
+        raise _err(*refusal)
     if on_use.amount_ok and not on_use.amount_ok(ctx_choice, amount, params or {}):
         raise _err(status.HTTP_409_CONFLICT, "amount_invalid")
+    if on_use.gold_cost:  # l'oro si controlla prima di toccare slot, usi e turno
+        from api.services.containers import withdraw  # import locale: containers importa il modello degli oggetti
+        await session.refresh(char, attribute_names=["currency"])
+        withdraw(char, "gold", on_use.gold_cost)
     maximize = False
     if on_use.maximize_if and on_use.maximize_if(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level), params or {}):
@@ -370,4 +383,6 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
         result.targets.append(feature_key)
+    if on_use.effect:
+        on_use.effect(ctx, params or {})
     return result

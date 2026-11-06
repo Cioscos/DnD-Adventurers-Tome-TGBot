@@ -467,6 +467,62 @@ describe('Turn page', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.no_slot'))
   })
 
+  it('asks which bonus action to take with Cunning Action, sends it and tells what it means', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 21, name: 'Azione Scaltra', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'rogue.cunning_action', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none',
+      use_choices: [{ key: 'action', label: { it: 'Azione bonus', en: 'Bonus action' }, options: [
+        { key: 'dash', label: { it: 'Scatto', en: 'Dash' } }, { key: 'hide', label: { it: 'Nascondersi', en: 'Hide' } }] }],
+    }] })
+    featureUse.mockClear().mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: ['cunning_hide'] })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeDisabled()  // senza l'azione scelta non si usa
+    await userEvent.click(screen.getByText('character.turn.choose'))
+    await userEvent.click(await screen.findByText('Nascondersi'))
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'rogue.cunning_action', 1, { action: 'hide' }))
+    expect(toastInfo).toHaveBeenCalledWith('character.turn.use_notes.cunning_hide')
+  })
+
+  it('asks the name of the false identity for Infiltration Expertise, sends it and explains a refusal for lack of gold', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 22, name: 'Maestro Infiltrato', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'rogue.infiltration_expertise', max_uses: null, uses: null, action_type: 'special', restoration_type: 'none',
+      use_texts: [{ key: 'identity', label: { it: "Nome dell'identità falsa", en: 'Name of the false identity' }, max_len: 80 }],
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.section_other'))  // un privilegio «special» sta sotto Altro
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeDisabled()  // senza il nome non si usa
+    await userEvent.type(screen.getByRole('textbox'), '  Marco il mercante ')
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'rogue.infiltration_expertise', 1, { identity: 'Marco il mercante' }))
+    const { ApiError } = await import('@/api/client')
+    featureUse.mockRejectedValueOnce(new ApiError(409, 'insufficient_funds'))
+    toastError.mockClear()
+    await userEvent.type(screen.getByRole('textbox'), 'Altro')
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.insufficient_funds'))
+  })
+
+  it('sends only the toggle when the optional spell name of Spell Thief is left empty', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 23, name: 'Ladro di Incantesimi', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'rogue.spell_thief', max_uses: 1, uses: 1, action_type: 'reaction', restoration_type: 'long_rest',
+      use_toggles: [{ key: 'stolen', label: { it: 'Il TS è fallito', en: 'The save failed' } }],
+      use_choices: [{ key: 'spell_level', optional: true, label: { it: 'Livello', en: 'Level' }, options: [{ key: '1', label: { it: '1° livello', en: 'Level 1' } }] }],
+      use_texts: [{ key: 'spell', optional: true, label: { it: 'Nome', en: 'Name' }, max_len: 80 }],
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'rogue.spell_thief', 1, { stolen: false }))
+  })
+
   it('opens the target sheet for a feature whose use leaves an effect on others (Intimidating Presence)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 6, name: 'Presenza Intimidatoria', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

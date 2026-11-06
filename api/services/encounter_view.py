@@ -15,6 +15,7 @@ from api.schemas.encounter import CombatantLive, EncounterLive, PublicState, Pub
 from api.services.condition_effects import effect_reads, pending_read
 from api.services.rules_states import GENERIC_STATE_NAME
 from core.rules.catalog import active_features
+from core.rules.modifiers import is_incapacitated
 from core.rules.states import is_conscious
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from core.utils.session_view import hp_bucket_from_ratio
@@ -31,6 +32,7 @@ def public_states(char: Character, lang: str = "it") -> list[PublicState]:
                              text=spec.summary.get(lang) or spec.summary["it"])
             for key in (state.get("data") or {}).get("others") or []
             if (spec := specs.get(key)) is not None and not (spec.needs_conscious and not is_conscious(char))
+            and not (spec.suspended_when_incapacitated and is_incapacitated(char))
         ]
         if others:
             owner = specs.get(state.get("feature_key"))
