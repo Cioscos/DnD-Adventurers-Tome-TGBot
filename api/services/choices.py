@@ -137,6 +137,10 @@ def resolve_class_option(session: AsyncSession, char: Character, choice: dict, p
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
     if ch is not None:
         apply_grants(char, ch, picked)
+        if ch.always_prepared:  # Incantesimi Personali: sempre preparati e fuori dal limite dei preparati
+            for spell in char.spells:
+                if spell.name in picked:
+                    spell.always_prepared = spell.is_prepared = True
     _history(session, char, f"{group}: {', '.join(picked)}")
 
 
@@ -160,6 +164,8 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     cls.options = {**(cls.options or {}), ch.group: [*taken, *(owned[i].srd_index or owned[i].name for i in ids)]}
     for i in ids:
         owned[i].class_id = cls.id  # la dichiarazione assegna la classe
+        if ch.spell_pick == "book":
+            owned[i].in_spellbook = True  # un incantesimo già sulla scheda è già nel libro
     if ch.spell_pick == "extra":
         char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: [*free, *(i for i in ids if i not in free)]}
     _history(session, char, f"{ch.group}: {', '.join(owned[i].name for i in ids)}")
@@ -190,6 +196,7 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
     if ch is None or not ch.spell_pick:
         return None
     info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch), "list": ch.spell_list,
+            **({"book": True} if ch.spell_pick == "book" else {}),
             **({"exact": True} if ch.spell_exact else {}), **({"ritual": True} if ch.spell_ritual else {})}
     if choice.get("retrofit"):  # R39: gli incantesimi che il personaggio ha già e può dichiarare «già sulla scheda»
         taken = (cls.options or {}).get(ch.group, [])
@@ -224,6 +231,8 @@ def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int |
 def consume_spell_pick(session: AsyncSession, char: Character, cls: CharacterClass, ch, spell) -> None:
     """L'incantesimo è stato aggiunto: la scelta scala di uno; un extra non entra nel conteggio dei conosciuti."""
     cls.options = {**(cls.options or {}), ch.group: [*(cls.options or {}).get(ch.group, []), spell.srd_index or spell.name]}
+    if ch.spell_pick == "book":
+        spell.in_spellbook = True
     if ch.spell_pick == "extra":
         free = [*((char.settings or {}).get(FREE_KNOWN_KEY) or []), spell.id]
         char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: free}

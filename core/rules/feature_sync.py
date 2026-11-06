@@ -220,7 +220,7 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
                           attack_save=data.attack_save, damage_dice=data.damage_dice, damage_type=data.damage_type,
                           higher_levels_dice=data.higher_levels_dice, srd_index=key,
                           extra_damage_dice=data.extra_damage_dice, extra_damage_type=data.extra_damage_type,
-                          components=data.components)
+                          components=data.components, school=data.school)
             session.add(spell)
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
@@ -230,6 +230,19 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         spell.class_id = spell.class_id or owner.id
     if set(owned) != set(previous):
         char.settings = {**(char.settings or {}), GRANTED_SPELL_KEYS: owned}
+    # Libro del Mago: l'incantesimo c'è e sta nel libro, ma non è preparato né sempre preparato (Servitori Non Morti, Mutaforma)
+    for key, owner in {key: row for spec, row in active_features(char) for key in spec.book_spells}.items():
+        spell = have.get(key)
+        if spell is None:
+            data = GRANTED_SPELLS[key]
+            spell = Spell(character_id=char.id, name=data.name.get(lang) or data.name["it"], level=data.level,
+                          casting_time=data.casting_time, range_area=data.range_area, duration=data.duration,
+                          is_concentration=data.is_concentration, is_ritual=data.is_ritual, attack_save=data.attack_save,
+                          srd_index=key, components=data.components, school=data.school, class_id=owner.id)
+            session.add(spell)
+        spell.in_spellbook = True
+        spell.school = spell.school or GRANTED_SPELLS[key].school
+        spell.class_id = spell.class_id or owner.id
 
 
 def mark_ability_bonuses(char: Character) -> None:

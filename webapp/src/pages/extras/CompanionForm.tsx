@@ -21,13 +21,15 @@ interface Props {
   isBeastMaster?: boolean
   /** Patto della Catena 2014: il famiglio può essere anche un imp, uno pseudodrago, un quasit o uno spiritello. */
   hasPactOfTheChain?: boolean
+  /** Mago 2014 con Evocazioni Perduranti o Servitori Non Morti: chiede la scuola dell'incantesimo che ha creato l'evocato. */
+  summonSchools?: ('conjuration' | 'necromancy')[]
   pending?: boolean
   onSubmit: (body: CompanionPayload) => void
   onClose: () => void
 }
 
 /** Creation sheet: pick a monster from the SRD catalogue or type the stats by hand. Warnings are advisory. */
-export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMaster, hasPactOfTheChain, pending, onSubmit, onClose }: Props) {
+export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMaster, hasPactOfTheChain, summonSchools = [], pending, onSubmit, onClose }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [kind, setKind] = useState<CompanionKind>('familiar')
@@ -41,6 +43,7 @@ export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMast
   const [entry, setEntry] = useState<MonsterEntry | null>(null)
   const [picking, setPicking] = useState(false)
   const [rangerBeast, setRangerBeast] = useState(false)
+  const [school, setSchool] = useState<'' | 'conjuration' | 'necromancy'>('')
 
   const warnKey = !entry ? null
     : kind === 'familiar' ? familiarWarning(entry, hasPactOfTheChain)
@@ -59,6 +62,7 @@ export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMast
     const base = {
       kind, name: name.trim(), max_hp: Number(hp) || 0, armor_class: Number(ac) || 10, notes: notes.trim() || null,
       ...(isBeastMaster && kind === 'companion' && rangerBeast ? { feature_key: 'ranger.rangers_companion' } : {}),
+      ...(school && kind !== 'wild_shape' ? { spell_school: school } : {}),
     }
     if (entry) {
       onSubmit({ ...base, srd_index: entry.index, statblock: monsterToStatblock(entry, lang) })
@@ -88,6 +92,15 @@ export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMast
               <SwitchToggle label={t('character.extras.beast.form_label')} checked={rangerBeast} onChange={setRangerBeast} />
               {rangerBeast && <p className="text-xs text-dnd-text-muted font-body">{t('character.extras.beast.form_hint')}</p>}
             </div>
+          )}
+          {summonSchools.length > 0 && kind !== 'wild_shape' && (
+            <ChipSelect
+              label={t('character.extras.spell_school')}
+              options={[{ value: '', label: t('character.extras.spell_school_none') }, ...summonSchools.map((s) => ({ value: s, label: t(`character.extras.spell_schools.${s}`) }))]}
+              value={school}
+              onChange={(v) => setSchool(v as '' | 'conjuration' | 'necromancy')}
+              columns={2}
+            />
           )}
           <Button variant="secondary" fullWidth className="min-h-11" icon={<BookOpen size={16} />} onClick={() => setPicking(true)}>
             {t('character.extras.from_catalog')}

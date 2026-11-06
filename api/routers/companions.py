@@ -29,7 +29,9 @@ from api.services.wild_shape import (
     deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
 )
 from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
-from core.rules.companions import BEAST_BONUS_ORDERS, BEAST_COMPANION, MAX_MULTIATTACK, companion_stats, stat_int
+from core.rules.companions import (
+    BEAST_BONUS_ORDERS, BEAST_COMPANION, MAX_MULTIATTACK, THRALL_KEY, companion_stats, stat_int, summon_temp_hp, thrall_stats,
+)
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
 from core.rules.forms import elemental_violations, form_violations, is_elemental_form
@@ -119,9 +121,13 @@ async def create_companion(
         if sum(c.kind == "wild_shape" for c in rows) >= limits.known_forms:  # 2024: forme conosciute, se ne sostituisce una
             raise HTTPException(status_code=422, detail="known_forms_limit")
     data = body.model_dump()
+    school = data.pop("spell_school", None)  # l'incantesimo che l'ha creato: i privilegi del Mago ne danno PF temporanei
+    if school == "necromancy":  # Servitori Non Morti lo legge dallo statblock: PF e danni seguono il livello del mago
+        data["statblock"] = {**data["statblock"], THRALL_KEY: True}
     data["current_hp"] = min(body.max_hp if body.current_hp is None else body.current_hp, body.max_hp)
+    data["temp_hp"] = max(data["temp_hp"], summon_temp_hp(char, school) if body.kind != "wild_shape" else 0)
     comp = Companion(character_id=char_id, created_at=_now(), **data)
-    if body.current_hp is None and body.feature_key:  # parte dai PF che il privilegio gli dà
+    if body.current_hp is None and (body.feature_key or thrall_stats(char, comp) is not None):  # parte dai PF che il privilegio gli dà
         comp.current_hp = _effective_max_hp(char, comp)
     session.add(comp)
     await session.flush()

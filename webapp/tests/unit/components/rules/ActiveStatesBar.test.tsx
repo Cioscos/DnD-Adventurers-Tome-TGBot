@@ -138,3 +138,25 @@ describe('ActiveStatesBar', () => {
     expect(screen.getByText(/character\.turn\.divine_failure/)).toBeInTheDocument()
   })
 })
+
+describe('ActiveStatesBar, wizard states', () => {
+  it('reads the ward hit points, the object made and the chosen benefit', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'arcane_ward', feature_key: 'wizard.arcane_ward', rounds_left: null, ends_on: ['rest_long'], data: { hp: 7, max: 15 } },
+      { key: 'minor_conjuration', feature_key: 'wizard.minor_conjuration', rounds_left: 600, ends_on: ['manual'], data: { object: 'Chiave di ferro' } },
+      { key: 'third_eye', feature_key: 'wizard.third_eye', rounds_left: null, ends_on: ['manual'], data: { option: 'darkvision' } },
+      { key: 'overchannel', feature_key: 'wizard.overchannel', rounds_left: null, ends_on: ['rest_long'], data: { uses: 2 } },
+    ], [])} />)
+    expect(screen.getByText(/character\.turn\.state_ward/)).toBeInTheDocument()
+    expect(screen.getByText(/Chiave di ferro/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_option\.darkvision/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_uses/)).toBeInTheDocument()
+  })
+
+  it('hides the internal windows the server opens after a cast', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'window_enchantment', feature_key: 'wizard.alter_memories', rounds_left: null, ends_on: ['cast'], data: { internal: true } },
+    ], [])} />)
+    expect(screen.queryByText('character.turn.end_state')).toBeNull()
+  })
+})

@@ -31,6 +31,12 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   if (typeof d.fly_ft === 'number') out.push(t('character.turn.state_fly', { n: Math.round(d.fly_ft * 0.3) }))
   if (typeof d.start_heal === 'number') out.push(t('character.turn.state_start_heal', { n: d.start_heal }))
   if (typeof d.start_damage === 'number') out.push(t('character.turn.state_start_damage', { n: d.start_damage }))
+  if (typeof d.hp === 'number' && typeof d.max === 'number') out.push(t('character.turn.state_ward', { hp: d.hp, max: d.max }))
+  if (typeof d.object === 'string') out.push(d.object)
+  if (typeof d.uses === 'number') out.push(t('character.turn.state_uses', { n: d.uses }))
+  for (const k of ['option', 'benefit', 'intelligence'] as const) {
+    if (typeof d[k] === 'string') out.push(t(`character.turn.state_option.${d[k]}`))
+  }
   if (d.until === 'next_turn_end') out.push(t('character.turn.state_until_next_turn_end'))
   if (typeof d.duplicates === 'number') out.push(t('character.turn.state_duplicates', { n: d.duplicates }))
   if (s.key === 'divine_intervention') {

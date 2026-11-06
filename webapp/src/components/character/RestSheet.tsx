@@ -10,7 +10,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
-import NaturalRecoveryPicker from '@/components/character/NaturalRecoveryPicker'
+import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
@@ -37,6 +37,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
   const [ateAndDrank, setAteAndDrank] = useState(true)
   const [tooSoon, setTooSoon] = useState(false)
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
+  const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
   const is2024 = char.rules_edition === '2024'
 
   const rollDice = useAnimatedRoll()
@@ -69,6 +70,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
         ate_and_drank: ateAndDrank,
         confirm_early: confirmEarly,
         ...(restType === 'short' && Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}),
+        ...(restType === 'short' && Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}),
       }),
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
@@ -86,6 +88,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
       setInterrupted(false)
       setAteAndDrank(true)
       setRecovery({})
+      setArcane({})
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
       setConfirmLongRest(false)
@@ -182,6 +185,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
               <RestPreviewList charId={char.id} restType="short" />
               <SongOfRestToggle char={char} />
               <NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} />
+              <ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} />
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
             </>
           }

@@ -58,6 +58,9 @@ class CompanionCreate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=5000)
     is_active: bool = False
     feature_key: Optional[str] = Field(default=None, max_length=80)  # compagno di privilegio: PF e bonus dal livello
+    # Scuola dell'incantesimo che ha creato l'evocato (``conjuration``, ``necromancy``): non è una colonna, i privilegi del Mago
+    # (Evocazioni Perduranti, Servitori Non Morti) la leggono alla creazione
+    spell_school: Optional[Literal["conjuration", "necromancy"]] = None
 
     @field_validator("statblock", mode="before")
     @classmethod

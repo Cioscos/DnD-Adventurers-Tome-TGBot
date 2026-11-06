@@ -6,24 +6,41 @@ import type { CharacterFull } from '@/types'
 
 const MAX_LEVEL = 5
 
-/** Livelli di slot recuperabili: metà del livello da druido, per eccesso (specchio di `api/services/natural_recovery.py`). */
-const recoveryBudget = (druidLevel: number) => Math.ceil(druidLevel / 2)
+/** Livelli di slot recuperabili: metà del livello della classe, per eccesso (specchio di `api/services/natural_recovery.py`). */
+const recoveryBudget = (classLevel: number) => Math.ceil(classLevel / 2)
 
-/** Recupero Naturale (Druido 2014, Circolo della Terra) nel foglio del riposo breve: quali slot spesi riprendere. Il server
- *  ricontrolla tutto (tetto, slot davvero spesi, un solo uso) e rifiuta il riposo intero se qualcosa non torna. */
-export default function NaturalRecoveryPicker({ char, value, onChange }: {
+/** Quale privilegio di recupero degli slot, di quale classe, con quali chiavi di testo: il Recupero Naturale del Druido o il
+ *  Recupero Arcano del Mago hanno le stesse regole e lo stesso endpoint. */
+interface RecoveryKind { feature: string; cls: string; keyPrefix: string; testId: string; idPrefix: string }
+const NATURAL: RecoveryKind = { feature: 'druid.natural_recovery', cls: 'druid', keyPrefix: 'natural_recovery', testId: 'natural-recovery', idPrefix: 'nr' }
+const ARCANE: RecoveryKind = { feature: 'wizard.arcane_recovery', cls: 'wizard', keyPrefix: 'arcane_recovery', testId: 'arcane-recovery', idPrefix: 'ar' }
+
+interface PickerProps {
   char: CharacterFull
   value: Record<number, number>
   onChange: (next: Record<number, number>) => void
-}) {
+}
+
+/** Recupero Naturale (Druido 2014, Circolo della Terra) nel foglio del riposo breve: quali slot spesi riprendere. Il server
+ *  ricontrolla tutto (tetto, slot davvero spesi, un solo uso) e rifiuta il riposo intero se qualcosa non torna. */
+export default function NaturalRecoveryPicker(props: PickerProps) {
+  return <SlotRecoveryPicker {...props} kind={NATURAL} />
+}
+
+/** Recupero Arcano (Mago 2014): stesso foglio, tetto dal livello da mago. */
+export function ArcaneRecoveryPicker(props: PickerProps) {
+  return <SlotRecoveryPicker {...props} kind={ARCANE} />
+}
+
+function SlotRecoveryPicker({ char, value, onChange, kind }: PickerProps & { kind: RecoveryKind }) {
   const { t } = useTranslation()
-  const ability = (char.abilities ?? []).find((a) => a.feature_key === 'druid.natural_recovery')
-  const druidLevel = (char.classes ?? []).filter((c) => classKey(c.class_name) === 'druid').reduce((n, c) => n + c.level, 0)
+  const ability = (char.abilities ?? []).find((a) => a.feature_key === kind.feature)
+  const classLevel = (char.classes ?? []).filter((c) => classKey(c.class_name) === kind.cls).reduce((n, c) => n + c.level, 0)
   const spent = (char.spell_slots ?? []).filter((s) => !s.is_pact && s.level <= MAX_LEVEL && s.used > 0)
-  if (!ability || (ability.max_uses != null && (ability.uses ?? 0) < 1) || druidLevel < 1 || spent.length === 0) return null
+  if (!ability || (ability.max_uses != null && (ability.uses ?? 0) < 1) || classLevel < 1 || spent.length === 0) return null
 
   const used = Object.entries(value).reduce((n, [lv, count]) => n + Number(lv) * count, 0)
-  const left = recoveryBudget(druidLevel) - used
+  const left = recoveryBudget(classLevel) - used
   const set = (level: number, count: number) => {
     const next = { ...value, [level]: count }
     if (count <= 0) delete next[level]
@@ -31,11 +48,11 @@ export default function NaturalRecoveryPicker({ char, value, onChange }: {
   }
 
   return (
-    <section data-testid="natural-recovery" className="space-y-2 text-left">
-      <h3 className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t('character.quick_actions.natural_recovery')}</h3>
+    <section data-testid={kind.testId} className="space-y-2 text-left">
+      <h3 className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t(`character.quick_actions.${kind.keyPrefix}`)}</h3>
       <p className="text-sm font-body text-dnd-text">
-        {t('character.quick_actions.natural_recovery_hint')}{' '}
-        <span data-testid="nr-left" className="font-mono tabular-nums font-bold">{left}</span>
+        {t(`character.quick_actions.${kind.keyPrefix}_hint`)}{' '}
+        <span data-testid={`${kind.idPrefix}-left`} className="font-mono tabular-nums font-bold">{left}</span>
       </p>
       <ul className="space-y-1.5">
         {spent.map((s) => {
@@ -43,16 +60,16 @@ export default function NaturalRecoveryPicker({ char, value, onChange }: {
           return (
             <li key={s.level} className="flex items-center gap-2">
               <span className="flex-1 text-sm font-body text-dnd-text">
-                {t('character.quick_actions.natural_recovery_slot', { level: s.level, spent: s.used })}
+                {t(`character.quick_actions.${kind.keyPrefix}_slot`, { level: s.level, spent: s.used })}
               </span>
-              <span data-testid={`nr-minus-${s.level}`}>
+              <span data-testid={`${kind.idPrefix}-minus-${s.level}`}>
                 <IconButton variant="secondary" className="min-h-11 min-w-11" icon={<Minus size={16} />} disabled={count === 0}
-                  aria-label={t('character.quick_actions.natural_recovery_less', { level: s.level })} onClick={() => set(s.level, count - 1)} />
+                  aria-label={t(`character.quick_actions.${kind.keyPrefix}_less`, { level: s.level })} onClick={() => set(s.level, count - 1)} />
               </span>
-              <span data-testid={`nr-count-${s.level}`} className="w-6 text-center font-mono tabular-nums font-bold">{count}</span>
-              <span data-testid={`nr-plus-${s.level}`}>
+              <span data-testid={`${kind.idPrefix}-count-${s.level}`} className="w-6 text-center font-mono tabular-nums font-bold">{count}</span>
+              <span data-testid={`${kind.idPrefix}-plus-${s.level}`}>
                 <IconButton variant="secondary" className="min-h-11 min-w-11" icon={<Plus size={16} />} disabled={count >= s.used || s.level > left}
-                  aria-label={t('character.quick_actions.natural_recovery_more', { level: s.level })} onClick={() => set(s.level, count + 1)} />
+                  aria-label={t(`character.quick_actions.${kind.keyPrefix}_more`, { level: s.level })} onClick={() => set(s.level, count + 1)} />
               </span>
             </li>
           )

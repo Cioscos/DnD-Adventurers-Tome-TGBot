@@ -210,3 +210,23 @@ describe('d20Arg', () => {
     })
   })
 })
+
+describe('recover options (Expert Divination)', () => {
+  beforeEach(() => { rollOptions.mockReset() })
+
+  it('lists the spent slots with the recover wording and sends the chosen level', async () => {
+    rollOptions.mockResolvedValue([option({
+      key: 'wizard.expert_divination', label: 'Divinazione Esperta', phase: 'before', requires_input: 'recover',
+      input_options: [{ level: 1, available: 3, dice: null }, { level: 2, available: 1, dice: null }],
+    })])
+    renderWithProviders(<RollOptionsHost />)
+    const asked = askRollOptions(1, { roll: 'cast', spell_id: 5 })
+    await userEvent.click(await screen.findByRole('switch'))
+    expect(screen.getAllByText('character.roll_options.slot_recover_choice')).toHaveLength(2)
+    await userEvent.click(screen.getAllByText('character.roll_options.slot_recover_choice')[1])
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(asked).resolves.toEqual({
+      options: ['wizard.expert_divination'], option_inputs: { 'wizard.expert_divination': { slot_level: 2 } },
+    })
+  })
+})

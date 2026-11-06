@@ -50,8 +50,26 @@ COMPANION_FEATURES: dict[str, tuple[str, str, Callable[..., CompanionStats]]] = 
 }
 
 
+THRALLS = "wizard.undead_thralls"  # Servitori Non Morti (Mago 2014, Scuola di Necromanzia 6)
+THRALL_KEY = "thrall"  # statblock: il non morto è stato creato con un incantesimo di necromanzia
+
+
+def thrall_stats(char, comp) -> CompanionStats | None:
+    """Un non morto creato con la necromanzia da un mago con Servitori Non Morti: PF massimi + livello da mago, e il bonus di
+    competenza ai danni con le armi."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    if not (comp.statblock or {}).get(THRALL_KEY):
+        return None
+    found = next((row for spec, row in active_features(char) if spec.key == THRALLS), None)
+    if found is None:
+        return None
+    return CompanionStats(max_hp=comp.max_hp + found.level, damage_bonus=char.proficiency_bonus)
+
+
 def companion_stats(char, comp) -> CompanionStats | None:
     """Valori del compagno di privilegio per il personaggio; ``None`` se non ne ha uno o il privilegio non è dell'edizione."""
+    if (thrall := thrall_stats(char, comp)) is not None:
+        return thrall
     entry = COMPANION_FEATURES.get(comp.feature_key or "")
     if entry is None or entry[1] != character_edition(char):
         return None
@@ -60,3 +78,13 @@ def companion_stats(char, comp) -> CompanionStats | None:
         return None
     wis = effective_ability_mod(char, "wisdom")
     return entry[2](comp.max_hp, comp.armor_class, level, char.proficiency_bonus, wis, comp.statblock or {})
+
+
+DURABLE_SUMMONS = "wizard.durable_summons"  # Evocazioni Perduranti (Mago 2014, Scuola di Evocazione 14)
+
+
+def summon_temp_hp(char, school: str | None) -> int:
+    """PF temporanei con cui nasce una creatura evocata da un incantesimo di ``school``: 30 per un mago con Evocazioni Perduranti
+    (solo se l'incantesimo è di evocazione)."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    return 30 if school == "conjuration" and any(spec.key == DURABLE_SUMMONS for spec, _row in active_features(char)) else 0

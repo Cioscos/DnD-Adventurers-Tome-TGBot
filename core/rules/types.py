@@ -30,7 +30,7 @@ class ChoiceSpec:
     (maestria); un'abilità già ``expert`` non scende mai. ``language``: le opzioni sono lingue (``label`` ne dà il nome
     bilingue) e si aggiungono a ``Character.languages`` senza duplicati. ``spell_pick``: le scelte non sono opzioni di un elenco ma
     incantesimi di qualsiasi classe, aggiunti dalla pagina degli incantesimi (``known`` conta fra i conosciuti,
-    ``extra`` no: Segreti Magici Aggiuntivi); ``options`` non si usa.
+    ``extra`` no: Segreti Magici Aggiuntivi; ``book``: l'incantesimo entra gratis nel Libro del Mago); ``options`` non si usa.
     ``owned(ctx)``: abilità che il giocatore ha già sulla scheda e che, per un personaggio esistente prima del catalogo
     (scelta con ``retrofit``, R39), si possono dichiarare «già sulla scheda» invece di aggiungerne altre.
     ``spell_level``: con ``spell_pick``, il livello massimo dell'incantesimo scelto (0: un trucchetto). ``spell_list``: la
@@ -43,7 +43,7 @@ class ChoiceSpec:
     replaceable: bool = False
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language"] | None = None
-    spell_pick: Literal["known", "extra"] | None = None
+    spell_pick: Literal["known", "extra", "book"] | None = None
     owned: Callable[["RuleContext"], list[str]] | None = None
     spell_level: int | None = None
     spell_list: str | None = None
@@ -58,11 +58,13 @@ class ChoiceSpec:
     # Chiavi che l'import da Beyond riconosce per nome: tutte, senza i prerequisiti che ``options`` verifica (le suppliche del
     # Warlock dipendono dal Dono del Patto, che l'import scrive nello stesso passaggio)
     import_options: "Callable[[RuleContext], list[str]] | None" = None
+    # Gli incantesimi scelti (per nome) diventano sempre preparati e fuori dal limite (Incantesimi Personali)
+    always_prepared: bool = False
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language"):
             raise ValueError(f"grants sconosciuto: {self.grants}")
-        if self.spell_pick not in (None, "known", "extra"):
+        if self.spell_pick not in (None, "known", "extra", "book"):
             raise ValueError(f"spell_pick sconosciuto: {self.spell_pick}")
 
 
@@ -309,6 +311,12 @@ class OnUse:
     # PF temporanei che l'uso dà a chi lo usa: ``f(ctx, tirato) -> n``; vale il maggiore fra quelli attuali e ``n``
     # (i PF temporanei non si sommano)
     temp_hp: "Callable[[RuleContext, int], int] | None" = None
+    # Cura che dipende da una scelta fatta all'uso (Raccolto Macabro: il livello dell'incantesimo): ``f(ctx, params) -> PF``,
+    # applicata a chi usa il privilegio al posto di ``heal``
+    heal_by: "Callable[[RuleContext, dict], int] | None" = None
+    # Esito da mostrare dopo l'uso, calcolato sulle scelte e sulla scheda (ore dimenticate, danno residuo): ``f(ctx, params)
+    # -> {"it": ..., "en": ...}``. Gira dopo il pagamento e prima dell'``effect``: vede la scheda com'era.
+    message: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -377,7 +385,8 @@ class RollOptionSpec:
     ``after_hit``, entrambi al danno; ``damage_in``, entrambi riducono il danno. ``multiplier`` agisce sul danno,
     per difetto; sul danno subito viene prima di resistenza e vulnerabilità.
 
-    ``requires_input="slot"``: il giocatore sceglie ``slot_level`` (con ``cost.spell_slot_min``). ``needs``: un'altra
+    ``requires_input="slot"``: il giocatore sceglie ``slot_level`` (con ``cost.spell_slot_min``). ``"recover"``: sceglie
+    ``slot_level`` fra gli slot spesi che ``recover_levels(ctx)`` ammette e quello torna disponibile (Divinazione Esperta). ``needs``: un'altra
     opzione da scegliere insieme (+1d8 di Punizione Divina). ``auto_fail``: fallimento automatico confermato.
     ``force_crit``: il colpo a segno è critico (solo ``before``).
 
@@ -411,7 +420,7 @@ class RollOptionSpec:
     once_per_turn: bool = False
     slot: str | None = None
     multiplier: float | None = None
-    requires_input: Literal["slot"] | None = None
+    requires_input: Literal["slot", "recover"] | None = None
     needs: str | None = None
     auto_fail: bool = False
     force_crit: bool = False
@@ -450,6 +459,12 @@ class RollOptionSpec:
     # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
     # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
     holds_at_one: bool = False
+    # Danno che l'opzione fa a chi la usa, come ``f(ctx, inputs) -> "NdM"`` o ``None`` (Saturazione Magica: necrotico, ignora
+    # resistenze e immunità). Lo tira e lo applica il router del tiro, dopo il pagamento dell'opzione.
+    self_damage: "Callable[[RuleContext, dict], str | None] | None" = None
+    self_damage_type: str = "necrotic"
+    # Con ``requires_input="recover"``: i livelli degli slot spesi che l'opzione può restituire adesso
+    recover_levels: "Callable[[RuleContext], list[int]] | None" = None
     # Con ``damage_in``: l'opzione dà resistenza al danno. Conta una volta sola: se la scheda ne ha già una non cambia nulla
     # (un ``multiplier`` invece si somma a ogni altra riduzione).
     grants_resistance: bool = False
@@ -467,8 +482,10 @@ class RollOptionSpec:
             raise ValueError("replace_die vale solo prima del tiro e il suo input è il dado salvato")
         if self.slot is not None and self.slot not in TURN_FLAGS:
             raise ValueError(f"slot sconosciuto: {self.slot}")
-        if self.requires_input not in (None, "slot"):
+        if self.requires_input not in (None, "slot", "recover"):
             raise ValueError(f"input sconosciuto: {self.requires_input}")
+        if (self.requires_input == "recover") != (self.recover_levels is not None):
+            raise ValueError("recover e recover_levels vanno insieme")
         if self.force_crit and self.phase != "before":
             raise ValueError("force_crit vale solo prima del tiro")
         if self.cost and self.cost.spell_slot_min is not None and self.requires_input != "slot":
@@ -487,6 +504,8 @@ class RollOptionSpec:
             raise ValueError("self_heal vale solo per la cura di un incantesimo")
         if self.maximize and (self.phase != "before" or "spell_damage" not in self.rolls):
             raise ValueError("maximize vale solo prima del danno di un incantesimo")
+        if self.self_damage and self.phase != "before":
+            raise ValueError("self_damage vale solo prima del tiro")
         if self.dice_cost and not self.needs:
             raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
         if self.on_zero_damage and self.phase != "damage_in":
@@ -592,6 +611,22 @@ class FeatureSpec:
     ritual_casting: bool = False
     # Gittata che il privilegio dà a un incantesimo: ``((srd_index o nome minuscolo, ...), testo)`` (Lancia Occulta: 90 m)
     spell_range: "tuple[tuple[str, ...], str] | None" = None
+    # Scuola che dimezza tempo e costo della copia nel Libro del Mago (i «Sapienti» delle otto scuole)
+    copy_school: str | None = None
+    # Incantesimo (``srd_index``) lanciabile senza slot spendendo un uso di questa riga, come l'Arcanum (Mutaforma)
+    free_spell: str | None = None
+    # Dadi d20 tirati alla fine del riposo lungo e salvati (R29, Portento): ``(chiave dell'opzione, f(ctx) -> quanti)``
+    long_rest_dice: "tuple[str, Callable[[RuleContext], int]] | None" = None
+    # Incantesimi (``GRANTED_SPELLS``) che il privilegio aggiunge al Libro del Mago senza prepararli (Servitori Non Morti, Mutaforma)
+    book_spells: tuple[str, ...] = ()
+    # I PF massimi non si riducono (Impervio alla Non Morte): nemmeno la spossatezza li dimezza
+    hp_max_locked: bool = False
+    # Chi supera il TS contro un tuo trucchetto di danno ne subisce comunque la metà (Trucchetto Potente)
+    save_half_cantrips: bool = False
+    # Scuole di incantesimi su cui il danno non fa tirare la concentrazione (Evocazione Focalizzata)
+    concentration_safe_schools: tuple[str, ...] = ()
+    # Gruppi di ``ChoiceSpec`` i cui incantesimi scelti si lanciano a volontà al livello base se preparati (Maestria)
+    mastery_groups: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

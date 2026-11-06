@@ -299,7 +299,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Un Arcanum Mistico non usa slot; una supplica «con uno slot di Patto» solo quelli del Patto.
   const availableSlotsFor = (spell: Spell) =>
-    spell.pact_cast?.kind === 'arcanum' ? [] : spellSlots
+    spell.pact_cast?.kind === 'arcanum' && !spell.pact_cast.also_slot ? [] : spellSlots
       .filter((s) => s.level >= spell.level && s.available > 0 && (!spell.pact_cast?.pact_only || s.is_pact))
       .sort((a, b) => a.level - b.level)
 
@@ -360,7 +360,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
               <CastSpellModal
                 spell={castingSpell}
                 availableSlots={availableSlotsFor(castingSpell)}
-                freeOnly={castingSpell.pact_cast?.kind === 'arcanum'}
+                freeOnly={castingSpell.pact_cast?.kind === 'arcanum' && !castingSpell.pact_cast.also_slot}
                 canRitual={!!castingSpell.is_ritual && (!!spellcasting?.has_ritual_caster || !!spellcasting?.ritual_only_spell_ids?.includes(castingSpell.id))}
                 onCast={handleCastSlot}
                 onCastRitual={handleCastRitual}

@@ -20,6 +20,7 @@ class PactCast:
     feature_key: str
     pact_only: bool
     uses_left: int | None
+    also_slot: bool = False  # si lancia anche con uno slot normale (Incantesimi Personali, Mutaforma del Mago)
 
 
 def _uses(char: Any, feature_key: str, class_id: int) -> int | None:
@@ -35,7 +36,9 @@ def pact_cast(char: Any, spell: Any) -> PactCast | None:
     for spec, row in active_features(char):
         if spec.arcanum_group and ((index or name) in ((row.options or {}).get(spec.arcanum_group) or [])
                                    or (name in ((row.options or {}).get(spec.arcanum_group) or []))):
-            return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id))
+            return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id), also_slot=spec.class_key == "wizard")
+        if spec.free_spell and index == spec.free_spell:  # Mutaforma: senza slot, spende l'uso come un Arcanum
+            return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id), also_slot=True)
         if spec.pact_spell and index == spec.pact_spell and index in granted:
             return PactCast("invocation", spec.key, True, _uses(char, spec.key, row.id))
     return None

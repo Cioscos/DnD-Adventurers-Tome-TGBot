@@ -28,6 +28,8 @@ from api.schemas.spell import (
     RollHealingRequest,
     RollHealingResult,
     SpellAttackRequest,
+    SpellCopyCost,
+    SpellCopyRequest,
     SpellCreate,
     SpellRead,
     SpellUpdate,
@@ -52,7 +54,10 @@ from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_states import _spend_atomically, remove_state
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
+from core.rules.catalog import active_features
 from core.rules.pact_casts import pact_cast
+from core.rules.school_hooks import after_cast
+from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
 from core.rules.states import free_cast_state
 from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
@@ -164,6 +169,10 @@ def _pick_slot(char: Character, spell: Spell, slot_id: int | None, slot_level: i
 def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     """Turno salvato per le regole sugli incantesimi nello stesso turno; le reazioni possono cadere fuori dal proprio."""
     kind = casting_kind(spell)
+    if spell.srd_index:  # Abiurazione Migliorata: la prova dopo controincantesimo o dissolvi magie, anche se lanciato in reazione
+        turn = get_turn(char)
+        turn["last_cast_spell"] = spell.srd_index
+        char.turn_state = turn
     if kind == "reaction":
         return
     turn = get_turn(char)
@@ -271,6 +280,7 @@ def _consume_cast(
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
     end_on_action(char, "cast")
+    after_cast(char, spell)  # i privilegi delle scuole del Mago (dopo end_on_action: le finestre nuove restano)
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 
@@ -322,9 +332,12 @@ async def add_spell(
     if body.pick_id:  # Segreti Magici: l'incantesimo è di qualsiasi classe e passa alla classe del bardo
         pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index, body.is_ritual)
         body.class_id = pick[0].id
-    if body.is_prepared and body.level >= 1 and not body.always_prepared:
-        _ensure_prepare_capacity(char, body.class_id)
     spell = Spell(character_id=char_id, **body.model_dump(exclude={"pick_id"}))
+    spell.in_spellbook = bool(pick and pick[1].spell_pick == "book")  # la scelta del Libro lo scrive gratis; il resto si copia
+    if body.is_prepared and body.level >= 1 and not body.always_prepared:
+        if (refusal := prepare_refusal(char, spell)) is not None:
+            raise HTTPException(status_code=refusal[0], detail={"code": refusal[1]})
+        _ensure_prepare_capacity(char, body.class_id)
     spell.is_prepared = spell.is_prepared or body.always_prepared
     session.add(spell)
     await session.flush()
@@ -359,6 +372,8 @@ async def update_spell(
         data["is_prepared"] = True
     new_level = data.get("level", spell.level)
     if data.get("is_prepared") is True and not spell.is_prepared and new_level >= 1 and not new_always:
+        if (refusal := prepare_refusal(char, spell)) is not None:
+            raise HTTPException(status_code=refusal[0], detail={"code": refusal[1]})
         _ensure_prepare_capacity(char, data.get("class_id", spell.class_id))
     for field, value in data.items():
         setattr(spell, field, value)
@@ -386,6 +401,68 @@ async def remove_spell(
     if release_spell_pick(char, spell):
         reconcile_choices(char)  # la scelta torna in coda: un errore di battitura si recupera
     await session.delete(spell)
+
+
+@router.get("/{char_id}/spellbook/cost", response_model=SpellCopyCost)
+async def spellbook_cost(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    level: int = 1,
+    school: str | None = None,
+    mode: str = "copy",
+) -> SpellCopyCost:
+    """Tempo e oro per copiare nel Libro un incantesimo di ``level`` e ``school`` (dimezzati da un «Sapiente»)."""
+    char = await _get_owned_full(char_id, user_id, session)
+    if mode not in MODES or not 1 <= level <= 9:
+        raise HTTPException(status_code=422, detail={"code": "bad_copy_mode"})
+    cost = copy_cost(char, level, school, mode)
+    return SpellCopyCost(hours=cost.hours, gold=cost.gold, halved=cost.halved)
+
+
+@router.post("/{char_id}/spells/{spell_id}/copy", response_model=CharacterFull)
+async def copy_spell_to_book(
+    char_id: int,
+    spell_id: int,
+    body: SpellCopyRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Copia l'incantesimo nel Libro del Mago (o nella copia di riserva) pagando l'oro: ogni rifiuto viene prima di spendere."""
+    from api.services.containers import withdraw  # import locale: containers importa il modello degli oggetti
+    char = await _get_owned_full(char_id, user_id, session)
+    spell = next((s for s in char.spells if s.id == spell_id), None)
+    if spell is None:
+        raise HTTPException(status_code=404, detail="Spell not found")
+    if (refusal := book_refusal(char, spell, body.mode)) is not None:
+        raise HTTPException(status_code=refusal[0], detail={"code": refusal[1]})
+    cost = copy_cost(char, spell.level, spell.school, body.mode)
+    withdraw(char, "gold", cost.gold)  # 409 insufficient_funds
+    if body.mode == "backup":
+        spell.in_backup = True
+    else:
+        spell.in_spellbook = True
+    _add_history(session, char.id, "spellbook",
+                 f"Libro degli Incantesimi: {spell.name} ({body.mode}), {cost.hours:g} h e {cost.gold} mo",
+                 meta={"mode": body.mode, "spell_id": spell.id, "hours": cost.hours, "gold": cost.gold})
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/spellbook/lost", response_model=CharacterFull)
+async def lose_spellbook(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Il libro è perso: resta ciò che c'è nella copia di riserva (che diventa il libro); il resto si ritrascrive se preparato."""
+    char = await _get_owned_full(char_id, user_id, session)
+    if not any(wizard_row(char, SimpleNamespace(class_id=c.id)) is not None for c in char.classes):
+        raise HTTPException(status_code=422, detail={"code": "no_spellbook"})
+    for spell in char.spells:
+        if spell.level >= 1 and wizard_row(char, spell) is not None:
+            spell.in_spellbook, spell.in_backup = bool(spell.in_backup), False
+    _add_history(session, char.id, "spellbook", "Libro degli Incantesimi perso")
+    return await build_character_response(session, char)
 
 
 @router.post("/{char_id}/spells/{spell_id}/use", response_model=CharacterFull)
@@ -773,7 +850,9 @@ async def roll_spell_damage(
         extra_damage_type=second_type if second_rolls else None,
         parts=parts,
         twinned_damage=_twinned_damage(char, spell, base_count, sides, base_bonus),
+        save_success_damage=half_damage if _potent_cantrip(char, spell) else None,
     )
+    await _self_damage(session, char, opts, spell, result)
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
     base_dice = ([[sides, v] for v in main_rolls] + [[second_sides, v] for v in second_rolls]
                  + [[extra_sides, v] for v in extra_rolls])
@@ -789,6 +868,30 @@ async def roll_spell_damage(
     }
     char.turn_state = turn
     return result
+
+
+def _potent_cantrip(char: Character, spell: Spell) -> bool:
+    """Trucchetto Potente: un trucchetto di danno con un TS fa comunque metà danni a chi lo supera."""
+    return (spell.level == 0 and (spell.attack_save or "").strip().upper() not in ("", "ATK")
+            and any(spec.save_half_cantrips for spec, _row in active_features(char)))
+
+
+async def _self_damage(session: AsyncSession, char: Character, opts: Any, spell: Spell, result: RollDamageResult) -> None:
+    """Saturazione Magica dal secondo uso: i dadi necrotici si tirano e si applicano a chi lancia con lo stesso percorso di ogni
+    danno, ma senza resistenze né immunità (``damage_modifier="none"``). L'esito entra fra gli effetti mostrati."""
+    from api.routers.hp import update_hp  # import locale: hp importa questo modulo
+    from api.schemas.common import HPOp, HPUpdate
+    for expr, damage_type in opts.self_damage:
+        count, sides = (int(n) for n in expr.split("d"))
+        rolls = [random.randint(1, sides) for _ in range(count)]
+        record_dice(char, [(f"d{sides}", v) for v in rolls])
+        total = sum(rolls)
+        await update_hp(char.id, HPUpdate(op=HPOp.DAMAGE, value=total, damage_type=damage_type, damage_modifier="none"),
+                        char.user_id, session, "it")
+        note = {"it": f"{spell.name}: subisci {total} danni necrotici ({expr}), senza resistenze né immunità.",
+                "en": f"{spell.name}: you take {total} necrotic damage ({expr}), ignoring resistance and immunity."}
+        if result.option_result is not None:
+            result.option_result.effects.append(note)
 
 
 def _twinned_damage(char: Character, spell: Spell, count: int, sides: int, bonus: int) -> dict | None:

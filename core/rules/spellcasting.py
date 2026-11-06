@@ -15,6 +15,7 @@ from core.rules.catalog import active_features
 from core.rules.edition import character_edition, class_key as row_class_key
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.proficiencies import is_armor_proficient
+from core.rules.schools import normalize_school  # noqa: F401  (ri-esportata: la usano i chiamanti storici)
 from core.rules.states import casting_blocked_by
 from core.rules.types import Edition
 
@@ -110,21 +111,10 @@ _SCHOOL_RESTRICTED: dict[str, tuple[tuple[str, ...], tuple[int, ...]]] = {
     "eldritch_knight": (("abjuration", "evocation"), (3, 8, 14, 20)),
     "arcane_trickster": (("enchantment", "illusion"), (3, 8, 14, 20)),
 }
-# nomi italiani delle scuole (la scuola salvata è di solito lo slug inglese del compendio)
-_SCHOOL_IT = {"abiurazione": "abjuration", "ammaliamento": "enchantment", "divinazione": "divination",
-              "evocazione": "conjuration", "illusione": "illusion", "invocazione": "evocation",
-              "necromanzia": "necromancy", "trasmutazione": "transmutation"}
-
-
 @dataclass(frozen=True)
 class SchoolLimit:
     names: tuple[str, ...]  # scuole ammesse
     free: int  # incantesimi conosciuti che possono essere di un'altra scuola
-
-
-def normalize_school(value: str | None) -> str | None:
-    text = (value or "").strip().lower()
-    return _SCHOOL_IT.get(text, text) or None
 
 
 def school_limit(edition: Edition, row: Any) -> SchoolLimit | None:
@@ -222,17 +212,22 @@ def can_ritual(char: Any, spell: Any = None) -> bool:
         return True
     if _has_ritual_feat(char) or _book_rituals(char, spell):
         return True
-    if edition == "2014":
-        return has_ritual_caster(char.classes)
+    if edition == "2014":  # il Lancio Rituale è della classe a cui appartiene l'incantesimo, non di tutto il personaggio
+        return has_ritual_caster(_spell_rows(char, spell))
     return any(caster_kind(c, edition) for c in char.classes)
+
+
+def _spell_rows(char: Any, spell: Any) -> list[Any]:
+    """Le classi a cui appartiene l'incantesimo; non assegnato (personaggi salvati prima): tutte."""
+    return [c for c in char.classes if spell is not None and c.id == spell.class_id] or list(char.classes)
 
 
 def _ritual_unprepared(char: Any, spell: Any) -> bool:
     if spell.is_prepared or spell.always_prepared:
         return False
-    rows = [c for c in char.classes if c.id == spell.class_id] or list(char.classes)
-    if has_wizard(rows):  # dal libro
-        return False
+    rows = _spell_rows(char, spell)
+    if has_wizard(rows):  # dal libro (2014); il 2024 non ha ancora un libro a catalogo
+        return character_edition(char) == "2014" and not spell.in_spellbook
     if character_edition(char) == "2024":
         return True
     # 2014: chi non prepara li conosce, il talento ha un suo libro.
@@ -258,9 +253,14 @@ def _form_block(char: Any) -> bool:
 
 
 def at_will(char: Any, spell: Any) -> bool:
-    """Un privilegio attivo concede l'incantesimo a volontà: si lancia senza slot, tutte le volte che si vuole."""
+    """Un privilegio attivo concede l'incantesimo a volontà: si lancia senza slot, tutte le volte che si vuole. La Maestria
+    negli Incantesimi lo concede per quelli scelti, finché sono preparati."""
     key = getattr(spell, "srd_index", None)
-    return bool(key) and any(key in spec.at_will_spells for spec, _row in active_features(char))
+    if key and any(key in spec.at_will_spells for spec, _row in active_features(char)):
+        return True
+    names = {n for n in (key, getattr(spell, "name", None)) if n}
+    return bool(getattr(spell, "is_prepared", False)) and any(
+        names & set((row.options or {}).get(group) or []) for spec, row in active_features(char) for group in spec.mastery_groups)
 
 
 _MATERIAL = re.compile(r"^M(?![A-Za-z])", re.IGNORECASE)

@@ -96,7 +96,7 @@ export interface PendingChoice {
   /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti.
    *  `list`: la classe del cui elenco si pesca (trucchetto del druido), `null` per qualsiasi classe.
    *  `owned`: con `retrofit`, gli incantesimi già conosciuti che si possono dichiarare «già sulla scheda». */
-  spell_pick?: { free: boolean; max_level: number; exact?: boolean; ritual?: boolean; list?: string | null; owned?: { id: number; name: string; level: number }[] }
+  spell_pick?: { free: boolean; max_level: number; exact?: boolean; ritual?: boolean; book?: boolean; list?: string | null; owned?: { id: number; name: string; level: number }[] }
 }
 
 export type ResolveChoiceBody =
@@ -181,6 +181,8 @@ export interface FeatureUseResult {
   received?: { name: string; healed: number } | null
   /** PF temporanei che il privilegio ha dato a chi lo usa (Benedizione dell'Oscuro, Vigore Immondo). */
   temp_hp?: number | null
+  /** Esito scritto dal privilegio nelle due lingue (ore dimenticate di Alterare Ricordi, danno residuo dell'Interdizione). */
+  message?: { it: string; en: string } | null
 }
 
 export interface MapEntry {
@@ -218,6 +220,10 @@ export interface Spell {
   extra_damage_type?: string | null
   class_id?: number | null
   always_prepared?: boolean
+  /** Libro del Mago: l'incantesimo è nel libro, nella copia di riserva, ed è di un libro (livello 1+ di un mago 2014). */
+  in_spellbook?: boolean
+  in_backup?: boolean
+  has_book?: boolean
   /** CD e attacco della classe dell'incantesimo. */
   save_dc?: number | null
   attack_bonus?: number | null
@@ -226,7 +232,7 @@ export interface Spell {
   /** Si lancia anche coi punti ki (Arti dell'Ombra, discipline dei Quattro Elementi): costo base, ki in più ammessi, ki rimasti. */
   ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string; self_only?: boolean } | null
   /** Lancio pagato da un privilegio del Warlock: Arcanum Mistico (senza slot) o una supplica a uso singolo (slot di Patto). */
-  pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null } | null
+  pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null; also_slot?: boolean } | null
 }
 
 export interface SpellSlot {
@@ -915,6 +921,8 @@ export interface SpellAttackRequest extends Partial<RollChoice> {
 }
 
 export interface RollDamageResult {
+  /** Trucchetto Potente: il danno di chi supera il TS contro un trucchetto di danno. */
+  save_success_damage?: number | null
   option_result?: OptionResult
   rolls: number[]
   total: number
@@ -1126,7 +1134,8 @@ export interface HitDiceResult {
   hit_dice_left: number
 }
 
-export type CompanionPayload = Partial<Pick<Companion,
+/** `spell_school`: l'incantesimo che ha creato l'evocato (Evocazioni Perduranti, Servitori Non Morti del Mago). */
+export type CompanionPayload = { spell_school?: 'conjuration' | 'necromancy' | null } & Partial<Pick<Companion,
   'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active' | 'feature_key'>>
 
 export interface CompanionAttackResult {

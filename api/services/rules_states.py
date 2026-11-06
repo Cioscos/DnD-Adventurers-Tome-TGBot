@@ -229,6 +229,7 @@ class UseResult:
     given: int | None = None  # valore da dare a un altro (``OnUse.gives``): l'app lo mostra e non scrive nulla
     received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): ``{name, healed}``
     temp_hp: int | None = None  # PF temporanei che il privilegio ha dato a chi lo usa (il maggiore fra attuali e nuovi)
+    message: dict | None = None  # esito scritto dal privilegio (``OnUse.message``), nelle due lingue
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -350,7 +351,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         removed = {c: False for c in on_use.clears(ctx, params or {}) if (char.conditions or {}).get(c)}
         if removed:
             await apply_conditions(session, char, removed)
-    if on_use.heal:
+    if on_use.heal_by:
+        healed += max(0, on_use.heal_by(ctx, params or {}))
+    if on_use.heal or on_use.heal_by:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]
     if on_use.temp_hp:  # i PF temporanei non si sommano: vale il maggiore
@@ -384,6 +387,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.target_effect:
         keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
         result.targets.append(feature_key)
+    if on_use.message:  # prima dell'effetto: vede la scheda com'era (i PF dell'interdizione prima dell'assorbimento)
+        result.message = on_use.message(ctx, params or {})
     if on_use.effect:
         on_use.effect(ctx, params or {})
     return result

@@ -194,6 +194,7 @@ class AppliedOptions:
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
     holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
     resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
+    self_damage: list[tuple[str, str]] = field(default_factory=list)  # (dadi, tipo) che chi usa le opzioni subisce
 
     @property
     def mode(self) -> str | None:
@@ -248,6 +249,11 @@ def _store_saved_dice(char: Any, key: str, values: list[int]) -> None:
     settings = dict(char.settings or {})
     settings["saved_dice"] = {**(settings.get("saved_dice") or {}), key: values}
     char.settings = settings  # nuovo dict: SQLAlchemy non vede le mutazioni in place
+
+
+def set_saved_dice(char: Any, key: str, values: list[int]) -> None:
+    """Sostituisce i dadi salvati di ``key`` (Portento: i d20 tirati alla fine di un riposo lungo)."""
+    _store_saved_dice(char, key, values)
 
 
 def cost_amount(cost: Cost, ctx: RuleContext) -> int:
@@ -342,6 +348,22 @@ def _slot_level(char: Any, spec: RollOptionSpec, inputs: dict) -> int:
     return level
 
 
+def spent_levels(char: Any) -> dict[int, int]:
+    """Livello -> slot normali spesi (il Patto non c'entra): quelli che un'opzione può far tornare."""
+    out: dict[int, int] = {}
+    for slot in char.spell_slots:
+        if not slot.is_pact and slot.used > 0:
+            out[slot.level] = out.get(slot.level, 0) + slot.used
+    return dict(sorted(out.items()))
+
+
+def _recover_level(option: RollOption, inputs: dict) -> int:
+    level = inputs.get("slot_level")
+    if type(level) is not int or level not in option.spec.recover_levels(option.ctx):
+        raise OptionUnavailable(option.spec.key)
+    return level
+
+
 def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     """Paga l'opzione e ne applica l'effetto collaterale. Ricontrolla ogni risorsa: due opzioni possono contendersi
     l'ultima. I gettoni restituiti sono quelli che ``refund_spent`` sa rimborsare."""
@@ -376,6 +398,11 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
         slot = next(s for s in char.spell_slots if s.level == level and s.available > 0)
         slot.use_slot()
         spent.append(f"slot:{level}:pact" if slot.is_pact else f"slot:{level}")
+    if spec.requires_input == "recover":
+        level = _recover_level(option, inputs)
+        slot = next(s for s in char.spell_slots if s.level == level and not s.is_pact and s.used > 0)
+        slot.used -= 1
+        spent.append(f"unslot:{level}")
     if spec.replace_die:
         values = saved_dice(char, spec.key)
         if inputs.get("die") not in values:
@@ -424,6 +451,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             groups.add(spec.group)
         if spec.requires_input == "slot":
             _slot_level(ctx.char, spec, given)  # i dadi dipendono dallo slot: va controllato prima di calcolarli
+        if spec.requires_input == "recover":
+            _recover_level(option, given)
         paid = _spend(session, option, given)
         out.spent += paid
         out.keys.append(key)
@@ -460,6 +489,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             types = frozenset(spec.maximize_types) if spec.maximize_types else None
             out.maximize_types = types if not out.maximize else (None if None in (types, out.maximize_types) else out.maximize_types | types)
             out.maximize = True
+        if spec.self_damage and (expr := spec.self_damage(option.ctx, given)):
+            out.self_damage.append((expr, spec.self_damage_type))
         if spec.self_heal:
             out.self_heal += max(0, spec.self_heal(option.ctx, given))
         out.force_crit = out.force_crit or spec.force_crit
@@ -500,6 +531,10 @@ def refund_spent(char: Any, spent: list[str]) -> None:
                         and a.max_uses is not None and (a.uses or 0) < a.max_uses), None)
             if row is not None:
                 row.uses = min(row.max_uses, (row.uses or 0) + int(amount))
+        elif kind == "unslot":  # lo slot recuperato torna speso
+            slot = next((s for s in char.spell_slots if s.level == int(rest) and not s.is_pact and s.used < s.total), None)
+            if slot is not None:
+                slot.used += 1
         elif kind == "slot":
             level, _, pact = rest.partition(":")
             slot = next((s for s in char.spell_slots

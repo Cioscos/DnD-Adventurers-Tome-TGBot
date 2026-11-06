@@ -46,6 +46,8 @@ export default function Extras() {
 
   const druid = char.classes.find((c) => classKey(c.class_name) === 'druid')
   const isBeastMaster = char.abilities.some((a) => a.feature_key === 'ranger.rangers_companion')
+  const summonSchools = ([['wizard.durable_summons', 'conjuration'], ['wizard.undead_thralls', 'necromancy']] as const)
+    .filter(([key]) => char.abilities.some((a) => a.feature_key === key)).map(([, school]) => school)
   const hasPactOfTheChain = char.abilities.some((a) => a.feature_key === 'warlock.pact_of_the_chain')
   const druidLevel = druid?.level ?? 0
   const isMoon = druid?.subclass_key === 'moon'
@@ -80,7 +82,7 @@ export default function Extras() {
         })}
       </div>
       {adding && (
-        <CompanionForm druidLevel={druidLevel} isMoon={isMoon} edition={edition} isBeastMaster={isBeastMaster} hasPactOfTheChain={hasPactOfTheChain} pending={create.isPending}
+        <CompanionForm druidLevel={druidLevel} isMoon={isMoon} edition={edition} isBeastMaster={isBeastMaster} hasPactOfTheChain={hasPactOfTheChain} summonSchools={summonSchools} pending={create.isPending}
           onSubmit={(b) => create.mutate(b)} onClose={() => setAdding(false)} />
       )}
     </Layout>

@@ -379,6 +379,9 @@ class Spell(Base):
     )
     # Fuori dal limite dei preparati e non togliibile con «non preparare».
     always_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Libro degli Incantesimi del Mago: nel libro, e nella copia di riserva (solo gli incantesimi di livello 1+ del Mago)
+    in_spellbook: Mapped[bool] = mapped_column(Boolean, default=False)
+    in_backup: Mapped[bool] = mapped_column(Boolean, default=False)
 
     character: Mapped["Character"] = relationship(
         back_populates="spells", foreign_keys=[character_id]

@@ -251,3 +251,39 @@ describe('Natural Recovery (druid, Circle of the Land)', () => {
     expect(rest.mock.calls[0][2].natural_recovery).toBeUndefined()
   })
 })
+
+describe('Arcane Recovery (wizard)', () => {
+  const wizard = (uses = 1, level = 4) => ({
+    id: 7, classes: [{ id: 1, class_name: 'Mago', level }], active_states: [],
+    abilities: [{ id: 9, feature_key: 'wizard.arcane_recovery', uses, max_uses: 1 }],
+    spell_slots: [
+      { id: 1, level: 1, total: 4, used: 3, available: 1, is_pact: false },
+      { id: 2, level: 2, total: 3, used: 1, available: 2, is_pact: false },
+    ],
+  }) as unknown as CharacterFull
+
+  it('is offered to a wizard with a use left, with a budget of half the wizard level (rounded up)', async () => {
+    setup(wizard())
+    await openShortRest()
+    expect(screen.getByTestId('arcane-recovery')).toBeTruthy()
+    expect(screen.queryByTestId('natural-recovery')).toBeNull()
+    expect(screen.getByTestId('ar-left')).toHaveTextContent('2')
+  })
+
+  it('is hidden once the daily use is spent', async () => {
+    setup(wizard(0))
+    await openShortRest()
+    expect(screen.queryByTestId('arcane-recovery')).toBeNull()
+  })
+
+  it('sends the chosen slots as arcane_recovery, not natural_recovery', async () => {
+    rest.mockResolvedValue(wizard())
+    setup(wizard())
+    await openShortRest()
+    await userEvent.click(within(screen.getByTestId('ar-plus-2')).getByRole('button'))
+    expect(within(screen.getByTestId('ar-plus-2')).getByRole('button')).toBeDisabled()
+    await userEvent.click(screen.getByText('rest'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ arcane_recovery: { 2: 1 } })))
+    expect(rest.mock.calls[0][2].natural_recovery).toBeUndefined()
+  })
+})

@@ -86,6 +86,10 @@ import type {
 
 export type RollMode = 'normal' | 'advantage' | 'disadvantage'
 
+/** Come si copia un incantesimo nel Libro del Mago. */
+export type SpellCopyMode = 'copy' | 'backup' | 'retranscribe'
+export interface SpellCopyCost { hours: number; gold: number; halved: boolean }
+
 /** Legacy single die (number) or the new `{dice, mode}` pair; omit values and the server rolls. */
 export type D20Roll = number | ({ dice?: number[]; mode?: RollMode } & Partial<RollChoice>)
 
@@ -108,7 +112,7 @@ export type RollOption = {
   once_per_turn: boolean
   slot: string | null
   needs: string | null
-  requires_input: 'slot' | null
+  requires_input: 'slot' | 'recover' | null
   input_options: { level: number; available: number; dice: string | null }[]
   auto_fail: boolean
   cost: { feature_key: string | null; amount: number; spell_slot_min: number | null } | null
@@ -606,7 +610,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number> },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number> },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',
@@ -875,6 +879,15 @@ export const api = {
     /** Regole che il lancio violerebbe, da confermare prima di tirare i dadi. */
     castCheck: (charId: number, spellId: number, ritual: boolean) =>
       request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}`),
+    /** Tempo e oro per copiare un incantesimo nel Libro del Mago (dimezzati da un «Sapiente»). */
+    spellbookCost: (charId: number, level: number, school: string | null, mode: SpellCopyMode) =>
+      request<SpellCopyCost>(`/characters/${charId}/spellbook/cost?level=${level}&mode=${mode}${school ? `&school=${encodeURIComponent(school)}` : ''}`),
+    /** Copia nel libro (`copy`), copia di riserva (`backup`) o ritrascrizione dopo la perdita (`retranscribe`); paga l'oro. */
+    copyToBook: (charId: number, spellId: number, mode: SpellCopyMode) =>
+      request<CharacterFull>(`/characters/${charId}/spells/${spellId}/copy`, { method: 'POST', body: JSON.stringify({ mode }) }),
+    /** Il libro è perso: resta la copia di riserva, il resto si ritrascrive se preparato. */
+    loseSpellbook: (charId: number) =>
+      request<CharacterFull>(`/characters/${charId}/spellbook/lost`, { method: 'POST' }),
     updateConcentration: (charId: number, spellId: number | null) =>
       request<CharacterFull>(`/characters/${charId}/concentration`, {
         method: 'PATCH',

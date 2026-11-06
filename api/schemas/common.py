@@ -352,6 +352,7 @@ class RestRequest(BaseModel):
     confirm_early: bool = False  # riposo lungo prima del limite di 24 h (2014) / 16 h (2024)
     # Recupero Naturale (Druido 2014): livello dello slot -> quanti ne recupera durante un riposo breve
     natural_recovery: Optional[dict[int, int]] = None
+    arcane_recovery: Optional[dict[int, int]] = None  # Recupero Arcano del Mago: stessi controlli
 
 
 class ItemChargePreview(BaseModel):

@@ -305,7 +305,8 @@ def effective_hp_max(char: Any, homebrew_bonus: int = 0, exhaustion: int | None 
     """PF massimi: base + homebrew + privilegi; ``exhaustion`` simula un altro livello (anteprima del riposo)."""
     applied = modifiers_for(char if exhaustion is None else _WithExhaustion(char, exhaustion), "hp_max")
     total = char.hit_points + homebrew_bonus + applied.flat
-    return total // 2 if applied.hp_half else total
+    locked = any(spec.hp_max_locked for spec, _row in active_features(char))  # Impervio alla Non Morte
+    return total // 2 if applied.hp_half and not locked else total
 
 
 class _WithExhaustion:

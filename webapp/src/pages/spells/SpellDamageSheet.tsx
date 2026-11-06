@@ -380,6 +380,11 @@ export default function SpellDamageSheet({
                 </p>
               </div>
             )}
+            {result.save_success_damage != null && (
+              <p data-testid="potent-cantrip" className="text-xs text-dnd-text-muted font-body text-center">
+                {t('character.spells.roll_damage.potent_cantrip', { n: result.save_success_damage })}
+              </p>
+            )}
           </div>
           {result.twinned_damage && (
             <div className="bg-dnd-surface border border-dnd-border rounded-md p-3 text-center">

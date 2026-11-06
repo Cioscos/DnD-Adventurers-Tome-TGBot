@@ -19,6 +19,7 @@ from core.rules.roll_options import (
     RollOption,
     apply_options,
     cost_amount,
+    spent_levels,
     roll_extra,
     roll_options_for,
     saved_dice,
@@ -133,6 +134,9 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         slots = [RollOptionSlot(level=level, available=free,
                                 dice=spec.extra_dice(ctx, {"slot_level": level}) if spec.extra_dice else None)
                  for level, free in slot_choices(ctx.char, minimum).items()]
+    if spec.requires_input == "recover":  # gli slot spesi che si possono far tornare, con quanti ne mancano
+        spent = spent_levels(ctx.char)
+        slots = [RollOptionSlot(level=level, available=spent[level]) for level in spec.recover_levels(ctx) if level in spent]
     fixed = spec.requires_input is None
     return RollOptionRead(
         key=spec.key, phase=spec.phase, label=spec.label.get(lang) or spec.label["it"], source=option.source,

@@ -152,6 +152,9 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "is_prepared", "BOOLEAN", "1"),
     ("spells", "class_id", "INTEGER REFERENCES character_classes(id) ON DELETE SET NULL", None),
     ("spells", "always_prepared", "BOOLEAN", "0"),
+    # Libro del Mago: gli incantesimi che c'erano prima sono già nel libro (backfill a 1), la copia di riserva no
+    ("spells", "in_spellbook", "BOOLEAN", "1"),
+    ("spells", "in_backup", "BOOLEAN", "0"),
     # Statistiche cumulative dei tiri (contatori per faccia, per tipo di dado)
     ("characters", "dice_stats", "JSON", None),
     # Snapshot per l'annullamento dell'ultima operazione PF

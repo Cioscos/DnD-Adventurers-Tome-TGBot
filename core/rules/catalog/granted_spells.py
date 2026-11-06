@@ -26,6 +26,8 @@ class GrantedSpell:
     extra_damage_type: str | None = None
     # Componenti («V, S, M»): servono ai controlli di lancio (Incantesimi Bestiali). Le riempie ``_COMPONENTS``.
     components: str | None = None
+    # Scuola di magia (slug inglese): i privilegi delle scuole del Mago la leggono dall'incantesimo
+    school: str | None = None
 
 
 GRANTED_SPELLS: dict[str, GrantedSpell] = {
@@ -422,4 +424,9 @@ _COMPONENTS: dict[str, str] = {
     "bestow-curse": "V, S",
     "compulsion": "V, S",
 }
-GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key)) for key, spell in GRANTED_SPELLS.items()}
+GRANTED_SPELLS["animate-dead"] = GrantedSpell(
+    "animate-dead", {"it": "Animare morti", "en": "Animate Dead"}, 3, "1 minuto", "3 m", "Istantanea", attack_save=None)
+_COMPONENTS["animate-dead"] = "V, S, M"
+# Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
+_SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy"}
+GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

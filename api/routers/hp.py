@@ -21,7 +21,10 @@ from api.services.effects import apply_conditions, apply_heal, cap_current_hp, e
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.beast_companion import long_rest_beast
 from api.services.durations import end_concentration, is_concentrating
-from api.services.natural_recovery import recover as recover_slots
+from api.services.natural_recovery import ARCANE_FEATURE, recover as recover_slots
+from core.rules.arcane_ward import absorb as absorb_ward
+from core.rules.roll_options import set_saved_dice
+from core.rules.school_hooks import concentration_safe
 from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
@@ -294,6 +297,10 @@ async def update_hp(
                     _add_history(session, char.id, "companion_hp",
                                  f"Forma selvatica terminata: {form.name} (PF a 0)")
         amount = applied
+        warded = absorb_ward(char, amount)  # l'Interdizione Arcana prende il danno al posto del mago, prima dei PF temporanei
+        if warded:
+            amount -= warded
+            conc_damage -= warded  # il danno è andato alla interdizione: la concentrazione non è toccata
         # Absorb temp HP first
         if char.temp_hp > 0:
             absorbed = min(char.temp_hp, amount)
@@ -324,6 +331,8 @@ async def update_hp(
             desc = f"Danni: -{pre_form} HP{note} ({old} → {char.current_hit_points})"
         if form_overflow:
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
+        if warded:
+            desc += f" — Interdizione Arcana assorbe {warded}"
         if held_at_one:
             desc += " — Sentinella Imperitura: resta a 1 PF"
         if not form_absorbed:
@@ -399,6 +408,7 @@ async def update_hp(
             conc_damage > 0
             and is_concentrating(char)
             and char.current_hit_points > 0
+            and not concentration_safe(char)
         ):
             conc_result = await roll_concentration_save(
                 char, conc_damage, session,
@@ -688,7 +698,7 @@ async def rest(
         return await build_character_response(session, char)
     edition = character_edition(char)
     rest_type = body.rest_type
-    if body.natural_recovery and rest_type != "short":
+    if (body.natural_recovery or body.arcane_recovery) and rest_type != "short":
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
@@ -711,6 +721,11 @@ async def rest(
         _add_history(session, char.id, "rest",
                      "Recupero Naturale: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
                      meta={"kind": "natural_recovery", "slots": {str(lv): n for lv, n in back.items()}})
+    if body.arcane_recovery:  # come il Recupero Naturale: convalida ed effetto prima di ogni altra scrittura del riposo
+        back = await recover_slots(session, char, body.arcane_recovery, ARCANE_FEATURE)
+        _add_history(session, char.id, "rest",
+                     "Recupero Arcano: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
+                     meta={"kind": "arcane_recovery", "slots": {str(lv): n for lv, n in back.items()}})
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     fx = compute_rest_effects(char, rest_type, hb_hp_bonus, body.ate_and_drank)
     for r in plan_item_recharges(char.items, rest_type):
@@ -769,6 +784,13 @@ async def rest(
                 started = spec.long_rest_state(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level))
                 if started is not None:
                     begin_state(char, started, spec.key, spec.name["it"])
+
+        for spec, row in active_features(char):  # Portento: i d20 nuovi prendono il posto di quelli non usati
+            if spec.long_rest_dice:
+                key, count = spec.long_rest_dice
+                rolled = [random.randint(1, 20) for _ in range(count(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level)))]
+                set_saved_dice(char, key, rolled)
+                record_dice(char, [("d20", v) for v in rolled])
 
         firing = await dispatch(session, char, "long_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))

@@ -77,6 +77,9 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "no_reactions": {"it": "Senza reazioni", "en": "No reactions"},
     "hurled": {"it": "Nei piani inferiori", "en": "Hurled through Hell"},
     "entropic_ward": {"it": "Attacco in svantaggio", "en": "Attack at disadvantage"},
+    "instinctive_charm": {"it": "Attacco deviato", "en": "Attack redirected"},
+    "altered_memory": {"it": "Ricordi alterati", "en": "Altered memory"},
+    "commanded_undead": {"it": "Non morto comandato", "en": "Commanded undead"},
 }
 
 

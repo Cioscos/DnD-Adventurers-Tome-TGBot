@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -40,6 +40,9 @@ class SpellRead(BaseModel):
     extra_damage_type: Optional[str] = None
     class_id: Optional[int] = None
     always_prepared: bool = False
+    in_spellbook: bool = False  # Libro del Mago: solo la copia nel libro lo cambia (``POST .../copy``)
+    in_backup: bool = False
+    has_book: bool = False  # l'incantesimo è del Libro del Mago (di livello 1+, di un mago 2014): il client mostra le azioni del libro
     # CD e attacco della classe dell'incantesimo; li riempie il server dove serve la scheda.
     save_dc: Optional[int] = None
     attack_bonus: Optional[int] = None
@@ -98,6 +101,30 @@ class SpellUpdate(BaseModel):
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
     class_id: Optional[int] = None
     always_prepared: Optional[bool] = None
+
+
+class SpellCopyRequest(BaseModel):
+    """Copia nel Libro del Mago: ``copy`` (incantesimo trovato), ``backup`` (copia di riserva di uno già nel libro),
+    ``retranscribe`` (libro perso: si riscrive un incantesimo preparato)."""
+    mode: Literal["copy", "backup", "retranscribe"] = "copy"
+
+
+class SpellCopyCost(BaseModel):
+    hours: float
+    gold: int
+    halved: bool = False  # un «Sapiente» della scuola ha dimezzato tempo e costo
+
+
+class SpellCopyRequest(BaseModel):
+    """Copia nel Libro del Mago: ``copy`` (incantesimo trovato), ``backup`` (copia di riserva di uno già nel libro),
+    ``retranscribe`` (libro perso: si riscrive un incantesimo preparato)."""
+    mode: Literal["copy", "backup", "retranscribe"] = "copy"
+
+
+class SpellCopyCost(BaseModel):
+    hours: float
+    gold: int
+    halved: bool = False  # un «Sapiente» della scuola ha dimezzato tempo e costo
 
 
 class SpellUseRequest(RollOptionsBody):
@@ -237,4 +264,5 @@ class RollDamageResult(BaseModel):
     option_result: OptionResult | None = absent_when_none()
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
     twinned_damage: dict | None = absent_when_none()  # Incantesimo Raddoppiato: {rolls, total} del secondo bersaglio
+    save_success_damage: int | None = absent_when_none()  # Trucchetto Potente: il danno di chi supera il TS (metà del totale)
     model_config = {"from_attributes": True}

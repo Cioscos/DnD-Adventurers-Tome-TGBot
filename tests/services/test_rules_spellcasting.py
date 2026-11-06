@@ -150,7 +150,8 @@ def test_third_caster_without_stored_ability_casts_with_intelligence():
 
 
 def _spell(**kw):
-    base = dict(level=1, casting_time="1 azione", is_prepared=True, always_prepared=False, class_id=None, is_ritual=False)
+    base = dict(level=1, casting_time="1 azione", is_prepared=True, always_prepared=False, class_id=None, is_ritual=False,
+                in_spellbook=True)
     return NS(**{**base, **kw})
 
 
@@ -198,6 +199,8 @@ def test_cast_warnings_ritual_preparation():
     unprepared = _spell(is_prepared=False, is_ritual=True)
     assert cast_warnings(_char(_cls("cleric", 5)), unprepared, ritual=True) == ["ritual_unprepared"]
     assert cast_warnings(_char(_cls("wizard", 5)), unprepared, ritual=True) == []  # dal libro
+    outside = _spell(is_prepared=False, is_ritual=True, in_spellbook=False)  # 2014: un rituale fuori dal libro si conferma
+    assert cast_warnings(_char(_cls("wizard", 5)), outside, ritual=True) == ["ritual_unprepared"]
     assert cast_warnings(_char(_cls("bard", 5)), unprepared, ritual=True) == []  # 2014: li conosce
     assert cast_warnings(_char(_cls("bard", 5), edition="2024"), unprepared, ritual=True) == ["ritual_unprepared"]
     assert cast_warnings(_char(_cls("wizard", 5), edition="2024"), unprepared, ritual=True) == []

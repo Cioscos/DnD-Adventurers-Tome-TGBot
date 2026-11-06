@@ -178,6 +178,8 @@ class ExportSpell(BaseModel):
     extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
     extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     always_prepared: bool = False
+    in_spellbook: bool = True  # un file senza il campo: l'incantesimo era già nel libro
+    in_backup: bool = False
     source_class_key: Optional[str] = Field(default=None, max_length=20)
 
 

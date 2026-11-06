@@ -165,7 +165,7 @@ function OptionRow({ option, on, blocked, slot, onToggle, onSlot }: {
                   ? 'border-dnd-gold/70 text-dnd-gold-bright shadow-halo-gold'
                   : 'border-dnd-border text-dnd-text'}`}
             >
-              {t('character.roll_options.slot_choice', { level: choice.level, available: choice.available })}
+              {t(option.requires_input === 'recover' ? 'character.roll_options.slot_recover_choice' : 'character.roll_options.slot_choice', { level: choice.level, available: choice.available })}
               {choice.dice ? ` · ${choice.dice}` : ''}
             </Pressable>
           ))}

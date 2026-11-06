@@ -191,7 +191,7 @@ def test_passive_adjustment_plus_minus_five():
 # --- Modificatori dei privilegi ---------------------------------------------------------------------------------------
 
 def _with_features(monkeypatch, *mods, key="fighter.prova"):
-    spec = SimpleNamespace(key=key, modifiers=mods)
+    spec = SimpleNamespace(key=key, modifiers=mods, hp_max_locked=False)
     row = SimpleNamespace(level=7)
     monkeypatch.setattr(mod_module, "active_features", lambda char: [(spec, row)])
 

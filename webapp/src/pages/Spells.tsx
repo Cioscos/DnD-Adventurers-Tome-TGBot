@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import OwnedSecrets from '@/pages/spells/OwnedSecrets'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
+import SpellbookSheet from '@/pages/spells/SpellbookSheet'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
 import { totalLevelOf } from '@/lib/dnd'
 import { itemSpellConcentration } from '@/lib/concentration'
@@ -98,9 +99,24 @@ export default function Spells() {
   })
 
   const castFlow = useCastFlow(charId, char)
+  const [bookSpell, setBookSpell] = useState<Spell | null>(null)  // Libro del Mago: l'incantesimo da copiare
+  const [confirmLost, setConfirmLost] = useState(false)
+  const loseBook = useMutation({
+    mutationFn: () => api.spells.loseSpellbook(charId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setConfirmLost(false)
+      toast.info(t('character.spells.book.lost_done'))
+    },
+  })
 
   const onPrepareError = (e: unknown) => {
     const detail = e instanceof ApiError ? e.detail as { code?: string; n?: number; cap?: number; per_class?: boolean } : null
+    if (detail?.code === 'not_in_spellbook' || detail?.code === 'spell_above_slots') {
+      haptic.warning()
+      toast.warning(t(`character.spells.${detail.code}`))
+      return
+    }
     if (detail?.code !== 'prepared_cap') {
       notifyMutationError()
       return
@@ -378,7 +394,9 @@ export default function Spells() {
         <Surface variant="arcane">
           <div data-testid="spell-pick-banner" className="space-y-1">
             <p className="font-body text-sm text-dnd-text">
-              {pick.spell_pick.ritual
+              {pick.spell_pick.book
+                ? t('character.spells.pick_book_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })
+                : pick.spell_pick.ritual
                 ? t('character.spells.pick_ritual_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
                 : pick.spell_pick.exact
                   ? t('character.spells.pick_exact_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
@@ -447,6 +465,14 @@ export default function Spells() {
           }`}>
             {spellcasting.prepared_count}/{spellcasting.prepared_cap ?? 0}
           </span>
+        </div>
+      )}
+
+      {spellcasting?.has_wizard && spells.some((s) => s.has_book) && (
+        <div className="flex justify-end px-1">
+          <Button variant="secondary" size="sm" className="min-h-11" onClick={() => setConfirmLost(true)}>
+            {t('character.spells.book.lost_button')}
+          </Button>
         </div>
       )}
 
@@ -611,6 +637,7 @@ export default function Spells() {
                             showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.always_prepared}
                             onPreparedToggle={() => handlePreparedToggle(spell)}
                             preparedPending={preparedMutation.isPending && preparedMutation.variables?.spellId === spell.id}
+                            onBook={() => setBookSpell(spell)}
                             concentrationPending={
                               concentrationMutation.isPending &&
                               (concentrationMutation.variables === spell.id ||
@@ -627,6 +654,25 @@ export default function Spells() {
           )
         })}
       </ScrollArea>
+
+      {spellcasting?.has_wizard && (
+        <SpellbookSheet
+          charId={charId}
+          spell={bookSpell ?? ({ id: 0, name: '', level: 1, is_concentration: false, is_ritual: false, is_pinned: false, is_prepared: false } as Spell)}
+          open={bookSpell !== null}
+          onClose={() => setBookSpell(null)}
+        />
+      )}
+
+      <ConfirmSheet
+        open={confirmLost}
+        onClose={() => setConfirmLost(false)}
+        title={t('character.spells.book.lost_title')}
+        body={t('character.spells.book.lost_body')}
+        confirmLabel={t('character.spells.book.lost_button')}
+        loading={loseBook.isPending}
+        onConfirm={() => loseBook.mutate()}
+      />
 
       {/* Dimentica: eliminazione definitiva, sempre confermata (audit #9). */}
       <ConfirmSheet
