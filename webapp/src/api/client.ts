@@ -668,8 +668,8 @@ export const api = {
       }),
     tickRound: (id: number) =>
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
-    turnState: (id: number) =>
-      request<TurnState>(`/characters/${id}/turn-state`),
+    turnState: (id: number, itemId?: number | null) =>
+      request<TurnState>(`/characters/${id}/turn-state${itemId ? `?item_id=${itemId}` : ''}`),
     turnUse: (id: number, slot: TurnSlot, used: boolean = true) =>
       request<TurnBlock>(`/characters/${id}/turn/use`, { method: 'POST', body: JSON.stringify({ slot, used }) }),
     rollOptions: (id: number, query: RollOptionsQuery) =>

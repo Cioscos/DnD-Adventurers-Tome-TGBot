@@ -347,6 +347,15 @@ async def test_thirsting_blade_gives_two_attacks_with_the_pact_weapon_only(clien
         assert r.status_code == 409 and r.json()["detail"]["code"] == "attack_limit"
 
 
+async def test_turn_state_gives_the_attack_limit_of_the_weapon_that_attacks(client):
+    cid = await _caster(client, 5, "thirsting_blade", boon="blade")
+    blade, axe = await _blade(client, cid), await _weapon(client, cid, "Ascia", "main_hand")
+    state = (await client.get(f"/characters/{cid}/turn-state")).json()
+    assert state["attacks_allowed"] == 1 and state["attacks_allowed_pact"] == 2
+    for item, expected in ((blade, 2), (axe, 1)):
+        assert (await client.get(f"/characters/{cid}/turn-state", params={"item_id": item})).json()["attacks_allowed"] == expected
+
+
 async def test_thirsting_blade_does_not_stack_with_extra_attack(client):
     cid = await _caster(client, 5, "thirsting_blade", boon="blade")
     blade = await _blade(client, cid)

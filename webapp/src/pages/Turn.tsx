@@ -217,7 +217,9 @@ export default function Turn() {
   const influenceSkills = standardActionsFor(char.rules_edition).find((s) => s.id === 'influence')?.skills ?? []
   const influenceTotal = influenceRolled && lastRoll?.roll === 'skill' && influenceSkills.includes(lastRoll.skill ?? '') ? lastRoll.total : null
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
-  const attacks = turn?.attacks_allowed ?? char.attacks_per_action ?? 1
+  // Lama Assetata: con l'arma del patto in mano gli attacchi sono quelli del privilegio
+  const pactInHand = char.items?.some((i) => i.is_equipped && i.item_metadata?.pact_weapon)
+  const attacks = (pactInHand ? turn?.attacks_allowed_pact : undefined) ?? turn?.attacks_allowed ?? char.attacks_per_action ?? 1
   const stdActions = standardActionsFor(char.rules_edition)
   // Richieste in serie dallo stesso dispositivo: il server fa read-modify-write sul JSON.
   const busy = useSlot.isPending || newTurn.isPending

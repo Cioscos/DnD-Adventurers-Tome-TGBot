@@ -257,6 +257,7 @@ class TurnBlock(BaseModel):
 class TurnState(BaseModel):
     turn: TurnBlock = TurnBlock()
     attacks_allowed: int = 1
+    attacks_allowed_pact: int = 1  # il limite con l'arma del patto (Lama Assetata)
     in_encounter: bool
     is_my_turn: bool
     round: Optional[int] = None

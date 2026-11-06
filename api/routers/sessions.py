@@ -318,15 +318,20 @@ async def character_turn_state(
     character_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    item_id: int | None = None,
 ) -> TurnState:
+    """``item_id``: l'arma che sta per attaccare; senza, ``attacks_allowed`` è il limite generale e
+    ``attacks_allowed_pact`` quello con l'arma del patto."""
     char = (await db.execute(select(Character).where(Character.id == character_id)
-                             .options(selectinload(Character.classes)))).scalar_one_or_none()
+                             .options(selectinload(Character.classes), selectinload(Character.items)))).scalar_one_or_none()
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
     if char.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     _, pendings = await character_effect_payload(db, character_id)
-    block = {"turn": get_turn(char), "attacks_allowed": attacks_allowed(char)}
+    item = next((i for i in char.items if i.id == item_id), None)
+    block = {"turn": get_turn(char), "attacks_allowed": attacks_allowed(char, item),
+             "attacks_allowed_pact": attacks_allowed(char, with_pact=True)}
     row = await active_encounter_row(db, character_id)
     if row is None:
         return TurnState(in_encounter=False, is_my_turn=False, pending_saves=pendings, **block)

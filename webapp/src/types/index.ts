@@ -1048,6 +1048,8 @@ export type TurnSlot = 'action' | 'bonus' | 'reaction' | 'free_interaction' | 's
 export interface TurnState {
   turn: TurnBlock
   attacks_allowed: number
+  /** Il limite con l'arma del patto in mano (Lama Assetata). */
+  attacks_allowed_pact?: number
   in_encounter: boolean
   is_my_turn: boolean
   round: number | null

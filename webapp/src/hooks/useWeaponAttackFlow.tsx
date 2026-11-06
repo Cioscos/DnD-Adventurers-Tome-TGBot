@@ -39,8 +39,8 @@ export function useAttackRoll() {
   const rollDice = useAnimatedRoll()
 
   /** Oltre il limite dell'azione Attacco si passa solo confermando. `null`: il giocatore ha rinunciato. */
-  const limitConfirmation = async (charId: number): Promise<{ confirm_extra_attack?: true } | null> => {
-    const state = await api.characters.turnState(charId).catch(() => null)
+  const limitConfirmation = async (charId: number, itemId?: number | null): Promise<{ confirm_extra_attack?: true } | null> => {
+    const state = await api.characters.turnState(charId, itemId).catch(() => null)
     if (!state || state.turn.action_attacks < state.attacks_allowed) return {}
     return (await askAttackLimit(state.turn.action_attacks, state.attacks_allowed)) ? { confirm_extra_attack: true } : null
   }
@@ -121,7 +121,7 @@ export function useAttackRoll() {
       // Prima le opzioni: una con uno slot proprio (Frenesia, Ritorsione) non pesa sul limite dell'azione Attacco.
       const { query: optionsQuery } = flow(charId, itemId, choice)
       const { own_slot, ranged, ...before } = await askRollOptions(charId, optionsQuery, 'before', preset ? { preset } : undefined)
-      const confirm = offhand || own_slot ? {} : await limitConfirmation(charId)
+      const confirm = offhand || own_slot ? {} : await limitConfirmation(charId, itemId)
       if (!confirm) return null
       const { post, secondStep } = flow(charId, itemId, choice, confirm, ranged)
       const dice = await rollD20(mode)

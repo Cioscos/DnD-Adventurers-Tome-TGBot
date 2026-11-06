@@ -269,6 +269,24 @@ describe('useAttackRoll', () => {
       expect(attack).toHaveBeenCalledWith(1, 3, false, undefined, { ...CHOICE, confirm_extra_attack: true })
     })
 
+    it('asks the limit of the weapon that attacks: the second attack with the pact weapon is not extra, the third is', async () => {
+      turnState.mockImplementation(async (_id: number, itemId?: number) => ({
+        attacks_allowed: itemId === 3 ? 2 : 1, turn: { attacks_made: 1, action_attacks: 1 },
+      }))
+      await start()
+      expect(turnState).toHaveBeenCalledWith(1, 3)
+      expect(screen.queryByText('character.attack.limit_confirm')).toBeNull()
+      expect(attack.mock.calls[0][4]).not.toHaveProperty('confirm_extra_attack')
+    })
+
+    it('the third attack with the pact weapon is extra: the question comes back', async () => {
+      turnState.mockResolvedValue({ attacks_allowed: 2, turn: { attacks_made: 2, action_attacks: 2 } })
+      const third = start()
+      expect(await screen.findByText('character.attack.limit_confirm')).toBeInTheDocument()
+      await userEvent.click(screen.getByText('character.attack.limit_cancel'))
+      await expect(third).resolves.toBeNull()
+    })
+
     it('counts only the attacks of the Attack action: a Frenzy attack made before does not make the next one extra', async () => {
       turnState.mockResolvedValue({ attacks_allowed: 2, turn: { attacks_made: 2, action_attacks: 1 } })
       const done = start()
