@@ -45,6 +45,7 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
               <li className="text-dnd-text-muted">{t(`character.target_effect.custom_note.${fx.condition.slice(7)}`, { defaultValue: '' })}</li>
             )}
             {fx.damage_dice && <li className="tabular-nums">{fx.damage_dice}</li>}
+            {fx.note && <li className="text-xs text-dnd-text-muted">{t(`character.target_effect.notes.${fx.note}`, { defaultValue: '' })}</li>}
             {fx.repeat_save && <li className="text-xs text-dnd-text-muted">{t(`character.target_effect.repeat_save_${fx.repeat_save}`)}</li>}
             {fx.extends && <li className="text-xs text-dnd-text-muted">{t('character.target_effect.extends_note')}</li>}
             {fx.immune_on_success && <li className="text-xs text-dnd-text-muted">{t('character.target_effect.immune_note')}</li>}

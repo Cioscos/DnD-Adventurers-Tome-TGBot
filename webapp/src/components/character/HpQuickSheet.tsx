@@ -61,7 +61,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
       modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
     }) => {
       const choice = op === 'damage'
-        ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type }, 'damage_in')
+        ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in')
         : undefined
       const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
       const updated = await (withOptions

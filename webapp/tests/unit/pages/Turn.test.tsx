@@ -716,6 +716,89 @@ describe('Turn page', () => {
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.cleansing_touch', 1, { condition: undefined }))
   })
 
+  const touch = (extra = {}) => ({
+    id: 9, name: 'Tocco Purificatore', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+    feature_key: 'paladin.cleansing_touch', max_uses: 2, uses: 2, action_type: 'action', restoration_type: 'long_rest',
+    use_choices: [{ key: 'condition', optional: true, label: { it: 'Condizione da terminare su di te', en: 'Condition to end on you' },
+      options: [{ key: 'charmed', label: { it: 'Affascinato', en: 'Charmed' } }] }], ...extra,
+  })
+
+  it('forgets the choice after a use, so the next use starts with no condition (Cleansing Touch twice)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [touch()] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.choice_none'))
+    await userEvent.click(await screen.findByText('Affascinato'))
+    await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+    await waitFor(() => expect(featureUse).toHaveBeenLastCalledWith(7, 'paladin.cleansing_touch', 1, { condition: 'charmed' }))
+    await waitFor(() => expect(screen.getByText('character.turn.choice_none')).toBeInTheDocument())  // di nuovo vuota
+    await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledTimes(2))
+    expect(featureUse.mock.calls[1]).toEqual([7, 'paladin.cleansing_touch', 1, {}])
+  })
+
+  it('lets an optional choice be taken off again with the None entry', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [touch()] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.choice_none'))
+    await userEvent.click(await screen.findByText('Affascinato'))
+    await userEvent.click(await screen.findByText('Affascinato'))  // il valore scelto è nel pulsante: riapre l'elenco
+    await userEvent.click(await screen.findByText('character.turn.choice_none'))
+    await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+    await waitFor(() => expect(featureUse).toHaveBeenCalled())
+    expect(featureUse.mock.calls[0]).toEqual([7, 'paladin.cleansing_touch', 1, {}])
+  })
+
+  describe('Lay on Hands on another creature', () => {
+    const lay = () => ({
+      id: 10, name: 'Imposizione delle Mani', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      choose_amount: true, ally_modes: ['other', 'cure_other'], feature_key: 'paladin.lay_on_hands', max_uses: 25, uses: 25,
+      action_type: 'action', restoration_type: 'long_rest',
+      use_choices: [{ key: 'mode', label: { it: 'Su chi', en: 'On whom' }, options: [
+        { key: 'self', label: { it: 'Cura PF a te stesso', en: 'Heal yourself' } },
+        { key: 'other', label: { it: 'Cura PF a un altro', en: 'Heal another' } }] }],
+    })
+    const pick = async (label: string) => {
+      await userEvent.click(await screen.findByText('character.turn.choose'))
+      await userEvent.click(await screen.findByText(label))
+    }
+
+    it('asks who gets the heal only for the mode aimed at another creature, and keeps the mode in the params', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [lay()] })
+      sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await pick('Cura PF a un altro')
+      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      expect(featureUse).not.toHaveBeenCalled()  // prima si sceglie a chi
+      await userEvent.click(await screen.findByText('Brun'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1, { mode: 'other', target_character_id: 31 }))
+    })
+
+    it('does not ask for a target when healing yourself', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [lay()] })
+      sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await pick('Cura PF a te stesso')
+      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1, { mode: 'self' }))
+    })
+
+    it('says who regained how many HP', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [lay()] })
+      sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])
+      featureUse.mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: [], received: { name: 'Brun', healed: 6 } })
+      renderWithProviders(<Turn />)
+      await pick('Cura PF a un altro')
+      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      toastInfo.mockClear()
+      await userEvent.click(await screen.findByText('Brun'))
+      await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_received'))
+    })
+  })
+
   it('shows a catalog feature with uses and no effect of its own as a counter, with no button to spend it (the pool)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [
       { id: 5, name: 'Incanalare Divinità', is_passive: false, is_active: true, is_class_feature: true, has_on_use: false,

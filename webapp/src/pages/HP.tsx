@@ -42,7 +42,6 @@ import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
-import UndyingSentinelOffer from '@/components/character/UndyingSentinelOffer'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
@@ -118,7 +117,7 @@ export default function HP() {
       modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; knock_out?: boolean }
     }) => {
       const choice = op === 'damage'
-        ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type }, 'damage_in')
+        ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in')
         : undefined
       const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
       return withOptions
@@ -396,7 +395,6 @@ export default function HP() {
                 <p className="text-center text-sm font-mono text-dnd-crimson-bright">
                   0 / {hpMax}
                 </p>
-                <UndyingSentinelOffer charId={charId} char={char} />
                 <DeathSaves
                   deathSaves={ds}
                   onRoll={(mode) => deathRollMutation.mutate(mode)}

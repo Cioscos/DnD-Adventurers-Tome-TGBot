@@ -328,9 +328,6 @@
       "title": "Hit Points",
       "reaction_title": "You can react",
       "reaction_attack": "Attack",
-      "sentinel_title": "Undying Sentinel",
-      "sentinel_body": "You are at 0 HP: you can stay at 1 HP by spending the use. It does not work if the damage killed you outright.",
-      "sentinel_cta": "Stay at 1 HP",
       "current": "Current",
       "max": "Maximum",
       "temp": "Temporary",
@@ -871,6 +868,12 @@
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
+      },
+      "notes": {
+        "abjure_enemy": "Frightened with speed 0 for the whole duration; a creature that passes the save only has its speed halved. Fiends and undead save with disadvantage; a creature immune to being frightened does not save. Ends on the first damage it takes: remove it by hand.",
+        "turn_the_unholy": "Turned: it moves away from you as far as it can and will not willingly come within 30 ft; no reactions; as its action only Dash, escaping what holds it or, if it cannot move, Dodge. Ends on the first damage it takes: remove it by hand.",
+        "turn_the_faithless": "Turned: it moves away from you as far as it can and will not willingly come within 30 ft; no reactions; as its action only Dash, escaping what holds it or, if it cannot move, Dodge. Its true form is revealed while it lasts. Ends on the first damage it takes: remove it by hand.",
+        "avenging_angel": "Applies the first time an enemy enters the aura (30 ft) or starts its turn there. Frightened for 1 minute or until damaged; attacks against it have advantage. Remove it by hand on the first damage it takes."
       }
     },
     "roll_options": {
@@ -1192,6 +1195,7 @@
       "bardic_die_ac": "Add to AC",
       "bardic_die_ac_result": "Inspiration die: add to your AC",
       "ally_other": "Another creature",
+      "choice_none": "None",
       "ally_has_die": "{{name}} already holds a d{{die}}: the new die replaces it and still costs a use.",
       "ally_replace": "Replace the die",
       "ally_back": "Back",
@@ -1239,6 +1243,11 @@
       "state_attack_bonus": "+{{n}} to the attack roll",
       "state_maximized": "Dice at maximum",
       "state_bonus": "Fixed damage +{{n}}",
+      "state_radius": "Radius {{n}} m",
+      "state_fly": "Fly {{n}} m",
+      "state_start_heal": "+{{n}} HP at the start of your turns",
+      "state_start_damage": "{{n}} radiant damage to enemies at the start of their turns",
+      "state_until_next_turn_end": "Until the end of your next turn",
       "state_duplicates": "Duplicates: {{n}}",
       "divine_success": "Success (d100 {{roll}} vs {{level}}): wait 7 days, then end the state",
       "divine_failure": "Failed (d100 {{roll}} vs {{level}}): returns after a long rest",
@@ -1269,11 +1278,15 @@
       "amount_less": "One use fewer",
       "amount_more": "One use more",
       "use_given": "To give to an ally: {{n}}",
+      "use_received": "{{name}} regains {{n}} HP.",
       "extra_actions": "Extra actions: {{n}}",
       "use_notes": {
         "arcane_charge": "Arcane Charge: you teleport up to 30 ft to an unoccupied space you can see, before or after the extra action.",
         "quivering_palm": "Constitution save: on a failure the target drops to 0 hit points; on a success it takes the necrotic damage rolled. The vibrations end.",
         "water_whip": "Dexterity save: on a failure it takes the bludgeoning damage and, your choice, is knocked prone or pulled up to 25 ft toward you; on a success, half damage and nothing else.",
+        "lay_on_hands_other": "Tell the GM how many HP you gave back: the creature regains them from there. If it is a character at the table, pick their name to heal them from here. Not on constructs or undead.",
+        "lay_on_hands_cure_self": "The poison is removed from your sheet, if you had one; mark a disease by hand. Not on constructs or undead.",
+        "lay_on_hands_cure_other": "Tell the GM or the player: the poison or disease has to be removed on their side. Not on constructs or undead.",
         "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else."
       },
       "use_rolled": "You rolled",

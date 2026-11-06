@@ -8,9 +8,10 @@ import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 const flowElements = vi.hoisted(() => vi.fn(() => null as unknown))
-const { updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({
+const { rollOptionsSpy, updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({
   attackWeaponSpy: vi.fn(),
   attackUnarmedSpy: vi.fn(),
+  rollOptionsSpy: vi.fn(),
   updateHpSpy: vi.fn(),
   undoHpSpy: vi.fn(),
   showUndoToastSpy: vi.fn(),
@@ -19,7 +20,7 @@ const { updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackW
 }))
 
 vi.mock('@/api/client', () => ({
-  api: { characters: { updateHp: updateHpSpy, undoHp: undoHpSpy } },
+  api: { characters: { updateHp: updateHpSpy, undoHp: undoHpSpy, rollOptions: rollOptionsSpy } },
   ApiError: class ApiError extends Error {
     constructor(public status: number, public detail: unknown) {
       super(`API ${status}`)
@@ -50,6 +51,7 @@ vi.mock('@/components/ui/Sheet', async () => {
 const char = { id: 42, current_hit_points: 10, hit_points: 20 } as CharacterFull
 
 afterEach(() => {
+  rollOptionsSpy.mockReset()
   updateHpSpy.mockReset()
   undoHpSpy.mockReset()
   showUndoToastSpy.mockReset()
@@ -65,6 +67,13 @@ async function applyDamage() {
 }
 
 describe('HpQuickSheet quick values', () => {
+  it('asks for the damage options with the amount, so an option valid only at 0 HP can be offered', async () => {
+    rollOptionsSpy.mockResolvedValue([])
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
+    await applyDamage()
+    expect(rollOptionsSpy).toHaveBeenCalledWith(42, expect.objectContaining({ roll: 'damage_taken', damage: 4 }))
+  })
+
   it('a chip applies at once, with the same undo as a typed value', async () => {
     updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
     const onClose = vi.fn()

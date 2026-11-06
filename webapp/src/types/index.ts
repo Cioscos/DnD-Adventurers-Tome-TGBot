@@ -121,6 +121,8 @@ export interface Ability {
   has_on_use?: boolean
   /** Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): si chiede a chi (R38). */
   gives_to_ally?: boolean
+  /** Valori della scelta `mode` rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi. */
+  ally_modes?: string[]
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null
@@ -171,6 +173,8 @@ export interface FeatureUseResult {
   targets?: string[]
   /** Valore da dare a un altro, mai scritto sulla scheda (PF temporanei di Incoraggiamento). */
   given?: number | null
+  /** Chi ha ricevuto una cura dal privilegio (Imposizione delle Mani su un compagno della serata). */
+  received?: { name: string; healed: number } | null
 }
 
 export interface MapEntry {

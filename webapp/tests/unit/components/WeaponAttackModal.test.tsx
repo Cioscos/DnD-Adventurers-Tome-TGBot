@@ -109,6 +109,11 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByTestId('damage-type')).toHaveTextContent('Colpo magico')
   })
 
+  it('says a weapon strike is magical even though the weapon has no damage type of its own (Sacred Weapon)', () => {
+    render(<WeaponAttackModal result={{ ...baseResult, is_magic: true }} onClose={() => {}} />)
+    expect(screen.getByTestId('damage-type')).toHaveTextContent('Colpo magico')
+  })
+
   it('shows no damage type line for a weapon attack', () => {
     render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
     expect(screen.queryByTestId('damage-type')).not.toBeInTheDocument()

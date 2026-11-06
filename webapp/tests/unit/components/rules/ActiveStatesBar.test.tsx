@@ -34,6 +34,20 @@ describe('ActiveStatesBar', () => {
     expect(notifyMutationError).not.toHaveBeenCalled()
   })
 
+  it('reads the range, duration, aura, flight and start-of-turn numbers a paladin state carries', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'divine_sense', feature_key: 'paladin.divine_sense', rounds_left: null, ends_on: ['manual'], data: { range_m: 18, until: 'next_turn_end' } },
+      { key: 'avenging_angel', feature_key: 'paladin.avenging_angel', rounds_left: 600, ends_on: ['manual'], data: { radius_m: 9, fly_ft: 60 } },
+      { key: 'elder_champion', feature_key: 'paladin.elder_champion', rounds_left: 10, ends_on: ['manual'], data: { start_heal: 10 } },
+      { key: 'holy_nimbus', feature_key: 'paladin.holy_nimbus', rounds_left: 10, ends_on: ['manual'], data: { start_damage: 10, radius_m: 9 } },
+    ], [])} />)
+    expect(screen.getByText(/character\.turn\.state_until_next_turn_end/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_fly/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_start_heal/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_start_damage/)).toBeInTheDocument()
+    expect(screen.getAllByText(/character\.turn\.state_radius/).length).toBeGreaterThanOrEqual(3)
+  })
+
   it('lists under a state the features that act on others, with their text', () => {
     renderWithProviders(<ActiveStatesBar char={char(
       [{ ...rage, data: { others: ['barbarian.totem_wolf', 'barbarian.gone'] } }],

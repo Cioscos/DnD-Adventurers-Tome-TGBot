@@ -36,10 +36,14 @@ export function groupForTurn(char: CharacterFull): TurnGroups {
   // Campione degli Antichi: gli incantesimi da paladino da 1 azione si lanciano come azione bonus.
   const champion = (char.active_states ?? []).some((s) => s.key === 'elder_champion')
   const paladinRows = new Set((char.classes ?? []).filter((c) => /^(paladin|paladino)$/i.test(c.class_name)).map((c) => c.id))
+  // Senza classe (aggiunto a mano) il server lo attribuisce all'unico incantatore del personaggio: qui uguale.
+  const casters = char.spellcasting?.casters ?? []
+  const onlyCasterIsPaladin = casters.length === 1 && paladinRows.has(casters[0].class_id)
   for (const s of char.spells ?? []) {
     if (!(s.level === 0 || s.is_prepared || noPrep)) continue
     let bucket: keyof TurnGroups = parseCastingTime(s.casting_time) ?? 'other'
-    if (champion && bucket === 'action' && s.class_id != null && paladinRows.has(s.class_id)) bucket = 'bonus_action'
+    const isPaladinSpell = s.class_id != null ? paladinRows.has(s.class_id) : onlyCasterIsPaladin
+    if (champion && bucket === 'action' && isPaladinSpell) bucket = 'bonus_action'
     g[bucket].push({ kind: 'spell', id: String(s.id), label: s.name })
   }
 

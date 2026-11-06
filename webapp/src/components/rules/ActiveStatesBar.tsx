@@ -23,6 +23,12 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   if (typeof d.cr === 'string') out.push(t('character.turn.state_cr', { cr: d.cr }))
   if (typeof d.attack_bonus === 'number') out.push(t('character.turn.state_attack_bonus', { n: d.attack_bonus }))
   if (typeof d.bonus === 'number') out.push(t('character.turn.state_bonus', { n: d.bonus }))
+  if (typeof d.range_m === 'number') out.push(t('character.turn.state_radius', { n: d.range_m }))
+  if (typeof d.radius_m === 'number') out.push(t('character.turn.state_radius', { n: d.radius_m }))
+  if (typeof d.fly_ft === 'number') out.push(t('character.turn.state_fly', { n: Math.round(d.fly_ft * 0.3) }))
+  if (typeof d.start_heal === 'number') out.push(t('character.turn.state_start_heal', { n: d.start_heal }))
+  if (typeof d.start_damage === 'number') out.push(t('character.turn.state_start_damage', { n: d.start_damage }))
+  if (d.until === 'next_turn_end') out.push(t('character.turn.state_until_next_turn_end'))
   if (typeof d.duplicates === 'number') out.push(t('character.turn.state_duplicates', { n: d.duplicates }))
   if (s.key === 'divine_intervention') {
     out.push(t(d.success ? 'character.turn.divine_success' : 'character.turn.divine_failure', { roll: d.roll ?? '-', level: d.level }))

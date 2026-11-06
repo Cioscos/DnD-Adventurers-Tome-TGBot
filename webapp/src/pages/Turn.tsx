@@ -44,7 +44,7 @@ const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bon
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
 const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
-const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air']
+const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -130,13 +130,14 @@ export default function Turn() {
   const abilityUse = useMutation({
     mutationFn: async ({ ability, uses, amount, allyId }: { ability: Ability; uses: number; amount?: number; allyId?: number }) => {
       if (ability.has_on_use && ability.feature_key) {
-        if (allyId !== undefined) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, { target_character_id: allyId })
         const chosen = toggles[ability.id]
         const picked = useChoices[ability.id]
-        const params = ability.use_toggles?.length || ability.use_choices?.length ? {
+        const choices = ability.use_toggles?.length || ability.use_choices?.length ? {
           ...Object.fromEntries((ability.use_toggles ?? []).map((x) => [x.key, !!chosen?.[x.key]])),
-          ...Object.fromEntries((ability.use_choices ?? []).map((x) => [x.key, picked?.[x.key]])),
+          ...Object.fromEntries((ability.use_choices ?? []).map((x) => [x.key, picked?.[x.key]]).filter(([, v]) => v)),
         } : undefined
+        // Il bersaglio scelto viaggia con le scelte già fatte (Imposizione delle Mani: la modalità decide cosa farne).
+        const params = allyId !== undefined ? { ...choices, target_character_id: allyId } : choices
         if (params) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
         if (amount) return api.characters.featureUse(charId, ability.feature_key, amount)
         return api.characters.featureUse(charId, ability.feature_key)
@@ -144,8 +145,11 @@ export default function Turn() {
       await api.abilities.update(charId, ability.id, { uses })
       return null
     },
-    onSuccess: (res) => {
+    onSuccess: (res, { ability }) => {
+      // Le scelte valgono per un uso solo: il prossimo riparte vuoto, senza riproporre una condizione già curata.
+      setUseChoices((s) => Object.fromEntries(Object.entries(s).filter(([id]) => Number(id) !== ability.id)))
       if (res?.targets?.length) setTargetKey(res.targets[0])
+      if (res?.received) toast.info(t('character.turn.use_received', { name: res.received.name, n: res.received.healed }))
       // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
       if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: `${res.rolls.join(' + ')} = ${res.rolls.reduce((a, b) => a + b, 0)}` })
       // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
@@ -169,7 +173,9 @@ export default function Turn() {
       setPanel(args.ability)
       return
     }
-    if (args.ability.gives_to_ally) {
+    // Un privilegio che dà un effetto a un alleato, o una cui modalità scelta è rivolta a un altro (Imposizione delle Mani).
+    const mode = useChoices[args.ability.id]?.mode
+    if (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode))) {
       const allies = await api.characters.sessionAllies(charId).catch(() => [])
       if (allies.length > 0) {
         setAllyPick({ ...args, allies })
@@ -214,7 +220,8 @@ export default function Turn() {
       ))}
       {ab.use_choices?.map((x) => (
         <SelectSheet key={x.key} label={x.label[lang]} placeholder={t('character.turn.choose')} value={useChoices[ab.id]?.[x.key] ?? ''}
-          options={x.options.map((o) => ({ value: o.key, label: o.label[lang] }))}
+          options={[...(x.optional ? [{ value: '', label: t('character.turn.choice_none') }] : []),
+            ...x.options.map((o) => ({ value: o.key, label: o.label[lang] }))]}
           onChange={(v) => setUseChoices((s) => ({ ...s, [ab.id]: { ...s[ab.id], [x.key]: v } }))} />
       ))}
     </div>

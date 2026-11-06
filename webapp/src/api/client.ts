@@ -137,6 +137,8 @@ export type RollOptionsQuery = {
   ability?: string
   skill?: string
   damage_type?: string
+  /** Solo `damage_taken`: il danno che sta per essere inserito, per le opzioni che valgono solo se porta a 0 PF. */
+  damage?: number
 }
 
 /** Corpo di POST /spells/{id}/use: `slot_id` sceglie il pool, `confirm` le regole accettate dal giocatore. */
@@ -179,6 +181,8 @@ export type TargetEffect = {
   immune_on_success?: boolean
   /** Il TS si ripete a inizio o fine turno del bersaglio (Collera della Natura). */
   repeat_save?: 'start' | 'end' | null
+  /** Chiave del testo che il foglio traduce: ciò che il GM chiude o applica a mano. */
+  note?: string | null
 }
 
 export type TargetEffectPreview = {

@@ -113,4 +113,26 @@ describe('Campione degli Antichi', () => {
     const g = groupForTurn(paladin as unknown as CharacterFull)
     expect(ids(g.action)).toEqual(expect.arrayContaining(['spell:30', 'spell:31']))
   })
+
+  it('also moves a paladin spell added by hand without a class, when the paladin is the only caster', () => {
+    const solo = {
+      ...char,
+      classes: [{ id: 1, class_name: 'paladin' }],
+      spellcasting: { casters: [{ class_id: 1, class_name: 'paladin' }] },
+      active_states: [{ key: 'elder_champion' }],
+      spells: [spell(40, { casting_time: '1 azione', class_id: null }), spell(41, { casting_time: '1 azione', class_id: 1 })],
+    }
+    const g = groupForTurn(solo as unknown as CharacterFull)
+    expect(ids(g.bonus_action)).toEqual(expect.arrayContaining(['spell:40', 'spell:41']))
+  })
+
+  it('leaves a spell without a class on the action when another class casts too, as the server cannot tell them apart', () => {
+    const two = {
+      ...paladin,
+      spellcasting: { casters: [{ class_id: 1, class_name: 'paladin' }, { class_id: 2, class_name: 'wizard' }] },
+      active_states: [{ key: 'elder_champion' }],
+      spells: [spell(42, { casting_time: '1 azione', class_id: null })],
+    }
+    expect(ids(groupForTurn(two as unknown as CharacterFull).action)).toContain('spell:42')
+  })
 })

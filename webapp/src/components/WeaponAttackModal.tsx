@@ -159,10 +159,11 @@ export default function WeaponAttackModal({
           <p className="text-4xl font-black font-display mt-1 text-dnd-crimson-bright">
             {damage_total}
           </p>
-          {result.damage_type && (
+          {(result.damage_type || result.is_magic) && (
             <p data-testid="damage-type" className="mt-1 text-xs font-body text-dnd-text-muted">
-              {t(`character.inventory.damage_types.dmg_${result.damage_type}`, { defaultValue: result.damage_type })}
-              {result.is_magic && ` · ${t('character.attack.magic_strike')}`}
+              {result.damage_type && t(`character.inventory.damage_types.dmg_${result.damage_type}`, { defaultValue: result.damage_type })}
+              {result.damage_type && result.is_magic && ' · '}
+              {result.is_magic && t('character.attack.magic_strike')}
             </p>
           )}
         </m.div>

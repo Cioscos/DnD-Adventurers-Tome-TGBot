@@ -60,6 +60,13 @@ describe('TargetEffectSheet', () => {
     expect(await screen.findByText('character.target_effect.repeat_save_end')).toBeInTheDocument()
   })
 
+  it('shows the note that says what the GM closes by hand (Abjure Enemy)', async () => {
+    preview.mockResolvedValue({ result: { ...topple, condition: 'frightened', note: 'abjure_enemy' }, combatants: [] })
+    renderWithProviders(<RollNotes charId={3} optionResult={opts} />)
+    await userEvent.click(screen.getByText('character.target_effect.open'))
+    expect(await screen.findByText('character.target_effect.notes.abjure_enemy')).toBeInTheDocument()
+  })
+
   it('only shows the outcome without an encounter', async () => {
     preview.mockResolvedValue({ result: topple, combatants: [] })
     renderWithProviders(<RollNotes charId={3} optionResult={opts} />)
