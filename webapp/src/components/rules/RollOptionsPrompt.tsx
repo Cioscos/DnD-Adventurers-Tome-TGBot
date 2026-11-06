@@ -65,8 +65,13 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
 
   const setOn = (option: RollOption, on: boolean) => {
     if (on) {
-      const rivals = options.filter((o) => o.group && o.group === option.group).map((o) => o.key)
-      setChosen((c) => [...rivals.reduce(without, c), option.key])
+      // Un gruppo ammette `group_max` opzioni insieme (default una): oltre il limite cade la più vecchia.
+      const mates = options.filter((o) => o.group && o.group === option.group && o.key !== option.key).map((o) => o.key)
+      const limit = option.group_max ?? 1
+      setChosen((c) => {
+        const on = c.filter((k) => mates.includes(k))
+        return [...on.slice(0, Math.max(0, on.length - (limit - 1))).reduce(without, c), option.key]
+      })
       const lowest = option.input_options[0]?.level ?? option.saved_dice?.[0]
       if (lowest !== undefined) setSlots((s) => ({ [option.key]: lowest, ...s }))
     } else {

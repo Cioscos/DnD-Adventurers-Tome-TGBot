@@ -150,6 +150,21 @@ describe('askRollOptions', () => {
     await expect(answer).resolves.toEqual({ options: ['m2'], option_inputs: {} })
   })
 
+  it('a group with a larger limit keeps that many options on and drops the oldest', async () => {
+    rollOptions.mockResolvedValue([
+      option({ key: 'e1', label: 'Effetto 1', group: 'effect', group_max: 2 }), option({ key: 'e2', label: 'Effetto 2', group: 'effect', group_max: 2 }),
+      option({ key: 'e3', label: 'Effetto 3', group: 'effect', group_max: 2 }),
+    ])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Effetto 1' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Effetto 2' }))
+    expect(screen.getByRole('switch', { name: 'Effetto 1' })).toBeChecked()
+    await userEvent.click(screen.getByRole('switch', { name: 'Effetto 3' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(answer).resolves.toEqual({ options: ['e2', 'e3'], option_inputs: {} })
+  })
+
   it('leaving a group also turns off what depended on the option left', async () => {
     rollOptions.mockResolvedValue([
       option({ key: 'm1', label: 'Manovra 1', group: 'maneuver' }), option({ key: 'm2', label: 'Manovra 2', group: 'maneuver' }),

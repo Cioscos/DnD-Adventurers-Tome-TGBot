@@ -80,6 +80,9 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "instinctive_charm": {"it": "Attacco deviato", "en": "Attack redirected"},
     "altered_memory": {"it": "Ricordi alterati", "en": "Altered memory"},
     "commanded_undead": {"it": "Non morto comandato", "en": "Commanded undead"},
+    "hamstring": {"it": "Colpo alle Gambe", "en": "Hamstrung"},
+    "staggered": {"it": "Colpo Stordente", "en": "Staggered"},
+    "sundered": {"it": "Colpo Spezzante", "en": "Sundered"},
 }
 
 

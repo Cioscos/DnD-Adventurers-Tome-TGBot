@@ -286,7 +286,7 @@ def test_barbarian_core_values():
     ch = exp.character
     assert ch.hit_points == 245  # d12 + CON 4 + Robustezza nanica, livello 20
     assert ch.unarmored_defense_ability == "constitution" and ch.base_armor_class == 16
-    assert ch.speed == 40  # nano 30 + Movimento veloce
+    assert ch.speed == 30  # nano 30: Movimento Veloce lo calcola il catalogo 2024 (R45), non la base
     assert {a.name: a.value for a in exp.ability_scores}["strength"] == 21
 
 
@@ -642,9 +642,9 @@ def test_monk_2024_speed_keeps_unarmored_movement_in_base():
     assert convert(monk(), edition="2024")[0].character.speed == 65  # nessun catalogo 2024: resta com'è
 
 
-def test_barbarian_2014_speed_base_has_no_fast_movement():
-    base = convert(barb(), edition="2024")[0].character.speed
-    assert convert(barb(), edition="2014")[0].character.speed == base - 10
+def test_barbarian_speed_base_has_no_fast_movement_in_either_edition():
+    # entrambe le edizioni hanno un catalogo che calcola il +10: la base è quella del lignaggio
+    assert [convert(barb(), edition=e)[0].character.speed for e in ("2014", "2024")] == [30, 30]
 
 
 # --- I5 (Task 28): la Resilienza Draconica la calcola il catalogo, non la somma l'import --------

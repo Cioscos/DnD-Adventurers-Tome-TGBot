@@ -127,7 +127,7 @@ async def build_character_response(
                                "options": [{"key": o, "label": c.option_label_ctx(ctx, o) if c.option_label_ctx else c.option_label(o)}
                                            for o in c.options(ctx)],
                                **({"optional": True} if c.optional else {})}
-                              for c in on_use.choices]
+                              for c in on_use.choices if c.applies is None or c.applies(ctx)]
             ab.use_texts = [{"key": t.key, "label": dict(t.label), "max_len": t.max_len, **({"optional": True} if t.optional else {})}
                             for t in on_use.texts]
 
@@ -156,6 +156,11 @@ async def build_character_response(
         if item_val:
             response.saves_items_modifiers[slug] = item_val
 
+    owned = {i.id: i for i in char.items}
+    for it in response.items:  # portata in più di un'arma (Radici Percuotenti)
+        if it.item_type == "weapon" and it.id in owned:
+            it.reach_bonus_ft = modifiers_for(char, "reach", item=owned[it.id]).flat or None
+
     rule_damage = modifiers_for(char, None)
     stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}
     walk = effective_speed(char, (
@@ -167,6 +172,8 @@ async def build_character_response(
     response.computed = ComputedStats(
         speed=walk,
         fly_speed=(max(walk if rule_damage.fly_speed else 0, rule_damage.fly_speed_value) or None),
+        climb_speed=walk if rule_damage.climb_speed else None,
+        swim_speed=walk if rule_damage.swim_speed else None,
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
         resistances=sorted({*(stored.get("resistances") or []), *rule_damage.resistances}),
         immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),

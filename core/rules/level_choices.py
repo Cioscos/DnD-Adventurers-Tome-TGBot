@@ -135,10 +135,16 @@ def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
     edition = character_edition(char)
     pending = list(char.pending_choices or [])
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
-    out = [c for c in pending if c.get("kind") not in ("class_option", "epic_boon")]
+    # Il 19° livello è un Dono Epico nel 2024 e un ASI nel 2014: un cambio di edizione scambia la scelta in sospeso
+    out = [c for c in pending if c.get("kind") not in ("class_option", "epic_boon")
+           and not (edition == "2024" and c.get("kind", "asi") == "asi" and c.get("level") == 19)]
     for cls in char.classes:
         key = pending_key(cls)
         mine = [c for c in pending if c.get("class_key") == key]
+        done_now = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()
+        if (edition == "2014" and cls.level >= 19 and 19 in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT)
+                and "asi:19" not in done_now and not any(c.get("class_key") == key and c.get("kind", "asi") == "asi" and c.get("level") == 19 for c in out)):
+            out.append({"id": uuid.uuid4().hex, "kind": "asi", "class_key": key, "level": 19, "created_at": _now()})
         # Dono Epico: 2024, livello di classe 19+, finché non risolto
         boons = [c for c in mine if c.get("kind") == "epic_boon"]
         done = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()

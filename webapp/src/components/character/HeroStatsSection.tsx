@@ -74,11 +74,14 @@ export default function HeroStatsSection({ char }: Props) {
   const longJumpBonus = char.computed?.long_jump_bonus_ft
   const storedSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
-  // Il volo dato da un privilegio (Aquila in ira) vale la velocità a terra, salvo un volo già scritto più alto.
-  const grantedFly = char.computed?.fly_speed ?? 0
-  const otherSpeeds = grantedFly > 0 && !storedSpeeds.some((s) => s.type === 'fly' && s.range_ft >= grantedFly)
-    ? [...storedSpeeds.filter((s) => s.type !== 'fly'), { type: 'fly', range_ft: grantedFly }]
-    : storedSpeeds
+  // Volo, scalare e nuotare dati da un privilegio (Aquila in ira, Pantera, Salmone) valgono la velocità a terra, salvo una
+  // velocità dello stesso tipo già scritta e più alta.
+  const granted = [['fly', char.computed?.fly_speed], ['climb', char.computed?.climb_speed], ['swim', char.computed?.swim_speed]] as const
+  const otherSpeeds = granted.reduce(
+    (acc, [type, range]) => (range && range > 0 && !acc.some((s) => s.type === type && s.range_ft >= range)
+      ? [...acc.filter((s) => s.type !== type), { type, range_ft: range }] : acc),
+    storedSpeeds,
+  )
 
   const speedTotal = char.computed?.speed ?? (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)

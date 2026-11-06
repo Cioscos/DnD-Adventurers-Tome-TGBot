@@ -195,6 +195,7 @@ class AppliedOptions:
     holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
     resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
     self_damage: list[tuple[str, str]] = field(default_factory=list)  # (dadi, tipo) che chi usa le opzioni subisce
+    ability_override: str | None = None  # la prova di abilità si fa con questa caratteristica (Conoscenza Primordiale)
 
     @property
     def mode(self) -> str | None:
@@ -436,19 +437,22 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     keys = list(dict.fromkeys([*(o.spec.key for o in automatic), *keys]))  # le automatiche per prime, una volta sola
     usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
     confirmed = ctx.confirmed if phase != "before" else ()
+    # Prima del tiro ``needs`` è soddisfatto anche da un'opzione «una volta per turno» già dichiarata in questo turno (Colpo
+    # Brutale su un attacco successivo a quello dell'Attacco Irruento)
+    declared = tuple(_turn(ctx.char).get("once_per_turn", ())) if phase == "before" else ()
     out = AppliedOptions()
     dice: dict[str, str] = {}
-    groups: set[str] = set()
+    groups: dict[str, int] = {}
     for key in keys:
         option = usable.get(key)
         if option is None or (option.spec.needs and option.spec.needs not in keys
-                              and option.spec.needs not in confirmed):
+                              and option.spec.needs not in confirmed and option.spec.needs not in declared):
             raise OptionUnavailable(key)
         spec, given = option.spec, inputs.get(key) or {}
         if spec.group:
-            if spec.group in groups:
+            if groups.get(spec.group, 0) >= (spec.group_max(option.ctx) if spec.group_max else 1):
                 raise OptionUnavailable(key)
-            groups.add(spec.group)
+            groups[spec.group] = groups.get(spec.group, 0) + 1
         if spec.requires_input == "slot":
             _slot_level(ctx.char, spec, given)  # i dadi dipendono dallo slot: va controllato prima di calcolarli
         if spec.requires_input == "recover":
@@ -482,6 +486,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.mode:
             out.modes.append(spec.mode)
         out.cancels += spec.cancels
+        out.ability_override = spec.ability_override or out.ability_override
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail

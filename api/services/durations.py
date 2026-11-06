@@ -14,7 +14,7 @@ from api.services.condition_effects import (
     UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
 from api.services.effects import _add_history
-from api.services.rules_states import end_counted_at_turn_end, end_states, get_states, tick_states
+from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
 from core.rules.edition import character_edition
 from core.rules.states import exhaustion_level
@@ -192,6 +192,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
         st = get_turn(char)
         if not st["attacks_made"] and not st["damaged"]:
             end_states(char, "turn_end_inactive")
+        end_unextended(char)  # Ira 2024: finisce se nel turno non è stata prolungata
         end_counted_at_turn_end(char)  # Colpo Mistico: finisce con il turno che segue il colpo
         set_damaged(char, False)  # il danno conta una sola valutazione
 

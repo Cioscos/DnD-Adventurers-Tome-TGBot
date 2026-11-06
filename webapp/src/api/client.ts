@@ -118,6 +118,8 @@ export type RollOption = {
   cost: { feature_key: string | null; amount: number; spell_slot_min: number | null } | null
   /** Una sola opzione del gruppo per richiesta. */
   group: string | null
+  /** Quante opzioni del gruppo si scelgono insieme (assente: una). */
+  group_max?: number | null
   /** Dadi tolti all'opzione indicata da `needs`. */
   dice_cost: number
   /** Solo `after_roll`: cosa fa al tiro già visto. */

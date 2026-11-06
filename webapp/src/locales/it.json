@@ -929,10 +929,13 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio", "instinctive_charm": "Attacco deviato", "altered_memory": "Ricordi alterati", "commanded_undead": "Non morto comandato" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio", "instinctive_charm": "Attacco deviato", "altered_memory": "Ricordi alterati", "commanded_undead": "Non morto comandato", "hamstring": "Colpo alle Gambe", "staggered": "Colpo Stordente", "sundered": "Colpo Spezzante" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
-        "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
+        "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano.",
+        "hamstring": "È solo un'etichetta con durata: la velocità -4,5 m del bersaglio la applica il GM a mano; vale solo il Colpo alle Gambe più recente.",
+        "staggered": "È solo un'etichetta con durata: lo svantaggio al prossimo TS del bersaglio e il divieto di attacchi di opportunità li applica il GM a mano.",
+        "sundered": "È solo un'etichetta con durata: il +5 al primo tiro per colpire di un'altra creatura contro il bersaglio lo applica il GM a mano."
       },
       "notes": {
         "hypnotic_gaze": "Affascinato dal mago, incapacitato e a velocità 0 fino alla fine del suo prossimo turno. Il mago lo mantiene con un'azione; finisce se si allontana, se la creatura non lo vede né lo sente o se subisce danni: toglilo a mano.",
@@ -947,7 +950,8 @@
         "avenging_angel": "Vale la prima volta che un nemico entra nell'aura (9 m) o vi inizia il turno. Spaventato per 1 minuto o fino al danno; gli attacchi contro di lui hanno vantaggio. Toglilo a mano al primo danno subìto.",
         "repelling_blast": "Spinto fino a 3 m in linea retta lontano dal warlock.",
         "hurl_through_hell": "Scompare nei piani inferiori fino alla fine del prossimo turno del warlock, poi torna nel suo spazio.",
-        "thought_shield": "Subisce lo stesso ammontare di danni psichici che ha inflitto."
+        "thought_shield": "Subisce lo stesso ammontare di danni psichici che ha inflitto.",
+        "branches_of_the_tree": "Se fallisce il TS Forza viene teletrasportata in uno spazio libero che vedi entro 1,5 m da te (o il più vicino possibile). Poi puoi portarne la velocità a 0 fino alla fine del turno: toglila a mano."
       }
     },
     "roll_options": {
@@ -1464,6 +1468,7 @@
         "no_benefit": "Nessun beneficio: costrutti e non morti non danno nulla.",
         "turn_slot_used": "Hai già usato quell'azione in questo turno.",
         "no_uses": "Usi esauriti.",
+        "already_used_this_rage": "L'hai già usato in questa Ira.",
         "amount_too_high": "Troppi usi in una volta per questo privilegio.",
         "amount_too_low": "Servono più usi in una volta per questo privilegio.",
         "amount_invalid": "Questa quantità non va bene per questa scelta (la cura di malattie e veleni costa 5 punti ciascuno).",
@@ -1788,6 +1793,7 @@
       "magic_bonus_label": "Bonus magico (+0 a +10)",
       "versatile_dice_label": "Dado a due mani (versatile)",
       "mastery": "Maestria: {{name}}",
+      "reach_bonus": "Portata +{{value}} nel tuo turno",
       "base_weapon_label": "Arma base (per la maestria)",
       "base_weapon_auto": "Dal nome dell'oggetto",
       "weapon_category_label": "Categoria arma",

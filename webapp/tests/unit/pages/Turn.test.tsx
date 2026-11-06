@@ -394,6 +394,33 @@ describe('Turn page', () => {
     })
   })
 
+  it('keeps the use button for a feature whose state is active with no uses left: extending the rage costs nothing', async () => {
+    const rage = { id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'barbarian.rage', max_uses: 3, uses: 0, action_type: 'bonus_action', restoration_type: 'long_rest' }
+    getChar.mockResolvedValue({ ...char, abilities: [rage] })
+    const { unmount } = renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.no_uses')).toBeDisabled()
+    unmount()
+    getChar.mockResolvedValue({ ...char, abilities: [rage], active_states: [{ key: 'rage', feature_key: 'barbarian.rage', rounds_left: 100 }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage'))
+  })
+
+  it('lets a depleted feature be restored by spending a rage use: the switch and the button stay reachable', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 6, name: 'Presenza Intimidatoria', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'barbarian.intimidating_presence', max_uses: 1, uses: 0, action_type: 'bonus_action', restoration_type: 'long_rest',
+      use_toggles: [{ key: 'restore', label: { it: 'Ripristina', en: 'Restore' } }],
+    }] })
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByRole('switch'))
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence', 1, { restore: true }))
+  })
+
   it('sends the switches chosen when using a feature, such as Frenzy when entering the rage', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

@@ -44,7 +44,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'invalid_choice', 'already_chosen', 'no_benefit']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'primeval_awareness', 'vanish_hide',
   'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus']
@@ -360,6 +360,11 @@ export default function Turn() {
     } else {
       const ab = c.abilities.find((a) => String(a.id) === e.id)
       if (ab && (ab.max_uses ?? 0) > 0) {
+        // Con lo stato del privilegio già attivo l'uso può essere un prolungamento senza costo (Ira 2024): decide il server.
+        const running = (c.active_states ?? []).some((s) => s.feature_key === ab.feature_key)
+        // Un uso finito si ripristina spendendo un uso di un'altra risorsa (Presenza Intimidatoria): l'interruttore c'è solo allora.
+        const restorable = !!ab.use_toggles?.some((x) => x.key === 'restore')
+        const usable = running || restorable
         const left = ab.uses ?? 0
         const pickable = !!(ab.has_on_use && ab.choose_amount)
         const floor = ab.min_amount ?? 1
@@ -372,14 +377,14 @@ export default function Turn() {
             <div className="pt-2"><AmountStepper value={amount} min={floor} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
           </>
         )
-        else if (left > 0) extra = renderToggles(ab)
+        else if (left > 0 || usable) extra = renderToggles(ab)
         // Una riserva a catalogo (`is_pool`, dal server: Incanalare Divinità) mostra solo il contatore, l'uso passa dai privilegi
         // che la spendono. Le righe automatiche di classe (Secondo Vento...) e quelle a mano conservano il «Usa».
         if (!ab.is_pool || ab.has_on_use) control = (
-          <Button size="sm" variant="secondary" disabled={left < (ab.min_amount ?? 1) || missingChoice(ab)}
+          <Button size="sm" variant="secondary" disabled={(left < (ab.min_amount ?? 1) && !usable) || missingChoice(ab)}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
-            {left < (ab.min_amount ?? 1) ? t('character.turn.no_uses') : t('character.turn.use')}
+            {left < (ab.min_amount ?? 1) && !usable ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
       } else if (ab && (isUnlimitedFeature(ab) || ab.has_on_use)) {

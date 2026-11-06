@@ -12,7 +12,7 @@ import { TYPE_ICON, consumableIcon, hasSingleQuantity } from './itemMetadata'
 import type { CharacterFull, Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
-import { useUnitSettings, formatWeight } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, formatWeight } from '@/store/unitSettings'
 import { ledgerEntry } from '@/styles/ledger'
 import Pressable from '@/components/ui/Pressable'
 import ExpandChevron from '@/components/ui/ExpandChevron'
@@ -82,6 +82,13 @@ function ItemStatChips({ item, edition }: { item: Item; edition?: string }) {
           {wpnType}
         </Chip>
       )
+      if (item.reach_bonus_ft) {
+        chips.push(
+          <Chip key="reach" icon={<Target size={12} />}>
+            {t('character.inventory.reach_bonus', { value: formatLength(item.reach_bonus_ft, system) })}
+          </Chip>
+        )
+      }
       if (edition === '2024' && item.mastery) {
         chips.push(
           <Chip key="mastery" icon={<Swords size={12} />}>

@@ -26,9 +26,10 @@ _STR_DEX = {"strength", "dexterity"}
 _FLAT_TARGET = {
     "attack": "attack", "damage": "damage", "ac": "ac", "speed": "speed", "hp_max": "hp_max",
     "initiative": "initiative", "passive": "passive", "skill": "skill", "ability": "skill",
-    "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
+    "reach": "reach", "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
 }
 _FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed",
+          "climb_speed", "swim_speed",
           "maximize_healing", "magic_weapon"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
 
@@ -54,6 +55,8 @@ class Applied:
     damage_reroll: int = 0  # i dadi dell'arma che mostrano al più questo valore si ritirano una volta (Armi Possenti)
     carry_double: bool = False
     fly_speed: bool = False
+    climb_speed: bool = False  # velocità di scalare pari a quella a terra (Pantera)
+    swim_speed: bool = False  # idem per nuotare (Salmone)
     fly_speed_value: int = 0  # velocità di volo fissa, in piedi (Angelo Vendicatore)
     maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
     magic_weapon: bool = False  # l'arma del colpo conta come magica (Arma Consacrata)
@@ -91,7 +94,7 @@ def surprise_exit_features(char: Any) -> list[str]:
             continue
         ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
         state = use.state(ctx, {}) if callable(use.state) else use.state
-        if state.key in wanted and (use.available is None or use.available(ctx)):
+        if state is not None and state.key in wanted and (use.available is None or use.available(ctx)):
             out.append(spec.key)
     return out
 

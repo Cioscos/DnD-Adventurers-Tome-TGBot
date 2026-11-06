@@ -265,6 +265,8 @@ export interface Item {
   container_stats?: ContainerStats | null
   /** Proprietà di maestria 2024 dell'arma: si mostra solo ai personaggi 2024. */
   mastery?: string
+  /** Portata in più nel proprio turno, da un privilegio (Radici Percuotenti). */
+  reach_bonus_ft?: number | null
 }
 
 export interface ContainerStats {
@@ -365,6 +367,9 @@ export interface ComputedStats {
   save_flat: Record<string, number>
   /** Volo pari alla velocità a terra, da un privilegio (Aquila in ira). */
   fly_speed?: number | null
+  /** Scalare e nuotare pari alla velocità a terra, da un privilegio (Pantera, Salmone). */
+  climb_speed?: number | null
+  swim_speed?: number | null
   /** Sensi dati da un privilegio (Percezione Cieca): la scheda mostra il maggiore fra questi e i suoi. */
   senses?: { type: string; range_ft: number }[]
   /** Piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio. */

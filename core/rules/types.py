@@ -89,7 +89,7 @@ def parse_dice(text: str) -> tuple[int, int] | None:
 
 ENDS_ON = frozenset({
     "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
-    "new_turn", "attack", "cast", "turn_end_counted", "turn_end",
+    "new_turn", "attack", "cast", "turn_end_counted", "turn_end", "turn_end_unextended", "heavy_armor",
 })
 
 BARDIC_DIE = "bardic_die"  # stato sul ricevente del dado di Ispirazione Bardica (R38); `data`: die, combat
@@ -108,7 +108,9 @@ class StateSpec:
     quello in cui è nato, con ``data["skip_new_turns"]`` = 1 (Colpo Mistico): ``new_turn`` lo fa scalare invece di
     chiuderlo e fuori da un incontro lo chiude al «Nuovo turno» seguente; ``attack`` / ``cast`` = quando chi lo porta attacca o lancia
     un incantesimo (Manto di Ombre). ``condition``: condizione che lo stato imposta finché dura (Invisibile) e toglie
-    quando finisce, a meno che ci fosse già per un'altra fonte.
+    quando finisce, a meno che ci fosse già per un'altra fonte. ``turn_end_unextended`` = alla fine di un turno di chi lo
+    porta in cui non è stato prolungato (attacco, TS imposto o azione bonus: Ira 2024); lo stato nato in quel turno
+    (``data["fresh"]``) vive fino alla fine del turno seguente. ``heavy_armor`` = quando chi lo porta indossa un'armatura pesante.
     ``rounds``: durata in round, ``None`` = senza scadenza. ``blocks_casting``: finché dura non si lanciano
     incantesimi (conferma al lancio). ``exhaustion_on_end``: livelli di spossatezza quando lo stato finisce, per
     qualunque via. ``immune_conditions``: condizioni che non si possono aggiungere finché dura; quelle già presenti
@@ -201,6 +203,8 @@ class UseChoice:
     option_label: "Callable[[str], dict[str, str]]"
     optional: bool = False
     option_label_ctx: "Callable[[RuleContext, str], dict[str, str]] | None" = None
+    # La scelta esiste solo se ``applies(ctx)``: altrimenti non si elenca né si valida (l'animale dell'Ira vale per un solo Cammino)
+    applies: "Callable[[RuleContext], bool] | None" = None
 
 
 @dataclass(frozen=True)
@@ -310,6 +314,13 @@ class OnUse:
     # Costo in usi che dipende dalla scelta fatta all'uso (Creare Slot Incantesimo: i punti dipendono dal livello dello slot):
     # ``cost_by(ctx, params)`` sostituisce ``cost * amount``
     cost_by: "Callable[[RuleContext, dict], int] | None" = None
+    # Slot di turno che dipende dalle scelte: ``slot_by(ctx, params) -> slot | None`` sostituisce ``slot`` (il prolungamento
+    # dell'Ira per un TS imposto non costa l'azione bonus)
+    slot_by: "Callable[[RuleContext, dict], str | None] | None" = None
+    # Usi di un altro privilegio spesi al posto dei propri quando ``params[alt_param]`` è vero (Presenza Intimidatoria:
+    # «ripristina» l'uso spendendo un uso di Ira); lo slot di turno si paga lo stesso
+    alt_spends: str | None = None
+    alt_param: str = "restore"
     # PF temporanei che l'uso dà a chi lo usa: ``f(ctx, tirato) -> n``; vale il maggiore fra quelli attuali e ``n``
     # (i PF temporanei non si sommano)
     temp_hp: "Callable[[RuleContext, int], int] | None" = None
@@ -340,7 +351,7 @@ class Modifier:
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>``, ``vulnerability:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
     Possenti); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
-    ``fly_speed`` (velocità di volo pari a quella a terra); ``fly_speed_value`` (velocità di volo fissa, in piedi: vale la
+    ``fly_speed`` (velocità di volo pari a quella a terra); ``climb_speed`` e ``swim_speed`` (idem per scalare e nuotare); ``fly_speed_value`` (velocità di volo fissa, in piedi: vale la
     maggiore fra i valori e quella a terra se c'è ``fly_speed``).
     ``when`` limita l'effetto (di solito su ``ctx.roll``); senza, vale sempre."""
     target: str
@@ -427,6 +438,8 @@ class RollOptionSpec:
     auto_fail: bool = False
     force_crit: bool = False
     group: str | None = None
+    # Quante opzioni del gruppo si possono scegliere insieme: ``f(ctx) -> n`` (Colpo Brutale: 1 effetto, 2 dal 17°); default 1
+    group_max: "Callable[[RuleContext], int] | None" = None
     dice_cost: int = 0
     crit_doubles: bool = True
     separate_damage: bool = False
@@ -470,6 +483,8 @@ class RollOptionSpec:
     # Con ``damage_in``: l'opzione dà resistenza al danno. Conta una volta sola: se la scheda ne ha già una non cambia nulla
     # (un ``multiplier`` invece si somma a ogni altra riduzione).
     grants_resistance: bool = False
+    # Con ``skill``: la prova si fa con un'altra caratteristica (Conoscenza Primordiale: Forza al posto di Destrezza)
+    ability_override: str | None = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):

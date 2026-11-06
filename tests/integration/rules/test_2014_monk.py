@@ -388,7 +388,7 @@ def _import_fixture(monkeypatch, name: str) -> None:
     ("monk20_2024.json", "2014", 35, 65),      # R45: il +30 lo calcola il catalogo 2014, la base resta del lignaggio
     ("monk20_2024.json", "2024", 65, 65),      # senza catalogo 2024 il bonus resta nella base com'era
     ("barbarian20_2024.json", "2014", 30, 40),  # Movimento Veloce: stesso errore possibile, stessa regola
-    ("barbarian20_2024.json", "2024", 40, 40),
+    ("barbarian20_2024.json", "2024", 30, 40),  # il catalogo 2024 del Barbaro (Task 31) calcola Movimento Veloce
 ])
 async def test_the_beyond_import_does_not_add_the_speed_bonus_the_catalog_computes_again(
         client, monkeypatch, fixture, edition, base, computed):

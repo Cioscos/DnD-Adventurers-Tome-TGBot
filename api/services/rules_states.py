@@ -80,6 +80,31 @@ def end_counted_at_turn_end(char) -> list[str]:
     return end_states(char, "turn_end_counted", keep=waiting)
 
 
+EXTENDED = "extended"  # turn_state: nel turno in corso lo stato è stato prolungato senza un attacco (TS imposto o azione bonus)
+
+
+def end_unextended(char) -> list[str]:
+    """Fine del turno di chi porta lo stato: chiude gli stati ``turn_end_unextended`` che nel turno non sono stati prolungati
+    (nessun attacco, nessun prolungamento dichiarato). Lo stato nato in questo turno (``data["fresh"]``) vive fino alla
+    fine del turno seguente: qui perde solo il segno. Va chiamata prima di azzerare il turno."""
+    turn = get_turn(char)
+    extended = bool(turn["attacks_made"]) or bool(turn.get(EXTENDED))
+    states, kept, closed = get_states(char), [], []
+    for s in states:
+        if "turn_end_unextended" not in s["ends_on"]:
+            kept.append(s)
+        elif (s.get("data") or {}).get("fresh"):
+            kept.append({**s, "data": {**s["data"], "fresh": False}})
+        elif extended:
+            kept.append(s)
+        else:
+            closed.append(s)
+    if kept != states:
+        char.active_states = kept  # nuova lista: SQLAlchemy non vede le mutazioni in place
+        settle_closed(char, closed)
+    return [s["key"] for s in closed]
+
+
 def end_states_on_rest(char, rest: str) -> list[str]:
     """Il riposo chiude gli stati che lo nominano e quelli che durano meno di lui: un'ora per il riposo breve, otto per il
     lungo. Restano gli stati senza durata (a mano, come i sette giorni di Intervento Divino) e quelli a tempo che durano
@@ -258,6 +283,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         raise _err(status.HTTP_409_CONFLICT, "feature_unavailable")
     ctx_choice = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
     for choice in on_use.choices:  # prima di spendere: un valore fuori elenco non costa nulla
+        if choice.applies and not choice.applies(ctx_choice):
+            continue
         given = (params or {}).get(choice.key)
         if choice.optional and given is None:
             continue
@@ -292,16 +319,19 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
-    if on_use.spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
-        ability = next((a for a in char.abilities if a.feature_key == pool_key(char, on_use.spends)), None)
+    # «Ripristina» spendendo un uso di un altro privilegio (Presenza Intimidatoria: un uso di Ira)
+    spends = on_use.alt_spends if on_use.alt_spends and (params or {}).get(on_use.alt_param) else on_use.spends
+    if spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
+        ability = next((a for a in char.abilities if a.feature_key == pool_key(char, spends)), None)
         if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
     elif spec.uses is not None:
         # senza riga o con usi a None il contatore è illimitato solo se la formula lo dichiara (max_uses None)
         if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
-    if on_use.slot:
-        spend(char, on_use.slot)  # 409 turn_slot_used prima di toccare gli usi
+    slot = on_use.slot_by(ctx_choice, params or {}) if on_use.slot_by else on_use.slot
+    if slot:
+        spend(char, slot)  # 409 turn_slot_used prima di toccare gli usi
     if on_use.spends_slot:
         await _spend_slot(session, char, int((params or {})[on_use.spends_slot]))
     if on_use.once_per_turn:
@@ -380,7 +410,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         # `rolled`: il tiro del privilegio, per chi decide lo stato dall'esito (Intervento Divino); mai dal client
         given = {**(params or {}), "rolled": sum(result.rolls), "maximized": maximize}
         state_spec = on_use.state(ctx, given) if callable(on_use.state) else on_use.state
-        result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
+        if state_spec is not None:  # ``None``: l'uso non avvia nulla (il prolungamento dell'Ira)
+            result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
     if on_use.clears_condition and (params or {}).get(on_use.clears_condition) is not None:  # Mente Lucida: la condizione scelta cade
         from api.services.effects import apply_conditions  # import locale: effects richiama on_conditions
         await apply_conditions(session, char, {params[on_use.clears_condition]: False})

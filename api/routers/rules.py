@@ -26,7 +26,7 @@ from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
 from api.services.dice_stats import record_dice
-from api.services.rules_states import remove_state, use_feature
+from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party_auras, seated_allies
 from core.rules.states import is_target_immune
@@ -115,6 +115,8 @@ async def turn_new(
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     in_encounter = await active_encounter_row(db, char_id) is not None
+    if not in_encounter:
+        end_unextended(char)  # fuori da un incontro «Nuovo turno» chiude il turno che finisce (Ira 2024)
     turn = reset_turn(char, keep_surprise=in_encounter, advances=not in_encounter)
     if not in_encounter:  # in un incontro l'inizio del turno lo dà il passaggio di turno, non questo pulsante
         await apply_turn_start(db, char)

@@ -144,7 +144,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         bonus=spec.bonus(ctx, {}) if fixed and spec.bonus else None,
         mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
         offered_on_damage=spec.offered_on_damage, ranged_unarmed=True if spec.ranged_unarmed else None,
-        needs=None if spec.needs in ctx.confirmed else spec.needs, group=spec.group, dice_cost=spec.dice_cost,
+        needs=None if spec.needs in ctx.confirmed or (spec.phase == "before" and spec.needs in (ctx.turn or {}).get("once_per_turn", ())) else spec.needs, group=spec.group, group_max=spec.group_max(ctx) if spec.group_max else None, dice_cost=spec.dice_cost,
         requires_input=spec.requires_input, input_options=slots, auto_fail=spec.auto_fail,
         after=spec.after, pay_if_success=spec.pay_if_success,
         reroll_limit=spec.reroll_dice(ctx, {}) if spec.reroll_dice and fixed else None, keep_rolled=spec.keep_rolled,

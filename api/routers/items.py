@@ -55,7 +55,8 @@ from api.schemas.container import ItemMoveRequest
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions, end_hide
-from api.services.rules_states import end_on_action
+from api.services.rules_states import end_on_action, end_states
+from core.utils.session_view import armor_category
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
 from core.game.attacks import martial_arts_die
 from core.rules.catalog import active_features
@@ -333,6 +334,8 @@ async def update_item(
     # which would otherwise break `CharacterFull.model_validate(char)` below.
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
+    if item.is_equipped and item.item_type == "armor" and armor_category(char) == "heavy":
+        end_states(char, "heavy_armor")  # l'Ira 2024 finisce se si indossa un'armatura pesante
     await sync_cataloged_features(session, char, lang)
 
     # Emit item_equipped / item_unequipped events for installed homebrew rules.

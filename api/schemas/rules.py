@@ -54,6 +54,7 @@ class RollOptionRead(BaseModel):
     slot: str | None = None
     needs: str | None = None
     group: str | None = None
+    group_max: int | None = None  # quante opzioni del gruppo si scelgono insieme (default 1)
     dice_cost: int = 0
     requires_input: str | None = None
     after: str | None = None

@@ -128,6 +128,7 @@ class ItemRead(BaseModel):
     container_id: Optional[int] = None
     container_stats: Optional[ContainerStatsRead] = None
     mastery: str | None = absent_when_none()  # proprietà di maestria 2024 dell'arma; l'interfaccia la mostra solo in 2024
+    reach_bonus_ft: int | None = absent_when_none()  # portata in più data da un privilegio nel proprio turno (Radici Percuotenti)
 
     model_config = {"from_attributes": True}
 

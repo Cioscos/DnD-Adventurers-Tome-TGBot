@@ -698,10 +698,12 @@ async def roll_skill(
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
-    bonus = await skill_bonus(session, char, skill_name)
-
-    applied = modifiers_for(char, "skill", skill=skill_name, ability=_SKILL_ABILITY[skill_name])
     opts = use_options(session, char, "skill", body, skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    # Una prova fatta con un'altra caratteristica (Conoscenza Primordiale) è a tutti gli effetti quella: bonus e modificatori.
+    ability = opts.ability_override or _SKILL_ABILITY[skill_name]
+    bonus = await check_bonus(session, char, ability, skill_name) if opts.ability_override else await skill_bonus(session, char, skill_name)
+
+    applied = modifiers_for(char, "skill", skill=skill_name, ability=ability)
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     die = outcome.kept
@@ -739,7 +741,7 @@ async def roll_skill(
         option_result=option_result(opts, option_rolls, option_total),
     )
     remember_roll(char, "skill", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
-                  skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+                  skill=skill_name, ability=ability)
     return result
 
 
@@ -827,7 +829,9 @@ async def roll_saving_throw(
     die = outcome.kept
     option_rolls, option_total = roll_option_dice(char, opts)
     bonus += opts.bonus
-    total = die + bonus + option_total
+    raw_total = die + bonus + option_total
+    # Totale minimo (Potenza Indomabile 2024): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
     is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
@@ -856,7 +860,8 @@ async def roll_saving_throw(
         description=ability,
         option_result=option_result(opts, option_rolls, option_total),
     )
-    remember_roll(char, "save", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS), ability=ability)
+    remember_roll(char, "save", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  ability=ability)
     return result
 
 
@@ -947,7 +952,8 @@ async def roll_pending_save(
     die = outcome.kept
     option_rolls, option_total = roll_option_dice(char, opts)
     bonus += opts.bonus
-    total = die + bonus + option_total
+    raw_total = die + bonus + option_total
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
     is_crit, is_fumble = die == 20 and not applied.auto_fail, die == 1
 
     history_msg = (
@@ -969,7 +975,7 @@ async def roll_pending_save(
                         notes=applied.notes, auto_fail=applied.auto_fail, bonus=bonus, total=total,
                         is_critical=is_crit, is_fumble=is_fumble, description=save_read.ability,
                         option_result=option_result(opts, option_rolls, option_total))
-    remember_roll(char, "save", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS),
+    remember_roll(char, "save", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
                   ability=save_read.ability, pending_save_id=psid)
     return PendingSaveRollResult(save=save_read, passed=passed, condition_removed=passed, roll=result)
 
