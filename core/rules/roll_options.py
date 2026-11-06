@@ -91,7 +91,8 @@ _CONDITION_OPTIONS = (
         key="aura:protection_after", phase="after_roll", after="add", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
         label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro",
                "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll"},
-        available=_ally_aura("protection"),
+        # Il Carisma si somma una volta: se è già stata confermata prima del tiro non si ripropone.
+        available=lambda ctx: _ally_aura("protection")(ctx) and "aura:protection" not in ctx.confirmed,
     ),
     RollOptionSpec(
         key="aura:warding", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,

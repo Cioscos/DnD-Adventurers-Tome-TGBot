@@ -98,3 +98,38 @@ async def test_the_aura_after_the_roll_is_refused_without_a_paladin_at_the_table
     await client.post(f"/characters/{hero}/concentration/save", json={"damage": 20, "dice": [9]})
     r = await _after(client, hero, AFTER)
     assert r.status_code == 409 and r.json()["detail"]["code"] == "option_unavailable"
+
+
+# ---------------------------------------------------------------------------
+# Giro 2, N1: le due varianti dell'aura si escludono sullo stesso tiro
+# ---------------------------------------------------------------------------
+
+async def test_the_aura_confirmed_before_a_save_is_refused_again_after_the_roll(client, test_session_factory):
+    _, _, hero = await _table(client, test_session_factory, charisma=16)
+    r = await client.post(f"/characters/{hero}/saving_throws/dexterity/roll", json={"die": 10, "options": [PROTECTION]})
+    assert r.status_code == 200, r.text
+    again = await _after(client, hero, AFTER)
+    assert again.status_code == 409 and again.json()["detail"]["key"] == AFTER
+    listed = (await client.get(f"/characters/{hero}/roll-options", params={"roll": "save", "ability": "dexterity"})).json()
+    assert AFTER not in {o["key"] for o in listed}  # non si ripropone nel modale dell'esito
+
+
+async def test_the_aura_confirmed_before_a_death_save_is_refused_again_after_the_roll(client, test_session_factory):
+    _, _, hero = await _table(client, test_session_factory, charisma=16)
+    async with test_session_factory() as s:
+        char = await s.get(Character, hero)
+        char.hit_points, char.current_hit_points = 20, 0
+        await s.commit()
+    r = await client.post(f"/characters/{hero}/death_saves/roll", json={"die": 9, "options": [PROTECTION]})
+    assert r.status_code == 200, r.text
+    again = await _after(client, hero, AFTER)
+    assert again.status_code == 409, again.text
+    listed = (await client.get(f"/characters/{hero}/roll-options", params={"roll": "death_save"})).json()
+    assert AFTER not in {o["key"] for o in listed}
+
+
+async def test_the_aura_after_the_roll_is_still_accepted_when_it_was_not_confirmed_before(client, test_session_factory):
+    _, _, hero = await _table(client, test_session_factory, charisma=16)
+    r = await client.post(f"/characters/{hero}/saving_throws/dexterity/roll", json={"die": 10})
+    assert r.status_code == 200, r.text
+    assert (await _after(client, hero, AFTER)).status_code == 200
