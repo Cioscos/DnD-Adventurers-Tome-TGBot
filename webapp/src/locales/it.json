@@ -953,7 +953,8 @@
         "repelling_blast": "Spinto fino a 3 m in linea retta lontano dal warlock.",
         "hurl_through_hell": "Scompare nei piani inferiori fino alla fine del prossimo turno del warlock, poi torna nel suo spazio.",
         "thought_shield": "Subisce lo stesso ammontare di danni psichici che ha inflitto.",
-        "branches_of_the_tree": "Se fallisce il TS Forza viene teletrasportata in uno spazio libero che vedi entro 1,5 m da te (o il più vicino possibile). Poi puoi portarne la velocità a 0 fino alla fine del turno: toglila a mano."
+        "branches_of_the_tree": "Se fallisce il TS Forza viene teletrasportata in uno spazio libero che vedi entro 1,5 m da te (o il più vicino possibile). Poi puoi portarne la velocità a 0 fino alla fine del turno: toglila a mano.",
+        "turn_undead": "Spaventata e Incapacitata per 1 minuto; a ogni suo turno si allontana il più possibile. Finisce prima se subisce danni (toglila a mano) o se il chierico è Incapacitato o muore."
       }
     },
     "roll_options": {

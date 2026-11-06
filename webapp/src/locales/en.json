@@ -953,7 +953,8 @@
         "repelling_blast": "Pushed up to 10 ft straight away from the warlock.",
         "hurl_through_hell": "Vanishes into the lower planes until the end of the warlock's next turn, then returns to its space.",
         "thought_shield": "Takes the same amount of psychic damage it dealt.",
-        "branches_of_the_tree": "On a failed Strength save it is teleported to an unoccupied space you can see within 5 ft of you (or the nearest one). You can then reduce its Speed to 0 until the end of the turn: remove it by hand."
+        "branches_of_the_tree": "On a failed Strength save it is teleported to an unoccupied space you can see within 5 ft of you (or the nearest one). You can then reduce its Speed to 0 until the end of the turn: remove it by hand.",
+        "turn_undead": "Frightened and Incapacitated for 1 minute; on each of its turns it moves as far away as it can. It ends early if it takes damage (remove it by hand) or if the cleric is Incapacitated or dies."
       }
     },
     "roll_options": {
