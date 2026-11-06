@@ -752,6 +752,11 @@
         "damage": "Damage",
         "half_damage": "Half",
         "potent_cantrip": "On a successful save: {{n}} damage (Potent Cantrip), no other effect.",
+        "cast_errors": {
+          "turn_slot_used": "You already used that action this turn.",
+          "no_uses": "No uses left.",
+          "pact_slot_required": "This needs a warlock (Pact Magic) slot."
+        },
         "close": "Close",
         "reroll": "Roll again",
         "no_slots_warning_title": "No slots available",

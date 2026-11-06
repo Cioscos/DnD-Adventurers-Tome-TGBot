@@ -1,11 +1,14 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { Spell, RollDamageResult } from '@/types'
 
-const { rollDamage, useSpell, updateConc } = vi.hoisted(() => ({ rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn() }))
+const { rollDamage, useSpell, updateConc, askRollOptions } = vi.hoisted(() => ({
+  rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn(), askRollOptions: vi.fn(),
+}))
+vi.mock('@/lib/rollOptions', async (orig) => ({ ...((await orig()) as object), askRollOptions }))
 
 vi.mock('@/api/client', () => ({
   api: { spells: { rollDamage, use: useSpell, updateConcentration: updateConc } },
@@ -45,7 +48,8 @@ const result: RollDamageResult = { total: 14, half_damage: 7, breakdown: '2d6+2 
 const cantrip = { id: 1, name: 'Mano Magica', level: 0, attack_save: 'ATK', is_concentration: false, damage_dice: '1d8' } as Spell
 const leveled = { id: 2, name: 'Palla di Fuoco', level: 3, attack_save: 'DEX', is_concentration: false, damage_dice: '8d6' } as Spell
 
-afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset() })
+beforeEach(() => askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }))
+afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset() })
 
 describe('SpellDamageSheet', () => {
   it('renders nothing without a spell', () => {
@@ -74,6 +78,15 @@ describe('SpellDamageSheet', () => {
     await waitFor(() => expect(rollDamage).toHaveBeenCalled())
     expect(updateConc).not.toHaveBeenCalled()  // il contatore dei round resta quello del lancio
   })
+
+  it('asks for the damage options at the level the spell is cast at, not at its base level (Overchannel is for 1st-5th)', async () => {
+    useSpell.mockResolvedValue({ id: 7 })
+    rollDamage.mockResolvedValue(result)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={6} slotId={21} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', spell_id: 2, casting_level: 6 })))
+  })
+
 
   it('shows the second damage part before the roll, and the dice typed by hand do not replace it', async () => {
     rollDamage.mockResolvedValue(result)

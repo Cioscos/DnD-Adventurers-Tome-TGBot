@@ -1,4 +1,4 @@
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyMutationError, notifyCastError } from '@/lib/mutationError'
 import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -108,7 +108,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       if (updated.option_result?.effects?.length || updated.option_result?.targets?.length) setCastNotes(updated.option_result)
     },
     onError: (err) => {
-      if (!(err instanceof CastCancelled)) notifyMutationError()
+      if (!(err instanceof CastCancelled)) notifyCastError(err)
     },
   })
 

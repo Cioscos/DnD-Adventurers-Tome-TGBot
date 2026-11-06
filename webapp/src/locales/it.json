@@ -752,6 +752,11 @@
         "damage": "Danno",
         "half_damage": "Dimezzato",
         "potent_cantrip": "Chi supera il TS: {{n}} danni (Trucchetto Potente), senza altri effetti.",
+        "cast_errors": {
+          "turn_slot_used": "Hai già usato quell'azione in questo turno.",
+          "no_uses": "Usi esauriti.",
+          "pact_slot_required": "Serve uno slot da warlock (slot di Patto)."
+        },
         "close": "Chiudi",
         "reroll": "Nuovo tiro",
         "no_slots_warning_title": "Nessuno slot disponibile",

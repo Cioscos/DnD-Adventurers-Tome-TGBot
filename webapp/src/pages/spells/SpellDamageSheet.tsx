@@ -1,5 +1,5 @@
 import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyCastError } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
@@ -130,7 +130,7 @@ export default function SpellDamageSheet({
         setSlotConsumed(true)
       }
 
-      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id })
+      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel })
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined
       let extra_rolls: number[] | undefined
@@ -189,7 +189,7 @@ export default function SpellDamageSheet({
     onError: (err) => {
       const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
       if (err instanceof DamageUnrollable || code === 'bad_damage_dice') setUnrollable(true)  // un testo suo, non «controlla la connessione»
-      else if (!(err instanceof CastCancelled)) notifyMutationError()
+      else if (!(err instanceof CastCancelled)) notifyCastError(err)
     },
   })
 
