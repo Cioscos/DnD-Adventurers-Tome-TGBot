@@ -8,16 +8,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from api.services.effects import apply_heal
 from api.services.rules_turn import refuse_if_incapacitated, spend
-from api.services.session_allies import seated_allies
+from api.services.session_allies import load_receiver as _load, seated_allies
 from core.db.models import Ability, Character
 from core.rules.catalog import active_features
 from core.rules.modifiers import effective_hp_max
+from core.rules.uses import pool_key
 
 FEATURE = "cleric.preserve_life"
 POOL = "cleric.channel_divinity"
@@ -43,14 +43,6 @@ def half_cap(char: Character) -> int:
     return max(0, effective_hp_max(char) // 2 - char.current_hit_points)
 
 
-async def _load(session: AsyncSession, char_id: int) -> Character:
-    row = await session.execute(select(Character).options(
-        selectinload(Character.classes), selectinload(Character.ability_scores), selectinload(Character.spells),
-        selectinload(Character.spell_slots), selectinload(Character.items), selectinload(Character.abilities),
-    ).where(Character.id == char_id).execution_options(populate_existing=True))
-    return row.scalar_one()
-
-
 @dataclass
 class Target:
     id: int
@@ -74,7 +66,8 @@ def _usable(char: Character):
 
 
 def _pool_row(char: Character):
-    return next((a for a in char.abilities if a.feature_key == POOL), None)
+    held = pool_key(char, POOL)  # la riserva può stare sulla riga di un'altra classe (Incanalare Divinità condivisa)
+    return next((a for a in char.abilities if a.feature_key == held), None)
 
 
 async def info(session: AsyncSession, char: Character) -> Info:

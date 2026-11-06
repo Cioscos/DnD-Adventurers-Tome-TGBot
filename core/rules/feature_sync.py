@@ -18,7 +18,7 @@ from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
-from core.rules.states import begin_state, has_state
+from core.rules.states import begin_state, has_state, settle_closed
 from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
 
@@ -82,6 +82,7 @@ async def sync_class_feature_abilities(
     _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
     _mark_retrofitted(char)
     _sync_permanent_states(char)
+    _end_unwielded_states(char)
     await _sync_granted_spells(session, char, lang)
 
 
@@ -100,8 +101,20 @@ async def sync_cataloged_features(
     _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
     _mark_retrofitted(char)
     _sync_permanent_states(char)
+    _end_unwielded_states(char)
     await _sync_granted_spells(session, char, lang)
     await session.flush()
+
+
+def _end_unwielded_states(char: Character) -> None:
+    """Gli stati legati a un'arma (``data["bound_item"]``, Arma Consacrata) finiscono quando quell'arma non è più impugnata:
+    tolta, riposta, sostituita o eliminata. Rimetterla in mano non li riavvia."""
+    wielded = {i.id for i in char.items or [] if i.is_equipped}
+    states = list(char.active_states or [])
+    closed = [s for s in states if (s.get("data") or {}).get("bound_item") not in (None, *wielded)]
+    if closed:
+        char.active_states = [s for s in states if s not in closed]
+        settle_closed(char, closed)
 
 
 def _sync_permanent_states(char: Character) -> None:

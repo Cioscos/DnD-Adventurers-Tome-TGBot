@@ -111,6 +111,7 @@ async def build_character_response(
             ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
+        ab.ally_modes = list(on_use.ally_modes) if on_use else []
         ab.use_panel = on_use.panel if on_use else None
         if on_use and on_use.spends:
             held = pool_key(char, on_use.spends)

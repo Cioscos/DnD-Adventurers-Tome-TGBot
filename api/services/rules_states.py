@@ -5,13 +5,15 @@ import random
 from dataclasses import dataclass, field
 
 from fastapi import HTTPException, status
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
 from api.services.rules_turn import (
     attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
 )
-from api.services.session_allies import ally_target
+from api.services.session_allies import ally_target, load_receiver
+from core.db.models import Ability
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
@@ -194,6 +196,16 @@ async def _swap_exclusive_target(session: AsyncSession, char, feature_key: str, 
     char.settings = {**(char.settings or {}), ALLY_EXCLUSIVE: held}
 
 
+async def _spend_atomically(session: AsyncSession, ability, cost: int) -> None:
+    """Spende ``cost`` usi con un UPDATE condizionato (come Preservare Vita): due richieste insieme non spendono gli stessi
+    punti. È il primo atto di scrittura, prima di rileggere chi riceve la cura."""
+    spent = await session.execute(
+        update(Ability).where(Ability.id == ability.id, Ability.uses >= cost).values(uses=Ability.uses - cost))
+    if spent.rowcount != 1:
+        raise _err(status.HTTP_409_CONFLICT, "no_uses")
+    await session.refresh(ability)
+
+
 @dataclass
 class UseResult:
     rolls: list[int] = field(default_factory=list)
@@ -202,6 +214,7 @@ class UseResult:
     notes: list[str] = field(default_factory=list)
     targets: list[str] = field(default_factory=list)  # chiavi per ``POST /target-effects``
     given: int | None = None  # valore da dare a un altro (``OnUse.gives``): l'app lo mostra e non scrive nulla
+    received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): ``{name, healed}``
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -239,12 +252,14 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.maximize_if and on_use.maximize_if(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level), params or {}):
         maximize = True
-        extra = next((a for a in char.abilities if a.feature_key == on_use.maximize_cost), None)
+        extra = next((a for a in char.abilities if a.feature_key == pool_key(char, on_use.maximize_cost)), None)
         if extra is None or (extra.max_uses is not None and (extra.uses or 0) < 1):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
     target = None
-    if on_use.ally_state and (params or {}).get("target_character_id") is not None:
+    for_other = (params or {}).get("mode") in on_use.ally_modes  # una scelta rivolta a un'altra creatura (R46)
+    if (on_use.ally_state or for_other) and (params or {}).get("target_character_id") is not None:
         target = await ally_target(session, char, params["target_character_id"])
+    heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost * amount
     if on_use.spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
@@ -262,13 +277,21 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.forgoes_attack:
         forgo_attack(char)
     if ability is not None and ability.max_uses is not None and ability.uses is not None:
-        ability.uses -= cost
+        if heals_ally and target is not None:
+            await _spend_atomically(session, ability, cost)
+        else:
+            ability.uses -= cost
+    if heals_ally and target is not None:  # dopo la spesa atomica il bersaglio si rilegge: i suoi PF sono quelli veri
+        target = await load_receiver(session, target.id)
+        if target.is_dead:
+            raise _err(status.HTTP_409_CONFLICT, "target_dead")
     if maximize and extra.max_uses is not None and extra.uses is not None:
         extra.uses -= 1
 
     result = UseResult()
     ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
     healed = 0
+    healed_ally = 0
     if on_use.rolls_by_amount:  # i dadi dipendono da quanto si spende e non si ripetono per unità
         formula = on_use.rolls_by_amount(ctx, amount)
     else:
@@ -279,6 +302,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.rolls += rolled
         if on_use.heal and (on_use.heal_when is None or on_use.heal_when(ctx, params or {})):
             healed += max(0, on_use.heal(ctx, sum(rolled)))
+        if on_use.heal and heals_ally:
+            healed_ally += max(0, on_use.heal(ctx, sum(rolled)))
         if on_use.grants_action:
             grant_action(char)
     if dice:
@@ -287,6 +312,18 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.given = max(0, on_use.gives(ctx, sum(result.rolls)))
     if on_use.notes:
         result.notes += on_use.notes(ctx, params or {})
+    if heals_ally:
+        if target is None:  # fuori serata, o un'altra creatura: il giocatore lo riporta al GM (D1)
+            result.given = healed_ally
+        else:
+            from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
+            got = (await apply_heal(session, target, healed_ally))["healed"]
+            result.received = {"name": target.name, "healed": got}
+    if on_use.clears:
+        from api.services.effects import apply_conditions  # import locale, come sopra
+        removed = {c: False for c in on_use.clears(ctx, params or {}) if (char.conditions or {}).get(c)}
+        if removed:
+            await apply_conditions(session, char, removed)
     if on_use.heal:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]

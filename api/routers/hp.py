@@ -239,6 +239,7 @@ async def update_hp(
         mod = body.damage_modifier
         raw = body.raw_value if body.raw_value is not None else body.value
         applied = body.value
+        opts = None
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             await attach_party_auras(session, char)
@@ -261,6 +262,11 @@ async def update_hp(
                 applied = apply_damage_mode(raw, mod)
         elif mod == "immune":
             applied = 0
+        if opts is not None and opts.resistance and mod != "immune":
+            # La resistenza conta una volta: quella di un'opzione (Aura di Interdizione) non si somma a una già presente.
+            mod = {"none": "half", "double": "half_double"}.get(mod, mod)
+            applied = apply_damage_mode(raw, mod)
+            option_block.damage_after = applied
         # Wild shape: the form soaks the (already resistance-adjusted, using the
         # character's modifiers) damage first; only the overflow reaches the character
         # through the normal path below (temp HP, death rules, one concentration save).
@@ -292,6 +298,15 @@ async def update_hp(
             char.temp_hp -= absorbed
             amount -= absorbed
         old = char.current_hit_points
+        held_at_one = False
+        if opts is not None and opts.holds_at_one:  # Sentinella Imperitura: la conferma vale solo se il danno porta a 0 senza uccidere
+            massive = amount - old >= effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
+            if old > 0 and amount >= old and not massive:
+                amount, held_at_one = old - 1, True
+            else:  # il danno non arriva a 0 (o uccide sul colpo): l'uso non si spende
+                paid = [token for tokens in opts.refundable.values() for token in tokens]
+                refund_spent(char, paid)
+                option_block.spent = [token for token in option_block.spent if token not in paid]
         char.current_hit_points = max(0, char.current_hit_points - amount)
         knocked = False  # 2024: il tramortito resta a 1 PF, non è «sceso a 0»
         if slug is not None and mod in ("half", "double", "half_double", "immune"):
@@ -307,6 +322,8 @@ async def update_hp(
             desc = f"Danni: -{pre_form} HP{note} ({old} → {char.current_hit_points})"
         if form_overflow:
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
+        if held_at_one:
+            desc += " — Sentinella Imperitura: resta a 1 PF"
         if not form_absorbed:
             _add_history(session, char.id, "hp_change", desc,
                          meta={"op": "DAMAGE", "amount": pre_form,

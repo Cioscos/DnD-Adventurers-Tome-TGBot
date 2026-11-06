@@ -141,6 +141,9 @@ class TargetEffect:
     immune_on_success: bool = False
     # Con un TS: se fallito, la condizione ripete il TS a ``start`` o ``end`` del turno del bersaglio (Collera della Natura)
     repeat_save: str | None = None
+    # Chiave di un testo che il foglio del bersaglio traduce (``character.target_effect.notes.<chiave>``): ciò che l'app non
+    # applica da sola e il GM chiude a mano (fino al danno, svantaggio, velocità, vantaggio agli attacchi...)
+    note: str | None = None
 
     def __post_init__(self) -> None:
         if self.repeat_save not in (None, "start", "end"):
@@ -254,6 +257,13 @@ class OnUse:
     # ``amount_invalid`` prima di spendere (la cura di malattie costa multipli di 5).
     heal_when: "Callable[[RuleContext, dict], bool] | None" = None
     amount_ok: "Callable[[RuleContext, int, dict], bool] | None" = None
+    # Imposizione delle Mani su un altro (R46). ``ally_modes``: i valori della scelta ``mode`` che si rivolgono a un'altra
+    # creatura (la scheda li passa al client, che chiede a chi). ``heal_ally_when(ctx, params)``: la cura va al bersaglio
+    # scelto, se siede alla serata: la riserva si spende con un UPDATE condizionato e il bersaglio si rilegge dopo.
+    # ``clears(ctx, params) -> [condizioni]``: condizioni tolte a chi usa il privilegio.
+    ally_modes: tuple[str, ...] = ()
+    heal_ally_when: "Callable[[RuleContext, dict], bool] | None" = None
+    clears: "Callable[[RuleContext, dict], list[str]] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -389,6 +399,12 @@ class RollOptionSpec:
     # Si applica da sola a ogni tiro in cui è disponibile, senza scelta né costo, e non si elenca al giocatore (Punizione
     # Divina Migliorata): vale per le fasi che il server percorre da solo, quindi ``before``.
     automatic: bool = False
+    # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
+    # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
+    holds_at_one: bool = False
+    # Con ``damage_in``: l'opzione dà resistenza al danno. Conta una volta sola: se la scheda ne ha già una non cambia nulla
+    # (un ``multiplier`` invece si somma a ogni altra riduzione).
+    grants_resistance: bool = False
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -536,3 +552,4 @@ class RuleContext:
     offhand: bool = False  # solo attacchi: l'attacco extra della proprietà Leggera
     casting_level: int | None = None  # solo ``spell_healing``: il livello dello slot con cui si lancia
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo
+    damage: int | None = None  # solo ``damage_taken``: il danno che il giocatore sta per inserire, se lo sa

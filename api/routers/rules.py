@@ -147,6 +147,7 @@ async def roll_options(
     attack_mode: Literal["melee", "thrown", "offhand"] = "melee",
     grip: Literal["one", "two"] = "one",
     casting_level: int | None = None,
+    damage: int | None = None,
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
     char = await _get_owned_full(char_id, user_id, db)
@@ -169,7 +170,8 @@ async def roll_options(
             _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, ability)
             attack = {"attack_mode": resolved_mode, "grip": grip, "offhand": attack_mode == "offhand"}
     return list_options(char, roll, lang, item=item, spell=spell, skill=skill, casting_level=casting_level, **attack,
-                        ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type))
+                        ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type),
+                        damage=damage if roll == "damage_taken" else None)
 
 
 def _refuse(code: str, **extra: str) -> HTTPException:
@@ -212,6 +214,7 @@ async def last_roll_options(
              "spell": next((s for s in char.spells if s.id == last["spell_id"]), None)}
     grip = ({"attack_mode": pending["attack_mode"], "grip": pending["grip"], "offhand": pending.get("offhand", False)}
             if weapon_attack else {})
+    await attach_party_auras(db, char)  # le aure dei compagni di serata (anche per il TS di concentrazione già tirato)
     opts = use_options(db, char, last["roll"], body, phase="after_roll", **where, **grip)
 
     applied = modifiers_for(char, last.get("modifier_roll") or last["roll"], **where,
@@ -330,6 +333,7 @@ class FeatureUseResult(BaseModel):
     notes: list[str] = []
     targets: list[str] = []
     given: int | None = None  # valore da dare a un altro (PF temporanei di Incoraggiamento), mai scritto sulla scheda
+    received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): name, healed
 
 
 @turn_router.post("/{char_id}/features/{feature_key}/use", response_model=FeatureUseResult)
@@ -340,7 +344,7 @@ async def feature_use(
     char = await _get_owned_full(char_id, user_id, db)
     res = await use_feature(db, char, feature_key, body.amount, body.params)
     return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets,
-                            given=res.given)
+                            given=res.given, received=res.received)
 
 
 class PreserveLifeBody(BaseModel):

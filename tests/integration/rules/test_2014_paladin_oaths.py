@@ -118,7 +118,7 @@ async def test_sacred_weapon_binds_the_chosen_weapon_for_ten_rounds_and_spends_t
     r = await _use(client, cid, SW, params={"weapon": str(sword)})
     assert r.status_code == 200, r.text
     state = r.json()["state"]
-    assert state["rounds_left"] == 10 and state["data"]["weapon_id"] == sword and state["data"]["bonus"] == 3
+    assert state["rounds_left"] == 10 and state["data"]["weapon_id"] == sword and state["data"]["attack_bonus"] == 3 and "bonus" not in state["data"]
     assert (await _ability(client, cid, CD))["uses"] == 0 and (await _turn(client, cid))["action_used"] is True
 
 
@@ -237,7 +237,7 @@ async def test_holy_nimbus_is_an_action_with_one_use_for_a_long_rest_and_lasts_t
     r = await _use(client, cid, HN)
     assert r.status_code == 200, r.text
     state = r.json()["state"]
-    assert state["rounds_left"] == 10 and state["data"]["others"] == [HN] and state["data"]["damage"] == 10
+    assert state["rounds_left"] == 10 and state["data"]["others"] == [HN] and state["data"]["start_damage"] == 10
     assert (await _ability(client, cid, HN))["uses"] == 0 and (await _turn(client, cid))["action_used"] is True
     await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})
     assert (await _use(client, cid, HN)).status_code == 409
@@ -305,35 +305,6 @@ async def test_undying_sentinel_is_a_single_use_for_a_long_rest(client):
     assert US not in await _keys_of(client, await _paladin(client, 14, "ancients"))
 
 
-async def test_undying_sentinel_keeps_the_paladin_at_one_hp_after_dropping_to_zero(client, test_session_factory):
-    cid = await _paladin(client, 15, "ancients")
-    hp = await _hp(client, cid)
-    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": hp})
-    assert r.status_code == 200 and r.json()["current_hit_points"] == 0
-    use = await _use(client, cid, US)
-    assert use.status_code == 200, use.text
-    full = await _full(client, cid)
-    assert full["current_hit_points"] == 1 and not full["conditions"].get("unconscious")
-    assert full["death_saves"]["failures"] == 0 and (await _ability(client, cid, US))["uses"] == 0
-    assert (await _use(client, cid, US)).status_code in (409, 404)
-
-
-async def test_undying_sentinel_cannot_be_used_while_the_paladin_still_stands(client):
-    cid = await _paladin(client, 15, "ancients")
-    r = await _use(client, cid, US)
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "feature_unavailable"
-    assert (await _ability(client, cid, US))["uses"] == 1
-
-
-async def test_undying_sentinel_does_not_save_the_paladin_from_an_instant_death(client):
-    cid = await _paladin(client, 15, "ancients")
-    hp = await _hp(client, cid)
-    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": hp * 3})
-    assert (await _full(client, cid))["is_dead"] is True
-    r = await _use(client, cid, US)
-    assert r.status_code == 409
-
-
 EC = "paladin.elder_champion"
 
 
@@ -355,15 +326,19 @@ async def test_elder_champion_lasts_ten_rounds_and_heals_ten_at_the_start_of_eac
     assert await _hp(client, cid) == maximum  # mai oltre il massimo
 
 
-async def test_elder_champion_does_not_heal_without_the_state_and_not_at_zero_hp(client, test_session_factory):
+async def test_elder_champion_does_not_heal_without_the_state(client, test_session_factory):
     cid = await _paladin(client, 20, "ancients")
     await _hurt(test_session_factory, cid, 5)
     await _new_turn(client, cid)
     assert await _hp(client, cid) == 5
+
+
+async def test_elder_champion_heals_at_the_start_of_the_turn_even_from_zero_hp(client, test_session_factory):
+    cid = await _paladin(client, 20, "ancients")
     await _use(client, cid, EC)
     await _hurt(test_session_factory, cid, 0)
     await _new_turn(client, cid)
-    assert await _hp(client, cid) == 0
+    assert await _hp(client, cid) == 10  # il manuale non fa eccezioni: a 0 PF recupera come sempre
 
 
 # ---------------------------------------------------------------------------

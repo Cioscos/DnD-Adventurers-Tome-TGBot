@@ -33,6 +33,20 @@ def attacks_made(ctx: RuleContext) -> int:
     return int((ctx.turn or {}).get("attacks_made") or 0)
 
 
+FIGHTING_STYLE_GROUP = "fighting_style"
+
+
+def style_options(styles: Any) -> Any:
+    """Le opzioni di una scelta di stile di combattimento: ``styles`` meno quelli che un'altra classe del personaggio ha già.
+    Il manuale vieta di prendere due volte lo stesso stile anche quando una seconda classe dà il diritto di sceglierne uno
+    (vale per ogni classe con lo stile: Guerriero, Paladino e le future). Gli stili della stessa classe li esclude già la scelta."""
+    def options(ctx: RuleContext) -> list[str]:
+        mine = getattr(ctx.class_row, "id", None)
+        taken = {k for row in ctx.char.classes if row.id != mine for k in (row.options or {}).get(FIGHTING_STYLE_GROUP, [])}
+        return [s for s in styles if s not in taken]
+    return options
+
+
 def skill_label(slug: str) -> dict:
     """Etichetta bilingue di un'abilità per le opzioni di una `ChoiceSpec` (Maestria, competenze a scelta)."""
     english = slug.replace("_", " ").title().replace(" Of ", " of ")

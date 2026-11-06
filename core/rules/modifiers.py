@@ -29,7 +29,7 @@ _FLAT_TARGET = {
     "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
 }
 _FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed",
-          "maximize_healing"}
+          "maximize_healing", "magic_weapon"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
 
 
@@ -55,6 +55,7 @@ class Applied:
     fly_speed: bool = False
     fly_speed_value: int = 0  # velocità di volo fissa, in piedi (Angelo Vendicatore)
     maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
+    magic_weapon: bool = False  # l'arma del colpo conta come magica (Arma Consacrata)
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
 

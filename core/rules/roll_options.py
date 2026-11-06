@@ -85,8 +85,16 @@ _CONDITION_OPTIONS = (
                "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma"},
         available=_ally_aura("protection"),
     ),
+    # Lo stesso bonus dopo aver visto il d20: serve al TS di concentrazione, anche quello automatico dopo il danno, per cui
+    # il giocatore non può confermare prima (D1).
     RollOptionSpec(
-        key="aura:warding", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
+        key="aura:protection_after", phase="after_roll", after="add", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
+        label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro",
+               "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll"},
+        available=_ally_aura("protection"),
+    ),
+    RollOptionSpec(
+        key="aura:warding", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
         label={"it": "Aura di Interdizione di un compagno paladino: sei entro la sua gittata e il danno viene da un incantesimo? Resistenza",
                "en": "Aura of Warding of a paladin ally: are you within its range and does the damage come from a spell? Resistance"},
         available=_ally_aura("warding"),
@@ -183,6 +191,8 @@ class AppliedOptions:
     self_heal: int = 0  # PF che chi lancia una cura recupera
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
+    holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
+    resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
 
     @property
     def mode(self) -> str | None:
@@ -410,8 +420,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         paid = _spend(session, option, given)
         out.spent += paid
         out.keys.append(key)
-        if spec.pay_if_success:
+        if spec.pay_if_success or spec.holds_at_one:
             out.refundable[key] = paid
+        out.holds_at_one = out.holds_at_one or spec.holds_at_one
+        out.resistance = out.resistance or spec.grants_resistance
         if spec.replace_die:
             out.replace_die = given["die"]
         out.reroll = out.reroll or spec.after == "reroll"

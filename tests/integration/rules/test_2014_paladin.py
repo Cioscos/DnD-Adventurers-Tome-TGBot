@@ -208,7 +208,7 @@ async def test_lay_on_hands_on_another_creature_only_spends_the_pool(client, tes
 async def test_lay_on_hands_cures_one_disease_or_poison_per_five_points_and_heals_nothing(client, test_session_factory):
     cid = await _paladin(client, 5)
     await _hurt(test_session_factory, cid, 10)
-    r = await _use(client, cid, LOH, amount=10, params={"mode": "cure"})  # due malattie o veleni
+    r = await _use(client, cid, LOH, amount=10, params={"mode": "cure_self"})  # due malattie o veleni
     assert r.status_code == 200, r.text
     assert r.json()["healed"] == 0 and await _hp(client, cid) == 10 and (await _ability(client, cid, LOH))["uses"] == 15
 
@@ -216,7 +216,7 @@ async def test_lay_on_hands_cures_one_disease_or_poison_per_five_points_and_heal
 @pytest.mark.parametrize("amount", [1, 4, 6, 12])
 async def test_lay_on_hands_cure_costs_multiples_of_five_and_changes_nothing_otherwise(client, amount):
     cid = await _paladin(client, 5)
-    r = await _use(client, cid, LOH, amount=amount, params={"mode": "cure"})
+    r = await _use(client, cid, LOH, amount=amount, params={"mode": "cure_self"})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "amount_invalid"
     assert (await _ability(client, cid, LOH))["uses"] == 25 and (await _turn(client, cid))["action_used"] is False
 

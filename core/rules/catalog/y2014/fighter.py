@@ -10,7 +10,7 @@ from typing import Any
 
 from core.data.damage_types import LABELS_IT, canonical_damage_type
 from core.game.item_bonuses import item_meta
-from core.rules.catalog._common import feature, state_on
+from core.rules.catalog._common import feature, state_on, style_options
 from core.rules.states import begin_state, has_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseToggle,
@@ -129,7 +129,7 @@ STYLE_ROWS = (
 
 
 def _style_choice(levels: dict[int, int]) -> ChoiceSpec:
-    return ChoiceSpec(group="fighting_style", levels=levels, options=lambda _ctx: list(STYLES))
+    return ChoiceSpec(group="fighting_style", levels=levels, options=style_options(STYLES))
 
 
 # ---------------------------------------------------------------------------

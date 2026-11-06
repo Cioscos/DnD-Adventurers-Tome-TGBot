@@ -218,6 +218,8 @@ class AbilityRead(BaseModel):
     has_on_use: bool = False
     # Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): il client chiede a chi (R38)
     gives_to_ally: bool = False
+    # Valori della scelta «mode» rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi
+    ally_modes: list[str] = []
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None

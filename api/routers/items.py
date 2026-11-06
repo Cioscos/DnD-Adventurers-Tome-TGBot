@@ -936,6 +936,7 @@ async def attack_with_weapon(
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
         rerolled=rerolled or None,
+        is_magic=True if applied.magic_weapon else None,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
     ), item, ability, resolved_mode, grip, opts, offhand)

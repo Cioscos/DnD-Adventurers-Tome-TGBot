@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
 
@@ -17,6 +18,16 @@ async def seated_allies(session: AsyncSession, char: Character) -> list[Characte
         select(Character).join(SessionParticipant, SessionParticipant.character_id == Character.id)
         .where(SessionParticipant.session_id.in_(mine), Character.id != char.id).order_by(Character.id))
     return list(dict.fromkeys(rows.scalars().all()))
+
+
+async def load_receiver(session: AsyncSession, char_id: int) -> Character:
+    """La scheda di chi riceve una cura, riletta da zero con ciò che serve a calcolare i suoi PF massimi: da usare dopo
+    la spesa atomica della riserva, così la cura parte dai PF veri e non da quelli letti prima."""
+    row = await session.execute(select(Character).options(
+        selectinload(Character.classes), selectinload(Character.ability_scores), selectinload(Character.spells),
+        selectinload(Character.spell_slots), selectinload(Character.items), selectinload(Character.abilities),
+    ).where(Character.id == char_id).execution_options(populate_existing=True))
+    return row.scalar_one()
 
 
 async def attach_party_auras(session: AsyncSession, char: Character) -> None:

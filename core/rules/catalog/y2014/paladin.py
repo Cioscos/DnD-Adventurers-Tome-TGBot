@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.rules.catalog._common import feature, state_on
+from core.rules.catalog._common import feature, state_on, style_options
 from core.rules.catalog.y2014.fighter import (
     _dueling, _great_weapon, _protection_effect, _weapon_in_hand, _wears_armor, _wields_shield,
 )
@@ -81,13 +81,26 @@ def _say(it: str, en: str):
 # ---------------------------------------------------------------------------
 
 _LOH_MODES = {
-    "self": {"it": "Cura te stesso", "en": "Heal yourself"},
-    "other": {"it": "Cura un'altra creatura", "en": "Heal another creature"},
-    "cure": {"it": "Cura malattie o veleni (5 punti ciascuno)", "en": "Cure diseases or poisons (5 points each)"},
+    "self": {"it": "Cura PF a te stesso", "en": "Heal yourself"},
+    "other": {"it": "Cura PF a un altro", "en": "Heal another creature"},
+    "cure_self": {"it": "Cura un veleno o una malattia a te (5 punti ciascuno)", "en": "Cure a poison or disease on yourself (5 points each)"},
+    "cure_other": {"it": "Cura un veleno o una malattia a un altro (5 punti ciascuno)", "en": "Cure a poison or disease on another (5 points each)"},
 }
+
+
+def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
+    """Esiti per chi usa il privilegio: la cura di un altro fuori serata, e l'eccezione di costrutti e non morti."""
+    mode = params.get("mode")
+    if mode == "other" and params.get("target_character_id") is None:
+        return ["lay_on_hands_other"]
+    return {"cure_self": ["lay_on_hands_cure_self"], "cure_other": ["lay_on_hands_cure_other"]}.get(mode, [])
+
+
 LAY_ON_HANDS_USE = OnUse(
     slot="action", choose_amount=True, heal=lambda _c, _r: 1, heal_when=lambda _c, params: params.get("mode") == "self",
-    amount_ok=lambda _c, amount, params: params.get("mode") != "cure" or amount % 5 == 0,
+    heal_ally_when=lambda _c, params: params.get("mode") == "other", ally_modes=("other", "cure_other"),
+    amount_ok=lambda _c, amount, params: not str(params.get("mode")).startswith("cure") or amount % 5 == 0,
+    notes=_loh_notes, clears=lambda _c, params: ["poisoned"] if params.get("mode") == "cure_self" else [],
     choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),))
 
 
@@ -164,8 +177,10 @@ def _turn_state(key: str):
     return state
 
 
-def _turn_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
-    return TargetEffect(condition="custom:turned", save_ability="wisdom", save_dc=_spell_dc(ctx), rounds=10)
+def _turn_effect(note: str):
+    def effect(ctx: RuleContext, _params: dict) -> TargetEffect:
+        return TargetEffect(condition="custom:turned", save_ability="wisdom", save_dc=_spell_dc(ctx), rounds=10, note=note)
+    return effect
 
 
 def _wielded_weapons(ctx: RuleContext) -> list[Any]:
@@ -179,12 +194,12 @@ def _weapon_label(ctx: RuleContext, key: str) -> dict:
 
 def _sacred_state(ctx: RuleContext, params: dict) -> StateSpec:
     return StateSpec("sacred_weapon", rounds=10, ends_on=("manual", "unconscious"),
-                     data={"weapon_id": int(params["weapon"]), "bonus": _cha_bonus(ctx)})
+                     data={"weapon_id": int(params["weapon"]), "bound_item": int(params["weapon"]), "attack_bonus": _cha_bonus(ctx)})
 
 
 def _sacred_bonus(ctx: RuleContext) -> int:
     state = next((s for s in ctx.char.active_states or [] if s.get("key") == "sacred_weapon"), None)
-    return int(((state or {}).get("data") or {}).get("bonus") or 0)
+    return int(((state or {}).get("data") or {}).get("attack_bonus") or 0)
 
 
 def _sacred_applies(ctx: RuleContext) -> bool:
@@ -196,7 +211,7 @@ def _sacred_applies(ctx: RuleContext) -> bool:
 
 
 def _nimbus_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec("holy_nimbus", rounds=10, ends_on=("manual",), data={"others": [f"{CK}.holy_nimbus"], "damage": 10, "radius_m": 9})
+    return StateSpec("holy_nimbus", rounds=10, ends_on=("manual",), data={"others": [f"{CK}.holy_nimbus"], "start_damage": 10, "radius_m": 9})
 
 
 HOLY_NIMBUS_SAVE = RollOptionSpec(
@@ -212,7 +227,7 @@ PURITY_IMMUNE = RollOptionSpec(
     label={"it": "Purezza di Spirito: charme, paura o possessione di quei tipi di creatura non ti riguardano (il TS riesce)",
            "en": "Purity of Spirit: charm, fear or possession by those creature types cannot affect you (the save succeeds)"})
 WARDING = RollOptionSpec(
-    key=f"{CK}.aura_of_warding", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
+    key=f"{CK}.aura_of_warding", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
     label={"it": "Aura di Interdizione: il danno viene da un incantesimo? Resistenza, danno dimezzato",
            "en": "Aura of Warding: does the damage come from a spell? Resistance, damage halved"})
 
@@ -223,7 +238,11 @@ def _wrath_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
 
 
 def _abjure_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
-    return TargetEffect(condition="frightened", save_ability="wisdom", save_dc=_spell_dc(ctx), rounds=10)
+    return TargetEffect(condition="frightened", save_ability="wisdom", save_dc=_spell_dc(ctx), rounds=10, note="abjure_enemy")
+
+
+def _angel_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
+    return TargetEffect(condition="frightened", save_ability="wisdom", save_dc=_spell_dc(ctx), rounds=10, note="avenging_angel")
 
 
 def _abjure_state(ctx: RuleContext, _params: dict) -> StateSpec:
@@ -274,20 +293,36 @@ def _angel_state(ctx: RuleContext, _params: dict) -> StateSpec:
 
 
 def _champion_state(_ctx: RuleContext, _params: dict) -> StateSpec:
-    return StateSpec("elder_champion", rounds=10, ends_on=("manual",), data={"others": [f"{CK}.elder_champion"], "heal": 10})
+    return StateSpec("elder_champion", rounds=10, ends_on=("manual",), data={"others": [f"{CK}.elder_champion"], "start_heal": 10})
 
 
 def _champion_heal(ctx: RuleContext) -> int:
-    return 10 if state_on(ctx, "elder_champion") and ctx.char.current_hit_points > 0 else 0
+    return 10 if state_on(ctx, "elder_champion") and not ctx.char.is_dead else 0
+
+
+def _permanent_note(key: str) -> StateSpec:
+    """Lo stato sempre attivo che porta il testo di un privilegio a GM e gruppo (R36)."""
+    return StateSpec(key, ends_on=("manual",), data={"others": [f"{CK}.{key}"], "permanent": True})
 
 
 def _purity_state() -> StateSpec:
-    return StateSpec("purity_of_spirit", ends_on=("manual",), data={"others": [f"{CK}.purity_of_spirit"], "permanent": True})
+    return _permanent_note("purity_of_spirit")
 
 
-def _standing(ctx: RuleContext) -> bool:
-    """A 0 PF e ancora vivo: Sentinella Imperitura può tenere il paladino a 1 PF."""
-    return ctx.char.current_hit_points == 0 and not ctx.char.is_dead
+def _drops_to_zero(ctx: RuleContext) -> bool:
+    """In piedi, e il danno che sta per subire (se lo si sa) lo porta a 0 PF: solo allora Sentinella Imperitura si offre."""
+    char = ctx.char
+    if char.is_dead or char.current_hit_points <= 0:
+        return False
+    return ctx.damage is None or ctx.damage >= char.current_hit_points + (char.temp_hp or 0)
+
+
+UNDYING_SENTINEL = f"{CK}.undying_sentinel"
+SENTINEL = RollOptionSpec(
+    key=UNDYING_SENTINEL, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=UNDYING_SENTINEL),
+    label={"it": "Sentinella Imperitura: se il danno ti porta a 0 PF senza ucciderti sul colpo, resti a 1 PF (un uso, riposo lungo)",
+           "en": "Undying Sentinel: if the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (one use, long rest)"},
+    available=_drops_to_zero)
 
 
 def _removable_conditions(ctx: RuleContext) -> list[str]:
@@ -348,7 +383,7 @@ FEATURES = (
             "action", uses=Uses(table={1: 1}, ability="charisma", minimum=1), restoration="long_rest",
             on_use=OnUse(slot="action", state=StateSpec(
                 "divine_sense", ends_on=("new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"),
-                data={"skip_new_turns": 1, "range_m": 18}))),
+                data={"skip_new_turns": 1, "range_m": 18, "until": "next_turn_end"}))),
     feature("lay_on_hands", CK, ED, 1, "Imposizione delle Mani / Lay on Hands (Paladino 1, pag. 97)",
             ("Imposizione delle Mani", "Lay on Hands"),
             ("Azione: riserva di 5 PF per livello; tocchi una creatura e spendi PF per curarla, o 5 per curare una malattia o un veleno. Non su costrutti e non morti. Riposo lungo.",
@@ -358,7 +393,7 @@ FEATURES = (
             ("Stile di Combattimento", "Fighting Style"),
             ("Al 2° livello scegli uno stile: Armi Possenti, Difesa, Duellare o Protezione. Mai due volte lo stesso.",
              "At 2nd level you choose a style: Great Weapon Fighting, Defense, Dueling or Protection. Never the same one twice."),
-            no_row=True, choices=(ChoiceSpec(group="fighting_style", levels={2: 1}, options=lambda _ctx: list(STYLES)),),
+            no_row=True, choices=(ChoiceSpec(group="fighting_style", levels={2: 1}, options=style_options(STYLES)),),
             covered_by="ChoiceSpec fighting_style di questa riga e le righe dei quattro stili; test_the_style_is_chosen_at_level_2_among_four"),
     *STYLE_ROWS,
     feature("spellcasting", CK, ED, 2, "Incantesimi / Spellcasting (Paladino 2, pag. 97)", ("Incantesimi", "Spellcasting"),
@@ -402,7 +437,7 @@ FEATURES = (
             ("Aura di Coraggio", "Aura of Courage"),
             ("Tu e gli alleati entro 3 m (9 m dal 18°) non potete essere spaventati, finché sei cosciente.",
              "You and allies within 10 ft (30 ft from 18th) cannot be frightened while you are conscious."),
-            condition_immunities=("frightened",), needs_conscious=True, passive=True),
+            condition_immunities=("frightened",), needs_conscious=True, passive=True, permanent_state=_permanent_note("aura_of_courage")),
     feature("improved_divine_smite", CK, ED, 11, "Punizione Divina Migliorata / Improved Divine Smite (Paladino 11, pag. 98)",
             ("Punizione Divina Migliorata", "Improved Divine Smite"),
             ("Ogni colpo con un'arma da mischia infligge 1d8 radiosi in più, anche insieme a Punizione Divina.",
@@ -432,7 +467,8 @@ FEATURES = (
             ("Arma Consacrata", "Sacred Weapon"),
             ("Azione, un uso di Incanalare Divinità: per 1 minuto aggiungi il Carisma (minimo +1) ai tiri per colpire con un'arma impugnata, che fa luce e conta come magica.",
              "Action, one Channel Divinity use: for 1 minute add your Charisma (minimum +1) to attack rolls with a wielded weapon, which sheds light and counts as magical."),
-            "action", subclass="devotion", modifiers=(Modifier("attack", _sacred_bonus, when=_sacred_applies, source=f"feature:{CK}.sacred_weapon"),),
+            "action", subclass="devotion", modifiers=(Modifier("attack", _sacred_bonus, when=_sacred_applies, source=f"feature:{CK}.sacred_weapon"),
+                                                      Modifier("magic_weapon", 1, when=_sacred_applies, source=f"feature:{CK}.sacred_weapon")),
             on_use=OnUse(slot="action", spends=POOL, available=lambda c: bool(_wielded_weapons(c)), state=_sacred_state, choices=(UseChoice(
                 "weapon", {"it": "Arma", "en": "Weapon"}, lambda c: [str(i.id) for i in _wielded_weapons(c)],
                 lambda k: {"it": k, "en": k}, option_label_ctx=_weapon_label),))),
@@ -441,12 +477,13 @@ FEATURES = (
             ("Azione, un uso di Incanalare Divinità: immondi e non morti entro 9 m fanno un TS Saggezza o sono scacciati per 1 minuto o fino al danno.",
              "Action, one Channel Divinity use: fiends and undead within 30 ft make a Wisdom save or are turned for 1 minute or until damaged."),
             "action", subclass="devotion",
-            on_use=OnUse(slot="action", spends=POOL, state=_turn_state("turn_the_unholy"), target_effect=_turn_effect)),
+            on_use=OnUse(slot="action", spends=POOL, state=_turn_state("turn_the_unholy"), target_effect=_turn_effect("turn_the_unholy"))),
     feature("aura_of_devotion", CK, ED, 7, "Aura di Devozione / Aura of Devotion (Giuramento di Devozione, Paladino 7, pag. 99)",
             ("Aura di Devozione", "Aura of Devotion"),
             ("Tu e gli alleati entro 3 m (9 m dal 18°) non potete essere affascinati, finché sei cosciente.",
              "You and allies within 10 ft (30 ft from 18th) cannot be charmed while you are conscious."),
-            subclass="devotion", condition_immunities=("charmed",), needs_conscious=True, passive=True),
+            subclass="devotion", condition_immunities=("charmed",), needs_conscious=True, passive=True,
+            permanent_state=_permanent_note("aura_of_devotion")),
     feature("purity_of_spirit", CK, ED, 15, "Purezza di Spirito / Purity of Spirit (Giuramento di Devozione, Paladino 15, pag. 99)",
             ("Purezza di Spirito", "Purity of Spirit"),
             ("Sei sempre sotto protezione dal bene e dal male: aberrazioni, celestiali, elementali, folletti, immondi e non morti ti attaccano con svantaggio e non ti affascinano, spaventano o possiedono.",
@@ -474,10 +511,10 @@ FEATURES = (
             on_use=OnUse(slot="action", spends=POOL, state=_wrath_state, target_effect=_wrath_effect)),
     feature("turn_the_faithless", CK, ED, 3, "Scacciare gli Infedeli / Turn the Faithless (Incanalare Divinità, Giuramento degli Antichi, Paladino 3, pag. 100)",
             ("Scacciare gli Infedeli", "Turn the Faithless"),
-            ("Azione, un uso di Incanalare Divinità: folletti e immondi entro 9 m (non i non morti) fanno un TS Saggezza o sono scacciati per 1 minuto; la loro vera forma si rivela.",
-             "Action, one Channel Divinity use: fey and fiends within 30 ft (not undead) make a Wisdom save or are turned for 1 minute; their true form is revealed."),
+            ("Azione, un uso di Incanalare Divinità: folletti e immondi entro 9 m (non i non morti) fanno un TS Saggezza o sono scacciati per 1 minuto o fino al danno; la loro vera forma si rivela.",
+             "Action, one Channel Divinity use: fey and fiends within 30 ft (not undead) make a Wisdom save or are turned for 1 minute or until damaged; their true form is revealed."),
             "action", subclass="ancients",
-            on_use=OnUse(slot="action", spends=POOL, state=_turn_state("turn_the_faithless"), target_effect=_turn_effect)),
+            on_use=OnUse(slot="action", spends=POOL, state=_turn_state("turn_the_faithless"), target_effect=_turn_effect("turn_the_faithless"))),
     feature("aura_of_warding", CK, ED, 7, "Aura di Interdizione / Aura of Warding (Giuramento degli Antichi, Paladino 7, pag. 100)",
             ("Aura di Interdizione", "Aura of Warding"),
             ("Tu e gli alleati entro 3 m (9 m dal 18°) avete resistenza ai danni degli incantesimi. Il tuo è una conferma sul danno subito.",
@@ -488,12 +525,11 @@ FEATURES = (
             ("Sentinella Imperitura", "Undying Sentinel"),
             ("A 0 PF, se non sei morto sul colpo, resti a 1 PF. Un uso, riposo lungo. Non invecchi.",
              "When reduced to 0 HP and not killed outright, you drop to 1 HP instead. One use, long rest. You do not age."),
-            "special", subclass="ancients", uses=Uses(table={15: 1}), restoration="long_rest",
-            on_use=OnUse(available=_standing, heal=lambda _c, _r: 1)),
+            "special", subclass="ancients", uses=Uses(table={15: 1}), restoration="long_rest", roll_options=(SENTINEL,)),
     feature("elder_champion", CK, ED, 20, "Campione degli Antichi / Elder Champion (Giuramento degli Antichi, Paladino 20, pag. 100)",
             ("Campione degli Antichi", "Elder Champion"),
-            ("Azione: per 1 minuto recuperi 10 PF a inizio turno, lanci da paladino con azione bonus gli incantesimi da 1 azione e i nemici vicini hanno svantaggio ai TS. Riposo lungo.",
-             "Action: for 1 minute you regain 10 HP at the start of your turns, cast 1-action paladin spells as a bonus action and nearby enemies have disadvantage on saves. Long rest."),
+            ("Azione, 1 minuto: +10 PF a inizio turno; incantesimi da paladino da 1 azione come azione bonus; nemici entro 3 m con svantaggio ai TS contro i tuoi incantesimi da paladino e Incanalare Divinità.",
+             "Action, 1 minute: regain 10 HP at turn start; 1-action paladin spells as a bonus action; enemies within 10 ft have disadvantage on saves against your paladin spells and Channel Divinity. Long rest."),
             "action", subclass="ancients", uses=Uses(table={20: 1}), restoration="long_rest", turn_start_heal=_champion_heal,
             on_use=OnUse(slot="action", state=_champion_state)),
 
@@ -506,14 +542,14 @@ FEATURES = (
                   ("Incantesimi del Giuramento di Vendetta", "Oath of Vengeance Spells")),
     feature("abjure_enemy", CK, ED, 3, "Abiurare Nemico / Abjure Enemy (Incanalare Divinità, Giuramento di Vendetta, Paladino 3, pag. 101)",
             ("Abiurare Nemico", "Abjure Enemy"),
-            ("Azione, un uso di Incanalare Divinità: una creatura entro 18 m fa un TS Saggezza o è spaventata, con velocità 0, per 1 minuto; se lo supera, velocità dimezzata.",
-             "Action, one Channel Divinity use: a creature within 60 ft makes a Wisdom save or is frightened with speed 0 for 1 minute; on a success its speed is halved."),
+            ("Azione, un uso di Incanalare Divinità: creatura entro 18 m, TS Saggezza (svantaggio se immonda o non morta) o spaventata, velocità 0, per 1 minuto o fino al danno; se supera, velocità dimezzata.",
+             "Action, one Channel Divinity use: a creature within 60 ft makes a Wisdom save (disadvantage if fiend or undead) or is frightened, speed 0, for 1 minute or until damaged; on a success, speed halved."),
             "action", subclass="vengeance",
             on_use=OnUse(slot="action", spends=POOL, state=_abjure_state, target_effect=_abjure_effect)),
     feature("vow_of_enmity", CK, ED, 3, "Giuramento di Inimicizia / Vow of Enmity (Incanalare Divinità, Giuramento di Vendetta, Paladino 3, pag. 101)",
             ("Giuramento di Inimicizia", "Vow of Enmity"),
-            ("Azione bonus, un uso di Incanalare Divinità: per 1 minuto hai vantaggio ai tiri per colpire contro una creatura entro 3 m, finché non scende a 0 PF.",
-             "Bonus action, one Channel Divinity use: for 1 minute you have advantage on attack rolls against a creature within 10 ft, until it drops to 0 HP."),
+            ("Azione bonus, un uso di Incanalare Divinità: per 1 minuto hai vantaggio ai tiri per colpire contro una creatura entro 3 m, finché non scende a 0 PF o cade priva di sensi.",
+             "Bonus action, one Channel Divinity use: for 1 minute you have advantage on attack rolls against a creature within 10 ft, until it drops to 0 HP or falls unconscious."),
             "bonus_action", subclass="vengeance", roll_options=(VOW_ATTACK,),
             on_use=OnUse(slot="bonus", spends=POOL, state=_vow_state)),
     feature("relentless_avenger", CK, ED, 7, "Vendicatore Implacabile / Relentless Avenger (Giuramento di Vendetta, Paladino 7, pag. 101)",
@@ -528,11 +564,11 @@ FEATURES = (
             "reaction", subclass="vengeance", roll_options=(SOUL_OF_VENGEANCE,)),
     feature("avenging_angel", CK, ED, 20, "Angelo Vendicatore / Avenging Angel (Giuramento di Vendetta, Paladino 20, pag. 101)",
             ("Angelo Vendicatore", "Avenging Angel"),
-            ("Azione: per 1 ora ali con volo 18 m e aura di 9 m che spaventa i nemici (TS Saggezza) alla prima entrata. Riposo lungo.",
-             "Action: for 1 hour wings with a 60 ft fly speed and a 30 ft aura that frightens enemies (Wisdom save) on their first entry. Long rest."),
+            ("Azione, 1 ora: ali (volo 18 m), aura di 9 m: il nemico che vi entra o vi inizia il turno la prima volta fa un TS Saggezza o è spaventato 1 minuto o fino al danno; attacchi contro di lui con vantaggio.",
+             "Action, 1 hour: wings (fly 60 ft), 30 ft aura: first time an enemy enters it or starts its turn there, it saves Wisdom or is frightened 1 minute or until damaged; attacks against it have advantage."),
             "action", subclass="vengeance", uses=Uses(table={20: 1}), restoration="long_rest",
             modifiers=(Modifier("fly_speed_value", 60, when=lambda c: state_on(c, "avenging_angel"), source=f"feature:{CK}.avenging_angel"),),
-            on_use=OnUse(slot="action", state=_angel_state)),
+            on_use=OnUse(slot="action", state=_angel_state, target_effect=_angel_effect)),
 
     feature("multiclassing", CK, ED, 1, "Multiclasse: Paladino / Multiclassing: Paladin (Regole opzionali, pag. 163)",
             ("Multiclasse: Paladino", "Multiclassing: Paladin"),
