@@ -125,7 +125,14 @@
         "hunters_prey": "Hunter's Prey",
         "defensive_tactics": "Defensive Tactics",
         "hunter_multiattack": "Multiattack",
-        "superior_hunters_defense": "Superior Hunter's Defense"
+        "superior_hunters_defense": "Superior Hunter's Defense",
+        "invocations": "Eldritch Invocations",
+        "pact_boon": "Pact Boon",
+        "tome_cantrips": "Book of Shadows cantrips",
+        "arcanum_6": "Mystic Arcanum 6th",
+        "arcanum_7": "Mystic Arcanum 7th",
+        "arcanum_8": "Mystic Arcanum 8th",
+        "arcanum_9": "Mystic Arcanum 9th"
       },
       "replace_title": "Replace option",
       "replace_old": "Option to replace",

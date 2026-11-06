@@ -546,6 +546,7 @@ class FeatureSpec:
     passive: bool = False
     cast_in_form: bool = False  # in Forma Selvatica si lanciano incantesimi senza conferma (Incantesimi Bestiali)
     attacks_per_action: int = 0
+    attacks_with_pact_weapon: int = 0  # attacchi per azione, ma solo con l'arma del patto (Lama Assetata)
     target_effect: Any = None
     # categoria (`armor`/`weapons`/`tools`) -> id di `core.rules.proficiencies.LABELS`, concesse una volta sola
     proficiency_grants: dict[str, tuple[str, ...]] | None = None

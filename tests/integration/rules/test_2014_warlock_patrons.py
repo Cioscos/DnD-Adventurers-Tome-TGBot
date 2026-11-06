@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from tests.integration.rules.test_2014_barbarian import _keys, _weapon
+from tests.integration.rules.test_2014_cleric_domains import _roll_keys
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _use
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _hit, _spell
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
@@ -165,39 +166,32 @@ async def _blessing_hit(client, cid, sword, *options) -> dict:
 @pytest.mark.parametrize("level,charisma,expected", [(1, 16, 4), (5, 16, 8), (10, 8, 9), (1, 1, 1), (2, 2, 1)])
 async def test_dark_ones_blessing_gives_charisma_plus_level_temporary_hit_points_and_at_least_one(client, level, charisma, expected):
     cid = await _patron(client, level, "fiend", charisma=charisma)
+    r = await _use(client, cid, BLESSING)
+    assert r.status_code == 200, r.text
+    assert r.json()["temp_hp"] == expected and (await _full(client, cid))["temp_hp"] == expected
+    assert (await _turn(client, cid))["action_used"] is False  # nessuna azione, nessun uso da spendere
+
+
+async def test_dark_ones_blessing_is_confirmed_after_the_damage_not_before(client):
+    cid = await _patron(client, 4, "fiend", charisma=16)
     sword = await _weapon(client, cid, "Spada", "main_hand", damage_dice="1d8")
-    assert BLESSING in await _keys(client, cid, "attack", item_id=sword)
-    expected = max(1, (charisma - 10) // 2 + level)
-    block = (await _blessing_hit(client, cid, sword, BLESSING))["option_result"]
-    assert str(expected) in block["effects"][0]["it"]
-    assert (await _full(client, cid))["temp_hp"] == expected
+    spell = await _spell(client, cid, "Fiammata", 0, attack_save="DEX", damage_dice="1d8", damage_type="fire")
+    assert BLESSING not in await _keys(client, cid, "attack", item_id=sword)
+    assert not any(k.startswith(BLESSING) for k in await _keys(client, cid, "spell_damage", spell_id=spell))
+    await _blessing_hit(client, cid, sword)
+    assert (await _full(client, cid))["temp_hp"] == 0  # il danno da solo non dà nulla
+    assert (await _use(client, cid, BLESSING)).status_code == 200  # lo si conferma dopo averlo visto
+    assert (await _full(client, cid))["temp_hp"] == 3 + 4
 
 
 async def test_dark_ones_blessing_does_not_stack_with_the_temporary_points_I_have(client):
     cid = await _patron(client, 3, "fiend", charisma=14)
-    sword = await _weapon(client, cid, "Spada", "main_hand", damage_dice="1d8")
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_temp", "value": 20})
-    await _blessing_hit(client, cid, sword, BLESSING)
+    await _use(client, cid, BLESSING)
     assert (await _full(client, cid))["temp_hp"] == 20
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_temp", "value": 2})
-    await _blessing_hit(client, cid, sword, BLESSING)
+    await _use(client, cid, BLESSING)
     assert (await _full(client, cid))["temp_hp"] == 5  # Carisma +2 e livello 3: il maggiore fra 2 e 5
-
-
-async def test_dark_ones_blessing_is_not_taken_unless_I_confirm_it(client):
-    cid = await _patron(client, 3, "fiend")
-    sword = await _weapon(client, cid, "Spada", "main_hand", damage_dice="1d8")
-    await _blessing_hit(client, cid, sword)
-    assert (await _full(client, cid))["temp_hp"] == 0
-
-
-async def test_dark_ones_blessing_also_applies_to_the_damage_of_a_spell(client):
-    cid = await _patron(client, 4, "fiend", charisma=16)
-    spell = await _spell(client, cid, "Fiammata", 0, attack_save="DEX", damage_dice="1d8", damage_type="fire")
-    assert "warlock.dark_ones_blessing_spell" in await _keys(client, cid, "spell_damage", spell_id=spell)
-    r = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"options": ["warlock.dark_ones_blessing_spell"], "main_rolls": [3]})
-    assert r.status_code == 200, r.text
-    assert (await _full(client, cid))["temp_hp"] == 3 + 4  # Carisma +3 e livello 4
 
 
 async def test_dark_ones_own_luck_adds_1d10_to_a_check_or_save_after_the_roll_once_per_rest(client):
@@ -225,11 +219,26 @@ async def test_fiendish_resilience_gives_resistance_to_the_chosen_type_until_ano
     assert (await _use(client, cid, RESILIENCE, params={"damage_type": "mud"})).status_code == 422
     r = await _use(client, cid, RESILIENCE, params={"damage_type": damage})
     assert r.status_code == 200, r.text
-    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": damage})
+    options = [RESILIENCE] if damage == "bludgeoning" else []  # i tipi fisici si confermano: armi magiche e d'argento ignorano
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": damage, "options": options})
     assert r.json()["current_hit_points"] == 95
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "acid"})
     assert r.json()["current_hit_points"] == 85
     assert (await _turn(client, cid))["action_used"] is False  # nessuna azione: si sceglie al riposo
+
+
+async def test_fiendish_resilience_to_physical_damage_needs_a_nonmagical_weapon(client):
+    cid = await _patron(client, 10, "fiend")
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 100})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 100})
+    await _use(client, cid, RESILIENCE, params={"damage_type": "slashing"})
+    assert RESILIENCE in await _roll_keys(client, cid, "damage_taken", damage_type="slashing")
+    assert RESILIENCE not in await _roll_keys(client, cid, "damage_taken", damage_type="piercing")
+    assert RESILIENCE not in await _roll_keys(client, cid, "damage_taken", damage_type="fire")
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "slashing"})
+    assert r.json()["current_hit_points"] == 90  # arma magica o d'argento: nessuna resistenza
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "slashing", "options": [RESILIENCE]})
+    assert r.json()["current_hit_points"] == 85  # arma comune: dimezzato
 
 
 async def test_fiendish_resilience_is_changed_at_a_rest_and_the_old_resistance_goes(client):

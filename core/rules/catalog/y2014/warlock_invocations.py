@@ -192,7 +192,7 @@ _ROWS = (
     _inv("thirsting_blade", "Lama Assetata", "Thirsting Blade", "Suppliche Occulte, livello 5, Patto della Lama, pag. 118", 5,
          ("Con l'azione di Attacco attacchi due volte con l'arma del patto. Non si somma ad Attacco Extra.",
           "With the Attack action you attack twice with the pact weapon. It does not stack with Extra Attack."),
-         boon="blade", attacks_per_action=2),
+         boon="blade", attacks_with_pact_weapon=2),
     _inv("eldritch_spear", "Lancia Occulta", "Eldritch Spear", "Suppliche Occulte, trucchetto deflagrazione occulta, pag. 118", 2,
          ("La gittata di deflagrazione occulta diventa 90 m.", "The range of eldritch blast becomes 300 ft."),
          blast=True, spell_range=((BLAST, *BLAST_NAMES), "90 m")),

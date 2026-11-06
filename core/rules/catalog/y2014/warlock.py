@@ -188,29 +188,13 @@ DARK_DELIRIUM_USE = OnUse(
 # L'Immondo
 # ---------------------------------------------------------------------------
 
-def _blessing_temp_hp(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    """PF temporanei = Carisma + livello da warlock (minimo 1); non si sommano a quelli che hai: vale il maggiore."""
-    ctx.char.temp_hp = max(ctx.char.temp_hp or 0, _blessing_value(ctx))
-
-
 def _blessing_value(ctx: RuleContext) -> int:
+    """PF temporanei = Carisma + livello da warlock (minimo 1)."""
     return max(1, _mod(ctx, "charisma") + ctx.class_level)
 
 
-def _blessing(key: str, rolls: str, phase: str, label: tuple[str, str]) -> RollOptionSpec:
-    return RollOptionSpec(
-        key=f"{CK}.dark_ones_blessing{key}", phase=phase, rolls=(rolls,), on_confirm=_blessing_temp_hp,
-        label={"it": label[0], "en": label[1]},
-        effect=lambda c, _i: {"it": f"Ottieni {_blessing_value(c)} PF temporanei (se più di quelli che hai).",
-                              "en": f"You gain {_blessing_value(c)} temporary hit points (if more than you have)."})
-
-
-BLESSING_ATTACK = _blessing("", "attack", "after_hit", (
-    "Benedizione dell'Oscuro: hai portato a 0 PF una creatura ostile con questo colpo?",
-    "Dark One's Blessing: did this hit reduce a hostile creature to 0 hit points?"))
-BLESSING_SPELL = _blessing("_spell", "spell_damage", "before", (
-    "Benedizione dell'Oscuro: questo danno porta a 0 PF una creatura ostile?",
-    "Dark One's Blessing: does this damage reduce a hostile creature to 0 hit points?"))
+# Si usa da «Turno» dopo aver visto il danno: senza costo né slot, i PF temporanei non si sommano
+BLESSING_USE = OnUse(cost=0, temp_hp=lambda c, _rolled: _blessing_value(c))
 
 DARK_LUCK = RollOptionSpec(
     key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save"), cost=Cost(feature_key=LUCK),
@@ -223,6 +207,16 @@ def _resilience_active(damage_type: str):
         found = next((s for s in ctx.char.active_states or [] if s.get("key") == "fiendish_resilience"), None)
         return found is not None and (found.get("data") or {}).get("damage_type") == damage_type
     return active
+
+
+_PHYSICAL = ("bludgeoning", "piercing", "slashing")
+
+# Le armi magiche e d'argento ignorano la resistenza: per i tipi fisici la si applica solo confermando che l'arma non lo è
+RESILIENCE_PHYSICAL = RollOptionSpec(
+    key=f"{CK}.fiendish_resilience", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
+    label={"it": "Resilienza Immonda: il colpo è di un'arma non magica e non d'argento?",
+           "en": "Fiendish Resilience: is the hit from a nonmagical, non-silvered weapon?"},
+    available=lambda c: c.damage_type in _PHYSICAL and _resilience_active(c.damage_type)(c))
 
 
 def _resilience_state(_ctx: RuleContext, params: dict) -> StateSpec:
@@ -408,7 +402,7 @@ FEATURES = (
             ("Benedizione dell'Oscuro", "Dark One's Blessing"),
             ("Quando porti a 0 PF una creatura ostile ottieni PF temporanei pari a Carisma + livello da warlock (minimo 1); non si sommano.",
              "When you reduce a hostile creature to 0 hit points you gain temporary hit points equal to Charisma + warlock level (minimum 1); they do not stack."),
-            roll_options=(BLESSING_ATTACK, BLESSING_SPELL), passive=True),
+            "special", on_use=BLESSING_USE),
     _patron("dark_ones_own_luck", "fiend", 6, "Fortuna dell'Oscuro / Dark One's Own Luck (Immondo 6, pag. 117)",
             ("Fortuna dell'Oscuro", "Dark One's Own Luck"),
             ("Dopo aver visto una prova di caratteristica o un TS, aggiungi 1d10 al tiro. Un uso, riposo breve.",
@@ -418,8 +412,9 @@ FEATURES = (
             ("Resilienza Immonda", "Fiendish Resilience"),
             ("A ogni riposo breve o lungo scegli un tipo di danno: ne hai la resistenza finché ne scegli un altro. Le armi magiche e d'argento ignorano la resistenza.",
              "At each short or long rest you choose a damage type: you resist it until you choose another. Magical and silvered weapons ignore the resistance."),
-            "special", on_use=FIENDISH_RESILIENCE_USE,
-            modifiers=tuple(Modifier(f"resistance:{t}", 1, when=_resilience_active(t), source=f"feature:{CK}.fiendish_resilience") for t in DAMAGE_TYPES)),
+            "special", on_use=FIENDISH_RESILIENCE_USE, roll_options=(RESILIENCE_PHYSICAL,),
+            modifiers=tuple(Modifier(f"resistance:{t}", 1, when=_resilience_active(t), source=f"feature:{CK}.fiendish_resilience")
+                            for t in DAMAGE_TYPES if t not in _PHYSICAL)),
     _patron("hurl_through_hell", "fiend", 14, "Scagliare all'Inferno / Hurl Through Hell (Immondo 14, pag. 117)",
             ("Scagliare all'Inferno", "Hurl Through Hell"),
             ("Quando colpisci, il bersaglio scompare fino alla fine del tuo prossimo turno; se non è un immondo subisce 10d10 danni psichici. Un uso, riposo lungo.",

@@ -264,7 +264,9 @@ async def test_twinned_spell_is_not_offered_for_a_self_spell(client):
     assert TWINNED not in await _roll_keys(client, cid, "cast", spell_id=spell)
 
 
-async def test_twinned_spell_repeats_the_attack_and_the_damage_for_the_second_creature(client):
+async def test_twinned_spell_repeats_the_attack_and_the_damage_for_the_second_creature(client, monkeypatch):
+    # il d20 del secondo bersaglio è casuale: fisso un 10 (né 1 né 20) così il danno c'è e i dadi non raddoppiano
+    monkeypatch.setattr("random.randint", lambda lo, hi: min(10, hi))
     cid = await _caster(client, 10, "twinned")
     spell = await _spell(client, cid, "Raggio di gelo", 0, attack_save="ATK", damage_dice="2d8", damage_type="cold", range_area="18 m")
     r = await client.post(f"/characters/{cid}/spells/{spell}/attack",

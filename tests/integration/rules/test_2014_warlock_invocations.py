@@ -328,14 +328,33 @@ async def test_lifedrinker_does_not_apply_to_other_weapons(client):
     assert "warlock.lifedrinker" not in await _keys(client, cid, "attack", item_id=other)
 
 
-async def test_thirsting_blade_gives_two_attacks_and_does_not_stack_with_extra_attack(client):
+async def _swing(client, cid, item_id=None):
+    """Un attacco senza la conferma dell'attacco extra: vale il limite dell'azione."""
+    url = f"/characters/{cid}/attack/unarmed" if item_id is None else f"/characters/{cid}/items/{item_id}/attack"
+    return await client.post(url, json={"die": 15})
+
+
+async def test_thirsting_blade_gives_two_attacks_with_the_pact_weapon_only(client):
     cid = await _caster(client, 5, "thirsting_blade", boon="blade")
-    assert (await client.get(f"/characters/{cid}/turn-state")).json()["attacks_allowed"] == 2
-    plain = await _caster(client, 5, "beast_speech", boon="blade")
-    assert (await client.get(f"/characters/{plain}/turn-state")).json()["attacks_allowed"] == 1
+    blade, axe = await _blade(client, cid), await _weapon(client, cid, "Ascia", "main_hand")
+    assert (await _swing(client, cid, blade)).status_code == 200
+    assert (await _swing(client, cid, blade)).status_code == 200  # il secondo attacco, con l'arma del patto
+    assert (await _swing(client, cid, blade)).status_code == 409
+    await _new_turn(client, cid)
+    assert (await _swing(client, cid, blade)).status_code == 200
+    for other in (axe, None):  # un'altra arma o il colpo senz'armi non hanno il secondo attacco
+        r = await _swing(client, cid, other)
+        assert r.status_code == 409 and r.json()["detail"]["code"] == "attack_limit"
+
+
+async def test_thirsting_blade_does_not_stack_with_extra_attack(client):
+    cid = await _caster(client, 5, "thirsting_blade", boon="blade")
+    blade = await _blade(client, cid)
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 5})
     assert r.status_code in (200, 201), r.text
-    assert (await client.get(f"/characters/{cid}/turn-state")).json()["attacks_allowed"] == 2
+    for _ in range(2):
+        assert (await _swing(client, cid, blade)).status_code == 200
+    assert (await _swing(client, cid, blade)).status_code == 409
 
 
 # ---------------------------------------------------------------------------

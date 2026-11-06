@@ -549,12 +549,12 @@ def _note_martial_attack(char: Character, item: Item | None, body: AttackSubmiss
         char.turn_state = {**turn, "martial_attack": True}
 
 
-def _check_attack_limit(char: Character, body: AttackSubmission | None) -> None:
+def _check_attack_limit(char: Character, body: AttackSubmission | None, item: Item | None = None) -> None:
     """Il limite dell'azione Attacco si supera solo confermando: chi ha privilegi in più non va impedito.
     Non vale per un attacco con un'opzione che ha uno slot proprio (Frenesia, Ritorsione): non è un attacco dell'azione."""
     if body and (body.with_inspiration or body.confirm_extra_attack or _own_slot_attack(char, body)):
         return
-    made, allowed = get_turn(char)["action_attacks"], attacks_allowed(char)
+    made, allowed = get_turn(char)["action_attacks"], attacks_allowed(char, item)
     if made >= allowed:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "attack_limit", "made": made, "allowed": allowed})
 
@@ -796,7 +796,7 @@ async def attack_with_weapon(
                    for i in char.items):
             raise HTTPException(status_code=422, detail="offhand_needs_second_light_weapon")
     else:
-        _check_attack_limit(char, body)
+        _check_attack_limit(char, body, item)
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
             i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id

@@ -125,7 +125,14 @@
         "hunters_prey": "Preda del Cacciatore",
         "defensive_tactics": "Tattiche Difensive",
         "hunter_multiattack": "Multiattacco",
-        "superior_hunters_defense": "Difesa del Cacciatore Superiore"
+        "superior_hunters_defense": "Difesa del Cacciatore Superiore",
+        "invocations": "Suppliche Occulte",
+        "pact_boon": "Dono del Patto",
+        "tome_cantrips": "Trucchetti del Tomo",
+        "arcanum_6": "Arcanum Mistico 6°",
+        "arcanum_7": "Arcanum Mistico 7°",
+        "arcanum_8": "Arcanum Mistico 8°",
+        "arcanum_9": "Arcanum Mistico 9°"
       },
       "replace_title": "Sostituisci opzione",
       "replace_old": "Opzione da sostituire",

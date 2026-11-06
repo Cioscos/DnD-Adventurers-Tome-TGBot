@@ -157,10 +157,14 @@ def refuse_if_incapacitated(char) -> None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "incapacitated"})
 
 
-def attacks_allowed(char) -> int:
-    """Attacchi del turno: per azione il massimo fra 1 e i privilegi attivi, mai somma fra classi, per le azioni disponibili."""
+def attacks_allowed(char, item=None) -> int:
+    """Attacchi del turno: per azione il massimo fra 1 e i privilegi attivi, mai somma fra classi, per le azioni disponibili.
+    ``item``: l'arma dell'attacco; i privilegi legati all'arma del patto contano solo con lei."""
+    from core.game.item_bonuses import item_meta  # import locale
+    with_pact = item is not None and bool(item_meta(item).get("pact_weapon"))
     per_action = max(
         attacks_per_action(char.classes),
-        *(spec.attacks_per_action for spec, _ in active_features(char)), 1,
+        *(spec.attacks_per_action for spec, _ in active_features(char)),
+        *(spec.attacks_with_pact_weapon for spec, _ in active_features(char) if with_pact), 1,
     )
     return per_action * (1 + get_turn(char)["extra_actions"])
