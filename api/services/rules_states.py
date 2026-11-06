@@ -389,8 +389,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]
     if on_use.temp_hp:  # i PF temporanei non si sommano: vale il maggiore
-        result.temp_hp = max(0, on_use.temp_hp(ctx, sum(result.rolls)))
-        char.temp_hp = max(char.temp_hp or 0, result.temp_hp)
+        granted = max(0, on_use.temp_hp(ctx, sum(result.rolls)))
+        if granted:  # niente toast «PF temporanei: 0» a ogni uso che non ne dà
+            result.temp_hp = granted
+            char.temp_hp = max(char.temp_hp or 0, granted)
     if on_use.ends_concentration:
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)

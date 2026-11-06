@@ -71,6 +71,15 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
     },
     onError: () => notifyMutationError(),
   })
+  // Prolungare l'Ira con un TS imposto non costa l'azione bonus: il bottone sta qui, fuori dalla sezione che si richiude.
+  const extend = useMutation({
+    mutationFn: (featureKey: string) => api.characters.featureUse(char.id, featureKey, 1, { extend_via: 'save' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
+    },
+    onError: () => notifyMutationError(),
+  })
   // I segni interni di un privilegio (il Canto di Riposo già ricevuto) non sono del giocatore: né si vedono né si chiudono.
   const states = (char.active_states ?? []).filter((s) => !s.data?.internal)
   if (states.length === 0) return null
@@ -85,6 +94,8 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
           .map((k) => char.abilities.find((a) => a.feature_key === k))
           .filter((a): a is NonNullable<typeof a> => !!a)
         const facts = stateFacts(s, t)
+        // Lo decide il server: la scelta di prolungamento c'è solo finché l'Ira si può prolungare (non dal 15°, non per le altre classi).
+        const canExtend = !!s.feature_key && !!char.abilities.find((a) => a.feature_key === s.feature_key)?.use_choices?.some((x) => x.key === 'extend_via')
         return (
           <li key={s.key} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
             <GiLightningTrio size={16} aria-hidden className="shrink-0 text-dnd-gold-bright" />
@@ -107,6 +118,12 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
               <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
                 loading={acBoost.isPending} onClick={() => acBoost.mutate()}>
                 {t('character.turn.bardic_die_ac')}
+              </Button>
+            )}
+            {canExtend && (
+              <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
+                loading={extend.isPending} onClick={() => extend.mutate(s.feature_key as string)}>
+                {t('character.turn.extend_rage_save')}
               </Button>
             )}
             {/* L'interdizione e la Saturazione Magica le chiude solo il riposo lungo: il server rifiuta, qui non si offre */}

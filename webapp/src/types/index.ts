@@ -121,6 +121,8 @@ export interface Ability {
   action_type?: ActionType | null
   /** Il «Usa» passa da POST /features/{key}/use (cura, stato, azione extra) invece di scalare solo il contatore. */
   has_on_use?: boolean
+  /** Il «Usa» ora non costa nulla e si può fare (prolungare l'Ira): acceso anche a 0 usi. Lo decide il server. */
+  free_use?: boolean
   /** Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): si chiede a chi (R38). */
   gives_to_ally?: boolean
   /** Valori della scelta `mode` rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi. */

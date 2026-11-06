@@ -5,11 +5,11 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import type { CharacterFull } from '@/types'
 
-const { bardicDieAc, toastInfo, toastError, endActiveState, notifyMutationError } = vi.hoisted(() => ({
-  bardicDieAc: vi.fn(), toastInfo: vi.fn(), toastError: vi.fn(), endActiveState: vi.fn(), notifyMutationError: vi.fn(),
+const { bardicDieAc, featureUse, toastInfo, toastError, endActiveState, notifyMutationError } = vi.hoisted(() => ({
+  bardicDieAc: vi.fn(), featureUse: vi.fn(), toastInfo: vi.fn(), toastError: vi.fn(), endActiveState: vi.fn(), notifyMutationError: vi.fn(),
 }))
 vi.mock('@/api/client', () => ({
-  api: { characters: { endActiveState, bardicDieAc } },
+  api: { characters: { endActiveState, bardicDieAc, featureUse } },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
@@ -143,6 +143,22 @@ describe('ActiveStatesBar', () => {
       [],
     )} />)
     expect(screen.getByText(/character\.turn\.divine_failure/)).toBeInTheDocument()
+  })
+})
+
+describe('ActiveStatesBar, rage extension', () => {
+  const extendable = { id: 1, name: 'Ira', feature_key: 'barbarian.rage', use_choices: [{ key: 'extend_via', optional: true, options: [] }] }
+
+  it('offers the forced-save extension next to the rage when the server says it can be extended, without the bonus action section', async () => {
+    featureUse.mockResolvedValue({})
+    renderWithProviders(<ActiveStatesBar char={char([{ ...rage, data: {} }], [extendable])} />)
+    await userEvent.click(screen.getByText('character.turn.extend_rage_save'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.rage', 1, { extend_via: 'save' }))
+  })
+
+  it('offers nothing when the server does not list the extension choice (level 15 or another class)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([{ ...rage, data: {} }], [{ ...extendable, use_choices: [] }])} />)
+    expect(screen.queryByText('character.turn.extend_rage_save')).not.toBeInTheDocument()
   })
 })
 

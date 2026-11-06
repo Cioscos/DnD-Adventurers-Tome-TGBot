@@ -46,7 +46,7 @@ const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bon
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
 const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
-const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'primeval_awareness', 'vanish_hide',
+const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'revivification_other', 'primeval_awareness', 'vanish_hide',
   'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
@@ -360,8 +360,8 @@ export default function Turn() {
     } else {
       const ab = c.abilities.find((a) => String(a.id) === e.id)
       if (ab && (ab.max_uses ?? 0) > 0) {
-        // Con lo stato del privilegio già attivo l'uso può essere un prolungamento senza costo (Ira 2024): decide il server.
-        const running = (c.active_states ?? []).some((s) => s.feature_key === ab.feature_key)
+        // Un uso che non costa nulla (prolungare l'Ira 2024) resta possibile a 0 usi: lo dice il server.
+        const running = !!ab.free_use
         // Un uso finito si ripristina spendendo un uso di un'altra risorsa (Presenza Intimidatoria): l'interruttore c'è solo allora.
         const restorable = !!ab.use_toggles?.some((x) => x.key === 'restore')
         const usable = running || restorable

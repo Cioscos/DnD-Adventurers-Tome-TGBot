@@ -113,6 +113,14 @@ async def build_character_response(
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         ab.ally_modes = list(on_use.ally_modes) if on_use else []
         ab.use_panel = on_use.panel if on_use else None
+        # Un uso gratuito nasce solo con lo stato del privilegio già attivo (prolungare l'Ira 2024); gli altri `cost_by` chiedono
+        # parametri (il livello dello slot) che qui non ci sono: non sono un uso libero.
+        if on_use and on_use.cost_by and owner is not None and any(s.get("feature_key") == ab.feature_key for s in char.active_states or []):
+            free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
+            try:
+                ab.free_use = on_use.cost_by(free_ctx, {}) == 0 and (on_use.available is None or bool(on_use.available(free_ctx)))
+            except KeyError:
+                ab.free_use = False
         if on_use and on_use.spends:
             held = pool_key(char, on_use.spends)
             pool = next((a for a in response.abilities if a.feature_key == held), None)

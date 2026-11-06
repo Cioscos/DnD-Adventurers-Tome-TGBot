@@ -441,6 +441,9 @@ class RollOptionSpec:
     # Quante opzioni del gruppo si possono scegliere insieme: ``f(ctx) -> n`` (Colpo Brutale: 1 effetto, 2 dal 17°); default 1
     group_max: "Callable[[RuleContext], int] | None" = None
     dice_cost: int = 0
+    # Scelta ``before`` che apre opzioni ``after_hit`` oggi non in elenco (Attacco Irruento → Frenesia, Colpo Brutale):
+    # il client fa aspettare il danno anche se nessun'altra opzione lo rinvia.
+    defers_damage: bool = False
     crit_doubles: bool = True
     separate_damage: bool = False
     on_confirm: "Callable[[Any, RuleContext, dict], None] | None" = None

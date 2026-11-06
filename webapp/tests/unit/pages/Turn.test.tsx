@@ -394,14 +394,20 @@ describe('Turn page', () => {
     })
   })
 
-  it('keeps the use button for a feature whose state is active with no uses left: extending the rage costs nothing', async () => {
+  it('keeps the use button on at zero uses only when the server says the use is free: extending the rage costs nothing', async () => {
     const rage = { id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
       feature_key: 'barbarian.rage', max_uses: 3, uses: 0, action_type: 'bonus_action', restoration_type: 'long_rest' }
+    const state = { key: 'rage', feature_key: 'barbarian.rage', rounds_left: 100 }
     getChar.mockResolvedValue({ ...char, abilities: [rage] })
     const { unmount } = renderWithProviders(<Turn />)
     expect(await screen.findByText('character.turn.no_uses')).toBeDisabled()
     unmount()
-    getChar.mockResolvedValue({ ...char, abilities: [rage], active_states: [{ key: 'rage', feature_key: 'barbarian.rage', rounds_left: 100 }] })
+    // Un'altra classe (Ira 2014) con lo stato attivo: costa un uso, il server non dichiara l'uso libero e il pulsante resta spento
+    getChar.mockResolvedValue({ ...char, abilities: [rage], active_states: [state] })
+    const { unmount: unmountOther } = renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.no_uses')).toBeDisabled()
+    unmountOther()
+    getChar.mockResolvedValue({ ...char, abilities: [{ ...rage, free_use: true }], active_states: [state] })
     featureUse.mockClear()
     renderWithProviders(<Turn />)
     await userEvent.click(await screen.findByText('character.turn.use'))

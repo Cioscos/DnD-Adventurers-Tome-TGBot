@@ -142,7 +142,10 @@ def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
         key = pending_key(cls)
         mine = [c for c in pending if c.get("class_key") == key]
         done_now = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()
+        # Solo lo scambio: il Dono Epico in sospeso (2024 → 2014) diventa l'ASI. Mai una scelta nuova a chi non cambia edizione
+        # (personaggi 2014 importati o senza il segno `asi:19`: l'ASI non è stato guadagnato).
         if (edition == "2014" and cls.level >= 19 and 19 in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT)
+                and any(c.get("class_key") == key and c.get("kind") == "epic_boon" for c in pending)
                 and "asi:19" not in done_now and not any(c.get("class_key") == key and c.get("kind", "asi") == "asi" and c.get("level") == 19 for c in out)):
             out.append({"id": uuid.uuid4().hex, "kind": "asi", "class_key": key, "level": 19, "created_at": _now()})
         # Dono Epico: 2024, livello di classe 19+, finché non risolto

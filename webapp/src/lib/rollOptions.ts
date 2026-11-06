@@ -146,6 +146,9 @@ export async function askRollOptions(
   const defer = phase === 'before' && query.roll === 'attack' && query.spell_id === undefined
     && defersDamage(listed)
   const base: RollChoice = { options: [], option_inputs: {}, ...(defer ? { defer_damage: true } : {}) }
+  const attackQuery = phase === 'before' && query.roll === 'attack' && query.spell_id === undefined
+  // Una scelta che apre opzioni dopo il colpo (Attacco Irruento) fa aspettare il danno anche se ora non ce ne sono.
+  const defersBy = (chosen: string[]) => attackQuery && listed.some((o) => o.defers_damage && chosen.includes(o.key))
   const inPhase = context?.fumble ? [] : listed.filter((o) => o.phase === phase)
   // `needs` di un'altra fase: il server lo azzera se è già confermata, altrimenti l'opzione non si può scegliere.
   const options = inPhase.filter((o) => !o.needs || inPhase.some((p) => p.key === o.needs))
@@ -159,7 +162,7 @@ export async function askRollOptions(
   const withRanged = (chosen: string[]): { ranged?: true } => (listed.some((o) => chosen.includes(o.key) && o.ranged_unarmed) ? { ranged: true } : {})
   if (context?.preset) {
     const chosen = context.preset.filter((k) => options.some((o) => o.key === k))
-    return { ...base, options: chosen, ...withSlot(chosen), ...withRanged(chosen) }
+    return { ...base, options: chosen, ...(defersBy(chosen) ? { defer_damage: true } : {}), ...withSlot(chosen), ...withRanged(chosen) }
   }
   if (options.length === 0 && afterRoll.length === 0 && !context?.keepOpen) return base
   return new Promise((resolve) => {
@@ -168,7 +171,7 @@ export async function askRollOptions(
         options, afterRoll, phase, context,
         answer: (answer) => {
           usePromptStore.setState({ request: null })
-          resolve({ ...answer, ...(defer ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options) })
+          resolve({ ...answer, ...(defer || defersBy(answer.options) ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options) })
         },
       },
     })

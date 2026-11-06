@@ -230,6 +230,8 @@ class AbilityRead(BaseModel):
     # Testi liberi da scrivere all'uso (nome di un'identità, di un incantesimo rubato): `[{key, label, max_len, optional}]`
     use_texts: list[dict[str, Any]] = []
     use_panel: Optional[str] = None
+    # L'uso ora non costa nulla e si può fare (prolungare l'Ira 2024): il «Usa» resta acceso anche a 0 usi; lo decide il server
+    free_use: bool = False
     # Usi che restano al privilegio di cui questo spende gli usi (Preservare Vita: la riserva di Incanalare Divinità)
     spends_left: Optional[int] = None
     # Riga di riserva a catalogo (Incanalare Divinita): solo contatore, l'uso passa dai privilegi che la spendono

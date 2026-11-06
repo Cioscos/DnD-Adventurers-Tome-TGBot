@@ -23,7 +23,10 @@ async def test_only_the_catalog_pool_rows_are_marked_as_pools(client):
     cleric = await _cleric(client, 5, "life")
     assert (await _ability(client, cleric, POOL))["is_pool"] is True
     assert (await _ability(client, cleric, "cleric.preserve_life"))["is_pool"] is False
-    # una classe ancora su CLASS_RESOURCES (il Guerriero ha il catalogo dal Task 23): la riga automatica resta usabile
+
+
+async def test_an_automatic_row_of_a_class_without_catalog_stays_usable(client, rules_catalog):
+    rules_catalog()  # registro vuoto: nessuna classe ha un catalogo, ognuna resta su CLASS_RESOURCES (non dipende dai task futuri)
     r = await client.post("/characters", json={"name": "Mago", "initial_class": {"class_name": "wizard", "level": 3}})
     recovery = await _ability(client, r.json()["id"], "wizard.arcane_recovery")
     assert recovery is not None and recovery["is_pool"] is False and recovery["has_on_use"] is False

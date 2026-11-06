@@ -60,6 +60,23 @@ async def test_reckless_attack_gives_strength_attacks_advantage_until_the_next_t
     assert (await _attack(client, cid, sword))["mode_applied"] == "normal"  # nuovo turno: va deciso di nuovo
 
 
+async def test_reckless_attack_advantage_survives_another_creatures_turn(client):
+    """«Fino all'inizio del tuo turno seguente»: il turno di un altro non lo tocca (I1)."""
+    cid, sword = await _armed(client, 5)
+    await _attack(client, cid, sword, options=[RECKLESS])
+    assert (await client.post(f"/characters/{cid}/turn/other")).status_code == 200
+    assert (await _attack(client, cid, sword))["mode_applied"] == "advantage"
+    await _new_turn(client, cid)
+    assert (await _attack(client, cid, sword))["mode_applied"] == "normal"
+
+
+async def test_reckless_attack_and_brutal_strike_ask_the_client_to_defer_the_damage(client):
+    """Frenesia e gli effetti del Colpo Brutale arrivano dopo il colpo: il client deve saperlo prima (C1)."""
+    cid, sword = await _armed(client, 17, "berserker")
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": sword})).json()
+    assert {o["key"] for o in listed if o.get("defers_damage")} == {RECKLESS, BRUTAL}
+
+
 async def test_reckless_attack_advantage_also_covers_thrown_strength_attacks(client):
     cid, sword = await _armed(client, 5)
     javelin = await _weapon(client, cid, "Giavellotto", None, properties=["thrown"], damage_dice="1d6")

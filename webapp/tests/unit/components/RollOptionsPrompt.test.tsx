@@ -84,6 +84,19 @@ describe('askRollOptions', () => {
     await expect(askRollOptions(1, { roll: 'attack', spell_id: 3 })).resolves.toEqual({ options: [], option_inputs: {} })
   })
 
+  it('a chosen before option that opens after-hit effects defers the damage even if none is listed yet', async () => {
+    rollOptions.mockResolvedValue([option({ key: 'reckless', label: 'Attacco Irruento?', defers_damage: true }), option({ key: 'other', label: 'Altra?' })])
+    renderWithProviders(<RollOptionsHost />)
+    const chosen = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Attacco Irruento?' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(chosen).resolves.toMatchObject({ options: ['reckless'], defer_damage: true })
+    const other = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Altra?' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(other).resolves.toEqual({ options: ['other'], option_inputs: {} })
+  })
+
   it('opens with nothing selected: the confirmation is never silent', async () => {
     rollOptions.mockResolvedValue([option()])
     renderWithProviders(<RollOptionsHost />)

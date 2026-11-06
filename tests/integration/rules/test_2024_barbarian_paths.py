@@ -272,7 +272,7 @@ async def test_vitality_surge_gives_temporary_hit_points_equal_to_the_level_with
 
 async def test_other_paths_get_no_temporary_hit_points_from_the_rage(client):
     cid = await _barbarian(client, 5, BERSERKER)
-    assert (await _rage(client, cid)).json()["temp_hp"] in (None, 0)
+    assert (await _rage(client, cid)).json()["temp_hp"] is None  # niente toast «PF temporanei: 0» (I5)
     assert (await _full(client, cid))["temp_hp"] == 0
 
 
@@ -477,14 +477,37 @@ async def test_the_divine_form_gives_flight_and_resistance_and_ends_at_zero_hit_
 
 async def test_revivification_spends_a_rage_use_in_the_divine_form_only(client):
     cid = await _barbarian(client, 14, ZEALOT)
-    assert (await _use(client, cid, "revivification")).status_code == 409  # niente forma
+    assert (await _use(client, cid, "revivification", params={"mode": "other"})).status_code == 409  # niente forma
     await _rage(client, cid, divine_form=True)
     before = await _spent(client, cid)
-    r = await _use(client, cid, "revivification")
+    other = {"params": {"mode": "other"}}
+    r = await _use(client, cid, "revivification", **other)
     assert r.status_code == 200, r.text
     assert r.json()["given"] == 14 and await _spent(client, cid) == before - 1
     assert (await _turn(client, cid))["reaction_used"] is True
-    assert (await _use(client, cid, "revivification")).status_code == 409  # la reazione è già spesa
+    assert (await _use(client, cid, "revivification", **other)).status_code == 409  # la reazione è già spesa
+
+
+async def test_intimidating_presence_while_raging_extends_the_rage_as_a_forced_save_would(client):
+    """Il TS imposto è un prolungamento dell'Ira anche quando lo impone Presenza Intimidatoria (I3)."""
+    cid = await _barbarian(client, 14, BERSERKER)
+    assert (await _rage(client, cid)).status_code == 200
+    await _new_turn(client, cid)  # l'Ira appena nata perde il segno `fresh`
+    assert (await _use(client, cid, "intimidating_presence")).status_code == 200
+    await _new_turn(client, cid)  # nessun attacco, ma c'è stato un TS imposto
+    assert any(s["key"] == "rage" for s in await _states(client, cid))
+    await _new_turn(client, cid)  # il turno dopo, senza nulla: finisce
+    assert not any(s["key"] == "rage" for s in await _states(client, cid))
+
+
+async def test_intimidating_presence_without_the_rage_does_not_mark_an_extension(client):
+    cid = await _barbarian(client, 14, BERSERKER)
+    assert (await _use(client, cid, "intimidating_presence")).status_code == 200
+    await _new_turn(client, cid)  # l'azione bonus è di nuovo libera
+    assert (await _rage(client, cid)).status_code == 200
+    await _new_turn(client, cid)
+    await _new_turn(client, cid)
+    assert not any(s["key"] == "rage" for s in await _states(client, cid))
 
 
 async def test_zealot_features_need_the_recognised_subclass(client):

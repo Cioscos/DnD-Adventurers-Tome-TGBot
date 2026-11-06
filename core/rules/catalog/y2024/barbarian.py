@@ -13,7 +13,7 @@ from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import (
     INCAPACITATING, attacks_made, feature, heavy_armor, once_used, skill_label, state_on,
 )
-from core.rules.catalog.y2014.barbarian import RETALIATION, _reckless_confirmed, rage_damage
+from core.rules.catalog.y2014.barbarian import RETALIATION, rage_damage
 from core.rules.states import begin_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
@@ -165,6 +165,12 @@ def _rage_effect(ctx: RuleContext, params: dict) -> None:
         begin_state(ctx.char, StateSpec("divine_form", rounds=10, ends_on=("unconscious", "manual")), GODS, "Ira degli Dei")
 
 
+def _extends_the_rage(ctx: RuleContext, _params: dict) -> None:
+    """Un TS imposto a un nemico prolunga l'Ira: lo fa anche Presenza Intimidatoria (la scheda lo elenca fra i prolungamenti)."""
+    if state_on(ctx, "rage"):
+        ctx.char.turn_state = {**(ctx.char.turn_state or {}), EXTENDED: True}
+
+
 def _rage_message(ctx: RuleContext, params: dict) -> dict[str, str] | None:
     """Ciò che l'attivazione concede e l'app non può fare da sola: movimenti e azioni (D1)."""
     if not (_rage_opt(ctx, "fresh")):
@@ -220,12 +226,17 @@ RAGE_USE = OnUse(
 # Opzioni al tiro
 # ---------------------------------------------------------------------------
 
+def _reckless_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    """Fino all'inizio del TUO turno seguente: lo stato finisce al «nuovo turno» di chi lo porta, non a quello di un altro."""
+    begin_state(ctx.char, StateSpec("reckless", rounds=1, ends_on=("new_turn",), data={"others": [RECKLESS]}), RECKLESS, "Attacco Irruento")
+
+
 RECKLESS_ATTACK = RollOptionSpec(
     key=RECKLESS, phase="before", rolls=("attack",), mode="advantage", once_per_turn=True,
     label=_both("Attacco Irruento: vantaggio ai tiri con Forza, ma gli attacchi contro di te hanno vantaggio",
                 "Reckless Attack: advantage on Strength attacks, but attacks against you have advantage"),
     available=lambda c: _strength_attack(c) and attacks_made(c) == 0,  # va deciso al primo tiro per colpire del turno
-    on_confirm=_reckless_confirmed,
+    on_confirm=_reckless_confirmed, defers_damage=True,  # apre Frenesia e Colpo Brutale, dopo il colpo
 )
 
 
@@ -245,7 +256,7 @@ BRUTAL_STRIKE = RollOptionSpec(
     extra_dice=lambda c, _i: "2d10" if c.class_level >= 17 else "1d10",
     label=_both("Colpo Brutale: rinunci al vantaggio, +1d10 danni (2d10 dal 17°) se colpisci e un effetto",
                 "Brutal Strike: forgo advantage for +1d10 damage (2d10 from 17th) on a hit and an effect"),
-    available=lambda c: _strength_attack(c) and _no_disadvantage(c),
+    available=lambda c: _strength_attack(c) and _no_disadvantage(c), defers_damage=True,  # gli effetti si scelgono dopo il colpo
 )
 
 
@@ -496,7 +507,7 @@ FEATURES = (
              "On your first attack roll of the turn: advantage on Strength attacks until your next turn, but attacks against you have advantage."),
             roll_options=(RECKLESS_ATTACK,),
             modifiers=(Modifier("advantage", 1, source=f"feature:{RECKLESS}",
-                                when=lambda c: c.roll == "attack" and _strength_attack(c) and _reckless_declared(c)),)),
+                                when=lambda c: c.roll == "attack" and _strength_attack(c) and state_on(c, "reckless")),)),  # dura fino al TUO turno seguente
     feature("subclass", CK, ED, 3, "Sottoclasse del Barbaro / Barbarian Subclass (Barbaro 3, pag. 52)",
             ("Sottoclasse del Barbaro", "Barbarian Subclass"),
             ("Al 3° livello si sceglie il Cammino del Berserker, del Cuore Selvaggio, dell'Albero del Mondo o dello Zelota.",
@@ -594,7 +605,7 @@ FEATURES = (
             ("Azione bonus: chi scegli entro 9 m fa un TS Saggezza (CD 8 + Forza + competenza) o è Spaventato 1 minuto. Si ripristina spendendo un uso di Ira.",
              "Bonus action: creatures you choose within 30 ft make a Wisdom save (DC 8 + Strength + proficiency) or are Frightened for 1 minute. Restore it by spending a Rage use."),
             "bonus_action", subclass="berserker", uses=Uses(table={14: 1}), restoration="long_rest",
-            on_use=OnUse(slot="bonus", target_effect=_intimidation, alt_spends=RAGE, alt_param="restore", toggles=(
+            on_use=OnUse(slot="bonus", target_effect=_intimidation, effect=_extends_the_rage, alt_spends=RAGE, alt_param="restore", toggles=(
                 UseToggle("restore", _both("Ripristina spendendo un uso di Ira", "Restore by spending a Rage use"),
                           available=_depleted(f"{CK}.intimidating_presence")),))),
 
@@ -755,7 +766,13 @@ FEATURES = (
             ("Reazione nella forma divina: spendi un uso di Ira e una creatura entro 9 m che scenderebbe a 0 PF passa a PF pari al tuo livello da barbaro.",
              "Reaction in the divine form: spend a Rage use and a creature within 30 ft that would drop to 0 HP instead has HP equal to your Barbarian level."),
             "reaction", subclass="zealot",
-            on_use=OnUse(slot="reaction", spends=RAGE, available=_in_form, gives=lambda c, _r: c.class_level)),
+            on_use=OnUse(slot="reaction", spends=RAGE, available=_in_form,
+                          # R42/R46, come l'Imposizione delle Mani: la cura va a un partecipante della serata (verificato dal server)
+                          heal=lambda c, _r: c.class_level, heal_when=lambda _c, _p: False,
+                          heal_ally_when=lambda _c, _p: True, ally_modes=("other",),
+                          notes=lambda _c, p: ["revivification_other"] if p.get("target_character_id") is None else [],
+                          choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: ["other"],
+                                             lambda _k: _both("Un'altra creatura", "Another creature")),))),
 
     feature("multiclassing", CK, ED, 1, "Multiclasse: Barbaro / Multiclassing: Barbarian (Barbaro, pag. 51; Multiclassing, pag. 44)",
             ("Multiclasse: Barbaro", "Multiclassing: Barbarian"),

@@ -133,6 +133,8 @@ export type RollOption = {
   keep_rolled?: boolean
   /** Lancio a distanza senz'armi (Deviare Proiettili): mai con l'arma impugnata. */
   ranged_unarmed?: boolean
+  /** Scelta prima del tiro, apre opzioni dopo il colpo che ora non sono in elenco: il danno aspetta. */
+  defers_damage?: boolean
 }
 
 /** Un risultato della tabella degli Impulsi di Magia Selvaggia (d100). */
