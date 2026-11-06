@@ -27,6 +27,21 @@ describe('spellPickFilter', () => {
     expect(rows.some((s) => s.level === 4)).toBe(false)
   })
 
+  it('an exact-level pick (Mystic Arcanum) offers only spells of that level', async () => {
+    const spells = await loadCatalog('spells')
+    const rows = spells.filter(spellPickFilter({ max_level: 6, exact: true }))
+    expect(rows.length).toBeGreaterThan(5)
+    expect(rows.every((s) => s.level === 6)).toBe(true)
+  })
+
+  it('a ritual pick (Book of Ancient Secrets) offers only first-level rituals', async () => {
+    const spells = await loadCatalog('spells')
+    const rows = spells.filter(spellPickFilter({ max_level: 1, exact: true, ritual: true }))
+    expect(rows.some((s) => s.index === 'detect-magic')).toBe(true)
+    expect(rows.every((s) => s.level === 1 && s.ritual)).toBe(true)
+    expect(rows.some((s) => s.index === 'magic-missile')).toBe(false)
+  })
+
   it('a list that the catalogue does not know leaves only the level limit', () => {
     const odd = { index: 'x', level: 0, classes: undefined } as unknown as SpellEntry
     expect(spellPickFilter({ max_level: 0, list: 'druid' })(odd)).toBe(false)

@@ -331,5 +331,11 @@ def apply_feature_grants(char: Any, lang: str = "it") -> None:
         merge_grant(char, ProficiencyGrant(armor=tuple(grants.get("armor", ())),
                                            weapons=tuple(grants.get("weapons", ())),
                                            tools=tuple(grants.get("tools", ()))), lang)
+        if grants.get("skills"):  # abilità: competenza, mai una maestria che scende (Influenza Seducente)
+            skills = dict(char.skills or {})
+            for slug in grants["skills"]:
+                if skills.get(slug) != "expert":
+                    skills[slug] = True
+            char.skills = skills
         done.append(spec.key)
         char.settings = {**(char.settings or {}), FEATURE_GRANTS_KEY: done}

@@ -228,6 +228,7 @@ class UseResult:
     targets: list[str] = field(default_factory=list)  # chiavi per ``POST /target-effects``
     given: int | None = None  # valore da dare a un altro (``OnUse.gives``): l'app lo mostra e non scrive nulla
     received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): ``{name, healed}``
+    temp_hp: int | None = None  # PF temporanei che il privilegio ha dato a chi lo usa (il maggiore fra attuali e nuovi)
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -352,6 +353,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.heal:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]
+    if on_use.temp_hp:  # i PF temporanei non si sommano: vale il maggiore
+        result.temp_hp = max(0, on_use.temp_hp(ctx, sum(result.rolls)))
+        char.temp_hp = max(char.temp_hp or 0, result.temp_hp)
     if on_use.ends_concentration:
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)

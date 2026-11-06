@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from core.db.models import Character, CharacterClass, CharacterHistory, Spell, SpellSlot
+from core.db.models import Ability, Character, CharacterClass, CharacterHistory, Spell, SpellSlot
 from api.schemas.character import CharacterFull, SpellAttackResult
 from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode
 from api.schemas.spell import (
@@ -50,8 +50,9 @@ from api.schemas.item import WeaponAttackResult
 from api.services.last_damage import damage_parts, last_damage_total, pairs, regroup
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
-from api.services.rules_states import remove_state
+from api.services.rules_states import _spend_atomically, remove_state
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
+from core.rules.pact_casts import pact_cast
 from core.rules.states import free_cast_state
 from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
@@ -134,19 +135,24 @@ def _check_class(char: Character, class_id: int | None) -> None:
         raise HTTPException(status_code=400, detail={"code": "bad_class"})
 
 
-def _pick_slot(char: Character, spell: Spell, slot_id: int | None, slot_level: int | None) -> SpellSlot:
-    """``slot_id`` sceglie il pool. Col solo livello: la prima riga con posto, gli slot normali prima del patto."""
+def _pick_slot(char: Character, spell: Spell, slot_id: int | None, slot_level: int | None,
+               pact_only: bool = False) -> SpellSlot:
+    """``slot_id`` sceglie il pool. Col solo livello: la prima riga con posto, gli slot normali prima del patto.
+    ``pact_only``: solo uno slot di Patto (le suppliche «una volta con uno slot da warlock»), 409 ``pact_slot_required``."""
     if slot_id is not None:
         slot = next((s for s in char.spell_slots if s.id == slot_id), None)
         if slot is None:
             raise HTTPException(status_code=400, detail="Slot not found")
+        if pact_only and not slot.is_pact:
+            raise HTTPException(status_code=409, detail={"code": "pact_slot_required"})
         slot_level = slot.level
     elif slot_level is None:
         raise HTTPException(status_code=400, detail="slot_level is required")
     if slot_level < spell.level:
         raise HTTPException(status_code=400, detail={"code": "slot_too_low"})
     if slot_id is None:
-        rows = sorted((s for s in char.spell_slots if s.level == slot_level), key=lambda s: bool(s.is_pact))
+        rows = sorted((s for s in char.spell_slots if s.level == slot_level and (s.is_pact or not pact_only)),
+                      key=lambda s: bool(s.is_pact))
         if not rows:
             raise HTTPException(status_code=400, detail=f"No slot configured for level {slot_level}")
         slot = next((s for s in rows if s.available > 0), rows[0])
@@ -193,19 +199,32 @@ def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
     silent: bool = False,
-) -> None:
+) -> Ability | None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
     Condiviso da /use e /attack. Una regola violata e non confermata risponde 409 ``cast_confirm`` prima di spendere.
+    Restituisce la riga del privilegio il cui uso il lancio spende (Arcanum Mistico, suppliche a uso singolo): lo spende
+    il chiamante con ``_charge_pact_use``, con un UPDATE condizionato.
     """
     ki_pool, ki_total = _ki_payment(char, spell, ritual, free_cast, ki_extra) if ki else (None, 0)
     free_state = None
     free_at_will = False
+    pact = pact_cast(char, spell) if not ritual and not ki and spell.level >= 1 else None
+    arcanum = None  # Arcanum Mistico: senza slot, spende l'uso della sua riga
     if free_cast:  # R43: serve uno stato attivo (o un privilegio a volontà) per questo incantesimo; costa l'azione, non uno slot
         free_state = free_cast_state(char, spell)
         free_at_will = free_state is None and at_will(char, spell)
-        if (free_state is None and not free_at_will) or ritual:
+        arcanum = pact if pact is not None and pact.kind == "arcanum" and free_state is None and not free_at_will else None
+        if (free_state is None and not free_at_will and arcanum is None) or ritual:
             raise HTTPException(status_code=409, detail={"code": "free_cast_unavailable"})
+    # Suppliche a uso singolo: lo slot è di Patto e il lancio spende l'uso. Tutti i rifiuti vengono prima di spendere.
+    invocation = pact if pact is not None and pact.kind == "invocation" and not free_cast else None
+    pact_row = None
+    if arcanum is not None or invocation is not None:
+        used = arcanum or invocation
+        pact_row = next((a for a in char.abilities if a.feature_key == used.feature_key), None)
+        if pact_row is None or (pact_row.uses or 0) < 1:
+            raise HTTPException(status_code=409, detail={"code": "no_uses"})
     if ritual:
         # Lancio rituale: +10 min, nessuno slot. Richiede il tag ritual e chi può celebrarlo per edizione.
         if not spell.is_ritual:
@@ -214,7 +233,8 @@ def _consume_cast(
             raise HTTPException(
                 status_code=400, detail="No class with Ritual Casting"
             )
-    slot = None if ritual or free_cast or ki or spell.level == 0 else _pick_slot(char, spell, slot_id, slot_level)
+    slot = None if ritual or free_cast or ki or spell.level == 0 else _pick_slot(
+        char, spell, slot_id, slot_level, pact_only=invocation is not None)
     missing = [w for w in cast_warnings(char, spell, ritual) if w not in (confirm or [])]
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
@@ -225,6 +245,10 @@ def _consume_cast(
         ki_pool.uses = (ki_pool.uses or 0) - ki_total
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} con {ki_total} ki",
                      meta={"ki": ki_total, "slot_level": spell.level + ki_extra})
+    elif arcanum is not None:
+        spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
+        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} (Arcanum Mistico)",
+                     meta={"slot_level": spell.level, "arcanum": True})
     elif free_at_will:
         spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
@@ -252,6 +276,14 @@ def _consume_cast(
 
     if spell.is_concentration:
         start_concentration(char, spell.id, parse_duration_rounds(spell.duration))
+    return pact_row
+
+
+async def _charge_pact_use(session: AsyncSession, row: Ability | None) -> None:
+    """Spende l'uso del privilegio con un UPDATE condizionato: due lanci insieme non spendono lo stesso uso (409 ``no_uses``,
+    e l'errore annulla tutto il lancio)."""
+    if row is not None:
+        await _spend_atomically(session, row, 1)
 
 
 @router.get("/{char_id}/spells", response_model=list[SpellRead])
@@ -288,7 +320,7 @@ async def add_spell(
     _check_class(char, body.class_id)
     pick = None
     if body.pick_id:  # Segreti Magici: l'incantesimo è di qualsiasi classe e passa alla classe del bardo
-        pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index)
+        pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index, body.is_ritual)
         body.class_id = pick[0].id
     if body.is_prepared and body.level >= 1 and not body.always_prepared:
         _ensure_prepare_capacity(char, body.class_id)
@@ -374,8 +406,9 @@ async def use_spell(
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
 
-    _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
-                  body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []))
+    await _charge_pact_use(session, _consume_cast(
+        session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
+        body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or [])))
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual))
     rolls, total = roll_option_dice(char, opts)
@@ -423,8 +456,8 @@ async def spell_attack(
     if body.with_inspiration:
         spend_inspiration_reroll(char)
     else:
-        _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
-                      silent=SUBTLE_KEY in (body.cast_options or []))
+        await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
+                                                      silent=SUBTLE_KEY in (body.cast_options or [])))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,

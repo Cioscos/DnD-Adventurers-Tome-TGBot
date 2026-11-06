@@ -482,7 +482,8 @@
       "blindsight": "Blindsight",
       "blindsense": "Blindsense",
       "truesight": "Truesight",
-      "tremorsense": "Tremorsense"
+      "tremorsense": "Tremorsense",
+      "devils_sight": "Devil's Sight"
     },
     "skills": {
       "title": "Skills",
@@ -591,6 +592,9 @@
       "prepared_counter": "Prepared",
       "pick_banner": "Magical Secrets: {{count}} left to choose among the spells of any class, up to level {{max}} (cantrips too). Add them one at a time.",
       "pick_cantrip_banner": "Choose {{count}} cantrip from the druid list. Add it from the catalog.",
+      "pick_exact_banner": "Choose {{count}} spell of level {{level}} from the warlock list. Add it from the catalog.",
+      "pick_ritual_banner": "Choose {{count}} more ritual spell of level {{level}} from any list. Add it from the catalog.",
+      "pick_cantrip_any_banner": "Choose {{count}} cantrip from any list. Add it from the catalog.",
       "pick_filter_note": "The catalog only shows what this choice allows. For a spell that is not listed, fill in the form by hand.",
       "pick_free": "These spells do not count among your known spells.",
       "spell_pick_level": "Level too high: you cannot cast spells of this level yet.",
@@ -877,7 +881,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell", "hurled": "Hurled through Hell", "entropic_ward": "Attack at disadvantage" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -886,7 +890,10 @@
         "abjure_enemy": "Frightened with speed 0 for the whole duration; a creature that passes the save only has its speed halved. Fiends and undead save with disadvantage; a creature immune to being frightened does not save. Ends on the first damage it takes: remove it by hand.",
         "turn_the_unholy": "Turned: it moves away from you as far as it can and will not willingly come within 30 ft; no reactions; as its action only Dash, escaping what holds it or, if it cannot move, Dodge. Ends on the first damage it takes: remove it by hand.",
         "turn_the_faithless": "Turned: it moves away from you as far as it can and will not willingly come within 30 ft; no reactions; as its action only Dash, escaping what holds it or, if it cannot move, Dodge. Its true form is revealed while it lasts. Ends on the first damage it takes: remove it by hand.",
-        "avenging_angel": "Applies the first time an enemy enters the aura (30 ft) or starts its turn there. Frightened for 1 minute or until damaged; attacks against it have advantage. Remove it by hand on the first damage it takes."
+        "avenging_angel": "Applies the first time an enemy enters the aura (30 ft) or starts its turn there. Frightened for 1 minute or until damaged; attacks against it have advantage. Remove it by hand on the first damage it takes.",
+        "repelling_blast": "Pushed up to 10 ft straight away from the warlock.",
+        "hurl_through_hell": "Vanishes into the lower planes until the end of the warlock's next turn, then returns to its space.",
+        "thought_shield": "Takes the same amount of psychic damage it dealt."
       }
     },
     "roll_options": {
@@ -1366,6 +1373,7 @@
       "amount_less": "One use fewer",
       "amount_more": "One use more",
       "use_given": "To give to an ally: {{n}}",
+      "use_temp_hp": "Temporary HP: {{n}}",
       "use_received": "{{name}} regains {{n}} HP.",
       "extra_actions": "Extra actions: {{n}}",
       "use_notes": {
@@ -1390,6 +1398,7 @@
       },
       "use_rolled": "You rolled",
       "use_errors": {
+        "already_chosen": "You already chose for this rest: the choice changes at your next short or long rest.",
         "once_per_turn": "You can use it only once per turn.",
         "no_attack_left": "You have no attack of the Attack action left to give up.",
         "turn_slot_used": "You have already used that action this turn.",

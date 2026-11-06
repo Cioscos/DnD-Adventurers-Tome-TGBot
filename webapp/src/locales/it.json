@@ -482,7 +482,8 @@
       "blindsight": "Vista cieca",
       "blindsense": "Percezione Cieca",
       "truesight": "Vista pura",
-      "tremorsense": "Percezione tellurica"
+      "tremorsense": "Percezione tellurica",
+      "devils_sight": "Vista del Diavolo"
     },
     "skills": {
       "title": "Abilità",
@@ -591,6 +592,9 @@
       "prepared_counter": "Preparati",
       "pick_banner": "Segreti Magici: ancora {{count}} da scegliere fra gli incantesimi di qualsiasi classe, fino al livello {{max}} (anche trucchetti). Aggiungili uno alla volta.",
       "pick_cantrip_banner": "Scegli {{count}} trucchetto dall'elenco del druido. Aggiungilo dal catalogo.",
+      "pick_exact_banner": "Scegli {{count}} incantesimo di {{level}}° livello dall'elenco del warlock. Aggiungilo dal catalogo.",
+      "pick_ritual_banner": "Scegli ancora {{count}} incantesimo rituale di {{level}}° livello da qualsiasi lista. Aggiungilo dal catalogo.",
+      "pick_cantrip_any_banner": "Scegli {{count}} trucchetto da qualsiasi lista. Aggiungilo dal catalogo.",
       "pick_filter_note": "Il catalogo mostra solo ciò che questa scelta ammette. Per un incantesimo che non c'è, compila il modulo a mano.",
       "pick_free": "Questi incantesimi non contano fra quelli conosciuti.",
       "spell_pick_level": "Livello troppo alto: non puoi ancora lanciare incantesimi di questo livello.",
@@ -877,7 +881,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -886,7 +890,10 @@
         "abjure_enemy": "Spaventato e a velocità 0 per tutta la durata; chi supera il TS ha solo la velocità dimezzata. Immondi e non morti tirano con svantaggio; chi è immune allo spavento non tira. Finisce al primo danno subìto: toglilo a mano.",
         "turn_the_unholy": "Scacciato: si allontana da te il più possibile e non entra volontariamente entro 9 m; niente reazioni; come azione solo Scatto, liberarsi da ciò che lo blocca o, se non può muoversi, Schivata. Finisce al primo danno subìto: toglilo a mano.",
         "turn_the_faithless": "Scacciato: si allontana da te il più possibile e non entra volontariamente entro 9 m; niente reazioni; come azione solo Scatto, liberarsi da ciò che lo blocca o, se non può muoversi, Schivata. La sua vera forma si rivela finché dura. Finisce al primo danno subìto: toglilo a mano.",
-        "avenging_angel": "Vale la prima volta che un nemico entra nell'aura (9 m) o vi inizia il turno. Spaventato per 1 minuto o fino al danno; gli attacchi contro di lui hanno vantaggio. Toglilo a mano al primo danno subìto."
+        "avenging_angel": "Vale la prima volta che un nemico entra nell'aura (9 m) o vi inizia il turno. Spaventato per 1 minuto o fino al danno; gli attacchi contro di lui hanno vantaggio. Toglilo a mano al primo danno subìto.",
+        "repelling_blast": "Spinto fino a 3 m in linea retta lontano dal warlock.",
+        "hurl_through_hell": "Scompare nei piani inferiori fino alla fine del prossimo turno del warlock, poi torna nel suo spazio.",
+        "thought_shield": "Subisce lo stesso ammontare di danni psichici che ha inflitto."
       }
     },
     "roll_options": {
@@ -1366,6 +1373,7 @@
       "amount_more": "Un uso in più",
       "use_rolled": "Hai tirato",
       "use_given": "Da dare a un alleato: {{n}}",
+      "use_temp_hp": "PF temporanei: {{n}}",
       "use_received": "{{name}} recupera {{n}} PF.",
       "extra_actions": "Azioni in più: {{n}}",
       "use_notes": {
@@ -1389,6 +1397,7 @@
         "bend_luck_minus": "Piegare la Fortuna: sottrai il d4 tirato dal tiro dell'altra creatura (colpire, prova o TS)."
       },
       "use_errors": {
+        "already_chosen": "Hai già scelto per questo riposo: la scelta si cambia al prossimo riposo, breve o lungo.",
         "once_per_turn": "Puoi usarlo una sola volta per turno.",
         "no_attack_left": "Non hai più attacchi dell'azione Attacco a cui rinunciare.",
         "turn_slot_used": "Hai già usato quell'azione in questo turno.",

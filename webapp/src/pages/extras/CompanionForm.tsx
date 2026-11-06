@@ -19,13 +19,15 @@ interface Props {
   edition: string
   /** Signore delle Bestie 2014: un compagno può essere la bestia del ranger (PF, CA e bonus dal suo livello). */
   isBeastMaster?: boolean
+  /** Patto della Catena 2014: il famiglio può essere anche un imp, uno pseudodrago, un quasit o uno spiritello. */
+  hasPactOfTheChain?: boolean
   pending?: boolean
   onSubmit: (body: CompanionPayload) => void
   onClose: () => void
 }
 
 /** Creation sheet: pick a monster from the SRD catalogue or type the stats by hand. Warnings are advisory. */
-export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMaster, pending, onSubmit, onClose }: Props) {
+export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMaster, hasPactOfTheChain, pending, onSubmit, onClose }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [kind, setKind] = useState<CompanionKind>('familiar')
@@ -41,7 +43,7 @@ export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMast
   const [rangerBeast, setRangerBeast] = useState(false)
 
   const warnKey = !entry ? null
-    : kind === 'familiar' ? familiarWarning(entry)
+    : kind === 'familiar' ? familiarWarning(entry, hasPactOfTheChain)
       : kind === 'wild_shape' ? wildShapeWarning(entry, druidLevel, isMoon, edition) : null
 
   const pick = (e: MonsterEntry) => {

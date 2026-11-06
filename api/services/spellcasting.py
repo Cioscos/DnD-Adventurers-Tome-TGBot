@@ -19,9 +19,10 @@ from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
+from core.rules.pact_casts import pact_cast
 from core.rules.spellcasting import (
     at_will, caster_stats, can_ritual, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
-    prepares, school_limit, spell_stats,
+    prepares, school_limit, spell_range_override, spell_stats,
 )
 
 
@@ -31,6 +32,12 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if stats:
             spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
         spell.at_will = at_will(char, spell)
+        if (shown := spell_range_override(char, spell)) is not None:
+            spell.range_area = shown
+        pact = pact_cast(char, spell)
+        if pact is not None:
+            spell.pact_cast = {"kind": pact.kind, "feature_key": pact.feature_key, "pact_only": pact.pact_only,
+                               "uses_left": pact.uses_left}
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

@@ -46,6 +46,8 @@ class SpellRead(BaseModel):
     at_will: bool = False  # un privilegio lo concede a volontà: si lancia senza slot (Mille Forme)
     # Lancio coi punti ki (Arti dell'Ombra, Quattro Elementi): `{cost, max_extra, ki_left, feature_key}`; `None` se non vale
     ki_cast: Optional[dict] = None
+    # Lancio pagato da un privilegio del Warlock (Arcanum Mistico, suppliche a uso singolo): `{kind, feature_key, pact_only, uses_left}`
+    pact_cast: Optional[dict] = None
 
     model_config = {"from_attributes": True}
 

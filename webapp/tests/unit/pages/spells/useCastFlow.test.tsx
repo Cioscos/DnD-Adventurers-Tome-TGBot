@@ -51,8 +51,9 @@ vi.mock('@/components/ui/ConfirmSheet', async () => {
 vi.mock('@/pages/spells/CastSpellModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { onCast: (s: { id: number; level: number }) => void; onCastRitual: () => void; onCastKi?: (extra: number) => void }) =>
-      React.createElement('div', null,
+    default: (p: { availableSlots: unknown[]; freeOnly?: boolean; canFreeCast?: boolean; onCastFree?: () => void; onCast: (s: { id: number; level: number }) => void; onCastRitual: () => void; onCastKi?: (extra: number) => void }) =>
+      React.createElement('div', { 'data-slots': String(p.availableSlots.length), 'data-free-only': String(!!p.freeOnly) },
+        p.canFreeCast ? React.createElement('button', { onClick: p.onCastFree }, 'cast-free') : null,
         React.createElement('button', { onClick: () => p.onCast({ id: 1, level: 3 }) }, 'cast-slot-3'),
         React.createElement('button', { onClick: p.onCastRitual }, 'cast-ritual'),
         p.onCastKi ? React.createElement('button', { onClick: () => p.onCastKi?.(1) }, 'cast-ki-1') : null,
@@ -62,12 +63,13 @@ vi.mock('@/pages/spells/CastSpellModal', async () => {
 vi.mock('@/pages/spells/SpellDamageSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: Spell | null; slotLevel: number | null; kiExtra?: number | null; slotAlreadyConsumed?: boolean; initialCritical?: boolean; onBack?: () => void }) =>
+    default: (p: { spell: Spell | null; slotLevel: number | null; kiExtra?: number | null; freeCast?: boolean; slotAlreadyConsumed?: boolean; initialCritical?: boolean; onBack?: () => void }) =>
       p.spell
         ? React.createElement('div', {
             'data-testid': 'damage-sheet',
             'data-slot': String(p.slotLevel),
             'data-ki': String(p.kiExtra ?? 'none'),
+            'data-free': String(!!p.freeCast),
             'data-consumed': String(!!p.slotAlreadyConsumed),
             'data-critical': String(!!p.initialCritical),
           }, p.onBack ? React.createElement('button', { onClick: p.onBack }, 'damage-back') : null)
@@ -289,6 +291,50 @@ describe('useCastFlow damageless casts', () => {
     expect(sheet).toHaveAttribute('data-ki', '1')
     expect(sheet).toHaveAttribute('data-slot', '2')  // 1° livello + 1 ki in più
     expect(useSpell).not.toHaveBeenCalled()
+  })
+
+  it('an Arcanum Mistico has no slots to choose and is cast free', async () => {
+    useSpell.mockResolvedValue(char)
+    renderFlow({ ...bless, id: 11, name: 'Passo planare', level: 7, pact_cast: { kind: 'arcanum', feature_key: 'warlock.mystic_arcanum_7', pact_only: false, uses_left: 1 } } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    expect(await screen.findByTestId('cast-sheet')).toBeInTheDocument()
+    expect(document.querySelector('[data-free-only="true"]')).not.toBeNull()
+    await userEvent.click(screen.getByText('cast-free'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 11, expect.objectContaining({ free_cast: true, slot_level: null, as_ritual: false })))
+  })
+
+  it('an Arcanum with damage dice waits for the first roll in the damage sheet, free of a slot', async () => {
+    const circle = { ...thunder, id: 12, name: 'Cerchio della morte', level: 6, damage_dice: '8d6',
+      pact_cast: { kind: 'arcanum', feature_key: 'warlock.mystic_arcanum_6', pact_only: false, uses_left: 1 } } as Spell
+    renderFlow(circle)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(await screen.findByText('cast-free'))
+    const sheet = await screen.findByTestId('damage-sheet')
+    expect(sheet).toHaveAttribute('data-free', 'true')
+    expect(sheet).toHaveAttribute('data-slot', '6')
+    expect(useSpell).not.toHaveBeenCalled()
+  })
+
+  it('an Arcanum already used is not offered as a free cast', async () => {
+    renderFlow({ ...bless, id: 13, level: 6, pact_cast: { kind: 'arcanum', feature_key: 'warlock.mystic_arcanum_6', pact_only: false, uses_left: 0 } } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    await screen.findByTestId('cast-sheet')
+    expect(screen.queryByText('cast-free')).toBeNull()
+  })
+
+  it('a once-per-rest invocation offers only the Pact slots', async () => {
+    const mixed = { ...char, spell_slots: [
+      { id: 1, level: 3, total: 2, used: 0, available: 2, is_pact: false },
+      { id: 2, level: 3, total: 1, used: 0, available: 1, is_pact: true }] } as unknown as CharacterFull
+    const slow = { ...bless, id: 14, name: 'Lentezza', level: 3, pact_cast: { kind: 'invocation', feature_key: 'warlock.mire_the_mind', pact_only: true, uses_left: 1 } } as Spell
+    function PactHarness() {
+      const flow = useCastFlow(7, mixed)
+      return (<><button onClick={() => flow.beginCast(slow)}>begin</button>{flow.elements}</>)
+    }
+    renderWithProviders(<PactHarness />, { client: new QueryClient() })
+    await userEvent.click(screen.getByText('begin'))
+    await screen.findByTestId('cast-sheet')
+    expect(document.querySelector('[data-slots="1"]')).not.toBeNull()
   })
 
   it('a spell that is not at will still asks for the slot', async () => {

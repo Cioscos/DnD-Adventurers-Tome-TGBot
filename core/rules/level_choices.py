@@ -42,7 +42,9 @@ def mark_resolved(char: Any, choice: dict) -> None:
 def active_choice_specs(char: Any, cls: Any) -> list:
     """`ChoiceSpec` delle feature della classe valide per edizione e sottoclasse."""
     return [ch for spec in features_for(character_edition(char), class_key(cls))
-            if spec.subclass is None or spec.subclass == cls.subclass_key
+            if (spec.subclass is None or spec.subclass == cls.subclass_key)
+            # la scelta di un'opzione (Patto del Tomo) vale solo a chi ha scelto quell'opzione
+            and (spec.option_group is None or spec.option_key in (cls.options or {}).get(spec.option_group, []))
             for ch in spec.choices]
 
 

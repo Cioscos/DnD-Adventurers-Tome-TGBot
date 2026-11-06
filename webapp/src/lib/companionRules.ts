@@ -9,14 +9,17 @@ const FAMILIAR_FORMS = new Set([
   'rat', 'raven', 'sea-horse', 'spider', 'weasel',
 ])
 
+// Patto della Catena (Warlock 2014): oltre alle forme di trova famiglio, imp, pseudodrago, quasit e spiritello.
+const PACT_CHAIN_FORMS = new Set(['imp', 'pseudodragon', 'quasit', 'sprite'])
+
 type Rule = Pick<MonsterEntry, 'index' | 'type' | 'challenge_rating' | 'speed'>
 
 // Forma Selvatica Elementale (Circolo della Luna 2014, dal 10°): i quattro elementali, senza limiti di GS (mirror di `core/rules/forms.py`).
 const ELEMENTALS = new Set(['air-elemental', 'earth-elemental', 'fire-elemental', 'water-elemental'])
 
 /** i18n key of the advisory warning, or null when the form is allowed. */
-export function familiarWarning(entry: Pick<MonsterEntry, 'index'>): string | null {
-  return FAMILIAR_FORMS.has(entry.index) ? null : 'character.extras.warn.familiar_form'
+export function familiarWarning(entry: Pick<MonsterEntry, 'index'>, hasPactOfTheChain = false): string | null {
+  return FAMILIAR_FORMS.has(entry.index) || (hasPactOfTheChain && PACT_CHAIN_FORMS.has(entry.index)) ? null : 'character.extras.warn.familiar_form'
 }
 
 /** Highest CR a druid can assume: mirrors `core/rules/forms.py` (the server blocks what breaks it).

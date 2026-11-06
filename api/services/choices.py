@@ -154,6 +154,7 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     if (not ids or len(ids) > count or len(set(ids)) != len(ids) or not set(ids) <= set(owned)
             or any((owned[i].srd_index or owned[i].name) in taken for i in ids)
             or any(owned[i].level > _pick_cap(char, cls, ch) for i in ids)  # un trucchetto resta un trucchetto
+            or (ch.spell_exact and any(owned[i].level != ch.spell_level for i in ids))  # un Arcanum è del suo grado
             or (ch.spell_pick == "known" and any(i in free for i in ids))):
         raise _bad("spell_not_known")
     cls.options = {**(cls.options or {}), ch.group: [*taken, *(owned[i].srd_index or owned[i].name for i in ids)]}
@@ -172,7 +173,10 @@ def max_pick_level(char: Character, cls: CharacterClass) -> int:
 
 
 def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
-    """Livello massimo dell'incantesimo di una scelta: quello della classe, o meno se la scelta è di soli trucchetti."""
+    """Livello massimo dell'incantesimo di una scelta: quello della classe, o meno se la scelta è di soli trucchetti.
+    ``spell_exact`` (Arcanum Mistico): il livello della scelta, qualunque siano gli slot della classe."""
+    if ch.spell_exact:
+        return ch.spell_level
     top = max_pick_level(char, cls)
     return top if ch.spell_level is None else min(top, ch.spell_level)
 
@@ -185,19 +189,20 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
     ch = _choice_spec(char, cls, choice.get("group")) if cls else None
     if ch is None or not ch.spell_pick:
         return None
-    info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch), "list": ch.spell_list}
+    info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch), "list": ch.spell_list,
+            **({"exact": True} if ch.spell_exact else {}), **({"ritual": True} if ch.spell_ritual else {})}
     if choice.get("retrofit"):  # R39: gli incantesimi che il personaggio ha già e può dichiarare «già sulla scheda»
         taken = (cls.options or {}).get(ch.group, [])
         free = (char.settings or {}).get(FREE_KNOWN_KEY) or []
         info["owned"] = [{"id": sp.id, "name": sp.name, "level": sp.level} for sp in sorted(char.spells, key=lambda x: (x.level, x.name))
                          if sp.class_id in (None, cls.id) and (sp.srd_index or sp.name) not in taken
-                         and sp.level <= info["max_level"]
+                         and sp.level <= info["max_level"] and (not ch.spell_exact or sp.level == ch.spell_level)
                          and not (ch.spell_pick == "known" and sp.id in free)]
     return info
 
 
 def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int | None, name: str,
-                      srd_index: str | None) -> tuple[CharacterClass, object]:
+                      srd_index: str | None, is_ritual: bool = True) -> tuple[CharacterClass, object]:
     """Controlla che la scelta esista e che l'incantesimo sia ammesso; restituisce classe e ``ChoiceSpec``."""
     choice = next((c for c in char.pending_choices or [] if c.get("id") == pick_id), None)
     cls = _class_by_key(char, choice.get("class_key")) if choice else None
@@ -206,8 +211,10 @@ def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int |
         raise HTTPException(404, detail={"code": "choice_not_found"})
     if class_id is not None and class_id != cls.id:
         raise HTTPException(400, detail={"code": "bad_class"})
-    if level > _pick_cap(char, cls, ch):
+    if level > _pick_cap(char, cls, ch) or (ch.spell_exact and level != ch.spell_level):
         raise HTTPException(422, detail={"code": "spell_pick_level"})
+    if ch.spell_ritual and not is_ritual:
+        raise HTTPException(422, detail={"code": "spell_pick_ritual"})
     lowered = name.strip().lower()
     if any((srd_index and s.srd_index == srd_index) or s.name.strip().lower() == lowered for s in char.spells):
         raise HTTPException(409, detail={"code": "spell_already_known"})

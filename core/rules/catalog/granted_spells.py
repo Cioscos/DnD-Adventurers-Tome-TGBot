@@ -273,6 +273,28 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'banishment': GrantedSpell(
         'banishment', {"it": 'Esilio', "en": 'Banishment'}, 4, '1 azione', '18 m', 'Concentrazione, fino a 1 minuto',
         is_concentration=True, attack_save='SAVE'),
+    # Warlock 2014: suppliche occulte che concedono incantesimi (a volontà o una volta per riposo lungo con uno slot di Patto)
+    'mage-armor': GrantedSpell(
+        'mage-armor', {"it": 'Armatura magica', "en": 'Mage Armor'}, 1, '1 azione', 'Contatto', '8 ore'),
+    'jump': GrantedSpell(
+        'jump', {"it": 'Saltare', "en": 'Jump'}, 1, '1 azione', 'Contatto', '1 minuto'),
+    'levitate': GrantedSpell(
+        'levitate', {"it": 'Levitazione', "en": 'Levitate'}, 2, '1 azione', '18 m', 'Concentrazione, fino a 10 minuti',
+        is_concentration=True, attack_save='SAVE'),
+    'detect-magic': GrantedSpell(
+        'detect-magic', {"it": 'Individuazione del magico', "en": 'Detect Magic'}, 1, '1 azione', 'Personale',
+        'Concentrazione, fino a 10 minuti', is_concentration=True, is_ritual=True),
+    'silent-image': GrantedSpell(
+        'silent-image', {"it": 'Immagine silenziosa', "en": 'Silent Image'}, 1, '1 azione', '18 m',
+        'Concentrazione, fino a 10 minuti', is_concentration=True),
+    'find-familiar': GrantedSpell(
+        'find-familiar', {"it": 'Trova famiglio', "en": 'Find Familiar'}, 1, '1 ora', '3 m', 'Istantanea', is_ritual=True),
+    'bestow-curse': GrantedSpell(
+        'bestow-curse', {"it": 'Scagliare maledizione', "en": 'Bestow Curse'}, 3, '1 azione', 'Contatto',
+        'Concentrazione, fino a 1 minuto', is_concentration=True, attack_save='SAVE'),
+    'compulsion': GrantedSpell(
+        'compulsion', {"it": 'Compulsione', "en": 'Compulsion'}, 4, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto',
+        is_concentration=True, attack_save='SAVE'),
 }
 
 
@@ -391,5 +413,13 @@ _COMPONENTS: dict[str, str] = {
     "bane": "V, S, M",
     "hunters-mark": "V",
     "banishment": "V, S, M",
+    "mage-armor": "V, S, M",
+    "jump": "V, S, M",
+    "levitate": "V, S, M",
+    "detect-magic": "V, S",
+    "silent-image": "V, S, M",
+    "find-familiar": "V, S, M",
+    "bestow-curse": "V, S",
+    "compulsion": "V, S",
 }
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key)) for key, spell in GRANTED_SPELLS.items()}

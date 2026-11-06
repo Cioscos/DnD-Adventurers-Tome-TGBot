@@ -15,6 +15,8 @@ interface CastSpellModalProps {
   /** Autorizzato da uno stato attivo (Lettura del Pensiero): costa l'azione, non uno slot. */
   canFreeCast?: boolean
   onCastFree?: () => void
+  /** Arcanum Mistico: nessuno slot da scegliere, solo il lancio gratuito. */
+  freeOnly?: boolean
   /** Si lancia anche coi punti ki (Arti dell'Ombra, discipline): `extra` ki in più alzano il livello. */
   kiCast?: Spell['ki_cast']
   onCastKi?: (extra: number) => void
@@ -32,6 +34,7 @@ export default function CastSpellModal({
   onCastRitual,
   canFreeCast = false,
   onCastFree,
+  freeOnly = false,
   kiCast = null,
   onCastKi,
   onCreateSlot,
@@ -48,7 +51,7 @@ export default function CastSpellModal({
       <div className="p-5 space-y-3">
         <p className="text-sm text-dnd-text-muted font-body italic">{spell.name}</p>
         <div className="space-y-2">
-          {availableSlots.length === 0 && kiCast ? null : availableSlots.length === 0 ? (
+          {(availableSlots.length === 0 && kiCast) || freeOnly ? null : availableSlots.length === 0 ? (
             <div className="space-y-3 py-2">
               <p className="text-sm text-dnd-crimson-bright text-center font-body">
                 {t('character.spells.no_slots')}

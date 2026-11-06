@@ -378,9 +378,13 @@ export default function Spells() {
         <Surface variant="arcane">
           <div data-testid="spell-pick-banner" className="space-y-1">
             <p className="font-body text-sm text-dnd-text">
-              {pick.spell_pick.max_level === 0
-                ? t('character.spells.pick_cantrip_banner', { count: pick.count ?? 0 })
-                : t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
+              {pick.spell_pick.ritual
+                ? t('character.spells.pick_ritual_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
+                : pick.spell_pick.exact
+                  ? t('character.spells.pick_exact_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
+                  : pick.spell_pick.max_level === 0
+                    ? t(pick.spell_pick.list ? 'character.spells.pick_cantrip_banner' : 'character.spells.pick_cantrip_any_banner', { count: pick.count ?? 0 })
+                    : t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
             </p>
             {pick.spell_pick.free && (
               <p className="font-body text-xs text-dnd-text-muted">{t('character.spells.pick_free')}</p>
@@ -646,7 +650,7 @@ export default function Spells() {
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
           casters={spellcasting?.casters ?? []}
-          pickFilter={pick?.spell_pick ? { max_level: pick.spell_pick.max_level, list: pick.spell_pick.list } : undefined}
+          pickFilter={pick?.spell_pick ? { max_level: pick.spell_pick.max_level, list: pick.spell_pick.list, exact: pick.spell_pick.exact, ritual: pick.spell_pick.ritual } : undefined}
         />
       )}
 

@@ -203,7 +203,7 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
             reached = [lvl for lvl in ch.levels if lvl <= cls.level]
             limit = ch.levels[max(reached)] if reached else 0
             names: dict[str, str] = {}
-            for key in ch.options(ctx):
+            for key in (ch.import_options or ch.options)(ctx):
                 for spec in specs:
                     if spec.option_group == ch.group and spec.option_key == key:
                         names.update({_norm_name(n): key for n in spec.name.values()})

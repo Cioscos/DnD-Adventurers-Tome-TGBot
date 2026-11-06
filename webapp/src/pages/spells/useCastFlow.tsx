@@ -62,6 +62,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const [pendingSlotId, setPendingSlotId] = useState<number | undefined>(undefined)
   // Lancio coi punti ki: i ki in più scelti (uno per livello dell'incantesimo in più), al posto di slot e rituale.
   const [pendingKi, setPendingKi] = useState<number | null>(null)
+  // Lancio senza slot (Arcanum Mistico, a volontà) di un incantesimo con dadi di danno: il primo tiro fa il lancio gratuito.
+  const [pendingFree, setPendingFree] = useState(false)
   // Esito delle opzioni di un lancio senza danno: effetti e bersaglio da mostrare.
   const [castNotes, setCastNotes] = useState<OptionResult | null>(null)
   const [pendingRitual, setPendingRitual] = useState(false)
@@ -75,7 +77,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const spellcasting = char?.spellcasting ?? null
   /** Uno stato attivo autorizza questo incantesimo senza slot (Lettura del Pensiero): il server lo ricontrolla. */
   const freeCastFor = (spell: Spell) =>
-    !!spell.at_will || (!!spell.srd_index && (char?.active_states ?? []).some((s) => (s.data as { free_cast?: string } | undefined)?.free_cast === spell.srd_index))
+    !!spell.at_will || (spell.pact_cast?.kind === 'arcanum' && (spell.pact_cast.uses_left ?? 0) > 0) || (!!spell.srd_index && (char?.active_states ?? []).some((s) => (s.data as { free_cast?: string } | undefined)?.free_cast === spell.srd_index))
   const spellSlots: SpellSlot[] = char?.spell_slots ?? []
 
   // Conferma dei lanci senza danno: nome + slot/rituale + concentrazione.
@@ -268,6 +270,19 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     castMutation.mutate({ spell, ki: extra })
   }, [castMutation])
 
+  // Senza slot: i dadi di danno passano dal foglio dei danni, che fa il lancio al primo tiro.
+  const proceedFreeCast = useCallback((spell: Spell) => {
+    if (spell.damage_dice && !isAttackSpell(spell) && !isHealingSpell(spell)) {
+      setPendingRitual(false)
+      setPendingSlotLevel(spell.level)
+      setPendingSlotId(undefined)
+      setPendingFree(true)
+      setRollDamageSpell(spell)
+      return
+    }
+    castMutation.mutate({ spell, free: true })
+  }, [castMutation])
+
   const handleCastSlot = useCallback((slot: SpellSlot) => {
     if (!castingSpell) return
     if (needsUnpreparedWarn(castingSpell)) {
@@ -282,9 +297,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     if (castingSpell) proceedRitualCast(castingSpell)
   }, [castingSpell, proceedRitualCast])
 
-  const availableSlotsFor = (spellLevel: number) =>
-    spellSlots
-      .filter((s) => s.level >= spellLevel && s.available > 0)
+  // Un Arcanum Mistico non usa slot; una supplica «con uno slot di Patto» solo quelli del Patto.
+  const availableSlotsFor = (spell: Spell) =>
+    spell.pact_cast?.kind === 'arcanum' ? [] : spellSlots
+      .filter((s) => s.level >= spell.level && s.available > 0 && (!spell.pact_cast?.pact_only || s.is_pact))
       .sort((a, b) => a.level - b.level)
 
   const isSpellPending = useCallback((spellId: number) =>
@@ -308,6 +324,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     setPendingSlotLevel(null)
     setPendingSlotId(undefined)
     setPendingKi(null)
+    setPendingFree(false)
     setPendingRitual(false)
     setDamageAfterAttack(null)
   }
@@ -342,12 +359,13 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
             {step === 'slot' && castingSpell && (
               <CastSpellModal
                 spell={castingSpell}
-                availableSlots={availableSlotsFor(castingSpell.level)}
+                availableSlots={availableSlotsFor(castingSpell)}
+                freeOnly={castingSpell.pact_cast?.kind === 'arcanum'}
                 canRitual={!!castingSpell.is_ritual && (!!spellcasting?.has_ritual_caster || !!spellcasting?.ritual_only_spell_ids?.includes(castingSpell.id))}
                 onCast={handleCastSlot}
                 onCastRitual={handleCastRitual}
                 canFreeCast={freeCastFor(castingSpell)}
-                onCastFree={() => castMutation.mutate({ spell: castingSpell, free: true })}
+                onCastFree={() => proceedFreeCast(castingSpell)}
                 kiCast={castingSpell.ki_cast}
                 onCastKi={(extra) => proceedKiCast(castingSpell, extra)}
                 onCreateSlot={(level) => createSlotMutation.mutate(level)}
@@ -374,6 +392,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
                 slotLevel={pendingSlotLevel}
                 slotId={pendingSlotId}
                 kiExtra={pendingKi}
+                freeCast={pendingFree}
                 asRitual={pendingRitual}
                 slotAlreadyConsumed={damageAfterAttack !== null}
                 initialCritical={damageAfterAttack?.critical ?? false}

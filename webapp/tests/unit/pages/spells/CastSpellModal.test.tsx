@@ -45,6 +45,16 @@ describe('CastSpellModal', () => {
     expect(onCreateSlot).toHaveBeenCalledWith(3)
   })
 
+  it('an Arcanum offers only the free cast: no slot list and no invitation to create a slot', async () => {
+    const onCastFree = vi.fn()
+    render(<CastSpellModal spell={{ ...spell, level: 6 }} availableSlots={[]} freeOnly canFreeCast onCastFree={onCastFree} onCast={noop}
+      onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
+    expect(screen.queryByText('character.spells.no_slots')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'character.spells.go_create_slot' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.cast_free' }))
+    expect(onCastFree).toHaveBeenCalledTimes(1)
+  })
+
   it('cancels', async () => {
     const onCancel = vi.fn()
     render(<CastSpellModal spell={spell} availableSlots={[]} onCast={noop} onCreateSlot={noop} onCancel={onCancel} isPending={false} isCreatingSlot={false} />)

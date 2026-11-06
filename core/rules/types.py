@@ -50,6 +50,14 @@ class ChoiceSpec:
     listed: bool = False
     # Lingue (it, en) che la risoluzione della scelta aggiunge sempre, qualunque opzione sia scelta (l'Antenato Draconico dà il Draconico)
     adds_language: tuple[str, str] | None = None
+    # Con ``spell_pick``: l'incantesimo deve essere esattamente di ``spell_level`` e non dipende dagli slot della classe
+    # (Arcanum Mistico: livelli 6-9, oltre gli slot di Patto)
+    spell_exact: bool = False
+    # Con ``spell_pick``: l'incantesimo scelto deve avere il tag rituale (Libro degli Antichi Segreti)
+    spell_ritual: bool = False
+    # Chiavi che l'import da Beyond riconosce per nome: tutte, senza i prerequisiti che ``options`` verifica (le suppliche del
+    # Warlock dipendono dal Dono del Patto, che l'import scrive nello stesso passaggio)
+    import_options: "Callable[[RuleContext], list[str]] | None" = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language"):
@@ -298,6 +306,9 @@ class OnUse:
     # Costo in usi che dipende dalla scelta fatta all'uso (Creare Slot Incantesimo: i punti dipendono dal livello dello slot):
     # ``cost_by(ctx, params)`` sostituisce ``cost * amount``
     cost_by: "Callable[[RuleContext, dict], int] | None" = None
+    # PF temporanei che l'uso dà a chi lo usa: ``f(ctx, tirato) -> n``; vale il maggiore fra quelli attuali e ``n``
+    # (i PF temporanei non si sommano)
+    temp_hp: "Callable[[RuleContext, int], int] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -571,6 +582,15 @@ class FeatureSpec:
     # dove è coperta una riga senza `Ability` che la mappatura vuole da implementare o correggere: `lavori-successivi`
     # (fuori dai cataloghi, R32) oppure il punto del codice o del test; `check_catalog` lo pretende insieme a `no_row`
     covered_by: str | None = None
+    # Supplica che dà un incantesimo da lanciare una volta per riposo lungo con uno slot di Patto (``srd_index``): il lancio
+    # spende un uso di questa riga (vedi ``core.rules.pact_casts``)
+    pact_spell: str | None = None
+    # Arcanum Mistico: gruppo di ``ChoiceSpec`` in cui sta l'incantesimo scelto; si lancia senza slot spendendo un uso
+    arcanum_group: str | None = None
+    # Il privilegio fa lanciare come rituale gli incantesimi rituali della classe (Libro degli Antichi Segreti)
+    ritual_casting: bool = False
+    # Gittata che il privilegio dà a un incantesimo: ``((srd_index o nome minuscolo, ...), testo)`` (Lancia Occulta: 90 m)
+    spell_range: "tuple[tuple[str, ...], str] | None" = None
 
 
 @dataclass(frozen=True)

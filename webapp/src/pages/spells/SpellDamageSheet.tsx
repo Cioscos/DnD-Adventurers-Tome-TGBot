@@ -49,6 +49,8 @@ interface SpellDamageSheetProps {
   slotId?: number
   /** Lancio coi punti ki: i ki in più scelti. Il primo tiro spende i ki, non uno slot; `slotLevel` è il livello raggiunto. */
   kiExtra?: number | null
+  /** Lancio senza slot (Arcanum Mistico, a volontà): il primo tiro fa il lancio gratuito e spende ciò che il privilegio richiede. */
+  freeCast?: boolean
   /** Lancio rituale: nessuno slot consumato al Roll (spec 2026-06-10). */
   asRitual?: boolean
   /** Slot/rituale/concentrazione già consumati dal tiro per colpire: il Roll non li tocca. */
@@ -66,6 +68,7 @@ export default function SpellDamageSheet({
   slotLevel,
   slotId,
   kiExtra = null,
+  freeCast = false,
   asRitual = false,
   slotAlreadyConsumed = false,
   initialCritical = false,
@@ -111,9 +114,11 @@ export default function SpellDamageSheet({
 
       // Il tiro per colpire (/attack) ha già fatto il lancio; altrimenti lo fa il primo tiro, una volta sola.
       // Slot, rituale o trucchetto: il server consuma il dovuto e avvia la concentrazione col suo contatore.
-      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || kiExtra != null || (slotLevel != null && slotLevel >= 1))) {
+      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || kiExtra != null || freeCast || (slotLevel != null && slotLevel >= 1))) {
         const updated = await castSpell(charId, spell.id, kiExtra != null
           ? { ki: true, ki_extra: kiExtra, slot_level: null, as_ritual: false }
+          : freeCast
+            ? { free_cast: true, slot_level: null, as_ritual: false }
           : asRitual
             ? { as_ritual: true, slot_level: null }
             : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
@@ -220,6 +225,11 @@ export default function SpellDamageSheet({
       } else {
         setShowNoSlotWarning(true)
       }
+      return
+    }
+    if (freeCast && !slotAlreadyConsumed) {
+      // Un nuovo tiro sarebbe un nuovo lancio gratuito: l'uso del privilegio è già speso.
+      setShowNoSlotWarning(true)
       return
     }
     if (slotAlreadyConsumed || asRitual || slotLevel == null || slotLevel === 0) {

@@ -11,6 +11,14 @@ describe('familiarWarning', () => {
     expect(familiarWarning({ index: 'poisonous-snake' })).toBeNull()
     expect(familiarWarning({ index: 'wolf' })).toBe('character.extras.warn.familiar_form')
   })
+
+  it('adds imp, pseudodragon, quasit and sprite only with the Pact of the Chain', () => {
+    for (const index of ['imp', 'pseudodragon', 'quasit', 'sprite']) {
+      expect(familiarWarning({ index })).toBe('character.extras.warn.familiar_form')
+      expect(familiarWarning({ index }, true)).toBeNull()
+    }
+    expect(familiarWarning({ index: 'wolf' }, true)).toBe('character.extras.warn.familiar_form')
+  })
 })
 
 describe('wildShapeWarning', () => {

@@ -96,7 +96,7 @@ export interface PendingChoice {
   /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti.
    *  `list`: la classe del cui elenco si pesca (trucchetto del druido), `null` per qualsiasi classe.
    *  `owned`: con `retrofit`, gli incantesimi già conosciuti che si possono dichiarare «già sulla scheda». */
-  spell_pick?: { free: boolean; max_level: number; list?: string | null; owned?: { id: number; name: string; level: number }[] }
+  spell_pick?: { free: boolean; max_level: number; exact?: boolean; ritual?: boolean; list?: string | null; owned?: { id: number; name: string; level: number }[] }
 }
 
 export type ResolveChoiceBody =
@@ -179,6 +179,8 @@ export interface FeatureUseResult {
   given?: number | null
   /** Chi ha ricevuto una cura dal privilegio (Imposizione delle Mani su un compagno della serata). */
   received?: { name: string; healed: number } | null
+  /** PF temporanei che il privilegio ha dato a chi lo usa (Benedizione dell'Oscuro, Vigore Immondo). */
+  temp_hp?: number | null
 }
 
 export interface MapEntry {
@@ -223,6 +225,8 @@ export interface Spell {
   at_will?: boolean
   /** Si lancia anche coi punti ki (Arti dell'Ombra, discipline dei Quattro Elementi): costo base, ki in più ammessi, ki rimasti. */
   ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string; self_only?: boolean } | null
+  /** Lancio pagato da un privilegio del Warlock: Arcanum Mistico (senza slot) o una supplica a uso singolo (slot di Patto). */
+  pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null } | null
 }
 
 export interface SpellSlot {

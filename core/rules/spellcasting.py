@@ -200,13 +200,27 @@ def granted_ritual_only(char: Any, spell: Any) -> bool:
                for spec, row in active_features(char) for key in spec.granted_spells if key in GRANTED_SPELLS)
 
 
+def _book_rituals(char: Any, spell: Any) -> bool:
+    """Libro degli Antichi Segreti: i rituali della classe (quelli del Libro e quelli conosciuti) si lanciano come rituale.
+    Senza incantesimo: la classe ha il privilegio."""
+    return any(spec.ritual_casting and (spell is None or spell.class_id in (None, row.id))
+               for spec, row in active_features(char))
+
+
+def spell_range_override(char: Any, spell: Any) -> str | None:
+    """Gittata che un privilegio dà a questo incantesimo (Lancia Occulta: 90 m per deflagrazione occulta)."""
+    names = {str(getattr(spell, "srd_index", None) or "").lower(), str(getattr(spell, "name", None) or "").strip().lower()} - {""}
+    return next((spec.spell_range[1] for spec, _row in active_features(char)
+                 if spec.spell_range and names & set(spec.spell_range[0])), None)
+
+
 def can_ritual(char: Any, spell: Any = None) -> bool:
     """2014: Lancio Rituale di classe o talento. 2024: chiunque abbia incantesimi preparati. Un incantesimo concesso
     come rituale si lancia anche senza."""
     edition = character_edition(char)
     if spell is not None and granted_ritual_only(char, spell):
         return True
-    if _has_ritual_feat(char):
+    if _has_ritual_feat(char) or _book_rituals(char, spell):
         return True
     if edition == "2014":
         return has_ritual_caster(char.classes)

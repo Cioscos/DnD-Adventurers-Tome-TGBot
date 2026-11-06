@@ -64,7 +64,7 @@ interface SpellFormProps {
   /** Classi che lanciano incantesimi: con almeno due si sceglie quella di CD e attacco. */
   casters?: { class_id: number; class_name: string }[]
   /** Scelta di incantesimi in corso: il catalogo mostra solo ciò che ammette (il modulo manuale resta per il resto). */
-  pickFilter?: { max_level: number; list?: string | null }
+  pickFilter?: { max_level: number; list?: string | null; exact?: boolean; ritual?: boolean }
 }
 
 export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter }: SpellFormProps) {

@@ -252,11 +252,27 @@ describe('Spells page', () => {
     it('a cantrip-only pick says so instead of announcing a spell level', async () => {
       const base = pickChar(true)
       getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'bonus_cantrip', count: 1,
-        spell_pick: { free: true, max_level: 0 } }] })
+        spell_pick: { free: true, max_level: 0, list: 'druid' } }] })
       renderPick()
       const banner = await screen.findByTestId('spell-pick-banner')
       expect(banner).toHaveTextContent('character.spells.pick_cantrip_banner')
       expect(banner).not.toHaveTextContent('character.spells.pick_banner')
+    })
+
+    it('a cantrip pick from any list (Pact of the Tome), a ritual pick and an exact-level pick (Arcanum) say what they ask', async () => {
+      const base = pickChar(true)
+      const withPick = (spell_pick: object) => ({ ...base, pending_choices: [{ ...base.pending_choices[0], count: 2, spell_pick }] })
+      getChar.mockResolvedValue(withPick({ free: true, max_level: 0 }))
+      const first = renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_cantrip_any_banner')
+      first.unmount()
+      getChar.mockResolvedValue(withPick({ free: true, max_level: 1, exact: true, ritual: true }))
+      const second = renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_ritual_banner')
+      second.unmount()
+      getChar.mockResolvedValue(withPick({ free: true, max_level: 6, exact: true }))
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_exact_banner')
     })
 
     it('hands the form the level limit and the spell list of the pick, and nothing without a pick', async () => {
