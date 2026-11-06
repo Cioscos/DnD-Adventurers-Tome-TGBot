@@ -432,6 +432,27 @@ for _key, _it, _en in (("power-word-heal", "Parola del Potere: Guarigione", "Pow
                        ("power-word-kill", "Parola del Potere: Uccisione", "Power Word Kill")):
     GRANTED_SPELLS[_key] = GrantedSpell(_key, {"it": _it, "en": _en}, 9, "1 azione", "18 m", "Istantanea")
     _COMPONENTS[_key] = "V, S"
+# Chierico 2024, incantesimi di dominio che il 2014 non aveva
+for _spell, _comp in (
+        (GrantedSpell("aid", {"it": "Aiuto", "en": "Aid"}, 2, "1 azione", "9 m", "8 ore"), "V, S, M"),
+        (GrantedSpell("mass-healing-word", {"it": "Parola curativa di massa", "en": "Mass Healing Word"}, 3, "1 azione bonus", "18 m",
+                      "Istantanea"), "V"),
+        (GrantedSpell("aura-of-life", {"it": "Aura di vita", "en": "Aura of Life"}, 4, "1 azione", "Personale (9 m)",
+                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V"),
+        (GrantedSpell("greater-restoration", {"it": "Ristorare superiore", "en": "Greater Restoration"}, 5, "1 azione", "Contatto",
+                      "Istantanea"), "V, S, M"),
+        (GrantedSpell("see-invisibility", {"it": "Vedere invisibile", "en": "See Invisibility"}, 2, "1 azione", "Personale", "1 ora"),
+         "V, S, M"),
+        (GrantedSpell("hypnotic-pattern", {"it": "Disegno ipnotico", "en": "Hypnotic Pattern"}, 3, "1 azione", "36 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "S, M"),
+        (GrantedSpell("guiding-bolt", {"it": "Dardo guida", "en": "Guiding Bolt"}, 1, "1 azione", "36 m", "1 round", attack_save="ATK",
+                      damage_dice="4d6", damage_type="radiant", higher_levels_dice="1d6"), "V, S"),
+        (GrantedSpell("fire-shield", {"it": "Scudo di fuoco", "en": "Fire Shield"}, 4, "1 azione", "Personale", "10 minuti"),
+         "V, S, M"),
+        (GrantedSpell("steel-wind-strike", {"it": "Colpo del vento d'acciaio", "en": "Steel Wind Strike"}, 5, "1 azione", "9 m",
+                      "Istantanea", attack_save="ATK", damage_dice="6d10", damage_type="force"), "S, M")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",

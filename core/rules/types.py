@@ -241,7 +241,8 @@ class OnUse:
     ``panel``: l'uso passa da un pannello e da un endpoint propri (Preservare Vita): ``POST /features/{key}/use`` lo
     rifiuta (409 ``needs_panel``) e la scheda dice quale pannello aprire in ``use_panel``.
     ``maximize_if(ctx, params)``: i dadi tirati dall'uso valgono il massimo e l'uso spende anche un uso di ``maximize_cost``
-    (Collera Distruttiva su Collera della Tempesta); senza usi sufficienti l'uso è rifiutato prima di spendere (409 ``no_uses``).
+    (Collera Distruttiva su Collera della Tempesta; senza ``maximize_cost`` i dadi valgono il massimo e nulla si spende,
+    Guarigione Suprema); senza usi sufficienti l'uso è rifiutato prima di spendere (409 ``no_uses``).
     ``choices``: scelte da fare all'uso, validate prima di spendere qualcosa (422 ``invalid_choice``).
     ``once_per_turn``: l'uso vale una volta per turno anche con più usi disponibili (Azione Impetuosa dal 17°); il secondo è
     rifiutato (409 ``once_per_turn``) prima di spendere. ``forgoes_attack``: l'uso rinuncia a un attacco dell'azione Attacco

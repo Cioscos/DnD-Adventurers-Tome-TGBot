@@ -58,7 +58,8 @@ from core.rules.catalog import active_features
 from core.rules.pact_casts import pact_cast
 from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
-from core.rules.states import free_cast_state
+from core.rules.states import begin_state, free_cast_state
+from core.rules.types import StateSpec
 from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
 from api.services.dice_stats import record_dice
@@ -218,6 +219,7 @@ def _consume_cast(
     ki_pool, ki_total = _ki_payment(char, spell, ritual, free_cast, ki_extra) if ki else (None, 0)
     free_state = None
     free_at_will = False
+    no_concentration = False  # Benedizione del Dio della Guerra: il lancio gratuito non chiede Concentrazione
     pact = pact_cast(char, spell) if not ritual and not ki and spell.level >= 1 else None
     arcanum = None  # Arcanum Mistico: senza slot, spende l'uso della sua riga
     if free_cast:  # R43: serve uno stato attivo (o un privilegio a volontà) per questo incantesimo; costa l'azione, non uno slot
@@ -266,6 +268,9 @@ def _consume_cast(
         spend(char, data.get("free_cast_slot", "action"))  # 409 turn_slot_used: nulla è ancora scritto
         if not data.get("free_cast_keep"):  # il Mantello di Maestà ripete il lancio finché dura
             remove_state(char, free_state["key"])
+        no_concentration = bool(data.get("no_concentration"))
+        if data.get("then"):  # lo stato che il lancio avvia al posto della concentrazione (durata propria)
+            begin_state(char, StateSpec(**data["then"]), free_state.get("feature_key") or free_state["key"], free_state.get("name"))
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")
     elif ritual:
         _add_history(
@@ -286,7 +291,7 @@ def _consume_cast(
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 
-    if spell.is_concentration:
+    if spell.is_concentration and not no_concentration:
         start_concentration(char, spell.id, parse_duration_rounds(spell.duration))
     return pact_row
 

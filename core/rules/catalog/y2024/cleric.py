@@ -1,12 +1,11 @@
-"""Chierico 2024: base della classe (Task 33, parte A). Le sottoclassi (Vita, Luce, Inganno, Guerra) vengono dopo (parte B).
+"""Chierico 2024: base della classe (Task 33, parte A) e sottoclassi Vita, Luce, Inganno, Guerra (parte B).
 
 Valori dalla scheda ``docs/superpowers/rules/2024/classes/cleric.md``; i testi sono nostri, mai quelli del manuale.
 Incanalare Divinità è la riserva condivisa ``channel_divinity`` (stessa chiave del 2014 e del Paladino): ogni effetto,
 anche quelli di sottoclasse, la spende con ``OnUse.spends=POOL``.
 
-Per la parte B: i privilegi di sottoclasse vanno in ``DOMAIN_FEATURES`` (``subclass="life"|"light"|"trickery"|"war"``),
-spendono ``POOL`` e usano ``spell_dc``; Guarigione Suprema deve agire su Scintilla Divina (``SPARK_USE``) oltre che sulle cure
-degli incantesimi.
+Parte B: i privilegi di sottoclasse stanno in ``DOMAIN_FEATURES`` (``subclass="life"|"light"|"trickery"|"war"``), spendono
+``POOL`` e usano ``spell_dc``; Guarigione Suprema agisce anche su Scintilla Divina (``SPARK_USE.maximize_if``, senza costo).
 """
 from __future__ import annotations
 
@@ -16,11 +15,13 @@ from typing import Any
 
 from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.cleric import (
-    POOL, _divine_strike, _no_options, _own_cantrip, _potent, _wisdom_mod, spell_dc,
+    BLESSED_HEALER, DUPLICITY_ADVANTAGE, GUIDED_STRIKE, INVOKE_DUPLICITY, POOL, WAR_PRIEST, WARDING_FLARE, _divine_strike,
+    _healing_roll, _no_options, _own_cantrip, _potent, _wisdom_mod, spell_dc,
 )
 from core.rules.states import STOLEN_SPELL, begin_state
 from core.rules.types import (
-    ChoiceSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses, UseText, UseToggle,
+    TRICKSTER_BLESSING, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses,
+    UseText, UseToggle,
 )
 
 ED, CK = "2024", "cleric"
@@ -90,8 +91,13 @@ def _spark_message(ctx: RuleContext, params: dict) -> dict[str, str]:
                   "damage, half on a success."}
 
 
+def _supreme_healing(ctx: RuleContext, params: dict) -> bool:
+    """Guarigione Suprema (Dominio della Vita, 17°): i dadi di cura della Scintilla Divina valgono il massimo."""
+    return params.get("mode") == "heal" and ctx.class_level >= 17 and getattr(ctx.class_row, "subclass_key", None) == "life"
+
+
 SPARK_USE = OnUse(
-    slot="action", spends=POOL, rolls=_spark_dice, heal=_spark_total, heal_when=lambda _c, _p: False,
+    slot="action", spends=POOL, maximize_if=_supreme_healing, rolls=_spark_dice, heal=_spark_total, heal_when=lambda _c, _p: False,
     heal_ally_when=lambda _c, p: p.get("mode") == "heal", ally_modes=("heal",), state=_spark_state, message=_spark_message,
     choices=(UseChoice("mode", {"it": "Effetto", "en": "Effect"}, lambda _c: list(_SPARK_MODES), lambda k: _SPARK_MODES[k]),))
 
@@ -220,7 +226,250 @@ def _wish_countdown(ctx: RuleContext) -> None:
 # Catalogo
 # ---------------------------------------------------------------------------
 
-DOMAIN_FEATURES: tuple = ()  # parte B: Vita, Luce, Inganno, Guerra
+# ---------------------------------------------------------------------------
+# Domini (parte B)
+# ---------------------------------------------------------------------------
+
+DOMAIN_SPELLS = {
+    "life": (("aid", "bless", "cure-wounds", "lesser-restoration"), ("mass-healing-word", "revivify"), ("aura-of-life", "death-ward"),
+             ("greater-restoration", "mass-cure-wounds")),
+    "light": (("burning-hands", "faerie-fire", "scorching-ray", "see-invisibility"), ("daylight", "fireball"),
+              ("arcane-eye", "wall-of-fire"), ("flame-strike", "scrying")),
+    "trickery": (("charm-person", "disguise-self", "invisibility", "pass-without-trace"), ("hypnotic-pattern", "nondetection"),
+                 ("confusion", "dimension-door"), ("dominate-person", "modify-memory")),
+    "war": (("guiding-bolt", "magic-weapon", "shield-of-faith", "spiritual-weapon"), ("crusaders-mantle", "spirit-guardians"),
+            ("fire-shield", "freedom-of-movement"), ("hold-monster", "steel-wind-strike")),
+}
+
+
+def _domain_spells(domain: str, title: str, name: tuple[str, str]) -> list:
+    """Quattro incantesimi al 3° livello, poi due ai livelli 5, 7 e 9: sempre preparati, fuori dal limite."""
+    tiers = DOMAIN_SPELLS[domain]
+    out = [feature(f"{domain}_spells", CK, ED, 3, title, name,
+                   ("Incantesimi di dominio sempre preparati, quattro al 3° livello e due al 5°, 7° e 9°; non contano nel limite.",
+                    "Domain spells are always prepared, four at level 3 and two at 5, 7 and 9; they do not count against the limit."),
+                   subclass=domain, granted_spells=tiers[0])]
+    for tier, spells in zip((5, 7, 9), tiers[1:]):
+        out.append(feature(f"{domain}_spells_{tier}", CK, ED, tier, title, name,
+                           (f"Incantesimi di dominio del {tier}° livello.", f"Domain spells gained at level {tier}."),
+                           subclass=domain, granted_spells=spells, no_row=True,
+                           covered_by=f"{CK}.{domain}_spells (stessa voce della mappatura) e test_domain_spells_arrive_at_3_5_7_and_9"))
+    return out
+
+
+# Luce: Fulgore dell'Alba, Lampo di Interdizione, Corona di Luce
+def _radiance_state(ctx: RuleContext, params: dict) -> StateSpec:
+    return StateSpec("radiance_of_the_dawn", rounds=1, ends_on=("manual", "new_turn"), data={
+        "dc": spell_dc(ctx), "save": "constitution", "damage_type": "radiant", "damage": int(params.get("rolled") or 0) + ctx.class_level,
+        "others": [f"{CK}.radiance_of_the_dawn"]})
+
+
+def _radiance_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
+    data = next((s.get("data") or {} for s in ctx.char.active_states or [] if s.get("key") == "radiance_of_the_dawn"), {})
+    return {"it": f"Ogni creatura a tua scelta entro 9 m fa un TS Costituzione (CD {data.get('dc')}): se fallisce subisce "
+                  f"{data.get('damage')} danni radiosi, la metà se lo supera. L'oscurità magica nell'area svanisce.",
+            "en": f"Each creature of your choice within 30 ft makes a Constitution save (DC {data.get('dc')}): on a failure it takes "
+                  f"{data.get('damage')} radiant damage, half on a success. Magical darkness in the area is dispelled."}
+
+
+def _flare_state(ctx: RuleContext, _params: dict) -> StateSpec:
+    others = [WARDING_FLARE] + ([f"{CK}.improved_warding_flare"] if ctx.class_level >= 6 else [])
+    return StateSpec("warding_flare", rounds=1, ends_on=("manual", "new_turn"), data={"others": others})
+
+
+def _flare_dice(ctx: RuleContext) -> str | None:
+    return "2d6" if ctx.class_level >= 6 else None
+
+
+def _flare_temp_hp(ctx: RuleContext, rolled: int) -> int:
+    return max(0, rolled + _wisdom_mod(ctx)) if ctx.class_level >= 6 else 0
+
+
+def _flare_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
+    base = {"it": "Il tiro per colpire della creatura che vedi entro 9 m ha svantaggio, prima dell'esito.",
+            "en": "The attack roll of the creature you can see within 30 ft has disadvantage, before the result."}
+    if ctx.class_level < 6:
+        return base
+    return {"it": base["it"] + " Puoi dare al bersaglio dell'attacco i PF temporanei mostrati.",
+            "en": base["en"] + " You can give the attack's target the temporary HP shown."}
+
+
+CORONA_USE = OnUse(slot="action", state=StateSpec("corona_of_light", rounds=10, ends_on=("manual",),
+                                                  data={"others": [f"{CK}.corona_of_light"]}))
+
+
+# Inganno: Benedizione dell'Ingannatore, Invocare Duplicato
+def _trickster_state(_ctx: RuleContext, params: dict) -> StateSpec:
+    """Vantaggio a Furtività fino al riposo lungo: su di te con ``self``, su un alleato della serata con il bersaglio; senza
+    nessuno dei due (una creatura del GM) resta una nota per il gruppo (D1)."""
+    ends = ("rest_long", "manual")
+    if params.get("self") or params.get("target_character_id") is not None:
+        return StateSpec(TRICKSTER_BLESSING, ends_on=ends)
+    return StateSpec("trickster_blessing_note", ends_on=ends, data={"others": [f"{CK}.blessing_of_the_trickster"]})
+
+
+def _trickster_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
+    return (422, "invalid_choice") if params.get("self") and params.get("target_character_id") is not None else None
+
+
+def _duplicity_state(ctx: RuleContext, _params: dict) -> StateSpec:
+    """1 minuto, senza Concentrazione: finisce se congedato (a mano) o se il chierico è Incapacitato."""
+    others = [INVOKE_DUPLICITY] + ([f"{CK}.improved_duplicity"] if ctx.class_level >= 17 else [])
+    return StateSpec("invoke_duplicity", rounds=10, ends_on=("incapacitated", "manual"), data={"others": others})
+
+
+_ILLUSION_HEAL = {"self": {"it": "Tu", "en": "You"},
+                  "ally": {"it": "Una creatura entro 1,5 m dall'illusione", "en": "A creature within 5 ft of the illusion"}}
+IMPROVED_DUPLICITY_USE = OnUse(
+    cost=0, available=lambda c: state_on(c, "invoke_duplicity"), ends_state="invoke_duplicity",
+    heal=lambda c, _r: c.class_level, heal_when=lambda _c, p: p.get("mode") == "self", ally_modes=("ally",),
+    heal_ally_when=lambda _c, p: p.get("mode") == "ally",
+    choices=(UseChoice("mode", {"it": "Chi recupera i PF", "en": "Who regains the HP"}, lambda _c: list(_ILLUSION_HEAL),
+                       lambda k: _ILLUSION_HEAL[k]),),
+    message=lambda c, _p: {"it": f"L'illusione finisce: chi sceglie recupera {c.class_level} PF (se non siede alla serata, riferiscili al GM).",
+                           "en": f"The illusion ends: the chosen creature regains {c.class_level} HP (if it does not sit at the evening, tell the GM)."})
+
+
+# Guerra
+WAR_PRIEST_ATTACK = RollOptionSpec(
+    key=WAR_PRIEST, phase="before", rolls=("attack",), slot="bonus", cost=Cost(feature_key=WAR_PRIEST),
+    label={"it": "Sacerdote di Guerra: attacco con arma o senz'armi come azione bonus", "en": "War Priest: weapon or unarmed attack as a bonus action"},
+    available=lambda c: c.spell is None)
+
+_WGB_SPELLS = {"shield-of-faith": {"it": "Scudo della fede", "en": "Shield of Faith"},
+               "spiritual-weapon": {"it": "Arma spirituale", "en": "Spiritual Weapon"}}
+
+
+def _wgb_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
+    """L'incantesimo scelto deve stare sulla scheda (lo dà il dominio al 3° livello)."""
+    return None if any(sp.srd_index == params.get("spell") for sp in ctx.char.spells) else (422, "invalid_choice")
+
+
+def _wgb_effect(ctx: RuleContext, params: dict) -> None:
+    """Autorizza un lancio gratuito (R43) dell'incantesimo scelto: azione bonus, nessuna Concentrazione; il lancio chiude
+    l'autorizzazione e avvia lo stato di 1 minuto, che finisce se Incapacitato o se si rilancia."""
+    spell = str(params["spell"])
+    begin_state(ctx.char, StateSpec("war_gods_blessing_free", ends_on=("manual", "rest_short", "rest_long"), data={
+        "free_cast": spell, "free_cast_slot": "bonus", "no_concentration": True, "spell": spell,
+        "then": {"key": "war_gods_blessing", "rounds": 10, "ends_on": ["incapacitated", "manual"], "data": {"spell": spell}}}),
+        f"{CK}.war_gods_blessing", "Benedizione del Dio della Guerra")
+
+
+WAR_GODS_BLESSING_USE = OnUse(
+    spends=POOL, check=_wgb_check, effect=_wgb_effect,
+    choices=(UseChoice("spell", {"it": "Incantesimo", "en": "Spell"}, lambda _c: list(_WGB_SPELLS), lambda k: _WGB_SPELLS[k]),),
+    message=lambda _c, _p: {"it": "Lancia l'incantesimo dalla pagina degli incantesimi, senza slot (azione bonus): niente Concentrazione, "
+                                  "dura 1 minuto e finisce se sei Incapacitato o se lo rilanci.",
+                            "en": "Cast the spell from the spells page with no slot (bonus action): no Concentration, it lasts 1 minute "
+                                  "and ends if you are Incapacitated or cast it again."})
+
+GUIDED_STRIKE_ALLY = OnUse(
+    slot="reaction", spends=POOL,
+    message=lambda _c, _p: {"it": "Una creatura entro 9 m ha mancato: somma 10 al suo tiro per colpire (puoi farlo dopo aver visto l'esito).",
+                            "en": "A creature within 30 ft missed: add 10 to its attack roll (you can do it after seeing the result)."})
+
+DOMAIN_FEATURES = (
+    # Dominio della Vita
+    *_domain_spells("life", "Incantesimi del Dominio della Vita / Life Domain Spells (Vita 3, pag. 73)",
+                    ("Incantesimi del Dominio della Vita", "Life Domain Spells")),
+    feature("disciple_of_life", CK, ED, 3, "Discepolo della Vita / Disciple of Life (Vita 3, pag. 73)",
+            ("Discepolo della Vita", "Disciple of Life"),
+            ("Un incantesimo lanciato con uno slot che restituisce PF ne dà 2 in più più il livello dello slot.",
+             "A spell cast with a slot that restores HP gives 2 extra HP plus the slot's level."),
+            subclass="life", modifiers=(Modifier("healing", lambda c: 2 + (c.casting_level or 0), when=_healing_roll,
+                                                 source=f"feature:{CK}.disciple_of_life"),)),
+    feature("preserve_life", CK, ED, 3, "Preservare Vita / Preserve Life (Vita 3, pag. 73)", ("Preservare Vita", "Preserve Life"),
+            ("Azione Magia, un uso: distribuisci 5 x livello PF fra creature Sanguinanti entro 9 m, fino alla metà dei loro PF massimi.",
+             "Magic action, one use: split 5 x level HP among Bloodied creatures within 30 ft, up to half their maximum HP."),
+            "action", subclass="life", on_use=OnUse(slot="action", spends=POOL, panel="preserve_life")),
+    feature("blessed_healer", CK, ED, 6, "Guaritore Benedetto / Blessed Healer (Vita 6, pag. 74)", ("Guaritore Benedetto", "Blessed Healer"),
+            ("Se curi un'altra creatura con uno slot, recuperi 2 PF più il livello dello slot.",
+             "When you heal another creature with a slot, you regain 2 HP plus the slot's level."),
+            subclass="life", roll_options=(BLESSED_HEALER,)),
+    feature("supreme_healing", CK, ED, 17, "Guarigione Suprema / Supreme Healing (Vita 17, pag. 74)", ("Guarigione Suprema", "Supreme Healing"),
+            ("I dadi di cura di un incantesimo o di Scintilla Divina valgono sempre il massimo.",
+             "The healing dice of a spell or of Divine Spark always count as their maximum."),
+            subclass="life", modifiers=(Modifier("maximize_healing", 1, when=lambda c: c.roll == "spell_healing",
+                                                 source=f"feature:{CK}.supreme_healing"),)),
+
+    # Dominio della Luce
+    *_domain_spells("light", "Incantesimi del Dominio della Luce / Light Domain Spells (Luce 3, pag. 74)",
+                    ("Incantesimi del Dominio della Luce", "Light Domain Spells")),
+    feature("radiance_of_the_dawn", CK, ED, 3, "Fulgore dell'Alba / Radiance of the Dawn (Luce 3, pag. 74)",
+            ("Fulgore dell'Alba", "Radiance of the Dawn"),
+            ("Azione Magia, un uso: 2d10 + livello radianti entro 9 m (TS Costituzione, metà); dissolve l'oscurità magica.",
+             "Magic action, one use: 2d10 + level radiant within 30 ft (Con save, half); dispels magical darkness."),
+            "action", subclass="light",
+            on_use=OnUse(slot="action", spends=POOL, rolls="2d10", state=_radiance_state, message=_radiance_message)),
+    feature("warding_flare", CK, ED, 3, "Lampo di Interdizione / Warding Flare (Luce 3, pag. 74)", ("Lampo di Interdizione", "Warding Flare"),
+            ("Reazione: svantaggio al tiro per colpire di una creatura visibile entro 9 m. Usi pari a Saggezza (minimo 1).",
+             "Reaction: disadvantage on the attack roll of a creature you can see within 30 ft. Uses equal Wisdom (minimum 1)."),
+            "reaction", subclass="light", uses=Uses(ability="wisdom", minimum=1), restoration={3: "long_rest", 6: "short_rest"},
+            on_use=OnUse(slot="reaction", state=_flare_state, rolls=_flare_dice, gives=_flare_temp_hp, message=_flare_message)),
+    feature("improved_warding_flare", CK, ED, 6, "Lampo di Interdizione Migliorato / Improved Warding Flare (Luce 6, pag. 75)",
+            ("Lampo di Interdizione Migliorato", "Improved Warding Flare"),
+            ("Gli usi tornano anche con un riposo breve; a ogni uso 2d6 + Saggezza PF temporanei al bersaglio dell'attacco.",
+             "Uses also return on a short rest; each use gives the attack's target 2d6 + Wisdom temporary HP."),
+            subclass="light", passive=True),
+    feature("corona_of_light", CK, ED, 17, "Corona di Luce / Corona of Light (Luce 17, pag. 75)", ("Corona di Luce", "Corona of Light"),
+            ("Azione Magia: 1 minuto di luce solare (18 m, fioca altri 9 m); i nemici nella luce intensa hanno svantaggio ai TS. Usi pari a Saggezza.",
+             "Magic action: 1 minute of sunlight (60 ft, dim 30 ft more); enemies in the bright light have disadvantage on saves. Uses equal Wisdom."),
+            "action", subclass="light", uses=Uses(ability="wisdom", minimum=1), restoration="long_rest", on_use=CORONA_USE),
+
+    # Dominio dell'Inganno
+    *_domain_spells("trickery", "Incantesimi del Dominio dell'Inganno / Trickery Domain Spells (Inganno 3, pag. 76)",
+                    ("Incantesimi del Dominio dell'Inganno", "Trickery Domain Spells")),
+    feature("blessing_of_the_trickster", CK, ED, 3, "Benedizione dell'Ingannatore / Blessing of the Trickster (Inganno 3, pag. 75)",
+            ("Benedizione dell'Ingannatore", "Blessing of the Trickster"),
+            ("Azione Magia: tu o una creatura consenziente entro 9 m avete vantaggio a Furtività fino al riposo lungo o al prossimo uso.",
+             "Magic action: you or a willing creature within 30 ft has advantage on Stealth until a long rest or the next use."),
+            "action", subclass="trickery",
+            on_use=OnUse(slot="action", ally_state=True, ally_exclusive=True, state=_trickster_state, check=_trickster_check,
+                         toggles=(UseToggle("self", {"it": "Su te stesso", "en": "On yourself"}),))),
+    feature("invoke_duplicity", CK, ED, 3, "Invocare Duplicato / Invoke Duplicity (Inganno 3, pag. 75)", ("Invocare Duplicato", "Invoke Duplicity"),
+            ("Azione bonus, un uso: illusione di te per 1 minuto, congedabile; vantaggio agli attacchi se siete entrambi entro 1,5 m dal bersaglio.",
+             "Bonus action, one use: an illusion of you for 1 minute, dismissable; advantage on attacks if you are both within 5 ft of the target."),
+            "bonus_action", subclass="trickery", roll_options=(DUPLICITY_ADVANTAGE,),
+            on_use=OnUse(slot="bonus", spends=POOL, state=_duplicity_state, available=lambda c: not state_on(c, "invoke_duplicity"))),
+    feature("invoke_duplicity_move", CK, ED, 3, "Invocare Duplicato / Invoke Duplicity (Inganno 3, pag. 75)",
+            ("Muovere il Duplicato", "Move the Duplicate"),
+            ("Azione bonus, finché l'illusione esiste: la sposti fino a 9 m in uno spazio libero visibile entro 36 m da te.",
+             "Bonus action while the illusion exists: move it up to 30 ft to an unoccupied space you can see within 120 ft of you."),
+            "bonus_action", subclass="trickery", on_use=OnUse(slot="bonus", cost=0, available=lambda c: state_on(c, "invoke_duplicity"))),
+    feature("tricksters_transposition", CK, ED, 6, "Trasposizione dell'Ingannatore / Trickster's Transposition (Inganno 6, pag. 76)",
+            ("Trasposizione dell'Ingannatore", "Trickster's Transposition"),
+            ("Con l'azione bonus che crea o muove l'illusione puoi scambiare il posto con lei.",
+             "With the bonus action that creates or moves the illusion you can swap places with it."),
+            subclass="trickery", passive=True),
+    feature("improved_duplicity", CK, ED, 17, "Duplicato Migliorato / Improved Duplicity (Inganno 17, pag. 76)",
+            ("Duplicato Migliorato", "Improved Duplicity"),
+            ("Alleati e tu avete vantaggio contro chi è entro 1,5 m dall'illusione; quando finisce, tu o una creatura vicina recuperate PF pari al livello.",
+             "You and your allies have advantage against creatures within 5 ft of the illusion; when it ends, you or a nearby creature regains HP equal to your level."),
+            subclass="trickery", on_use=IMPROVED_DUPLICITY_USE),
+
+    # Dominio della Guerra
+    *_domain_spells("war", "Incantesimi del Dominio della Guerra / War Domain Spells (Guerra 3, pag. 77)",
+                    ("Incantesimi del Dominio della Guerra", "War Domain Spells")),
+    feature("guided_strike", CK, ED, 3, "Colpo Guidato / Guided Strike (Guerra 3, pag. 77)", ("Colpo Guidato", "Guided Strike"),
+            ("Dopo un tiro per colpire mancato, tuo o di una creatura entro 9 m, spendi un uso di Incanalare Divinità e somma 10 al tiro.",
+             "After a missed attack roll, yours or a creature's within 30 ft, spend a Channel Divinity use and add 10 to the roll."),
+            "reaction", subclass="war", roll_options=(GUIDED_STRIKE,), on_use=GUIDED_STRIKE_ALLY),
+    feature("war_priest", CK, ED, 3, "Sacerdote di Guerra / War Priest (Guerra 3, pag. 77)", ("Sacerdote di Guerra", "War Priest"),
+            ("Azione bonus: un attacco con arma o un Colpo Senz'Armi. Usi pari a Saggezza (minimo 1), con riposo breve o lungo.",
+             "Bonus action: one weapon attack or Unarmed Strike. Uses equal Wisdom (minimum 1), on a short or long rest."),
+            "bonus_action", subclass="war", uses=Uses(ability="wisdom", minimum=1), restoration="short_rest",
+            roll_options=(WAR_PRIEST_ATTACK,)),
+    feature("war_gods_blessing", CK, ED, 6, "Benedizione del Dio della Guerra / War God's Blessing (Guerra 6, pag. 77)",
+            ("Benedizione del Dio della Guerra", "War God's Blessing"),
+            ("Un uso di Incanalare Divinità: lanci Scudo della Fede o Arma Spirituale senza slot né Concentrazione, per 1 minuto.",
+             "Spend a Channel Divinity use: cast Shield of Faith or Spiritual Weapon with no slot or Concentration, for 1 minute."),
+            "bonus_action", subclass="war", on_use=WAR_GODS_BLESSING_USE),
+    feature("avatar_of_battle", CK, ED, 17, "Avatar della Battaglia / Avatar of Battle (Guerra 17, pag. 77)",
+            ("Avatar della Battaglia", "Avatar of Battle"),
+            ("Resistenza ai danni contundenti, perforanti e taglienti.", "Resistance to bludgeoning, piercing and slashing damage."),
+            subclass="war", modifiers=tuple(Modifier(f"resistance:{t}", 1, source=f"feature:{CK}.avatar_of_battle")
+                                            for t in ("bludgeoning", "piercing", "slashing"))),
+)
 
 CLASS_FEATURES = (
     feature("core_traits", CK, ED, 1, "Tratti base / Core Cleric Traits (Chierico 1, pag. 69)", ("Tratti Base del Chierico", "Core Cleric Traits"),

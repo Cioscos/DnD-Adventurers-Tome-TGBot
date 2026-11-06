@@ -306,9 +306,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         await session.refresh(char, attribute_names=["currency"])
         withdraw(char, "gold", on_use.gold_cost)
     maximize = False
+    extra = None
     if on_use.maximize_if and on_use.maximize_if(
             RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level), params or {}):
         maximize = True
+    if maximize and on_use.maximize_cost:  # senza costo (Guarigione Suprema) i dadi valgono il massimo e basta
         extra = next((a for a in char.abilities if a.feature_key == pool_key(char, on_use.maximize_cost)), None)
         if extra is None or (extra.max_uses is not None and (extra.uses or 0) < 1):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
@@ -344,7 +346,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await load_receiver(session, target.id)
         if target.is_dead:
             raise _err(status.HTTP_409_CONFLICT, "target_dead")
-    if maximize and extra.max_uses is not None and extra.uses is not None:
+    if extra is not None and extra.max_uses is not None and extra.uses is not None:
         extra.uses -= 1
 
     result = UseResult()
