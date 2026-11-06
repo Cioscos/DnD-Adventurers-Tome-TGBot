@@ -318,6 +318,8 @@ class OnUse:
     # Slot di turno che dipende dalle scelte: ``slot_by(ctx, params) -> slot | None`` sostituisce ``slot`` (il prolungamento
     # dell'Ira per un TS imposto non costa l'azione bonus)
     slot_by: "Callable[[RuleContext, dict], str | None] | None" = None
+    # ``spends_slot`` vale solo se ``spends_slot_when(ctx, params)`` (Mantello di Maestà: lo slot serve a ripristinare l'uso)
+    spends_slot_when: "Callable[[RuleContext, dict], bool] | None" = None
     # Usi di un altro privilegio spesi al posto dei propri quando ``params[alt_param]`` è vero (Presenza Intimidatoria:
     # «ripristina» l'uso spendendo un uso di Ira); lo slot di turno si paga lo stesso
     alt_spends: str | None = None
@@ -489,6 +491,9 @@ class RollOptionSpec:
     grants_resistance: bool = False
     # Con ``skill``: la prova si fa con un'altra caratteristica (Conoscenza Primordiale: Forza al posto di Destrezza)
     ability_override: str | None = None
+    # Con ``attack``: il Colpo Senz'Armi infligge questi dadi più Destrezza al posto del danno normale (Danno Bardico);
+    # ``f(ctx, inputs) -> "NdM"``
+    unarmed_dice: "Callable[[RuleContext, dict], str] | None" = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -648,6 +653,8 @@ class FeatureSpec:
     concentration_safe_schools: tuple[str, ...] = ()
     # Gruppi di ``ChoiceSpec`` i cui incantesimi scelti si lanciano a volontà al livello base se preparati (Maestria)
     mastery_groups: tuple[str, ...] = ()
+    # Il tiro per colpire dei Colpi Senz'Armi usa la Destrezza se è migliore, ma solo senza armatura né Scudo (Passo Abbagliante)
+    dex_unarmed: bool = False
 
 
 @dataclass(frozen=True)

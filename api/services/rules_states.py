@@ -332,7 +332,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     slot = on_use.slot_by(ctx_choice, params or {}) if on_use.slot_by else on_use.slot
     if slot:
         spend(char, slot)  # 409 turn_slot_used prima di toccare gli usi
-    if on_use.spends_slot:
+    if on_use.spends_slot and (on_use.spends_slot_when is None or on_use.spends_slot_when(ctx_choice, params or {})):
         await _spend_slot(session, char, int((params or {})[on_use.spends_slot]))
     if on_use.once_per_turn:
         mark_once(char, feature_key)

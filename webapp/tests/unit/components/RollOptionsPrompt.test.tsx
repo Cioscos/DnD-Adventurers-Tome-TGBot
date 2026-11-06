@@ -79,6 +79,15 @@ describe('askRollOptions', () => {
     expect(screen.queryByText('Applica Attacco Furtivo?')).toBeNull()
   })
 
+  it('an option that opens an attack outside the Attack action does not count against its limit, like one with its own slot', async () => {
+    rollOptions.mockResolvedValue([option({ key: 'agile', label: 'Colpi Agili?', outside_action: true })])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'attack' })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Colpi Agili?' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(answer).resolves.toMatchObject({ options: ['agile'], own_slot: true })
+  })
+
   it('a spell attack never defers: its damage has its own step', async () => {
     rollOptions.mockResolvedValue([option({ phase: 'after_hit' })])
     await expect(askRollOptions(1, { roll: 'attack', spell_id: 3 })).resolves.toEqual({ options: [], option_inputs: {} })

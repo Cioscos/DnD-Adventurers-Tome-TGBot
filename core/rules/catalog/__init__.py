@@ -8,7 +8,7 @@ from core.rules.types import FeatureSpec
 
 # Aumenta ogni task che aggiunge o cambia un catalogo di classe (R33): all'avvio dell'API, se la versione salvata in
 # `app_meta` è diversa, i personaggi esistenti passano una volta dal sync (`api/services/catalog_migration.py`).
-CATALOG_VERSION = 46
+CATALOG_VERSION = 47
 
 _REGISTRY: dict[tuple[str, str], tuple[FeatureSpec, ...]] = {}
 
@@ -51,8 +51,9 @@ def _register() -> None:
     from core.rules.catalog.y2014 import warlock as warlock_2014
     from core.rules.catalog.y2014 import wizard as wizard_2014
     from core.rules.catalog.y2024 import barbarian as barbarian_2024
+    from core.rules.catalog.y2024 import bard as bard_2024
 
-    for module in (barbarian_2014, bard_2014, cleric_2014, druid_2014, fighter_2014, monk_2014, paladin_2014, ranger_2014, rogue_2014, sorcerer_2014, warlock_2014, wizard_2014, barbarian_2024):
+    for module in (barbarian_2014, bard_2014, cleric_2014, druid_2014, fighter_2014, monk_2014, paladin_2014, ranger_2014, rogue_2014, sorcerer_2014, warlock_2014, wizard_2014, barbarian_2024, bard_2024):
         for spec in module.FEATURES:
             _REGISTRY[(spec.edition, spec.class_key)] = _REGISTRY.get((spec.edition, spec.class_key), ()) + (spec,)
 

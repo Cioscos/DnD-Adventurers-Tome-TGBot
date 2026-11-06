@@ -427,6 +427,21 @@ describe('Turn page', () => {
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence', 1, { restore: true }))
   })
 
+  it('lets a depleted feature that spends another pool be used when the server says it is free: Beguiling Magic is restored with Inspiration', async () => {
+    const beguiling = { id: 8, name: 'Magia Ammaliante', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'bard.beguiling_magic', max_uses: 1, uses: 0, action_type: 'bonus_action', restoration_type: 'long_rest', spends_left: 2, free_use: true }
+    getChar.mockResolvedValue({ ...char, abilities: [beguiling] })
+    featureUse.mockClear()
+    const { unmount } = renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'bard.beguiling_magic'))
+    unmount()
+    // Senza usi di Ispirazione il pulsante è spento: il server rifiuterebbe comunque
+    getChar.mockResolvedValue({ ...char, abilities: [{ ...beguiling, spends_left: 0 }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.no_uses')).toBeDisabled()
+  })
+
   it('sends the switches chosen when using a feature, such as Frenzy when entering the rage', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

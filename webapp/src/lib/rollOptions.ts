@@ -158,7 +158,7 @@ export async function askRollOptions(
         && !(context?.fumble && o.after === 'add'))
     : []
   // Una scelta con uno slot di turno proprio (azione bonus, reazione) non è un attacco dell'azione Attacco.
-  const withSlot = (chosen: string[]): { own_slot?: true } => (listed.some((o) => chosen.includes(o.key) && o.slot) ? { own_slot: true } : {})
+  const withSlot = (chosen: string[]): { own_slot?: true } => (listed.some((o) => chosen.includes(o.key) && (o.slot || o.outside_action)) ? { own_slot: true } : {})
   const withRanged = (chosen: string[]): { ranged?: true } => (listed.some((o) => chosen.includes(o.key) && o.ranged_unarmed) ? { ranged: true } : {})
   if (context?.preset) {
     const chosen = context.preset.filter((k) => options.some((o) => o.key === k))

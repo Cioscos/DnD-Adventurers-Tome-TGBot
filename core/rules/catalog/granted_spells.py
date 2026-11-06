@@ -427,6 +427,12 @@ _COMPONENTS: dict[str, str] = {
 GRANTED_SPELLS["animate-dead"] = GrantedSpell(
     "animate-dead", {"it": "Animare morti", "en": "Animate Dead"}, 3, "1 minuto", "3 m", "Istantanea", attack_save=None)
 _COMPONENTS["animate-dead"] = "V, S, M"
+# Bardo 2024, Parole della Creazione: le due Parole del Potere sempre preparate
+for _key, _it, _en in (("power-word-heal", "Parola del Potere: Guarigione", "Power Word Heal"),
+                       ("power-word-kill", "Parola del Potere: Uccisione", "Power Word Kill")):
+    GRANTED_SPELLS[_key] = GrantedSpell(_key, {"it": _it, "en": _en}, 9, "1 azione", "18 m", "Istantanea")
+    _COMPONENTS[_key] = "V, S"
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
-_SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy"}
+_SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
+            "power-word-heal": "enchantment", "power-word-kill": "enchantment"}
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

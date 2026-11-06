@@ -196,6 +196,7 @@ class AppliedOptions:
     resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
     self_damage: list[tuple[str, str]] = field(default_factory=list)  # (dadi, tipo) che chi usa le opzioni subisce
     ability_override: str | None = None  # la prova di abilità si fa con questa caratteristica (Conoscenza Primordiale)
+    unarmed_dice: str | None = None  # il Colpo Senz'Armi infligge questi dadi più Destrezza (Danno Bardico)
 
     @property
     def mode(self) -> str | None:
@@ -487,6 +488,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.modes.append(spec.mode)
         out.cancels += spec.cancels
         out.ability_override = spec.ability_override or out.ability_override
+        if spec.unarmed_dice:
+            out.unarmed_dice = spec.unarmed_dice(option.ctx, given)
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail

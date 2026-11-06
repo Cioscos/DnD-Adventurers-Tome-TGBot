@@ -133,6 +133,8 @@ export type RollOption = {
   keep_rolled?: boolean
   /** Lancio a distanza senz'armi (Deviare Proiettili): mai con l'arma impugnata. */
   ranged_unarmed?: boolean
+  /** L'attacco che apre non è dell'azione Attacco (Colpi Agili, Raffica di Colpi): non pesa sul suo limite, come uno slot proprio. */
+  outside_action?: boolean
   /** Scelta prima del tiro, apre opzioni dopo il colpo che ora non sono in elenco: il danno aspetta. */
   defers_damage?: boolean
 }

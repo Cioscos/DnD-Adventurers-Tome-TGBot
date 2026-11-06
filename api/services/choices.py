@@ -233,6 +233,8 @@ def consume_spell_pick(session: AsyncSession, char: Character, cls: CharacterCla
     cls.options = {**(cls.options or {}), ch.group: [*(cls.options or {}).get(ch.group, []), spell.srd_index or spell.name]}
     if ch.spell_pick == "book":
         spell.in_spellbook = True
+    if ch.always_prepared:  # Scoperte Magiche: sempre preparato e fuori dal limite
+        spell.always_prepared = spell.is_prepared = True
     if ch.spell_pick == "extra":
         free = [*((char.settings or {}).get(FREE_KNOWN_KEY) or []), spell.id]
         char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: free}

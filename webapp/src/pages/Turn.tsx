@@ -365,6 +365,8 @@ export default function Turn() {
         // Un uso finito si ripristina spendendo un uso di un'altra risorsa (Presenza Intimidatoria): l'interruttore c'è solo allora.
         const restorable = !!ab.use_toggles?.some((x) => x.key === 'restore')
         const usable = running || restorable
+        // Un uso che spende un'altra riserva e l'ha finita (Magia Ammaliante senza Ispirazione): il server lo rifiuterebbe
+        const poolEmpty = ab.spends_left === 0
         const left = ab.uses ?? 0
         const pickable = !!(ab.has_on_use && ab.choose_amount)
         const floor = ab.min_amount ?? 1
@@ -381,10 +383,10 @@ export default function Turn() {
         // Una riserva a catalogo (`is_pool`, dal server: Incanalare Divinità) mostra solo il contatore, l'uso passa dai privilegi
         // che la spendono. Le righe automatiche di classe (Secondo Vento...) e quelle a mano conservano il «Usa».
         if (!ab.is_pool || ab.has_on_use) control = (
-          <Button size="sm" variant="secondary" disabled={(left < (ab.min_amount ?? 1) && !usable) || missingChoice(ab)}
+          <Button size="sm" variant="secondary" disabled={(left < (ab.min_amount ?? 1) && !usable) || missingChoice(ab) || poolEmpty}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
-            {left < (ab.min_amount ?? 1) && !usable ? t('character.turn.no_uses') : t('character.turn.use')}
+            {(left < (ab.min_amount ?? 1) && !usable) || poolEmpty ? t('character.turn.no_uses') : t('character.turn.use')}
           </Button>
         )
       } else if (ab && (isUnlimitedFeature(ab) || ab.has_on_use)) {

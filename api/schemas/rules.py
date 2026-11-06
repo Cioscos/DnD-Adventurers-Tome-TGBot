@@ -67,6 +67,7 @@ class RollOptionRead(BaseModel):
     auto_fail: bool = False
     cost: RollOptionCost | None = None
     ranged_unarmed: bool | None = absent_when_none()  # l'attacco è un lancio a distanza senz'armi: mai con l'arma impugnata
+    outside_action: bool | None = absent_when_none()  # l'attacco che apre non è dell'azione Attacco (Colpi Agili, Raffica di Colpi)
     offered_on_damage: bool | None = absent_when_none()  # la propone l'app dopo un danno subito; assente: sì se ha lo slot reazione
 
 

@@ -262,8 +262,10 @@ def _consume_cast(
         spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
     elif free_state is not None:
-        spend(char, "action")  # 409 turn_slot_used: nulla è ancora scritto
-        remove_state(char, free_state["key"])
+        data = free_state.get("data") or {}
+        spend(char, data.get("free_cast_slot", "action"))  # 409 turn_slot_used: nulla è ancora scritto
+        if not data.get("free_cast_keep"):  # il Mantello di Maestà ripete il lancio finché dura
+            remove_state(char, free_state["key"])
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")
     elif ritual:
         _add_history(

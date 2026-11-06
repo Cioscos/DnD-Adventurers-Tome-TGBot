@@ -34,7 +34,7 @@ from api.services.last_damage import pairs
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
-from core.game.stats import effective_ability_score
+from core.game.stats import effective_ability_score, roll_ability_mod
 from core.game.containers import container_meta, is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from api.routers._helpers import (
@@ -60,6 +60,7 @@ from core.utils.session_view import armor_category
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
 from core.game.attacks import martial_arts_die
 from core.rules.catalog import active_features
+from core.rules.catalog._common import unarmored_unshielded
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
 from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
@@ -978,6 +979,11 @@ async def attack_unarmed(
     throw = bool(body and throws_unarmed(char, body.options or []))  # il proiettile afferrato: a distanza, con Destrezza
     mode = "ranged" if throw else "melee"
     ability_mod, damage_dice_str, ability = unarmed_attack_profile(char, throw)
+    damage_mod, damage_ability = ability_mod, ability  # il danno resta con la caratteristica di prima
+    if not throw and unarmored_unshielded(char) and any(spec.dex_unarmed for spec, _row in active_features(char)):
+        dex_mod = roll_ability_mod(char, "dexterity")  # Passo Abbagliante: per colpire la Destrezza, se è migliore
+        if dex_mod > ability_mod:
+            ability_mod, ability = dex_mod, "dexterity"
     pb = char.proficiency_bonus
     if body and body.effect != "damage":
         return _unarmed_effect(session, char, body.effect, 8 + ability_mod + pb)
@@ -1002,7 +1008,9 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, ability, ability_mod, 0, is_critical, mode)
+        if opts.unarmed_dice:  # Danno Bardico: il dado di Ispirazione più Destrezza, al posto del danno normale
+            damage_dice_str, damage_mod, damage_ability = opts.unarmed_dice, roll_ability_mod(char, "dexterity"), "dexterity"
+        damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, damage_ability, damage_mod, 0, is_critical, mode)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 

@@ -30,6 +30,12 @@ def save_spell(spell: Any) -> bool:
     return (spell.attack_save or "").strip().upper() not in ("", "ATK")
 
 
+def unarmored_unshielded(char: Any) -> bool:
+    """Né armatura né Scudo indossati (Collegio della Danza)."""
+    from core.game.stats import _worn  # import locale: stats usa il catalogo
+    return _worn(char, "armor") is None and _worn(char, "shield") is None
+
+
 def once_used(char: Any, key: str) -> bool:
     return key in ((getattr(char, "turn_state", None) or {}).get("once_per_turn") or [])
 
