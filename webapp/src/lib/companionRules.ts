@@ -62,6 +62,8 @@ export function monsterToStatblock(e: MonsterEntry, lang: Lang): CompanionStatbl
   }))
   return {
     size: e.size, type: e.type, speed: e.speed, abilities: e.abilities, challenge_rating: e.challenge_rating,
+    // Dadi Vita del profilo: la bestia del Signore delle Bestie li spende nei riposi brevi
+    ...(e.hit_dice ? { hit_dice: e.hit_dice } : {}),
     // competenze della creatura (bonus totali): il server le dà al druido in Forma Selvatica
     ...(nonEmpty(e.skills) ? { skills: e.skills } : {}),
     ...(nonEmpty(e.saves) ? { saves: e.saves } : {}),

@@ -116,7 +116,14 @@
         "maneuvers": "Manovre",
         "weapon_mastery": "Padronanza delle armi",
         "fighting_style": "Stile di combattimento",
-        "elemental_disciplines": "Discipline elementali"
+        "elemental_disciplines": "Discipline elementali",
+        "favored_enemy": "Nemico prescelto",
+        "favored_enemy_language": "Linguaggio del nemico prescelto",
+        "favored_terrain": "Terreno prescelto",
+        "hunters_prey": "Preda del Cacciatore",
+        "defensive_tactics": "Tattiche Difensive",
+        "hunter_multiattack": "Multiattacco",
+        "superior_hunters_defense": "Difesa del Cacciatore Superiore"
       },
       "replace_title": "Sostituisci opzione",
       "replace_old": "Opzione da sostituire",
@@ -1126,6 +1133,45 @@
       "aria": "Ispirazione eroica"
     },
     "extras": {
+      "beast": {
+        "title": "Bestia compagna",
+        "none": "Nessuna bestia viva: aggiungine una dalla pagina Extra.",
+        "action_orders": "Ordine con l'azione",
+        "bonus_orders": "Ordine con l'azione bonus (Addestramento Straordinario)",
+        "attacks_left": "Attacchi della bestia: {{n}}",
+        "hint": "L'attacco della bestia si tira dalla sua scheda in Extra; la sua reazione non ha bisogno di ordini.",
+        "orders": {
+          "attack": "Attacco",
+          "help": "Aiuto",
+          "disengage": "Disimpegno",
+          "dash": "Scatto",
+          "dodge": "Schivata"
+        },
+        "errors": {
+          "turn_slot_used": "Hai già usato quell'azione in questo turno.",
+          "beast_attacked": "La bestia ha già attaccato in questo turno: l'ordine in azione bonus non vale.",
+          "beast_not_attacking": "Hai già ordinato qualcosa in azione bonus: in questo turno la bestia non attacca.",
+          "companion_down": "La bestia è a 0 PF.",
+          "incapacitated": "Incapacitato: non puoi dare ordini, la bestia agisce da sola.",
+          "feature_unavailable": "Questo ordine non è disponibile."
+        },
+        "no_order": "La bestia non attacca senza un ordine: ordinale l'Attacco dalla vista Turno.",
+        "reaction_attack": "Reazione",
+        "hit_dice": "Dado Vita",
+        "hit_dice_left": "Dadi Vita rimasti: {{n}}",
+        "hit_dice_healed": "+{{n}} PF",
+        "hit_dice_errors": {
+          "no_hit_dice": "Dadi Vita esauriti.",
+          "hp_full": "La bestia è già a PF pieni.",
+          "companion_down": "La bestia è a 0 PF."
+        },
+        "form_label": "Compagno del Ranger (Signore delle Bestie)",
+        "form_hint": "PF, CA, attacco e danni seguono il tuo livello e la tua competenza.",
+        "form_errors": {
+          "companion_exists": "Hai già una bestia viva: una nuova solo quando muore.",
+          "feature_unavailable": "Serve l'archetipo Signore delle Bestie."
+        }
+      },
       "title": "Extra",
       "add": "Aggiungi",
       "empty": "Nessun famiglio, compagno o forma salvata.",
@@ -1242,6 +1288,9 @@
       "state_attack_bonus": "+{{n}} al tiro per colpire",
       "state_maximized": "Dadi al massimo",
       "state_bonus": "Danni +{{n}} fissi",
+      "state_radius_km": "Raggio {{n}} km",
+      "state_ac_bonus": "CA +{{n}}",
+      "state_stealth_bonus": "Furtività +{{n}}",
       "state_radius": "Raggio {{n}} m",
       "state_fly": "Volo {{n}} m",
       "state_start_heal": "+{{n}} PF a inizio turno",
@@ -1267,6 +1316,7 @@
         "target_dead": "Una creatura è morta: non si può curare.",
         "confirm_required": "Conferma che nessuno è un costrutto né un non morto.",
         "bad_allocation": "Le cifre non sono valide.",
+        "no_slot": "Nessuno slot libero di quel livello.",
         "feature_not_usable": "Questo privilegio non si può usare ora.",
         "default": "Impossibile curare. Riprova."
       },
@@ -1287,6 +1337,8 @@
         "lay_on_hands_other": "Riferisci i PF al GM: la creatura li recupera da lui. Se è un personaggio della serata, scegli il suo nome per curarlo da qui. Non vale su costrutti e non morti.",
         "lay_on_hands_cure_self": "Il veleno è tolto dalla scheda, se c'era; una malattia la segni a mano. Non vale su costrutti e non morti.",
         "lay_on_hands_cure_other": "Dillo al GM o al giocatore: il veleno o la malattia va tolto da loro. Non vale su costrutti e non morti.",
+        "primeval_awareness": "Percepisci aberrazioni, celestiali, draghi, elementali, folletti, immondi e non morti entro il raggio dello stato (1,5 km, 9 km nel terreno prescelto). Non vedi dove sono né quanti.",
+        "vanish_hide": "Svanire: usi Nascondersi come azione bonus. Tira Furtività dalla vista Turno o dalle Abilità.",
         "fist_of_unbroken_air": "TS Forza: se fallisce, subisce i danni contundenti, è spinto fino a 6 m e cade prono; se supera, metà danni e nessun altro effetto."
       },
       "use_errors": {

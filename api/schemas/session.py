@@ -250,6 +250,7 @@ class TurnBlock(BaseModel):
     start_heal: list[StartHealNotice] = []  # le cure d'inizio turno di questo turno (avviso al giocatore)
     action_spell_level: Optional[int] = None  # livello dell'ultimo incantesimo lanciato con l'azione in questo turno (0: trucchetto)
     pending_attack: Optional[dict] = None
+    beast: Optional[dict] = None  # gli ordini alla bestia del Signore delle Bestie in questo turno (attacchi che le restano)
     last_roll: Optional[dict] = None  # la domanda «Riuscito?» resta finché ``refundable`` non è vuoto
 
 

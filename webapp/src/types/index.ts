@@ -71,6 +71,8 @@ export interface ClassOptionEntry {
 
 export interface ClassOptionsState {
   replaceable: boolean
+  /** Il gruppo si mostra nella pagina della classe anche se non si può sostituire. */
+  listed?: boolean
   chosen: ClassOptionEntry[]
   available: ClassOptionEntry[]
 }
@@ -1021,6 +1023,8 @@ export interface TurnBlock {
   /** Livello dell'ultimo incantesimo lanciato con l'azione in questo turno (0: trucchetto). */
   action_spell_level?: number | null
   pending_attack?: Record<string, unknown> | null
+  /** Ordini alla bestia del Signore delle Bestie in questo turno: quanti attacchi le restano. */
+  beast?: { id: number; attacks_left?: number; attacked?: boolean; bonus_order?: boolean; commands?: string[] }
   last_roll?: { roll_id: string; roll?: string; skill?: string | null; total: number; refundable?: Record<string, string[]> } | null
 }
 
@@ -1094,6 +1098,15 @@ export interface Companion {
   damage_bonus_extra?: number
   /** Danno alla forma attiva: il TS di concentrazione che il personaggio ha tirato per l'eccesso. */
   concentration_save?: ConcentrationSaveResult | null
+}
+
+export type BeastCommand = 'attack' | 'help' | 'disengage' | 'dash' | 'dodge'
+
+export interface HitDiceResult {
+  companion: Companion
+  rolls: number[]
+  healed: number
+  hit_dice_left: number
 }
 
 export type CompanionPayload = Partial<Pick<Companion,

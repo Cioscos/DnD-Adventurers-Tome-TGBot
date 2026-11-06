@@ -116,7 +116,14 @@
         "maneuvers": "Maneuvers",
         "weapon_mastery": "Weapon Mastery",
         "fighting_style": "Fighting Style",
-        "elemental_disciplines": "Elemental disciplines"
+        "elemental_disciplines": "Elemental disciplines",
+        "favored_enemy": "Favored enemy",
+        "favored_enemy_language": "Favored enemy language",
+        "favored_terrain": "Favored terrain",
+        "hunters_prey": "Hunter's Prey",
+        "defensive_tactics": "Defensive Tactics",
+        "hunter_multiattack": "Multiattack",
+        "superior_hunters_defense": "Superior Hunter's Defense"
       },
       "replace_title": "Replace option",
       "replace_old": "Option to replace",
@@ -1127,6 +1134,45 @@
       "aria": "Heroic Inspiration"
     },
     "extras": {
+      "beast": {
+        "title": "Beast companion",
+        "none": "No living beast: add one from the Extras page.",
+        "action_orders": "Order with your action",
+        "bonus_orders": "Order with a bonus action (Exceptional Training)",
+        "attacks_left": "Beast attacks: {{n}}",
+        "hint": "Roll the beast's attack from its card in Extras; its reaction needs no order.",
+        "orders": {
+          "attack": "Attack",
+          "help": "Help",
+          "disengage": "Disengage",
+          "dash": "Dash",
+          "dodge": "Dodge"
+        },
+        "errors": {
+          "turn_slot_used": "You already used that action this turn.",
+          "beast_attacked": "The beast already attacked this turn: the bonus action order does not apply.",
+          "beast_not_attacking": "You already gave a bonus action order: the beast does not attack this turn.",
+          "companion_down": "The beast is at 0 HP.",
+          "incapacitated": "Incapacitated: you cannot give orders, the beast acts on its own.",
+          "feature_unavailable": "That order is not available."
+        },
+        "no_order": "The beast does not attack without an order: order it to Attack from the Turn view.",
+        "reaction_attack": "Reaction",
+        "hit_dice": "Hit Die",
+        "hit_dice_left": "Hit Dice left: {{n}}",
+        "hit_dice_healed": "+{{n}} HP",
+        "hit_dice_errors": {
+          "no_hit_dice": "No Hit Dice left.",
+          "hp_full": "The beast is already at full HP.",
+          "companion_down": "The beast is at 0 HP."
+        },
+        "form_label": "Ranger's Companion (Beast Master)",
+        "form_hint": "HP, AC, attack and damage follow your level and proficiency.",
+        "form_errors": {
+          "companion_exists": "You already have a living beast: a new one only when it dies.",
+          "feature_unavailable": "You need the Beast Master archetype."
+        }
+      },
       "title": "Extras",
       "add": "Add",
       "empty": "No familiars, companions or forms saved.",
@@ -1243,6 +1289,9 @@
       "state_attack_bonus": "+{{n}} to the attack roll",
       "state_maximized": "Dice at maximum",
       "state_bonus": "Fixed damage +{{n}}",
+      "state_radius_km": "Radius {{n}} km",
+      "state_ac_bonus": "AC +{{n}}",
+      "state_stealth_bonus": "Stealth +{{n}}",
       "state_radius": "Radius {{n}} m",
       "state_fly": "Fly {{n}} m",
       "state_start_heal": "+{{n}} HP at the start of your turns",
@@ -1268,6 +1317,7 @@
         "target_dead": "A creature is dead and cannot be healed.",
         "confirm_required": "Confirm that no one is a construct or an undead.",
         "bad_allocation": "The numbers are not valid.",
+        "no_slot": "No free slot of that level.",
         "feature_not_usable": "You cannot use this feature now.",
         "default": "Could not heal. Try again."
       },
@@ -1287,6 +1337,8 @@
         "lay_on_hands_other": "Tell the GM how many HP you gave back: the creature regains them from there. If it is a character at the table, pick their name to heal them from here. Not on constructs or undead.",
         "lay_on_hands_cure_self": "The poison is removed from your sheet, if you had one; mark a disease by hand. Not on constructs or undead.",
         "lay_on_hands_cure_other": "Tell the GM or the player: the poison or disease has to be removed on their side. Not on constructs or undead.",
+        "primeval_awareness": "You sense aberrations, celestials, dragons, elementals, fey, fiends and undead within the radius of the state (1 mile, 6 miles in your favored terrain). You do not learn where they are or how many.",
+        "vanish_hide": "Vanish: you take the Hide action as a bonus action. Roll Stealth from the Turn view or from Skills.",
         "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else."
       },
       "use_rolled": "You rolled",

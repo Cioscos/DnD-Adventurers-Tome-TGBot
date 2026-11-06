@@ -34,6 +34,7 @@ export default function Extras() {
     onError: (err) => {
       if (err instanceof ApiError && err.status === 422 && err.detail === 'companion_limit') toast.error(t('character.extras.limit'))
       else if (err instanceof ApiError && err.status === 422 && err.detail === 'known_forms_limit') toast.error(t('character.extras.known_forms_limit'))
+      else if (err instanceof ApiError && err.status === 422 && (err.detail === 'companion_exists' || err.detail === 'feature_unavailable')) toast.error(t(`character.extras.beast.form_errors.${err.detail}`))
       else notifyMutationError()
     },
   })
@@ -44,6 +45,7 @@ export default function Extras() {
   }
 
   const druid = char.classes.find((c) => classKey(c.class_name) === 'druid')
+  const isBeastMaster = char.abilities.some((a) => a.feature_key === 'ranger.rangers_companion')
   const druidLevel = druid?.level ?? 0
   const isMoon = druid?.subclass_key === 'moon'
   const edition = char.rules_edition ?? '2014'
@@ -77,7 +79,7 @@ export default function Extras() {
         })}
       </div>
       {adding && (
-        <CompanionForm druidLevel={druidLevel} isMoon={isMoon} edition={edition} pending={create.isPending}
+        <CompanionForm druidLevel={druidLevel} isMoon={isMoon} edition={edition} isBeastMaster={isBeastMaster} pending={create.isPending}
           onSubmit={(b) => create.mutate(b)} onClose={() => setAdding(false)} />
       )}
     </Layout>

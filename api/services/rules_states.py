@@ -13,7 +13,7 @@ from api.services.rules_turn import (
     attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
 )
 from api.services.session_allies import ally_target, load_receiver
-from core.db.models import Ability
+from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect
@@ -206,6 +206,19 @@ async def _spend_atomically(session: AsyncSession, ability, cost: int) -> None:
     await session.refresh(ability)
 
 
+async def _spend_slot(session: AsyncSession, char, level: int) -> None:
+    """Spende uno slot incantesimo di ``level`` (prima i normali, poi quelli del Patto) con un UPDATE condizionato: due
+    richieste insieme non prendono lo stesso slot. 409 ``no_slot`` se non ce n'è uno libero."""
+    candidates = sorted((s for s in char.spell_slots if s.level == level and s.used < s.total), key=lambda s: bool(s.is_pact))
+    for slot in candidates:
+        taken = await session.execute(
+            update(SpellSlot).where(SpellSlot.id == slot.id, SpellSlot.used < SpellSlot.total).values(used=SpellSlot.used + 1))
+        if taken.rowcount == 1:
+            await session.refresh(slot)
+            return
+    raise _err(status.HTTP_409_CONFLICT, "no_slot")
+
+
 @dataclass
 class UseResult:
     rolls: list[int] = field(default_factory=list)
@@ -272,6 +285,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
     if on_use.slot:
         spend(char, on_use.slot)  # 409 turn_slot_used prima di toccare gli usi
+    if on_use.spends_slot:
+        await _spend_slot(session, char, int((params or {})[on_use.spends_slot]))
     if on_use.once_per_turn:
         mark_once(char, feature_key)
     if on_use.forgoes_attack:

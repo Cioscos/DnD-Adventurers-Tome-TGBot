@@ -78,6 +78,7 @@ export interface MonsterEntry extends BaseEntry {
   type: string
   armor_class: number
   hit_points: number
+  hit_dice?: string
   speed: Record<string, number>
   abilities: Record<string, number>
   skills?: Record<string, number>

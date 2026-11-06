@@ -5,6 +5,7 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipSelect from '@/components/ui/ChipSelect'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { localized, type Lang, type MonsterEntry } from '@/lib/srd/catalog'
 import { KINDS, familiarWarning, formatCr, monsterToStatblock, wildShapeWarning, wildShapeMaxCr } from '@/lib/companionRules'
@@ -16,13 +17,15 @@ interface Props {
   druidLevel: number
   isMoon: boolean
   edition: string
+  /** Signore delle Bestie 2014: un compagno può essere la bestia del ranger (PF, CA e bonus dal suo livello). */
+  isBeastMaster?: boolean
   pending?: boolean
   onSubmit: (body: CompanionPayload) => void
   onClose: () => void
 }
 
 /** Creation sheet: pick a monster from the SRD catalogue or type the stats by hand. Warnings are advisory. */
-export default function CompanionForm({ druidLevel, isMoon, edition, pending, onSubmit, onClose }: Props) {
+export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMaster, pending, onSubmit, onClose }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [kind, setKind] = useState<CompanionKind>('familiar')
@@ -35,6 +38,7 @@ export default function CompanionForm({ druidLevel, isMoon, edition, pending, on
   const [notes, setNotes] = useState('')
   const [entry, setEntry] = useState<MonsterEntry | null>(null)
   const [picking, setPicking] = useState(false)
+  const [rangerBeast, setRangerBeast] = useState(false)
 
   const warnKey = !entry ? null
     : kind === 'familiar' ? familiarWarning(entry)
@@ -50,7 +54,10 @@ export default function CompanionForm({ druidLevel, isMoon, edition, pending, on
 
   const manualAttack = atkName.trim() && atkBonus !== '' && DICE.test(atkDice.trim())
   const submit = () => {
-    const base = { kind, name: name.trim(), max_hp: Number(hp) || 0, armor_class: Number(ac) || 10, notes: notes.trim() || null }
+    const base = {
+      kind, name: name.trim(), max_hp: Number(hp) || 0, armor_class: Number(ac) || 10, notes: notes.trim() || null,
+      ...(isBeastMaster && kind === 'companion' && rangerBeast ? { feature_key: 'ranger.rangers_companion' } : {}),
+    }
     if (entry) {
       onSubmit({ ...base, srd_index: entry.index, statblock: monsterToStatblock(entry, lang) })
     } else {
@@ -74,6 +81,12 @@ export default function CompanionForm({ druidLevel, isMoon, edition, pending, on
             onChange={(v) => setKind(v as CompanionKind)}
             columns={2}
           />
+          {isBeastMaster && kind === 'companion' && (
+            <div className="space-y-1">
+              <SwitchToggle label={t('character.extras.beast.form_label')} checked={rangerBeast} onChange={setRangerBeast} />
+              {rangerBeast && <p className="text-xs text-dnd-text-muted font-body">{t('character.extras.beast.form_hint')}</p>}
+            </div>
+          )}
           <Button variant="secondary" fullWidth className="min-h-11" icon={<BookOpen size={16} />} onClick={() => setPicking(true)}>
             {t('character.extras.from_catalog')}
           </Button>

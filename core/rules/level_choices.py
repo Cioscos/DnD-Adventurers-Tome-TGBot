@@ -55,6 +55,8 @@ def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
         known = {str(x).strip().lower() for x in char.languages or []}
         added = list(char.languages or [])
         for key in keys:
+            if ch.label and ch.label(key).get("skip"):  # «nessun linguaggio»: la scelta si chiude senza aggiungere nulla
+                continue
             names = ch.label(key)["name"] if ch.label else {"it": key, "en": key}
             if not ({n.lower() for n in names.values()} & known):
                 added.append(names["it"])

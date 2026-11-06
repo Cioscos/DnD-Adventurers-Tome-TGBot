@@ -72,10 +72,10 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   })
 
   const attack = useMutation({
-    mutationFn: async ({ idx, mode }: { idx: number; mode: RollMode }) => {
+    mutationFn: async ({ idx, mode, reaction }: { idx: number; mode: RollMode; reaction?: boolean }) => {
       const choice = await askRollOptions(charId, { roll: 'attack' })
       const dice = await rollD20(mode)
-      return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs })
+      return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs }, reaction)
     },
     onSuccess: (r, { idx }) => {
       refreshAfterOptions(qc, charId, r.option_result)
@@ -84,13 +84,35 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       refresh()
     },
     onError: (err) => {
-      if (err instanceof ApiError && (err.detail as { code?: string } | null)?.code === 'incapacitated') {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (code === 'incapacitated') {
         toast.error(t('character.attack.incapacitated'))
+      } else if (code === 'no_order') {
+        toast.error(t('character.extras.beast.no_order'))
+      } else if (code === 'companion_down') {
+        toast.error(t('character.extras.beast.errors.companion_down'))
       } else {
         notifyMutationError()
       }
     },
   })
+
+  // Signore delle Bestie: i Dadi Vita del profilo della bestia, spesi in un riposo breve
+  const isBeast = comp.feature_key === 'ranger.rangers_companion'
+  const hitDice = useMutation({
+    mutationFn: () => api.companions.hitDice(charId, comp.id, 1),
+    onSuccess: (r) => {
+      haptic.success(); refresh()
+      toast.info(t('character.extras.beast.hit_dice_healed', { n: r.healed }), { description: t('character.extras.beast.hit_dice_left', { n: r.hit_dice_left }) })
+    },
+    onError: (err) => {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (code && ['no_hit_dice', 'hp_full', 'companion_down'].includes(code)) toast.error(t(`character.extras.beast.hit_dice_errors.${code}`))
+      else notifyMutationError()
+    },
+  })
+  const hdTotal = Number(/^(\d+)d\d+$/.exec(String(comp.statblock.hit_dice ?? ''))?.[1] ?? 0)
+  const hdLeft = Math.max(0, hdTotal - Number(comp.statblock.hit_dice_spent ?? 0))
 
   const activate = useMutation({
     mutationFn: (force: boolean) => api.companions.activate(charId, comp.id, force),
@@ -174,6 +196,13 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       </div>
       </>}
 
+      {isBeast && comp.current_hp > 0 && hdTotal > 0 && (
+        <Button variant="secondary" fullWidth className="min-h-11" disabled={comp.current_hp >= comp.max_hp || hdLeft === 0}
+          loading={hitDice.isPending} onClick={() => hitDice.mutate()}>
+          {t('character.extras.beast.hit_dice')} ({hdLeft}/{hdTotal})
+        </Button>
+      )}
+
       {attacks.length > 0 && (
         <ul className="space-y-1.5">
           {attacks.map(({ a, idx }) => (
@@ -193,6 +222,16 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
               >
                 <Swords size={14} />{t('character.turn.attack')}
               </RollButton>
+              {isBeast && (
+                <RollButton
+                  onRoll={(mode) => attack.mutate({ idx, mode, reaction: true })}
+                  pending={attack.isPending}
+                  ariaLabel={`${t('character.extras.beast.reaction_attack')} ${a.name}`}
+                  className="flex items-center gap-1 text-sm font-medium px-3 min-h-11 rounded-lg border bg-dnd-surface text-dnd-text border-dnd-border"
+                >
+                  {t('character.extras.beast.reaction_attack')}
+                </RollButton>
+              )}
             </li>
           ))}
         </ul>

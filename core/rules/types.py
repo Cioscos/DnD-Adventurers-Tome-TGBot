@@ -35,6 +35,7 @@ class ChoiceSpec:
     (scelta con ``retrofit``, R39), si possono dichiarare «già sulla scheda» invece di aggiungerne altre.
     ``spell_level``: con ``spell_pick``, il livello massimo dell'incantesimo scelto (0: un trucchetto). ``spell_list``: la
     classe del cui elenco si pesca (``druid``); il client restringe il catalogo, il server non ha gli elenchi.
+    ``listed``: la pagina della classe mostra le opzioni scelte del gruppo anche se non si possono sostituire (Nemico Prescelto).
     """
     group: str
     levels: dict[int, int]
@@ -46,6 +47,7 @@ class ChoiceSpec:
     owned: Callable[["RuleContext"], list[str]] | None = None
     spell_level: int | None = None
     spell_list: str | None = None
+    listed: bool = False
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language"):
@@ -264,6 +266,9 @@ class OnUse:
     ally_modes: tuple[str, ...] = ()
     heal_ally_when: "Callable[[RuleContext, dict], bool] | None" = None
     clears: "Callable[[RuleContext, dict], list[str]] | None" = None
+    # chiave della ``UseChoice`` che porta il livello di uno slot incantesimo da spendere (Consapevolezza Primordiale): lo slot si prende
+    # con un UPDATE condizionato, normali prima del Patto; senza slot libero l'uso è rifiutato (409 ``no_slot``)
+    spends_slot: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):

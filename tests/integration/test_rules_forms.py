@@ -188,8 +188,9 @@ async def test_spell_blocked_in_form_unless_feature(client, rules_catalog):
     assert (await client.post(f"/characters/{cid}/spells/{spell}/use", json={})).status_code == 200
 
 
-async def _ranger(client, level, edition, **scores) -> int:
-    r = await client.post("/characters", json={"name": "[prova] Ranger", "initial_class": {"class_name": "Ranger", "level": level}})
+async def _ranger(client, level, edition, subclass=None, **scores) -> int:
+    cls = {"class_name": "Ranger", "level": level, **({"subclass": subclass} if subclass else {})}
+    r = await client.post("/characters", json={"name": "[prova] Ranger", "initial_class": cls})
     cid = r.json()["id"]
     if edition != "2014":
         await client.patch(f"/characters/{cid}", json={"rules_edition": edition})
@@ -211,11 +212,12 @@ async def _read(client, cid, comp_id) -> dict:
 
 
 async def test_companion_from_feature_scales_with_pb(client):
-    cid = await _ranger(client, 3, "2014")  # PB +2
+    cid = await _ranger(client, 3, "2014", "Signore delle Bestie")  # PB +2
     comp = await _companion(client, cid, "ranger.rangers_companion")
     read = await _read(client, cid, comp["id"])
     assert read["max_hp"] == 12 and read["armor_class"] == 15 and read["attack_bonus_extra"] == 2
     assert read["damage_bonus_extra"] == 2 and read["feature_key"] == "ranger.rangers_companion"
+    await client.post(f"/characters/{cid}/companions/{comp['id']}/command", json={"command": "attack"})  # la bestia agisce se glielo ordini
     atk = await client.post(f"/characters/{cid}/companions/{comp['id']}/attack",
                             json={"action_index": 0, "mode": "normal", "dice": [10], "damage_rolls": [3]})
     assert atk.status_code == 200, atk.text

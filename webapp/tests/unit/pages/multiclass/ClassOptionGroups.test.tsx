@@ -38,6 +38,16 @@ describe('ClassOptionGroups (R20: sostituire un\'opzione scelta dalla pagina del
     expect(screen.queryByTestId('option-group-fighting_style')).not.toBeInTheDocument()  // lo stile non si cambia
   })
 
+  it('lists the options of a group the catalog only lists (Favored Enemy), with no replace button', async () => {
+    classOptions.mockImplementation(async () => ({
+      replaceable: false, listed: true, chosen: [entry('undead', 'Non morti'), entry('giants', 'Giganti')], available: [],
+    }))
+    const ranger = { id: 12, class_name: 'Ranger', level: 6, options: { favored_enemy: ['undead', 'giants'] } } as unknown as CharacterClass
+    renderWithProviders(<ClassOptionGroups char={char} cls={ranger} />)
+    expect(await screen.findByTestId('option-group-favored_enemy')).toHaveTextContent('Non morti, Giganti')
+    expect(screen.queryByText('character.level_choice.replace_title')).not.toBeInTheDocument()
+  })
+
   it('replaces an option through the generic sheet', async () => {
     renderWithProviders(<ClassOptionGroups char={char} cls={fighter} />)
     await userEvent.click(await screen.findByText('character.level_choice.replace_title'))

@@ -21,6 +21,7 @@ import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import SelectSheet from '@/components/ui/SelectSheet'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
+import BeastOrders from '@/components/character/BeastOrders'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
@@ -42,9 +43,9 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
-const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other']
+const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'primeval_awareness', 'vanish_hide']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -538,6 +539,8 @@ export default function Turn() {
           </fieldset>
         )}
       </section>
+
+      <BeastOrders char={char} turn={block} />
 
       <GiveInspirationRow char={char} />
 

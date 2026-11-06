@@ -14,8 +14,9 @@ from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.schemas.common import HPOp, HPUpdate
 from api.schemas.companion import (
-    DICE_RE, MAX_COMPANIONS, CompanionActivate, CompanionAttack, CompanionAttackResult, CompanionCreate,
-    CompanionHp, CompanionRead, CompanionUpdate, WildHealRequest, WildHealResult,
+    DICE_RE, MAX_COMPANIONS, CompanionActivate, CompanionAttack, CompanionAttackResult, CompanionCommand,
+    CompanionCommandResult, CompanionCreate, CompanionHp, CompanionRead, CompanionUpdate, HitDiceRequest, HitDiceResult,
+    WildHealRequest, WildHealResult,
 )
 from api.routers.hp import _get_owned_full, update_hp
 from api.routers.items import _option_damage
@@ -28,11 +29,11 @@ from api.services.wild_shape import (
     deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
 )
 from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
-from core.rules.companions import companion_stats
+from core.rules.companions import BEAST_BONUS_ORDERS, BEAST_COMPANION, companion_stats
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
 from core.rules.forms import elemental_violations, form_violations, is_elemental_form
-from core.rules.modifiers import Applied, modifiers_for
+from core.rules.modifiers import Applied, is_incapacitated, modifiers_for
 
 router = APIRouter(prefix="/characters", tags=["companions"])
 
@@ -108,6 +109,11 @@ async def create_companion(
         raise HTTPException(status_code=422, detail="companion_limit")
     if body.is_active and body.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
+    if body.feature_key == BEAST_COMPANION:  # solo il Signore delle Bestie, e una bestia per volta (quella morta si sostituisce)
+        if not any(spec.key == BEAST_COMPANION for spec, _row in active_features(char)):
+            raise HTTPException(status_code=422, detail="feature_unavailable")
+        if any(c.feature_key == BEAST_COMPANION and c.current_hp > 0 for c in rows):
+            raise HTTPException(status_code=422, detail="companion_exists")
     limits = form_limits(char)
     if body.kind == "wild_shape" and limits is not None and limits.known_forms is not None:
         if sum(c.kind == "wild_shape" for c in rows) >= limits.known_forms:  # 2024: forme conosciute, se ne sostituisce una
@@ -319,6 +325,108 @@ async def companion_hp(
     return out
 
 
+def _beast_state(char: Character) -> dict:
+    return dict(get_turn(char).get("beast") or {})
+
+
+def _save_beast_state(char: Character, beast: dict) -> None:
+    char.turn_state = {**get_turn(char), "beast": beast}
+
+
+def _take_beast_attack(char: Character, comp: Companion, reaction: bool) -> None:
+    """La bestia del ranger attacca solo se il ranger glielo ha ordinato in questo turno (un attacco per ordine, due con Furia
+    Bestiale); la sua reazione non ha bisogno di ordini, e con il ranger incapacitato agisce da sola."""
+    if comp.current_hp <= 0:
+        raise HTTPException(status_code=409, detail={"code": "companion_down"})
+    if reaction or is_incapacitated(char):
+        return
+    beast = _beast_state(char)
+    if beast.get("id") != comp.id or int(beast.get("attacks_left") or 0) < 1:
+        raise HTTPException(status_code=409, detail={"code": "no_order"})
+    _save_beast_state(char, {**beast, "attacks_left": beast["attacks_left"] - 1, "attacked": True})
+
+
+def _beast_attacks(char: Character, comp: Companion) -> int:
+    """Attacchi dell'ordine di Attacco: uno; con Furia Bestiale due, o il Multiattacco della bestia se lo possiede."""
+    if not any(spec.key == "ranger.bestial_fury" for spec, _row in active_features(char)):
+        return 1
+    return max(2, int((comp.statblock or {}).get("multiattack") or 0))
+
+
+@router.post("/{char_id}/companions/{comp_id}/command", response_model=CompanionCommandResult)
+async def command_companion(
+    char_id: int,
+    comp_id: int,
+    body: CompanionCommand,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CompanionCommandResult:
+    """Ordine alla bestia del ranger. Con l'azione: Attacco, Aiuto, Disimpegno, Scatto o Schivata. Con l'azione bonus
+    (Addestramento Straordinario, 7°) tutti tranne l'Attacco, e solo in un turno in cui la bestia non attacca."""
+    char = await _get_char(session, char_id, user_id)
+    comp = await _get_companion(session, char_id, comp_id)
+    if comp.feature_key != BEAST_COMPANION:
+        raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
+    if comp.current_hp <= 0:
+        raise HTTPException(status_code=409, detail={"code": "companion_down"})
+    refuse_if_incapacitated(char)  # il ranger incapacitato non ordina: la bestia agisce da sola
+    beast = _beast_state(char)
+    if body.bonus:
+        if body.command not in BEAST_BONUS_ORDERS:
+            raise HTTPException(status_code=422, detail={"code": "bonus_not_attack"})
+        if not any(spec.key == "ranger.exceptional_training" for spec, _row in active_features(char)):
+            raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
+        if beast.get("attacked") or int(beast.get("attacks_left") or 0) > 0:
+            raise HTTPException(status_code=409, detail={"code": "beast_attacked"})
+        spend(char, "bonus")  # 409 turn_slot_used
+        beast = {**beast, "id": comp.id, "bonus_order": True}
+    else:
+        if body.command == "attack" and beast.get("bonus_order"):
+            raise HTTPException(status_code=409, detail={"code": "beast_not_attacking"})
+        spend(char, "action")  # 409 turn_slot_used
+        beast = {**beast, "id": comp.id, "attacks_left": _beast_attacks(char, comp) if body.command == "attack" else 0}
+    _save_beast_state(char, {**beast, "commands": [*beast.get("commands", []), body.command]})
+    _history(session, char_id, "companion_hp", f"{comp.name}: ordine {body.command}")
+    return CompanionCommandResult(command=body.command, bonus=body.bonus,
+                                  attacks_left=int(_beast_state(char).get("attacks_left") or 0))
+
+
+@router.post("/{char_id}/companions/{comp_id}/hit-dice", response_model=HitDiceResult)
+async def spend_beast_hit_dice(
+    char_id: int,
+    comp_id: int,
+    body: HitDiceRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HitDiceResult:
+    """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0."""
+    char = await _get_char(session, char_id, user_id)
+    comp = await _get_companion(session, char_id, comp_id)
+    if comp.feature_key != BEAST_COMPANION:
+        raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
+    if comp.current_hp <= 0:
+        raise HTTPException(status_code=409, detail={"code": "companion_down"})
+    top = _effective_max_hp(char, comp)
+    if comp.current_hp >= top:
+        raise HTTPException(status_code=409, detail={"code": "hp_full"})
+    sb = dict(comp.statblock or {})
+    dice = DICE_RE.match(str(sb.get("hit_dice") or ""))
+    total, sides = (int(dice.group(1)), int(dice.group(2))) if dice else (0, 0)
+    spent = int(sb.get("hit_dice_spent") or 0)
+    if not sides or total - spent < body.count:
+        raise HTTPException(status_code=409, detail={"code": "no_hit_dice"})
+    con = (sb.get("abilities") or {}).get("con")
+    mod = ((con if isinstance(con, int) and not isinstance(con, bool) else 10) - 10) // 2
+    rolls = [random.randint(1, sides) for _ in range(body.count)]
+    record_dice(char, [(f"d{sides}", r) for r in rolls])
+    before = comp.current_hp
+    comp.current_hp = min(top, before + sum(max(0, r + mod) for r in rolls))
+    comp.statblock = {**sb, "hit_dice_spent": spent + body.count}  # nuovo dict: SQLAlchemy non vede le mutazioni in place
+    _history(session, char_id, "companion_hp", f"{comp.name}: {body.count} Dadi Vita, +{comp.current_hp - before} PF")
+    return HitDiceResult(companion=_read(char, comp), rolls=rolls, healed=comp.current_hp - before,
+                         hit_dice_left=total - spent - body.count)
+
+
 @router.post("/{char_id}/companions/{comp_id}/attack", response_model=CompanionAttackResult)
 async def companion_attack(
     char_id: int,
@@ -335,6 +443,8 @@ async def companion_attack(
     action = actions[body.action_index]
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
+    if comp.feature_key == BEAST_COMPANION:
+        _take_beast_attack(char, comp, body.reaction)
 
     # In Forma Selvatica attacca il personaggio: le sue condizioni restano; un compagno è un altro combattente.
     applied = Applied()

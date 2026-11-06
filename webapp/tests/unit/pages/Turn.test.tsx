@@ -429,6 +429,44 @@ describe('Turn page', () => {
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'cleric.knowledge_of_the_ages', 1, { skill: 'stealth' }))
   })
 
+  it('asks the slot level and the terrain for Primeval Awareness and sends both, then says what it senses', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 14, name: 'Consapevolezza Primordiale', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'ranger.primeval_awareness', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+      use_toggles: [{ key: 'terrain', label: { it: 'Terreno prescelto', en: 'Favored terrain' } }],
+      use_choices: [{ key: 'slot_level', label: { it: 'Livello dello slot', en: 'Slot level' }, options: [
+        { key: '1', label: { it: 'Slot di 1° livello', en: 'Level 1 slot' } }, { key: '2', label: { it: 'Slot di 2° livello', en: 'Level 2 slot' } }] }],
+    }] })
+    featureUse.mockClear().mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: ['primeval_awareness'] })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeDisabled()  // senza il livello dello slot non si usa
+    await userEvent.click(screen.getByText('character.turn.choose'))
+    await userEvent.click(await screen.findByText('Slot di 2° livello'))
+    await userEvent.click(screen.getByRole('switch'))
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'ranger.primeval_awareness', 1, { terrain: true, slot_level: '2' }))
+    expect(toastInfo).toHaveBeenCalledWith('character.turn.use_notes.primeval_awareness')
+  })
+
+  it('tells the player that Vanish is the Hide action, and has a text for a refused slot', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 15, name: 'Svanire', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'ranger.vanish', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none',
+    }] })
+    featureUse.mockClear().mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: ['vanish_hide'] })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.use'))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_notes.vanish_hide'))
+    const { ApiError } = await import('@/api/client')
+    featureUse.mockRejectedValueOnce(new ApiError(409, { code: 'no_slot' }))
+    toastError.mockClear()
+    await userEvent.click(screen.getByText('character.turn.use'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.no_slot'))
+  })
+
   it('opens the target sheet for a feature whose use leaves an effect on others (Intimidating Presence)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 6, name: 'Presenza Intimidatoria', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

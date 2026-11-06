@@ -73,6 +73,8 @@ import type {
   Companion,
   CompanionAttackResult,
   WildHealResult,
+  BeastCommand,
+  HitDiceResult,
   CompanionPayload,
   SessionFeedResponse,
   SessionMessage,
@@ -1001,10 +1003,16 @@ export const api = {
       request<void>(`/characters/${charId}/companions/${id}`, { method: 'DELETE' }),
     hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number) =>
       request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value }) }),
-    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[], choice?: Pick<RollChoice, 'options' | 'option_inputs'>) =>
+    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[], choice?: Pick<RollChoice, 'options' | 'option_inputs'>, reaction = false) =>
       request<CompanionAttackResult>(`/characters/${charId}/companions/${id}/attack`, {
-        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice, ...choice }),
+        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice, ...(reaction ? { reaction } : {}), ...choice }),
       }),
+    command: (charId: number, id: number, command: BeastCommand, bonus = false) =>
+      request<{ command: string; bonus: boolean; attacks_left: number }>(`/characters/${charId}/companions/${id}/command`, {
+        method: 'POST', body: JSON.stringify({ command, bonus }),
+      }),
+    hitDice: (charId: number, id: number, count = 1) =>
+      request<HitDiceResult>(`/characters/${charId}/companions/${id}/hit-dice`, { method: 'POST', body: JSON.stringify({ count }) }),
     activate: (charId: number, id: number, force = false) =>
       request<Companion>(`/characters/${charId}/companions/${id}/activate`, { method: 'POST', body: JSON.stringify({ force }) }),
     deactivate: (charId: number, id: number) =>

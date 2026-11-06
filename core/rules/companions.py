@@ -28,6 +28,11 @@ def _primal_companion(_hp: int, _ac: int, level: int, pb: int, wis: int, statblo
     return CompanionStats(per_level * (level + 1), 13 + wis, pb + wis, wis)
 
 
+BEAST_COMPANION = "ranger.rangers_companion"  # il compagno del Signore delle Bestie 2014: agisce solo se il ranger glielo ordina
+BEAST_ORDERS = ("attack", "help", "disengage", "dash", "dodge")
+BEAST_BONUS_ORDERS = ("help", "disengage", "dash", "dodge")  # Addestramento Straordinario: tutti tranne l'attacco
+
+
 # chiave -> (classe, edizione, formula)
 COMPANION_FEATURES: dict[str, tuple[str, str, Callable[..., CompanionStats]]] = {
     "ranger.rangers_companion": ("ranger", "2014", _rangers_companion),

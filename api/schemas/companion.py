@@ -125,9 +125,33 @@ class CompanionHp(BaseModel):
 
 class CompanionAttack(RollOptionsBody):
     action_index: int = Field(ge=0)
+    reaction: bool = False  # la reazione della bestia del ranger (attacco di opportunità) non ha bisogno di un ordine
     mode: RollMode = "normal"
     dice: D20Dice | None = None
     damage_rolls: Optional[list[int]] = Field(default=None, max_length=100)
+
+
+class CompanionCommand(BaseModel):
+    """Ordine del ranger alla bestia compagna: con l'azione, o con l'azione bonus (Addestramento Straordinario)."""
+    command: Literal["attack", "help", "disengage", "dash", "dodge"]
+    bonus: bool = False
+
+
+class CompanionCommandResult(BaseModel):
+    command: str
+    bonus: bool
+    attacks_left: int  # attacchi che la bestia può ancora fare in questo turno
+
+
+class HitDiceRequest(BaseModel):
+    count: int = Field(default=1, ge=1, le=20)
+
+
+class HitDiceResult(BaseModel):
+    companion: CompanionRead
+    rolls: list[int]
+    healed: int  # PF che la bestia ha recuperato davvero (il massimo non si supera)
+    hit_dice_left: int
 
 
 class CompanionAttackResult(BaseModel):

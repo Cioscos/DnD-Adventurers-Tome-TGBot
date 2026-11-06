@@ -102,7 +102,7 @@ def class_options_state(char: Character, cls: CharacterClass, group: str) -> dic
     ch = _choice_spec(char, cls, group)
     if ch is None:
         raise HTTPException(404, "Option group not found")
-    return {"replaceable": ch.replaceable,
+    return {"replaceable": ch.replaceable, "listed": ch.listed,
             "chosen": _entries(char, cls, group, list((cls.options or {}).get(group, []))),
             "available": _entries(char, cls, group, _available(char, cls, ch)[0])}
 
