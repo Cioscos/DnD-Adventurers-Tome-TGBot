@@ -400,6 +400,49 @@ async def preserve_life_info(
     return PreserveLifeInfo(pool=res.pool, uses_left=res.uses_left, targets=[asdict(t) for t in res.targets])
 
 
+class SurgeBody(BaseModel):
+    die: int | None = Field(default=None, ge=1, le=20)  # il d20, se l'ha già tirato il client
+    percentile: list[int] | None = Field(default=None, max_length=2)  # i d100, se già tirati
+    tides: bool = False  # il GM fa tirare la tabella dopo Onde di Caos: niente d20
+
+
+class SurgeChoose(BaseModel):
+    index: int = Field(ge=0, le=1)
+
+
+class SurgeResult(BaseModel):
+    die: int | None
+    triggered: bool
+    pending: bool  # Caos Controllato: due risultati, il giocatore sceglie
+    options: list[dict]
+    applied: dict | None
+    tides_restored: bool
+
+
+@turn_router.post("/{char_id}/wild-magic/surge", response_model=SurgeResult)
+async def wild_magic_surge(
+    char_id: int, body: SurgeBody, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Impulso di Magia Selvaggia: d20 una volta per turno e, con 1, la tabella dei 50 impulsi."""
+    from api.services.wild_magic import roll_surge
+    if body.percentile is not None and any(not 1 <= p <= 100 for p in body.percentile):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "bad_percentile"})
+    char = await _get_owned_full(char_id, user_id, db)
+    return await roll_surge(db, char, body.die, body.percentile, body.tides)
+
+
+@turn_router.post("/{char_id}/wild-magic/surge/choose", response_model=SurgeResult)
+async def wild_magic_choose(
+    char_id: int, body: SurgeChoose, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Caos Controllato: il giocatore sceglie fra i due risultati tirati."""
+    from api.services.wild_magic import choose_surge
+    char = await _get_owned_full(char_id, user_id, db)
+    return await choose_surge(db, char, body.index)
+
+
 class AllyRead(BaseModel):
     id: int
     name: str

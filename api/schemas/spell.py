@@ -234,4 +234,5 @@ class RollDamageResult(BaseModel):
     parts: list[DamagePart] = []  # i gruppi di dadi, ciascuno col suo tipo
     option_result: OptionResult | None = absent_when_none()
     reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
+    twinned_damage: dict | None = absent_when_none()  # Incantesimo Raddoppiato: {rolls, total} del secondo bersaglio
     model_config = {"from_attributes": True}

@@ -250,7 +250,12 @@ def _store_saved_dice(char: Any, key: str, values: list[int]) -> None:
     char.settings = settings  # nuovo dict: SQLAlchemy non vede le mutazioni in place
 
 
-def _affordable(char: Any, spec: RollOptionSpec) -> bool:
+def cost_amount(cost: Cost, ctx: RuleContext) -> int:
+    """Quanti usi costa l'opzione adesso: fisso, o calcolato dal lancio (``amount_by``)."""
+    return cost.amount_by(ctx) if cost.amount_by else cost.amount
+
+
+def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None) -> bool:
     if spec.replace_die and not saved_dice(char, spec.key):
         return False
     if spec.once_per_turn and _once_key(spec) in _turn(char).get("once_per_turn", []):
@@ -258,7 +263,7 @@ def _affordable(char: Any, spec: RollOptionSpec) -> bool:
     if spec.slot and not _slot_free(char, spec.slot):
         return False
     cost = spec.cost
-    if cost and cost.feature_key and _ability_row(char, cost.feature_key, cost.amount) is None:
+    if cost and cost.feature_key and _ability_row(char, cost.feature_key, cost_amount(cost, ctx) if ctx else cost.amount) is None:
         return False
     if cost and cost.state_key and not any(s.get("key") == cost.state_key for s in char.active_states or []):
         return False
@@ -275,7 +280,7 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
     # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
     kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
     return [o for o in found.values()
-            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec)]
+            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec, o.ctx)]
 
 
 def roll_options_for(ctx: RuleContext) -> list[RollOption]:
@@ -341,7 +346,7 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     """Paga l'opzione e ne applica l'effetto collaterale. Ricontrolla ogni risorsa: due opzioni possono contendersi
     l'ultima. I gettoni restituiti sono quelli che ``refund_spent`` sa rimborsare."""
     spec, char = option.spec, option.ctx.char
-    if not _affordable(char, spec):
+    if not _affordable(char, spec, option.ctx):
         raise OptionUnavailable(spec.key)
     spent: list[str] = []
     turn = _turn(char)
@@ -359,10 +364,11 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     char.turn_state = turn  # nuovo dict: SQLAlchemy non vede le mutazioni in place
     cost = spec.cost
     if cost and cost.feature_key:
-        row = _ability_row(char, cost.feature_key, cost.amount)
+        amount = cost_amount(cost, option.ctx)
+        row = _ability_row(char, cost.feature_key, amount)
         if row.max_uses is not None:
-            row.uses = (row.uses or 0) - cost.amount
-        spent.append(f"feature:{row.feature_key}:{cost.amount}")
+            row.uses = (row.uses or 0) - amount
+        spent.append(f"feature:{row.feature_key}:{amount}")
     if cost and cost.state_key:
         spent.append(_spend_state_token(char, cost.state_key))
     if spec.requires_input == "slot":

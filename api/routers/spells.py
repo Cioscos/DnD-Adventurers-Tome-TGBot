@@ -42,7 +42,8 @@ from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
-from api.services.d20 import d20_records, d20_history_label, resolve_body, spend_inspiration_reroll
+from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
+from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.modifiers import modifiers_for
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
@@ -191,6 +192,7 @@ def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, ex
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
+    silent: bool = False,
 ) -> None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
@@ -245,7 +247,7 @@ def _consume_cast(
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
     end_on_action(char, "cast")
-    if casts_verbally(spell):
+    if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 
     if spell.is_concentration:
@@ -373,7 +375,7 @@ async def use_spell(
         raise HTTPException(status_code=404, detail="Spell not found")
 
     _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
-                  body.ki, body.ki_extra)
+                  body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []))
     opts = use_options(session, char, "cast", body, spell=spell)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
@@ -420,7 +422,8 @@ async def spell_attack(
     if body.with_inspiration:
         spend_inspiration_reroll(char)
     else:
-        _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm)
+        _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
+                      silent=SUBTLE_KEY in (body.cast_options or []))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
@@ -464,7 +467,9 @@ async def spell_attack(
         "notes": applied.notes, "auto_fail": False, "description": "",
     }, spell_id=spell.id)
 
+    twinned = _twinned_attack(char, spell, body.mode, applied, bonus)
     return SpellAttackResult(
+        twinned_attack=twinned,
         spell_name=spell.name,
         to_hit_die=die,
         dice=outcome.dice,
@@ -480,6 +485,22 @@ async def spell_attack(
         character=await build_character_response(session, char),
         homebrew_notifications=notifications or None,
     )
+
+
+def _twinned_attack(char: Character, spell: Spell, mode: RollMode, applied: Any, bonus: int) -> dict | None:
+    """Incantesimo Raddoppiato: il secondo bersaglio ha il suo tiro per colpire, con lo stesso modo e lo stesso bonus. Il
+    critico resta sul turno per il danno del secondo bersaglio."""
+    twin = (char.turn_state or {}).get(TWINNED_TURN_KEY)
+    if not twin or twin.get("spell_id") != spell.id:
+        return None
+    outcome = resolve_applied(mode, None, None, applied)
+    record_dice(char, d20_records(outcome))
+    critical = outcome.kept >= applied.crit_min
+    turn = get_turn(char)
+    turn[TWINNED_TURN_KEY] = {**twin, "is_critical": critical}
+    char.turn_state = turn
+    return {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "total": outcome.kept + bonus,
+            "is_critical": critical, "is_fumble": outcome.kept == 1}
 
 
 @router.patch("/{char_id}/concentration", response_model=CharacterFull)
@@ -698,6 +719,7 @@ async def roll_spell_damage(
         extra_rolls=all_extra,
         extra_damage_type=second_type if second_rolls else None,
         parts=parts,
+        twinned_damage=_twinned_damage(char, spell, base_count, sides, base_bonus),
     )
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
     base_dice = ([[sides, v] for v in main_rolls] + [[second_sides, v] for v in second_rolls]
@@ -714,6 +736,21 @@ async def roll_spell_damage(
     }
     char.turn_state = turn
     return result
+
+
+def _twinned_damage(char: Character, spell: Spell, count: int, sides: int, bonus: int) -> dict | None:
+    """Incantesimo Raddoppiato: l'incantesimo con tiro per colpire ripete i danni per il secondo bersaglio (uno con TS tira una
+    volta sola per entrambi). Il segno si consuma: vale per un solo tiro di danno."""
+    turn = get_turn(char)
+    twin = turn.pop(TWINNED_TURN_KEY, None)
+    if not twin or twin.get("spell_id") != spell.id:
+        return None
+    char.turn_state = turn
+    if (spell.attack_save or "").strip().upper() != "ATK":
+        return None
+    rolls = [random.randint(1, sides) for _ in range(count * (2 if twin.get("is_critical") else 1))]
+    record_dice(char, [(f"d{sides}", v) for v in rolls])
+    return {"rolls": rolls, "total": sum(rolls) + bonus}
 
 
 @router.post("/{char_id}/spells/{spell_id}/roll_healing", response_model=RollHealingResult)

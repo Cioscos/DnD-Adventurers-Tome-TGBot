@@ -129,6 +129,28 @@ export type RollOption = {
   ranged_unarmed?: boolean
 }
 
+/** Un risultato della tabella degli Impulsi di Magia Selvaggia (d100). */
+export type WildSurgeEntry = { roll: number; lo: number; hi: number; label: string; name: { it: string; en: string }; text: { it: string; en: string } }
+
+/** Esito di `POST /wild-magic/surge`: `pending` = Caos Controllato, due risultati fra cui scegliere. */
+export type WildSurgeResult = {
+  die: number | null
+  triggered: boolean
+  pending: boolean
+  options: WildSurgeEntry[]
+  applied: (WildSurgeEntry & {
+    healed: number
+    slot_level: number | null
+    points: boolean
+    extra_action: boolean
+    dc: number | null
+    state: { key: string; rounds_left: number | null } | null
+    damage: { dice: string; type: string; rolls: number[]; total: number } | null
+    extra_roll: { dice: string; rolls: number[]; total: number } | null
+  }) | null
+  tides_restored: boolean
+}
+
 export type RollOptionsQuery = {
   casting_level?: number
   roll: 'attack' | 'spell_damage' | 'spell_healing' | 'weapon_damage' | 'skill' | 'ability' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
@@ -682,6 +704,12 @@ export const api = {
     preserveLife: (id: number, body: { allocations: { character_id: number; amount: number }[]; confirm_living: boolean }) =>
       request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number }[] }>(
         `/characters/${id}/preserve-life`, { method: 'POST', body: JSON.stringify(body) }),
+    /** Impulso di Magia Selvaggia: d20 (una volta per turno) e, con 1, la tabella; `tides` salta il d20 dopo Onde di Caos. */
+    wildMagicSurge: (id: number, body: { die?: number; percentile?: number[]; tides?: boolean }) =>
+      request<WildSurgeResult>(`/characters/${id}/wild-magic/surge`, { method: 'POST', body: JSON.stringify(body) }),
+    /** Caos Controllato: sceglie fra i due risultati tirati. */
+    wildMagicChoose: (id: number, index: number) =>
+      request<WildSurgeResult>(`/characters/${id}/wild-magic/surge/choose`, { method: 'POST', body: JSON.stringify({ index }) }),
     /** Ispirazione in Combattimento alla CA: spende la reazione e il dado, restituisce il valore da sommare. */
     bardicDieAc: (id: number) => request<{ die: number; roll: number }>(`/characters/${id}/bardic-die/ac`, { method: 'POST' }),
     endActiveState: (id: number, key: string) =>

@@ -287,7 +287,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await ally_target(session, char, params["target_character_id"])
     heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
-    cost = on_use.cost * amount
+    cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
     if on_use.spends:  # gli usi sono di un altro privilegio (Parole Taglienti spende l'Ispirazione Bardica)
         ability = next((a for a in char.abilities if a.feature_key == pool_key(char, on_use.spends)), None)
         if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):

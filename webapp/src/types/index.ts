@@ -890,6 +890,8 @@ export interface SpellAttackResult {
   is_fumble: boolean
   caster_class: string | null
   cast_option_result?: OptionResult
+  /** Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio. */
+  twinned_attack?: { die: number; dice: number[]; mode: string; total: number; is_critical: boolean; is_fumble: boolean }
   character: CharacterFull
   homebrew_notifications?: Array<Record<string, unknown>> | null
 }
@@ -927,6 +929,8 @@ export interface RollDamageResult {
   parts?: { label: 'main' | 'second' | 'extra'; type: string | null; kind: string; rolls: number[] }[]
   /** `[lati, valore]` dei dadi ritirabili (anche quelli delle opzioni), con l'indice del server. */
   reroll_dice?: [number, number][]
+  /** Incantesimo Raddoppiato: i danni del secondo bersaglio di un incantesimo con tiro per colpire. */
+  twinned_damage?: { rolls: number[]; total: number }
 }
 
 export interface TradeRequest {

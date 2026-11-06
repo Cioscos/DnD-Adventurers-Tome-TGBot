@@ -24,6 +24,7 @@ from api.services.durations import end_concentration, is_concentrating
 from api.services.natural_recovery import recover as recover_slots
 from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
+from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
 from api.services.session_allies import attach_party_auras
 from api.services.condition_effects import release_concentration_effects
@@ -729,6 +730,7 @@ async def rest(
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
+        clear_created_slots(char)  # gli slot creati con Incantesimi Flessibili svaniscono
         hd_regained = sum(fx.hit_dice_regain.values())
         for cls in char.classes:
             if cls.id in fx.hit_dice_regain:

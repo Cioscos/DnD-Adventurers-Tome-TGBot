@@ -22,6 +22,7 @@ from core.rules.feature_sync import (
     clean_target_immunity, clean_zero_hp_uses,
 )
 from core.rules.level_choices import FREE_KNOWN_KEY
+from api.services.spell_slots import CREATED_SLOTS, clean_created_slots
 from core.rules.states import ALLY_EXCLUSIVE, TARGET_IMMUNITY, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
@@ -277,7 +278,7 @@ async def import_character(
     if GRANTED_SPELL_KEYS in (char.settings or {}):
         char.settings = {**char.settings, GRANTED_SPELL_KEYS: clean_granted_keys(char.settings[GRANTED_SPELL_KEYS])}
     for key, clean in ((ABILITY_BONUS_KEY, clean_ability_bonus), (ZERO_HP_USES, clean_zero_hp_uses),
-                       (TARGET_IMMUNITY, clean_target_immunity)):
+                       (TARGET_IMMUNITY, clean_target_immunity), (CREATED_SLOTS, clean_created_slots)):
         if key in (char.settings or {}):
             char.settings = {**char.settings, key: clean(char.settings[key])}
 

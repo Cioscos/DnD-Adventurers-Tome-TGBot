@@ -17,6 +17,7 @@ import TargetEffectSheet from '@/components/rules/TargetEffectSheet'
 import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
 import PreserveLifeSheet from '@/components/rules/PreserveLifeSheet'
 import WeaponBondSheet from '@/components/rules/WeaponBondSheet'
+import WildMagicSheet from '@/components/rules/WildMagicSheet'
 import AmountStepper from '@/components/rules/AmountStepper'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import SelectSheet from '@/components/ui/SelectSheet'
@@ -46,7 +47,7 @@ const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bon
 const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'invalid_choice']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'primeval_awareness', 'vanish_hide',
-  'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control']
+  'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -178,7 +179,7 @@ export default function Turn() {
   })
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
   const triggerAbility = async (args: { ability: Ability; uses: number; amount?: number }) => {
-    if (args.ability.use_panel === 'preserve_life' || args.ability.use_panel === 'weapon_bond') {
+    if (args.ability.use_panel === 'preserve_life' || args.ability.use_panel === 'weapon_bond' || args.ability.use_panel === 'wild_magic') {
       setPanel(args.ability)
       return
     }
@@ -566,7 +567,9 @@ export default function Turn() {
       {castFlow.elements}
       {panel && char && (panel.use_panel === 'weapon_bond'
         ? <WeaponBondSheet char={char} onClose={() => setPanel(null)} />
-        : <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />)}
+        : panel.use_panel === 'wild_magic'
+          ? <WildMagicSheet char={char} onClose={() => setPanel(null)} />
+          : <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />)}
       {allyPick && (
         <AllyTargetSheet title={allyPick.ability.name} die={allyPick.ability.feature_key === 'bard.bardic_inspiration'} allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
           onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />

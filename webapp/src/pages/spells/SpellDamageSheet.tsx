@@ -371,6 +371,13 @@ export default function SpellDamageSheet({
               </div>
             )}
           </div>
+          {result.twinned_damage && (
+            <div className="bg-dnd-surface border border-dnd-border rounded-md p-3 text-center">
+              <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t('character.spells.twinned_damage')}</p>
+              <p className="text-sm text-dnd-text-muted font-body tabular-nums">{result.twinned_damage.rolls.join(' + ')}</p>
+              <p className="text-2xl font-display font-black text-dnd-text mt-0.5 tabular-nums">{result.twinned_damage.total}</p>
+            </div>
+          )}
           <RollNotes charId={charId} optionResult={castNotes} />
           <AfterDamageOptions
             charId={charId}

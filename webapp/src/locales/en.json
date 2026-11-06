@@ -114,6 +114,8 @@
       "already_on_sheet": "Already on your sheet",
       "groups": {
         "maneuvers": "Maneuvers",
+        "metamagic": "Metamagic",
+        "dragon_ancestor": "Dragon Ancestor",
         "weapon_mastery": "Weapon Mastery",
         "fighting_style": "Fighting Style",
         "elemental_disciplines": "Elemental disciplines",
@@ -566,6 +568,8 @@
       "sources": "Sources"
     },
     "spells": {
+      "twinned_attack": "Second target: to hit",
+      "twinned_damage": "Second target: damage",
       "pick_already_known": "It is already on my sheet",
       "pick_owned_title": "Already know them? Mark the ones that are already your Magical Secrets, without adding them again.",
       "title": "Spells",
@@ -873,7 +877,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "magical_ambush": "Magical Ambush" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand."
@@ -1324,6 +1328,35 @@
         "default": "Could not heal. Try again."
       },
       "preserve_done": "Preserve Life",
+      "wild": {
+        "title": "Wild Magic Surge",
+        "intro": "The GM can ask for it after one of your spells of 1st level or higher: a d20 once per turn; on a 1 you roll on the surge table.",
+        "confirm": "The GM asks for the surge",
+        "roll": "Roll the d20",
+        "tides": "Tides of Chaos spent: roll the table",
+        "no_surge": "d20: {{n}}. No surge.",
+        "table_roll": "d100 {{n}} ({{label}})",
+        "choose_title": "Controlled Chaos: choose one of the two results.",
+        "choose": "Choose",
+        "close": "Close",
+        "healed": "You regain {{n}} hit points.",
+        "slot": "Level {{n}} slot regained.",
+        "points": "Sorcery points regained: all of them.",
+        "action": "You take an additional action, right now.",
+        "damage": "{{type}} damage ({{dice}}): {{rolls}} = {{total}}. Apply it to the creatures hit.",
+        "extra_roll": "Die {{dice}}: {{rolls}} = {{total}}.",
+        "dc": "Save DC: {{n}}.",
+        "timer": "Duration: {{n}} rounds (the states bar follows it).",
+        "tides_back": "Tides of Chaos is available again.",
+        "errors": {
+          "once_per_turn": "The surge d20 is rolled once per turn.",
+          "tides_not_spent": "Tides of Chaos has not been spent.",
+          "no_pending_surge": "There is no surge to choose.",
+          "feature_not_usable": "This feature cannot be used now.",
+          "invalid_choice": "That choice is not valid.",
+          "default": "Could not roll the surge. Try again."
+        }
+      },
       "end_state": "End",
       "state_generic": "Active effect",
       "amount_label": "Uses to spend",
@@ -1348,7 +1381,9 @@
         "cunning_thieves_tools": "Fast Hands: you use thieves' tools on a lock or trap as a bonus action.",
         "cunning_use_object": "Fast Hands: the Use an Object action as a bonus action.",
         "mage_hand_control": "You control the mage hand with your bonus action. For unnoticed tasks roll Sleight of Hand (Dexterity) against the Perception (Wisdom) of whoever watches.",
-        "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else."
+        "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else.",
+        "bend_luck_plus": "Bend Luck: add the d4 you rolled to the other creature's roll (attack, check or save).",
+        "bend_luck_minus": "Bend Luck: subtract the d4 you rolled from the other creature's roll (attack, check or save)."
       },
       "use_rolled": "You rolled",
       "use_errors": {

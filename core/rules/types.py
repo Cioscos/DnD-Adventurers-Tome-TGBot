@@ -48,6 +48,8 @@ class ChoiceSpec:
     spell_level: int | None = None
     spell_list: str | None = None
     listed: bool = False
+    # Lingue (it, en) che la risoluzione della scelta aggiunge sempre, qualunque opzione sia scelta (l'Antenato Draconico dà il Draconico)
+    adds_language: tuple[str, str] | None = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language"):
@@ -293,6 +295,9 @@ class OnUse:
     effect: "Callable[[RuleContext, dict], None] | None" = None
     # ``check(ctx, params)``: rifiuta l'uso prima di spendere qualcosa, con ``(codice_http, nome)`` oppure ``None``
     check: "Callable[[RuleContext, dict], tuple[int, str] | None] | None" = None
+    # Costo in usi che dipende dalla scelta fatta all'uso (Creare Slot Incantesimo: i punti dipendono dal livello dello slot):
+    # ``cost_by(ctx, params)`` sostituisce ``cost * amount``
+    cost_by: "Callable[[RuleContext, dict], int] | None" = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
@@ -342,6 +347,8 @@ class Cost:
     amount: int = 1
     spell_slot_min: int | None = None
     state_key: str | None = None
+    # Costo che dipende dal lancio (Incantesimo Raddoppiato: il livello dell'incantesimo): sostituisce ``amount``
+    amount_by: "Callable[[RuleContext], int] | None" = None
 
 
 @dataclass(frozen=True)
@@ -517,7 +524,7 @@ class FeatureSpec:
     action_type: str | None
     uses: Uses | None = None
     restoration: str | dict[int, str] = "none"  # dict: livello minimo -> tipo di riposo
-    short_rest_recovers: int | None = None
+    short_rest_recovers: "int | dict[int, int] | None" = None  # dict: livello minimo -> usi recuperati (Ripristino Stregonesco)
     subclass: str | None = None
     option_group: str | None = None
     option_key: str | None = None

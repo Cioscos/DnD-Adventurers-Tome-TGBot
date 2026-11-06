@@ -457,5 +457,6 @@ class SpellAttackResult(BaseModel):
     is_fumble: bool
     caster_class: Optional[str] = None
     cast_option_result: OptionResult | None = absent_when_none()
+    twinned_attack: dict | None = absent_when_none()  # Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio
     character: CharacterFull
     homebrew_notifications: Optional[list[dict]] = None

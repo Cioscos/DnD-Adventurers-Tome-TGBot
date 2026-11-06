@@ -76,7 +76,7 @@ from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
 from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, upsert_effect
 from api.services.durations import tick_rounds
-from api.services.spell_slots import recalc_spell_slots
+from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
 
@@ -86,7 +86,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
-                         RETROFIT_DONE, ALLY_EXCLUSIVE)
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, CREATED_SLOTS)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {

@@ -49,6 +49,10 @@ def active_choice_specs(char: Any, cls: Any) -> list:
 def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
     """Le opzioni scelte di una ``ChoiceSpec`` con ``grants`` sono abilità: competenza o maestria, mai una maestria che
     scende. Unico punto per la risoluzione di una scelta e per l'import."""
+    if ch.adds_language:
+        known = {str(x).strip().lower() for x in char.languages or []}
+        if not ({n.lower() for n in ch.adds_language} & known):
+            char.languages = [*(char.languages or []), ch.adds_language[0]]
     if not ch.grants:
         return
     if ch.grants == "language":

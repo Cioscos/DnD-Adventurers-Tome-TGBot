@@ -73,6 +73,7 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "protection": {"it": "Attacco ostacolato", "en": "Attack hindered"},
     "eldritch_strike": {"it": "Colpo Mistico", "en": "Eldritch Strike"},
     "magical_ambush": {"it": "Imboscata Magica", "en": "Magical Ambush"},
+    "heightened_spell": {"it": "Incantesimo Intensificato", "en": "Heightened Spell"},
     "no_reactions": {"it": "Senza reazioni", "en": "No reactions"},
 }
 

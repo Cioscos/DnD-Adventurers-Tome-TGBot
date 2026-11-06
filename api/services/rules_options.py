@@ -18,6 +18,7 @@ from core.rules.roll_options import (
     OptionUnavailable,
     RollOption,
     apply_options,
+    cost_amount,
     roll_extra,
     roll_options_for,
     saved_dice,
@@ -144,7 +145,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         after=spec.after, pay_if_success=spec.pay_if_success,
         reroll_limit=spec.reroll_dice(ctx, {}) if spec.reroll_dice and fixed else None, keep_rolled=spec.keep_rolled,
         saved_dice=saved_dice(ctx.char, spec.key) if spec.replace_die else [],
-        cost=RollOptionCost(feature_key=spec.cost.feature_key, amount=spec.cost.amount,
+        cost=RollOptionCost(feature_key=spec.cost.feature_key, amount=cost_amount(spec.cost, ctx),
                             spell_slot_min=spec.cost.spell_slot_min) if spec.cost else None,
     )
 

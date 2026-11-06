@@ -284,6 +284,13 @@ def _restoration(spec: FeatureSpec, level: int) -> RestorationType:
     return RestorationType(value)
 
 
+def _short_rest_recovers(spec: FeatureSpec, level: int) -> int | None:
+    value = spec.short_rest_recovers
+    if isinstance(value, dict):
+        return value[max(lv for lv in value if lv <= level)] if any(lv <= level for lv in value) else None
+    return value
+
+
 def _spec_anywhere(edition: str, key_of_class: str, feature_key: str) -> FeatureSpec | None:
     """La spec dall'edizione corrente o, se manca lì, dall'altra."""
     for ed in (edition, *EDITIONS):
@@ -345,7 +352,7 @@ def _sync_from_catalog(session: AsyncSession, char: Character, cls: CharacterCla
         ability.is_passive = spec.passive
         # Senza contatore la ricarica non esiste: `none` distingue questa riga da una risorsa illimitata.
         ability.restoration_type = RestorationType.NONE if spec.uses is None else _restoration(spec, cls.level)
-        ability.short_rest_recovers = spec.short_rest_recovers
+        ability.short_rest_recovers = _short_rest_recovers(spec, cls.level)
         if "description" in saved:
             ability.description = saved["description"]
         elif ability.description is None or ability.description in _generated_descriptions(key_of_class, spec.key):

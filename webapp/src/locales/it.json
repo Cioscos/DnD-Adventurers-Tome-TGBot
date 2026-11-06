@@ -114,6 +114,8 @@
       "already_on_sheet": "Già sulla tua scheda",
       "groups": {
         "maneuvers": "Manovre",
+        "metamagic": "Metamagia",
+        "dragon_ancestor": "Antenato Draconico",
         "weapon_mastery": "Padronanza delle armi",
         "fighting_style": "Stile di combattimento",
         "elemental_disciplines": "Discipline elementali",
@@ -566,6 +568,8 @@
       "sources": "Sorgenti"
     },
     "spells": {
+      "twinned_attack": "Secondo bersaglio: per colpire",
+      "twinned_damage": "Secondo bersaglio: danno",
       "pick_already_known": "È già sulla mia scheda",
       "pick_owned_title": "Li conosci già? Segna quelli che sono già i tuoi Segreti Magici, senza aggiungerli di nuovo.",
       "title": "Incantesimi",
@@ -873,7 +877,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano."
@@ -1323,6 +1327,35 @@
         "default": "Impossibile curare. Riprova."
       },
       "preserve_done": "Preservare Vita",
+      "wild": {
+        "title": "Impulso di Magia Selvaggia",
+        "intro": "Il GM può chiederlo dopo un tuo incantesimo di 1° livello o più: un d20 una volta per turno; con 1 si tira sulla tabella degli impulsi.",
+        "confirm": "Il GM richiede l'impulso",
+        "roll": "Tira il d20",
+        "tides": "Onde di Caos spese: tira la tabella",
+        "no_surge": "d20: {{n}}. Nessun impulso.",
+        "table_roll": "d100 {{n}} ({{label}})",
+        "choose_title": "Caos Controllato: scegli uno dei due risultati.",
+        "choose": "Scegli",
+        "close": "Chiudi",
+        "healed": "Recuperi {{n}} PF.",
+        "slot": "Slot di {{n}}° livello recuperato.",
+        "points": "Punti stregoneria recuperati: tutti.",
+        "action": "Hai un'azione in più, subito.",
+        "damage": "Danni {{type}} ({{dice}}): {{rolls}} = {{total}}. Applicali alle creature colpite.",
+        "extra_roll": "Dado {{dice}}: {{rolls}} = {{total}}.",
+        "dc": "CD del TS: {{n}}.",
+        "timer": "Durata: {{n}} round (la barra degli stati la segue).",
+        "tides_back": "Onde di Caos è di nuovo disponibile.",
+        "errors": {
+          "once_per_turn": "Il d20 dell'impulso si tira una volta per turno.",
+          "tides_not_spent": "Onde di Caos non è stata spesa.",
+          "no_pending_surge": "Non c'è nessun impulso da scegliere.",
+          "feature_not_usable": "Questo privilegio non si può usare ora.",
+          "invalid_choice": "La scelta non è valida.",
+          "default": "Impossibile tirare l'impulso. Riprova."
+        }
+      },
       "end_state": "Termina",
       "state_generic": "Effetto attivo",
       "amount_label": "Usi da spendere",
@@ -1348,7 +1381,9 @@
         "cunning_thieves_tools": "Mani Veloci: usi gli arnesi da scasso su una serratura o una trappola come azione bonus.",
         "cunning_use_object": "Mani Veloci: l'azione Usare un Oggetto come azione bonus.",
         "mage_hand_control": "Controlli la mano magica con l'azione bonus. Per i compiti inosservati tira Rapidità di Mano (Destrezza) contro la Percezione (Saggezza) di chi guarda.",
-        "fist_of_unbroken_air": "TS Forza: se fallisce, subisce i danni contundenti, è spinto fino a 6 m e cade prono; se supera, metà danni e nessun altro effetto."
+        "fist_of_unbroken_air": "TS Forza: se fallisce, subisce i danni contundenti, è spinto fino a 6 m e cade prono; se supera, metà danni e nessun altro effetto.",
+        "bend_luck_plus": "Piegare la Fortuna: somma il d4 tirato al tiro dell'altra creatura (colpire, prova o TS).",
+        "bend_luck_minus": "Piegare la Fortuna: sottrai il d4 tirato dal tiro dell'altra creatura (colpire, prova o TS)."
       },
       "use_errors": {
         "once_per_turn": "Puoi usarlo una sola volta per turno.",

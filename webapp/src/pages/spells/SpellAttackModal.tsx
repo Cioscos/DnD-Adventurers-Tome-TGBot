@@ -128,6 +128,17 @@ export default function SpellAttackModal({
           {to_hit_total}
         </p>
       </m.div>
+      {result.twinned_attack && (
+        <div className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3">
+          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
+            {t('character.spells.twinned_attack')}
+          </p>
+          <p className="text-xs text-dnd-text-muted font-body tabular-nums">
+            <D20Faces die={result.twinned_attack.die} dice={result.twinned_attack.dice} mode={(result.twinned_attack.mode ?? 'normal') as typeof mode} /> {bonusStr}
+          </p>
+          <p className="text-2xl font-black font-display mt-1 tabular-nums text-dnd-text">{result.twinned_attack.total}</p>
+        </div>
+      )}
     </ResultDialog>
   )
 }

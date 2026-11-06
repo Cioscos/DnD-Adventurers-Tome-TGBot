@@ -16,6 +16,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, SpellSlot
+from core.rules.created_slots import CREATED_SLOTS, _created, add_created_slot, clean_created_slots, clear_created_slots  # noqa: F401
 from core.rules.edition import character_edition
 from core.rules.spellcasting import slots_for
 
@@ -44,6 +45,8 @@ async def recalc_spell_slots(session: AsyncSession, char: Character) -> None:
     table = slots_for(character_edition(char), char.classes)
     for level, total in table.regular.items():
         targets[(level, False)] = total
+    for level, extra in _created(char).items():  # gli slot creati con Incantesimi Flessibili restano fino al riposo lungo
+        targets[(level, False)] = targets.get((level, False), 0) + extra
     for level, total in table.pact.items():
         targets[(level, True)] = total
 
