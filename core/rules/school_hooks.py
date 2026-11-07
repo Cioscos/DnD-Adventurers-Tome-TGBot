@@ -70,7 +70,9 @@ def concentration_safe(char: Any) -> bool:
     (Evocazione Focalizzata)."""
     spell = next((s for s in char.spells or [] if s.id == char.concentrating_spell_id), None)
     school = normalize_school(spell.school) if spell is not None else None
-    return school is not None and any(school in spec.concentration_safe_schools for spec, _row in active_features(char))
+    features = active_features(char)
+    return (school is not None and any(school in spec.concentration_safe_schools for spec, _row in features)) or (
+        spell is not None and any(spell.srd_index in spec.concentration_safe_spells for spec, _row in features))
 
 
 def after_cast(char: Any, spell: Any) -> None:

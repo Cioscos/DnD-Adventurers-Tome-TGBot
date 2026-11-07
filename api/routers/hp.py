@@ -627,6 +627,21 @@ def _restores_resource(resource, rest_type: str) -> bool:
     return resource.restoration_type in types
 
 
+def _short_rest_exhaustion(char: Character) -> bool:
+    exh = (char.conditions or {}).get("exhaustion", 0)
+    return (isinstance(exh, int) and not isinstance(exh, bool) and exh > 0
+            and any(spec.short_rest_exhaustion for spec, _row in active_features(char)))
+
+
+def _apply_exhaustion_change(session: AsyncSession, char: Character, change: int, kind: str) -> None:
+    conditions = dict(char.conditions or {})  # int mai False/None: il bug F04 del serializzatore dello storico
+    old_exh = conditions["exhaustion"]
+    conditions["exhaustion"] = old_exh + change
+    char.conditions = conditions
+    _add_history(session, char.id, "condition_change", f"Spossatezza: livello {old_exh} → {old_exh + change} ({kind})",
+                 meta={"slug": "exhaustion", "active": change > 0})
+
+
 def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,
                          ate_and_drank: bool = True) -> RestPreview:
     """Pure: cosa cambierebbe un riposo. Usata da /rest (che poi applica) e dall'anteprima."""
@@ -660,6 +675,8 @@ def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,
         # Il massimo vale per il livello di spossatezza a riposo finito.
         hp_max = effective_hp_max(char, hp_max_bonus, exhaustion_level(char) + fx.exhaustion_change)
         fx.hp_gain = max(0, hp_max - char.current_hit_points)
+    elif _short_rest_exhaustion(char):  # Instancabile: ogni riposo breve toglie un livello di Sfinimento
+        fx.exhaustion_change = -1
     fx.abilities = [a.name for a in char.abilities
                     if _restores_ability(a, rest_type) and a.uses != a.max_uses]
     fx.homebrew_resources = [r.name for r in char.homebrew_resources
@@ -770,15 +787,7 @@ async def rest(
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         if fx.exhaustion_change:
-            # Keep the value an int (never False/None) to avoid the F04 history-serializer bug.
-            conditions = dict(char.conditions or {})
-            old_exh = conditions["exhaustion"]
-            new_exh = old_exh + fx.exhaustion_change
-            conditions["exhaustion"] = new_exh
-            char.conditions = conditions
-            _add_history(session, char.id, "condition_change",
-                         f"Spossatezza: livello {old_exh} → {new_exh} (riposo lungo)",
-                         meta={"slug": "exhaustion", "active": new_exh > old_exh})
+            _apply_exhaustion_change(session, char, fx.exhaustion_change, "riposo lungo")
         # Dopo la spossatezza: il massimo effettivo dipende dal livello appena sceso.
         char.current_hit_points = effective_hp_max(char, hb_hp_bonus)
         _add_history(session, char.id, "rest", "Riposo lungo completato",
@@ -802,6 +811,8 @@ async def rest(
     else:
         # D8: il riposo breve non interrompe la concentrazione.
         end_states_on_rest(char, "short")
+        if fx.exhaustion_change:
+            _apply_exhaustion_change(session, char, fx.exhaustion_change, "riposo breve")
         # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
         for slot in char.spell_slots:
             if slot.is_pact:

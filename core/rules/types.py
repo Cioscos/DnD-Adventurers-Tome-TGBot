@@ -667,6 +667,10 @@ class FeatureSpec:
     save_half_cantrips: bool = False
     # Scuole di incantesimi su cui il danno non fa tirare la concentrazione (Evocazione Focalizzata)
     concentration_safe_schools: tuple[str, ...] = ()
+    # ``srd_index`` degli incantesimi su cui il danno non fa tirare la concentrazione (Cacciatore Implacabile: Hunter's Mark)
+    concentration_safe_spells: tuple[str, ...] = ()
+    # Ogni riposo breve toglie un livello di Sfinimento (Instancabile del Ranger 2024)
+    short_rest_exhaustion: bool = False
     # Gruppi di ``ChoiceSpec`` i cui incantesimi scelti si lanciano a volontà al livello base se preparati (Maestria)
     mastery_groups: tuple[str, ...] = ()
     # Il tiro per colpire dei Colpi Senz'Armi usa la Destrezza se è migliore, ma solo senza armatura né Scudo (Passo Abbagliante)
