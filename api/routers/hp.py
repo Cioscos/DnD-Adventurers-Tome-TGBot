@@ -987,7 +987,7 @@ async def roll_death_save(
     record_dice(char, d20_records(d20))
     option_rolls, option_total = roll_option_dice(char, opts)
     bonus = applied.flat + opts.bonus
-    outcome, revived = await _apply_death_roll(session, char, ds, die, bonus + option_total)
+    outcome, revived = await _apply_death_roll(session, char, ds, die, bonus + option_total, nat20_min=applied.crit_min)
 
     block = option_result(opts, option_rolls, option_total)
     remember_roll(char, "death_save", opts, {
@@ -1034,7 +1034,7 @@ async def retouch_death_save(
     await sync_zero_hp(session, char, False)  # un 20 corretto aveva tolto Privo di sensi
     die, total = roll["die"], roll["total"]
     outcome, revived = await _apply_death_roll(session, char, dict(death["before"]["death_saves"]), die, total - die,
-                                               notify=not was_dead)
+                                               notify=not was_dead, nat20_min=modifiers_for(char, "death_save").crit_min)
     if was_dead and not char.is_dead:
         _add_history(session, char.id, "death_save", "Correzione: il nuovo tiro evita la morte")
     ds = char.death_saves
@@ -1046,12 +1046,12 @@ async def retouch_death_save(
 
 
 async def _apply_death_roll(
-    session: AsyncSession, char: Character, ds: dict, die: int, modifier: int, notify: bool = True,
+    session: AsyncSession, char: Character, ds: dict, die: int, modifier: int, notify: bool = True, nat20_min: int = 20,
 ) -> tuple[str, bool]:
     """Applica l'esito a ``char``: (esito, rianimato)."""
     revived = False
 
-    if die == 20:
+    if die >= nat20_min:  # Sfidare la Morte: 18-20 valgono come un 20
         # Natural 20: revive with 1 HP
         ds = {"successes": 0, "failures": 0, "stable": False}
         char.current_hit_points = 1

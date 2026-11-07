@@ -14,7 +14,7 @@ from core.rules.types import RuleContext
 _NEEDED = {"classes", "items", "ability_scores"}
 
 
-async def apply_turn_start(session: AsyncSession, char: Character) -> int:
+async def apply_turn_start(session: AsyncSession, char: Character, in_encounter: bool = True) -> int:
     """Cura i PF che i privilegi attivi danno a inizio turno e restituisce quelli recuperati davvero.
 
     Un solo punto per i due ingressi del turno: il passaggio di turno dell'incontro (``process_edge`` e il primo turno) e
@@ -33,5 +33,11 @@ async def apply_turn_start(session: AsyncSession, char: Character) -> int:
             healed += got
             if got:
                 notices.append({"feature_key": spec.key, "name": spec.name, "amount": got})
+    for spec, _row in active_features(char):  # Guerriero Eroico: solo in combattimento, e solo se non l'ha già
+        if spec.turn_start_inspiration and in_encounter and not char.heroic_inspiration:
+            char.heroic_inspiration = True
+            notices.append({"feature_key": spec.key, "name": spec.name, "amount": 0, "message": {
+                "it": "Guerriero Eroico: all'inizio del turno ottieni l'Ispirazione Eroica.",
+                "en": "Heroic Warrior: at the start of your turn you gain Heroic Inspiration."}})
     set_start_heal(char, notices)
     return healed

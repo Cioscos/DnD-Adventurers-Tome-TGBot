@@ -233,6 +233,7 @@ class StartHealNotice(BaseModel):
     feature_key: str
     name: dict[str, str]
     amount: int
+    message: Optional[dict[str, str]] = None  # un avviso che non è una cura (Guerriero Eroico): sostituisce il testo di default
 
 
 class TurnBlock(BaseModel):

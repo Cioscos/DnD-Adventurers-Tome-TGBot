@@ -611,6 +611,8 @@ class FeatureSpec:
     zero_hp_save: ZeroHpSave | None = None
     # PF che il privilegio cura all'inizio di ogni turno di chi lo ha (Sopravvissuto); 0 se la condizione non c'è
     turn_start_heal: "Callable[[RuleContext], int] | None" = None
+    # Ispirazione Eroica a inizio turno, solo in un incontro, se non c'è già (Guerriero Eroico del Campione 2024)
+    turn_start_inspiration: bool = False
     # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce
     ability_bonus: dict[str, int] | None = None
     ability_cap: int = 20

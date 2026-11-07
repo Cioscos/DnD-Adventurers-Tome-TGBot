@@ -1,5 +1,5 @@
 """Guerriero 2024, parte A (base della classe). Le sottoclassi (Maestro di Battaglia, Campione, Cavaliere Mistico, Guerriero
-Psionico) sono la parte B e si aggiungono a ``SUBCLASS_ROWS``.
+Psionico) sono la parte B, in ``fighter_subclasses.py``.
 
 Valori dalla scheda ``docs/superpowers/rules/2024/classes/fighter.md``; i testi sono nostri, mai quelli del manuale.
 Le chiavi di Recuperare Energie, Azione Impetuosa e Indomito sono quelle legacy di ``CLASS_RESOURCES`` (R17).
@@ -11,10 +11,10 @@ from typing import Any
 
 from core.rules.catalog._common import feature, style_options, FIGHTING_STYLE_GROUP
 from core.rules.catalog.y2014.fighter import (
-    _dueling, _great_weapon, _is_ranged_weapon, _off_hand_modifier, _protection_effect, _weapon_in_hand, _wears_armor,
-    _wields_shield,
+    _arcane_charge_notes, _arcane_charge_toggle, _dueling, _great_weapon, _is_ranged_weapon, _off_hand_modifier,
+    _protection_effect, _weapon_in_hand, _wears_armor, _wields_shield,
 )
-from core.rules.types import ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, Uses
+from core.rules.types import ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, Uses, UseToggle
 from core.rules.weapons import MASTERY_OPTIONS, _knows, mastery_choice, weapon_mastery
 
 ED, CK = "2024", "fighter"
@@ -193,7 +193,10 @@ BASE_ROWS = (
     feature("action_surge", CK, ED, 2, "Azione Impetuosa / Action Surge (Guerriero 2, pag. 91)", ("Azione Impetuosa", "Action Surge"),
             ("Nel tuo turno compi un'azione in più, mai Magia. Un uso (due dal 17°, ma uno per turno); torna con un riposo breve o lungo.",
              "On your turn you take one extra action, never Magic. One use (two from 17th, but one per turn); back after a short or long rest."),
-            "special", uses=Uses(table={2: 1, 17: 2}), restoration="short_rest", on_use=OnUse(grants_action=True, once_per_turn=True)),
+            "special", uses=Uses(table={2: 1, 17: 2}), restoration="short_rest",
+            on_use=OnUse(grants_action=True, once_per_turn=True, notes=_arcane_charge_notes, toggles=(UseToggle(
+                "arcane_charge", _both("Carica Arcana: ti teletrasporti fino a 9 m", "Arcane Charge: teleport up to 30 ft"),
+                available=_arcane_charge_toggle),))),
     feature("tactical_mind", CK, ED, 2, "Mente Tattica / Tactical Mind (Guerriero 2, pag. 91)", ("Mente Tattica", "Tactical Mind"),
             ("Dopo una prova fallita spendi un uso di Recuperare Energie e somma 1d10, senza curarti; se fallisce ancora, l'uso non si spende.",
              "After a failed check you spend a Second Wind use and add 1d10, with no healing; if it still fails the use is not spent."),
@@ -243,7 +246,6 @@ BASE_ROWS = (
             no_row=True, covered_by=f"{_ROWS} e webapp/src/data/multiclassPrereqs.ts (D2)"),
 )
 
-# Parte B: Maestro di Battaglia, Campione, Cavaliere Mistico, Guerriero Psionico (``subclass=`` con la chiave di ``subclasses.py``).
-SUBCLASS_ROWS: tuple = ()
+from core.rules.catalog.y2024.fighter_subclasses import SUBCLASS_ROWS  # noqa: E402  (parte B, dopo le definizioni comuni)
 
 FEATURES = BASE_ROWS + SUBCLASS_ROWS

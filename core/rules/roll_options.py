@@ -458,6 +458,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             _slot_level(ctx.char, spec, given)  # i dadi dipendono dallo slot: va controllato prima di calcolarli
         if spec.requires_input == "recover":
             _recover_level(option, given)
+        pre_dice = spec.extra_dice(option.ctx, given) if spec.extra_dice else None  # prima del pagamento: Implacabile lo cambia
         paid = _spend(session, option, given)
         out.spent += paid
         out.keys.append(key)
@@ -480,8 +481,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.target_effect:
             keep_target_effect(ctx.char, key, spec.target_effect(option.ctx, given))
             out.targets.append(key)
-        if spec.extra_dice:
-            dice[key] = spec.extra_dice(option.ctx, given)
+        if pre_dice is not None:
+            dice[key] = pre_dice
         if spec.bonus:
             out.bonus += spec.bonus(option.ctx, given)
         if spec.mode:

@@ -478,8 +478,13 @@ for _spell, _comp in (
                       "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
+# Guerriero Psionico 2024 (Maestro Telecinetico)
+GRANTED_SPELLS["telekinesis"] = GrantedSpell(
+    "telekinesis", {"it": "Telecinesi", "en": "Telekinesis"}, 5, "1 azione", "18 m", "Concentrazione, fino a 10 minuti",
+    is_concentration=True, attack_save="SAVE")
+_COMPONENTS["telekinesis"] = "V, S"  # quelle dell'incantesimo; il Maestro Telecinetico le ignora, e l'app non le controlla
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",
-            "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
+            "telekinesis": "transmutation", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

@@ -119,7 +119,7 @@ async def turn_new(
         end_unextended(char)  # fuori da un incontro «Nuovo turno» chiude il turno che finisce (Ira 2024)
     turn = reset_turn(char, keep_surprise=in_encounter, advances=not in_encounter)
     if not in_encounter:  # in un incontro l'inizio del turno lo dà il passaggio di turno, non questo pulsante
-        await apply_turn_start(db, char)
+        await apply_turn_start(db, char, in_encounter=False)
         turn = get_turn(char)  # con l'avviso della cura d'inizio turno
     return turn
 

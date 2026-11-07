@@ -137,6 +137,8 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             if healed and pc.current_hit_points == healed["after"]:
                 pc.current_hit_points = healed["before"]
                 set_start_heal(pc, [])
+            if snap.get("inspired"):
+                pc.heroic_inspiration = False
             if "exhaustion" in snap:  # la spossatezza addebitata dagli stati chiusi dall'avanzamento
                 restore_exhaustion(pc, snap["exhaustion"])
                 if not snap["is_dead"] and pc.is_dead and snap["exhaustion"] < 6:

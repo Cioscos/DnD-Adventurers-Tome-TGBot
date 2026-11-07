@@ -437,10 +437,6 @@ async def test_the_2024_fighter_keeps_its_spent_uses_when_the_edition_changes(cl
     assert row["max_uses"] == 3 and row["uses"] == 2  # un uso speso resta speso: la chiave è la stessa (R17)
 
 
-async def test_no_row_of_the_2024_fighter_depends_on_a_subclass_yet(client):
-    assert not [s for s in features_for("2024", "fighter") if s.subclass is not None]  # le sottoclassi sono la parte B
-
-
 async def test_beyond_options_find_the_fighter_choices(test_session_factory):
     from api.routers.transfer import _apply_class_options
     from api.services.ddb_import import ImportReport

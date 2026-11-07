@@ -158,6 +158,13 @@ describe('Turn page', () => {
     expect(await screen.findByTestId('start-heal')).toBeInTheDocument()
   })
 
+  it('shows the notice text of a start-of-turn privilege that is not a heal', async () => {
+    getChar.mockResolvedValue(char)
+    server.block = { ...NEW_BLOCK, start_heal: [{ feature_key: 'fighter.heroic_warrior', name: { it: 'Guerriero Eroico', en: 'Heroic Warrior' }, amount: 0, message: { it: 'Ispirazione Eroica ottenuta', en: 'Heroic Inspiration gained' } }] }
+    renderWithProviders(<Turn />)
+    expect(await screen.findByTestId('start-heal')).toHaveTextContent(/Ispirazione Eroica ottenuta|Heroic Inspiration gained/)
+  })
+
   it('disables every action while incapacitated but keeps the new turn button', async () => {
     getChar.mockResolvedValue({ ...char, computed: { incapacitated: true } })
     renderWithProviders(<Turn />)
