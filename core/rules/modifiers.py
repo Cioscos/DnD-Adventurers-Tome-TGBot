@@ -53,6 +53,7 @@ class Applied:
     min_total: int | None = None  # totale minimo di una prova (Potenza Indomabile)
     crit_dice: int = 0  # dadi dell'arma in più al critico (Critico Brutale)
     damage_reroll: int = 0  # i dadi dell'arma che mostrano al più questo valore si ritirano una volta (Armi Possenti)
+    damage_min_die: int = 0  # i dadi dell'arma che mostrano meno di questo valore contano come questo (Armi a Due Mani 2024)
     carry_double: bool = False
     fly_speed: bool = False
     climb_speed: bool = False  # velocità di scalare pari a quella a terra (Pantera)
@@ -267,6 +268,9 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             counted = True
         elif m.target == "crit_dice":
             out.crit_dice += m.value(mctx) if callable(m.value) else m.value
+            counted = True
+        elif m.target == "damage_min_die":
+            out.damage_min_die = max(out.damage_min_die, m.value(mctx) if callable(m.value) else m.value)
             counted = True
         elif m.target == "damage_reroll":
             out.damage_reroll = max(out.damage_reroll, m.value(mctx) if callable(m.value) else m.value)

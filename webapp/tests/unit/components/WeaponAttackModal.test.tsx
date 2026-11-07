@@ -245,6 +245,15 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByTestId('grazed-damage')).toHaveTextContent('3')
   })
 
+  it('a declared miss with no damage (Studied Attacks) says it was noted and shows no damage number', () => {
+    render(<WeaponAttackModal onClose={vi.fn()} result={{
+      weapon_name: 'x', to_hit_die: 5, to_hit_bonus: 5, to_hit_total: 10, is_critical: false, is_fumble: false,
+      damage_dice: '1d6', damage_rolls: [], damage_bonus: 0, damage_total: 0, grazed: true,
+    }} />)
+    expect(screen.getByTestId('grazed-damage')).toHaveTextContent('Mancato: segnato, nessun danno')
+    expect(screen.getByTestId('grazed-damage')).not.toHaveTextContent('Graze')
+  })
+
   it('offers the damage reroll with the weapon dice and shows the rerolled damage', async () => {
     render(<WeaponAttackModal result={{ ...baseResult, damage_dice: '2d8', damage_rolls: [3, 4], damage_total: 10 }} charId={7} onClose={() => {}} />)
     const reroll = screen.getByTestId('after-damage')

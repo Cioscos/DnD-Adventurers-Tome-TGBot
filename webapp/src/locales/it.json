@@ -552,6 +552,7 @@
       "effect_grapple": "Afferrare: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce è Afferrato. Serve una mano libera.",
       "effect_shove": "Spingere: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce lo sposti di 1,5 m o lo rendi Prono.",
       "grazed": "Graze: danno sul mancato",
+      "missed_noted": "Mancato: segnato, nessun danno",
       "limit_title": "Attacchi esauriti",
       "limit_text": "Hai già fatto {{made}} attacchi su {{allowed}} con l'azione Attacco. Attacchi comunque, per un privilegio o una reazione?",
       "limit_confirm": "Attacca comunque",
@@ -757,7 +758,8 @@
         "cast_errors": {
           "turn_slot_used": "Hai già usato quell'azione in questo turno.",
           "no_uses": "Usi esauriti.",
-          "pact_slot_required": "Serve uno slot da warlock (slot di Patto)."
+          "pact_slot_required": "Serve uno slot da warlock (slot di Patto).",
+          "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia."
         },
         "close": "Chiudi",
         "reroll": "Nuovo tiro",

@@ -138,8 +138,8 @@ export default function WeaponAttackModal({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">{t('character.attack.grazed')}</p>
-          <p className="text-4xl font-black font-display mt-1 text-dnd-crimson-bright">{damage_total}</p>
+          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">{t(damage_total > 0 ? 'character.attack.grazed' : 'character.attack.missed_noted')}</p>
+          {damage_total > 0 && <p className="text-4xl font-black font-display mt-1 text-dnd-crimson-bright">{damage_total}</p>}
         </m.div>
       )}
 

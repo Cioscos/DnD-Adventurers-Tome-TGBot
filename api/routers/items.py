@@ -713,6 +713,12 @@ def _base_damage(
                     damage_rolls[i] = random.randint(1, int(die.group(2)))
                     if rerolled is not None:
                         rerolled.append([value, damage_rolls[i]])
+        if applied.damage_min_die:  # «conta come 3»: il dado mostrato è già quello che vale
+            for i, value in enumerate(damage_rolls):
+                if value < applied.damage_min_die:
+                    damage_rolls[i] = applied.damage_min_die
+                    if rerolled is not None:
+                        rerolled.append([value, damage_rolls[i]])
     return damage_rolls, (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
                           + applied.flat)
 

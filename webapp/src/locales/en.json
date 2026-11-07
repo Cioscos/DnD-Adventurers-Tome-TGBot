@@ -552,6 +552,7 @@
       "effect_grapple": "Grapple: the target makes a Strength or Dexterity save, DC {{dc}}. On a failure it is Grappled. You need a free hand.",
       "effect_shove": "Shove: the target makes a Strength or Dexterity save, DC {{dc}}. On a failure you move it 5 ft or knock it Prone.",
       "grazed": "Graze: damage on a miss",
+      "missed_noted": "Missed: noted, no damage",
       "limit_title": "No attacks left",
       "limit_text": "You already made {{made}} of {{allowed}} attacks with the Attack action. Attack anyway, for a feature or a reaction?",
       "limit_confirm": "Attack anyway",
@@ -757,7 +758,8 @@
         "cast_errors": {
           "turn_slot_used": "You already used that action this turn.",
           "no_uses": "No uses left.",
-          "pact_slot_required": "This needs a warlock (Pact Magic) slot."
+          "pact_slot_required": "This needs a warlock (Pact Magic) slot.",
+          "surge_no_magic": "The extra action from Action Surge cannot be the Magic action."
         },
         "close": "Close",
         "reroll": "Roll again",

@@ -55,6 +55,7 @@ from api.services.rules_options import merge_options, option_result, remember_ro
 from api.services.rules_states import _spend_atomically, remove_state
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
+from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
 from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
@@ -250,6 +251,11 @@ def _consume_cast(
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
+    if (not ritual and character_edition(char) == "2024" and casting_kind(spell) == "action"
+            and not _LONG_CASTING.search(spell.casting_time or "")):
+        turn = get_turn(char)  # Azione Impetuosa 2024: l'azione in più non può essere Magia
+        if turn["action_used"] and turn["extra_actions"] > 0:
+            raise HTTPException(status_code=409, detail={"code": "surge_no_magic"})
     if ki_pool is not None:
         if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
             spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto

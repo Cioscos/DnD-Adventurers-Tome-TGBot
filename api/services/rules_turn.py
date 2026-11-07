@@ -117,13 +117,13 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
 
     ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014). ``surprised`` resta: lo
     toglie la fine del primo turno del combattente, non «Nuovo turno», ma solo se c'è un incontro attivo
-    (``keep_surprise``): fuori da un incontro non c'è nessuno che la tolga. ``vex`` arriva fino alla
+    (``keep_surprise``): fuori da un incontro non c'è nessuno che la tolga. ``vex`` e ``studied`` arrivano fino alla
     fine del turno seguente a quello del colpo. ``advances`` è falso per il pulsante «Nuovo turno» dentro un incontro:
     il turno lo fa avanzare il GM e gli stati che contano i turni non scalano."""
     from api.services.rules_states import end_on_new_turn  # import locale: rules_states importa questo modulo
     end_on_new_turn(char, advances=advances)  # il Canto di Riposo del bardo finisce al prossimo «Nuovo turno»
     previous = get_turn(char)
-    vex = {"vex": previous["vex"] - 1} if previous.get("vex", 0) > 1 else {}
+    vex = {k: previous[k] - 1 for k in ("vex", "studied") if previous.get(k, 0) > 1}  # Vex e Attacchi Studiati
     notice = {} if advances or not previous.get("start_heal") else {"start_heal": previous["start_heal"]}
     _save(char, {**_default(), "damaged": previous["damaged"],
                  "surprised": previous["surprised"] and keep_surprise, **vex, **notice})

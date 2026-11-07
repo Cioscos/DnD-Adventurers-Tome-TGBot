@@ -358,7 +358,7 @@ class Modifier:
     salto in lungo con rincorsa, si sommano); ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>``, ``vulnerability:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
-    Possenti); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
+    Possenti); ``damage_min_die`` (i dadi dell'arma che mostrano meno contano questo valore: Armi a Due Mani 2024); ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``; ``carry_double`` (capacità di carico doppia);
     ``fly_speed`` (velocità di volo pari a quella a terra); ``climb_speed`` e ``swim_speed`` (idem per scalare e nuotare); ``fly_speed_value`` (velocità di volo fissa, in piedi: vale la
     maggiore fra i valori e quella a terra se c'è ``fly_speed``).
     ``when`` limita l'effetto (di solito su ``ctx.roll``); senza, vale sempre."""
