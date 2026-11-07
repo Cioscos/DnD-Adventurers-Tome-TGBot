@@ -187,6 +187,7 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     char.turn_state = turn
 
 
+WAR_MAGIC_KEYS = {"fighter.war_magic", "fighter.improved_war_magic"}
 _LONG_CASTING = re.compile(r"minut|minute|\bor[ae]\b|hour", re.IGNORECASE)
 
 
@@ -209,7 +210,7 @@ def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, ex
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
-    silent: bool = False,
+    silent: bool = False, war_magic: bool = False,
 ) -> Ability | None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
@@ -254,7 +255,9 @@ def _consume_cast(
     if (not ritual and character_edition(char) == "2024" and casting_kind(spell) == "action"
             and not _LONG_CASTING.search(spell.casting_time or "")):
         turn = get_turn(char)  # Azione Impetuosa 2024: l'azione in più non può essere Magia
-        if turn["action_used"] and turn["extra_actions"] > 0:
+        # L'azione Attacco già iniziata (attacchi o lancio fatti) è l'azione spesa; la Magia da Guerra fa parte dell'Attacco
+        spent_action = turn["action_used"] or turn["action_attacks"] > 0 or turn.get("action_spell_level") is not None
+        if spent_action and turn["extra_actions"] > 0 and not war_magic:
             raise HTTPException(status_code=409, detail={"code": "surge_no_magic"})
     if ki_pool is not None:
         if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
@@ -498,7 +501,8 @@ async def use_spell(
 
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
-        body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or [])))
+        body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []),
+        war_magic=bool(WAR_MAGIC_KEYS & set(body.options or []))))
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
@@ -548,7 +552,8 @@ async def spell_attack(
         spend_inspiration_reroll(char)
     else:
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
-                                                      silent=SUBTLE_KEY in (body.cast_options or [])))
+                                                      silent=SUBTLE_KEY in (body.cast_options or []),
+                                                      war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or []))))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,

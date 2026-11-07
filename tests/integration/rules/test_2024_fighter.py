@@ -450,3 +450,79 @@ async def test_beyond_options_find_the_fighter_choices(test_session_factory):
         _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         assert char.classes[0].options == {"fighting_style": ["defense"],
                                            "weapon_mastery": ["greatsword", "longsword", "dagger", "handaxe"]}
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1 (I1, I2)
+# ---------------------------------------------------------------------------
+
+async def test_action_surge_after_the_attacks_refuses_a_spell_without_marking_the_action_by_hand(client):
+    cid = await _fighter24(client, 5)
+    wid = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[])
+    spell = (await client.post(f"/characters/{cid}/spells", json={"name": "Dardo", "level": 0, "casting_time": "1 azione"})).json()["id"]
+    for _ in range(2):
+        assert (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).status_code == 200
+    assert (await _use(client, cid, AS)).status_code == 200
+    assert (await _turn(client, cid))["action_used"] is False
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "surge_no_magic"
+
+
+async def test_action_surge_before_anything_lets_the_normal_action_cast(client):
+    cid = await _fighter24(client, 5)
+    spell = (await client.post(f"/characters/{cid}/spells", json={"name": "Dardo", "level": 0, "casting_time": "1 azione"})).json()["id"]
+    assert (await _use(client, cid, AS)).status_code == 200
+    assert (await client.post(f"/characters/{cid}/spells/{spell}/use", json={})).status_code == 200
+
+
+async def test_war_magic_cantrip_is_allowed_with_the_extra_action_of_the_surge(client):
+    from tests.integration.rules.test_2014_fighter_eldritch_knight import _cast, _spell
+    from tests.integration.rules.test_2024_fighter_subclasses import _sub
+    cid = await _sub(client, "eldritch_knight", 7)
+    wid = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[])
+    cantrip = await _spell(client, cid, "Raggio di fuoco", 0)
+    assert (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).status_code == 200
+    assert (await _use(client, cid, AS)).status_code == 200
+    plain = await _cast(client, cid, cantrip)
+    assert plain.status_code == 409 and plain.json()["detail"]["code"] == "surge_no_magic"
+    assert (await _cast(client, cid, cantrip, options=["fighter.war_magic"])).status_code == 200
+
+
+async def _graze_fighter(client):
+    cid = await _fighter24(client, 13, strength=16)
+    await _masters(client, cid, "greatsword", "longsword", "dagger", "handaxe", "rapier")
+    wid = await _weapon(client, cid, "Spadone", damage_dice="2d6", properties=["heavy", "two_handed"])
+    return cid, wid
+
+
+async def _miss(client, cid, wid, *keys, inputs=None):
+    await _studied_attack(client, cid, wid)
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": list(keys), "option_inputs": inputs or {}})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+@pytest.mark.parametrize("keys", [["mastery_graze"], ["fighter.studied_attacks_miss"],
+                                  ["mastery_graze", "fighter.studied_attacks_miss"], ["fighter.studied_attacks_miss", "mastery_graze"]])
+async def test_every_declared_miss_arms_studied_attacks_and_graze_still_deals_its_damage(client, keys):
+    cid, wid = await _graze_fighter(client)
+    body = await _miss(client, cid, wid, *keys)
+    assert body["attack"]["damage_total"] == 3  # il modificatore di Forza, qualunque sia l'ordine
+    assert "fighter.studied_attacks_advantage" in await _keys(client, cid, "attack", item_id=wid)
+
+
+async def test_the_miss_button_arms_studied_attacks_without_dealing_graze_damage(client):
+    cid, wid = await _graze_fighter(client)
+    body = await _miss(client, cid, wid, "fighter.studied_attacks_miss",
+                       inputs={"fighter.studied_attacks_miss": {"declared_only": 1}})
+    assert body["attack"]["damage_total"] == 0
+    assert "fighter.studied_attacks_advantage" in await _keys(client, cid, "attack", item_id=wid)
+
+
+
+async def test_2024_protection_lasts_until_the_start_of_the_knights_next_turn_and_says_so(client):
+    row = next(f for f in features_for("2024", "fighter") if f.key == "fighter.style_protection")
+    assert "tutti gli altri" in row.summary["it"] and "all other attack rolls" in row.summary["en"]
+    assert "1,5 m" in row.summary["it"] and "next turn" in row.summary["en"]
+    effect = row.on_use.target_effect(None, {})
+    assert effect.ends_at == {"anchor": "source", "edge": "start", "count": 1} and effect.rounds is None

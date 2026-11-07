@@ -474,8 +474,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.reroll_dice:
             out.reroll_limit += spec.reroll_dice(option.ctx, given)
             out.keep_rolled = out.keep_rolled or spec.keep_rolled
-        if spec.miss_damage:
-            out.miss_damage = max(0, spec.miss_damage(option.ctx))
+        if spec.miss_damage:  # «declared_only» (pulsante Mancato): arma l'opzione senza il danno di Graze
+            out.miss_damage = max(out.miss_damage or 0, 0 if given.get("declared_only") else max(0, spec.miss_damage(option.ctx)))
         if spec.effect:
             out.effects.append(spec.effect(option.ctx, given))
         if spec.target_effect:
@@ -505,6 +505,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         out.force_crit = out.force_crit or spec.force_crit
         if option.source not in out.notes:
             out.notes.append(option.source)
+    if out.miss_damage is not None:  # un mancato dichiarato arma anche le opzioni «on_miss» non scelte (Attacchi Studiati)
+        for key, option in usable.items():
+            if option.spec.on_miss and key not in keys and option.spec.on_confirm:
+                option.spec.on_confirm(session, option.ctx, {})
     for key in keys:
         spec = usable[key].spec
         if spec.dice_cost:

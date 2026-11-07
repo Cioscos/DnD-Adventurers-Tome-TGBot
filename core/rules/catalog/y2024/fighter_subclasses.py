@@ -455,6 +455,7 @@ def _strike_dice(ctx: RuleContext, _inputs: dict) -> str:
 
 PSIONIC_STRIKE = RollOptionSpec(
     key=f"{CK}.psionic_strike", phase="after_hit", rolls=("attack",), once_per_turn=True, cost=Cost(feature_key=PSI), extra_dice=_strike_dice,
+    crit_doubles=False,  # danno a sé, tirato dopo il colpo: il critico non lo raddoppia
     available=_weapon_attack,
     label=_both("Colpo Psionico: spendi un dado psionico per danno da Forza (dado + Intelligenza), una volta per turno",
                 "Psionic Strike: spend a psionic die for Force damage (die + Intelligence), once per turn"),

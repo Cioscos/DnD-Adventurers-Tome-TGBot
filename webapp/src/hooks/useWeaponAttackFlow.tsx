@@ -79,7 +79,11 @@ export function useAttackRoll() {
         })
         // Su un 1 naturale non c'è danno da chiedere: anche senza più opzioni l'esito è il mancato.
         if (after.outcome === 'miss' || (result.is_fumble && !after.outcome)) {
-          if (refundable) await api.characters.lastRollRefund(charId).catch(() => toast.warning(t('character.roll_options.refund_failed')))
+          if (after.after_option) {  // il server arma l'opzione e rimborsa da sé ciò che si paga solo se il tiro riesce
+            await api.characters.lastRollOptions(charId, {
+              options: [after.after_option.key], option_inputs: { [after.after_option.key]: { declared_only: 1 } }, mode: 'normal',
+            }).catch(() => toast.warning(t('character.roll_options.after_roll_failed')))
+          } else if (refundable) await api.characters.lastRollRefund(charId).catch(() => toast.warning(t('character.roll_options.refund_failed')))
           return result.is_fumble ? { ...result, attack_id: undefined } : null
         }
         if (after.outcome === 'after_roll') {

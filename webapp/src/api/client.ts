@@ -126,6 +126,8 @@ export type RollOption = {
   after?: 'add' | 'reroll' | 'succeed' | null
   /** Si rimborsa se il giocatore dichiara il tiro fallito. */
   pay_if_success?: boolean
+  /** Si arma con ogni mancato dichiarato, anche col pulsante «Mancato». */
+  on_miss?: boolean
   /** Portento: il d20 si sceglie fra questi valori salvati. */
   saved_dice?: number[]
   /** Solo `after_damage`: quanti dadi di danno ritirare; `keep_rolled`: solo al massimo, il nuovo si somma. */
@@ -193,7 +195,7 @@ export type SpellUseBody = Partial<RollChoice> & {
 
 export type RollChoice = {
   options: string[]
-  option_inputs: Record<string, { slot_level: number } | { die: number }>
+  option_inputs: Record<string, { slot_level: number } | { die: number } | { declared_only: number }>
   defer_damage?: boolean
   /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato, ritira con l'ispirazione o usa un'opzione. */
   outcome?: 'miss' | 'reroll' | 'after_roll'

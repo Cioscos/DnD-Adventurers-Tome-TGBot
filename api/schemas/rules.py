@@ -60,6 +60,7 @@ class RollOptionRead(BaseModel):
     requires_input: str | None = None
     after: str | None = None
     pay_if_success: bool = False
+    on_miss: bool = False
     saved_dice: list[int] = []
     reroll_limit: int | None = None
     keep_rolled: bool = False

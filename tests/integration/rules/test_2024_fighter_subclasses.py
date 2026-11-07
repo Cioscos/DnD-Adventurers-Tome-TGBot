@@ -532,3 +532,15 @@ async def test_telekinetic_master_gives_a_bonus_action_attack_while_concentratin
     assert key in await _roll_keys(client, cid, "attack", item_id=wid)
     assert (await _swing(client, cid, wid, options=[key])).status_code == 200
     assert (await _turn(client, cid))["bonus_used"] is True
+
+
+async def test_psionic_strike_die_does_not_double_on_a_critical(client, monkeypatch):
+    cid = await _sub(client, "psi_warrior", 5, intelligence=16)
+    wid = await _sword(client, cid)
+    _fixed(monkeypatch, 4)
+    hit = await _hit(client, cid, wid, die=20)
+    plain = hit["damage_total"]
+    body = (await _damage(client, cid, hit, _k("psionic_strike"))).json()
+    assert body["damage_total"] == plain + 4 + 3  # un solo dado: il critico raddoppia l'arma, non il Colpo Psionico
+    assert body["option_result"]["extra_rolls"] == [4]
+

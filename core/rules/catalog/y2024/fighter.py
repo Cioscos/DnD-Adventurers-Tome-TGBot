@@ -12,10 +12,10 @@ from typing import Any
 from core.rules.catalog._common import feature, style_options, FIGHTING_STYLE_GROUP
 from core.rules.catalog.y2014.fighter import (
     _arcane_charge_notes, _arcane_charge_toggle, _dueling, _great_weapon, _is_ranged_weapon, _off_hand_modifier,
-    _protection_effect, _weapon_in_hand, _wears_armor, _wields_shield,
+    _weapon_in_hand, _wears_armor, _wields_shield,
 )
-from core.rules.types import ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, Uses, UseToggle
-from core.rules.weapons import MASTERY_OPTIONS, _knows, mastery_choice, weapon_mastery
+from core.rules.types import ChoiceSpec, TargetEffect, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, Uses, UseToggle
+from core.rules.weapons import MASTERY_OPTIONS, _graze_available, _knows, _modifier, mastery_choice, weapon_mastery
 
 ED, CK = "2024", "fighter"
 SW, AS, IND = f"{CK}.second_wind", f"{CK}.action_surge", f"{CK}.indomitable"
@@ -24,6 +24,11 @@ STUDIED = f"{CK}.studied_attacks"
 STYLES = ("archery", "blind_fighting", "defense", "dueling", "great_weapon", "interception", "protection", "thrown_weapon",
           "two_weapon", "unarmed")
 _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/routers/classes.py create_class_for_character e add_class"
+
+
+def _protection_effect(_ctx: RuleContext, _params: dict) -> TargetEffect:
+    """Protezione 2024: Svantaggio a tutti gli attacchi contro il bersaglio fino all'inizio del prossimo turno di chi protegge."""
+    return TargetEffect(condition="custom:protection", ends_at={"anchor": "source", "edge": "start", "count": 1})
 
 
 def _both(it: str, en: str) -> dict[str, str]:
@@ -79,8 +84,10 @@ STYLE_ROWS = (
             "Reaction, with a shield or weapon: reduce the damage an ally next to you takes by 1d10 + proficiency. The app shows the value."),
            "reaction", on_use=OnUse(slot="reaction", rolls="1d10", gives=_interception_given, available=_armed)),
     _style("protection", "Protezione / Protection", ("Protezione", "Protection"),
-           ("Reazione, con uno scudo: una creatura che vedi attacca un altro bersaglio entro 1,5 m da te e ha svantaggio al tiro.",
-            "Reaction, with a shield: a creature you see attacks a target other than you within 5 ft of you and has disadvantage."),
+           ("Reazione, con uno scudo: una creatura che vedi attacca un altro bersaglio entro 1,5 m da te; quel tiro e tutti gli altri tiri per colpire contro "
+            "quel bersaglio hanno svantaggio fino all'inizio del tuo prossimo turno, se resti entro 1,5 m da lui.",
+            "Reaction, with a shield: a creature you see attacks a target other than you within 5 ft of you; that roll and all other attack rolls "
+            "against that target have disadvantage until the start of your next turn, if you stay within 5 ft of it."),
            "reaction", on_use=OnUse(slot="reaction", available=_wields_shield, target_effect=_protection_effect)),
     _style("thrown_weapon", "Combattere con armi da lancio / Thrown Weapon Fighting", ("Combattere con Armi da Lancio", "Thrown Weapon Fighting"),
            ("+2 al danno degli attacchi con un'arma lanciata.", "+2 damage on attacks made by throwing a weapon."),
@@ -154,7 +161,8 @@ def _use_studied(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
 
 
 STUDIED_MISS = RollOptionSpec(
-    key=f"{STUDIED}_miss", phase="after_roll", after="miss", rolls=("attack",), miss_damage=lambda _c: 0,
+    key=f"{STUDIED}_miss", phase="after_roll", after="miss", rolls=("attack",), on_miss=True,
+    miss_damage=lambda c: _modifier(c) if _graze_available(c) else 0,  # ogni mancato vale anche Graze, se l'arma lo ha
     available=_studied_available, on_confirm=_arm_studied,
     label=_both("Attacchi Studiati: hai mancato? Vantaggio sul prossimo attacco contro la stessa creatura",
                 "Studied Attacks: did you miss? Advantage on your next attack against the same creature"))

@@ -99,6 +99,18 @@ describe('useAttackRoll', () => {
     expect(attackDamage).not.toHaveBeenCalled()
   })
 
+  it('the miss button also arms the on_miss option (Studied Attacks), without Graze damage', async () => {
+    const studied = { ...sneak, key: 'studied', phase: 'after_roll', after: 'miss', once_per_turn: false, on_miss: true } as RollOption
+    rollOptions.mockResolvedValue([studied])
+    attack.mockResolvedValue(hit)
+    lastRollOptions.mockResolvedValue({})
+    const done = start()
+    await userEvent.click(await screen.findByText('character.roll_options.miss'))
+    await expect(done).resolves.toBeNull()
+    expect(lastRollOptions).toHaveBeenCalledWith(1, { options: ['studied'], option_inputs: { studied: { declared_only: 1 } }, mode: 'normal' })
+    expect(attackDamage).not.toHaveBeenCalled()
+  })
+
   it('a fumble comes back without attack_id: no second step', async () => {
     attack.mockResolvedValue({ is_fumble: true, damage_total: 0 })
     await expect(start()).resolves.toEqual({ is_fumble: true, damage_total: 0 })

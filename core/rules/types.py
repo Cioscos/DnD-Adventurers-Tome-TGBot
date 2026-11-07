@@ -459,6 +459,7 @@ class RollOptionSpec:
     pay_if_success: bool = False
     replace_die: bool = False
     miss_damage: "Callable[[RuleContext], int] | None" = None
+    on_miss: bool = False  # si arma con ogni mancato dichiarato (anche da Graze o dal pulsante «Mancato»)
     effect: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
     second_attack: bool = False
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None

@@ -87,7 +87,10 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
       ]),
     ),
   })
-  const close = (outcome: 'miss' | 'reroll') => answer({ options: [], option_inputs: {}, outcome })
+  // «Mancato» arma anche le opzioni che scattano con ogni mancato (Attacchi Studiati), senza il danno di Graze.
+  const close = (outcome: 'miss' | 'reroll') => answer({
+    options: [], option_inputs: {}, outcome, ...(outcome === 'miss' ? { after_option: afterRoll.find((o) => o.on_miss) } : {}),
+  })
 
   return (
     <Sheet open onClose={() => undefined} dismissible={false} zClassName="z-[70]" title={t(context?.cast ? 'character.roll_options.title_cast' : `character.roll_options.title_${phase}`)}>
