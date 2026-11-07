@@ -3,7 +3,7 @@ Cacciatore) sono la parte B: le loro righe vanno in ``SUBCLASS_ROWS`` con ``subc
 beast_master, fey_wanderer, gloom_stalker, hunter).
 
 Valori dalla scheda ``docs/superpowers/rules/2024/classes/ranger.md``; i testi sono nostri, mai quelli del manuale.
-Per la parte B: ``hunters_mark_active(ctx)`` dice se la concentrazione è su Hunter's Mark (Preda del Cacciatore Superiore, Furia
+Le sottoclassi sono in ``ranger_subclasses.py``. Per quelle: ``hunters_mark_active(ctx)`` dice se la concentrazione è su Hunter's Mark (Preda del Cacciatore Superiore, Furia
 Bestiale, Cacciatore Terribile); ``MARK_DAMAGE`` è l'opzione del danno extra del marchio (d6, d10 al 20°) e ``MARK`` la sua chiave.
 Il lancio gratuito del marchio è lo stato ``favored_enemy_free`` (R43), chiuso dal lancio.
 """
@@ -226,6 +226,6 @@ BASE_ROWS = (
             no_row=True, covered_by=f"{_ROWS} e webapp/src/data/multiclassPrereqs.ts (D2); test_multiclass_slots_count_half_the_ranger_levels_rounded_up"),
 )
 
-SUBCLASS_ROWS: tuple = ()  # parte B: Signore delle Bestie, Viandante Fatato, Stalker delle Tenebre, Cacciatore
+from core.rules.catalog.y2024.ranger_subclasses import SUBCLASS_ROWS  # noqa: E402  (parte B, dopo le definizioni comuni)
 
 FEATURES = BASE_ROWS + SUBCLASS_ROWS

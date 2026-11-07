@@ -1217,6 +1217,8 @@
         "title": "Beast companion",
         "none": "No living beast: add one from the Extras page.",
         "action_orders": "Order with your action",
+        "primal_action_orders": "Give up one of your attacks: the beast makes its Strike",
+        "primal_bonus_orders": "Order with a bonus action",
         "bonus_orders": "Order with a bonus action (Exceptional Training)",
         "attacks_left": "Beast attacks: {{n}}",
         "hint": "Roll the beast's attack from its card in Extras; its reaction needs no order.",
@@ -1229,6 +1231,8 @@
         },
         "errors": {
           "turn_slot_used": "You already used that action this turn.",
+          "bonus_needed": "Without a bonus action you can only order the Strike, giving up one of your attacks.",
+          "no_attack_left": "You have no Attack action attacks left to give up.",
           "beast_attacked": "The beast already attacked this turn: the bonus action order does not apply.",
           "beast_not_attacking": "You already gave a bonus action order: the beast does not attack this turn.",
           "companion_down": "The beast is at 0 HP.",

@@ -61,6 +61,17 @@ describe('BeastOrders (Compagno del Ranger: ordini alla bestia)', () => {
     await waitFor(() => expect(command).toHaveBeenCalledWith(7, 3, 'dash', true))
   })
 
+  it('for the 2024 primal beast offers only the strike with an attack given up, and every order with the bonus action', async () => {
+    list.mockResolvedValue([{ ...beast(), feature_key: 'ranger.primal_companion' }])
+    renderWithProviders(<BeastOrders char={{ id: 7, abilities: [ability('ranger.primal_companion')] } as unknown as CharacterFull} />)
+    expect(await screen.findByText('character.extras.beast.primal_action_orders')).toBeInTheDocument()
+    expect(screen.getAllByText('character.extras.beast.orders.attack')).toHaveLength(2)  // rinunciando a un attacco e con l'azione bonus
+    const dodge = screen.getAllByText('character.extras.beast.orders.dodge')
+    expect(dodge).toHaveLength(1)  // solo con l'azione bonus
+    await userEvent.click(dodge[0])
+    await waitFor(() => expect(command).toHaveBeenCalledWith(7, 3, 'dodge', true))
+  })
+
   it('tells how many attacks the beast has left this turn', async () => {
     renderWithProviders(<BeastOrders char={master()} turn={{ beast: { id: 3, attacks_left: 2 } } as unknown as TurnBlock} />)
     expect(await screen.findByText('character.extras.beast.attacks_left:2')).toBeInTheDocument()

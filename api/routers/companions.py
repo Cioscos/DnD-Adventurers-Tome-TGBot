@@ -32,7 +32,7 @@ from api.services.wild_shape import (
 )
 from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
 from core.rules.companions import (
-    BEAST_BONUS_ORDERS, BEAST_COMPANION, MAX_MULTIATTACK, THRALL_KEY, companion_stats, stat_int, summon_temp_hp, thrall_stats,
+    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, stat_int, summon_temp_hp, thrall_stats,
 )
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
@@ -359,6 +359,21 @@ def _take_beast_attack(char: Character, comp: Companion, reaction: bool) -> None
     _save_beast_state(char, {**beast, "attacks_left": beast["attacks_left"] - 1, "attacked": True})
 
 
+def _primal_order(char: Character, comp: Companion, body: CompanionCommand, beast: dict) -> CompanionCommandResult:
+    """Ordine alla bestia primordiale (2024). Senza azione bonus solo il Colpo della Bestia, rinunciando a un tuo attacco; con
+    l'azione bonus qualunque ordine, e dal 7° (Addestramento Eccezionale) uno dei quattro con in più un Colpo."""
+    if not body.bonus and body.command != "attack":
+        raise HTTPException(status_code=422, detail={"code": "bonus_needed"})
+    if body.bonus:
+        spend(char, "bonus")  # 409 turn_slot_used
+    else:
+        forgo_attack(char)  # 409 no_attack_left
+    training = any(spec.key == "ranger.exceptional_training" for spec, _row in active_features(char))
+    left = _beast_attacks(char, comp) if body.command == "attack" else (1 if body.bonus and training else 0)
+    _save_beast_state(char, {**beast, "id": comp.id, "attacks_left": left, "commands": [*beast.get("commands", []), body.command]})
+    return CompanionCommandResult(command=body.command, bonus=body.bonus, attacks_left=left)
+
+
 def _beast_attacks(char: Character, comp: Companion) -> int:
     """Attacchi dell'ordine di Attacco: uno; con Furia Bestiale due, o il Multiattacco della bestia se lo possiede."""
     if not any(spec.key == "ranger.bestial_fury" for spec, _row in active_features(char)):
@@ -378,12 +393,14 @@ async def command_companion(
     (Addestramento Straordinario, 7°) tutti tranne l'Attacco, e solo in un turno in cui la bestia non attacca."""
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
-    if comp.feature_key != BEAST_COMPANION:
+    if comp.feature_key not in BEAST_KEYS:
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
     refuse_if_incapacitated(char)  # il ranger incapacitato non ordina: la bestia agisce da sola
     beast = _beast_state(char)
+    if comp.feature_key == PRIMAL_COMPANION:  # 2024: rinunci a un attacco per il Colpo, o l'azione bonus per qualunque ordine
+        return _primal_order(char, comp, body, beast)
     if body.bonus:
         if body.command not in BEAST_BONUS_ORDERS:
             raise HTTPException(status_code=422, detail={"code": "bonus_not_attack"})
@@ -458,7 +475,7 @@ async def companion_attack(
     action = actions[body.action_index]
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
-    if comp.feature_key == BEAST_COMPANION:
+    if comp.feature_key in BEAST_KEYS:
         _take_beast_attack(char, comp, body.reaction)
 
     # In Forma Selvatica attacca il personaggio: le sue condizioni restano; un compagno è un altro combattente.
@@ -468,7 +485,7 @@ async def companion_attack(
         refuse_if_incapacitated(char)
         applied = modifiers_for(char, "attack", ability="strength")
     # attack_mode="form": le opzioni della forma (Colpo Primordiale, Radianza Lunare) si scelgono prima del tiro
-    opts = use_options(session, char, "attack", body, **({"attack_mode": "form"} if in_form else {}))
+    opts = use_options(session, char, "attack", body, **({"attack_mode": "form"} if in_form else {"attack_mode": "beast"} if comp.feature_key == PRIMAL_COMPANION else {}))
     merge_options(applied, opts)
     outcome = resolve_applied(body.mode, body.dice, None, applied)
     stats = companion_stats(char, comp)
@@ -513,7 +530,7 @@ async def companion_attack(
     result = CompanionAttackResult(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
         dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,
-        damage_total=total, damage_type="radiant" if "druid.radiant_moon" in opts.keys else action.get("damage_type"),
+        damage_total=total, damage_type="radiant" if "druid.radiant_moon" in opts.keys else "force" if "ranger.beast_force" in opts.keys else action.get("damage_type"),
         is_magical=in_form and any(spec.key == "druid.primal_strike" for spec, _row in active_features(char)),
         option_result=option_result(opts, option_rolls, option_total),
     )

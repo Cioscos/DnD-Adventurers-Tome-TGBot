@@ -504,9 +504,22 @@ GRANTED_SPELLS["telekinesis"] = GrantedSpell(
     "telekinesis", {"it": "Telecinesi", "en": "Telekinesis"}, 5, "1 azione", "18 m", "Concentrazione, fino a 10 minuti",
     is_concentration=True, attack_save="SAVE")
 _COMPONENTS["telekinesis"] = "V, S"  # quelle dell'incantesimo; il Maestro Telecinetico le ignora, e l'app non le controlla
+# Ranger 2024, Viandante Fatato e Stalker delle Tenebre: incantesimi sempre preparati che il 2014 non concedeva
+for _spell, _comp in (
+        (GrantedSpell("summon-fey", {"it": "Evocare fatato", "en": "Summon Fey"}, 3, "1 azione", "27 m", "Concentrazione, fino a 1 ora",
+                      is_concentration=True), "V, S, M"),
+        (GrantedSpell("mislead", {"it": "Inganno", "en": "Mislead"}, 5, "1 azione", "Personale", "Concentrazione, fino a 1 ora",
+                      is_concentration=True), "S"),
+        (GrantedSpell("rope-trick", {"it": "Trucco della corda", "en": "Rope Trick"}, 2, "1 azione", "Contatto", "1 ora"), "V, S, M"),
+        (GrantedSpell("seeming", {"it": "Mascherare", "en": "Seeming"}, 5, "1 azione", "9 m", "8 ore", attack_save="SAVE"), "V, S"),
+        (GrantedSpell("fear", {"it": "Paura", "en": "Fear"}, 3, "1 azione", "Personale (9 m)", "Concentrazione, fino a 1 minuto",
+                      is_concentration=True, attack_save="SAVE"), "V, S, M")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",
             "divine-smite": "evocation", "find-steed": "conjuration",
-            "telekinesis": "transmutation", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
+            "summon-fey": "conjuration", "mislead": "illusion", "rope-trick": "transmutation", "seeming": "illusion",
+            "fear": "illusion", "telekinesis": "transmutation", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

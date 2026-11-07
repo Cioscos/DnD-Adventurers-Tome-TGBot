@@ -29,6 +29,8 @@ def _primal_companion(_hp: int, _ac: int, level: int, pb: int, wis: int, statblo
 
 
 BEAST_COMPANION = "ranger.rangers_companion"  # il compagno del Signore delle Bestie 2014: agisce solo se il ranger glielo ordina
+PRIMAL_COMPANION = "ranger.primal_companion"  # la bestia primordiale 2024: Schiva da sola, il Colpo della Bestia solo su ordine
+BEAST_KEYS = (BEAST_COMPANION, PRIMAL_COMPANION)
 BEAST_ORDERS = ("attack", "help", "disengage", "dash", "dodge")
 MAX_MULTIATTACK, MAX_HIT_DICE = 6, 40  # tetti dei numeri dello statblock che il server legge (validati al salvataggio)
 
@@ -46,7 +48,7 @@ BEAST_BONUS_ORDERS = ("help", "disengage", "dash", "dodge")  # Addestramento Str
 # chiave -> (classe, edizione, formula)
 COMPANION_FEATURES: dict[str, tuple[str, str, Callable[..., CompanionStats]]] = {
     "ranger.rangers_companion": ("ranger", "2014", _rangers_companion),
-    "ranger.primal_companion": ("ranger", "2024", _primal_companion),
+    PRIMAL_COMPANION: ("ranger", "2024", _primal_companion),
 }
 
 

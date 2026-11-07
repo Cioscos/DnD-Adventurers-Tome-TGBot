@@ -1216,6 +1216,8 @@
         "title": "Bestia compagna",
         "none": "Nessuna bestia viva: aggiungine una dalla pagina Extra.",
         "action_orders": "Ordine con l'azione",
+        "primal_action_orders": "Rinunci a un tuo attacco: la bestia compie il Colpo",
+        "primal_bonus_orders": "Ordine con l'azione bonus",
         "bonus_orders": "Ordine con l'azione bonus (Addestramento Straordinario)",
         "attacks_left": "Attacchi della bestia: {{n}}",
         "hint": "L'attacco della bestia si tira dalla sua scheda in Extra; la sua reazione non ha bisogno di ordini.",
@@ -1228,6 +1230,8 @@
         },
         "errors": {
           "turn_slot_used": "Hai già usato quell'azione in questo turno.",
+          "bonus_needed": "Senza azione bonus puoi ordinare solo il Colpo, rinunciando a un tuo attacco.",
+          "no_attack_left": "Non hai attacchi dell'azione Attacco da cedere.",
           "beast_attacked": "La bestia ha già attaccato in questo turno: l'ordine in azione bonus non vale.",
           "beast_not_attacking": "Hai già ordinato qualcosa in azione bonus: in questo turno la bestia non attacca.",
           "companion_down": "La bestia è a 0 PF.",
