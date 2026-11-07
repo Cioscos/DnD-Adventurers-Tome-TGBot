@@ -1,6 +1,6 @@
-"""Monaco 2024, parte A (base della classe). Le sottoclassi (Guerriero della Misericordia, dell'Ombra, degli Elementi e della
-Mano Aperta) sono la parte B: aggiungono le loro righe a ``SUBCLASS_ROWS`` con ``subclass=`` (chiavi di
-``core/rules/subclasses.py``: mercy, shadow, elements, open_hand).
+"""Monaco 2024: base della classe (parte A) e sottoclassi (parte B: Guerriero della Misericordia, dell'Ombra, degli Elementi e
+della Mano Aperta, ``SUBCLASS_ROWS`` con ``subclass=`` = chiavi di ``core/rules/subclasses.py``: mercy, shadow, elements,
+open_hand).
 
 Valori dalla scheda ``docs/superpowers/rules/2024/classes/monk.md``; i testi sono nostri, mai quelli del manuale.
 La riserva dei Punti Concentrazione ha la chiave legacy ``monk.ki`` (R17): tutte le spese passano da lì
@@ -17,12 +17,13 @@ from core.data.damage_types import DAMAGE_TYPES
 from core.game.attacks import martial_arts_die
 from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.monk import (
-    DIAMOND_REROLL, EVASION_FAILED, EVASION_SAVE, EVASION_SUCCESS, FLURRY_STATE, FLURRY_STRIKE, SLOW_FALL_OPTION, _bare,
-    _can_act, _ki_dc, _ki_row, _lacks_save_proficiency, _mod, _movement_bonus, _save_proficiency, _say, _unarmed,
+    _LIGHT_CHOICE, DIAMOND_REROLL, EVASION_FAILED, EVASION_SAVE, EVASION_SUCCESS, FLURRY_STATE, FLURRY_STRIKE,
+    SLOW_FALL_OPTION, STEP_ADVANTAGE, _bare, _can_act, _dc_say, _flurry_hit, _ki_dc, _ki_row, _lacks_save_proficiency, _mod,
+    _movement_bonus, _save_proficiency, _say, _technique, _till_my_next_turn, _turn, _unarmed,
 )
 from core.rules.states import begin_state
 from core.rules.types import (
-    Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
+    Cost, KiSpell, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
 )
 
 ED, CK = "2024", "monk"
@@ -378,6 +379,386 @@ BASE_ROWS = (
             no_row=True, covered_by=f"{_ROWS} e webapp/src/data/multiclassPrereqs.ts (D2)"),
 )
 
-SUBCLASS_ROWS: tuple = ()  # parte B
+
+
+# ===========================================================================
+# Sottoclassi (parte B)
+# ===========================================================================
+
+SUBS = {"mercy": "Guerriero della Misericordia", "shadow": "Guerriero dell'Ombra", "elements": "Guerriero degli Elementi",
+        "open_hand": "Guerriero della Mano Aperta"}
+ELEMENTS = ("acid", "cold", "fire", "lightning", "thunder")
+_ELEMENT_LABELS = {"acid": _both("Acido", "Acid"), "cold": _both("Freddo", "Cold"), "fire": _both("Fuoco", "Fire"),
+                   "lightning": _both("Fulmine", "Lightning"), "thunder": _both("Tuono", "Thunder")}
+_ELEMENT_CHOICE = UseChoice("element", _both("Tipo di danno", "Damage type"), lambda _c: list(ELEMENTS),
+                            lambda k: _ELEMENT_LABELS[k])
+MERCY_POOL, ULTIMATE_USED = f"{CK}.flurry_of_healing_and_harm", "hand_of_ultimate_mercy_used"
+ATTUNE_STATE, SHADOW_STRIKE_STATE = "elemental_attunement", "shadow_step_strike"
+CLOAK_STATE, PALM_STATE = "cloak_of_shadows", "quivering_palm"
+
+
+def _sub_row(sub: str, key: str, level: int, it: str, en: str, page: int, summary: tuple[str, str], action_type: str | None = None,
+             names: tuple[str, str] | None = None, **kw: Any):
+    """Riga di sottoclasse: il titolo è quello della mappatura, ``names`` il nome mostrato se diverso dal titolo."""
+    return feature(key, CK, ED, level, f"{it} / {en} ({SUBS[sub]} {level}, pag. {page})", names or (it, en), summary, action_type,
+                   subclass=sub, **kw)
+
+
+def _wis(ctx: RuleContext) -> int:
+    return _mod(ctx, "wisdom")
+
+
+def _is_attuned(ctx: RuleContext) -> bool:
+    return state_on(ctx, ATTUNE_STATE)
+
+
+# ---------------------------------------------------------------------------
+# Guerriero della Misericordia
+# ---------------------------------------------------------------------------
+
+def _harm_option(key: str, *, poison: bool, free: bool) -> RollOptionSpec:
+    """Mano del Danno: dopo un colpo senz'armi a segno, un dado Arti Marziali più Saggezza di danni necrotici, una volta per turno.
+    La versione ``free`` (liv. 11) vale solo sui colpi della Raffica e spende un uso della riserva, non un punto."""
+    tail_it, tail_en = ((" Il bersaglio è avvelenato fino alla fine del tuo prossimo turno.",
+                         " The target is poisoned until the end of your next turn.") if poison else ("", ""))
+    return RollOptionSpec(
+        key=key, phase="after_hit", rolls=("attack",), once_per_turn=True, group=f"{CK}.hand_of_harm",
+        cost=Cost(feature_key=MERCY_POOL if free else KI),
+        available=(lambda c: _unarmed(c) and _flurry_hit(c)) if free else _unarmed,
+        extra_dice=lambda c, _i: _die(c), bonus=lambda c, _i: _wis(c),
+        label=_both(f"Mano del Danno{' (avvelena)' if poison else ''}: {'senza punti, ' if free else 'spendi 1 punto, '}danni necrotici extra",
+                    f"Hand of Harm{' (poisons)' if poison else ''}: {'no points, ' if free else 'spend 1 point, '}extra necrotic damage"),
+        effect=_say("Mano del Danno: un dado Arti Marziali più Saggezza di danni necrotici extra, una volta per turno." + tail_it,
+                    "Hand of Harm: a Martial Arts die plus Wisdom of extra necrotic damage, once per turn." + tail_en),
+        target_effect=(lambda _c, _i: TargetEffect(condition="poisoned", ends_at=_till_my_next_turn())) if poison else None)
+
+
+HARM = _harm_option(f"{CK}.hand_of_harm", poison=False, free=False)
+HARM_POISON = _harm_option(f"{CK}.hand_of_harm_poisoned", poison=True, free=False)
+HARM_FREE = _harm_option(f"{CK}.hand_of_harm_free", poison=False, free=True)
+HARM_FREE_POISON = _harm_option(f"{CK}.hand_of_harm_free_poisoned", poison=True, free=True)
+
+_HEAL_MODES = {"self": _both("Cura te", "Heal yourself"), "other": _both("Cura un'altra creatura", "Heal another creature")}
+_CURABLE = {"blinded": _both("Accecato", "Blinded"), "deafened": _both("Assordato", "Deafened"),
+            "paralyzed": _both("Paralizzato", "Paralyzed"), "poisoned": _both("Avvelenato", "Poisoned"),
+            "stunned": _both("Stordito", "Stunned")}
+
+
+def _heal_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
+    if params.get("mode") == "other":
+        return _both("La creatura toccata recupera i PF indicati: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."
+                     + (" La condizione scelta termina su di lei (riferiscilo al GM)." if params.get("condition") else ""),
+                     "The touched creature regains the shown hit points: if it sits at the evening and you picked it, it is already healed; "
+                     "otherwise tell the GM." + (" The chosen condition ends on it (tell the GM)." if params.get("condition") else ""))
+    return _both("Recuperi i PF indicati.", "You regain the shown hit points.")
+
+
+def _spend_flurry_strike(ctx: RuleContext, _params: dict) -> None:
+    """Il colpo sostituito dalla guarigione è uno di quelli della Raffica: ne scala uno dallo stato."""
+    from core.rules.roll_options import _spend_state_token  # import locale: roll_options usa il catalogo
+    _spend_state_token(ctx.char, FLURRY_STATE)
+
+
+def _healing_use(*, slot: str | None, spends: str | None = None, in_flurry: bool = False, once: bool = False) -> OnUse:
+    """Mano della Guarigione: un dado Arti Marziali più Saggezza. Dal 6° livello termina anche una condizione, a scelta
+    del giocatore: su di sé la toglie l'app, su un altro la dice al GM (D1)."""
+    return OnUse(
+        slot=slot, spends=spends, cost=1, rolls=_die, heal=lambda c, rolled: rolled + _wis(c),
+        heal_when=lambda _c, p: p.get("mode") == "self", heal_ally_when=lambda _c, p: p.get("mode") == "other",
+        ally_modes=("other",), once_per_turn=once,
+        available=(lambda c: state_on(c, FLURRY_STATE)) if in_flurry else None,
+        effect=_spend_flurry_strike if in_flurry else None, message=_heal_message,
+        clears=lambda c, p: [p["condition"]] if p.get("mode") == "self" and p.get("condition") and c.class_level >= 6 else [],
+        choices=(UseChoice("mode", _both("Chi recupera i PF", "Who regains the HP"), lambda _c: list(_HEAL_MODES), lambda k: _HEAL_MODES[k]),
+                 UseChoice("condition", _both("Condizione da terminare", "Condition to end"), lambda _c: list(_CURABLE),
+                           lambda k: _CURABLE[k], optional=True, applies=lambda c: c.class_level >= 6)))
+
+
+def _ultimate_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
+    return _both(f"Una creatura morta da meno di 24 ore torna in vita con i PF indicati (4d10 + {_wis(ctx)}) e senza Accecato, Assordato, "
+                 "Paralizzato, Avvelenato e Stordito: riferiscilo al GM, l'app non ha la sua scheda.",
+                 f"A creature dead for less than 24 hours returns to life with the shown hit points (4d10 + {_wis(ctx)}) and without "
+                 "Blinded, Deafened, Paralyzed, Poisoned and Stunned: tell the GM, the app has no sheet for it.")
+
+
+MERCY_ROWS = (
+    _sub_row("mercy", "hand_of_harm", 3, "Mano del Danno", "Hand of Harm", 104,
+             ("Dopo un colpo senz'armi a segno, 1 punto: un dado Arti Marziali più Saggezza di danni necrotici extra, una volta per turno.",
+              "After an unarmed hit, 1 point: a Martial Arts die plus Wisdom of extra necrotic damage, once per turn."),
+             roll_options=(HARM,)),
+    _sub_row("mercy", "hand_of_healing", 3, "Mano della Guarigione", "Hand of Healing", 104,
+             ("Azione Magia e 1 punto: tocchi una creatura, che recupera un dado Arti Marziali più Saggezza di PF.",
+              "Magic action and 1 point: you touch a creature, which regains a Martial Arts die plus Wisdom hit points."),
+             "action", on_use=_healing_use(slot="action", spends=KI)),
+    _sub_row("mercy", "hand_of_healing_flurry", 3, "Mano della Guarigione", "Hand of Healing", 104,
+             ("Durante la Raffica di Colpi sostituisci un colpo con questa cura, senza il punto: una volta per turno.",
+              "During Flurry of Blows you swap one strike for this healing, with no point: once per turn."),
+             names=("Mano della Guarigione (in Raffica)", "Hand of Healing (in Flurry)"),
+             on_use=_healing_use(slot=None, in_flurry=True, once=True)),
+    _sub_row("mercy", "implements_of_mercy", 3, "Strumenti della Misericordia", "Implements of Mercy", 104,
+             ("Competenza in Intuizione, Medicina e nella borsa da erborista.",
+              "Proficiency in Insight, Medicine and the herbalism kit."),
+             proficiency_grants={"skills": ("insight", "medicine"), "tools": ("herbalism_kit",)}, passive=True),
+    _sub_row("mercy", "physicians_touch", 6, "Tocco del Medico", "Physician's Touch", 104,
+             ("Mano del Danno può avvelenare il bersaglio fino alla fine del tuo prossimo turno; Mano della Guarigione termina anche una condizione.",
+              "Hand of Harm can poison the target until the end of your next turn; Hand of Healing also ends a condition."),
+             roll_options=(HARM_POISON,)),
+    _sub_row("mercy", "flurry_of_healing_and_harm", 11, "Raffica di Guarigione e Danno", "Flurry of Healing and Harm", 104,
+             ("Nella Raffica ogni colpo può diventare Mano della Guarigione, e Mano del Danno vale senza punti: usi pari a Saggezza, riposo lungo.",
+              "In Flurry every strike can become Hand of Healing, and Hand of Harm works with no points: Wisdom uses, long rest."),
+             "special", uses=Uses(ability="wisdom", minimum=1), restoration="long_rest",
+             roll_options=(HARM_FREE, HARM_FREE_POISON), on_use=_healing_use(slot=None, in_flurry=True)),
+    _sub_row("mercy", "hand_of_ultimate_mercy", 17, "Mano della Misericordia Suprema", "Hand of Ultimate Mercy", 105,
+             ("Azione Magia e 5 punti, una volta per riposo lungo: un cadavere morto da meno di 24 ore torna in vita con 4d10 più Saggezza PF.",
+              "Magic action and 5 points, once per long rest: a creature dead less than 24 hours returns with 4d10 plus Wisdom hit points."),
+             "action", on_use=OnUse(
+                 slot="action", spends=KI, cost=5, rolls="4d10", gives=lambda c, rolled: rolled + _wis(c), message=_ultimate_message,
+                 available=lambda c: not state_on(c, ULTIMATE_USED), state=StateSpec(ULTIMATE_USED, ends_on=("rest_long",)))),
+)
+
+
+# ---------------------------------------------------------------------------
+# Guerriero dell'Ombra
+# ---------------------------------------------------------------------------
+
+def _darkvision_range(ctx: RuleContext) -> int:
+    """Scurovisione 18 m (60 piedi); se già posseduta, la portata cresce di altri 18 m."""
+    have = max((int(s.get("range_ft") or 0) for s in (ctx.char.settings or {}).get("senses") or []
+                if isinstance(s, dict) and s.get("type") == "darkvision"), default=0)
+    return 60 + have
+
+
+def _begin_shadow_strike(ctx: RuleContext, _params: dict) -> None:
+    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "manual")), f"{CK}.improved_shadow_step",
+                "Passo dell'Ombra Migliorato")
+
+
+SHADOW_STRIKE = RollOptionSpec(
+    key=f"{CK}.shadow_step_strike", phase="before", rolls=("attack",), outside_action=True, cost=Cost(state_key=SHADOW_STRIKE_STATE),
+    available=lambda c: _unarmed(c) and state_on(c, SHADOW_STRIKE_STATE),
+    label=_both("Passo dell'Ombra Migliorato: colpo senz'armi subito dopo il teletrasporto",
+                "Improved Shadow Step: unarmed strike right after the teleport"))
+
+_CLOAK_MESSAGE = _both(
+    "Per 1 minuto sei invisibile e in parte incorporeo: attraversi gli spazi occupati come terreno difficile e, se finisci il turno in uno, "
+    "torni nell'ultimo spazio libero. Finisce se sei incapacitato o chiudi il turno in luce intensa (Termina a mano).",
+    "For 1 minute you are invisible and partly incorporeal: you pass through occupied spaces as difficult terrain and, if you end your turn "
+    "in one, you go back to the last free space. It ends if you are incapacitated or end your turn in bright light (End it by hand).")
+
+SHADOW_ROWS = (
+    _sub_row("shadow", "shadow_arts", 3, "Arti dell'Ombra", "Shadow Arts", 105,
+             ("Oscurità con 1 punto, senza componenti; Scurovisione 18 m (altri 18 m se già ce l'hai); conosci Illusione Minore con Saggezza.",
+              "Darkness for 1 point, no components; Darkvision 18 m (another 18 m if you already have it); you know Minor Illusion with Wisdom."),
+             "action", passive=True, granted_spells=("darkness", "minor-illusion"), ki_spells=(KiSpell("darkness", 1),),
+             modifiers=(Modifier("sense:darkvision", _darkvision_range, source=f"feature:{CK}.shadow_arts"),)),
+    _sub_row("shadow", "shadow_step", 6, "Passo dell'Ombra", "Shadow Step", 105,
+             ("Azione bonus, da luce fioca o oscurità: ti teletrasporti fino a 18 m in uno spazio libero anch'esso in luce fioca; vantaggio al prossimo attacco in mischia.",
+              "Bonus action, from dim light or darkness: teleport up to 60 ft to a free space also in dim light; advantage on your next melee attack."),
+             "bonus_action", roll_options=(STEP_ADVANTAGE,),
+             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,), state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+    _sub_row("shadow", "improved_shadow_step", 11, "Passo dell'Ombra Migliorato", "Improved Shadow Step", 105,
+             ("Con 1 punto il Passo dell'Ombra ignora la luce di partenza e arrivo, e subito dopo il teletrasporto fai un colpo senz'armi.",
+              "With 1 point Shadow Step ignores the light at start and arrival, and right after the teleport you make an unarmed strike."),
+             "bonus_action", roll_options=(SHADOW_STRIKE,),
+             on_use=OnUse(slot="bonus", spends=KI, effect=_begin_shadow_strike,
+                          state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+    _sub_row("shadow", "cloak_of_shadows", 17, "Manto di Ombre", "Cloak of Shadows", 105,
+             ("Azione Magia e 3 punti, da luce fioca o oscurità: per 1 minuto invisibile e in parte incorporeo. Finisce se incapacitato.",
+              "Magic action and 3 points, from dim light or darkness: for 1 minute invisible and partly incorporeal. Ends if incapacitated."),
+             "action", on_use=OnUse(
+                 slot="action", spends=KI, cost=3, choices=(_LIGHT_CHOICE,), message=lambda _c, _p: _CLOAK_MESSAGE,
+                 state=StateSpec(CLOAK_STATE, rounds=10, ends_on=("incapacitated", "manual"), condition="invisible"))),
+    _sub_row("shadow", "shadow_flurry", 17, "Manto di Ombre", "Cloak of Shadows", 105,
+             ("Con il manto addosso la Raffica di Colpi non costa punti (Raffica d'Ombra).",
+              "With the cloak on, Flurry of Blows costs no points (Shadow Flurry)."),
+             "bonus_action", names=("Raffica d'Ombra", "Shadow Flurry"),
+             on_use=OnUse(slot="bonus", available=lambda c: state_on(c, CLOAK_STATE), state=_flurry_state)),
+)
+
+
+# ---------------------------------------------------------------------------
+# Guerriero degli Elementi
+# ---------------------------------------------------------------------------
+
+def _element_option(kind: str) -> RollOptionSpec:
+    label = _ELEMENT_LABELS[kind]
+    return RollOptionSpec(
+        key=f"{CK}.elemental_strike_{kind}", phase="before", rolls=("attack",), group=f"{CK}.elemental_strike", unarmed_damage_type=kind,
+        available=lambda c: _unarmed(c) and _is_attuned(c),
+        label=_both(f"Colpi Elementali: il colpo senz'armi infligge danni da {label['it'].lower()}",
+                    f"Elemental Strikes: the unarmed strike deals {label['en'].lower()} damage"))
+
+
+def _push_available(ctx: RuleContext) -> bool:
+    return _unarmed(ctx) and _is_attuned(ctx) and any(f"{CK}.elemental_strike_{k}" in ctx.confirmed for k in ELEMENTS)
+
+
+ELEMENT_OPTIONS = tuple(_element_option(k) for k in ELEMENTS)
+ELEMENT_PUSH = RollOptionSpec(
+    key=f"{CK}.elemental_push", phase="after_hit", rolls=("attack",), available=_push_available,
+    label=_both("Colpi Elementali: TS Forza o il bersaglio è spostato di 3 m", "Elemental Strikes: Strength save or the target is moved 10 ft"),
+    effect=_dc_say("Il bersaglio fa un TS Forza CD {dc}: se fallisce lo sposti fino a 3 m verso di te o lontano da te.",
+                   "The target makes a DC {dc} Strength save: on a failure you move it up to 10 ft toward or away from you."),
+    target_effect=lambda ctx, _i: TargetEffect(save_ability="strength", save_dc=_ki_dc(ctx)))
+
+
+def _burst_dice(ctx: RuleContext) -> str:
+    return f"3{_die(ctx)[1:]}"
+
+
+def _burst_message(ctx: RuleContext, params: dict) -> dict[str, str]:
+    kind = _ELEMENT_LABELS[params["element"]]
+    return _both(f"Sfera di 6 m entro 36 m: TS Destrezza CD {_ki_dc(ctx)}, danni da {kind['it'].lower()} pari ai dadi tirati, la metà se supera.",
+                 f"6 m sphere within 36 m: DC {_ki_dc(ctx)} Dexterity save, {kind['en'].lower()} damage equal to the dice rolled, half on a success.")
+
+
+def _chosen_resistance(ctx: RuleContext) -> str | None:
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == ATTUNE_STATE), None)
+    return (state.get("data") or {}).get("resistance") if state else None
+
+
+def _choose_resistance(ctx: RuleContext, params: dict) -> None:
+    """La resistenza scelta sta nei dati dello stato di Sintonia: finisce con lui e si cambia a ogni turno."""
+    ctx.char.active_states = [{**s, "data": {**(s.get("data") or {}), "resistance": params["element"]}}
+                              if s.get("key") == ATTUNE_STATE else s for s in ctx.char.active_states or []]
+
+
+def _epitome_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
+    kind = _ELEMENT_LABELS[params["element"]]
+    return _both(f"Resistenza ai danni da {kind['it'].lower()} finché la Sintonia dura; la cambi a inizio di ogni turno.",
+                 f"Resistance to {kind['en'].lower()} damage while the Attunement lasts; you change it at the start of each turn.")
+
+
+EPITOME_STRIKE = RollOptionSpec(
+    key=f"{CK}.elemental_epitome_strike", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=lambda c, _i: _die(c),
+    available=lambda c: _unarmed(c) and _is_attuned(c),
+    label=_both("Epitome Elementale: un dado Arti Marziali di danni extra, una volta per turno",
+                "Elemental Epitome: an extra Martial Arts die of damage, once per turn"),
+    effect=_say("Epitome Elementale: danni extra pari a un dado Arti Marziali, dello stesso tipo del colpo.",
+                "Elemental Epitome: extra damage equal to a Martial Arts die, of the strike's damage type."))
+
+ELEMENTS_ROWS = (
+    _sub_row("elements", "elemental_attunement", 3, "Sintonia Elementale", "Elemental Attunement", 106,
+             ("A inizio turno, 1 punto: per 10 minuti portata +3 m ai colpi senz'armi e danni elementali a scelta, con spinta di 3 m (TS Forza).",
+              "At the start of your turn, 1 point: for 10 minutes +3 m reach on unarmed strikes and elemental damage of your choice, with a 3 m push (Strength save)."),
+             "special", roll_options=(*ELEMENT_OPTIONS, ELEMENT_PUSH),
+             on_use=OnUse(spends=KI, state=StateSpec(ATTUNE_STATE, rounds=100, ends_on=("incapacitated", "manual"),
+                                                     data={"reach_bonus_ft": 10}))),
+    _sub_row("elements", "manipulate_elements", 3, "Manipolare gli Elementi", "Manipulate Elements", 106,
+             ("Conosci il trucchetto Elementalismo, con Saggezza come caratteristica da incantatore.",
+              "You know the Elementalism cantrip, with Wisdom as your spellcasting ability."),
+             granted_spells=("elementalism",), passive=True),
+    _sub_row("elements", "elemental_burst", 6, "Esplosione Elementale", "Elemental Burst", 106,
+             ("Azione Magia e 2 punti: sfera di 6 m entro 36 m, TS Destrezza, tre dadi Arti Marziali del tipo scelto, metà se riuscito.",
+              "Magic action and 2 points: 6 m sphere within 36 m, Dexterity save, three Martial Arts dice of the chosen type, half on a success."),
+             "action", on_use=OnUse(
+                 slot="action", spends=KI, cost=2, rolls=_burst_dice, choices=(_ELEMENT_CHOICE,), message=_burst_message,
+                 target_effect=lambda c, _p: TargetEffect(save_ability="dexterity", save_dc=_ki_dc(c), on_failure_only=False,
+                                                          damage_dice=_burst_dice(c)))),
+    _sub_row("elements", "stride_of_the_elements", 11, "Passo degli Elementi", "Stride of the Elements", 106,
+             ("Con la Sintonia Elementale attiva hai Velocità di Volo e di Nuoto pari alla tua Velocità.",
+              "While Elemental Attunement is active you have Fly and Swim Speeds equal to your Speed."),
+             modifiers=(Modifier("fly_speed", 1, when=_is_attuned, source=f"feature:{CK}.stride_of_the_elements"),
+                        Modifier("swim_speed", 1, when=_is_attuned, source=f"feature:{CK}.stride_of_the_elements"))),
+    _sub_row("elements", "elemental_epitome", 17, "Epitome Elementale", "Elemental Epitome", 106,
+             ("Con la Sintonia attiva: resistenza a un elemento a scelta, +6 m col Passo del Vento (danno ai vicini) e un dado Arti Marziali extra al turno.",
+              "While attuned: resistance to a chosen element, +6 m with Step of the Wind (damage to nearby creatures) and an extra Martial Arts die per turn."),
+             "special", roll_options=(EPITOME_STRIKE,),
+             on_use=OnUse(cost=0, available=_is_attuned, effect=_choose_resistance, choices=(_ELEMENT_CHOICE,), message=_epitome_message),
+             modifiers=(*(Modifier(f"resistance:{t}", 1, when=lambda c, t=t: _is_attuned(c) and _chosen_resistance(c) == t,
+                                   source=f"feature:{CK}.elemental_epitome") for t in ELEMENTS),
+                        Modifier("speed", 20, when=lambda c: _is_attuned(c) and state_on(c, "step_of_the_wind"),
+                                 source=f"feature:{CK}.elemental_epitome"))),
+)
+
+
+# ---------------------------------------------------------------------------
+# Guerriero della Mano Aperta
+# ---------------------------------------------------------------------------
+
+ADDLE_OPTION = _technique(
+    "addle", ("Distrarre: il bersaglio non può fare attacchi di opportunità", "Addle: the target cannot make opportunity attacks"),
+    ("Il bersaglio non può fare attacchi di opportunità fino all'inizio del suo prossimo turno. Nessun tiro salvezza.",
+     "The target cannot make opportunity attacks until the start of its next turn. No saving throw."), None)
+PUSH_OPTION = _technique(
+    "push", ("Spingere: TS Forza o il bersaglio è spinto di 4,5 m", "Push: Strength save or the target is pushed 15 ft"),
+    ("Il bersaglio fa un TS Forza CD {dc}: se fallisce lo spingi fino a 4,5 m lontano da te.",
+     "The target makes a DC {dc} Strength save: on a failure you push it up to 15 ft away from you."),
+    lambda ctx, _i: TargetEffect(save_ability="strength", save_dc=_ki_dc(ctx)))
+TOPPLE_OPTION = _technique(
+    "topple", ("Atterrare: TS Destrezza o il bersaglio cade prono", "Topple: Dexterity save or the target falls prone"),
+    ("Il bersaglio fa un TS Destrezza CD {dc}: se fallisce cade prono.", "The target makes a DC {dc} Dexterity save: on a failure it falls prone."),
+    lambda ctx, _i: TargetEffect(condition="prone", save_ability="dexterity", save_dc=_ki_dc(ctx)))
+
+
+def _fleet_available(ctx: RuleContext) -> bool:
+    """Dopo un'azione bonus che non sia il Passo del Vento (che apre lo stato): non si concatena a se stesso."""
+    return bool(_turn(ctx).get("bonus_used")) and not state_on(ctx, "step_of_the_wind")
+
+
+PALM_START = RollOptionSpec(
+    key=f"{CK}.quivering_palm_start", phase="after_hit", rolls=("attack",), cost=Cost(feature_key=KI, amount=4),
+    available=lambda c: _unarmed(c) and not state_on(c, PALM_STATE),
+    on_confirm=lambda _s, ctx, _i: begin_state(ctx.char, StateSpec(PALM_STATE, rounds=ctx.class_level * 14400, ends_on=("manual",)),
+                                               f"{CK}.quivering_palm", "Palmo Tremante"),
+    label=_both("Palmo Tremante: spendi 4 punti e avvia le vibrazioni nel bersaglio",
+                "Quivering Palm: spend 4 points and start the vibrations in the target"),
+    effect=_say("Vibrazioni avviate: durano tanti giorni quanti i tuoi livelli da monaco, su una sola creatura per volta.",
+                "Vibrations started: they last as many days as your monk levels, on a single creature at a time."))
+
+
+def _palm_end(**kw: Any) -> OnUse:
+    """Fine delle vibrazioni: TS Costituzione del bersaglio, 10d12 danni da Forza, metà se lo supera. Vale con l'azione o con un attacco rinunciato."""
+    return OnUse(
+        rolls="10d12", ends_state=PALM_STATE, available=lambda c: state_on(c, PALM_STATE),
+        message=lambda c, _p: _both(
+            f"TS Costituzione CD {_ki_dc(c)} del bersaglio: se fallisce subisce i danni da Forza tirati, la metà se supera. Le vibrazioni finiscono.",
+            f"The target's DC {_ki_dc(c)} Constitution save: on a failure it takes the Force damage rolled, half on a success. The vibrations end."),
+        target_effect=lambda c, _p: TargetEffect(save_ability="constitution", save_dc=_ki_dc(c), on_failure_only=False, damage_dice="10d12"),
+        **kw)
+
+
+OPEN_HAND_ROWS = (
+    _sub_row("open_hand", "open_hand_technique", 3, "Tecnica della Mano Aperta", "Open Hand Technique", 107,
+             ("Su un colpo della Raffica di Colpi scegli un effetto: Distrarre, Spingere o Atterrare. Uno per colpo, nessun punto.",
+              "On a Flurry of Blows hit you pick one effect: Addle, Push or Topple. One per hit, no points."), passive=True),
+    _sub_row("open_hand", "addle", 3, "Distrarre", "Addle", 107,
+             ("Sul colpo della Raffica: il bersaglio non può fare attacchi di opportunità fino all'inizio del suo prossimo turno.",
+              "On a Flurry hit: the target cannot make opportunity attacks until the start of its next turn."),
+             roll_options=(ADDLE_OPTION,)),
+    _sub_row("open_hand", "push", 3, "Spingere", "Push", 107,
+             ("Sul colpo della Raffica: TS Forza (CD 8 + Saggezza + competenza) o il bersaglio è spinto di 4,5 m.",
+              "On a Flurry hit: Strength save (DC 8 + Wisdom + proficiency) or the target is pushed 15 ft."),
+             roll_options=(PUSH_OPTION,)),
+    _sub_row("open_hand", "topple", 3, "Atterrare", "Topple", 107,
+             ("Sul colpo della Raffica: TS Destrezza (CD 8 + Saggezza + competenza) o il bersaglio cade prono.",
+              "On a Flurry hit: Dexterity save (DC 8 + Wisdom + proficiency) or the target falls prone."),
+             roll_options=(TOPPLE_OPTION,)),
+    _sub_row("open_hand", "wholeness_of_body", 6, "Integrità del Corpo", "Wholeness of Body", 107,
+             ("Azione bonus: tiri il dado Arti Marziali e recuperi quel risultato più Saggezza in PF (minimo 1). Usi pari a Saggezza, riposo lungo.",
+              "Bonus action: roll the Martial Arts die and regain that result plus Wisdom hit points (minimum 1). Wisdom uses, long rest."),
+             "bonus_action", uses=Uses(ability="wisdom", minimum=1), restoration="long_rest",
+             on_use=OnUse(slot="bonus", rolls=_die, heal=lambda c, rolled: max(1, rolled + _wis(c)))),
+    _sub_row("open_hand", "fleet_step", 11, "Passo Rapido", "Fleet Step", 107,
+             ("Dopo un'azione bonus diversa dal Passo del Vento usi subito il Passo del Vento gratis (Scatto), senza un'altra azione bonus.",
+              "After a bonus action other than Step of the Wind you use Step of the Wind for free (Dash), with no other bonus action."),
+             "special", on_use=OnUse(available=_fleet_available, state=_step_state(False))),
+    _sub_row("open_hand", "fleet_step_focus", 11, "Passo Rapido", "Fleet Step", 107,
+             ("Come sopra, ma con 1 punto: Passo del Vento con Disimpegno e Scatto e salto doppio.",
+              "As above, but with 1 point: Step of the Wind with Disengage and Dash and a doubled jump."),
+             "special", names=("Passo Rapido (1 punto)", "Fleet Step (1 point)"),
+             on_use=OnUse(spends=KI, available=_fleet_available, state=_step_state(True))),
+    _sub_row("open_hand", "quivering_palm", 17, "Palmo Tremante", "Quivering Palm", 107,
+             ("Dopo un colpo senz'armi, 4 punti: vibrazioni per giorni pari al livello. Con un'azione le termini: TS Costituzione, 10d12 Forza, metà se riuscito.",
+              "After an unarmed hit, 4 points: vibrations for days equal to your level. As an action you end them: Constitution save, 10d12 Force, half on a success."),
+             "action", roll_options=(PALM_START,), on_use=_palm_end(slot="action")),
+    _sub_row("open_hand", "quivering_palm_attack", 17, "Palmo Tremante", "Quivering Palm", 107,
+             ("Le vibrazioni si possono terminare anche rinunciando a uno degli attacchi dell'azione Attacco; stesso esito.",
+              "The vibrations can also end by giving up one attack of the Attack action; same outcome."),
+             "special", names=("Palmo Tremante (attacco rinunciato)", "Quivering Palm (attack given up)"),
+             on_use=_palm_end(forgoes_attack=True)),
+)
+
+SUBCLASS_ROWS = MERCY_ROWS + SHADOW_ROWS + ELEMENTS_ROWS + OPEN_HAND_ROWS
 
 FEATURES = BASE_ROWS + SUBCLASS_ROWS

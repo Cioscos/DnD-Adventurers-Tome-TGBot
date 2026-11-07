@@ -243,6 +243,9 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     # Monaco 2014: Arti dell'Ombra, Corpo Vuoto e le discipline dei Quattro Elementi (si lanciano col ki)
     'darkvision': GrantedSpell(
         'darkvision', {"it": 'Scurovisione', "en": 'Darkvision'}, 2, '1 azione', 'Contatto', '8 ore'),
+    # Monaco 2024 (Guerriero degli Elementi): trucchetto 2024, assente dal catalogo SRD 2014
+    'elementalism': GrantedSpell(
+        'elementalism', {"it": 'Elementalismo', "en": 'Elementalism'}, 0, '1 azione', '9 m', 'Istantaneo'),
     'minor-illusion': GrantedSpell(
         'minor-illusion', {"it": 'Illusione minore', "en": 'Minor Illusion'}, 0, '1 azione', '9 m', '1 minuto'),
     'fly': GrantedSpell(
@@ -404,6 +407,7 @@ _COMPONENTS: dict[str, str] = {
     "alter-self": "V, S",
     "darkvision": "V, S, M",
     "minor-illusion": "S, M",
+    "elementalism": "V, S",
     "fly": "V, S, M",
     "astral-projection": "V, S, M",
     "protection-from-evil-and-good": "V, S, M",
