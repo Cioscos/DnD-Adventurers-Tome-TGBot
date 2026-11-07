@@ -16,10 +16,10 @@ describe('texts of the druid rules', () => {
     }
   })
 
-  it('the cantrip pick banner names the druid list, not a feature that grants none in particular', () => {
-    expect(at(it_, 'character.spells.pick_cantrip_banner')).toMatch(/druido/i)
+  it('the cantrip pick banner names the list as a parameter, not a feature that grants none in particular', () => {
+    expect(at(it_, 'character.spells.pick_cantrip_banner')).toContain('{{list}}')
     expect(at(it_, 'character.spells.pick_cantrip_banner')).not.toMatch(/privilegio/i)
-    expect(at(en, 'character.spells.pick_cantrip_banner')).toMatch(/druid/i)
+    expect(at(en, 'character.spells.pick_cantrip_banner')).toContain('{{list}}')
     expect(at(en, 'character.spells.pick_cantrip_banner')).not.toMatch(/feature/i)
   })
 
