@@ -82,7 +82,8 @@ async def test_2024_import_has_no_2014_approximations(client, monkeypatch, rules
     assert not [a for a in ch["abilities"] if a["name"] == "Focus Points" and not a["is_class_feature"]]
 
 
-async def test_class_outside_catalog_keeps_ddb_max(client, monkeypatch):
+async def test_class_outside_catalog_keeps_ddb_max(client, monkeypatch, rules_catalog):
+    # registro vuoto: il Monaco 2024 è a catalogo dal Task 36, ma qui serve una classe fuori catalogo
     def spend(data):
         for a in data["actions"]["class"]:
             if a["name"] == "Focus Points":

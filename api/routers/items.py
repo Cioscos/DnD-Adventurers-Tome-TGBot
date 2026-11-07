@@ -1065,8 +1065,9 @@ async def attack_unarmed(
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
         # il proiettile afferrato non è un colpo senz'armi: né il tipo di danno (che il manuale non fissa) né «magico»
-        damage_type=None if throw else next((s["data"]["unarmed_damage_type"] for s in char.active_states or []
-                                             if (s.get("data") or {}).get("unarmed_damage_type")), "bludgeoning"),
+        damage_type=None if throw else opts.unarmed_damage_type or next(
+            (s["data"]["unarmed_damage_type"] for s in char.active_states or [] if (s.get("data") or {}).get("unarmed_damage_type")),
+            "bludgeoning"),
         is_magic=True if not throw and any(spec.magic_unarmed for spec, _row in active_features(char)) else None,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),

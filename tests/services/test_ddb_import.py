@@ -256,7 +256,8 @@ def test_monk_unarmored_defense_and_hp():
 
 
 def test_monk_speed_lineage_plus_unarmored_movement():
-    assert convert(monk())[0].character.speed == 65  # lignaggio silvano 35 + movimento senza armatura 30
+    # la scheda è 2024: dal Task 36 il +30 lo calcola il catalogo (R45), la base resta il lignaggio silvano 35
+    assert convert(monk())[0].character.speed == 35
 
 
 def test_unarmored_movement_lost_with_armor():
@@ -638,8 +639,8 @@ def test_monk_2014_speed_base_has_no_unarmored_movement():
     assert ch.speed == 35  # solo il lignaggio: il +30 lo calcola il catalogo 2014
 
 
-def test_monk_2024_speed_keeps_unarmored_movement_in_base():
-    assert convert(monk(), edition="2024")[0].character.speed == 65  # nessun catalogo 2024: resta com'è
+def test_monk_2024_speed_leaves_unarmored_movement_to_the_catalog():
+    assert convert(monk(), edition="2024")[0].character.speed == 35  # Task 36: il catalogo 2024 calcola il +30 (R45)
 
 
 def test_barbarian_speed_base_has_no_fast_movement_in_either_edition():

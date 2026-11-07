@@ -34,6 +34,7 @@ from api.schemas.encounter import (
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
+from api.services.effects import apply_heal
 from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, modifiers_for
 from core.rules.roll_options import AppliedOptions
@@ -374,6 +375,8 @@ async def roll_initiative(
     _surprise_disadvantage(comb, char, applied)
     opts = AppliedOptions() if char is None else use_options(db, char, "initiative", body, ability="dexterity")
     merge_options(applied, opts)
+    if char is not None and opts.self_heal:  # Metabolismo Prodigioso, come nel tiro fuori incontro
+        await apply_heal(db, char, opts.self_heal)
     outcome = resolve_body(body, applied)
     option_rolls, option_total = ([], 0) if char is None else roll_option_dice(char, opts)
     comb.initiative_die = outcome.kept

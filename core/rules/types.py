@@ -465,7 +465,7 @@ class RollOptionSpec:
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
-    self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (solo ``spell_healing``)
+    self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (``spell_healing``, o l'iniziativa: lo applica il router del tiro)
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)
     maximize_types: tuple[str, ...] = ()  # tipi di danno che la massimizzazione tocca; vuoto = tutti (i dadi a mano mai)
@@ -500,6 +500,8 @@ class RollOptionSpec:
     # Con ``attack``: il Colpo Senz'Armi infligge questi dadi più Destrezza al posto del danno normale (Danno Bardico);
     # ``f(ctx, inputs) -> "NdM"``
     unarmed_dice: "Callable[[RuleContext, dict], str] | None" = None
+    # Con ``attack`` senz'armi: tipo di danno scelto al posto di quello normale (Colpi Potenziati del Monaco 2024: Forza)
+    unarmed_damage_type: str | None = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -532,8 +534,8 @@ class RollOptionSpec:
             raise ValueError("after_damage non chiede input: il client manda sempre option_inputs vuoto")
         if self.keep_rolled and self.reroll_dice is None:
             raise ValueError("keep_rolled riguarda reroll_dice")
-        if self.self_heal and "spell_healing" not in self.rolls:
-            raise ValueError("self_heal vale solo per la cura di un incantesimo")
+        if self.self_heal and not {"spell_healing", "initiative"} & set(self.rolls):
+            raise ValueError("self_heal vale solo per la cura di un incantesimo o per l'iniziativa (Metabolismo Prodigioso)")
         if self.maximize and (self.phase != "before" or "spell_damage" not in self.rolls):
             raise ValueError("maximize vale solo prima del danno di un incantesimo")
         if self.self_damage and self.phase != "before":

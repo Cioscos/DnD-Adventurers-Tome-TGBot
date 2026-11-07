@@ -19,6 +19,7 @@ from api.services import telegram_notify
 from api.routers._helpers import initiative_bonus
 from api.services.d20 import d20_records, resolve_body, resolve_d20, spend_inspiration_reroll
 from api.services.dice_stats import record_dice
+from api.services.effects import apply_heal
 from api.services.rules_options import (
     LAST_ROLL_FIELDS,
     merge_options,
@@ -122,6 +123,8 @@ async def roll_character_initiative(
     applied = modifiers_for(char, "initiative", ability="dexterity")
     opts = use_options(session, char, "initiative", body, ability="dexterity")
     merge_options(applied, opts)
+    if opts.self_heal:  # Metabolismo Prodigioso: la cura passa dal percorso comune (massimo, tiri salvezza morte, storico)
+        await apply_heal(session, char, opts.self_heal)
     bonus = await initiative_bonus(session, char) + opts.bonus
     outcome = resolve_body(body, applied)
     die = outcome.kept
