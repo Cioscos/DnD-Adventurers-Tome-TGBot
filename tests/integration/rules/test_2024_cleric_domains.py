@@ -10,7 +10,7 @@ from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed
 from tests.integration.rules.test_2014_barbarian import _attack, _turn, _weapon
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _roll_keys, _states, _use
 from tests.integration.rules.test_2014_bard_inspiration import _seat
-from tests.integration.rules.test_2024_cleric import POOL, _paladin_pool_spec
+from tests.integration.rules.test_2024_cleric import POOL
 
 DOMAINS = {"life": "Dominio della Vita", "light": "Dominio della Luce", "trickery": "Dominio dell'Inganno", "war": "Dominio della Guerra"}
 SPELLS = {
@@ -147,25 +147,22 @@ async def test_preserve_life_heals_five_times_the_level_up_to_half_and_spends_th
 
 @pytest.mark.parametrize("cleric_first", [True, False])
 async def test_preserve_life_spends_the_shared_pool_in_both_multiclass_orders(client, cleric_first):
-    from core.rules import catalog
-    catalog._REGISTRY[("2024", "paladin")] = (_paladin_pool_spec(3),)
-    try:
-        first, second = ("cleric", "paladin") if cleric_first else ("paladin", "cleric")
-        sub = [DOMAINS["life"] if c == "cleric" else None for c in (first, second)]
-        r = await client.post("/characters", json={"name": "Mix", "initial_class": {"class_name": first, "level": 5, "subclass": sub[0]}})
-        cid = r.json()["id"]
-        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
-        r = await client.post(f"/characters/{cid}/classes", json={"class_name": second, "level": 5, "hit_die": 8, "subclass": sub[1]})
-        assert r.status_code == 201, r.text
-        await _hp(client, cid, 10)
-        rows = [a for a in (await _full(client, cid))["abilities"] if a["feature_key"] in (POOL, "paladin.channel_divinity")]
-        assert len(rows) == 1
-        r = await client.post(f"/characters/{cid}/preserve-life", json={
-            "allocations": [{"character_id": cid, "amount": 5}], "confirm_living": True})
-        assert r.status_code == 200, r.text
-        assert (await _ability(client, cid, POOL))["uses"] == rows[0]["max_uses"] - 1
-    finally:
-        catalog._REGISTRY.pop(("2024", "paladin"), None)
+    # Paladino 2024 vero (Task 37): il Chierico di 6° livello ha 3 usi, il Paladino di 5° ne ha 2: tiene la riserva il Chierico
+    first, second = ("cleric", "paladin") if cleric_first else ("paladin", "cleric")
+    levels = {"cleric": 6, "paladin": 5}
+    sub = [DOMAINS["life"] if c == "cleric" else None for c in (first, second)]
+    r = await client.post("/characters", json={"name": "Mix", "initial_class": {"class_name": first, "level": levels[first], "subclass": sub[0]}})
+    cid = r.json()["id"]
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": second, "level": levels[second], "hit_die": 8, "subclass": sub[1]})
+    assert r.status_code == 201, r.text
+    await _hp(client, cid, 10)
+    rows = [a for a in (await _full(client, cid))["abilities"] if a["feature_key"] in (POOL, "paladin.channel_divinity")]
+    assert len(rows) == 1 and rows[0]["feature_key"] == POOL and rows[0]["max_uses"] == 3
+    r = await client.post(f"/characters/{cid}/preserve-life", json={
+        "allocations": [{"character_id": cid, "amount": 5}], "confirm_living": True})
+    assert r.status_code == 200, r.text
+    assert (await _ability(client, cid, POOL))["uses"] == 2
 
 
 # ---------------------------------------------------------------------------

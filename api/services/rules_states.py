@@ -402,6 +402,12 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                 healed_ally = max(0, healed_ally - target.current_hit_points)
             got = (await apply_heal(session, target, healed_ally))["healed"]
             result.received = {"name": target.name, "healed": got}
+    if on_use.clears_ally and for_other and target is not None:
+        from api.services.effects import apply_conditions  # import locale, come sopra
+        target = await load_receiver(session, target.id)
+        removed = {c: False for c in on_use.clears_ally(ctx, params or {}) if (target.conditions or {}).get(c)}
+        if removed:
+            await apply_conditions(session, target, removed)
     if on_use.clears:
         from api.services.effects import apply_conditions  # import locale, come sopra
         removed = {c: False for c in on_use.clears(ctx, params or {}) if (char.conditions or {}).get(c)}

@@ -47,9 +47,14 @@ def immune_conditions(char: Any) -> set[str]:
 
 
 def is_conscious(char: Any) -> bool:
-    """Cosciente: vivo, con almeno 1 PF e non Privo di sensi (le aure del paladino valgono solo così)."""
-    return (not getattr(char, "is_dead", False) and (char.current_hit_points or 0) > 0
-            and not (char.conditions or {}).get("unconscious"))
+    """Cosciente: vivo, con almeno 1 PF e non Privo di sensi (le aure del paladino valgono solo così). Nel 2024 le aure
+    sono inattive con qualunque condizione che incapacita (Aura di Protezione), non solo a 0 PF."""
+    from core.rules.catalog._common import INCAPACITATING  # import locale: il catalogo importa questo modulo
+    from core.rules.edition import character_edition
+    conditions = char.conditions or {}
+    if getattr(char, "is_dead", False) or (char.current_hit_points or 0) <= 0 or conditions.get("unconscious"):
+        return False
+    return not (character_edition(char) == "2024" and any(conditions.get(c) for c in INCAPACITATING))
 
 
 def casting_blocked_by(char: Any) -> bool:

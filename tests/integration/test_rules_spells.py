@@ -208,11 +208,13 @@ async def test_edition_switch_keeps_spent_slots_and_spells(client):
     r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     assert r.status_code == 200, r.text
     assert {s["level"]: (s["total"], s["used"]) for s in r.json()["spell_slots"]} == {1: (4, 3), 2: (3, 2)}
-    assert [s["id"] for s in r.json()["spells"]] == [spell["id"]]
+    # il Paladino 2024 ha sempre preparati Punizione Divina e Trova Destriero (Task 37): l'incantesimo del giocatore resta
+    assert spell["id"] in [s["id"] for s in r.json()["spells"]]
+    assert {s["srd_index"] for s in r.json()["spells"]} >= {"divine-smite", "find-steed"}
 
     r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})
     assert {s["level"]: (s["total"], s["used"]) for s in r.json()["spell_slots"]} == {1: (4, 3), 2: (2, 2)}
-    assert [s["id"] for s in r.json()["spells"]] == [spell["id"]]
+    assert spell["id"] in [s["id"] for s in r.json()["spells"]]  # gli incantesimi concessi restano sulla scheda (come per le altre classi)
 
 
 async def test_manual_slots_untouched_by_edition_switch(client):

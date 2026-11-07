@@ -300,11 +300,18 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'compulsion': GrantedSpell(
         'compulsion', {"it": 'Compulsione', "en": 'Compulsion'}, 4, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto',
         is_concentration=True, attack_save='SAVE'),
+    # Paladino 2024 (Punizione del Paladino, Destriero Fedele): sempre preparati, un lancio gratuito per riposo lungo
+    'divine-smite': GrantedSpell(
+        'divine-smite', {"it": 'Punizione Divina', "en": 'Divine Smite'}, 1, '1 azione bonus', 'Personale', 'Istantanea'),
+    'find-steed': GrantedSpell(
+        'find-steed', {"it": 'Trova destriero', "en": 'Find Steed'}, 2, '10 minuti', '9 m', 'Istantanea'),
 }
 
 
 # Componenti di ogni incantesimo concesso: dato meccanico («V, S, M»), non testo dei manuali.
 _COMPONENTS: dict[str, str] = {
+    "divine-smite": "V",  # Paladino 2024 (Punizione del Paladino): il danno lo calcola il flusso del colpo
+    "find-steed": "V, S",  # Paladino 2024 (Destriero Fedele)
     "beast-sense": "S",
     "speak-with-animals": "V, S",
     "commune-with-nature": "V, S",
@@ -490,5 +497,6 @@ _COMPONENTS["telekinesis"] = "V, S"  # quelle dell'incantesimo; il Maestro Telec
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",
+            "divine-smite": "evocation", "find-steed": "conjuration",
             "telekinesis": "transmutation", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

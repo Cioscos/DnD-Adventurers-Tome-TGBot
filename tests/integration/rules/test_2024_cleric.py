@@ -234,34 +234,22 @@ async def test_turn_undead_is_refused_without_uses_and_keeps_the_action(client):
 
 
 # ---------------------------------------------------------------------------
-# Riserva condivisa (la riuserà il Paladino 2024)
+# Riserva condivisa col Paladino 2024 (la riga vera, Task 37)
 # ---------------------------------------------------------------------------
-
-def _paladin_pool_spec(level):
-    from core.rules.types import FeatureSpec, Uses
-    return FeatureSpec(key="paladin.channel_divinity", class_key="paladin", edition="2024", level=level, source_title="prova",
-                       name={"it": "x", "en": "x"}, summary={"it": "x", "en": "x"}, action_type="action",
-                       uses=Uses(table={level: 1}), restoration="short_rest", shared_pool="channel_divinity")
-
 
 @pytest.mark.parametrize("cleric_first", [True, False])
 async def test_channel_divinity_is_one_pool_in_both_multiclass_orders(client, cleric_first):
-    from core.rules.types import FeatureSpec  # noqa: F401  (il registro è quello vero: la riga di prova si aggiunge)
-    from core.rules import catalog
-    catalog._REGISTRY[("2024", "paladin")] = (_paladin_pool_spec(3),)
-    try:
-        first, second = ("cleric", "paladin") if cleric_first else ("paladin", "cleric")
-        r = await client.post("/characters", json={"name": "Mix", "initial_class": {"class_name": first, "level": 5, "subclass": None}})
-        cid = r.json()["id"]
-        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
-        r = await client.post(f"/characters/{cid}/classes", json={"class_name": second, "level": 5, "hit_die": 8})
-        assert r.status_code == 201, r.text
-        rows = [a for a in (await _full(client, cid))["abilities"] if a["feature_key"] in (POOL, "paladin.channel_divinity")]
-        assert len(rows) == 1 and rows[0]["feature_key"] == POOL and rows[0]["max_uses"] == 2  # la classe che ne dà di più
-        assert (await _use(client, cid, TURN)).status_code == 200
-        assert (await _ability(client, cid, POOL))["uses"] == 1
-    finally:
-        catalog._REGISTRY.pop(("2024", "paladin"), None)
+    first, second = (("cleric", 6), ("paladin", 5)) if cleric_first else (("paladin", 5), ("cleric", 6))
+    r = await client.post("/characters", json={"name": "Mix", "initial_class": {"class_name": first[0], "level": first[1], "subclass": None}})
+    cid = r.json()["id"]
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": second[0], "level": second[1], "hit_die": 8})
+    assert r.status_code == 201, r.text
+    rows = [a for a in (await _full(client, cid))["abilities"] if a["feature_key"] in (POOL, "paladin.channel_divinity")]
+    assert len(rows) == 1 and rows[0]["feature_key"] == POOL and rows[0]["max_uses"] == 3  # la classe che ne dà di più
+    assert (await _use(client, cid, TURN)).status_code == 200
+    assert (await _use(client, cid, "paladin.divine_sense")).status_code == 200  # l'opzione del paladino spende la stessa riserva
+    assert (await _ability(client, cid, POOL))["uses"] == 1
 
 
 # ---------------------------------------------------------------------------
