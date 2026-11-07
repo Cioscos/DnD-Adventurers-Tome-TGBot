@@ -445,7 +445,7 @@ async def test_indomitable_might_raises_strength_checks_and_saves_to_the_score(c
     cid = await _barbarian(client, 18, strength=20)
     assert (await client.post(f"/characters/{cid}/skills/athletics/roll", json={"die": 1})).json()["total"] >= 20
     assert (await client.post(f"/characters/{cid}/saving_throws/strength/roll", json={"die": 1})).json()["total"] >= 20
-    assert (await client.post(f"/characters/{cid}/saving_throws/dexterity/roll", json={"die": 1})).json()["total"] < 20
+    assert (await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"die": 1})).json()["total"] < 20
     assert (await client.post(f"/characters/{cid}/skills/acrobatics/roll", json={"die": 1})).json()["total"] < 20
     plain = await _barbarian(client, 17, strength=20)
     assert (await client.post(f"/characters/{plain}/saving_throws/strength/roll", json={"die": 1})).json()["total"] < 20
