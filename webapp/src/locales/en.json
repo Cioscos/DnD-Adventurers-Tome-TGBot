@@ -933,7 +933,7 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell", "hurled": "Hurled through Hell", "entropic_ward": "Attack at disadvantage", "instinctive_charm": "Attack redirected", "altered_memory": "Altered memory", "commanded_undead": "Commanded undead", "hamstring": "Hamstrung", "staggered": "Staggered", "sundered": "Sundered" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "no_opportunity_attacks": "No opportunity attacks", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell", "hurled": "Hurled through Hell", "entropic_ward": "Attack at disadvantage", "instinctive_charm": "Attack redirected", "altered_memory": "Altered memory", "commanded_undead": "Commanded undead", "hamstring": "Hamstrung", "staggered": "Staggered", "sundered": "Sundered" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand.",

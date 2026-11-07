@@ -106,7 +106,7 @@ async def test_hand_of_harm_is_for_unarmed_hits_spends_a_point_and_adds_a_necrot
     body = (await _damage(client, cid, hit, HARM)).json()
     assert await _ki(client, cid) == 2 and len(body["option_result"]["extra_rolls"]) == 1
     assert "necrotic" in body["option_result"]["effects"][0]["en"] and "necrotici" in body["option_result"]["effects"][0]["it"]
-    assert (await _states(client, cid)) == {} or "poisoned" not in (await _full(client, cid))["conditions"]
+    assert "poisoned" not in (await _full(client, cid))["conditions"]
 
 
 async def test_hand_of_harm_is_once_per_turn_and_needs_a_point(client):
@@ -480,13 +480,12 @@ async def test_elemental_epitome_does_nothing_without_the_attunement(client):
 
 async def test_destructive_stride_adds_twenty_feet_to_step_of_the_wind_only_while_attuned(client):
     cid = await _sub(client, "elements", 17)
-    base = (await _full(client, cid))["speed"]
     await _use(client, cid, STEP)
     plain = (await _full(client, cid))["computed"]["speed"]
     await _new_turn(client, cid)
     await _use(client, cid, ATTUNE)
     await _use(client, cid, STEP)
-    assert (await _full(client, cid))["computed"]["speed"] == plain + 20 and base is not None
+    assert (await _full(client, cid))["computed"]["speed"] == plain + 20
 
 
 async def test_the_epitome_adds_a_martial_die_of_damage_once_per_turn_on_unarmed_hits_while_attuned(client):
@@ -667,3 +666,65 @@ async def test_the_vibrations_can_end_harmlessly_without_an_action(client):
     await _damage(client, cid, await _hit(client, cid), PALM_START)
     assert (await client.delete(f"/characters/{cid}/active-states/quivering_palm")).status_code == 200
     assert "quivering_palm" not in await _states(client, cid) and not (await _turn(client, cid))["action_used"]
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1 (I2, I3, I5, I6, M12)
+# ---------------------------------------------------------------------------
+
+async def _deferring(client, cid) -> set[str]:
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})
+    return {o["key"] for o in r.json() if o.get("defers_damage")}
+
+
+async def test_the_flurry_strike_and_the_elemental_strikes_make_the_damage_wait_for_the_after_hit_choice(client):
+    """Il client rinvia il danno solo se una scelta prima del tiro lo dichiara: senza, Tecnica e spinta andrebbero perse."""
+    cid = await _sub(client, "open_hand", 5, wisdom=16, dexterity=16)
+    await _strike(client, cid)
+    assert (await _use(client, cid, FLURRY)).status_code == 200
+    assert STRIKE in await _deferring(client, cid)
+    el = await _sub(client, "elements", 3, wisdom=16)
+    await _use(client, el, ATTUNE)
+    assert {_elemental(k) for k in ("acid", "cold", "fire", "lightning", "thunder")} <= await _deferring(client, el)
+
+
+async def test_the_destructive_stride_rolls_a_martial_die_of_a_chosen_type_once_per_creature_and_costs_nothing(client):
+    cid = await _sub(client, "elements", 17, dexterity=16)
+    key = "monk.destructive_stride"
+    assert (await _use(client, cid, key, params={"element": "fire"})).status_code == 409  # senza Sintonia e Passo del Vento
+    await _use(client, cid, ATTUNE)
+    await _use(client, cid, STEP)
+    ki = await _ki(client, cid)
+    r = await _use(client, cid, key, params={"element": "fire"})
+    assert r.status_code == 200, r.text
+    assert len(r.json()["rolls"]) == 1 and await _ki(client, cid) == ki
+    text = r.json()["message"]
+    assert "una volta per turno" in text["it"] and "fuoco" in text["it"].lower() and "once per turn" in text["en"]
+
+
+async def test_hand_of_harm_and_the_epitome_do_not_double_their_die_on_a_critical_hit(client):
+    cid = await _sub(client, "mercy", 3, wisdom=16, dexterity=16)
+    body = (await _damage(client, cid, await _hit(client, cid, die=20), HARM)).json()
+    assert len(body["option_result"]["extra_rolls"]) == 1
+    cid = await _sub(client, "elements", 17, dexterity=16)
+    await _use(client, cid, ATTUNE)
+    body = (await _damage(client, cid, await _hit(client, cid, die=20), "monk.elemental_epitome_strike")).json()
+    assert len(body["option_result"]["extra_rolls"]) == 1
+
+
+async def test_hand_of_harm_total_adds_the_die_and_wisdom_to_the_strike(client, monkeypatch):
+    cid = await _sub(client, "mercy", 3, wisdom=16, dexterity=16)  # Saggezza +3, Destrezza +3, d6
+    _fixed(monkeypatch, 4)
+    hit = await _hit(client, cid)
+    body = (await _damage(client, cid, hit, HARM)).json()
+    assert body["option_result"]["extra_rolls"] == [4] and body["damage_total"] == (4 + 3) + (4 + 3)
+
+
+async def test_addle_is_an_effect_on_the_target_until_the_start_of_its_next_turn(client):
+    from core.data.labels import CUSTOM_CONDITION_LABELS
+    cid = await _sub(client, "open_hand", 3, wisdom=16, dexterity=16)
+    await _damage(client, cid, await _flurry_hit(client, cid), ADDLE)
+    effect = await _target(client, cid, ADDLE)
+    assert effect["condition"] == "custom:no_opportunity_attacks"
+    assert effect["ends_at"] == {"anchor": "owner", "edge": "start", "count": 1}
+    assert "no_opportunity_attacks" in CUSTOM_CONDITION_LABELS

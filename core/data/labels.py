@@ -75,6 +75,7 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "magical_ambush": {"it": "Imboscata Magica", "en": "Magical Ambush"},
     "heightened_spell": {"it": "Incantesimo Intensificato", "en": "Heightened Spell"},
     "no_reactions": {"it": "Senza reazioni", "en": "No reactions"},
+    "no_opportunity_attacks": {"it": "Niente attacchi di opportunità", "en": "No opportunity attacks"},
     "hurled": {"it": "Nei piani inferiori", "en": "Hurled through Hell"},
     "entropic_ward": {"it": "Attacco in svantaggio", "en": "Attack at disadvantage"},
     "instinctive_charm": {"it": "Attacco deviato", "en": "Attack redirected"},

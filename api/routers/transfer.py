@@ -230,7 +230,7 @@ def _find_feature(char, cls_id: int, slug: str):
                  and a.feature_key and f"_{a.feature_key.split('.', 1)[-1]}_" in f"_{slug}_"), None)
 
 
-# Finché una classe non è a catalogo per l'edizione resta sulla tabella 2014, che chiama «Ki» i Punti Focus 2024
+# DDB 2024 chiama «Focus Points» i punti ki: l'alias vale anche per le classi a catalogo (la riserva ha la chiave 2014 `ki`)
 _LEGACY_ALIASES = {"focus_points": "ki_points"}
 
 
@@ -244,7 +244,7 @@ async def _apply_feature_uses(session: AsyncSession, char, feature_uses: list[di
         slug = re.sub(r"[^a-z0-9]+", "_", fu["name"].lower()).strip("_")
         cls = classes[fu["class_index"]]
         feat = _find_feature(char, cls.id, slug)
-        if feat is None and not features_for(character_edition(char), class_key(cls)):
+        if feat is None:
             feat = _find_feature(char, cls.id, _LEGACY_ALIASES.get(slug, slug))
         # più voci DDB per la stessa feature ("Rage (Enter)" 6, "Rage: Regain Expended Uses" 1):
         # la riserva vera è quella con più cariche, le altre restano abilità a sé

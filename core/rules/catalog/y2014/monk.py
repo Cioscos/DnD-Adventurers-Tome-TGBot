@@ -99,6 +99,7 @@ MARTIAL_BONUS = RollOptionSpec(
 
 FLURRY_STRIKE = RollOptionSpec(
     key=f"{CK}.flurry_strike", phase="before", rolls=("attack",), outside_action=True, cost=Cost(state_key=FLURRY_STATE),
+    defers_damage=True,  # apre la Tecnica della Mano Aperta dopo il colpo
     available=lambda c: _unarmed(c) and state_on(c, FLURRY_STATE),
     label={"it": "Raffica di Colpi: uno dei due colpi senz'armi", "en": "Flurry of Blows: one of the two unarmed strikes"})
 

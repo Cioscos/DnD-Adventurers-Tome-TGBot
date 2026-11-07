@@ -376,3 +376,11 @@ async def test_opportunist_is_not_proposed_after_the_monk_takes_damage(client):
     await _hurt(client, cid, 50, 60)
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5})
     assert OPPORTUNIST not in [o["key"] for o in r.json()["reactions"]]
+
+
+async def test_the_flurry_strike_makes_the_damage_wait_so_the_open_hand_technique_is_not_lost(client):
+    cid = await _monk(client, 3, "open_hand", wisdom=16, dexterity=16)
+    await _strike(client, cid)
+    assert (await _use(client, cid, FLURRY)).status_code == 200
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})
+    assert STRIKE in {o["key"] for o in r.json() if o.get("defers_damage")}

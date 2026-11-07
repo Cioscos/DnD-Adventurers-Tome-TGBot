@@ -154,3 +154,16 @@ async def test_null_rules_edition_means_detect_it(client, monkeypatch):
     assert r.json()["character"]["rules_edition"] == "2024"
     _serve(monkeypatch, "wizard17_warlock3_multi.json")
     assert (await _post(client, rules_edition=None)).status_code == 409
+
+
+async def test_monk_2024_focus_points_spent_on_beyond_land_on_the_one_catalog_pool(client, monkeypatch):
+    """Catalogo reale: i punti spesi non si perdono e la riserva non compare due volte."""
+    def spend(data):
+        for a in data["actions"]["class"]:
+            if a["name"] == "Focus Points":
+                a["limitedUse"]["numberUsed"] = 3
+    _serve(monkeypatch, "monk20_2024.json", spend)
+    ch = (await _post(client)).json()["character"]
+    pools = [a for a in ch["abilities"] if a["name"] == "Focus Points" or a["feature_key"] in ("monk.ki", "monk.focus_points")]
+    assert len(pools) == 1 and pools[0]["is_class_feature"]
+    assert pools[0]["uses"] == pools[0]["max_uses"] - 3

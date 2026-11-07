@@ -292,7 +292,7 @@ BASE_ROWS = (
              "o subisce due dadi Arti Marziali + Destrezza dello stesso tipo del danno.",
              "After reducing the damage to 0, 1 point: a creature you can see within 5 ft (melee) or 60 ft (ranged) makes a Dexterity save "
              "or takes two Martial Arts dice + Dexterity of the attack's damage type."),
-            "reaction", on_use=OnUse(
+            "special", on_use=OnUse(  # non "reaction": Deviare ha già speso la reazione e la sezione Reazione del Turno si richiude
                 spends=KI, available=lambda c: state_on(c, REDIRECT_STATE), rolls=lambda c: _patient_dice_for(c, 2),
                 ends_state=REDIRECT_STATE, target_effect=_redirect_effect,
                 message=lambda c, _p: _both(
@@ -422,7 +422,7 @@ def _harm_option(key: str, *, poison: bool, free: bool) -> RollOptionSpec:
     tail_it, tail_en = ((" Il bersaglio è avvelenato fino alla fine del tuo prossimo turno.",
                          " The target is poisoned until the end of your next turn.") if poison else ("", ""))
     return RollOptionSpec(
-        key=key, phase="after_hit", rolls=("attack",), once_per_turn=True, group=f"{CK}.hand_of_harm",
+        key=key, phase="after_hit", rolls=("attack",), once_per_turn=True, group=f"{CK}.hand_of_harm", crit_doubles=False,
         cost=Cost(feature_key=MERCY_POOL if free else KI),
         available=(lambda c: _unarmed(c) and _flurry_hit(c)) if free else _unarmed,
         extra_dice=lambda c, _i: _die(c), bonus=lambda c, _i: _wis(c),
@@ -584,6 +584,7 @@ def _element_option(kind: str) -> RollOptionSpec:
     label = _ELEMENT_LABELS[kind]
     return RollOptionSpec(
         key=f"{CK}.elemental_strike_{kind}", phase="before", rolls=("attack",), group=f"{CK}.elemental_strike", unarmed_damage_type=kind,
+        defers_damage=True,  # apre la spinta dopo il colpo
         available=lambda c: _unarmed(c) and _is_attuned(c),
         label=_both(f"Colpi Elementali: il colpo senz'armi infligge danni da {label['it'].lower()}",
                     f"Elemental Strikes: the unarmed strike deals {label['en'].lower()} damage"))
@@ -630,12 +631,24 @@ def _epitome_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
 
 
 EPITOME_STRIKE = RollOptionSpec(
-    key=f"{CK}.elemental_epitome_strike", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=lambda c, _i: _die(c),
-    available=lambda c: _unarmed(c) and _is_attuned(c),
+    key=f"{CK}.elemental_epitome_strike", phase="after_hit", rolls=("attack",), once_per_turn=True, crit_doubles=False,
+    extra_dice=lambda c, _i: _die(c), available=lambda c: _unarmed(c) and _is_attuned(c),
     label=_both("Epitome Elementale: un dado Arti Marziali di danni extra, una volta per turno",
                 "Elemental Epitome: an extra Martial Arts die of damage, once per turn"),
     effect=_say("Epitome Elementale: danni extra pari a un dado Arti Marziali, dello stesso tipo del colpo.",
                 "Elemental Epitome: extra damage equal to a Martial Arts die, of the strike's damage type."))
+
+def _stride_available(ctx: RuleContext) -> bool:
+    return _is_attuned(ctx) and state_on(ctx, "step_of_the_wind")
+
+
+def _stride_message(ctx: RuleContext, params: dict) -> dict[str, str]:
+    kind = _ELEMENT_LABELS[params["element"]]
+    return _both(f"Ogni creatura a tua scelta entro 1,5 m dal tuo percorso subisce il dado tirato in danni da {kind['it'].lower()}, "
+                 "una volta per turno per creatura; non costa punti.",
+                 f"Each creature of your choice you pass within 5 ft of takes the rolled die in {kind['en'].lower()} damage, "
+                 "once per turn per creature; it costs no points.")
+
 
 ELEMENTS_ROWS = (
     _sub_row("elements", "elemental_attunement", 3, "Sintonia Elementale", "Elemental Attunement", 106,
@@ -660,6 +673,10 @@ ELEMENTS_ROWS = (
               "While Elemental Attunement is active you have Fly and Swim Speeds equal to your Speed."),
              modifiers=(Modifier("fly_speed", 1, when=_is_attuned, source=f"feature:{CK}.stride_of_the_elements"),
                         Modifier("swim_speed", 1, when=_is_attuned, source=f"feature:{CK}.stride_of_the_elements"))),
+    _sub_row("elements", "destructive_stride", 17, "Passo Distruttivo", "Destructive Stride", 106,
+             ("Con Sintonia e Passo del Vento attivi: ogni creatura a tua scelta che sfiori (entro 1,5 m) subisce un dado Arti Marziali di un tipo elementale a scelta, una volta per turno per creatura.",
+              "With Attunement and Step of the Wind active: each creature of your choice you pass within 5 ft takes a Martial Arts die of an elemental type you choose, once per turn per creature."),
+             "special", on_use=OnUse(cost=0, available=_stride_available, rolls=_die, choices=(_ELEMENT_CHOICE,), message=_stride_message)),
     _sub_row("elements", "elemental_epitome", 17, "Epitome Elementale", "Elemental Epitome", 106,
              ("Con la Sintonia attiva: resistenza a un elemento a scelta, +6 m col Passo del Vento (danno ai vicini) e un dado Arti Marziali extra al turno.",
               "While attuned: resistance to a chosen element, +6 m with Step of the Wind (damage to nearby creatures) and an extra Martial Arts die per turn."),
@@ -679,7 +696,8 @@ ELEMENTS_ROWS = (
 ADDLE_OPTION = _technique(
     "addle", ("Distrarre: il bersaglio non può fare attacchi di opportunità", "Addle: the target cannot make opportunity attacks"),
     ("Il bersaglio non può fare attacchi di opportunità fino all'inizio del suo prossimo turno. Nessun tiro salvezza.",
-     "The target cannot make opportunity attacks until the start of its next turn. No saving throw."), None)
+     "The target cannot make opportunity attacks until the start of its next turn. No saving throw."),
+    lambda _ctx, _i: TargetEffect(condition="custom:no_opportunity_attacks", ends_at={"anchor": "owner", "edge": "start", "count": 1}))
 PUSH_OPTION = _technique(
     "push", ("Spingere: TS Forza o il bersaglio è spinto di 4,5 m", "Push: Strength save or the target is pushed 15 ft"),
     ("Il bersaglio fa un TS Forza CD {dc}: se fallisce lo spingi fino a 4,5 m lontano da te.",

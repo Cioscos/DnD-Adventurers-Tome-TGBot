@@ -628,3 +628,9 @@ async def test_the_2014_monk_rows_do_not_survive_the_edition_change(client):
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})).status_code == 200
     keys = await _keys_of(client, cid)
     assert "monk.deflect_missiles" in keys and "monk.deflect_attacks" not in keys
+
+
+async def test_the_redirect_stays_reachable_after_the_reaction_is_spent(client):
+    """Deviare ha speso la reazione: il rinvio non può stare nella sezione Reazione del Turno, che si richiude."""
+    cid = await _monk24(client, 5, dexterity=16)
+    assert (await _ability(client, cid, REDIRECT))["action_type"] == "special"
