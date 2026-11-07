@@ -177,6 +177,7 @@ export default function Turn() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+      qc.invalidateQueries({ queryKey: ['companions', charId] })  // Compagno Primordiale crea o rialza la bestia
       setAllyPick(null)
     },
   })

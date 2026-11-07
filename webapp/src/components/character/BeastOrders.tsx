@@ -47,7 +47,7 @@ export default function BeastOrders({ char, turn }: { char: CharacterFull; turn?
     <section data-testid="beast-orders" className="space-y-2">
       <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.extras.beast.title')}</h2>
       {!beast ? (
-        <p className="px-1 text-sm font-body text-dnd-text-muted">{t('character.extras.beast.none')}</p>
+        <p className="px-1 text-sm font-body text-dnd-text-muted">{t(primal ? 'character.extras.beast.primal_none' : 'character.extras.beast.none')}</p>
       ) : (
         <>
           <p className="px-1 text-sm font-body text-dnd-text">

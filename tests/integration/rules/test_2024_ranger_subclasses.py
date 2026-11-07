@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from core.db.models import Character
 from core.rules.catalog import features_for
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from tests.integration.rules.test_2014_bard import _ability, _choice, _full, _keys_of, _resolve, _roll_keys, _skills, _states, _use
@@ -132,7 +133,7 @@ async def _order(client, cid, comp, command, bonus=False):
 
 
 async def _strike(client, cid, comp, **body):
-    return await client.post(f"/characters/{cid}/companions/{comp['id']}/attack", json={"action_index": 0, "die": 12, **body})
+    return await client.post(f"/characters/{cid}/companions/{comp['id']}/attack", json={"action_index": 0, "dice": [12], **body})
 
 
 async def test_the_beast_attacks_only_on_command_forgoing_an_attack_or_with_the_bonus_action(client):
@@ -172,6 +173,59 @@ async def test_bestial_fury_gives_two_strikes_and_extra_mark_damage_once_per_tur
     r = await _strike(client, cid, comp, options=["ranger.bestial_fury_damage"])
     assert r.status_code == 200 and r.json()["option_result"]["extra_total"] >= 1, r.text
     assert "ranger.bestial_fury_damage" not in await _roll_keys(client, cid, "attack", attack_mode="beast")  # una volta per turno
+
+
+async def test_bestial_fury_adds_exactly_one_mark_die_and_the_mark_itself_does_not_reach_the_beast(client):
+    cid = await _sub(client, 17, "beast_master")
+    comp = await _beast(client, cid)
+    await _cast_mark(client, cid)
+    keys = await _roll_keys(client, cid, "attack", attack_mode="beast")
+    assert "ranger.bestial_fury_damage" in keys
+    assert not {"ranger.hunters_mark_damage", "ranger.precise_hunter"} & set(keys)  # il marchio e il Vantaggio sono del ranger
+    assert {"ranger.hunters_mark_damage", "ranger.precise_hunter"} <= set(await _roll_keys(client, cid, "attack"))  # i suoi attacchi li hanno
+    await _order(client, cid, comp, "attack")
+    r = await _strike(client, cid, comp, options=["ranger.bestial_fury_damage"])
+    assert r.status_code == 200, r.text
+    assert len(r.json()["option_result"]["extra_rolls"]) == 1  # un solo d6: quello di Furia Bestiale
+    for key in ("ranger.hunters_mark_damage", "ranger.precise_hunter"):
+        assert (await _strike(client, cid, comp, options=[key])).status_code == 409
+
+
+async def test_hunters_mark_does_not_reach_the_attack_of_another_companion(client):
+    cid = await _sub(client, 17, "beast_master")
+    await _cast_mark(client, cid)
+    assert not {"ranger.hunters_mark_damage", "ranger.precise_hunter"} & set(await _roll_keys(client, cid, "attack", attack_mode="companion"))
+    r = await client.post(f"/characters/{cid}/companions", json={
+        "kind": "familiar", "name": "Gufo", "max_hp": 5, "armor_class": 11,
+        "statblock": {"size": "Tiny", "type": "beast", "actions": [{"name": "Artigli", "attack_bonus": 3, "damage_dice": "1d4"}]}})
+    assert r.status_code == 201, r.text
+    hit = await client.post(f"/characters/{cid}/companions/{r.json()['id']}/attack",
+                            json={"action_index": 0, "dice": [12], "options": ["ranger.hunters_mark_damage"]})
+    assert hit.status_code == 409, hit.text
+
+
+async def test_a_missed_strike_of_the_beast_does_not_spend_bestial_fury(client):
+    cid = await _sub(client, 11, "beast_master")
+    comp = await _beast(client, cid)
+    await _cast_mark(client, cid)
+    await _order(client, cid, comp, "attack")
+    assert (await _strike(client, cid, comp, dice=[1], options=["ranger.bestial_fury_damage"])).status_code == 200  # un 1: manca
+    assert "ranger.bestial_fury_damage" in await _roll_keys(client, cid, "attack", attack_mode="beast")  # l'uso torna
+    r = await _strike(client, cid, comp, options=["ranger.bestial_fury_damage"])
+    assert r.status_code == 200 and len(r.json()["option_result"]["extra_rolls"]) == 1, r.text
+    assert "ranger.bestial_fury_damage" not in await _roll_keys(client, cid, "attack", attack_mode="beast")  # colpito: speso
+
+
+async def test_the_strikes_of_the_orders_add_up_and_a_bonus_order_gives_the_strikes_of_bestial_fury(client):
+    five, seven, eleven = [await _sub(client, lvl, "beast_master") for lvl in (5, 7, 11)]
+    comp = await _beast(client, five)
+    assert (await _order(client, five, comp, "attack")).json()["attacks_left"] == 1
+    assert (await _order(client, five, comp, "attack")).json()["attacks_left"] == 2  # due attacchi ceduti: due Colpi, non uno
+    comp = await _beast(client, seven)
+    assert (await _order(client, seven, comp, "attack")).json()["attacks_left"] == 1
+    assert (await _order(client, seven, comp, "dash", bonus=True)).json()["attacks_left"] == 2  # il Colpo dell'azione bonus si aggiunge
+    comp = await _beast(client, eleven)
+    assert (await _order(client, eleven, comp, "dash", bonus=True)).json()["attacks_left"] == 2  # Furia Bestiale: due Colpi
 
 
 async def test_the_beast_of_the_land_adds_a_die_when_it_charges_twenty_feet(client):
@@ -222,6 +276,16 @@ async def test_otherworldly_glamour_adds_wisdom_to_charisma_skills_and_asks_for_
     assert choice["count"] == 1 and {o["key"] for o in choice["options"]} == {"deception", "performance", "persuasion"}
     assert (await _resolve(client, cid, "otherworldly_glamour", ["persuasion"])).status_code == 200
     assert (await _full(client, cid))["skills"]["persuasion"] is True
+
+
+async def test_otherworldly_glamour_adds_wisdom_to_a_pure_charisma_check(client):
+    cid = await _sub(client, 3, "fey_wanderer", wisdom=16, charisma=10)
+    bonus = {}
+    for ability in ("charisma", "strength"):
+        r = await client.post(f"/characters/{cid}/ability_checks/{ability}/roll", json={"dice": [10]})
+        assert r.status_code == 200, r.text
+        bonus[ability] = r.json()["bonus"]
+    assert bonus == {"charisma": 3, "strength": 0}
 
 
 async def test_beguiling_twist_gives_advantage_against_charm_and_fear_and_a_reaction_with_the_spell_dc(client):
@@ -302,6 +366,21 @@ async def test_iron_mind_gives_wisdom_save_proficiency_from_level_7(client):
     assert (await _save(client, cid, "wisdom"))["bonus"] == 2 + 3  # non si somma due volte
 
 
+async def test_iron_mind_asks_for_intelligence_or_charisma_when_wisdom_is_already_a_proficient_save(client):
+    plain = await _sub(client, 7, "gloom_stalker", wisdom=14)
+    assert _choice(await _full(client, plain), "iron_mind") is None  # il Ranger puro prende la Saggezza e basta
+    cid = await _sub(client, 6, "gloom_stalker", wisdom=14)
+    await client.patch(f"/characters/{cid}/saving_throws", json={"saving_throws": {"wisdom": True}})  # per esempio da un Chierico
+    klass = (await _full(client, cid))["classes"][0]["id"]
+    assert (await client.patch(f"/characters/{cid}/classes/{klass}", json={"level": 7})).status_code == 200
+    choice = _choice(await _full(client, cid), "iron_mind")
+    assert choice["count"] == 1 and {o["key"] for o in choice["options"]} == {"intelligence", "charisma"}
+    assert all(o["name"]["it"] and o["name"]["en"] for o in choice["options"])
+    assert (await _resolve(client, cid, "iron_mind", ["charisma"])).status_code == 200
+    assert (await _full(client, cid))["saving_throws"]["charisma"] is True
+    assert (await _save(client, cid, "charisma"))["bonus"] == 0 + 3  # CAR 10, competenza +3
+
+
 async def test_stalkers_flurry_offers_a_sudden_strike_or_mass_fear_after_a_dreadful_strike_once_per_turn(client):
     early, cid = await _sub(client, 10, "gloom_stalker", wisdom=16), await _sub(client, 11, "gloom_stalker", wisdom=16)
     listed = {}
@@ -310,17 +389,19 @@ async def test_stalkers_flurry_offers_a_sudden_strike_or_mass_fear_after_a_dread
         hit = await _deferred(client, who, sword)
         assert (await _damage(client, who, hit, ["ranger.dreadful_strike"])).status_code == 200
         listed[who] = {o["key"] for o in await _listed(client, who, sword)}
-    assert {"ranger.sudden_strike", "ranger.mass_fear"} <= listed[cid]
+    assert "ranger.sudden_strike" in listed[cid]
     assert not {"ranger.sudden_strike", "ranger.mass_fear"} & listed[early]
 
 
-async def test_mass_fear_states_the_wisdom_save_against_the_spell_dc(client):
+async def test_mass_fear_is_offered_on_the_hit_of_the_dreadful_strike_and_states_the_wisdom_save(client):
     cid = await _sub(client, 11, "gloom_stalker", wisdom=16)
     sword = await _weapon(client, cid)
     hit = await _deferred(client, cid, sword)
-    await _damage(client, cid, hit, ["ranger.dreadful_strike"])
-    r = await _damage(client, cid, await _deferred(client, cid, sword), ["ranger.mass_fear"])
+    assert {"ranger.dreadful_strike", "ranger.mass_fear"} <= {o["key"] for o in await _listed(client, cid, sword)}  # sullo stesso colpo
+    r = await _damage(client, cid, hit, ["ranger.dreadful_strike", "ranger.mass_fear"])
     assert r.status_code == 200 and "14" in r.text, r.text
+    assert (await _ability(client, cid, DREAD))["uses"] == 2  # un solo uso per i due effetti
+    assert "ranger.mass_fear" not in [o["key"] for o in await _listed(client, cid, sword)]  # non su un colpo successivo
 
 
 async def test_shadowy_dodge_spends_the_reaction_from_level_15(client):
@@ -348,7 +429,14 @@ async def test_hunters_prey_is_chosen_at_level_3_and_only_the_chosen_one_works(c
 async def test_hunters_prey_is_replaceable_after_a_rest(client):
     cid = await _sub(client, 3, "hunter")
     await _resolve(client, cid, "hunters_prey", ["colossus_slayer"])
-    assert any(f.choices and f.choices[0].replaceable for f in features_for("2024", "ranger") if f.key == "ranger.hunters_prey")
+    klass = (await _full(client, cid))["classes"][0]["id"]
+    await _rest(client, cid, "long")
+    r = await client.post(f"/characters/{cid}/classes/{klass}/options/replace",
+                          json={"group": "hunters_prey", "old_key": "colossus_slayer", "new_key": "horde_breaker"})
+    assert r.status_code == 200, r.text
+    state = (await client.get(f"/characters/{cid}/classes/{klass}/options/hunters_prey")).json()
+    assert [o["key"] for o in state["chosen"]] == ["horde_breaker"]
+    assert "ranger.colossus_slayer" not in [o["key"] for o in await _listed(client, cid, await _weapon(client, cid))]
 
 
 async def test_defensive_tactics_are_chosen_at_level_7(client):
@@ -382,8 +470,15 @@ async def test_superior_hunters_prey_adds_the_mark_die_to_a_second_creature_once
     for who in (early, cid):
         await _cast_mark(client, who)
     sword = await _weapon(client, cid)
-    assert "ranger.superior_hunters_prey" in [o["key"] for o in await _listed(client, cid, sword)]
     assert "ranger.superior_hunters_prey" not in [o["key"] for o in await _listed(client, early, await _weapon(client, early))]
+    for die in (10, 20):  # anche al critico: il dado è di un'altra creatura e non si raddoppia
+        hit = await _deferred(client, cid, sword, die=die)
+        plain = hit["damage_total"]
+        body = (await _damage(client, cid, hit, ["ranger.superior_hunters_prey"])).json()
+        block = body["option_result"]
+        assert len(block["separate_rolls"]) == 1 and not block["extra_rolls"], block  # un dado a parte, fuori dal totale
+        assert body["damage_total"] == plain
+        await _new_turn(client, cid)
 
 
 async def test_superior_hunters_prey_needs_hunters_mark(client):
@@ -392,11 +487,53 @@ async def test_superior_hunters_prey_needs_hunters_mark(client):
     assert "ranger.superior_hunters_prey" not in [o["key"] for o in await _listed(client, cid, sword)]
 
 
-async def test_superior_hunters_defense_halves_the_damage_with_the_reaction_from_level_15(client):
-    early, cid = await _sub(client, 14, "hunter"), await _sub(client, 15, "hunter")
-    assert "ranger.superior_hunters_defense" not in await _roll_keys(client, early, "damage_taken")
-    assert "ranger.superior_hunters_defense" in await _roll_keys(client, cid, "damage_taken")
-    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 60})
-    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "options": ["ranger.superior_hunters_defense"]})
+async def _hp_now(client, cid) -> int:
+    return (await _full(client, cid))["current_hit_points"]
+
+
+async def _hurt(client, cid, value, **body):
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": value, "raw_value": value, **body})
     assert r.status_code == 200, r.text
+    return r
+
+
+async def _tough_hunter(client, cid):
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 300})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 300})
+
+
+DEFENSE = "ranger.superior_hunters_defense"
+
+
+async def test_superior_hunters_defense_halves_the_triggering_damage_with_the_reaction_from_level_15(client):
+    early, cid = await _sub(client, 14, "hunter"), await _sub(client, 15, "hunter")
+    assert DEFENSE not in await _roll_keys(client, early, "damage_taken")
+    assert DEFENSE in await _roll_keys(client, cid, "damage_taken")
+    await _tough_hunter(client, cid)
+    await _hurt(client, cid, 20, damage_type="slashing", options=[DEFENSE])
+    assert await _hp_now(client, cid) == 290
     assert (await _turn(client, cid))["reaction_used"] is True
+
+
+async def test_superior_hunters_defense_resists_that_type_until_the_end_of_the_turn(client):
+    cid = await _sub(client, 15, "hunter")
+    await _tough_hunter(client, cid)
+    await _hurt(client, cid, 20, damage_type="slashing", options=[DEFENSE])
+    await _hurt(client, cid, 20, damage_type="slashing")  # altro danno dello stesso tipo, stesso turno: resistenza
+    assert await _hp_now(client, cid) == 280
+    await _hurt(client, cid, 20, damage_type="fire")  # un altro tipo no
+    assert await _hp_now(client, cid) == 260
+    await _new_turn(client, cid)
+    await _hurt(client, cid, 20, damage_type="slashing")  # a fine turno la resistenza finisce
+    assert await _hp_now(client, cid) == 240
+
+
+async def test_superior_hunters_defense_does_not_stack_with_a_resistance_the_character_already_has(client, test_session_factory):
+    cid = await _sub(client, 15, "hunter")
+    await _tough_hunter(client, cid)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.damage_modifiers = {"resistances": ["fire"]}
+        await s.commit()
+    await _hurt(client, cid, 20, damage_type="fire", options=[DEFENSE])
+    assert await _hp_now(client, cid) == 290  # 10, non 5

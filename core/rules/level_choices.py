@@ -13,6 +13,7 @@ from typing import Any
 from core.data.classes import ASI_LEVELS, ASI_LEVELS_DEFAULT, class_table_key
 from core.rules.catalog import features_for
 from core.rules.edition import character_edition, class_key
+from core.rules.types import RuleContext
 
 RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "epic_boon:19"]}
 FREE_KNOWN_KEY = "free_known_spells"  # settings: id degli incantesimi che non contano fra i conosciuti (Segreti Magici Aggiuntivi)
@@ -41,11 +42,12 @@ def mark_resolved(char: Any, choice: dict) -> None:
 
 def active_choice_specs(char: Any, cls: Any) -> list:
     """`ChoiceSpec` delle feature della classe valide per edizione e sottoclasse."""
+    ctx = RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)
     return [ch for spec in features_for(character_edition(char), class_key(cls))
             if (spec.subclass is None or spec.subclass == cls.subclass_key)
             # la scelta di un'opzione (Patto del Tomo) vale solo a chi ha scelto quell'opzione
             and (spec.option_group is None or spec.option_key in (cls.options or {}).get(spec.option_group, []))
-            for ch in spec.choices]
+            for ch in spec.choices if ch.applies is None or ch.applies(ctx)]
 
 
 def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
@@ -67,6 +69,9 @@ def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
             if not ({n.lower() for n in names.values()} & known):
                 added.append(names["it"])
         char.languages = added
+        return
+    if ch.grants == "save":
+        char.saving_throws = {**(char.saving_throws or {}), **{key: True for key in keys}}
         return
     skills = dict(char.skills or {})
     for key in keys:

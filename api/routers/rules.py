@@ -148,7 +148,7 @@ async def roll_options(
     ability: str | None = None,
     skill: str | None = None,
     damage_type: str | None = None,
-    attack_mode: Literal["melee", "thrown", "offhand", "form", "beast"] = "melee",
+    attack_mode: Literal["melee", "thrown", "offhand", "form", "beast", "companion"] = "melee",
     grip: Literal["one", "two"] = "one",
     casting_level: int | None = None,
     slotless: bool = False,
@@ -170,7 +170,7 @@ async def roll_options(
         if item is None:
             throw = attack_mode == "thrown"  # il lancio a distanza senz'armi (Deviare Proiettili)
             _, _, ability = unarmed_attack_profile(char, throw)
-            attack = {"attack_mode": attack_mode if attack_mode in ("form", "beast") else "ranged" if throw else "melee", "grip": "one"}
+            attack = {"attack_mode": attack_mode if attack_mode in ("form", "beast", "companion") else "ranged" if throw else "melee", "grip": "one"}
         else:
             _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, ability)
             attack = {"attack_mode": resolved_mode, "grip": grip, "offhand": attack_mode == "offhand"}

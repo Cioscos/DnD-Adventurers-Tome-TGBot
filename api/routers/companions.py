@@ -369,7 +369,8 @@ def _primal_order(char: Character, comp: Companion, body: CompanionCommand, beas
     else:
         forgo_attack(char)  # 409 no_attack_left
     training = any(spec.key == "ranger.exceptional_training" for spec, _row in active_features(char))
-    left = _beast_attacks(char, comp) if body.command == "attack" else (1 if body.bonus and training else 0)
+    new = _beast_attacks(char, comp) if body.command == "attack" or (body.bonus and training) else 0
+    left = new + (int(beast.get("attacks_left") or 0) if beast.get("id") == comp.id else 0)  # i Colpi degli ordini si sommano
     _save_beast_state(char, {**beast, "id": comp.id, "attacks_left": left, "commands": [*beast.get("commands", []), body.command]})
     return CompanionCommandResult(command=body.command, bonus=body.bonus, attacks_left=left)
 
@@ -485,7 +486,7 @@ async def companion_attack(
         refuse_if_incapacitated(char)
         applied = modifiers_for(char, "attack", ability="strength")
     # attack_mode="form": le opzioni della forma (Colpo Primordiale, Radianza Lunare) si scelgono prima del tiro
-    opts = use_options(session, char, "attack", body, **({"attack_mode": "form"} if in_form else {"attack_mode": "beast"} if comp.feature_key == PRIMAL_COMPANION else {}))
+    opts = use_options(session, char, "attack", body, **({"attack_mode": "form"} if in_form else {"attack_mode": "beast"} if comp.feature_key == PRIMAL_COMPANION else {"attack_mode": "companion"}))
     merge_options(applied, opts)
     outcome = resolve_applied(body.mode, body.dice, None, applied)
     stats = companion_stats(char, comp)

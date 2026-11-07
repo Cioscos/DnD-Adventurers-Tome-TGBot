@@ -1216,6 +1216,7 @@
       "beast": {
         "title": "Beast companion",
         "none": "No living beast: add one from the Extras page.",
+        "primal_none": "No living beast: summon or raise one with Primal Companion.",
         "action_orders": "Order with your action",
         "primal_action_orders": "Give up one of your attacks: the beast makes its Strike",
         "primal_bonus_orders": "Order with a bonus action",

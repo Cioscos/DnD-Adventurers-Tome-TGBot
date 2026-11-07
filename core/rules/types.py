@@ -27,7 +27,7 @@ class ChoiceSpec:
     ``options(ctx)``: chiavi scegliibili (``ctx.class_row.options[group]`` contiene già le scelte).
     ``label(key)``: ``{"name": ..., "summary": ...}`` delle opzioni che non sono privilegi del catalogo (armi, abilità).
     ``grants``: alla risoluzione le opzioni scelte sono abilità e diventano ``proficient`` (competenza) o ``expert``
-    (maestria); un'abilità già ``expert`` non scende mai. ``language``: le opzioni sono lingue (``label`` ne dà il nome
+    (maestria); un'abilità già ``expert`` non scende mai. ``save``: le opzioni sono caratteristiche e ne diventa competente il TS. ``language``: le opzioni sono lingue (``label`` ne dà il nome
     bilingue) e si aggiungono a ``Character.languages`` senza duplicati. ``spell_pick``: le scelte non sono opzioni di un elenco ma
     incantesimi di qualsiasi classe, aggiunti dalla pagina degli incantesimi (``known`` conta fra i conosciuti,
     ``extra`` no: Segreti Magici Aggiuntivi; ``book``: l'incantesimo entra gratis nel Libro del Mago); ``options`` non si usa.
@@ -42,7 +42,7 @@ class ChoiceSpec:
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
     label: Callable[[str], dict] | None = None
-    grants: Literal["proficient", "expert", "language"] | None = None
+    grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None
     owned: Callable[["RuleContext"], list[str]] | None = None
     spell_level: int | None = None
@@ -60,9 +60,11 @@ class ChoiceSpec:
     import_options: "Callable[[RuleContext], list[str]] | None" = None
     # Gli incantesimi scelti (per nome) diventano sempre preparati e fuori dal limite (Incantesimi Personali)
     always_prepared: bool = False
+    # La scelta esiste solo se ``applies(ctx)``: Mente di Ferro la chiede a chi ha già la competenza nei TS su Saggezza
+    applies: "Callable[[RuleContext], bool] | None" = None
 
     def __post_init__(self) -> None:
-        if self.grants not in (None, "proficient", "expert", "language"):
+        if self.grants not in (None, "proficient", "expert", "language", "save"):
             raise ValueError(f"grants sconosciuto: {self.grants}")
         if self.spell_pick not in (None, "known", "extra", "book"):
             raise ValueError(f"spell_pick sconosciuto: {self.spell_pick}")

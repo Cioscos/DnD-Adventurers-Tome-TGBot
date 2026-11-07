@@ -74,14 +74,19 @@ def _mark_dice(ctx: RuleContext, _inputs: dict) -> str:
     return "1d10" if ctx.class_level >= 20 else "1d6"
 
 
+def _rangers_own_attack(ctx: RuleContext) -> bool:
+    """Il marchio e il Vantaggio sono del ranger: non valgono sull'attacco della bestia o di un altro compagno."""
+    return hunters_mark_active(ctx) and ctx.attack_mode not in ("beast", "companion")
+
+
 MARK_DAMAGE = RollOptionSpec(
-    key=MARK, phase="before", rolls=("attack",), extra_dice=_mark_dice, available=hunters_mark_active,
+    key=MARK, phase="before", rolls=("attack",), extra_dice=_mark_dice, available=_rangers_own_attack,
     label=_both("Hunter's Mark: il bersaglio è la creatura marcata? +1d6 danni da forza (1d10 al 20°)",
                 "Hunter's Mark: is the target the marked creature? Extra 1d6 force damage (1d10 at 20th)"),
     effect=lambda _c, _i: _both("Hunter's Mark: danni da forza in più, già nel totale.", "Hunter's Mark: extra force damage, already in the total."))
 
 PRECISE_HUNTER = RollOptionSpec(
-    key=f"{CK}.precise_hunter", phase="before", rolls=("attack",), mode="advantage", available=hunters_mark_active,
+    key=f"{CK}.precise_hunter", phase="before", rolls=("attack",), mode="advantage", available=_rangers_own_attack,
     label=_both("Cacciatore Preciso: il bersaglio è la creatura marcata da Hunter's Mark? Vantaggio",
                 "Precise Hunter: is the target the creature marked by Hunter's Mark? Advantage"))
 

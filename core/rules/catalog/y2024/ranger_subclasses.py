@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from core.data.damage_types import DAMAGE_TYPES
 from core.data.skills import SKILL_ABILITY_MAP
 from core.rules.catalog._common import feature, skill_label, state_on
 from core.rules.catalog.y2014.ranger import (
@@ -161,6 +162,7 @@ BEAST_FORCE = RollOptionSpec(
 
 BESTIAL_FURY_DAMAGE = RollOptionSpec(
     key=f"{CK}.bestial_fury_damage", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice,
+    pay_if_success=True,  # «la prima volta che colpisce»: su un mancato l'uso torna
     available=lambda c: _beast_attack(c) and hunters_mark_active(c),
     label=_both("Furia Bestiale: il bersaglio è la creatura marcata da Hunter's Mark? Danni da forza in più (una volta per turno)",
                 "Bestial Fury: is the target the creature Hunter's Mark marks? Extra force damage (once per turn)"),
@@ -208,7 +210,8 @@ def _glamour_bonus(ctx: RuleContext) -> int:
     return max(1, _wis_mod(ctx))
 
 
-GLAMOUR = Modifier("skill", _glamour_bonus, when=lambda c: c.roll == "skill" and SKILL_ABILITY_MAP.get(c.skill) == "charisma",
+GLAMOUR = Modifier("skill", _glamour_bonus,
+                   when=lambda c: (c.roll == "skill" and SKILL_ABILITY_MAP.get(c.skill) == "charisma") or (c.roll == "ability" and c.ability == "charisma"),
                    source=f"feature:{CK}.otherworldly_glamour")
 
 TWIST_SAVE = RollOptionSpec(
@@ -261,6 +264,12 @@ def _dread_used(ctx: RuleContext) -> bool:
     return DREAD_KEY in ((ctx.turn or {}).get("once_per_turn") or [])
 
 
+def _dread_offered(ctx: RuleContext) -> bool:
+    """Paura di Massa è un effetto dell'uso di Colpo Terribile: si offre sul colpo che lo usa, non su uno successivo."""
+    from core.rules.roll_options import _affordable  # import locale: roll_options usa il catalogo
+    return DREAD_KEY in ctx.confirmed or _affordable(ctx.char, DREADFUL_STRIKE, ctx)
+
+
 SUDDEN_STRIKE = RollOptionSpec(
     key=f"{CK}.sudden_strike", phase="before", rolls=("attack",), once_per_turn=True, group="stalkers_flurry", outside_action=True,
     available=lambda c: _weapon_attack(c) and _dread_used(c),
@@ -268,7 +277,8 @@ SUDDEN_STRIKE = RollOptionSpec(
                 "Sudden Strike: an extra attack with the same weapon against another creature within 5 ft of the target, in range"))
 
 MASS_FEAR = RollOptionSpec(
-    key=f"{CK}.mass_fear", phase="after_hit", rolls=("attack",), once_per_turn=True, group="stalkers_flurry", available=_dread_used,
+    key=f"{CK}.mass_fear", phase="after_hit", rolls=("attack",), once_per_turn=True, group="stalkers_flurry", needs=DREAD_KEY,
+    available=lambda c: _weapon_attack(c) and _dread_offered(c),
     target_effect=lambda c, _i: TargetEffect(condition="frightened", save_ability="wisdom", save_dc=_spell_dc(c),
                                              ends_at={"anchor": "source", "edge": "start", "count": 1}),
     label=_both("Paura di Massa: il bersaglio e le creature entro 3 m fanno un TS Saggezza o sono Spaventati fino al tuo prossimo turno",
@@ -298,19 +308,26 @@ MULTIATTACK_DEFENSE = RollOptionSpec(
 
 SUPERIOR_PREY = RollOptionSpec(
     key=f"{CK}.superior_hunters_prey", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_mark_dice,
+    separate_damage=True, crit_doubles=False,  # il dado è di una seconda creatura: fuori dal totale e senza raddoppio al critico
     available=lambda c: _weapon_attack(c) and hunters_mark_active(c),
     label=_both("Preda del Cacciatore Superiore: una seconda creatura entro 9 m dalla marcata subisce i danni di Hunter's Mark (una volta per turno)",
                 "Superior Hunter's Prey: a second creature within 30 ft of the marked one takes Hunter's Mark's damage (once per turn)"))
 
 
+def _defended_type(ctx: RuleContext) -> str | None:
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "superior_hunters_defense"), None)
+    return (state.get("data") or {}).get("damage_type") if state else None
+
+
 def _shd_started(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     begin_state(ctx.char, StateSpec("superior_hunters_defense", rounds=1, ends_on=("new_turn", "turn_end", "manual"),
-                                    data={"others": [f"{CK}.superior_hunters_defense"]}), f"{CK}.superior_hunters_defense",
+                                    data={"others": [f"{CK}.superior_hunters_defense"], "damage_type": ctx.damage_type}),
+                f"{CK}.superior_hunters_defense",
                 "Difesa del Cacciatore Superiore")
 
 
 SUPERIOR_DEFENSE = RollOptionSpec(
-    key=f"{CK}.superior_hunters_defense", phase="damage_in", rolls=("damage_taken",), slot="reaction", multiplier=0.5, on_confirm=_shd_started,
+    key=f"{CK}.superior_hunters_defense", phase="damage_in", rolls=("damage_taken",), slot="reaction", grants_resistance=True, on_confirm=_shd_started,
     label=_both("Difesa del Cacciatore Superiore: subisci danni? Reazione, resistenza a quel tipo fino a fine turno (danni dimezzati)",
                 "Superior Hunter's Defense: taking damage? Reaction, resistance to that type until end of turn (damage halved)"))
 
@@ -332,6 +349,10 @@ def _choice_row(key: str, level: int, title: str, name: tuple[str, str], summary
 # ---------------------------------------------------------------------------
 # Catalogo
 # ---------------------------------------------------------------------------
+
+# Mente di Ferro a chi ha già il TS su Saggezza: la competenza va su Intelligenza o Carisma
+_IRON_MIND_SAVES = {k: {"name": _both(it, en), "summary": _both("", "")}
+                    for k, it, en in (("intelligence", "Intelligenza", "Intelligence"), ("charisma", "Carisma", "Charisma"))}
 
 BM, FW, GS, HU = "beast_master", "fey_wanderer", "gloom_stalker", "hunter"
 SUBCLASS_ROWS = (
@@ -416,7 +437,9 @@ SUBCLASS_ROWS = (
     _sub(GS, "iron_mind", 7, "Mente di Ferro / Iron Mind (Stalker delle Tenebre 7, pag. 126)", ("Mente di Ferro", "Iron Mind"),
          ("Competenza nei tiri salvezza su Saggezza.", "Proficiency in Wisdom saving throws."),
          modifiers=(Modifier("save", lambda c: c.char.proficiency_bonus, when=_lacks_wisdom_save_proficiency, source=f"feature:{CK}.iron_mind"),),
-         passive=True),
+         passive=True,
+         choices=(ChoiceSpec(group="iron_mind", levels={7: 1}, options=lambda _c: list(_IRON_MIND_SAVES), label=lambda k: _IRON_MIND_SAVES[k],
+                             grants="save", applies=lambda c: bool((c.char.saving_throws or {}).get("wisdom"))),)),
     _sub(GS, "stalkers_flurry", 11, "Raffica dello Stalker / Stalker's Flurry (Stalker delle Tenebre 11, pag. 126)", ("Raffica dello Stalker", "Stalker's Flurry"),
          ("Colpo Terribile a 2d8. Usandolo, una volta per turno scegli Colpo Improvviso o Paura di Massa.",
           "Dreadful Strike becomes 2d8. When you use it, once per turn you choose Sudden Strike or Mass Fear."), passive=True),
@@ -468,5 +491,7 @@ SUBCLASS_ROWS = (
          ("Difesa del Cacciatore Superiore", "Superior Hunter's Defense"),
          ("Reazione quando subisci danni: resistenza a quel tipo fino alla fine del turno, anche per il danno che l'ha innescata.",
           "Reaction when you take damage: resistance to that type until the end of the turn, including the triggering damage."),
-         "reaction", roll_options=(SUPERIOR_DEFENSE,), passive=True),
+         "reaction", roll_options=(SUPERIOR_DEFENSE,), passive=True,
+         modifiers=tuple(Modifier(f"resistance:{t}", 1, when=lambda c, t=t: _defended_type(c) == t, source=f"feature:{CK}.superior_hunters_defense")
+                         for t in DAMAGE_TYPES)),
 )

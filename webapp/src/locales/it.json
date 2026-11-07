@@ -1215,6 +1215,7 @@
       "beast": {
         "title": "Bestia compagna",
         "none": "Nessuna bestia viva: aggiungine una dalla pagina Extra.",
+        "primal_none": "Nessuna bestia viva: evocala o rialzala con Compagno Primordiale.",
         "action_orders": "Ordine con l'azione",
         "primal_action_orders": "Rinunci a un tuo attacco: la bestia compie il Colpo",
         "primal_bonus_orders": "Ordine con l'azione bonus",

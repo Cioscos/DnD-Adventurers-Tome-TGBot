@@ -94,4 +94,11 @@ describe('BeastOrders (Compagno del Ranger: ordini alla bestia)', () => {
     expect(await screen.findByText('character.extras.beast.none')).toBeInTheDocument()
     expect(screen.queryByText('character.extras.beast.orders.attack')).toBeNull()
   })
+
+  it('for the 2024 primal beast does not send the player to the Extras page when no beast is alive', async () => {
+    list.mockResolvedValue([{ ...beast(0), feature_key: 'ranger.primal_companion' }])
+    renderWithProviders(<BeastOrders char={{ id: 7, abilities: [ability('ranger.primal_companion')] } as unknown as CharacterFull} />)
+    expect(await screen.findByText('character.extras.beast.primal_none')).toBeInTheDocument()
+    expect(screen.queryByText('character.extras.beast.none')).toBeNull()
+  })
 })

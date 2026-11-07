@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Turn from '@/pages/Turn'
 
@@ -324,6 +325,18 @@ describe('Turn page', () => {
     expect(screen.getAllByText('character.turn.use')).toHaveLength(2)
     await userEvent.click(within(screen.getByText('Presenza Intimidatoria').closest('li') as HTMLElement).getByText('character.turn.use'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence'))
+  })
+
+  it('refreshes the companions after a feature is used, because Primal Companion creates the beast', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [
+      { id: 8, name: 'Compagno Primordiale', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+        feature_key: 'ranger.primal_companion', max_uses: 1, uses: 1, action_type: 'action', restoration_type: 'long_rest' },
+    ] })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    renderWithProviders(<Turn />, { client })
+    await userEvent.click(within((await screen.findByText(/Compagno Primordiale/)).closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['companions', 7] }))
   })
 
   it('shows the dice a feature rolled when it is used, such as Cutting Words', async () => {
