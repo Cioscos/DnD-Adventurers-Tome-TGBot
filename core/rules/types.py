@@ -424,7 +424,7 @@ class RollOptionSpec:
     totale (seconda creatura). ``on_confirm(session, ctx, inputs)``: effetto collaterale dopo il pagamento, nella
     stessa transazione; è sincrono e ``/hp/undo`` non lo annulla.
     ``after`` (solo ``after_roll``): ``add`` somma al totale, ``reroll`` impone un nuovo d20 (``bonus`` e ``mode``
-    valgono su quello), ``succeed`` porta prova o TS a 20 e fa di un attacco un colpo a segno non critico,
+    valgono su quello), ``succeed`` porta prova o TS a 20 e fa di un attacco un colpo a segno non critico, ``twenty`` porta il d20 a 20 anche in un attacco (colpo critico: Colpo di Fortuna 2024),
     ``miss`` chiude un attacco mancato con il danno ``miss_damage(ctx)`` (Graze).
     ``effect(ctx, inputs) -> {"it": ..., "en": ...}``: esito da mostrare al giocatore (CD, durata).
     ``target_effect(ctx, inputs) -> TargetEffect``: effetto sul combattente scelto; confermata l'opzione, il server lo tiene
@@ -461,7 +461,7 @@ class RollOptionSpec:
     crit_doubles: bool = True
     separate_damage: bool = False
     on_confirm: "Callable[[Any, RuleContext, dict], None] | None" = None
-    after: Literal["add", "reroll", "succeed", "miss"] | None = None
+    after: Literal["add", "reroll", "succeed", "twenty", "miss"] | None = None
     pay_if_success: bool = False
     replace_die: bool = False
     miss_damage: "Callable[[RuleContext], int] | None" = None
@@ -514,7 +514,7 @@ class RollOptionSpec:
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
             raise ValueError(f"fase sconosciuta: {self.phase}")
-        if (self.phase == "after_roll") != (self.after in ("add", "reroll", "succeed", "miss")):
+        if (self.phase == "after_roll") != (self.after in ("add", "reroll", "succeed", "twenty", "miss")):
             raise ValueError("after è obbligatorio in after_roll e vale solo lì")
         if self.phase == "after_roll" and self.requires_input:
             raise ValueError("after_roll è un pulsante nel modale di esito: non chiede input")

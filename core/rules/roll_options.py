@@ -186,6 +186,7 @@ class AppliedOptions:
     force_crit: bool = False
     reroll: bool = False
     succeed: bool = False
+    twenty: bool = False
     refundable: dict[str, list[str]] = field(default_factory=dict)  # chiave -> gettoni, per ``pay_if_success``
     replace_die: int | None = None
     miss_damage: int | None = None
@@ -482,6 +483,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.replace_die = given["die"]
         out.reroll = out.reroll or spec.after == "reroll"
         out.succeed = out.succeed or spec.after == "succeed"
+        out.twenty = out.twenty or spec.after == "twenty"
         out.second_attack = out.second_attack or spec.second_attack
         if spec.reroll_dice:
             out.reroll_limit += spec.reroll_dice(option.ctx, given)

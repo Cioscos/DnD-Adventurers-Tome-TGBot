@@ -933,10 +933,12 @@
       "applied": "Applied to {{name}}",
       "applied_save": "Applied to {{name}}: the save is pending",
       "nothing": "Nothing to apply",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "no_opportunity_attacks": "No opportunity attacks", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell", "hurled": "Hurled through Hell", "entropic_ward": "Attack at disadvantage", "instinctive_charm": "Attack redirected", "altered_memory": "Altered memory", "commanded_undead": "Commanded undead", "hamstring": "Hamstrung", "staggered": "Staggered", "sundered": "Sundered" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Turned", "thoughts_read": "Thoughts read", "nature_ward": "Warded off", "goaded": "Goaded", "protection": "Attack hindered", "eldritch_strike": "Eldritch Strike", "no_reactions": "No reactions", "no_opportunity_attacks": "No opportunity attacks", "magical_ambush": "Magical Ambush", "heightened_spell": "Heightened Spell", "hurled": "Hurled through Hell", "entropic_ward": "Attack at disadvantage", "instinctive_charm": "Attack redirected", "altered_memory": "Altered memory", "commanded_undead": "Commanded undead", "hamstring": "Hamstrung", "staggered": "Staggered", "sundered": "Sundered", "dazed": "Dazed" },
       "custom_note": {
         "sap": "Just a label with a duration: the GM applies the disadvantage on the target's next attack by hand.",
         "slow": "Just a label with a duration: the GM applies the target's -10 ft speed by hand.",
+        "daze": "It can do only one thing on its next turn: move, take an action or take a bonus action. It ends at the end of that turn.",
+        "knock_out": "Unconscious for 1 minute: it repeats the save at the end of each of its turns. It ends on a success or when it first takes damage: remove it by hand.",
         "hamstring": "Just a label with a duration: the target's -15 ft speed is applied by the GM by hand; only the latest Hamstring Blow counts.",
         "staggered": "Just a label with a duration: the disadvantage on the target's next save and the ban on opportunity attacks are applied by the GM by hand.",
         "sundered": "Just a label with a duration: the +5 to the first attack roll by another creature against the target is applied by the GM by hand."
@@ -1497,6 +1499,7 @@
         "feature_unavailable": "You cannot use it now (for example you must be raging, without heavy armor, or know mage hand).",
         "insufficient_funds": "You do not have enough gold (purse and containers).",
         "invalid_text": "Write a name (80 characters at most).",
+        "already_moved": "You already moved this turn: Steady Aim needs you not to have moved.",
         "identity_exists": "You already have an identity with this name in your notes.",
         "invalid_choice": "Invalid choice: check the spell level.",
         "default": "Could not use the feature. Try again."

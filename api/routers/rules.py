@@ -235,8 +235,8 @@ async def last_roll_options(
     rolls, extra = roll_option_dice(char, opts)
     bonus += opts.bonus
     total += opts.bonus + extra
-    forced_hit = last["forced_hit"] or (opts.succeed and is_attack)
-    if opts.succeed and not is_attack:
+    forced_hit = last["forced_hit"] or ((opts.succeed or opts.twenty) and is_attack)
+    if (opts.succeed and not is_attack) or opts.twenty:
         total += 20 - die
         die = 20
     raw_total = total  # il tiro salvato non porta il minimo (Potenza Indomabile): si rimette ogni volta sul totale

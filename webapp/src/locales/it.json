@@ -933,10 +933,12 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "no_opportunity_attacks": "Niente attacchi di opportunità", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio", "instinctive_charm": "Attacco deviato", "altered_memory": "Ricordi alterati", "commanded_undead": "Non morto comandato", "hamstring": "Colpo alle Gambe", "staggered": "Colpo Stordente", "sundered": "Colpo Spezzante" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "no_opportunity_attacks": "Niente attacchi di opportunità", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio", "instinctive_charm": "Attacco deviato", "altered_memory": "Ricordi alterati", "commanded_undead": "Non morto comandato", "hamstring": "Colpo alle Gambe", "staggered": "Colpo Stordente", "sundered": "Colpo Spezzante", "dazed": "Stordito" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano.",
+        "daze": "Può fare una sola cosa nel suo prossimo turno: muoversi, agire o usare un'azione bonus. Finisce alla fine di quel turno.",
+        "knock_out": "Privo di Sensi per 1 minuto: ripete il TS alla fine di ogni suo turno. Finisce con un successo o al primo danno subito: toglilo a mano.",
         "hamstring": "È solo un'etichetta con durata: la velocità -4,5 m del bersaglio la applica il GM a mano; vale solo il Colpo alle Gambe più recente.",
         "staggered": "È solo un'etichetta con durata: lo svantaggio al prossimo TS del bersaglio e il divieto di attacchi di opportunità li applica il GM a mano.",
         "sundered": "È solo un'etichetta con durata: il +5 al primo tiro per colpire di un'altra creatura contro il bersaglio lo applica il GM a mano."
@@ -1496,6 +1498,7 @@
         "feature_unavailable": "Ora non puoi usarlo (per esempio serve essere in ira, senza armatura pesante, o conoscere mano magica).",
         "insufficient_funds": "Non hai abbastanza oro (borsa e contenitori).",
         "invalid_text": "Scrivi un nome (al massimo 80 caratteri).",
+        "already_moved": "Hai già mosso in questo turno: la Mira Costante richiede di non esserti mosso.",
         "identity_exists": "Hai già un'identità con questo nome fra le note.",
         "invalid_choice": "Scelta non valida: controlla il livello dell'incantesimo.",
         "default": "Impossibile usare il privilegio. Riprova."
