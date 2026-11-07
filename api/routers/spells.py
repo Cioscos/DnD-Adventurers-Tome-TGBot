@@ -305,7 +305,7 @@ def _consume_cast(
     else:
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
-    end_on_action(char, "cast")
+    end_on_action(char, "cast", spell)
     after_cast(char, spell)  # i privilegi delle scuole del Mago (dopo end_on_action: le finestre nuove restano)
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)

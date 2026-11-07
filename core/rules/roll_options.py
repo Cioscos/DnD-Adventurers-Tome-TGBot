@@ -573,7 +573,10 @@ def refund_spent(char: Any, spent: list[str]) -> None:
                 slot.used -= 1
         elif kind == "state":
             key, _, blob = rest.partition(":")
-            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), json.loads(blob)]
+            state = json.loads(blob)
+            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), state]
+            if state.get("condition"):  # lo stato rimesso rimette anche la condizione che imponeva
+                char.conditions = {**(char.conditions or {}), state["condition"]: True}
         elif kind == "die":
             key, _, value = rest.rpartition(":")
             _store_saved_dice(char, key, [*saved_dice(char, key), int(value)])

@@ -1,6 +1,7 @@
 """Stati attivi dei privilegi (``Character.active_states``) e uso reale dei privilegi."""
 from __future__ import annotations
 
+import json
 import random
 from dataclasses import dataclass, field
 
@@ -121,9 +122,27 @@ def end_states_on_rest(char, rest: str) -> list[str]:
     return closed
 
 
-def end_on_action(char, action: str) -> None:
-    """Chi attacca (``attack``) o lancia (``cast``) chiude gli stati che finiscono così (Manto di Ombre)."""
-    end_states(char, action)
+MISS_REFUND = "miss_refund"  # turn_state: gettoni degli stati chiusi dall'attacco, che il mancato dichiarato rimette (``remember_roll``)
+
+
+def _spell_effect(spell) -> bool:
+    """Danni o TS sulla scheda dell'incantesimo; col tiro per colpire (``ATK``) decide l'attacco, non il lancio."""
+    get = spell.get if isinstance(spell, dict) else lambda k: getattr(spell, k, None)
+    save = (get("attack_save") or "").strip().upper()
+    return save != "ATK" and bool(get("damage_dice") or get("extra_damage_dice") or save)
+
+
+def end_on_action(char, action: str, spell=None) -> None:
+    """Chi attacca (``attack``) o lancia (``cast``) chiude gli stati che finiscono così (Manto di Ombre).
+
+    Gli stati con ``data["needs_effect"]`` (Velo Psichico) non finiscono per un lancio di ``spell`` senza danni né TS; quelli con
+    ``data["refund_on_miss"]`` chiusi da un attacco tornano se il giocatore dichiara il mancato (``last_roll.refundable``)."""
+    keep = {s["key"] for s in get_states(char) if (s.get("data") or {}).get("needs_effect")}         if action == "cast" and spell is not None and not _spell_effect(spell) else frozenset()
+    held = [s for s in get_states(char) if action in s["ends_on"] and s["key"] not in keep and (s.get("data") or {}).get("refund_on_miss")]
+    end_states(char, action, keep=keep)
+    if action == "attack":  # ogni attacco riparte da zero: un resto di quello prima non si attacca al tiro nuovo
+        char.turn_state = {**{k: v for k, v in get_turn(char).items() if k != MISS_REFUND},
+                           **({MISS_REFUND: {s["key"]: [f"state:{s['key']}:{json.dumps(s)}"] for s in held}} if held else {})}
 
 
 def state_name(char, state: dict) -> str:

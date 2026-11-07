@@ -562,6 +562,59 @@ async def test_i5_the_psychic_veil_ends_when_the_soulknife_attacks(client):
     assert not full["conditions"].get("invisible") and not [s for s in full["active_states"] if s["key"] == "psychic_veil"]
 
 
+async def _veiled(client) -> int:
+    cid = await _sub(client, "soulknife", 13, dexterity=16)
+    assert (await _use(client, cid, _k("psychic_veil"))).status_code == 200
+    await _new_turn(client, cid)  # l'azione Magia del Velo è spesa: il lancio di prova ha bisogno di un turno nuovo
+    return cid
+
+
+async def _veil(client, cid) -> dict | None:
+    return next((s for s in (await _full(client, cid))["active_states"] if s["key"] == "psychic_veil"), None)
+
+
+async def test_n1_a_blade_hit_ends_the_veil_and_a_declared_miss_gives_it_back(client):
+    cid = await _veiled(client)
+    hit = await _blade(client, cid, _k("psychic_blade"))
+    assert await _veil(client, cid) is None and not (await _full(client, cid))["conditions"].get("invisible")
+    assert (await _damage(client, cid, hit)).status_code == 200  # il danno dice che il colpo è andato a segno
+    assert await _veil(client, cid) is None
+    assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": False})).status_code == 409
+
+    cid = await _veiled(client)
+    await _blade(client, cid, _k("psychic_blade"))
+    assert (await _turn(client, cid))["last_roll"]["refundable"]  # esce «Il tiro è riuscito?»
+    assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": False})).status_code == 200
+    veil = await _veil(client, cid)
+    assert veil and veil["rounds_left"] == 600 and (await _full(client, cid))["conditions"]["invisible"] is True
+
+
+async def test_n1_answering_that_the_attack_hit_keeps_the_veil_ended(client):
+    cid = await _veiled(client)
+    await _blade(client, cid, _k("psychic_blade"))
+    assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": True})).status_code == 200
+    assert await _veil(client, cid) is None
+
+
+async def test_n1_a_natural_one_gives_the_veil_back_without_asking(client):
+    cid = await _veiled(client)
+    await _blade(client, cid, _k("psychic_blade"), mode="advantage", dice=[1, 1])
+    assert await _veil(client, cid) is not None and not (await _turn(client, cid))["last_roll"]["refundable"]
+
+
+@pytest.mark.parametrize("extra,ends", [
+    ({"damage_dice": "1d10"}, True),
+    ({"attack_save": "DEX"}, True),
+    ({}, False),  # né danni né TS: il Velo resta
+    ({"damage_dice": "1d10", "attack_save": "ATK"}, False),  # a decidere è il tiro per colpire
+])
+async def test_n1_a_spell_ends_the_veil_only_with_damage_or_a_save(client, extra, ends):
+    cid = await _veiled(client)
+    spell = await _spell(client, cid, "Prova", **extra)
+    assert (await _cast(client, cid, spell)).status_code == 200
+    assert (await _veil(client, cid) is None) is ends
+
+
 async def test_i8_the_psychic_blades_defer_the_damage_by_themselves(client):
     cid = await _sub(client, "soulknife", 3, dexterity=16)
     listed = {o["key"]: o for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()}

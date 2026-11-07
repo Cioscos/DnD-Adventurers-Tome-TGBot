@@ -1156,7 +1156,7 @@ async def cast_from_item(
     rolled = charge_die(char) if cost else None
     if cost and rolled != 6:
         set_item_charges(item, current - cost)
-    end_on_action(char, "cast")  # come ogni lancio: il Manto di Ombre finisce
+    end_on_action(char, "cast", spell)  # come ogni lancio: il Manto di Ombre finisce
 
     if spell.get("is_concentration"):
         # Match by srd_index (when both set), then by case-insensitive name.

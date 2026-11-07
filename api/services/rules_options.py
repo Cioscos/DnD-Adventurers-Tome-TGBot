@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from api.schemas.common import OptionResult
 from api.schemas.rules import RollOptionCost, RollOptionRead, RollOptionSlot
 from api.services.dice_stats import record_dice
+from api.services.rules_states import MISS_REFUND
 from api.services.rules_turn import get_turn
 from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, is_incapacitated
@@ -18,6 +19,7 @@ from core.rules.roll_options import (
     OptionUnavailable,
     RollOption,
     apply_options,
+    refund_spent,
     cost_amount,
     spent_levels,
     roll_extra,
@@ -72,9 +74,14 @@ LAST_ROLL_FIELDS = {"die", "dice", "mode", "bonus", "total", "notes", "auto_fail
 def remember_roll(char: Any, roll: str, opts: AppliedOptions, fields: dict, **where: Any) -> None:
     """``fields``: ``LAST_ROLL_FIELDS``. ``where``: skill, ability, item_id, spell_id, pending_save_id."""
     turn = get_turn(char)
+    miss = turn.pop(MISS_REFUND, {}) if roll == "attack" else {}  # stati chiusi da questo attacco: tornano se manca
+    if miss and fields.get("die") == 1:  # un 1 naturale manca sempre: nessuna domanda
+        refund_spent(char, [t for paid in miss.values() for t in paid])
+        turn, miss = get_turn(char), {}
+        turn.pop(MISS_REFUND, None)
     turn["last_roll"] = {
         "roll_id": uuid.uuid4().hex, "roll": roll, "skill": None, "ability": None, "item_id": None, "spell_id": None,
-        "pending_save_id": None, **where, **fields, "forced_hit": False, "refundable": {},
+        "pending_save_id": None, **where, **fields, "forced_hit": False, "refundable": miss,
         # né il modo né il dado dichiarato tornano: l'ispirazione ritira un solo dado
         "applied": {**asdict(opts), "modes": [], "spent": [], "replace_die": None},
     }
