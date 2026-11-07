@@ -20,6 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.beast_companion import long_rest_beast
+from api.services.wild_shape import long_rest_familiar
 from api.services.durations import end_concentration, is_concentrating
 from api.services.natural_recovery import ARCANE_FEATURE, recover as recover_slots
 from core.rules.arcane_ward import absorb as absorb_ward
@@ -135,6 +136,7 @@ async def _get_owned_full(
             selectinload(Character.abilities),
             selectinload(Character.maps),
             selectinload(Character.homebrew_resources),
+            selectinload(Character.companions),  # Compagno Selvatico crea e sostituisce il famiglio
         )
         .where(Character.id == char_id)
     )
@@ -742,6 +744,7 @@ async def rest(
         end_concentration(char)
         end_states_on_rest(char, "long")
         await long_rest_beast(session, char)
+        await long_rest_familiar(session, char)
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0

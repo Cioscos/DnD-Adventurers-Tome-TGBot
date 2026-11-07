@@ -14,6 +14,7 @@ from core.rules.forms import FormLimits, FormRules
 from core.rules.types import StateSpec
 
 STATE_KEY = "wild_shape"
+WILD_COMPANION = "druid.wild_companion"
 _PHYSICAL = {"str": "strength", "dex": "dexterity", "con": "constitution"}
 _ABILITY_FULL = {"str": "strength", "dex": "dexterity", "con": "constitution", "int": "intelligence", "wis": "wisdom",
                  "cha": "charisma"}
@@ -76,9 +77,10 @@ def end_form(char: Character, form: Companion) -> None:
 
 
 def return_to_normal(char: Character, form: Companion) -> None:
-    """Ritorno volontario alla forma normale: nel 2014 costa l'azione bonus (409 ``turn_slot_used`` se è già spesa, la forma
-    resta). Unico punto per «Termina» da Extra e da Turno; le fini automatiche (0 PF, durata, riposo) usano ``end_form``."""
-    if character_edition(char) == "2014" and form_limits(char) is not None:
+    """Ritorno volontario alla forma normale: costa l'azione bonus, in entrambe le edizioni (409 ``turn_slot_used`` se è già
+    spesa, la forma resta). Unico punto per «Termina» da Extra e da Turno; le fini automatiche (0 PF, durata, riposo) usano
+    ``end_form``."""
+    if form_limits(char) is not None:
         spend(char, "bonus")
     end_form(char, form)
 
@@ -104,6 +106,14 @@ def start_form(char: Character, form: Companion, grant: bool = True) -> None:
         char.temp_hp = max(char.temp_hp or 0, limits.temp_hp)  # i PF temporanei non si sommano: vale il maggiore
         if limits.ac_wisdom:
             form.armor_class = max(form.armor_class, 13 + effective_ability_mod(char, "wisdom"))
+
+
+async def long_rest_familiar(session: AsyncSession, char: Character) -> None:
+    """Compagno Selvatico: il famiglio Fatato scompare al termine del riposo lungo."""
+    rows = (await session.execute(
+        select(Companion).where(Companion.character_id == char.id, Companion.feature_key == WILD_COMPANION))).scalars()
+    for comp in rows:
+        await session.delete(comp)
 
 
 def absorb_damage(form: Companion, amount: int) -> int:

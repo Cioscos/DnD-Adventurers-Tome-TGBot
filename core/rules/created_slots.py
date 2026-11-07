@@ -1,10 +1,10 @@
-"""Slot creati con Incantesimi Flessibili (Stregone 2014): restano fino al riposo lungo."""
+"""Slot creati con Incantesimi Flessibili (Stregone 2014) e Mago della Natura (Druido 2024): restano fino al riposo lungo."""
 from __future__ import annotations
 
 from core.db.models import Character, SpellSlot
 
 
-_LEVELS = {"1", "2", "3", "4", "5"}
+_LEVELS = {str(n) for n in range(1, 10)}  # Incantesimi Flessibili arriva al 5°, il Mago della Natura (Druido 2024) all'8°
 CREATED_SLOTS = "created_slots"  # settings: {"3": 1} = slot creati con Incantesimi Flessibili, per livello (scritto dal server)
 
 
@@ -14,7 +14,7 @@ def _created(char: Character) -> dict[int, int]:
 
 
 def clean_created_slots(value: object) -> dict[str, int]:
-    """Da un file importato: solo i livelli 1-5, con un conteggio ragionevole."""
+    """Da un file importato: solo i livelli 1-9, con un conteggio ragionevole."""
     if not isinstance(value, dict):
         return {}
     return {str(k): v for k, v in value.items() if str(k) in _LEVELS and type(v) is int and 0 < v <= 20}

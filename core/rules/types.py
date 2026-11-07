@@ -656,6 +656,8 @@ class FeatureSpec:
     mastery_groups: tuple[str, ...] = ()
     # Il tiro per colpire dei Colpi Senz'Armi usa la Destrezza se è migliore, ma solo senza armatura né Scudo (Passo Abbagliante)
     dex_unarmed: bool = False
+    # Metri in più alla gittata (3 m o più) dei trucchetti della classe che ha il privilegio (Incantesimi Potenti del Druido, 15°)
+    cantrip_range_bonus: int = 0
 
 
 @dataclass(frozen=True)

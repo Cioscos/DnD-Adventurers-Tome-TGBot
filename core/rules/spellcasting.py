@@ -200,8 +200,26 @@ def _book_rituals(char: Any, spell: Any) -> bool:
 def spell_range_override(char: Any, spell: Any) -> str | None:
     """Gittata che un privilegio dà a questo incantesimo (Lancia Occulta: 90 m per deflagrazione occulta)."""
     names = {str(getattr(spell, "srd_index", None) or "").lower(), str(getattr(spell, "name", None) or "").strip().lower()} - {""}
-    return next((spec.spell_range[1] for spec, _row in active_features(char)
-                 if spec.spell_range and names & set(spec.spell_range[0])), None)
+    fixed = next((spec.spell_range[1] for spec, _row in active_features(char)
+                  if spec.spell_range and names & set(spec.spell_range[0])), None)
+    return fixed if fixed is not None else _cantrip_range_bonus(char, spell)
+
+
+_METERS = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*m(?![a-z])", re.IGNORECASE)
+
+
+def _cantrip_range_bonus(char: Any, spell: Any) -> str | None:
+    """Incantesimi Potenti (Druido 2024, 15°): un trucchetto della classe con gittata di 3 m o più guadagna 90 m."""
+    if getattr(spell, "level", None) != 0:
+        return None
+    found = _METERS.match(getattr(spell, "range_area", None) or "")
+    if not found or (meters := float(found.group(1).replace(",", "."))) < 3:
+        return None
+    for spec, row in active_features(char):
+        if spec.cantrip_range_bonus and (getattr(spell, "class_id", None) == row.id
+                                         or (getattr(spell, "class_id", None) is None and len(char.classes) == 1)):
+            return f"{meters + spec.cantrip_range_bonus:g} m"
+    return None
 
 
 def can_ritual(char: Any, spell: Any = None) -> bool:

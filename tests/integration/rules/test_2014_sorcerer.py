@@ -255,9 +255,9 @@ async def test_two_simultaneous_creations_pay_for_one_slot_only(client):
     assert await _points(client, cid) == 0 and (await _slots(client, cid))[3][0] == before + 1
 
 
-@pytest.mark.parametrize("raw,kept", [({"12": 1}, {}), ({"23": 1, "2345": 2}, {}), ({"3": 1, "6": 1, "0": 1, "": 1}, {"3": 1}),
-                                      ({"1": 1, "5": 2}, {"1": 1, "5": 2})])
-def test_created_slot_keys_are_levels_one_to_five_only(raw, kept):
+@pytest.mark.parametrize("raw,kept", [({"12": 1}, {}), ({"23": 1, "2345": 2}, {}), ({"3": 1, "10": 1, "0": 1, "": 1}, {"3": 1}),
+                                      ({"1": 1, "5": 2}, {"1": 1, "5": 2}), ({"8": 1}, {"8": 1})])
+def test_created_slot_keys_are_levels_one_to_nine_only(raw, kept):
     from core.rules.created_slots import clean_created_slots
     assert clean_created_slots(raw) == kept
 

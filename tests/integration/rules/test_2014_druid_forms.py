@@ -132,14 +132,12 @@ async def test_the_deactivate_button_and_the_turn_bar_cost_the_same(client):
     assert (await _turn(client, a))["bonus_used"] is True and (await _turn(client, b))["bonus_used"] is True
 
 
-async def test_in_2024_returning_to_normal_form_costs_nothing(client):
+async def test_in_2024_returning_to_normal_form_costs_the_bonus_action_too(client):
     cid = await _druid(client, 5)
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
-    form = await _in_form(client, cid)
-    await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": False})
+    await _in_form(client, cid)
     assert (await client.delete(f"/characters/{cid}/active-states/wild_shape")).status_code == 200
-    assert (await _turn(client, cid)).get("bonus_used") is not True
-    assert form
+    assert (await _turn(client, cid)).get("bonus_used") is True
 
 
 # ---------------------------------------------------------------------------

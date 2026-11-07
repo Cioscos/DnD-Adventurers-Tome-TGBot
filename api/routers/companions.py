@@ -239,7 +239,7 @@ async def deactivate_wild_shape(
     if comp.is_active:
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             return _read(char, comp)
-        return_to_normal(char, comp)  # 2014: azione bonus; già spesa = 409 e la forma resta
+        return_to_normal(char, comp)  # azione bonus; già spesa = 409 e la forma resta
         _history(session, char_id, "companion_hp", "Forma selvatica terminata")
     return _read(char, comp)
 
@@ -298,7 +298,7 @@ async def delete_companion(
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             end_form(char, comp)
         else:
-            return_to_normal(char, comp)  # 2014: azione bonus; già spesa = 409 e la forma resta, non si elimina
+            return_to_normal(char, comp)  # azione bonus; già spesa = 409 e la forma resta, non si elimina
     await session.delete(comp)
 
 
