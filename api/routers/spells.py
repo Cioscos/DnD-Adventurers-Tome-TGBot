@@ -508,6 +508,8 @@ async def use_spell(
     spell = result.scalar_one_or_none()
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
+    if spell.srd_index == "divine-smite" and character_edition(char) == "2024":  # si sceglie dopo un colpo, mai da elenco
+        raise HTTPException(status_code=409, detail={"code": "smite_on_hit"})
 
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,

@@ -9,15 +9,16 @@ scelta (con slot o gratuita) in questo colpo; ``POOL`` è la riserva che le opzi
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any
 
 from core.rules.catalog._common import FIGHTING_STYLE_GROUP, feature, style_options
 from core.rules.catalog.y2014.paladin import SAVE_ROLLS, _aura_range, _cha_bonus, _cha_mod, _permanent_note, _say, _spell_dc
 from core.rules.catalog.y2024.fighter import STYLE_ROWS as FIGHTER_STYLE_ROWS, STYLES as FIGHTER_STYLES
-from core.rules.states import begin_state, is_conscious
+from core.rules.states import is_conscious
 from core.rules.types import (
     AuraSpec, ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice,
-    UseToggle, Uses,
+    UseText, UseToggle, Uses,
 )
 from core.rules.weapons import MASTERY_OPTIONS, mastery_choice
 
@@ -83,13 +84,14 @@ def _loh_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
 
 
 def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
-    """Esiti per chi usa il privilegio: con un altro fuori serata il GM riceve il resto (D1)."""
+    """Esiti per chi usa il privilegio. Sul PG altrui si scrivono solo i PF (R42, R46): la cura di un altro è sempre una nota
+    (D1), anche con l'alleato in serata; i PF di un altro fuori serata li riporta il giocatore al GM."""
     mode, seated = params.get("mode"), params.get("target_character_id") is not None
     if mode == "other" and not seated:
         return ["lay_on_hands_other_2024"]
     if mode == "cure_self":
         return ["lay_on_hands_cure_self_2024"]
-    return ["lay_on_hands_cure_other_2024"] if mode == "cure_other" and not seated else []
+    return ["lay_on_hands_cure_other_2024"] if mode == "cure_other" else []
 
 
 LAY_ON_HANDS_USE = OnUse(
@@ -97,7 +99,6 @@ LAY_ON_HANDS_USE = OnUse(
     heal_ally_when=lambda _c, p: p.get("mode") == "other", ally_modes=("other", "cure_other"),
     amount_ok=_loh_amount_ok, check=_loh_check, notes=_loh_notes,
     clears=lambda c, p: _picked(c, p) if p.get("mode") == "cure_self" else [],
-    clears_ally=lambda c, p: _picked(c, p) if p.get("mode") == "cure_other" else [],
     choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),),
     toggles=tuple(UseToggle(f"cure_{key}", _both(f"Togli {it}", f"Remove {en}"), available=lambda c, k=key: k in _curable(c))
                   for key, (it, en) in _CURABLE.items()))
@@ -134,8 +135,8 @@ BLESSED_WARRIOR = feature(
 # ---------------------------------------------------------------------------
 
 def _smite_dice(_ctx: RuleContext, inputs: dict) -> str:
-    """2d8 con uno slot di 1° livello, un d8 in più per ogni livello oltre il primo, al massimo 5d8."""
-    return f"{min(5, 1 + int(inputs.get('slot_level') or 1))}d8"
+    """2d8 con uno slot di 1° livello, un d8 in più per ogni livello oltre il primo (il manuale non pone un tetto)."""
+    return f"{1 + int(inputs.get('slot_level') or 1)}d8"
 
 
 def _slot_smite_ok(ctx: RuleContext) -> bool:
@@ -167,8 +168,8 @@ def smite_cast(ctx: RuleContext) -> bool:
 
 
 _RADIANT = _say("I dadi in più sono danni radiosi.", "The extra dice are radiant damage.")
-_SMITE_LABEL = ("Punizione Divina: azione bonus, 2d8 radiosi in più (+1d8 per livello dello slot oltre il 1°, massimo 5d8)",
-                "Divine Smite: bonus action, extra 2d8 radiant (+1d8 per slot level above 1st, up to 5d8)")
+_SMITE_LABEL = ("Punizione Divina: azione bonus, 2d8 radiosi in più (+1d8 per livello dello slot oltre il 1°)",
+                "Divine Smite: bonus action, extra 2d8 radiant (+1d8 per slot level above 1st)")
 DIVINE_SMITE = RollOptionSpec(
     key=SMITE, phase="after_hit", rolls=("attack",), requires_input="slot", cost=Cost(spell_slot_min=1), slot="bonus", group=SMITE_GROUP,
     extra_dice=_smite_dice, available=_slot_smite_ok, on_confirm=_mark_slot_spell, effect=_RADIANT,
@@ -215,16 +216,28 @@ def _abjure_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
 # Destriero Fedele
 # ---------------------------------------------------------------------------
 
-def _steed_cast(ctx: RuleContext, _params: dict) -> None:
-    """Autorizza il lancio gratuito (R43) di Trova Destriero; il lancio chiude l'autorizzazione. Dura 10 minuti: non pesa sul turno."""
-    begin_state(ctx.char, StateSpec("faithful_steed_free", ends_on=("manual", "rest_long"),
-                                    data={"free_cast": "find-steed", "free_cast_slot": "free_interaction", "spell": "find-steed"}),
-                STEED, "Destriero Fedele")
+STEED_SPELL_LEVEL = 2  # il lancio gratuito è al livello base dell'incantesimo
 
 
-STEED_USE = OnUse(effect=_steed_cast, message=lambda _c, _p: _both(
-    "Lancia Trova Destriero dalla pagina degli incantesimi, senza slot; il destriero lo aggiungi tu da Compagni.",
-    "Cast Find Steed from the spells page, with no slot; you add the steed yourself from Companions."))
+def _steed_cast(ctx: RuleContext, params: dict) -> None:
+    """Trova Destriero (azione): crea il destriero come compagno con le statistiche del manuale (CA 10 + livello dell'incantesimo,
+    PF 5 + 10 per livello, 18 m; il volo 27 m c'è solo dal 4° livello, e il lancio gratuito è di 2°). Un nuovo lancio sostituisce il precedente."""
+    from core.db.models import Companion  # import locale: i modelli non servono al resto del catalogo
+    for old in [c for c in ctx.char.companions if c.feature_key == STEED]:
+        ctx.char.companions.remove(old)
+    level = STEED_SPELL_LEVEL
+    hp = 5 + 10 * level
+    ctx.char.companions.append(Companion(
+        character_id=ctx.char.id, kind="mount", name=str(params.get("name") or "").strip() or "Destriero",
+        statblock={"type": "celestial, fey o fiend", "size": "Large", "speed_ft": 60},
+        max_hp=hp, current_hp=hp, armor_class=10 + level, feature_key=STEED,
+        created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
+
+
+STEED_USE = OnUse(
+    slot="action", effect=_steed_cast, texts=(UseText("name", _both("Nome del destriero", "Steed name"), max_len=80, optional=True),),
+    message=lambda _c, _p: _both("Lanci Trova Destriero senza slot: il destriero è fra i compagni (CA 12, 25 PF, 18 m).",
+                                 "You cast Find Steed with no slot: the steed is among your companions (AC 12, 25 HP, 60 ft)."))
 
 
 # ---------------------------------------------------------------------------
@@ -287,8 +300,8 @@ BASE_ROWS = (
             ("Due attacchi con l'azione Attacco; non si somma all'Attacco Extra di altre classi.",
              "Two attacks with the Attack action; does not stack with other classes' Extra Attack."), attacks_per_action=2),
     feature("faithful_steed", CK, ED, 5, "Destriero Fedele / Faithful Steed (Paladino 5, pag. 111)", ("Destriero Fedele", "Faithful Steed"),
-            ("Trova Destriero sempre preparato; un lancio gratuito per riposo lungo: «Usa» autorizza il lancio senza slot.",
-             "Find Steed always prepared; one free cast per long rest: \"Use\" authorizes the cast with no slot."),
+            ("Trova Destriero sempre preparato; un lancio gratuito per riposo lungo: «Usa» lo lancia con l'azione e crea il destriero fra i compagni.",
+             "Find Steed always prepared; one free cast per long rest: \"Use\" casts it with your action and adds the steed to your companions."),
             "special", uses=Uses(table={5: 1}), restoration="long_rest", granted_spells=("find-steed",), on_use=STEED_USE),
     feature("aura_of_protection", CK, ED, 6, "Aura di Protezione / Aura of Protection (Paladino 6, pag. 111)",
             ("Aura di Protezione", "Aura of Protection"),

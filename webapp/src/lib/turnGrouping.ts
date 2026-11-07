@@ -1,3 +1,4 @@
+import { isHitOnlySpell } from '@/lib/spellType'
 import { standardActionsFor } from '@/data/standardActions'
 import type { ActionType, CharacterFull } from '@/types'
 
@@ -40,7 +41,7 @@ export function groupForTurn(char: CharacterFull): TurnGroups {
   const casters = char.spellcasting?.casters ?? []
   const onlyCasterIsPaladin = casters.length === 1 && paladinRows.has(casters[0].class_id)
   for (const s of char.spells ?? []) {
-    if (!(s.level === 0 || s.is_prepared || noPrep)) continue
+    if (!(s.level === 0 || s.is_prepared || noPrep) || isHitOnlySpell(s)) continue
     let bucket: keyof TurnGroups = parseCastingTime(s.casting_time) ?? 'other'
     const isPaladinSpell = s.class_id != null ? paladinRows.has(s.class_id) : onlyCasterIsPaladin
     if (champion && bucket === 'action' && isPaladinSpell) bucket = 'bonus_action'

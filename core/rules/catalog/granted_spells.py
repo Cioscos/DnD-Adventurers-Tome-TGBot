@@ -304,7 +304,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'divine-smite': GrantedSpell(
         'divine-smite', {"it": 'Punizione Divina', "en": 'Divine Smite'}, 1, '1 azione bonus', 'Personale', 'Istantanea'),
     'find-steed': GrantedSpell(
-        'find-steed', {"it": 'Trova destriero', "en": 'Find Steed'}, 2, '10 minuti', '9 m', 'Istantanea'),
+        'find-steed', {"it": 'Trova destriero', "en": 'Find Steed'}, 2, '1 azione', '9 m', 'Istantanea'),
 }
 
 

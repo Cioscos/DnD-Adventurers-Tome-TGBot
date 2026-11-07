@@ -17,6 +17,7 @@ from core.rules.catalog.y2014.paladin import (
 )
 from core.rules.catalog.y2024.paladin import CK, ED, POOL, SMITE, SMITE_FREE, _fiend_slot_ok, _free_left, _melee_or_unarmed
 from core.rules.states import begin_state, is_conscious
+from core.game.item_bonuses import item_meta
 from core.rules.types import (
     AuraSpec, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, UseToggle, Uses,
 )
@@ -99,15 +100,39 @@ def _restoring_use(state: Any, **kw: Any) -> OnUse:
 # Devozione
 # ---------------------------------------------------------------------------
 
+def _melee_wielded(ctx: RuleContext) -> list[Any]:
+    """Il manuale 2024 dice «un'arma da mischia»: il 2014 le accettava tutte."""
+    return [i for i in _wielded_weapons(ctx) if item_meta(i).get("weapon_type", "melee") != "ranged"]
+
+
+_DAMAGE_TYPES = {"normal": _both("Il tipo di danno normale dell'arma", "The weapon's normal damage type"),
+                 "radiant": _both("Danno radioso", "Radiant damage")}
+
+
 def _sacred_state(ctx: RuleContext, params: dict) -> StateSpec:
     return StateSpec("sacred_weapon", rounds=100, ends_on=("manual", "unconscious"),
-                     data={"weapon_id": int(params["weapon"]), "bound_item": int(params["weapon"]), "attack_bonus": _cha_bonus(ctx)})
+                     data={"weapon_id": int(params["weapon"]), "bound_item": int(params["weapon"]), "attack_bonus": _cha_bonus(ctx),
+                           "damage_type": params.get("damage_type") or "normal"})
+
+
+def _sacred_radiant(ctx: RuleContext) -> bool:
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "sacred_weapon"), None)
+    return _sacred_applies(ctx) and ((state or {}).get("data") or {}).get("damage_type") == "radiant"
+
+
+SACRED_RADIANT = RollOptionSpec(
+    key=f"{CK}.sacred_weapon_radiant", phase="before", rolls=("attack",), automatic=True, available=_sacred_radiant,
+    label=_both("Arma Consacrata: il danno dell'arma è radioso", "Sacred Weapon: the weapon's damage is radiant"),
+    effect=_say("Arma Consacrata: i danni di quest'arma sono radiosi (scelti all'attivazione).",
+                "Sacred Weapon: this weapon's damage is radiant (chosen when activated)."))
 
 
 SACRED_WEAPON_USE = OnUse(
-    spends=POOL, available=lambda c: bool(_wielded_weapons(c)), state=_sacred_state,
-    choices=(UseChoice("weapon", _both("Arma", "Weapon"), lambda c: [str(i.id) for i in _wielded_weapons(c)],
-                       lambda k: _both(k, k), option_label_ctx=_weapon_label),))
+    spends=POOL, available=lambda c: bool(_melee_wielded(c)), state=_sacred_state,
+    choices=(UseChoice("weapon", _both("Arma", "Weapon"), lambda c: [str(i.id) for i in _melee_wielded(c)],
+                       lambda k: _both(k, k), option_label_ctx=_weapon_label),
+             UseChoice("damage_type", _both("Tipo di danno", "Damage type"), lambda _c: list(_DAMAGE_TYPES), lambda k: _DAMAGE_TYPES[k],
+                       optional=True)))
 
 
 def _protection_state(_ctx: RuleContext, _inputs: dict) -> StateSpec:
@@ -156,7 +181,7 @@ DEVOTION = (
             ("Arma Consacrata", "Sacred Weapon"),
             ("Con l'azione Attacca, un uso di Incanalare Divinità: per 10 minuti aggiungi il Carisma (minimo +1) ai tiri per colpire con l'arma impugnata, che fa luce.",
              "With the Attack action, one Channel Divinity use: for 10 minutes add your Charisma (minimum +1) to attack rolls with the wielded weapon, which sheds light."),
-            "special", subclass="devotion", on_use=SACRED_WEAPON_USE,
+            "special", subclass="devotion", on_use=SACRED_WEAPON_USE, roll_options=(SACRED_RADIANT,),
             modifiers=(Modifier("attack", _sacred_bonus, when=_sacred_applies, source=f"feature:{CK}.sacred_weapon"),)),
     feature("aura_of_devotion", CK, ED, 7, "Aura di Devozione / Aura of Devotion (Giuramento di Devozione, Paladino 7, pag. 114)",
             ("Aura di Devozione", "Aura of Devotion"),
@@ -200,8 +225,19 @@ def _inspiring_temp(ctx: RuleContext, rolled: int, params: dict) -> int:
 
 _KEEP = {"all": _both("Tutti a te", "All to you"), "half": _both("Metà a te, il resto agli altri", "Half to you, the rest to others"),
          "none": _both("Tutti agli altri", "All to others")}
+def _inspiring_given(ctx: RuleContext, rolled: int, params: dict) -> int:
+    """Agli altri va ciò che il paladino non tiene (D1: l'unico esito per loro)."""
+    return _inspiring_total(ctx, rolled) - _inspiring_temp(ctx, rolled, params)
+
+
+def _consume_smite(ctx: RuleContext, _params: dict) -> None:
+    """Una volta per lancio di Punizione Divina: l'uso chiude la finestra, una nuova Punizione la riapre."""
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), "smite_cast": False}
+
+
 INSPIRING_SMITE_USE = OnUse(
-    spends=POOL, rolls="2d8", available=_smite_cast_this_turn, gives=_inspiring_total, temp_hp_by=_inspiring_temp,
+    spends=POOL, rolls="2d8", available=_smite_cast_this_turn, gives_by=_inspiring_given, temp_hp_by=_inspiring_temp,
+    effect=_consume_smite,
     choices=(UseChoice("keep", _both("PF temporanei per te", "Temporary hit points for you"), lambda _c: list(_KEEP), lambda k: _KEEP[k]),))
 
 PEERLESS_STATE = StateSpec("peerless_athlete", rounds=600, ends_on=("manual",), data={"others": [f"{CK}.peerless_athlete"]})
@@ -346,6 +382,11 @@ SOUL_2024 = replace(SOUL_OF_VENGEANCE, label=_both(
     "Soul of Vengeance: did the creature under your Vow of Enmity hit or miss with an attack? Reaction: melee attack"))
 
 
+def _angel_effect_2024(ctx: RuleContext, params: dict) -> TargetEffect:
+    """Il 2024 vale solo a inizio turno nell'aura: la nota del 2014 dice anche «entra nell'aura»."""
+    return replace(_angel_effect(ctx, params), note="avenging_angel_2024")
+
+
 def _angel_state(ctx: RuleContext, _params: dict) -> StateSpec:
     return StateSpec("avenging_angel", rounds=100, ends_on=("manual",),
                      data={"dc": _spell_dc(ctx), "save": "wisdom", "others": [f"{CK}.avenging_angel"], "radius_m": 9, "fly_ft": 60})
@@ -374,7 +415,7 @@ VENGEANCE = (
              "Bonus action, 10 minutes: fly 60 ft; enemies starting their turn in the aura make a Wisdom save or are Frightened, and attacks against them have advantage. One use, long rest or a level 5 slot."),
             "bonus_action", subclass="vengeance", uses=Uses(table={20: 1}), restoration="long_rest",
             modifiers=(Modifier("fly_speed_value", 60, when=lambda c: state_on(c, "avenging_angel"), source=f"feature:{CK}.avenging_angel"),),
-            on_use=_restoring_use(_angel_state, target_effect=_angel_effect)),
+            on_use=_restoring_use(_angel_state, target_effect=_angel_effect_2024)),
 )
 
 SUBCLASS_ROWS = DEVOTION + GLORY + ANCIENTS + VENGEANCE

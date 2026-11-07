@@ -11,7 +11,7 @@ import Pressable from '@/components/ui/Pressable'
 import StatPill from '@/components/ui/StatPill'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import RollButton from '@/components/ui/RollButton'
-import { isAttackSpell } from '@/lib/spellType'
+import { isAttackSpell, isHitOnlySpell } from '@/lib/spellType'
 import { scaleCantripDice } from '@/lib/dnd'
 import { ledgerEntry } from '@/styles/ledger'
 import type { RollMode } from '@/api/client'
@@ -221,7 +221,7 @@ function SpellItemInner({
 
               {/* Action buttons */}
               <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
-                {isAttackSpell(spell) ? (
+                {isHitOnlySpell(spell) ? null : isAttackSpell(spell) ? (
                   // Spell attack: long press opens the advantage/disadvantage menu.
                   <RollButton
                     onRoll={onUse}

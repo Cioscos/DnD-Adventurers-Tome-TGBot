@@ -208,14 +208,16 @@ async def test_lay_on_hands_heals_a_seated_ally_and_spends_the_pool_and_the_bonu
     assert (await _hero_state(test_session_factory, hero))[0] == 13
 
 
-async def test_lay_on_hands_removes_poisoned_from_a_seated_ally(client, test_session_factory):
+async def test_a_cure_on_a_seated_ally_never_writes_their_conditions_it_is_a_note_for_the_gm(client, test_session_factory):
+    """R42/R46: sul PG altrui si scrivono solo i PF; le condizioni le toglie il giocatore, e l'esito è sempre un messaggio."""
     _, paladin, hero = await _table24(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 20, conditions={"poisoned": True, "prone": True})
     as_user(GM_ID)
     r = await _give(client, paladin, hero, 5, mode="cure_other", cure_poisoned=True)
     assert r.status_code == 200, r.text
+    assert r.json()["notes"] == ["lay_on_hands_cure_other_2024"]
     hp, conditions = await _hero_state(test_session_factory, hero)
-    assert hp == 20 and not conditions.get("poisoned") and conditions.get("prone") is True
+    assert hp == 20 and conditions.get("poisoned") is True and conditions.get("prone") is True
     assert await _pool(client, paladin) == 20
 
 
@@ -362,9 +364,9 @@ async def test_the_paladins_smite_gives_divine_smite_and_one_free_cast_per_long_
     assert PS not in await _keys_of(client, await _paladin24(client, 1))
 
 
-async def test_smite_offers_two_dice_at_slot_one_plus_one_per_level_up_to_five(client):
+async def test_smite_offers_two_dice_at_slot_one_plus_one_per_level_with_no_cap(client):
     cid = await _paladin24(client, 17)
-    assert _smite_dice(await _listed(client, cid, await _sword(client, cid))) == {1: "2d8", 2: "3d8", 3: "4d8", 4: "5d8", 5: "5d8"}
+    assert _smite_dice(await _listed(client, cid, await _sword(client, cid))) == {1: "2d8", 2: "3d8", 3: "4d8", 4: "5d8", 5: "6d8"}
 
 
 async def test_the_free_smite_costs_no_slot_takes_the_bonus_action_and_adds_two_radiant_dice(client):
@@ -495,17 +497,33 @@ async def test_radiant_strikes_stack_with_a_smite(client):
 async def test_faithful_steed_gives_find_steed_and_one_free_cast_per_long_rest(client):
     cid = await _paladin24(client, 5)
     spells = {s["srd_index"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}
-    assert "find-steed" in spells
-    assert (await _use(client, cid, STEED)).status_code == 200
-    assert (await _ability(client, cid, STEED))["uses"] == 0
-    assert any((s.get("data") or {}).get("free_cast") == "find-steed" for s in await _states(client, cid))
-    r = await client.post(f"/characters/{cid}/spells/{spells['find-steed']['id']}/use", json={"free_cast": True, "confirm": []})
+    assert "find-steed" in spells and spells["find-steed"]["casting_time"] == "1 azione"
+    r = await _use(client, cid, STEED, params={"name": "Lampo"})
     assert r.status_code == 200, r.text
+    assert (await _ability(client, cid, STEED))["uses"] == 0
+    assert (await _turn(client, cid))["action_used"] is True  # il lancio costa l'azione (manuale: Action)
     assert await _slots(client, cid) == {1: 0, 2: 0}
-    assert not any((s.get("data") or {}).get("free_cast") for s in await _states(client, cid))
+    steed = next(c for c in (await client.get(f"/characters/{cid}/companions")).json() if c["feature_key"] == STEED)
+    assert (steed["name"], steed["armor_class"], steed["max_hp"], steed["current_hp"]) == ("Lampo", 12, 25, 25)
     assert (await _use(client, cid, STEED)).status_code == 409
     await _rest(client, cid, "long")
     assert (await _ability(client, cid, STEED))["uses"] == 1
+
+
+async def test_faithful_steed_needs_the_action(client):
+    cid = await _paladin24(client, 5)
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": True})
+    assert (await _use(client, cid, STEED)).status_code == 409
+    assert (await _ability(client, cid, STEED))["uses"] == 1
+
+
+async def test_divine_smite_cannot_be_cast_from_the_spell_list_only_after_a_hit(client):
+    """Una «Lancia» da elenco spenderebbe uno slot senza danno e bloccherebbe la vera Punizione del turno."""
+    cid = await _paladin24(client, 5)
+    smite = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "divine-smite")
+    r = await client.post(f"/characters/{cid}/spells/{smite['id']}/use", json={"slot_level": 1, "confirm": []})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "smite_on_hit"
+    assert await _slots(client, cid) == {1: 0, 2: 0} and (await _turn(client, cid))["spell_slot_cast"] is False
 
 
 # ---------------------------------------------------------------------------

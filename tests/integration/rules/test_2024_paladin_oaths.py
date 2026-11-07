@@ -211,8 +211,8 @@ async def test_inspiring_smite_needs_a_divine_smite_this_turn(client):
     assert (await _ability(client, cid, CD))["uses"] == 2
 
 
-@pytest.mark.parametrize("keep", ["all", "none"])
-async def test_inspiring_smite_rolls_2d8_plus_level_and_gives_the_chosen_share_to_the_paladin(client, keep):
+@pytest.mark.parametrize("keep,others", [("all", 0), ("half", 1), ("none", 1)])
+async def test_inspiring_smite_rolls_2d8_plus_level_and_gives_the_chosen_share_to_the_paladin(client, keep, others):
     cid = await _oath(client, 5, "glory", charisma=16)
     wid = await _sword(client, cid)
     assert (await _damage(client, cid, await _deferred(client, cid, wid), [FREE])).status_code == 200
@@ -220,9 +220,20 @@ async def test_inspiring_smite_rolls_2d8_plus_level_and_gives_the_chosen_share_t
     assert r.status_code == 200, r.text
     body = r.json()
     total = sum(body["rolls"]) + 5
-    assert len(body["rolls"]) == 2 and 7 <= total <= 21 and body["given"] == total
-    assert (await _full(client, cid))["temp_hp"] == (total if keep == "all" else 0)
+    mine = {"all": total, "half": total // 2, "none": 0}[keep]
+    assert len(body["rolls"]) == 2 and 7 <= total <= 21
+    assert (body["given"] or 0) == total - mine  # agli altri va solo ciò che il paladino non tiene
+    assert (await _full(client, cid))["temp_hp"] == mine
     assert (await _ability(client, cid, CD))["uses"] == 1
+
+
+async def test_inspiring_smite_is_once_per_smite(client):
+    cid = await _oath(client, 5, "glory", charisma=16)
+    wid = await _sword(client, cid)
+    assert (await _damage(client, cid, await _deferred(client, cid, wid), [FREE])).status_code == 200
+    assert (await _use(client, cid, IS, params={"keep": "all"})).status_code == 200
+    again = await _use(client, cid, IS, params={"keep": "all"})
+    assert again.status_code == 409 and (await _ability(client, cid, CD))["uses"] == 1
 
 
 async def test_inspiring_smite_keeps_the_higher_temporary_hit_points(client):
@@ -480,3 +491,32 @@ async def test_changing_the_oath_swaps_the_oath_rows(client):
     assert (await client.patch(f"/characters/{cid}/classes/{klass}", json={"subclass": NAMES["vengeance"]})).status_code == 200
     keys = await _keys_of(client, cid)
     assert SW not in keys and VOW in keys and "paladin.relentless_avenger" in keys
+
+
+async def test_avenging_angel_note_is_the_2024_one_start_of_turn_only(client):
+    cid = await _oath(client, 20, "vengeance", charisma=16)
+    assert (await _use(client, cid, AV)).status_code == 200
+    effect = (await client.get(f"/characters/{cid}/target-effects/{AV}")).json()["result"]
+    assert effect["note"] == "avenging_angel_2024"
+
+
+async def test_sacred_weapon_is_for_melee_weapons_only(client):
+    cid = await _oath(client, 3, "devotion", charisma=16)
+    bow = await _item(client, cid, "Arco", damage_dice="1d8", weapon_type="ranged", properties=["ammunition"], equip="main_hand")
+    r = await _use(client, cid, SW, params={"weapon": str(bow)})
+    assert r.status_code == 409 and (await _ability(client, cid, CD))["uses"] == 2
+
+
+async def test_sacred_weapon_saves_the_damage_type_and_the_hit_shows_radiant(client):
+    cid = await _oath(client, 3, "devotion", charisma=16)
+    sword = await _sword(client, cid, equip="main_hand")
+    r = await _use(client, cid, SW, params={"weapon": str(sword), "damage_type": "radiant"})
+    assert r.status_code == 200, r.text
+    assert r.json()["state"]["data"]["damage_type"] == "radiant"
+    body = (await client.post(f"/characters/{cid}/items/{sword}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
+    assert any("radios" in e["it"].lower() for e in body["option_result"]["effects"])
+    other = await _oath(client, 3, "devotion", charisma=16)
+    sword2 = await _sword(client, other, equip="main_hand")
+    assert (await _use(client, other, SW, params={"weapon": str(sword2)})).json()["state"]["data"]["damage_type"] == "normal"
+    body = (await client.post(f"/characters/{other}/items/{sword2}/attack", json={"die": 10, "confirm_extra_attack": True})).json()
+    assert not any("radios" in e["it"].lower() for e in (body.get("option_result") or {}).get("effects", []))

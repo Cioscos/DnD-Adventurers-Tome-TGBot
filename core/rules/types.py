@@ -279,6 +279,8 @@ class OnUse:
     forgoes_attack: bool = False
     notes: "Callable[[RuleContext, dict], list[str]] | None" = None
     gives: "Callable[[RuleContext, int], int] | None" = None
+    # Come ``gives`` ma legge anche le scelte fatte all'uso (Punizione Ispiratrice: agli altri va ciò che chi usa non tiene)
+    gives_by: "Callable[[RuleContext, int, dict], int] | None" = None
     # chiave del parametro (una ``UseChoice``) che contiene la condizione da togliere a chi usa il privilegio (Mente Lucida)
     clears_condition: str | None = None
     # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki) e dadi che dipendono da quanti se ne spendono: la formula
@@ -300,9 +302,6 @@ class OnUse:
     heal_ally_when: "Callable[[RuleContext, dict], bool] | None" = None
     heal_ally_to: bool = False  # ``heal`` è il valore a cui portare i PF del bersaglio, non una cura da sommare (Rivivificazione)
     clears: "Callable[[RuleContext, dict], list[str]] | None" = None
-    # Condizioni tolte al bersaglio scelto della serata (Imposizione delle Mani 2024 su un altro personaggio): senza bersaglio
-    # valido l'uso resta una nota per il GM
-    clears_ally: "Callable[[RuleContext, dict], list[str]] | None" = None
     # chiave della ``UseChoice`` che porta il livello di uno slot incantesimo da spendere (Consapevolezza Primordiale): lo slot si prende
     # con un UPDATE condizionato, normali prima del Patto; senza slot libero l'uso è rifiutato (409 ``no_slot``)
     spends_slot: str | None = None

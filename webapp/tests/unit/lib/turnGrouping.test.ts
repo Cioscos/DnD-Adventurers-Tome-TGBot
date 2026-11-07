@@ -136,3 +136,12 @@ describe('Campione degli Antichi', () => {
     expect(ids(groupForTurn(two as unknown as CharacterFull).action)).toContain('spell:42')
   })
 })
+
+describe('Punizione Divina 2024', () => {
+  const ids = (list: { kind: string; id: string }[]) => list.map((e) => `${e.kind}:${e.id}`)
+  it('has no row in the turn: it is chosen after a hit, never cast from the list', () => {
+    const c = { items: [], abilities: [], rules_edition: '2024', active_states: [], classes: [],
+      spells: [spell(7, { casting_time: '1 azione bonus', srd_index: 'divine-smite' }), spell(8, { casting_time: '1 azione bonus' })] }
+    expect(ids(groupForTurn(c as unknown as CharacterFull).bonus_action)).toEqual(['spell:8'])
+  })
+})

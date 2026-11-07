@@ -389,8 +389,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             grant_action(char)
     if dice:
         record_dice(char, [(f"d{dice[1]}", r) for r in result.rolls])
-    if on_use.gives:
-        result.given = max(0, on_use.gives(ctx, sum(result.rolls)))
+    if on_use.gives or on_use.gives_by:
+        given = on_use.gives_by(ctx, sum(result.rolls), params or {}) if on_use.gives_by else on_use.gives(ctx, sum(result.rolls))
+        result.given = max(0, given) if given > 0 or not on_use.gives_by else None  # niente toast «da dare: 0»
     if on_use.notes:
         result.notes += on_use.notes(ctx, params or {})
     if heals_ally:
@@ -402,12 +403,6 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                 healed_ally = max(0, healed_ally - target.current_hit_points)
             got = (await apply_heal(session, target, healed_ally))["healed"]
             result.received = {"name": target.name, "healed": got}
-    if on_use.clears_ally and for_other and target is not None:
-        from api.services.effects import apply_conditions  # import locale, come sopra
-        target = await load_receiver(session, target.id)
-        removed = {c: False for c in on_use.clears_ally(ctx, params or {}) if (target.conditions or {}).get(c)}
-        if removed:
-            await apply_conditions(session, target, removed)
     if on_use.clears:
         from api.services.effects import apply_conditions  # import locale, come sopra
         removed = {c: False for c in on_use.clears(ctx, params or {}) if (char.conditions or {}).get(c)}
