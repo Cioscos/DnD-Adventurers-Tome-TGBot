@@ -65,7 +65,8 @@ async def test_resolved_level_is_not_offered_again(client):
 
 async def test_2024_level_19_creates_epic_boon_not_asi(client):
     body = await _char(client, edition="2024", xp=305000)
-    assert _pending(body) == [("asi", 4), ("asi", 6), ("asi", 8), ("asi", 12), ("asi", 14), ("asi", 16),
+    # il Guerriero 2024 ha anche scelte di classe (stile, maestria): qui contano ASI e Dono Epico
+    assert [p for p in _pending(body) if p[0] in ("asi", "epic_boon")] == [("asi", 4), ("asi", 6), ("asi", 8), ("asi", 12), ("asi", 14), ("asi", 16),
                               ("epic_boon", 19)]
     mage = await _char(client, "Mago", edition="2024", xp=305000)
     assert _pending(mage) == [("asi", 4), ("asi", 8), ("asi", 12), ("asi", 16), ("epic_boon", 19)]
