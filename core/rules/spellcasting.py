@@ -16,7 +16,7 @@ from core.rules.edition import character_edition, class_key as row_class_key
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.proficiencies import is_armor_proficient
 from core.rules.schools import normalize_school  # noqa: F401  (ri-esportata: la usano i chiamanti storici)
-from core.rules.states import casting_blocked_by
+from core.rules.states import casting_blocked_by, has_state
 from core.rules.types import Edition
 
 
@@ -149,7 +149,8 @@ def caster_stats(char: Any) -> list[CasterStats]:
         if normalize_class_name(row.class_name) is not None and caster_kind(row, edition) is None:
             continue
         mod = effective_ability_mod(char, ability)
-        out.append(CasterStats(row.id, row.class_name, ability, 8 + pb + mod + item_bonus_total(char.items, "spell_dc"),
+        innate = 1 if edition == "2024" and row_class_key(row) == "sorcerer" and has_state(char, "innate_sorcery") else 0  # Stregoneria Innata
+        out.append(CasterStats(row.id, row.class_name, ability, 8 + pb + mod + innate + item_bonus_total(char.items, "spell_dc"),
                                pb + mod + item_bonus_total(char.items, "spell_attack")))
     return out
 

@@ -188,6 +188,7 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     if kind == "reaction":
         return
     turn = get_turn(char)
+    turn["cast_prior_slot"] = turn["spell_slot_cast"]  # Incantesimo Rapido 2024: cosa era già stato lanciato prima di questo lancio
     turn["spell_slot_cast"] = turn["spell_slot_cast"] or spent_slot
     turn["bonus_spell_cast"] = turn["bonus_spell_cast"] or kind == "bonus"
     if kind == "action":  # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale)
@@ -518,6 +519,7 @@ async def use_spell(
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
+    _end_cast(char)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
@@ -570,6 +572,7 @@ async def spell_attack(
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
                                 casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual))
+        _end_cast(char)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
     await release_concentration_effects(session, char)
@@ -635,6 +638,13 @@ def _cast_level(spell: Spell, slot_level: int | None, ritual: bool = False) -> i
     """Il livello a cui si lancia: quello dello slot (un incantesimo di livello superiore «assume il livello superiore»),
     il proprio se è un trucchetto, un rituale o un lancio senza slot."""
     return slot_level if slot_level and slot_level >= spell.level and not ritual else spell.level
+
+
+def _end_cast(char: Character) -> None:
+    """Le opzioni del lancio hanno visto cosa c'era prima di questo incantesimo: il segno non serve più."""
+    turn = get_turn(char)
+    if turn.pop("cast_prior_slot", None) is not None:
+        char.turn_state = turn
 
 
 def _close_twinned(char: Character) -> None:
@@ -827,7 +837,8 @@ async def roll_spell_damage(
     total = scale_damage(total, opts.multiplier)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
-    parts = damage_parts([("main", spell.damage_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
+    main_type = opts.damage_type or spell.damage_type  # Incantesimo Trasmutato
+    parts = damage_parts([("main", main_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
                           ("extra", None, extra_sides, extra_rolls)])
     breakdown_parts = [f"{len(main_rolls)}d{sides}={main_rolls}"]
     for part in parts[1:]:
@@ -853,7 +864,7 @@ async def roll_spell_damage(
         "spell_name": spell.name,
         "rolls": main_rolls + second_rolls + extra_rolls,
         "total": total,
-        "damage_type": spell.damage_type,
+        "damage_type": main_type,
         "casting_level": casting_level,
         "is_critical": body.is_critical,
     }
@@ -868,7 +879,7 @@ async def roll_spell_damage(
         rolls=main_rolls + all_extra,
         total=total,
         half_damage=half_damage,
-        damage_type=spell.damage_type,
+        damage_type=main_type,
         breakdown=breakdown,
         casting_level=casting_level,
         is_critical=bool(body.is_critical),

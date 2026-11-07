@@ -209,6 +209,7 @@ class AppliedOptions:
     unarmed_dice: str | None = None  # il Colpo Senz'Armi infligge questi dadi più Destrezza (Danno Bardico)
     unarmed_damage_type: str | None = None  # il Colpo Senz'Armi infligge questo tipo di danno (Colpi Potenziati)
     finesse_unarmed: bool = False  # per colpire e per il danno vale la migliore fra Forza e Destrezza (Lame Psichiche)
+    damage_type: str | None = None  # il danno dell'incantesimo cambia tipo (Incantesimo Trasmutato)
 
     @property
     def mode(self) -> str | None:
@@ -510,6 +511,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.unarmed_dice = spec.unarmed_dice(option.ctx, given)
         out.unarmed_damage_type = spec.unarmed_damage_type or out.unarmed_damage_type
         out.finesse_unarmed = out.finesse_unarmed or spec.finesse_unarmed
+        out.damage_type = spec.damage_type_to or out.damage_type
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail

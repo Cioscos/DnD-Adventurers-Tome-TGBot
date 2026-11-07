@@ -513,6 +513,8 @@ class RollOptionSpec:
     # Con ``attack`` senz'armi e ``unarmed_dice``: arma Accurata, la caratteristica è la migliore fra Forza e Destrezza per
     # colpire e per il danno (Lame Psichiche del Coltello dell'Anima)
     finesse_unarmed: bool = False
+    # Con ``spell_damage`` prima del tiro: il tipo di danno dell'incantesimo diventa questo (Incantesimo Trasmutato)
+    damage_type_to: str | None = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -553,6 +555,8 @@ class RollOptionSpec:
             raise ValueError("self_damage vale solo prima del tiro")
         if self.dice_cost and not self.needs:
             raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
+        if self.damage_type_to and (self.phase != "before" or "spell_damage" not in self.rolls):
+            raise ValueError("damage_type_to vale solo prima del danno di un incantesimo")
         if self.on_zero_damage and self.phase != "damage_in":
             raise ValueError("on_zero_damage vale solo per il danno subito")
         if self.outside_action and self.phase != "before":
