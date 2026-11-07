@@ -423,6 +423,7 @@ class SurgeBody(BaseModel):
     percentile: list[int] | None = Field(default=None, max_length=2)  # i d100, se già tirati
     tides: bool = False  # il GM fa tirare la tabella dopo Onde di Caos: niente d20
     repeat: bool = False  # impulso 01-02 attivo: tabella a ogni turno, niente d20
+    tamed: bool = False  # Impulso Domato (2024): l'effetto è il d100 scelto, niente d20
 
 
 class SurgeChoose(BaseModel):
@@ -448,7 +449,7 @@ async def wild_magic_surge(
     if body.percentile is not None and any(not 1 <= p <= 100 for p in body.percentile):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "bad_percentile"})
     char = await _get_owned_full(char_id, user_id, db)
-    return await roll_surge(db, char, body.die, body.percentile, body.tides, body.repeat)
+    return await roll_surge(db, char, body.die, body.percentile, body.tides, body.repeat, body.tamed)
 
 
 @turn_router.post("/{char_id}/wild-magic/surge/choose", response_model=SurgeResult)

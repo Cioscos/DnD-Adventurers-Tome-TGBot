@@ -516,6 +516,43 @@ for _spell, _comp in (
                       is_concentration=True, attack_save="SAVE"), "V, S, M")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
+# Stregone 2024 (Aberrante, Meccanica, Draconica): incantesimi sempre preparati che il 2014 non concedeva
+for _spell, _comp in (
+        (GrantedSpell("arms-of-hadar", {"it": "Braccia di Hadar", "en": "Arms of Hadar"}, 1, "1 azione", "Personale (3 m)", "Istantanea",
+                      attack_save="SAVE", damage_dice="2d6", damage_type="necrotic", higher_levels_dice="1d6"), "V, S"),
+        (GrantedSpell("dissonant-whispers", {"it": "Sussurri dissonanti", "en": "Dissonant Whispers"}, 1, "1 azione", "18 m", "Istantanea",
+                      attack_save="SAVE", damage_dice="3d6", damage_type="psychic", higher_levels_dice="1d6"), "V"),
+        (GrantedSpell("mind-sliver", {"it": "Scheggia mentale", "en": "Mind Sliver"}, 0, "1 azione", "18 m", "1 round",
+                      attack_save="SAVE", damage_dice="1d6", damage_type="psychic"), "V"),
+        (GrantedSpell("calm-emotions", {"it": "Calmare le emozioni", "en": "Calm Emotions"}, 2, "1 azione", "18 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S"),
+        (GrantedSpell("detect-thoughts", {"it": "Individuazione dei pensieri", "en": "Detect Thoughts"}, 2, "1 azione", "Personale",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+        (GrantedSpell("hunger-of-hadar", {"it": "Fame di Hadar", "en": "Hunger of Hadar"}, 3, "1 azione", "45 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+        (GrantedSpell("sending", {"it": "Messaggio a distanza", "en": "Sending"}, 3, "1 azione", "Illimitata", "1 round"), "V, S, M"),
+        (GrantedSpell("evards-black-tentacles", {"it": "Tentacoli neri di Evard", "en": "Evard's Black Tentacles"}, 4, "1 azione", "27 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="3d6",
+                      damage_type="bludgeoning"), "V, S, M"),
+        (GrantedSpell("summon-aberration", {"it": "Evocare aberrazione", "en": "Summon Aberration"}, 4, "1 azione", "27 m",
+                      "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M"),
+        (GrantedSpell("rarys-telepathic-bond", {"it": "Legame telepatico di Rary", "en": "Rary's Telepathic Bond"}, 5, "1 azione", "9 m",
+                      "1 ora", is_ritual=True), "V, S, M"),
+        (GrantedSpell("alarm", {"it": "Allarme", "en": "Alarm"}, 1, "1 minuto", "9 m", "8 ore", is_ritual=True), "V, S, M"),
+        (GrantedSpell("summon-construct", {"it": "Evocare costrutto", "en": "Summon Construct"}, 4, "1 azione", "3 m",
+                      "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M"),
+        (GrantedSpell("wall-of-force", {"it": "Muro di forza", "en": "Wall of Force"}, 5, "1 azione", "36 m",
+                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S, M"),
+        (GrantedSpell("chromatic-orb", {"it": "Sfera cromatica", "en": "Chromatic Orb"}, 1, "1 azione", "27 m", "Istantanea",
+                      attack_save="ATK", damage_dice="3d8", higher_levels_dice="1d8"), "V, S, M"),
+        (GrantedSpell("dragons-breath", {"it": "Soffio del drago", "en": "Dragon's Breath"}, 2, "1 azione bonus", "Contatto",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+        (GrantedSpell("charm-monster", {"it": "Charme su mostri", "en": "Charm Monster"}, 4, "1 azione", "9 m", "1 ora",
+                      attack_save="SAVE"), "V, S"),
+        (GrantedSpell("summon-dragon", {"it": "Evocare drago", "en": "Summon Dragon"}, 5, "1 azione", "18 m",
+                      "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",

@@ -21,24 +21,29 @@ from core.game.stats import effective_ability_mod
 from core.rules.catalog import active_features
 from core.rules.catalog.y2014.sorcerer import CK, SP, SURGE, TIDES
 from core.rules.catalog.y2014.sorcerer_wild_magic import SURGES, Surge
+from core.rules.catalog.y2024.sorcerer_wild_magic import SURGES as SURGES_2024
+from core.rules.edition import character_edition
 from core.rules.states import begin_state, has_state
 from core.rules.types import StateSpec, parse_dice
 
 PENDING = "pending_surge"
 REPEAT = "wild_repeat"  # stato dell'impulso 01-02: a ogni turno si tira la tabella
 CONTROLLED_CHAOS = f"{CK}.controlled_chaos"
+TAMED = f"{CK}.tamed_surge"  # 2024: l'effetto si sceglie invece di tirare, una volta per riposo lungo
+LAST_ROW = 97  # 2024: la riga 97-00 non si può scegliere con Impulso Domato
 
 
 def _err(code: int, name: str) -> HTTPException:
     return HTTPException(code, detail={"code": name})
 
 
-def _bucket(percentile: int) -> Surge:
-    return next(s for s in SURGES if s.lo <= percentile <= s.hi)
+def _bucket(char, percentile: int) -> Surge:
+    table = SURGES_2024 if character_edition(char) == "2024" else SURGES
+    return next(s for s in table if s.lo <= percentile <= s.hi)
 
 
-def _entry(percentile: int) -> dict:
-    s = _bucket(percentile)
+def _entry(char, percentile: int) -> dict:
+    s = _bucket(char, percentile)
     return {"roll": percentile, "lo": s.lo, "hi": s.hi, "label": s.label, "name": dict(s.name), "text": dict(s.text)}
 
 
@@ -71,8 +76,8 @@ def _state_for(s: Surge) -> StateSpec | None:
 
 
 async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = False) -> dict:
-    s = _bucket(percentile)
-    out = {**_entry(percentile), "healed": 0, "slot_level": None, "points": False, "state": None, "damage": None,
+    s = _bucket(char, percentile)
+    out = {**_entry(char, percentile), "healed": 0, "slot_level": None, "points": False, "state": None, "damage": None,
            "extra_roll": None, "dc": None, "extra_action": False, "ignored": False}
     if repeat and s.state_key == REPEAT:  # tirato a ogni turno dello stato 01-02: un nuovo 01-02 si ignora
         out["ignored"] = True
@@ -119,9 +124,28 @@ def _restore_tides(char) -> bool:
     return True
 
 
+async def _tamed(session: AsyncSession, char, percentile: list[int] | None) -> dict:
+    """Impulso Domato (2024, 18°): l'effetto si sceglie fra quelli della tabella, tranne 97-00; spende l'unico uso."""
+    _owner(char)
+    row = next((a for a in char.abilities if a.feature_key == TAMED), None)
+    if row is None:
+        raise _err(status.HTTP_404_NOT_FOUND, "feature_not_usable")
+    if not percentile or not 1 <= percentile[0] < LAST_ROW:
+        raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    if (row.uses or 0) <= 0:
+        raise _err(status.HTTP_409_CONFLICT, "no_uses")
+    row.uses -= 1
+    applied = await _apply(session, char, percentile[0])
+    return {"die": None, "triggered": True, "pending": False, "options": [_entry(char, percentile[0])], "applied": applied,
+            "tides_restored": False}
+
+
 async def roll_surge(session: AsyncSession, char, die: int | None, percentile: list[int] | None, tides: bool,
-                     repeat: bool = False) -> dict:
+                     repeat: bool = False, tamed: bool = False) -> dict:
+    if tamed:
+        return await _tamed(session, char, percentile)
     owner = _owner(char)
+    trigger = 20 if character_edition(char) == "2024" else 1  # 2014: un 1 apre la tabella; 2024: un 20
     tides_row = next((a for a in char.abilities if a.feature_key == TIDES), None)
     if repeat:  # lo stato 01-02: tabella senza d20, una volta per turno
         if not has_state(char, REPEAT):
@@ -139,13 +163,13 @@ async def roll_surge(session: AsyncSession, char, die: int | None, percentile: l
         mark_once(char, SURGE)
         d20 = die if die is not None else random.randint(1, 20)
         record_dice(char, [("d20", d20)])
-        if d20 != 1:
+        if d20 != trigger:
             return {"die": d20, "triggered": False, "pending": False, "options": [], "applied": None, "tides_restored": False}
     wanted = 2 if _has_controlled_chaos(char) else 1
     given = [p for p in (percentile or []) if 1 <= p <= 100][:wanted]
     rolls = given + [random.randint(1, 100) for _ in range(wanted - len(given))]
     record_dice(char, [("d100", v) for v in rolls[len(given):]])
-    options = [_entry(p) for p in rolls]
+    options = [_entry(char, p) for p in rolls]
     if wanted == 2:  # Caos Controllato: il giocatore sceglie, e nulla si applica prima
         turn = get_turn(char)
         turn[PENDING] = {"rolls": rolls, "tides": tides, "repeat": repeat}
@@ -166,5 +190,5 @@ async def choose_surge(session: AsyncSession, char, index: int) -> dict:
         raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
     char.turn_state = turn
     applied = await _apply(session, char, pending["rolls"][index], bool(pending.get("repeat")))
-    return {"die": None, "triggered": True, "pending": False, "options": [_entry(p) for p in pending["rolls"]],
+    return {"die": None, "triggered": True, "pending": False, "options": [_entry(char, p) for p in pending["rolls"]],
             "applied": applied, "tides_restored": _restore_tides(char) if pending.get("tides") else False}
