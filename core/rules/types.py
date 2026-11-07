@@ -658,6 +658,8 @@ class FeatureSpec:
     dex_unarmed: bool = False
     # Metri in più alla gittata (3 m o più) dei trucchetti della classe che ha il privilegio (Incantesimi Potenti del Druido, 15°)
     cantrip_range_bonus: int = 0
+    # Incantesimi (``srd_index``) che si lanciano in Forma Selvatica senza avviso, solo questi (Incantesimi del Circolo della Luna)
+    cast_in_form_spells: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -264,10 +264,12 @@ def _armor_block(char: Any) -> bool:
     return any(i.is_equipped and i.item_type in kinds and not is_armor_proficient(char, i) for i in char.items)
 
 
-def _form_block(char: Any) -> bool:
-    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali)."""
+def _form_block(char: Any, spell: Any = None) -> bool:
+    """In Forma Selvatica non si lanciano incantesimi, salvo un privilegio che lo consente (Incantesimi Bestiali) o che
+    concede proprio questo (Incantesimi del Circolo della Luna)."""
+    index = getattr(spell, "srd_index", None)
     return (any(s.get("key") == "wild_shape" for s in char.active_states or [])
-            and not any(spec.cast_in_form for spec, _row in active_features(char)))
+            and not any(spec.cast_in_form or (index and index in spec.cast_in_form_spells) for spec, _row in active_features(char)))
 
 
 def at_will(char: Any, spell: Any) -> bool:
@@ -313,7 +315,7 @@ def _turn_warning(char: Any, spell: Any) -> str | None:
 def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
     """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
     out = ["armor"] if _armor_block(char) else []
-    if _form_block(char):
+    if _form_block(char, spell):
         out.append("wild_shape")
     elif (materials := _form_materials(char, spell)) is not None:
         out.append(materials)

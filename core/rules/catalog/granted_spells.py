@@ -453,6 +453,30 @@ for _spell, _comp in (
                       "Istantanea", attack_save="ATK", damage_dice="6d10", damage_type="force"), "S, M")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
+# Druido 2024, circoli: incantesimi che il 2014 non concedeva
+for _spell, _comp in (
+        (GrantedSpell("fire-bolt", {"it": "Dardo di fuoco", "en": "Fire Bolt"}, 0, "1 azione", "36 m", "Istantanea", attack_save="ATK",
+                      damage_dice="1d10", damage_type="fire"), "V, S"),
+        (GrantedSpell("ray-of-frost", {"it": "Raggio di gelo", "en": "Ray of Frost"}, 0, "1 azione", "18 m", "Istantanea", attack_save="ATK",
+                      damage_dice="1d8", damage_type="cold"), "V, S"),
+        (GrantedSpell("shocking-grasp", {"it": "Contatto elettrizzante", "en": "Shocking Grasp"}, 0, "1 azione", "Contatto",
+                      "Istantanea", attack_save="ATK", damage_dice="1d8", damage_type="lightning"), "V, S"),
+        (GrantedSpell("acid-splash", {"it": "Spruzzo acido", "en": "Acid Splash"}, 0, "1 azione", "18 m", "Istantanea", attack_save="SAVE",
+                      damage_dice="1d6", damage_type="acid"), "V, S"),
+        (GrantedSpell("starry-wisp", {"it": "Fuoco fatuo stellare", "en": "Starry Wisp"}, 0, "1 azione", "18 m", "Istantanea",
+                      attack_save="ATK", damage_dice="1d8", damage_type="radiant"), "V, S"),
+        (GrantedSpell("guidance", {"it": "Guida", "en": "Guidance"}, 0, "1 azione", "Contatto", "Concentrazione, fino a 1 minuto",
+                      is_concentration=True), "V, S"),
+        (GrantedSpell("sleep", {"it": "Sonno", "en": "Sleep"}, 1, "1 azione", "18 m", "Concentrazione, fino a 1 minuto",
+                      is_concentration=True, attack_save="SAVE"), "V, S, M"),
+        (GrantedSpell("ray-of-sickness", {"it": "Raggio di infermità", "en": "Ray of Sickness"}, 1, "1 azione", "18 m", "Istantanea",
+                      attack_save="ATK", damage_dice="2d8", damage_type="poison"), "V, S"),
+        (GrantedSpell("conjure-animals", {"it": "Evocare animali", "en": "Conjure Animals"}, 3, "1 azione", "18 m",
+                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S"),
+        (GrantedSpell("fount-of-moonlight", {"it": "Fonte di luce lunare", "en": "Fount of Moonlight"}, 4, "1 azione", "Personale",
+                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",
