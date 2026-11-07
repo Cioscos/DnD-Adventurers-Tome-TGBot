@@ -98,11 +98,13 @@ async def test_use_magic_device_is_a_passive_row_of_the_thief(client):
 # Riflessi da Furfante
 # ---------------------------------------------------------------------------
 
-async def _reflexes_encounter(client, factory, *, surprised=False, level=17, subclass="Furfante"):
+async def _reflexes_encounter(client, factory, *, surprised=False, level=17, subclass="Furfante", edition=None):
     sid, cid = await seed_session(factory)
     as_user(PLAYER_ID)
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": level, "hit_die": 8, "subclass": subclass})
     assert r.status_code == 201, r.text
+    if edition:
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
     as_user(GM_ID)
     r = await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})
     assert r.status_code == 201, r.text

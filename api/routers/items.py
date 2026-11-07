@@ -47,7 +47,8 @@ from api.routers._helpers import (
 from api.services.durations import start_concentration
 from api.services.condition_effects import release_concentration_effects
 from api.services import weapon_bond
-from api.services.item_charges import attunement_limit, charges_spent, set_item_charges
+from api.services.skills import check_bonus
+from api.services.item_charges import attunement_limit, charge_die, charge_note, has_use_magic_device, set_item_charges
 from core.game.actions import parse_duration_rounds
 from api.services.equipment import apply_equip_ac, slot_allowed_for_type, swap_slot_occupant
 from api.services.containers import move_items, reparent_contents
@@ -572,7 +573,8 @@ def _settle_attack(
     Un 1 naturale non ha danno da aspettare, a meno che un'opzione dopo il tiro possa ancora cambiarlo."""
     pending = None
     item_id = item.id if item else None
-    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand)
+    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand,
+                           confirmed=tuple(opts.keys))
     if body and body.defer_damage and (
             not result.is_fumble or any(o.spec.phase == "after_roll" for o in roll_options_for(context))):
         result.attack_id = uuid.uuid4().hex
@@ -1086,6 +1088,7 @@ async def attack_unarmed(
 
 class ChargesDelta(BaseModel):
     delta: int = Field(ge=-100, le=100)
+    spend: bool = False  # una spesa vera (non una correzione a mano): per Usare Dispositivi Magici vale il d6
 
 
 class ItemCast(BaseModel):
@@ -1115,13 +1118,17 @@ async def adjust_item_charges(
     if not isinstance(ch, dict):
         raise HTTPException(status_code=409, detail="no_charges")
     old = int(ch.get("current") or 0)
-    delta = body.delta + (1 if body.delta < 0 and not charges_spent(char) else 0)  # Usare Dispositivi Magici: con 6 su 1d6 resta
+    rolled = charge_die(char) if body.spend and body.delta < 0 else None
+    delta = 0 if rolled == 6 else body.delta  # Usare Dispositivi Magici: con 6 su 1d6 non si spende nulla
     new = max(0, min(int(ch.get("max") or 0), old + delta))
     set_item_charges(item, new)
-    _add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}")
+    _add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}"
+                 + (f" (d6 = {rolled})" if rolled is not None else ""))
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
-    return await build_character_response(session, char)
+    response = await build_character_response(session, char)
+    response.homebrew_notifications = charge_note(rolled) or None
+    return response
 
 
 @router.post("/{char_id}/items/{item_id}/cast", response_model=CharacterFull)
@@ -1146,7 +1153,8 @@ async def cast_from_item(
     current = int(ch.get("current") or 0) if ch else 0
     if cost > current:
         raise HTTPException(status_code=409, detail="not_enough_charges")
-    if cost and charges_spent(char):
+    rolled = charge_die(char) if cost else None
+    if cost and rolled != 6:
         set_item_charges(item, current - cost)
     end_on_action(char, "cast")  # come ogni lancio: il Manto di Ombre finisce
 
@@ -1170,7 +1178,48 @@ async def cast_from_item(
                  meta={"item_id": item.id})
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
-    return await build_character_response(session, char)
+    response = await build_character_response(session, char)
+    response.homebrew_notifications = charge_note(rolled) or None
+    return response
+
+
+class ScrollCast(BaseModel):
+    spell_level: int = Field(ge=0, le=9)
+
+
+@router.post("/{char_id}/items/{item_id}/scroll", response_model=CharacterFull)
+async def cast_from_scroll(
+    char_id: int,
+    item_id: int,
+    body: ScrollCast,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Usare Dispositivi Magici (Furfante 2024, 13°): lancio da una pergamena. Livelli 0-1 riescono sempre; dal 2° prova di
+    Intelligenza (Arcano) CD 10 + livello. La pergamena si consuma; l'effetto dell'incantesimo resta a parole."""
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    if not has_use_magic_device(char):
+        raise HTTPException(status_code=409, detail="no_scroll_casting")
+    if item.item_type != "consumable" or item_meta(item).get("subtype") != "scroll" or item.quantity <= 0:
+        raise HTTPException(status_code=409, detail="not_a_scroll")
+    level = body.spell_level
+    ok, text = True, f"{item.name}: incantesimo di livello {level} lanciato."
+    if level >= 2:
+        die = random.randint(1, 20)
+        total = die + await check_bonus(session, char, "intelligence", "arcana")
+        ok = total >= 10 + level
+        text = (f"Arcano {die} → {total} contro CD {10 + level}: "
+                + (f"{item.name} riesce, l'incantesimo di livello {level} ha effetto." if ok
+                   else f"{item.name} si disintegra, l'incantesimo non ha effetto."))
+    item.quantity = max(0, item.quantity - 1)
+    _add_history(session, char.id, "item_used", f"Pergamena {item.name} (livello {level}): " + ("riuscita" if ok else "disintegrata"))
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    response = await build_character_response(session, char)
+    response.homebrew_notifications = [{"severity": "success" if ok else "error", "message": text,
+                                        "rule_id": None, "rule_name": "Usare Dispositivi Magici"}]
+    return response
 
 
 # ---------------------------------------------------------------------------

@@ -106,6 +106,7 @@ def end_hide(session: AsyncSession, char: Character) -> None:
     if "hiding" not in settings:
         return
     char.settings = {k: v for k, v in settings.items() if k != "hiding"}
+    char.turn_state = {**(char.turn_state or {}), "hide_broken": settings["hiding"]}  # Furtività Suprema lo ripristina
     if settings["hiding"].get("was_invisible"):
         return  # era già Invisibile per un'altra fonte: finisce solo il nascondiglio
     char.conditions = {**(char.conditions or {}), "invisible": False}

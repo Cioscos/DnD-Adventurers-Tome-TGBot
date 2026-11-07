@@ -31,6 +31,7 @@ from core.rules.types import RuleContext
 def roll_context(char: Any, roll: str, **kw: Any) -> RuleContext:
     turn = char.turn_state or {}
     confirmed = tuple((turn.get("pending_attack") or {}).get("options", [])) if roll == "attack" else ()
+    confirmed = tuple(kw.pop("confirmed", None) or confirmed)
     last = turn.get("last_roll") or {}
     if roll != "attack" and last.get("roll") == roll:  # il tiro salvato: ciò che era già stato applicato (aura prima/dopo)
         confirmed = tuple((last.get("applied") or {}).get("keys", []))

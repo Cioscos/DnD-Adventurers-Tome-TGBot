@@ -25,6 +25,7 @@ from core.rules.level_choices import FREE_KNOWN_KEY
 from api.services.spell_slots import CREATED_SLOTS, clean_created_slots
 from core.rules.states import ALLY_EXCLUSIVE, TARGET_IMMUNITY, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
+from api.services.item_charges import attunement_limit
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
     Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
@@ -201,8 +202,6 @@ async def import_character(
             raise _unprocessable("Unknown source_class_key")
     if any(sp.source_class_key is not None and sp.source_class_key not in class_keys for sp in data.spells):
         raise _unprocessable("Unknown source_class_key")
-    if sum(1 for it in data.items if is_attuned(it)) > 3:
-        raise _unprocessable("attunement_limit")
     for h in data.homebrew_resources:
         if h.rule_index >= len(data.homebrew_rules):
             raise _unprocessable("Unknown rule_index")
@@ -253,6 +252,8 @@ async def import_character(
     char.spells = spells
     char.spell_slots = [SpellSlot(**s.model_dump()) for s in data.spell_slots]
     char.items = items
+    if sum(1 for it in items if is_attuned(it)) > attunement_limit(char):  # il limite dipende dalla scheda importata
+        raise _unprocessable("attunement_limit")
     char.currency = Currency(**(data.currency.model_dump() if data.currency else {}))
     session.add(char)
     await session.flush()  # assegna gli id nuovi

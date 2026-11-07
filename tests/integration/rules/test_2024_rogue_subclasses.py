@@ -9,7 +9,8 @@ from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _r
 from tests.integration.rules.test_2014_fighter_battle_master import _fixed
 from tests.integration.rules.test_2014_fighter_eldritch_knight import KNOWN, SLOTS, _cast, _spell
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
-from tests.integration.rules.test_2014_rogue import _damage, _hit, _rapier
+from tests.integration.rules.test_2014_rogue_thief import _order, _reflexes_encounter
+from tests.integration.rules.test_2014_rogue import _damage, _hit, _rapier, _rogue, _skill_roll
 from tests.integration.rules.test_2014_rogue_trickster import _with_hand
 
 SUBS = {"arcane_trickster": "Mistificatore Arcano", "assassin": "Assassino", "soulknife": "Coltello dell'Anima", "thief": "Furfante"}
@@ -308,9 +309,9 @@ async def test_sneak_attack_works_with_a_psychic_blade(client):
 async def test_homing_strikes_add_the_die_to_a_blade_attack_from_level_9(client):
     cid = await _sub(client, "soulknife", 9, dexterity=16)
     key = _k("homing_strikes")
+    await _blade(client, cid, _k("psychic_blade"), die=5)
     assert key in await _roll_keys(client, cid, "attack")
     assert key not in await _roll_keys(client, await _sub(client, "soulknife", 8), "attack")
-    await _blade(client, cid, _k("psychic_blade"), die=5)
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [key]})
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, PSI))["uses"] == 7
@@ -409,21 +410,188 @@ async def test_use_magic_device_roll_of_six_spends_no_charge(client, monkeypatch
         item = next(i for i in (await _full(client, cid))["items"] if i["id"] == iid)
         return item["item_metadata"]["charges"]["current"]
     _fixed(monkeypatch, 6)
-    await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -1})
+    await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -1, "spend": True})
     assert await charges() == 5
     _fixed(monkeypatch, 3)
-    await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -1})
+    await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -1, "spend": True})
     assert await charges() == 4
     plain = await _sub(client, "thief", 12)
     r = await client.post(f"/characters/{plain}/items", json={
         "name": "Bacchetta", "item_type": "magic_item", "item_metadata": {"charges": {"current": 5, "max": 7}}})
     pid = max(i["id"] for i in r.json()["items"])
     _fixed(monkeypatch, 6)
-    await client.post(f"/characters/{plain}/items/{pid}/charges", json={"delta": -1})
+    await client.post(f"/characters/{plain}/items/{pid}/charges", json={"delta": -1, "spend": True})
     item = next(i for i in (await _full(client, plain))["items"] if i["id"] == pid)
     assert item["item_metadata"]["charges"]["current"] == 4
 
 
-async def test_thiefs_reflexes_is_a_row_of_the_2024_thief_at_17(client):
+async def test_thiefs_reflexes_is_a_row_of_the_2024_thief_at_17(client, test_session_factory):
     row = await _ability(client, await _sub(client, "thief", 17), _k("thiefs_reflexes"))
     assert row is not None and row["name"]
+    # M9: il secondo turno dell'incontro vale anche per il Furfante 2024
+    _sid, _cid, live = await _reflexes_encounter(client, test_session_factory, edition="2024")
+    assert [i for _n, i in _order(live)] == [23, 13, 1] and "Riflessi" in _order(live)[1][0]
+
+
+# ---------------------------------------------------------------------------
+# Giro di correzione 1 (I1-I12)
+# ---------------------------------------------------------------------------
+
+async def _attune(client, cid, n) -> int:
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": f"Anello {n}", "item_type": "magic_item", "item_metadata": {"requires_attunement": True, "attuned": True}})
+    return r.status_code
+
+
+async def _wand(client, cid, current=5, spells=()) -> int:
+    meta = {"charges": {"current": current, "max": 7}, "granted_spells": list(spells)}
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Bacchetta", "item_type": "magic_item", "item_metadata": meta})
+    assert r.status_code == 201, r.text
+    return max(i["id"] for i in r.json()["items"])
+
+
+async def _charges(client, cid, iid) -> int:
+    return next(i for i in (await _full(client, cid))["items"] if i["id"] == iid)["item_metadata"]["charges"]["current"]
+
+
+async def test_i1_a_2014_thief_keeps_three_attunements_and_spends_charges_without_the_d6(client, monkeypatch):
+    cid = await _rogue(client, 13, "thief")
+    assert [await _attune(client, cid, n) for n in range(4)] == [201, 201, 201, 409]
+    assert (await _full(client, cid))["computed"].get("attunement_limit", 3) == 3
+    iid = await _wand(client, cid)
+    _fixed(monkeypatch, 6)
+    r = await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -1, "spend": True})
+    assert r.status_code == 200 and await _charges(client, cid, iid) == 4
+    assert not r.json().get("homebrew_notifications")
+
+
+async def test_i2_the_server_says_the_attunement_limit(client):
+    assert (await _full(client, await _sub(client, "thief", 13)))["computed"]["attunement_limit"] == 4
+    assert (await _full(client, await _sub(client, "thief", 12)))["computed"]["attunement_limit"] == 3
+
+
+async def test_i3_export_import_and_duplicate_accept_four_attunements_for_who_has_the_right(client):
+    cid = await _sub(client, "thief", 13)
+    for n in range(4):
+        assert await _attune(client, cid, n) == 201
+    assert (await client.post(f"/characters/{cid}/duplicate")).status_code == 201
+    data = (await client.get(f"/characters/{cid}/export")).json()
+    assert (await client.post("/characters/import", json=data)).status_code == 201
+    data["character"]["rules_edition"] = "2014"  # senza il privilegio il limite resta 3
+    refused = await client.post("/characters/import", json=data)
+    assert refused.status_code == 422 and "attunement_limit" in refused.text
+
+
+async def test_i7_a_six_spends_no_charge_whatever_the_delta_and_the_outcome_is_shown(client, monkeypatch):
+    cid = await _sub(client, "thief", 13)
+    iid = await _wand(client, cid, 5, spells=[{"name": "Dardo", "level": 1, "charges_cost": 2}])
+    _fixed(monkeypatch, 6)
+    r = await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -3, "spend": True})
+    assert await _charges(client, cid, iid) == 5
+    assert "6" in " ".join(n["message"] for n in r.json()["homebrew_notifications"])
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0})
+    assert r.status_code == 200 and await _charges(client, cid, iid) == 5 and r.json()["homebrew_notifications"]
+    _fixed(monkeypatch, 3)
+    r = await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -3, "spend": True})
+    assert await _charges(client, cid, iid) == 2 and r.json()["homebrew_notifications"]
+    _fixed(monkeypatch, 6)  # correzione a mano: nessun tiro
+    r = await client.post(f"/characters/{cid}/items/{iid}/charges", json={"delta": -1})
+    assert await _charges(client, cid, iid) == 1 and not r.json().get("homebrew_notifications")
+
+
+async def _scroll(client, cid) -> int:
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": "Pergamena di Dardo", "item_type": "consumable", "quantity": 2, "item_metadata": {"subtype": "scroll"}})
+    assert r.status_code == 201, r.text
+    return max(i["id"] for i in r.json()["items"])
+
+
+async def _qty(client, cid, iid) -> int:
+    return next(i for i in (await _full(client, cid))["items"] if i["id"] == iid)["quantity"]
+
+
+async def test_i6_scroll_cast_levels_0_and_1_always_work_higher_ones_need_an_arcana_check(client, monkeypatch):
+    cid = await _sub(client, "thief", 13)  # Intelligenza 10, nessuna competenza in Arcano
+    iid = await _scroll(client, cid)
+    _fixed(monkeypatch, 1)
+    r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 1})
+    assert r.status_code == 200, r.text
+    assert await _qty(client, cid, iid) == 1 and r.json()["homebrew_notifications"][0]["severity"] == "success"
+    r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 3})  # CD 13, tiro 1
+    note = r.json()["homebrew_notifications"][0]
+    assert note["severity"] == "error" and "disintegra" in note["message"] and await _qty(client, cid, iid) == 0
+    iid = await _scroll(client, cid)
+    _fixed(monkeypatch, 20)
+    r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 3})
+    assert r.json()["homebrew_notifications"][0]["severity"] == "success" and await _qty(client, cid, iid) == 1
+
+
+async def test_i6_scroll_cast_is_for_use_magic_device_only_and_for_scrolls_only(client):
+    other = await _sub(client, "thief", 12)
+    assert (await client.post(f"/characters/{other}/items/{await _scroll(client, other)}/scroll", json={"spell_level": 1})).status_code == 409
+    cid = await _sub(client, "thief", 13)
+    assert (await client.post(f"/characters/{cid}/items/{await _wand(client, cid)}/scroll", json={"spell_level": 1})).status_code == 409
+
+
+async def _hidden_thief(client) -> tuple[int, int]:
+    cid = await _sub(client, "thief", 9, dexterity=16)
+    wid = await _rapier(client, cid)
+    await _skill_roll(client, cid, "stealth", die=20)
+    assert (await client.post(f"/characters/{cid}/hide")).status_code == 200
+    return cid, wid
+
+
+async def test_i4_supreme_sneak_keeps_the_hiding_invisibility_after_the_attack(client):
+    cid, wid = await _hidden_thief(client)
+    hit = await _hit(client, cid, wid, mode="advantage", dice=[10, 12])
+    assert (await _damage(client, cid, hit, SNEAK, _k("supreme_sneak"))).status_code == 200
+    full = await _full(client, cid)
+    assert full["conditions"]["invisible"] is True and "hiding" in full["settings"]
+    plain, wid2 = await _hidden_thief(client)  # senza l'opzione l'attacco rompe il nascondiglio
+    hit = await _hit(client, plain, wid2, mode="advantage", dice=[10, 12])
+    assert (await _damage(client, plain, hit, SNEAK)).status_code == 200
+    assert not (await _full(client, plain))["conditions"].get("invisible")
+
+
+async def test_i5_the_psychic_veil_ends_when_the_soulknife_attacks(client):
+    cid = await _sub(client, "soulknife", 13, dexterity=16)
+    assert (await _use(client, cid, _k("psychic_veil"))).status_code == 200
+    assert (await _full(client, cid))["conditions"]["invisible"] is True
+    await _blade(client, cid, _k("psychic_blade"))
+    full = await _full(client, cid)
+    assert not full["conditions"].get("invisible") and not [s for s in full["active_states"] if s["key"] == "psychic_veil"]
+
+
+async def test_i8_the_psychic_blades_defer_the_damage_by_themselves(client):
+    cid = await _sub(client, "soulknife", 3, dexterity=16)
+    listed = {o["key"]: o for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()}
+    assert listed[_k("psychic_blade")].get("defers_damage") is True
+    await _blade(client, cid, _k("psychic_blade"))
+    listed = {o["key"]: o for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})).json()}
+    assert listed[_k("psychic_blade_bonus")].get("defers_damage") is True
+
+
+async def test_i9_the_blade_arms_vex_for_the_next_attack(client):
+    cid = await _sub(client, "soulknife", 3, dexterity=16)
+    vex = _k("psychic_blade_vex")
+    hit = await _blade(client, cid, _k("psychic_blade"))
+    assert "mastery_vex_advantage" not in await _roll_keys_unarmed(client, cid)
+    assert (await _damage(client, cid, hit, vex)).status_code == 200
+    assert "mastery_vex_advantage" in await _roll_keys_unarmed(client, cid)
+
+
+async def test_i11_envenom_weapons_poison_dice_do_not_double_on_a_critical(client):
+    cid = await _sub(client, "assassin", 13, dexterity=16)
+    wid = await _rapier(client, cid)
+    plain = (await _damage(client, cid, await _hit(client, cid, wid, die=20, mode="advantage", dice=[20, 12]), SNEAK, _k("poison"))).json()
+    await _new_turn(client, cid)
+    both = (await _damage(client, cid, await _hit(client, cid, wid, die=20, mode="advantage", dice=[20, 12]), SNEAK, _k("poison"), _k("envenom_weapons"))).json()
+    assert both["is_critical"] and len(both["option_result"]["extra_rolls"]) == len(plain["option_result"]["extra_rolls"]) + 2
+
+
+async def test_i12_homing_strikes_need_the_psychic_blade(client):
+    cid = await _sub(client, "soulknife", 9, dexterity=16)
+    r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 5, "defer_damage": True, "confirm_extra_attack": True})
+    assert r.status_code == 200, r.text
+    refused = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [_k("homing_strikes")]})
+    assert refused.status_code == 409

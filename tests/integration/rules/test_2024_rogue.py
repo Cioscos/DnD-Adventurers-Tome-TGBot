@@ -421,6 +421,13 @@ async def test_stroke_of_luck_on_a_missed_attack_makes_the_d20_a_twenty_and_so_a
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [LUCK]})
     assert r.status_code == 200, r.text
     assert r.json()["die"] == 20 and r.json()["is_critical"] is True and r.json()["forced_hit"] is True
+    assert len(r.json()["attack"]["damage_rolls"]) == 2  # M9: il danno è ritirato col critico (1d8 raddoppiato)
+
+
+async def test_i10_stroke_of_luck_covers_pure_checks_and_death_saves(client):
+    cid = await _rogue24(client, 20)
+    for roll, query in (("ability", {"ability": "strength"}), ("death_save", {})):
+        assert LUCK in await _roll_keys(client, cid, roll, **query), roll
 
 
 # ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ class ItemRecharge:
 
 def _has_use_magic_device(char) -> bool:
     from core.rules.catalog import active_features  # import locale: il catalogo importa i servizi
-    return any(spec.key == "rogue.use_magic_device" for spec, _row in active_features(char))
+    return any(spec.key == "rogue.use_magic_device" and spec.edition == "2024" for spec, _row in active_features(char))
 
 
 def attunement_limit(char) -> int:
@@ -31,9 +31,22 @@ def attunement_limit(char) -> int:
     return 4 if _has_use_magic_device(char) else 3
 
 
-def charges_spent(char) -> bool:
-    """Una proprietà che spende cariche: con Usare Dispositivi Magici si tira 1d6 e con 6 non si spende nulla."""
-    return not (_has_use_magic_device(char) and random.randint(1, 6) == 6)
+def has_use_magic_device(char) -> bool:
+    return _has_use_magic_device(char)
+
+
+def charge_die(char) -> int | None:
+    """Una spesa di cariche: con Usare Dispositivi Magici si tira 1d6 e con 6 non si spende nulla. ``None`` senza il privilegio."""
+    return random.randint(1, 6) if _has_use_magic_device(char) else None
+
+
+def charge_note(rolled: int | None) -> list[dict]:
+    """L'esito del d6 come notifica della risposta (il client le mostra tutte): vuoto senza tiro."""
+    if rolled is None:
+        return []
+    saved = rolled == 6
+    return [{"severity": "success" if saved else "info", "rule_id": None, "rule_name": "Usare Dispositivi Magici",
+             "message": f"d6 = {rolled}: " + ("nessuna carica spesa" if saved else "cariche spese")}]
 
 
 def _roll_amount(formula: str) -> int:

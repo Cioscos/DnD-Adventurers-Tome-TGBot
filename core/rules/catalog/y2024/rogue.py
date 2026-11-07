@@ -194,7 +194,7 @@ def _lacks_save(ability: str):
     return lambda ctx: ctx.roll in ("save", "concentration") and ctx.ability == ability and not (ctx.char.saving_throws or {}).get(ability)
 
 
-STROKE_2024 = replace(STROKE_OF_LUCK, after="twenty", rolls=("attack", "skill", "save"), label=_both(
+STROKE_2024 = replace(STROKE_OF_LUCK, after="twenty", rolls=("attack", "skill", "ability", "save", "death_save"), label=_both(
     "Colpo di Fortuna: il Test con d20 è fallito? Il d20 vale 20 (con un attacco è un colpo critico)",
     "Stroke of Luck: did the d20 Test fail? The d20 counts as 20 (on an attack, a critical hit)"))
 

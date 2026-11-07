@@ -339,7 +339,7 @@ export default function Inventory() {
   })
 
   const chargesMutation = useMutation({
-    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) => api.items.charges(charId, itemId, delta),
+    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) => api.items.charges(charId, itemId, delta, delta < 0),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
@@ -347,6 +347,14 @@ export default function Inventory() {
     onError: () => toast.error(t('common.action_failed')),
   })
   const itemCast = useItemCast(charId)
+  const scrollMutation = useMutation({
+    mutationFn: ({ itemId, level }: { itemId: number; level: number }) => api.items.scroll(charId, itemId, level),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.light()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
@@ -784,7 +792,7 @@ export default function Inventory() {
         <EmptyState icon={<Backpack size={32} />} title={t(pc + 'empty')} />
       )}
 
-      {!current && <AttunementSection charId={charId} items={items} />}
+      {!current && <AttunementSection charId={charId} items={items} limit={char?.computed?.attunement_limit} />}
 
       {childBoxes.length > 0 && (
         <section className="mb-4">
@@ -866,6 +874,9 @@ export default function Inventory() {
                             setPropertyPending={setPropertyMutation.isPending && setPropertyMutation.variables?.itemId === item.id}
                             onCharges={(delta) => chargesMutation.mutate({ itemId: item.id, delta })}
                             onCastSpell={(i) => itemCast.mutate({ itemId: item.id, spellIndex: i, name: itemGrantedSpells(item)[i]?.name ?? '' })}
+                            onScroll={char?.computed?.scroll_casting && item.item_type === 'consumable' && item.item_metadata?.subtype === 'scroll'
+                              ? (level) => scrollMutation.mutate({ itemId: item.id, level }) : undefined}
+                            scrollPending={scrollMutation.isPending && scrollMutation.variables?.itemId === item.id}
                             chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
                             castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                             onMove={() => setMoveTargets([item])}

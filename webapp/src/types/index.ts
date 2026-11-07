@@ -378,6 +378,10 @@ export interface ComputedStats {
   senses?: { type: string; range_ft: number }[]
   /** Piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio. */
   long_jump_bonus_ft?: number | null
+  /** Sintonie ammesse: 3, o 4 con Usare Dispositivi Magici (Furfante 2024). */
+  attunement_limit?: number
+  /** Può lanciare dalle pergamene (Usare Dispositivi Magici). */
+  scroll_casting?: boolean
 }
 
 /** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */

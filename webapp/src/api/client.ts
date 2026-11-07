@@ -964,10 +964,17 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
-    charges: (charId: number, itemId: number, delta: number) =>
+    /** `spend`: una spesa vera (non una correzione a mano), dove Usare Dispositivi Magici tira il d6. */
+    charges: (charId: number, itemId: number, delta: number, spend = false) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/charges`, {
         method: 'POST',
-        body: JSON.stringify({ delta }),
+        body: JSON.stringify({ delta, spend }),
+      }),
+    /** Lancio da pergamena (Usare Dispositivi Magici): l'esito arriva nelle notifiche della risposta. */
+    scroll: (charId: number, itemId: number, spellLevel: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/scroll`, {
+        method: 'POST',
+        body: JSON.stringify({ spell_level: spellLevel }),
       }),
     cast: (charId: number, itemId: number, spellIndex: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {

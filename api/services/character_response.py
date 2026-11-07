@@ -16,6 +16,7 @@ from api.services.choices import is_resolvable, option_catalog, pick_count, spel
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
+from api.services.item_charges import attunement_limit, has_use_magic_device
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
@@ -197,6 +198,8 @@ async def build_character_response(
         save_flat={a: modifiers_for(char, "save", ability=a).flat for a in ABILITY_NAMES},
         senses=[{"type": k, "range_ft": v} for k, v in sorted(rule_damage.senses.items())],
         long_jump_bonus_ft=rule_damage.jump_bonus_ft,
+        attunement_limit=attunement_limit(char),
+        scroll_casting=has_use_magic_device(char),
     )
     return response
 

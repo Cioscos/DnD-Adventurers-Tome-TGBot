@@ -16,6 +16,7 @@ from core.rules.catalog.y2014.rogue import (
     MAGICAL_AMBUSH_CAST, SPELL_THIEF_USE, _cunning_label, _knows_mage_hand, _proficient_skill_check,
 )
 from core.rules.catalog.y2024.rogue import CK, ED, POISON, SNEAK, _both, _cunning, _dc
+from core.rules.weapons import _arm_vex
 from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseChoice, UseToggle
 
 PSI = f"{CK}.psionic_power"
@@ -81,6 +82,7 @@ ASSASSINATE_DAMAGE = RollOptionSpec(
                 "Assassinate: first round, did Sneak Attack hit? Extra damage equal to your rogue level, of the weapon's type"))
 ENVENOM = RollOptionSpec(
     key=f"{CK}.envenom_weapons", phase="after_hit", rolls=("attack",), needs=POISON.key, extra_dice=lambda _c, _i: "2d6",
+    crit_doubles=False,  # il danno viene dal TS fallito, non dai dadi dell'attacco: il critico non lo raddoppia
     label=_both("Armi Velenose: il TS contro Veleno è fallito? 2d6 danni da veleno in più (ignorano la Resistenza al veleno)",
                 "Envenom Weapons: did the Poison save fail? 2d6 extra poison damage (ignores Poison resistance)"))
 
@@ -145,6 +147,7 @@ def _blade_used(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
 
 PSYCHIC_BLADE = RollOptionSpec(
     key=BLADE, phase="before", rolls=("attack",), available=_bare, group="psychic_blade", on_confirm=_blade_used,
+    defers_damage=True,  # apre Attacco Furtivo e le altre opzioni dopo il colpo
     unarmed_dice=lambda _c, _i: "1d6", unarmed_damage_type="psychic", finesse_unarmed=True,
     label=_both("Lama Psichica: manifesta la lama (1d6 psichico, Accurata, Lanciabile 18/36 m)",
                 "Psychic Blade: manifest the blade (1d6 psychic, Finesse, Thrown 60/120 ft)"),
@@ -152,6 +155,7 @@ PSYCHIC_BLADE = RollOptionSpec(
                                 "Psychic Blade: Vex mastery (doesn't count toward your limit); it vanishes after the attack. Finesse: use the better of Strength and Dexterity."))
 PSYCHIC_BLADE_BONUS = RollOptionSpec(
     key=BLADE_BONUS, phase="before", rolls=("attack",), slot="bonus", group="psychic_blade", on_confirm=_blade_used,
+    defers_damage=True,
     available=lambda c: _bare(c) and bool((c.turn or {}).get(BLADE_USED)),
     unarmed_dice=lambda _c, _i: "1d4", unarmed_damage_type="psychic", finesse_unarmed=True,
     label=_both("Lama Psichica, azione bonus: secondo attacco con una nuova lama (1d4 psichico), mano libera",
@@ -163,13 +167,21 @@ KNACK = RollOptionSpec(
                 "Psi-Bolstered Knack: failed a proficient check? Spend an Energy Die and add it (the die comes back if it still fails)"))
 HOMING = RollOptionSpec(
     key=f"{CK}.homing_strikes", phase="after_roll", after="add", rolls=("attack",), cost=Cost(feature_key=PSI), pay_if_success=True,
-    extra_dice=lambda c, _i: _psi_die(c), available=_bare,
+    extra_dice=lambda c, _i: _psi_die(c), available=lambda c: _bare(c) and _blade_sneak(c),  # solo con la lama psichica
     label=_both("Colpi Guidati: la Lama Psichica ha mancato? Spendi un Dado Energia e sommalo al tiro (il dado torna se manca comunque)",
                 "Homing Strikes: did the Psychic Blade miss? Spend an Energy Die and add it to the roll (the die comes back if it still misses)"))
 
 
 def _blade_sneak(ctx: RuleContext) -> bool:
     return any(k in ctx.confirmed for k in (BLADE, BLADE_BONUS))
+
+
+PSYCHIC_BLADE_VEX = RollOptionSpec(
+    key=f"{CK}.psychic_blade_vex", phase="after_hit", rolls=("attack",), once_per_turn=True, available=_blade_sneak, on_confirm=_arm_vex,
+    label=_both("Lama Psichica, maestria Vex: hai colpito? Vantaggio al prossimo attacco contro il bersaglio",
+                "Psychic Blade, Vex mastery: did you hit? Advantage on your next attack against the target"),
+    effect=lambda _c, _i: _both("Vex: vantaggio al prossimo attacco contro il bersaglio, entro la fine del tuo prossimo turno.",
+                                "Vex: advantage on your next attack against the target, by the end of your next turn."))
 
 
 def _rend(key: str, cost: Cost, it: str, en: str) -> RollOptionSpec:
@@ -209,7 +221,7 @@ SOULKNIFE = (
     _sk("psychic_blades", 3, "Lame Psichiche", "Psychic Blades", 136,
         ("Con l'azione Attacco manifesti una lama (1d6 psichico, Accurata, Lanciabile); poi con l'azione bonus una seconda lama da 1d4.",
          "With the Attack action you manifest a blade (1d6 psychic, Finesse, Thrown); then a second 1d4 blade as a bonus action."),
-        roll_options=(PSYCHIC_BLADE, PSYCHIC_BLADE_BONUS), passive=True),
+        roll_options=(PSYCHIC_BLADE, PSYCHIC_BLADE_BONUS, PSYCHIC_BLADE_VEX), passive=True),
     _sk("soul_blades", 9, "Lame dell'Anima", "Soul Blades", 136,
         ("Sblocca Colpi Guidati e Teletrasporto Psichico per le Lame Psichiche.", "Unlocks Homing Strikes and Psychic Teleportation for the Psychic Blades."),
         passive=True),
@@ -229,9 +241,9 @@ SOULKNIFE = (
          "Magic action: Invisible for 1 hour; it ends if you deal damage or force a save. One use per long rest, or an Energy Die."),
         "action", uses=Uses(table={13: 1}), restoration="long_rest",
         on_use=OnUse(slot="action", alt_spends=PSI, toggles=(_restore_toggle(),),
-                     state=StateSpec("psychic_veil", rounds=600, ends_on=("manual",), condition="invisible"),
-                     message=lambda _c, _p: _both("Invisibile per 1 ora: termina se infliggi danno a una creatura o la costringi a un TS.",
-                                                  "Invisible for 1 hour: it ends if you deal damage to a creature or force it to make a save."))),
+                     state=StateSpec("psychic_veil", rounds=600, ends_on=("attack", "cast", "manual"), condition="invisible"),
+                     message=lambda _c, _p: _both("Invisibile per 1 ora: termina se attacchi o lanci un incantesimo (per l'app ogni attacco o lancio infligge danno o impone un TS).",
+                                                  "Invisible for 1 hour: it ends when you attack or cast a spell (the app treats every attack or cast as dealing damage or forcing a save)."))),
     _sk("rend_mind", 17, "Dilaniare la Mente", "Rend Mind", 136,
         ("Con l'Attacco Furtivo di una lama: TS Saggezza o Stordito 1 minuto. Un uso per riposo lungo, o tre Dadi Energia.",
          "With a blade's Sneak Attack: Wisdom save or Stunned for 1 minute. One use per long rest, or three Energy Dice."),
@@ -248,6 +260,16 @@ FAST_HANDS_USE = OnUse(
     choices=(UseChoice("action", _both("Azione bonus", "Bonus action"), lambda _c: ["sleight_of_hand", "use_object"], _cunning_label),))
 
 
+def _keep_hiding(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    """Furtività Suprema: il tiro per colpire ha già chiuso il nascondiglio (``end_hide``); la conferma lo ripristina."""
+    turn = dict(ctx.char.turn_state or {})
+    hiding = turn.pop("hide_broken", None)
+    if hiding:
+        ctx.char.settings = {**(ctx.char.settings or {}), "hiding": hiding}
+        ctx.char.conditions = {**(ctx.char.conditions or {}), "invisible": True}
+        ctx.char.turn_state = turn
+
+
 def _score(ctx: RuleContext, ability: str) -> int:
     from core.game.stats import effective_ability_score  # import locale: stats usa il catalogo
     row = next((a for a in ctx.char.ability_scores if a.name == ability), None)
@@ -259,11 +281,12 @@ def _jump_bonus(ctx: RuleContext) -> int:
     return max(0, _score(ctx, "dexterity") - _score(ctx, "strength"))
 
 
-SUPREME_SNEAK = _cunning(
+SUPREME_SNEAK = replace(_cunning(
     "supreme_sneak", 1, "Attacco Furtivo di Nascosto (1d6): resti Invisibile da Nascondersi se finisci il turno dietro Copertura",
     "Sneak Attack from Hiding (1d6): you stay Invisible from Hide if you end the turn behind Cover",
     effect=lambda _c, _i: _both("Furtività Suprema: se hai la condizione Invisibile da Nascondersi, l'attacco non la fa terminare se finisci il turno dietro Copertura Tre Quarti o Totale.",
-                                "Supreme Sneak: if you are Invisible from the Hide action, the attack doesn't end it if you end the turn behind Three-Quarters or Total Cover."))
+                                "Supreme Sneak: if you are Invisible from the Hide action, the attack doesn't end it if you end the turn behind Three-Quarters or Total Cover.")),
+    on_confirm=_keep_hiding)
 
 _th = _sub(("Furfante", "Thief"), "thief")
 THIEF = (
@@ -281,8 +304,8 @@ THIEF = (
          "New Cunning Strike option, Sneak Attack from Hiding (1d6): from Hide's Invisible you keep the condition behind Cover."),
         roll_options=(SUPREME_SNEAK,), passive=True),
     _th("use_magic_device", 13, "Usare Dispositivi Magici", "Use Magic Device", 137,
-        ("Sintonia con 4 oggetti magici; spendendo cariche tira 1d6 e con 6 non le spendi. Pergamene: a mano, prova di Intelligenza (Arcano).",
-         "Attune to 4 magic items; when spending charges roll 1d6 and on a 6 you spend none. Scrolls: by hand, Intelligence (Arcana) check."),
+        ("Sintonia con 4 oggetti; con 1d6 a 6 non spendi cariche. Pergamene: dal 2° livello prova di Intelligenza (Arcano) CD 10 + livello, o si disintegra.",
+         "Attune to 4 items; a 6 on 1d6 spends no charge. Scrolls: from level 2 an Intelligence (Arcana) check, DC 10 + level, or it disintegrates."),
         passive=True),
     _th("thiefs_reflexes", 17, "Riflessi del Furfante", "Thief's Reflexes", 137,
         ("Nel primo round di ogni combattimento hai due turni: all'Iniziativa e all'Iniziativa meno 10. L'incontro aggiunge il secondo turno.",

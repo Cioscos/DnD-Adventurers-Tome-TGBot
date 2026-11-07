@@ -57,6 +57,8 @@ class ComputedStats(BaseModel):
     climb_speed: Optional[int] = None  # scalare concesso da un privilegio, pari alla velocità a terra (Pantera)
     swim_speed: Optional[int] = None  # nuotare concesso da un privilegio, pari alla velocità a terra (Salmone)
     senses: list[dict[str, Any]] = []  # sensi dati da un privilegio (Percezione Cieca): la scheda mostra il maggiore fra questi e i suoi
+    attunement_limit: int = 3  # sintonie ammesse: 4 con Usare Dispositivi Magici (Furfante 2024)
+    scroll_casting: bool = False  # può lanciare dalle pergamene (Usare Dispositivi Magici)
     long_jump_bonus_ft: Optional[int] = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio
 
 
