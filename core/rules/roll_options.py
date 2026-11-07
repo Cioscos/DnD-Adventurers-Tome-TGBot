@@ -208,6 +208,7 @@ class AppliedOptions:
     ability_override: str | None = None  # la prova di abilità si fa con questa caratteristica (Conoscenza Primordiale)
     unarmed_dice: str | None = None  # il Colpo Senz'Armi infligge questi dadi più Destrezza (Danno Bardico)
     unarmed_damage_type: str | None = None  # il Colpo Senz'Armi infligge questo tipo di danno (Colpi Potenziati)
+    finesse_unarmed: bool = False  # per colpire e per il danno vale la migliore fra Forza e Destrezza (Lame Psichiche)
 
     @property
     def mode(self) -> str | None:
@@ -508,6 +509,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.unarmed_dice:
             out.unarmed_dice = spec.unarmed_dice(option.ctx, given)
         out.unarmed_damage_type = spec.unarmed_damage_type or out.unarmed_damage_type
+        out.finesse_unarmed = out.finesse_unarmed or spec.finesse_unarmed
         if spec.multiplier is not None:
             out.multiplier *= spec.multiplier
         out.auto_fail = out.auto_fail or spec.auto_fail

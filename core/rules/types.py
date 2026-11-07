@@ -510,6 +510,9 @@ class RollOptionSpec:
     unarmed_dice: "Callable[[RuleContext, dict], str] | None" = None
     # Con ``attack`` senz'armi: tipo di danno scelto al posto di quello normale (Colpi Potenziati del Monaco 2024: Forza)
     unarmed_damage_type: str | None = None
+    # Con ``attack`` senz'armi e ``unarmed_dice``: arma Accurata, la caratteristica è la migliore fra Forza e Destrezza per
+    # colpire e per il danno (Lame Psichiche del Coltello dell'Anima)
+    finesse_unarmed: bool = False
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):

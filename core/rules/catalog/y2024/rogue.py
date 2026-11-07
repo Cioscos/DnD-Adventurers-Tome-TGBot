@@ -1,5 +1,5 @@
 """Ladro 2024, parte A (base della classe). Le sottoclassi (Mistificatore Arcano, Assassino, Coltello dell'Anima, Furfante) sono la
-parte B, in ``rogue_subclasses.py``: le loro righe vanno in ``SUBCLASS_ROWS`` con ``subclass=`` (arcane_trickster, assassin, soul_knife, thief).
+parte B, in ``rogue_subclasses.py``: le loro righe vanno in ``SUBCLASS_ROWS`` con ``subclass=`` (arcane_trickster, assassin, soulknife, thief).
 
 Valori dalla scheda ``docs/superpowers/rules/2024/classes/rogue.md``; i testi sono nostri, mai quelli del manuale.
 Per la parte B: ``SNEAK``/``POISON``/``TRIP``/``CUNNING_OPTIONS`` sono le opzioni del Colpo Astuto (gruppo ``cunning_strike``, costo in
@@ -14,7 +14,7 @@ from core.rules.catalog._common import INCAPACITATING, feature, state_on
 from core.rules.catalog.y2014.cleric import _languages_owned, language_label
 from core.rules.catalog.y2014.rogue import (
     CUNNING_BASE, EXPERTISE, EVASION_FAILED, EVASION_SAVE, EVASION_SUCCESS, SNEAK_ATTACK, STROKE_OF_LUCK, UNCANNY_DODGE,
-    _cunning_label, _dex_mod, _permanent_note, _proficient_skill_check,
+    _cunning_label, _dex_mod, _knows_mage_hand, _not_at_disadvantage, _permanent_note, _proficient_skill_check,
 )
 from core.rules.catalog.y2024.barbarian import _half_speed, _m
 from core.rules.catalog.y2024.ranger import _new_languages
@@ -38,7 +38,16 @@ def _both(it: str, en: str) -> dict[str, str]:
 # Attacco Furtivo
 # ---------------------------------------------------------------------------
 
-SNEAK_2024 = replace(SNEAK_ATTACK, label=_both(
+BLADE_KEYS = (f"{CK}.psychic_blade", f"{CK}.psychic_blade_bonus")
+
+
+def _sneak_available(ctx: RuleContext) -> bool:
+    """Arma Accurata o a distanza, oppure una Lama Psichica (Coltello dell'Anima: colpo senz'armi confermato nel primo tempo)."""
+    blade = ctx.item is None and any(k in ctx.confirmed for k in BLADE_KEYS)
+    return (SNEAK_ATTACK.available(ctx) or blade) and _not_at_disadvantage(ctx)
+
+
+SNEAK_2024 = replace(SNEAK_ATTACK, available=_sneak_available, label=_both(
     "Attacco Furtivo: hai vantaggio sul tiro, o un alleato non incapacitato è entro 1,5 m dal bersaglio e non hai svantaggio? Danni extra (una volta per turno)",
     "Sneak Attack: do you have advantage on the roll, or is an ally who is not incapacitated within 5 ft of the target and you have no disadvantage? Extra damage (once per turn)"))
 
@@ -52,9 +61,13 @@ CUNNING_ACTION_USE = OnUse(
     choices=(UseChoice("action", _both("Azione bonus", "Bonus action"), lambda _c: list(CUNNING_BASE), _cunning_label),))
 
 
-def steady_aim_keeps_speed(_ctx: RuleContext) -> bool:
-    """Punto di estensione della parte B: l'Assassino al 9° livello non perde la Velocità con la Mira Costante."""
-    return False
+def _subclass_from(ctx: RuleContext, key: str, level: int) -> bool:
+    return ctx.class_row is not None and ctx.class_row.subclass_key == key and ctx.class_level >= level
+
+
+def steady_aim_keeps_speed(ctx: RuleContext) -> bool:
+    """Mira Errante (Assassino 9): la Mira Costante non porta la Velocità a 0."""
+    return _subclass_from(ctx, "assassin", 9)
 
 
 def _steady_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
@@ -85,7 +98,8 @@ def _effects_allowed(ctx: RuleContext) -> int:
 
 
 def _has_poisoners_kit(ctx: RuleContext) -> bool:
-    return any(w in (i.name or "").lower() for i in ctx.char.items or [] for w in ("avvelenatore", "poisoner"))
+    """L'Assassino 3 riceve il Kit da Avvelenatore con Strumenti dell'Assassino: nessun oggetto da aggiungere a mano."""
+    return _subclass_from(ctx, "assassin", 3) or any(w in (i.name or "").lower() for i in ctx.char.items or [] for w in ("avvelenatore", "poisoner"))
 
 
 def _save_text(name: tuple[str, str], ability: tuple[str, str], outcome: tuple[str, str]):
@@ -113,12 +127,24 @@ POISON = _cunning(
                       ("Se fallisce è Avvelenato per 1 minuto e ripete il TS alla fine di ogni suo turno.",
                        "On a failure it is Poisoned for 1 minute and repeats the save at the end of each of its turns.")),
     target_effect=_save_effect("poisoned", "constitution", rounds=10, repeat_save="end"))
+_TRIP_TEXT = _save_text(("Sgambetto", "Trip"), ("Destrezza", "Dexterity"),
+                        ("Vale solo per un bersaglio Grande o più piccolo; se fallisce cade Prono.",
+                         "Only for a Large or smaller target; on a failure it falls Prone."))
+
+
+def _trip_effect(ctx: RuleContext, inputs: dict) -> dict[str, str]:
+    """Ingannatore Versatile (Mistificatore Arcano 13): con Mano Magica il TS vale anche per una seconda creatura."""
+    text = _TRIP_TEXT(ctx, inputs)
+    if not (_subclass_from(ctx, "arcane_trickster", 13) and _knows_mage_hand(ctx)):
+        return text
+    return _both(f"{text['it']} Ingannatore Versatile: anche una seconda creatura entro 1,5 m dalla mano spettrale fa lo stesso TS, con la stessa CD.",
+                 f"{text['en']} Versatile Trickster: a second creature within 5 ft of the spectral hand makes the same save, same DC.")
+
+
 TRIP = _cunning(
     "trip", 1, "Sgambetto (1d6): il bersaglio Grande o più piccolo fa un TS Destrezza o cade Prono",
     "Trip (1d6): a Large or smaller target makes a Dexterity save or falls Prone",
-    effect=_save_text(("Sgambetto", "Trip"), ("Destrezza", "Dexterity"),
-                      ("Vale solo per un bersaglio Grande o più piccolo; se fallisce cade Prono.",
-                       "Only for a Large or smaller target; on a failure it falls Prone.")),
+    effect=_trip_effect,
     target_effect=_save_effect("prone", "dexterity"))
 
 

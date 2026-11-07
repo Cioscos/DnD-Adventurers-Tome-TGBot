@@ -47,7 +47,7 @@ from api.routers._helpers import (
 from api.services.durations import start_concentration
 from api.services.condition_effects import release_concentration_effects
 from api.services import weapon_bond
-from api.services.item_charges import set_item_charges
+from api.services.item_charges import attunement_limit, charges_spent, set_item_charges
 from core.game.actions import parse_duration_rounds
 from api.services.equipment import apply_equip_ac, slot_allowed_for_type, swap_slot_occupant
 from api.services.containers import move_items, reparent_contents
@@ -186,10 +186,10 @@ def is_container_meta(meta: dict | None) -> bool:
 
 
 def _check_attunement_limit(char, item, new_meta: dict | None) -> None:
-    """409 when this write newly attunes an item and the character already has 3."""
+    """409 when this write newly attunes an item and the character already has 3 (4 with Use Magic Device)."""
     if not (new_meta or {}).get("attuned") or (item is not None and is_attuned(item)):
         return
-    if sum(1 for i in char.items if i is not item and is_attuned(i)) >= 3:
+    if sum(1 for i in char.items if i is not item and is_attuned(i)) >= attunement_limit(char):
         raise HTTPException(status_code=409, detail="attunement_limit")
 
 
@@ -1000,6 +1000,10 @@ async def attack_unarmed(
     applied = modifiers_for(char, "attack", ability=ability, attack_mode=mode)
     opts = use_options(session, char, "attack", body, ability=ability, attack_mode=mode, grip="one")
     merge_options(applied, opts)
+    if opts.finesse_unarmed:  # Lama Psichica: Accurata, la migliore fra Forza e Destrezza anche per il danno
+        str_mod, dex_mod = roll_ability_mod(char, "strength"), roll_ability_mod(char, "dexterity")
+        ability_mod, ability = (dex_mod, "dexterity") if dex_mod >= str_mod else (str_mod, "strength")
+        damage_mod, damage_ability = ability_mod, ability
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
     to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack") + applied.flat + opts.bonus
@@ -1015,7 +1019,9 @@ async def attack_unarmed(
         damage_total = 0
     else:
         if opts.unarmed_dice:  # Danno Bardico: il dado di Ispirazione più Destrezza, al posto del danno normale
-            damage_dice_str, damage_mod, damage_ability = opts.unarmed_dice, roll_ability_mod(char, "dexterity"), "dexterity"
+            damage_dice_str = opts.unarmed_dice
+            if not opts.finesse_unarmed:
+                damage_mod, damage_ability = roll_ability_mod(char, "dexterity"), "dexterity"
         damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, damage_ability, damage_mod, 0, is_critical, mode)
         option_rolls, option_total, damage_total = _option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
@@ -1109,7 +1115,8 @@ async def adjust_item_charges(
     if not isinstance(ch, dict):
         raise HTTPException(status_code=409, detail="no_charges")
     old = int(ch.get("current") or 0)
-    new = max(0, min(int(ch.get("max") or 0), old + body.delta))
+    delta = body.delta + (1 if body.delta < 0 and not charges_spent(char) else 0)  # Usare Dispositivi Magici: con 6 su 1d6 resta
+    new = max(0, min(int(ch.get("max") or 0), old + delta))
     set_item_charges(item, new)
     _add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}")
     await session.flush()
@@ -1139,7 +1146,7 @@ async def cast_from_item(
     current = int(ch.get("current") or 0) if ch else 0
     if cost > current:
         raise HTTPException(status_code=409, detail="not_enough_charges")
-    if cost:
+    if cost and charges_spent(char):
         set_item_charges(item, current - cost)
     end_on_action(char, "cast")  # come ogni lancio: il Manto di Ombre finisce
 

@@ -21,6 +21,21 @@ class ItemRecharge:
     formula: str
 
 
+def _has_use_magic_device(char) -> bool:
+    from core.rules.catalog import active_features  # import locale: il catalogo importa i servizi
+    return any(spec.key == "rogue.use_magic_device" for spec, _row in active_features(char))
+
+
+def attunement_limit(char) -> int:
+    """Oggetti con sintonia: 3, e 4 con Usare Dispositivi Magici (Furfante 2024, 13°)."""
+    return 4 if _has_use_magic_device(char) else 3
+
+
+def charges_spent(char) -> bool:
+    """Una proprietà che spende cariche: con Usare Dispositivi Magici si tira 1d6 e con 6 non si spende nulla."""
+    return not (_has_use_magic_device(char) and random.randint(1, 6) == 6)
+
+
 def _roll_amount(formula: str) -> int:
     m = _DICE.match(formula)
     if not m:
