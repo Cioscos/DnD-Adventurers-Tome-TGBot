@@ -7,7 +7,7 @@ from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.catalog.y2024.druid import CON_IN_FORM
 from core.rules.types import RuleContext
 from tests.integration.rules.test_2014_bard import _ability, _full, _roll_keys, _states, _use
-from tests.integration.rules.test_2014_druid import _activate, _beast, _form
+from tests.integration.rules.test_2014_druid import _activate, _beast, _form, _turn
 from tests.integration.rules.test_2024_druid import _druid24, _new_turn, _next_turn, _resolve
 from tests.integration.rules.test_2024_druid_circles import _circle, _turn_flag
 
@@ -22,7 +22,7 @@ async def _bite(client, cid, cr=0.5) -> int:
 
 
 async def _hit(client, cid, form, *options):
-    return await client.post(f"/characters/{cid}/companions/{form}/attack", json={"action_index": 0, "die": 15, "options": list(options)})
+    return await client.post(f"/characters/{cid}/companions/{form}/attack", json={"action_index": 0, "mode": "normal", "dice": [15], "options": list(options)})
 
 
 async def _keys(client, cid) -> set[str]:
@@ -228,3 +228,62 @@ def test_m2_ray_of_sickness_scales_and_conjure_animals_has_its_2024_damage():
     assert GRANTED_SPELLS["ray-of-sickness"].higher_levels_dice == "1d8"
     conjure = GRANTED_SPELLS["conjure-animals"]
     assert (conjure.attack_save, conjure.damage_dice, conjure.damage_type, conjure.higher_levels_dice) == ("SAVE", "3d10", "slashing", "1d10")
+
+
+# Giro 2: N1 (un colpo mancato non brucia l'opzione), N2 (l'attacco di un compagno non chiude gli stati del druido) ---------
+
+async def _swing(client, cid, form, die, *options):
+    return await client.post(f"/characters/{cid}/companions/{form}/attack", json={"action_index": 0, "mode": "normal", "dice": [die], "options": list(options)})
+
+
+async def _refund(client, cid, succeeded):
+    return await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": succeeded})
+
+
+async def test_n1_missed_form_attack_gives_the_once_per_turn_back(client):
+    cid = await _circle(client, "moon", 14, wisdom=16)
+    form = await _bite(client, cid, 4)
+    r = await _swing(client, cid, form, 5, "druid.lunar_radiance")
+    assert r.status_code == 200, r.text
+    assert (await _turn(client, cid))["last_roll"]["refundable"]  # il giocatore dice l'esito dopo aver visto il d20
+    assert (await _refund(client, cid, False)).status_code == 200
+    assert (await _swing(client, cid, form, 15, "druid.lunar_radiance")).status_code == 200  # il secondo attacco la ha ancora
+
+
+async def test_n1_hit_form_attack_keeps_the_spend_once(client):
+    cid = await _circle(client, "moon", 14, wisdom=16)
+    form = await _bite(client, cid, 4)
+    assert (await _swing(client, cid, form, 15, "druid.lunar_radiance")).status_code == 200
+    assert (await _refund(client, cid, True)).status_code == 200
+    assert (await _swing(client, cid, form, 15, "druid.lunar_radiance")).status_code == 409
+
+
+async def test_n1_natural_one_refunds_by_itself_and_critical_asks_nothing(client):
+    cid = await _circle(client, "moon", 14, wisdom=16)
+    form = await _bite(client, cid, 4)
+    r = await _swing(client, cid, form, 1, "druid.lunar_radiance")
+    assert r.json()["damage_total"] == 0 and not ((await _turn(client, cid)).get("last_roll") or {}).get("refundable")
+    r = await _swing(client, cid, form, 20, "druid.lunar_radiance")  # il 1 è stato rimborsato: ora il critico la spende
+    assert r.status_code == 200 and not ((await _turn(client, cid)).get("last_roll") or {}).get("refundable")
+    assert (await _swing(client, cid, form, 15, "druid.lunar_radiance")).status_code == 409
+
+
+async def test_n1_primal_strike_form_misses_give_it_back_too(client):
+    cid = await _druid24(client, 7)
+    await _resolve(client, cid, "elemental_fury", ["primal_strike"])
+    form = await _bite(client, cid)
+    assert (await _swing(client, cid, form, 5, "druid.primal_strike_fire_form")).status_code == 200
+    assert (await _refund(client, cid, False)).status_code == 200
+    assert (await _swing(client, cid, form, 15, "druid.primal_strike_cold_form")).status_code == 200
+
+
+async def test_n2_a_familiar_attack_does_not_end_moonlight_step(client):
+    cid = await _circle(client, "moon", 10, wisdom=16)
+    form = await _bite(client, cid, 3)
+    assert (await _use(client, cid, "druid.moonlight_step")).status_code == 200
+    r = await client.post(f"/characters/{cid}/companions", json={
+        "kind": "familiar", "name": "Gufo", "statblock": {"actions": BITE}, "max_hp": 5, "armor_class": 11})
+    owl = r.json()["id"]
+    assert (await _swing(client, cid, owl, 12)).status_code == 200
+    assert any(s["key"] == "moonlight_step" for s in await _states(client, cid))
+    assert (await _swing(client, cid, form, 12)).json()["mode"] == "advantage"

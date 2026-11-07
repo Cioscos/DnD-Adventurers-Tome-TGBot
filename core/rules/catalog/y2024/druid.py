@@ -167,7 +167,7 @@ def _primal_strike_form(kind: str) -> RollOptionSpec:
     it, en = _ENERGIES[kind]
     return RollOptionSpec(
         key=f"{CK}.primal_strike_{kind}_form", phase="before", rolls=("attack",), once_per_turn=True, group="primal_strike",
-        extra_dice=_strike_dice, available=_form_attack,
+        extra_dice=_strike_dice, available=_form_attack, pay_if_success=True,  # il giocatore dice se ha colpito: se no, torna
         label={"it": f"Colpo Primordiale: danni da {it} in più", "en": f"Primal Strike: extra {en} damage"})
 
 
@@ -398,6 +398,7 @@ RADIANT_MOON = RollOptionSpec(
     effect=lambda _c, _i: {"it": "Il danno di questo colpo è Radioso.", "en": "This hit's damage is Radiant."})
 LUNAR_RADIANCE = RollOptionSpec(
     key=f"{CK}.lunar_radiance", phase="before", rolls=("attack",), once_per_turn=True, extra_dice=lambda _c, _i: "2d10", available=_form_attack,
+    pay_if_success=True,
     label={"it": "Radianza Lunare Migliorata: 2d10 danni Radiosi in più (una volta per turno)",
            "en": "Improved Lunar Radiance: 2d10 extra Radiant damage (once per turn)"})
 MOONLIGHT_STEP = f"{CK}.moonlight_step"

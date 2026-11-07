@@ -507,8 +507,8 @@ class RollOptionSpec:
             raise ValueError("after è obbligatorio in after_roll e vale solo lì")
         if self.phase == "after_roll" and self.requires_input:
             raise ValueError("after_roll è un pulsante nel modale di esito: non chiede input")
-        if self.pay_if_success and self.phase != "after_roll":
-            raise ValueError("pay_if_success vale solo dopo il tiro")
+        if self.pay_if_success and self.phase not in ("after_roll", "before"):
+            raise ValueError("pay_if_success vale solo prima o dopo il tiro")
         if self.replace_die and (self.phase != "before" or self.requires_input):
             raise ValueError("replace_die vale solo prima del tiro e il suo input è il dado salvato")
         if self.slot is not None and self.slot not in TURN_FLAGS:

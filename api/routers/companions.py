@@ -23,7 +23,8 @@ from api.routers.items import _option_damage
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
-from api.services.rules_options import merge_options, option_result, use_options
+from api.services.rules_options import merge_options, option_result, remember_roll, use_options
+from core.rules.roll_options import refund_spent
 from api.services.rules_states import end_on_action
 from api.services.rules_turn import forgo_attack, get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import (
@@ -474,7 +475,8 @@ async def companion_attack(
     bonus = int(action["attack_bonus"]) + applied.flat + opts.bonus + (stats.attack_bonus if stats else 0)
     is_fumble = outcome.kept == 1
     is_critical = outcome.kept >= applied.crit_min or (opts.force_crit and not is_fumble)
-    end_on_action(char, "attack")  # il Vantaggio di Passo Lunare vale per il prossimo tiro per colpire, anche della forma
+    if in_form:  # solo la forma è il druido che attacca: un famiglio o un compagno non chiude gli stati del personaggio
+        end_on_action(char, "attack")  # il Vantaggio di Passo Lunare vale per il prossimo tiro per colpire, anche della forma
 
     rolls: list[int] = []
     flat = 0
@@ -515,6 +517,15 @@ async def companion_attack(
         is_magical=in_form and any(spec.key == "druid.primal_strike" for spec, _row in active_features(char)),
         option_result=option_result(opts, option_rolls, option_total),
     )
+    if opts.refundable:  # Colpo Primordiale / Radianza Lunare: valgono se il colpo va a segno, lo dice il giocatore
+        if is_fumble:
+            refund_spent(char, [t for paid in opts.refundable.values() for t in paid])
+        elif not is_critical:
+            remember_roll(char, "attack", opts, {
+                "die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "bonus": bonus,
+                "total": result.to_hit_total, "notes": applied.notes, "auto_fail": False, "description": "",
+                "option_result": result.option_result.model_dump(mode="json") if result.option_result else None})
+            char.turn_state = {**get_turn(char), "last_roll": {**get_turn(char)["last_roll"], "refundable": opts.refundable}}
     turn = get_turn(char)  # i dadi di questo colpo si possono ritirare, come per l'arma
     turn.pop("last_damage", None)
     if m and (rolls or opts.rolled_dice) and not is_fumble:
