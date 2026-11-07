@@ -163,6 +163,7 @@ export default function Turn() {
       // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
       if (res?.given != null) toast.info(t('character.turn.use_given', { n: res.given }))
       if (res?.temp_hp != null) toast.info(t('character.turn.use_temp_hp', { n: res.temp_hp }))
+      if (res?.attack) toast.info(t('character.turn.use_attack', { die: res.attack.die, bonus: `${res.attack.bonus >= 0 ? '+' : ''}${res.attack.bonus}`, total: res.attack.total }), { description: res.attack.is_fumble ? t('character.dice.fumble_banner') : res.attack.is_critical ? t('character.dice.critical_banner') : undefined })
       if (res?.message) toast.info(res.message[i18n.language?.startsWith('en') ? 'en' : 'it'])
       for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
     },
@@ -454,6 +455,7 @@ export default function Turn() {
 
   const section = (title: string, entries: TurnEntry[], bucket: Bucket) => {
     const isUsed = used[bucket]
+    const freeNow = isUsed ? entries.filter((e) => e.kind === 'ability' && char?.abilities.some((a) => String(a.id) === e.id && a.free_use)) : []
     return (
       <section>
         <div className="flex items-center justify-between gap-2 border-b border-dnd-border pb-1 pl-1">
@@ -472,8 +474,9 @@ export default function Turn() {
             {isUsed ? t('character.turn.used') : t('character.turn.mark_used')}
           </Pressable>
         </div>
-        {/* Una sezione usata si richiude: in vista resta solo ciò che si può ancora fare. */}
+        {/* Una sezione usata si richiude: in vista resta solo ciò che si può ancora fare, anche un uso gratuito (Arciere). */}
         {!isUsed && sectionBody(title, entries)}
+        {isUsed && freeNow.length > 0 && sectionBody(title, freeNow)}
       </section>
     )
   }

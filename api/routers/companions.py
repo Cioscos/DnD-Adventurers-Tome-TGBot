@@ -24,6 +24,7 @@ from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, use_options
+from api.services.rules_states import end_on_action
 from api.services.rules_turn import forgo_attack, get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import (
     deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
@@ -465,13 +466,15 @@ async def companion_attack(
     if in_form:
         refuse_if_incapacitated(char)
         applied = modifiers_for(char, "attack", ability="strength")
-    opts = use_options(session, char, "attack", body)
+    # attack_mode="form": le opzioni della forma (Colpo Primordiale, Radianza Lunare) si scelgono prima del tiro
+    opts = use_options(session, char, "attack", body, **({"attack_mode": "form"} if in_form else {}))
     merge_options(applied, opts)
     outcome = resolve_applied(body.mode, body.dice, None, applied)
     stats = companion_stats(char, comp)
     bonus = int(action["attack_bonus"]) + applied.flat + opts.bonus + (stats.attack_bonus if stats else 0)
     is_fumble = outcome.kept == 1
     is_critical = outcome.kept >= applied.crit_min or (opts.force_crit and not is_fumble)
+    end_on_action(char, "attack")  # il Vantaggio di Passo Lunare vale per il prossimo tiro per colpire, anche della forma
 
     rolls: list[int] = []
     flat = 0
@@ -508,7 +511,7 @@ async def companion_attack(
     result = CompanionAttackResult(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
         dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,
-        damage_total=total, damage_type=action.get("damage_type"),
+        damage_total=total, damage_type="radiant" if "druid.radiant_moon" in opts.keys else action.get("damage_type"),
         is_magical=in_form and any(spec.key == "druid.primal_strike" for spec, _row in active_features(char)),
         option_result=option_result(opts, option_rolls, option_total),
     )

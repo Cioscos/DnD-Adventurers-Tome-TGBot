@@ -119,14 +119,14 @@ async def test_lands_aid_spends_a_wild_shape_use_and_scales_the_dice(client, mon
     monkeypatch.setattr("core.rules.catalog.y2024.druid.random.randint", lambda a, b: 3)
     for level, dice in ((3, 2), (10, 3), (14, 4)):
         cid = await _circle(client, "land", level, wisdom=16)
-        r = await _use(client, cid, "druid.lands_aid")
+        r = await _use(client, cid, "druid.lands_aid", params={"mode": "self"})
         assert r.status_code == 200, r.text
         assert r.json()["rolls"] == [3] * dice
         assert (await _ability(client, cid, WILD))["uses"] == (await _ability(client, cid, WILD))["max_uses"] - 1
         state = next(s for s in await _states(client, cid) if s["key"] == "lands_aid")
         assert state["data"]["save"] == "constitution" and state["data"]["damage"] == 3 * dice
-        assert state["data"]["damage_type"] == "necrotic" and state["data"]["dc"] == 8 + 2 + 3 or level > 3
-        assert state["data"]["heal"] == 3 * dice
+        assert state["data"]["damage_type"] == "necrotic" and state["data"]["dc"] == 8 + {3: 2, 10: 4, 14: 5}[level] + 3
+        assert "heal" not in state["data"]  # la cura si applica subito, non resta nello stato
 
 
 async def test_natural_recovery_returns_slots_after_a_short_rest_from_level_6(client):
@@ -200,7 +200,7 @@ async def test_improved_circle_forms_offers_radiant_and_adds_wisdom_to_constitut
     cid = await _circle(client, "moon", 6, wisdom=16, constitution=10)
     assert "druid.radiant_moon" not in await _roll_keys(client, cid, "attack")
     await _shape(client, cid)
-    assert "druid.radiant_moon" in await _roll_keys(client, cid, "attack", phase="after_hit")
+    assert "druid.radiant_moon" in await _roll_keys(client, cid, "attack", attack_mode="form")
     assert (await _full(client, cid))["computed"]["save_flat"]["constitution"] == 3
     low = await _circle(client, "moon", 5, wisdom=16, constitution=10)
     await _shape(client, low)
@@ -231,10 +231,10 @@ async def test_moonlight_step_minimum_is_one_use(client):
 
 async def test_lunar_form_adds_2d10_radiant_once_per_turn_to_a_form_attack(client):
     cid = await _circle(client, "moon", 14, wisdom=16)
-    assert "druid.lunar_radiance" not in await _roll_keys(client, cid, "attack", phase="after_hit")
+    assert "druid.lunar_radiance" not in await _roll_keys(client, cid, "attack", attack_mode="form")
     await _shape(client, cid)
-    assert "druid.lunar_radiance" in await _roll_keys(client, cid, "attack", phase="after_hit")
-    assert "druid.lunar_radiance" not in await _roll_keys(client, await _circle(client, "moon", 13), "attack", phase="after_hit")
+    assert "druid.lunar_radiance" in await _roll_keys(client, cid, "attack", attack_mode="form")
+    assert "druid.lunar_radiance" not in await _roll_keys(client, await _circle(client, "moon", 13), "attack", attack_mode="form")
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +367,7 @@ async def test_dragon_flies_from_level_10_and_full_of_stars_resists_physical_dam
     assert not {"bludgeoning", "piercing", "slashing"} & set((await _full(client, cid))["computed"]["resistances"])
     await _use(client, cid, "druid.starry_form", params={"constellation": "dragon"})
     computed = (await _full(client, cid))["computed"]
-    assert {"bludgeoning", "piercing", "slashing"} <= set(computed["resistances"]) and computed["fly_speed"] == computed["speed"]
+    assert {"bludgeoning", "piercing", "slashing"} <= set(computed["resistances"]) and computed["fly_speed"] == 20  # 6 m, non la velocità a terra
     low = await _circle(client, "stars", 9, wisdom=16)
     await _use(client, low, "druid.starry_form", params={"constellation": "dragon"})
     assert not (await _full(client, low))["computed"]["fly_speed"]

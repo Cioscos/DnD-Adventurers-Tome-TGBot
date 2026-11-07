@@ -205,20 +205,25 @@ def spell_range_override(char: Any, spell: Any) -> str | None:
     return fixed if fixed is not None else _cantrip_range_bonus(char, spell)
 
 
-_METERS = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*m(?![a-z])", re.IGNORECASE)
+_RANGE = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(m|ft)(?![a-z])(.*)$", re.IGNORECASE | re.DOTALL)
 
 
 def _cantrip_range_bonus(char: Any, spell: Any) -> str | None:
-    """Incantesimi Potenti (Druido 2024, 15°): un trucchetto della classe con gittata di 3 m o più guadagna 90 m."""
+    """Incantesimi Potenti (Druido 2024, 15°): un trucchetto della classe con gittata di 3 m (10 ft) o più guadagna 90 m (300 ft).
+    Vale con le due unità e conserva ciò che segue la gittata (``18 m (sfera di 6 m)``)."""
     if getattr(spell, "level", None) != 0:
         return None
-    found = _METERS.match(getattr(spell, "range_area", None) or "")
-    if not found or (meters := float(found.group(1).replace(",", "."))) < 3:
+    found = _RANGE.match(getattr(spell, "range_area", None) or "")
+    if not found:
+        return None
+    amount, unit = float(found.group(1).replace(",", ".")), found.group(2).lower()
+    if amount < (3 if unit == "m" else 10):
         return None
     for spec, row in active_features(char):
         if spec.cantrip_range_bonus and (getattr(spell, "class_id", None) == row.id
                                          or (getattr(spell, "class_id", None) is None and len(char.classes) == 1)):
-            return f"{meters + spec.cantrip_range_bonus:g} m"
+            bonus = spec.cantrip_range_bonus if unit == "m" else spec.cantrip_range_bonus * 10 // 3
+            return f"{amount + bonus:g} {unit}{found.group(3)}"
     return None
 
 

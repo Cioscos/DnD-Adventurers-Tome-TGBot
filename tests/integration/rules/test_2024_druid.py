@@ -353,14 +353,14 @@ async def test_wild_resurgence_gives_a_use_for_a_slot_only_with_no_uses_left_and
 
 async def test_wild_resurgence_turns_a_use_into_a_first_level_slot_once_per_long_rest(client):
     cid = await _druid24(client, 5)
-    assert (await _use(client, cid, RESURGENCE_SLOT)).status_code == 409  # nessuno slot speso da riavere
     await _shape(client, cid)
     await _shape(client, cid)
     assert (await _use(client, cid, RESURGENCE, params={"slot_level": "1"})).status_code == 200
     r = await _use(client, cid, RESURGENCE_SLOT)
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, WILD))["uses"] == 0
-    assert {s["level"]: s["used"] for s in (await _full(client, cid))["spell_slots"]}[1] == 0
+    first = next(s for s in (await _full(client, cid))["spell_slots"] if s["level"] == 1)
+    assert (first["total"], first["used"]) == (5, 1)  # lo slot speso dalla Rigenerazione resta speso, ne arriva uno nuovo
     await _new_turn(client, cid)
     assert (await _use(client, cid, RESURGENCE_SLOT)).status_code == 409  # serve un riposo lungo
     await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})
@@ -507,8 +507,8 @@ async def test_a_druid_level_added_as_a_multiclass_gets_the_level_1_rows_and_the
     assert r.status_code in (200, 201), r.text
     full = await _full(client, cid)
     assert _choice(full, "primal_order") is not None
-    assert "druid.druidic" in await _keys_of(client, cid) or any(s["srd_index"] == "speak-with-animals"
-                                                                  for s in (await client.get(f"/characters/{cid}/spells")).json())
+    assert "druid.druidic" in await _keys_of(client, cid)
+    assert any(s["srd_index"] == "speak-with-animals" for s in (await client.get(f"/characters/{cid}/spells")).json())
 
 
 async def test_a_2014_druid_that_becomes_2024_gets_the_2024_rows_and_keeps_its_spent_uses(client):

@@ -118,6 +118,10 @@ async def build_character_response(
         if on_use and on_use.cost_by and owner is not None and any(s.get("feature_key") == ab.feature_key for s in char.active_states or []):
             free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.free_use = on_use.cost_by(free_ctx, {}) == 0 and (on_use.available is None or bool(on_use.available(free_ctx)))
+        # Uno slot di turno che dipende dal momento (Arciere): gratuito ora se non ne chiede nessuno, anche con l'azione bonus spesa
+        elif on_use and on_use.slot_by and owner is not None:
+            free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
+            ab.free_use = on_use.slot_by(free_ctx, {}) is None and (on_use.available is None or bool(on_use.available(free_ctx)))
         # Un uso che spende un'altra riserva non tocca il contatore della riga (Magia Ammaliante: lo ripristina spendendo Ispirazione)
         elif on_use and on_use.spends and ab.max_uses is not None and owner is not None:
             free_ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)

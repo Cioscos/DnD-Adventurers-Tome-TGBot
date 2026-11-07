@@ -470,9 +470,10 @@ for _spell, _comp in (
         (GrantedSpell("sleep", {"it": "Sonno", "en": "Sleep"}, 1, "1 azione", "18 m", "Concentrazione, fino a 1 minuto",
                       is_concentration=True, attack_save="SAVE"), "V, S, M"),
         (GrantedSpell("ray-of-sickness", {"it": "Raggio di infermità", "en": "Ray of Sickness"}, 1, "1 azione", "18 m", "Istantanea",
-                      attack_save="ATK", damage_dice="2d8", damage_type="poison"), "V, S"),
+                      attack_save="ATK", damage_dice="2d8", damage_type="poison", higher_levels_dice="1d8"), "V, S"),
         (GrantedSpell("conjure-animals", {"it": "Evocare animali", "en": "Conjure Animals"}, 3, "1 azione", "18 m",
-                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S"),
+                      "Concentrazione, fino a 10 minuti", is_concentration=True, attack_save="SAVE", damage_dice="3d10",
+                      damage_type="slashing", higher_levels_dice="1d10"), "V, S"),
         (GrantedSpell("fount-of-moonlight", {"it": "Fonte di luce lunare", "en": "Fount of Moonlight"}, 4, "1 azione", "Personale",
                       "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S")):
     GRANTED_SPELLS[_spell.key] = _spell

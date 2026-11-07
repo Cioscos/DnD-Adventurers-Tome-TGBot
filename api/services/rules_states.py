@@ -257,6 +257,21 @@ class UseResult:
     received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): ``{name, healed}``
     temp_hp: int | None = None  # PF temporanei che il privilegio ha dato a chi lo usa (il maggiore fra attuali e nuovi)
     message: dict | None = None  # esito scritto dal privilegio (``OnUse.message``), nelle due lingue
+    attack: dict | None = None  # il tiro per colpire di ``OnUse.spell_attack``: die, bonus, total, mode, is_critical, is_fumble
+
+
+def _feature_attack(char, ability: str) -> dict:
+    """Attacco con incantesimo a distanza di un privilegio: d20 con i modificatori dell'attacco, competenza e caratteristica."""
+    from api.services.d20 import d20_records, resolve_applied  # import locale
+    from core.game.stats import effective_ability_mod
+    from core.rules.modifiers import modifiers_for
+    applied = modifiers_for(char, "attack", ability=ability, attack_mode="ranged")
+    outcome = resolve_applied("normal", None, None, applied)
+    record_dice(char, d20_records(outcome))
+    bonus = char.proficiency_bonus + effective_ability_mod(char, ability) + applied.flat
+    fumble = outcome.kept == 1
+    return {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "bonus": bonus, "total": outcome.kept + bonus,
+            "is_fumble": fumble, "is_critical": outcome.kept >= applied.crit_min and not fumble, "notes": applied.notes}
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -358,6 +373,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     else:
         formula = on_use.rolls(ctx) if callable(on_use.rolls) else on_use.rolls
     dice = parse_dice(formula) if formula else None
+    if on_use.spell_attack:  # il d20 prima dei dadi: un mancato non fa danno, un critico li raddoppia
+        result.attack = _feature_attack(char, on_use.spell_attack)
+        end_on_action(char, "attack")
+        if dice:
+            dice = (0 if result.attack["is_fumble"] else dice[0] * (2 if result.attack["is_critical"] else 1), dice[1])
     for _ in range(1 if on_use.rolls_by_amount else amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
         rolled = ([dice[1]] * dice[0] if maximize else [random.randint(1, dice[1]) for _ in range(dice[0])]) if dice else []
         result.rolls += rolled

@@ -1443,6 +1443,7 @@
       "amount_less": "Un uso in meno",
       "amount_more": "Un uso in più",
       "use_rolled": "Hai tirato",
+      "use_attack": "Tiro per colpire: {{total}} (d20 {{die}} {{bonus}})",
       "use_given": "Da dare a un alleato: {{n}}",
       "use_temp_hp": "PF temporanei: {{n}}",
       "use_received": "{{name}} recupera {{n}} PF.",

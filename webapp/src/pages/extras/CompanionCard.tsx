@@ -73,7 +73,9 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
 
   const attack = useMutation({
     mutationFn: async ({ idx, mode, reaction }: { idx: number; mode: RollMode; reaction?: boolean }) => {
-      const choice = await askRollOptions(charId, { roll: 'attack' })
+      // In forma l'attacco ha un passaggio solo: le opzioni del colpo (Colpo Primordiale, Radianza Lunare) si scelgono prima del tiro.
+      const inForm = comp.kind === 'wild_shape' && comp.is_active
+      const choice = await askRollOptions(charId, { roll: 'attack', ...(inForm ? { attack_mode: 'form' } : {}) })
       const dice = await rollD20(mode)
       return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs }, reaction)
     },

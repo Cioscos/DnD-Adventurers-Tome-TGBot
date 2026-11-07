@@ -185,6 +185,8 @@ export interface FeatureUseResult {
   temp_hp?: number | null
   /** Esito scritto dal privilegio nelle due lingue (ore dimenticate di Alterare Ricordi, danno residuo dell'Interdizione). */
   message?: { it: string; en: string } | null
+  /** Tiro per colpire di un privilegio che attacca (Arciere): senza danno se `is_fumble`, dadi doppi se `is_critical`. */
+  attack?: { die: number; bonus: number; total: number; is_critical: boolean; is_fumble: boolean } | null
 }
 
 export interface MapEntry {

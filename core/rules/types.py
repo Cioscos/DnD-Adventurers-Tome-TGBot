@@ -334,6 +334,10 @@ class OnUse:
     # Esito da mostrare dopo l'uso, calcolato sulle scelte e sulla scheda (ore dimenticate, danno residuo): ``f(ctx, params)
     # -> {"it": ..., "en": ...}``. Gira dopo il pagamento e prima dell'``effect``: vede la scheda com'era.
     message: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
+    # Caratteristica di un attacco con incantesimo a distanza che l'uso tira per davvero (Arciere): il server tira il d20
+    # (competenza + caratteristica + modificatori) e i dadi di ``rolls`` solo se colpisce (raddoppiati al critico), e chiude
+    # gli stati che finiscono con un attacco. L'esito sta in ``UseResult.attack``.
+    spell_attack: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_amount is not None and (not self.choose_amount or self.max_amount < 1):
