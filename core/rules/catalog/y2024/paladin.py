@@ -143,8 +143,13 @@ def _slot_smite_ok(ctx: RuleContext) -> bool:
     return _melee_or_unarmed(ctx) and not (ctx.char.turn_state or {}).get("spell_slot_cast")
 
 
+def _mark_smite(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    """La Punizione Divina è stata lanciata in questo turno: Punizione Ispiratrice (Gloria) la richiede."""
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), "smite_cast": True}
+
+
 def _mark_slot_spell(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    ctx.char.turn_state = {**(ctx.char.turn_state or {}), "spell_slot_cast": True}
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), "spell_slot_cast": True, "smite_cast": True}
 
 
 def _free_left(ctx: RuleContext) -> bool:
@@ -170,7 +175,7 @@ DIVINE_SMITE = RollOptionSpec(
     label=_both(*_SMITE_LABEL))
 DIVINE_SMITE_FREE = RollOptionSpec(
     key=SMITE_FREE, phase="after_hit", rolls=("attack",), cost=Cost(feature_key=PS), slot="bonus", group=SMITE_GROUP,
-    extra_dice=lambda _c, _i: "2d8", available=_melee_or_unarmed, effect=_RADIANT,
+    extra_dice=lambda _c, _i: "2d8", available=_melee_or_unarmed, effect=_RADIANT, on_confirm=_mark_smite,
     label=_both("Punizione del Paladino: lancio gratuito, azione bonus, 2d8 radiosi in più (un uso, riposo lungo)",
                 "Paladin's Smite: free cast, bonus action, extra 2d8 radiant (one use, long rest)"))
 _FIEND_LABEL = _both("Punizione Divina: il bersaglio è un immondo o un non morto? +1d8 radioso",
@@ -322,6 +327,6 @@ BASE_ROWS = (
             no_row=True, covered_by=f"{_ROWS} e webapp/src/data/multiclassPrereqs.ts (D2); test_multiclass_slots_count_half_the_paladin_levels_rounded_up"),
 )
 
-SUBCLASS_ROWS: tuple[FeatureSpec, ...] = ()  # parte B: giuramenti
+from core.rules.catalog.y2024.paladin_oaths import SUBCLASS_ROWS  # noqa: E402  (parte B, dopo le definizioni comuni)
 
 FEATURES = BASE_ROWS + SUBCLASS_ROWS

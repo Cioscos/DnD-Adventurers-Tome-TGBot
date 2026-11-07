@@ -59,7 +59,7 @@ from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
 from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
-from core.rules.states import begin_state, free_cast_state
+from core.rules.states import begin_state, free_cast_state, has_state
 from core.rules.types import StateSpec
 from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
@@ -168,9 +168,19 @@ def _pick_slot(char: Character, spell: Spell, slot_id: int | None, slot_level: i
     return slot
 
 
+def _cast_kind(char: Character, spell: Spell) -> str:
+    """Il slot di turno del lancio. Campione degli Antichi 2024 (Incantesimi Rapidi): finché dura, un incantesimo da un'azione
+    si lancia con un'azione bonus."""
+    kind = casting_kind(spell)
+    if (kind == "action" and character_edition(char) == "2024" and has_state(char, "elder_champion")
+            and not _LONG_CASTING.search(spell.casting_time or "")):
+        return "bonus"
+    return kind
+
+
 def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     """Turno salvato per le regole sugli incantesimi nello stesso turno; le reazioni possono cadere fuori dal proprio."""
-    kind = casting_kind(spell)
+    kind = _cast_kind(char, spell)
     if spell.srd_index:  # Abiurazione Migliorata: la prova dopo controincantesimo o dissolvi magie, anche se lanciato in reazione
         turn = get_turn(char)
         turn["last_cast_spell"] = spell.srd_index
@@ -252,7 +262,7 @@ def _consume_cast(
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
-    if (not ritual and character_edition(char) == "2024" and casting_kind(spell) == "action"
+    if (not ritual and character_edition(char) == "2024" and _cast_kind(char, spell) == "action"
             and not _LONG_CASTING.search(spell.casting_time or "")):
         turn = get_turn(char)  # Azione Impetuosa 2024: l'azione in più non può essere Magia
         # L'azione Attacco già iniziata (attacchi o lancio fatti) è l'azione spesa; la Magia da Guerra fa parte dell'Attacco
@@ -261,16 +271,16 @@ def _consume_cast(
             raise HTTPException(status_code=409, detail={"code": "surge_no_magic"})
     if ki_pool is not None:
         if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
-            spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
+            spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
         ki_pool.uses = (ki_pool.uses or 0) - ki_total
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} con {ki_total} ki",
                      meta={"ki": ki_total, "slot_level": spell.level + ki_extra})
     elif arcanum is not None:
-        spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
+        spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} (Arcanum Mistico)",
                      meta={"slot_level": spell.level, "arcanum": True})
     elif free_at_will:
-        spend(char, casting_kind(spell))  # 409 turn_slot_used: nulla è ancora scritto
+        spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
     elif free_state is not None:
         data = free_state.get("data") or {}

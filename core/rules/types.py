@@ -331,6 +331,8 @@ class OnUse:
     # PF temporanei che l'uso dà a chi lo usa: ``f(ctx, tirato) -> n``; vale il maggiore fra quelli attuali e ``n``
     # (i PF temporanei non si sommano)
     temp_hp: "Callable[[RuleContext, int], int] | None" = None
+    # Come ``temp_hp`` ma legge anche le scelte fatte all'uso (Punizione Ispiratrice: quanta parte tiene chi la usa)
+    temp_hp_by: "Callable[[RuleContext, int, dict], int] | None" = None
     # Cura che dipende da una scelta fatta all'uso (Raccolto Macabro: il livello dell'incantesimo): ``f(ctx, params) -> PF``,
     # applicata a chi usa il privilegio al posto di ``heal``
     heal_by: "Callable[[RuleContext, dict], int] | None" = None
@@ -489,6 +491,8 @@ class RollOptionSpec:
     # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
     # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
     holds_at_one: bool = False
+    # Con ``holds_at_one``: PF che si recuperano oltre al 1 PF (Sentinella Imperitura 2024: 3 x livello da paladino)
+    holds_heal: "Callable[[RuleContext], int] | None" = None
     # Danno che l'opzione fa a chi la usa, come ``f(ctx, inputs) -> "NdM"`` o ``None`` (Saturazione Magica: necrotico, ignora
     # resistenze e immunità). Lo tira e lo applica il router del tiro, dopo il pagamento dell'opzione.
     self_damage: "Callable[[RuleContext, dict], str | None] | None" = None

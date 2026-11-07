@@ -39,10 +39,12 @@ def _bardic_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"1d{((_bardic_state(ctx) or {}).get('data') or {}).get('die') or 6}"
 
 
-def _ally_aura(kind: str):
-    """Un compagno della serata proietta questa aura e chi tira non ne ha una uguale per conto suo."""
+def _ally_aura(kind: str, edition: str | None = None):
+    """Un compagno della serata proietta questa aura (nell'edizione data: l'Interdizione cambia fra 2014 e 2024) e chi tira non
+    ne ha una uguale per conto suo."""
     from core.rules.auras import has_own_aura, party_auras  # import locale: auras usa il catalogo
-    return lambda ctx: bool(party_auras(ctx.char, kind)) and not has_own_aura(ctx.char, kind)
+    return lambda ctx: (any(edition is None or a.get("edition") == edition for a in party_auras(ctx.char, kind))
+                        and not has_own_aura(ctx.char, kind))
 
 
 def _ally_aura_bonus(ctx: RuleContext, _inputs: dict) -> int:
@@ -98,7 +100,13 @@ _CONDITION_OPTIONS = (
         key="aura:warding", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
         label={"it": "Aura di Interdizione di un compagno paladino: sei entro la sua gittata e il danno viene da un incantesimo? Resistenza",
                "en": "Aura of Warding of a paladin ally: are you within its range and does the damage come from a spell? Resistance"},
-        available=_ally_aura("warding"),
+        available=_ally_aura("warding", "2014"),
+    ),
+    RollOptionSpec(
+        key="aura:warding_2024", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
+        label={"it": "Aura di Interdizione di un compagno paladino: sei entro la sua gittata? Resistenza al danno necrotico, psichico o radioso",
+               "en": "Aura of Warding of a paladin ally: are you within its range? Resistance to necrotic, psychic or radiant damage"},
+        available=lambda ctx: _ally_aura("warding", "2024")(ctx) and ctx.damage_type in (None, "necrotic", "psychic", "radiant"),
     ),
     # Effetti dati da un chierico a chi li riceve: valgono per ogni scheda, come il dado di Ispirazione Bardica.
     RollOptionSpec(
@@ -193,6 +201,7 @@ class AppliedOptions:
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
     holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
+    held_heal: int = 0  # PF recuperati oltre a quel 1 PF (Sentinella Imperitura 2024)
     resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
     self_damage: list[tuple[str, str]] = field(default_factory=list)  # (dadi, tipo) che chi usa le opzioni subisce
     ability_override: str | None = None  # la prova di abilità si fa con questa caratteristica (Conoscenza Primordiale)
@@ -466,6 +475,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.pay_if_success or spec.holds_at_one:
             out.refundable[key] = paid
         out.holds_at_one = out.holds_at_one or spec.holds_at_one
+        if spec.holds_heal:
+            out.held_heal = max(out.held_heal, spec.holds_heal(option.ctx))
         out.resistance = out.resistance or spec.grants_resistance
         if spec.replace_die:
             out.replace_die = given["die"]

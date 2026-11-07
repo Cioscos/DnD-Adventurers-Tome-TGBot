@@ -21,7 +21,8 @@ def projected_auras(char: Any) -> list[dict]:
         if aura is None or (aura.needs_conscious and not is_conscious(char)):
             continue
         ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
-        out.append({"kind": aura.kind, "source": char.name, "bonus": aura.bonus(ctx), "range_ft": aura.range_ft(ctx)})
+        out.append({"kind": aura.kind, "source": char.name, "bonus": aura.bonus(ctx), "range_ft": aura.range_ft(ctx),
+                    "edition": ctx.edition})
     return out
 
 

@@ -313,7 +313,8 @@ async def update_hp(
         if opts is not None and opts.holds_at_one:  # Sentinella Imperitura: la conferma vale solo se il danno porta a 0 senza uccidere
             massive = amount - old >= effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
             if old > 0 and amount >= old and not massive:
-                amount, held_at_one = old - 1, True
+                kept = min(1 + opts.held_heal, effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max")))
+                amount, held_at_one = old - kept, True
             else:  # il danno non arriva a 0 (o uccide sul colpo): l'uso non si spende
                 paid = [token for tokens in opts.refundable.values() for token in tokens]
                 refund_spent(char, paid)

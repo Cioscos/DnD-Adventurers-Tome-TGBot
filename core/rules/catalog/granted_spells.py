@@ -464,6 +464,16 @@ for _spell, _comp in (
                       "Istantanea", attack_save="ATK", damage_dice="6d10", damage_type="force"), "S, M")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
+# Paladino 2024, giuramenti: incantesimi che il 2014 non concedeva (Presenza Regale di Yolande non è nell'SRD)
+for _spell, _comp in (
+        (GrantedSpell("heroism", {"it": "Eroismo", "en": "Heroism"}, 1, "1 azione", "Contatto", "Concentrazione, fino a 1 minuto",
+                      is_concentration=True), "V, S"),
+        (GrantedSpell("enhance-ability", {"it": "Potenziare caratteristica", "en": "Enhance Ability"}, 2, "1 azione", "Contatto",
+                      "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M"),
+        (GrantedSpell("yolandes-regal-presence", {"it": "Presenza regale di Yolande", "en": "Yolande's Regal Presence"}, 5, "1 azione",
+                      "Personale (3 m)", "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Druido 2024, circoli: incantesimi che il 2014 non concedeva
 for _spell, _comp in (
         (GrantedSpell("fire-bolt", {"it": "Dardo di fuoco", "en": "Fire Bolt"}, 0, "1 azione", "36 m", "Istantanea", attack_save="ATK",
