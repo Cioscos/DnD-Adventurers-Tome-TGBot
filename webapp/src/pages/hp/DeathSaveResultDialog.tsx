@@ -70,7 +70,7 @@ export default function DeathSaveResultDialog({ result: rolled, onClose, afterRo
         </m.p>
       )}
 
-      <RollNotes notes={result.notes} />
+      <RollNotes notes={result.notes} optionResult={result.option_result} charId={afterRoll?.charId} />
       <p className={`font-bold font-cinzel uppercase tracking-wider ${verdictColor}`}>
         {outcome === 'revived'
           ? t('character.death_saves.revived_no_roll')

@@ -46,6 +46,13 @@ const result = (over: Partial<DeathSaveRollResult> = {}): DeathSaveRollResult =>
 })
 
 describe('DeathSaveResultDialog', () => {
+  it('shows what the confirmed options produced (Vendetta Ardente: text of the effect)', () => {
+    const option_result = { keys: ['warlock.searing_vengeance'], extra_rolls: [], extra_total: 0, bonus: 0, multiplier: 1, spent: [],
+      effects: [{ it: '2d8 + Carisma radiosi, Accecate', en: '2d8 + Charisma radiant, Blinded' }] }
+    render(<DeathSaveResultDialog result={result({ option_result })} onClose={() => {}} afterRoll={{ charId: 7 }} />)
+    expect(screen.getByText('2d8 + Carisma radiosi, Accecate', { exact: false })).toBeInTheDocument()
+  })
+
   it('nat20 → gold, pulsing, success verdict, revived message, big die value (D&D 5e revive rule)', () => {
     render(<DeathSaveResultDialog result={result()} onClose={() => {}} />)
     const dialog = screen.getByTestId('result-dialog')
