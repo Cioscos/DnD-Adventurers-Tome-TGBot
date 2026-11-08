@@ -312,6 +312,7 @@ export interface CharacterSummary {
   ac: number
   total_level: number
   class_summary: string
+  classes?: { class_name: string; level: number; subclass?: string | null }[]
   heroic_inspiration: boolean
   /** 2024: ricevuta un'altra Ispirazione avendone già una: da cedere. */
   inspiration_extra?: boolean

@@ -1,4 +1,4 @@
-import { notifyMutationError, notifyCastError } from '@/lib/mutationError'
+import { notifyCastError } from '@/lib/mutationError'
 import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -136,7 +136,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       if (err instanceof ApiError && (err.detail as { code?: string } | null)?.code === 'incapacitated') {
         toast.error(t('character.attack.incapacitated'))
       } else {
-        notifyMutationError()
+        notifyCastError(err)
       }
     },
   })

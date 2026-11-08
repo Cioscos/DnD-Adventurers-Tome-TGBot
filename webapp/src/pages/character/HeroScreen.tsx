@@ -2,6 +2,7 @@ import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { classSummary } from '@/lib/classLabel'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { m } from 'framer-motion'
 import { CircleDot, HeartPulse, SlidersHorizontal } from 'lucide-react'
@@ -138,7 +139,7 @@ export default function HeroScreen({ char }: Props) {
           className="block w-full text-left pr-14 min-h-[44px]"
           aria-label={t('character.identity.title', { defaultValue: 'Identity' })}
         >
-          <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
+          <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{classSummary(t, char.classes ?? [])}</p>
           {char.race && (
             <p className="text-xs text-dnd-text-muted font-body">{char.race}</p>
           )}

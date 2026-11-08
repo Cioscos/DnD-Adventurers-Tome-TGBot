@@ -40,6 +40,14 @@ describe('SubclassSelect', () => {
     expect(onChange).toHaveBeenCalledWith('Cammino del Combattente Totemico')
   })
 
+  it('picking "Other" after a catalog entry clears the value so the free input can be typed', async () => {
+    const onChange = vi.fn()
+    wrap(<SubclassSelect edition="2014" className="Barbaro" value="Cammino del Berserker" onChange={onChange} />)
+    await userEvent.click(await screen.findByRole('button', { name: /Cammino del Berserker/ }))
+    await userEvent.click(await screen.findByRole('radio', { name: 'character.multiclass.subclass_other' }))
+    expect(onChange).toHaveBeenCalledWith('')
+  })
+
   it('keeps an unrecognised text visible under "Other"', async () => {
     wrap(<SubclassSelect edition="2014" className="Barbaro" value="Cammino Strano" onChange={() => {}} />)
     expect(await screen.findByDisplayValue('Cammino Strano')).toBeInTheDocument()

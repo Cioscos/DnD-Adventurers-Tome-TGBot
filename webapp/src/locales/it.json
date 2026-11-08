@@ -205,7 +205,17 @@
       "inspiration": "Ispirazione",
       "armor_untrained": "Armatura senza addestramento",
       "armor_stealth": "Armatura rumorosa",
-      "surprised": "Colto di sorpresa"
+      "surprised": "Colto di sorpresa",
+      "option": {
+        "bardic_die_add": "Ispirazione Bardica",
+        "bardic_die_damage": "Ispirazione Bardica (danno)",
+        "aura_protection": "Aura di Protezione",
+        "aura_protection_after": "Aura di Protezione",
+        "aura_warding": "Aura di Interdizione",
+        "aura_warding_2024": "Aura di Interdizione",
+        "war_blessing_add": "Benedizione di Guerra",
+        "trickster_advantage": "Benedizione dell'Ingannatore"
+      }
     },
     "hero": {
       "stats_section": "Statistiche",
@@ -319,6 +329,7 @@
     "select": {
       "title": "I tuoi personaggi",
       "new": "Nuovo personaggio",
+      "no_class": "Nessuna classe",
       "empty": "Nessun personaggio. Creane uno!",
       "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile.",
       "undo_delete": "Personaggio eliminato",
@@ -405,9 +416,6 @@
       "current_short": "ATTUALI",
       "max_short": "MASSIMO",
       "temp_short": "Temporanei",
-      "long_rest_confirm_title": "Riposo lungo",
-      "long_rest_confirm_body": "Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
-      "long_rest_confirm_action": "Riposa",
       "quick_damage_undo": "Inflitti {{n}} danni",
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
@@ -1520,6 +1528,7 @@
         "no_benefit": "Nessun beneficio: costrutti e non morti non danno nulla.",
         "turn_slot_used": "Hai già usato quell'azione in questo turno.",
         "no_uses": "Usi esauriti.",
+        "no_slot": "Non hai più slot di quel livello.",
         "already_used_this_rage": "L'hai già usato in questa Ira.",
         "amount_too_high": "Troppi usi in una volta per questo privilegio.",
         "amount_too_low": "Servono più usi in una volta per questo privilegio.",

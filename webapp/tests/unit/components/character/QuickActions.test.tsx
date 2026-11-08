@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import QuickActions from '@/components/character/QuickActions'
+import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 const { spendHitDice, update, notifyMutationError, toastError, charges, rest } = vi.hoisted(() => ({
@@ -254,7 +255,7 @@ describe('QuickActions short rest with Natural Recovery', () => {
     expect(screen.getByTestId('natural-recovery')).toBeTruthy()
     await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
     await userEvent.click(screen.getByText('character.hp.confirm_rest'))
-    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', { natural_recovery: { 1: 1 } }))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ natural_recovery: { 1: 1 } })))
   })
 
   it('rests without the field when nothing was chosen', async () => {
@@ -262,7 +263,28 @@ describe('QuickActions short rest with Natural Recovery', () => {
     renderQC(landDruid)
     await userEvent.click(screen.getByText('character.quick_actions.rest_short'))
     await userEvent.click(screen.getByText('character.hp.confirm_rest'))
-    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
+  })
+})
+
+describe('QuickActions long rest questions (same as the menu)', () => {
+  const longChar = {
+    id: 7, settings: { quick_actions: [{ type: 'rest', rest: 'long' }] }, items: [], spells: [], active_states: [], rules_edition: '2014',
+    classes: [{ id: 1, class_name: 'fighter', level: 3, hit_die: 10, hit_dice_used: 0 }],
+  } as unknown as CharacterFull
+
+  it('asks about interruption and food, and confirms a too-soon long rest', async () => {
+    rest.mockRejectedValueOnce(new ApiError(409, 'long_rest_too_soon')).mockResolvedValue(longChar)
+    renderQC(longChar)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    const switches = screen.getAllByRole('switch')
+    expect(switches).toHaveLength(2)
+    await userEvent.click(switches[0])
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.confirm_long_rest_title'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ interrupted: true, ate_and_drank: true })))
+    await screen.findByText('character.quick_actions.rest_too_soon_body')
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.rest_too_soon_title'))
+    await waitFor(() => expect(rest).toHaveBeenLastCalledWith(7, 'long', expect.objectContaining({ confirm_early: true })))
   })
 })
 
@@ -279,7 +301,7 @@ describe('QuickActions long rest with the Pact of the Tome', () => {
     await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
     await userEvent.click(within(screen.getByTestId('tome-reopen')).getByRole('switch'))
     await userEvent.click(screen.getByText('confirm:character.quick_actions.confirm_long_rest_title'))
-    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', { reopen_tome: true }))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ reopen_tome: true })))
   })
 
   it('does not offer it to a character without the pact', async () => {

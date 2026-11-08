@@ -4,6 +4,9 @@ import { useParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
+/** Opzioni condivise del server (`bardic_die:add`, `aura:protection`...): la nota è la loro chiave. */
+const SHARED_OPTIONS = ['bardic_die', 'aura', 'war_blessing', 'trickster']
+
 /** Traduce le note di un tiro: `condition:<slug>`, `armor:untrained`, `armor:stealth`, `weapon:heavy`, `inspiration:advantage`, `feature:<chiave>`.
  *  `charId` serve fuori da /char/:id (sessione): dà l'edizione per il nome della spossatezza. */
 export function useRollNoteLabels(charId?: number): (notes: string[]) => string[] {
@@ -38,6 +41,7 @@ export function useRollNoteLabels(charId?: number): (notes: string[]) => string[
     if (kind === 'weapon') return t('character.roll_notes.weapon_heavy')
     if (kind === 'inspiration') return t('character.roll_notes.inspiration')
     if (kind === 'feature') return featureName(value)
+    if (SHARED_OPTIONS.includes(kind)) return t(`character.roll_notes.option.${kind}_${value}`, { defaultValue: note })
     return note
   })
 }

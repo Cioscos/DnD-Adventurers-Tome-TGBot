@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GiHealthNormal as Heart, GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
 import { api } from '@/api/client'
 import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyCastError } from '@/lib/mutationError'
 import { haptic } from '@/auth/telegram'
 import Button from '@/components/ui/Button'
 import SwitchToggle from '@/components/ui/SwitchToggle'
@@ -60,7 +60,7 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
       qc.invalidateQueries({ queryKey: ['character', charId] })
       setResult(data)
     },
-    onError: (err) => { if (!(err instanceof CastCancelled)) notifyMutationError() },
+    onError: (err) => { if (!(err instanceof CastCancelled)) notifyCastError(err) },
   })
 
   if (!spell) return null

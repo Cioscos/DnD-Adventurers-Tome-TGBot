@@ -3,11 +3,12 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
+import { ApiError } from '@/api/client'
 import type { Spell, RollHealingResult } from '@/types'
 
 const { rollHealing, useSpell } = vi.hoisted(() => ({ rollHealing: vi.fn(), useSpell: vi.fn() }))
 
-vi.mock('@/api/client', () => ({ api: { spells: { rollHealing, use: useSpell } } }))
+vi.mock('@/api/client', async (orig) => ({ ...((await orig()) as object), api: { spells: { rollHealing, use: useSpell } } }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -67,5 +68,18 @@ describe('SpellHealingSheet', () => {
     await userEvent.click(screen.getByRole('switch'))
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ apply_to_self: true })))
+  })
+})
+
+describe('SpellHealingSheet, lancio rifiutato dal server', () => {
+  it('shows the rule text for turn_slot_used, not the generic connection error', async () => {
+    const { toast } = await import('sonner')
+    const spy = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    useSpell.mockRejectedValue(new ApiError(409, { code: 'turn_slot_used' }))
+    renderWithProviders(<SpellHealingSheet charId={7} spell={cure} slotLevel={1} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(spy).toHaveBeenCalled())
+    expect(spy.mock.calls[0][0]).not.toMatch(/connessione|connection/i)
+    spy.mockRestore()
   })
 })

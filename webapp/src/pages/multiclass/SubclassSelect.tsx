@@ -47,7 +47,7 @@ export default function SubclassSelect({ edition, className, value, onChange, zC
         onChange={(k) => {
           const picked = catalog.find((s) => s.key === k)
           setOtherPicked(!picked)
-          if (picked) onChange(nameOf(picked))
+          onChange(picked ? nameOf(picked) : '') // «Altro» svuota: il testo libero parte pulito
         }}
         placeholder={placeholder}
         zClassName={zClassName}

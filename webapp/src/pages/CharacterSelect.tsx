@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classSummary } from '@/lib/classLabel'
 import { m } from 'framer-motion'
 import { Plus, Pencil, SkipForward, ScrollText, Upload, BookOpen, Link2 } from 'lucide-react'
 import {
@@ -352,7 +353,7 @@ export default function CharacterSelect() {
                         )}
                       </div>
                       <p className="text-sm text-dnd-text-muted font-body italic">
-                        {char.class_summary}
+                        {char.classes ? classSummary(t, char.classes) : char.class_summary}
                         {char.race ? ` · ${char.race}` : ''}
                       </p>
 

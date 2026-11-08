@@ -46,6 +46,13 @@ describe('useRollNoteLabels', () => {
     ])
   })
 
+  it('translates the shared options the server uses as notes (bard die, auras)', () => {
+    expect(labels(['bardic_die:add', 'aura:protection_after', 'war_blessing:add', 'trickster:advantage'])).toEqual([
+      'character.roll_notes.option.bardic_die_add', 'character.roll_notes.option.aura_protection_after',
+      'character.roll_notes.option.war_blessing_add', 'character.roll_notes.option.trickster_advantage',
+    ])
+  })
+
   it('names a feature of a character that is not in the cache yet (session pages never load it)', async () => {
     getSpy.mockResolvedValue({ rules_edition: '2014', abilities: [{ feature_key: 'monk.perfect_self', name: 'Perfezione Interiore' }] })
     const qc = new QueryClient()

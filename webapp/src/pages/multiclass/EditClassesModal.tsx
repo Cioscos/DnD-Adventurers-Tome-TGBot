@@ -19,6 +19,7 @@ import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
 import { multiclassWarnings, type AbilityKey } from '@/data/multiclassPrereqs'
 import { classKey } from '@/lib/classProgression'
+import { classLabel } from '@/lib/classLabel'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
@@ -318,7 +319,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
               <Surface key={e.tempId} variant="elevated" className="flex flex-wrap items-center gap-x-4 gap-y-2 !py-3 !px-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-display font-bold text-dnd-gold-bright truncate">
-                    {e.className}
+                    {classLabel(t, e.className)}
                     {e.kind === 'new' && (
                       <span className="ml-2 text-xs font-cinzel uppercase tracking-widest text-dnd-amber">
                         {t('character.multiclass.edit.new_tag')}
@@ -338,7 +339,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   onChange={(ev) => setEntryLevel(e.tempId, ev.target.value)}
                   onBlur={() => normalizeEntryLevel(e.tempId)}
                   className="w-20 min-h-[44px] rounded-lg bg-dnd-surface border border-dnd-border text-dnd-gold-bright font-mono text-center focus:border-dnd-gold/60 focus:outline-none"
-                  aria-label={`${e.className} · ${t('character.multiclass.level')}`}
+                  aria-label={`${classLabel(t, e.className)} · ${t('character.multiclass.level')}`}
                 />
                 {e.kind === 'new' && (
                   <Pressable

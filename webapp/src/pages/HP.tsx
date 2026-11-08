@@ -10,33 +10,25 @@ import {
   GiHeartPlus as Heart,
 } from 'react-icons/gi'
 import { toast } from 'sonner'
-import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult, type RollOption } from '@/api/client'
+import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type RollOption } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
-import ConfirmSheet from '@/components/ui/ConfirmSheet'
-import RestPreviewList from '@/components/character/RestPreviewList'
-import SongOfRestToggle from '@/components/character/SongOfRestToggle'
-import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
-import MemorizeSpellPicker, { type MemorizeChoice } from '@/components/character/MemorizeSpellPicker'
-import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
-import TomeReopenToggle from '@/components/character/TomeReopenToggle'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import HpOperationForm from '@/pages/hp/HpOperationForm'
 import DeathSaves from '@/pages/hp/DeathSaves'
-import HitDiceModal from '@/pages/hp/HitDiceModal'
-import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
+import RestDialogs from '@/components/character/RestDialogs'
+import { useRest } from '@/hooks/useRest'
 import DeadState from '@/pages/hp/DeadState'
 import InstantDeathDialog from '@/pages/hp/InstantDeathDialog'
 import type { CharacterFull } from '@/types'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
-import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
@@ -65,7 +57,6 @@ export default function HP() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
-  const rollDice = useAnimatedRoll()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
@@ -79,14 +70,6 @@ export default function HP() {
   // AbilityScores.tsx. Without it every Conferma sent 2 identical PATCH /hp (finding #1).
   const savingRef = useRef(false)
 
-  const [showShortRest, setShowShortRest] = useState(false)
-  const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
-  const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
-  const [memorize, setMemorize] = useState<MemorizeChoice | null>(null)  // Memorizzare Incantesimo (Mago 2024)
-  const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
-  const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
-  const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
-  const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
   // Reazioni che l'ultimo danno ha aperto (Ritorsione): si propongono con l'attacco in un tocco.
@@ -96,6 +79,7 @@ export default function HP() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+  const rest = useRest(charId, char)
   const offers = useReactionOffers({
     charId, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
   })
@@ -197,32 +181,6 @@ export default function HP() {
     },
   })
 
-  const restMutation = useMutation({
-    mutationFn: (restType: 'long' | 'short') => {
-      const slots = restType === 'short'
-        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}), ...(memorize ? { memorize_spell: memorize } : {}) }
-        : reopenTome ? { reopen_tome: true } : {}
-      return Object.keys(slots).length > 0 ? api.characters.rest(charId, restType, slots) : api.characters.rest(charId, restType)
-    },
-    onError: (err) => {
-      const detail = err instanceof ApiError ? err.detail : null
-      if (detail === 'rest_needs_hp') toast.error(t('character.quick_actions.rest_needs_hp'))
-      else if (detail === 'long_rest_too_soon') toast.error(t('character.quick_actions.rest_too_soon_use_menu'))
-      else notifyMutationError()
-    },
-    onSuccess: (updated) => {
-      setRecovery({})
-      setArcane({})
-      setRestoration(0)
-      setMemorize(null)
-      setReopenTome(false)
-      qc.setQueryData(['character', charId], updated)
-      // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
-      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
-      haptic.success()
-    },
-  })
-
   const deathMutation = useMutation({
     mutationFn: (action: string) =>
       api.characters.updateDeathSaves(charId, action),
@@ -241,19 +199,6 @@ export default function HP() {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
       refreshAfterOptions(qc, charId, result.option_result)
-      haptic.success()
-    },
-  })
-
-  const hitDiceMutation = useMutation({
-    mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
-      const hitDie = char?.classes.find((c) => c.id === classId)?.hit_die
-      const rolls = await rollDice(`d${hitDie ?? 8}`, count)
-      return api.characters.spendHitDice(charId, classId, count, rolls)
-    },
-    onSuccess: (result) => {
-      setHitDiceResult(result)
-      qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
   })
@@ -316,7 +261,6 @@ export default function HP() {
   const isDying = atZero && !ds.stable && !isDead
   const concentrating = isConcentrating(char)
   const concentrationName = concentrationLabel(char)
-  const classes = char.classes ?? []
   const hbHp = char.hp_max_homebrew_modifier ?? 0
   const hpMax = char.computed?.hp_max_effective ?? char.hit_points + hbHp
   // In forma selvatica il numero grande e la barra sono quelli della forma (come in Eroe).
@@ -486,8 +430,8 @@ export default function HP() {
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={() => setShowShortRest(true)}
-          loading={restMutation.isPending}
+          onClick={rest.openShort}
+          loading={rest.pending}
           icon={<Campfire size={18} />}
           haptic="medium"
         >
@@ -497,8 +441,8 @@ export default function HP() {
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={() => setShowLongRestConfirm(true)}
-          loading={restMutation.isPending}
+          onClick={rest.openLong}
+          loading={rest.pending}
           icon={<Moon size={18} />}
           haptic="success"
         >
@@ -507,49 +451,7 @@ export default function HP() {
       </div>
       )}
 
-      <ConfirmSheet
-        open={showLongRestConfirm}
-        onClose={() => setShowLongRestConfirm(false)}
-        onConfirm={() => {
-          setShowLongRestConfirm(false)
-          restMutation.mutate('long')
-        }}
-        title={t('character.hp.long_rest_confirm_title')}
-        body={
-          <div className="space-y-3">
-            <p>{t('character.hp.long_rest_confirm_body')}</p>
-            {showLongRestConfirm && <RestPreviewList charId={charId} restType="long" />}
-            <TomeReopenToggle char={char} value={reopenTome} onChange={setReopenTome} />
-          </div>
-        }
-        confirmLabel={t('character.hp.long_rest_confirm_action')}
-        confirmVariant="primary"
-        loading={restMutation.isPending}
-      />
-
-      {/* Hit dice modal */}
-      {showShortRest && (
-        <HitDiceModal
-          classes={classes}
-          preview={<><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /><SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} /><MemorizeSpellPicker char={char} onChange={setMemorize} /></>}
-          onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
-          onConfirmRest={() => {
-            restMutation.mutate('short')
-            setShowShortRest(false)
-          }}
-          onClose={() => setShowShortRest(false)}
-          isPending={hitDiceMutation.isPending}
-          pendingClassId={hitDiceMutation.isPending ? hitDiceMutation.variables?.classId : undefined}
-          restPending={restMutation.isPending}
-        />
-      )}
-
-      {hitDiceResult && (
-        <HitDiceResultDialog
-          result={hitDiceResult}
-          onClose={() => setHitDiceResult(null)}
-        />
-      )}
+      {char && <RestDialogs char={char} rest={rest} />}
 
       {deathRollResult && (
         <DeathSaveResultDialog

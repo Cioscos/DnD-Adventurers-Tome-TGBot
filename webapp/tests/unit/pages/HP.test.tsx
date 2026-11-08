@@ -3,6 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import HP from '@/pages/HP'
+import { ApiError } from '@/api/client'
 
 // Spies hoisted so the vi.mock factories can close over them.
 const {
@@ -387,12 +388,12 @@ describe('HP page', () => {
     await userEvent.click(await screen.findByTestId('hd-spend'))
     await waitFor(() => expect(spendHitDiceSpy).toHaveBeenCalledWith(7, 1, 2, undefined))
     await userEvent.click(screen.getByTestId('hd-rest'))
-    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
 
     // long rest button → opens ConfirmSheet → confirm
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
     await userEvent.click(await screen.findByTestId('confirm-ok'))
-    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
   })
 
   it('offers Natural Recovery in the short rest and sends the chosen slots with it', async () => {
@@ -404,7 +405,7 @@ describe('HP page', () => {
     expect(await screen.findByTestId('natural-recovery')).toBeInTheDocument()
     await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
     await userEvent.click(screen.getByTestId('hd-rest'))
-    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', { natural_recovery: { 1: 1 } }))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ natural_recovery: { 1: 1 } })))
   })
 
   it('offers the Book of Shadows switch in the long rest and sends reopen_tome', async () => {
@@ -417,7 +418,23 @@ describe('HP page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
     await userEvent.click(within(await screen.findByTestId('tome-reopen')).getByRole('switch'))
     await userEvent.click(screen.getByTestId('confirm-ok'))
-    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', { reopen_tome: true }))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ reopen_tome: true })))
+  })
+
+  it('asks if the rest was interrupted and if the character ate, and confirms a too-soon long rest', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    restSpy.mockRejectedValueOnce(new ApiError(409, 'long_rest_too_soon')).mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
+    const switches = await screen.findAllByRole('switch')
+    expect(switches).toHaveLength(2) // interrotto + ha mangiato e bevuto (2014)
+    await userEvent.click(switches[0])
+    await userEvent.click(screen.getByTestId('confirm-ok'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ interrupted: true, ate_and_drank: true })))
+    await screen.findByText('character.quick_actions.rest_too_soon_body')
+    await userEvent.click(screen.getByTestId('confirm-ok'))
+    await waitFor(() => expect(restSpy).toHaveBeenLastCalledWith(7, 'long', expect.objectContaining({ confirm_early: true })))
   })
 
   it('does not offer the Book of Shadows switch without the pact', async () => {

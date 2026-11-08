@@ -205,7 +205,17 @@
       "inspiration": "Inspiration",
       "armor_untrained": "Armor without training",
       "armor_stealth": "Noisy armor",
-      "surprised": "Surprised"
+      "surprised": "Surprised",
+      "option": {
+        "bardic_die_add": "Bardic Inspiration",
+        "bardic_die_damage": "Bardic Inspiration (damage)",
+        "aura_protection": "Aura of Protection",
+        "aura_protection_after": "Aura of Protection",
+        "aura_warding": "Aura of Warding",
+        "aura_warding_2024": "Aura of Warding",
+        "war_blessing_add": "War God's Blessing",
+        "trickster_advantage": "Blessing of the Trickster"
+      }
     },
     "hero": {
       "stats_section": "Statistics",
@@ -319,6 +329,7 @@
     "select": {
       "title": "Your characters",
       "new": "New character",
+      "no_class": "No class",
       "empty": "No characters yet. Create one!",
       "delete_confirm": "Delete {{name}}? This action is irreversible.",
       "undo_delete": "Character deleted",
@@ -405,9 +416,6 @@
       "current_short": "CURR",
       "max_short": "MAX",
       "temp_short": "Temporary",
-      "long_rest_confirm_title": "Long rest",
-      "long_rest_confirm_body": "D&D 5e rules allow only one long rest every 24 hours.",
-      "long_rest_confirm_action": "Rest",
       "quick_damage_undo": "{{n}} damage dealt",
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
@@ -1522,6 +1530,7 @@
         "turn_slot_used": "You have already used that action this turn.",
         "already_used_this_rage": "You already used it during this Rage.",
         "no_uses": "No uses left.",
+        "no_slot": "You have no slots of that level left.",
         "amount_too_high": "Too many uses at once for this feature.",
         "amount_too_low": "This feature needs more uses at once.",
         "amount_invalid": "This amount does not fit this choice (curing diseases and poisons costs 5 points each).",
