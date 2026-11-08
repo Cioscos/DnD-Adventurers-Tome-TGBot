@@ -281,7 +281,7 @@ async def _load_live_characters(
 @router.get("/me", response_model=Optional[GameSessionRead])
 async def my_active_session(
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Optional[GameSessionRead]:
     session = await _find_active_session_for_user(user_id, db)
     if session is None:
@@ -317,7 +317,7 @@ async def active_encounter_row(db: AsyncSession, character_id: int):
 async def character_turn_state(
     character_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     item_id: int | None = None,
 ) -> TurnState:
     """``item_id``: l'arma che sta per attaccare; senza, ``attacks_allowed`` è il limite generale e
@@ -364,7 +364,7 @@ def _compute_gm_display_name(tg_user: TelegramUser, custom_title: Optional[str])
 async def create_session(
     body: SessionCreateRequest,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GameSessionRead:
     user_id = tg_user.id
     # Users can only be in one active session at a time (regardless of role)
@@ -427,7 +427,7 @@ async def create_session(
 async def join_session(
     body: SessionJoinRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GameSessionRead:
     # Users can only be in one active session at a time
     existing = await _find_active_session_for_user(user_id, db)
@@ -486,7 +486,7 @@ async def join_session(
 async def get_session(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GameSessionRead:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -497,7 +497,7 @@ async def get_session(
 async def get_session_live(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> GameSessionLiveRead:
     session = await _load_session(session_id, db)
@@ -608,7 +608,7 @@ async def get_session_live(
 async def leave_session(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     session = await _load_session(session_id, db)
     participant = _assert_participant(session, user_id)
@@ -629,7 +629,7 @@ async def leave_session(
 async def close_session(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     session = await _load_session(session_id, db)
     if user_id != session.gm_user_id:
@@ -645,7 +645,7 @@ async def close_session(
 async def get_session_recap(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """End-of-evening snapshot: GM, participants or members of the session's campaign."""
     session = await _load_session(session_id, db)
@@ -666,7 +666,7 @@ async def get_session_recap(
 async def list_messages(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     after_id: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[SessionMessage]:
@@ -702,7 +702,7 @@ async def post_message(
     session_id: int,
     body: SessionMessageCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SessionMessage:
     session = await _load_session(session_id, db)
     sender = _assert_participant(session, user_id)
@@ -770,7 +770,7 @@ async def get_participant_identity(
     code: str,
     user_id: int,
     caller_user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> IdentityView:
     session = await _load_session_by_code(code, db)
     _assert_participant(session, caller_user_id)
@@ -864,7 +864,7 @@ async def gm_grant_item(
     session_id: int,
     body: GMGrantItemRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GMGrantItemResponse:
     """GM-only: deliver a freshly created item to one or more session players.
 
@@ -1003,7 +1003,7 @@ async def trade(
     session_id: int,
     body: TradeRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Player action: give an item/container/coins to another PG of the session.
@@ -1078,7 +1078,7 @@ async def give_inspiration(
     session_id: int,
     body: InspirationGiveRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Cede l'Ispirazione a un compagno che ne è privo. 2024: ricevendone un'altra (``PATCH /inspiration`` con una
     già in mano) quella in più si può cedere e chi cede tiene la propria. 2014: si cede la propria e la si perde."""
@@ -1171,7 +1171,7 @@ def _post_stash_message(db, session_obj, user_id, role, display_name, body, kind
 async def get_stash(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignStash:
     _s, _me, stash = await _stash_ctx(session_id, user_id, db, mutate=False)
     return await _stash_read(db, stash)
@@ -1221,7 +1221,7 @@ async def stash_put(
     session_id: int,
     body: StashPutRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Player: move an item/container/coins from their PG into the party stash."""
@@ -1234,7 +1234,7 @@ async def stash_take(
     session_id: int,
     body: StashTakeRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Player: move an item/container/coins from the party stash to their PG."""
@@ -1254,7 +1254,7 @@ async def stash_gm_add(
     session_id: int,
     body: StashGMAddRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignStash:
     """GM: create an item or coins straight into the party stash."""
     session_obj, _me, stash = await _gm_stash_ctx(session_id, user_id, db)
@@ -1291,7 +1291,7 @@ async def stash_gm_remove(
     session_id: int,
     body: StashGMRemoveRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignStash:
     """GM: destroy an item (or part of a stack) or coins from the party stash."""
     session_obj, _me, stash = await _gm_stash_ctx(session_id, user_id, db)
@@ -1323,7 +1323,7 @@ async def stash_gm_remove(
 async def get_session_feed(
     code: str,
     caller_user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     since: Annotated[Optional[str], Query()] = None,
     before: Annotated[Optional[str], Query()] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,

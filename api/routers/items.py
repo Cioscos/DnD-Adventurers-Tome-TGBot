@@ -143,7 +143,7 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
 async def list_items(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[Item]:
     char = await _get_owned_full(char_id, user_id, session)
     return char.items
@@ -199,7 +199,7 @@ async def add_item(
     char_id: int,
     body: ItemCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -265,7 +265,7 @@ async def update_item(
     item_id: int,
     body: ItemUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -373,7 +373,7 @@ async def move_items_endpoint(
     char_id: int,
     body: ItemMoveRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -406,7 +406,7 @@ async def delete_item(
     char_id: int,
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -435,7 +435,7 @@ async def use_consumable(
     char_id: int,
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     # Da morto ogni uso di consumabile è inerte (coerente con /hp).
@@ -737,7 +737,7 @@ async def deferred_attack_damage(
     char_id: int,
     attack_id: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[RollOptionsBody | None, Body()] = None,
 ) -> WeaponAttackResult:
     """Secondo tempo dell'attacco: opzioni ``after_hit`` confermate sul danno già tirato."""
@@ -778,7 +778,7 @@ async def attack_with_weapon(
     char_id: int,
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
     char = await _get_owned_full(char_id, user_id, session)
@@ -978,7 +978,7 @@ def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int
 async def attack_unarmed(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
     """Unarmed strike: 1+STR bludgeoning; Monk uses best of STR/DEX + Martial Arts die."""
@@ -1112,7 +1112,7 @@ async def adjust_item_charges(
     item_id: int,
     body: ChargesDelta,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
@@ -1139,7 +1139,7 @@ async def cast_from_item(
     item_id: int,
     body: ItemCast,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
@@ -1195,7 +1195,7 @@ async def cast_from_scroll(
     item_id: int,
     body: ScrollCast,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Usare Dispositivi Magici (Furfante 2024, 13°): lancio da una pergamena. Livelli 0-1 riescono sempre; dal 2° prova di
     Intelligenza (Arcano) CD 10 + livello. La pergamena si consuma; l'effetto dell'incantesimo resta a parole."""
@@ -1241,7 +1241,7 @@ async def _bond_response(session: AsyncSession, char: Character) -> CharacterFul
 @router.post("/{char_id}/items/{item_id}/bond", response_model=CharacterFull)
 async def bond_weapon(
     char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)], body: Annotated[BondRequest | None, Body()] = None,
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")], body: Annotated[BondRequest | None, Body()] = None,
 ) -> CharacterFull:
     """Il rituale di un'ora è concluso (l'app non lo cronometra): l'arma è vincolata. Al massimo due."""
     char = await _get_owned_full(char_id, user_id, session)
@@ -1254,7 +1254,7 @@ async def bond_weapon(
 @router.delete("/{char_id}/items/{item_id}/bond", response_model=CharacterFull)
 async def break_weapon_bond(
     char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
@@ -1266,7 +1266,7 @@ async def break_weapon_bond(
 @router.post("/{char_id}/items/{item_id}/summon", response_model=CharacterFull)
 async def summon_bonded_weapon(
     char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Evoca l'arma vincolata nella mano libera come azione bonus (stesso piano di esistenza: lo dichiara il giocatore)."""
     char = await _get_owned_full(char_id, user_id, session)

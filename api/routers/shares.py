@@ -65,7 +65,7 @@ async def _get_valid_share(token: str, db: AsyncSession) -> ContentShare:
 async def get_share_preview(
     token: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SharePreview:
     share = await _get_valid_share(token, db)
     p = share.payload or {}
@@ -93,7 +93,7 @@ async def import_share(
     token: str,
     body: ShareImportRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> ShareImportResult:
     share = await _get_valid_share(token, db)
     char = (await db.execute(

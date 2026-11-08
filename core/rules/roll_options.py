@@ -248,7 +248,7 @@ def _ability_row(char: Any, feature_key: str, amount: int) -> Any:
 
 def _slot_free(char: Any, slot: str) -> bool:
     turn = _turn(char)
-    return not turn.get(TURN_FLAGS[slot]) or (slot == "action" and turn.get("extra_actions", 0) > 0)
+    return not turn.get(TURN_FLAGS[slot]) or (slot == "action" and (turn.get("extra_actions") or 0) > 0)
 
 
 def _once_key(spec: RollOptionSpec) -> str:

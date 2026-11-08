@@ -301,6 +301,23 @@ def is_armor_proficient(char: Any, item: Any) -> bool:
     return kind not in _ARMOR or kind in _profs(char, "armor", "other")
 
 
+def _keep_inventory_proficient(char: Any, lang: str) -> None:
+    """Armi e armature già in inventario che il seed renderebbe non competenti restano tali (il giocatore può toglierle)."""
+    cats = normalize(char.general_proficiencies)
+    changed = False
+    for item in getattr(char, "items", None) or ():
+        if is_weapon_proficient(char, item):
+            pass
+        else:
+            changed |= _add(cats["other"], [str(item.name)])
+        item_type = getattr(item, "item_type", None)
+        kind = "shields" if item_type == "shield" else _meta(item).get("armor_type") if item_type == "armor" else None
+        if kind in _ARMOR and not is_armor_proficient(char, item):
+            changed |= _add(cats["armor"], [label(kind, lang)])
+    if changed:
+        char.general_proficiencies = cats
+
+
 def seed_character(char: Any, lang: str = "it") -> None:
     """Migrazione una tantum: aggiunge le competenze di ogni classe a quelle esistenti. Idempotente."""
     if (char.settings or {}).get(SEEDED_FLAG):
@@ -316,7 +333,8 @@ def seed_character(char: Any, lang: str = "it") -> None:
     if not known:
         # Classe custom o nessuna classe: fino a ieri ogni arma dava il bonus, lo conservano.
         merge_grant(char, ProficiencyGrant(weapons=("simple", "martial")), lang)
-    mark_seeded(char)
+    mark_seeded(char)  # prima: i controlli sotto giudicano da seminato
+    _keep_inventory_proficient(char, lang)
 
 
 def apply_feature_grants(char: Any, lang: str = "it") -> None:

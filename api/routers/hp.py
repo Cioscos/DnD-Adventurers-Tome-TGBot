@@ -219,7 +219,7 @@ async def update_hp(
     char_id: int,
     body: HPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -526,7 +526,7 @@ async def undo_hp(
     char_id: int,
     body: HPUndoRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa."""
     char = await _get_owned_full(char_id, user_id, session)
@@ -695,7 +695,7 @@ async def rest_preview(
     char_id: int,
     rest_type: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> RestPreview:
     if rest_type not in ("long", "short"):
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
@@ -709,7 +709,7 @@ async def rest(
     char_id: int,
     body: RestRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     if body.rest_type not in ("long", "short"):
@@ -868,7 +868,7 @@ async def spend_hit_dice(
     char_id: int,
     body: HitDiceSpendRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceSpendResult:
     char = await _get_owned_full(char_id, user_id, session)
 
@@ -936,7 +936,7 @@ async def update_death_saves(
     char_id: int,
     body: DeathSaveUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     if char.is_dead:
@@ -990,7 +990,7 @@ async def update_death_saves(
 async def roll_death_save(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> DeathSaveRollResult:
     char = await _get_owned_full(char_id, user_id, session)
@@ -1145,7 +1145,7 @@ async def _apply_death_roll(
 async def recalc_hp(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Recalculate hit_points from D&D 5e fixed formula.
 
@@ -1187,7 +1187,7 @@ async def recalc_hp(
 async def revive(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Bring a dead character back with 1 HP. No-op if not dead (idempotent)."""
     char = await _get_owned_full(char_id, user_id, session)

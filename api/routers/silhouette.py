@@ -65,7 +65,7 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
 async def upload_silhouette(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     file: UploadFile = File(...),
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -99,7 +99,7 @@ async def upload_silhouette(
 @router.get("/{char_id}/silhouette/file")
 async def get_silhouette_file(
     char_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
     init_data: str = Query(""),
 ):
@@ -124,7 +124,7 @@ async def get_silhouette_file(
 async def delete_silhouette(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     if char.silhouette_path:

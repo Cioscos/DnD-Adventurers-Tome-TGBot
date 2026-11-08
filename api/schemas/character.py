@@ -103,6 +103,13 @@ class SpellcastingInfo(BaseModel):
     limits: list[ClassSpellLimits] = []
 
 
+class ClassBrief(BaseModel):
+    class_name: str
+    level: int
+    subclass: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
 class CharacterSummary(BaseModel):
     """Lightweight model returned in the character list."""
 
@@ -116,6 +123,7 @@ class CharacterSummary(BaseModel):
     ac: int
     total_level: int
     class_summary: str
+    classes: list[ClassBrief] = []  # il client traduce i nomi: class_summary li ha grezzi
     heroic_inspiration: bool = False
     experience_points: int = 0
     hp_max_homebrew_modifier: int = 0

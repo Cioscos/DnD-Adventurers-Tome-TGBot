@@ -37,7 +37,8 @@ from api.services.class_features import sync_cataloged_features, sync_class_feat
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
 from core.rules.states import ALLY_EXCLUSIVE, TARGET_IMMUNITY, ZERO_HP_USES
-from core.game.stats import hit_points_for_level, roll_ability_mod
+from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
+from core.rules.proficiencies import FEATURE_GRANTS_KEY, SEEDED_FLAG
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -86,7 +87,9 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
-                         RETROFIT_DONE, ALLY_EXCLUSIVE, CREATED_SLOTS)
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, CREATED_SLOTS,
+                         "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
+                         SEEDED_FLAG, FEATURE_GRANTS_KEY)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -203,7 +206,7 @@ async def _refresh_char_full(
 @router.get("", response_model=list[CharacterSummary])
 async def list_characters(
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
@@ -283,7 +286,7 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
 async def create_character(
     body: CharacterCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0)
@@ -344,7 +347,7 @@ async def create_character(
 async def get_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     return await build_character_response(session, char)
@@ -359,7 +362,7 @@ async def update_character(
     char_id: int,
     body: CharacterUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
@@ -391,7 +394,7 @@ async def update_character(
 async def delete_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
 
@@ -426,7 +429,7 @@ async def update_skills(
     char_id: int,
     body: SkillsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     current = dict(char.skills or {})
@@ -446,7 +449,7 @@ async def update_saving_throws(
     char_id: int,
     body: SavingThrowsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     current = dict(char.saving_throws or {})
@@ -466,7 +469,7 @@ async def update_conditions(
     char_id: int,
     body: ConditionsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     result = await apply_conditions(session, char, body.conditions)
@@ -491,7 +494,7 @@ async def update_conditions(
 async def hide(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Azione Nascondersi 2024: l'ultima prova di Furtività, salvata dal server, di almeno 15 (con le condizioni
     confermate dal giocatore) rende Invisibili; il totale è la CD per trovarti. Nel 2014 l'esito lo decide il DM."""
@@ -518,7 +521,7 @@ async def hide(
 async def tick_round(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     if await active_encounter_row(session, char_id) is not None:
@@ -541,7 +544,7 @@ async def update_inspiration(
     char_id: int,
     body: InspirationUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     settings = dict(char.settings or {})
@@ -560,7 +563,7 @@ async def update_inspiration(
 async def discard_extra_inspiration(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Scarta l'Ispirazione ricevuta in più che non si vuole cedere: quella propria resta."""
     char = await _get_owned(char_id, user_id, session, full=True)
@@ -580,7 +583,7 @@ async def update_xp(
     char_id: int,
     body: XPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
@@ -688,7 +691,7 @@ async def roll_skill(
     char_id: int,
     skill_name: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     if skill_name not in _SKILL_ABILITY:
@@ -754,7 +757,7 @@ async def roll_ability_check(
     char_id: int,
     ability: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     """Prova di caratteristica senza abilità (spingere, sollevare, spezzare): modificatore, nessuna competenza, stessi
@@ -809,7 +812,7 @@ async def roll_saving_throw(
     char_id: int,
     ability: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     if ability not in ABILITY_NAMES:
@@ -918,7 +921,7 @@ async def roll_pending_save(
     char_id: int,
     psid: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> PendingSaveRollResult:
     char = await _get_owned(char_id, user_id, session, full=True)
@@ -985,7 +988,7 @@ async def dismiss_pending_save(
     char_id: int,
     psid: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _get_owned(char_id, user_id, session)
     ps = await _owned_pending_save(session, char_id, psid)

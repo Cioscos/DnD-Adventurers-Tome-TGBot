@@ -53,7 +53,7 @@ def _filename(name: str) -> str:
 async def export_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Response:
     char = await _get_owned(char_id, user_id, session)
     data = await build_export(session, char)
@@ -68,7 +68,7 @@ async def export_character(
 async def send_export(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     char = await _get_owned(char_id, user_id, session)
     if not bot_token_configured():
@@ -131,7 +131,7 @@ async def _create_from(session: AsyncSession, user_id: int, data: CharacterExpor
 async def import_character_endpoint(
     request: Request,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     raw = await _import_body(request)
@@ -159,7 +159,7 @@ def _ddb_error(code: str) -> HTTPException:
 async def import_ddb_character(
     body: DdbImportRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> DdbImportResult:
     ddb_id = parse_ddb_id(body.url)
@@ -269,7 +269,7 @@ async def _apply_feature_uses(session: AsyncSession, char, feature_uses: list[di
 async def duplicate_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session)

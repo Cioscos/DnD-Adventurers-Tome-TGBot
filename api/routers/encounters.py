@@ -267,7 +267,7 @@ async def create_encounter(
     session_id: int,
     body: EncounterCreateRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -302,7 +302,7 @@ async def add_combatants(
     session_id: int,
     body: CombatantAddRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -346,7 +346,7 @@ async def roll_initiative(
     combatant_id: int,
     body: InitiativeRollRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -399,7 +399,7 @@ async def roll_initiative(
 async def sync_pcs(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -425,7 +425,7 @@ async def start_encounter(
     session_id: int,
     body: EncounterStartRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -528,7 +528,7 @@ async def _turn_endpoint(
 async def next_turn(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     return await _turn_endpoint(session_id, user_id, db, lang, backward=False)
@@ -538,7 +538,7 @@ async def next_turn(
 async def prev_turn(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     return await _turn_endpoint(session_id, user_id, db, lang, backward=True)
@@ -553,7 +553,7 @@ async def patch_combatant(
     combatant_id: int,
     body: CombatantPatchRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -707,7 +707,7 @@ async def gm_apply_condition(
     combatant_id: int,
     body: GmConditionApply,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
@@ -730,7 +730,7 @@ async def gm_remove_condition(
     combatant_id: int,
     slug: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
@@ -756,7 +756,7 @@ async def gm_resolve_monster_save(
     save_id: int,
     body: PendingSaveResolve,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -811,7 +811,7 @@ async def delete_combatant(
     session_id: int,
     combatant_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -844,7 +844,7 @@ async def reorder_combatants(
     session_id: int,
     body: ReorderRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
@@ -873,7 +873,7 @@ async def reorder_combatants(
 async def end_encounter(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)

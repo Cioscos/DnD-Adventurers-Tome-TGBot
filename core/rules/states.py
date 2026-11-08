@@ -22,11 +22,11 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
              "immune_conditions": list(spec.immune_conditions), "end_slot": spec.end_slot}
     if spec.condition:
         # rinnovare lo stato non cambia di chi era l'invisibilità: la prima volta ricorda se c'era già
-        previous = next((s for s in get_states(char) if s["key"] == spec.key and s.get("condition")), None)
-        was_on = previous["condition_was_on"] if previous else bool((char.conditions or {}).get(spec.condition))
+        previous = next((s for s in get_states(char) if s.get("key") == spec.key and s.get("condition")), None)
+        was_on = previous.get("condition_was_on", False) if previous else bool((char.conditions or {}).get(spec.condition))
         state.update(condition=spec.condition, condition_was_on=was_on)
         char.conditions = {**(char.conditions or {}), spec.condition: True}
-    char.active_states = [*(s for s in get_states(char) if s["key"] != spec.key), state]
+    char.active_states = [*(s for s in get_states(char) if s.get("key") != spec.key), state]
     return state
 
 

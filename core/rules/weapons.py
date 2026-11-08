@@ -118,15 +118,15 @@ def ability_score(char: Any, ability: str) -> int:
     return effective_ability_score(ability, row.value, [i for i in char.items if i.is_equipped])[0]
 
 
-_SMALL_RACES = ("halfling", "halfelin", "mezzuomo", "gnom", "goblin", "kobold", "coboldo")
-_MEDIUM_RACES = ("human", "uman", "elf", "elfo", "elfi", "dwarf", "nano", "nana", "dragon", "drago", "half-orc",
+_SMALL_RACES = ("halfling", "halfelin", "mezzuomo", "gnom", "kobold", "coboldo")
+_MEDIUM_RACES = ("human", "uman", "elf", "elfo", "elfi", "dwarf", "nano", "nana", "dragon", "drago", "hobgoblin", "half-orc",
                  "mezzorco", "half-elf", "mezzelf", "tiefling")
 
 
 def small_race(char: Any) -> bool | None:
     """Il 2014 lega Pesante alla taglia. ``None``: razza che l'app non conosce, lo dichiara il giocatore."""
     race = (getattr(char, "race", None) or "").lower()
-    if any(word in race for word in _SMALL_RACES):
+    if any(word in race for word in _SMALL_RACES) or re.search(r"\bgoblin\b", race):  # parola intera: non "hobgoblin"
         return True
     return False if any(word in race for word in _MEDIUM_RACES) else None
 

@@ -127,7 +127,7 @@ async def _save_both(
 async def list_lore(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[LoreRead]:
     is_gm = await _access(db, campaign_id, user_id)
     rows = (await db.execute(select(CampaignLore).where(CampaignLore.campaign_id == campaign_id))).scalars().all()
@@ -141,7 +141,7 @@ async def list_lore(
 async def create_lore(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     title: str = Form(..., min_length=1, max_length=120),
     body: str = Form(""),
     tags: str = Form("[]"),
@@ -167,7 +167,7 @@ async def update_lore(
     campaign_id: int,
     lore_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     title: str | None = Form(None, min_length=1, max_length=120),
     body: str | None = Form(None),
     tags: str | None = Form(None),
@@ -205,7 +205,7 @@ async def delete_lore(
     campaign_id: int,
     lore_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Response:
     lore = await _gm_lore(db, campaign_id, lore_id, user_id)
     paths = [lore.image_path, lore.audio_path]
@@ -221,7 +221,7 @@ async def reveal_lore(
     campaign_id: int,
     lore_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> LoreRead:
     lore = await _gm_lore(db, campaign_id, lore_id, user_id)
     if lore.revealed_at is None:
@@ -244,7 +244,7 @@ async def hide_lore(
     campaign_id: int,
     lore_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> LoreRead:
     lore = await _gm_lore(db, campaign_id, lore_id, user_id)
     if lore.revealed_at is not None:
@@ -276,7 +276,7 @@ async def _serve(campaign_id: int, lore_id: int, db: AsyncSession, header: str, 
 
 @router.get("/{lore_id}/image", response_model=None)
 async def get_lore_image(
-    campaign_id: int, lore_id: int, db: Annotated[AsyncSession, Depends(get_db)],
+    campaign_id: int, lore_id: int, db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
     init_data: str = Query(""),
 ):
@@ -285,7 +285,7 @@ async def get_lore_image(
 
 @router.get("/{lore_id}/audio", response_model=None)
 async def get_lore_audio(
-    campaign_id: int, lore_id: int, db: Annotated[AsyncSession, Depends(get_db)],
+    campaign_id: int, lore_id: int, db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
     init_data: str = Query(""),
 ):

@@ -50,7 +50,7 @@ async def add_spell_slot(
     char_id: int,
     body: SpellSlotCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SpellSlot:
     await _get_owned_full(char_id, user_id, session)
     slot = SpellSlot(
@@ -71,7 +71,7 @@ async def update_spell_slot(
     slot_id: int,
     body: SpellSlotUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SpellSlotRead:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -119,7 +119,7 @@ async def delete_spell_slot(
     char_id: int,
     slot_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -135,7 +135,7 @@ async def delete_spell_slot(
 async def reset_spell_slots(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     for slot in char.spell_slots:

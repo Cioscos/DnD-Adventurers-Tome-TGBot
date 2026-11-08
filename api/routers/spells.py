@@ -339,7 +339,7 @@ async def _charge_pact_use(session: AsyncSession, row: Ability | None) -> None:
 async def list_spells(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     q: str | None = None,
 ) -> list[SpellRead]:
     char = await _get_owned_full(char_id, user_id, session)
@@ -363,7 +363,7 @@ async def add_spell(
     char_id: int,
     body: SpellCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Spell:
     char = await _get_owned_full(char_id, user_id, session)
     _check_class(char, body.class_id)
@@ -391,7 +391,7 @@ async def update_spell(
     spell_id: int,
     body: SpellUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Spell:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -424,7 +424,7 @@ async def remove_spell(
     char_id: int,
     spell_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -446,7 +446,7 @@ async def remove_spell(
 async def spellbook_cost(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     level: int = 1,
     school: str | None = None,
     mode: str = "copy",
@@ -465,7 +465,7 @@ async def copy_spell_to_book(
     spell_id: int,
     body: SpellCopyRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Copia l'incantesimo nel Libro del Mago (o nella copia di riserva) pagando l'oro: ogni rifiuto viene prima di spendere."""
     from api.services.containers import withdraw  # import locale: containers importa il modello degli oggetti
@@ -491,7 +491,7 @@ async def copy_spell_to_book(
 async def lose_spellbook(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Il libro è perso: resta ciò che c'è nella copia di riserva (che diventa il libro); il resto si ritrascrive se preparato."""
     char = await _get_owned_full(char_id, user_id, session)
@@ -510,7 +510,7 @@ async def use_spell(
     spell_id: int,
     body: SpellUseRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
@@ -547,7 +547,7 @@ async def cast_check(
     char_id: int,
     spell_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     ritual: bool = False,
 ) -> list[str]:
     """Le regole che questo lancio violerebbe, da confermare prima di tirare i dadi. Il lancio le ricontrolla."""
@@ -564,7 +564,7 @@ async def spell_attack(
     spell_id: int,
     body: SpellAttackRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SpellAttackResult:
     char = await _get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
@@ -693,7 +693,7 @@ async def update_concentration(
     char_id: int,
     body: ConcentrationUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     if body.spell_id is None:
@@ -716,7 +716,7 @@ async def concentration_save(
     char_id: int,
     body: ConcentrationSaveRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> ConcentrationSaveResult:
     char = await _get_owned_full(char_id, user_id, session)
     return await roll_concentration_save(
@@ -737,7 +737,7 @@ async def roll_spell_damage(
     spell_id: int,
     body: RollDamageRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> RollDamageResult:
     char = await _get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
@@ -973,7 +973,7 @@ async def roll_spell_healing(
     spell_id: int,
     body: RollHealingRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> RollHealingResult:
     """PF che un incantesimo di cura restituisce (R41): dadi allo slot scelto, modificatore da incantatore e privilegi
     (Discepolo della Vita, Guarigione Suprema). Il server tira e somma; con ``apply_to_self`` li aggiunge a chi lancia."""
@@ -1029,7 +1029,7 @@ async def last_damage_options(
     char_id: int,
     body: LastDamageBody,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> RollDamageResult | WeaponAttackResult | CompanionAttackResult:
     """Privilegi usati dopo aver visto i dadi di danno (incantesimo, arma o compagno). Il tiro è quello salvato dal server."""
     char = await _get_owned_full(char_id, user_id, session)

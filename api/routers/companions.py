@@ -93,7 +93,7 @@ async def _get_companion(session: AsyncSession, char_id: int, comp_id: int) -> C
 async def list_companions(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[CompanionRead]:
     char = await _get_char(session, char_id, user_id)
     res = await session.execute(
@@ -107,7 +107,7 @@ async def create_companion(
     char_id: int,
     body: CompanionCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
     rows = list((await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars())
@@ -148,7 +148,7 @@ async def update_companion(
     comp_id: int,
     body: CompanionUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
@@ -182,7 +182,7 @@ async def activate_wild_shape(
     char_id: int,
     comp_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[CompanionActivate | None, Body()] = None,
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
@@ -236,7 +236,7 @@ async def deactivate_wild_shape(
     char_id: int,
     comp_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
@@ -254,7 +254,7 @@ async def wild_heal(
     comp_id: int,
     body: WildHealRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> WildHealResult:
     """Forma Selvatica da Combattimento (Druido 2014, Circolo della Luna): in forma, azione bonus e uno slot per curare la
     forma di 1d8 per livello dello slot. Il server tira; lo slot si prende con un UPDATE condizionato."""
@@ -294,7 +294,7 @@ async def delete_companion(
     char_id: int,
     comp_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
@@ -312,7 +312,7 @@ async def companion_hp(
     comp_id: int,
     body: CompanionHp,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
@@ -398,7 +398,7 @@ async def command_companion(
     comp_id: int,
     body: CompanionCommand,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionCommandResult:
     """Ordine alla bestia del ranger. Con l'azione: Attacco, Aiuto, Disimpegno, Scatto o Schivata. Con l'azione bonus
     (Addestramento Straordinario, 7°) tutti tranne l'Attacco, e solo in un turno in cui la bestia non attacca."""
@@ -440,7 +440,7 @@ async def spend_beast_hit_dice(
     comp_id: int,
     body: HitDiceRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceResult:
     """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0."""
     char = await _get_char(session, char_id, user_id)
@@ -476,7 +476,7 @@ async def companion_attack(
     comp_id: int,
     body: CompanionAttack,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionAttackResult:
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)

@@ -99,7 +99,7 @@ async def _save(campaign_id: int, file: UploadFile) -> str:
 async def list_maps(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[AtlasMapRead]:
     is_gm = await _access(db, campaign_id, user_id)
     rows = (await db.execute(
@@ -113,7 +113,7 @@ async def list_maps(
 async def create_map(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     name: str = Form(..., min_length=1, max_length=80),
     file: UploadFile = File(...),
 ) -> AtlasMapRead:
@@ -134,7 +134,7 @@ async def create_map(
 async def rename_map(
     campaign_id: int, map_id: int, body: AtlasMapRename,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> AtlasMapRead:
     m = await _gm_map(db, campaign_id, map_id, user_id)
     m.name, m.updated_at = body.name.strip(), _now()
@@ -146,7 +146,7 @@ async def rename_map(
 async def replace_image(
     campaign_id: int, map_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     file: UploadFile = File(...),
 ) -> AtlasMapRead:
     m = await _gm_map(db, campaign_id, map_id, user_id)
@@ -161,7 +161,7 @@ async def replace_image(
 async def reveal_map(
     campaign_id: int, map_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> AtlasMapRead:
     m = await _gm_map(db, campaign_id, map_id, user_id)
     if m.revealed_at is None:
@@ -175,7 +175,7 @@ async def reveal_map(
 async def hide_map(
     campaign_id: int, map_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> AtlasMapRead:
     m = await _gm_map(db, campaign_id, map_id, user_id)
     if m.revealed_at is not None:
@@ -188,7 +188,7 @@ async def hide_map(
 async def delete_map(
     campaign_id: int, map_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> AtlasMapDeleted:
     m = await _gm_map(db, campaign_id, map_id, user_id)
     path = m.image_path
@@ -203,7 +203,7 @@ async def delete_map(
 
 @router.get("/maps/{map_id}/image", response_model=None)
 async def get_map_image(
-    campaign_id: int, map_id: int, db: Annotated[AsyncSession, Depends(get_db)],
+    campaign_id: int, map_id: int, db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
     init_data: str = Query(""),
 ):
@@ -323,7 +323,7 @@ async def _author(db: AsyncSession, campaign_id: int, user_id: int) -> tuple[int
 async def list_markers(
     campaign_id: int, map_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[MarkerRead]:
     is_gm = await _access(db, campaign_id, user_id)
     await _map(db, campaign_id, map_id, is_gm)
@@ -337,7 +337,7 @@ async def list_markers(
 async def create_marker(
     campaign_id: int, map_id: int, body: MarkerCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerRead:
     is_gm = await _access(db, campaign_id, user_id)
     m = await _map(db, campaign_id, map_id, is_gm)
@@ -363,7 +363,7 @@ async def create_marker(
 async def update_marker(
     campaign_id: int, marker_id: int, body: MarkerUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerRead:
     is_gm = await _access(db, campaign_id, user_id)
     mk = await _marker(db, campaign_id, marker_id, user_id, is_gm)
@@ -387,7 +387,7 @@ async def update_marker(
 async def set_marker_visibility(
     campaign_id: int, marker_id: int, body: MarkerVisibility,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerRead:
     is_gm = await _access(db, campaign_id, user_id)
     mk = await _marker(db, campaign_id, marker_id, user_id, is_gm)
@@ -407,7 +407,7 @@ async def set_marker_visibility(
 async def delete_marker(
     campaign_id: int, marker_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     is_gm = await _access(db, campaign_id, user_id)
     mk = await _marker(db, campaign_id, marker_id, user_id, is_gm)
@@ -421,7 +421,7 @@ async def delete_marker(
 async def list_marker_types(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[MarkerTypeRead]:
     is_gm = await _access(db, campaign_id, user_id)
     custom = (await _types(db, campaign_id)).values()
@@ -433,7 +433,7 @@ async def list_marker_types(
 async def create_marker_type(
     campaign_id: int, body: MarkerTypeCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerTypeRead:
     is_gm = await _access(db, campaign_id, user_id)
     t = CampaignMarkerType(campaign_id=campaign_id, name=body.name, icon=body.icon, color=body.color,
@@ -447,7 +447,7 @@ async def create_marker_type(
 async def delete_marker_type(
     campaign_id: int, type_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     is_gm = await _access(db, campaign_id, user_id)
     t = await db.get(CampaignMarkerType, type_id)

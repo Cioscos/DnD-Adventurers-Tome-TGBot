@@ -96,7 +96,7 @@ async def update_ability_score(
     ability_name: str,
     body: AbilityScoreUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -129,7 +129,7 @@ async def update_ac(
     char_id: int,
     body: ACUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     if body.base is not None:
@@ -147,7 +147,7 @@ async def update_ac(
 async def reset_ac_override(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Clear AC manual override flags and recompute Base/Shield from currently equipped items."""
     char = await _get_owned_full(char_id, user_id, session)
@@ -175,7 +175,7 @@ async def update_carry_capacity(
     char_id: int,
     body: CarryCapacityUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Set a manual carry capacity and lock it against Strength recomputation."""
     char = await _get_owned_full(char_id, user_id, session)
@@ -188,7 +188,7 @@ async def update_carry_capacity(
 async def reset_carry_capacity_override(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Clear the manual override and recompute carry capacity from Strength (STR x 15)."""
     char = await _get_owned_full(char_id, user_id, session)
@@ -202,7 +202,7 @@ async def set_unarmored_defense(
     char_id: int,
     body: UnarmoredDefenseUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Enable/disable Unarmored Defense.
 

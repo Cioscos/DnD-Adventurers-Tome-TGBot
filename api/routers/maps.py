@@ -84,7 +84,7 @@ async def _get_map(map_id: int, char_id: int, session: AsyncSession) -> Map:
 async def list_maps(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[Map]:
     await _get_owned(char_id, user_id, session)
     result = await session.execute(
@@ -99,7 +99,7 @@ async def list_maps(
 async def get_map_file(
     char_id: int,
     map_id: int,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
     init_data: str = Query(""),
 ):
@@ -171,7 +171,7 @@ async def get_map_file(
 async def upload_map(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     zone_name: str = Form(...),
     file: UploadFile = File(...),
 ) -> Map:
@@ -222,7 +222,7 @@ async def delete_map(
     char_id: int,
     map_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _get_owned(char_id, user_id, session)
     map_row = await _get_map(map_id, char_id, session)
@@ -238,7 +238,7 @@ async def delete_map(
 async def reorder_maps(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     payload: Annotated[MapReorderBody, Body(...)],
 ) -> CharacterFull:
     """Persist a new drag-reorder of maps inside a zone.
@@ -271,7 +271,7 @@ async def delete_map_zone(
     char_id: int,
     zone_name: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _get_owned(char_id, user_id, session)
     result = await session.execute(

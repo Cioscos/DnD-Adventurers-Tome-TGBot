@@ -62,7 +62,7 @@ async def _get_or_create_currency(char_id: int, session: AsyncSession) -> Curren
 async def get_currency(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Currency:
     await _get_owned_full(char_id, user_id, session)
     return await _get_or_create_currency(char_id, session)
@@ -73,7 +73,7 @@ async def update_currency(
     char_id: int,
     body: CurrencyUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Currency:
     await _get_owned_full(char_id, user_id, session)
     currency = await _get_or_create_currency(char_id, session)
@@ -87,7 +87,7 @@ async def convert_currency(
     char_id: int,
     body: CurrencyConvert,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Currency:
     char = await _get_owned_full(char_id, user_id, session)
     if body.source not in _VALID_COINS or body.target not in _VALID_COINS:
@@ -125,7 +125,7 @@ async def adjust_currency(
     char_id: int,
     body: CoinAdjustRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CoinAdjustResult:
     char = await _get_owned_full(char_id, user_id, session)
     await _get_or_create_currency(char_id, session)
@@ -146,7 +146,7 @@ async def move_currency(
     char_id: int,
     body: CoinMoveRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CoinAdjustResult:
     char = await _get_owned_full(char_id, user_id, session)
     await _get_or_create_currency(char_id, session)

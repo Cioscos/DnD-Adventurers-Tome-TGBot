@@ -58,7 +58,7 @@ async def resolve_choice(
     choice_id: str,
     body: Annotated[Union[AsiResolve, FeatResolve, EpicBoonResolve, ClassOptionResolve], Field(discriminator="kind")],
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
@@ -117,7 +117,7 @@ async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id:
 async def delete_feat_by_rule(
     char_id: int, rule_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     return await _remove(char_id, user_id, session, None, rule_id)
 
@@ -126,7 +126,7 @@ async def delete_feat_by_rule(
 async def delete_feat(
     char_id: int, ability_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     return await _remove(char_id, user_id, session, ability_id)
 
@@ -148,7 +148,7 @@ def _class_of(char, class_id: int):
 async def class_options(
     char_id: int, class_id: int, group: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     char = await _get_owned_full(char_id, user_id, session)
     return class_options_state(char, _class_of(char, class_id), group)
@@ -158,7 +158,7 @@ async def class_options(
 async def replace_option(
     char_id: int, class_id: int, body: OptionReplace,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)

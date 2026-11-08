@@ -108,7 +108,7 @@ class InitiativeSubmission(RollOptionsBody):
 async def roll_character_initiative(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[InitiativeSubmission | None, Body()] = None,
 ) -> RollResult:
     """Iniziativa fuori da un incontro: stesso bonus della scheda, modo e note come gli altri tiri."""
@@ -150,7 +150,7 @@ async def post_dice_result(
     char_id: int,
     body: DiceResultRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> DiceRollResult:
     # validate ranges
     for entry in body.rolls:
@@ -201,7 +201,7 @@ async def post_dice_result(
 async def get_dice_history(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[DiceRollResult]:
     char = await _get_owned(char_id, user_id, session)
     history = list(char.rolls_history or [])
@@ -229,7 +229,7 @@ async def post_dice_to_chat(
     char_id: int,
     body: DicePostToChatRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Send a dice roll result to the user's private Telegram chat.
 
@@ -262,7 +262,7 @@ async def post_dice_to_chat(
 async def clear_dice_history(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
     char.rolls_history = []
@@ -272,7 +272,7 @@ async def clear_dice_history(
 async def get_dice_stats(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Contatori cumulativi raw {kind: {faccia: conteggio}}; il FE deriva il resto."""
     char = await _get_owned(char_id, user_id, session)
@@ -283,7 +283,7 @@ async def get_dice_stats(
 async def reset_dice_stats(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
     char.dice_stats = {}

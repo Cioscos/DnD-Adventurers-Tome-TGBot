@@ -102,7 +102,7 @@ async def _owned_char(db: AsyncSession, char_id: int, user_id: int) -> Character
 @turn_router.post("/{char_id}/turn/use", response_model=TurnBlock)
 async def turn_use(
     char_id: int, body: TurnUse, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     return (spend if body.used else release)(char, body.slot)
@@ -111,7 +111,7 @@ async def turn_use(
 @turn_router.post("/{char_id}/turn/new", response_model=TurnBlock)
 async def turn_new(
     char_id: int, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     in_encounter = await active_encounter_row(db, char_id) is not None
@@ -127,7 +127,7 @@ async def turn_new(
 @turn_router.post("/{char_id}/turn/other", response_model=TurnBlock)
 async def turn_other(
     char_id: int, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Fuori da un incontro: è il turno di un altro, tornano gli effetti «una volta per turno»."""
     char = await _owned_char(db, char_id, user_id)
@@ -142,7 +142,7 @@ async def roll_options(
                   "damage_taken", "cast", "spell_healing"],
     user_id: Annotated[int, Depends(get_current_user)],
     lang: Annotated[str, Depends(get_current_lang)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     item_id: int | None = None,
     spell_id: int | None = None,
     ability: str | None = None,
@@ -190,7 +190,7 @@ _HISTORY_EVENT = {"skill": "skill_roll", "ability": "skill_roll", "save": "savin
 
 @turn_router.post("/{char_id}/last-roll/options", response_model=LastRollResult)
 async def last_roll_options(
-    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[LastRollBody | None, Body()] = None,
 ) -> LastRollResult:
     """Privilegi usati dopo aver visto il d20. Il tiro è quello salvato dal server, non quello del client."""
@@ -305,7 +305,7 @@ async def last_roll_options(
 
 @turn_router.post("/{char_id}/last-roll/refund", response_model=TurnBlock)
 async def last_roll_refund(
-    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[LastRollRefund | None, Body()] = None,
 ) -> dict:
     """Il giocatore dichiara l'esito: se è fallito tornano le opzioni che si pagano solo se riesce."""
@@ -351,7 +351,7 @@ _FEATURE_LOCKS: defaultdict[tuple[int, int], asyncio.Lock] = defaultdict(asyncio
 @turn_router.post("/{char_id}/features/{feature_key}/use", response_model=FeatureUseResult)
 async def feature_use(
     char_id: int, feature_key: str, body: FeatureUse, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> FeatureUseResult:
     # Un uso alla volta per personaggio: la seconda richiesta rilegge il turno e i totali già scritti dalla prima, così un doppio
     # tocco non paga due volte ciò che ottiene una (slot creato). shortcut: un solo processo API, con più worker serve un lock nel DB.
@@ -377,7 +377,7 @@ class PreserveLifeResult(BaseModel):
 @turn_router.post("/{char_id}/preserve-life", response_model=PreserveLifeResult)
 async def preserve_life_endpoint(
     char_id: int, body: PreserveLifeBody, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> PreserveLifeResult:
     """Preservare Vita (R42): distribuisce 5 × livello PF fra chi usa il privilegio e gli altri partecipanti della serata."""
     from dataclasses import asdict
@@ -407,7 +407,7 @@ class PreserveLifeInfo(BaseModel):
 
 @turn_router.get("/{char_id}/preserve-life", response_model=PreserveLifeInfo)
 async def preserve_life_info(
-    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> PreserveLifeInfo:
     """Per il pannello di Preservare Vita: la riserva e il tetto di ciascun destinatario, calcolati dal server e solo
     per chi può usare il privilegio adesso."""
@@ -442,7 +442,7 @@ class SurgeResult(BaseModel):
 @turn_router.post("/{char_id}/wild-magic/surge", response_model=SurgeResult)
 async def wild_magic_surge(
     char_id: int, body: SurgeBody, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Impulso di Magia Selvaggia: d20 una volta per turno e, con 1, la tabella dei 50 impulsi."""
     from api.services.wild_magic import roll_surge
@@ -454,7 +454,7 @@ async def wild_magic_surge(
 
 @turn_router.get("/{char_id}/wild-magic/table")
 async def wild_magic_table(
-    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[dict]:
     """La tabella degli impulsi dell'edizione del personaggio (per scegliere l'effetto di Impulso Domato)."""
     from api.services.wild_magic import surge_table
@@ -464,7 +464,7 @@ async def wild_magic_table(
 @turn_router.post("/{char_id}/wild-magic/surge/choose", response_model=SurgeResult)
 async def wild_magic_choose(
     char_id: int, body: SurgeChoose, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Caos Controllato: il giocatore sceglie fra i due risultati tirati."""
     from api.services.wild_magic import choose_surge
@@ -480,7 +480,7 @@ class AllyRead(BaseModel):
 
 @turn_router.get("/{char_id}/session-allies", response_model=list[AllyRead])
 async def session_allies(
-    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[AllyRead]:
     """Gli altri personaggi seduti alla stessa serata attiva: a chi dare il dado di Ispirazione. Vuoto fuori serata."""
     char = await _owned_char(db, char_id, user_id)
@@ -500,7 +500,7 @@ class BardicDieAc(BaseModel):
 
 @turn_router.post("/{char_id}/bardic-die/ac", response_model=BardicDieAc)
 async def bardic_die_ac(
-    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> BardicDieAc:
     """Ispirazione in Combattimento (Collegio del Valore): in reazione, il dado ricevuto si somma alla CA contro un attacco.
     Spende la reazione e il dado; il valore da sommare lo dice la risposta. Con la reazione già spesa non perde il dado."""
@@ -521,7 +521,7 @@ async def bardic_die_ac(
 @turn_router.delete("/{char_id}/active-states/{key}", response_model=list[dict])
 async def end_active_state(
     char_id: int, key: str, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[dict]:
     char = await _get_owned_full(char_id, user_id, db)
     form = await get_active_form(db, char.id) if key == WILD_SHAPE_STATE else None
@@ -548,7 +548,7 @@ async def _active_encounter(db: AsyncSession, char_id: int) -> tuple[Encounter, 
 @turn_router.get("/{char_id}/target-effects/{effect_key}", response_model=TargetEffectPreview)
 async def target_effect_preview(
     char_id: int, effect_key: str, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> TargetEffectPreview:
     char = await _owned_char(db, char_id, user_id)
     found = await _active_encounter(db, char_id)
@@ -564,7 +564,7 @@ async def target_effect_preview(
 @turn_router.post("/{char_id}/target-effects", response_model=TargetEffectResult)
 async def target_effect_apply(
     char_id: int, body: TargetEffectBody, user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> TargetEffectResult:
     """Applica al combattente scelto l'effetto confermato col tiro. Fuori da un incontro attivo restituisce solo l'esito."""
     char = await _owned_char(db, char_id, user_id)
