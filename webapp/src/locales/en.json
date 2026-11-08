@@ -766,7 +766,7 @@
         "full_damage": "Full",
         "damage": "Damage",
         "half_damage": "Half",
-        "potent_cantrip": "On a successful save: {{n}} damage (Potent Cantrip), no other effect.",
+        "potent_cantrip": "Save passed or attack missed: {{n}} damage (Potent Cantrip), no other effect.",
         "cast_errors": {
           "turn_slot_used": "You already used that action this turn.",
           "no_uses": "No uses left.",

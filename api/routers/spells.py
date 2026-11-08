@@ -72,7 +72,7 @@ from api.services.spellcasting import build_spellcasting_info, fill_spell_stats,
 from core.game.stats import cantrip_dice_multiplier
 from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
 from core.rules.spellcasting import (
-    at_will, can_ritual, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
+    at_will, bonus_cast, can_ritual, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
 )
 
 
@@ -177,6 +177,8 @@ def _cast_kind(char: Character, spell: Spell) -> str:
     kind = casting_kind(spell)
     if (kind == "action" and character_edition(char) == "2024" and has_state(char, "elder_champion")
             and not _LONG_CASTING.search(spell.casting_time or "")):
+        return "bonus"
+    if kind == "action" and bonus_cast(char, spell):  # Rompi-Incantesimi: Dissolvi Magie come azione bonus
         return "bonus"
     return kind
 
@@ -363,7 +365,7 @@ async def add_spell(
     _check_class(char, body.class_id)
     pick = None
     if body.pick_id:  # Segreti Magici: l'incantesimo è di qualsiasi classe e passa alla classe del bardo
-        pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index, body.is_ritual)
+        pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index, body.is_ritual, body.school)
         body.class_id = pick[0].id
     spell = Spell(character_id=char_id, **body.model_dump(exclude={"pick_id"}))
     spell.in_spellbook = bool(pick and pick[1].spell_pick == "book")  # la scelta del Libro lo scrive gratis; il resto si copia
@@ -921,9 +923,11 @@ async def roll_spell_damage(
 
 
 def _potent_cantrip(char: Character, spell: Spell) -> bool:
-    """Trucchetto Potente: un trucchetto di danno con un TS fa comunque metà danni a chi lo supera."""
-    return (spell.level == 0 and (spell.attack_save or "").strip().upper() not in ("", "ATK")
-            and any(spec.save_half_cantrips for spec, _row in active_features(char)))
+    """Trucchetto Potente: un trucchetto di danno con un TS fa comunque metà danni a chi lo supera; dal 2024 anche quello con
+    tiro per colpire che manca."""
+    kind = (spell.attack_save or "").strip().upper()
+    return spell.level == 0 and kind != "" and any(
+        spec.save_half_cantrips and (kind != "ATK" or spec.cantrip_half_on_miss) for spec, _row in active_features(char))
 
 
 async def _self_damage(session: AsyncSession, char: Character, opts: Any, spell: Spell, result: RollDamageResult) -> None:

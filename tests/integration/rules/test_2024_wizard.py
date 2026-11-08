@@ -94,9 +94,9 @@ def test_every_base_mapping_title_has_its_row_with_both_languages():
                for f in features_for("2024", "wizard"))
 
 
-def test_the_subclass_module_is_hooked_but_still_empty():
+def test_the_subclass_module_is_hooked():
     from core.rules.catalog.y2024 import wizard, wizard_subclasses
-    assert wizard_subclasses.SUBCLASS_ROWS == () and len(wizard.FEATURES) == len(wizard.BASE_ROWS)
+    assert len(wizard_subclasses.SUBCLASS_ROWS) == 24 and len(wizard.FEATURES) == len(wizard.BASE_ROWS) + 24
 
 
 # ---------------------------------------------------------------------------

@@ -96,7 +96,7 @@ export interface PendingChoice {
   /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti.
    *  `list`: la classe del cui elenco si pesca (trucchetto del druido), `null` per qualsiasi classe.
    *  `owned`: con `retrofit`, gli incantesimi già conosciuti che si possono dichiarare «già sulla scheda». */
-  spell_pick?: { free: boolean; max_level: number; exact?: boolean; ritual?: boolean; book?: boolean; list?: string | null; owned?: { id: number; name: string; level: number }[] }
+  spell_pick?: { free: boolean; max_level: number; exact?: boolean; ritual?: boolean; book?: boolean; list?: string | null; school?: string | null; owned?: { id: number; name: string; level: number }[] }
 }
 
 export type ResolveChoiceBody =

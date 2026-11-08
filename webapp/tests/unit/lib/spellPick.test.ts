@@ -5,6 +5,13 @@ import { loadCatalog, type SpellEntry } from '@/lib/srd/catalog'
 const names = (rows: SpellEntry[]) => rows.map((s) => s.index).sort()
 
 describe('spellPickFilter', () => {
+  it('a school pick (Wizard Savant) offers only spells of that school', async () => {
+    const spells = await loadCatalog('spells')
+    const rows = spells.filter(spellPickFilter({ max_level: 2, list: 'wizard', school: 'abjuration' }))
+    expect(rows.length).toBeGreaterThan(3)
+    expect(rows.every((s) => s.school === 'abjuration' && s.level <= 2)).toBe(true)
+  })
+
   it('a cantrip pick from the druid list offers the druid cantrips and nothing else', async () => {
     const spells = await loadCatalog('spells')
     const rows = spells.filter(spellPickFilter({ max_level: 0, list: 'druid' }))

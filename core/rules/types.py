@@ -66,6 +66,8 @@ class ChoiceSpec:
     protected: "Callable[[RuleContext], set[str]] | None" = None
     # La scelta in blocco e ammessa: ``f(ctx, scelte) -> bool`` (una supplica che ne richiede un'altra scelta insieme a lei)
     batch_ok: "Callable[[RuleContext, list[str]], bool] | None" = None
+    # Con ``spell_pick``: l'incantesimo scelto deve essere di questa scuola (slug inglese): i Sapienti del Mago 2024
+    spell_school: str | None = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language", "save"):
@@ -707,6 +709,13 @@ class FeatureSpec:
     cantrip_range_bonus: int = 0
     # Incantesimi (``srd_index``) che si lanciano in Forma Selvatica senza avviso, solo questi (Incantesimi del Circolo della Luna)
     cast_in_form_spells: tuple[str, ...] = ()
+    # Gli incantesimi di questa scuola non hanno componente Verbale e, con gittata di 3 m o più, hanno ``metri`` in più: ``(scuola, m)``
+    # (Illusioni Migliorate)
+    school_boost: "tuple[str, int] | None" = None
+    # ``srd_index`` degli incantesimi da un'azione che il privilegio fa lanciare con un'azione bonus (Rompi-Incantesimi: Dissolvi Magie)
+    bonus_cast_spells: tuple[str, ...] = ()
+    # Trucchetto Potente 2024: anche il trucchetto con tiro per colpire che manca fa metà danno, non solo quello con TS superato
+    cantrip_half_on_miss: bool = False
 
 
 @dataclass(frozen=True)

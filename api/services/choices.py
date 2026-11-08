@@ -19,6 +19,7 @@ from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
 )
 from core.rules.edition import character_edition, class_key
+from core.rules.schools import normalize_school
 from core.rules.spellcasting import slots_for
 from core.rules.types import RuleContext
 
@@ -207,7 +208,7 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
     if ch is None or not ch.spell_pick:
         return None
     info = {"free": ch.spell_pick == "extra", "max_level": _pick_cap(char, cls, ch), "list": ch.spell_list,
-            **({"book": True} if ch.spell_pick == "book" else {}),
+            **({"book": True} if ch.spell_pick == "book" else {}), **({"school": ch.spell_school} if ch.spell_school else {}),
             **({"exact": True} if ch.spell_exact else {}), **({"ritual": True} if ch.spell_ritual else {})}
     if choice.get("retrofit"):  # R39: gli incantesimi che il personaggio ha già e può dichiarare «già sulla scheda»
         taken = (cls.options or {}).get(ch.group, [])
@@ -220,7 +221,7 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
 
 
 def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int | None, name: str,
-                      srd_index: str | None, is_ritual: bool = True) -> tuple[CharacterClass, object]:
+                      srd_index: str | None, is_ritual: bool = True, school: str | None = None) -> tuple[CharacterClass, object]:
     """Controlla che la scelta esista e che l'incantesimo sia ammesso; restituisce classe e ``ChoiceSpec``."""
     choice = next((c for c in char.pending_choices or [] if c.get("id") == pick_id), None)
     cls = _class_by_key(char, choice.get("class_key")) if choice else None
@@ -233,6 +234,8 @@ def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int |
         raise HTTPException(422, detail={"code": "spell_pick_level"})
     if ch.spell_ritual and not is_ritual:
         raise HTTPException(422, detail={"code": "spell_pick_ritual"})
+    if ch.spell_school and normalize_school(school) != ch.spell_school:  # Sapienti del Mago 2024: solo la propria scuola
+        raise HTTPException(422, detail={"code": "spell_pick_school"})
     lowered = name.strip().lower()
     if any((srd_index and s.srd_index == srd_index) or s.name.strip().lower() == lowered for s in char.spells):
         raise HTTPException(409, detail={"code": "spell_already_known"})

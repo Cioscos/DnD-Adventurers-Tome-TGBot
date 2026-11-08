@@ -205,7 +205,31 @@ def spell_range_override(char: Any, spell: Any) -> str | None:
                   if spec.spell_range and names & set(spec.spell_range[0])), None)
     if fixed is not None:
         return fixed
-    return _per_level_range(char, spell, names) or _cantrip_range_bonus(char, spell)
+    return _per_level_range(char, spell, names) or _cantrip_range_bonus(char, spell) or _school_range(char, spell)
+
+
+def school_boost_range(spell: Any, school: str, metres: int) -> str | None:
+    """Illusioni Migliorate: la gittata di 3 m (10 ft) o più di un incantesimo della scuola cresce di ``metres`` (60 ft per 18 m)."""
+    if normalize_school(getattr(spell, "school", None)) != school:
+        return None
+    found = _RANGE.match(getattr(spell, "range_area", None) or "")
+    if not found:
+        return None
+    amount, unit = float(found.group(1).replace(",", ".")), found.group(2).lower()
+    if amount < (3 if unit == "m" else 10):
+        return None
+    return f"{amount + (metres if unit == 'm' else metres * 10 / 3):g} {unit}{found.group(3)}"
+
+
+def _school_range(char: Any, spell: Any) -> str | None:
+    return next((r for spec, _row in active_features(char) if spec.school_boost
+                 and (r := school_boost_range(spell, *spec.school_boost))), None)
+
+
+def no_verbal(char: Any, spell: Any) -> bool:
+    """Illusioni Migliorate: gli incantesimi di Illusione si lanciano senza componente Verbale."""
+    school = normalize_school(getattr(spell, "school", None))
+    return school is not None and any(spec.school_boost and spec.school_boost[0] == school for spec, _row in active_features(char))
 
 
 _RANGE = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(m|ft)(?![a-z])(.*)$", re.IGNORECASE | re.DOTALL)
@@ -271,6 +295,12 @@ def _ritual_unprepared(char: Any, spell: Any) -> bool:
         return True
     # 2014: chi non prepara li conosce, il talento ha un suo libro.
     return not _has_ritual_feat(char) and any(row_class_key(c) in ("cleric", "druid") for c in rows)
+
+
+def bonus_cast(char: Any, spell: Any) -> bool:
+    """Un privilegio fa lanciare questo incantesimo con un'azione bonus (Rompi-Incantesimi: Dissolvi Magie)."""
+    key = getattr(spell, "srd_index", None)
+    return bool(key) and any(key in spec.bonus_cast_spells for spec, _row in active_features(char))
 
 
 def casting_kind(spell: Any) -> str:

@@ -23,7 +23,7 @@ from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
 from core.rules.spellcasting import (
     at_will, caster_stats, can_ritual, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
-    prepares, school_limit, spell_range_override, spell_stats,
+    no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
 
 
@@ -36,6 +36,8 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         spell.has_book = spell.level >= 1 and wizard_row(char, spell) is not None
         if (shown := spell_range_override(char, spell)) is not None:
             spell.range_area = shown
+        if spell.components and no_verbal(char, spell):  # Illusioni Migliorate
+            spell.components = ", ".join(c for c in (x.strip() for x in spell.components.split(",")) if c.upper() != "V")
         pact = pact_cast(char, spell)
         if pact is not None:
             spell.pact_cast = {"kind": pact.kind, "feature_key": pact.feature_key, "pact_only": pact.pact_only,

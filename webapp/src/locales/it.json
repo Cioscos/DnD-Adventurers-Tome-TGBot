@@ -766,7 +766,7 @@
         "full_damage": "Pieno",
         "damage": "Danno",
         "half_damage": "Dimezzato",
-        "potent_cantrip": "Chi supera il TS: {{n}} danni (Trucchetto Potente), senza altri effetti.",
+        "potent_cantrip": "TS superato o attacco mancato: {{n}} danni (Trucchetto Potente), senza altri effetti.",
         "cast_errors": {
           "turn_slot_used": "Hai già usato quell'azione in questo turno.",
           "no_uses": "Usi esauriti.",
