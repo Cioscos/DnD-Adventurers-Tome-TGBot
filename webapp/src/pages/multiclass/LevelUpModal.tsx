@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { m } from 'framer-motion'
 import { ChevronsUp } from 'lucide-react'
 import { api } from '@/api/client'
@@ -203,7 +204,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                         ? 'bg-dnd-gold text-dnd-ink border-2 border-dnd-gold scale-[1.02]'
                         : 'bg-dnd-surface text-dnd-text border border-dnd-border hover:border-dnd-gold/60'}`}
                   >
-                    <span className="block">{cls.class_name}</span>
+                    <span className="block">{classLabel(t, cls.class_name)}</span>
                     <span className="block text-xs opacity-70 font-mono mt-0.5">
                       {t('character.equipment.progression.level_header')} {cls.level}
                     </span>

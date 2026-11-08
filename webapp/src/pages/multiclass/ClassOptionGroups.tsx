@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { Replace } from 'lucide-react'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
@@ -30,7 +31,7 @@ function Group({ char, cls, group }: { char: CharacterFull; cls: CharacterClass;
     <div data-testid={`option-group-${group}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-dnd-border/60 py-2 pl-1">
       <div className="min-w-0 flex-1">
         <p className={LEDGER_LABEL}>
-          {t(`character.level_choice.groups.${group}`, { defaultValue: group })} · {cls.class_name}
+          {t(`character.level_choice.groups.${group}`, { defaultValue: group })} · {classLabel(t, cls.class_name)}
         </p>
         <p className="text-sm font-body text-dnd-text">{state.data.chosen.map((o) => o.name[lang]).join(', ')}</p>
       </div>

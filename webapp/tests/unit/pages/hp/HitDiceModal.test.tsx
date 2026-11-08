@@ -52,7 +52,7 @@ describe('HitDiceModal', () => {
     render(
       <HitDiceModal classes={classes} onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />,
     )
-    expect(screen.getByText('fighter')).toBeInTheDocument()
+    expect(screen.getByText('dnd.classes.fighter')).toBeInTheDocument()
     // Row markup is "d10 · {remaining}/{level} {label}" split across text nodes/spans
     // (die-size text and the "3/5" remaining indicator are separate nodes).
     expect(screen.getByText(/d10/)).toBeInTheDocument()
