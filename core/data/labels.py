@@ -84,7 +84,7 @@ CUSTOM_CONDITION_LABELS: dict[str, dict[str, str]] = {
     "hamstring": {"it": "Colpo alle Gambe", "en": "Hamstrung"},
     "staggered": {"it": "Colpo Stordente", "en": "Staggered"},
     "sundered": {"it": "Colpo Spezzante", "en": "Sundered"},
-    "dazed": {"it": "Stordito", "en": "Dazed"},
+    "dazed": {"it": "Frastornato", "en": "Dazed"},
 }
 
 
