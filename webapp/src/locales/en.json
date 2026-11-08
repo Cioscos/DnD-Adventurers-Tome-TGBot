@@ -199,7 +199,13 @@
     "roll_notes": {
       "title": "Situational note: {{name}}",
       "edit": "Edit note: {{name}}",
-      "placeholder": "E.g. advantage vs. charm"
+      "placeholder": "E.g. advantage vs. charm",
+      "auto_fail": "Automatic failure",
+      "weapon_heavy": "Heavy weapon",
+      "inspiration": "Inspiration",
+      "armor_untrained": "Armor without training",
+      "armor_stealth": "Noisy armor",
+      "surprised": "Surprised"
     },
     "hero": {
       "stats_section": "Statistics",
@@ -723,7 +729,6 @@
       "create_slot_switches_manual": "Switched to manual spell slot management.",
       "conc_lost": "Concentration has been broken",
       "higher_level": "At higher levels",
-      "attack_save": "Attack / Save",
       "badge_concentration": "Concentration",
       "badge_ritual": "Ritual",
       "chip_casting_time": "CAST",
@@ -918,14 +923,6 @@
       "rolling": "Rolling…",
       "result_title": "Result",
       "pool_cap_reached": "Maximum dice limit reached"
-    },
-    "roll_notes": {
-      "auto_fail": "Automatic failure",
-      "weapon_heavy": "Heavy weapon",
-      "inspiration": "Inspiration",
-      "armor_untrained": "Armor without training",
-      "armor_stealth": "Noisy armor",
-      "surprised": "Surprised"
     },
     "target_effect": {
       "open": "Apply to a combatant",

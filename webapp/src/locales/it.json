@@ -199,7 +199,13 @@
     "roll_notes": {
       "title": "Nota situazionale: {{name}}",
       "edit": "Modifica nota: {{name}}",
-      "placeholder": "Es. vantaggio contro charme"
+      "placeholder": "Es. vantaggio contro charme",
+      "auto_fail": "Fallimento automatico",
+      "weapon_heavy": "Arma pesante",
+      "inspiration": "Ispirazione",
+      "armor_untrained": "Armatura senza addestramento",
+      "armor_stealth": "Armatura rumorosa",
+      "surprised": "Colto di sorpresa"
     },
     "hero": {
       "stats_section": "Statistiche",
@@ -723,7 +729,6 @@
       "create_slot_switches_manual": "Passato alla gestione manuale degli slot incantesimo.",
       "conc_lost": "La concentrazione è stata interrotta",
       "higher_level": "A livelli superiori",
-      "attack_save": "Attacco / TS",
       "badge_concentration": "Concentrazione",
       "badge_ritual": "Rituale",
       "chip_casting_time": "LANCIO",
@@ -918,14 +923,6 @@
       "rolling": "Sto lanciando…",
       "result_title": "Risultato",
       "pool_cap_reached": "Limite massimo dadi raggiunto"
-    },
-    "roll_notes": {
-      "auto_fail": "Fallimento automatico",
-      "weapon_heavy": "Arma pesante",
-      "inspiration": "Ispirazione",
-      "armor_untrained": "Armatura senza addestramento",
-      "armor_stealth": "Armatura rumorosa",
-      "surprised": "Colto di sorpresa"
     },
     "target_effect": {
       "open": "Applica a un combattente",
