@@ -120,6 +120,12 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         raise _bad("option_is_prerequisite")
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
+    if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi
+        for spell in char.spells:
+            if spell.name == old_key:
+                spell.always_prepared = spell.is_prepared = False
+            elif spell.name == new_key:
+                spell.always_prepared = spell.is_prepared = True
     _history(session, char, f"{group}: {old_key} -> {new_key}")
 
 

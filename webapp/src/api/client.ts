@@ -622,7 +622,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; reopen_tome?: boolean },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',

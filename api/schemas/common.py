@@ -347,6 +347,11 @@ class HPUndoRequest(BaseModel):
     op_id: str
 
 
+class MemorizeSpellRequest(BaseModel):
+    out: int  # id dell'incantesimo preparato che si lascia
+    into: int  # id dell'incantesimo del libro che si prepara al suo posto
+
+
 class RestRequest(BaseModel):
     rest_type: str  # "long" | "short"
     interrupted: bool = False
@@ -356,6 +361,7 @@ class RestRequest(BaseModel):
     natural_recovery: Optional[dict[int, int]] = None
     arcane_recovery: Optional[dict[int, int]] = None  # Recupero Arcano del Mago: stessi controlli
     reopen_tome: bool = False  # Patto del Tomo: i trucchetti e i rituali del Libro delle Ombre tornano da scegliere
+    memorize_spell: Optional[MemorizeSpellRequest] = None  # Memorizzare Incantesimo (Mago 2024, 5°): scambio al riposo breve
     sorcerous_restoration: Optional[int] = None  # Ripristino Stregonesco (Stregone 2024): punti stregoneria da recuperare
 
 

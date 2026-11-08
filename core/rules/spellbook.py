@@ -1,4 +1,4 @@
-"""Libro degli Incantesimi del Mago 2014: di chi è un incantesimo, quanto costa copiarlo, cosa si può preparare.
+"""Libro degli Incantesimi del Mago (2014 e 2024): di chi è un incantesimo, quanto costa copiarlo, cosa si può preparare.
 
 Funzioni pure sul personaggio, senza scrivere nulla: chi copia (``api/routers/spellbook.py``) controlla e spende.
 Costi dalla scheda ``docs/superpowers/rules/2014/classes/wizard.md``: copia nel libro 2 ore e 50 mo per livello
@@ -28,10 +28,8 @@ class CopyCost:
 
 def wizard_row(char: Any, spell: Any) -> Any | None:
     """La classe Mago a cui appartiene l'incantesimo: quella assegnata, o l'unico incantatore se non è assegnato
-    (personaggi salvati prima delle classi sugli incantesimi). ``None``: non è un incantesimo da mago, o il personaggio
-    non segue le regole 2014."""
-    if character_edition(char) != "2014":
-        return None
+    (personaggi salvati prima delle classi sugli incantesimi). ``None``: non è un incantesimo da mago.
+    Il libro è lo stesso nelle due edizioni."""
     wizards = [c for c in char.classes if class_key(c) == "wizard"]
     if spell.class_id is not None:
         return next((c for c in wizards if c.id == spell.class_id), None)

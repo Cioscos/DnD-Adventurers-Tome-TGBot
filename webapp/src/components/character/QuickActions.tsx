@@ -17,6 +17,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
+import MemorizeSpellPicker, { type MemorizeChoice } from '@/components/character/MemorizeSpellPicker'
 import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
 import TomeReopenToggle from '@/components/character/TomeReopenToggle'
 import UsesEditSheet from '@/components/ui/UsesEditSheet'
@@ -101,6 +102,7 @@ export default function QuickActions({ char }: Props) {
   const [shortRestOpen, setShortRestOpen] = useState(false)
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
+  const [memorize, setMemorize] = useState<MemorizeChoice | null>(null)  // Memorizzare Incantesimo (Mago 2024)
   const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
   const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
   const [confirmRestore, setConfirmRestore] = useState(false)
@@ -310,7 +312,7 @@ export default function QuickActions({ char }: Props) {
   const restMutation = useMutation({
     mutationFn: (restType: 'long' | 'short') => {
       const slots = restType === 'short'
-        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}) }
+        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}), ...(memorize ? { memorize_spell: memorize } : {}) }
         : reopenTome ? { reopen_tome: true } : {}
       return Object.keys(slots).length > 0 ? api.characters.rest(char.id, restType, slots) : api.characters.rest(char.id, restType)
     },
@@ -324,6 +326,7 @@ export default function QuickActions({ char }: Props) {
       setRecovery({})
       setArcane({})
       setRestoration(0)
+      setMemorize(null)
       setReopenTome(false)
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
@@ -901,7 +904,7 @@ export default function QuickActions({ char }: Props) {
           classes={char.classes ?? []}
           onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
           onConfirmRest={() => restMutation.mutate('short')}
-          preview={<><RestPreviewList charId={char.id} restType="short" /><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /><SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} /></>}
+          preview={<><RestPreviewList charId={char.id} restType="short" /><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /><SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} /><MemorizeSpellPicker char={char} onChange={setMemorize} /></>}
           onClose={() => setShortRestOpen(false)}
           isPending={hitDieMutation.isPending}
           pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}

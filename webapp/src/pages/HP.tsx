@@ -21,6 +21,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
+import MemorizeSpellPicker, { type MemorizeChoice } from '@/components/character/MemorizeSpellPicker'
 import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
 import TomeReopenToggle from '@/components/character/TomeReopenToggle'
 import { showUndoToast } from '@/components/ui/UndoToast'
@@ -81,6 +82,7 @@ export default function HP() {
   const [showShortRest, setShowShortRest] = useState(false)
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
+  const [memorize, setMemorize] = useState<MemorizeChoice | null>(null)  // Memorizzare Incantesimo (Mago 2024)
   const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
   const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
   const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
@@ -198,7 +200,7 @@ export default function HP() {
   const restMutation = useMutation({
     mutationFn: (restType: 'long' | 'short') => {
       const slots = restType === 'short'
-        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}) }
+        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}), ...(memorize ? { memorize_spell: memorize } : {}) }
         : reopenTome ? { reopen_tome: true } : {}
       return Object.keys(slots).length > 0 ? api.characters.rest(charId, restType, slots) : api.characters.rest(charId, restType)
     },
@@ -212,6 +214,7 @@ export default function HP() {
       setRecovery({})
       setArcane({})
       setRestoration(0)
+      setMemorize(null)
       setReopenTome(false)
       qc.setQueryData(['character', charId], updated)
       // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
@@ -528,7 +531,7 @@ export default function HP() {
       {showShortRest && (
         <HitDiceModal
           classes={classes}
-          preview={<><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /><SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} /></>}
+          preview={<><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /><SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} /><MemorizeSpellPicker char={char} onChange={setMemorize} /></>}
           onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
           onConfirmRest={() => {
             restMutation.mutate('short')

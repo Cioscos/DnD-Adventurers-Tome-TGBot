@@ -11,6 +11,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
+import MemorizeSpellPicker, { type MemorizeChoice } from '@/components/character/MemorizeSpellPicker'
 import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
 import TomeReopenToggle from '@/components/character/TomeReopenToggle'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
@@ -40,6 +41,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
   const [tooSoon, setTooSoon] = useState(false)
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
+  const [memorize, setMemorize] = useState<MemorizeChoice | null>(null)  // Memorizzare Incantesimo (Mago 2024)
   const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
   const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
   const is2024 = char.rules_edition === '2024'
@@ -76,6 +78,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
         ...(restType === 'short' && Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}),
         ...(restType === 'short' && Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}),
         ...(restType === 'short' && restoration > 0 ? { sorcerous_restoration: restoration } : {}),
+        ...(restType === 'short' && memorize ? { memorize_spell: memorize } : {}),
         ...(restType === 'long' && reopenTome ? { reopen_tome: true } : {}),
       }),
     onError: (err) => {
@@ -96,6 +99,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
       setRecovery({})
       setArcane({})
       setRestoration(0)
+      setMemorize(null)
       setReopenTome(false)
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
@@ -196,6 +200,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
               <NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} />
               <ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} />
               <SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} />
+              <MemorizeSpellPicker char={char} onChange={setMemorize} />
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
             </>
           }

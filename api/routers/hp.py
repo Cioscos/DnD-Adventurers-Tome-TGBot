@@ -22,6 +22,7 @@ from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.beast_companion import long_rest_beast
 from api.services.wild_shape import long_rest_familiar
 from api.services.durations import end_concentration, is_concentrating
+from api.services.memorize import memorize
 from api.services.natural_recovery import ARCANE_FEATURE, recover as recover_slots, restore_points
 from core.rules.arcane_ward import absorb as absorb_ward
 from core.rules.roll_options import set_saved_dice
@@ -718,7 +719,7 @@ async def rest(
         return await build_character_response(session, char)
     edition = character_edition(char)
     rest_type = body.rest_type
-    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration) and rest_type != "short":
+    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and rest_type != "short":
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
@@ -744,6 +745,10 @@ async def rest(
         _add_history(session, char.id, "rest",
                      "Recupero Naturale: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
                      meta={"kind": "natural_recovery", "slots": {str(lv): n for lv, n in back.items()}})
+    if body.memorize_spell:  # Memorizzare Incantesimo: si convalida prima del Recupero Arcano, che spende un uso
+        swapped = memorize(char, body.memorize_spell.out, body.memorize_spell.into)
+        _add_history(session, char.id, "rest", f"Memorizzare Incantesimo: {swapped[0]} → {swapped[1]}",
+                     meta={"kind": "memorize_spell", "out": body.memorize_spell.out, "into": body.memorize_spell.into})
     if body.arcane_recovery:  # come il Recupero Naturale: convalida ed effetto prima di ogni altra scrittura del riposo
         back = await recover_slots(session, char, body.arcane_recovery, ARCANE_FEATURE)
         _add_history(session, char.id, "rest",

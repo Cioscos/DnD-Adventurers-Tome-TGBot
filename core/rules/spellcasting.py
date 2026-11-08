@@ -265,8 +265,8 @@ def _ritual_unprepared(char: Any, spell: Any) -> bool:
     if spell.is_prepared or spell.always_prepared:
         return False
     rows = _spell_rows(char, spell)
-    if has_wizard(rows):  # dal libro (2014); il 2024 non ha ancora un libro a catalogo
-        return character_edition(char) == "2014" and not spell.in_spellbook
+    if has_wizard(rows):  # dal libro (Lancio Rituale 2014, Adepto dei Rituali 2024)
+        return not spell.in_spellbook
     if character_edition(char) == "2024":
         return True
     # 2014: chi non prepara li conosce, il talento ha un suo libro.
