@@ -84,10 +84,8 @@ STYLE_ROWS = (
             "Reaction, with a shield or weapon: reduce the damage an ally next to you takes by 1d10 + proficiency. The app shows the value."),
            "reaction", on_use=OnUse(slot="reaction", rolls="1d10", gives=_interception_given, available=_armed)),
     _style("protection", "Protezione / Protection", ("Protezione", "Protection"),
-           ("Reazione, con uno scudo: una creatura che vedi attacca un altro bersaglio entro 1,5 m da te; quel tiro e tutti gli altri tiri per colpire contro "
-            "quel bersaglio hanno svantaggio fino all'inizio del tuo prossimo turno, se resti entro 1,5 m da lui.",
-            "Reaction, with a shield: a creature you see attacks a target other than you within 5 ft of you; that roll and all other attack rolls "
-            "against that target have disadvantage until the start of your next turn, if you stay within 5 ft of it."),
+           ("Reazione, con uno scudo: una creatura attacca un altro bersaglio entro 1,5 m da te; quel tiro e tutti gli altri contro di lui hanno svantaggio fino al tuo prossimo turno.",
+            "Reaction, with a shield: a creature attacks a target within 5 ft of you; that roll and all other attack rolls against it have disadvantage until your next turn."),
            "reaction", on_use=OnUse(slot="reaction", available=_wields_shield, target_effect=_protection_effect)),
     _style("thrown_weapon", "Combattere con armi da lancio / Thrown Weapon Fighting", ("Combattere con Armi da Lancio", "Thrown Weapon Fighting"),
            ("+2 al danno degli attacchi con un'arma lanciata.", "+2 damage on attacks made by throwing a weapon."),

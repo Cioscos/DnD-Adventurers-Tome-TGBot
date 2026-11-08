@@ -108,15 +108,9 @@ LAY_ON_HANDS_USE = OnUse(
 # Stile di Combattimento: i dieci talenti del Guerriero (nuove righe del Paladino) e Guerriero Benedetto
 # ---------------------------------------------------------------------------
 
-_PROTECTION_SUMMARY = _both(
-    "Reazione, con uno scudo: una creatura attacca un altro bersaglio entro 1,5 m da te; quel tiro e gli altri contro di lui hanno svantaggio fino al tuo prossimo turno.",
-    "Reaction, with a shield: a creature attacks a target within 5 ft of you; that roll and others against it have disadvantage until your next turn.")
-
-
 def _paladin_style(spec: FeatureSpec) -> FeatureSpec:
     """Lo stesso talento, riga del Paladino: chiave, classe, livello 2 e fonte dei modificatori (le etichette citano la riga)."""
-    summary = _PROTECTION_SUMMARY if spec.key == "fighter.style_protection" else spec.summary  # il testo del Guerriero supera 200 caratteri
-    return replace(spec, key=spec.key.replace("fighter.", f"{CK}.", 1), class_key=CK, level=2, summary=summary,
+    return replace(spec, key=spec.key.replace("fighter.", f"{CK}.", 1), class_key=CK, level=2,
                    modifiers=tuple(replace(m, source=m.source.replace("fighter.", f"{CK}.", 1)) for m in spec.modifiers))
 
 

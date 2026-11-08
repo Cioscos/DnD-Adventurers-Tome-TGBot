@@ -16,7 +16,6 @@ from core.rules.catalog._common import FIGHTING_STYLE_GROUP, feature, heavy_armo
 from core.rules.catalog.y2014.bard import _expertise_options
 from core.rules.catalog.y2014.cleric import LANGUAGES, _languages_owned, language_label
 from core.rules.catalog.y2024.fighter import STYLE_ROWS as FIGHTER_STYLE_ROWS, STYLES as FIGHTER_STYLES
-from core.rules.catalog.y2024.paladin import _PROTECTION_SUMMARY
 from core.rules.states import begin_state, has_state
 from core.rules.types import ChoiceSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
 from core.rules.weapons import MASTERY_OPTIONS, mastery_choice
@@ -97,8 +96,7 @@ PRECISE_HUNTER = RollOptionSpec(
 
 def _ranger_style(spec: Any) -> Any:
     """Lo stesso talento, riga del Ranger: chiave, classe, livello 2 e fonte dei modificatori."""
-    summary = _PROTECTION_SUMMARY if spec.key == "fighter.style_protection" else spec.summary  # il testo del Guerriero supera 200 caratteri
-    return replace(spec, key=spec.key.replace("fighter.", f"{CK}.", 1), class_key=CK, level=2, summary=summary,
+    return replace(spec, key=spec.key.replace("fighter.", f"{CK}.", 1), class_key=CK, level=2,
                    modifiers=tuple(replace(m, source=m.source.replace("fighter.", f"{CK}.", 1)) for m in spec.modifiers))
 
 

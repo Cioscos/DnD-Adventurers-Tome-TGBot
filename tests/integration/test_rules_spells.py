@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from core.db.models import Spell
 from core.rules.catalog import granted_spells
 from core.rules.catalog.granted_spells import GrantedSpell
 from core.rules.feature_sync import GRANTED_SPELL_KEYS, clean_granted_keys
@@ -298,7 +299,7 @@ async def test_manual_cap_hides_per_class_limit(client):
 
 # --- Rituali --------------------------------------------------------------------------------------------------------
 
-async def test_ritual_2014_classes_2024_any_prepared(client):
+async def test_ritual_2014_classes_2024_any_prepared(client, test_session_factory):
     paladin14 = await _char(client, ("paladin", 5))
     spell = await _spell(client, paladin14, is_ritual=True, is_prepared=True)
     r = await client.post(f"/characters/{paladin14}/spells/{spell['id']}/use", json={"as_ritual": True})
@@ -321,6 +322,9 @@ async def test_ritual_2014_classes_2024_any_prepared(client):
 
     wizard24 = await _char(client, ("wizard", 3), edition="2024")
     book = await _spell(client, wizard24, is_ritual=True)
+    async with test_session_factory() as s:  # 2024: l'Adepto dei Rituali vale per il libro (Task 42)
+        (await s.get(Spell, book["id"])).in_spellbook = True
+        await s.commit()
     r = await client.post(f"/characters/{wizard24}/spells/{book['id']}/use", json={"as_ritual": True})
     assert r.status_code == 200, r.text
 
