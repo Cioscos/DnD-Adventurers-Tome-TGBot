@@ -622,7 +622,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number> },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',
@@ -722,8 +722,10 @@ export const api = {
       request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number }[] }>(
         `/characters/${id}/preserve-life`, { method: 'POST', body: JSON.stringify(body) }),
     /** Impulso di Magia Selvaggia: d20 (una volta per turno) e, con 1, la tabella; `tides` salta il d20 dopo Onde di Caos, `repeat` lo salta durante l'impulso 01-02. */
-    wildMagicSurge: (id: number, body: { die?: number; percentile?: number[]; tides?: boolean; repeat?: boolean }) =>
+    wildMagicSurge: (id: number, body: { die?: number; percentile?: number[]; tides?: boolean; repeat?: boolean; tamed?: boolean }) =>
       request<WildSurgeResult>(`/characters/${id}/wild-magic/surge`, { method: 'POST', body: JSON.stringify(body) }),
+    /** La tabella degli impulsi dell'edizione del personaggio (per scegliere l'effetto di Impulso Domato). */
+    wildMagicTable: (id: number) => request<WildSurgeEntry[]>(`/characters/${id}/wild-magic/table`),
     /** Caos Controllato: sceglie fra i due risultati tirati. */
     wildMagicChoose: (id: number, index: number) =>
       request<WildSurgeResult>(`/characters/${id}/wild-magic/surge/choose`, { method: 'POST', body: JSON.stringify({ index }) }),

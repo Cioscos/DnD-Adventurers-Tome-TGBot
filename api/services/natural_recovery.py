@@ -60,3 +60,30 @@ async def recover(session: AsyncSession, char: Character, wanted: dict[int, int]
     for level in plan:
         await session.refresh(slots[level])
     return plan
+
+
+RESTORATION = "sorcerer.sorcerous_restoration"
+SORCERY_POINTS = "sorcerer.sorcery_points"
+
+
+async def restore_points(session: AsyncSession, char: Character, points: int) -> int:
+    """Ripristino Stregonesco (Stregone 2024, 5°): a fine riposo breve si recuperano punti stregoneria spesi, al massimo metà del
+    livello da stregone, una volta fra riposi lunghi. Stesse regole di ``recover``: convalida e uso speso con un UPDATE condizionato."""
+    found = next(((spec, row) for spec, row in active_features(char) if spec.key == RESTORATION), None)
+    if found is None:
+        raise _refuse(status.HTTP_422_UNPROCESSABLE_ENTITY, "restoration_unavailable")
+    if points < 1 or points > found[1].level // 2:
+        raise _refuse(status.HTTP_422_UNPROCESSABLE_ENTITY, "restoration_cap")
+    pool = next((a for a in char.abilities if a.feature_key == SORCERY_POINTS), None)
+    ability = next((a for a in char.abilities if a.feature_key == RESTORATION), None)
+    if pool is None or (pool.uses or 0) >= (pool.max_uses or 0):
+        raise _refuse(status.HTTP_409_CONFLICT, "nothing_to_restore")
+    if ability is None or (ability.uses or 0) < 1:
+        raise _refuse(status.HTTP_409_CONFLICT, "no_uses")
+    spent = await session.execute(update(Ability).where(Ability.id == ability.id, Ability.uses >= 1).values(uses=Ability.uses - 1))
+    if spent.rowcount != 1:
+        raise _refuse(status.HTTP_409_CONFLICT, "no_uses")
+    gained = min(points, pool.max_uses - (pool.uses or 0))
+    pool.uses = (pool.uses or 0) + gained
+    await session.refresh(ability)
+    return gained

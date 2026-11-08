@@ -21,6 +21,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
+import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
@@ -79,6 +80,7 @@ export default function HP() {
   const [showShortRest, setShowShortRest] = useState(false)
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
+  const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
   const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
@@ -194,7 +196,7 @@ export default function HP() {
   const restMutation = useMutation({
     mutationFn: (restType: 'long' | 'short') => {
       const slots = restType === 'short'
-        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}) }
+        ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}) }
         : {}
       return Object.keys(slots).length > 0 ? api.characters.rest(charId, restType, slots) : api.characters.rest(charId, restType)
     },
@@ -207,6 +209,7 @@ export default function HP() {
     onSuccess: (updated) => {
       setRecovery({})
       setArcane({})
+      setRestoration(0)
       qc.setQueryData(['character', charId], updated)
       // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
@@ -521,7 +524,7 @@ export default function HP() {
       {showShortRest && (
         <HitDiceModal
           classes={classes}
-          preview={<><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /></>}
+          preview={<><SongOfRestToggle char={char} /><NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} /><ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} /><SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} /></>}
           onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
           onConfirmRest={() => {
             restMutation.mutate('short')

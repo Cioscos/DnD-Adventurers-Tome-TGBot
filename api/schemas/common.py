@@ -355,6 +355,7 @@ class RestRequest(BaseModel):
     # Recupero Naturale (Druido 2014): livello dello slot -> quanti ne recupera durante un riposo breve
     natural_recovery: Optional[dict[int, int]] = None
     arcane_recovery: Optional[dict[int, int]] = None  # Recupero Arcano del Mago: stessi controlli
+    sorcerous_restoration: Optional[int] = None  # Ripristino Stregonesco (Stregone 2024): punti stregoneria da recuperare
 
 
 class ItemChargePreview(BaseModel):

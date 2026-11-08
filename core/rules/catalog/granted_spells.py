@@ -544,7 +544,7 @@ for _spell, _comp in (
         (GrantedSpell("wall-of-force", {"it": "Muro di forza", "en": "Wall of Force"}, 5, "1 azione", "36 m",
                       "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S, M"),
         (GrantedSpell("chromatic-orb", {"it": "Sfera cromatica", "en": "Chromatic Orb"}, 1, "1 azione", "27 m", "Istantanea",
-                      attack_save="ATK", damage_dice="3d8", higher_levels_dice="1d8"), "V, S, M"),
+                      attack_save="ATK", damage_dice="3d8", damage_type="fire", higher_levels_dice="1d8"), "V, S, M"),
         (GrantedSpell("dragons-breath", {"it": "Soffio del drago", "en": "Dragon's Breath"}, 2, "1 azione bonus", "Contatto",
                       "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
         (GrantedSpell("charm-monster", {"it": "Charme su mostri", "en": "Charm Monster"}, 4, "1 azione", "9 m", "1 ora",

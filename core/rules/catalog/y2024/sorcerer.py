@@ -35,7 +35,7 @@ _TYPE_LABELS = {"acid": ("acido", "acid"), "cold": ("freddo", "cold"), "fire": (
                 "poison": ("veleno", "poison"), "thunder": ("tuono", "thunder")}
 # Incantesimi che con uno slot più alto prendono una creatura in più (Incantesimo Raddoppiato): srd_index
 TWINNED_SPELLS = frozenset({
-    "animal-friendship", "banishment", "bane", "bless", "blindness-deafness", "charm-person", "command", "enhance-ability", "fly",
+    "animal-friendship", "banishment", "bane", "bless", "blindness-deafness", "charm-monster", "charm-person", "command", "enhance-ability", "fly",
     "hold-monster", "hold-person", "invisibility", "jump", "longstrider",
 })
 _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/routers/classes.py create_class_for_character e add_class"
@@ -105,31 +105,6 @@ CREATE_USE = OnUse(
     choices=(UseChoice("slot_level", _both("Livello dello slot da creare", "Level of the slot to create"),
                        lambda c: [str(level) for level, minimum in CREATE_MIN_LEVEL.items() if c.class_level >= minimum], _created_label),))
 CONVERT_USE_2024 = replace(CONVERT_USE, slot=None)  # nessuna azione
-
-
-# ---------------------------------------------------------------------------
-# Ripristino Stregonesco
-# ---------------------------------------------------------------------------
-
-def _pool(ctx: RuleContext) -> Any:
-    return next((a for a in ctx.char.abilities if a.feature_key == SP), None)
-
-
-def _restore_check(ctx: RuleContext, _params: dict) -> tuple[int, str] | None:
-    pool = _pool(ctx)
-    return (409, "nothing_to_restore") if pool is None or (pool.uses or 0) >= (pool.max_uses or 0) else None
-
-
-def _restore_points(ctx: RuleContext, params: dict) -> None:
-    pool = _pool(ctx)
-    pool.uses = min(pool.max_uses, (pool.uses or 0) + int(params["points"]))
-
-
-RESTORATION_USE = OnUse(
-    slot=None, check=_restore_check, effect=_restore_points,
-    choices=(UseChoice("points", _both("Punti stregoneria da recuperare (al massimo metà livello)", "Sorcery points to regain (half your level at most)"),
-                       lambda c: [str(n) for n in range(1, c.class_level // 2 + 1)],
-                       lambda k: _both(f"{k} punti", f"{k} points")),))
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +330,7 @@ BASE_ROWS = (
             ("Ripristino Stregonesco", "Sorcerous Restoration"),
             ("A fine riposo breve recuperi fino a metà del livello da stregone in punti stregoneria spesi. Un uso fra riposi lunghi.",
              "At the end of a short rest you regain spent sorcery points, up to half your sorcerer level. One use between long rests."),
-            uses=Uses(table={5: 1}), restoration="long_rest", on_use=RESTORATION_USE),
+            "special", uses=Uses(table={5: 1}), restoration="long_rest", passive=False),  # si usa nel riposo breve (POST /rest)
     feature("sorcery_incarnate", CK, ED, 7, "Stregoneria Incarnata / Sorcery Incarnate (Stregone 7, pag. 141)", ("Stregoneria Incarnata", "Sorcery Incarnate"),
             ("Senza usi di Stregoneria Innata la attivi con 2 punti stregoneria. Con Innata attiva usi fino a 2 opzioni di Metamagia per incantesimo.",
              "With no Innate Sorcery uses left you activate it for 2 sorcery points. While it is active you use up to 2 Metamagic options per spell."),

@@ -452,6 +452,15 @@ async def wild_magic_surge(
     return await roll_surge(db, char, body.die, body.percentile, body.tides, body.repeat, body.tamed)
 
 
+@turn_router.get("/{char_id}/wild-magic/table")
+async def wild_magic_table(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[dict]:
+    """La tabella degli impulsi dell'edizione del personaggio (per scegliere l'effetto di Impulso Domato)."""
+    from api.services.wild_magic import surge_table
+    return surge_table(await _get_owned_full(char_id, user_id, db))
+
+
 @turn_router.post("/{char_id}/wild-magic/surge/choose", response_model=SurgeResult)
 async def wild_magic_choose(
     char_id: int, body: SurgeChoose, user_id: Annotated[int, Depends(get_current_user)],

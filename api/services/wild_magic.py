@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
+from api.services.rules_states import remove_state
 from api.services.rules_turn import get_turn, grant_action, mark_once, once_used
 from core.db.models import CharacterHistory
 from core.game.stats import effective_ability_mod
@@ -31,6 +32,7 @@ REPEAT = "wild_repeat"  # stato dell'impulso 01-02: a ogni turno si tira la tabe
 CONTROLLED_CHAOS = f"{CK}.controlled_chaos"
 TAMED = f"{CK}.tamed_surge"  # 2024: l'effetto si sceglie invece di tirare, una volta per riposo lungo
 LAST_ROW = 97  # 2024: la riga 97-00 non si può scegliere con Impulso Domato
+TIDES_DUE = "tides_surge_due"  # 2024: Maree spese e lancio con slot fatto: la tabella si tira senza d20
 
 
 def _err(code: int, name: str) -> HTTPException:
@@ -52,6 +54,25 @@ def _owner(char):
     if found is None:
         raise _err(status.HTTP_404_NOT_FOUND, "feature_not_usable")
     return found[1]
+
+
+def mark_tides_due(char, spell) -> None:
+    """Maree del Caos 2024: se sono spese e si lancia con uno slot un incantesimo da stregone, la tabella si tira da sola
+    (e le Maree tornano): lo stato resta finché non la si tira o non finisce un riposo lungo."""
+    tides = next((a for a in char.abilities if a.feature_key == TIDES), None)
+    owner = next((r for s, r in active_features(char) if s.key == TIDES), None)
+    if (character_edition(char) != "2024" or spell.level < 1 or tides is None or tides.max_uses is None or (tides.uses or 0) >= tides.max_uses
+            or owner is None or has_state(char, TIDES_DUE)):
+        return
+    from core.rules.spellcasting import caster_stats  # import locale: spellcasting importa il catalogo
+    if spell.class_id == owner.id or (spell.class_id is None and len(caster_stats(char)) == 1):
+        begin_state(char, StateSpec(TIDES_DUE, ends_on=("manual", "rest_long")), TIDES, "Maree del Caos: tira la tabella")
+
+
+def surge_table(char) -> list[dict]:
+    """La tabella dell'edizione del personaggio, per scegliere l'effetto di Impulso Domato."""
+    table = SURGES_2024 if character_edition(char) == "2024" else SURGES
+    return [{"roll": s.lo, "lo": s.lo, "hi": s.hi, "label": s.label, "name": dict(s.name), "text": dict(s.text)} for s in table]
 
 
 def _has_controlled_chaos(char) -> bool:
@@ -153,9 +174,13 @@ async def roll_surge(session: AsyncSession, char, die: int | None, percentile: l
         if not mark_once(char, REPEAT):
             raise _err(status.HTTP_409_CONFLICT, "once_per_turn")
         d20 = None
-    elif tides:  # il GM fa tirare la tabella dopo Onde di Caos: nessun d20, e l'uso torna disponibile
+    elif tides:  # la tabella senza d20 dopo le Maree spese: l'uso torna disponibile
         if tides_row is None or tides_row.max_uses is None or (tides_row.uses or 0) >= tides_row.max_uses:
             raise _err(status.HTTP_409_CONFLICT, "tides_not_spent")
+        if character_edition(char) == "2024":  # il manuale la tira al lancio con slot, non quando si vuole
+            if not has_state(char, TIDES_DUE):
+                raise _err(status.HTTP_409_CONFLICT, "tides_not_spent")
+            remove_state(char, TIDES_DUE)
         d20 = None
     else:
         if once_used(char, SURGE):

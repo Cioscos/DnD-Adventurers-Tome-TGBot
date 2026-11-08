@@ -22,7 +22,7 @@ from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.beast_companion import long_rest_beast
 from api.services.wild_shape import long_rest_familiar
 from api.services.durations import end_concentration, is_concentrating
-from api.services.natural_recovery import ARCANE_FEATURE, recover as recover_slots
+from api.services.natural_recovery import ARCANE_FEATURE, recover as recover_slots, restore_points
 from core.rules.arcane_ward import absorb as absorb_ward
 from core.rules.roll_options import set_saved_dice
 from core.rules.school_hooks import concentration_safe
@@ -718,7 +718,7 @@ async def rest(
         return await build_character_response(session, char)
     edition = character_edition(char)
     rest_type = body.rest_type
-    if (body.natural_recovery or body.arcane_recovery) and rest_type != "short":
+    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration) and rest_type != "short":
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
@@ -746,6 +746,10 @@ async def rest(
         _add_history(session, char.id, "rest",
                      "Recupero Arcano: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
                      meta={"kind": "arcane_recovery", "slots": {str(lv): n for lv, n in back.items()}})
+    if body.sorcerous_restoration:  # Ripristino Stregonesco: i punti tornano nel riposo breve, convalidati dal server
+        gained = await restore_points(session, char, body.sorcerous_restoration)
+        _add_history(session, char.id, "rest", f"Ripristino Stregonesco: {gained} punti stregoneria",
+                     meta={"kind": "sorcerous_restoration", "points": gained})
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     fx = compute_rest_effects(char, rest_type, hb_hp_bonus, body.ate_and_drank)
     for r in plan_item_recharges(char.items, rest_type):

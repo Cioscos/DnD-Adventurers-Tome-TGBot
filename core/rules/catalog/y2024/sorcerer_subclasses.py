@@ -21,6 +21,8 @@ from core.rules.types import (
 
 ED, CK = "2024", "sorcerer"
 P = f"{CK}."
+D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative")  # D20 Test: prove, tiri per colpire, TS
+NO_CONCENTRATION_KEY = f"{P}dragon_companion_no_concentration"  # lo legge il router degli incantesimi
 
 
 def _both(it: str, en: str) -> dict[str, str]:
@@ -179,8 +181,12 @@ AFFINITY_BONUS = RollOptionSpec(
     key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c),
     available=lambda c: c.spell is not None and _affinity_type(c) is not None and canonical_damage_type(c.spell.damage_type) == _affinity_type(c),
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
+RESTORE_OWN_ROLL = RollOptionSpec(
+    key=f"{P}restore_balance_own_roll", phase="before", rolls=D20_TESTS, cancels=("*",), slot="reaction", cost=Cost(feature_key=f"{P}restore_balance"),
+    label=_both("Ripristinare l'Equilibrio: tira questo d20 senza vantaggio né svantaggio (reazione)",
+                "Restore Balance: roll this d20 without advantage or disadvantage (reaction)"))
 NO_CONCENTRATION = RollOptionSpec(
-    key=f"{P}dragon_companion_no_concentration", phase="before", rolls=("cast",),
+    key=NO_CONCENTRATION_KEY, phase="before", rolls=("cast",),
     available=lambda c: c.spell is not None and c.spell.srd_index == "summon-dragon",
     label=_both("Compagno Draconico: senza concentrazione, per 1 minuto", "Dragon Companion: no concentration, for 1 minute"),
     effect=lambda _c, _i: _both("L'incantesimo non richiede concentrazione e dura 1 minuto; senza componente materiale.",
@@ -194,8 +200,8 @@ draconic = _sub(DRACONIC, "draconic")
 
 WILD = "Magia Selvaggia"
 TIDES_ADVANTAGE = RollOptionSpec(
-    key=f"{P}tides_of_chaos_advantage", phase="before", rolls=("skill", "ability", "initiative"), mode="advantage", cost=Cost(feature_key=TIDES),
-    label=_both("Maree del Caos: tira questa prova con vantaggio", "Tides of Chaos: make this check with advantage"))
+    key=f"{P}tides_of_chaos_advantage", phase="before", rolls=D20_TESTS, mode="advantage", cost=Cost(feature_key=TIDES),
+    label=_both("Maree del Caos: tira questo d20 con vantaggio", "Tides of Chaos: make this D20 Test with advantage"))
 wild = _sub(WILD, "wild_magic")
 SURGE_MODIFIERS = (
     Modifier("ac", 2, when=lambda c: state_on(c, "wild_shield"), source=f"feature:{P}wild_magic_surge"),
@@ -252,7 +258,9 @@ SUBCLASS_ROWS: tuple = (
     clockwork("restore_balance", 3, "Ripristinare l'Equilibrio", "Restore Balance", 146,
               ("Reazione: una creatura entro 18 m che tira un d20 con vantaggio o svantaggio lo tira senza. Usi pari a Carisma (minimo 1).",
                "Reaction: a creature within 60 ft rolling a d20 with advantage or disadvantage rolls without. Uses equal to Charisma (minimum 1)."),
-              "reaction", uses=Uses(ability="charisma", minimum=1), restoration="long_rest", on_use=OnUse(slot="reaction")),
+              "reaction", uses=Uses(ability="charisma", minimum=1), restoration="long_rest", roll_options=(RESTORE_OWN_ROLL,),
+              on_use=OnUse(slot="reaction", message=_both("Il GM tira senza vantaggio né svantaggio il d20 della creatura entro 18 m.",
+                                                          "The GM rolls that creature's d20 (within 60 ft) without advantage or disadvantage."))),
     clockwork("bastion_of_law", 6, "Bastione della Legge", "Bastion of Law", 147,
               ("Azione Magia, 1-5 punti: tanti d8 su di te o su una creatura entro 9 m; chi subisce danni ne spende e ne riduce il danno. Fino al riposo lungo.",
                "Magic action, 1-5 points: that many d8 on you or a creature within 30 ft; when it takes damage it spends some to reduce it. Until a long rest."),
@@ -261,7 +269,7 @@ SUBCLASS_ROWS: tuple = (
               ("Azione bonus, 1 minuto: i tiri per colpire contro di te non hanno vantaggio e un d20 di 9 o meno nelle Prove vale 10. Un uso.",
                "Bonus action, 1 minute: attack rolls against you lack advantage and a d20 of 9 or lower on checks counts as 10. One use."),
               "bonus_action", uses=Uses(table={14: 1}), restoration="long_rest", on_use=TRANCE_USE,
-              modifiers=(Modifier("min_d20", 10, when=lambda c: state_on(c, "trance_of_order") and c.roll in ("skill", "ability", "initiative"),
+              modifiers=(Modifier("min_d20", 10, when=lambda c: state_on(c, "trance_of_order") and c.roll in D20_TESTS,
                                   source=f"feature:{P}trance_of_order"),)),
     clockwork("clockwork_cavalcade", 18, "Cavalcata Meccanica", "Clockwork Cavalcade", 147,
               ("Azione Magia: Cubo di 9 m, cura fino a 100 PF divisi, ripara oggetti, termina incantesimi di livello 6 o inferiore. Un uso.",

@@ -297,29 +297,51 @@ async def test_sorcery_points_depend_only_on_sorcerer_levels(client):
 # Ripristino Stregonesco
 # ---------------------------------------------------------------------------
 
-async def test_sorcerous_restoration_gives_back_up_to_half_the_level_once_between_long_rests(client):
+async def _short(client, cid, **body):
+    return await client.post(f"/characters/{cid}/rest", json={"rest_type": "short", **body})
+
+
+async def test_sorcerous_restoration_is_not_a_free_use_any_more(client):
+    cid = await _sorcerer24(client, 11)
+    await _set_points(client, cid, 3)
+    r = await _use(client, cid, RESTORATION, params={"points": "5"})
+    assert r.status_code >= 400 and await _points(client, cid) == 3
+
+
+async def test_sorcerous_restoration_gives_back_up_to_half_the_level_in_a_short_rest_once_between_long_rests(client):
     assert RESTORATION not in await _keys_of(client, await _sorcerer24(client, 4))
     cid = await _sorcerer24(client, 11)
     row = await _ability(client, cid, RESTORATION)
     assert (row["max_uses"], row["restoration_type"]) == (1, "long_rest")
     await _set_points(client, cid, 3)
-    r = await _use(client, cid, RESTORATION, params={"points": "6"})
-    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice" and await _points(client, cid) == 3
-    r = await _use(client, cid, RESTORATION, params={"points": "5"})
-    assert r.status_code == 200, r.text
-    assert await _points(client, cid) == 8 and (await _turn(client, cid))["bonus_used"] is False
-    assert (await _use(client, cid, RESTORATION, params={"points": "1"})).status_code == 409
+    r = await _short(client, cid, sorcerous_restoration=6)
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "restoration_cap" and await _points(client, cid) == 3
+    assert (await _short(client, cid, sorcerous_restoration=5)).status_code == 200
+    assert await _points(client, cid) == 8 and (await _ability(client, cid, RESTORATION))["uses"] == 0
+    await _set_points(client, cid, 3)
+    r = await _short(client, cid, sorcerous_restoration=1)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_uses" and await _points(client, cid) == 3
     await _rest(client, cid, "long")
     await _set_points(client, cid, 1)
-    assert (await _use(client, cid, RESTORATION, params={"points": "2"})).status_code == 200 and await _points(client, cid) == 3
+    assert (await _short(client, cid, sorcerous_restoration=2)).status_code == 200 and await _points(client, cid) == 3
+
+
+async def test_sorcerous_restoration_is_refused_in_a_long_rest_and_without_the_feature(client):
+    cid = await _sorcerer24(client, 11)
+    await _set_points(client, cid, 3)
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "sorcerous_restoration": 2})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "natural_recovery_short_only" and await _points(client, cid) == 3
+    r = await _short(client, await _sorcerer24(client, 4), sorcerous_restoration=1)
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "restoration_unavailable"
 
 
 async def test_sorcerous_restoration_never_passes_the_maximum_and_is_refused_at_full_points(client):
     cid = await _sorcerer24(client, 10)
-    assert (await _use(client, cid, RESTORATION, params={"points": "1"})).status_code == 409
+    r = await _short(client, cid, sorcerous_restoration=1)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "nothing_to_restore"
     assert (await _ability(client, cid, RESTORATION))["uses"] == 1
     await _set_points(client, cid, 8)
-    assert (await _use(client, cid, RESTORATION, params={"points": "5"})).status_code == 200
+    assert (await _short(client, cid, sorcerous_restoration=5)).status_code == 200
     assert await _points(client, cid) == 10
 
 

@@ -1,30 +1,43 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '@/api/client'
 import type { WildSurgeEntry, WildSurgeResult } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import SelectSheet from '@/components/ui/SelectSheet'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import { useToast } from '@/hooks/useToast'
 import type { CharacterFull } from '@/types'
 
 const ERRORS = ['once_per_turn', 'tides_not_spent', 'no_repeat', 'no_pending_surge', 'feature_not_usable', 'invalid_choice']
 const TIDES = 'sorcerer.tides_of_chaos'
+const TAMED = 'sorcerer.tamed_surge'
+const LAST_ROW = 97  // 2024: la riga 97-00 non si sceglie con Impulso Domato
 
-/** Impulso di Magia Selvaggia (Stregone 2014): il GM lo chiede dopo un incantesimo, il server tira il d20 (una volta per turno)
- *  e con 1 la tabella dei 50 impulsi, e applica PF, slot, punti, azione extra, CA e stati con timer. Dal 14° livello i risultati
- *  sono due e si sceglie (Caos Controllato). Qui si conferma la richiesta del GM e si leggono gli esiti. */
+/** Impulso di Magia Selvaggia: il server tira il d20 (una volta per turno) e con la soglia dell'edizione la tabella, e applica PF,
+ *  slot, punti, azione extra, CA e stati con timer. Dal 14° livello i risultati sono due e si sceglie (Caos Controllato).
+ *  2014: il GM lo chiede dopo un incantesimo, qui si conferma la richiesta (1 apre la tabella, 50 impulsi). 2024: lo decide il
+ *  giocatore (20 apre la tabella, 25 gruppi); le Maree spese tirano la tabella dopo il lancio con slot (stato `tides_surge_due`)
+ *  e Impulso Domato sceglie l'effetto per nome. */
 export default function WildMagicSheet({ char, onClose }: { char: CharacterFull; onClose: () => void }) {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const is24 = char.rules_edition === '2024'
   const [asked, setAsked] = useState(false)
+  const [pick, setPick] = useState('')
   const [result, setResult] = useState<WildSurgeResult | null>(null)
   // Onde di Caos spesa: il GM può far tirare la tabella senza il d20 e l'uso torna.
   const tides = (char.abilities ?? []).find((a) => a.feature_key === TIDES)
   const tidesSpent = !!tides && tides.max_uses != null && (tides.uses ?? 0) < tides.max_uses
+  // 2024: la tabella dopo le Maree spese si tira al lancio con slot, che il server segna con uno stato.
+  const tidesDue = (char.active_states ?? []).some((s) => s.key === 'tides_surge_due')
+  const showTides = tidesSpent && (!is24 || tidesDue)
+  const tamed = (char.abilities ?? []).find((a) => a.feature_key === TAMED)
+  const tamedReady = is24 && !!tamed && (tamed.uses ?? 0) > 0
+  const table = useQuery({ queryKey: ['wild-magic-table', char.id], queryFn: () => api.characters.wildMagicTable(char.id), enabled: tamedReady })
   // Impulso 01-02 in corso: a ogni turno si tira la tabella senza d20.
   const repeating = (char.active_states ?? []).some((s) => s.key === 'wild_repeat')
 
@@ -39,8 +52,9 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
     qc.invalidateQueries({ queryKey: ['character', char.id] })
   }
   const surge = useMutation({
-    mutationFn: (mode: 'd20' | 'tides' | 'repeat') =>
-      api.characters.wildMagicSurge(char.id, mode === 'repeat' ? { repeat: true } : { tides: mode === 'tides' }),
+    mutationFn: (mode: 'd20' | 'tides' | 'repeat' | number) =>
+      api.characters.wildMagicSurge(char.id, typeof mode === 'number' ? { tamed: true, percentile: [mode] }
+        : mode === 'repeat' ? { repeat: true } : { tides: mode === 'tides' }),
     onSuccess: done, onError: fail,
   })
   const choose = useMutation({ mutationFn: (index: number) => api.characters.wildMagicChoose(char.id, index), onSuccess: done, onError: fail })
@@ -72,15 +86,24 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
       <div className="flex flex-col gap-3 px-4 pb-4">
         {!result && (
           <>
-            <p className="text-sm font-body text-dnd-text-muted">{t('character.turn.wild.intro')}</p>
-            <SwitchToggle label={t('character.turn.wild.confirm')} checked={asked} onChange={setAsked} />
-            <Button variant="primary" disabled={!asked} loading={surge.isPending} onClick={() => surge.mutate('d20')}>
+            <p className="text-sm font-body text-dnd-text-muted">{t(is24 ? 'character.turn.wild.intro_2024' : 'character.turn.wild.intro')}</p>
+            {!is24 && <SwitchToggle label={t('character.turn.wild.confirm')} checked={asked} onChange={setAsked} />}
+            <Button variant="primary" disabled={!is24 && !asked} loading={surge.isPending} onClick={() => surge.mutate('d20')}>
               {t('character.turn.wild.roll')}
             </Button>
-            {tidesSpent && (
+            {showTides && (
               <Button variant="secondary" loading={surge.isPending} onClick={() => surge.mutate('tides')}>
-                {t('character.turn.wild.tides')}
+                {t(is24 ? 'character.turn.wild.tides_2024' : 'character.turn.wild.tides')}
               </Button>
+            )}
+            {tamedReady && table.data && (
+              <>
+                <SelectSheet label={t('character.turn.wild.tamed_label')} value={pick} onChange={setPick} placeholder={t('character.turn.wild.tamed_placeholder')}
+                  options={table.data.filter((e) => e.lo < LAST_ROW).map((e) => ({ value: String(e.lo), label: `${e.label} · ${e.name[lang]}`, description: e.text[lang] }))} />
+                <Button variant="secondary" disabled={!pick} loading={surge.isPending} onClick={() => surge.mutate(Number(pick))}>
+                  {t('character.turn.wild.tamed_apply')}
+                </Button>
+              </>
             )}
             {repeating && (
               <Button variant="secondary" loading={surge.isPending} onClick={() => surge.mutate('repeat')}>

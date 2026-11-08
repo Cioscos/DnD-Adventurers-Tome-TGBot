@@ -5,9 +5,9 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import WildMagicSheet from '@/components/rules/WildMagicSheet'
 import type { CharacterFull } from '@/types'
 
-const { wildMagicSurge, wildMagicChoose, toastError } = vi.hoisted(() => ({ wildMagicSurge: vi.fn(), wildMagicChoose: vi.fn(), toastError: vi.fn() }))
+const { wildMagicSurge, wildMagicChoose, wildMagicTable, toastError } = vi.hoisted(() => ({ wildMagicSurge: vi.fn(), wildMagicChoose: vi.fn(), wildMagicTable: vi.fn(), toastError: vi.fn() }))
 vi.mock('@/api/client', () => ({
-  api: { characters: { wildMagicSurge, wildMagicChoose } },
+  api: { characters: { wildMagicSurge, wildMagicChoose, wildMagicTable } },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: vi.fn(), error: toastError, success: vi.fn() }) }))
@@ -95,5 +95,51 @@ describe('WildMagicSheet', () => {
     await userEvent.click(screen.getByText('character.turn.wild.repeat'))
     await waitFor(() => expect(wildMagicSurge).toHaveBeenCalledWith(7, { repeat: true }))
     expect(await screen.findByText('character.turn.wild.ignored')).toBeInTheDocument()
+  })
+
+  describe('2024', () => {
+    const char24 = (extra: Record<string, unknown> = {}) => ({
+      id: 7, rules_edition: '2024', abilities: [{ id: 1, feature_key: 'sorcerer.tides_of_chaos', max_uses: 1, uses: 1 }], active_states: [], ...extra,
+    }) as unknown as CharacterFull
+
+    it('lets the player roll the d20 right away, with the 2024 text and without the 2014 GM switch', async () => {
+      wildMagicSurge.mockResolvedValue({ die: 7, triggered: false, pending: false, options: [], applied: null, tides_restored: false })
+      renderWithProviders(<WildMagicSheet char={char24()} onClose={() => {}} />)
+      expect(screen.getByText('character.turn.wild.intro_2024')).toBeInTheDocument()
+      expect(screen.queryByText('character.turn.wild.intro')).not.toBeInTheDocument()
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+      await userEvent.click(screen.getByText('character.turn.wild.roll'))
+      await waitFor(() => expect(wildMagicSurge).toHaveBeenCalledWith(7, { tides: false }))
+    })
+
+    it('offers the table after the Tides only once a slot spell has been cast (the due state), never from the spent use alone', async () => {
+      wildMagicSurge.mockResolvedValue({ die: null, triggered: true, pending: false, options: [entry(17, 'Piume')], applied: applied(17, 'Piume'), tides_restored: true })
+      const spent = [{ id: 1, feature_key: 'sorcerer.tides_of_chaos', max_uses: 1, uses: 0 }]
+      const { unmount } = renderWithProviders(<WildMagicSheet char={char24({ abilities: spent })} onClose={() => {}} />)
+      expect(screen.queryByText('character.turn.wild.tides_2024')).not.toBeInTheDocument()
+      unmount()
+      renderWithProviders(<WildMagicSheet char={char24({ abilities: spent, active_states: [{ key: 'tides_surge_due', rounds_left: null }] })} onClose={() => {}} />)
+      await userEvent.click(screen.getByText('character.turn.wild.tides_2024'))
+      await waitFor(() => expect(wildMagicSurge).toHaveBeenCalledWith(7, { tides: true }))
+    })
+
+    it('picks a Tamed Surge effect by name, never the last row, and sends only that percentile', async () => {
+      wildMagicTable.mockResolvedValue([entry(1, 'Ripetizione'), entry(53, 'Azione extra'), entry(97, 'Ultima')])
+      wildMagicSurge.mockResolvedValue({ die: null, triggered: true, pending: false, options: [entry(53, 'Azione extra')], applied: applied(53, 'Azione extra', { extra_action: true }), tides_restored: false })
+      const tamed = [{ id: 2, feature_key: 'sorcerer.tamed_surge', max_uses: 1, uses: 1 }]
+      renderWithProviders(<WildMagicSheet char={char24({ abilities: tamed })} onClose={() => {}} />)
+      expect(await screen.findByText('53 · Azione extra')).toBeInTheDocument()
+      expect(screen.queryByText(/Ultima/)).not.toBeInTheDocument()
+      await userEvent.click(screen.getByText('53 · Azione extra'))
+      await userEvent.click(screen.getByText('character.turn.wild.tamed_apply'))
+      await waitFor(() => expect(wildMagicSurge).toHaveBeenCalledWith(7, { tamed: true, percentile: [53] }))
+    })
+
+    it('hides Tamed Surge when its use is spent', async () => {
+      wildMagicTable.mockResolvedValue([entry(1, 'Ripetizione')])
+      const spent = [{ id: 2, feature_key: 'sorcerer.tamed_surge', max_uses: 1, uses: 0 }]
+      renderWithProviders(<WildMagicSheet char={char24({ abilities: spent })} onClose={() => {}} />)
+      expect(screen.queryByText('character.turn.wild.tamed_apply')).not.toBeInTheDocument()
+    })
   })
 })

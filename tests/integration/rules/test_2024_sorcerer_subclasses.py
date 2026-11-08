@@ -8,7 +8,7 @@ from core.rules.catalog.y2024.sorcerer_wild_magic import SURGES
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _roll_keys, _states, _use
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
 from tests.integration.rules.test_2014_sorcerer import SP, _points, _set_points
-from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell, _sword
 
 NAMES = {"aberrant": "Stregoneria Aberrante", "clockwork": "Stregoneria Meccanica", "draconic": "Stregoneria Draconica",
          "wild_magic": "Magia Selvaggia"}
@@ -24,6 +24,10 @@ async def _make(client, sub, level=10, **scores) -> int:
     for ability, value in {"charisma": 18, **scores}.items():
         assert (await client.patch(f"/characters/{cid}/ability_scores/{ability}", json={"value": value})).status_code == 200
     return cid
+
+
+async def _cast(client, cid, spell, **body):
+    return await client.post(f"/characters/{cid}/spells/{spell}/use", json=body)
 
 
 async def _spells(client, cid) -> dict[str, dict]:
@@ -236,6 +240,35 @@ async def test_dragon_companion_casts_summon_dragon_once_without_a_slot(client):
     assert P + "dragon_companion_no_concentration" in await _roll_keys(client, cid, "cast", spell_id=spell)
 
 
+async def test_dragon_companion_option_casts_summon_dragon_without_concentration_and_keeps_the_other(client):
+    cid = await _make(client, "draconic", 18)
+    other = await _spell(client, cid, "Volare", 3, is_concentration=True)
+    r = await _cast(client, cid, other, slot_level=3)
+    assert r.status_code == 200, r.text
+    assert (await _full(client, cid))["concentrating_spell_id"] == other
+    await _new_turn(client, cid)
+    spell = (await _spells(client, cid))["summon-dragon"]["id"]
+    r = await _cast(client, cid, spell, slot_level=5, options=[P + "dragon_companion_no_concentration"])
+    assert r.status_code == 200, r.text
+    assert (await _full(client, cid))["concentrating_spell_id"] == other  # il drago non toglie la concentrazione già attiva
+    await _new_turn(client, cid)
+    spell2 = await _spell(client, cid, "Ancora", 3, is_concentration=True)
+    assert (await _cast(client, cid, spell2, slot_level=3)).status_code == 200
+    assert (await _full(client, cid))["concentrating_spell_id"] == spell2  # senza l'opzione la concentrazione resta quella di sempre
+
+
+async def test_restore_balance_on_your_own_roll_removes_advantage_and_costs_a_use_and_the_reaction(client):
+    cid = await _make(client, "clockwork", 5, charisma=18)
+    key, feature = P + "restore_balance_own_roll", P + "restore_balance"
+    assert key in await _roll_keys(client, cid, "skill")
+    r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "advantage", "dice": [3, 17], "options": [key]})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode_applied"] == "normal" and len(r.json()["dice"]) == 1, r.text
+    assert (await _ability(client, cid, feature))["uses"] == 3 and (await _turn(client, cid))["reaction_used"] is True
+    r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"mode": "advantage", "dice": [3, 17], "options": [key]})
+    assert r.status_code == 409, r.text
+
+
 # ---------------------------------------------------------------------------
 # Magia Selvaggia
 # ---------------------------------------------------------------------------
@@ -276,12 +309,48 @@ async def test_controlled_chaos_rolls_twice_and_the_player_picks_one(client):
 async def test_tides_of_chaos_gives_advantage_to_a_check_and_returns_after_a_surge(client):
     cid = await _make(client, "wild_magic", 3)
     assert P + "tides_of_chaos_advantage" in await _roll_keys(client, cid, "skill")
-    assert P + "tides_of_chaos_advantage" not in await _roll_keys(client, cid, "attack")
+    assert P + "tides_of_chaos_advantage" not in await _roll_keys(client, cid, "cast")
     r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"die": 8, "options": [P + "tides_of_chaos_advantage"]})
     assert r.status_code == 200, r.text
     assert (await _ability(client, cid, P + "tides_of_chaos"))["uses"] == 0
+    await _surge(client, cid, tides=True, percentile=[5], expect=409)  # senza un lancio con slot dopo le Maree non si tira
+    spell = await _spell(client, cid, "Ragnatela", 2)
+    r = await _cast(client, cid, spell, slot_level=2)
+    assert r.status_code == 200, r.text
+    assert "tides_surge_due" in [s["key"] for s in await _states(client, cid)]
     body = await _surge(client, cid, tides=True, percentile=[5])
     assert body["tides_restored"] is True and (await _ability(client, cid, P + "tides_of_chaos"))["uses"] == 1
+    assert "tides_surge_due" not in [s["key"] for s in await _states(client, cid)]
+
+
+@pytest.mark.parametrize("roll", ["attack", "save", "skill", "initiative", "death_save"])
+async def test_tides_of_chaos_is_offered_on_every_d20_test(client, roll):
+    cid = await _make(client, "wild_magic", 3)
+    assert P + "tides_of_chaos_advantage" in await _roll_keys(client, cid, roll)
+
+
+async def test_trance_of_order_floors_a_save_and_an_attack_to_ten(client):
+    cid = await _make(client, "clockwork", 14)
+    assert (await _use(client, cid, P + "trance_of_order")).status_code == 200
+    r = await client.post(f"/characters/{cid}/saving_throws/dexterity/roll", json={"die": 5})
+    assert r.json()["die"] == 10, r.text
+    sword = await _sword(client, cid)
+    r = await client.post(f"/characters/{cid}/items/{sword}/attack", json={"die": 5})
+    assert r.status_code == 200 and r.json()["to_hit_die"] == 10, r.text
+
+
+async def test_a_cantrip_after_the_tides_does_not_ask_for_the_table(client):
+    cid = await _make(client, "wild_magic", 3)
+    await client.post(f"/characters/{cid}/skills/arcana/roll", json={"die": 8, "options": [P + "tides_of_chaos_advantage"]})
+    cantrip = await _spell(client, cid, "Raggio", 0)
+    assert (await _cast(client, cid, cantrip)).status_code == 200
+    assert "tides_surge_due" not in [s["key"] for s in await _states(client, cid)]
+
+
+async def test_the_surge_table_is_listed_with_its_names(client):
+    cid = await _make(client, "wild_magic", 18)
+    r = await client.get(f"/characters/{cid}/wild-magic/table")
+    assert r.status_code == 200 and len(r.json()) == 25 and r.json()[0]["lo"] == 1 and r.json()[0]["name"]["it"]
 
 
 async def test_bend_luck_costs_one_point(client):
@@ -307,3 +376,10 @@ async def test_the_2014_surge_is_unchanged_for_a_2014_character(client):
     body = {"name": "Vecchio", "initial_class": {"class_name": "sorcerer", "level": 3, "subclass": "Magia Selvaggia"}}
     cid = (await client.post("/characters", json=body)).json()["id"]
     assert (await _surge(client, cid, die=1, percentile=[1]))["triggered"] is True
+
+
+def test_charm_monster_is_a_twinned_spell_and_chromatic_orb_has_a_damage_type():
+    from core.rules.catalog.granted_spells import GRANTED_SPELLS
+    from core.rules.catalog.y2024.sorcerer import TWINNED_SPELLS
+    assert "charm-monster" in TWINNED_SPELLS
+    assert GRANTED_SPELLS["chromatic-orb"].damage_type == "fire"  # predefinito: il tipo si sceglie al lancio (Trasmutato lo cambia)

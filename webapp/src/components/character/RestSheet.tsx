@@ -11,6 +11,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
+import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
@@ -38,6 +39,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
   const [tooSoon, setTooSoon] = useState(false)
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
+  const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
   const is2024 = char.rules_edition === '2024'
 
   const rollDice = useAnimatedRoll()
@@ -71,6 +73,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
         confirm_early: confirmEarly,
         ...(restType === 'short' && Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}),
         ...(restType === 'short' && Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}),
+        ...(restType === 'short' && restoration > 0 ? { sorcerous_restoration: restoration } : {}),
       }),
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
@@ -89,6 +92,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
       setAteAndDrank(true)
       setRecovery({})
       setArcane({})
+      setRestoration(0)
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
       setConfirmLongRest(false)
@@ -186,6 +190,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
               <SongOfRestToggle char={char} />
               <NaturalRecoveryPicker char={char} value={recovery} onChange={setRecovery} />
               <ArcaneRecoveryPicker char={char} value={arcane} onChange={setArcane} />
+              <SorcerousRestorationPicker char={char} value={restoration} onChange={setRestoration} />
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
             </>
           }

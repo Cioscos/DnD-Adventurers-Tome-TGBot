@@ -46,6 +46,7 @@ from api.routers._helpers import collect_homebrew_notifications, roll_concentrat
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
 from core.rules.modifiers import modifiers_for
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
@@ -53,6 +54,7 @@ from api.services.last_damage import damage_parts, last_damage_total, pairs, reg
 from core.rules.roll_options import scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_states import _spend_atomically, remove_state
+from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
@@ -221,7 +223,7 @@ def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, ex
 def _consume_cast(
     session, char: Character, spell: Spell, slot_id: int | None, slot_level: int | None, ritual: bool,
     confirm: list[str] | None = None, free_cast: bool = False, ki: bool = False, ki_extra: int = 0,
-    silent: bool = False, war_magic: bool = False,
+    silent: bool = False, war_magic: bool = False, no_concentration_option: bool = False,
 ) -> Ability | None:
     """Consuma il lancio (slot o rituale) e attiva la concentrazione. Un trucchetto non consuma nulla.
 
@@ -232,7 +234,7 @@ def _consume_cast(
     ki_pool, ki_total = _ki_payment(char, spell, ritual, free_cast, ki_extra) if ki else (None, 0)
     free_state = None
     free_at_will = False
-    no_concentration = False  # Benedizione del Dio della Guerra: il lancio gratuito non chiede Concentrazione
+    no_concentration = no_concentration_option  # Compagno Draconico (l'opzione è convalidata da use_options); Benedizione del Dio della Guerra: il lancio gratuito non chiede Concentrazione
     pact = pact_cast(char, spell) if not ritual and not ki and spell.level >= 1 else None
     arcanum = None  # Arcanum Mistico: senza slot, spende l'uso della sua riga
     if free_cast:  # R43: serve uno stato attivo (o un privilegio a volontà) per questo incantesimo; costa l'azione, non uno slot
@@ -306,6 +308,8 @@ def _consume_cast(
     else:
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
+    if slot is not None:
+        mark_tides_due(char, spell)  # Maree del Caos 2024 spese: il lancio con slot apre la tabella
     end_on_action(char, "cast", spell)
     after_cast(char, spell)  # i privilegi delle scuole del Mago (dopo end_on_action: le finestre nuove restano)
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
@@ -515,7 +519,8 @@ async def use_spell(
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []),
-        war_magic=bool(WAR_MAGIC_KEYS & set(body.options or []))))
+        war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
+        no_concentration_option=NO_CONCENTRATION_KEY in (body.options or [])))
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
@@ -567,7 +572,8 @@ async def spell_attack(
     else:
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                                                       silent=SUBTLE_KEY in (body.cast_options or []),
-                                                      war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or []))))
+                                                      war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
+                                                      no_concentration_option=NO_CONCENTRATION_KEY in (body.cast_options or [])))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
