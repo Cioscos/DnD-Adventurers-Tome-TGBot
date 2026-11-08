@@ -117,9 +117,9 @@ vi.mock('@/components/ui/Button', async () => {
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { open: boolean; onConfirm: () => void; confirmLabel: string }) =>
+    default: (p: { open: boolean; body?: unknown; onConfirm: () => void; confirmLabel: string }) =>
       p.open
-        ? React.createElement('div', { 'data-testid': 'confirm-sheet' },
+        ? React.createElement('div', { 'data-testid': 'confirm-sheet' }, p.body as never,
             React.createElement('button', { 'data-testid': 'confirm-ok', onClick: p.onConfirm }, p.confirmLabel))
         : null,
   }
@@ -405,6 +405,28 @@ describe('HP page', () => {
     await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
     await userEvent.click(screen.getByTestId('hd-rest'))
     await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', { natural_recovery: { 1: 1 } }))
+  })
+
+  it('offers the Book of Shadows switch in the long rest and sends reopen_tome', async () => {
+    const tomeLock = { ...aliveChar, rules_edition: '2024', classes: [{ id: 1, class_name: 'warlock', level: 3 }], active_states: [],
+      abilities: [{ id: 5, feature_key: 'warlock.pact_of_the_tome', name: 'Patto del Tomo' }] }
+    getChar.mockResolvedValue(tomeLock)
+    restSpy.mockResolvedValue(tomeLock)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
+    await userEvent.click(within(await screen.findByTestId('tome-reopen')).getByRole('switch'))
+    await userEvent.click(screen.getByTestId('confirm-ok'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', { reopen_tome: true }))
+  })
+
+  it('does not offer the Book of Shadows switch without the pact', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
+    await screen.findByTestId('confirm-ok')
+    expect(screen.queryByTestId('tome-reopen')).toBeNull()
   })
 
   it('does not offer Natural Recovery to a character without the feature', async () => {

@@ -941,7 +941,7 @@
       "applied": "Applicato a {{name}}",
       "applied_save": "Applicato a {{name}}: il TS è in attesa",
       "nothing": "Niente da applicare",
-      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "no_opportunity_attacks": "Niente attacchi di opportunità", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio", "instinctive_charm": "Attacco deviato", "altered_memory": "Ricordi alterati", "commanded_undead": "Non morto comandato", "hamstring": "Colpo alle Gambe", "staggered": "Colpo Stordente", "sundered": "Colpo Spezzante", "dazed": "Stordito" },
+      "custom": { "sap": "Sap", "slow": "Slow", "turned": "Scacciato", "thoughts_read": "Pensieri letti", "nature_ward": "Dissuaso", "goaded": "Adescato", "protection": "Attacco ostacolato", "eldritch_strike": "Colpo Mistico", "no_reactions": "Senza reazioni", "no_opportunity_attacks": "Niente attacchi di opportunità", "magical_ambush": "Imboscata Magica", "heightened_spell": "Incantesimo Intensificato", "hurled": "Nei piani inferiori", "entropic_ward": "Attacco in svantaggio", "instinctive_charm": "Attacco deviato", "altered_memory": "Ricordi alterati", "commanded_undead": "Non morto comandato", "hamstring": "Colpo alle Gambe", "staggered": "Colpo Stordente", "sundered": "Colpo Spezzante", "dazed": "Frastornato" },
       "custom_note": {
         "sap": "È solo un'etichetta con durata: lo svantaggio al prossimo attacco del bersaglio lo applica il GM a mano.",
         "slow": "È solo un'etichetta con durata: la velocità -3 m del bersaglio la applica il GM a mano.",
@@ -952,6 +952,8 @@
         "sundered": "È solo un'etichetta con durata: il +5 al primo tiro per colpire di un'altra creatura contro il bersaglio lo applica il GM a mano."
       },
       "notes": {
+        "daze": "Può fare una sola cosa nel suo prossimo turno: muoversi, agire o usare un'azione bonus. Finisce alla fine di quel turno.",
+        "knock_out": "Privo di Sensi per 1 minuto: ripete il TS alla fine di ogni suo turno. Finisce con un successo o al primo danno subito: toglilo a mano.",
         "hypnotic_gaze": "Affascinato dal mago, incapacitato e a velocità 0 fino alla fine del suo prossimo turno. Il mago lo mantiene con un'azione; finisce se si allontana, se la creatura non lo vede né lo sente o se subisce danni: toglilo a mano.",
         "instinctive_charm": "Se fallisce deve attaccare la creatura più vicina a sé che non sia il mago né l'attaccante stesso (a pari distanza sceglie l'attaccante). Chi supera il TS è immune a questo effetto fino al riposo lungo del mago; le creature che non possono essere affascinate sono immuni.",
         "altered_memory": "Se il TS fallisce dimentica fino a 1 + Carisma del mago ore del tempo passato affascinata, non oltre la durata dell'incantesimo.",
@@ -1233,6 +1235,7 @@
       "aria": "Ispirazione eroica"
     },
     "extras": {
+      "chain_master": { "stats": "CD {{dc}} · Volo o nuoto {{m}} m", "bonus": "Ordina l'attacco con l'azione bonus", "damage_type": "Tipo di danno", "as_listed": "Come da scheda", "necrotic": "Necrotico", "radiant": "Radioso", "resist": "Resistenza (reazione)", "reaction_used": "La reazione è già usata in questo turno." },
       "beast": {
         "title": "Bestia compagna",
         "none": "Nessuna bestia viva: aggiungine una dalla pagina Extra.",
@@ -1489,6 +1492,7 @@
         "quivering_palm": "TS Costituzione: se fallisce, il bersaglio scende a 0 PF; se supera, subisce i danni necrotici tirati. Le vibrazioni finiscono.",
         "water_whip": "TS Destrezza: se fallisce, subisce i danni contundenti e, a tua scelta, cade prono o è tirato fino a 7,5 m verso di te; se supera, metà danni e nessun altro effetto.",
         "revivification_other": "Riferisci al GM che la creatura è a PF pari al tuo livello da barbaro. Se è un personaggio della serata, scegli il suo nome per curarlo da qui.",
+        "gift_of_the_protectors_other": "Riferisci al GM che la creatura scende a 1 PF invece che a 0. Se è un personaggio della serata a 0 PF, scegli il suo nome per portarlo a 1 PF da qui.",
         "lay_on_hands_other_2024": "Riferisci i PF al GM: la creatura li recupera da lui. Se è un personaggio della serata, scegli il suo nome per curarlo da qui.",
         "lay_on_hands_cure_self_2024": "Le condizioni scelte sono tolte dalla scheda; i punti spesi non curano PF.",
         "lay_on_hands_cure_other_2024": "Le condizioni scelte non si scrivono sulla scheda altrui: dillo al GM o al giocatore, che le toglie da loro. I punti sono già spesi.",

@@ -15,6 +15,12 @@ class CompanionStats:
     armor_class: int | None = None
     attack_bonus: int = 0
     damage_bonus: int = 0
+    # Investitura del Padrone delle Catene (Warlock 2024): CD dei TS che impone, volo o nuoto in metri, tipi di danno a scelta al
+    # posto di contundente/perforante/tagliente e resistenza in reazione
+    save_dc: int | None = None
+    fly_or_swim_m: int = 0
+    damage_types: tuple[str, ...] = ()
+    can_resist: bool = False
 
 
 def _rangers_companion(base_hp: int, base_ac: int, level: int, pb: int, _wis: int, _statblock: dict) -> CompanionStats:
@@ -68,10 +74,27 @@ def thrall_stats(char, comp) -> CompanionStats | None:
     return CompanionStats(max_hp=comp.max_hp + found.level, damage_bonus=char.proficiency_bonus)
 
 
+CHAIN_MASTER = "warlock.investment_of_the_chain_master"  # Investitura del Padrone delle Catene (Warlock 2024)
+
+
+def chain_master_stats(char, comp) -> CompanionStats | None:
+    """Il famiglio (non un compagno di privilegio) di un warlock 2024 con l'Investitura: volo o nuoto 12 m, necrotico o radioso al posto
+    dei danni fisici, la CD del warlock per i suoi TS e la resistenza in reazione."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    if comp.kind != "familiar" or comp.feature_key or character_edition(char) != "2024":
+        return None
+    if not any(spec.key == CHAIN_MASTER for spec, _row in active_features(char)):
+        return None
+    return CompanionStats(save_dc=8 + char.proficiency_bonus + effective_ability_mod(char, "charisma"), fly_or_swim_m=12,
+                          damage_types=("necrotic", "radiant"), can_resist=True)
+
+
 def companion_stats(char, comp) -> CompanionStats | None:
     """Valori del compagno di privilegio per il personaggio; ``None`` se non ne ha uno o il privilegio non è dell'edizione."""
     if (thrall := thrall_stats(char, comp)) is not None:
         return thrall
+    if (chain := chain_master_stats(char, comp)) is not None:
+        return chain
     entry = COMPANION_FEATURES.get(comp.feature_key or "")
     if entry is None or entry[1] != character_edition(char):
         return None

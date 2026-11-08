@@ -69,6 +69,8 @@ def _read(char: Character, comp: Companion) -> CompanionRead:
         out.max_hp = stats.max_hp if stats.max_hp is not None else comp.max_hp
         out.armor_class = stats.armor_class if stats.armor_class is not None else comp.armor_class
         out.attack_bonus_extra, out.damage_bonus_extra = stats.attack_bonus, stats.damage_bonus
+        out.save_dc, out.fly_or_swim_m, out.can_resist = stats.save_dc, stats.fly_or_swim_m, stats.can_resist
+        out.damage_type_options = list(stats.damage_types)
         out.current_hp = min(comp.current_hp, out.max_hp)
     return out
 
@@ -323,10 +325,18 @@ async def companion_hp(
         out.down = comp.current_hp == 0
         out.concentration_save = full.concentration_save  # il TS di PATCH /hp, se l'eccesso l'ha fatto tirare
         return out
+    value = body.value
+    if body.resist:  # Investitura del Padrone delle Catene: la reazione del warlock dà al famiglio la resistenza a quel danno
+        stats = companion_stats(char, comp)
+        if body.op != "damage" or stats is None or not stats.can_resist:
+            raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
+        refuse_if_incapacitated(char)
+        spend(char, "reaction")  # 409 turn_slot_used
+        value //= 2
     if body.op == "damage":
-        absorbed = min(comp.temp_hp, body.value)
+        absorbed = min(comp.temp_hp, value)
         comp.temp_hp -= absorbed
-        comp.current_hp = max(0, comp.current_hp - (body.value - absorbed))
+        comp.current_hp = max(0, comp.current_hp - (value - absorbed))
     elif body.op == "heal":
         comp.current_hp = min(_effective_max_hp(char, comp), comp.current_hp + body.value)
     else:
@@ -478,6 +488,18 @@ async def companion_attack(
         raise HTTPException(status_code=422, detail="action_not_attack")
     if comp.feature_key in BEAST_KEYS:
         _take_beast_attack(char, comp, body.reaction)
+    converted = None
+    if body.bonus or body.damage_type:  # Investitura del Padrone delle Catene
+        chain = companion_stats(char, comp)
+        if chain is None or not chain.damage_types:
+            raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
+        if body.damage_type:
+            if action.get("damage_type") not in ("bludgeoning", "piercing", "slashing"):
+                raise HTTPException(status_code=422, detail="damage_type_not_convertible")
+            converted = body.damage_type
+        if body.bonus:  # il warlock ordina l'attacco con l'azione bonus
+            refuse_if_incapacitated(char)
+            spend(char, "bonus")  # 409 turn_slot_used
 
     # In Forma Selvatica attacca il personaggio: le sue condizioni restano; un compagno è un altro combattente.
     applied = Applied()
@@ -531,7 +553,7 @@ async def companion_attack(
     result = CompanionAttackResult(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
         dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,
-        damage_total=total, damage_type="radiant" if "druid.radiant_moon" in opts.keys else "force" if "ranger.beast_force" in opts.keys else action.get("damage_type"),
+        damage_total=total, damage_type=converted or ("radiant" if "druid.radiant_moon" in opts.keys else "force" if "ranger.beast_force" in opts.keys else action.get("damage_type")),
         is_magical=in_form and any(spec.key == "druid.primal_strike" for spec, _row in active_features(char)),
         option_result=option_result(opts, option_rolls, option_total),
     )

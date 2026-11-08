@@ -353,6 +353,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     for_other = (params or {}).get("mode") in on_use.ally_modes  # una scelta rivolta a un'altra creatura (R46)
     if (on_use.ally_state or for_other) and (params or {}).get("target_character_id") is not None:
         target = await ally_target(session, char, params["target_character_id"])
+        if on_use.ally_needs_zero_hp and target.current_hit_points > 0:
+            raise _err(status.HTTP_409_CONFLICT, "target_not_down")
     heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount

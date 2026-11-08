@@ -22,6 +22,7 @@ import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
 import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
+import TomeReopenToggle from '@/components/character/TomeReopenToggle'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
@@ -81,6 +82,7 @@ export default function HP() {
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
   const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
+  const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
   const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
@@ -197,7 +199,7 @@ export default function HP() {
     mutationFn: (restType: 'long' | 'short') => {
       const slots = restType === 'short'
         ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}) }
-        : {}
+        : reopenTome ? { reopen_tome: true } : {}
       return Object.keys(slots).length > 0 ? api.characters.rest(charId, restType, slots) : api.characters.rest(charId, restType)
     },
     onError: (err) => {
@@ -210,6 +212,7 @@ export default function HP() {
       setRecovery({})
       setArcane({})
       setRestoration(0)
+      setReopenTome(false)
       qc.setQueryData(['character', charId], updated)
       // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
@@ -513,6 +516,7 @@ export default function HP() {
           <div className="space-y-3">
             <p>{t('character.hp.long_rest_confirm_body')}</p>
             {showLongRestConfirm && <RestPreviewList charId={charId} restType="long" />}
+            <TomeReopenToggle char={char} value={reopenTome} onChange={setReopenTome} />
           </div>
         }
         confirmLabel={t('character.hp.long_rest_confirm_action')}

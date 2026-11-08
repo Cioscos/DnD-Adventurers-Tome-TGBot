@@ -212,6 +212,14 @@ GIFT = RollOptionSpec(
            "en": "Gift of the Protectors: if the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (one use, long rest)"})
 
 
+# R42: su un alleato della serata verificato dal server, «Usa» lo porta da 0 a 1 PF e spende l'uso (storico sul ricevente);
+# fuori serata, o su una creatura non PG, resta l'esito testuale
+GIFT_USE = OnUse(
+    heal=lambda _c, _r: 1, heal_when=lambda _c, _p: False, heal_ally_when=lambda _c, _p: True, heal_ally_to=True, ally_needs_zero_hp=True,
+    ally_modes=("ally",), notes=lambda _c, p: ["gift_of_the_protectors_other"] if p.get("target_character_id") is None else [],
+    choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: ["ally"], lambda _k: {"it": "Un'altra creatura", "en": "Another creature"}),))
+
+
 def _shadows_state() -> RollOptionSpec:
     return RollOptionSpec(
         key=f"{CK}.one_with_shadows_light", phase="before", rolls=("cast",),
@@ -294,9 +302,9 @@ _ROWS: list = [
          granted_spells=("water-breathing",), free_spell="water-breathing", uses=Uses(table={1: 1}), restoration="long_rest",
          modifiers=(Modifier("swim_speed", 1, source=f"feature:{CK}.gift_of_the_depths"),)),
     _inv("gift_of_the_protectors", "Dono dei Protettori", "Gift of the Protectors", f"{_P}, livello 9+, Patto del Tomo, pag. 156", 9,
-         ("Nomi sul Libro delle Ombre (Carisma, minimo 1): chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo. L'app lo applica a te.",
-          "Names in the Book of Shadows (Charisma, minimum 1): whoever drops to 0 HP without dying outright stays at 1, once until a long rest. The app applies it to you."),
-         uses=Uses(table={9: 1}), restoration="long_rest", roll_options=(GIFT,), passive=True),
+         ("Chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo (nomi: Carisma, min. 1). Su di te col danno; su un alleato della serata a 0 PF con «Usa».",
+          "Whoever drops to 0 HP without dying outright stays at 1, once until a long rest (names: Charisma, min. 1). On you with the damage; on a table ally at 0 HP with Use."),
+         uses=Uses(table={9: 1}), restoration="long_rest", roll_options=(GIFT,), on_use=GIFT_USE),
     _inv("investment_of_the_chain_master", "Investitura del Padrone delle Catene", "Investment of the Chain Master",
          f"{_P}, livello 5+, Patto della Catena, pag. 156", 5,
          ("Il famiglio evocato con Trova Famiglio vola o nuota a 12 m, attacca con la tua azione bonus, infligge danni necrotici o radiosi, usa la tua CD e resiste in reazione.",

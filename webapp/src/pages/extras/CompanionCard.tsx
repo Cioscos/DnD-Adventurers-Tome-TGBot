@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import HPGauge from '@/components/ui/HPGauge'
 import Pressable from '@/components/ui/Pressable'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RollButton from '@/components/ui/RollButton'
@@ -56,6 +57,9 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const [concSave, setConcSave] = useState<ConcentrationSaveResult | null>(null)
   const [formReasons, setFormReasons] = useState<string[] | null>(null)
   const [result, setResult] = useState<{ name: string; r: CompanionAttackResult } | null>(null)
+  const [chainBonus, setChainBonus] = useState(false)  // Investitura del Padrone delle Catene: attacco ordinato con l'azione bonus
+  const [chainType, setChainType] = useState('')
+  const chainOptions = comp.damage_type_options ?? []
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['companions', charId] })
@@ -63,12 +67,16 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   }
 
   const hp = useMutation({
-    mutationFn: (op: 'damage' | 'heal') => api.companions.hp(charId, comp.id, op, Number(amount)),
+    mutationFn: (op: 'damage' | 'heal' | 'resist') => api.companions.hp(charId, comp.id, op === 'resist' ? 'damage' : op, Number(amount), op === 'resist'),
     onSuccess: (updated) => {
       setAmount(''); haptic.success(); refresh()
       if (updated.concentration_save) setConcSave(updated.concentration_save)
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (code === 'turn_slot_used') toast.error(t('character.extras.chain_master.reaction_used'))
+      else notifyMutationError()
+    },
   })
 
   const attack = useMutation({
@@ -77,7 +85,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       const inForm = comp.kind === 'wild_shape' && comp.is_active
       const choice = await askRollOptions(charId, { roll: 'attack', ...(inForm ? { attack_mode: 'form' } : comp.feature_key === 'ranger.primal_companion' ? { attack_mode: 'beast' } : { attack_mode: 'companion' }) })
       const dice = await rollD20(mode)
-      return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs }, reaction)
+      const chain = chainOptions.length ? { ...(chainBonus ? { bonus: true } : {}), ...(chainType ? { damage_type: chainType } : {}) } : undefined
+      return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs }, reaction, chain)
     },
     onSuccess: (r, { idx }) => {
       refreshAfterOptions(qc, charId, r.option_result)
@@ -91,6 +100,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
         toast.error(t('character.attack.incapacitated'))
       } else if (code === 'no_order') {
         toast.error(t('character.extras.beast.no_order'))
+      } else if (code === 'turn_slot_used') {
+        toast.error(t('character.attack.bonus_used'))
       } else if (code === 'companion_down') {
         toast.error(t('character.extras.beast.errors.companion_down'))
       } else {
@@ -196,6 +207,10 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
         <Button variant="primary" className="min-h-11" disabled={!amountOk} loading={hp.isPending && hp.variables === 'heal'}
           onClick={() => hp.mutate('heal')}>{t('character.hp.quick_heal')}</Button>
       </div>
+      {comp.can_resist && (
+        <Button variant="secondary" fullWidth className="min-h-11" disabled={!amountOk} loading={hp.isPending && hp.variables === 'resist'}
+          onClick={() => hp.mutate('resist')}>{t('character.extras.chain_master.resist')}</Button>
+      )}
       </>}
 
       {isBeast && comp.current_hp > 0 && hdTotal > 0 && (
@@ -203,6 +218,21 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
           loading={hitDice.isPending} onClick={() => hitDice.mutate()}>
           {t('character.extras.beast.hit_dice')} ({hdLeft}/{hdTotal})
         </Button>
+      )}
+
+      {chainOptions.length > 0 && (
+        <div className="space-y-2" data-testid="chain-master">
+          <p className="text-xs font-mono text-dnd-text-muted tabular-nums">{t('character.extras.chain_master.stats', { dc: comp.save_dc, m: comp.fly_or_swim_m })}</p>
+          <SwitchToggle checked={chainBonus} onChange={setChainBonus} label={t('character.extras.chain_master.bonus')} />
+          <label className="flex items-center gap-2 text-sm font-body text-dnd-text">
+            <span className="flex-1 min-w-0">{t('character.extras.chain_master.damage_type')}</span>
+            <select value={chainType} onChange={(e) => setChainType(e.target.value)}
+              className="min-h-11 rounded-lg border border-dnd-border bg-dnd-surface text-dnd-text px-3">
+              <option value="">{t('character.extras.chain_master.as_listed')}</option>
+              {chainOptions.map((o) => <option key={o} value={o}>{t(`character.extras.chain_master.${o}`)}</option>)}
+            </select>
+          </label>
+        </div>
       )}
 
       {attacks.length > 0 && (

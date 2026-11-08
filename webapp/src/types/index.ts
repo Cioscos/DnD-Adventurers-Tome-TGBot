@@ -1134,6 +1134,11 @@ export interface Companion {
   /** Compagno di privilegio: si somma al bonus dello statblock. */
   attack_bonus_extra?: number
   damage_bonus_extra?: number
+  /** Investitura del Padrone delle Catene: CD del warlock, volo o nuoto in metri, tipi di danno a scelta, resistenza in reazione. */
+  save_dc?: number | null
+  fly_or_swim_m?: number
+  damage_type_options?: string[]
+  can_resist?: boolean
   /** Danno alla forma attiva: il TS di concentrazione che il personaggio ha tirato per l'eccesso. */
   concentration_save?: ConcentrationSaveResult | null
 }

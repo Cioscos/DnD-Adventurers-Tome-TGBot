@@ -18,6 +18,7 @@ import RestPreviewList from '@/components/character/RestPreviewList'
 import SongOfRestToggle from '@/components/character/SongOfRestToggle'
 import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/character/NaturalRecoveryPicker'
 import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
+import TomeReopenToggle from '@/components/character/TomeReopenToggle'
 import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
@@ -101,6 +102,7 @@ export default function QuickActions({ char }: Props) {
   const [recovery, setRecovery] = useState<Record<number, number>>({})  // Recupero Naturale: livello -> slot
   const [arcane, setArcane] = useState<Record<number, number>>({})  // Recupero Arcano: livello -> slot
   const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
+  const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
   const [confirmRestore, setConfirmRestore] = useState(false)
   const [orderDraft, setOrderDraft] = useState<string[] | null>(null)
   const orderRef = useRef<string[] | null>(null)
@@ -309,7 +311,7 @@ export default function QuickActions({ char }: Props) {
     mutationFn: (restType: 'long' | 'short') => {
       const slots = restType === 'short'
         ? { ...(Object.keys(recovery).length > 0 ? { natural_recovery: recovery } : {}), ...(Object.keys(arcane).length > 0 ? { arcane_recovery: arcane } : {}), ...(restoration > 0 ? { sorcerous_restoration: restoration } : {}) }
-        : {}
+        : reopenTome ? { reopen_tome: true } : {}
       return Object.keys(slots).length > 0 ? api.characters.rest(char.id, restType, slots) : api.characters.rest(char.id, restType)
     },
     onError: (err) => {
@@ -322,6 +324,7 @@ export default function QuickActions({ char }: Props) {
       setRecovery({})
       setArcane({})
       setRestoration(0)
+      setReopenTome(false)
       qc.setQueryData(['character', char.id], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
       setConfirmLongRest(false)
@@ -884,6 +887,7 @@ export default function QuickActions({ char }: Props) {
           <div className="space-y-3">
             <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
             {confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
+            <TomeReopenToggle char={char} value={reopenTome} onChange={setReopenTome} />
           </div>
         }
         confirmLabel={t('character.quick_actions.rest_long')}

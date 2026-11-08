@@ -112,6 +112,10 @@ class CompanionRead(BaseModel):
     feature_key: Optional[str] = None
     attack_bonus_extra: int = 0  # compagno di privilegio: si somma al bonus dello statblock
     damage_bonus_extra: int = 0
+    save_dc: Optional[int] = None  # Investitura del Padrone delle Catene: la CD del warlock per i TS del famiglio
+    fly_or_swim_m: int = 0  # idem: volo o nuoto a scelta, in metri
+    damage_type_options: list[str] = []  # idem: necrotico o radioso al posto dei danni fisici
+    can_resist: bool = False  # idem: resistenza in reazione (``resist`` su PATCH /hp)
     down: bool = False  # set by the hp endpoint: 0 HP means "a terra" (no death saves)
     concentration_save: Optional[ConcentrationSaveResult] = None  # danno alla forma attiva: il TS del personaggio
 
@@ -134,6 +138,7 @@ class WildHealResult(BaseModel):
 class CompanionHp(BaseModel):
     op: Literal["damage", "heal", "set_temp"]
     value: int = Field(ge=0, le=100_000)
+    resist: bool = False  # Investitura del Padrone delle Catene: reazione del warlock, il famiglio resiste (metà danno)
 
 
 class CompanionAttack(RollOptionsBody):
@@ -142,6 +147,8 @@ class CompanionAttack(RollOptionsBody):
     mode: RollMode = "normal"
     dice: D20Dice | None = None
     damage_rolls: Optional[list[int]] = Field(default=None, max_length=100)
+    bonus: bool = False  # Investitura del Padrone delle Catene: l'attacco è ordinato con l'azione bonus del warlock
+    damage_type: Optional[Literal["necrotic", "radiant"]] = None  # idem: al posto di contundente, perforante o tagliente
 
 
 class CompanionCommand(BaseModel):

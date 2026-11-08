@@ -52,8 +52,8 @@ vi.mock('framer-motion', async (orig) => {
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { open: boolean; title: string; onConfirm: () => void }) =>
-      p.open ? React.createElement('button', { onClick: p.onConfirm }, `confirm:${p.title}`) : null,
+    default: (p: { open: boolean; title: string; body?: unknown; onConfirm: () => void }) =>
+      p.open ? React.createElement('div', null, p.body as never, React.createElement('button', { onClick: p.onConfirm }, `confirm:${p.title}`)) : null,
   }
 })
 vi.mock('@/pages/hp/HitDiceResultDialog', () => ({ default: () => null }))
@@ -263,5 +263,28 @@ describe('QuickActions short rest with Natural Recovery', () => {
     await userEvent.click(screen.getByText('character.quick_actions.rest_short'))
     await userEvent.click(screen.getByText('character.hp.confirm_rest'))
     await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short'))
+  })
+})
+
+describe('QuickActions long rest with the Pact of the Tome', () => {
+  const tomeLock = {
+    id: 7, settings: { quick_actions: [{ type: 'rest', rest: 'long' }] }, items: [], spells: [], active_states: [], rules_edition: '2024',
+    classes: [{ id: 1, class_name: 'warlock', level: 3, hit_die: 8, hit_dice_used: 0 }],
+    abilities: [{ id: 5, feature_key: 'warlock.pact_of_the_tome', name: 'Patto del Tomo' }],
+  } as unknown as CharacterFull
+
+  it('offers the switch and sends reopen_tome with the long rest', async () => {
+    rest.mockResolvedValue(tomeLock)
+    renderQC(tomeLock)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    await userEvent.click(within(screen.getByTestId('tome-reopen')).getByRole('switch'))
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.confirm_long_rest_title'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', { reopen_tome: true }))
+  })
+
+  it('does not offer it to a character without the pact', async () => {
+    renderQC({ ...tomeLock, abilities: [] } as unknown as CharacterFull)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    expect(screen.queryByTestId('tome-reopen')).toBeNull()
   })
 })

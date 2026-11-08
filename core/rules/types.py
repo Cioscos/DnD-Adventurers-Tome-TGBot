@@ -310,6 +310,7 @@ class OnUse:
     heal_ally_half_max: bool = False
     # L'uso è possibile anche a 0 PF, da incapacitato (Vendetta Ardente): la UI non lo spegne
     usable_at_zero_hp: bool = False
+    ally_needs_zero_hp: bool = False  # il bersaglio dev'essere a 0 PF, altrimenti 409 ``target_not_down`` prima di spendere (Dono dei Protettori)
     heal_ally_to: bool = False  # ``heal`` è il valore a cui portare i PF del bersaglio, non una cura da sommare (Rivivificazione)
     clears: "Callable[[RuleContext, dict], list[str]] | None" = None
     # chiave della ``UseChoice`` che porta il livello di uno slot incantesimo da spendere (Consapevolezza Primordiale): lo slot si prende

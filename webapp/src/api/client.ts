@@ -1064,11 +1064,11 @@ export const api = {
       request<Companion>(`/characters/${charId}/companions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     remove: (charId: number, id: number) =>
       request<void>(`/characters/${charId}/companions/${id}`, { method: 'DELETE' }),
-    hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number) =>
-      request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value }) }),
-    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[], choice?: Pick<RollChoice, 'options' | 'option_inputs'>, reaction = false) =>
+    hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number, resist = false) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value, ...(resist ? { resist } : {}) }) }),
+    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[], choice?: Pick<RollChoice, 'options' | 'option_inputs'>, reaction = false, chain?: { bonus?: boolean; damage_type?: string }) =>
       request<CompanionAttackResult>(`/characters/${charId}/companions/${id}/attack`, {
-        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice, ...(reaction ? { reaction } : {}), ...choice }),
+        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice, ...(reaction ? { reaction } : {}), ...chain, ...choice }),
       }),
     command: (charId: number, id: number, command: BeastCommand, bonus = false) =>
       request<{ command: string; bonus: boolean; attacks_left: number }>(`/characters/${charId}/companions/${id}/command`, {
