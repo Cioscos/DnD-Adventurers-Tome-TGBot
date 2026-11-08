@@ -8,9 +8,11 @@ scelta del giocatore è la riga. Nota per la parte B: ``PACT_WEAPON`` (metadato 
 from __future__ import annotations
 
 import json
+import random
 from typing import Any
 
 from core.rules.catalog._common import feature, state_on
+from core.rules.catalog.y2014.paladin import _drops_to_zero
 from core.rules.catalog.y2014.warlock import PACT_WEAPONS, _create_pact_weapon, _is_pact, _weapon_label
 from core.rules.catalog.y2014.warlock_invocations import (
     MAGE_ARMOR_AC, MAGE_ARMOR_CAST, PACT_WEAPON, _beams, _is_pact_weapon, _mod, _say,
@@ -93,29 +95,100 @@ SMITE = RollOptionSpec(
                 "The extra dice are force damage. If the target is Huge or smaller you can knock it Prone."))
 
 
-def _lifedrinker(damage_type: str) -> RollOptionSpec:
+def _hit_die_row(ctx: RuleContext) -> Any:
+    """La classe da cui spendere un Dado Vita: la propria se ne ha, altrimenti un'altra."""
+    rows = [ctx.class_row, *(ctx.char.classes or [])]
+    return next((r for r in rows if r is not None and (r.hit_dice_used or 0) < r.level), None)
+
+
+def _drink_hit_die(ctx: RuleContext, given: dict) -> int:
+    """Spende un Dado Vita e dà la cura: il tiro più Costituzione, minimo 1 (2024). Il tiro resta in ``given`` per l'esito."""
+    row = _hit_die_row(ctx)
+    given["rolled"] = random.randint(1, row.hit_die or 8)
+    row.hit_dice_used = (row.hit_dice_used or 0) + 1
+    given["healed"] = max(1, given["rolled"] + _mod(ctx, "constitution"))
+    return given["healed"]
+
+
+def _lifedrinker(damage_type: str, hit_die: bool = False) -> RollOptionSpec:
     it, en = _TYPE_LABELS[damage_type]
+    plain = {"it": f"1d6 danni {it} in più. Puoi spendere un Dado Vita con l'altra opzione di Succhiavita.",
+             "en": f"Extra 1d6 {en} damage. You can spend a Hit Die with the other Lifedrinker option."}
     return RollOptionSpec(
-        key=f"{CK}.lifedrinker_{damage_type}", phase="after_hit", rolls=("attack",), group=f"{CK}.lifedrinker", once_per_turn=True,
-        extra_dice=lambda _c, _i: "1d6", available=_is_pact_weapon,
-        label={"it": f"Succhiavita: 1d6 danni {it} in più con l'arma del patto (una volta per turno)",
-               "en": f"Lifedrinker: extra 1d6 {en} damage with the pact weapon (once per turn)"},
-        effect=_say(f"1d6 danni {it} in più. Puoi spendere un Dado Vita: recuperi PF pari al tiro più il modificatore di Costituzione (minimo 1).",
-                    f"Extra 1d6 {en} damage. You can spend a Hit Die: you regain hit points equal to the roll plus Constitution (minimum 1)."))
+        key=f"{CK}.lifedrinker_{damage_type}" + ("_hd" if hit_die else ""), phase="after_hit", rolls=("attack",), group=f"{CK}.lifedrinker",
+        once_per_turn=True, extra_dice=lambda _c, _i: "1d6",
+        available=(lambda c: _is_pact_weapon(c) and _hit_die_row(c) is not None) if hit_die else _is_pact_weapon,
+        self_heal=_drink_hit_die if hit_die else None,
+        label={"it": f"Succhiavita: 1d6 danni {it} in più con l'arma del patto" + (", e spendi un Dado Vita per curarti" if hit_die else "") + " (una volta per turno)",
+               "en": f"Lifedrinker: extra 1d6 {en} damage with the pact weapon" + (", and spend a Hit Die to heal" if hit_die else "") + " (once per turn)"},
+        effect=(lambda _c, g: {"it": f"1d6 danni {it} in più. Dado Vita speso: tiro {g.get('rolled')} + Costituzione = {g.get('healed')} PF recuperati.",
+                               "en": f"Extra 1d6 {en} damage. Hit Die spent: roll {g.get('rolled')} + Constitution = {g.get('healed')} hit points regained."})
+        if hit_die else (lambda _c, _i: plain))
+
+
+BOUND = "pact_bound"  # item_metadata: un'arma magica già posseduta, legata (non evocata)
+ORIGINAL_TYPE = "pact_original_damage_type"
+
+
+def _bindable(ctx: RuleContext) -> list[str]:
+    """Armi da mischia magiche dell'inventario: si legano invece di evocarne una (``bind:<id>``)."""
+    from core.game.item_bonuses import item_meta  # import locale
+    out = []
+    for item in ctx.char.items:
+        meta = item_meta(item)
+        magic = int(meta.get("magic_bonus") or 0) > 0 or bool(meta.get("requires_attunement") or meta.get("magical"))
+        if item.item_type == "weapon" and magic and meta.get("weapon_type", "melee") == "melee":
+            out.append(f"bind:{item.id}")
+    return out
+
+
+def _release_bound(char: Any) -> None:
+    """Il legame con un'arma vera termina: torna com'era, non si cancella (l'arma evocata la toglie ``_create_pact_weapon``)."""
+    from core.game.item_bonuses import item_meta  # import locale
+    for item in char.items:
+        meta = dict(item_meta(item))
+        if meta.get(BOUND):
+            original = meta.pop(ORIGINAL_TYPE, None)
+            meta.pop(PACT_WEAPON, None)
+            meta.pop(BOUND, None)
+            if original is None:
+                meta.pop("damage_type", None)
+            else:
+                meta["damage_type"] = original
+            item.item_metadata = json.dumps(meta)
 
 
 def _blade_use() -> OnUse:
     def create(ctx: RuleContext, params: dict) -> None:
-        _create_pact_weapon(ctx, params)
+        from core.db.models import EquipmentSlot  # import locale: i modelli non si importano dal catalogo
+        from core.game.item_bonuses import item_meta
+        _release_bound(ctx.char)
         chosen = params.get("damage_type")
+        if params["weapon"].startswith("bind:"):
+            item = next(i for i in ctx.char.items if f"bind:{i.id}" == params["weapon"])
+            for other in ctx.char.items:
+                if other.is_equipped and other.equipment_slot == EquipmentSlot.MAIN_HAND:
+                    other.is_equipped, other.equipment_slot = False, None
+            item.is_equipped, item.equipment_slot = True, EquipmentSlot.MAIN_HAND
+            meta = item_meta(item)
+            item.item_metadata = json.dumps({**meta, PACT_WEAPON: True, BOUND: True, ORIGINAL_TYPE: meta.get("damage_type")})
+        else:
+            _create_pact_weapon(ctx, params)
         if chosen in DAMAGE_TYPES:  # la scelta è il tipo di danno dell'arma; senza, resta il suo
             for item in ctx.char.items:
                 if _is_pact(item):
                     item.item_metadata = json.dumps({**json.loads(item.item_metadata), "damage_type": chosen})
 
+    def label_ctx(ctx: RuleContext, key: str) -> dict[str, str]:
+        if not key.startswith("bind:"):
+            return _weapon_label(key)
+        name = next((i.name for i in ctx.char.items if f"bind:{i.id}" == key), key)
+        return {"it": f"Lega: {name}", "en": f"Bind: {name}"}
+
     return OnUse(
         slot="bonus", effect=create,
-        choices=(UseChoice("weapon", {"it": "Forma dell'arma", "en": "Weapon form"}, lambda _c: list(PACT_WEAPONS), lambda k: _weapon_label(k)),
+        choices=(UseChoice("weapon", {"it": "Forma dell'arma o arma magica da legare", "en": "Weapon form or magic weapon to bind"},
+                           lambda c: [*PACT_WEAPONS, *_bindable(c)], lambda k: _weapon_label(k), option_label_ctx=label_ctx),
                  UseChoice("damage_type", {"it": "Tipo di danno", "en": "Damage type"}, lambda _c: ["normal", *DAMAGE_TYPES],
                            lambda k: {"it": "Quello dell'arma", "en": "The weapon's own"} if k == "normal"
                            else {"it": _TYPE_LABELS[k][0].title(), "en": _TYPE_LABELS[k][1].title()}, optional=True)))
@@ -130,6 +203,13 @@ GAZE_USE = OnUse(slot="bonus", state=_gaze_state)
 # I PF temporanei sono il massimo del dado (1d4 + 4): niente tiro
 VIGOR_USE = OnUse(slot="action", temp_hp=lambda _c, _rolled: 8)
 CHAIN_USE = OnUse(forgoes_attack=True)  # rinunci a un attacco: il famiglio attacca con la sua reazione
+
+
+GIFT_KEY = f"{CK}.gift_of_the_protectors"
+GIFT = RollOptionSpec(
+    key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_drops_to_zero,
+    label={"it": "Dono dei Protettori: se il danno ti porta a 0 PF senza ucciderti sul colpo, resti a 1 PF (un uso, riposo lungo)",
+           "en": "Gift of the Protectors: if the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (one use, long rest)"})
 
 
 def _shadows_state() -> RollOptionSpec:
@@ -179,7 +259,7 @@ _ROWS: list = [
     _will("armor_of_shadows", "Armatura delle Ombre", "Armor of Shadows", f"{_P}, pag. 155", 1, "mage-armor", "armatura magica", "mage armor",
           True, roll_options=(MAGE_ARMOR_CAST,), modifiers=(MAGE_ARMOR_AC,)),
     _will("ascendant_step", "Passo Ascendente", "Ascendant Step", f"{_P}, livello 5+, pag. 155", 5, "levitate", "levitazione", "levitate", True),
-    _inv("devils_sight", "Vista del Diavolo", "Devil's Sight", f"{_P}, livello 2+, pag. 155", 1,
+    _inv("devils_sight", "Vista del Diavolo", "Devil's Sight", f"{_P}, livello 2+, pag. 155", 2,
          ("Vedi normalmente in luce fioca e nell'oscurità, anche magica, fino a 36 m.",
           "You see normally in dim light and darkness, magical or not, up to 120 ft."),
          modifiers=(Modifier("sense:devils_sight", 120, source=f"feature:{CK}.devils_sight"),), passive=True),
@@ -200,7 +280,7 @@ _ROWS: list = [
         ("Ripetibile: la gittata del trucchetto scelto (almeno 3 m) aumenta di 9 m per livello da warlock, con un trucchetto diverso a ogni scelta.",
          "Repeatable: the range of the chosen cantrip (at least 10 ft) grows by 30 ft per warlock level, with a different cantrip each pick."),
         [i for i, c in CANTRIPS.items() if c[3]], lambda index, key: {"spell_range_per_level": (tuple(_names(index)), 9), "passive": True}),
-    _inv("fiendish_vigor", "Vigore Immondo", "Fiendish Vigor", f"{_P}, livello 2+, pag. 155", 1,
+    _inv("fiendish_vigor", "Vigore Immondo", "Fiendish Vigor", f"{_P}, livello 2+, pag. 155", 2,
          ("Azione: lanci vita falsata su di te senza slot, a volontà; ottieni il massimo dei PF temporanei (8) invece di tirare, se più di quelli che hai.",
           "Action: you cast false life on yourself with no slot, at will; you gain the maximum temporary hit points (8) instead of rolling, if higher than yours."),
          action_type="action", on_use=VIGOR_USE),
@@ -214,29 +294,29 @@ _ROWS: list = [
          granted_spells=("water-breathing",), free_spell="water-breathing", uses=Uses(table={1: 1}), restoration="long_rest",
          modifiers=(Modifier("swim_speed", 1, source=f"feature:{CK}.gift_of_the_depths"),)),
     _inv("gift_of_the_protectors", "Dono dei Protettori", "Gift of the Protectors", f"{_P}, livello 9+, Patto del Tomo, pag. 156", 9,
-         ("Sul Libro delle Ombre scrivi tanti nomi quanti il tuo Carisma (minimo 1): chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo.",
-          "In your Book of Shadows you write as many names as your Charisma (minimum 1): whoever drops to 0 hit points without dying outright stays at 1, once until a long rest."),
-         passive=True),
+         ("Nomi sul Libro delle Ombre (Carisma, minimo 1): chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo. L'app lo applica a te.",
+          "Names in the Book of Shadows (Charisma, minimum 1): whoever drops to 0 HP without dying outright stays at 1, once until a long rest. The app applies it to you."),
+         uses=Uses(table={9: 1}), restoration="long_rest", roll_options=(GIFT,), passive=True),
     _inv("investment_of_the_chain_master", "Investitura del Padrone delle Catene", "Investment of the Chain Master",
          f"{_P}, livello 5+, Patto della Catena, pag. 156", 5,
          ("Il famiglio evocato con Trova Famiglio vola o nuota a 12 m, attacca con la tua azione bonus, infligge danni necrotici o radiosi, usa la tua CD e resiste in reazione.",
           "The familiar from Find Familiar flies or swims at 40 ft, attacks on your bonus action, deals necrotic or radiant damage, uses your DC and resists as a reaction."),
          passive=True),
-    _inv("lessons_of_the_first_ones", "Lezioni dei Primi", "Lessons of the First Ones", f"{_P}, livello 2+, pag. 156", 1,
+    _inv("lessons_of_the_first_ones", "Lezioni dei Primi", "Lessons of the First Ones", f"{_P}, livello 2+, pag. 156", 2,
          ("Ripetibile: ottieni un talento di Origine a tua scelta, diverso a ogni scelta.",
           "Repeatable: you gain an Origin feat of your choice, a different one each pick."), passive=True),
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", f"{_P}, livello 9+, Patto della Lama, pag. 156", 9,
          ("Dopo un colpo con l'arma del patto: 1d6 danni necrotici, psichici o radiosi in più e, spendendo un Dado Vita, recuperi PF pari al tiro più COS. Una volta per turno.",
           "After a hit with the pact weapon: extra 1d6 necrotic, psychic or radiant damage and, spending a Hit Die, you regain hit points equal to the roll plus Con. Once per turn."),
-         roll_options=tuple(_lifedrinker(t) for t in DAMAGE_TYPES), passive=True),
-    _will("mask_of_many_faces", "Maschera dei Molti Volti", "Mask of Many Faces", f"{_P}, livello 2+, pag. 156", 1, "disguise-self",
+         roll_options=(*(_lifedrinker(t) for t in DAMAGE_TYPES), *(_lifedrinker(t, True) for t in DAMAGE_TYPES)), passive=True),
+    _will("mask_of_many_faces", "Maschera dei Molti Volti", "Mask of Many Faces", f"{_P}, livello 2+, pag. 156", 2, "disguise-self",
           "camuffare se stesso", "disguise self", True),
     _will("master_of_myriad_forms", "Maestro di Mille Forme", "Master of Myriad Forms", f"{_P}, livello 5+, pag. 156", 5, "alter-self",
           "alterare se stesso", "alter self", True),
-    _will("misty_visions", "Visioni Velate", "Misty Visions", f"{_P}, livello 2+, pag. 156", 1, "silent-image", "immagine silenziosa", "silent image"),
+    _will("misty_visions", "Visioni Velate", "Misty Visions", f"{_P}, livello 2+, pag. 156", 2, "silent-image", "immagine silenziosa", "silent image"),
     _will("one_with_shadows", "Tutt'Uno con le Ombre", "One with Shadows", f"{_P}, livello 5+, pag. 156", 5, "invisibility",
           "invisibilità", "invisibility", True, roll_options=(_shadows_state(),)),
-    _will("otherworldly_leap", "Balzo Ultraterreno", "Otherworldly Leap", f"{_P}, livello 2+, pag. 156", 1, "jump", "saltare", "jump", True),
+    _will("otherworldly_leap", "Balzo Ultraterreno", "Otherworldly Leap", f"{_P}, livello 2+, pag. 156", 2, "jump", "saltare", "jump", True),
     _inv("pact_of_the_blade", "Patto della Lama", "Pact of the Blade", f"{_P}, pag. 156", 1,
          ("Azione bonus: evochi un'arma da mischia del patto (di cui sei competente, anche focus). Usi Carisma per attacco e danni; danno necrotico, psichico, radioso o normale.",
           "Bonus action: you conjure a pact melee weapon (you are proficient, also a focus). You use Charisma for attack and damage; necrotic, psychic, radiant or normal damage."),

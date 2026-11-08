@@ -226,6 +226,7 @@ class AmmoState(BaseModel):
 
 class WeaponAttackResult(BaseModel):
     weapon_name: str
+    self_healed: int = 0  # PF che chi colpisce recupera per un privilegio (Succhiavita)
     to_hit_die: int
     dice: list[int] = []
     mode: RollMode = "normal"

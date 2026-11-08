@@ -34,7 +34,8 @@ vi.mock('@/components/ui/Sheet', async () => {
 })
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
-  return { default: (p: { open: boolean; body?: unknown }) => (p.open ? React.createElement('div', null, p.body) : null) }
+  return { default: (p: { open: boolean; body?: unknown; onConfirm?: () => void }) => (p.open
+    ? React.createElement('div', null, p.body, React.createElement('button', { onClick: p.onConfirm }, 'confirm')) : null) }
 })
 vi.mock('@/pages/hp/HitDiceModal', async () => {
   const React = await import('react')
@@ -107,6 +108,26 @@ describe('RestSheet short rest', () => {
     setup({ ...char, rules_edition: '2014' } as CharacterFull)
     await openShortRest()
     expect(screen.queryByRole('switch')).toBeNull()
+  })
+
+  describe('Pact of the Tome (warlock)', () => {
+    const tome = { id: 7, classes: [{ id: 1, class_name: 'warlock', level: 3 }], active_states: [], rules_edition: '2024',
+      abilities: [{ id: 5, feature_key: 'warlock.pact_of_the_tome', name: 'Patto del Tomo' }] } as unknown as CharacterFull
+
+    it('is not offered without the pact', async () => {
+      setup()
+      await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+      expect(screen.queryByTestId('tome-reopen')).toBeNull()
+    })
+
+    it('sends reopen_tome on the long rest when switched on', async () => {
+      rest.mockResolvedValue(tome)
+      setup(tome)
+      await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+      await userEvent.click(within(screen.getByTestId('tome-reopen')).getByRole('switch'))
+      await userEvent.click(screen.getByText('confirm'))
+      await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ reopen_tome: true })))
+    })
   })
 
   describe('Song of Rest switch (bard)', () => {

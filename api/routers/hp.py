@@ -736,6 +736,9 @@ async def rest(
         if _utcnow() - datetime.fromisoformat(char.last_long_rest_at) < gap:
             raise HTTPException(status_code=409, detail="long_rest_too_soon")
     notifications: list[dict] = []
+    if body.reopen_tome:  # Patto del Tomo: dopo ogni controllo che può rifiutare il riposo
+        from api.services.choices import reopen_tome  # import locale: choices importa i modelli del riposo
+        await reopen_tome(session, char)
     if body.natural_recovery:  # convalida ed effetto prima di ogni altra scrittura del riposo
         back = await recover_slots(session, char, body.natural_recovery)
         _add_history(session, char.id, "rest",
@@ -1001,6 +1004,13 @@ async def roll_death_save(
     await attach_party_auras(session, char)
     opts = use_options(session, char, "death_save", body)
     merge_options(applied, opts)
+    if opts.self_heal:  # Vendetta Ardente: la cura viene prima del TS, e se risale sopra 0 PF il tiro non si fa
+        await apply_heal(session, char, opts.self_heal)
+        if char.current_hit_points > 0:
+            ds = char.death_saves or {}
+            return DeathSaveRollResult(
+                die=0, outcome="revived", successes=ds.get("successes", 0), failures=ds.get("failures", 0), stable=False, revived=True,
+                current_hp=char.current_hit_points, option_result=option_result(opts, [], 0))
     d20 = resolve_body(body, applied)
     die = d20.kept
     record_dice(char, d20_records(d20))

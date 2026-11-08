@@ -100,6 +100,14 @@ describe('DeathSaveResultDialog', () => {
     expect(screen.queryByText('character.death_saves.nat20', { exact: false })).not.toBeInTheDocument()
   })
 
+  it('revived (Searing Vengeance): no die, a success verdict without a roll, and no "revived with 1 HP" line', () => {
+    render(<DeathSaveResultDialog result={result({ outcome: 'revived', die: 0, successes: 0, failures: 0, revived: true, current_hp: 40 })} onClose={() => {}} />)
+    expect(screen.getByTestId('result-dialog')).toHaveAttribute('data-accent', 'emerald')
+    expect(screen.getByText('character.death_saves.revived_no_roll')).toBeInTheDocument()
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
+    expect(screen.queryByText('character.death_saves.revived')).not.toBeInTheDocument()
+  })
+
   it('renders the success/failure tally and forwards onClose', async () => {
     const onClose = vi.fn()
     render(<DeathSaveResultDialog result={result({ successes: 2, failures: 1 })} onClose={onClose} />)

@@ -19,7 +19,7 @@ export default function DeathSaveResultDialog({ result: rolled, onClose, afterRo
   const [result, retouch] = useRetouched(rolled)
   const { outcome, die, successes, failures, revived, stable } = result
 
-  const isSuccess = outcome === 'success' || outcome === 'nat20'
+  const isSuccess = outcome === 'success' || outcome === 'nat20' || outcome === 'revived'
   const accent = outcome === 'nat20' ? 'gold' : isSuccess ? 'emerald' : 'crimson'
   const pulse = outcome === 'nat20' || outcome === 'nat1'
 
@@ -59,23 +59,27 @@ export default function DeathSaveResultDialog({ result: rolled, onClose, afterRo
         </p>
       )}
 
-      <m.p
-        initial={{ scale: 0, rotate: -180 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ ...spring.elastic, delay: 0.1 }}
-        className={`text-7xl font-black font-display ${dieColor}`}
-      >
-        {die}
-      </m.p>
+      {outcome !== 'revived' && (
+        <m.p
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ ...spring.elastic, delay: 0.1 }}
+          className={`text-7xl font-black font-display ${dieColor}`}
+        >
+          {die}
+        </m.p>
+      )}
 
       <RollNotes notes={result.notes} />
       <p className={`font-bold font-cinzel uppercase tracking-wider ${verdictColor}`}>
-        {isSuccess
-          ? t('character.death_saves.success')
-          : t('character.death_saves.failure')}
+        {outcome === 'revived'
+          ? t('character.death_saves.revived_no_roll')
+          : isSuccess
+            ? t('character.death_saves.success')
+            : t('character.death_saves.failure')}
       </p>
 
-      {revived && (
+      {revived && outcome !== 'revived' && (
         <p className="text-dnd-gold-bright text-sm font-medium font-body italic">
           {t('character.death_saves.revived')}
         </p>

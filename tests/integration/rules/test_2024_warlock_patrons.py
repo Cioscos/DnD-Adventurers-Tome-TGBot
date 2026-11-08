@@ -443,7 +443,7 @@ async def test_hurl_through_hell_asks_a_charisma_save_and_adds_8d10_psychic_unle
     assert "8d10" in block["effects"][0]["it"] and block["targets"] == [HURL]
     effect = await _effect(client, cid, HURL)
     assert effect["condition"] == "incapacitated" and effect["save_ability"] == "charisma" and effect["save_dc"] == 8 + 5 + 4
-    assert effect["ends_at"] == {"anchor": "owner", "edge": "end", "count": 1} and effect["note"] == "hurl_through_hell_2024"
+    assert effect["ends_at"] == {"anchor": "source", "edge": "end", "count": 1} and effect["note"] == "hurl_through_hell_2024"
     assert (await _ability(client, cid, HURL))["uses"] == 0
     assert HURL not in await _keys(client, cid, "attack", item_id=sword)
 

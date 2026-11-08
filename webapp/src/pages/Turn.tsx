@@ -529,7 +529,7 @@ export default function Turn() {
 
       {exitEntries.length > 0 && (
         <section data-testid="turn-surprise-exit">
-          <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.turn.surprised_exit')}</h2>
+          <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t(char.computed?.surprised ? 'character.turn.surprised_exit' : 'character.turn.down_exit')}</h2>
           <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
             {exitEntries.map((e) => renderEntry(e, char))}
           </ul>

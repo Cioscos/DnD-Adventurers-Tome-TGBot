@@ -267,6 +267,32 @@ def release_spell_pick(char: Character, spell) -> bool:
     return changed
 
 
+TOME_GROUPS = ("tome_cantrips", "tome_rituals")
+
+
+async def reopen_tome(session: AsyncSession, char: Character) -> None:
+    """Patto del Tomo (a ogni riposo): il Libro delle Ombre si evoca di nuovo e le sue scelte tornano da fare. Gli incantesimi
+    scelti per il Libro (quelli fuori dal limite dei conosciuti) si tolgono, le scelte tornano in coda."""
+    from core.rules.catalog import active_features  # import locale
+    if not any(spec.key == "warlock.pact_of_the_tome" for spec, _row in active_features(char)):
+        raise HTTPException(422, detail={"code": "no_pact_of_the_tome"})
+    free = set((char.settings or {}).get(FREE_KNOWN_KEY) or [])
+    for cls in char.classes:
+        options = dict(cls.options or {})
+        for group in TOME_GROUPS:
+            taken = options.get(group) or []
+            for spell in [s for s in char.spells or [] if (s.srd_index or s.name) in taken and s.id in free]:
+                free.discard(spell.id)
+                await session.delete(spell)
+            options[group] = []
+        cls.options = options
+    char.settings = {**(char.settings or {}), FREE_KNOWN_KEY: sorted(free)}
+    await session.flush()
+    await session.refresh(char, attribute_names=["spells"])
+    reconcile_choices(char)
+    _history(session, char, "Libro delle Ombre: scelte da rifare")
+
+
 def _check_feat(char: Character, spec, boon: bool) -> None:
     """Edizione, categoria e prerequisiti (livello, caratteristica, incantesimi) di un talento."""
     if spec.edition != character_edition(char):

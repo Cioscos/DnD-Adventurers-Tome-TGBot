@@ -372,7 +372,7 @@ export type DeathSaveRollResult = {
   dice?: number[]
   mode?: RollMode
   notes?: string[]
-  outcome: 'nat20' | 'nat1' | 'success' | 'failure'
+  outcome: 'nat20' | 'nat1' | 'success' | 'failure' | 'revived'
   successes: number
   failures: number
   stable: boolean
@@ -622,7 +622,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; reopen_tome?: boolean },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',

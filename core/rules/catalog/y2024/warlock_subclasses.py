@@ -307,8 +307,24 @@ def _vengeance_message(ctx: RuleContext, params: dict) -> dict[str, str]:
                  "The ally within 60 ft regains half their maximum hit points and stands up: tell the GM." + tail["en"])
 
 
+def _stand_up(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    ctx.char.conditions = {**(ctx.char.conditions or {}), "prone": False}
+
+
+VENGEANCE_KEY = f"{P}searing_vengeance"
+# Prima del TS contro la morte (modale del tiro): metà dei PF massimi e si rialza, senza tirare. Il costo è l'uso del privilegio
+VENGEANCE_SAVE = RollOptionSpec(
+    key=f"{VENGEANCE_KEY}_save", phase="before", rolls=("death_save",), cost=Cost(feature_key=VENGEANCE_KEY),
+    available=lambda c: c.char.current_hit_points <= 0, self_heal=lambda c, _i: c.char.hit_points // 2, on_confirm=_stand_up,
+    target_effect=lambda c, _i: _vengeance_effect(c, {}),
+    label=_both("Vendetta Ardente: prima del TS contro la morte torni a metà dei PF massimi e ti rialzi; le creature scelte entro 9 m sono Accecate",
+                "Searing Vengeance: before the death save you regain half your maximum HP and stand up; the creatures you choose within 30 ft are Blinded"),
+    effect=lambda c, _i: _vengeance_message(c, {"mode": "self"}))
+
 VENGEANCE_USE = OnUse(
+    usable_at_zero_hp=True, heal_ally_half_max=True,
     heal=lambda c, _r: c.char.hit_points // 2, heal_when=lambda _c, p: p.get("mode") == "self", check=_vengeance_check,
+    heal_ally_when=lambda _c, p: p.get("mode") == "ally", ally_modes=("ally",),
     clears=lambda _c, p: ["prone"] if p.get("mode") == "self" else [], target_effect=_vengeance_effect, message=_vengeance_message,
     choices=(UseChoice("mode", _both("Chi sta per tirare contro la morte", "Who is about to roll a death save"), lambda _c: list(WHO),
                        lambda k: _both(*WHO[k])),))
@@ -332,7 +348,7 @@ RESILIENCE_USE = OnUse(
 
 
 def _hurled(ctx: RuleContext, _inputs: dict) -> TargetEffect:
-    return TargetEffect(condition="incapacitated", save_ability="charisma", save_dc=_dc(ctx), ends_at={"anchor": "owner", "edge": "end", "count": 1},
+    return TargetEffect(condition="incapacitated", save_ability="charisma", save_dc=_dc(ctx), ends_at={"anchor": "source", "edge": "end", "count": 1},
                         note="hurl_through_hell_2024")
 
 
@@ -340,10 +356,10 @@ def _hurl(is_fiend: bool) -> RollOptionSpec:
     def text(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
         dc = _dc(ctx)
         if is_fiend:
-            return _both(f"TS Carisma, CD {dc}: se fallisce sparisce nei Piani Inferiori ed è Incapacitato fino alla fine del suo prossimo turno. Nessun danno: è un immondo.",
-                         f"Charisma save, DC {dc}: on a failure it vanishes into the Lower Planes and is Incapacitated until the end of its next turn. No damage: it is a fiend.")
-        return _both(f"TS Carisma, CD {dc}: se fallisce sparisce nei Piani Inferiori, subisce 8d10 danni psichici (riportati a parte) ed è Incapacitato fino alla fine del suo prossimo turno.",
-                     f"Charisma save, DC {dc}: on a failure it vanishes into the Lower Planes, takes 8d10 psychic damage (reported apart) and is Incapacitated until the end of its next turn.")
+            return _both(f"TS Carisma, CD {dc}: se fallisce sparisce nei Piani Inferiori ed è Incapacitato fino alla fine del tuo prossimo turno. Nessun danno: è un immondo.",
+                         f"Charisma save, DC {dc}: on a failure it vanishes into the Lower Planes and is Incapacitated until the end of your next turn. No damage: it is a fiend.")
+        return _both(f"TS Carisma, CD {dc}: se fallisce sparisce nei Piani Inferiori, subisce 8d10 danni psichici (riportati a parte) ed è Incapacitato fino alla fine del tuo prossimo turno.",
+                     f"Charisma save, DC {dc}: on a failure it vanishes into the Lower Planes, takes 8d10 psychic damage (reported apart) and is Incapacitated until the end of your next turn.")
     return RollOptionSpec(
         key=HURL + ("_fiend" if is_fiend else ""), phase="after_hit", rolls=("attack",), cost=Cost(feature_key=HURL), group=HURL, once_per_turn=True,
         extra_dice=None if is_fiend else (lambda _c, _i: "8d10"), separate_damage=not is_fiend, crit_doubles=False, target_effect=_hurled, effect=text,
@@ -432,7 +448,7 @@ SUBCLASS_ROWS = (
     celestial("healing_light", 3, "Luce Guaritrice", "Healing Light", 160,
               ("Riserva di d6 pari a 1 + livello da warlock. Azione bonus: spendi fino a Carisma dadi e curi te o una creatura entro 18 m. Riposo lungo.",
                "A pool of d6s equal to 1 + warlock level. Bonus action: spend up to Charisma dice and heal yourself or a creature within 60 ft. Long rest."),
-              "bonus", uses=Uses(table={3: 1}, per_level=1), restoration="long_rest", on_use=LIGHT_USE),
+              "bonus_action", uses=Uses(table={3: 1}, per_level=1), restoration="long_rest", on_use=LIGHT_USE),
     celestial("radiant_soul", 6, "Anima Radiosa", "Radiant Soul", 160,
               ("Resistenza ai danni radiosi. Un incantesimo che infligge danni radiosi o da fuoco somma il Carisma al danno contro un bersaglio, una volta per turno.",
                "Resistance to radiant damage. A spell dealing radiant or fire damage adds your Charisma to its damage against one target, once per turn."),
@@ -444,7 +460,7 @@ SUBCLASS_ROWS = (
     celestial("searing_vengeance", 14, "Vendetta Ardente", "Searing Vengeance", 161,
               ("Prima di un TS contro la morte tuo o di un alleato entro 18 m: metà dei PF massimi e si rialza; chi scegli entro 9 m subisce radiosi 2d8 + Carisma e Accecato. Riposo lungo.",
                "Before your or an ally's death save within 60 ft: half maximum HP and stands up; chosen creatures within 30 ft take 2d8 + Charisma radiant and are Blinded. Long rest."),
-              "special", uses=Uses(table={14: 1}), restoration="long_rest", on_use=VENGEANCE_USE, dc_ability="charisma"),
+              "special", uses=Uses(table={14: 1}), restoration="long_rest", on_use=VENGEANCE_USE, roll_options=(VENGEANCE_SAVE,), dc_ability="charisma"),
     # Patrono Immondo
     fiend("dark_ones_blessing", 3, "Benedizione dell'Oscuro", "Dark One's Blessing", 161,
           ("Quando porti a 0 PF un nemico (o lo fa un altro entro 3 m) ottieni PF temporanei pari a Carisma + livello da warlock (minimo 1); non si sommano.",
@@ -469,7 +485,7 @@ SUBCLASS_ROWS = (
     oldone("awakened_mind", 3, "Mente Risvegliata", "Awakened Mind", 162,
            ("Azione bonus: telepatia con una creatura che vedi entro 9 m, a Carisma miglia, per tanti minuti quanti i livelli da warlock. Un nuovo legame sostituisce il vecchio.",
             "Bonus action: telepathy with a creature you see within 30 ft, out to Charisma miles, for minutes equal to your warlock levels. A new link replaces the old."),
-           "bonus", on_use=MIND_USE),
+           "bonus_action", on_use=MIND_USE),
     *_spells("great_old_one", OLD_ONE, "great_old_one_spells", "Incantesimi del Grande Antico", "Great Old One Spells", 163, OLD_ONE_SPELLS),
     oldone("psychic_spells", 3, "Incantesimi Psichici", "Psychic Spells", 163,
            ("Un incantesimo da warlock che infligge danni può farli psichici. Quelli di Ammaliamento o Illusione si lanciano senza componenti verbali né somatiche.",

@@ -306,6 +306,10 @@ class OnUse:
     # ``clears(ctx, params) -> [condizioni]``: condizioni tolte a chi usa il privilegio.
     ally_modes: tuple[str, ...] = ()
     heal_ally_when: "Callable[[RuleContext, dict], bool] | None" = None
+    # Vendetta Ardente su un altro: i suoi PF salgono a metà del *suo* massimo (letto dal server sul bersaglio) e si rialza
+    heal_ally_half_max: bool = False
+    # L'uso è possibile anche a 0 PF, da incapacitato (Vendetta Ardente): la UI non lo spegne
+    usable_at_zero_hp: bool = False
     heal_ally_to: bool = False  # ``heal`` è il valore a cui portare i PF del bersaglio, non una cura da sommare (Rivivificazione)
     clears: "Callable[[RuleContext, dict], list[str]] | None" = None
     # chiave della ``UseChoice`` che porta il livello di uno slot incantesimo da spendere (Consapevolezza Primordiale): lo slot si prende
@@ -555,8 +559,10 @@ class RollOptionSpec:
             raise ValueError("after_damage non chiede input: il client manda sempre option_inputs vuoto")
         if self.keep_rolled and self.reroll_dice is None:
             raise ValueError("keep_rolled riguarda reroll_dice")
-        if self.self_heal and not {"spell_healing", "initiative"} & set(self.rolls):
-            raise ValueError("self_heal vale solo per la cura di un incantesimo o per l'iniziativa (Metabolismo Prodigioso)")
+        if self.self_heal and not ({"spell_healing", "initiative", "death_save"} & set(self.rolls)
+                                   or (self.phase == "after_hit" and "attack" in self.rolls)):
+            raise ValueError("self_heal vale solo per la cura di un incantesimo, l'iniziativa (Metabolismo Prodigioso), il TS contro la morte "
+                             "(Vendetta Ardente) o il danno dopo un colpo (Succhiavita)")
         if self.maximize and (self.phase != "before" or "spell_damage" not in self.rolls):
             raise ValueError("maximize vale solo prima del danno di un incantesimo")
         if self.self_damage and self.phase != "before":

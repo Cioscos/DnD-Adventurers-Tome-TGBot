@@ -85,15 +85,22 @@ def surprised_turn(char: Any) -> bool:
 def surprise_exit_features(char: Any) -> list[str]:
     """Con il turno da sorpreso in corso: i privilegi il cui «Usa» avvia lo stato che permette di agire (Ira per
     l'Istinto Ferino). Restano utilizzabili anche se la scheda è incapacitata (la UI non li spegne)."""
-    if not surprised_turn(char):
+    surprised = surprised_turn(char)
+    down = char.current_hit_points <= 0 < char.hit_points and not char.is_dead  # a 0 PF: Vendetta Ardente (``usable_at_zero_hp``)
+    if not (surprised or down):
         return []
     wanted = {spec.acts_when_surprised for spec, _row in active_features(char) if spec.acts_when_surprised}
     out: list[str] = []
     for spec, row in active_features(char):
         use = spec.on_use
-        if use is None or use.state is None:
+        if use is None:
             continue
         ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
+        if down and use.usable_at_zero_hp and (use.available is None or use.available(ctx)):
+            out.append(spec.key)
+            continue
+        if not surprised or use.state is None:
+            continue
         state = use.state(ctx, {}) if callable(use.state) else use.state
         if state is not None and state.key in wanted and (use.available is None or use.available(ctx)):
             out.append(spec.key)

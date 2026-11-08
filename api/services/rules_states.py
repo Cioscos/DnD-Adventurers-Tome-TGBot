@@ -416,11 +416,16 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.notes += on_use.notes(ctx, params or {})
     if heals_ally:
         if target is None:  # fuori serata, o un'altra creatura: il giocatore lo riporta al GM (D1)
-            result.given = healed_ally
+            result.given = None if on_use.heal_ally_half_max else healed_ally  # metà del massimo altrui: lo dice il messaggio
         else:
             from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
             if on_use.heal_ally_to:
                 healed_ally = max(0, healed_ally - target.current_hit_points)
+            if on_use.heal_ally_half_max:  # R42: il tetto è metà dei PF massimi del bersaglio, letto qui e mai dal client
+                healed_ally = max(0, target.hit_points // 2 - target.current_hit_points)
+                if (target.conditions or {}).get("prone"):
+                    from api.services.effects import apply_conditions as _conditions  # import locale, come sopra
+                    await _conditions(session, target, {"prone": False})
             got = (await apply_heal(session, target, healed_ally))["healed"]
             result.received = {"name": target.name, "healed": got}
     if on_use.clears:

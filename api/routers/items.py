@@ -755,6 +755,8 @@ async def deferred_attack_damage(
     result = WeaponAttackResult(**pending["result"])
     result.homebrew_notifications = None  # già consegnate col tiro per colpire
     result.attack_id = None  # il danno è definitivo: da qui si può ritirare un dado
+    if opts.self_heal:  # Succhiavita: il Dado Vita speso dall'opzione cura nello stesso uso, con lo storico dei PF
+        result.self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]
     second = _second_attack(char, opts, pending, item, result.to_hit_bonus) if opts.second_attack else {}
     rolls, extra, result.damage_total = _option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
     result.damage_bonus += opts.bonus
