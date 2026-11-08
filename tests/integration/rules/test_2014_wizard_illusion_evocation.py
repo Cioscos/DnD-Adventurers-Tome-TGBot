@@ -124,13 +124,15 @@ async def test_illusory_reality_is_a_bonus_action_in_the_turn_of_an_illusion_of_
     assert state["rounds_left"] == 10 and state["data"]["object"] == "Ponte di corda"
 
 
-async def test_illusory_reality_does_not_survive_the_turn_or_a_cantrip(client):
+async def test_illusory_reality_lasts_while_the_illusion_lasts_but_a_cantrip_does_not_open_it(client):
     cid = await _wizard(client, 14, "illusion")
     assert (await _cast(client, cid, await _illusion(client, cid, 0, "1 minuto", "Illusione minore"))).status_code == 200
     assert (await _use(client, cid, REALITY, params={"object": "Ponte"})).status_code == 409  # un trucchetto non basta
     assert (await _cast(client, cid, await _illusion(client, cid), slot_level=1)).status_code == 200
     await client.post(f"/characters/{cid}/turn/new")
-    assert (await _use(client, cid, REALITY, params={"object": "Ponte"})).status_code == 409  # il turno è finito
+    assert (await _use(client, cid, REALITY, params={"object": "Ponte"})).status_code == 200  # l'illusione è ancora in corso
+    await _rest(client, cid, "long")
+    assert (await _use(client, cid, REALITY, params={"object": "Torre"})).status_code == 409  # il riposo chiude la finestra
 
 
 async def test_illusory_reality_is_used_once_per_cast(client):

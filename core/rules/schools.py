@@ -14,6 +14,6 @@ def normalize_school(value: str | None) -> str | None:
 
 # stati-finestra: chi li legge (``available`` di un uso) li trova finché non si lancia altro o non finisce il turno/il riposo
 WINDOW_ENCHANTMENT = "window_enchantment"  # Alterare Ricordi: l'ammaliamento appena lanciato
-WINDOW_ILLUSION_TURN = "window_illusion_turn"  # Realtà Illusoria: lo stesso turno del lancio
+WINDOW_ILLUSION_TURN = "window_illusion_turn"  # Realtà Illusoria: finché l'illusione dura (solo il turno, se non ha una durata)
 WINDOW_ILLUSION = "window_illusion"  # Illusioni Duttili: l'illusione dura ancora
 WINDOW_TRANSMUTATION = "window_transmutation"  # Pietra del Trasmutatore: si può cambiare il beneficio

@@ -312,10 +312,14 @@ def _consume_cast(
     else:
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
+    if slot is not None and spell.srd_index:  # Rompi-Incantesimi: lo slot dell'ultimo lancio del turno, da rendere a lancio concluso
+        turn = get_turn(char)
+        turn["last_slot_cast"] = {"spell": spell.srd_index, "level": slot.level, "pact": bool(slot.is_pact)}
+        char.turn_state = turn
     if slot is not None:
         mark_tides_due(char, spell)  # Maree del Caos 2024 spese: il lancio con slot apre la tabella
     end_on_action(char, "cast", spell)
-    after_cast(char, spell)  # i privilegi delle scuole del Mago (dopo end_on_action: le finestre nuove restano)
+    after_cast(char, spell, slot.level if slot is not None else None)  # i privilegi delle scuole del Mago (dopo end_on_action: le finestre nuove restano)
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 

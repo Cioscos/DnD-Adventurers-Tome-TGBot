@@ -206,18 +206,24 @@ async def test_spell_breaker_adds_proficiency_to_the_dispel_magic_check_only(cli
     assert boosted["total"] == plain["total"] + 4
 
 
-async def test_spell_breaker_gives_the_slot_back_when_the_spell_failed_to_stop_the_target(client):
+async def test_spell_breaker_gives_the_slot_back_after_the_cast_not_before_it(client):
     cid = await _make(client, "abjurer", 10)
     spells = await _by_index(client, cid)
-    spent = await _cast(client, cid, spells["dispel-magic"]["id"], slot_level=3)
-    assert (await _used(client, cid))[3] == 1 and BREAKER_REFUND not in await _roll_keys(client, cid, "ability", ability="wisdom")
-    await client.post(f"/characters/{cid}/turn/new")
-    assert BREAKER_REFUND in await _roll_keys(client, cid, "cast", spell_id=spells["counterspell"]["id"], casting_level=3)
-    kept = await _cast(client, cid, spells["counterspell"]["id"], slot_level=3, options=[BREAKER_REFUND])
-    assert spent.status_code == kept.status_code == 200, kept.text
-    assert (await _used(client, cid))[3] == 1  # il secondo lancio ha speso uno slot e la conferma lo ha restituito
+    assert BREAKER_REFUND not in await _roll_keys(client, cid, "cast", spell_id=spells["counterspell"]["id"], casting_level=3)
+    assert (await _use(client, cid, BREAKER)).status_code == 409  # nessun lancio con slot in questo turno
+    assert (await _cast(client, cid, spells["counterspell"]["id"], slot_level=3)).status_code == 200
+    assert (await _used(client, cid))[3] == 1
+    assert (await _use(client, cid, BREAKER)).status_code == 200  # l'esito si dichiara dopo il lancio
+    assert (await _used(client, cid))[3] == 0
+    assert (await _use(client, cid, BREAKER)).status_code == 409  # una sola volta per lancio
     other = await _spell(client, cid, "Scudo", 1, srd_index="shield", school="abjuration")
-    assert BREAKER_REFUND not in await _roll_keys(client, cid, "cast", spell_id=other, casting_level=1)
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _cast(client, cid, other, slot_level=1)).status_code == 200
+    assert (await _use(client, cid, BREAKER)).status_code == 409  # solo Controincantesimo e Dissolvi Magie
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _cast(client, cid, spells["dispel-magic"]["id"], slot_level=3)).status_code == 200
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _use(client, cid, BREAKER)).status_code == 409  # il turno è finito
 
 
 async def test_spell_resistance_is_advantage_on_saves_against_spells_and_resistance_to_their_damage(client):
@@ -447,6 +453,70 @@ async def test_illusory_reality_follows_an_illusion_cast_with_a_slot_for_one_min
     state = (await _states(client, cid))["illusory_reality"]
     assert state["data"]["object"] == "ponte" and (await _turn(client, cid))["bonus_used"] is True
     assert (await _use(client, await _make(client, "illusionist", 13), REALITY, params={"object": "x"})).status_code == 404
+
+
+async def test_a_ritual_abjuration_makes_no_ward_and_the_recharge_counts_the_slot_level_not_the_spell_level(client):
+    cid = await _make(client, "abjurer", 10)  # 2 x 10 + 3 = 23
+    await _hp(client, cid)
+    rite = await _spell(client, cid, "Allarme", 1, school="abjuration", is_ritual=True, casting_time="1 azione")
+    assert (await _cast(client, cid, rite, as_ritual=True, confirm=["ritual_unprepared"])).status_code == 200
+    assert _ward(await _full(client, cid)) is None  # il 2024 vuole uno slot
+    await _cast_at(client, cid, await _abjuration(client, cid))
+    await _damage(client, cid, 23)
+    assert _ward(await _full(client, cid))["data"]["hp"] == 0
+    counter = (await _by_index(client, cid))["counterspell"]["id"]  # 3° livello
+    await _cast_at(client, cid, counter, 5)
+    assert _ward(await _full(client, cid))["data"]["hp"] == 10  # 2 x livello dello slot (5), non dell'incantesimo (3)
+    await _cast(client, cid, rite, as_ritual=True, confirm=["ritual_unprepared"])
+    assert _ward(await _full(client, cid))["data"]["hp"] == 10  # il rituale non ricarica
+
+
+async def test_improved_illusions_casts_minor_illusion_as_a_bonus_action(client):
+    cid = await _make(client, "illusionist", 3)
+    minor = await _spell(client, cid, "Illusione Minore", 0, school="illusion", srd_index="minor-illusion", is_prepared=True)
+    assert (await _cast(client, cid, minor)).status_code == 200
+    turn = await _turn(client, cid)
+    assert turn["bonus_spell_cast"] is True
+    other = await _make(client, "evoker", 3)
+    minor_other = await _spell(client, other, "Illusione Minore", 0, school="illusion", srd_index="minor-illusion", is_prepared=True)
+    assert (await _cast(client, other, minor_other)).status_code == 200
+    assert (await _turn(client, other))["bonus_spell_cast"] is False
+
+
+async def test_illusory_reality_lasts_as_long_as_the_illusion_and_not_for_a_ritual(client):
+    cid = await _make(client, "illusionist", 14)
+    assert (await _cast(client, cid, await _illusion(client, cid), slot_level=1)).status_code == 200
+    await client.post(f"/characters/{cid}/turn/new")  # il turno dopo, con l'illusione ancora in corso
+    assert (await _use(client, cid, REALITY, params={"object": "ponte"})).status_code == 200
+    rite = await _illusion(client, cid, name="Rito", is_ritual=True)
+    await _rest(client, cid, "long")
+    assert (await _cast(client, cid, rite, as_ritual=True, confirm=["ritual_unprepared"])).status_code == 200
+    assert (await _use(client, cid, REALITY, params={"object": "x"})).status_code == 409  # il 2024 vuole uno slot
+
+
+async def test_the_savant_retrofit_lists_and_accepts_only_spells_of_its_school(client, test_session_factory):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from api.services.catalog_migration import migrate_catalog
+    from core.db.models import Character
+
+    cid = await _make(client, "abjurer", 3)
+    good = await _spell(client, cid, "Scudo", 1, school="abjuration")
+    bad = await _spell(client, cid, "Dardo", 1, school="evocation")
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).options(selectinload(Character.classes)).where(Character.id == cid))).scalar_one()
+        char.pending_choices = [c for c in char.pending_choices if c["kind"] != "class_option"]
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k != "retrofit_done"}
+        for cls in char.classes:
+            cls.options = {}
+        await s.commit()
+    assert await migrate_catalog(test_session_factory) >= 1
+    choice = _choice(await _full(client, cid), "abjuration_savant")
+    assert choice["retrofit"] is True and {o["id"] for o in choice["spell_pick"]["owned"]} == {good}
+    r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve", json={"kind": "class_option", "options": [str(bad)]})
+    assert r.status_code == 422 and r.json()["detail"] == "spell_not_known"
+    r = await client.post(f"/characters/{cid}/choices/{choice['id']}/resolve", json={"kind": "class_option", "options": [str(good)]})
+    assert r.status_code == 200, r.text
 
 
 # ---------------------------------------------------------------------------

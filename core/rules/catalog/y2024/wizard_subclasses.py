@@ -87,21 +87,24 @@ SPELL_BREAKER_CHECK = RollOptionSpec(
                 "Spell Breaker: is the check for Dispel Magic? Add your proficiency bonus"))
 
 
-def _give_slot_back(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    """Lo slot del lancio (già speso) torna disponibile: normale, altrimenti di Patto."""
-    level = ctx.casting_level or ctx.spell.level
-    slots = [s for s in ctx.char.spell_slots if s.level == level and s.used > 0]
-    slot = next((s for s in slots if not s.is_pact), None) or next(iter(slots), None)
-    if slot is not None:
-        slot.used -= 1
+def _breaker_cast(ctx: RuleContext) -> dict | None:
+    """L'ultimo lancio del turno con slot, se è Controincantesimo o Dissolvi Magie."""
+    last = (ctx.char.turn_state or {}).get("last_slot_cast")
+    return last if last and last.get("spell") in _COUNTER_OR_DISPEL else None
 
 
-SPELL_BREAKER_REFUND = RollOptionSpec(
-    key=f"{P}spell_breaker_refund", phase="before", rolls=("cast",), on_confirm=_give_slot_back,
-    available=lambda c: c.spell is not None and c.spell.srd_index in _COUNTER_OR_DISPEL and not c.slotless
-    and (c.casting_level or c.spell.level) >= 1,
-    label=_both("Rompi-Incantesimi: l'incantesimo non ha fermato il bersaglio? Lo slot non si spende",
-                "Spell Breaker: did the spell fail to stop its target? The slot is not spent"))
+def _give_slot_back(ctx: RuleContext, _params: dict) -> None:
+    """Il bersaglio non è stato fermato: lo slot del lancio (già speso) torna disponibile, una sola volta."""
+    last = _breaker_cast(ctx)
+    slots = [s for s in ctx.char.spell_slots if s.level == last["level"] and s.used > 0 and bool(s.is_pact) == last["pact"]]
+    if slots:
+        slots[0].used -= 1
+    turn = dict(ctx.char.turn_state or {})
+    turn.pop("last_slot_cast", None)
+    ctx.char.turn_state = turn
+
+
+SPELL_BREAKER_USE = OnUse(cost=0, available=lambda c: _breaker_cast(c) is not None, effect=_give_slot_back)
 
 _ABJ = _sub("Abiuratore", "abjurer")
 ABJURER = (
@@ -116,9 +119,9 @@ ABJURER = (
          "reaction", on_use=PROJECTED_USE),
     _ABJ("spell_breaker", 10, "Rompi-Incantesimi", "Spell Breaker", 173,
          ("Controincantesimo e Dissolvi Magie sono sempre preparati; Dissolvi Magie è un'azione bonus con competenza alla prova; slot reso se fallisce.",
-          "Counterspell and Dispel Magic are always prepared; Dispel Magic is a bonus action with proficiency on the check; slot refunded on failure."),
-         granted_spells=_COUNTER_OR_DISPEL, bonus_cast_spells=("dispel-magic",), roll_options=(SPELL_BREAKER_CHECK, SPELL_BREAKER_REFUND),
-         passive=True),
+          "Counterspell and Dispel Magic are always prepared; Dispel Magic is a bonus action with proficiency on the check; after the cast, give the slot back if it failed."),
+         granted_spells=_COUNTER_OR_DISPEL, bonus_cast_spells=("dispel-magic",), roll_options=(SPELL_BREAKER_CHECK,),
+         on_use=SPELL_BREAKER_USE),
     _ABJ("spell_resistance", 14, "Resistenza agli Incantesimi", "Spell Resistance", 173,
          ("Vantaggio ai tiri salvezza contro gli incantesimi e resistenza ai danni degli incantesimi.",
           "Advantage on saving throws against spells and resistance to spell damage."),
@@ -248,7 +251,7 @@ ILLUSIONIST = (
     _ILL("improved_illusions", 3, "Illusioni Migliorate", "Improved Illusions", 175,
          ("Illusione senza componenti Verbali e +18 m di gittata (da 3 m in su); impari Illusione Minore (un lancio crea suono e immagine).",
           "Illusion spells lose Verbal components and gain 60 ft of range (from 10 ft up); you learn Minor Illusion (one casting makes sound and image)."),
-         passive=True, school_boost=("illusion", 18),
+         passive=True, school_boost=("illusion", 18), bonus_cast_spells=("minor-illusion",),
          choices=(ChoiceSpec(group="improved_illusions", levels={3: 1}, options=_no_options, spell_pick="extra", spell_level=0,
                              spell_list="wizard"),)),
     _phantasmal("phantasmal_beast", "summon-beast", "Evocare bestia", "Summon Beast"),

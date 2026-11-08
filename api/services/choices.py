@@ -171,6 +171,7 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
             or any((owned[i].srd_index or owned[i].name) in taken for i in ids)
             or any(owned[i].level > _pick_cap(char, cls, ch) for i in ids)  # un trucchetto resta un trucchetto
             or (ch.spell_exact and any(owned[i].level != ch.spell_level for i in ids))  # un Arcanum è del suo grado
+            or (ch.spell_school and any(normalize_school(owned[i].school) != ch.spell_school for i in ids))  # un Sapiente, la sua scuola
             or (ch.spell_pick == "known" and any(i in free for i in ids))):
         raise _bad("spell_not_known")
     cls.options = {**(cls.options or {}), ch.group: [*taken, *(owned[i].srd_index or owned[i].name for i in ids)]}
@@ -216,6 +217,7 @@ def spell_pick_info(char: Character, choice: dict) -> dict | None:
         info["owned"] = [{"id": sp.id, "name": sp.name, "level": sp.level} for sp in sorted(char.spells, key=lambda x: (x.level, x.name))
                          if sp.class_id in (None, cls.id) and (sp.srd_index or sp.name) not in taken
                          and sp.level <= info["max_level"] and (not ch.spell_exact or sp.level == ch.spell_level)
+                         and (not ch.spell_school or normalize_school(sp.school) == ch.spell_school)
                          and not (ch.spell_pick == "known" and sp.id in free)]
     return info
 
