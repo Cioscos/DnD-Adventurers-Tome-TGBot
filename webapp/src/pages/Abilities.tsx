@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Pencil, Trash2, RotateCcw, FilterX } from 'lucide-react'
 import { GiLightningTrio as Zap, GiAura } from 'react-icons/gi'
@@ -288,7 +289,7 @@ export default function Abilities() {
 
   // Mappa classId -> nome classe, per il badge sulle feature auto-generate.
   const classNameById = new Map<number, string>(
-    (char.classes ?? []).map((c) => [c.id, c.class_name]),
+    (char.classes ?? []).map((c) => [c.id, classLabel(t, c.class_name)]),
   )
 
   // Opzioni di filtro derivate dai dati (niente hardcoded). Una dimensione si
