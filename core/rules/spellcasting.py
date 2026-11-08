@@ -203,10 +203,25 @@ def spell_range_override(char: Any, spell: Any) -> str | None:
     names = {str(getattr(spell, "srd_index", None) or "").lower(), str(getattr(spell, "name", None) or "").strip().lower()} - {""}
     fixed = next((spec.spell_range[1] for spec, _row in active_features(char)
                   if spec.spell_range and names & set(spec.spell_range[0])), None)
-    return fixed if fixed is not None else _cantrip_range_bonus(char, spell)
+    if fixed is not None:
+        return fixed
+    return _per_level_range(char, spell, names) or _cantrip_range_bonus(char, spell)
 
 
 _RANGE = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(m|ft)(?![a-z])(.*)$", re.IGNORECASE | re.DOTALL)
+
+
+def _per_level_range(char: Any, spell: Any, names: set[str]) -> str | None:
+    """Lancia Occulta 2024: 9 m (30 ft) per livello da warlock alla gittata di 3 m (10 ft) o piu del trucchetto scelto."""
+    found = _RANGE.match(getattr(spell, "range_area", None) or "")
+    if not found:
+        return None
+    amount, unit = float(found.group(1).replace(",", ".")), found.group(2).lower()
+    for spec, row in active_features(char):
+        if spec.spell_range_per_level and names & set(spec.spell_range_per_level[0]) and amount >= (3 if unit == "m" else 10):
+            bonus = spec.spell_range_per_level[1] * row.level * (1 if unit == "m" else 10 / 3)
+            return f"{amount + bonus:g} {unit}{found.group(3)}"
+    return None
 
 
 def _cantrip_range_bonus(char: Any, spell: Any) -> str | None:

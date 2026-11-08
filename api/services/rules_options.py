@@ -143,7 +143,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         minimum = (spec.cost.spell_slot_min if spec.cost else None) or 0
         slots = [RollOptionSlot(level=level, available=free,
                                 dice=spec.extra_dice(ctx, {"slot_level": level}) if spec.extra_dice else None)
-                 for level, free in slot_choices(ctx.char, minimum).items()]
+                 for level, free in slot_choices(ctx.char, minimum, bool(spec.cost and spec.cost.pact_only)).items()]
     if spec.requires_input == "recover":  # gli slot spesi che si possono far tornare, con quanti ne mancano
         spent = spent_levels(ctx.char)
         slots = [RollOptionSlot(level=level, available=spent[level]) for level in spec.recover_levels(ctx) if level in spent]

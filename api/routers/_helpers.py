@@ -21,6 +21,7 @@ from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import save_roll_part
 from core.game.stats import effective_ability_mod, roll_ability_mod
+from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.spellcasting import concentration_dc
 from core.rules.modifiers import modifiers_for
@@ -121,7 +122,13 @@ def weapon_attack_profile(
         ability = chosen if chosen in mods else best
     else:
         ability = "dexterity" if is_ranged else "strength"
-    return mods[ability], ability, "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
+    mode = "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
+    if meta.get("pact_weapon") and character_edition(char) == "2024" and any(
+            spec.key == "warlock.pact_of_the_blade" for spec, _ in active_features(char)):
+        charisma = roll_ability_mod(char, "charisma")  # Patto della Lama: Carisma al posto di Forza o Destrezza, se e meglio
+        if charisma > mods[ability]:
+            return charisma, "charisma", mode
+    return mods[ability], ability, mode
 
 
 def unarmed_attack_profile(char: Character, ranged: bool = False) -> tuple[int, str, str]:

@@ -116,6 +116,8 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         raise _bad("option_not_replaceable")
     if old_key not in chosen or new_key not in _available(char, cls, ch)[0]:
         raise _bad("invalid_replacement")
+    if ch.protected and old_key in ch.protected(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)):
+        raise _bad("option_is_prerequisite")
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
     _history(session, char, f"{group}: {old_key} -> {new_key}")
@@ -134,6 +136,9 @@ def resolve_class_option(session: AsyncSession, char: Character, choice: dict, p
     if (cls is None or not group or not count or not need or len(picked) != need
             or len(set(picked)) != len(picked) or not set(picked) <= valid):
         raise _bad(f"Pick exactly {need or count} distinct valid options")
+    if ch is not None and ch.batch_ok and not ch.batch_ok(RuleContext(char=char, edition=character_edition(char), class_row=cls,
+                                                                        class_level=cls.level), picked):
+        raise _bad("option_prerequisite")
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
     if ch is not None:
         apply_grants(char, ch, picked)

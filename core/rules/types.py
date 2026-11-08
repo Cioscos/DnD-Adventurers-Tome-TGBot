@@ -62,6 +62,10 @@ class ChoiceSpec:
     always_prepared: bool = False
     # La scelta esiste solo se ``applies(ctx)``: Mente di Ferro la chiede a chi ha già la competenza nei TS su Saggezza
     applies: "Callable[[RuleContext], bool] | None" = None
+    # Opzioni scelte che non si sostituiscono perche un'altra scelta le richiede (Patto della Lama per Lama Assetata)
+    protected: "Callable[[RuleContext], set[str]] | None" = None
+    # La scelta in blocco e ammessa: ``f(ctx, scelte) -> bool`` (una supplica che ne richiede un'altra scelta insieme a lei)
+    batch_ok: "Callable[[RuleContext, list[str]], bool] | None" = None
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language", "save"):
@@ -393,6 +397,8 @@ class Cost:
     amount: int = 1
     spell_slot_min: int | None = None
     state_key: str | None = None
+    # Con ``spell_slot_min``: solo uno slot di Patto (Fendente Occulto)
+    pact_only: bool = False
     # Costo che dipende dal lancio (Incantesimo Raddoppiato: il livello dell'incantesimo): sostituisce ``amount``
     amount_by: "Callable[[RuleContext], int] | None" = None
 
@@ -662,6 +668,8 @@ class FeatureSpec:
     ritual_casting: bool = False
     # Gittata che il privilegio dà a un incantesimo: ``((srd_index o nome minuscolo, ...), testo)`` (Lancia Occulta: 90 m)
     spell_range: "tuple[tuple[str, ...], str] | None" = None
+    # Metri di gittata in piu per livello della classe a un incantesimo che la ha di almeno 3 m: ``((nomi in minuscolo...), metri)`` (Lancia Occulta)
+    spell_range_per_level: "tuple[tuple[str, ...], int] | None" = None
     # Scuola che dimezza tempo e costo della copia nel Libro del Mago (i «Sapienti» delle otto scuole)
     copy_school: str | None = None
     # Incantesimo (``srd_index``) lanciabile senza slot spendendo un uso di questa riga, come l'Arcanum (Mutaforma)

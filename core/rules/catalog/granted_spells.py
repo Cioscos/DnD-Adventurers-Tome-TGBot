@@ -553,8 +553,12 @@ for _spell, _comp in (
                       "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
+# Warlock 2024 (Contattare il Patrono): sempre preparato, un lancio gratuito per riposo lungo
+GRANTED_SPELLS["contact-other-plane"] = GrantedSpell(
+    "contact-other-plane", {"it": "Contattare altro piano", "en": "Contact Other Plane"}, 5, "1 minuto", "Personale", "1 minuto", is_ritual=True)
+_COMPONENTS["contact-other-plane"] = "V"
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
-_SCHOOLS = {"animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
+_SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",
             "divine-smite": "evocation", "find-steed": "conjuration",
             "summon-fey": "conjuration", "mislead": "illusion", "rope-trick": "transmutation", "seeming": "illusion",

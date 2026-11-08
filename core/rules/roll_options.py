@@ -230,11 +230,11 @@ def _turn(char: Any) -> dict:
     return dict(char.turn_state or {})
 
 
-def slot_choices(char: Any, minimum: int) -> dict[int, int]:
-    """Livello -> slot liberi (patto compreso) da ``minimum`` in su."""
+def slot_choices(char: Any, minimum: int, pact_only: bool = False) -> dict[int, int]:
+    """Livello -> slot liberi (patto compreso, o solo il patto) da ``minimum`` in su."""
     out: dict[int, int] = {}
     for slot in char.spell_slots:
-        if slot.level >= minimum and slot.available > 0:
+        if slot.level >= minimum and slot.available > 0 and (slot.is_pact or not pact_only):
             out[slot.level] = out.get(slot.level, 0) + slot.available
     return dict(sorted(out.items()))
 
@@ -288,7 +288,7 @@ def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None)
         return False
     if cost and cost.state_key and not any(s.get("key") == cost.state_key for s in char.active_states or []):
         return False
-    return not (cost and cost.spell_slot_min is not None and not slot_choices(char, cost.spell_slot_min))
+    return not (cost and cost.spell_slot_min is not None and not slot_choices(char, cost.spell_slot_min, cost.pact_only))
 
 
 def _candidates(ctx: RuleContext) -> list[RollOption]:
@@ -358,7 +358,8 @@ def run_zero_damage_hooks(session: Any, char: Any, keys: list[str]) -> None:
 
 def _slot_level(char: Any, spec: RollOptionSpec, inputs: dict) -> int:
     level = inputs.get("slot_level")
-    if type(level) is not int or level not in slot_choices(char, (spec.cost.spell_slot_min if spec.cost else None) or 0):
+    if type(level) is not int or level not in slot_choices(
+            char, (spec.cost.spell_slot_min if spec.cost else None) or 0, bool(spec.cost and spec.cost.pact_only)):
         raise OptionUnavailable(spec.key)
     return level
 
@@ -410,7 +411,7 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
         spent.append(_spend_state_token(char, cost.state_key))
     if spec.requires_input == "slot":
         level = _slot_level(char, spec, inputs)
-        slot = next(s for s in char.spell_slots if s.level == level and s.available > 0)
+        slot = next(s for s in char.spell_slots if s.level == level and s.available > 0 and (s.is_pact or not (cost and cost.pact_only)))
         slot.use_slot()
         spent.append(f"slot:{level}:pact" if slot.is_pact else f"slot:{level}")
     if spec.requires_input == "recover":
