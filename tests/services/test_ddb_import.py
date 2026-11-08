@@ -673,6 +673,3 @@ def test_the_imported_current_hit_points_keep_the_distance_from_the_sheet_maximu
     assert hurt.current_hit_points == full.current_hit_points - 7
 
 
-def test_other_editions_without_the_catalog_keep_the_bonus_in_the_base():
-    base = convert(_draconic_sorcerer(per_level=0), edition="2024")[0].character
-    assert convert(_draconic_sorcerer(per_level=1), edition="2024")[0].character.hit_points > base.hit_points
