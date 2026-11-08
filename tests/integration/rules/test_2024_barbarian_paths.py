@@ -58,7 +58,8 @@ async def test_frenzy_dice_follow_the_rage_damage(client, level, dice):
     sword = await _weapon(client, cid)
     await _rage(client, cid)
     await _new_turn(client, cid)
-    hit = await _deferred(client, cid, sword, options=[RECKLESS])
+    # Attacco Irruento dà vantaggio: entrambi i d20 fissi, altrimenti un 20 casuale fa critico e raddoppia i dadi
+    hit = await _deferred(client, cid, sword, options=[RECKLESS], dice=[10, 10])
     r = await _damage(client, cid, hit, ["barbarian.frenzy"])
     assert len(r.json()["option_result"]["extra_rolls"]) == dice
 
