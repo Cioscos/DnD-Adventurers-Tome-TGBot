@@ -19,7 +19,7 @@ describe('prepareCast', () => {
   it('does not send a level for a ritual or a cast without a slot', async () => {
     await prepareCast(3, 9, true, 4)
     await prepareCast(3, 9, false, null)
-    expect(rollOptions).toHaveBeenNthCalledWith(1, 3, { roll: 'cast', spell_id: 9 })
+    expect(rollOptions).toHaveBeenNthCalledWith(1, 3, { roll: 'cast', spell_id: 9, slotless: true })  // il rituale non spende slot
     expect(rollOptions).toHaveBeenNthCalledWith(2, 3, { roll: 'cast', spell_id: 9 })
   })
 })

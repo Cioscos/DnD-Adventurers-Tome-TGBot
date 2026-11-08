@@ -125,8 +125,8 @@ async def test_class_options_follow_the_catalog(client, monkeypatch, rules_catal
     assert not [e for e in r.json()["report"]["approximated"] if e["section"] == "options"]
 
 
-async def test_unmatched_options_stay_in_report(client, monkeypatch):
-    _serve(monkeypatch, "sorcerer5_2024.json")  # catalogo vuoto: nessun gruppo le riconosce
+async def test_unmatched_options_stay_in_report(client, monkeypatch, rules_catalog):
+    _serve(monkeypatch, "sorcerer5_2024.json")  # catalogo vuoto (fixture): nessun gruppo le riconosce
     rep = (await _post(client)).json()["report"]
     names = {e["name"] for e in rep["approximated"] if e["section"] == "options"}
     assert names == {"Quickened Spell", "Extended Spell"}
