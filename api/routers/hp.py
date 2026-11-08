@@ -835,6 +835,9 @@ async def rest(
 
         firing = await dispatch(session, char, "short_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))
+    for spec, row in active_features(char):  # Resilienza Celestiale: a ogni riposo concluso PF temporanei (non si sommano)
+        if spec.rest_temp_hp:
+            char.temp_hp = max(char.temp_hp or 0, spec.rest_temp_hp(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level)))
     await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
 

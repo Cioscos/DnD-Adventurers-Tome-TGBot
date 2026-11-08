@@ -557,6 +557,24 @@ for _spell, _comp in (
 GRANTED_SPELLS["contact-other-plane"] = GrantedSpell(
     "contact-other-plane", {"it": "Contattare altro piano", "en": "Contact Other Plane"}, 5, "1 minuto", "Personale", "1 minuto", is_ritual=True)
 _COMPONENTS["contact-other-plane"] = "V"
+# Warlock 2024, patroni (parte B): incantesimi sempre preparati che il catalogo non aveva ancora
+for _spell, _comp in (
+        (GrantedSpell("phantasmal-force", {"it": "Forza fantasmagorica", "en": "Phantasmal Force"}, 2, "1 azione", "18 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="2d8",
+                      damage_type="psychic", higher_levels_dice="1d8"), "V, S, M"),
+        (GrantedSpell("sacred-flame", {"it": "Fiamma sacra", "en": "Sacred Flame"}, 0, "1 azione", "18 m", "Istantanea",
+                      attack_save="SAVE", damage_dice="1d8", damage_type="radiant"), "V, S"),
+        (GrantedSpell("summon-celestial", {"it": "Evocare celestiale", "en": "Summon Celestial"}, 5, "1 azione", "27 m",
+                      "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M"),
+        (GrantedSpell("geas", {"it": "Geas", "en": "Geas"}, 5, "1 minuto", "18 m", "30 giorni", attack_save="SAVE"), "V"),
+        (GrantedSpell("clairvoyance", {"it": "Chiaroveggenza", "en": "Clairvoyance"}, 3, "10 minuti", "1,5 km",
+                      "Concentrazione, fino a 10 minuti", is_concentration=True), "V, S, M"),
+        (GrantedSpell("tashas-hideous-laughter", {"it": "Risata orribile di Tasha", "en": "Tasha's Hideous Laughter"}, 1, "1 azione", "9 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M"),
+        (GrantedSpell("hex", {"it": "Malia", "en": "Hex"}, 1, "1 azione bonus", "27 m", "Concentrazione, fino a 1 ora",
+                      is_concentration=True), "V, S, M")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",

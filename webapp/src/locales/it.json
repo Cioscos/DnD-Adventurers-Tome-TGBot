@@ -964,6 +964,17 @@
         "repelling_blast": "Spinto fino a 3 m in linea retta lontano dal warlock.",
         "hurl_through_hell": "Scompare nei piani inferiori fino alla fine del prossimo turno del warlock, poi torna nel suo spazio.",
         "thought_shield": "Subisce lo stesso ammontare di danni psichici che ha inflitto.",
+        "taunting_step": "Se fallisce il TS Saggezza ha svantaggio ai tiri per colpire contro chiunque non sia il warlock fino all'inizio del suo prossimo turno.",
+        "terrifying_step": "Se fallisce il TS Saggezza subisce 2d10 danni psichici.",
+        "beguiling_defenses": "Se fallisce il TS Saggezza subisce danni psichici pari al danno subito dal warlock.",
+        "clairvoyant_combatant": "Se fallisce il TS Saggezza ha svantaggio ai tiri per colpire contro il warlock e il warlock ha vantaggio contro di essa finché dura il legame.",
+        "hurl_through_hell_2024": "Se fallisce il TS Carisma scompare nei Piani Inferiori, subisce 8d10 danni psichici (non se è un immondo) ed è Incapacitata fino alla fine del suo prossimo turno, quando torna nel suo spazio.",
+        "eldritch_hex_strength": "Ha svantaggio anche ai tiri salvezza di Forza finché dura Malia.",
+        "eldritch_hex_dexterity": "Ha svantaggio anche ai tiri salvezza di Destrezza finché dura Malia.",
+        "eldritch_hex_constitution": "Ha svantaggio anche ai tiri salvezza di Costituzione finché dura Malia.",
+        "eldritch_hex_intelligence": "Ha svantaggio anche ai tiri salvezza di Intelligenza finché dura Malia.",
+        "eldritch_hex_wisdom": "Ha svantaggio anche ai tiri salvezza di Saggezza finché dura Malia.",
+        "eldritch_hex_charisma": "Ha svantaggio anche ai tiri salvezza di Carisma finché dura Malia.",
         "branches_of_the_tree": "Se fallisce il TS Forza viene teletrasportata in uno spazio libero che vedi entro 1,5 m da te (o il più vicino possibile). Poi puoi portarne la velocità a 0 fino alla fine del turno: toglila a mano.",
         "turn_undead": "Spaventata e Incapacitata per 1 minuto; a ogni suo turno si allontana il più possibile. Finisce prima se subisce danni (toglila a mano) o se il chierico è Incapacitato o muore."
       }

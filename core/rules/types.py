@@ -329,6 +329,8 @@ class OnUse:
     slot_by: "Callable[[RuleContext, dict], str | None] | None" = None
     # ``spends_slot`` vale solo se ``spends_slot_when(ctx, params)`` (Mantello di Maestà: lo slot serve a ripristinare l'uso)
     spends_slot_when: "Callable[[RuleContext, dict], bool] | None" = None
+    # Lo slot di ``spends_slot`` è solo di Patto (ripristino dei privilegi del Patrono del Warlock)
+    spends_slot_pact_only: bool = False
     # Usi di un altro privilegio spesi al posto dei propri quando ``params[alt_param]`` è vero (Presenza Intimidatoria:
     # «ripristina» l'uso spendendo un uso di Ira); lo slot di turno si paga lo stesso
     alt_spends: str | None = None
@@ -674,6 +676,8 @@ class FeatureSpec:
     copy_school: str | None = None
     # Incantesimo (``srd_index``) lanciabile senza slot spendendo un uso di questa riga, come l'Arcanum (Mutaforma)
     free_spell: str | None = None
+    # PF temporanei a chi finisce un riposo breve o lungo (Resilienza Celestiale): ``f(ctx) -> n``, vale il maggiore con quelli attuali
+    rest_temp_hp: "Callable[[RuleContext], int] | None" = None
     # Dadi d20 tirati alla fine del riposo lungo e salvati (R29, Portento): ``(chiave dell'opzione, f(ctx) -> quanti)``
     long_rest_dice: "tuple[str, Callable[[RuleContext], int]] | None" = None
     # Incantesimi (``GRANTED_SPELLS``) che il privilegio aggiunge al Libro del Mago senza prepararli (Servitori Non Morti, Mutaforma)

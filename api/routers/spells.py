@@ -47,6 +47,7 @@ from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
+from core.rules.catalog.y2024.warlock_subclasses import THRALL_CAST
 from core.rules.modifiers import modifiers_for
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
@@ -287,7 +288,8 @@ def _consume_cast(
         _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
     elif free_state is not None:
         data = free_state.get("data") or {}
-        spend(char, data.get("free_cast_slot", "action"))  # 409 turn_slot_used: nulla è ancora scritto
+        if (turn_slot := data.get("free_cast_slot", "action")) is not None:  # ``None``: parte di un'altra azione (Magia Stregata)
+            spend(char, turn_slot)  # 409 turn_slot_used: nulla è ancora scritto
         if not data.get("free_cast_keep"):  # il Mantello di Maestà ripete il lancio finché dura
             remove_state(char, free_state["key"])
         no_concentration = bool(data.get("no_concentration"))
@@ -520,7 +522,7 @@ async def use_spell(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
-        no_concentration_option=NO_CONCENTRATION_KEY in (body.options or [])))
+        no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
@@ -573,7 +575,7 @@ async def spell_attack(
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                                                       silent=SUBTLE_KEY in (body.cast_options or []),
                                                       war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
-                                                      no_concentration_option=NO_CONCENTRATION_KEY in (body.cast_options or [])))
+                                                      no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options or []))))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,

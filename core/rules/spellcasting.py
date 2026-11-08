@@ -16,7 +16,7 @@ from core.rules.edition import character_edition, class_key as row_class_key
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.proficiencies import is_armor_proficient
 from core.rules.schools import normalize_school  # noqa: F401  (ri-esportata: la usano i chiamanti storici)
-from core.rules.states import casting_blocked_by, has_state
+from core.rules.states import casting_blocked_by, free_cast_state, has_state
 from core.rules.types import Edition
 
 
@@ -327,6 +327,9 @@ def _turn_warning(char: Any, spell: Any) -> str | None:
         return None
     turn = char.turn_state or {}
     if character_edition(char) == "2024":
+        free = free_cast_state(char, spell)  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
+        if free is not None and (free.get("data") or {}).get("free_cast_slot", "action") is None:
+            return None
         return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") else None
     if kind == "bonus":
         return "bonus_spell" if turn.get("spell_slot_cast") or turn.get("bonus_spell_cast") else None

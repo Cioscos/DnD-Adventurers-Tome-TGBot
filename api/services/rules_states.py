@@ -252,10 +252,11 @@ async def _spend_atomically(session: AsyncSession, ability, cost: int) -> None:
     await session.refresh(ability)
 
 
-async def _spend_slot(session: AsyncSession, char, level: int) -> None:
-    """Spende uno slot incantesimo di ``level`` (prima i normali, poi quelli del Patto) con un UPDATE condizionato: due
-    richieste insieme non prendono lo stesso slot. 409 ``no_slot`` se non ce n'è uno libero."""
-    candidates = sorted((s for s in char.spell_slots if s.level == level and s.used < s.total), key=lambda s: bool(s.is_pact))
+async def _spend_slot(session: AsyncSession, char, level: int, pact_only: bool = False) -> None:
+    """Spende uno slot incantesimo di ``level`` (prima i normali, poi quelli del Patto; con ``pact_only`` solo questi) con un UPDATE
+    condizionato: due richieste insieme non prendono lo stesso slot. 409 ``no_slot`` se non ce n'è uno libero."""
+    candidates = sorted((s for s in char.spell_slots if s.level == level and s.used < s.total and (s.is_pact or not pact_only)),
+                        key=lambda s: bool(s.is_pact))
     for slot in candidates:
         taken = await session.execute(
             update(SpellSlot).where(SpellSlot.id == slot.id, SpellSlot.used < SpellSlot.total).values(used=SpellSlot.used + 1))
@@ -369,7 +370,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if slot:
         spend(char, slot)  # 409 turn_slot_used prima di toccare gli usi
     if on_use.spends_slot and (on_use.spends_slot_when is None or on_use.spends_slot_when(ctx_choice, params or {})):
-        await _spend_slot(session, char, int((params or {})[on_use.spends_slot]))
+        await _spend_slot(session, char, int((params or {})[on_use.spends_slot]), on_use.spends_slot_pact_only)
     if on_use.once_per_turn:
         mark_once(char, feature_key)
     if on_use.forgoes_attack:
@@ -464,8 +465,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         await apply_conditions(session, char, {params[on_use.clears_condition]: False})
     if on_use.ends_state and has_state(char, on_use.ends_state):  # già finito (Duplicato Migliorato dopo la fine): niente da chiudere
         remove_state(char, on_use.ends_state)
-    if on_use.target_effect:
-        keep_target_effect(char, feature_key, on_use.target_effect(ctx, params or {}))
+    if on_use.target_effect and (effect := on_use.target_effect(ctx, params or {})) is not None:  # ``None``: questa scelta non ha effetto sugli altri
+        keep_target_effect(char, feature_key, effect)
         result.targets.append(feature_key)
     if on_use.message:  # prima dell'effetto: vede la scheda com'era (i PF dell'interdizione prima dell'assorbimento)
         result.message = on_use.message(ctx, params or {})

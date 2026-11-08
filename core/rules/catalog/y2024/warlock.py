@@ -42,9 +42,17 @@ def _cunning(ctx: RuleContext, _params: dict) -> None:
         back = min(slot.used, budget)
         slot.used -= back
         budget -= back
+    from core.rules.catalog.y2024.warlock_subclasses import resilience_hp  # import locale: il modulo dei patroni importa questo in fondo
+    if (points := resilience_hp(ctx)) is not None:  # Resilienza Celestiale: PF temporanei a ogni uso di Astuzia Magica
+        ctx.char.temp_hp = max(ctx.char.temp_hp or 0, points)
 
 
-CUNNING_USE = OnUse(effect=_cunning, available=lambda c: any(s.used > 0 for s in pact_slots(c.char)))
+def _cunning_message(ctx: RuleContext, _params: dict) -> dict[str, str] | None:
+    from core.rules.catalog.y2024.warlock_subclasses import resilience_ally_text  # import locale, come sopra
+    return resilience_ally_text(ctx)
+
+
+CUNNING_USE = OnUse(effect=_cunning, message=_cunning_message, available=lambda c: any(s.used > 0 for s in pact_slots(c.char)))
 
 
 # ---------------------------------------------------------------------------
