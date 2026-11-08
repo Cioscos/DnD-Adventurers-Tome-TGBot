@@ -73,7 +73,7 @@ async function spendOneHitDie() {
       <QuickActions char={char} />
     </QueryClientProvider>,
   )
-  await userEvent.click(screen.getByText('d10 · fighter'))
+  await userEvent.click(screen.getByText('d10 · dnd.classes.fighter'))
   await userEvent.click(screen.getByText('confirm:character.quick_actions.spend_hit_die_title'))
 }
 

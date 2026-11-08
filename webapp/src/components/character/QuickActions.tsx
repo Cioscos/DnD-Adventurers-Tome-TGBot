@@ -3,6 +3,7 @@ import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import { lazy, Suspense, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { Plus, Check, Minus, RotateCcw } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook,
@@ -417,7 +418,7 @@ export default function QuickActions({ char }: Props) {
       case 'ability': case 'counter_ability': return a.ability.name
       case 'counter_inspiration': return t('character.quick_actions.inspiration')
       case 'counter_ammo': case 'item_charges': return a.item.name
-      case 'hit_die': return `d${a.cls.hit_die ?? 8} · ${a.cls.class_name}`
+      case 'hit_die': return `d${a.cls.hit_die ?? 8} · ${classLabel(t, a.cls.class_name)}`
       case 'rest': return t(`character.quick_actions.rest_${a.rest}`)
     }
   }
@@ -475,7 +476,7 @@ export default function QuickActions({ char }: Props) {
         })),
         ...(char.classes ?? []).map((cls) => ({
           entry: { type: 'hit_die', classId: cls.id } as QuickActionEntry,
-          label: `${t('character.quick_actions.spend_hit_die_title')} · d${cls.hit_die ?? 8} ${cls.class_name}`,
+          label: `${t('character.quick_actions.spend_hit_die_title')} · d${cls.hit_die ?? 8} ${classLabel(t, cls.class_name)}`,
         })),
       ],
       emptyKey: null,
@@ -918,7 +919,7 @@ export default function QuickActions({ char }: Props) {
         title={t('character.quick_actions.spend_hit_die_title')}
         body={confirmHitDie
           ? t('character.quick_actions.spend_hit_die_body', {
-              cls: confirmHitDie.cls.class_name,
+              cls: classLabel(t, confirmHitDie.cls.class_name),
               die: confirmHitDie.cls.hit_die ?? 8,
               remaining: confirmHitDie.remaining,
             })
