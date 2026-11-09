@@ -301,7 +301,7 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
         for option in spec.roll_options:
             if not option.for_ally:  # le ``for_ally`` le offre ai compagni, non a chi le possiede
                 found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
-    for offer in getattr(ctx.char, "party_donors", None) or []:  # messi dal server (``attach_party_donors``)
+    for offer in getattr(ctx.char, "party_donors", None) or []:  # messi dal server (``attach_party``)
         donor, spec = offer["donor"], offer["spec"]
         key = f"ally:{donor.id}:{spec.key}"
         label = {lang: text.format(donor=donor.name) for lang, text in spec.label.items()}
