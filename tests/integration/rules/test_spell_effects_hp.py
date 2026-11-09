@@ -331,6 +331,62 @@ async def test_warding_bond_shares_damage_and_ends_when_the_caster_drops_to_zero
     assert (await _sheet(client, hero))["ac"] == ac
 
 
+async def _history(client, cid, user=GM_ID) -> list[str]:
+    as_user(user)
+    data = (await client.get(f"/characters/{cid}/history")).json()
+    return [h["description"] for h in (data["items"] if isinstance(data, dict) else data)]
+
+
+async def _damage(client, cid, value, damage_type="fire", **extra) -> dict:
+    as_user(PLAYER_ID)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": value, "damage_type": damage_type, **extra})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _undo(client, cid, op_id, user=PLAYER_ID) -> None:
+    as_user(user)
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": op_id})
+    assert r.status_code == 200, r.text
+
+
+async def test_undoing_a_warding_bond_damage_restores_the_caster_hp_and_history(client, test_session_factory):
+    """C2: l'annullo del bersaglio riporta anche il lanciatore com'era."""
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=2)
+    dmg = await _damage(client, hero, 20)
+    assert dmg["current_hit_points"] == 190 and (await _sheet(client, caster, GM_ID))["current_hit_points"] == 20
+    await _undo(client, hero, dmg["hp_undo_id"])
+    assert (await _sheet(client, hero))["current_hit_points"] == 200
+    assert (await _sheet(client, caster, GM_ID))["current_hit_points"] == 30
+    assert any("annullat" in h.lower() for h in await _history(client, caster))
+
+
+async def test_undoing_a_damage_that_ended_warding_bond_brings_the_bond_back_on_both_sheets(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 5, 30)
+    await _cast(client, caster, spell, [hero], level=2)
+    dmg = await _damage(client, hero, 100)
+    assert (await _sheet(client, caster, GM_ID))["current_hit_points"] == 0 and await _states(client, hero, "spell:warding_bond") == []
+    await _undo(client, hero, dmg["hp_undo_id"])
+    caster_sheet = await _sheet(client, caster, GM_ID)
+    assert caster_sheet["current_hit_points"] == 5 and not caster_sheet["conditions"].get("unconscious")
+    assert len(await _states(client, caster, "spell_cast:warding_bond", GM_ID)) == 1
+    assert len(await _states(client, hero, "spell:warding_bond")) == 1
+
+
+async def test_warding_bond_shared_damage_makes_the_caster_roll_the_concentration_save(client, test_session_factory):
+    """M2: è danno vero: segue il percorso del danno (TS di concentrazione, PF temporanei, morte)."""
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=2)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{caster}/concentration", json={"spell_id": spell})).status_code == 200
+    await _damage(client, hero, 20)
+    assert any("TS Concentrazione" in h for h in await _history(client, caster))
+
+
 # --- Rigenerazione ---------------------------------------------------------------------------------------------------
 
 async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_session_factory, monkeypatch):

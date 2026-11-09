@@ -31,7 +31,7 @@ from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
-from api.services.session_allies import attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
+from api.services.session_allies import load_receiver, attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
 from api.services.spell_hp import spell_damage_effects
@@ -225,9 +225,16 @@ async def update_hp(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    return await apply_hp_update(session, char, body, lang)
+
+
+async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate, lang: str,
+                          shared_from: str | None = None) -> CharacterFull | None:
+    """Un'operazione PF su ``char`` (già verificato). ``shared_from``: il danno è quello che un incantesimo gira a ``char``
+    (Legame di Protezione): stessa strada del danno, ma senza rigirarlo e senza risposta (``None``); il testo va nello storico."""
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
-        return await build_character_response(session, char)
+        return None if shared_from else await build_character_response(session, char)
     if body.options and body.op != HPOp.DAMAGE:
         raise HTTPException(status_code=422, detail={"code": "options_only_on_damage"})
     form = await get_active_form(session, char.id)  # the form involved in this op, if any
@@ -239,6 +246,7 @@ async def update_hp(
     conc_result: ConcentrationSaveResult | None = None
     zero_save: ZeroHpSaveResult | None = None
     notifications: list[dict] = []
+    shared_log: list[dict] = []  # lo stato che il danno condiviso ha lasciato sui lanciatori: l'annullo lo rimette
 
     was_at_zero = char.current_hit_points == 0
 
@@ -346,6 +354,8 @@ async def update_hp(
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if warded:
             desc += f" — Interdizione Arcana assorbe {warded}"
+        if shared_from:
+            desc += f" — {shared_from}"
         if held_at_one:
             desc += (f" — resta a 1 PF grazie a {', '.join(d.name for d in held_by)}" if held_by
                      else " — Interdizione alla Morte: resta a 1 PF" if any(k.startswith("spell:") for k in opts.keys)
@@ -417,7 +427,7 @@ async def update_hp(
             end_concentration(char)
 
         on_damage(char, applied)
-        notifications.extend(await spell_damage_effects(session, char, applied, had_temp, lang))  # ritorsione, danno condiviso, fine degli incantesimi
+        notifications.extend(await spell_damage_effects(session, char, applied, had_temp, lang, share=shared_from is None, shared_log=shared_log))  # ritorsione, danno condiviso, fine degli incantesimi
 
         # Auto concentration save — only if still conscious and concentrating
         if (
@@ -517,7 +527,9 @@ async def update_hp(
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
                     "spent": option_block.spent if option_block else [], "zero_before": zero_before,
-                    "zero_after": _zero_conditions(char)}
+                    "zero_after": _zero_conditions(char), "shared": shared_log}
+    if shared_from:
+        return None
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
@@ -533,28 +545,21 @@ async def update_hp(
     return result
 
 
-@router.post("/{char_id}/hp/undo", response_model=CharacterFull)
-async def undo_hp(
-    char_id: int,
-    body: HPUndoRequest,
-    user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-) -> CharacterFull:
-    """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa."""
-    char = await _get_owned_full(char_id, user_id, session)
-    snap = char.hp_undo
-    form = None
+async def _undo_form(session: AsyncSession, char: Character, snap: dict | None):
+    """La forma selvatica coinvolta nell'operazione da annullare, se c'è."""
     if snap and (snap.get("after") or {}).get("form"):
-        form = (await session.execute(select(Companion).where(
+        return (await session.execute(select(Companion).where(
             Companion.id == snap["after"]["form"]["form_id"], Companion.character_id == char.id,
         ))).scalar_one_or_none()
-    if (
-        not snap
-        or snap.get("op_id") != body.op_id
-        or {**_hp_state(char, form), "form_state": None} != {**snap.get("after", {}), "form_state": None}
-    ):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
+    return None
 
+
+def _undo_applies(char: Character, snap: dict, form) -> bool:
+    return {**_hp_state(char, form), "form_state": None} == {**snap.get("after", {}), "form_state": None}
+
+
+async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, note: str | None = None) -> None:
+    """Rimette ``char`` com'era prima dell'operazione descritta da ``snap``."""
     before = snap["before"]
     if before.get("form"):
         form.current_hp = before["form"]["current_hp"]
@@ -624,8 +629,31 @@ async def undo_hp(
     char.hp_undo = None
 
     _add_history(session, char.id, "hp_change",
-                 f"Annullata ultima operazione PF ({old} → {char.current_hit_points})",
+                 note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})",
                  meta={"op": "UNDO"})
+
+
+@router.post("/{char_id}/hp/undo", response_model=CharacterFull)
+async def undo_hp(
+    char_id: int,
+    body: HPUndoRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> CharacterFull:
+    """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa. Il danno condiviso da un incantesimo
+    (Legame di Protezione) si annulla anche sulla scheda del lanciatore, se è ancora com'era dopo il danno."""
+    char = await _get_owned_full(char_id, user_id, session)
+    snap = char.hp_undo
+    form = await _undo_form(session, char, snap)
+    if not snap or snap.get("op_id") != body.op_id or not _undo_applies(char, snap, form):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
+    shared = snap.get("shared") or []
+    await _restore_hp(session, char, snap, form)
+    for entry in shared:
+        caster = await load_receiver(session, entry["id"])
+        caster_form = await _undo_form(session, caster, entry)
+        if _undo_applies(caster, entry, caster_form):
+            await _restore_hp(session, caster, entry, caster_form, f"Annullato il danno condiviso con {char.name}")
     return await build_character_response(session, char)
 
 
