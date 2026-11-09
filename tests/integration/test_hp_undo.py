@@ -204,3 +204,17 @@ async def test_undo_restores_concentration_rounds(client, monkeypatch):
     assert r.status_code == 200, r.text
     assert r.json()["concentrating_spell_id"] == spell_id
     assert r.json()["settings"]["concentration_rounds_left"] == 7
+
+async def test_undo_of_a_snapshot_saved_before_a_new_key_existed(client, test_session_factory):
+    # dopo il deploy, un annullo salvato dalla versione precedente non ha le chiavi nuove: niente 500
+    cid = await _make_char(client, 20)
+    dmg = await _hp(client, cid, "damage", 8)
+    async with test_session_factory() as session:
+        char = (await session.execute(select(Character).where(Character.id == cid))).scalar_one()
+        before = dict(char.hp_undo["before"])
+        before.pop("temp_hp_given", None)
+        char.hp_undo = {**char.hp_undo, "before": before}
+        await session.commit()
+    r = await _undo(client, cid, dmg["hp_undo_id"])
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] == 20

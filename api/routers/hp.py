@@ -590,6 +590,8 @@ async def undo_hp(
                              meta={"op": "TEMP_HP", "amount": entry["amount"], "restored": True})
                 receiver.temp_hp = entry["amount"]
     for k in _CONC_SETTINGS:
+        if k not in before:  # snapshot salvato prima che la chiave esistesse: non la tocca
+            continue
         if before[k] is None:
             settings.pop(k, None)
         else:
