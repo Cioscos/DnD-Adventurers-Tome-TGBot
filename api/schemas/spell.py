@@ -124,6 +124,18 @@ class SpellRemovalBody(BaseModel):
     conditions: list[str] | None = Field(None, max_length=10)
 
 
+class SpellEffectTarget(BaseModel):
+    id: int
+    name: str
+
+
+class SpellEffectsRead(BaseModel):
+    """Esito degli effetti di un incantesimo nel catalogo: i bersagli che hanno ricevuto lo stato e, fuori serata o per un
+    effetto solo descrittivo, il testo (it/en) per il GM."""
+    applied: list[SpellEffectTarget] = []
+    text: dict[str, str] | None = None
+
+
 class SpellUseRequest(RollOptionsBody):
     """Le opzioni sono quelle di ``roll="cast"``. ``slot_id`` sceglie il pool; ``slot_level`` da solo prende il primo
     con posto. Uno dei due è obbligatorio per un incantesimo di livello (400, non 422, come gli altri errori di
@@ -136,6 +148,8 @@ class SpellUseRequest(RollOptionsBody):
     ki_extra: int = Field(0, ge=0, le=9)  # punti ki in più: uno per livello dell'incantesimo in più
     confirm: list[str] = Field(default_factory=list, max_length=10)
     removal: SpellRemovalBody | None = None
+    targets: list[int] | None = Field(None, max_length=20)  # id dei personaggi bersaglio; assente = chi lancia
+    choices: dict[str, str] | None = None  # scelte dell'incantesimo (tipo di danno, ...)
 
 
 class SpellAttackRequest(RollOptionsBody):
@@ -146,6 +160,8 @@ class SpellAttackRequest(RollOptionsBody):
     confirm: list[str] = Field(default_factory=list, max_length=10)
     cast_options: list[str] = Field(default_factory=list, max_length=30)
     cast_option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
+    targets: list[int] | None = Field(None, max_length=20)  # come in SpellUseRequest, per gli effetti del lancio
+    choices: dict[str, str] | None = None
     die: int | None = Field(None, ge=1, le=20)
     with_inspiration: bool = False
     mode: RollMode = "normal"

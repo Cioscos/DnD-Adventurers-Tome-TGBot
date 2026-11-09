@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.types import StateSpec
 
 
@@ -80,6 +81,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     charge_exhaustion(char, closed)
     drop_stolen_spells(char, closed)
     release_given_temp_hp(char, closed)
+    release_given_spells(char, closed)
     release_suspended(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
@@ -98,6 +100,17 @@ def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
     gone = [entry for s in closed for entry in given.pop(s.get("key"), [])]
     if gone:
         char.settings = {**settings, TEMP_GIVEN: given, TEMP_RELEASE: [*(settings.get(TEMP_RELEASE) or []), *gone]}
+
+
+def release_given_spells(char: Any, closed: list[dict]) -> None:
+    """Gli effetti che chi lancia ha dato ad altri con un incantesimo finiscono con il suo orologio ``spell_cast:*``: i bersagli
+    passano in ``SPELL_RELEASE``, che il flush della richiesta applica togliendo loro lo stato ``spell:*``."""
+    settings = getattr(char, "settings", None) or {}
+    given = dict(settings.get(SPELL_GIVEN) or {})
+    gone = [{"id": t, "key": SPELL_STATE_PREFIX + s["key"][len(SPELL_CLOCK_PREFIX):]}
+            for s in closed if str(s.get("key")).startswith(SPELL_CLOCK_PREFIX) for t in given.pop(s["key"], [])]
+    if gone:
+        char.settings = {**settings, SPELL_GIVEN: given, SPELL_RELEASE: [*(settings.get(SPELL_RELEASE) or []), *gone]}
 
 
 def release_suspended(char: Any, closed: list[dict]) -> None:
@@ -143,6 +156,9 @@ ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 # svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
 # richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
 TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
+# Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in
+# SPELL_RELEASE ([{"id", "key"}]), che il flush toglie ai bersagli solo se lo stato è ancora di chi lancia (``data["caster_id"]``).
+SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"
 # Condizioni sospese (Calmare Emozioni). Su chi lancia: stato ``SUSPENDED_KEY`` che finisce con la concentrazione e, in settings,
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
 # ``SUSPENDED_ON``: {condizione: id di chi la sospende}, cancellato se la condizione cambia per altra via (allora non torna).

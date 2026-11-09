@@ -23,7 +23,7 @@ from core.rules.feature_sync import (
 )
 from core.rules.level_choices import FREE_KNOWN_KEY
 from api.services.spell_slots import CREATED_SLOTS, clean_created_slots
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
 from api.services.item_charges import attunement_limit
 from core.game.item_bonuses import is_attuned
@@ -285,7 +285,7 @@ async def import_character(
 
     # un file importato passa dal retrofit per le sue classi (R34, R39): il segno del file non vale
     # gli id dei personaggi di un altro database non valgono qui
-    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON)}
+    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON)}
 
     for sp, row in zip(data.spells, spells):
         row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None

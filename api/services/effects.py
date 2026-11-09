@@ -18,7 +18,7 @@ from api.services.condition_effects import clear_effects_for, release_concentrat
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.states import COND_RELEASE, SUSPENDED_ON, TEMP_RELEASE, immune_conditions
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SUSPENDED_ON, TEMP_RELEASE, immune_conditions
 
 
 def _now() -> str:
@@ -229,6 +229,21 @@ def _restore_suspended(session: Session, char: Character) -> None:
                              meta={"slug": c, "active": True, "restored": True})
 
 
+def _drop_given_spells(session: Session, char: Character) -> None:
+    """L'orologio di un incantesimo è finito, da qualunque via: i bersagli perdono lo stato, ma solo se è ancora di ``char``
+    (un altro lanciatore può averlo rinnovato). Un bersaglio cancellato si salta."""
+    pending = (char.settings or {}).get(SPELL_RELEASE)
+    if not pending:
+        return
+    char.settings = {k: v for k, v in char.settings.items() if k != SPELL_RELEASE}
+    for entry in pending:
+        receiver = session.get(Character, entry["id"])
+        states = (receiver.active_states or []) if receiver is not None else []
+        kept = [s for s in states if not (s.get("key") == entry["key"] and (s.get("data") or {}).get("caster_id") == char.id)]
+        if len(kept) != len(states):
+            receiver.active_states = kept
+
+
 @event.listens_for(Session, "before_flush")
 def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     """Un'Ira (o un altro stato) è finita, da qualunque via: i PF temporanei che chi la viveva ha consegnato svaniscono.
@@ -237,6 +252,7 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo; da rivedere se serve la provenienza."""
     for char in [o for o in session.dirty if isinstance(o, Character)]:
         _restore_suspended(session, char)
+        _drop_given_spells(session, char)
         pending = (char.settings or {}).get(TEMP_RELEASE)
         if not pending:
             continue

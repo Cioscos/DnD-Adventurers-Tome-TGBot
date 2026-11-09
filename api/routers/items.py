@@ -45,6 +45,7 @@ from api.routers._helpers import (
     weapon_attack_profile,
 )
 from api.services.durations import start_concentration
+from api.services.spell_effects import apply_spell_effects, item_spell, validate_spell_targets
 from api.services.condition_effects import release_concentration_effects
 from api.services import weapon_bond
 from api.services.skills import check_bonus
@@ -1095,6 +1096,8 @@ class ChargesDelta(BaseModel):
 
 class ItemCast(BaseModel):
     spell_index: int = Field(ge=0)
+    targets: list[int] | None = Field(None, max_length=20)  # come in /spells/{id}/use
+    choices: dict[str, str] | None = None
 
 
 async def _get_item(session: AsyncSession, char_id: int, item_id: int) -> Item:
@@ -1150,6 +1153,8 @@ async def cast_from_item(
     spell = granted[body.spell_index]
     if meta.get("requires_attunement") and not meta.get("attuned"):
         raise HTTPException(status_code=409, detail="attunement_required")
+    fx_spell = item_spell(spell)
+    await validate_spell_targets(session, char, fx_spell, fx_spell.level, body.targets, body.choices)  # prima di spendere
     cost = int(spell.get("charges_cost") or 0)
     ch = meta.get("charges") if isinstance(meta.get("charges"), dict) else None
     current = int(ch.get("current") or 0) if ch else 0
@@ -1175,6 +1180,7 @@ async def cast_from_item(
             start_concentration(char, None, rounds, {"item_id": item.id, "name": spell["name"]})
         await release_concentration_effects(session, char)
 
+    spell_fx = await apply_spell_effects(session, char, fx_spell, fx_spell.level, body.targets, body.choices)
     _add_history(session, char.id, "spell_cast",
                  f"Lanciato {spell['name']} da {item.name} ({cost} cariche)",
                  meta={"item_id": item.id})
@@ -1182,6 +1188,7 @@ async def cast_from_item(
     await session.refresh(char, attribute_names=["items"])
     response = await build_character_response(session, char)
     response.homebrew_notifications = charge_note(rolled) or None
+    response.spell_effects = spell_fx
     return response
 
 

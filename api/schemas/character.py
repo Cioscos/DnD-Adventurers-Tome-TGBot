@@ -27,7 +27,7 @@ from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.container import CoinLocationRead
 from api.schemas.rules import RollOptionRead
 from api.schemas.item import ItemRead
-from api.schemas.spell import SpellRead, SpellSlotRead
+from api.schemas.spell import SpellEffectsRead, SpellRead, SpellSlotRead
 
 
 class AcBreakdown(BaseModel):
@@ -257,6 +257,8 @@ class CharacterFull(BaseModel):
     damage_unrollable: bool = False
     # POST /spells/{id}/use: esiti delle condizioni tolte (Task 48), nelle due lingue
     removal_result: list[dict[str, str]] | None = absent_when_none()
+    # POST /spells/{id}/use|attack e /items/{id}/cast: bersagli dell'effetto dell'incantesimo e testo per il GM
+    spell_effects: SpellEffectsRead | None = absent_when_none()
 
     has_custom_silhouette: bool = False
 

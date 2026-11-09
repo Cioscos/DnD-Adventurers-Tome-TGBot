@@ -42,6 +42,7 @@ from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import deliver_temp_gifts
+from api.services.spell_effects import apply_spell_effects, cast_level, validate_spell_targets
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
@@ -535,11 +536,14 @@ async def use_spell(
         picked = plan(rule, body.removal.conditions, rule.conditions)
         removal = (rule, picked, await resolve_targets(session, char, rule, body.removal.targets), body.removal.conditions is not None)
 
+    fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
+    await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices)  # prima di spendere
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
+    spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
@@ -553,6 +557,7 @@ async def use_spell(
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
     response.option_result = option_result(opts, rolls, total)
+    response.spell_effects = spell_fx
     if rule is None and looks_like_removal(spell.name):  # mai in silenzio: l'app non sa cosa toglie
         removal_lines = [NOT_RECOGNIZED]
     response.removal_result = removal_lines
@@ -593,14 +598,17 @@ async def spell_attack(
         raise HTTPException(status_code=400, detail="Spell is not an attack spell")
     refuse_if_incapacitated(char)
 
-    cast_block = None
+    cast_block = spell_fx = None
     if body.with_inspiration:
         spend_inspiration_reroll(char)
     else:
+        fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
+        await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices)  # prima di spendere
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                                                       silent=SUBTLE_KEY in (body.cast_options or []),
                                                       war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
                                                       no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options or []))))
+        spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
@@ -649,6 +657,8 @@ async def spell_attack(
     }, spell_id=spell.id)
 
     twinned = _twinned_attack(char, spell, body.mode, applied, bonus, keep=body.with_inspiration)
+    character = await build_character_response(session, char)
+    character.spell_effects = spell_fx
     return SpellAttackResult(
         twinned_attack=twinned,
         spell_name=spell.name,
@@ -663,7 +673,7 @@ async def spell_attack(
         is_fumble=is_fumble,
         caster_class=caster.class_name if caster else None,
         cast_option_result=cast_block,
-        character=await build_character_response(session, char),
+        character=character,
         homebrew_notifications=notifications or None,
     )
 
