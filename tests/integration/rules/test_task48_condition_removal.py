@@ -307,6 +307,7 @@ async def test_hand_of_healing_on_a_companion_heals_and_removes_the_chosen_condi
     r = await _use(client, monk, HEAL, params=_rm([hero], ["poisoned"], mode="other"))
     assert r.status_code == 200, r.text
     assert r.json()["received"]["name"] == "Eroe" and r.json()["received"]["healed"] > 0
+    assert r.json().get("message") is None  # niente «riferiscili al GM» accanto al toast di chi è curato
     assert await _hero(test_session_factory, hero) == {"stunned": True}
     assert await _ki(client, monk) == ki - 1  # una sola spesa
     assert "Condizione Avvelenato tolta da Monaco" in await _history(test_session_factory, hero)

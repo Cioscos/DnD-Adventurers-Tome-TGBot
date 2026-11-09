@@ -321,13 +321,14 @@ def _aid_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     data = _state_data(ctx, "lands_aid")
     healed = (ctx.char.turn_state or {}).get(LANDS_AID_HEAL)
     mine = params.get("mode") == "self"
+    told = params.get("ally_healed")  # l'alleato della serata è già curato e ha il suo toast
     return {"it": f"Sfera di 3 m entro 18 m: ogni creatura scelta fa un TS Costituzione (CD {data.get('dc')}) e subisce "
                   f"{data.get('damage')} danni necrotici, la metà se lo supera. "
-                  + (f"Hai recuperato {healed} PF." if mine else
+                  + (f"Hai recuperato {healed} PF." if mine else "" if told else
                      f"Un'altra creatura scelta recupera {healed} PF: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."),
             "en": f"Sphere of 10 ft within 60 ft: each chosen creature makes a Constitution save (DC {data.get('dc')}) and takes "
                   f"{data.get('damage')} necrotic damage, half on a success. "
-                  + (f"You regained {healed} HP." if mine else
+                  + (f"You regained {healed} HP." if mine else "" if told else
                      f"Another chosen creature regains {healed} HP: if it sits at the evening and you picked it, it is already healed; "
                      "otherwise tell the GM.")}
 

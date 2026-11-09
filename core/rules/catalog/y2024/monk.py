@@ -444,7 +444,9 @@ _CURABLE = {"blinded": _both("Accecato", "Blinded"), "deafened": _both("Assordat
             "stunned": _both("Stordito", "Stunned")}
 
 
-def _heal_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
+def _heal_message(_ctx: RuleContext, params: dict) -> dict[str, str] | None:
+    if params.get("mode") == "other" and params.get("ally_healed"):
+        return None  # PF e condizione hanno già i loro toast (``received``, ``removal``)
     if params.get("mode") == "other":
         return _both("La creatura toccata recupera i PF indicati: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."
                      + (" La condizione scelta è tolta se hai scelto un personaggio della serata; altrimenti riferiscilo al GM." if params.get("condition") else ""),

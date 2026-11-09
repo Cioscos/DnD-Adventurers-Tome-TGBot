@@ -287,3 +287,12 @@ async def test_n2_a_familiar_attack_does_not_end_moonlight_step(client):
     assert (await _swing(client, cid, owl, 12)).status_code == 200
     assert any(s["key"] == "moonlight_step" for s in await _states(client, cid))
     assert (await _swing(client, cid, form, 12)).json()["mode"] == "advantage"
+
+
+def test_lands_aid_message_drops_the_gm_hint_when_the_seated_ally_is_already_healed():
+    from types import SimpleNamespace
+    from core.rules.catalog.y2024.druid import _aid_message
+    ctx = SimpleNamespace(char=SimpleNamespace(turn_state={"lands_aid_heal": 7}, active_states=[]))
+    told = _aid_message(ctx, {"mode": "other", "ally_healed": True})
+    assert "Costituzione" in told["it"] and "GM" not in told["it"] and "GM" not in told["en"]
+    assert "GM" in _aid_message(ctx, {"mode": "other"})["it"]

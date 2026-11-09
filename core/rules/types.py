@@ -360,7 +360,7 @@ class OnUse:
     heal_by: "Callable[[RuleContext, dict], int] | None" = None
     # Esito da mostrare dopo l'uso, calcolato sulle scelte e sulla scheda (ore dimenticate, danno residuo): ``f(ctx, params)
     # -> {"it": ..., "en": ...}``. Gira dopo il pagamento e prima dell'``effect``: vede la scheda com'era.
-    message: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
+    message: "Callable[[RuleContext, dict], dict[str, str] | None] | None" = None
     # Caratteristica di un attacco con incantesimo a distanza che l'uso tira per davvero (Arciere): il server tira il d20
     # (competenza + caratteristica + modificatori) e i dadi di ``rolls`` solo se colpisce (raddoppiati al critico), e chiude
     # gli stati che finiscono con un attacco. L'esito sta in ``UseResult.attack``.

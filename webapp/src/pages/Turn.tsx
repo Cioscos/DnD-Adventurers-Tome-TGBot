@@ -172,8 +172,7 @@ export default function Turn() {
       }
       if (res?.temp_hp != null) toast.info(t('character.turn.use_temp_hp', { n: res.temp_hp }))
       if (res?.attack) toast.info(t('character.turn.use_attack', { die: res.attack.die, bonus: `${res.attack.bonus >= 0 ? '+' : ''}${res.attack.bonus}`, total: res.attack.total }), { description: res.attack.is_fumble ? t('character.dice.fumble_banner') : res.attack.is_critical ? t('character.dice.critical_banner') : undefined })
-      // Un alleato della serata curato davvero ha già il suo toast: il messaggio «riferiscilo al GM» sarebbe doppio.
-      if (res?.message && !res.received) toast.info(res.message[i18n.language?.startsWith('en') ? 'en' : 'it'])
+      if (res?.message) toast.info(res.message[i18n.language?.startsWith('en') ? 'en' : 'it'])
       for (const line of res?.removal ?? []) toast.info(line[i18n.language?.startsWith('en') ? 'en' : 'it'])
       for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
     },
