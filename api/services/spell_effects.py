@@ -22,6 +22,8 @@ from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
                  "en": "Outside an evening the effect is not applied automatically: the GM applies it to the targets."}
+_NO_SHEET_TEXT = {"it": "L'effetto non è sulla scheda di nessun personaggio: riferiscilo al GM.",
+                  "en": "The effect is not on any character's sheet: tell the GM."}
 
 
 def cast_level(char: Character, spell, slot_id: int | None, slot_level: int | None) -> int:
@@ -103,7 +105,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             "caster_name": caster.name, "edition": character_edition(caster),
             "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest}}
     if not (variant.modifiers(data) or variant.options) or not chars:  # nessun personaggio: l'effetto lo applica il GM
-        return SpellEffectsRead(applied=[], text=variant.text or _OUTSIDE_TEXT)
+        return SpellEffectsRead(applied=[], text=variant.text or (_OUTSIDE_TEXT if outside else _NO_SHEET_TEXT))
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})
     given = dict(settings.get(SPELL_GIVEN) or {})

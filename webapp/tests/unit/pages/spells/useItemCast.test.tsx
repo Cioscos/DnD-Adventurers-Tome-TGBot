@@ -13,6 +13,7 @@ vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { items: { cast }, characters: { sessionAllies } } }
 })
+vi.mock('@/hooks/useD20Roll', async (orig) => ({ ...((await orig()) as Record<string, unknown>), useD20Roll: () => async () => undefined }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), info: vi.fn(), error: toastError, warning: vi.fn() } }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('react-i18next', async (orig) => {

@@ -343,6 +343,7 @@ async def test_another_creature_gives_gm_text_and_no_clock(client, test_session_
     assert r.status_code == 200, r.text
     fx = r.json()["spell_effects"]
     assert fx["applied"] == [] and fx["text"]["it"] and fx["text"]["en"]
+    assert "Fuori da una serata" not in fx["text"]["it"] and "Outside an evening" not in fx["text"]["en"]
     assert await _states(client, caster, GM_ID, f"{SPELL_CLOCK_PREFIX}shield_of_faith") == []
     assert not (r.json().get("settings") or {}).get("spell_given")
 
