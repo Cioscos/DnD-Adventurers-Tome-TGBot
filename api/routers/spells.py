@@ -40,7 +40,9 @@ from api.services.durations import end_concentration, start_concentration
 from core.data.damage_types import canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
+from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import deliver_temp_gifts
+from core.rules.condition_removal import spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
@@ -525,6 +527,14 @@ async def use_spell(
     if spell.srd_index == "divine-smite" and character_edition(char) == "2024":  # si sceglie dopo un colpo, mai da elenco
         raise HTTPException(status_code=409, detail={"code": "smite_on_hit"})
 
+    removal = None  # Task 48: cosa toglie il lancio e a chi, tutto controllato prima di spendere lo slot
+    if body.removal is not None:
+        rule = spell_removal(character_edition(char), spell.srd_index)
+        if rule is None:
+            raise HTTPException(status_code=422, detail={"code": "not_a_removal_spell"})
+        picked = plan(rule, body.removal.conditions, rule.conditions)
+        removal = (rule, picked, await resolve_targets(session, char, rule, body.removal.targets), body.removal.conditions is not None)
+
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []),
@@ -534,11 +544,16 @@ async def use_spell(
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
     await deliver_temp_gifts(session, char, opts)  # Passo Rinfrescante su un altro PG della serata
+    removal_lines = None
+    if removal is not None:  # stessa transazione del lancio: o paga e toglie, o nulla
+        rule, (conds, untracked), targets, explicit = removal
+        removal_lines = await apply_removal(session, char, rule, conds, untracked, targets, explicit=explicit)
     _end_cast(char)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
     response.option_result = option_result(opts, rolls, total)
+    response.removal_result = removal_lines
     # Dadi che il server non sa tirare: l'incantesimo si lancia lo stesso, senza danno, e la scheda lo dice
     response.damage_unrollable = any(d and not _DICE_RE.match(d.strip()) for d in (spell.damage_dice, spell.extra_damage_dice))
     return response

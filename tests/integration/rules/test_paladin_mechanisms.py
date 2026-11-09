@@ -2,6 +2,7 @@
 fisso, immunità che vale da coscienti, scelte facoltative e filtri sull'uso di un privilegio."""
 from __future__ import annotations
 
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     ChoiceSpec, FeatureSpec, Modifier, OnUse, RollOptionSpec, TargetEffect, UseChoice, Uses,
 )
@@ -177,7 +178,7 @@ def _pool_feature() -> FeatureSpec:
     return _feature(
         uses=Uses(per_level=2), restoration="long_rest", action_type="action",
         on_use=OnUse(
-            choose_amount=True, clears_condition="condition",
+            choose_amount=True, removal=ConditionRemoval(("charmed", "frightened"), ally=False),
             heal=lambda _c, _r: 1, heal_when=lambda _c, params: params.get("mode") == "self",
             amount_ok=lambda _c, amount, params: params.get("mode") != "cure" or amount % 5 == 0,
             choices=(UseChoice("mode", {"it": "Modo", "en": "Mode"}, lambda _c: ["self", "other", "cure"],

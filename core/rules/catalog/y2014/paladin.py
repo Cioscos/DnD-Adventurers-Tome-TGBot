@@ -13,6 +13,7 @@ from core.rules.catalog.y2014.fighter import (
     _dueling, _great_weapon, _protection_effect, _weapon_in_hand, _wears_armor, _wields_shield,
 )
 from core.rules.states import is_conscious
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     AuraSpec, ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses,
 )
@@ -90,17 +91,23 @@ _LOH_MODES = {
 
 def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
     """Esiti per chi usa il privilegio: la cura di un altro fuori serata, e l'eccezione di costrutti e non morti."""
-    mode = params.get("mode")
-    if mode == "other" and params.get("target_character_id") is None:
+    if params.get("mode") == "other" and params.get("target_character_id") is None:
         return ["lay_on_hands_other"]
-    return {"cure_self": ["lay_on_hands_cure_self"], "cure_other": ["lay_on_hands_cure_other"]}.get(mode, [])
+    return []  # veleno e malattia sono nel meccanismo comune (``removal``)
 
+
+# Cinque punti per un veleno o una malattia (PHB 2014): il veleno è la condizione, la malattia una nota
+_LOH_REMOVAL = ConditionRemoval(
+    ("poisoned",), ("disease",), count=None,
+    footer={"it": "Non vale su costrutti e non morti.", "en": "Not on constructs or undead."},
+    pick=lambda _c, p: ["poisoned", "disease"] if str(p.get("mode")).startswith("cure") else [],
+    who=lambda _c, p: {"cure_self": "self", "cure_other": "other"}.get(p.get("mode")))
 
 LAY_ON_HANDS_USE = OnUse(
     slot="action", choose_amount=True, heal=lambda _c, _r: 1, heal_when=lambda _c, params: params.get("mode") == "self",
     heal_ally_when=lambda _c, params: params.get("mode") == "other", ally_modes=("other", "cure_other"),
     amount_ok=lambda _c, amount, params: not str(params.get("mode")).startswith("cure") or amount % 5 == 0,
-    notes=_loh_notes, clears=lambda _c, params: ["poisoned"] if params.get("mode") == "cure_self" else [],
+    notes=_loh_notes, removal=_LOH_REMOVAL,
     choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),))
 
 
@@ -448,7 +455,7 @@ FEATURES = (
             ("Azione: termini un incantesimo su di te o su una creatura consenziente che tocchi. Usi pari al Carisma (minimo 1), riposo lungo.",
              "Action: end one spell on yourself or on a willing creature you touch. Uses equal to Charisma (minimum 1), long rest."),
             "action", uses=Uses(ability="charisma", minimum=1), restoration="long_rest",
-            on_use=OnUse(slot="action", clears_condition="condition", choices=(UseChoice(
+            on_use=OnUse(slot="action", removal=ConditionRemoval(allowed=lambda c: tuple(_removable_conditions(c)), ally=False), choices=(UseChoice(
                 "condition", {"it": "Condizione da terminare su di te", "en": "Condition to end on you"}, _removable_conditions,
                 lambda k: {"it": k, "en": k}, optional=True, option_label_ctx=_condition_label),))),
     feature("aura_improvements", CK, ED, 18, "Aure Migliorate / Aura Improvements (Paladino 18, pag. 98)",

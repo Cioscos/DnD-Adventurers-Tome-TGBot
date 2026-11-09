@@ -51,6 +51,8 @@ class SpellRead(BaseModel):
     ki_cast: Optional[dict] = None
     # Lancio pagato da un privilegio del Warlock (Arcanum Mistico, suppliche a uso singolo): `{kind, feature_key, pact_only, uses_left}`
     pact_cast: Optional[dict] = None
+    # Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48): `{conditions, untracked, count, max_targets, ally}`
+    removal: Optional[dict] = None
 
     model_config = {"from_attributes": True}
 
@@ -115,6 +117,13 @@ class SpellCopyCost(BaseModel):
     halved: bool = False  # un «Sapiente» della scuola ha dimezzato tempo e costo
 
 
+class SpellRemovalBody(BaseModel):
+    """Chi e cosa toglie il lancio (Task 48). ``targets``: ``"self"``, l'id di un PG della serata o ``"other"`` (una creatura
+    fuori dalla serata: solo una nota). ``conditions``: la scelta, assente se l'incantesimo le toglie tutte."""
+    targets: list[int | str] = Field(min_length=1, max_length=12)
+    conditions: list[str] | None = Field(None, max_length=10)
+
+
 class SpellUseRequest(RollOptionsBody):
     """Le opzioni sono quelle di ``roll="cast"``. ``slot_id`` sceglie il pool; ``slot_level`` da solo prende il primo
     con posto. Uno dei due è obbligatorio per un incantesimo di livello (400, non 422, come gli altri errori di
@@ -126,6 +135,7 @@ class SpellUseRequest(RollOptionsBody):
     ki: bool = False  # senza slot, coi punti ki di un privilegio (Arti dell'Ombra, discipline dei Quattro Elementi)
     ki_extra: int = Field(0, ge=0, le=9)  # punti ki in più: uno per livello dell'incantesimo in più
     confirm: list[str] = Field(default_factory=list, max_length=10)
+    removal: SpellRemovalBody | None = None
 
 
 class SpellAttackRequest(RollOptionsBody):

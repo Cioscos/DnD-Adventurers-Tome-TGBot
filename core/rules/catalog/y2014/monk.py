@@ -11,6 +11,7 @@ from typing import Any
 from core.data.damage_types import DAMAGE_TYPES
 from core.rules.catalog._common import feature, state_on
 from core.rules.states import begin_state
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     ChoiceSpec, Cost, KiSpell, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses,
     UseChoice,
@@ -479,7 +480,7 @@ FEATURES = (
             ("Con un'azione termini un effetto che ti rende affascinato o spaventato.",
              "As an action you end one effect on you that makes you charmed or frightened."),
             "action",
-            on_use=OnUse(slot="action", available=lambda c: bool(_mind_conditions(c)), clears_condition="condition",
+            on_use=OnUse(slot="action", available=lambda c: bool(_mind_conditions(c)), removal=ConditionRemoval(("charmed", "frightened"), ally=False),
                          choices=(UseChoice("condition", {"it": "Condizione", "en": "Condition"}, _mind_conditions,
                                             lambda k: _MIND_LABELS[k]),))),
     feature("purity_of_body", CK, ED, 10, "Purezza del Corpo / Purity of Body (Monaco 10, pag. 92)",

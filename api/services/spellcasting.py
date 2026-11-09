@@ -17,6 +17,7 @@ from core.data.spell_slots import caster_kind
 from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
+from core.rules.condition_removal import CONDITION_NAMES, UNTRACKED, spell_removal
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.pact_casts import pact_cast
@@ -42,6 +43,10 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if pact is not None:
             spell.pact_cast = {"kind": pact.kind, "feature_key": pact.feature_key, "pact_only": pact.pact_only,
                                "uses_left": pact.uses_left, **({"also_slot": True} if pact.also_slot else {})}
+        if (rm := spell_removal(character_edition(char), spell.srd_index)) is not None:
+            spell.removal = {"count": rm.count, "max_targets": rm.max_targets, "ally": rm.ally,
+                             "conditions": [{"key": c, "label": CONDITION_NAMES[c]} for c in rm.conditions],
+                             "untracked": [{"key": u, "label": UNTRACKED[u]} for u in rm.untracked]}
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

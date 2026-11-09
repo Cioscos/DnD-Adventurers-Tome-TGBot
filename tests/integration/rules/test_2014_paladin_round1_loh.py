@@ -121,7 +121,8 @@ async def test_cure_on_yourself_removes_poisoned_and_says_the_exceptions(client,
     assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})).status_code == 200
     r = await _use(client, cid, LOH, amount=5, params={"mode": "cure_self"})
     assert r.status_code == 200, r.text
-    assert r.json()["notes"] == ["lay_on_hands_cure_self"] and r.json()["healed"] == 0
+    assert r.json()["notes"] == [] and r.json()["healed"] == 0
+    assert "malattia" in " ".join(x["it"] for x in r.json()["removal"]).lower()  # la malattia resta una nota visibile
     assert not (await _full(client, cid))["conditions"].get("poisoned")
     assert await _pool(client, cid) == 20
 
@@ -130,19 +131,19 @@ async def test_cure_on_yourself_without_poison_still_spends_for_a_disease_and_le
     cid = await _paladin(client, 5)
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"blinded": True}})
     r = await _use(client, cid, LOH, amount=10, params={"mode": "cure_self"})
-    assert r.status_code == 200 and r.json()["notes"] == ["lay_on_hands_cure_self"]
+    assert r.status_code == 200 and r.json()["notes"] == [] and r.json()["removal"]
     assert (await _full(client, cid))["conditions"].get("blinded") is True and await _pool(client, cid) == 15
 
 
-async def test_cure_on_an_ally_writes_nothing_on_their_sheet_and_tells_the_player(client, test_session_factory):
+async def test_cure_on_an_ally_removes_the_poison_from_their_sheet_task48(client, test_session_factory):
     _, paladin, hero = await _table(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 5, conditions={"poisoned": True})
     as_user(GM_ID)
     r = await _give(client, paladin, hero, 5, mode="cure_other")
     assert r.status_code == 200, r.text
-    assert r.json()["notes"] == ["lay_on_hands_cure_other"] and r.json()["received"] is None
+    assert r.json()["notes"] == [] and r.json()["received"] is None  # Task 48: la condizione si scrive (prima era una nota)
     assert await _pool(client, paladin) == 20
-    assert await _hero_state(test_session_factory, hero) == (5, {"poisoned": True})
+    assert await _hero_state(test_session_factory, hero) == (5, {"poisoned": False})
 
 
 @pytest.mark.parametrize("mode", ["cure_self", "cure_other"])

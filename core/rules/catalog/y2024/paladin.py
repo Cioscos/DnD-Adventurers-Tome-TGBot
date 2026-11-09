@@ -16,6 +16,7 @@ from core.rules.catalog._common import FIGHTING_STYLE_GROUP, feature, style_opti
 from core.rules.catalog.y2014.paladin import SAVE_ROLLS, _aura_range, _cha_bonus, _cha_mod, _permanent_note, _say, _spell_dc
 from core.rules.catalog.y2024.fighter import STYLE_ROWS as FIGHTER_STYLE_ROWS, STYLES as FIGHTER_STYLES
 from core.rules.states import is_conscious
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     AuraSpec, ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice,
     UseText, UseToggle, Uses,
@@ -84,21 +85,22 @@ def _loh_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
 
 
 def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
-    """Esiti per chi usa il privilegio. Sul PG altrui si scrivono solo i PF (R42, R46): la cura di un altro è sempre una nota
-    (D1), anche con l'alleato in serata; i PF di un altro fuori serata li riporta il giocatore al GM."""
-    mode, seated = params.get("mode"), params.get("target_character_id") is not None
-    if mode == "other" and not seated:
+    """Esiti per chi usa il privilegio: i PF di un altro fuori serata li riporta il giocatore al GM."""
+    if params.get("mode") == "other" and params.get("target_character_id") is None:
         return ["lay_on_hands_other_2024"]
-    if mode == "cure_self":
-        return ["lay_on_hands_cure_self_2024"]
-    return ["lay_on_hands_cure_other_2024"] if mode == "cure_other" else []
+    return []  # le condizioni sono nel meccanismo comune (``removal``)
 
+
+_LOH_REMOVAL = ConditionRemoval(
+    tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)),
+    pick=lambda c, p: _picked(c, p) if _is_cure(p) else [],
+    who=lambda _c, p: {"cure_self": "self", "cure_other": "other"}.get(p.get("mode")))
 
 LAY_ON_HANDS_USE = OnUse(
     slot="bonus", choose_amount=True, heal=lambda _c, _r: 1, heal_when=lambda _c, p: p.get("mode") == "self",
     heal_ally_when=lambda _c, p: p.get("mode") == "other", ally_modes=("other", "cure_other"),
     amount_ok=_loh_amount_ok, check=_loh_check, notes=_loh_notes,
-    clears=lambda c, p: _picked(c, p) if p.get("mode") == "cure_self" else [],
+    removal=_LOH_REMOVAL,
     choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),),
     toggles=tuple(UseToggle(f"cure_{key}", _both(f"Togli {it}", f"Remove {en}"), available=lambda c, k=key: k in _curable(c))
                   for key, (it, en) in _CURABLE.items()))

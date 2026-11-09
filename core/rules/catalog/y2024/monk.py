@@ -22,6 +22,7 @@ from core.rules.catalog.y2014.monk import (
     _movement_bonus, _save_proficiency, _say, _technique, _till_my_next_turn, _turn, _unarmed,
 )
 from core.rules.states import begin_state
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     Cost, KiSpell, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
 )
@@ -342,7 +343,7 @@ BASE_ROWS = (
             ("Autoguarigione", "Self-Restoration"),
             ("Una volta alla fine del tuo turno togli a te stesso Affascinato, Spaventato o Avvelenato; digiuno e sete non ti danno Spossatezza.",
              "Once at the end of your turn you remove Charmed, Frightened or Poisoned from yourself; going hungry or thirsty gives you no Exhaustion."),
-            on_use=OnUse(once_per_turn=True, available=lambda c: bool(_restorable(c)), clears_condition="condition",
+            on_use=OnUse(once_per_turn=True, available=lambda c: bool(_restorable(c)), removal=ConditionRemoval(tuple(_RESTORABLE), ally=False),
                          choices=(UseChoice("condition", _both("Condizione", "Condition"), _restorable, lambda k: _RESTORABLE[k]),))),
     feature("deflect_energy", CK, ED, 13, "Deviare Energia / Deflect Energy (Monaco 13, pag. 103)", ("Deviare Energia", "Deflect Energy"),
             ("Deviare Attacchi vale per attacchi di ogni tipo di danno.", "Deflect Attacks works against attacks of any damage type."),
@@ -447,9 +448,9 @@ _CURABLE = {"blinded": _both("Accecato", "Blinded"), "deafened": _both("Assordat
 def _heal_message(_ctx: RuleContext, params: dict) -> dict[str, str]:
     if params.get("mode") == "other":
         return _both("La creatura toccata recupera i PF indicati: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."
-                     + (" La condizione scelta termina su di lei (riferiscilo al GM)." if params.get("condition") else ""),
+                     + (" La condizione scelta è tolta se hai scelto un personaggio della serata; altrimenti riferiscilo al GM." if params.get("condition") else ""),
                      "The touched creature regains the shown hit points: if it sits at the evening and you picked it, it is already healed; "
-                     "otherwise tell the GM." + (" The chosen condition ends on it (tell the GM)." if params.get("condition") else ""))
+                     "otherwise tell the GM." + (" The chosen condition is removed if you picked a character at the table; otherwise tell the GM." if params.get("condition") else ""))
     return _both("Recuperi i PF indicati.", "You regain the shown hit points.")
 
 
@@ -468,7 +469,9 @@ def _healing_use(*, slot: str | None, spends: str | None = None, in_flurry: bool
         ally_modes=("other",), once_per_turn=once,
         available=(lambda c: state_on(c, FLURRY_STATE)) if in_flurry else None,
         effect=_spend_flurry_strike if in_flurry else None, message=_heal_message,
-        clears=lambda c, p: [p["condition"]] if p.get("mode") == "self" and p.get("condition") and c.class_level >= 6 else [],
+        removal=ConditionRemoval(
+            tuple(_CURABLE), allowed=lambda c: tuple(_CURABLE) if c.class_level >= 6 else (),
+            who=lambda _c, p: {"self": "self", "other": "other"}.get(p.get("mode")) if p.get("condition") else None),
         choices=(UseChoice("mode", _both("Chi recupera i PF", "Who regains the HP"), lambda _c: list(_HEAL_MODES), lambda k: _HEAL_MODES[k]),
                  UseChoice("condition", _both("Condizione da terminare", "Condition to end"), lambda _c: list(_CURABLE),
                            lambda k: _CURABLE[k], optional=True, applies=lambda c: c.class_level >= 6)))

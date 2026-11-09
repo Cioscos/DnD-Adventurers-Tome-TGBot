@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
+from core.rules.condition_removal import ConditionRemoval
+
 Edition = Literal["2014", "2024"]
 
 
@@ -296,8 +298,8 @@ class OnUse:
     ally_count: "Callable[[RuleContext], int] | None" = None
     # Chiave dello stato di chi usa il privilegio (``rage``) con cui i PF temporanei consegnati svaniscono quando finisce
     temp_hp_ends_with: str | None = None
-    # chiave del parametro (una ``UseChoice``) che contiene la condizione da togliere a chi usa il privilegio (Mente Lucida)
-    clears_condition: str | None = None
+    # Condizioni che l'uso toglie, a sé o a un PG della serata (Task 48): il meccanismo comune a privilegi e incantesimi
+    removal: "ConditionRemoval | None" = None
     # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki) e dadi che dipendono da quanti se ne spendono: la formula
     # ``f(ctx, spesi) -> "NdM"`` sostituisce ``rolls`` e non si ripete per unità
     min_amount: int = 1

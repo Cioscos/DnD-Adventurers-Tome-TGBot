@@ -208,16 +208,16 @@ async def test_lay_on_hands_heals_a_seated_ally_and_spends_the_pool_and_the_bonu
     assert (await _hero_state(test_session_factory, hero))[0] == 13
 
 
-async def test_a_cure_on_a_seated_ally_never_writes_their_conditions_it_is_a_note_for_the_gm(client, test_session_factory):
-    """R42/R46: sul PG altrui si scrivono solo i PF; le condizioni le toglie il giocatore, e l'esito è sempre un messaggio."""
+async def test_a_cure_on_a_seated_ally_removes_only_the_chosen_condition_task48(client, test_session_factory):
+    """Task 48 (estende R42): sul PG della serata si tolgono le condizioni scelte e ammesse, non i PF né altro."""
     _, paladin, hero = await _table24(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 20, conditions={"poisoned": True, "prone": True})
     as_user(GM_ID)
     r = await _give(client, paladin, hero, 5, mode="cure_other", cure_poisoned=True)
     assert r.status_code == 200, r.text
-    assert r.json()["notes"] == ["lay_on_hands_cure_other_2024"]
+    assert r.json()["notes"] == [] and r.json()["removal"]
     hp, conditions = await _hero_state(test_session_factory, hero)
-    assert hp == 20 and conditions.get("poisoned") is True and conditions.get("prone") is True
+    assert hp == 20 and conditions.get("poisoned") is False and conditions.get("prone") is True
     assert await _pool(client, paladin) == 20
 
 
@@ -225,7 +225,7 @@ async def test_a_cure_on_someone_outside_the_evening_is_a_note_for_the_gm(client
     _, paladin, _ = await _table24(client, test_session_factory, level=5)
     as_user(GM_ID)
     r = await _give(client, paladin, None, 5, mode="cure_other", cure_poisoned=True)
-    assert r.status_code == 200 and r.json()["notes"] == ["lay_on_hands_cure_other_2024"]
+    assert r.status_code == 200 and "Da togliere alla creatura" in r.json()["removal"][0]["it"]
     assert await _pool(client, paladin) == 20
 
 

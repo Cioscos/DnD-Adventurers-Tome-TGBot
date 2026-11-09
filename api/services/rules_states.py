@@ -13,6 +13,7 @@ from api.services.dice_stats import record_dice
 from api.services.rules_turn import (
     attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
 )
+from api.services.condition_removal import apply_removal, plan
 from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
@@ -275,6 +276,7 @@ class UseResult:
     targets: list[str] = field(default_factory=list)  # chiavi per ``POST /target-effects``
     given: int | None = None  # valore da dare a un altro (``OnUse.gives``): l'app lo mostra e non scrive nulla
     received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): ``{name, healed}``
+    removal: list[dict] = field(default_factory=list)  # esiti di ``OnUse.removal`` nelle due lingue (Task 48)
     temp_received: list[dict] = field(default_factory=list)  # chi ha ricevuto PF temporanei: ``{name, given, temp_hp, applied}``
     temp_hp: int | None = None  # PF temporanei che il privilegio ha dato a chi lo usa (il maggiore fra attuali e nuovi)
     message: dict | None = None  # esito scritto dal privilegio (``OnUse.message``), nelle due lingue
@@ -293,6 +295,19 @@ def _feature_attack(char, ability: str) -> dict:
     fumble = outcome.kept == 1
     return {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "bonus": bonus, "total": outcome.kept + bonus,
             "is_fumble": fumble, "is_critical": outcome.kept >= applied.crit_min and not fumble, "notes": applied.notes}
+
+
+def _plan_removal(ctx: RuleContext, rm, params: dict) -> tuple[list[str], list[str], str] | None:
+    """``(condizioni, voci non tracciate, "self"|"other")`` che quest'uso toglie, o ``None`` se non toglie nulla (modalità senza
+    rimozione, scelta facoltativa lasciata vuota). 422 se la scelta non è ammessa dalla regola."""
+    who = rm.who(ctx, params) if rm.who else "self"
+    if who is None or (who == "other" and not rm.ally):
+        return None
+    picks = rm.pick(ctx, params) if rm.pick else ([params["condition"]] if params.get("condition") else None)
+    if not picks:
+        return None
+    conds, untracked = plan(rm, picks, rm.allowed_for(ctx))
+    return conds, untracked, who
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -356,6 +371,11 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await ally_target(session, char, params["target_character_id"])
         if on_use.ally_needs_zero_hp and target.current_hit_points > 0:
             raise _err(status.HTTP_409_CONFLICT, "target_not_down")
+    removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
+    if on_use.removal is not None:
+        removal_plan = _plan_removal(ctx_choice, on_use.removal, params or {})
+        if removal_plan is not None and removal_plan[2] == "other" and target is None and (params or {}).get("target_character_id") is not None:
+            target = await ally_target(session, char, params["target_character_id"])
     temp_targets: list[Character] = []
     if on_use.temp_hp_ally:  # PF temporanei a PG della serata (Task 46): tutti validati prima di spendere qualcosa
         wanted = (params or {}).get("target_character_ids")
@@ -456,6 +476,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                     await _conditions(session, target, {"prone": False})
             got = (await apply_heal(session, target, healed_ally))["healed"]
             result.received = {"name": target.name, "healed": got}
+    if removal_plan is not None:  # dopo la spesa atomica: lo stesso uso non può togliere due volte
+        conds, untracked, who = removal_plan
+        result.removal = await apply_removal(session, char, on_use.removal, conds, untracked,
+                                             [char] if who == "self" else [target], explicit=True)
     if on_use.clears:
         from api.services.effects import apply_conditions  # import locale, come sopra
         removed = {c: False for c in on_use.clears(ctx, params or {}) if (char.conditions or {}).get(c)}
@@ -493,9 +517,6 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         state_spec = on_use.state(ctx, given) if callable(on_use.state) else on_use.state
         if state_spec is not None:  # ``None``: l'uso non avvia nulla (il prolungamento dell'Ira)
             result.state = start_state(target if target is not None else char, state_spec, feature_key, name)
-    if on_use.clears_condition and (params or {}).get(on_use.clears_condition) is not None:  # Mente Lucida: la condizione scelta cade
-        from api.services.effects import apply_conditions  # import locale: effects richiama on_conditions
-        await apply_conditions(session, char, {params[on_use.clears_condition]: False})
     if on_use.ends_state and has_state(char, on_use.ends_state):  # già finito (Duplicato Migliorato dopo la fine): niente da chiudere
         remove_state(char, on_use.ends_state)
     if on_use.target_effect and (effect := on_use.target_effect(ctx, params or {})) is not None:  # ``None``: questa scelta non ha effetto sugli altri

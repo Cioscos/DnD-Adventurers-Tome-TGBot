@@ -255,6 +255,8 @@ class CharacterFull(BaseModel):
     option_result: OptionResult | None = absent_when_none()
     # POST /spells/{id}/use: l'incantesimo ha dadi di danno che il server non sa tirare (si lancia lo stesso, senza danno)
     damage_unrollable: bool = False
+    # POST /spells/{id}/use: esiti delle condizioni tolte (Task 48), nelle due lingue
+    removal_result: list[dict[str, str]] | None = absent_when_none()
 
     has_custom_silhouette: bool = False
 

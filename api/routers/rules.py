@@ -344,6 +344,7 @@ class FeatureUseResult(BaseModel):
     temp_received: list[dict] = []  # PF temporanei consegnati ad altri PG: name, given, temp_hp (ora sulla scheda), applied
     message: dict[str, str] | None = None  # esito scritto dal privilegio, nelle due lingue
     attack: dict | None = None  # tiro per colpire di un privilegio che attacca (Arciere): die, bonus, total, is_critical, is_fumble
+    removal: list[dict[str, str]] = []  # esiti delle condizioni tolte (Task 48), nelle due lingue
 
 
 _FEATURE_LOCKS: defaultdict[tuple[int, int], asyncio.Lock] = defaultdict(asyncio.Lock)  # (event loop, personaggio)
@@ -361,7 +362,7 @@ async def feature_use(
         res = await use_feature(db, char, feature_key, body.amount, body.params)
         await db.commit()
     return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets,
-                            given=res.given, received=res.received, temp_hp=res.temp_hp, temp_received=res.temp_received, message=res.message, attack=res.attack)
+                            given=res.given, received=res.received, temp_hp=res.temp_hp, temp_received=res.temp_received, message=res.message, attack=res.attack, removal=res.removal)
 
 
 class PreserveLifeBody(BaseModel):
