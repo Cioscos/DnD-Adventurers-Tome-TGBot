@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from core.db.models import Character, CharacterHistory, SessionParticipant, SessionRole
+from core.db.models import Ability, Character, CharacterHistory, SessionParticipant, SessionRole
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard import _ability, _full
 from tests.integration.rules.test_2024_warlock import TOME, _caster24
@@ -129,3 +129,27 @@ async def test_a_blow_that_kills_outright_is_not_offered_the_gift(client, test_s
     assert key not in await _offered(client, hero, PLAYER_ID, damage=85)
     as_user(GM_ID)
     assert "warlock.gift_of_the_protectors" not in await _offered(client, cid, GM_ID, damage=1000)
+
+
+async def test_the_refund_is_one_atomic_update_capped_at_max_uses(client, test_session_factory):
+    from api.services.session_allies import refund_donor_tokens
+    cid, hero, key = await _table(client, test_session_factory)
+    async with test_session_factory() as s:
+        row = (await s.execute(select(Ability).where(Ability.character_id == cid, Ability.feature_key == GIFT))).scalar_one()
+        row_id, row.max_uses, row.uses = row.id, 2, 0
+        await s.commit()
+    token = f"donor:{cid}:{row_id}:1"
+    async with test_session_factory() as stale, test_session_factory() as other:
+        receiver = await stale.get(Character, hero)
+        assert (await stale.get(Ability, row_id)).uses == 0  # la riga letta resta ferma a 0
+        (await other.get(Ability, row_id)).uses = 1  # un'altra richiesta intanto ha già restituito un uso
+        await other.commit()
+        await refund_donor_tokens(stale, receiver, [token])
+        await stale.commit()
+    async with test_session_factory() as s:
+        assert (await s.get(Ability, row_id)).uses == 2  # 1 + 1: niente aggiornamento perso
+        await refund_donor_tokens(s, receiver, [token])  # un terzo rimborso non supera il tetto
+        await s.commit()
+        assert (await s.get(Ability, row_id)).uses == 2
+        theirs = (await s.execute(select(CharacterHistory).where(CharacterHistory.character_id == cid))).scalars().all()
+    assert any("uso restituito" in e.description for e in theirs)

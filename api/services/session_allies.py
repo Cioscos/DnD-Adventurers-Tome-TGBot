@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -79,19 +79,21 @@ async def spend_donor_tokens(session: AsyncSession, receiver: Character, spent: 
     return donors
 
 
-async def donor_rows_for_undo(session: AsyncSession, receiver: Character, spent: list[str]) -> dict[int, Ability]:
-    """Le righe dei donatori dei gettoni ``donor:`` annullati, per ``refund_spent``; scrive lo storico sul donatore."""
-    rows: dict[int, Ability] = {}
+async def refund_donor_tokens(session: AsyncSession, receiver: Character, spent: list[str]) -> None:
+    """Rimette sulle schede dei donatori gli usi dei gettoni ``donor:`` annullati, con un UPDATE atomico
+    (``uses = MIN(max_uses, uses + n)``, come la spesa); scrive lo storico sul donatore."""
     for token in (t for t in spent if t.startswith("donor:")):
-        _, donor_id, row_id, _ = token.split(":")
+        _, donor_id, row_id, amount = token.split(":")
         row = await session.get(Ability, int(row_id))
         if row is None or row.character_id != int(donor_id):
             continue
-        rows[row.id] = row
+        await session.execute(
+            update(Ability).where(Ability.id == row.id, Ability.max_uses.is_not(None))
+            .values(uses=func.min(Ability.max_uses, func.coalesce(Ability.uses, 0) + int(amount))))
+        await session.refresh(row)
         session.add(CharacterHistory(
             character_id=row.character_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
             description=f"{row.name or row.feature_key}: uso restituito, il danno di {receiver.name} è stato annullato"))
-    return rows
 
 
 async def ally_target(session: AsyncSession, char: Character, target_id: object) -> Character:

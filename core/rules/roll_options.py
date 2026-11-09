@@ -564,9 +564,9 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     return out
 
 
-def refund_spent(char: Any, spent: list[str], donor_rows: dict[int, Any] | None = None) -> None:
+def refund_spent(char: Any, spent: list[str]) -> None:
     """Restituisce ciò che ``_spend`` ha pagato, a partire dai suoi gettoni. I gettoni ``donor:`` toccano la riga di un'altra
-    scheda: si rimborsano solo se il chiamante passa quelle righe (``donor_rows``, per id), come fa l'annullamento del danno."""
+    scheda e li rimborsa il server con un UPDATE atomico (``refund_donor_tokens``): qui sono ignorati."""
     turn = _turn(char)
     for token in spent:
         kind, _, rest = token.partition(":")
@@ -598,10 +598,6 @@ def refund_spent(char: Any, spent: list[str], donor_rows: dict[int, Any] | None 
             char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), state]
             if state.get("condition"):  # lo stato rimesso rimette anche la condizione che imponeva
                 char.conditions = {**(char.conditions or {}), state["condition"]: True}
-        elif kind == "donor":
-            row = (donor_rows or {}).get(int(rest.split(":")[1]))
-            if row is not None and row.max_uses is not None:
-                row.uses = min(row.max_uses, (row.uses or 0) + int(rest.split(":")[2]))
         elif kind == "die":
             key, _, value = rest.rpartition(":")
             _store_saved_dice(char, key, [*saved_dice(char, key), int(value)])

@@ -244,6 +244,10 @@ async def test_undoing_the_damage_that_ended_the_rage_gives_back_the_life_giving
     undone = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": hurt.json()["hp_undo_id"]})
     assert undone.status_code == 200, undone.text
     assert await _temp(client, hero) == 10
+    as_user(PLAYER_ID)
+    history = (await client.get(f"/characters/{hero}/history")).json()
+    assert any("PF temporanei tornati" in e["description"] and "0 → 10" in e["description"] for e in history)
+    as_user(GM_ID)
     await _end_rage(client, cid, "manual")  # e la consegna è di nuovo legata all'Ira
     assert await _temp(client, hero) == 0
 
