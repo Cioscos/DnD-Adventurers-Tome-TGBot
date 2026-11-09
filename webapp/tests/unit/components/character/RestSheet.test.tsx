@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import RestSheet from '@/components/character/RestSheet'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, rest, restPreview, notifyMutationError, toastError, toastSuccess, featureUse, endActiveState } = vi.hoisted(() => ({
+const { spendHitDice, rest, restPreview, notifyMutationError, toastError, toastSuccess, toastInfo, featureUse, endActiveState } = vi.hoisted(() => ({
   featureUse: vi.fn(),
   endActiveState: vi.fn(),
   spendHitDice: vi.fn(),
@@ -14,6 +14,7 @@ const { spendHitDice, rest, restPreview, notifyMutationError, toastError, toastS
   notifyMutationError: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+  toastInfo: vi.fn(),
 }))
 
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
@@ -22,7 +23,7 @@ vi.mock('@/api/client', async (orig) => {
   return { ...actual, api: { characters: { spendHitDice, rest, restPreview, featureUse, endActiveState } } }
 })
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
-vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: toastSuccess }) }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: toastSuccess, info: toastInfo }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -92,6 +93,24 @@ describe('RestSheet short rest', () => {
     expect(qc.getQueryData(['character', 7])).toEqual(updated)
     expect(toastSuccess).toHaveBeenCalledWith('character.quick_actions.rest_done')
     expect(screen.queryByTestId('hit-dice-modal')).toBeNull()
+  })
+
+  it('a refused receiver shows the rule message, not the connection one', async () => {
+    const { ApiError } = await import('@/api/client')
+    rest.mockRejectedValue(new ApiError(409, { code: 'target_dead' }))
+    setup()
+    await openShortRest()
+    await userEvent.click(screen.getByText('rest'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.target_dead'))
+    expect(notifyMutationError).not.toHaveBeenCalled()
+  })
+
+  it('a receiver that keeps higher temporary HP gets a rest message without "the use is spent"', async () => {
+    rest.mockResolvedValue({ ...char, temp_received: [{ name: 'Brun', given: 7, temp_hp: 20, applied: false }] })
+    setup()
+    await openShortRest()
+    await userEvent.click(screen.getByText('rest'))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.quick_actions.rest_temp_kept'))
   })
 
   it('2024: offers the interrupted question and sends it', async () => {

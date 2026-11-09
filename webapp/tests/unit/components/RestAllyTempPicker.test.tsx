@@ -25,6 +25,13 @@ describe('RestAllyTempPicker', () => {
     expect(onChange).toHaveBeenCalledWith([])
   })
 
+  it('does not offer a dead creature (the server would refuse the rest)', async () => {
+    sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun', dead: true }, { id: 32, name: 'Lia', dead: false }])
+    renderWithProviders(<RestAllyTempPicker char={char({ gives_to_ally: true, ally_max: 2 })} value={[]} onChange={() => {}} />)
+    expect(await screen.findByRole('switch', { name: 'Lia' })).toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: 'Brun' })).toBeNull()
+  })
+
   it('shows nothing for a warlock that is not Celestial (Magical Cunning gives nothing to allies)', () => {
     renderWithProviders(<RestAllyTempPicker char={char({ gives_to_ally: false })} value={[]} onChange={() => {}} />)
     expect(screen.queryByTestId('rest-ally-temp')).toBeNull()

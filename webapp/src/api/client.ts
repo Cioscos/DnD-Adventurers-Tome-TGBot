@@ -720,7 +720,7 @@ export const api = {
         method: 'POST', body: JSON.stringify(params ? { amount, params } : { amount }),
       }),
     /** Gli altri personaggi seduti alla stessa serata attiva (vuoto fuori serata). */
-    sessionAllies: (id: number) => request<{ id: number; name: string; die?: number | null }[]>(`/characters/${id}/session-allies`),
+    sessionAllies: (id: number) => request<{ id: number; name: string; die?: number | null; dead?: boolean }[]>(`/characters/${id}/session-allies`),
     /** Preservare Vita: la riserva e il tetto di ciascun destinatario, calcolati dal server. */
     preserveLifeInfo: (id: number) =>
       request<{ pool: number; uses_left: number | null; targets: { id: number; name: string; cap: number; self: boolean }[]; needs_confirm: boolean }>(`/characters/${id}/preserve-life`),

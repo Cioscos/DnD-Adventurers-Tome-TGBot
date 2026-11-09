@@ -65,9 +65,10 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     # max(old, ...): una cura non abbassa mai i PF.
     char.current_hit_points = max(old, min(effective_max, char.current_hit_points + amount))
     healed = char.current_hit_points - old
-    _add_history(session, char.id, "hp_change",
-                 f"Cura: +{amount} HP ({old} → {char.current_hit_points})",
-                 meta={"op": "HEAL", "amount": healed})
+    if amount > 0:  # una cura da 0 non è un evento da ricordare
+        _add_history(session, char.id, "hp_change",
+                     f"Cura: +{amount} HP ({old} → {char.current_hit_points})",
+                     meta={"op": "HEAL", "amount": healed})
     firing = await dispatch(session, char, "hp_healed", {
         "amount": amount,
         "current_hp_before": old,

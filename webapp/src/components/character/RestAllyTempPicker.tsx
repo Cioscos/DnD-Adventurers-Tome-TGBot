@@ -13,7 +13,8 @@ interface Props { char: CharacterFull; value: number[]; onChange: (next: number[
 export default function RestAllyTempPicker({ char, value, onChange }: Props) {
   const { t } = useTranslation()
   const max = (char.abilities ?? []).find((a) => a.feature_key === CUNNING && a.gives_to_ally)?.ally_max ?? 0
-  const { data: allies = [] } = useQuery({ queryKey: ['session-allies', char.id], queryFn: () => api.characters.sessionAllies(char.id), enabled: max > 0 })
+  const { data: everyone = [] } = useQuery({ queryKey: ['session-allies', char.id], queryFn: () => api.characters.sessionAllies(char.id), enabled: max > 0 })
+  const allies = everyone.filter((a) => !a.dead)  // il server rifiuta il riposo se un ricevente è morto
   if (max < 1 || allies.length === 0) return null
   const toggle = (id: number, on: boolean) => onChange(on ? (value.length < max ? [...value, id] : value) : value.filter((x) => x !== id))
   return (

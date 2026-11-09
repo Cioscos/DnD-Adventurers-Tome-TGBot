@@ -71,7 +71,7 @@ from api.routers._helpers import (
 from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    ZERO_HP_USES, begin_state, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    TEMP_GIVEN, ZERO_HP_USES, begin_state, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext
 from api.services.character_response import build_character_response
@@ -149,7 +149,7 @@ async def _get_owned_full(
     return char
 
 
-_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES)  # + il conteggio di Ira Implacabile
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES, TEMP_GIVEN)  # + il conteggio di Ira Implacabile
 
 
 def _hp_state(char: Character, form=None) -> dict:
@@ -579,6 +579,16 @@ async def undo_hp(
     await release_concentration_effects(session, char)
     refund_spent(char, snap.get("spent") or [], await donor_rows_for_undo(session, char, snap.get("spent") or []))
     settings = dict(char.settings or {})
+    still_given = settings.get(TEMP_GIVEN) or {}
+    for key, entries in (before.get(TEMP_GIVEN) or {}).items():  # l'Ira chiusa dal danno riapre: tornano i PF temporanei dati con essa
+        if key in still_given or not has_state(char, key):
+            continue
+        for entry in entries:
+            receiver = await session.get(Character, entry["id"])
+            if receiver is not None and (receiver.temp_hp or 0) < entry["amount"]:
+                _add_history(session, receiver.id, "hp_change", f"PF temporanei tornati: il danno di {char.name} è stato annullato ({receiver.temp_hp or 0} → {entry['amount']})",
+                             meta={"op": "TEMP_HP", "amount": entry["amount"], "restored": True})
+                receiver.temp_hp = entry["amount"]
     for k in _CONC_SETTINGS:
         if before[k] is None:
             settings.pop(k, None)

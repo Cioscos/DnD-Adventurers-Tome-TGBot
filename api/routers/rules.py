@@ -490,6 +490,7 @@ class AllyRead(BaseModel):
     id: int
     name: str
     die: int | None = None  # il dado di Ispirazione che ha già: darne un altro lo sostituisce
+    dead: bool = False  # un morto non riceve cure né PF temporanei: i selettori non lo offrono
 
 
 @turn_router.get("/{char_id}/session-allies", response_model=list[AllyRead])
@@ -503,7 +504,7 @@ async def session_allies(
         die = ((state or {}).get("data") or {}).get("die")
         return die if isinstance(die, int) else None
 
-    return [AllyRead(id=a.id, name=a.name, die=held(a))
+    return [AllyRead(id=a.id, name=a.name, die=held(a), dead=a.is_dead)
             for a in await seated_allies(db, char)]
 
 

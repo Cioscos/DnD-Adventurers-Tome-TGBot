@@ -66,11 +66,14 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
       }),
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
+      const code = (detail as { code?: string } | null)?.code
       if (detail === 'long_rest_too_soon') {
         setConfirmLongRest(false)
         setTooSoon(true)
       } else if (detail === 'rest_needs_hp') {
         toast.error(t('character.quick_actions.rest_needs_hp'))
+      } else if (code === 'invalid_target' || code === 'target_dead') {
+        toast.error(t(`character.turn.use_errors.${code}`))
       } else {
         notifyMutationError()
       }
@@ -92,7 +95,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
       onDone?.()
       toast.success(t('character.quick_actions.rest_done'))
       for (const r of updated.temp_received ?? []) {  // il server dice se i PF temporanei sono saliti o se l'altro ne aveva di più
-        toast.info(t(r.applied ? 'character.turn.use_temp_received' : 'character.turn.use_temp_kept', { name: r.name, n: r.given, have: r.temp_hp }))
+        toast.info(t(r.applied ? 'character.turn.use_temp_received' : 'character.quick_actions.rest_temp_kept', { name: r.name, n: r.given, have: r.temp_hp }))
       }
       haptic.success()
     },

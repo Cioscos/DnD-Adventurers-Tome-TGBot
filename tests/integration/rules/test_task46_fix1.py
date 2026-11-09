@@ -233,6 +233,33 @@ async def test_life_giving_temporary_hp_vanish_when_the_rage_ends(client, test_s
     assert any("Ira" in e["description"] for e in (await client.get(f"/characters/{hero}/history")).json())
 
 
+async def test_undoing_the_damage_that_ended_the_rage_gives_back_the_life_giving_points(client, test_session_factory):
+    _sid, cid, hero = await _table(client, test_session_factory, _life)
+    await _give_life(client, cid, hero)
+    as_user(GM_ID)
+    hurt = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 999})
+    assert hurt.status_code == 200, hurt.text
+    assert await _temp(client, hero) == 0  # l'Ira è finita con i 0 PF
+    as_user(GM_ID)
+    undone = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": hurt.json()["hp_undo_id"]})
+    assert undone.status_code == 200, undone.text
+    assert await _temp(client, hero) == 10
+    await _end_rage(client, cid, "manual")  # e la consegna è di nuovo legata all'Ira
+    assert await _temp(client, hero) == 0
+
+
+async def test_session_allies_say_who_is_dead(client, test_session_factory):
+    from sqlalchemy import update
+    from core.db.models import Character
+    _sid, cid, hero = await _table(client, test_session_factory, _life)
+    async with test_session_factory() as db:
+        await db.execute(update(Character).where(Character.id == hero).values(is_dead=True))
+        await db.commit()
+    as_user(GM_ID)
+    allies = (await client.get(f"/characters/{cid}/session-allies")).json()
+    assert {a["id"]: a["dead"] for a in allies}[hero] is True
+
+
 async def test_what_is_left_of_the_life_giving_points_vanishes_too(client, test_session_factory):
     _sid, cid, hero = await _table(client, test_session_factory, _life)
     await _give_life(client, cid, hero)
