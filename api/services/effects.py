@@ -9,7 +9,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import event, inspect
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_object_session
+from sqlalchemy.util import await_only
 from sqlalchemy.orm import Session
 
 from core.db.models import Character, CharacterHistory
@@ -17,6 +18,7 @@ from core.data.labels import condition_label
 from api.services.condition_effects import clear_effects_for, release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
+from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
@@ -51,12 +53,27 @@ async def cap_current_hp(session: AsyncSession, char: Character) -> None:
         char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 
 
-def cap_hp_to_max(char: Character) -> None:
-    """Finito un effetto che alzava il massimo (Aiuto, Banchetto degli Eroi) i PF attuali non lo superano.
+def raises_hp_max(closed: list[dict]) -> bool:
+    """Tra gli stati chiusi c'è un incantesimo che alzava i PF massimi (Aiuto, Banchetto degli Eroi)."""
+    for state in closed:
+        data = state.get("data") or {}
+        effect = SPELL_EFFECTS.get(data.get("spell_key") or str(state.get("key", ""))[len(SPELL_STATE_PREFIX):])
+        variant = effect and effect.variants.get(data.get("edition", "2014"))
+        if variant and any(m.target == "hp_max" for m in variant.modifiers(data)):
+            return True
+    return False
 
-    shortcut: il massimo è quello delle regole senza il bonus homebrew (qui non c'è un accesso asincrono al database); da rivedere se serve."""
-    if char.hit_points > 0:
-        char.current_hit_points = min(char.current_hit_points, effective_hp_max(char))
+
+def cap_hp_to_max(char: Character, closed: list[dict], bonus: int | None = None) -> None:
+    """Finito un effetto che alzava il massimo (Aiuto, Banchetto degli Eroi) i PF attuali non lo superano; per gli altri non cambia nulla.
+
+    ``bonus`` è il bonus PF homebrew; ``None`` lo legge dal database (solo dentro il flush, dove la greenlet permette l'attesa)."""
+    if not raises_hp_max(closed) or char.hit_points <= 0:
+        return
+    if bonus is None:
+        aio = async_object_session(char)
+        bonus = await_only(get_passive_modifiers(aio, char, "character.hit_points_max")) if aio is not None else 0
+    char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 
 
 async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dict:
@@ -252,7 +269,7 @@ def _drop_given_spells(session: Session, char: Character) -> None:
         if len(kept) != len(states):
             receiver.active_states = kept
             settle_closed(receiver, [x for x in states if x not in kept])  # la condizione imposta (Invisibile) cade con lo stato
-            cap_hp_to_max(receiver)
+            cap_hp_to_max(receiver, [x for x in states if x not in kept])
 
 
 def _end_spent_spells(session: Session, char: Character) -> None:

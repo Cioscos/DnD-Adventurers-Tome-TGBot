@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.spell import SpellEffectsRead
 from api.services.effects import apply_heal, cap_hp_to_max, grant_temp_hp
+from api.services.homebrew.passive import get_passive_modifiers
 from api.services.session_allies import ally_target
 from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
 from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
@@ -89,13 +90,13 @@ async def validate_spell_targets(session: AsyncSession, caster: Character, spell
     return resolved and resolved[:3]
 
 
-def _drop_state(target: Character, key: str, caster_id: int) -> None:
+async def _drop_state(session: AsyncSession, target: Character, key: str, caster_id: int) -> None:
     states = target.active_states or []
     kept = [s for s in states if not (s.get("key") == key and (s.get("data") or {}).get("caster_id") == caster_id)]
     if len(kept) != len(states):
         target.active_states = kept
         settle_closed(target, [s for s in states if s not in kept])  # la condizione imposta (Invisibile) cade con lo stato
-        cap_hp_to_max(target)
+        cap_hp_to_max(target, [s for s in states if s not in kept], await get_passive_modifiers(session, target, "character.hit_points_max"))
 
 
 def _stateful(variant: SpellVariant, data: dict) -> bool:
@@ -148,7 +149,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     for old in set(given.get(clock, [])) - {c.id for c in chars}:  # lanciato di nuovo su altri: i vecchi bersagli lo perdono
         previous = caster if old == caster.id else await session.get(Character, old)
         if previous is not None:
-            _drop_state(previous, key, caster.id)
+            await _drop_state(session, previous, key, caster.id)
     applied = []
     for target in chars:
         mine = {**data, **(variant.per_target(data) if variant.per_target else {})}

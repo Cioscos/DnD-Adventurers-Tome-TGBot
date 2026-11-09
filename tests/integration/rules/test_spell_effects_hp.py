@@ -216,6 +216,40 @@ async def test_aid_raises_current_hp_too_and_the_end_caps_them_at_the_old_maximu
     assert sheet["computed"]["hp_max_effective"] == 200 and sheet["current_hit_points"] == 200
 
 
+async def _homebrew_hp(client, cid, bonus, user=PLAYER_ID) -> None:
+    as_user(user)
+    rule = {"name": "PF extra", "enabled": True, "dsl": {"version": 1, "subject": {"type": "character"}, "triggers": [], "passive_modifiers": [{
+        "when": {"path": "$character.id", "op": "gt", "value": 0}, "target": "character.hit_points_max", "value": bonus,
+        "label_i18n": {"it": "PF extra", "en": "HP bonus"}}]}}
+    assert (await client.post(f"/characters/{cid}/homebrew/rules", json=rule)).status_code in (200, 201)
+
+
+async def _caster_long_rest(client, caster) -> None:
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/rest", json={"rest_type": "long"})).status_code == 200
+
+
+async def test_ending_a_spell_without_hp_max_keeps_the_homebrew_hp_bonus(client, test_session_factory):
+    """I3: la fine di Benedizione non tocca i PF attuali, nemmeno quelli oltre il massimo delle regole."""
+    hero, caster, spell = await _table(client, test_session_factory, "Bless", "bless", 1)
+    await _hp(client, caster, 30, 30)
+    await _homebrew_hp(client, hero, 10)
+    await _hp(client, hero, 210, user=PLAYER_ID)
+    await _cast(client, caster, spell, [hero], level=1)
+    await _caster_long_rest(client, caster)
+    assert (await _sheet(client, hero))["current_hit_points"] == 210
+
+
+async def test_ending_aid_caps_current_hp_at_the_maximum_including_the_homebrew_bonus(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Aid", "aid", 2)
+    await _hp(client, caster, 30, 30)
+    await _homebrew_hp(client, hero, 10)
+    await _cast(client, caster, spell, [hero], level=2)
+    await _hp(client, hero, 215, user=PLAYER_ID)
+    await _caster_long_rest(client, caster)
+    assert (await _sheet(client, hero))["current_hit_points"] == 210  # 200 + 10, non 200
+
+
 async def test_heroes_feast_rolls_2d10_for_maximum_and_current(client, test_session_factory, monkeypatch):
     _max_dice(monkeypatch)
     hero, caster, spell = await _table(client, test_session_factory, "Heroes' Feast", "heroes-feast", 6)
