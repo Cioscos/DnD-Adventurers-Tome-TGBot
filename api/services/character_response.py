@@ -30,7 +30,7 @@ from core.rules.edition import character_edition
 from core.rules.types import RuleContext
 from core.rules.uses import pool_key
 from core.rules.modifiers import (
-    effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
+    ac_delta, effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
 from core.game.stats import effective_ability_mod, effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import initiative_bonus
@@ -81,7 +81,7 @@ async def build_character_response(
         magic=char.magic_armor,
         homebrew=hb_ac,
         items=item_bonus_total(char.items, "ac"),
-        rules=modifiers_for(char, "ac").flat,
+        rules=ac_delta(char, response.ac),
     )
     response.ac += response.ac_breakdown.rules
 

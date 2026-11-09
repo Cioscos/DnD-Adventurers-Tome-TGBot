@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.effects import apply_heal
 from api.services.rules_turn import get_turn, set_start_heal
+from api.services.spell_hp import spell_turn_start
 from core.db.models import Character
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
@@ -39,5 +40,8 @@ async def apply_turn_start(session: AsyncSession, char: Character, in_encounter:
             notices.append({"feature_key": spec.key, "name": spec.name, "amount": 0, "message": {
                 "it": "Guerriero Eroico: all'inizio del turno ottieni l'Ispirazione Eroica.",
                 "en": "Heroic Warrior: at the start of your turn you gain Heroic Inspiration."}})
+    spell_healed, spell_notices = await spell_turn_start(session, char)  # Rigenerazione, Aura di Vita, Eroismo
+    healed += spell_healed
+    notices += spell_notices
     set_start_heal(char, notices)
     return healed

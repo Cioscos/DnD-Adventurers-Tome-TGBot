@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from core.data.damage_types import DAMAGE_TYPES
-from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
+from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant, roll
 from core.rules.types import Modifier, RollOptionSpec, RuleContext
 
 SAVES = ("save", "death_save", "concentration")
@@ -50,8 +50,9 @@ _STONESKIN_2024 = SpellVariant(modifiers=res(*PHYSICAL), concentration=True, rou
 
 _AURA_LIFE = SpellVariant(
     modifiers=res("necrotic"), concentration=True, rounds=MIN10,
-    text=txt("PF massimi non riducibili e 1 PF a inizio turno a chi è a 0 PF: li applica il GM.",
-             "Hit point maximum can't be reduced and 1 HP at the start of the turn at 0 HP: the GM applies them."))
+    turn_heal=lambda d, c: 1 if c.current_hit_points == 0 and not c.is_dead else 0,  # a 0 PF recupera 1 PF a inizio turno
+    text=txt("PF massimi non riducibili: lo applica il GM. A 0 PF recuperi 1 PF a inizio turno (automatico).",
+             "Hit point maximum can't be reduced: the GM applies it. At 0 HP you regain 1 HP at the start of your turn (automatic)."))
 
 _PURITY_OPTION = confirm_save("aura_of_purity", txt(
     "Aura di Purezza: il TS è contro accecato, affascinato, assordato, avvelenato, paralizzato, spaventato o stordito?",
@@ -73,8 +74,11 @@ _FIRE_SHIELD = SpellVariant(
     modifiers=lambda d: (Modifier(f"resistance:{'cold' if (d.get('choices') or {}).get('shield') == 'warm' else 'fire'}", 1),),
     choices=(SpellChoice("shield", txt("Scudo", "Shield"), lambda _ed: ["warm", "cold"]),),
     rounds=MIN10,
-    text=txt("Chi ti colpisce in mischia entro 1,5 m subisce 2d8 danni (fuoco con lo scudo caldo, freddo con quello freddo): li applica il GM.",
-             "A creature that hits you in melee within 5 ft takes 2d8 damage (fire with the warm shield, cold with the cold one): the GM applies it."))
+    retaliation=lambda d, _temp: txt(
+        f"Scudo di Fuoco: se il colpo era in mischia entro 1,5 m, chi ti ha colpito subisce 2d8 danni da {'fuoco' if (d.get('choices') or {}).get('shield') == 'warm' else 'freddo'}.",
+        f"Fire Shield: if the hit was a melee attack within 5 ft, the attacker takes 2d8 {'fire' if (d.get('choices') or {}).get('shield') == 'warm' else 'cold'} damage."),
+    text=txt("Chi ti colpisce in mischia entro 1,5 m subisce 2d8 danni (fuoco con lo scudo caldo, freddo con quello freddo): a ogni danno subito l'app te lo ricorda, li applica il GM.",
+             "A creature that hits you in melee within 5 ft takes 2d8 damage (fire with the warm shield, cold with the cold one): on every damage you take the app reminds you, the GM applies it."))
 
 _FEIGN_DEATH = SpellVariant(
     condition="incapacitated", immune_conditions=("poisoned",), rounds=HOUR,
@@ -177,18 +181,27 @@ _GREATER_INVISIBILITY = SpellVariant(condition="invisible", concentration=True, 
 
 _HEROISM = SpellVariant(
     immune_conditions=("frightened",), track=True, concentration=True, rounds=10,
-    text=txt("A inizio di ogni tuo turno ottieni PF temporanei pari al modificatore da incantatore di chi ha lanciato: li inserisci a mano.",
-             "At the start of each of your turns you gain temporary HP equal to the caster's spellcasting modifier: enter them by hand."))
+    turn_temp_hp=lambda d: max(0, d.get("cast_mod", 0)),  # il modificatore da incantatore di chi lancia, fissato al lancio
+    text=txt("A inizio di ogni tuo turno ottieni PF temporanei pari al modificatore da incantatore di chi ha lanciato (automatico).",
+             "At the start of each of your turns you gain temporary HP equal to the caster's spellcasting modifier (automatic)."))
 _MIND_BLANK = SpellVariant(
     modifiers=lambda d: (Modifier("immunity:psychic", 1),), immune_conditions=("charmed",), rounds=DAY,
     text=txt("Immune anche a ciò che percepisce emozioni o legge i pensieri e alle divinazioni: lo applica il GM.",
              "Also immune to anything that senses emotions or reads thoughts, and to divination: the GM applies it."))
-_FEAST_TEXT = txt("PF massimi e attuali +2d10: tira e inseriscili a mano. Cura le malattie.",
-                  "Hit point maximum and current +2d10: roll and enter them by hand. Cures disease.")
+_FEAST_TEXT = txt("Cura le malattie: lo applica il GM. I PF massimi e attuali +2d10 sono automatici.",
+                  "Cures disease: the GM applies it. Hit point maximum and current +2d10 are automatic.")
+
+
+def _feast_hp(d: dict) -> tuple[Modifier, ...]:
+    return (Modifier("hp_max", d.get("feast_hp", 0)),)
+
+
+_FEAST_HP = dict(per_target=lambda d: {"feast_hp": roll(2, 10)}, heal=lambda d: d.get("feast_hp", 0))
 _FEAST_2014 = SpellVariant(
-    modifiers=lambda d: (Modifier("immunity:poison", 1), adv(lambda c: c.roll == "save" and c.ability == "wisdom")),
-    immune_conditions=("frightened", "poisoned"), rounds=DAY, text=_FEAST_TEXT)
-_FEAST_2024 = SpellVariant(modifiers=res("poison"), immune_conditions=("frightened", "poisoned"), rounds=DAY, text=_FEAST_TEXT)
+    modifiers=lambda d: (Modifier("immunity:poison", 1), adv(lambda c: c.roll == "save" and c.ability == "wisdom"), *_feast_hp(d)),
+    immune_conditions=("frightened", "poisoned"), rounds=DAY, text=_FEAST_TEXT, **_FEAST_HP)
+_FEAST_2024 = SpellVariant(modifiers=lambda d: (Modifier("resistance:poison", 1), *_feast_hp(d)),
+                           immune_conditions=("frightened", "poisoned"), rounds=DAY, text=_FEAST_TEXT, **_FEAST_HP)
 
 _AURA = SpellTarget("aura", lambda slot: 20)
 

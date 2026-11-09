@@ -21,7 +21,7 @@ from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, 
 from api.database import get_db
 from core.game.containers import is_container, trade_snapshot
 from core.rules.edition import character_edition
-from core.rules.modifiers import modifiers_for
+from core.rules.modifiers import ac_delta
 from api.schemas.session import (
     CharacterLiveSnapshot,
     GameSessionLiveRead,
@@ -259,7 +259,7 @@ async def _load_live_characters(
             hit_points=char.hit_points,
             current_hit_points=char.current_hit_points,
             temp_hp=char.temp_hp or 0,
-            ac=char.ac + modifiers_for(char, "ac").flat,
+            ac=char.ac + ac_delta(char, char.ac),
             conditions=char.conditions or {},
             death_saves=char.death_saves or {},
             heroic_inspiration=bool(char.heroic_inspiration),

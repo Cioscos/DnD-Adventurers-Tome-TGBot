@@ -1,6 +1,7 @@
 """Effetti degli incantesimi lanciati sui personaggi: tipi del catalogo e modificatori degli stati ``spell:<chiave>``."""
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
@@ -8,6 +9,11 @@ from core.rules.types import Modifier, RollOptionSpec
 
 SPELL_STATE_PREFIX = "spell:"
 SPELL_CLOCK_PREFIX = "spell_cast:"
+
+
+def roll(count: int, sides: int, bonus: int = 0) -> int:
+    """``count`` dadi a ``sides`` facce più ``bonus`` (Vita Falsata, Rigenerazione, Resistenza dell'Orso)."""
+    return sum(random.randint(1, sides) for _ in range(count)) + bonus
 
 
 @dataclass(frozen=True)
@@ -39,6 +45,19 @@ class SpellVariant:
     ends_on: tuple[str, ...] = ("manual",)  # fini dello stato sul bersaglio (``attack`` / ``cast``: Invisibilità)
     max_targets: Callable[[int], int] | None = None  # sostituisce ``target.count`` quando il numero di bersagli cambia con l'edizione (Saltare 2014)
     track: bool = False  # lo stato (e l'orologio di concentrazione) esiste anche senza modificatori: effetti solo descrittivi
+    # PF al lancio, per ogni bersaglio: i temporanei (il maggiore vince) e la cura (limitata al massimo, Aiuto alza prima il massimo).
+    # Senza altro effetto l'incantesimo è istantaneo: nessuno stato né orologio (Vita Falsata 2024, Parola del Potere: Fortificare).
+    per_target: Callable[[dict], dict] | None = None  # dati tirati per ogni bersaglio e uniti ai ``data`` dello stato (Banchetto degli Eroi: 2d10)
+    temp_hp: Callable[[dict], int] | None = None
+    heal: Callable[[dict], int] | None = None
+    # A inizio del turno del bersaglio: ``turn_heal(data, personaggio)`` (Rigenerazione, Aura di Vita) e PF temporanei (Eroismo)
+    turn_heal: Callable[[dict, Any], int] | None = None
+    turn_temp_hp: Callable[[dict], int] | None = None
+    clock_ends_on: tuple[str, ...] = ()  # fini dell'orologio del lanciatore oltre a concentrazione e riposo (``unconscious``: Legame di Protezione)
+    ends_at_zero_temp: bool = False  # 2024: lo stato sul bersaglio finisce quando i PF temporanei sono esauriti (Armatura di Agathys)
+    # Promemoria per il GM quando il bersaglio subisce danno: ``f(data, aveva_PF_temporanei) -> {"it", "en"}`` o ``None``
+    retaliation: Callable[[dict, bool], dict[str, str] | None] | None = None
+    shares_damage: bool = False  # il lanciatore subisce lo stesso danno del bersaglio (Legame di Protezione)
 
 
 @dataclass(frozen=True)

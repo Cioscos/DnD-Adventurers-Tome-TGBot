@@ -51,6 +51,14 @@ async def cap_current_hp(session: AsyncSession, char: Character) -> None:
         char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 
 
+def cap_hp_to_max(char: Character) -> None:
+    """Finito un effetto che alzava il massimo (Aiuto, Banchetto degli Eroi) i PF attuali non lo superano.
+
+    shortcut: il massimo è quello delle regole senza il bonus homebrew (qui non c'è un accesso asincrono al database); da rivedere se serve."""
+    if char.hit_points > 0:
+        char.current_hit_points = min(char.current_hit_points, effective_hp_max(char))
+
+
 async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dict:
     """Heal `char` by `amount` HP, clamped to effective max (base + passive
     homebrew bonus). Resets death saves if HP rises from 0. Logs history and
@@ -244,6 +252,7 @@ def _drop_given_spells(session: Session, char: Character) -> None:
         if len(kept) != len(states):
             receiver.active_states = kept
             settle_closed(receiver, [x for x in states if x not in kept])  # la condizione imposta (Invisibile) cade con lo stato
+            cap_hp_to_max(receiver)
 
 
 def _end_spent_spells(session: Session, char: Character) -> None:
@@ -259,6 +268,10 @@ def _end_spent_spells(session: Session, char: Character) -> None:
             continue
         from api.services.durations import end_concentration  # import locale: durations importa i servizi degli effetti
         end_concentration(caster)  # chiude gli stati ``concentration_end``, orologio compreso
+        left = [s for s in caster.active_states or [] if s.get("key") == clock]  # un incantesimo senza concentrazione: l'orologio si chiude qui
+        if left:
+            caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
+            settle_closed(caster, left)
         _drop_given_spells(session, caster)
 
 

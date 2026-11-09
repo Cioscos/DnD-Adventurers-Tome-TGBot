@@ -521,6 +521,8 @@ class RollOptionSpec:
     # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
     # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
     holds_at_one: bool = False
+    # Con ``holds_at_one``: vale anche per il danno massiccio, che il manuale non esclude (Interdizione alla Morte)
+    holds_vs_massive: bool = False
     # Con ``holds_at_one``: PF che si recuperano oltre al 1 PF (Sentinella Imperitura 2024: 3 x livello da paladino)
     holds_heal: "Callable[[RuleContext], int] | None" = None
     # Danno che l'opzione fa a chi la usa, come ``f(ctx, inputs) -> "NdM"`` o ``None`` (Saturazione Magica: necrotico, ignora

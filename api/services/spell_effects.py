@@ -8,14 +8,17 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.spell import SpellEffectsRead
+from api.services.effects import apply_heal, cap_hp_to_max, grant_temp_hp
 from api.services.session_allies import ally_target
 from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
 from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.edition import character_edition
+from core.game.stats import effective_ability_mod
+from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
 from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state, settle_closed
 from core.rules.types import StateSpec
@@ -92,6 +95,22 @@ def _drop_state(target: Character, key: str, caster_id: int) -> None:
     if len(kept) != len(states):
         target.active_states = kept
         settle_closed(target, [s for s in states if s not in kept])  # la condizione imposta (Invisibile) cade con lo stato
+        cap_hp_to_max(target)
+
+
+def _stateful(variant: SpellVariant, data: dict) -> bool:
+    return bool(variant.modifiers(data) or variant.options or variant.track or variant.condition
+                or variant.turn_heal or variant.turn_temp_hp)
+
+
+async def _give_hp(session: AsyncSession, target: Character, variant: SpellVariant, data: dict) -> None:
+    """I PF dell'incantesimo al bersaglio: i temporanei (il maggiore vince) e la cura, dopo che lo stato ha alzato il massimo."""
+    if variant.temp_hp and (amount := variant.temp_hp(data)) > 0:
+        grant_temp_hp(session, target, amount)
+    if variant.heal and (amount := variant.heal(data)) > 0:
+        if missing := {"classes", "items", "ability_scores"} & inspect(target).unloaded:  # un alleato arriva senza le relazioni dei massimi
+            await session.refresh(target, attribute_names=list(missing))
+        await apply_heal(session, target, amount)
 
 
 def spell_state_spec(key: str, data: dict) -> StateSpec:
@@ -112,9 +131,17 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     effect, variant, chars, chosen, outside = resolved
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster),
-            "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest}}
-    if not (variant.modifiers(data) or variant.options or variant.track or variant.condition) or not chars:  # nessun personaggio: l'effetto lo applica il GM
+            "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest},
+            "targets": len(chars)}
+    if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
+        stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
+        data["cast_mod"] = effective_ability_mod(caster, stats.ability) if stats else 0
+    if not chars or not (_stateful(variant, data) or variant.temp_hp or variant.heal):  # nessun personaggio: l'effetto lo applica il GM
         return SpellEffectsRead(applied=[], text=variant.text or (_OUTSIDE_TEXT if outside else _NO_SHEET_TEXT))
+    if not _stateful(variant, data):  # istantaneo: solo PF, nessuno stato né orologio
+        for target in chars:
+            await _give_hp(session, target, variant, {**data, **(variant.per_target(data) if variant.per_target else {})})
+        return SpellEffectsRead(applied=[{"id": c.id, "name": c.name} for c in chars], text=variant.text or (_OUTSIDE_TEXT if outside else None))
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})
     given = dict(settings.get(SPELL_GIVEN) or {})
@@ -124,11 +151,13 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             _drop_state(previous, key, caster.id)
     applied = []
     for target in chars:
-        begin_state(target, spell_state_spec(key, data), key, spell.name)
+        mine = {**data, **(variant.per_target(data) if variant.per_target else {})}
+        begin_state(target, spell_state_spec(key, mine), key, spell.name)
         if variant.on_apply:
-            variant.on_apply(target, data)
+            variant.on_apply(target, mine)
+        await _give_hp(session, target, variant, mine)
         applied.append({"id": target.id, "name": target.name})
-    ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else [])]
+    ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
     begin_state(caster, StateSpec(clock, rounds=variant.rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato

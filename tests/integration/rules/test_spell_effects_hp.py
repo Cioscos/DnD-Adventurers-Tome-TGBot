@@ -1,0 +1,241 @@
+"""Effetti degli incantesimi sui PF: CA impostata, PF temporanei, Aiuto, Interdizione alla Morte, Legame di Protezione, cure nel tempo."""
+from __future__ import annotations
+
+import pytest
+
+from core.rules.catalog.spells import spell_effect
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration.rules.test_spell_effects_cast import _full
+from tests.integration.rules.test_spell_effects_defenses import _cast, _hit, _sheet, _table
+from tests.integration.test_magic_items import _item
+
+DEATH_WARD = "spell:death_ward:hold"
+
+
+def _max_dice(monkeypatch) -> None:
+    monkeypatch.setattr("core.rules.spell_effects.random.randint", lambda _a, b: b)
+
+
+async def _hp(client, cid, current, maximum=None, user=GM_ID) -> None:
+    as_user(user)
+    if maximum is not None:
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": maximum})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": current})).status_code == 200
+
+
+async def _states(client, cid, key, user=PLAYER_ID) -> list[dict]:
+    return [s for s in (await _sheet(client, cid, user))["active_states"] or [] if s["key"] == key]
+
+
+async def _new_turn(client, cid, user=PLAYER_ID) -> None:
+    as_user(user)
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+
+
+# --- catalogo -----------------------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("srd", ["mage-armor", "barkskin", "armor-of-agathys", "false-life", "death-ward", "warding-bond",
+                                 "regenerate", "aura-of-vitality"])
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+def test_hit_point_spells_are_in_both_editions(edition, srd):
+    assert spell_effect(edition, srd) is not None
+
+
+def test_power_word_fortify_is_2024_only():
+    assert spell_effect("2014", "power-word-fortify") is None and spell_effect("2024", "power-word-fortify") is not None
+
+
+def test_aura_of_life_heals_one_hp_only_at_zero():
+    _, variant = spell_effect("2014", "aura-of-life")
+    zero, up = type("C", (), {"current_hit_points": 0, "is_dead": False}), type("C", (), {"current_hit_points": 5, "is_dead": False})
+    assert variant.turn_heal({}, zero) == 1 and variant.turn_heal({}, up) == 0
+
+
+# --- CA impostata ---------------------------------------------------------------------------------------------------
+
+async def test_mage_armor_sets_base_ac_13_plus_dex_only_without_armor(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    assert (await _sheet(client, hero))["ac"] == 13  # DES 16 senza armatura: 10 + 3
+    await _cast(client, caster, spell, [hero], level=1)
+    assert (await _sheet(client, hero))["ac"] == 16  # 13 + 3
+
+
+async def test_mage_armor_does_nothing_with_armor_on(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    as_user(PLAYER_ID)
+    await _item(client, hero, "Cotta di maglia", item_type="armor", slot="body", base_ac=16)
+    before = (await _sheet(client, hero))["ac"]
+    await _cast(client, caster, spell, [hero], level=1)
+    assert (await _sheet(client, hero))["ac"] == before
+
+
+@pytest.mark.parametrize("edition,floor", [("2014", 16), ("2024", 17)])
+async def test_barkskin_sets_a_minimum_ac(client, test_session_factory, edition, floor):
+    hero, caster, spell = await _table(client, test_session_factory, "Barkskin", "barkskin", 2, hero_edition=edition, caster_edition=edition)
+    await _cast(client, caster, spell, [hero], level=2)
+    assert (await _sheet(client, hero))["ac"] == floor
+
+
+# --- PF temporanei -------------------------------------------------------------------------------------------------
+
+async def test_false_life_2014_gives_1d4_plus_4_plus_5_per_slot_and_the_higher_temp_hp_wins(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "False Life", "false-life", 2)
+    await _hp(client, caster, 20, 20)
+    await _cast(client, caster, spell, [], level=2)
+    assert (await _sheet(client, caster, GM_ID))["temp_hp"] == 13  # 4 + 4 + 5
+    await client.patch(f"/characters/{caster}/hp", json={"op": "set_temp", "value": 30})
+    await _cast(client, caster, spell, [], level=2)
+    assert (await _sheet(client, caster, GM_ID))["temp_hp"] == 30  # non si sommano: resta il maggiore
+
+
+async def test_false_life_2024_is_instant_2d4_plus_4_and_leaves_no_state(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "False Life", "false-life", 1, caster_edition="2024")
+    await _cast(client, caster, spell, [], level=1)
+    sheet = await _sheet(client, caster, GM_ID)
+    assert sheet["temp_hp"] == 12 and not [s for s in sheet["active_states"] or [] if s["key"].startswith("spell")]
+
+
+async def test_enhance_ability_2014_constitution_gives_2d6_temp_hp(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "Enhance Ability", "enhance-ability", 2)
+    await _cast(client, caster, spell, [hero], level=2, choices={"ability": "constitution"})
+    assert (await _sheet(client, hero))["temp_hp"] == 12
+
+
+async def test_power_word_fortify_splits_120_temp_hp(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Power Word Fortify", "power-word-fortify", 7,
+                                       hero_edition="2024", caster_edition="2024")
+    await _cast(client, caster, spell, [hero, caster], level=7)
+    assert (await _sheet(client, hero))["temp_hp"] == 60 and (await _sheet(client, caster, GM_ID))["temp_hp"] == 60
+
+
+async def test_armor_of_agathys_2014_keeps_the_spell_and_reminds_the_retaliation(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Armor of Agathys", "armor-of-agathys", 2)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [], level=2)
+    assert (await _sheet(client, caster, GM_ID))["temp_hp"] == 10
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 10, "damage_type": "slashing"})
+    note = " ".join(n["message"] for n in r.json()["homebrew_notifications"])
+    assert "10 danni da freddo" in note
+    assert len(await _states(client, caster, "spell:armor_of_agathys", GM_ID)) == 1  # 2014: l'incantesimo non finisce
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 3, "damage_type": "slashing"})
+    assert not r.json().get("homebrew_notifications")  # senza PF temporanei niente ritorsione
+
+
+async def test_armor_of_agathys_2024_ends_when_the_temp_hp_are_gone(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Armor of Agathys", "armor-of-agathys", 1, caster_edition="2024")
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [], level=1)
+    as_user(GM_ID)
+    await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 3, "damage_type": "slashing"})
+    assert len(await _states(client, caster, "spell:armor_of_agathys", GM_ID)) == 1  # restano 2 PF temporanei
+    await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 5, "damage_type": "slashing"})
+    assert await _states(client, caster, "spell:armor_of_agathys", GM_ID) == []
+    assert await _states(client, caster, "spell_cast:armor_of_agathys", GM_ID) == []
+
+
+async def test_fire_shield_reminds_the_retaliation_on_every_damage(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Fire Shield", "fire-shield", 4)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [], level=4, choices={"shield": "warm"})
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 4, "damage_type": "slashing"})
+    assert "2d8 danni da fuoco" in r.json()["homebrew_notifications"][0]["message"]
+
+
+async def test_heroism_gives_temp_hp_equal_to_the_casters_modifier_at_the_start_of_each_turn(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Heroism", "heroism", 1)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/classes", json={"class_name": "bard", "level": 3, "hit_die": 8})).status_code == 201
+    assert (await client.patch(f"/characters/{caster}/ability_scores/charisma", json={"value": 16})).status_code == 200
+    await _cast(client, caster, spell, [hero], level=1)
+    assert (await _sheet(client, hero))["temp_hp"] == 0  # a inizio turno, non al lancio
+    await _new_turn(client, hero)
+    assert (await _sheet(client, hero))["temp_hp"] == 3
+    await client.patch(f"/characters/{hero}/hp", json={"op": "set_temp", "value": 1})
+    await _new_turn(client, hero)
+    assert (await _sheet(client, hero))["temp_hp"] == 3  # non si sommano
+
+
+# --- Aiuto -----------------------------------------------------------------------------------------------------------
+
+async def test_aid_raises_current_hp_too_and_the_end_caps_them_at_the_old_maximum(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Aid", "aid", 2)
+    await _hp(client, caster, 30, 30)
+    await _hp(client, hero, 150, user=PLAYER_ID)
+    await _cast(client, caster, spell, [hero], level=2)
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 205 and sheet["current_hit_points"] == 155  # +5 al 2° livello
+    await _hp(client, hero, 205, user=PLAYER_ID)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/rest", json={"rest_type": "long"})).status_code == 200
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 200 and sheet["current_hit_points"] == 200
+
+
+async def test_heroes_feast_rolls_2d10_for_maximum_and_current(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "Heroes' Feast", "heroes-feast", 6)
+    await _cast(client, caster, spell, [hero], level=6)
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 220 and sheet["current_hit_points"] == 220
+
+
+# --- Interdizione alla Morte ---------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+async def test_death_ward_holds_at_one_hp_even_against_massive_damage_and_ends(client, test_session_factory, edition):
+    hero, caster, spell = await _table(client, test_session_factory, "Death Ward", "death-ward", 4, hero_edition=edition, caster_edition=edition)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=4)
+    as_user(PLAYER_ID)
+    assert await _hit(client, hero, 500, "slashing", options=[DEATH_WARD]) == 199
+    sheet = await _sheet(client, hero)
+    assert sheet["current_hit_points"] == 1 and not sheet["is_dead"]
+    assert await _states(client, hero, "spell:death_ward") == []
+    assert await _states(client, caster, "spell_cast:death_ward", GM_ID) == []  # l'incantesimo è finito
+
+
+async def test_death_ward_is_kept_when_the_hit_does_not_reach_zero(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Death Ward", "death-ward", 4)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=4)
+    as_user(PLAYER_ID)
+    assert await _hit(client, hero, 50, "slashing", options=[DEATH_WARD]) == 50
+    assert len(await _states(client, hero, "spell:death_ward")) == 1
+    assert len(await _states(client, caster, "spell_cast:death_ward", GM_ID)) == 1  # il rimborso toglie anche la fine in attesa
+    assert await _hit(client, hero, 500, "slashing") == 150  # senza conferma il colpo uccide
+    assert (await _sheet(client, hero))["is_dead"]
+
+
+# --- Legame di Protezione ------------------------------------------------------------------------------------------
+
+async def test_warding_bond_shares_damage_and_ends_when_the_caster_drops_to_zero(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 30, 30)
+    ac = (await _sheet(client, hero))["ac"]
+    await _cast(client, caster, spell, [hero], level=2)
+    assert (await _sheet(client, hero))["ac"] == ac + 1
+    assert await _hit(client, hero, 10, "fire") == 5  # resistenza a tutti i danni
+    assert (await _sheet(client, caster, GM_ID))["current_hit_points"] == 25  # il lanciatore subisce gli stessi 5
+    as_user(GM_ID)
+    history = (await client.get(f"/characters/{caster}/history")).json()
+    assert any("condivisi con Eroe" in h["description"] for h in (history["items"] if isinstance(history, dict) else history))
+    assert await _hit(client, hero, 100, "fire") == 50  # altri 50: il lanciatore va a 0
+    caster_sheet = await _sheet(client, caster, GM_ID)
+    assert caster_sheet["current_hit_points"] == 0 and caster_sheet["conditions"].get("unconscious")
+    assert await _states(client, hero, "spell:warding_bond") == []
+    assert (await _sheet(client, hero))["ac"] == ac
+
+
+# --- Rigenerazione ---------------------------------------------------------------------------------------------------
+
+async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "Regenerate", "regenerate", 7)
+    await _hp(client, hero, 100, user=PLAYER_ID)
+    await _cast(client, caster, spell, [hero], level=7)
+    assert (await _sheet(client, hero))["current_hit_points"] == 147  # 32 + 15
+    await _new_turn(client, hero)
+    assert (await _sheet(client, hero))["current_hit_points"] == 148

@@ -204,6 +204,7 @@ class AppliedOptions:
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
     holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
+    holds_vs_massive: bool = False  # ``holds_at_one`` vale anche se il danno uccide sul colpo (Interdizione alla Morte)
     held_heal: int = 0  # PF recuperati oltre a quel 1 PF (Sentinella Imperitura 2024)
     resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
     self_damage: list[tuple[str, str]] = field(default_factory=list)  # (dadi, tipo) che chi usa le opzioni subisce
@@ -502,6 +503,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.pay_if_success or spec.holds_at_one:
             out.refundable[key] = paid
         out.holds_at_one = out.holds_at_one or spec.holds_at_one
+        out.holds_vs_massive = out.holds_vs_massive or spec.holds_vs_massive
         if spec.holds_heal:
             out.held_heal = max(out.held_heal, spec.holds_heal(option.ctx))
         out.resistance = out.resistance or spec.grants_resistance
@@ -604,6 +606,11 @@ def refund_spent(char: Any, spent: list[str]) -> None:
             key, _, blob = rest.partition(":{")  # la chiave può avere i due punti (``spell:guidance``)
             state = json.loads("{" + blob)
             char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), state]
+            if key.startswith(SPELL_STATE_PREFIX):  # l'incantesimo non è finito: il pagamento annullato toglie la fine in attesa
+                pending = (char.settings or {}).get(SPELL_SPENT) or []
+                mine = next((e for e in pending if e["key"] == key and e["caster_id"] == (state.get("data") or {}).get("caster_id")), None)
+                if mine is not None:
+                    char.settings = {**char.settings, SPELL_SPENT: [e for e in pending if e is not mine]}
             if state.get("condition"):  # lo stato rimesso rimette anche la condizione che imponeva
                 char.conditions = {**(char.conditions or {}), state["condition"]: True}
         elif kind == "die":

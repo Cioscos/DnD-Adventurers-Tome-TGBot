@@ -75,7 +75,7 @@ from core.rules.edition import character_edition
 from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import attach_party_auras
-from core.rules.modifiers import effective_hp_max, modifiers_for, rule_hp_bonus
+from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
@@ -229,7 +229,7 @@ async def list_characters(
             session, c, "character.ac"
         )
         summary.ac_items_modifier = item_bonus_total(c.items, "ac")
-        summary.ac += modifiers_for(c, "ac").flat
+        summary.ac += ac_delta(c, summary.ac)
         summary.hp_max_effective = effective_hp_max(c, summary.hp_max_homebrew_modifier)
         summaries.append(summary)
     return summaries

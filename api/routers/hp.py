@@ -34,6 +34,7 @@ from api.services.rules_turn import get_turn, set_damaged
 from api.services.session_allies import attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
+from api.services.spell_hp import spell_damage_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -305,6 +306,7 @@ async def update_hp(
         if warded:
             amount -= warded
             conc_damage -= warded  # il danno è andato alla interdizione: la concentrazione non è toccata
+        had_temp = char.temp_hp > 0
         # Absorb temp HP first
         if char.temp_hp > 0:
             absorbed = min(char.temp_hp, amount)
@@ -313,7 +315,7 @@ async def update_hp(
         old = char.current_hit_points
         held_at_one, held_by = False, []
         if opts is not None and opts.holds_at_one:  # Sentinella Imperitura: la conferma vale solo se il danno porta a 0 senza uccidere
-            massive = amount - old >= effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
+            massive = not opts.holds_vs_massive and amount - old >= effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
             if old > 0 and amount >= old and not massive:
                 kept = min(1 + opts.held_heal, effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max")))
                 amount, held_at_one = old - kept, True
@@ -346,6 +348,7 @@ async def update_hp(
             desc += f" — Interdizione Arcana assorbe {warded}"
         if held_at_one:
             desc += (f" — resta a 1 PF grazie a {', '.join(d.name for d in held_by)}" if held_by
+                     else " — Interdizione alla Morte: resta a 1 PF" if any(k.startswith("spell:") for k in opts.keys)
                      else " — Sentinella Imperitura: resta a 1 PF")
         if not form_absorbed:
             _add_history(session, char.id, "hp_change", desc,
@@ -414,6 +417,7 @@ async def update_hp(
             end_concentration(char)
 
         on_damage(char, applied)
+        notifications.extend(await spell_damage_effects(session, char, applied, had_temp, lang))  # ritorsione, danno condiviso, fine degli incantesimi
 
         # Auto concentration save — only if still conscious and concentrating
         if (

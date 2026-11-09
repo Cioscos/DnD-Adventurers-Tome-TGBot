@@ -94,7 +94,7 @@ def _no_armor(ctx: RuleContext) -> bool:
     return not any(i.is_equipped and i.item_type == "armor" for i in ctx.char.items or [])
 
 
-MAGE_ARMOR_AC = Modifier("ac", _mage_armor_bonus, when=lambda c: state_on(c, "mage_armor") and _no_armor(c),
+MAGE_ARMOR_AC = Modifier("ac", _mage_armor_bonus, when=lambda c: state_on(c, "mage_armor") and _no_armor(c) and not state_on(c, "spell:mage_armor"),  # il catalogo degli incantesimi lo conta già
                          source=f"feature:{CK}.armor_of_shadows")
 
 CHAINS_CAST = RollOptionSpec(

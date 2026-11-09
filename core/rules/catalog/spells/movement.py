@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from core.rules.catalog.spells.defenses import DAY, HOUR, MIN10, adv, both, txt
-from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
+from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant, roll
 from core.rules.types import Modifier
 from core.rules.weapons import ability_score
 
@@ -58,8 +58,9 @@ def _enhance(d: dict) -> tuple[Modifier, ...]:
 _ENHANCE_CHOICE = (SpellChoice("ability", txt("Caratteristica", "Ability"), lambda _ed: list(_ABILITIES)),)
 _ENHANCE_2014 = SpellVariant(
     modifiers=_enhance, choices=_ENHANCE_CHOICE, concentration=True, rounds=HOUR,
-    text=txt("Costituzione: 2d6 PF temporanei (tirali tu). Destrezza: niente danni da caduta fino a 6 m. Forza: capacità di carico doppia (già applicata).",
-             "Constitution: 2d6 temporary HP (roll them). Dexterity: no fall damage up to 20 ft. Strength: double carrying capacity (already applied)."))
+    temp_hp=lambda d: roll(2, 6) if (d.get("choices") or {}).get("ability") == "constitution" else 0,  # Resistenza dell'Orso
+    text=txt("Costituzione: 2d6 PF temporanei (automatici). Destrezza: niente danni da caduta fino a 6 m. Forza: capacità di carico doppia (già applicata).",
+             "Constitution: 2d6 temporary HP (automatic). Dexterity: no fall damage up to 20 ft. Strength: double carrying capacity (already applied)."))
 _ENHANCE_2024 = SpellVariant(
     modifiers=_enhance, choices=_ENHANCE_CHOICE, concentration=True, rounds=HOUR,
     text=txt("Ogni bersaglio riceve la stessa caratteristica; se ognuno ne sceglie una diversa, le altre le applica il GM (un nuovo lancio toglie l'effetto ai bersagli precedenti).",
