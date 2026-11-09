@@ -274,6 +274,15 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 - **Durations**: conditions and concentration expire after a round count, decremented by `rounds/tick`
 - **Wild shape**: damage beyond the beast form's HP carries over to the normal form; a form at 0 HP ends
 
+### Class rules by edition (2014 / 2024)
+- Every character has `Character.rules_edition` (`"2014"` default, `"2024"`): class features, rests and spells follow that edition. Existing characters stay 2014 until switched; 2024 Beyond imports set it.
+- Feature catalog: `core/rules/catalog/y2014/` and `y2024/` (one module per class and per subclass group), built from the types in `core/rules/types.py` (`OnUse` for usable features, `RollOptionSpec` for choices offered on a roll, `StateSpec` for timed states). No DB access in `core/`: the API attaches what the rules need to the character before evaluating them.
+- Roll options (reactions, rerolls, damage reductions, spend-a-resource prompts): `core/rules/roll_options.py`. `_spend` pays, `refund_spent` undoes from the spent tokens; options paid by another character (`for_ally`) are spent and refunded on the donor's row with atomic UPDATEs (`api/services/session_allies.py`).
+- Party effects (auras, temp HP or healing to an ally, a companion's Gift of the Protectors) only reach characters seated in the same active evening, verified by the server (`attach_party`); outside an evening the result is text for the GM.
+- Condition removal by features and spells goes through `core/rules/condition_removal.py` (one `removal {targets, conditions}` contract; spells recognised by name it/en).
+- Starting equipment per edition: `core/rules/starting_equipment.py` (inserted into the inventory, no mechanical effect).
+- Homebrew rules that model a feature the catalog now automates must be turned off, or the effect applies twice.
+
 ## i18n
 
 ### Bot
