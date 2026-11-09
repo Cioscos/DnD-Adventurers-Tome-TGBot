@@ -335,7 +335,7 @@ async def test_list_is_localized_and_describes_the_option(client, rules_catalog)
     assert r.json() == [{
         "key": "focus", "phase": "before", "label": "Applica?", "source": "feature:fighter.prova",
         "dice": None, "bonus": None, "mode": "advantage", "multiplier": None, "once_per_turn": False, "slot": None,
-        "needs": None, "group": None, "group_max": None, "dice_cost": 0, "requires_input": None, "input_options": [],
+        "needs": None, "group": None, "group_max": None, "dice_cost": 0, "requires_input": None, "gives_to_ally": False, "input_options": [],
         "auto_fail": False, "after": None, "pay_if_success": False, "on_miss": False, "saved_dice": [], "reroll_limit": None, "keep_rolled": False,
         "cost": {"feature_key": "fighter.prova", "amount": 1, "spell_slot_min": None},
     }]
