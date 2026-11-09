@@ -212,6 +212,8 @@ class RollDamageRequest(RollOptionsBody):
     extra_rolls: list[int] | None = None  # prima i dadi della seconda parte dell'incantesimo, poi quelli a mano
     # Tipo della seconda parte, se l'incantesimo ne offre piu' d'uno (Onda distruttiva: radioso o necrotico)
     extra_damage_type: str | None = None
+    # Tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida contro le scelte dell'incantesimo
+    damage_type: str | None = None
 
     @field_validator("extra_dice")
     @classmethod

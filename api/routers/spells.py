@@ -42,7 +42,7 @@ from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import deliver_temp_gifts
-from api.services.spell_effects import apply_spell_effects, cast_level, validate_spell_targets
+from api.services.spell_effects import apply_spell_effects, cast_level, chosen_damage_type, validate_spell_targets
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
@@ -546,7 +546,7 @@ async def use_spell(
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
-                       slotless=bool(body.free_cast or body.as_ritual))
+                       slotless=bool(body.free_cast or body.as_ritual), damage_type=canonical_damage_type((body.choices or {}).get("damage_type")))
     await deliver_temp_gifts(session, char, opts)  # Passo Rinfrescante su un altro PG della serata
     removal_lines = None
     if removal is not None:  # stessa transazione del lancio: o paga e toglie, o nulla
@@ -612,7 +612,8 @@ async def spell_attack(
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
-                                casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual))
+                                casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual),
+                                damage_type=canonical_damage_type((body.choices or {}).get("damage_type")))
         await deliver_temp_gifts(session, char, cast_opts)
         _end_cast(char)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
@@ -868,12 +869,14 @@ async def roll_spell_damage(
         all_extra = [random.randint(1, group_sides) for _, count, group_sides in groups for _ in range(count)]
     second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
-    opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level)
+    base_type = chosen_damage_type(char, spell, body.damage_type) or spell.damage_type  # il tipo scelto al lancio
+    opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level, damage_type=canonical_damage_type(base_type))
+    main_type = opts.damage_type or base_type  # Incantesimo Trasmutato
     await deliver_temp_gifts(session, char, opts)  # Incantesimi Potenti Migliorati
     if opts.maximize:  # Collera Distruttiva: valgono il massimo i dadi dei tipi che l'opzione tocca, mai quelli messi a mano
         def maximized(kind: str | None) -> bool:
             return opts.maximize_types is None or canonical_damage_type(kind) in opts.maximize_types
-        if maximized(spell.damage_type):
+        if maximized(main_type):
             main_rolls = [sides] * len(main_rolls)
         if second_rolls and maximized(second_type):
             second_rolls = [second_sides] * len(second_rolls)
@@ -882,7 +885,6 @@ async def roll_spell_damage(
     total = scale_damage(total, opts.multiplier)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
-    main_type = opts.damage_type or spell.damage_type  # Incantesimo Trasmutato
     parts = damage_parts([("main", main_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
                           ("extra", None, extra_sides, extra_rolls)])
     breakdown_parts = [f"{len(main_rolls)}d{sides}={main_rolls}"]
@@ -1070,7 +1072,7 @@ async def last_damage_options(
     if not last or (kind == "spell" and spell is None):
         raise HTTPException(status_code=409, detail={"code": "no_last_damage"})
     opts = use_options(session, char, "spell_damage" if kind == "spell" else "weapon_damage", body, phase="after_damage",
-                       spell=spell)
+                       spell=spell, damage_type=canonical_damage_type(last["result"].get("damage_type")) if spell else None)
 
     dice = [list(d) for d in last["dice"]]
     picked = list(dict.fromkeys(body.reroll))

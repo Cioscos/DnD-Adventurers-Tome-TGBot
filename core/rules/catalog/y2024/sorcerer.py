@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import spell_damage_type
 from core.game.actions import parse_casting_time
 from core.rules.catalog._common import feature, save_spell, state_on
 from core.rules.catalog.y2014.sorcerer import (
@@ -227,8 +227,8 @@ def _transmute(damage_type: str) -> RollOptionSpec:
     return RollOptionSpec(
         key=f"{_meta('transmuted')}_{damage_type}", phase="before", rolls=("spell_damage",), group=f"{CK}.transmuted", cost=price(1),
         damage_type_to=damage_type, on_confirm=_confirm(),
-        available=lambda c: c.spell is not None and canonical_damage_type(c.spell.damage_type) in TRANSMUTE_TYPES
-        and canonical_damage_type(c.spell.damage_type) != damage_type,
+        available=lambda c: c.spell is not None and spell_damage_type(c) in TRANSMUTE_TYPES
+        and spell_damage_type(c) != damage_type,
         label=_both(f"Incantesimo Trasmutato: il danno diventa {it} (1 punto)", f"Transmuted Spell: the damage becomes {en} (1 point)"),
         effect=_say(f"Il tipo di danno dell'incantesimo diventa {it}.", f"The spell's damage type becomes {en}."))
 

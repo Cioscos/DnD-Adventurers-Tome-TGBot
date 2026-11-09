@@ -919,6 +919,8 @@ export interface RollDamageRequest extends Partial<RollChoice> {
   extra_rolls?: number[]
   /** Tipo della seconda parte, se l'incantesimo ne offre più d'uno (radioso o necrotico). */
   extra_damage_type?: string
+  /** Tipo di danno scelto al lancio (Sfera Cromatica...); il server lo riconvalida. */
+  damage_type?: string
 }
 
 export interface RollHealingRequest extends Partial<RollChoice> {

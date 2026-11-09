@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import spell_damage_type
 from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.sorcerer import BEND_LUCK_USE, SP, TIDES, _cha, _regeneration
 from core.rules.states import get_states
@@ -179,7 +179,7 @@ def _affinity_label(key: str) -> dict:
 
 AFFINITY_BONUS = RollOptionSpec(
     key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c),
-    available=lambda c: c.spell is not None and _affinity_type(c) is not None and canonical_damage_type(c.spell.damage_type) == _affinity_type(c),
+    available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c),
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
 RESTORE_OWN_ROLL = RollOptionSpec(
     key=f"{P}restore_balance_own_roll", phase="before", rolls=D20_TESTS, cancels=("*",), slot="reaction", cost=Cost(feature_key=f"{P}restore_balance"),

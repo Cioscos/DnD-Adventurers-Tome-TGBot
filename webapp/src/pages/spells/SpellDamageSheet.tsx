@@ -1,4 +1,4 @@
-import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
+import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions, useEffectPickStore } from '@/lib/rollOptions'
 import { notifyCastError } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
@@ -130,7 +130,9 @@ export default function SpellDamageSheet({
         setSlotConsumed(true)
       }
 
-      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel })
+      // Il tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida e i privilegi che lo leggono lo vedono.
+      const chosenType = useEffectPickStore.getState().picked[spell.id]?.choices?.damage_type
+      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel, ...(chosenType ? { damage_type: chosenType } : {}) })
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined
       let extra_rolls: number[] | undefined
@@ -176,6 +178,7 @@ export default function SpellDamageSheet({
 
       return api.spells.rollDamage(charId, spell.id, {
         ...body,
+        ...(chosenType ? { damage_type: chosenType } : {}),
         main_rolls,
         extra_rolls,
         ...(choice.options.length > 0 ? choice : {}),

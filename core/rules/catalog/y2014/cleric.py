@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import spell_damage_type
 from core.data.skills import SKILLS
 from core.rules.catalog._common import attacks_made, feature, skill_label, state_on
 from core.rules.types import (
@@ -234,7 +234,7 @@ WAR_PRIEST_ATTACK = RollOptionSpec(
     available=lambda c: c.spell is None and attacks_made(c) > 0)
 
 def _spell_damage_in(ctx: RuleContext, *types: str) -> bool:
-    return ctx.spell is not None and canonical_damage_type(ctx.spell.damage_type) in types
+    return ctx.spell is not None and spell_damage_type(ctx) in types
 
 
 DESTRUCTIVE_WRATH = RollOptionSpec(

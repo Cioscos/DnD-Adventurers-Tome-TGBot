@@ -91,6 +91,22 @@ async def validate_spell_targets(session: AsyncSession, caster: Character, spell
     return resolved and resolved[:3]
 
 
+def chosen_damage_type(char: Character, spell, requested: str | None) -> str | None:
+    """Il tipo di danno scelto al lancio per il tiro di danno: quello richiesto (422 ``invalid_choice`` se l'incantesimo non lo
+    offre o non lo ammette) o, senza richiesta, quello ricordato dall'orologio di chi lancia. ``None``: vale il tipo dell'incantesimo."""
+    edition = character_edition(char)
+    found = spell_effect(edition, spell.srd_index, spell.name)
+    choice = next((c for c in found[1].choices if c.key == "damage_type"), None) if found else None
+    if requested is not None:
+        if choice is None or requested not in choice.options(edition):
+            raise _invalid("invalid_choice")
+        return requested
+    if choice is None:
+        return None
+    clock = next((s for s in char.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{found[0].key}"), None)
+    return (((clock or {}).get("data") or {}).get("state_data") or {}).get("choices", {}).get("damage_type")
+
+
 def end_unarmored_spells(char: Character) -> None:
     """Chi indossa un'armatura perde Armatura Magica: l'incantesimo termina (il flush chiude anche l'orologio di chi l'ha lanciato)."""
     if any(s.get("key") == "spell:mage_armor" for s in char.active_states or []):
@@ -145,6 +161,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
         data["cast_mod"] = effective_ability_mod(caster, stats.ability) if stats else 0
+    if variant.choices and not variant.text and not (_stateful(variant, data) or variant.temp_hp or variant.heal):
+        return SpellEffectsRead(applied=[])  # solo una scelta (il tipo di danno): viaggia con il tiro di danno, nulla da dire al GM
     if not chars or not (_stateful(variant, data) or variant.temp_hp or variant.heal):  # nessun personaggio: l'effetto lo applica il GM
         return SpellEffectsRead(applied=[], text=variant.text or (_OUTSIDE_TEXT if outside else _NO_SHEET_TEXT))
     if not _stateful(variant, data):  # istantaneo: solo PF, nessuno stato né orologio

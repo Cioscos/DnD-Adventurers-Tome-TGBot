@@ -12,7 +12,7 @@ import re
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import DAMAGE_TYPES, LABELS_IT, canonical_damage_type
+from core.data.damage_types import DAMAGE_TYPES, LABELS_IT, canonical_damage_type, spell_damage_type
 from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014.warlock import (
@@ -268,7 +268,7 @@ LIGHT_USE = OnUse(
 def _fire_or_radiant(ctx: RuleContext) -> bool:
     if ctx.spell is None:
         return False
-    kinds = {canonical_damage_type(ctx.spell.damage_type), canonical_damage_type(getattr(ctx.spell, "extra_damage_type", None))}
+    kinds = {spell_damage_type(ctx), canonical_damage_type(getattr(ctx.spell, "extra_damage_type", None))}
     return bool(kinds & {"radiant", "fire"})
 
 
@@ -393,7 +393,7 @@ MIND_USE = OnUse(
                                 f"Telepathic link with a creature you see within 30 ft for {c.class_level} minutes; range: {max(1, _cha(c))} miles. A new link replaces the old one."))
 PSYCHIC_TYPE = RollOptionSpec(
     key=PSYCHIC, phase="before", rolls=("spell_damage",), damage_type_to="psychic",
-    available=lambda c: c.spell is not None and bool(c.spell.damage_dice) and canonical_damage_type(c.spell.damage_type) not in (None, "psychic"),
+    available=lambda c: c.spell is not None and bool(c.spell.damage_dice) and spell_damage_type(c) not in (None, "psychic"),
     label=_both("Incantesimi Psichici: il danno di questo incantesimo da warlock è psichico", "Psychic Spells: this warlock spell's damage is psychic"))
 
 
