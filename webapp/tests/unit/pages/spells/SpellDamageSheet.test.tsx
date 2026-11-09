@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
+import { useEffectPickStore } from '@/lib/rollOptions'
 import type { Spell, RollDamageResult } from '@/types'
 
 const { rollDamage, useSpell, updateConc, askRollOptions } = vi.hoisted(() => ({
@@ -48,7 +49,7 @@ const result: RollDamageResult = { total: 14, half_damage: 7, breakdown: '2d6+2 
 const cantrip = { id: 1, name: 'Mano Magica', level: 0, attack_save: 'ATK', is_concentration: false, damage_dice: '1d8' } as Spell
 const leveled = { id: 2, name: 'Palla di Fuoco', level: 3, attack_save: 'DEX', is_concentration: false, damage_dice: '8d6' } as Spell
 
-beforeEach(() => askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }))
+beforeEach(() => { askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }); useEffectPickStore.setState({ picked: {} }) })
 afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset() })
 
 describe('SpellDamageSheet', () => {
@@ -87,6 +88,28 @@ describe('SpellDamageSheet', () => {
     await waitFor(() => expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', spell_id: 2, casting_level: 6 })))
   })
 
+
+  it('shows the damage type chosen at the cast before the roll and sends it with the options and the roll', async () => {
+    useEffectPickStore.setState({ picked: { 2: { choices: { damage_type: 'cold' } } } })
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    expect(screen.getByText(/character.spells.roll_damage.chosen_type/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ damage_type: 'cold' })))
+    expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', damage_type: 'cold' }))
+  })
+
+  it('sends no damage type and shows no chosen type when the cast chose none', async () => {
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    expect(screen.queryByText(/chosen_type/)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalled())
+    expect(rollDamage.mock.calls[0][2]).not.toHaveProperty('damage_type')
+    expect(askRollOptions.mock.calls[0][1]).not.toHaveProperty('damage_type')
+  })
 
   it('shows the second damage part before the roll, and the dice typed by hand do not replace it', async () => {
     rollDamage.mockResolvedValue(result)

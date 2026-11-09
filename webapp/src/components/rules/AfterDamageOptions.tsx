@@ -19,7 +19,7 @@ export type DamageReroll = RollDamageResult | WeaponAttackResult | CompanionAtta
 export default function AfterDamageOptions({ charId, query, dice: allDice, onResult }: {
   charId: number
   /** Come per `GET /roll-options`: `spell_damage` con l'incantesimo, `weapon_damage` per l'arma. */
-  query: { roll: 'spell_damage'; spell_id: number } | { roll: 'weapon_damage' }
+  query: { roll: 'spell_damage'; spell_id: number; damage_type?: string } | { roll: 'weapon_damage' }
   /** Dadi del danno già visti, con l'indice con cui il server li conosce. */
   dice: DamageDie[]
   onResult: (result: DamageReroll) => void

@@ -82,6 +82,7 @@ export default function SpellDamageSheet({
   const secondTypes = (spell?.extra_damage_type ?? '').split('|').filter(Boolean)
   const [secondType, setSecondType] = useState('')
   const [unrollable, setUnrollable] = useState(false)
+  const pickedType = useEffectPickStore((s) => (spell ? s.picked[spell.id]?.choices?.damage_type : undefined))  // il tipo scelto al lancio
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [slotConsumed, setSlotConsumed] = useState(false)
@@ -282,6 +283,12 @@ export default function SpellDamageSheet({
             </div>
           )}
 
+          {pickedType && (
+            <p className="text-sm text-center font-body text-dnd-text">
+              {t('character.spells.roll_damage.chosen_type', { type: t(`character.inventory.damage_types.dmg_${pickedType}`, { defaultValue: pickedType }) })}
+            </p>
+          )}
+
           {autoExtra > 0 && (
             <p className="text-sm text-dnd-text-muted font-body italic text-center">
               {t('character.spells.upcast_auto', { dice: spell.higher_levels_dice })}
@@ -400,7 +407,7 @@ export default function SpellDamageSheet({
           <RollNotes charId={charId} optionResult={result.option_result} />  {/* ciò che è avvenuto col danno (Saturazione Magica: i necrotici a sé) */}
           <AfterDamageOptions
             charId={charId}
-            query={{ roll: 'spell_damage', spell_id: spell.id }}
+            query={{ roll: 'spell_damage', spell_id: spell.id, ...(result.damage_type ? { damage_type: result.damage_type } : {}) }}
             dice={result.reroll_dice ? rerollDiceOf(result.reroll_dice) : [
               ...(result.main_rolls ?? []).map((value, index) => ({ value, index, sides: sidesOf(result.main_kind) })),
               ...(result.extra_rolls ?? []).map((value, i) => ({ value, index: (result.main_rolls ?? []).length + i, sides: sidesOf(result.extra_kind) })),

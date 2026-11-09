@@ -815,6 +815,7 @@
       },
       "roll_damage": {
         "title": "Tiro danni: {{name}}",
+        "chosen_type": "Tipo di danno scelto: {{type}}",
         "button": "Rolla danni",
         "casting_level": "Livello di casting",
         "decrease_level": "Diminuisci livello",
@@ -836,7 +837,8 @@
           "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia.",
           "invalid_target": "Il bersaglio non è valido.",
           "target_dead": "Il bersaglio è morto.",
-          "invalid_choice": "La scelta non è valida."
+          "invalid_choice": "La scelta non è valida.",
+          "option_unavailable": "Quell'opzione non è disponibile per questo lancio."
         },
         "close": "Chiudi",
         "reroll": "Nuovo tiro",
@@ -853,6 +855,7 @@
       "reload_title": "Ricaricare dal catalogo?",
       "reload_body": "Nome, descrizione, tempo di lancio, gittata, durata e a livelli superiori verranno sostituiti con il testo del catalogo.",
       "reload_confirm": "Ricarica",
+      "damage_type_choice": "a scelta",
       "upcast_auto": "Livelli superiori: +{{dice}} per livello (già incluso)",
       "schools": {
         "abjuration": "Abiurazione",

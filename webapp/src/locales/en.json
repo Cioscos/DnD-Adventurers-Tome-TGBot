@@ -815,6 +815,7 @@
       },
       "roll_damage": {
         "title": "Damage roll: {{name}}",
+        "chosen_type": "Damage type chosen: {{type}}",
         "button": "Roll damage",
         "casting_level": "Casting level",
         "decrease_level": "Decrease level",
@@ -836,7 +837,8 @@
           "surge_no_magic": "The extra action from Action Surge cannot be the Magic action.",
           "invalid_target": "The target is not valid.",
           "target_dead": "The target is dead.",
-          "invalid_choice": "The choice is not valid."
+          "invalid_choice": "The choice is not valid.",
+          "option_unavailable": "That option is not available for this cast."
         },
         "close": "Close",
         "reroll": "Roll again",
@@ -853,6 +855,7 @@
       "reload_title": "Reload from catalogue?",
       "reload_body": "Name, description, casting time, range, duration and at higher levels will be replaced with the catalogue text.",
       "reload_confirm": "Reload",
+      "damage_type_choice": "of your choice",
       "upcast_auto": "Higher levels: +{{dice}} per level (already included)",
       "schools": {
         "abjuration": "Abjuration",

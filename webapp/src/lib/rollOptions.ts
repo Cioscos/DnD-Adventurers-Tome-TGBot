@@ -80,8 +80,10 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
   for (const code of confirm) {
     if (!(await askCastConfirm(code))) throw new CastCancelled()
   }
+  // Il tipo di danno scelto al lancio (Sfera Cromatica...): l'Affinità Elementale al lancio si offre su quello, non sul tipo di base.
+  const chosenType = useEffectPickStore.getState().picked[spellId]?.choices?.damage_type
   const choice = await askRollOptions(
-    charId, { roll: 'cast', spell_id: spellId, ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true },
+    charId, { roll: 'cast', spell_id: spellId, ...(chosenType ? { damage_type: chosenType } : {}), ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true },
   )
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
