@@ -1516,7 +1516,7 @@
         "quivering_palm": "TS Costituzione: se fallisce, il bersaglio scende a 0 PF; se supera, subisce i danni necrotici tirati. Le vibrazioni finiscono.",
         "water_whip": "TS Destrezza: se fallisce, subisce i danni contundenti e, a tua scelta, cade prono o è tirato fino a 7,5 m verso di te; se supera, metà danni e nessun altro effetto.",
         "revivification_other": "Riferisci al GM che la creatura è a PF pari al tuo livello da barbaro. Se è un personaggio della serata, scegli il suo nome per curarlo da qui.",
-        "gift_of_the_protectors_other": "Riferisci al GM che la creatura scende a 1 PF invece che a 0. Se è un personaggio della serata a 0 PF, scegli il suo nome per portarlo a 1 PF da qui.",
+        "gift_of_the_protectors_other": "Riferisci al GM che la creatura scende a 1 PF invece che a 0. Per un personaggio della serata il Dono scatta da solo quando il danno lo porta a 0 PF: lo offre la finestra del danno.",
         "lay_on_hands_other_2024": "Riferisci i PF al GM: la creatura li recupera da lui. Se è un personaggio della serata, scegli il suo nome per curarlo da qui.",
         "lay_on_hands_cure_self_2024": "Le condizioni scelte sono tolte dalla scheda; i punti spesi non curano PF.",
         "lay_on_hands_cure_other_2024": "Le condizioni scelte non si scrivono sulla scheda altrui: dillo al GM o al giocatore, che le toglie da loro. I punti sono già spesi.",

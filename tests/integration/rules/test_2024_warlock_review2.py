@@ -31,55 +31,18 @@ async def _table(client, factory, hero_hp=0):
     return cid, hero
 
 
-def _gift(client, cid, hero):
-    params = {"mode": "ally", **({"target_character_id": hero} if hero is not None else {})}
-    return _use(client, cid, GIFT, params=params)
+def _gift(client, cid):
+    return _use(client, cid, GIFT, params={})
 
 
-async def test_gift_of_the_protectors_brings_a_seated_ally_at_zero_to_one_hp_and_spends_the_use(client, test_session_factory):
-    cid, hero = await _table(client, test_session_factory)
-    mine = (await _full(client, cid))["current_hit_points"]
-    r = await _gift(client, cid, hero)
-    assert r.status_code == 200, r.text
-    assert r.json()["received"] == {"name": "Eroe", "healed": 1}
-    async with test_session_factory() as s:
-        assert (await s.get(Character, hero)).current_hit_points == 1
-        events = (await s.execute(select(CharacterHistory).where(CharacterHistory.character_id == hero))).scalars().all()
-    assert any(e.event_type == "hp_change" and "+1" in e.description for e in events)  # lo storico sta sul ricevente
-    assert (await _ability(client, cid, GIFT))["uses"] == 0 and (await _full(client, cid))["current_hit_points"] == mine
-    assert (await _gift(client, cid, hero)).status_code == 409  # una volta fino al riposo lungo
-
-
-async def test_gift_of_the_protectors_refuses_an_ally_outside_the_evening_and_spends_nothing(client, test_session_factory):
+async def test_gift_of_the_protectors_use_is_a_text_outcome_for_a_non_player_creature_and_spends_the_use(client, test_session_factory):
+    # Sui PG della serata il Dono scatta dal danno (test_2024_warlock_gift_ally); «Usa» resta per le altre creature
     cid, _ = await _table(client, test_session_factory)
-    async with test_session_factory() as s:
-        stranger = Character(user_id=9001, name="Estraneo", hit_points=40, current_hit_points=0)
-        s.add(stranger)
-        await s.commit()
-        stranger_id = stranger.id
-    for target in (stranger_id, cid, 99999):
-        r = await _gift(client, cid, target)
-        assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_target"
-    assert (await _ability(client, cid, GIFT))["uses"] == 1
-    async with test_session_factory() as s:
-        assert (await s.get(Character, stranger_id)).current_hit_points == 0
-
-
-async def test_gift_of_the_protectors_without_a_target_is_a_text_outcome_for_a_non_player_creature(client, test_session_factory):
-    cid, _ = await _table(client, test_session_factory)
-    r = await _gift(client, cid, None)
+    r = await _gift(client, cid)
     assert r.status_code == 200, r.text
-    assert r.json()["given"] == 1 and r.json()["received"] is None and r.json()["notes"] == ["gift_of_the_protectors_other"]
+    assert r.json()["received"] is None and r.json()["notes"] == ["gift_of_the_protectors_other"]
     assert (await _ability(client, cid, GIFT))["uses"] == 0
-
-
-async def test_gift_of_the_protectors_refuses_an_ally_who_is_not_at_zero_and_spends_nothing(client, test_session_factory):
-    cid, hero = await _table(client, test_session_factory, hero_hp=12)
-    r = await _gift(client, cid, hero)
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "target_not_down"
-    assert (await _ability(client, cid, GIFT))["uses"] == 1
-    async with test_session_factory() as s:
-        assert (await s.get(Character, hero)).current_hit_points == 12
+    assert (await _gift(client, cid)).status_code == 409  # una volta fino al riposo lungo
 
 
 # --- Investitura del Padrone delle Catene -----------------------------------------------------------------------------

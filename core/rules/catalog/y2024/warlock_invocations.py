@@ -206,18 +206,22 @@ CHAIN_USE = OnUse(forgoes_attack=True)  # rinunci a un attacco: il famiglio atta
 
 
 GIFT_KEY = f"{CK}.gift_of_the_protectors"
+GIFT_GROUP = "gift_of_the_protectors"  # una sola offerta per danno: la propria o quella di un compagno
 GIFT = RollOptionSpec(
     key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_drops_to_zero,
+    group=GIFT_GROUP,
     label={"it": "Dono dei Protettori: se il danno ti porta a 0 PF senza ucciderti sul colpo, resti a 1 PF (un uso, riposo lungo)",
            "en": "Gift of the Protectors: if the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (one use, long rest)"})
+# Il nome sul libro lo sa il tavolo (R42): l'offerta vale per ogni partecipante della serata e paga l'uso del warlock
+GIFT_ALLY = RollOptionSpec(
+    key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_drops_to_zero,
+    group=GIFT_GROUP, for_ally=True,
+    label={"it": "Dono dei Protettori di {donor}: il tuo nome è scritto nel suo libro? Se il danno ti porta a 0 PF senza ucciderti sul colpo, resti a 1 PF (spende l'uso di {donor})",
+           "en": "{donor}'s Gift of the Protectors: is your name written in their book? If the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (spends {donor}'s use)"})
 
 
-# R42: su un alleato della serata verificato dal server, «Usa» lo porta da 0 a 1 PF e spende l'uso (storico sul ricevente);
-# fuori serata, o su una creatura non PG, resta l'esito testuale
-GIFT_USE = OnUse(
-    heal=lambda _c, _r: 1, heal_when=lambda _c, _p: False, heal_ally_when=lambda _c, _p: True, heal_ally_to=True, ally_needs_zero_hp=True,
-    ally_modes=("ally",), notes=lambda _c, p: ["gift_of_the_protectors_other"] if p.get("target_character_id") is None else [],
-    choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: ["ally"], lambda _k: {"it": "Un'altra creatura", "en": "Another creature"}),))
+# Su un alleato della serata il Dono scatta dal suo danno (``GIFT_ALLY``): «Usa» resta per le creature non PG, esito testuale
+GIFT_USE = OnUse(notes=lambda _c, _p: ["gift_of_the_protectors_other"])
 
 
 def _shadows_state() -> RollOptionSpec:
@@ -304,7 +308,7 @@ _ROWS: list = [
     _inv("gift_of_the_protectors", "Dono dei Protettori", "Gift of the Protectors", f"{_P}, livello 9+, Patto del Tomo, pag. 156", 9,
          ("Chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo (nomi: Carisma, min. 1). Su di te col danno; su un alleato della serata a 0 PF con «Usa».",
           "Whoever drops to 0 HP without dying outright stays at 1, once until a long rest (names: Charisma, min. 1). On you with the damage; on a table ally at 0 HP with Use."),
-         uses=Uses(table={9: 1}), restoration="long_rest", roll_options=(GIFT,), on_use=GIFT_USE),
+         uses=Uses(table={9: 1}), restoration="long_rest", roll_options=(GIFT, GIFT_ALLY), on_use=GIFT_USE),
     _inv("investment_of_the_chain_master", "Investitura del Padrone delle Catene", "Investment of the Chain Master",
          f"{_P}, livello 5+, Patto della Catena, pag. 156", 5,
          ("Il famiglio evocato con Trova Famiglio vola o nuota a 12 m, attacca con la tua azione bonus, infligge danni necrotici o radiosi, usa la tua CD e resiste in reazione.",

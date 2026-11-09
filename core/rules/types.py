@@ -492,6 +492,9 @@ class RollOptionSpec:
     replace_die: bool = False
     miss_damage: "Callable[[RuleContext], int] | None" = None
     on_miss: bool = False  # si arma con ogni mancato dichiarato (anche da Graze o dal pulsante «Mancato»)
+    # Offerta agli altri partecipanti della serata, non a chi possiede il privilegio: l'opzione compare sul tiro del ricevente
+    # (``available`` guarda lui; ``{donor}`` nel label è il nome del donatore) e il costo si spende sulla scheda del donatore.
+    for_ally: bool = False
     effect: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
     second_attack: bool = False
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None

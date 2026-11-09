@@ -28,7 +28,7 @@ from api.services.d20 import d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
-from api.services.session_allies import attach_party_auras, seated_allies
+from api.services.session_allies import attach_party_auras, attach_party_donors, seated_allies
 from core.rules.states import is_target_immune
 from api.services.turn_start import apply_turn_start
 from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
@@ -164,6 +164,8 @@ async def roll_options(
         ability = "dexterity"
     if roll in ("save", "death_save", "damage_taken"):
         await attach_party_auras(db, char)  # le aure dei compagni di serata (conferma al tiro)
+        if roll == "damage_taken":
+            await attach_party_donors(db, char)  # Dono dei Protettori di un compagno
     # Stesso contesto del tiro: un'opzione legata a caratteristica o modalità non deve sparire solo dall'elenco.
     attack: dict = {}
     if roll == "attack" and spell is None:

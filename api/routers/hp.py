@@ -31,7 +31,7 @@ from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
-from api.services.session_allies import attach_party_auras
+from api.services.session_allies import attach_party_auras, attach_party_donors, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -251,6 +251,7 @@ async def update_hp(
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             await attach_party_auras(session, char)
+            await attach_party_donors(session, char)  # Dono dei Protettori di un compagno della serata
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
             rolls, reduction = roll_option_dice(char, opts)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
@@ -310,12 +311,13 @@ async def update_hp(
             char.temp_hp -= absorbed
             amount -= absorbed
         old = char.current_hit_points
-        held_at_one = False
+        held_at_one, held_by = False, []
         if opts is not None and opts.holds_at_one:  # Sentinella Imperitura: la conferma vale solo se il danno porta a 0 senza uccidere
             massive = amount - old >= effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
             if old > 0 and amount >= old and not massive:
                 kept = min(1 + opts.held_heal, effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max")))
                 amount, held_at_one = old - kept, True
+                held_by = await spend_donor_tokens(session, char, opts.spent)  # l'uso del donatore, una volta sola
             else:  # il danno non arriva a 0 (o uccide sul colpo): l'uso non si spende
                 paid = [token for tokens in opts.refundable.values() for token in tokens]
                 refund_spent(char, paid)
@@ -338,7 +340,8 @@ async def update_hp(
         if warded:
             desc += f" — Interdizione Arcana assorbe {warded}"
         if held_at_one:
-            desc += " — Sentinella Imperitura: resta a 1 PF"
+            desc += (f" — resta a 1 PF grazie a {', '.join(d.name for d in held_by)}" if held_by
+                     else " — Sentinella Imperitura: resta a 1 PF")
         if not form_absorbed:
             _add_history(session, char.id, "hp_change", desc,
                          meta={"op": "DAMAGE", "amount": pre_form,

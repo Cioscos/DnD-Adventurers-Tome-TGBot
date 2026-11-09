@@ -1,12 +1,14 @@
 """Chi siede alla stessa serata di un personaggio: il bersaglio dei privilegi che aiutano un alleato (R38)."""
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
+from core.db.models import Ability, Character, CharacterHistory, GameSession, SessionParticipant, SessionStatus
 
 
 async def seated_allies(session: AsyncSession, char: Character) -> list[Character]:
@@ -39,6 +41,42 @@ async def attach_party_auras(session: AsyncSession, char: Character) -> None:
         await session.refresh(ally, ["classes", "ability_scores", "items"])
         found += projected_auras(ally)
     char.party_auras = found
+
+
+async def attach_party_donors(session: AsyncSession, char: Character) -> None:
+    """Mette su ``char`` le opzioni al tiro che i compagni della serata gli offrono (``RollOptionSpec.for_ally``, es. Dono dei
+    Protettori): ``char.party_donors``, transitorio. Il costo resta sulla scheda del donatore; fuori serata non ce ne sono."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa i tipi
+    found: list[dict] = []
+    for ally in await seated_allies(session, char):
+        if ally.is_dead:
+            continue
+        await session.refresh(ally, ["classes", "ability_scores", "items", "abilities"])
+        found += [{"donor": ally, "spec": option, "row": row} for spec, row in active_features(ally)
+                  for option in spec.roll_options if option.for_ally]
+    char.party_donors = found
+
+
+async def spend_donor_tokens(session: AsyncSession, receiver: Character, spent: list[str]) -> list[Character]:
+    """Spende sulle schede dei donatori i gettoni ``donor:<pg>:<riga>:<usi>`` delle opzioni confermate, con un UPDATE condizionato
+    (stesso uso mai speso due volte: 409 ``option_unavailable``), e scrive lo storico sulla scheda del donatore. Restituisce i donatori."""
+    from api.services.rules_states import _spend_atomically  # import locale: rules_states importa questo modulo
+    donors: list[Character] = []
+    for token in (t for t in spent if t.startswith("donor:")):
+        _, donor_id, row_id, amount = token.split(":")
+        donor = await session.get(Character, int(donor_id))
+        row = await session.get(Ability, int(row_id))
+        if donor is None or row is None or row.character_id != donor.id:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable"})
+        try:
+            await _spend_atomically(session, row, int(amount))
+        except HTTPException:  # l'uso è già andato (un altro danno, un altro alleato): la risposta è la stessa dell'opzione
+            raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable"}) from None
+        session.add(CharacterHistory(
+            character_id=donor.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
+            description=f"{row.name or row.feature_key}: speso per {receiver.name}, che resta a 1 PF"))
+        donors.append(donor)
+    return donors
 
 
 async def ally_target(session: AsyncSession, char: Character, target_id: object) -> Character:

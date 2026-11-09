@@ -167,6 +167,7 @@ class RollOption:
     spec: RollOptionSpec
     ctx: RuleContext  # con la classe che possiede il privilegio
     source: str  # nota del tiro: `condition:<slug>` o `feature:<chiave>`
+    donor: Any = None  # la scheda che paga (opzione ``for_ally`` di un altro partecipante); None: paga chi tira
 
 
 @dataclass
@@ -298,11 +299,17 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         for option in spec.roll_options:
-            found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
+            if not option.for_ally:  # le ``for_ally`` le offre ai compagni, non a chi le possiede
+                found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
+    for offer in getattr(ctx.char, "party_donors", None) or []:  # messi dal server (``attach_party_donors``)
+        donor, spec = offer["donor"], offer["spec"]
+        key = f"ally:{donor.id}:{spec.key}"
+        label = {lang: text.format(donor=donor.name) for lang, text in spec.label.items()}
+        found[key] = RollOption(replace(spec, key=key, for_ally=False, label=label), ctx, f"feature:{spec.key}", donor)
     # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
     kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
     return [o for o in found.values()
-            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(ctx.char, o.spec, o.ctx)]
+            if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(o.donor or ctx.char, o.spec, o.ctx)]
 
 
 def roll_options_for(ctx: RuleContext) -> list[RollOption]:
@@ -385,6 +392,13 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     """Paga l'opzione e ne applica l'effetto collaterale. Ricontrolla ogni risorsa: due opzioni possono contendersi
     l'ultima. I gettoni restituiti sono quelli che ``refund_spent`` sa rimborsare."""
     spec, char = option.spec, option.ctx.char
+    if option.donor is not None:
+        # Il costo è sulla scheda del donatore: qui solo un gettone. Lo spende il router, con un UPDATE condizionato, quando
+        # l'effetto scatta davvero (``spend_donor_tokens``): niente da rimborsare, e due richieste insieme non spendono lo stesso uso.
+        row = _ability_row(option.donor, spec.cost.feature_key, cost_amount(spec.cost, option.ctx))
+        if row is None:
+            raise OptionUnavailable(spec.key)
+        return [f"donor:{option.donor.id}:{row.id}:{cost_amount(spec.cost, option.ctx)}"]
     if not _affordable(char, spec, option.ctx):
         raise OptionUnavailable(spec.key)
     spent: list[str] = []
