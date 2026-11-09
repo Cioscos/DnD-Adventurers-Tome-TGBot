@@ -53,6 +53,8 @@ class SpellRead(BaseModel):
     pact_cast: Optional[dict] = None
     # Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48): `{conditions, untracked, count, max_targets, ally}`
     removal: Optional[dict] = None
+    # Effetto dell'incantesimo nel catalogo (edizione di chi lancia): `{target_kind, max_targets_by_slot, choices}`; `None` se non c'è
+    effect: Optional[dict] = None
 
     model_config = {"from_attributes": True}
 

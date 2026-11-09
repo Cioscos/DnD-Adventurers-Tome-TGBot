@@ -13,6 +13,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
 import AllyTargetSheet, { type Ally } from '@/components/rules/AllyTargetSheet'
 import RollNotes from '@/components/rules/RollNotes'
+import SpellEffectAsk, { type SpellEffectPick } from '@/components/rules/SpellEffectAsk'
 import type { OptionResult } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
@@ -50,7 +51,7 @@ export interface CastFlow {
  *  Incantesimi d'attacco (spec 2026-10-30): d20 dopo la scelta dello slot, poi
  *  esito e danno con slot già consumato. Lanci senza danno: toast di conferma. */
 export function useCastFlow(charId: number, char: CharacterFull | undefined): CastFlow {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const rollDice = useAnimatedRoll()
   const rollD20 = useD20Roll()
@@ -73,6 +74,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   >(null)
   // Incantesimo che toglie condizioni (Task 48): prima del lancio si sceglie cosa e a chi, nel foglio comune degli alleati.
   const [removalAsk, setRemovalAsk] = useState<{ spell: Spell; allies: Ally[]; next: () => void } | null>(null)
+  // Incantesimo con effetto sui bersagli (catalogo): prima del lancio si scelgono opzioni e bersagli.
+  const [effectAsk, setEffectAsk] = useState<{ spell: Spell; slot: SpellSlot } | null>(null)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   // Danno dopo il tiro per colpire: slot già consumato, critico preimpostato.
   const [damageAfterAttack, setDamageAfterAttack] = useState<{ critical: boolean } | null>(null)
@@ -95,12 +98,12 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Lancio senza dadi: slot, rituale o trucchetto. Il server avvia anche la concentrazione col suo contatore.
   const castMutation = useMutation({
-    mutationFn: ({ spell, slot, ritual = false, free = false, ki = null }: { spell: Spell; slot?: SpellSlot; ritual?: boolean; free?: boolean; ki?: number | null }) =>
+    mutationFn: ({ spell, slot, ritual = false, free = false, ki = null, effect }: { spell: Spell; slot?: SpellSlot; ritual?: boolean; free?: boolean; ki?: number | null; effect?: SpellEffectPick }) =>
       castSpell(charId, spell.id, ki != null
         ? { slot_level: null, as_ritual: false, ki: true, ki_extra: ki }
         : free
           ? { slot_level: null, as_ritual: false, free_cast: true }
-          : { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual }),
+          : { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual, ...effect }),
     onSuccess: (updated, { spell, slot, ritual = false, ki = null }) => {
       qc.setQueryData(['character', charId], updated)
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -108,6 +111,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       haptic.success()
       confirmCastDone(spell, slot?.level ?? null, ritual, ki)
       refreshAfterOptions(qc, charId, updated.option_result)
+      const fx = updated.spell_effects
+      const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+      if (fx?.applied.length) toast.success(t('character.spells.effect_applied', { name: spell.name, targets: fx.applied.map((a) => a.name).join(', ') }))
+      if (fx?.text) toast.info(fx.text[lang])
       if (updated.option_result?.effects?.length || updated.option_result?.targets?.length) setCastNotes(updated.option_result)
     },
     onError: (err) => {
@@ -247,6 +254,11 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setPendingSlotLevel(slot.level)
       setPendingSlotId(slot.id)
       setRollDamageSpell(spell)
+      return
+    }
+    // Con un effetto sui bersagli (non su di sé) o scelte da fare, si chiede prima; il server ricontrolla tutto.
+    if (spell.effect && (spell.effect.target_kind !== 'self' || spell.effect.choices.length > 0)) {
+      setEffectAsk({ spell, slot })
       return
     }
     castMutation.mutate({ spell, slot })
@@ -449,6 +461,21 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
               setRemovalAsk(null)
               next()
             },
+          }}
+        />
+      )}
+
+      {effectAsk?.spell.effect && (
+        <SpellEffectAsk
+          charId={charId}
+          title={effectAsk.spell.name}
+          effect={effectAsk.spell.effect}
+          slotLevel={effectAsk.slot.level}
+          onClose={() => setEffectAsk(null)}
+          onConfirm={(effect) => {
+            const { spell, slot } = effectAsk
+            setEffectAsk(null)
+            castMutation.mutate({ spell, slot, effect })
           }}
         />
       )}

@@ -18,6 +18,7 @@ from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
 from core.rules.condition_removal import spell_removal, view as removal_view
+from core.rules.catalog.spells import spell_effect
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.pact_casts import pact_cast
@@ -45,6 +46,12 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
                                "uses_left": pact.uses_left, **({"also_slot": True} if pact.also_slot else {})}
         if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
             spell.removal = removal_view(rm)
+        if (found := spell_effect(character_edition(char), spell.srd_index, spell.name)) is not None:
+            fx, variant = found
+            edition = character_edition(char)
+            spell.effect = {"target_kind": fx.target.kind,
+                            "max_targets_by_slot": {lvl: fx.target.count(lvl) for lvl in range(max(spell.level, 1), 10)},
+                            "choices": [{"key": c.key, "label": c.label, "options": c.options(edition)} for c in variant.choices]}
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

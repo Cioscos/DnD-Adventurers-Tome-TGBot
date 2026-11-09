@@ -192,4 +192,17 @@ describe('ActiveStatesBar, wizard states', () => {
     ], [])} />)
     expect(screen.queryByText('character.turn.end_state')).toBeNull()
   })
+
+  it('shows a spell effect with its name, caster and duration, and the target can end it by hand', async () => {
+    endActiveState.mockResolvedValue([])
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:shield_of_faith', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Scudo della Fede',
+        data: { caster_id: 3, caster_name: 'Chierico', duration: { rounds: 100, concentration: true, until_rest: false } } },
+    ], [])} />)
+    expect(screen.getByText(/Scudo della Fede/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_from/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_while_concentrating/)).toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.turn.end_state'))
+    await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'spell:shield_of_faith'))
+  })
 })

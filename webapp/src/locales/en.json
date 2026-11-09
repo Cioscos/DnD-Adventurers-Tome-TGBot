@@ -841,6 +841,9 @@
       "cast_done_slot": " · level {{level}} slot",
       "cast_done_ritual": " · as a ritual",
       "cast_done_concentration": " · concentrating",
+      "effect_applied": "{{name}} on {{targets}}",
+      "effect_next": "Next",
+      "effect_confirm": "Cast",
       "to_hit": "To hit",
       "attack_caster": "{{class}} · {{bonus}}",
       "attack_roll_damage": "Roll damage"
@@ -1502,6 +1505,10 @@
         }
       },
       "end_state": "End",
+      "state_from": "from {{name}}",
+      "state_until_rest": "until a long rest",
+      "state_while_concentrating": "while the caster concentrates",
+      "state_rounds_total": "{{n}} rounds",
       "extend_rage_save": "Extend: forced save",
       "extend_rage_done": "Rage extended until the end of your next turn.",
       "state_generic": "Active effect",

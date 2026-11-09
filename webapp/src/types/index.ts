@@ -214,6 +214,18 @@ export interface MapEntry {
   size_bytes?: number
 }
 
+export interface SpellEffectInfo {
+  target_kind: 'self' | 'ally' | 'allies' | 'aura'
+  max_targets_by_slot: Record<string, number>
+  choices: { key: string; label: { it: string; en: string }; options: string[] }[]
+}
+
+/** Esito degli effetti di un lancio: bersagli che hanno ricevuto lo stato e, fuori serata, il testo per il GM. */
+export interface SpellEffectsResult {
+  applied: { id: number; name: string }[]
+  text?: { it: string; en: string } | null
+}
+
 export interface Spell {
   id: number
   name: string
@@ -253,6 +265,8 @@ export interface Spell {
   /** Lancio pagato da un privilegio del Warlock: Arcanum Mistico (senza slot) o una supplica a uso singolo (slot di Patto). */
   /** Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48). */
   removal?: RemovalInfo | null
+  /** Effetto dell'incantesimo nel catalogo (edizione di chi lancia): chi può riceverlo, quanti per livello di slot, le scelte. */
+  effect?: SpellEffectInfo | null
   pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null; also_slot?: boolean } | null
 }
 
@@ -550,6 +564,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   damage_unrollable?: boolean
   /** POST /spells/{id}/use: esiti delle condizioni tolte, nelle due lingue (Task 48). */
   removal_result?: { it: string; en: string }[]
+  /** POST /spells/{id}/use|attack e /items/{id}/cast: chi ha ricevuto l'effetto dell'incantesimo. */
+  spell_effects?: SpellEffectsResult
   currency?: Currency
   abilities: Ability[]
   maps: MapEntry[]

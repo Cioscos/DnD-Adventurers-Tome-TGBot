@@ -7,7 +7,9 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useCastConfirmStore } from '@/lib/rollOptions'
 import type { CharacterFull, Spell } from '@/types'
 
-const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError } = vi.hoisted(() => ({
+const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError, toastInfo, sessionAllies } = vi.hoisted(() => ({
+  toastInfo: vi.fn(),
+  sessionAllies: vi.fn(),
   toastError: vi.fn(),
   castCheck: vi.fn(),
   attack: vi.fn(),
@@ -19,9 +21,9 @@ const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastEr
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck } } }
+  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck }, characters: { sessionAllies } } }
 })
-vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: vi.fn(), error: toastError, warning: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: toastInfo, error: toastError, warning: vi.fn() } }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   const t = (k: string, o?: Record<string, unknown>) =>
@@ -365,5 +367,54 @@ describe('useCastFlow damageless casts', () => {
     await waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('one_slot_per_turn'))
     useCastConfirmStore.getState().request!.answer(true)
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 4, expect.objectContaining({ confirm: ['one_slot_per_turn'] })))
+  })
+})
+
+describe('useCastFlow spell effects', () => {
+  const shield = {
+    id: 8, name: 'Scudo della Fede', level: 1, attack_save: null, is_concentration: true, is_ritual: false, is_prepared: true,
+    effect: { target_kind: 'ally', max_targets_by_slot: { '3': 1 }, choices: [] },
+  } as unknown as Spell
+  const aid = {
+    id: 9, name: 'Aiuto', level: 2, attack_save: null, is_concentration: false, is_ritual: false, is_prepared: true,
+    effect: { target_kind: 'allies', max_targets_by_slot: { '3': 3 }, choices: [] },
+  } as unknown as Spell
+
+  it('asks for a target and sends it with the cast', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockResolvedValue({ ...char, spell_effects: { applied: [{ id: 21, name: 'Eroe' }] } })
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    expect(useSpell).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ slot_level: 3, targets: [21] })))
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('character.spells.effect_applied(name=Scudo della Fede,targets=Eroe)'))
+  })
+
+  it('lets the caster pick himself and shows the GM text outside an evening', async () => {
+    sessionAllies.mockResolvedValue([])
+    useSpell.mockResolvedValue({ ...char, spell_effects: { applied: [], text: { it: 'Lo applica il GM', en: 'GM applies it' } } })
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('character.turn.removal_self'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ targets: [7] })))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('Lo applica il GM'))
+  })
+
+  it('picks several targets up to the slot limit', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }, { id: 22, name: 'Maga' }])
+    useSpell.mockResolvedValue(char)
+    castCheck.mockResolvedValue([])
+    renderFlow(aid)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await userEvent.click(screen.getByText('Maga'))
+    await userEvent.click(screen.getByText('character.turn.ally_confirm(n=2)'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 9, expect.objectContaining({ targets: [21, 22] })))
   })
 })

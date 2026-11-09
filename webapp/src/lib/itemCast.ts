@@ -16,7 +16,7 @@ export interface ResolvedItemCast {
 }
 
 /** Incantesimo del personaggio corrispondente (per indice SRD, poi per nome). */
-function matchingSpell(char: CharacterFull, g: GrantedSpell) {
+export function matchingSpell(char: CharacterFull, g: GrantedSpell) {
   const spells = char.spells ?? []
   const byIndex = g.srd_index
     ? spells.find((s) => (s as { srd_index?: string | null }).srd_index === g.srd_index)

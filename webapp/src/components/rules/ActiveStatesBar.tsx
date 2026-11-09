@@ -11,9 +11,17 @@ import type { CharacterFull } from '@/types'
 type StateRow = NonNullable<CharacterFull['active_states']>[number]
 
 /** I numeri che uno stato porta con sé e che il giocatore deve poter leggere: CD del TS, GS, danno fisso, esito. */
-function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string): string[] {
+function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string, charId: number): string[] {
   const d = (s.data ?? {}) as Record<string, unknown>
   const out: string[] = []
+  if (s.key.startsWith('spell:')) {
+    // Effetto di un incantesimo: lo scandisce l'orologio del lanciatore, qui si legge da chi viene e quanto dura.
+    if (typeof d.caster_name === 'string' && d.caster_id !== charId) out.push(t('character.turn.state_from', { name: d.caster_name }))
+    const dur = d.duration as { rounds?: number | null; concentration?: boolean; until_rest?: boolean } | undefined
+    if (dur?.until_rest) out.push(t('character.turn.state_until_rest'))
+    else if (dur?.concentration) out.push(t('character.turn.state_while_concentrating'))
+    else if (dur?.rounds) out.push(t('character.turn.state_rounds_total', { n: dur.rounds }))
+  }
   if (typeof d.dc === 'number') {
     out.push(t('character.turn.state_dc', { dc: d.dc, save: typeof d.save === 'string' ? t(`common.abilities.${d.save}`) : '' }))
   }
@@ -97,7 +105,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
         const others = ((s.data?.others as string[] | undefined) ?? [])
           .map((k) => char.abilities.find((a) => a.feature_key === k))
           .filter((a): a is NonNullable<typeof a> => !!a)
-        const facts = stateFacts(s, t)
+        const facts = stateFacts(s, t, char.id)
         // Lo decide il server: la scelta di prolungamento c'è solo finché l'Ira si può prolungare (non dal 15°, non per le altre classi).
         const canExtend = !!s.feature_key && !!char.abilities.find((a) => a.feature_key === s.feature_key)?.use_choices?.some((x) => x.key === 'extend_via')
         return (

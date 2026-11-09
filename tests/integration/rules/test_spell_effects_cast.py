@@ -323,3 +323,15 @@ async def test_item_cast_concentration_comes_from_the_catalog_variant(client, te
     as_user(GM_ID)
     await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})
     assert await _ac(client, hero, PLAYER_ID) == base
+
+
+async def test_spell_list_exposes_the_effect_for_the_client(client, test_session_factory):
+    caster, _ = await _caster(client, test_session_factory, seat=False)
+    as_user(GM_ID)
+    await client.post(f"/characters/{caster}/spells", json={"name": "Aid", "srd_index": "aid", "level": 2})
+    await client.post(f"/characters/{caster}/spells", json={"name": "Fireball", "srd_index": "fireball", "level": 3})
+    spells = {s["srd_index"]: s for s in (await client.get(f"/characters/{caster}/spells")).json()}
+    assert spells[SOF]["effect"]["target_kind"] == "ally" and spells[SOF]["effect"]["max_targets_by_slot"]["1"] == 1
+    aid = spells["aid"]["effect"]
+    assert aid["target_kind"] == "allies" and aid["max_targets_by_slot"]["3"] == 3 and aid["choices"] == []
+    assert spells["fireball"]["effect"] is None

@@ -195,6 +195,9 @@ export type SpellUseBody = Partial<RollChoice> & {
   confirm?: string[]
   /** Togliere condizioni (Task 48): `"self"`, l'id di un PG della serata o `"other"`; `conditions` assente se toglie tutto. */
   removal?: { targets: (number | string)[]; conditions?: string[] }
+  /** Effetto sui bersagli (catalogo): id dei personaggi; assente = te stesso. */
+  targets?: number[]
+  choices?: Record<string, string>
 }
 
 export type RollChoice = {
@@ -988,10 +991,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ spell_level: spellLevel }),
       }),
-    cast: (charId: number, itemId: number, spellIndex: number) =>
+    cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string> }) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
         method: 'POST',
-        body: JSON.stringify({ spell_index: spellIndex }),
+        body: JSON.stringify({ spell_index: spellIndex, ...effect }),
       }),
     attack: (
       charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll, choice?: AttackChoice,

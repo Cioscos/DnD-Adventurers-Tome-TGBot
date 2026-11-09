@@ -841,6 +841,9 @@
       "cast_done_slot": " · slot {{level}}° livello",
       "cast_done_ritual": " · come rituale",
       "cast_done_concentration": " · concentrazione attiva",
+      "effect_applied": "{{name}} su {{targets}}",
+      "effect_next": "Avanti",
+      "effect_confirm": "Lancia",
       "to_hit": "Per colpire",
       "attack_caster": "{{class}} · {{bonus}}",
       "attack_roll_damage": "Tira danni"
@@ -1501,6 +1504,10 @@
         }
       },
       "end_state": "Termina",
+      "state_from": "da {{name}}",
+      "state_until_rest": "fino al riposo lungo",
+      "state_while_concentrating": "finché il lanciatore si concentra",
+      "state_rounds_total": "{{n}} round",
       "extend_rage_save": "Prolunga: TS imposto",
       "extend_rage_done": "Ira prolungata fino alla fine del turno seguente.",
       "state_generic": "Effetto attivo",
