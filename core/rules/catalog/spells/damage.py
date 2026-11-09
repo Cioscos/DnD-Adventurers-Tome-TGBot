@@ -36,6 +36,10 @@ _MINOR_ELEMENTALS = SpellVariant(
     choices=(_types("acid", "cold", "fire", "lightning"),), track=True, concentration=True, rounds=MIN10,
     text=txt("I tuoi attacchi che colpiscono nell'Emanazione infliggono 2d8 extra del tipo scelto: li applichi a mano.",
              "Your attacks that hit in the Emanation deal extra 2d8 of the chosen type: apply it by hand."))
+_ELEMENTAL = SpellVariant(  # 2024: l'elemento del Grande Spirito decide il tipo (aria fulmine, terra tuono, fuoco fuoco, acqua freddo)
+    choices=(_types("lightning", "thunder", "fire", "cold"),), track=True, concentration=True, rounds=MIN10,
+    text=txt("Chi entra nello Spirito o inizia lì il turno fa il TS Destrezza o subisce 8d8 del tipo dell'elemento scelto (aria fulmine, terra tuono, fuoco fuoco, acqua freddo): li applichi a mano.",
+             "A creature that enters the spirit or starts its turn there makes a DEX save or takes 8d8 of the chosen element's type (air lightning, earth thunder, fire fire, water cold): apply it by hand."))
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("chromatic_orb", ("chromatic-orb",), ("Globo Cromatico", "Sfera Cromatica", "Chromatic Orb"), SpellTarget("self"), both(_ORB)),
@@ -45,4 +49,5 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("elemental_weapon", ("elemental-weapon",), ("Arma Elementale", "Elemental Weapon"), SpellTarget("ally"), both(_WEAPON)),
     SpellEffect("conjure_minor_elementals", ("conjure-minor-elementals",), ("Evoca Elementali Minori", "Conjure Minor Elementals"),
                 SpellTarget("self"), {"2024": _MINOR_ELEMENTALS}),
+    SpellEffect("conjure_elemental", ("conjure-elemental",), ("Evoca Elementale", "Conjure Elemental"), SpellTarget("self"), {"2024": _ELEMENTAL}),
 )

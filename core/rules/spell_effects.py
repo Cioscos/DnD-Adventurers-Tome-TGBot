@@ -27,6 +27,7 @@ class SpellChoice:
     key: str
     label: dict[str, str]
     options: Callable[[str], list[str]]  # per edizione
+    inflicts: bool = True  # False: il tipo scelto è un tipo a cui si resiste (Protezione dall'Energia), non un danno inflitto
 
 
 @dataclass(frozen=True)

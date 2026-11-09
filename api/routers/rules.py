@@ -25,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
+from api.services.spell_effects import resists_chosen_type
 from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
@@ -172,6 +173,8 @@ async def roll_options(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not found")
     if roll == "initiative":
         ability = "dexterity"
+    if spell is not None and resists_chosen_type(char, spell):
+        damage_type = None  # il tipo scelto è quello a cui si resiste: non attiva i privilegi sul danno inflitto
     if roll in ("save", "death_save", "damage_taken"):
         if roll == "damage_taken":  # aure dei compagni e Dono dei Protettori di un compagno
             await attach_party(db, char)

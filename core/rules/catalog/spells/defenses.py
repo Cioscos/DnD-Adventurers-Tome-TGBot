@@ -88,7 +88,7 @@ _FEIGN_DEATH = SpellVariant(
 
 _PROT_ENERGY = SpellVariant(
     modifiers=lambda d: (Modifier(f"resistance:{(d.get('choices') or {}).get('damage_type')}", 1),),
-    choices=(SpellChoice("damage_type", txt("Tipo di danno", "Damage type"), lambda _ed: list(ENERGY)),),
+    choices=(SpellChoice("damage_type", txt("Tipo di danno", "Damage type"), lambda _ed: list(ENERGY), inflicts=False),),
     concentration=True, rounds=HOUR)
 
 _POISON_OPTION = confirm_save("protection_from_poison", txt("Protezione dai Veleni: il TS è contro avvelenato?",
@@ -122,7 +122,7 @@ RESISTANCE_2024 = SpellVariant(
         extra_dice=lambda _c, _i: "1d4", available=_reduces,
         label=txt("Resistenza: riduci il danno di 1d4", "Resistance: reduce the damage by 1d4")),),
     choices=(SpellChoice("damage_type", txt("Tipo di danno", "Damage type"),
-                         lambda _ed: [t for t in DAMAGE_TYPES if t not in ("force", "psychic")]),),
+                         lambda _ed: [t for t in DAMAGE_TYPES if t not in ("force", "psychic")], inflicts=False),),
     concentration=True, rounds=10)
 
 # --- Vantaggi -----------------------------------------------------------------------------------------------------

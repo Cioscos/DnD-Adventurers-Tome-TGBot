@@ -22,7 +22,8 @@ from core.game.stats import effective_ability_mod
 from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
-from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_state, forget_spell_temp_drop, note_spell_temp_hp, settle_closed
+from core.data.damage_types import canonical_damage_type
+from core.rules.states import SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_state, forget_spell_temp_drop, note_spell_temp_hp, settle_closed
 from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
@@ -91,20 +92,51 @@ async def validate_spell_targets(session: AsyncSession, caster: Character, spell
     return resolved and resolved[:3]
 
 
+def _damage_choice(char: Character, spell):
+    """``(effetto, scelta del tipo di danno inflitto)`` dell'incantesimo nell'edizione di chi lancia, o ``None``."""
+    found = spell_effect(character_edition(char), spell.srd_index, spell.name)
+    choice = next((c for c in found[1].choices if c.key == "damage_type" and c.inflicts), None) if found else None
+    return (found[0], choice) if choice else None
+
+
+def resists_chosen_type(char: Character, spell) -> bool:
+    """Il tipo scelto al lancio è un tipo a cui si resiste (Protezione dall'Energia), non un danno inflitto."""
+    found = spell_effect(character_edition(char), spell.srd_index, spell.name)
+    return bool(found) and any(c.key == "damage_type" and not c.inflicts for c in found[1].choices)
+
+
+def cast_damage_type(char: Character, spell, choices: dict[str, str] | None) -> str | None:
+    """Il tipo di danno inflitto scelto in un lancio (non quello a cui si resiste): per le opzioni del lancio."""
+    return canonical_damage_type((choices or {}).get("damage_type")) if _damage_choice(char, spell) else None
+
+
 def chosen_damage_type(char: Character, spell, requested: str | None) -> str | None:
-    """Il tipo di danno scelto al lancio per il tiro di danno: quello richiesto (422 ``invalid_choice`` se l'incantesimo non lo
-    offre o non lo ammette) o, senza richiesta, quello ricordato dall'orologio di chi lancia. ``None``: vale il tipo dell'incantesimo."""
-    edition = character_edition(char)
-    found = spell_effect(edition, spell.srd_index, spell.name)
-    choice = next((c for c in found[1].choices if c.key == "damage_type"), None) if found else None
-    if requested is not None:
-        if choice is None or requested not in choice.options(edition):
+    """Il tipo di danno scelto al lancio, per il tiro di danno: quello dell'ultimo lancio di questo incantesimo o, per uno con durata,
+    quello dell'orologio. 422 ``invalid_choice`` se manca o se la richiesta ne indica un altro. ``None``: l'incantesimo non offre la scelta."""
+    found = _damage_choice(char, spell)
+    if found is None:
+        if requested is not None:
             raise _invalid("invalid_choice")
-        return requested
-    if choice is None:
         return None
-    clock = next((s for s in char.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{found[0].key}"), None)
-    return (((clock or {}).get("data") or {}).get("state_data") or {}).get("choices", {}).get("damage_type")
+    effect = found[0]
+    last = (char.settings or {}).get(SPELL_CAST_TYPE) or {}
+    if last.get("spell") == effect.key:
+        stored = last.get("damage_type")
+    else:
+        clock = next((s for s in char.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{effect.key}"), None)
+        stored = (((clock or {}).get("data") or {}).get("state_data") or {}).get("choices", {}).get("damage_type")
+    if stored is None or (requested is not None and requested != stored):
+        raise _invalid("invalid_choice")
+    return stored
+
+
+def _remember_cast_type(caster: Character, effect_key: str | None, choice_type: str | None) -> None:
+    """Un lancio qualunque sostituisce (o toglie) il tipo dell'ultimo: un tipo vecchio non resta su un lancio nuovo."""
+    settings = {k: v for k, v in (caster.settings or {}).items() if k != SPELL_CAST_TYPE}
+    if choice_type:
+        settings[SPELL_CAST_TYPE] = {"spell": effect_key, "damage_type": choice_type}
+    if settings != (caster.settings or {}):
+        caster.settings = settings
 
 
 def end_unarmored_spells(char: Character) -> None:
@@ -152,8 +184,11 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     nessuno stato e un testo per il GM."""
     resolved = await _resolve(session, caster, spell, slot_level, targets, choices)
     if resolved is None:
+        _remember_cast_type(caster, None, None)
         return None
     effect, variant, chars, chosen, outside = resolved
+    inflicts = any(c.key == "damage_type" and c.inflicts for c in variant.choices)
+    _remember_cast_type(caster, effect.key, chosen.get("damage_type") if inflicts else None)
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster),
             "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest},

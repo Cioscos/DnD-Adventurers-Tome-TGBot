@@ -9,6 +9,7 @@ from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
 from tests.integration.rules.test_2024_sorcerer import OPTIONS, TRANSMUTED, _caster24, _damage, _pending
 from tests.integration.rules.test_spell_effects_cast import _full
 from tests.integration.rules.test_2024_sorcerer_subclasses import P, _affinity, _make
+from tests.integration.rules.test_2014_sorcerer_origins import AFFINITY_CAST, _draconic as _draconic14
 
 ORB = dict(name="Sfera Cromatica", srd_index="chromatic-orb", attack_save="DEX", damage_dice="3d8", damage_type="acid")
 SIX = ["acid", "cold", "lightning", "fire", "thunder", "poison"]
@@ -33,6 +34,7 @@ async def _use(client, cid, spell, **body):
     ("2024", "glyph-of-warding", {"acid", "cold", "fire", "lightning", "thunder"}),
     ("2024", "sorcerous-burst", {"acid", "cold", "fire", "lightning", "poison", "psychic", "thunder"}),
     ("2024", "conjure-minor-elementals", {"acid", "cold", "fire", "lightning"}),
+    ("2024", "conjure-elemental", {"lightning", "thunder", "fire", "cold"}),
     ("2014", "protection-from-energy", {"acid", "cold", "fire", "lightning", "thunder"}),
 ])
 def test_the_spell_offers_its_damage_types_in_the_edition(edition, srd, options):
@@ -41,7 +43,7 @@ def test_the_spell_offers_its_damage_types_in_the_edition(edition, srd, options)
     assert set(choice.options(edition)) == options
 
 
-@pytest.mark.parametrize("edition,srd", [("2014", "dragons-breath"), ("2014", "sorcerous-burst"), ("2014", "conjure-minor-elementals")])
+@pytest.mark.parametrize("edition,srd", [("2014", "dragons-breath"), ("2014", "sorcerous-burst"), ("2014", "conjure-minor-elementals"), ("2014", "conjure-elemental")])
 def test_a_spell_that_does_not_exist_in_the_edition_has_no_entry(edition, srd):
     assert spell_effect(edition, srd) is None
 
@@ -76,10 +78,49 @@ async def test_a_spell_without_a_choice_is_unchanged(client):
     assert result["damage_type"] == "fire"
 
 
-async def test_the_roll_without_a_type_keeps_the_type_of_the_spell(client):
+async def _roll(client, cid, spell, **body):
+    return await client.post(f"/characters/{cid}/spells/{spell}/roll_damage", json={"casting_level": 1, **body})
+
+
+async def test_the_roll_without_a_cast_does_not_fall_back_to_the_type_of_the_row(client):
     cid = (await client.post("/characters", json={"name": "Mago"})).json()["id"]
     spell = await _orb(client, cid)
-    assert (await _damage(client, cid, spell, casting_level=1))["damage_type"] == "acid"
+    r = await _roll(client, cid, spell)
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"
+    r = await _roll(client, cid, spell, damage_type="cold")  # nemmeno il tipo imposto dal client
+    assert r.status_code == 422
+
+
+async def test_the_roll_uses_the_type_of_the_cast_and_refuses_another(client):
+    cid = (await client.post("/characters", json={"name": "Mago"})).json()["id"]
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": 1, "total": 3})
+    spell = await _orb(client, cid)
+    r0 = await _use(client, cid, spell, choices={"damage_type": "fire"}, confirm=["one_slot_per_turn"]); assert r0.status_code == 200, r0.text
+    assert (await _roll(client, cid, spell, damage_type="poison")).status_code == 422
+    assert (await _roll(client, cid, spell)).json()["damage_type"] == "fire"  # senza tipo: quello del lancio
+    assert (await _roll(client, cid, spell, damage_type="fire")).json()["damage_type"] == "fire"
+
+
+async def test_a_new_cast_replaces_the_type_and_another_spell_drops_it(client):
+    cid = (await client.post("/characters", json={"name": "Mago"})).json()["id"]
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": 1, "total": 4})
+    spell = await _orb(client, cid)
+    other = await _spell(client, cid, "Dardo", 1, srd_index="fire-bolt-x", damage_dice="1d10", damage_type="fire")
+    await _use(client, cid, spell, choices={"damage_type": "fire"})
+    await _use(client, cid, spell, choices={"damage_type": "cold"})
+    assert (await _roll(client, cid, spell, damage_type="fire")).status_code == 422
+    assert (await _roll(client, cid, spell)).json()["damage_type"] == "cold"
+    assert (await _use(client, cid, other)).status_code == 200  # un altro lancio: il tipo vecchio non resta
+    assert (await _roll(client, cid, spell)).status_code == 422
+
+
+async def test_the_resisted_type_of_protection_from_energy_is_not_a_damage_type(client):
+    cid = await _draconic14(client, 6, "red")
+    spell = await _spell(client, cid, "Protezione dall'Energia", 3, srd_index="protection-from-energy")
+    assert AFFINITY_CAST not in await _roll_keys(client, cid, "cast", spell_id=spell, damage_type="fire")  # nemmeno nell'elenco
+    r = await _use(client, cid, spell, slot_level=3, choices={"damage_type": "fire"}, options=[AFFINITY_CAST])
+    assert r.status_code == 409  # il tipo a cui si resiste non è un danno inflitto: l'Affinità non vale
+    assert (await _use(client, cid, spell, slot_level=3, choices={"damage_type": "fire"})).status_code == 200
 
 
 async def test_a_concentration_spell_remembers_the_type_chosen_at_the_cast(client):
@@ -107,12 +148,30 @@ async def test_the_affinity_bonus_applies_to_the_rolled_cold_orb(client):
     cid = await _make(client, "draconic", 6)
     await _affinity(client, cid, "cold")
     spell = await _orb(client, cid)
+    assert (await _use(client, cid, spell, choices={"damage_type": "cold"})).status_code == 200
     plain = await _damage(client, cid, spell, casting_level=1, damage_type="cold", main_rolls=[1, 1, 1])
     boosted = await _damage(client, cid, spell, P + "elemental_affinity", casting_level=1, damage_type="cold", main_rolls=[1, 1, 1])
     assert boosted["total"] == plain["total"] + 4 and boosted["damage_type"] == "cold"
-    r = await client.post(f"/characters/{cid}/spells/{spell}/roll_damage",
-                          json={"options": [P + "elemental_affinity"], "casting_level": 1, "damage_type": "fire"})
+    r0 = await _use(client, cid, spell, choices={"damage_type": "fire"}, confirm=["one_slot_per_turn"]); assert r0.status_code == 200, r0.text
+    r = await _roll(client, cid, spell, options=[P + "elemental_affinity"])
     assert r.status_code == 409  # sul fuoco l'Affinità non c'è
+
+
+async def test_the_affinity_resistance_at_the_cast_follows_the_chosen_type_in_2014(client):
+    cid = await _draconic14(client, 6, "red")  # antenato rosso: fuoco; la Sfera di base è acido
+    spell = await _orb(client, cid)
+    assert AFFINITY_CAST in await _roll_keys(client, cid, "cast", spell_id=spell, damage_type="fire")
+    assert AFFINITY_CAST not in await _roll_keys(client, cid, "cast", spell_id=spell, damage_type="cold")
+    r = await _use(client, cid, spell, slot_level=1, choices={"damage_type": "fire"}, options=[AFFINITY_CAST])
+    assert r.status_code == 200, r.text
+
+
+async def test_the_transmuted_affinity_is_listed_after_the_transmuted_option(client):
+    cid = await _draconic_transmuter(client, "cold")
+    spell = await _spell(client, cid, "Fiamma", 1, attack_save="DEX", damage_dice="2d6", damage_type="fire")
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "spell_damage", "spell_id": spell})
+    options = {o["key"]: o for o in r.json()}
+    assert options[P + "elemental_affinity"]["needs"] == f"{TRANSMUTED}_cold"
 
 
 async def _draconic_transmuter(client, ancestor):
@@ -129,7 +188,7 @@ async def test_transmuted_spell_from_fire_to_cold_is_seen_by_the_affinity(client
     cid = await _draconic_transmuter(client, "cold")
     spell = await _spell(client, cid, "Fiamma", 1, attack_save="DEX", damage_dice="2d6", damage_type="fire")
     affinity = P + "elemental_affinity"
-    assert affinity not in await _roll_keys(client, cid, "spell_damage", spell_id=spell)  # sul fuoco non c'è
+    assert affinity in await _roll_keys(client, cid, "spell_damage", spell_id=spell)  # elencata solo dopo Trasmutato (needs): sul fuoco da sola non si applica
     plain = await _damage(client, cid, spell, f"{TRANSMUTED}_cold", casting_level=1, main_rolls=[1, 1])
     boosted = await _damage(client, cid, spell, f"{TRANSMUTED}_cold", affinity, casting_level=1, main_rolls=[1, 1])
     assert boosted["damage_type"] == "cold" and boosted["total"] == plain["total"] + 4

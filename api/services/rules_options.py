@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -169,7 +169,16 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
 def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionRead]:
     from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD  # import locale, come negli altri servizi
     # Interdizione alla Morte la applica il server da sola (``apply_hp_update``): il client non la deve offrire
-    return [option_read(o, lang) for o in roll_options_for(roll_context(char, roll, **kw)) if o.spec.key != DEATH_WARD_HOLD]
+    ctx = roll_context(char, roll, **kw)
+    offered = [o for o in roll_options_for(ctx) if o.spec.key != DEATH_WARD_HOLD]
+    out = [option_read(o, lang) for o in offered]
+    for turn in (o for o in offered if o.spec.damage_type_to and o.spec.phase == "before"):
+        # Incantesimo Trasmutato: le opzioni che compaiono solo sul tipo nuovo (Affinità Elementale) si scelgono dopo di lui
+        have = {r.key for r in out}
+        out += [option_read(o, lang).model_copy(update={"needs": turn.spec.key})
+                for o in roll_options_for(replace(ctx, damage_type=turn.spec.damage_type_to))
+                if o.spec.key not in have and o.spec.phase == "before" and not o.spec.damage_type_to and o.spec.key != DEATH_WARD_HOLD]
+    return out
 
 
 def reaction_offers(char: Any, lang: str) -> list[RollOptionRead]:

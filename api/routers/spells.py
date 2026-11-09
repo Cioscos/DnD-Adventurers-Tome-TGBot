@@ -42,7 +42,7 @@ from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import deliver_temp_gifts
-from api.services.spell_effects import apply_spell_effects, cast_level, chosen_damage_type, validate_spell_targets
+from api.services.spell_effects import apply_spell_effects, cast_level, cast_damage_type, chosen_damage_type, validate_spell_targets
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
@@ -546,7 +546,7 @@ async def use_spell(
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
-                       slotless=bool(body.free_cast or body.as_ritual), damage_type=canonical_damage_type((body.choices or {}).get("damage_type")))
+                       slotless=bool(body.free_cast or body.as_ritual), damage_type=cast_damage_type(char, spell, body.choices))
     await deliver_temp_gifts(session, char, opts)  # Passo Rinfrescante su un altro PG della serata
     removal_lines = None
     if removal is not None:  # stessa transazione del lancio: o paga e toglie, o nulla
@@ -613,7 +613,7 @@ async def spell_attack(
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
                                 casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual),
-                                damage_type=canonical_damage_type((body.choices or {}).get("damage_type")))
+                                damage_type=cast_damage_type(char, spell, body.choices))
         await deliver_temp_gifts(session, char, cast_opts)
         _end_cast(char)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
