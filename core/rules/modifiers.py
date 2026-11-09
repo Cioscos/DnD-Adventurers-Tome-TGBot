@@ -12,6 +12,7 @@ from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_armor_proficient
+from core.rules.spell_effects import spell_state_modifiers
 from core.rules.states import exhaustion_level, immune_conditions
 from core.rules.types import Edition, Modifier, RuleContext
 from core.rules.weapons import ability_score, has_property, small_race
@@ -234,6 +235,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         pairs += [(m, feature_ctx, m.source or f"feature:{spec.key}") for m in spec.modifiers]
+    pairs += [(m, ctx, src) for m, src in spell_state_modifiers(ctx.char)]
 
     out = Applied()
     half_prof = False
