@@ -215,6 +215,16 @@
         "aura_warding_2024": "Aura of Warding",
         "war_blessing_add": "War God's Blessing",
         "trickster_advantage": "Blessing of the Trickster"
+      },
+      "spell": {
+        "shield_of_faith": "Shield of Faith",
+        "aid": "Aid",
+        "longstrider": "Longstrider",
+        "bless": "Bless",
+        "guidance": "Guidance",
+        "resistance": "Resistance",
+        "pass_without_trace": "Pass without Trace",
+        "blade_ward": "Blade Ward"
       }
     },
     "hero": {

@@ -215,6 +215,16 @@
         "aura_warding_2024": "Aura di Interdizione",
         "war_blessing_add": "Benedizione di Guerra",
         "trickster_advantage": "Benedizione dell'Ingannatore"
+      },
+      "spell": {
+        "shield_of_faith": "Scudo della Fede",
+        "aid": "Aiuto",
+        "longstrider": "Passo Veloce",
+        "bless": "Benedizione",
+        "guidance": "Guida",
+        "resistance": "Resistenza",
+        "pass_without_trace": "Passare Senza Tracce",
+        "blade_ward": "Protezione dalle Lame"
       }
     },
     "hero": {

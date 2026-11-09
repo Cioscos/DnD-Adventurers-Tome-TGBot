@@ -48,6 +48,13 @@ describe('ActiveStatesBar', () => {
     expect(screen.getAllByText(/character\.turn\.state_radius/).length).toBeGreaterThanOrEqual(3)
   })
 
+  it('shows the skill a 2024 Guidance was cast on, kept in the spell choices', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:guidance', feature_key: 'spell:guidance', rounds_left: null, ends_on: ['manual'], name: 'Guida', data: { spell_key: 'guidance', choices: { skill: 'sleight_of_hand' } } },
+    ], [])} />)
+    expect(screen.getByText(/character\.skills\.sleight_of_hand/)).toBeInTheDocument()
+  })
+
   it('does not offer to end a state that only a long rest closes (ward, Overchannel)', () => {
     renderWithProviders(<ActiveStatesBar char={char([
       { key: 'arcane_ward', feature_key: 'wizard.arcane_ward', rounds_left: null, ends_on: ['rest_long'], data: { hp: 5, max: 10, locked: true } },
