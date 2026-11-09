@@ -210,7 +210,7 @@ def _gift_available(ctx: RuleContext) -> bool:
     if not _drops_to_zero(ctx):
         return False
     char = ctx.char
-    return ctx.damage is None or ctx.damage - char.current_hit_points - (char.temp_hp or 0) < char.hit_points
+    return ctx.damage is None or ctx.damage - char.current_hit_points - (char.temp_hp or 0) < getattr(char, "party_hp_max", char.hit_points)
 
 
 GIFT_KEY = f"{CK}.gift_of_the_protectors"

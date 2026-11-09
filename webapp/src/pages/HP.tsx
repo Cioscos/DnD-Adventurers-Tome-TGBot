@@ -120,9 +120,11 @@ export default function HP() {
       setReactions(op === 'damage' ? updated.reactions ?? [] : [])
       if (updated.option_result) {
         refreshAfterOptions(qc, charId, updated.option_result)
-        toast.info(t('character.roll_options.damage_changed', {
-          before: updated.option_result.damage_before, after: updated.option_result.damage_after,
-        }))
+        if (updated.option_result.damage_before != null && updated.option_result.damage_after != null) { // senza riduzione il server non li manda
+          toast.info(t('character.roll_options.damage_changed', {
+            before: updated.option_result.damage_before, after: updated.option_result.damage_after,
+          }))
+        }
       }
       // HP events (damage/heal) can drive homebrew change_resource rules (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })

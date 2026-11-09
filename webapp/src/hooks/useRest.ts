@@ -72,8 +72,10 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         setTooSoon(true)
       } else if (detail === 'rest_needs_hp') {
         toast.error(t('character.quick_actions.rest_needs_hp'))
-      } else if (code === 'invalid_target' || code === 'target_dead') {
-        toast.error(t(`character.turn.use_errors.${code}`))
+      } else if (code === 'target_dead') {
+        toast.error(t('character.quick_actions.rest_target_dead'))
+      } else if (code === 'invalid_target') {
+        toast.error(t('character.turn.use_errors.invalid_target'))
       } else {
         notifyMutationError()
       }

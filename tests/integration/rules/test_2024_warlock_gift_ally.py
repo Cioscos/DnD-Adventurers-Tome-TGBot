@@ -153,3 +153,43 @@ async def test_the_refund_is_one_atomic_update_capped_at_max_uses(client, test_s
         assert (await s.get(Ability, row_id)).uses == 2
         theirs = (await s.execute(select(CharacterHistory).where(CharacterHistory.character_id == cid))).scalars().all()
     assert any("uso restituito" in e.description for e in theirs)
+
+
+async def test_the_kill_threshold_uses_the_effective_maximum_with_a_hit_point_bonus(client, test_session_factory):
+    from tests.integration.homebrew.test_passive_modifiers import _ALWAYS_TRUE_CHAR, _build_passive_rule
+    cid, hero, key = await _table(client, test_session_factory)
+    as_user(PLAYER_ID)
+    rule = _build_passive_rule("+10 PF", {"type": "character"}, "character.hit_points_max", 10, _ALWAYS_TRUE_CHAR)
+    assert (await client.post(f"/characters/{hero}/homebrew/rules", json=rule)).status_code in (200, 201)
+    # 85 - 40 PF = 45: sopra i 40 base, sotto i 50 effettivi: non uccide sul colpo
+    assert key in await _offered(client, hero, PLAYER_ID, damage=85)
+    r = await _hit(client, hero, PLAYER_ID, 85, [key])
+    assert r.status_code == 200 and r.json()["current_hit_points"] == 1 and r.json()["is_dead"] is False
+
+
+async def test_a_damage_with_options_loads_the_seated_allies_once(client, test_session_factory, monkeypatch):
+    import api.services.session_allies as allies
+    cid, hero, key = await _table(client, test_session_factory)
+    calls = []
+    real = allies.seated_allies
+
+    async def counting(session, char):
+        calls.append(char.id)
+        return await real(session, char)
+
+    monkeypatch.setattr(allies, "seated_allies", counting)
+    assert (await _hit(client, hero, PLAYER_ID, 10, [key])).status_code == 200
+    assert len(calls) == 1
+    calls.clear()
+    await _offered(client, hero, PLAYER_ID)
+    assert len(calls) == 1
+
+
+async def test_holding_at_one_has_no_fake_reduction_and_the_history_shows_the_hit_points_really_lost(client, test_session_factory):
+    cid, hero, key = await _table(client, test_session_factory)
+    r = await _hit(client, hero, PLAYER_ID, 60, [key])
+    assert r.status_code == 200 and r.json()["current_hit_points"] == 1
+    block = r.json()["option_result"]
+    assert block["damage_before"] is None and block["damage_after"] is None  # il danno non è stato ridotto
+    history = (await client.get(f"/characters/{hero}/history")).json()
+    assert any("Danni: -39 HP (40 → 1)" in e["description"] for e in history)

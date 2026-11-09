@@ -327,6 +327,7 @@
       "rest_too_soon_title": "Long rest too soon",
       "rest_too_soon_body": "Less than {{hours}} hours have passed since the last long rest. Proceed anyway?",
       "rest_too_soon_use_menu": "Last long rest too recent: confirm from the Rest menu.",
+      "rest_target_dead": "That character is dead: they can't receive temporary HP.",
       "rest_needs_hp": "You need at least 1 HP to start the rest."
     },
     "select": {

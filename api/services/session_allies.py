@@ -8,6 +8,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.homebrew.passive import get_passive_modifiers
+from core.rules.modifiers import effective_hp_max
 from core.db.models import Ability, Character, CharacterHistory, GameSession, SessionParticipant, SessionStatus
 
 
@@ -32,29 +34,36 @@ async def load_receiver(session: AsyncSession, char_id: int) -> Character:
     return row.scalar_one()
 
 
+async def _party(session: AsyncSession, char: Character) -> list[Character]:
+    """Gli alleati seduti, con ciò che servono aure e doni (un solo caricamento per alleato)."""
+    allies = await seated_allies(session, char)
+    for ally in allies:
+        await session.refresh(ally, ["classes", "ability_scores", "items", "abilities"])
+    return allies
+
+
+def _auras(allies: list[Character]) -> list[dict]:
+    from core.rules.auras import projected_auras  # import locale: auras usa il catalogo
+    return [aura for ally in allies for aura in projected_auras(ally)]
+
+
 async def attach_party_auras(session: AsyncSession, char: Character) -> None:
     """Mette su ``char`` le aure che i compagni della serata proiettano su di lui (``char.party_auras``, transitorio):
     le opzioni al tiro `aura:*` le leggono. Fuori serata non ce ne sono."""
-    from core.rules.auras import projected_auras  # import locale: auras usa il catalogo
-    found: list[dict] = []
-    for ally in await seated_allies(session, char):
-        await session.refresh(ally, ["classes", "ability_scores", "items"])
-        found += projected_auras(ally)
-    char.party_auras = found
+    char.party_auras = _auras(await _party(session, char))
 
 
-async def attach_party_donors(session: AsyncSession, char: Character) -> None:
-    """Mette su ``char`` le opzioni al tiro che i compagni della serata gli offrono (``RollOptionSpec.for_ally``, es. Dono dei
-    Protettori): ``char.party_donors``, transitorio. Il costo resta sulla scheda del donatore; fuori serata non ce ne sono."""
+async def attach_party(session: AsyncSession, char: Character) -> None:
+    """Per un danno subito: le aure (come ``attach_party_auras``) e le opzioni che i compagni gli offrono
+    (``RollOptionSpec.for_ally``, es. Dono dei Protettori: ``char.party_donors``, il costo resta sul donatore), con un solo
+    caricamento degli alleati. Mette anche ``char.party_hp_max``, i PF massimi con i bonus passivi, che il catalogo
+    (senza sessione) usa per la soglia «uccide sul colpo». Tutto transitorio."""
     from core.rules.catalog import active_features  # import locale: il catalogo importa i tipi
-    found: list[dict] = []
-    for ally in await seated_allies(session, char):
-        if ally.is_dead:
-            continue
-        await session.refresh(ally, ["classes", "ability_scores", "items", "abilities"])
-        found += [{"donor": ally, "spec": option, "row": row} for spec, row in active_features(ally)
-                  for option in spec.roll_options if option.for_ally]
-    char.party_donors = found
+    allies = await _party(session, char)
+    char.party_auras = _auras(allies)
+    char.party_donors = [{"donor": ally, "spec": option, "row": row} for ally in allies if not ally.is_dead
+                         for spec, row in active_features(ally) for option in spec.roll_options if option.for_ally]
+    char.party_hp_max = effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
 
 
 async def spend_donor_tokens(session: AsyncSession, receiver: Character, spent: list[str]) -> list[Character]:

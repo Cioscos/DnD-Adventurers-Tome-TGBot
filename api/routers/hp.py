@@ -31,7 +31,7 @@ from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
-from api.services.session_allies import attach_party_auras, attach_party_donors, refund_donor_tokens, spend_donor_tokens
+from api.services.session_allies import attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -250,8 +250,7 @@ async def update_hp(
         opts = None
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
-            await attach_party_auras(session, char)
-            await attach_party_donors(session, char)  # Dono dei Protettori di un compagno della serata
+            await attach_party(session, char)  # aure e Dono dei Protettori dei compagni della serata
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
             rolls, reduction = roll_option_dice(char, opts)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
@@ -323,18 +322,21 @@ async def update_hp(
                 refund_spent(char, paid)
                 option_block.spent = [token for token in option_block.spent if token not in paid]
         char.current_hit_points = max(0, char.current_hit_points - amount)
+        if option_block is not None and option_block.damage_before == option_block.damage_after:
+            option_block.damage_before = option_block.damage_after = None  # nessuna riduzione (resta a 1 PF): niente «Danno 20 → 20»
+        lost = old - char.current_hit_points if held_at_one else pre_form  # tenuto a 1 PF si perdono meno PF del danno
         knocked = False  # 2024: il tramortito resta a 1 PF, non è «sceso a 0»
         if slug is not None and mod in ("half", "double", "half_double", "immune"):
             word = {"half": "resistenza", "double": "vulnerabilità", "half_double": "resistenza e vulnerabilità",
                     "immune": "immunità"}[mod]
-            desc = (f"Danno {raw} {LABELS_IT[slug]} → {pre_form} ({word}) "
+            desc = (f"Danno {raw} {LABELS_IT[slug]} → {lost} ({word}) "
                     f"({old} → {char.current_hit_points})")
         else:
             note = ""
             if body.raw_value is not None and mod in ("half", "double", "half_double"):
                 word = {"half": "dimezzati", "double": "raddoppiati", "half_double": "dimezzati e raddoppiati"}[mod]
                 note = f" ({body.raw_value} {word})"
-            desc = f"Danni: -{pre_form} HP{note} ({old} → {char.current_hit_points})"
+            desc = f"Danni: -{lost} HP{note} ({old} → {char.current_hit_points})"
         if form_overflow:
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if warded:

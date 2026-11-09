@@ -69,9 +69,11 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         : api.characters.updateHp(char.id, op, value))
       if (updated.option_result) {
         refreshAfterOptions(qc, char.id, updated.option_result)
-        toast.info(t('character.roll_options.damage_changed', {
-          before: updated.option_result.damage_before, after: updated.option_result.damage_after,
-        }))
+        if (updated.option_result.damage_before != null && updated.option_result.damage_after != null) { // senza riduzione il server non li manda
+          toast.info(t('character.roll_options.damage_changed', {
+            before: updated.option_result.damage_before, after: updated.option_result.damage_after,
+          }))
+        }
       }
       return updated
     },
