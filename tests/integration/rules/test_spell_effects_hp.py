@@ -200,6 +200,32 @@ async def test_heroism_gives_temp_hp_equal_to_the_casters_modifier_at_the_start_
     assert (await _sheet(client, hero))["temp_hp"] == 3  # non si sommano
 
 
+async def test_undoing_the_turn_advance_takes_back_the_heroism_temp_hp(client, test_session_factory, monkeypatch):
+    """I4: i PF temporanei dati a inizio turno si tolgono con l'annullo dell'avanzamento."""
+    from sqlalchemy import select
+
+    from core.db.models import Character
+    from tests.integration._encounter_helpers import setup_full_encounter
+    from tests.integration._telegram_stub import install_fake_telegram
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    assert (await client.post(f"/sessions/{sid}/encounter/start", json={})).status_code == 200
+    async with test_session_factory() as s:
+        hero = (await s.execute(select(Character).where(Character.name == "Eroe"))).scalar_one()
+        hero.temp_hp = 0
+        hero.active_states = [*(hero.active_states or []), {"key": "spell:heroism", "name": "Heroism", "ends_on": ["manual"], "rounds_left": None,
+                                                           "data": {"spell_key": "heroism", "edition": "2014", "cast_mod": 3}}]
+        await s.commit()
+        hero_id = hero.id
+    as_user(GM_ID)
+    for _ in range(3):  # PG -> goblin -> goblin -> PG
+        assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200
+    assert (await _sheet(client, hero_id))["temp_hp"] == 3
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    assert (await _sheet(client, hero_id))["temp_hp"] == 0
+
+
 # --- Aiuto -----------------------------------------------------------------------------------------------------------
 
 async def test_aid_raises_current_hp_too_and_the_end_caps_them_at_the_old_maximum(client, test_session_factory):

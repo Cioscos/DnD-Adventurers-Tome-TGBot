@@ -164,9 +164,11 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "start":
         reset_turn(char)
-        before_hp, was_inspired = char.current_hit_points, bool(char.heroic_inspiration)
+        before_hp, before_temp, was_inspired = char.current_hit_points, char.temp_hp or 0, bool(char.heroic_inspiration)
         if await apply_turn_start(db, char):  # Sopravvissuto: la cura d'inizio turno si annulla con l'avanzamento
             undo.char_states[str(char.id)]["healed"] = {"before": before_hp, "after": char.current_hit_points}
+        if (char.temp_hp or 0) != before_temp:  # Eroismo: i PF temporanei di inizio turno
+            undo.char_states[str(char.id)]["temp"] = {"before": before_temp, "after": char.temp_hp}
         if char.heroic_inspiration and not was_inspired:  # Guerriero Eroico: l'annullamento la toglie
             undo.char_states[str(char.id)]["inspired"] = True
         expired += tick_states(char)
