@@ -500,3 +500,18 @@ async def test_panacea_on_a_seated_ally_restores_all_hit_points_with_history_on_
     assert (await _hero_state(test_session_factory, hero))[0] == 40
     assert r.json()["received"] == {"name": r.json()["received"]["name"], "healed": 33}
     assert any("Cura: +" in h for h in await _history(test_session_factory, hero))
+
+async def test_panacea_reaches_the_effective_maximum_with_a_bonus(client, test_session_factory, monkeypatch):
+    import api.services.effects as effects
+    async def _bonus(_s, _c, path):  # +10 ai PF massimi, come una regola homebrew passiva
+        return 10 if path == "character.hit_points_max" else 0
+    monkeypatch.setattr(effects, "get_passive_modifiers", _bonus)
+    _sid, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _wizard(client, 14, "transmutation")
+    await _seat(test_session_factory, cid)
+    await _hero_hp(test_session_factory, hero, 0, maximum=40, conditions={"poisoned": True})
+    await _master(client, cid)
+    r = await _use(client, cid, PANACEA, params=_rm([hero], mode="other"))
+    assert r.status_code == 200, r.text
+    assert (await _hero_state(test_session_factory, hero))[0] == 50

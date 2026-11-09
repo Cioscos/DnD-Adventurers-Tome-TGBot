@@ -484,8 +484,10 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
             if on_use.heal_ally_to:
                 healed_ally = max(0, healed_ally - target.current_hit_points)
-            if on_use.heal_ally_full:  # apply_heal taglia al massimo effettivo del bersaglio
-                healed_ally = target.hit_points
+            if on_use.heal_ally_full:  # fino al massimo effettivo (base + bonus), lo stesso di apply_heal
+                from api.services.effects import get_passive_modifiers as _hb
+                from core.rules.modifiers import effective_hp_max as _max
+                healed_ally = max(0, _max(target, await _hb(session, target, "character.hit_points_max")) - target.current_hit_points)
             if on_use.heal_ally_half_max:  # R42: il tetto è metà dei PF massimi del bersaglio, letto qui e mai dal client
                 healed_ally = max(0, target.hit_points // 2 - target.current_hit_points)
                 if (target.conditions or {}).get("prone"):
