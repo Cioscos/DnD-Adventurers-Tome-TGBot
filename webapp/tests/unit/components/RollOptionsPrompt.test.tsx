@@ -8,9 +8,9 @@ import { d20Arg } from '@/hooks/useD20Roll'
 import RollNotes from '@/components/rules/RollNotes'
 import type { RollOption } from '@/api/client'
 
-const { rollOptions, toastWarning } = vi.hoisted(() => ({ rollOptions: vi.fn(), toastWarning: vi.fn() }))
+const { rollOptions, toastWarning, sessionAllies } = vi.hoisted(() => ({ rollOptions: vi.fn(), toastWarning: vi.fn(), sessionAllies: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { warning: toastWarning } }))
-vi.mock('@/api/client', () => ({ api: { characters: { rollOptions } } }))
+vi.mock('@/api/client', () => ({ api: { characters: { rollOptions, sessionAllies } } }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
@@ -265,5 +265,20 @@ describe('recover options (Expert Divination)', () => {
     await expect(asked).resolves.toEqual({
       options: ['wizard.expert_divination'], option_inputs: { 'wizard.expert_divination': { slot_level: 2 } },
     })
+  })
+
+  it('an option that gives temporary HP asks the ally and sends it as the target, and no pick keeps the written outcome', async () => {
+    sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }, { id: 32, name: 'Lia' }])
+    rollOptions.mockResolvedValue([option({ key: 'gift', label: 'Dai PF temporanei?', gives_to_ally: true })])
+    renderWithProviders(<RollOptionsHost />)
+    const picked = askRollOptions(1, { roll: 'cast', spell_id: 3 }, 'before', { cast: true })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Dai PF temporanei?' }))
+    await userEvent.click(await screen.findByText('Lia'))
+    await userEvent.click(screen.getByText('character.roll_options.cast'))
+    await expect(picked).resolves.toEqual({ options: ['gift'], option_inputs: { gift: { target_character_id: 32 } } })
+    const none = askRollOptions(1, { roll: 'cast', spell_id: 3 }, 'before', { cast: true })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Dai PF temporanei?' }))
+    await userEvent.click(screen.getByText('character.roll_options.cast'))
+    await expect(none).resolves.toEqual({ options: ['gift'], option_inputs: {} })
   })
 })

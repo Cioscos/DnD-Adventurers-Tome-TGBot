@@ -704,6 +704,36 @@ async def rest_preview(
     return compute_rest_effects(char, rest_type, bonus)
 
 
+def _rest_ally_temp_hp(char, edition) -> tuple[int, int]:
+    """Quante creature e quanti PF temporanei ciascuna: il massimo fra i privilegi di riposo del personaggio (Resilienza Celestiale)."""
+    best = (0, 0)
+    for spec, row in active_features(char):
+        if spec.rest_temp_hp_ally:
+            best = max(best, spec.rest_temp_hp_ally(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level)), key=lambda t: t[1])
+    return best
+
+
+async def _rest_temp_receivers(session: AsyncSession, char, edition, wanted: list[int]) -> list:
+    if not wanted:
+        return []
+    from api.services.session_allies import temp_hp_receivers  # import locale: la serata non serve agli altri endpoint
+    return await temp_hp_receivers(session, char, wanted, _rest_ally_temp_hp(char, edition)[0])
+
+
+async def _deliver_rest_temp_hp(session: AsyncSession, char, edition, receivers: list) -> list[dict]:
+    """Consegna i PF temporanei di fine riposo, riletti i riceventi; il valore lo calcola il server. Il maggiore fra i loro e i nuovi."""
+    from api.services.effects import grant_temp_hp  # import locale, come sopra
+    from api.services.session_allies import load_receiver
+    value, out = _rest_ally_temp_hp(char, edition)[1], []
+    for target in receivers:
+        receiver = await load_receiver(session, target.id)
+        if receiver.is_dead:
+            raise HTTPException(status_code=409, detail={"code": "target_dead"})
+        given = grant_temp_hp(session, receiver, value)
+        out.append({"name": receiver.name, "given": value, "temp_hp": given["new"], "applied": given["applied"]})
+    return out
+
+
 @router.post("/{char_id}/rest", response_model=CharacterFull)
 async def rest(
     char_id: int,
@@ -719,6 +749,7 @@ async def rest(
         return await build_character_response(session, char)
     edition = character_edition(char)
     rest_type = body.rest_type
+    receivers = await _rest_temp_receivers(session, char, edition, body.temp_hp_allies)  # prima di ogni scrittura del riposo
     if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and rest_type != "short":
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
@@ -846,10 +877,12 @@ async def rest(
     for spec, row in active_features(char):  # Resilienza Celestiale: a ogni riposo concluso PF temporanei (non si sommano)
         if spec.rest_temp_hp:
             char.temp_hp = max(char.temp_hp or 0, spec.rest_temp_hp(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level)))
+    temp_received = await _deliver_rest_temp_hp(session, char, edition, receivers)
     await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
 
     result = await build_character_response(session, char)
+    result.temp_received = temp_received
     if notifications:
         result.homebrew_notifications = notifications
     return result

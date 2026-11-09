@@ -28,6 +28,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
   const [memorize, setMemorize] = useState<MemorizeChoice | null>(null)  // Memorizzare Incantesimo (Mago 2024)
   const [restoration, setRestoration] = useState(0)  // Ripristino Stregonesco: punti stregoneria
   const [reopenTome, setReopenTome] = useState(false)  // Patto del Tomo: le scelte del Libro tornano da fare
+  const [tempAllies, setTempAllies] = useState<number[]>([])  // Resilienza Celestiale: PG della serata che ricevono i PF temporanei
 
   const hitDieMutation = useMutation({
     mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
@@ -61,6 +62,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         ...(restType === 'short' && restoration > 0 ? { sorcerous_restoration: restoration } : {}),
         ...(restType === 'short' && memorize ? { memorize_spell: memorize } : {}),
         ...(restType === 'long' && reopenTome ? { reopen_tome: true } : {}),
+        ...(tempAllies.length > 0 ? { temp_hp_allies: tempAllies } : {}),
       }),
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
@@ -82,12 +84,16 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
       setRestoration(0)
       setMemorize(null)
       setReopenTome(false)
+      setTempAllies([])
       qc.setQueryData(['character', charId], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setConfirmLongRest(false)
       setShortRestOpen(false)
       onDone?.()
       toast.success(t('character.quick_actions.rest_done'))
+      for (const r of updated.temp_received ?? []) {  // il server dice se i PF temporanei sono saliti o se l'altro ne aveva di più
+        toast.info(t(r.applied ? 'character.turn.use_temp_received' : 'character.turn.use_temp_kept', { name: r.name, n: r.given, have: r.temp_hp }))
+      }
       haptic.success()
     },
   })
@@ -99,7 +105,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     shortRestOpen, setShortRestOpen, confirmLongRest, setConfirmLongRest, tooSoon, setTooSoon,
     hitDieResult, setHitDieResult, interrupted, setInterrupted, ateAndDrank, setAteAndDrank,
     recovery, setRecovery, arcane, setArcane, memorize, setMemorize, restoration, setRestoration,
-    reopenTome, setReopenTome, hitDieMutation, restMutation,
+    reopenTome, setReopenTome, tempAllies, setTempAllies, hitDieMutation, restMutation,
   }
 }
 

@@ -113,6 +113,8 @@ export type RollOption = {
   slot: string | null
   needs: string | null
   requires_input: 'slot' | 'recover' | null
+  /** PF temporanei per un PG della serata: il giocatore sceglie a chi (senza scelta resta l'esito scritto). */
+  gives_to_ally?: boolean
   input_options: { level: number; available: number; dice: string | null }[]
   auto_fail: boolean
   cost: { feature_key: string | null; amount: number; spell_slot_min: number | null } | null
@@ -195,7 +197,7 @@ export type SpellUseBody = Partial<RollChoice> & {
 
 export type RollChoice = {
   options: string[]
-  option_inputs: Record<string, { slot_level: number } | { die: number } | { declared_only: number }>
+  option_inputs: Record<string, { slot_level: number } | { die: number } | { declared_only: number } | { target_character_id: number }>
   defer_damage?: boolean
   /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato, ritira con l'ispirazione o usa un'opzione. */
   outcome?: 'miss' | 'reroll' | 'after_roll'
@@ -622,7 +624,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean; temp_hp_allies?: number[] },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',

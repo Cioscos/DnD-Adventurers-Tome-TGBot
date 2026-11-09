@@ -267,6 +267,8 @@
       "arcane_recovery_slot": "Slot di livello {{level}} (spesi: {{spent}})",
       "arcane_recovery_less": "Meno slot di livello {{level}}",
       "arcane_recovery_more": "Più slot di livello {{level}}",
+      "rest_ally_temp": "Resilienza Celestiale",
+      "rest_ally_temp_hint": "A fine riposo fino a {{max}} personaggi della serata ricevono PF temporanei (metà livello + Carisma). Se non ne scegli, restano un esito da dire a voce.",
       "sorcerous_restoration": "Ripristino Stregonesco",
       "sorcerous_restoration_hint": "Riprendi punti stregoneria spesi, al massimo {{max}} (metà del livello da stregone). Un uso fra riposi lunghi.",
       "sorcerous_restoration_points": "Punti stregoneria da recuperare",
@@ -995,6 +997,7 @@
     },
     "roll_options": {
         "title_cast": "Al lancio",
+        "ally_pick": "A chi vanno i PF temporanei? Se non scegli, resta un esito da dire a voce.",
         "cast": "Lancia",
         "after_damage_pick_one": "Scegli {{count}} dado",
         "after_damage_pick_other": "Scegli fino a {{count}} dadi",

@@ -294,6 +294,8 @@ class OnUse:
     # partecipanti della serata, tenendo per ciascuno il maggiore fra i suoi e i nuovi (Task 46). ``ally_count`` a 0: nessun valore da dare.
     temp_hp_ally: bool = False
     ally_count: "Callable[[RuleContext], int] | None" = None
+    # Chiave dello stato di chi usa il privilegio (``rage``) con cui i PF temporanei consegnati svaniscono quando finisce
+    temp_hp_ends_with: str | None = None
     # chiave del parametro (una ``UseChoice``) che contiene la condizione da togliere a chi usa il privilegio (Mente Lucida)
     clears_condition: str | None = None
     # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki) e dadi che dipendono da quanti se ne spendono: la formula
@@ -481,6 +483,9 @@ class RollOptionSpec:
     crit_doubles: bool = True
     separate_damage: bool = False
     on_confirm: "Callable[[Any, RuleContext, dict], None] | None" = None
+    # PF temporanei per un'altra creatura della serata: ``f(ctx, inputs) -> n``. Con ``target_character_id`` fra gli input il server
+    # li consegna (``deliver_temp_gifts``), senza resta l'esito scritto (Passo Rinfrescante su un altro, Incantesimi Potenti)
+    temp_hp_gift: "Callable[[RuleContext, dict], int] | None" = None
     after: Literal["add", "reroll", "succeed", "twenty", "miss"] | None = None
     pay_if_success: bool = False
     replace_die: bool = False
@@ -692,6 +697,8 @@ class FeatureSpec:
     free_spell: str | None = None
     # PF temporanei a chi finisce un riposo breve o lungo (Resilienza Celestiale): ``f(ctx) -> n``, vale il maggiore con quelli attuali
     rest_temp_hp: "Callable[[RuleContext], int] | None" = None
+    # Come ``rest_temp_hp`` ma per altre creature della serata: ``f(ctx) -> (quante, PF temporanei per ciascuna)`` (Resilienza Celestiale)
+    rest_temp_hp_ally: "Callable[[RuleContext], tuple[int, int]] | None" = None
     # Dadi d20 tirati alla fine del riposo lungo e salvati (R29, Portento): ``(chiave dell'opzione, f(ctx) -> quanti)``
     long_rest_dice: "tuple[str, Callable[[RuleContext], int]] | None" = None
     # Incantesimi (``GRANTED_SPELLS``) che il privilegio aggiunge al Libro del Mago senza prepararli (Servitori Non Morti, Mutaforma)

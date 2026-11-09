@@ -48,3 +48,29 @@ async def ally_target(session: AsyncSession, char: Character, target_id: object)
         if found is not None:
             return found
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "invalid_target"})
+
+
+async def deliver_temp_gifts(session: AsyncSession, char: Character, opts) -> None:
+    """PF temporanei che le opzioni al tiro confermate danno a un PG della serata (``RollOptionSpec.temp_hp_gift``). Il bersaglio
+    è controllato come per ogni privilegio che aiuta un alleato (422 ``invalid_target``, 409 ``target_dead``); il valore è del
+    server. Un errore annulla l'intero tiro: le opzioni già pagate tornano con il rollback della richiesta."""
+    from api.services.effects import grant_temp_hp  # import locale: effects non conosce la serata
+    for gift in opts.gifts:
+        target = await ally_target(session, char, gift["target"])
+        receiver = await load_receiver(session, target.id)
+        if receiver.is_dead:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "target_dead"})
+        out = grant_temp_hp(session, receiver, gift["value"])
+        opts.effects.append(
+            {"it": f"{receiver.name} ora ha {out['new']} PF temporanei.", "en": f"{receiver.name} now has {out['new']} temporary hit points."}
+            if out["applied"] else
+            {"it": f"{receiver.name} ha già {out['old']} PF temporanei, più dei {gift['value']} offerti: li conserva.",
+             "en": f"{receiver.name} already has {out['old']} temporary hit points, more than the {gift['value']} offered: they keep them."})
+    opts.gifts = []
+
+
+async def temp_hp_receivers(session: AsyncSession, char: Character, wanted: list[int], limit: int) -> list[Character]:
+    """Le creature scelte per i PF temporanei di un riposo: partecipanti della serata, senza doppioni, al massimo ``limit``."""
+    if len(wanted) != len(set(wanted)) or len(wanted) > limit:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "invalid_target"})
+    return [await ally_target(session, char, tid) for tid in wanted]

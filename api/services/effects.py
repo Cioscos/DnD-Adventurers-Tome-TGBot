@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import inspect
+from sqlalchemy import event, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from core.db.models import Character, CharacterHistory
 from core.data.labels import condition_label
@@ -17,7 +18,7 @@ from api.services.condition_effects import clear_effects_for, release_concentrat
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.states import immune_conditions
+from core.rules.states import TEMP_RELEASE, immune_conditions
 
 
 def _now() -> str:
@@ -198,3 +199,22 @@ async def apply_conditions(session: AsyncSession, char: Character,
             return {"changed": changed}
         await cap_current_hp(session, char)
     return {"changed": changed}
+
+
+@event.listens_for(Session, "before_flush")
+def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
+    """Un'Ira (o un altro stato) è finita, da qualunque via: i PF temporanei che chi la viveva ha consegnato svaniscono.
+
+    Si toglie ciò che resta solo se non supera quanto fu consegnato: se il ricevente ne ha presi di più alti nel frattempo, restano.
+    shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo; da rivedere se serve la provenienza."""
+    for char in [o for o in session.dirty if isinstance(o, Character)]:
+        pending = (char.settings or {}).get(TEMP_RELEASE)
+        if not pending:
+            continue
+        char.settings = {k: v for k, v in char.settings.items() if k != TEMP_RELEASE}
+        for entry in pending:
+            receiver = session.get(Character, entry["id"])
+            if receiver is not None and 0 < (receiver.temp_hp or 0) <= entry["amount"]:
+                _add_history(session, receiver.id, "hp_change", f"PF temporanei svaniti: l'Ira di {char.name} è finita ({receiver.temp_hp} → 0)",
+                             meta={"op": "TEMP_HP", "amount": 0, "released": True})
+                receiver.temp_hp = 0

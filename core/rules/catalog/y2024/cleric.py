@@ -148,8 +148,11 @@ POTENT_TEMP_HP = RollOptionSpec(
     label={"it": "Incantesimi Potenti: dai PF temporanei a te o a una creatura entro 18 m",
            "en": "Potent Spellcasting: give temporary HP to yourself or a creature within 60 ft"},
     available=lambda c: _chosen(c, STRIKES, "potent_spellcasting") and _own_cantrip(c) and _wisdom_mod(c) >= 1,
-    effect=lambda c, _i: {"it": f"Dai {2 * _wisdom_mod(c)} PF temporanei a te o a una creatura entro 18 m.",
-                          "en": f"Give {2 * _wisdom_mod(c)} temporary HP to yourself or a creature within 60 ft."})
+    temp_hp_gift=lambda c, _i: 2 * _wisdom_mod(c),
+    effect=lambda c, i: ({"it": f"{2 * _wisdom_mod(c)} PF temporanei a una creatura entro 18 m.",
+                          "en": f"{2 * _wisdom_mod(c)} temporary HP to a creature within 60 ft."} if i.get("target_character_id") is not None else
+                         {"it": f"Dai {2 * _wisdom_mod(c)} PF temporanei a te o a una creatura entro 18 m.",
+                          "en": f"Give {2 * _wisdom_mod(c)} temporary HP to yourself or a creature within 60 ft."}))
 
 
 # ---------------------------------------------------------------------------

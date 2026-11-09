@@ -210,6 +210,7 @@ class AppliedOptions:
     unarmed_damage_type: str | None = None  # il Colpo Senz'Armi infligge questo tipo di danno (Colpi Potenziati)
     finesse_unarmed: bool = False  # per colpire e per il danno vale la migliore fra Forza e Destrezza (Lame Psichiche)
     damage_type: str | None = None  # il danno dell'incantesimo cambia tipo (Incantesimo Trasmutato)
+    gifts: list[dict] = field(default_factory=list)  # PF temporanei per un'altra creatura: {"target": id, "value": n}, consegnati dal router
 
     @property
     def mode(self) -> str | None:
@@ -497,6 +498,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.self_heal += max(0, spec.self_heal(option.ctx, given))
         if spec.effect:
             out.effects.append(spec.effect(option.ctx, given))
+        if spec.temp_hp_gift and type(given.get("target_character_id")) is int:
+            out.gifts.append({"target": given["target_character_id"], "value": max(0, spec.temp_hp_gift(option.ctx, given))})
         if spec.target_effect:
             keep_target_effect(ctx.char, key, spec.target_effect(option.ctx, given))
             out.targets.append(key)

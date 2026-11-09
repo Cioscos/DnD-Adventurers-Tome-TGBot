@@ -509,6 +509,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   /** Solo da PATCH /hp dopo un danno: le reazioni che il danno ha aperto (Ritorsione). */
   reactions?: RollOption[] | null
   homebrew_notifications?: Array<Record<string, unknown>> | null
+  /** Solo dal riposo con Resilienza Celestiale: chi ha ricevuto PF temporanei. */
+  temp_received?: { name: string; given: number; temp_hp: number; applied: boolean }[]
   rolls_history?: DiceRollResult[]
   /** Raw dal BE: valore stringa legacy oppure dict {body, created_at, updated_at, tags}. */
   notes?: Record<

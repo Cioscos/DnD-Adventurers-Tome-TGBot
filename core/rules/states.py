@@ -79,6 +79,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     incantesimi che avevano portato."""
     charge_exhaustion(char, closed)
     drop_stolen_spells(char, closed)
+    release_given_temp_hp(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
         if offer:
@@ -87,6 +88,15 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
     if gone:
         char.conditions = {**(char.conditions or {}), **{c: False for c in gone}}
+
+
+def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
+    """I PF temporanei che chi ha avviato questi stati ha consegnato ad altri svaniscono con lo stato: li segna da togliere."""
+    settings = getattr(char, "settings", None) or {}
+    given = dict(settings.get(TEMP_GIVEN) or {})
+    gone = [entry for s in closed for entry in given.pop(s.get("key"), [])]
+    if gone:
+        char.settings = {**settings, TEMP_GIVEN: given, TEMP_RELEASE: [*(settings.get(TEMP_RELEASE) or []), *gone]}
 
 
 def charge_exhaustion(char: Any, closed: list[dict]) -> None:
@@ -119,6 +129,10 @@ def restore_exhaustion(char: Any, level: int) -> None:
 ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 
 
+# settings, scritti dal server. TEMP_GIVEN: {chiave dello stato: [{"id": ricevente, "amount": PF}]} dei PF temporanei consegnati che
+# svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
+# richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
+TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
 
 

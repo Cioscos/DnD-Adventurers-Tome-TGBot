@@ -241,6 +241,9 @@ class CharacterFull(BaseModel):
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None
 
+    # Populated only by POST /rest con Resilienza Celestiale: chi ha ricevuto PF temporanei (name, given, temp_hp, applied).
+    temp_received: list[dict] = []
+
     # Populated only by POST /rounds/tick: labels of effects that just expired.
     expired_effects: Optional[list[str]] = None
 

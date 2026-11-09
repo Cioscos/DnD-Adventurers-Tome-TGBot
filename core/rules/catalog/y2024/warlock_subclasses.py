@@ -131,11 +131,14 @@ def _refreshing(mine: bool) -> RollOptionSpec:
         n = given["rolled"]
         if mine:
             return _both(f"Passo Rinfrescante: ottieni {n} PF temporanei.", f"Refreshing Step: you gain {n} temporary hit points.")
+        if given.get("target_character_id") is not None:  # la consegna a un PG della serata la scrive il server
+            return _both(f"Passo Rinfrescante: una creatura che vedi entro 3 m ottiene {n} PF temporanei.",
+                         f"Refreshing Step: a creature you see within 10 ft gains {n} temporary hit points.")
         return _both(f"Passo Rinfrescante: una creatura che vedi entro 3 m ottiene {n} PF temporanei (dillo al GM).",
                      f"Refreshing Step: a creature you see within 10 ft gains {n} temporary hit points (tell the GM).")
     return RollOptionSpec(
         key=f"{STEPS}_refreshing" + ("" if mine else "_other"), phase="before", rolls=("cast",), group="steps", available=_misty_cast,
-        on_confirm=confirmed, effect=effect,
+        on_confirm=confirmed, effect=effect, temp_hp_gift=None if mine else (lambda _c, given: _d10(given)),
         label=_both("Passi del Fatato: Passo Rinfrescante, 1d10 PF temporanei a " + ("te" if mine else "un'altra creatura entro 3 m"),
                     "Steps of the Fey: Refreshing Step, 1d10 temporary HP to " + ("you" if mine else "another creature within 10 ft")))
 
@@ -278,6 +281,13 @@ def resilience_hp(ctx: RuleContext) -> int | None:
     if getattr(ctx.class_row, "subclass_key", None) != "celestial" or ctx.class_level < 10:
         return None
     return max(0, ctx.class_level + _cha(ctx))
+
+
+def resilience_ally_points(ctx: RuleContext) -> tuple[int, int]:
+    """``(creature, PF temporanei per ciascuna)`` di Resilienza Celestiale: fino a cinque, metà livello + Carisma; ``(0, 0)`` senza."""
+    if resilience_hp(ctx) is None:
+        return 0, 0
+    return 5, max(0, ctx.class_level // 2 + _cha(ctx))
 
 
 def resilience_ally_text(ctx: RuleContext) -> dict[str, str] | None:
@@ -456,7 +466,7 @@ SUBCLASS_ROWS = (
     celestial("celestial_resilience", 10, "Resilienza Celestiale", "Celestial Resilience", 161,
               ("Con Astuzia Magica e a ogni riposo breve o lungo ottieni PF temporanei pari a livello + Carisma; fino a cinque creature, metà livello + Carisma.",
                "With Magical Cunning and at each short or long rest you gain temporary HP equal to level + Charisma; up to five creatures, half level + Charisma."),
-              rest_temp_hp=lambda c: resilience_hp(c) or 0, passive=True),
+              rest_temp_hp=lambda c: resilience_hp(c) or 0, rest_temp_hp_ally=resilience_ally_points, passive=True),
     celestial("searing_vengeance", 14, "Vendetta Ardente", "Searing Vengeance", 161,
               ("Prima di un TS contro la morte tuo o di un alleato entro 18 m: metà dei PF massimi e si rialza; chi scegli entro 9 m subisce radiosi 2d8 + Carisma e Accecato. Riposo lungo.",
                "Before your or an ally's death save within 60 ft: half maximum HP and stands up; chosen creatures within 30 ft take 2d8 + Charisma radiant and are Blinded. Long rest."),

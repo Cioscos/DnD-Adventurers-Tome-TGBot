@@ -47,12 +47,23 @@ def _cunning(ctx: RuleContext, _params: dict) -> None:
         ctx.char.temp_hp = max(ctx.char.temp_hp or 0, points)
 
 
-def _cunning_message(ctx: RuleContext, _params: dict) -> dict[str, str] | None:
+def _cunning_message(ctx: RuleContext, params: dict) -> dict[str, str] | None:
     from core.rules.catalog.y2024.warlock_subclasses import resilience_ally_text  # import locale, come sopra
-    return resilience_ally_text(ctx)
+    return None if params.get("target_character_ids") or params.get("target_character_id") is not None else resilience_ally_text(ctx)
 
 
-CUNNING_USE = OnUse(effect=_cunning, message=_cunning_message, available=lambda c: any(s.used > 0 for s in pact_slots(c.char)))
+def _cunning_ally_count(ctx: RuleContext) -> int:
+    from core.rules.catalog.y2024.warlock_subclasses import resilience_ally_points  # import locale, come sopra
+    return resilience_ally_points(ctx)[0]
+
+
+def _cunning_given(ctx: RuleContext, _rolled: int, _params: dict) -> int:
+    from core.rules.catalog.y2024.warlock_subclasses import resilience_ally_points  # import locale, come sopra
+    return resilience_ally_points(ctx)[1]
+
+
+CUNNING_USE = OnUse(effect=_cunning, message=_cunning_message, available=lambda c: any(s.used > 0 for s in pact_slots(c.char)),
+                    temp_hp_ally=True, ally_count=_cunning_ally_count, gives_by=_cunning_given)
 
 
 # ---------------------------------------------------------------------------

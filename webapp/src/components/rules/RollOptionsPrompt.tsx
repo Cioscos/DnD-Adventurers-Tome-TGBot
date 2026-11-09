@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { api } from '@/api/client'
 import type { RollOption } from '@/api/client'
 import { optionHints, useAttackLimitStore, useCastConfirmStore, usePromptStore, type PromptRequest } from '@/lib/rollOptions'
 import { AfterRollButton } from '@/components/rules/AfterRollOptions'
@@ -54,10 +56,11 @@ function CastConfirmPrompt({ code, answer }: { code: string; answer: (go: boolea
 
 function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   const { t } = useTranslation()
-  const { options, afterRoll, phase, context, answer } = request
+  const { charId, options, afterRoll, phase, context, answer } = request
   // Sempre tutto spento: una conferma non è mai silenziosa.
   const [chosen, setChosen] = useState<string[]>([])
   const [slots, setSlots] = useState<Record<string, number>>({})
+  const [allyOf, setAllyOf] = useState<Record<string, number>>({})  // opzione -> PG della serata che riceve i PF temporanei
 
   // Spegne un'opzione e chi dipende da lei.
   const without = (keys: string[], gone: string) =>
@@ -81,11 +84,14 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
 
   const confirm = () => answer({
     options: chosen,
-    option_inputs: Object.fromEntries(
-      chosen.filter((k) => slots[k] !== undefined).map((k) => [
-        k, options.find((o) => o.key === k)?.saved_dice?.length ? { die: slots[k] } : { slot_level: slots[k] },
-      ]),
-    ),
+    option_inputs: {
+      ...Object.fromEntries(
+        chosen.filter((k) => slots[k] !== undefined).map((k) => [
+          k, options.find((o) => o.key === k)?.saved_dice?.length ? { die: slots[k] } : { slot_level: slots[k] },
+        ]),
+      ),
+      ...Object.fromEntries(chosen.filter((k) => allyOf[k] !== undefined).map((k) => [k, { target_character_id: allyOf[k] }])),
+    },
   })
   // «Mancato» arma anche le opzioni che scattano con ogni mancato (Attacchi Studiati), senza il danno di Graze.
   const close = (outcome: 'miss' | 'reroll') => answer({
@@ -114,6 +120,9 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
             on={chosen.includes(option.key)}
             blocked={!!option.needs && !chosen.includes(option.needs)}
             slot={slots[option.key]}
+            charId={charId}
+            ally={allyOf[option.key]}
+            onAlly={(id) => setAllyOf((a) => { const { [option.key]: _gone, ...rest } = a; return id === undefined ? rest : { ...rest, [option.key]: id } })}
             onToggle={(on) => setOn(option, on)}
             onSlot={(level) => setSlots((s) => ({ ...s, [option.key]: level }))}
           />
@@ -140,16 +149,22 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   )
 }
 
-function OptionRow({ option, on, blocked, slot, onToggle, onSlot }: {
+function OptionRow({ option, on, blocked, slot, charId, ally, onAlly, onToggle, onSlot }: {
   option: RollOption
   on: boolean
   blocked: boolean
   slot?: number
+  charId: number
+  ally?: number
+  onAlly: (id: number | undefined) => void
   onToggle: (on: boolean) => void
   onSlot: (level: number) => void
 }) {
   const { t } = useTranslation()
   const hints = optionHints(option, t)
+  const { data: allies = [] } = useQuery({
+    queryKey: ['session-allies', charId], queryFn: () => api.characters.sessionAllies(charId), enabled: on && !!option.gives_to_ally,
+  })
   return (
     <div className="rounded-xl border border-dnd-border bg-dnd-surface/80 p-3 space-y-2">
       <SwitchToggle
@@ -177,6 +192,25 @@ function OptionRow({ option, on, blocked, slot, onToggle, onSlot }: {
               {choice.dice ? ` · ${choice.dice}` : ''}
             </Pressable>
           ))}
+        </div>
+      )}
+      {on && !!option.gives_to_ally && allies.length > 0 && (
+        <div className="space-y-2" data-testid="option-ally">
+          <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.roll_options.ally_pick')}</p>
+          <div className="flex flex-wrap gap-2">
+            {allies.map((a) => (
+              <Pressable
+                key={a.id}
+                type="button"
+                aria-pressed={ally === a.id}
+                onClick={() => onAlly(ally === a.id ? undefined : a.id)}
+                className={`min-h-11 min-w-11 px-3 rounded-lg border text-sm break-words
+                  ${ally === a.id ? 'border-dnd-gold/70 text-dnd-gold-bright shadow-halo-gold' : 'border-dnd-border text-dnd-text'}`}
+              >
+                {a.name}
+              </Pressable>
+            ))}
+          </div>
         </div>
       )}
       {on && !!option.saved_dice?.length && (

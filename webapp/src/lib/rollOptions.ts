@@ -26,6 +26,8 @@ export type PromptContext = {
 }
 
 export type PromptRequest = {
+  /** Per chiedere a chi vanno i PF temporanei di un'opzione (`gives_to_ally`). */
+  charId: number
   options: RollOption[]
   /** Dopo il tiro per colpire: agiscono subito sul d20 già visto, prima del danno. */
   afterRoll: RollOption[]
@@ -168,7 +170,7 @@ export async function askRollOptions(
   return new Promise((resolve) => {
     usePromptStore.setState({
       request: {
-        options, afterRoll, phase, context,
+        charId, options, afterRoll, phase, context,
         answer: (answer) => {
           usePromptStore.setState({ request: null })
           resolve({ ...answer, ...(defer || defersBy(answer.options) ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options) })

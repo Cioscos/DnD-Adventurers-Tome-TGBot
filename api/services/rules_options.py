@@ -83,7 +83,7 @@ def remember_roll(char: Any, roll: str, opts: AppliedOptions, fields: dict, **wh
         "roll_id": uuid.uuid4().hex, "roll": roll, "skill": None, "ability": None, "item_id": None, "spell_id": None,
         "pending_save_id": None, **where, **fields, "forced_hit": False, "refundable": miss,
         # né il modo né il dado dichiarato tornano: l'ispirazione ritira un solo dado
-        "applied": {**asdict(opts), "modes": [], "spent": [], "replace_die": None},
+        "applied": {**asdict(opts), "modes": [], "spent": [], "replace_die": None, "gifts": []},
     }
     char.turn_state = turn
 
@@ -157,7 +157,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         outside_action=True if spec.outside_action else None,
         defers_damage=True if spec.defers_damage else None,
         needs=None if spec.needs in ctx.confirmed or (spec.phase == "before" and spec.needs in (ctx.turn or {}).get("once_per_turn", ())) else spec.needs, group=spec.group, group_max=spec.group_max(ctx) if spec.group_max else None, dice_cost=spec.dice_cost,
-        requires_input=spec.requires_input, input_options=slots, auto_fail=spec.auto_fail,
+        requires_input=spec.requires_input, gives_to_ally=bool(spec.temp_hp_gift), input_options=slots, auto_fail=spec.auto_fail,
         after=spec.after, pay_if_success=spec.pay_if_success, on_miss=spec.on_miss,
         reroll_limit=spec.reroll_dice(ctx, {}) if spec.reroll_dice and fixed else None, keep_rolled=spec.keep_rolled,
         saved_dice=saved_dice(ctx.char, spec.key) if spec.replace_die else [],

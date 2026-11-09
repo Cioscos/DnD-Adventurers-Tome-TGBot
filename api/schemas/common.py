@@ -365,6 +365,7 @@ class RestRequest(BaseModel):
     reopen_tome: bool = False  # Patto del Tomo: i trucchetti e i rituali del Libro delle Ombre tornano da scegliere
     memorize_spell: Optional[MemorizeSpellRequest] = None  # Memorizzare Incantesimo (Mago 2024, 5°): scambio al riposo breve
     sorcerous_restoration: Optional[int] = None  # Ripristino Stregonesco (Stregone 2024): punti stregoneria da recuperare
+    temp_hp_allies: list[int] = []  # Resilienza Celestiale: PG della serata che ricevono i PF temporanei a fine riposo (fino a 5)
 
 
 class ItemChargePreview(BaseModel):

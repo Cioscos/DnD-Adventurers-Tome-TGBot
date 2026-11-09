@@ -40,6 +40,7 @@ from api.services.durations import end_concentration, start_concentration
 from core.data.damage_types import canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
+from api.services.session_allies import deliver_temp_gifts
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
@@ -532,6 +533,7 @@ async def use_spell(
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual))
+    await deliver_temp_gifts(session, char, opts)  # Passo Rinfrescante su un altro PG della serata
     _end_cast(char)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
@@ -586,6 +588,7 @@ async def spell_attack(
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
                                 casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual))
+        await deliver_temp_gifts(session, char, cast_opts)
         _end_cast(char)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
@@ -839,6 +842,7 @@ async def roll_spell_damage(
     second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
     opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level)
+    await deliver_temp_gifts(session, char, opts)  # Incantesimi Potenti Migliorati
     if opts.maximize:  # Collera Distruttiva: valgono il massimo i dadi dei tipi che l'opzione tocca, mai quelli messi a mano
         def maximized(kind: str | None) -> bool:
             return opts.maximize_types is None or canonical_damage_type(kind) in opts.maximize_types

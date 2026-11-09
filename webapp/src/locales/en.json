@@ -267,6 +267,8 @@
       "arcane_recovery_slot": "Level {{level}} slot (spent: {{spent}})",
       "arcane_recovery_less": "Fewer level {{level}} slots",
       "arcane_recovery_more": "More level {{level}} slots",
+      "rest_ally_temp": "Celestial Resilience",
+      "rest_ally_temp_hint": "At the end of the rest up to {{max}} characters at the table gain temporary HP (half level + Charisma). If you pick none, it stays a result to tell aloud.",
       "sorcerous_restoration": "Sorcerous Restoration",
       "sorcerous_restoration_hint": "Regain spent sorcery points, up to {{max}} (half your sorcerer level). One use between long rests.",
       "sorcerous_restoration_points": "Sorcery points to regain",
@@ -995,6 +997,7 @@
     },
     "roll_options": {
         "title_cast": "On casting",
+        "ally_pick": "Who gets the temporary HP? If you pick nobody, it stays a result to tell aloud.",
         "cast": "Cast",
         "after_damage_pick_one": "Choose {{count}} die",
         "after_damage_pick_other": "Choose up to {{count}} dice",

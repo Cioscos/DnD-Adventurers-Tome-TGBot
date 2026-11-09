@@ -433,6 +433,12 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                 raise _err(status.HTTP_409_CONFLICT, "target_dead")
             out = grant_temp_hp(session, receiver, result.given)
             result.temp_received.append({"name": receiver.name, "given": result.given, "temp_hp": out["new"], "applied": out["applied"]})
+            if on_use.temp_hp_ends_with and out["applied"]:  # svanisce con lo stato di chi lo dà (l'Ira): il server se ne ricorda
+                from core.rules.states import TEMP_GIVEN  # import locale, come sopra
+                given = dict((char.settings or {}).get(TEMP_GIVEN) or {})
+                given[on_use.temp_hp_ends_with] = [*(e for e in given.get(on_use.temp_hp_ends_with, []) if e["id"] != tid),
+                                                   {"id": tid, "amount": result.given}]
+                char.settings = {**(char.settings or {}), TEMP_GIVEN: given}
         result.given = None  # consegnato: niente toast «da dare a un alleato»
     if on_use.notes:
         result.notes += on_use.notes(ctx, params or {})

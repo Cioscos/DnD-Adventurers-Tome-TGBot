@@ -223,8 +223,8 @@ def _inspiring_temp(ctx: RuleContext, rolled: int, params: dict) -> int:
     return {"all": total, "half": total // 2}.get(params.get("keep"), 0)
 
 
-_KEEP = {"all": _both("Tutti a te", "All to you"), "half": _both("Metà a te, il resto agli altri", "Half to you, the rest to others"),
-         "none": _both("Tutti agli altri", "All to others")}
+_KEEP = {"all": _both("Tutti a te", "All to you"), "half": _both("Metà a te, il resto a un solo altro", "Half to you, the rest to only one other creature"),
+         "none": _both("Tutti a un solo altro", "All to only one other creature")}
 def _inspiring_given(ctx: RuleContext, rolled: int, params: dict) -> int:
     """Agli altri va ciò che il paladino non tiene (D1: l'unico esito per loro)."""
     return _inspiring_total(ctx, rolled) - _inspiring_temp(ctx, rolled, params)
@@ -278,8 +278,8 @@ GLORY = (
     *_oath_spells("glory"),
     feature("inspiring_smite", CK, ED, 3, "Punizione Ispiratrice / Inspiring Smite (Incanalare Divinità, Giuramento della Gloria, Paladino 3, pag. 114)",
             ("Punizione Ispiratrice", "Inspiring Smite"),
-            ("Subito dopo Punizione Divina, un uso di Incanalare Divinità: 2d8 + livello da paladino PF temporanei da dividere fra creature entro 9 m, te compreso.",
-             "Right after Divine Smite, one Channel Divinity use: 2d8 + paladin level temporary hit points to divide among creatures within 30 ft, you included."),
+            ("Subito dopo Punizione Divina, un uso di Incanalare Divinità: 2d8 + livello da paladino PF temporanei da dividere fra creature entro 9 m, te compreso (nell'app la quota per gli altri va a un solo ricevente).",
+             "Right after Divine Smite, one Channel Divinity use: 2d8 + paladin level temporary hit points to divide among creatures within 30 ft, you included (in the app the share for others goes to only one receiver)."),
             "special", subclass="glory", on_use=INSPIRING_SMITE_USE),
     feature("peerless_athlete", CK, ED, 3, "Atleta Impareggiabile / Peerless Athlete (Incanalare Divinità, Giuramento della Gloria, Paladino 3, pag. 115)",
             ("Atleta Impareggiabile", "Peerless Athlete"),
