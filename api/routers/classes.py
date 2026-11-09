@@ -172,6 +172,7 @@ async def create_class_for_character(
     # Sempre additive: non toglie né sovrascrive quanto l'utente ha già.
     merge_grant(char, grant, lang, tuple(chosen))
     mark_seeded(char)
+    grant_assassin_kits(char, lang)  # classe aggiunta con la sottoclasse già scelta (EditClassesModal)
 
     return cls
 

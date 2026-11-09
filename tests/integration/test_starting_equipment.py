@@ -180,3 +180,12 @@ async def test_assassin_2024_gets_kits_once(client):
 async def test_assassin_2014_gets_no_kits(client):
     _, _, body = await _assassin(client, "2014")
     assert body["items"] == []
+
+async def test_assassin_2024_added_as_a_new_class_gets_kits(client):
+    # EditClassesModal aggiunge la classe con la sottoclasse già scelta, senza PATCH
+    r = await _create(client, "fighter", rules_edition="2024")
+    cid = r.json()["id"]
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 3, "subclass": "Assassino"})
+    assert r.status_code in (200, 201), r.text
+    items = (await client.get(f"/characters/{cid}")).json()["items"]
+    assert sorted(i["name"] for i in items if i["item_type"] == "tool") == ["Kit da avvelenatore", "Kit da travestimento"]
