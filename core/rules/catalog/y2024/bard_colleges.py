@@ -199,6 +199,11 @@ def _beguiling_restore(ctx: RuleContext, _params: dict) -> None:
         row.uses = min(row.max_uses, (row.uses or 0) + 1)
 
 
+def _mantle_targets(ctx: RuleContext) -> int:
+    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
+    return max(1, effective_ability_mod(ctx.char, "charisma"))
+
+
 def _mantle_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
     from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
     n = max(1, effective_ability_mod(ctx.char, "charisma"))
@@ -270,7 +275,8 @@ GLAMOUR = (
              ("Mantello di Ispirazione", "Mantle of Inspiration"),
              ("Azione bonus, un uso di Ispirazione: tiri il dado e fino a Car creature entro 18 m ottengono il doppio come PF temporanei.",
               "Bonus action, one Inspiration use: roll the die and up to Cha creatures within 60 ft get twice the result as temporary HP."),
-             "bonus_action", on_use=OnUse(slot="bonus", spends=BI, rolls=_die, gives=lambda _c, rolled: 2 * rolled, message=_mantle_message)),
+             "bonus_action", on_use=OnUse(slot="bonus", spends=BI, rolls=_die, gives=lambda _c, rolled: 2 * rolled, message=_mantle_message,
+                                          temp_hp_ally=True, ally_count=_mantle_targets)),
     _glamour("mantle_of_majesty", 6, "Mantello di Maestà / Mantle of Majesty (Collegio dell'Incanto 6, pag. 65)",
              ("Mantello di Maestà", "Mantle of Majesty"),
              ("Comando sempre preparato. Azione bonus: lo lanci senza slot per 1 minuto e per la durata puoi rilanciarlo come azione bonus senza slot.",

@@ -1366,6 +1366,10 @@
       "ally_back": "Indietro",
       "bardic_die_name": "Ispirazione Bardica",
       "ally_pick": "A chi dai il dado?",
+      "ally_pick_many": "A chi li dai? Fino a {{n}} creature.",
+      "ally_confirm": "Conferma ({{n}})",
+      "use_temp_received": "{{name}} ora ha {{n}} PF temporanei.",
+      "use_temp_kept": "{{name}} ha già {{have}} PF temporanei, più dei {{n}} offerti: li conserva. L'uso è speso.",
       "ally_pick_effect": "A chi lo dai?",
       "title": "Turno",
       "round": "Round {{n}}",
@@ -1522,6 +1526,8 @@
         "bend_luck_minus": "Piegare la Fortuna: sottrai il d4 tirato dal tiro dell'altra creatura (colpire, prova o TS)."
       },
       "use_errors": {
+        "invalid_target": "Una creatura non siede alla tua serata.",
+        "target_dead": "Una creatura è morta: non si può aiutare.",
         "already_chosen": "Hai già scelto per questo riposo: la scelta si cambia al prossimo riposo, breve o lungo.",
         "once_per_turn": "Puoi usarlo una sola volta per turno.",
         "no_attack_left": "Non hai più attacchi dell'azione Attacco a cui rinunciare.",

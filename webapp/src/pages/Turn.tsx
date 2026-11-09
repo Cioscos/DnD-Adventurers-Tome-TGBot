@@ -44,7 +44,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'lay_on_hands_other_2024', 'lay_on_hands_cure_self_2024', 'lay_on_hands_cure_other_2024', 'revivification_other', 'gift_of_the_protectors_other', 'primeval_awareness', 'vanish_hide',
   'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus']
@@ -73,7 +73,7 @@ export default function Turn() {
   // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
   const [targetKey, setTargetKey] = useState<string | null>(null)
   // Privilegio che dà lo stato a un alleato della serata (Ispirazione Bardica): prima si sceglie a chi (R38).
-  const [allyPick, setAllyPick] = useState<{ ability: Ability; uses: number; amount?: number; allies: { id: number; name: string }[] } | null>(null)
+  const [allyPick, setAllyPick] = useState<{ ability: Ability; uses: number; amount?: number; allies: { id: number; name: string }[]; max: number } | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
 
@@ -133,7 +133,7 @@ export default function Turn() {
 
   // Un privilegio con effetto reale passa dal server (usi, slot di turno, cura, stato); gli altri scalano solo il contatore.
   const abilityUse = useMutation({
-    mutationFn: async ({ ability, uses, amount, allyId }: { ability: Ability; uses: number; amount?: number; allyId?: number }) => {
+    mutationFn: async ({ ability, uses, amount, allyId, allyIds }: { ability: Ability; uses: number; amount?: number; allyId?: number; allyIds?: number[] }) => {
       if (ability.has_on_use && ability.feature_key) {
         const chosen = toggles[ability.id]
         const picked = useChoices[ability.id]
@@ -144,7 +144,8 @@ export default function Turn() {
           ...Object.fromEntries((ability.use_texts ?? []).map((x) => [x.key, typed?.[x.key]?.trim()]).filter(([, v]) => v)),
         } : undefined
         // Il bersaglio scelto viaggia con le scelte già fatte (Imposizione delle Mani: la modalità decide cosa farne).
-        const params = allyId !== undefined ? { ...choices, target_character_id: allyId } : choices
+        const params = allyIds !== undefined ? { ...choices, target_character_ids: allyIds }
+          : allyId !== undefined ? { ...choices, target_character_id: allyId } : choices
         if (params) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
         if (amount) return api.characters.featureUse(charId, ability.feature_key, amount)
         return api.characters.featureUse(charId, ability.feature_key)
@@ -162,6 +163,9 @@ export default function Turn() {
       if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: `${res.rolls.join(' + ')} = ${res.rolls.reduce((a, b) => a + b, 0)}` })
       // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
       if (res?.given != null) toast.info(t('character.turn.use_given', { n: res.given }))
+      for (const r of res?.temp_received ?? []) {  // PF temporanei consegnati: il server dice se sono saliti o se l'altro ne aveva già di più
+        toast.info(t(r.applied ? 'character.turn.use_temp_received' : 'character.turn.use_temp_kept', { name: r.name, n: r.given, have: r.temp_hp }))
+      }
       if (res?.temp_hp != null) toast.info(t('character.turn.use_temp_hp', { n: res.temp_hp }))
       if (res?.attack) toast.info(t('character.turn.use_attack', { die: res.attack.die, bonus: `${res.attack.bonus >= 0 ? '+' : ''}${res.attack.bonus}`, total: res.attack.total }), { description: res.attack.is_fumble ? t('character.dice.fumble_banner') : res.attack.is_critical ? t('character.dice.critical_banner') : undefined })
       if (res?.message) toast.info(res.message[i18n.language?.startsWith('en') ? 'en' : 'it'])
@@ -192,7 +196,7 @@ export default function Turn() {
     if (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode))) {
       const allies = await api.characters.sessionAllies(charId).catch(() => [])
       if (allies.length > 0) {
-        setAllyPick({ ...args, allies })
+        setAllyPick({ ...args, allies, max: args.ability.ally_max ?? 1 })
         return
       }
     }
@@ -586,7 +590,8 @@ export default function Turn() {
           ? <WildMagicSheet char={char} onClose={() => setPanel(null)} />
           : <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />)}
       {allyPick && (
-        <AllyTargetSheet title={allyPick.ability.name} die={allyPick.ability.feature_key === 'bard.bardic_inspiration'} allies={allyPick.allies} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
+        <AllyTargetSheet title={allyPick.ability.name} die={allyPick.ability.feature_key === 'bard.bardic_inspiration'} allies={allyPick.allies} max={allyPick.max} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
+          onPickMany={(allyIds) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, allyIds })}
           onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />
       )}
       {targetKey && <TargetEffectSheet charId={charId} effectKey={targetKey} onClose={() => setTargetKey(null)} />}

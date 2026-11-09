@@ -696,7 +696,7 @@ FEATURES = (
             ("A inizio turno in Ira, un'altra creatura entro 3 m ottiene PF temporanei: d6 pari al bonus danni dell'Ira. Svaniscono con l'Ira.",
              "At the start of your turn while raging, another creature within 10 ft gains temporary HP: d6s equal to your Rage damage bonus. They vanish when the Rage ends."),
             "special", subclass="world_tree",
-            on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True,
+            on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True, temp_hp_ally=True,
                          available=lambda c: state_on(c, "rage"))),
     feature("branches_of_the_tree", CK, ED, 6, "Rami dell'Albero / Branches of the Tree (Cammino dell'Albero del Mondo 6, pag. 56)",
             ("Rami dell'Albero", "Branches of the Tree"),

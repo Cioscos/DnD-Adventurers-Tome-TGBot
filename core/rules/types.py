@@ -289,6 +289,11 @@ class OnUse:
     gives: "Callable[[RuleContext, int], int] | None" = None
     # Come ``gives`` ma legge anche le scelte fatte all'uso (Punizione Ispiratrice: agli altri va ciò che chi usa non tiene)
     gives_by: "Callable[[RuleContext, int, dict], int] | None" = None
+    # Il valore di ``gives``/``gives_by`` sono PF temporanei per un'altra creatura (Incoraggiamento, Mantello di Ispirazione): con
+    # ``target_character_id`` (o ``target_character_ids``, fino a ``ally_count(ctx)`` creature) il server li consegna ai
+    # partecipanti della serata, tenendo per ciascuno il maggiore fra i suoi e i nuovi (Task 46). ``ally_count`` a 0: nessun valore da dare.
+    temp_hp_ally: bool = False
+    ally_count: "Callable[[RuleContext], int] | None" = None
     # chiave del parametro (una ``UseChoice``) che contiene la condizione da togliere a chi usa il privilegio (Mente Lucida)
     clears_condition: str | None = None
     # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki) e dadi che dipendono da quanti se ne spendono: la formula

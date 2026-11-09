@@ -234,7 +234,7 @@ MANEUVER_ROWS = (
     _maneuver("rally", "Incoraggiamento", "Rally", 95,
               ("Azione bonus: un alleato entro 9 m che vede o sente guadagna PF temporanei pari al dado + metà del tuo livello da guerriero.",
                "Bonus action: an ally within 30 ft who sees or hears you gains temporary hit points equal to the die + half your fighter level."),
-              "bonus_action", on_use=_sd_use(slot="bonus", gives=lambda c, rolled: rolled + c.class_level // 2)),
+              "bonus_action", on_use=_sd_use(slot="bonus", gives=lambda c, rolled: rolled + c.class_level // 2, temp_hp_ally=True)),
     _maneuver("riposte", "Replica", "Riposte", 95,
               ("Reazione: una creatura ti manca in mischia, la attacchi con un'arma o un Colpo Senz'Armi in mischia e se colpisci +dado al danno.",
                "Reaction: a creature misses you in melee, you attack it in melee with a weapon or Unarmed Strike and add the die to damage on a hit."),

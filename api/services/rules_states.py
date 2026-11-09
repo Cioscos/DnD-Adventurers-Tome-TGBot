@@ -275,6 +275,7 @@ class UseResult:
     targets: list[str] = field(default_factory=list)  # chiavi per ``POST /target-effects``
     given: int | None = None  # valore da dare a un altro (``OnUse.gives``): l'app lo mostra e non scrive nulla
     received: dict | None = None  # chi ha ricevuto una cura dal privilegio (Imposizione delle Mani): ``{name, healed}``
+    temp_received: list[dict] = field(default_factory=list)  # chi ha ricevuto PF temporanei: ``{name, given, temp_hp, applied}``
     temp_hp: int | None = None  # PF temporanei che il privilegio ha dato a chi lo usa (il maggiore fra attuali e nuovi)
     message: dict | None = None  # esito scritto dal privilegio (``OnUse.message``), nelle due lingue
     attack: dict | None = None  # il tiro per colpire di ``OnUse.spell_attack``: die, bonus, total, mode, is_critical, is_fumble
@@ -355,6 +356,16 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await ally_target(session, char, params["target_character_id"])
         if on_use.ally_needs_zero_hp and target.current_hit_points > 0:
             raise _err(status.HTTP_409_CONFLICT, "target_not_down")
+    temp_targets: list[Character] = []
+    if on_use.temp_hp_ally:  # PF temporanei a PG della serata (Task 46): tutti validati prima di spendere qualcosa
+        wanted = (params or {}).get("target_character_ids")
+        if wanted is None and (params or {}).get("target_character_id") is not None:
+            wanted = [params["target_character_id"]]
+        wanted = wanted if isinstance(wanted, list) else []
+        limit = on_use.ally_count(ctx_choice) if on_use.ally_count else 1
+        if len(wanted) != len(set(wanted)) or len(wanted) > max(limit, 1):
+            raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_target")
+        temp_targets = [await ally_target(session, char, tid) for tid in wanted]
     heals_ally = bool(for_other and on_use.heal_ally_when and on_use.heal_ally_when(ctx_choice, params or {}))
     ability = next((a for a in char.abilities if a.feature_key == feature_key and a.source_class_id == row.id), None)
     cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
@@ -414,6 +425,15 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.gives or on_use.gives_by:
         given = on_use.gives_by(ctx, sum(result.rolls), params or {}) if on_use.gives_by else on_use.gives(ctx, sum(result.rolls))
         result.given = max(0, given) if given > 0 or not on_use.gives_by else None  # niente toast «da dare: 0»
+    if temp_targets and result.given:  # consegna ai riceventi, riletti dopo la spesa atomica; il valore è del server
+        from api.services.effects import grant_temp_hp  # import locale, come sopra
+        for tid in [t.id for t in temp_targets]:
+            receiver = await load_receiver(session, tid)
+            if receiver.is_dead:
+                raise _err(status.HTTP_409_CONFLICT, "target_dead")
+            out = grant_temp_hp(session, receiver, result.given)
+            result.temp_received.append({"name": receiver.name, "given": result.given, "temp_hp": out["new"], "applied": out["applied"]})
+        result.given = None  # consegnato: niente toast «da dare a un alleato»
     if on_use.notes:
         result.notes += on_use.notes(ctx, params or {})
     if heals_ally:

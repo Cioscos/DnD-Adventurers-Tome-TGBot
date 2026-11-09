@@ -66,4 +66,15 @@ describe('AllyTargetSheet', () => {
     await userEvent.click(screen.getByText('Lia'))
     expect(onPick).toHaveBeenCalledWith(32)
   })
+
+  it('with several recipients allowed it toggles up to the maximum and confirms them in one go', async () => {
+    const onPickMany = vi.fn()
+    const three = [...allies, { id: 33, name: 'Tor', die: null }]
+    renderWithProviders(<AllyTargetSheet title="Mantello" allies={three} max={2} onPickMany={onPickMany} onPick={() => {}} onClose={() => {}} />)
+    await userEvent.click(screen.getByText('Brun'))
+    await userEvent.click(screen.getByText('Lia'))
+    await userEvent.click(screen.getByText('Tor'))  // oltre il massimo: ignorato
+    await userEvent.click(screen.getByText('character.turn.ally_confirm'))
+    expect(onPickMany).toHaveBeenCalledWith([31, 32])
+  })
 })

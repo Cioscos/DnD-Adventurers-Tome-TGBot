@@ -84,6 +84,19 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     return {"old": old, "new": char.current_hit_points, "healed": healed, "firing": firing}
 
 
+def grant_temp_hp(session: AsyncSession, char: Character, amount: int) -> dict:
+    """PF temporanei dati a ``char`` da un altro: non si sommano, resta il maggiore (2014 e 2024). Storico sulla sua scheda.
+
+    Ritorna ``{"old", "new", "applied"}``; ``applied`` è falso se ne aveva già altrettanti o di più."""
+    old = char.temp_hp or 0
+    char.temp_hp = max(old, amount)
+    _add_history(session, char.id, "hp_change",
+                 f"PF temporanei: {amount} ({old} → {char.temp_hp})" if char.temp_hp > old
+                 else f"PF temporanei offerti: {amount}, tenuti i {old} che aveva già",
+                 meta={"op": "TEMP_HP", "amount": amount, "applied": char.temp_hp > old})
+    return {"old": old, "new": char.temp_hp, "applied": char.temp_hp > old}
+
+
 async def sync_zero_hp(session: AsyncSession, char: Character, was_at_zero: bool) -> None:
     """A 0 PF, ancora vivo, il personaggio è Privo di sensi e Prono; risalendo sopra 0 la prima condizione cade.
 

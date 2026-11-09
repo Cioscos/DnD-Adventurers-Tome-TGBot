@@ -112,6 +112,9 @@ async def build_character_response(
             ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
+        if on_use and on_use.temp_hp_ally and owner is not None:  # PF temporanei a un PG della serata (Task 46)
+            ab.ally_max = on_use.ally_count(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)) if on_use.ally_count else 1
+            ab.gives_to_ally = ab.ally_max > 0
         ab.ally_modes = list(on_use.ally_modes) if on_use else []
         ab.use_panel = on_use.panel if on_use else None
         # Un uso gratuito nasce solo con lo stato del privilegio già attivo (prolungare l'Ira 2024); gli altri `cost_by` chiedono

@@ -418,7 +418,7 @@ def _maneuver_rows() -> list:
         _maneuver("rally", ("Azione bonus e un dado: un alleato che vedi o senti riceve PF temporanei pari al dado + Carisma.",
                                 "Bonus action and a die: an ally you see or hear gains temporary hit points equal to the die + Charisma."),
                   "bonus_action",
-                  on_use=OnUse(slot="bonus", spends=SD, rolls=_die, gives=lambda c, rolled: rolled + _cha_mod(c))),
+                  on_use=OnUse(slot="bonus", spends=SD, rolls=_die, gives=lambda c, rolled: rolled + _cha_mod(c), temp_hp_ally=True)),
         _maneuver("parry", ("Reazione: un attacco in mischia ti ferisce, il danno scende del dado + Destrezza.",
                                 "Reaction: a melee attack hurts you, the damage drops by the die + Dexterity."),
                   "reaction", roll_options=(PARRY,)),

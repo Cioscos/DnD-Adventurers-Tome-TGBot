@@ -220,6 +220,8 @@ class AbilityRead(BaseModel):
     gives_to_ally: bool = False
     # Valori della scelta «mode» rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi
     ally_modes: list[str] = []
+    # Quante creature della serata possono ricevere i PF temporanei del «Usa» (con gives_to_ally)
+    ally_max: int = 1
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None

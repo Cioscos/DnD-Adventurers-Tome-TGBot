@@ -236,7 +236,7 @@ def _consume_smite(ctx: RuleContext, _params: dict) -> None:
 
 
 INSPIRING_SMITE_USE = OnUse(
-    spends=POOL, rolls="2d8", available=_smite_cast_this_turn, gives_by=_inspiring_given, temp_hp_by=_inspiring_temp,
+    spends=POOL, rolls="2d8", available=_smite_cast_this_turn, gives_by=_inspiring_given, temp_hp_by=_inspiring_temp, temp_hp_ally=True,
     effect=_consume_smite,
     choices=(UseChoice("keep", _both("PF temporanei per te", "Temporary hit points for you"), lambda _c: list(_KEEP), lambda k: _KEEP[k]),))
 

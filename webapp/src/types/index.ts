@@ -127,6 +127,8 @@ export interface Ability {
   gives_to_ally?: boolean
   /** Valori della scelta `mode` rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi. */
   ally_modes?: string[]
+  /** Con `gives_to_ally` per PF temporanei: quante creature della serata può raggiungere il «Usa» (Mantello di Ispirazione: più d'una). */
+  ally_max?: number
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null
@@ -181,6 +183,8 @@ export interface FeatureUseResult {
   given?: number | null
   /** Chi ha ricevuto una cura dal privilegio (Imposizione delle Mani su un compagno della serata). */
   received?: { name: string; healed: number } | null
+  /** PF temporanei consegnati ad altri PG della serata: `given` offerti, `temp_hp` ora sulla scheda, `applied` falso se ne avevano di più. */
+  temp_received?: { name: string; given: number; temp_hp: number; applied: boolean }[]
   /** PF temporanei che il privilegio ha dato a chi lo usa (Benedizione dell'Oscuro, Vigore Immondo). */
   temp_hp?: number | null
   /** Esito scritto dal privilegio nelle due lingue (ore dimenticate di Alterare Ricordi, danno residuo dell'Interdizione). */
