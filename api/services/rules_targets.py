@@ -216,7 +216,8 @@ async def apply_target_effect(
     if not with_save:
         for each in (slug, *effect.get("also", ())):
             await apply_condition_to_combatant(db, enc, target, GmConditionApply(
-                slug=each, expiry=expiry, source_combatant_id=mine.id), applied_by_gm=False)
+                slug=each, expiry=expiry, source_combatant_id=mine.id,
+                ends_with_concentration=bool(effect.get("ends_with_concentration"))), applied_by_gm=False)
         _add_history(db, char.id, "condition_change",
                      f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))
         return True, None
@@ -227,6 +228,8 @@ async def apply_target_effect(
         expiry_anchor=expiry["anchor"] if expiry else None, expiry_edge=expiry["edge"] if expiry else None,
         expiry_count=expiry["count"] if expiry else None, source_combatant_id=mine.id, source_character_id=char.id,
         applied_by_gm=False, encounter_id=enc.id, created_at=now,
+        ends_with_concentration=bool(effect.get("ends_with_concentration")),
+        source_spell_id=char.concentrating_spell_id if effect.get("ends_with_concentration") else None,
         immunity_key=effect_key if effect.get("immune_on_success") else None,
         also_slugs=",".join(effect.get("also", ())) or None,
         # TS ripetuto (Collera della Natura): lo porta la condizione, comincia a contare quando il primo TS è fallito

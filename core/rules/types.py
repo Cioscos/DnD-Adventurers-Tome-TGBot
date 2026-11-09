@@ -173,6 +173,8 @@ class TargetEffect:
     # Chiave di un testo che il foglio del bersaglio traduce (``character.target_effect.notes.<chiave>``): ciò che l'app non
     # applica da sola e il GM chiude a mano (fino al danno, svantaggio, velocità, vantaggio agli attacchi...)
     note: str | None = None
+    # La condizione cade con la concentrazione di chi la applica (le punizioni: Punizione Collerica, Colpo Accecante...)
+    ends_with_concentration: bool = False
 
     def __post_init__(self) -> None:
         if self.repeat_save not in (None, "start", "end"):

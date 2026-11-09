@@ -198,6 +198,9 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
         data["cast_mod"] = effective_ability_mod(caster, stats.ability) if stats else 0
+    if variant.needs_dc:  # la CD dei TS delle punizioni, fissata ora
+        stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)
+        data["save_dc"] = stats.save_dc if stats else 8 + caster.proficiency_bonus
     if variant.choices and not variant.text and not (_stateful(variant, data) or variant.temp_hp or variant.heal):
         return SpellEffectsRead(applied=[])  # solo una scelta (il tipo di danno): viaggia con il tiro di danno, nulla da dire al GM
     if not chars or not (_stateful(variant, data) or variant.temp_hp or variant.heal):  # nessun personaggio: l'effetto lo applica il GM

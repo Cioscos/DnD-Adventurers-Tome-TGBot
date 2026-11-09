@@ -59,6 +59,7 @@ class SpellVariant:
     ends_at_zero_temp: bool = False  # 2024: lo stato sul bersaglio finisce quando i PF temporanei sono esauriti (Armatura di Agathys)
     # Promemoria per il GM quando il bersaglio subisce danno: ``f(data, aveva_PF_temporanei) -> {"it", "en"}`` o ``None``
     retaliation: Callable[[dict, bool], dict[str, str] | None] | None = None
+    needs_dc: bool = False  # la CD dei TS di chi lancia si fissa al lancio nei ``data`` dello stato (le punizioni)
     shares_damage: bool = False  # il lanciatore subisce lo stesso danno del bersaglio (Legame di Protezione)
 
 
