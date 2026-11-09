@@ -116,6 +116,10 @@ def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
     temp = getattr(char, "temp_hp", 0) or 0
     if given and 0 < temp <= max(given):
         char.temp_hp = 0
+        # ricordati per l'annullo (``regrant_spells``) e per lo storico (il flush scrive la riga: qui non c'è una sessione)
+        dropped = {s["key"]: {"caster_id": (s.get("data") or {}).get("caster_id"), "amount": temp, "name": s.get("name"), "logged": False}
+                   for s in closed if (s.get("data") or {}).get("temp_given")}
+        char.settings = {**(getattr(char, "settings", None) or {}), SPELL_TEMP_DROPPED: dropped}
 
 
 def release_given_spells(char: Any, closed: list[dict]) -> None:
@@ -172,6 +176,8 @@ ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 # svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
 # richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
 TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
+# PF temporanei tolti al ricevente dalla fine di un incantesimo: {chiave dello stato: {caster_id, amount, name, logged}}, per ridarli con l'annullo.
+SPELL_TEMP_DROPPED = "spell_temp_dropped"
 # Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in
 # SPELL_RELEASE ([{"id", "key"}]), che il flush toglie ai bersagli solo se lo stato è ancora di chi lancia (``data["caster_id"]``).
 SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"

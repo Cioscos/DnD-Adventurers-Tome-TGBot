@@ -21,7 +21,7 @@ from api.services.homebrew.dispatcher import dispatch
 from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 def _now() -> str:
@@ -273,7 +273,7 @@ def _drop_given_spells(session: Session, char: Character) -> None:
 
 
 def _end_spent_spells(session: Session, char: Character) -> None:
-    """Un'opzione ha speso lo stato ``spell:*`` di ``char`` e l'incantesimo termina: il lanciatore perde concentrazione e orologio."""
+    """Un'opzione ha speso lo stato ``spell:*`` di ``char`` e l'incantesimo termina: il lanciatore perde il suo orologio (e la concentrazione solo se è quella dell'incantesimo)."""
     pending = (char.settings or {}).get(SPELL_SPENT)
     if not pending:
         return
@@ -283,8 +283,9 @@ def _end_spent_spells(session: Session, char: Character) -> None:
         clock = SPELL_CLOCK_PREFIX + entry["key"][len(SPELL_STATE_PREFIX):]
         if caster is None or not any(s.get("key") == clock for s in caster.active_states or []):
             continue
-        from api.services.durations import end_concentration  # import locale: durations importa i servizi degli effetti
-        end_concentration(caster)  # chiude gli stati ``concentration_end``, orologio compreso
+        if "concentration_end" in next(s for s in caster.active_states if s.get("key") == clock).get("ends_on", ()):
+            from api.services.durations import end_concentration  # import locale: durations importa i servizi degli effetti
+            end_concentration(caster)  # solo un incantesimo di concentrazione: l'orologio ancora aperto è quello della concentrazione in corso
         left = [s for s in caster.active_states or [] if s.get("key") == clock]  # un incantesimo senza concentrazione: l'orologio si chiude qui
         if left:
             caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
@@ -302,6 +303,13 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
         _restore_suspended(session, char)
         _drop_given_spells(session, char)
         _end_spent_spells(session, char)
+        dropped = (char.settings or {}).get(SPELL_TEMP_DROPPED) or {}
+        if any(not e.get("logged") for e in dropped.values()):
+            for e in dropped.values():
+                if not e.get("logged"):
+                    _add_history(session, char.id, "hp_change", f"PF temporanei svaniti: {e.get('name')} è finito ({e['amount']} → 0)",
+                                 meta={"op": "TEMP_HP", "amount": 0, "released": True})
+            char.settings = {**char.settings, SPELL_TEMP_DROPPED: {k: {**e, "logged": True} for k, e in dropped.items()}}
         pending = (char.settings or {}).get(TEMP_RELEASE)
         if not pending:
             continue

@@ -483,6 +483,82 @@ async def test_undoing_a_death_ward_hit_reopens_the_casters_clock_too(client, te
     assert await _states(client, hero, "spell:death_ward") == []
 
 
+async def _extra_spell(client, caster, name, srd, level) -> int:
+    """Un secondo incantesimo del lanciatore, senza concentrazione, con il suo slot."""
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{caster}/spells", json={"name": name, "srd_index": srd, "level": level, "is_concentration": False})
+    assert r.status_code == 201, r.text
+    assert (await client.post(f"/characters/{caster}/spell_slots", json={"level": level, "total": 2})).status_code == 201
+    return r.json()["id"]
+
+
+async def test_death_ward_triggering_keeps_the_casters_other_concentration(client, test_session_factory):
+    """Giro 3, 1: Interdizione alla Morte scatta, ma Pelle Coriacea (concentrazione) resta sul bersaglio."""
+    hero, caster, bark = await _table(client, test_session_factory, "Barkskin", "barkskin", 2)
+    ward = await _extra_spell(client, caster, "Death Ward", "death-ward", 4)
+    await _cast(client, caster, ward, [hero], level=4)
+    await _cast(client, caster, bark, [hero], level=2)
+    assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] == bark
+    await _damage(client, hero, 500, "slashing", options=[DEATH_WARD])
+    assert await _states(client, hero, "spell:death_ward") == [] and await _states(client, caster, "spell_cast:death_ward", GM_ID) == []
+    assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] == bark
+    assert len(await _states(client, hero, "spell:barkskin")) == 1
+
+
+async def test_mage_armor_ending_keeps_the_casters_other_concentration(client, test_session_factory):
+    hero, caster, bark = await _table(client, test_session_factory, "Barkskin", "barkskin", 2)
+    armor = await _extra_spell(client, caster, "Mage Armor", "mage-armor", 1)
+    await _cast(client, caster, armor, [hero], level=1)
+    await _cast(client, caster, bark, [hero], level=2)
+    as_user(PLAYER_ID)
+    await _item(client, hero, "Cotta di maglia", item_type="armor", slot="body", base_ac=16)
+    assert await _states(client, hero, "spell:mage_armor") == []
+    assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] == bark
+    assert len(await _states(client, hero, "spell:barkskin")) == 1
+
+
+async def _heroism_with_temp(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Heroism", "heroism", 1)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/classes", json={"class_name": "bard", "level": 3, "hit_die": 8})).status_code == 201
+    assert (await client.patch(f"/characters/{caster}/ability_scores/charisma", json={"value": 16})).status_code == 200
+    await _hp(client, caster, 200, 200)
+    await _cast(client, caster, spell, [hero], level=1)
+    await _new_turn(client, hero)
+    assert (await _sheet(client, hero))["temp_hp"] == 3
+    return hero, caster
+
+
+async def test_undoing_the_damage_that_broke_concentration_gives_back_the_heroism_temp_hp(client, test_session_factory):
+    """Giro 3, 2: l'annullo ridà al bersaglio anche i PF temporanei tolti dalla fine dell'incantesimo."""
+    hero, caster = await _heroism_with_temp(client, test_session_factory)
+    as_user(GM_ID)
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 100, "damage_type": "fire"})
+    assert r.status_code == 200, r.text
+    assert (await _sheet(client, hero))["temp_hp"] == 0 and await _states(client, hero, "spell:heroism") == []
+    await _undo(client, caster, r.json()["hp_undo_id"], GM_ID)
+    assert len(await _states(client, hero, "spell:heroism")) == 1
+    sheet = await _sheet(client, hero)
+    assert sheet["temp_hp"] == 3 and (await _states(client, hero, "spell:heroism"))[0]["data"]["temp_given"] == 3
+
+
+async def test_heroism_temp_hp_are_not_given_back_if_the_target_got_others_meanwhile(client, test_session_factory):
+    hero, caster = await _heroism_with_temp(client, test_session_factory)
+    as_user(GM_ID)
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 100, "damage_type": "fire"})
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{hero}/hp", json={"op": "set_temp", "value": 5})).status_code == 200
+    await _undo(client, caster, r.json()["hp_undo_id"], GM_ID)
+    assert (await _sheet(client, hero))["temp_hp"] == 5
+
+
+async def test_the_end_of_a_temp_hp_spell_leaves_a_history_row_on_the_receiver(client, test_session_factory):
+    """Giro 3, 3."""
+    hero, caster = await _heroism_with_temp(client, test_session_factory)
+    await _end_spell(client, hero, caster, "heroism", "manual")
+    assert any("PF temporanei svaniti" in h and "3 → 0" in h for h in await _history(client, hero, PLAYER_ID))
+
+
 # --- Rigenerazione ---------------------------------------------------------------------------------------------------
 
 async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_session_factory, monkeypatch):

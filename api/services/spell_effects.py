@@ -22,7 +22,7 @@ from core.game.stats import effective_ability_mod
 from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
-from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state, note_spell_temp_hp, settle_closed
+from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_state, note_spell_temp_hp, settle_closed
 from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
@@ -199,6 +199,12 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
                 continue
             if held is None:
                 begin_state(target, spell_state_spec(key, state["data"]["state_data"]), key, state.get("name"))
+                lost = (target.settings or {}).get(SPELL_TEMP_DROPPED, {}).get(key)  # i PF temporanei che la chiusura le aveva tolto
+                if lost and lost["caster_id"] == caster.id and not target.temp_hp:
+                    target.temp_hp = lost["amount"]
+                    note_spell_temp_hp(target, key, lost["amount"])
+                if lost:
+                    target.settings = {**target.settings, SPELL_TEMP_DROPPED: {k: v for k, v in target.settings[SPELL_TEMP_DROPPED].items() if k != key}}
             back.append(tid)
         given[clock] = back
     caster.settings = {**settings, SPELL_GIVEN: given} if given else settings
