@@ -40,7 +40,7 @@ class SpellVariant:
 class SpellEffect:
     key: str
     srd_index: tuple[str, ...]
-    names: tuple[str, str]  # it, en
+    names: tuple[str, ...]  # it, en, e gli altri nomi (2024)
     target: SpellTarget
     variants: dict[str, SpellVariant] = field(default_factory=dict)  # "2014" / "2024"
 
@@ -59,4 +59,20 @@ def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:
         variant = effect and effect.variants.get(data.get("edition", "2014"))
         if variant:
             out += [(m, f"spell:{effect.key}") for m in variant.modifiers(data)]
+    return out
+
+
+def spell_state_options(char: Any) -> list[tuple[RollOptionSpec, dict]]:
+    """Le opzioni al tiro degli stati ``spell:*`` (variante dell'edizione del lanciatore), ognuna con i ``data`` del suo stato."""
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
+
+    out: list[tuple[RollOptionSpec, dict]] = []
+    for state in char.active_states or []:
+        key = str(state.get("key", ""))
+        if not key.startswith(SPELL_STATE_PREFIX):
+            continue
+        data = state.get("data") or {}
+        effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
+        variant = effect and effect.variants.get(data.get("edition", "2014"))
+        out += [(o, data) for o in variant.options] if variant else []
     return out

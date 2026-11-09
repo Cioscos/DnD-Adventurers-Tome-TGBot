@@ -754,3 +754,4 @@ class RuleContext:
     slotless: bool = False  # solo ``cast``: lancio gratuito o rituale, senza slot
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo
     damage: int | None = None  # solo ``damage_taken``: il danno che il giocatore sta per inserire, se lo sa
+    spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)

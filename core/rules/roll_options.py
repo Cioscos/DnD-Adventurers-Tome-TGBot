@@ -301,6 +301,9 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
         for option in spec.roll_options:
             if not option.for_ally:  # le ``for_ally`` le offre ai compagni, non a chi le possiede
                 found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
+    from core.rules.spell_effects import spell_state_options  # import locale: il catalogo degli incantesimi usa i tipi delle regole
+    for spec, data in spell_state_options(ctx.char):  # dadi e bonus degli incantesimi ricevuti
+        found.setdefault(spec.key, RollOption(spec, replace(ctx, spell_data=data), f"spell:{data.get('spell_key')}"))
     for offer in getattr(ctx.char, "party_donors", None) or []:  # messi dal server (``attach_party``)
         donor, spec = offer["donor"], offer["spec"]
         key = f"ally:{donor.id}:{spec.key}"
@@ -593,8 +596,8 @@ def refund_spent(char: Any, spent: list[str]) -> None:
             if slot is not None:
                 slot.used -= 1
         elif kind == "state":
-            key, _, blob = rest.partition(":")
-            state = json.loads(blob)
+            key, _, blob = rest.partition(":{")  # la chiave può avere i due punti (``spell:guidance``)
+            state = json.loads("{" + blob)
             char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), state]
             if state.get("condition"):  # lo stato rimesso rimette anche la condizione che imponeva
                 char.conditions = {**(char.conditions or {}), state["condition"]: True}
