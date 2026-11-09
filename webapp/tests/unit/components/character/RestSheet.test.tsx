@@ -101,7 +101,7 @@ describe('RestSheet short rest', () => {
     setup()
     await openShortRest()
     await userEvent.click(screen.getByText('rest'))
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.target_dead'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.quick_actions.rest_target_dead'))
     expect(notifyMutationError).not.toHaveBeenCalled()
   })
 
