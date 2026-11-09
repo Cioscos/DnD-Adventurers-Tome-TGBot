@@ -138,6 +138,41 @@ async def test_resistance_2014_is_for_one_saving_throw_only(client, test_session
     assert await _states(client, hero, PLAYER_ID, "spell:resistance") == []
 
 
+@pytest.mark.parametrize("name,srd,key", [("Guidance", "guidance", "spell:guidance:add"), ("Resistance", "resistance", "spell:resistance:add")])
+async def test_a_spent_2014_spell_ends_it_for_the_caster_too(client, test_session_factory, name, srd, key):
+    """«Poi l'incantesimo termina»: il lanciatore non resta concentrato né tiene l'orologio."""
+    hero, caster, spell = await _table(client, test_session_factory, name, srd, 0)
+    await _cast(client, caster, spell, [hero], level=0)
+    as_user(GM_ID)
+    before = await _full(client, caster)
+    assert before["concentrating_spell_id"] == spell and await _states(client, caster, GM_ID, f"spell_cast:{srd}")
+    await _roll(client, hero, "save" if srd == "resistance" else "skill")
+    assert (await _add(client, hero, key)).status_code == 200
+    assert await _states(client, hero, PLAYER_ID, f"spell:{srd}") == []
+    as_user(GM_ID)
+    assert (await _full(client, caster))["concentrating_spell_id"] is None
+    assert await _states(client, caster, GM_ID, f"spell_cast:{srd}") == []
+
+
+async def test_resistance_2014_also_covers_a_death_save(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Resistance", "resistance", 0)
+    await _cast(client, caster, spell, [hero], level=0)
+    as_user(PLAYER_ID)
+    assert "spell:resistance:add" in await _roll_keys(client, hero, "death_save")
+
+
+def test_new_dice_options_have_both_languages_and_a_clear_label():
+    labels = {}
+    for edition, srd in (("2014", "bless"), ("2014", "guidance"), ("2024", "guidance"), ("2014", "resistance")):
+        _, variant = spell_effect(edition, srd)
+        labels[(edition, srd)] = variant.options[0].label
+    assert labels[("2014", "bless")] == {"it": "Benedizione: somma 1d4 al tiro", "en": "Bless: add 1d4 to the roll"}
+    assert labels[("2014", "guidance")] == labels[("2024", "guidance")] == {
+        "it": "Guida: somma 1d4 alla prova", "en": "Guidance: add 1d4 to the check"}
+    assert labels[("2014", "resistance")] == {
+        "it": "Resistenza: somma 1d4 al tiro salvezza", "en": "Resistance: add 1d4 to the saving throw"}
+
+
 def test_a_refund_gives_a_spell_state_back():
     state = {"key": "spell:guidance", "data": {"spell_key": "guidance", "edition": "2014"}, "rounds_left": None}
     char = SimpleNamespace(active_states=[state], turn_state={}, abilities=[], spell_slots=[], settings={})

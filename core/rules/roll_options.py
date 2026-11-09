@@ -11,7 +11,8 @@ from typing import Any
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
-from core.rules.states import has_state, immune_conditions
+from core.rules.spell_effects import SPELL_STATE_PREFIX
+from core.rules.states import SPELL_SPENT, has_state, immune_conditions
 from core.rules.uses import pool_key
 from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
@@ -355,6 +356,10 @@ def _spend_state_token(char: Any, key: str) -> str:
     if type(charges) is int and charges > 1:
         rest.append({**state, "data": {**state["data"], "charges": charges - 1}})
     char.active_states = rest
+    caster = (state.get("data") or {}).get("caster_id")
+    if key.startswith(SPELL_STATE_PREFIX) and caster is not None and not any(s.get("key") == key for s in rest):
+        settings = char.settings or {}  # l'incantesimo termina con l'ultimo uso: il flush chiude il lanciatore
+        char.settings = {**settings, SPELL_SPENT: [*(settings.get(SPELL_SPENT) or []), {"caster_id": caster, "key": key}]}
     return f"state:{key}:{json.dumps(state)}"
 
 

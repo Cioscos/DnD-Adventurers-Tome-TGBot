@@ -33,7 +33,7 @@ _GUIDANCE_2024 = SpellVariant(
 # 2014: un solo TS, prima o dopo il tiro (qui dopo); il 2024 riduce il danno ed è un'altra primitiva, non ancora nel catalogo
 _RESISTANCE_2014 = SpellVariant(
     options=(_d4_option("resistance", {"it": "Resistenza: somma 1d4 al tiro salvezza", "en": "Resistance: add 1d4 to the saving throw"},
-                        ("save",), once=True),),
+                        ("save", "death_save"), once=True),),
     concentration=True, rounds=10)
 
 _PASS_WITHOUT_TRACE = SpellVariant(

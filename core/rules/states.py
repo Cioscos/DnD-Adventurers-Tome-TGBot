@@ -159,6 +159,9 @@ TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
 # Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in
 # SPELL_RELEASE ([{"id", "key"}]), che il flush toglie ai bersagli solo se lo stato è ancora di chi lancia (``data["caster_id"]``).
 SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"
+# Sul bersaglio: [{"caster_id", "key"}] degli stati ``spell:*`` spesi da un'opzione (Guida e Resistenza 2014: «poi l'incantesimo termina»);
+# il flush chiude la concentrazione e l'orologio di chi ha lanciato.
+SPELL_SPENT = "spell_spent"
 # Condizioni sospese (Calmare Emozioni). Su chi lancia: stato ``SUSPENDED_KEY`` che finisce con la concentrazione e, in settings,
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
 # ``SUSPENDED_ON``: {condizione: id di chi la sospende}, cancellato se la condizione cambia per altra via (allora non torna).
