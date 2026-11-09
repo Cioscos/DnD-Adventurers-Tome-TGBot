@@ -73,6 +73,8 @@ export default function Turn() {
   // Effetto su altri di un privilegio appena usato (Presenza Intimidatoria): il giocatore sceglie su chi applicarlo.
   const [targetKey, setTargetKey] = useState<string | null>(null)
   // Privilegio che dà lo stato a un alleato della serata (Ispirazione Bardica): prima si sceglie a chi (R38).
+  // Privilegio che toglie condizioni (Task 48): lo stesso foglio degli incantesimi, aperto dall'uso
+  const [removalPick, setRemovalPick] = useState<{ ability: Ability; uses: number; amount?: number; allies: { id: number; name: string }[] } | null>(null)
   const [allyPick, setAllyPick] = useState<{ ability: Ability; uses: number; amount?: number; allies: { id: number; name: string }[]; max: number } | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const setChoice = useWeaponChoices((s) => s.setChoice)
@@ -133,7 +135,7 @@ export default function Turn() {
 
   // Un privilegio con effetto reale passa dal server (usi, slot di turno, cura, stato); gli altri scalano solo il contatore.
   const abilityUse = useMutation({
-    mutationFn: async ({ ability, uses, amount, allyId, allyIds }: { ability: Ability; uses: number; amount?: number; allyId?: number; allyIds?: number[] }) => {
+    mutationFn: async ({ ability, uses, amount, allyId, allyIds, removal }: { ability: Ability; uses: number; amount?: number; allyId?: number; allyIds?: number[]; removal?: { targets: (number | string)[]; conditions?: string[] } }) => {
       if (ability.has_on_use && ability.feature_key) {
         const chosen = toggles[ability.id]
         const picked = useChoices[ability.id]
@@ -144,8 +146,10 @@ export default function Turn() {
           ...Object.fromEntries((ability.use_texts ?? []).map((x) => [x.key, typed?.[x.key]?.trim()]).filter(([, v]) => v)),
         } : undefined
         // Il bersaglio scelto viaggia con le scelte già fatte (Imposizione delle Mani: la modalità decide cosa farne).
-        const params = allyIds !== undefined ? { ...choices, target_character_ids: allyIds }
+        const chosenTarget = allyIds !== undefined ? { ...choices, target_character_ids: allyIds }
           : allyId !== undefined ? { ...choices, target_character_id: allyId } : choices
+        // Togliere condizioni: lo stesso corpo `removal` degli incantesimi (il server ricava costo e bersaglio dei PF)
+        const params = removal ? { ...chosenTarget, removal } : chosenTarget
         if (params) return api.characters.featureUse(charId, ability.feature_key, amount ?? 1, params)
         if (amount) return api.characters.featureUse(charId, ability.feature_key, amount)
         return api.characters.featureUse(charId, ability.feature_key)
@@ -184,6 +188,7 @@ export default function Turn() {
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       qc.invalidateQueries({ queryKey: ['companions', charId] })  // Compagno Primordiale crea o rialza la bestia
       setAllyPick(null)
+      setRemovalPick(null)
     },
   })
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
@@ -194,6 +199,12 @@ export default function Turn() {
     }
     // Un privilegio che dà un effetto a un alleato, o una cui modalità scelta è rivolta a un altro (Imposizione delle Mani).
     const mode = useChoices[args.ability.id]?.mode
+    const rm = args.ability.removal
+    if (rm && (!rm.modes || (mode && rm.modes.includes(mode)))) {
+      const allies = rm.ally && !(rm.bound && mode === 'self') ? await api.characters.sessionAllies(charId).catch(() => []) : []
+      setRemovalPick({ ...args, allies })
+      return
+    }
     if (args.ability.gives_to_ally || (mode && args.ability.ally_modes?.includes(mode))) {
       const allies = await api.characters.sessionAllies(charId).catch(() => [])
       if (allies.length > 0) {
@@ -590,6 +601,16 @@ export default function Turn() {
         : panel.use_panel === 'wild_magic'
           ? <WildMagicSheet char={char} onClose={() => setPanel(null)} />
           : <PreserveLifeSheet char={char} onClose={() => setPanel(null)} />)}
+      {removalPick?.ability.removal && (
+        <AllyTargetSheet
+          title={removalPick.ability.name} allies={removalPick.allies} pending={abilityUse.isPending} onPick={() => {}} onClose={() => setRemovalPick(null)}
+          removal={{
+            ...removalPick.ability.removal, maxTargets: removalPick.ability.removal.max_targets, optional: removalPick.ability.removal.optional,
+            costEach: removalPick.ability.removal.cost_each, confirmKey: 'removal_confirm_use',
+            scope: !removalPick.ability.removal.ally ? 'self' : removalPick.ability.removal.bound ? (useChoices[removalPick.ability.id]?.mode === 'self' ? 'self' : 'others') : 'any',
+            onConfirm: (removal) => abilityUse.mutate({ ability: removalPick.ability, uses: removalPick.uses, amount: removalPick.amount, removal }),
+          }} />
+      )}
       {allyPick && (
         <AllyTargetSheet title={allyPick.ability.name} die={allyPick.ability.feature_key === 'bard.bardic_inspiration'} allies={allyPick.allies} max={allyPick.max} pending={abilityUse.isPending} onClose={() => setAllyPick(null)}
           onPickMany={(allyIds) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, allyIds })}

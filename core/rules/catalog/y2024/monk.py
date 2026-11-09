@@ -343,8 +343,7 @@ BASE_ROWS = (
             ("Autoguarigione", "Self-Restoration"),
             ("Una volta alla fine del tuo turno togli a te stesso Affascinato, Spaventato o Avvelenato; digiuno e sete non ti danno Spossatezza.",
              "Once at the end of your turn you remove Charmed, Frightened or Poisoned from yourself; going hungry or thirsty gives you no Exhaustion."),
-            on_use=OnUse(once_per_turn=True, available=lambda c: bool(_restorable(c)), removal=ConditionRemoval(tuple(_RESTORABLE), ally=False),
-                         choices=(UseChoice("condition", _both("Condizione", "Condition"), _restorable, lambda k: _RESTORABLE[k]),))),
+            on_use=OnUse(once_per_turn=True, available=lambda c: bool(_restorable(c)), removal=ConditionRemoval(tuple(_RESTORABLE), ally=False, allowed=lambda c: tuple(_restorable(c))))),
     feature("deflect_energy", CK, ED, 13, "Deviare Energia / Deflect Energy (Monaco 13, pag. 103)", ("Deviare Energia", "Deflect Energy"),
             ("Deviare Attacchi vale per attacchi di ogni tipo di danno.", "Deflect Attacks works against attacks of any damage type."),
             passive=True),
@@ -469,12 +468,8 @@ def _healing_use(*, slot: str | None, spends: str | None = None, in_flurry: bool
         ally_modes=("other",), once_per_turn=once,
         available=(lambda c: state_on(c, FLURRY_STATE)) if in_flurry else None,
         effect=_spend_flurry_strike if in_flurry else None, message=_heal_message,
-        removal=ConditionRemoval(
-            tuple(_CURABLE), allowed=lambda c: tuple(_CURABLE) if c.class_level >= 6 else (),
-            who=lambda _c, p: {"self": "self", "other": "other"}.get(p.get("mode")) if p.get("condition") else None),
-        choices=(UseChoice("mode", _both("Chi recupera i PF", "Who regains the HP"), lambda _c: list(_HEAL_MODES), lambda k: _HEAL_MODES[k]),
-                 UseChoice("condition", _both("Condizione da terminare", "Condition to end"), lambda _c: list(_CURABLE),
-                           lambda k: _CURABLE[k], optional=True, applies=lambda c: c.class_level >= 6)))
+        removal=ConditionRemoval(tuple(_CURABLE), allowed=lambda c: tuple(_CURABLE) if c.class_level >= 6 else (), bound=True, optional=True),
+        choices=(UseChoice("mode", _both("Chi recupera i PF", "Who regains the HP"), lambda _c: list(_HEAL_MODES), lambda k: _HEAL_MODES[k]),))
 
 
 def _ultimate_message(ctx: RuleContext, _params: dict) -> dict[str, str]:

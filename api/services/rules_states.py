@@ -13,7 +13,7 @@ from api.services.dice_stats import record_dice
 from api.services.rules_turn import (
     attacks_allowed, forgo_attack, get_turn, grant_action, mark_once, once_used, set_damaged, spend,
 )
-from api.services.condition_removal import apply_removal, plan
+from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
@@ -297,17 +297,28 @@ def _feature_attack(char, ability: str) -> dict:
             "is_fumble": fumble, "is_critical": outcome.kept >= applied.crit_min and not fumble, "notes": applied.notes}
 
 
-def _plan_removal(ctx: RuleContext, rm, params: dict) -> tuple[list[str], list[str], str] | None:
-    """``(condizioni, voci non tracciate, "self"|"other")`` che quest'uso toglie, o ``None`` se non toglie nulla (modalità senza
-    rimozione, scelta facoltativa lasciata vuota). 422 se la scelta non è ammessa dalla regola."""
-    who = rm.who(ctx, params) if rm.who else "self"
-    if who is None or (who == "other" and not rm.ally):
-        return None
-    picks = rm.pick(ctx, params) if rm.pick else ([params["condition"]] if params.get("condition") else None)
-    if not picks:
-        return None
-    conds, untracked = plan(rm, picks, rm.allowed_for(ctx))
-    return conds, untracked, who
+async def _plan_removal(session: AsyncSession, char, ctx: RuleContext, rm, params: dict):
+    """``(condizioni, voci non tracciate, bersagli, esplicita)`` che quest'uso toglie, o ``None``. Lo stesso corpo ``removal``
+    {targets, conditions} degli incantesimi; 422 se la scelta, i bersagli o la modalità non sono ammessi, tutto prima di spendere."""
+    req = params.get("removal")
+    if req is None:
+        if rm.auto:  # cadono da sole su chi usa il privilegio (Ira): stesso servizio, senza foglio
+            picks = rm.auto(ctx, params)
+            return (*plan(rm, picks, rm.allowed_for(ctx)), [char], False) if picks else None
+        if rm.optional or (rm.modes is not None and params.get("mode") not in rm.modes):
+            return None
+        raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    targets, picks = (req.get("targets"), req.get("conditions")) if isinstance(req, dict) else (None, None)
+    bad = (not isinstance(targets, list) or (picks is not None and not isinstance(picks, list))
+           or (rm.modes is not None and params.get("mode") not in rm.modes))
+    if not bad and rm.bound:  # il bersaglio segue la modalità: te stesso, oppure un altro
+        bad = len(targets) != 1 or (targets[0] == "self") != (params.get("mode") == "self")
+    if bad:
+        raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    conds, untracked = ([], []) if picks == [] and rm.optional else plan(rm, picks, rm.allowed_for(ctx))
+    if not (conds or untracked) and not rm.optional:
+        raise _err(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_choice")
+    return conds, untracked, await resolve_targets(session, char, rm, targets), True
 
 
 async def use_feature(session: AsyncSession, char, feature_key: str, amount: int = 1,
@@ -321,6 +332,15 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     on_use = spec.on_use
     if on_use.panel:
         raise _err(status.HTTP_409_CONFLICT, "needs_panel")
+    params = dict(params or {})
+    removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
+    if on_use.removal is not None:
+        removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,
+                                                                      class_level=row.level), on_use.removal, params)
+        if removal_plan is not None and removal_plan[3] and on_use.removal.cost_each:  # il costo lo decide il server
+            amount = on_use.removal.cost_each * (len(removal_plan[0]) + len(removal_plan[1]))
+        if removal_plan is not None and removal_plan[3] and on_use.removal.bound:  # anche i PF vanno a chi si è scelto
+            params["target_character_id"] = getattr(removal_plan[2][0], "id", None)
     if on_use.max_amount is not None and amount > on_use.max_amount:
         raise _err(status.HTTP_409_CONFLICT, "amount_too_high")
     if amount < on_use.min_amount:
@@ -371,11 +391,6 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await ally_target(session, char, params["target_character_id"])
         if on_use.ally_needs_zero_hp and target.current_hit_points > 0:
             raise _err(status.HTTP_409_CONFLICT, "target_not_down")
-    removal_plan = None  # Task 48: cosa si toglie e a chi, controllato prima di spendere
-    if on_use.removal is not None:
-        removal_plan = _plan_removal(ctx_choice, on_use.removal, params or {})
-        if removal_plan is not None and removal_plan[2] == "other" and target is None and (params or {}).get("target_character_id") is not None:
-            target = await ally_target(session, char, params["target_character_id"])
     temp_targets: list[Character] = []
     if on_use.temp_hp_ally:  # PF temporanei a PG della serata (Task 46): tutti validati prima di spendere qualcosa
         wanted = (params or {}).get("target_character_ids")
@@ -476,15 +491,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                     await _conditions(session, target, {"prone": False})
             got = (await apply_heal(session, target, healed_ally))["healed"]
             result.received = {"name": target.name, "healed": got}
-    if removal_plan is not None:  # dopo la spesa atomica: lo stesso uso non può togliere due volte
-        conds, untracked, who = removal_plan
-        result.removal = await apply_removal(session, char, on_use.removal, conds, untracked,
-                                             [char] if who == "self" else [target], explicit=True)
-    if on_use.clears:
-        from api.services.effects import apply_conditions  # import locale, come sopra
-        removed = {c: False for c in on_use.clears(ctx, params or {}) if (char.conditions or {}).get(c)}
-        if removed:
-            await apply_conditions(session, char, removed)
+    if removal_plan is not None and (removal_plan[0] or removal_plan[1]):  # dopo la spesa atomica: lo stesso uso non può togliere due volte
+        conds, untracked, targets, explicit = removal_plan
+        result.removal = await apply_removal(session, char, on_use.removal, conds, untracked, targets, explicit=explicit)
     if on_use.heal_by:
         healed += max(0, on_use.heal_by(ctx, params or {}))
     if on_use.heal or on_use.heal_by:

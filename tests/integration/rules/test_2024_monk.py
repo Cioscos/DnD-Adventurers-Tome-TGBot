@@ -540,19 +540,23 @@ async def test_evasion_is_asked_on_dexterity_saves_from_level_7_and_halves_damag
     assert EVASION not in await _roll_keys(client, cid, "save", ability="dexterity")
 
 
+def _self(condition: str) -> dict:
+    return {"removal": {"targets": ["self"], "conditions": [condition]}}
+
+
 async def test_self_restoration_removes_charmed_frightened_or_poisoned_once_per_turn(client):
     low = await _monk24(client, 9)
     assert RESTORE not in await _keys_of(client, low)
     cid = await _monk24(client, 10)
-    r = await _use(client, cid, RESTORE, params={"condition": "charmed"})
+    r = await _use(client, cid, RESTORE, params=_self("charmed"))
     assert r.status_code in (409, 422)  # nessuna condizione da togliere
     await _conditions(client, cid, charmed=True, frightened=True, poisoned=True, blinded=True)
     row = await _ability(client, cid, RESTORE)
-    assert [o["key"] for o in row["use_choices"][0]["options"]] == ["charmed", "frightened", "poisoned"]
-    assert (await _use(client, cid, RESTORE, params={"condition": "poisoned"})).status_code == 200
+    assert [o["key"] for o in row["removal"]["conditions"]] == ["charmed", "frightened", "poisoned"] and row["removal"]["ally"] is False
+    assert (await _use(client, cid, RESTORE, params=_self("poisoned"))).status_code == 200
     conditions = (await _full(client, cid))["conditions"]
     assert not conditions.get("poisoned") and conditions["charmed"] and conditions["blinded"]
-    assert (await _use(client, cid, RESTORE, params={"condition": "charmed"})).status_code == 409  # una per turno
+    assert (await _use(client, cid, RESTORE, params=_self("charmed"))).status_code == 409  # una per turno
     assert not (await _turn(client, cid))["action_used"]
 
 

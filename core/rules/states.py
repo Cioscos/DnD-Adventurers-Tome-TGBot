@@ -80,6 +80,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     charge_exhaustion(char, closed)
     drop_stolen_spells(char, closed)
     release_given_temp_hp(char, closed)
+    release_suspended(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
         if offer:
@@ -97,6 +98,15 @@ def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
     gone = [entry for s in closed for entry in given.pop(s.get("key"), [])]
     if gone:
         char.settings = {**settings, TEMP_GIVEN: given, TEMP_RELEASE: [*(settings.get(TEMP_RELEASE) or []), *gone]}
+
+
+def release_suspended(char: Any, closed: list[dict]) -> None:
+    """Le condizioni sospese da chi lancia (Calmare Emozioni) tornano quando la concentrazione, da qualunque via, chiude lo stato:
+    passano in ``COND_RELEASE``, che il flush della richiesta applica ai riceventi."""
+    settings = getattr(char, "settings", None) or {}
+    held = settings.get(SUSPENDED_KEY)
+    if held and any(s.get("key") == SUSPENDED_KEY for s in closed):
+        char.settings = {**{k: v for k, v in settings.items() if k != SUSPENDED_KEY}, COND_RELEASE: [*(settings.get(COND_RELEASE) or []), *held]}
 
 
 def charge_exhaustion(char: Any, closed: list[dict]) -> None:
@@ -133,6 +143,10 @@ ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 # svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
 # richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
 TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
+# Condizioni sospese (Calmare Emozioni). Su chi lancia: stato ``SUSPENDED_KEY`` che finisce con la concentrazione e, in settings,
+# ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
+# ``SUSPENDED_ON``: {condizione: id di chi la sospende}, cancellato se la condizione cambia per altra via (allora non torna).
+SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON = "suspended_conditions", "conditions_release", "conditions_suspended_on"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
 
 

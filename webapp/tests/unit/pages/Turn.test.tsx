@@ -915,11 +915,14 @@ describe('Turn page', () => {
   describe('Lay on Hands on another creature', () => {
     const lay = () => ({
       id: 10, name: 'Imposizione delle Mani', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
-      choose_amount: true, ally_modes: ['other', 'cure_other'], feature_key: 'paladin.lay_on_hands', max_uses: 25, uses: 25,
+      choose_amount: true, ally_modes: ['other'], feature_key: 'paladin.lay_on_hands', max_uses: 25, uses: 25,
       action_type: 'action', restoration_type: 'long_rest',
       use_choices: [{ key: 'mode', label: { it: 'Su chi', en: 'On whom' }, options: [
         { key: 'self', label: { it: 'Cura PF a te stesso', en: 'Heal yourself' } },
-        { key: 'other', label: { it: 'Cura PF a un altro', en: 'Heal another' } }] }],
+        { key: 'other', label: { it: 'Cura PF a un altro', en: 'Heal another' } },
+        { key: 'cure', label: { it: 'Togli condizioni', en: 'Remove conditions' } }] }],
+      removal: { count: null, max_targets: 1, ally: true, modes: ['cure'], cost_each: 5,
+        conditions: [{ key: 'poisoned', label: { it: 'Avvelenato', en: 'Poisoned' } }], untracked: [{ key: 'disease', label: { it: 'malattia', en: 'disease' } }] },
     })
     const pick = async (label: string) => {
       await userEvent.click(await screen.findByText('character.turn.choose'))
@@ -936,6 +939,22 @@ describe('Turn page', () => {
       expect(featureUse).not.toHaveBeenCalled()  // prima si sceglie a chi
       await userEvent.click(await screen.findByText('Brun'))
       await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1, { mode: 'other', target_character_id: 31 }))
+    })
+
+    it('the cure mode opens the common removal sheet and sends the same removal body as a spell', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [lay()] })
+      sessionAllies.mockResolvedValue([{ id: 31, name: 'Brun' }])
+      featureUse.mockClear()
+      renderWithProviders(<Turn />)
+      await pick('Togli condizioni')
+      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      expect(featureUse).not.toHaveBeenCalled()
+      await userEvent.click(await screen.findByText('Avvelenato'))
+      await userEvent.click(await screen.findByText('malattia'))
+      await userEvent.click(await screen.findByText('character.turn.removal_self'))
+      await userEvent.click(await screen.findByText('character.turn.removal_confirm_use'))
+      await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1,
+        { mode: 'cure', removal: { targets: ['self'], conditions: ['poisoned', 'disease'] } }))
     })
 
     it('does not ask for a target when healing yourself', async () => {

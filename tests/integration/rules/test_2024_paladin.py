@@ -158,11 +158,16 @@ async def test_the_pool_comes_back_with_a_long_rest(client):
     assert (await _ability(client, cid, LOH))["uses"] == 25
 
 
+def _cure(targets, conditions) -> dict:
+    """Task 48: stesso corpo `removal` degli incantesimi; il costo (5 per condizione) lo calcola il server."""
+    return {"mode": "cure", "removal": {"targets": targets, "conditions": conditions}}
+
+
 async def test_five_points_remove_poisoned_without_healing(client, test_session_factory):
     cid = await _paladin24(client, 5)
     await _hurt(test_session_factory, cid, 3)
     await _conditions(client, cid, poisoned=True)
-    r = await _use(client, cid, LOH, amount=5, params={"mode": "cure_self", "cure_poisoned": True})
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned"]))
     assert r.status_code == 200, r.text
     full = await _full(client, cid)
     assert not full["conditions"].get("poisoned") and full["current_hit_points"] == 3
@@ -171,17 +176,16 @@ async def test_five_points_remove_poisoned_without_healing(client, test_session_
 
 async def test_a_cure_costs_exactly_five_points_per_condition_and_needs_a_condition(client):
     cid = await _paladin24(client, 5)
-    for amount, toggles in ((4, True), (10, True), (5, False)):
-        r = await _use(client, cid, LOH, amount=amount, params={"mode": "cure_self", **({"cure_poisoned": True} if toggles else {})})
-        assert r.status_code in (409, 422), (amount, toggles)
+    for params in (_cure(["self"], []), {"mode": "cure"}, _cure(["self"], ["poisoned", "poisoned", "blinded"])):
+        r = await _use(client, cid, LOH, amount=5, params=params)
+        assert r.status_code == 422, params
     assert (await _ability(client, cid, LOH))["uses"] == 25 and (await _turn(client, cid))["bonus_used"] is False
 
 
 async def test_restoring_touch_adds_six_conditions_at_level_14_and_each_costs_five(client):
     cid = await _paladin24(client, 14)
     await _conditions(client, cid, poisoned=True, blinded=True, stunned=True, prone=True)
-    params = {"mode": "cure_self", "cure_poisoned": True, "cure_blinded": True, "cure_stunned": True}
-    r = await _use(client, cid, LOH, amount=15, params=params)
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned", "blinded", "stunned"]))
     assert r.status_code == 200, r.text
     left = (await _full(client, cid))["conditions"]
     assert not any(left.get(c) for c in ("poisoned", "blinded", "stunned")) and left.get("prone") is True
@@ -191,10 +195,10 @@ async def test_restoring_touch_adds_six_conditions_at_level_14_and_each_costs_fi
 async def test_restoring_touch_conditions_are_not_available_before_level_14(client):
     cid = await _paladin24(client, 13)
     await _conditions(client, cid, blinded=True)
-    r = await _use(client, cid, LOH, amount=5, params={"mode": "cure_self", "cure_blinded": True})
-    assert r.status_code in (409, 422) and (await _full(client, cid))["conditions"].get("blinded") is True
-    assert {t["key"] for t in (await _ability(client, cid, LOH))["use_toggles"]} == {"cure_poisoned"}
-    assert len((await _ability(client, await _paladin24(client, 14), LOH))["use_toggles"]) == 7
+    r = await _use(client, cid, LOH, amount=5, params=_cure(["self"], ["blinded"]))
+    assert r.status_code == 422 and (await _full(client, cid))["conditions"].get("blinded") is True
+    assert [c["key"] for c in (await _ability(client, cid, LOH))["removal"]["conditions"]] == ["poisoned"]
+    assert len((await _ability(client, await _paladin24(client, 14), LOH))["removal"]["conditions"]) == 7
 
 
 async def test_lay_on_hands_heals_a_seated_ally_and_spends_the_pool_and_the_bonus_action(client, test_session_factory):
@@ -213,7 +217,7 @@ async def test_a_cure_on_a_seated_ally_removes_only_the_chosen_condition_task48(
     _, paladin, hero = await _table24(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 20, conditions={"poisoned": True, "prone": True})
     as_user(GM_ID)
-    r = await _give(client, paladin, hero, 5, mode="cure_other", cure_poisoned=True)
+    r = await _use(client, paladin, LOH, amount=1, params=_cure([hero], ["poisoned"]))
     assert r.status_code == 200, r.text
     assert r.json()["notes"] == [] and r.json()["removal"]
     hp, conditions = await _hero_state(test_session_factory, hero)
@@ -224,7 +228,7 @@ async def test_a_cure_on_a_seated_ally_removes_only_the_chosen_condition_task48(
 async def test_a_cure_on_someone_outside_the_evening_is_a_note_for_the_gm(client, test_session_factory):
     _, paladin, _ = await _table24(client, test_session_factory, level=5)
     as_user(GM_ID)
-    r = await _give(client, paladin, None, 5, mode="cure_other", cure_poisoned=True)
+    r = await _use(client, paladin, LOH, amount=1, params=_cure(["other"], ["poisoned"]))
     assert r.status_code == 200 and "Da togliere alla creatura" in r.json()["removal"][0]["it"]
     assert await _pool(client, paladin) == 20
 

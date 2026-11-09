@@ -294,7 +294,7 @@ async def _master(client, cid):
 
 
 async def test_each_master_transmuter_option_consumes_the_stone_and_blocks_a_new_one_until_a_long_rest(client):
-    for key, params in ((PANACEA, {"target": "other"}), (YOUTH, {}), (MAJOR, {})):
+    for key, params in ((PANACEA, {"mode": "other", "removal": {"targets": ["other"]}}), (YOUTH, {}), (MAJOR, {})):
         cid = await _wizard(client, 14, "transmutation")
         assert (await _use(client, cid, key, params=params)).status_code == 409  # senza pietra
         await _master(client, cid)
@@ -320,19 +320,21 @@ async def test_panacea_on_oneself_restores_every_hit_point_and_cures_poison(clie
     await _hp(client, cid, 100, 10)
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})
     await _master(client, cid)
-    r = await _use(client, cid, PANACEA, params={"target": "self"})
+    r = await _use(client, cid, PANACEA, params={"mode": "self", "removal": {"targets": ["self"]}})
     assert r.status_code == 200, r.text
     full = await _full(client, cid)
     assert full["current_hit_points"] == 100 and not full["conditions"].get("poisoned")
 
 
-async def test_panacea_on_another_creature_only_says_so(client):
+async def test_panacea_on_another_creature_outside_the_evening_is_a_visible_note(client):
     cid = await _wizard(client, 14, "transmutation")
     await _hp(client, cid, 100, 10)
     await _master(client, cid)
-    assert (await _use(client, cid, PANACEA, params={"target": "mud"})).status_code == 422
-    r = await _use(client, cid, PANACEA, params={"target": "other"})
+    assert (await _use(client, cid, PANACEA, params={"mode": "mud"})).status_code == 422
+    assert (await _use(client, cid, PANACEA, params={"mode": "other"})).status_code == 422  # senza il foglio comune non si usa
+    r = await _use(client, cid, PANACEA, params={"mode": "other", "removal": {"targets": ["other"]}})
     assert r.status_code == 200 and (await _full(client, cid))["current_hit_points"] == 10
+    assert "maledizione" in " ".join(x["it"] for x in r.json()["removal"])
     assert "PF" in r.json()["message"]["it"] and "hit points" in r.json()["message"]["en"]
 
 

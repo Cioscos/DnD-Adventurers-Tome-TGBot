@@ -12,6 +12,13 @@ export type AbilityName =
 
 export type AbilityModifierKind = 'absolute' | 'relative'
 
+/** Cosa si può togliere e a chi (Task 48): lo stesso per un incantesimo e per un privilegio. */
+export type RemovalInfo = {
+  count: number | null; max_targets: number; ally: boolean
+  optional?: boolean; bound?: boolean; modes?: string[] | null; cost_each?: number
+  conditions: { key: string; label: { it: string; en: string } }[]; untracked: { key: string; label: { it: string; en: string } }[]
+}
+
 export interface AbilityModifier {
   ability: AbilityName
   kind: AbilityModifierKind
@@ -127,6 +134,8 @@ export interface Ability {
   gives_to_ally?: boolean
   /** Valori della scelta `mode` rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi. */
   ally_modes?: string[]
+  /** Il «Usa» toglie condizioni nel foglio comune (Task 48), già filtrato per questo personaggio. */
+  removal?: RemovalInfo | null
   /** Con `gives_to_ally` per PF temporanei: quante creature della serata può raggiungere il «Usa» (Mantello di Ispirazione: più d'una). */
   ally_max?: number
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
@@ -243,7 +252,7 @@ export interface Spell {
   ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string; self_only?: boolean } | null
   /** Lancio pagato da un privilegio del Warlock: Arcanum Mistico (senza slot) o una supplica a uso singolo (slot di Patto). */
   /** Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48). */
-  removal?: { count: number | null; max_targets: number; ally: boolean; conditions: { key: string; label: { it: string; en: string } }[]; untracked: { key: string; label: { it: string; en: string } }[] } | null
+  removal?: RemovalInfo | null
   pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null; also_slot?: boolean } | null
 }
 

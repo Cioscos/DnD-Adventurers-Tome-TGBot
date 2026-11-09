@@ -42,7 +42,7 @@ from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import deliver_temp_gifts
-from core.rules.condition_removal import spell_removal
+from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
@@ -528,8 +528,8 @@ async def use_spell(
         raise HTTPException(status_code=409, detail={"code": "smite_on_hit"})
 
     removal = None  # Task 48: cosa toglie il lancio e a chi, tutto controllato prima di spendere lo slot
+    rule = spell_removal(character_edition(char), spell.srd_index, spell.name)  # per srd_index o, in mancanza, per nome
     if body.removal is not None:
-        rule = spell_removal(character_edition(char), spell.srd_index)
         if rule is None:
             raise HTTPException(status_code=422, detail={"code": "not_a_removal_spell"})
         picked = plan(rule, body.removal.conditions, rule.conditions)
@@ -553,6 +553,8 @@ async def use_spell(
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
     response.option_result = option_result(opts, rolls, total)
+    if rule is None and looks_like_removal(spell.name):  # mai in silenzio: l'app non sa cosa toglie
+        removal_lines = [NOT_RECOGNIZED]
     response.removal_result = removal_lines
     # Dadi che il server non sa tirare: l'incantesimo si lancia lo stesso, senza danno, e la scheda lo dice
     response.damage_unrollable = any(d and not _DICE_RE.match(d.strip()) for d in (spell.damage_dice, spell.extra_damage_dice))

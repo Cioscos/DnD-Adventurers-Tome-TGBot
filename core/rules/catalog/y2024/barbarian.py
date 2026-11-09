@@ -10,6 +10,7 @@ from typing import Any
 
 from core.data.damage_types import DAMAGE_TYPES
 from core.game.item_bonuses import item_meta
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog._common import (
     INCAPACITATING, attacks_made, feature, heavy_armor, once_used, skill_label, state_on,
 )
@@ -204,7 +205,8 @@ def _rage_modifiers() -> tuple[Modifier, ...]:
 
 RAGE_USE = OnUse(
     slot="bonus", slot_by=_rage_slot, cost_by=_rage_cost, ends_concentration=True, state=_rage_state, available=_rage_available,
-    check=_rage_check, temp_hp=_entry_temp_hp, clears=_entry_clears, effect=_rage_effect, message=_rage_message,
+    check=_rage_check, temp_hp=_entry_temp_hp,
+    removal=ConditionRemoval(("charmed", "frightened"), count=None, ally=False, auto=_entry_clears), effect=_rage_effect, message=_rage_message,
     toggles=(UseToggle("divine_form", _both("Forma divina (Ira degli Dei)", "Divine form (Rage of the Gods)"),
                        available=lambda c: _divine_ready(c) and not state_on(c, "rage")),),
     choices=(

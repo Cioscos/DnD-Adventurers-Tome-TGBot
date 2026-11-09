@@ -116,49 +116,53 @@ async def test_two_requests_cannot_spend_the_same_points_twice(client, test_sess
     assert (await _hero_state(test_session_factory, hero))[0] == 9  # una sola cura di 8
 
 
+def _cure(targets, conditions) -> dict:
+    """Task 48: stesso corpo `removal` degli incantesimi; il server calcola il costo (5 punti per voce)."""
+    return {"mode": "cure", "removal": {"targets": targets, "conditions": conditions}}
+
+
 async def test_cure_on_yourself_removes_poisoned_and_says_the_exceptions(client, test_session_factory):
     cid = await _paladin(client, 5)
     assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})).status_code == 200
-    r = await _use(client, cid, LOH, amount=5, params={"mode": "cure_self"})
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["poisoned", "disease"]))
     assert r.status_code == 200, r.text
     assert r.json()["notes"] == [] and r.json()["healed"] == 0
     assert "malattia" in " ".join(x["it"] for x in r.json()["removal"]).lower()  # la malattia resta una nota visibile
     assert not (await _full(client, cid))["conditions"].get("poisoned")
-    assert await _pool(client, cid) == 20
+    assert await _pool(client, cid) == 15  # cinque punti per voce, deciso dal server
 
 
-async def test_cure_on_yourself_without_poison_still_spends_for_a_disease_and_leaves_other_conditions(client):
+async def test_cure_on_yourself_only_costs_what_is_picked_and_leaves_other_conditions(client):
     cid = await _paladin(client, 5)
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"blinded": True}})
-    r = await _use(client, cid, LOH, amount=10, params={"mode": "cure_self"})
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["self"], ["disease"]))
     assert r.status_code == 200 and r.json()["notes"] == [] and r.json()["removal"]
-    assert (await _full(client, cid))["conditions"].get("blinded") is True and await _pool(client, cid) == 15
+    assert (await _full(client, cid))["conditions"].get("blinded") is True and await _pool(client, cid) == 20
 
 
 async def test_cure_on_an_ally_removes_the_poison_from_their_sheet_task48(client, test_session_factory):
     _, paladin, hero = await _table(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 5, conditions={"poisoned": True})
     as_user(GM_ID)
-    r = await _give(client, paladin, hero, 5, mode="cure_other")
+    r = await _use(client, paladin, LOH, amount=1, params=_cure([hero], ["poisoned"]))
     assert r.status_code == 200, r.text
-    assert r.json()["notes"] == [] and r.json()["received"] is None  # Task 48: la condizione si scrive (prima era una nota)
+    assert r.json()["notes"] == [] and r.json()["received"] is None
     assert await _pool(client, paladin) == 20
     assert await _hero_state(test_session_factory, hero) == (5, {"poisoned": False})
 
 
-@pytest.mark.parametrize("mode", ["cure_self", "cure_other"])
-@pytest.mark.parametrize("amount", [1, 4, 12])
-async def test_cure_modes_cost_multiples_of_five(client, mode, amount):
+async def test_cure_refuses_a_missing_or_empty_removal_and_spends_nothing(client):
     cid = await _paladin(client, 5)
-    r = await _use(client, cid, LOH, amount=amount, params={"mode": mode})
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "amount_invalid"
+    for params in ({"mode": "cure"}, _cure(["self"], []), _cure(["self"], ["blinded"]), _cure([], ["poisoned"])):
+        r = await _use(client, cid, LOH, amount=5, params=params)
+        assert r.status_code == 422, (params, r.text)
     assert await _pool(client, cid) == 25
 
 
-async def test_the_old_cure_mode_is_gone_and_the_ability_names_the_modes_for_another_creature(client):
+async def test_the_cure_mode_opens_the_common_sheet_and_heal_modes_do_not(client):
     cid = await _paladin(client, 5)
-    assert (await _use(client, cid, LOH, amount=5, params={"mode": "cure"})).status_code == 422
     row = await _ability(client, cid, LOH)
-    assert row["ally_modes"] == ["other", "cure_other"]
+    assert row["ally_modes"] == ["other"] and row["removal"]["modes"] == ["cure"] and row["removal"]["cost_each"] == 5
+    assert [c["key"] for c in row["removal"]["conditions"]] == ["poisoned"] and [u["key"] for u in row["removal"]["untracked"]] == ["disease"]
     [choice] = row["use_choices"]
-    assert [o["key"] for o in choice["options"]] == ["self", "other", "cure_self", "cure_other"]
+    assert [o["key"] for o in choice["options"]] == ["self", "other", "cure"]

@@ -171,13 +171,13 @@ async def test_hand_of_healing_is_refused_without_points_or_action_and_costs_not
 
 async def test_hand_of_healing_ends_a_condition_on_yourself_only_from_level_6(client):
     low = await _sub(client, "mercy", 3)
-    assert [c["key"] for c in (await _ability(client, low, HEAL))["use_choices"]] == ["mode"]
+    assert [c["key"] for c in (await _ability(client, low, HEAL))["use_choices"]] == ["mode"] and not (await _ability(client, low, HEAL))["removal"]
     cid = await _sub(client, "mercy", 6)
     await _conditions(client, cid, poisoned=True, stunned=True, charmed=True)
     row = await _ability(client, cid, HEAL)
-    condition = next(c for c in row["use_choices"] if c["key"] == "condition")
-    assert [o["key"] for o in condition["options"]] == ["blinded", "deafened", "paralyzed", "poisoned", "stunned"]
-    assert (await _use(client, cid, HEAL, params={"mode": "self", "condition": "poisoned"})).status_code == 200
+    assert [o["key"] for o in row["removal"]["conditions"]] == ["blinded", "deafened", "paralyzed", "poisoned", "stunned"]
+    assert row["removal"]["bound"] and row["removal"]["optional"]
+    assert (await _use(client, cid, HEAL, params={"mode": "self", "removal": {"targets": ["self"], "conditions": ["poisoned"]}})).status_code == 200
     conditions = (await _full(client, cid))["conditions"]
     assert not conditions.get("poisoned") and conditions["stunned"] and conditions["charmed"]
 

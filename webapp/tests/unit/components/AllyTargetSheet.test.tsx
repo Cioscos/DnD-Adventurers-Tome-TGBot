@@ -107,6 +107,28 @@ describe('AllyTargetSheet', () => {
       expect(r.onConfirm).toHaveBeenCalledWith({ targets: ['other'], conditions: ['disease'] })
     })
 
+    it('a privilege that costs points per item lets you pick several, shows the cost and leaves others out for a self-only scope', async () => {
+      const r = removal({ count: null, costEach: 5, scope: 'self', confirmKey: 'removal_confirm_use' })
+      renderWithProviders(<AllyTargetSheet title="Imposizione delle Mani" allies={allies} removal={r} onPick={() => {}} onClose={() => {}} />)
+      expect(screen.queryByText('Brun')).toBeNull()
+      expect(screen.queryByText('character.turn.removal_self')).toBeNull()  // già te stesso: nessuna domanda
+      expect(screen.getByText('character.turn.removal_confirm_use').closest('button')).toBeDisabled()
+      await userEvent.click(screen.getByText('Accecato'))
+      await userEvent.click(screen.getByText('malattia'))
+      expect(screen.getByText('character.turn.removal_cost')).toBeInTheDocument()
+      await userEvent.click(screen.getByText('character.turn.removal_confirm_use'))
+      expect(r.onConfirm).toHaveBeenCalledWith({ targets: ['self'], conditions: ['blinded', 'disease'] })
+    })
+
+    it('an optional removal confirms without removing anything and only offers others for the bound mode', async () => {
+      const r = removal({ optional: true, scope: 'others' })
+      renderWithProviders(<AllyTargetSheet title="Mano della Guarigione" allies={allies} removal={r} onPick={() => {}} onClose={() => {}} />)
+      expect(screen.queryByText('character.turn.removal_self')).toBeNull()
+      await userEvent.click(screen.getByText('Brun'))
+      await userEvent.click(screen.getByText('character.turn.removal_use_only'))
+      expect(r.onConfirm).toHaveBeenCalledWith({ targets: [31], conditions: [] })
+    })
+
     it('a spell that removes everything asks only for the targets, up to the maximum', async () => {
       const r = removal({ count: null, maxTargets: 2 })
       renderWithProviders(<AllyTargetSheet title="Guarigione di Massa" allies={allies} removal={r} onPick={() => {}} onClose={() => {}} />)

@@ -9,6 +9,8 @@ from api.services.session_allies import ally_target, load_receiver
 from core.data.labels import condition_label
 from core.db.models import Character
 from core.rules.condition_removal import ConditionRemoval, outcome_lines, resolve_picks
+from core.rules.states import SUSPENDED_KEY, SUSPENDED_ON, begin_state
+from core.rules.types import StateSpec
 
 
 def plan(removal: ConditionRemoval, chosen: list[str] | None, allowed: tuple[str, ...]) -> tuple[list[str], list[str]]:
@@ -46,6 +48,7 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
     (non si annulla, come le cure). Ritorna gli esiti nelle due lingue, comprese le note per ciò che l'app non traccia."""
     from api.services.effects import _add_history, apply_conditions  # import locale: effects richiama rules_states
     lines: list[dict[str, str]] = []
+    held: list[dict] = []  # condizioni sospese, non cancellate: tornano quando finisce la concentrazione di chi lancia
     for target in targets:
         if target is None:
             lines += outcome_lines(removal, target="", removed=[], absent=[], untracked=untracked, wanted=conds)
@@ -58,10 +61,17 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
         if changes:
             await apply_conditions(session, target, changes)
         mine = target.id == caster.id
+        if removal.suppress and present:
+            held.append({"id": target.id, "conditions": present})
+            target.settings = {**(target.settings or {}), SUSPENDED_ON: {**((target.settings or {}).get(SUSPENDED_ON) or {}),
+                                                                       **{c: caster.id for c in present}}}
         if not mine:
             for c in present:
                 _add_history(session, target.id, "condition_change", f"Condizione {condition_label(c)} tolta da {caster.name}",
                              meta={"slug": c, "active": False, "by": caster.name})
         lines += outcome_lines(removal, target=None if mine else target.name, removed=present,
                                absent=[c for c in conds if c not in present] if explicit else [], untracked=untracked, wanted=conds)
+    if held:  # la stessa concentrazione chiude lo stato (end_concentration) e rimette le condizioni
+        caster.settings = {**(caster.settings or {}), SUSPENDED_KEY: [*((caster.settings or {}).get(SUSPENDED_KEY) or []), *held]}
+        begin_state(caster, StateSpec(SUSPENDED_KEY, ends_on=("concentration_end", "manual")), "removal")
     return lines

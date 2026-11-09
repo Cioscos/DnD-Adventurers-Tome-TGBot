@@ -24,6 +24,7 @@ from core.game.actions import attacks_per_action
 from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_part
+from core.rules.condition_removal import view as removal_view
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext
@@ -137,6 +138,9 @@ async def build_character_response(
         ab.choose_amount = bool(on_use and on_use.choose_amount)
         ab.max_amount = on_use.max_amount if on_use and on_use.choose_amount else None
         ab.min_amount = on_use.min_amount if on_use and on_use.choose_amount else 1
+        if on_use and on_use.removal and not on_use.removal.auto and owner is not None:
+            shown = removal_view(on_use.removal, RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
+            ab.removal = shown if shown["conditions"] or shown["untracked"] else None
         if on_use and (on_use.toggles or on_use.choices or on_use.texts):
             ctx = RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)
             ab.use_toggles = [{"key": t.key, "label": dict(t.label)} for t in on_use.toggles if t.available(ctx)]

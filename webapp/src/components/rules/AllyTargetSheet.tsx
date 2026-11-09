@@ -10,6 +10,14 @@ export type Removal = {
   untracked: { key: string; label: Label }[]
   count: number | null
   maxTargets: number
+  /** Si può confermare senza togliere nulla (Mano della Guarigione: la cura vale lo stesso). */
+  optional?: boolean
+  /** Punti spesi per ogni voce tolta (Imposizione delle Mani): il server decide, qui si mostra. */
+  costEach?: number
+  /** Chi può ricevere: `self` solo te stesso, `others` solo altri (la modalità dice già chi ha i PF), `any` tutti. */
+  scope?: 'any' | 'self' | 'others'
+  /** Testo del pulsante: lancio di un incantesimo o uso di un privilegio. */
+  confirmKey?: 'removal_confirm' | 'removal_confirm_use'
   onConfirm: (r: { targets: (number | string)[]; conditions?: string[] }) => void
 }
 export type Ally = { id: number; name: string; /** Dado che ha già: darne un altro lo sostituisce. */ die?: number | null }
@@ -34,7 +42,7 @@ type Props = {
 export default function AllyTargetSheet({ title, die = false, allies, max = 1, onPickMany, pending = false, removal, onPick, onClose }: Props) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
-  const [who, setWho] = useState<(number | string)[]>([])
+  const [who, setWho] = useState<(number | string)[]>(removal?.scope === 'self' ? ['self'] : [])
   const [what, setWhat] = useState<string[]>([])
   const [replacing, setReplacing] = useState<Ally | null>(null)
   const [chosen, setChosen] = useState<number[]>([])
@@ -43,14 +51,16 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
   if (removal) {
     const options = [...removal.conditions, ...removal.untracked]
     const toggleWho = (id: number | string) => setWho((w) => (w.includes(id) ? w.filter((x) => x !== id) : removal.maxTargets === 1 ? [id] : w.length < removal.maxTargets ? [...w, id] : w))
-    const toggleWhat = (k: string) => setWhat((w) => (w.includes(k) ? w.filter((x) => x !== k) : removal.count === 1 ? [k] : w.length < (removal.count ?? 0) ? [...w, k] : w))
-    const ready = who.length > 0 && (removal.count === null || what.length > 0)
+    const toggleWhat = (k: string) => setWhat((w) => (w.includes(k) ? w.filter((x) => x !== k) : removal.count === 1 ? [k] : removal.count === null || w.length < removal.count ? [...w, k] : w))
+    const picks = removal.count !== null || !!removal.costEach  // si sceglie cosa togliere; altrimenti tutto ciò che la regola ammette
+    const scope = removal.scope ?? 'any'
+    const ready = who.length > 0 && (!picks || removal.optional || what.length > 0)
     return (
       <Sheet open onClose={onClose} title={title} zClassName="z-[60]">
         <div className="flex flex-col gap-2 px-4 pb-4">
-          {removal.count !== null && (
+          {picks && (
             <>
-              <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.turn.removal_what', { n: removal.count })}</p>
+              <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{removal.count === null ? t('character.turn.removal_what_any') : t('character.turn.removal_what', { n: removal.count })}</p>
               <div className="flex flex-wrap gap-2">
                 {options.map((o) => (
                   <Button key={o.key} size="sm" variant={what.includes(o.key) ? 'primary' : 'secondary'} className="break-words" disabled={pending} onClick={() => toggleWhat(o.key)}>
@@ -60,14 +70,15 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
               </div>
             </>
           )}
-          <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{removal.maxTargets > 1 ? t('character.turn.ally_pick_many', { n: removal.maxTargets }) : t('character.turn.removal_who')}</p>
-          <Button variant={who.includes('self') ? 'primary' : 'secondary'} className="justify-start text-left" disabled={pending} onClick={() => toggleWho('self')}>{t('character.turn.removal_self')}</Button>
-          {allies.map((a) => (
+          {scope !== 'self' && <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{removal.maxTargets > 1 ? t('character.turn.ally_pick_many', { n: removal.maxTargets }) : t('character.turn.removal_who')}</p>}
+          {scope === 'any' && <Button variant={who.includes('self') ? 'primary' : 'secondary'} className="justify-start text-left" disabled={pending} onClick={() => toggleWho('self')}>{t('character.turn.removal_self')}</Button>}
+          {scope !== 'self' && allies.map((a) => (
             <Button key={a.id} variant={who.includes(a.id) ? 'primary' : 'secondary'} className="justify-start break-words text-left" disabled={pending} onClick={() => toggleWho(a.id)}>{a.name}</Button>
           ))}
-          <Button variant={who.includes('other') ? 'primary' : 'ghost'} className="justify-start break-words text-left" disabled={pending} onClick={() => toggleWho('other')}>{t('character.turn.ally_other')}</Button>
-          <Button variant="primary" disabled={pending || !ready} onClick={() => removal.onConfirm({ targets: who, ...(removal.count === null ? {} : { conditions: what }) })}>
-            {t('character.turn.removal_confirm')}
+          {scope !== 'self' && <Button variant={who.includes('other') ? 'primary' : 'ghost'} className="justify-start break-words text-left" disabled={pending} onClick={() => toggleWho('other')}>{t('character.turn.ally_other')}</Button>}
+          {!!removal.costEach && <p className="text-sm font-body text-dnd-text-muted">{t('character.turn.removal_cost', { n: removal.costEach * what.length })}</p>}
+          <Button variant="primary" disabled={pending || !ready} onClick={() => removal.onConfirm({ targets: who, ...(picks ? { conditions: what } : {}) })}>
+            {t(removal.optional && picks && what.length === 0 ? 'character.turn.removal_use_only' : `character.turn.${removal.confirmKey ?? 'removal_confirm'}`)}
           </Button>
         </div>
       </Sheet>

@@ -713,7 +713,7 @@ export const api = {
       request<TargetEffectResult>(`/characters/${id}/target-effects`, {
         method: 'POST', body: JSON.stringify({ effect_key: effectKey, combatant_id: combatantId }),
       }),
-    featureUse: (id: number, featureKey: string, amount: number = 1, params?: Record<string, boolean | number | string | number[]>) =>
+    featureUse: (id: number, featureKey: string, amount: number = 1, params?: Record<string, boolean | number | string | number[] | { targets: (number | string)[]; conditions?: string[] }>) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
         method: 'POST', body: JSON.stringify(params ? { amount, params } : { amount }),
       }),

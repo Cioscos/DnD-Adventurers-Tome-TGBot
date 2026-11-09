@@ -208,17 +208,21 @@ async def test_lay_on_hands_on_another_creature_only_spends_the_pool(client, tes
 async def test_lay_on_hands_cures_one_disease_or_poison_per_five_points_and_heals_nothing(client, test_session_factory):
     cid = await _paladin(client, 5)
     await _hurt(test_session_factory, cid, 10)
-    r = await _use(client, cid, LOH, amount=10, params={"mode": "cure_self"})  # due malattie o veleni
+    r = await _use(client, cid, LOH, amount=1, params=_cure(["poisoned", "disease"]))  # due voci: dieci punti
     assert r.status_code == 200, r.text
     assert r.json()["healed"] == 0 and await _hp(client, cid) == 10 and (await _ability(client, cid, LOH))["uses"] == 15
 
 
+def _cure(conditions) -> dict:
+    """Task 48: stesso corpo `removal` degli incantesimi; il server calcola il costo (5 punti per voce)."""
+    return {"mode": "cure", "removal": {"targets": ["self"], "conditions": conditions}}
+
+
 @pytest.mark.parametrize("amount", [1, 4, 6, 12])
-async def test_lay_on_hands_cure_costs_multiples_of_five_and_changes_nothing_otherwise(client, amount):
+async def test_lay_on_hands_cure_costs_five_per_item_whatever_amount_is_sent(client, amount):
     cid = await _paladin(client, 5)
-    r = await _use(client, cid, LOH, amount=amount, params={"mode": "cure_self"})
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "amount_invalid"
-    assert (await _ability(client, cid, LOH))["uses"] == 25 and (await _turn(client, cid))["action_used"] is False
+    r = await _use(client, cid, LOH, amount=amount, params=_cure(["disease"]))
+    assert r.status_code == 200 and (await _ability(client, cid, LOH))["uses"] == 20 and (await _turn(client, cid))["action_used"] is True
 
 
 async def test_lay_on_hands_needs_a_known_mode_and_enough_points(client):
@@ -318,8 +322,8 @@ async def test_cleansing_touch_ends_a_condition_on_the_paladin_when_asked(client
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"charmed": True}})
     full = await _full(client, cid)
     row = next(a for a in full["abilities"] if a["feature_key"] == CT)
-    assert row["use_choices"] and [o["key"] for o in row["use_choices"][0]["options"]] == ["charmed"]
-    r = await _use(client, cid, CT, params={"condition": "charmed"})
+    assert [o["key"] for o in row["removal"]["conditions"]] == ["charmed"] and row["removal"]["optional"]
+    r = await _use(client, cid, CT, params={"removal": {"targets": ["self"], "conditions": ["charmed"]}})
     assert r.status_code == 200, r.text
     assert not (await _full(client, cid))["conditions"].get("charmed")
     assert (await _ability(client, cid, CT))["uses"] == 1 and (await _turn(client, cid))["action_used"] is True
@@ -334,7 +338,7 @@ async def test_cleansing_touch_on_another_creature_spends_a_use_and_the_action_o
 
 async def test_cleansing_touch_refuses_a_condition_the_paladin_does_not_have(client):
     cid = await _paladin(client, 14, charisma=14)
-    r = await _use(client, cid, CT, params={"condition": "charmed"})
+    r = await _use(client, cid, CT, params={"removal": {"targets": ["self"], "conditions": ["charmed"]}})
     assert r.status_code == 422
     assert (await _ability(client, cid, CT))["uses"] == 2 and (await _turn(client, cid))["action_used"] is False
 

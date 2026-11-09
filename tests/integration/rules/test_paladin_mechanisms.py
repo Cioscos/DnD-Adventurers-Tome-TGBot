@@ -2,7 +2,6 @@
 fisso, immunità che vale da coscienti, scelte facoltative e filtri sull'uso di un privilegio."""
 from __future__ import annotations
 
-from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     ChoiceSpec, FeatureSpec, Modifier, OnUse, RollOptionSpec, TargetEffect, UseChoice, Uses,
 )
@@ -178,7 +177,7 @@ def _pool_feature() -> FeatureSpec:
     return _feature(
         uses=Uses(per_level=2), restoration="long_rest", action_type="action",
         on_use=OnUse(
-            choose_amount=True, removal=ConditionRemoval(("charmed", "frightened"), ally=False),
+            choose_amount=True,
             heal=lambda _c, _r: 1, heal_when=lambda _c, params: params.get("mode") == "self",
             amount_ok=lambda _c, amount, params: params.get("mode") != "cure" or amount % 5 == 0,
             choices=(UseChoice("mode", {"it": "Modo", "en": "Mode"}, lambda _c: ["self", "other", "cure"],
@@ -218,10 +217,8 @@ async def test_an_optional_choice_may_be_left_out_and_when_given_it_must_be_vali
     cond = next(c for c in row["use_choices"] if c["key"] == "condition")
     assert cond["options"] == [{"key": "charmed", "label": {"it": "Etichetta charmed", "en": "Label charmed"}}]
     assert (await _use(client, cid, mode="other")).status_code == 200
-    assert (await _full(client, cid))["conditions"]["charmed"] is True  # senza la scelta la condizione resta
     assert (await _use(client, cid, mode="other", condition="frightened")).status_code == 422
     assert (await _use(client, cid, mode="other", condition="charmed")).status_code == 200
-    assert not (await _full(client, cid))["conditions"].get("charmed")
 
 
 async def test_a_mandatory_choice_still_has_to_be_given(client, rules_catalog):

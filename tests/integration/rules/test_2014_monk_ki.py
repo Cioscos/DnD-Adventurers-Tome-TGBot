@@ -529,12 +529,16 @@ async def test_evasion_does_not_work_while_incapacitated(client):
 # Mente Lucida
 # ---------------------------------------------------------------------------
 
+def _mind(condition: str) -> dict:
+    return {"removal": {"targets": ["self"], "conditions": [condition]}}
+
+
 async def test_stillness_of_mind_removes_the_chosen_condition_with_an_action_and_no_cost(client):
     cid = await _monk(client, 7)
     await _conditions(client, cid, charmed=True, frightened=True)
     row = await _ability(client, cid, STILLNESS)
-    assert [o["key"] for o in row["use_choices"][0]["options"]] == ["charmed", "frightened"]
-    r = await _use(client, cid, STILLNESS, params={"condition": "charmed"})
+    assert [o["key"] for o in row["removal"]["conditions"]] == ["charmed", "frightened"] and row["removal"]["ally"] is False
+    r = await _use(client, cid, STILLNESS, params=_mind("charmed"))
     assert r.status_code == 200, r.text
     conditions = (await _full(client, cid))["conditions"]
     assert not conditions.get("charmed") and conditions["frightened"] is True
@@ -543,17 +547,17 @@ async def test_stillness_of_mind_removes_the_chosen_condition_with_an_action_and
 
 async def test_stillness_of_mind_offers_only_the_conditions_the_monk_has_and_costs_nothing_when_refused(client):
     cid = await _monk(client, 7)
-    r = await _use(client, cid, STILLNESS, params={"condition": "charmed"})
+    r = await _use(client, cid, STILLNESS, params=_mind("charmed"))
     assert r.status_code in (409, 422)
     assert not (await _turn(client, cid))["action_used"]
     await _conditions(client, cid, frightened=True)
     row = await _ability(client, cid, STILLNESS)
-    assert [o["key"] for o in row["use_choices"][0]["options"]] == ["frightened"]
-    bad = await _use(client, cid, STILLNESS, params={"condition": "charmed"})
-    assert bad.status_code == 422 and bad.json()["detail"]["code"] == "invalid_choice"
+    assert [o["key"] for o in row["removal"]["conditions"]] == ["frightened"]
+    bad = await _use(client, cid, STILLNESS, params=_mind("charmed"))
+    assert bad.status_code == 422 and bad.json()["detail"]["code"] == "invalid_condition"
     assert not (await _turn(client, cid))["action_used"]
     await client.post(f"/characters/{cid}/turn/use", json={"slot": "action"})
-    spent = await _use(client, cid, STILLNESS, params={"condition": "frightened"})
+    spent = await _use(client, cid, STILLNESS, params=_mind("frightened"))
     assert spent.status_code == 409 and spent.json()["detail"]["code"] == "turn_slot_used"
     assert (await _full(client, cid))["conditions"]["frightened"] is True
 

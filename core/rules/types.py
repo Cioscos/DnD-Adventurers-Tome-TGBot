@@ -314,7 +314,6 @@ class OnUse:
     # Imposizione delle Mani su un altro (R46). ``ally_modes``: i valori della scelta ``mode`` che si rivolgono a un'altra
     # creatura (la scheda li passa al client, che chiede a chi). ``heal_ally_when(ctx, params)``: la cura va al bersaglio
     # scelto, se siede alla serata: la riserva si spende con un UPDATE condizionato e il bersaglio si rilegge dopo.
-    # ``clears(ctx, params) -> [condizioni]``: condizioni tolte a chi usa il privilegio.
     ally_modes: tuple[str, ...] = ()
     heal_ally_when: "Callable[[RuleContext, dict], bool] | None" = None
     # Vendetta Ardente su un altro: i suoi PF salgono a metà del *suo* massimo (letto dal server sul bersaglio) e si rialza
@@ -323,7 +322,6 @@ class OnUse:
     usable_at_zero_hp: bool = False
     ally_needs_zero_hp: bool = False  # il bersaglio dev'essere a 0 PF, altrimenti 409 ``target_not_down`` prima di spendere (Dono dei Protettori)
     heal_ally_to: bool = False  # ``heal`` è il valore a cui portare i PF del bersaglio, non una cura da sommare (Rivivificazione)
-    clears: "Callable[[RuleContext, dict], list[str]] | None" = None
     # chiave della ``UseChoice`` che porta il livello di uno slot incantesimo da spendere (Consapevolezza Primordiale): lo slot si prende
     # con un UPDATE condizionato, normali prima del Patto; senza slot libero l'uso è rifiutato (409 ``no_slot``)
     spends_slot: str | None = None

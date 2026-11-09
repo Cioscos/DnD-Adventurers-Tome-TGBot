@@ -4,6 +4,7 @@ from __future__ import annotations
 import uuid
 
 from core.rules.catalog._common import feature
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog.y2014.wizard_common import CK, ED, dc, savant
 from core.rules.schools import WINDOW_TRANSMUTATION
 from core.rules.states import STOLEN_SPELL, begin_state, has_state
@@ -139,18 +140,20 @@ def _after_stone(extra: OnUse | None = None):
 
 def _restore_to_full(ctx: RuleContext, params: dict) -> int:
     from core.rules.modifiers import effective_hp_max  # import locale: modifiers usa il catalogo
-    return max(0, effective_hp_max(ctx.char) - ctx.char.current_hit_points) if params.get("target") == "self" else 0
+    return max(0, effective_hp_max(ctx.char) - ctx.char.current_hit_points) if params.get("mode") == "self" else 0
 
 
 _PANACEA_TARGET = {"self": ("Su di te", "On yourself"), "other": ("Su un'altra creatura", "On another creature")}
 
 PANACEA_USE = OnUse(
-    **_after_stone(), choices=(_choice("target", ("Creatura toccata", "Creature touched"), _PANACEA_TARGET),),
-    heal_by=_restore_to_full, clears=lambda _c, p: ["poisoned"] if p["target"] == "self" else [],
+    **_after_stone(), choices=(_choice("mode", ("Creatura toccata", "Creature touched"), _PANACEA_TARGET),), ally_modes=("other",),
+    # veleno come condizione; maledizioni e malattie sono note. Su sé o su un PG della serata, nel foglio comune
+    removal=ConditionRemoval(("poisoned",), ("curse", "disease"), count=None, bound=True),
+    heal_by=_restore_to_full,
     message=lambda _c, p: {"it": "Una creatura toccata con la pietra torna a tutti i suoi PF e perde maledizioni, malattie e veleni."
-                           if p["target"] == "other" else "Recuperi tutti i tuoi PF e perdi veleno; maledizioni e malattie le toglie il tavolo.",
+                           if p["mode"] == "other" else "Recuperi tutti i tuoi PF e perdi veleno; maledizioni e malattie le toglie il tavolo.",
                            "en": "A creature touched with the stone regains all its hit points and loses curses, diseases and poisons."
-                           if p["target"] == "other" else "You regain all your hit points and lose poison; the table removes curses and diseases."})
+                           if p["mode"] == "other" else "You regain all your hit points and lose poison; the table removes curses and diseases."})
 
 YOUTH_USE = OnUse(
     **_after_stone(), rolls="3d10",

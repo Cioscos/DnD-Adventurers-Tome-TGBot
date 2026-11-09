@@ -7,12 +7,18 @@ import pytest
 from sqlalchemy import select
 
 from core.db.models import CharacterHistory
-from tests.integration._encounter_helpers import GM_ID, as_user, seed_session
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard import _full
 from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_cleric import _cleric
 from tests.integration.rules.test_2014_paladin_auras import _table as _table14
-from tests.integration.rules.test_2014_paladin_round1_loh import _give, _hero_hp, _hero_state, _pool
+from tests.integration.rules.test_2014_bard import _use
+from tests.integration.rules.test_2014_monk_ki import _ki
+from tests.integration.rules.test_2014_paladin import LOH
+from tests.integration.rules.test_2014_paladin_round1_loh import _hero_hp, _hero_state, _pool
+from tests.integration.rules.test_2014_wizard import _wizard
+from tests.integration.rules.test_2014_wizard_necromancy_transmutation import PANACEA, _master
+from tests.integration.rules.test_2024_monk_subclasses import HEAL, _sub
 from tests.integration.rules.test_2024_cleric import _cleric24
 from tests.integration.rules.test_2024_paladin import _table24
 
@@ -65,6 +71,15 @@ async def _cast(client, cid, spell: int, level: int, targets, conditions=None):
     as_user(GM_ID)
     return await client.post(f"/characters/{cid}/spells/{spell}/use", json={
         "slot_level": level, "removal": {"targets": targets, **({"conditions": conditions} if conditions is not None else {})}})
+
+
+async def _named_spell(client, cid, name: str, level: int, srd_index=None, concentration=False, duration=None) -> int:
+    """Un incantesimo inserito a mano o importato: il nome, e se c'è lo `srd_index`."""
+    r = await client.post(f"/characters/{cid}/spells", json={
+        "name": name, "level": level, "srd_index": srd_index, "is_prepared": True, "is_concentration": concentration, "duration": duration,
+        "class_id": (await _full(client, cid))["classes"][0]["id"]})
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
 
 
 async def _slot_used(client, cid, level: int) -> int:
@@ -195,14 +210,18 @@ async def test_a_cast_without_removal_works_as_before(client, test_session_facto
 
 
 # ---------------------------------------------------------------------------
-# Privilegi: Imposizione delle Mani e Tocco Ristoratore sul meccanismo comune
+# Privilegi: un solo corpo `removal` e lo stesso foglio degli incantesimi
 # ---------------------------------------------------------------------------
+
+def _rm(targets, conditions=None, **extra) -> dict:
+    return {**extra, "removal": {"targets": targets, **({"conditions": conditions} if conditions is not None else {})}}
+
 
 async def test_lay_on_hands_2014_cures_poison_on_a_seated_ally_and_notes_the_disease(client, test_session_factory):
     _, paladin, hero = await _table14(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 5, conditions={"poisoned": True, "blinded": True})
     as_user(GM_ID)
-    r = await _give(client, paladin, hero, 10, mode="cure_other")  # un veleno e una malattia: 5 punti ciascuno
+    r = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned", "disease"], mode="cure"))  # due voci: 5 punti ciascuna
     assert r.status_code == 200, r.text
     assert r.json()["notes"] == [] and "malattia" in " ".join(x["it"] for x in r.json()["removal"]).lower()
     assert await _pool(client, paladin) == 15
@@ -213,7 +232,7 @@ async def test_lay_on_hands_2014_cures_poison_on_a_seated_ally_and_notes_the_dis
 async def test_lay_on_hands_2014_outside_the_evening_is_a_note_for_the_gm(client, test_session_factory):
     _, paladin, _h = await _table14(client, test_session_factory, level=5)
     as_user(GM_ID)
-    r = await _give(client, paladin, None, 5, mode="cure_other")
+    r = await _use(client, paladin, LOH, amount=1, params=_rm(["other"], ["poisoned"], mode="cure"))
     assert r.status_code == 200 and "Da togliere alla creatura" in r.json()["removal"][0]["it"] and await _pool(client, paladin) == 20
 
 
@@ -222,19 +241,22 @@ async def test_lay_on_hands_2024_removes_the_chosen_conditions_from_a_seated_all
     await _hero_hp(test_session_factory, hero, 20, conditions={"poisoned": True, "blinded": True, "prone": True})
     as_user(GM_ID)
     before = await _pool(client, paladin)
-    r = await _give(client, paladin, hero, 10, mode="cure_other", cure_poisoned=True, cure_blinded=True)
+    r = await _use(client, paladin, LOH, amount=99, params=_rm([hero], ["poisoned", "blinded"], mode="cure"))  # il costo non lo decide il client
     assert r.status_code == 200, r.text
     assert await _hero(test_session_factory, hero) == {"prone": True}  # Prono non è nell'elenco del Tocco Ristoratore
     assert await _pool(client, paladin) == before - 10
-    bad = await _give(client, paladin, hero, 5, mode="cure_other", cure_poisoned=True, cure_blinded=True)  # il costo è 5 per condizione
-    assert bad.status_code == 409 and bad.json()["detail"]["code"] == "amount_invalid"
+    bad = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["prone"], mode="cure"))
+    assert bad.status_code == 422 and bad.json()["detail"]["code"] == "invalid_condition"
+    assert await _pool(client, paladin) == before - 10
 
 
 async def test_lay_on_hands_2024_below_level_14_only_poison_exists(client, test_session_factory):
     _, paladin, hero = await _table24(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 20, conditions={"poisoned": True, "blinded": True})
     as_user(GM_ID)
-    r = await _give(client, paladin, hero, 5, mode="cure_other", cure_poisoned=True, cure_blinded=True)
+    bad = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned", "blinded"], mode="cure"))
+    assert bad.status_code == 422 and await _hero(test_session_factory, hero) == {"poisoned": True, "blinded": True}
+    r = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
     assert r.status_code == 200 and await _hero(test_session_factory, hero) == {"blinded": True}  # Accecato è del 14° livello
 
 
@@ -244,7 +266,7 @@ async def test_lay_on_hands_2024_refuses_a_non_participant_and_spends_nothing(cl
     outsider = (await client.post("/characters", json={"name": "Estraneo"})).json()["id"]
     as_user(GM_ID)
     before = await _pool(client, paladin)
-    r = await _give(client, paladin, outsider, 5, mode="cure_other", cure_poisoned=True)
+    r = await _use(client, paladin, LOH, amount=1, params=_rm([outsider], ["poisoned"], mode="cure"))
     assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_target"
     assert await _pool(client, paladin) == before
 
@@ -253,5 +275,190 @@ async def test_lay_on_hands_2024_cure_on_yourself_still_removes(client, test_ses
     _, paladin, _h = await _table24(client, test_session_factory, level=5)
     as_user(GM_ID)
     await client.patch(f"/characters/{paladin}/conditions", json={"conditions": {"poisoned": True}})
-    r = await _give(client, paladin, None, 5, mode="cure_self", cure_poisoned=True)
+    r = await _use(client, paladin, LOH, amount=1, params=_rm(["self"], ["poisoned"], mode="cure"))
     assert r.status_code == 200 and not (await _full(client, paladin))["conditions"].get("poisoned")
+
+
+async def test_a_double_tap_on_the_same_use_spends_and_removes_once(client, test_session_factory):
+    _, paladin, hero = await _table24(client, test_session_factory, level=5)
+    await _hero_hp(test_session_factory, hero, 20, conditions={"poisoned": True})
+    as_user(GM_ID)
+    first = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
+    assert first.status_code == 200
+    again = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used"  # azione bonus già spesa
+    assert await _pool(client, paladin) == 20
+
+
+# --- I4: Mano della Guarigione / Tocco del Medico su un compagno ------------------------------------------------------
+
+async def _mercy_table(client, factory, level):
+    _sid, hero = await seed_session(factory)
+    as_user(GM_ID)
+    monk = await _sub(client, "mercy", level, wisdom=16)
+    await _seat(factory, monk)
+    return monk, hero
+
+
+async def test_hand_of_healing_on_a_companion_heals_and_removes_the_chosen_condition(client, test_session_factory):
+    monk, hero = await _mercy_table(client, test_session_factory, 6)
+    await _hero_hp(test_session_factory, hero, 10, conditions={"poisoned": True, "stunned": True})
+    ki = await _ki(client, monk)
+    r = await _use(client, monk, HEAL, params=_rm([hero], ["poisoned"], mode="other"))
+    assert r.status_code == 200, r.text
+    assert r.json()["received"]["name"] == "Eroe" and r.json()["received"]["healed"] > 0
+    assert await _hero(test_session_factory, hero) == {"stunned": True}
+    assert await _ki(client, monk) == ki - 1  # una sola spesa
+    assert "Condizione Avvelenato tolta da Monaco" in await _history(test_session_factory, hero)
+
+
+async def test_hand_of_healing_on_a_companion_refuses_what_the_rules_do_not_allow(client, test_session_factory):
+    monk, hero = await _mercy_table(client, test_session_factory, 6)
+    await _hero_hp(test_session_factory, hero, 10, conditions={"charmed": True, "poisoned": True})
+    ki = await _ki(client, monk)
+    outsider = (await client.post("/characters", json={"name": "Estraneo"})).json()["id"]
+    for params, code in ((_rm([hero], ["charmed"], mode="other"), "invalid_condition"),  # Affascinato non è nell'elenco
+                         (_rm([outsider], ["poisoned"], mode="other"), "invalid_target"),  # non partecipante
+                         (_rm(["self"], ["poisoned"], mode="other"), "invalid_choice"),  # il bersaglio segue la modalità
+                         (_rm([hero], ["poisoned"], mode="self"), "invalid_choice")):
+        r = await _use(client, monk, HEAL, params=params)
+        assert r.status_code == 422 and r.json()["detail"]["code"] == code, (params, r.text)
+    assert await _ki(client, monk) == ki and await _hero(test_session_factory, hero) == {"charmed": True, "poisoned": True}
+
+
+async def test_hand_of_healing_below_level_6_cannot_remove_anything(client, test_session_factory):
+    monk, hero = await _mercy_table(client, test_session_factory, 3)
+    await _hero_hp(test_session_factory, hero, 10, conditions={"poisoned": True})
+    r = await _use(client, monk, HEAL, params=_rm([hero], ["poisoned"], mode="other"))
+    assert r.status_code == 422 and await _hero(test_session_factory, hero) == {"poisoned": True}
+
+
+# --- Panacea e gli automatici sullo stesso meccanismo --------------------------------------------------------------------
+
+async def test_panacea_on_a_seated_ally_removes_poison_and_notes_curses_and_diseases(client, test_session_factory):
+    _sid, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _wizard(client, 14, "transmutation")
+    await _seat(test_session_factory, cid)
+    await _hero_hp(test_session_factory, hero, 10, conditions={"poisoned": True, "blinded": True})
+    await _master(client, cid)
+    r = await _use(client, cid, PANACEA, params=_rm([hero], mode="other"))
+    assert r.status_code == 200, r.text
+    assert await _hero(test_session_factory, hero) == {"blinded": True}
+    lines = " ".join(x["it"] for x in r.json()["removal"]).lower()
+    assert "maledizione" in lines and "malattia" in lines
+    assert "Condizione Avvelenato tolta da" in " ".join(await _history(test_session_factory, hero))
+
+
+async def test_there_is_no_second_path_clears_is_gone():
+    from core.rules.types import OnUse
+    assert not hasattr(OnUse(), "clears")
+
+
+# ---------------------------------------------------------------------------
+# I3: incantesimi inseriti a mano o importati, riconosciuti per nome
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("name,edition,have,chosen,kept", [
+    ("Ristorare Inferiore", "2014", ["blinded", "charmed"], ["blinded"], ["charmed"]),
+    ("Lesser Restoration", "2024", ["poisoned", "stunned"], ["poisoned"], ["stunned"]),
+    ("Parola del Potere Guarire", "2014", ["charmed", "poisoned"], None, ["poisoned"]),
+    ("Power Word Heal", "2024", ["charmed", "poisoned"], None, []),
+    ("ristorare   superiore", "2014", ["charmed", "petrified"], ["charmed"], ["petrified"]),
+])
+async def test_a_spell_without_srd_index_is_recognized_by_its_name(client, test_session_factory, name, edition, have, chosen, kept):
+    cid, hero = await _table(client, test_session_factory, edition)
+    await _hero_hp(test_session_factory, hero, 20, conditions=_on(have))
+    level = 9 if "Guarire" in name or "Heal" in name else 5 if "uperiore" in name else 2
+    spell = await _named_spell(client, cid, name, level)
+    sheet = next(s for s in (await _full(client, cid))["spells"] if s["id"] == spell)
+    assert sheet["removal"] and sheet["removal"]["conditions"]
+    r = await _cast(client, cid, spell, level, [hero], chosen)
+    assert r.status_code == 200, r.text
+    assert set(await _hero(test_session_factory, hero)) == set(kept)
+
+
+async def test_a_removal_looking_spell_that_is_not_recognized_says_so(client, test_session_factory):
+    cid, _hero_id = await _table(client, test_session_factory, "2014")
+    spell = await _named_spell(client, cid, "Ristorare Minore Homebrew", 2)
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 2})
+    assert r.status_code == 200, r.text
+    assert "non lo riconosce" in r.json()["removal_result"][0]["it"] and "does not recognize" in r.json()["removal_result"][0]["en"]
+    other = await _named_spell(client, cid, "Palla di Fuoco", 3)
+    quiet = await client.post(f"/characters/{cid}/spells/{other}/use", json={"slot_level": 3})
+    assert quiet.status_code == 200 and "removal_result" not in quiet.json()
+
+
+# ---------------------------------------------------------------------------
+# I5: Calmare Emozioni sospende; le condizioni tornano quando finisce la concentrazione
+# ---------------------------------------------------------------------------
+
+async def _calm(client, factory, edition="2014", have=("charmed", "frightened", "blinded")):
+    cid, hero = await _table(client, factory, edition)
+    await _hero_hp(factory, hero, 20, conditions=_on(list(have)))
+    spell = await _named_spell(client, cid, "Calmare Emozioni", 2, srd_index="calm-emotions", concentration=True,
+                               duration="Concentrazione, fino a 1 minuto")
+    r = await _cast(client, cid, spell, 2, [hero])
+    assert r.status_code == 200, r.text
+    assert set(await _hero(factory, hero)) == {"blinded"} and (await _full(client, cid))["concentrating_spell_id"] == spell
+    return cid, hero, spell
+
+
+async def _back(factory, hero) -> set[str]:
+    return set(await _hero(factory, hero))
+
+
+async def test_calm_emotions_conditions_come_back_when_the_concentration_is_dropped(client, test_session_factory):
+    cid, hero, _spell_id = await _calm(client, test_session_factory)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
+    assert await _back(test_session_factory, hero) == {"blinded", "charmed", "frightened"}
+    assert any("tornata" in d for d in await _history(test_session_factory, hero))
+    as_user(GM_ID)
+    assert not (await _full(client, cid)).get("active_states")  # lo stato di sospensione è chiuso
+
+
+async def test_calm_emotions_conditions_come_back_when_the_caster_starts_another_concentration(client, test_session_factory):
+    cid, hero, _spell_id = await _calm(client, test_session_factory, "2024")
+    other = await _named_spell(client, cid, "Benedizione", 1, concentration=True, duration="Concentrazione, fino a 1 minuto")
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{cid}/spells/{other}/use", json={"slot_level": 1, "confirm": ["one_slot_per_turn"]})
+    assert r.status_code == 200, r.text
+    assert await _back(test_session_factory, hero) == {"blinded", "charmed", "frightened"}
+
+
+async def test_calm_emotions_conditions_come_back_when_the_caster_is_incapacitated(client, test_session_factory):
+    cid, hero, _spell_id = await _calm(client, test_session_factory)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"incapacitated": True}})).status_code == 200
+    assert await _back(test_session_factory, hero) == {"blinded", "charmed", "frightened"}
+
+
+async def test_calm_emotions_conditions_come_back_when_the_duration_runs_out(client, test_session_factory):
+    cid, hero, spell = await _calm(client, test_session_factory)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": spell, "rounds": 1})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+    assert await _back(test_session_factory, hero) == {"blinded", "charmed", "frightened"}
+
+
+async def test_a_condition_removed_another_way_in_the_meantime_does_not_come_back(client, test_session_factory):
+    cid, hero, _spell_id = await _calm(client, test_session_factory)
+    as_user(PLAYER_ID)
+    # la tolgono davvero (per altra via): non è più sospesa
+    assert (await client.patch(f"/characters/{hero}/conditions", json={"conditions": {"charmed": False}})).status_code == 200
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
+    assert await _back(test_session_factory, hero) == {"blinded", "frightened"}
+
+
+async def test_calm_emotions_on_the_caster_comes_back_too(client, test_session_factory):
+    cid, hero = await _table(client, test_session_factory, "2014")
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"frightened": True}})
+    spell = await _named_spell(client, cid, "Calmare Emozioni", 2, srd_index="calm-emotions", concentration=True,
+                               duration="Concentrazione, fino a 1 minuto")
+    assert (await _cast(client, cid, spell, 2, ["self"])).status_code == 200
+    assert not (await _full(client, cid))["conditions"].get("frightened")
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
+    assert (await _full(client, cid))["conditions"].get("frightened") is True

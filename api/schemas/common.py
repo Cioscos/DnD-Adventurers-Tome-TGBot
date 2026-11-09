@@ -231,6 +231,8 @@ class AbilityRead(BaseModel):
     use_choices: list[dict[str, Any]] = []
     # Testi liberi da scrivere all'uso (nome di un'identità, di un incantesimo rubato): `[{key, label, max_len, optional}]`
     use_texts: list[dict[str, Any]] = []
+    # Il «Usa» toglie condizioni nel foglio comune (Task 48): stessa forma di ``SpellRead.removal``, già filtrata per questo personaggio
+    removal: Optional[dict[str, Any]] = None
     use_panel: Optional[str] = None
     # L'uso ora non costa nulla e si può fare (prolungare l'Ira 2024): il «Usa» resta acceso anche a 0 usi; lo decide il server
     free_use: bool = False

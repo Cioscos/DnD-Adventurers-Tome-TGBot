@@ -13,6 +13,7 @@ from dataclasses import replace
 from typing import Any
 
 from core.data.damage_types import DAMAGE_TYPES, LABELS_IT, canonical_damage_type
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014.warlock import (
     BLESSING_USE, THOUGHT_REFLECTION, _dc, _lock_resilience, _resilience_active, _resilience_check, _resilience_state,
@@ -335,7 +336,7 @@ VENGEANCE_USE = OnUse(
     usable_at_zero_hp=True, heal_ally_half_max=True,
     heal=lambda c, _r: c.char.hit_points // 2, heal_when=lambda _c, p: p.get("mode") == "self", check=_vengeance_check,
     heal_ally_when=lambda _c, p: p.get("mode") == "ally", ally_modes=("ally",),
-    clears=lambda _c, p: ["prone"] if p.get("mode") == "self" else [], target_effect=_vengeance_effect, message=_vengeance_message,
+    removal=ConditionRemoval(("prone",), count=None, ally=False, auto=lambda _c, p: ["prone"] if p.get("mode") == "self" else []), target_effect=_vengeance_effect, message=_vengeance_message,
     choices=(UseChoice("mode", _both("Chi sta per tirare contro la morte", "Who is about to roll a death save"), lambda _c: list(WHO),
                        lambda k: _both(*WHO[k])),))
 

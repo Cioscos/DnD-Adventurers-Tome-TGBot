@@ -19,7 +19,7 @@ from core.rules.states import is_conscious
 from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
     AuraSpec, ChoiceSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice,
-    UseText, UseToggle, Uses,
+    UseText, Uses,
 )
 from core.rules.weapons import MASTERY_OPTIONS, mastery_choice
 
@@ -52,8 +52,7 @@ def _melee_or_unarmed(ctx: RuleContext) -> bool:
 _LOH_MODES = {
     "self": _both("Cura PF a te stesso", "Heal yourself"),
     "other": _both("Cura PF a un altro", "Heal another creature"),
-    "cure_self": _both("Togli condizioni a te (5 punti ciascuna)", "Remove conditions from yourself (5 points each)"),
-    "cure_other": _both("Togli condizioni a un altro (5 punti ciascuna)", "Remove conditions from another (5 points each)"),
+    "cure": _both("Togli condizioni (5 punti ciascuna)", "Remove conditions (5 points each)"),
 }
 # Avvelenato dal 1° livello; le altre sei con il Tocco Ristoratore (14°)
 _CURABLE = {
@@ -67,23 +66,6 @@ def _curable(ctx: RuleContext) -> list[str]:
     return [c for i, c in enumerate(_CURABLE) if i == 0 or ctx.class_level >= 14]
 
 
-def _picked(ctx: RuleContext, params: dict) -> list[str]:
-    return [c for c in _curable(ctx) if params.get(f"cure_{c}") is True]
-
-
-def _is_cure(params: dict) -> bool:
-    return str(params.get("mode")).startswith("cure")
-
-
-def _loh_amount_ok(ctx: RuleContext, amount: int, params: dict) -> bool:
-    """Una cura costa 5 punti per condizione scelta, né più né meno; la cura dei PF qualunque importo."""
-    return amount == 5 * len(_picked(ctx, params)) if _is_cure(params) else amount >= 1
-
-
-def _loh_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
-    return (422, "invalid_choice") if _is_cure(params) and not _picked(ctx, params) else None
-
-
 def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
     """Esiti per chi usa il privilegio: i PF di un altro fuori serata li riporta il giocatore al GM."""
     if params.get("mode") == "other" and params.get("target_character_id") is None:
@@ -91,19 +73,13 @@ def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
     return []  # le condizioni sono nel meccanismo comune (``removal``)
 
 
-_LOH_REMOVAL = ConditionRemoval(
-    tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)),
-    pick=lambda c, p: _picked(c, p) if _is_cure(p) else [],
-    who=lambda _c, p: {"cure_self": "self", "cure_other": "other"}.get(p.get("mode")))
+_LOH_REMOVAL = ConditionRemoval(tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)), modes=("cure",), cost_each=5)
 
 LAY_ON_HANDS_USE = OnUse(
     slot="bonus", choose_amount=True, heal=lambda _c, _r: 1, heal_when=lambda _c, p: p.get("mode") == "self",
-    heal_ally_when=lambda _c, p: p.get("mode") == "other", ally_modes=("other", "cure_other"),
-    amount_ok=_loh_amount_ok, check=_loh_check, notes=_loh_notes,
+    heal_ally_when=lambda _c, p: p.get("mode") == "other", ally_modes=("other",), notes=_loh_notes,
     removal=_LOH_REMOVAL,
-    choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),),
-    toggles=tuple(UseToggle(f"cure_{key}", _both(f"Togli {it}", f"Remove {en}"), available=lambda c, k=key: k in _curable(c))
-                  for key, (it, en) in _CURABLE.items()))
+    choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),))
 
 
 # ---------------------------------------------------------------------------

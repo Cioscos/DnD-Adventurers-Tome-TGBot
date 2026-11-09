@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
+from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog._common import INCAPACITATING, feature, skill_label, state_on, style_options
 from core.rules.catalog.y2014.fighter import (
     DISARMING, DISTRACTING, ELDRITCH_STRIKE, ELDRITCH_STRIKE_CAST, FEINT_STRIKE, GOADING, MANEUVER_KEYS, MANEUVERING, MENACING,
@@ -555,7 +556,8 @@ PSI_WARRIOR = (
           "Resistance to Psychic damage; if you start your turn Charmed or Frightened, spend a die and those effects end."),
          modifiers=(Modifier("resistance:psychic", 1, source=f"feature:{CK}.guarded_mind"),),
          on_use=OnUse(spends=PSI, available=_clearable,
-                      clears=lambda c, _p: [x for x in ("charmed", "frightened") if (c.char.conditions or {}).get(x)])),
+                      removal=ConditionRemoval(("charmed", "frightened"), count=None, ally=False,
+                                               auto=lambda c, _p: [x for x in ("charmed", "frightened") if (c.char.conditions or {}).get(x)]))),
     _psi("bulwark_of_force", 15, "Baluardo di Forza", "Bulwark of Force", 99,
          ("Azione bonus: fino a Intelligenza creature entro 9 m (tu compreso) hanno Mezza Copertura per 1 minuto. Un uso per riposo lungo, o un dado.",
           "Bonus action: up to Intelligence creatures within 30 ft (you included) have Half Cover for 1 minute. One use per long rest, or a die."),

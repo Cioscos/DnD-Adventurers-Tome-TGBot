@@ -18,7 +18,7 @@ from api.services.condition_effects import clear_effects_for, release_concentrat
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.states import TEMP_RELEASE, immune_conditions
+from core.rules.states import COND_RELEASE, SUSPENDED_ON, TEMP_RELEASE, immune_conditions
 
 
 def _now() -> str:
@@ -155,6 +155,9 @@ async def apply_conditions(session: AsyncSession, char: Character,
     current = dict(old_conditions)
     current.update(changes)
     char.conditions = current
+    if marks := (char.settings or {}).get(SUSPENDED_ON):  # cambiata per altra via: la sospensione non vale più
+        left = {c: by for c, by in marks.items() if c not in changes}
+        char.settings = {**{k: v for k, v in char.settings.items() if k != SUSPENDED_ON}, **({SUSPENDED_ON: left} if left else {})}
     for flag, slug in (("knocked_out", "unconscious"), ("hiding", "invisible")):
         if changes.get(slug, True) is False and (char.settings or {}).get(flag):
             char.settings = {k: v for k, v in char.settings.items() if k != flag}  # tolta a mano: finito
@@ -201,6 +204,30 @@ async def apply_conditions(session: AsyncSession, char: Character,
     return {"changed": changed}
 
 
+def _restore_suspended(session: Session, char: Character) -> None:
+    """La concentrazione di chi ha sospeso delle condizioni è finita: tornano sul ricevente, se nessuno le ha cambiate nel frattempo."""
+    pending = (char.settings or {}).get(COND_RELEASE)
+    if not pending:
+        return
+    char.settings = {k: v for k, v in char.settings.items() if k != COND_RELEASE}
+    for entry in pending:
+        receiver = session.get(Character, entry["id"])
+        if receiver is None:
+            continue
+        marks = dict((receiver.settings or {}).get(SUSPENDED_ON) or {})
+        back = [c for c in entry["conditions"] if marks.get(c) == char.id and c not in immune_conditions(receiver)]
+        for c in entry["conditions"]:
+            if marks.get(c) == char.id:
+                marks.pop(c)
+        if receiver.settings and SUSPENDED_ON in receiver.settings:
+            receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_ON}, **({SUSPENDED_ON: marks} if marks else {})}
+        if back:
+            receiver.conditions = {**(receiver.conditions or {}), **{c: True for c in back}}
+            for c in back:
+                _add_history(session, receiver.id, "condition_change", f"Condizione tornata: {condition_label(c)} (la concentrazione di {char.name} è finita)",
+                             meta={"slug": c, "active": True, "restored": True})
+
+
 @event.listens_for(Session, "before_flush")
 def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     """Un'Ira (o un altro stato) è finita, da qualunque via: i PF temporanei che chi la viveva ha consegnato svaniscono.
@@ -208,6 +235,7 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     Si toglie ciò che resta solo se non supera quanto fu consegnato: se il ricevente ne ha presi di più alti nel frattempo, restano.
     shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo; da rivedere se serve la provenienza."""
     for char in [o for o in session.dirty if isinstance(o, Character)]:
+        _restore_suspended(session, char)
         pending = (char.settings or {}).get(TEMP_RELEASE)
         if not pending:
             continue
