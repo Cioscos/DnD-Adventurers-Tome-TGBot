@@ -205,16 +205,24 @@ VIGOR_USE = OnUse(slot="action", temp_hp=lambda _c, _rolled: 8)
 CHAIN_USE = OnUse(forgoes_attack=True)  # rinunci a un attacco: il famiglio attacca con la sua reazione
 
 
+def _gift_available(ctx: RuleContext) -> bool:
+    """Come Sentinella, ma niente offerta se il danno uccide sul colpo (residuo >= PF massimi): non potrebbe funzionare."""
+    if not _drops_to_zero(ctx):
+        return False
+    char = ctx.char
+    return ctx.damage is None or ctx.damage - char.current_hit_points - (char.temp_hp or 0) < char.hit_points
+
+
 GIFT_KEY = f"{CK}.gift_of_the_protectors"
 GIFT_GROUP = "gift_of_the_protectors"  # una sola offerta per danno: la propria o quella di un compagno
 GIFT = RollOptionSpec(
-    key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_drops_to_zero,
+    key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_gift_available,
     group=GIFT_GROUP,
     label={"it": "Dono dei Protettori: se il danno ti porta a 0 PF senza ucciderti sul colpo, resti a 1 PF (un uso, riposo lungo)",
            "en": "Gift of the Protectors: if the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (one use, long rest)"})
 # Il nome sul libro lo sa il tavolo (R42): l'offerta vale per ogni partecipante della serata e paga l'uso del warlock
 GIFT_ALLY = RollOptionSpec(
-    key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_drops_to_zero,
+    key=GIFT_KEY, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, cost=Cost(feature_key=GIFT_KEY), available=_gift_available,
     group=GIFT_GROUP, for_ally=True,
     label={"it": "Dono dei Protettori di {donor}: il tuo nome è scritto nel suo libro? Se il danno ti porta a 0 PF senza ucciderti sul colpo, resti a 1 PF (spende l'uso di {donor})",
            "en": "{donor}'s Gift of the Protectors: is your name written in their book? If the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (spends {donor}'s use)"})
@@ -306,8 +314,8 @@ _ROWS: list = [
          granted_spells=("water-breathing",), free_spell="water-breathing", uses=Uses(table={1: 1}), restoration="long_rest",
          modifiers=(Modifier("swim_speed", 1, source=f"feature:{CK}.gift_of_the_depths"),)),
     _inv("gift_of_the_protectors", "Dono dei Protettori", "Gift of the Protectors", f"{_P}, livello 9+, Patto del Tomo, pag. 156", 9,
-         ("Chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo (nomi: Carisma, min. 1). Su di te col danno; su un alleato della serata a 0 PF con «Usa».",
-          "Whoever drops to 0 HP without dying outright stays at 1, once until a long rest (names: Charisma, min. 1). On you with the damage; on a table ally at 0 HP with Use."),
+         ("Chi scende a 0 PF senza morire sul colpo resta a 1 PF, una volta fino al riposo lungo (nomi: Carisma, min. 1). Scatta da solo col danno, su di te o su un alleato della serata (usa il tuo uso).",
+          "Whoever drops to 0 HP without dying outright stays at 1, once until a long rest (names: Charisma, min. 1). Triggers by itself on the damage, on you or on a table ally (spends your use)."),
          uses=Uses(table={9: 1}), restoration="long_rest", roll_options=(GIFT, GIFT_ALLY), on_use=GIFT_USE),
     _inv("investment_of_the_chain_master", "Investitura del Padrone delle Catene", "Investment of the Chain Master",
          f"{_P}, livello 5+, Patto della Catena, pag. 156", 5,

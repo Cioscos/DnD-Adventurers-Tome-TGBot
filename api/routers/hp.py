@@ -31,7 +31,7 @@ from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
-from api.services.session_allies import attach_party_auras, attach_party_donors, spend_donor_tokens
+from api.services.session_allies import attach_party_auras, attach_party_donors, donor_rows_for_undo, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -577,7 +577,7 @@ async def undo_hp(
         char.active_states = [*char.active_states, now_form_state]
     set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
-    refund_spent(char, snap.get("spent") or [])
+    refund_spent(char, snap.get("spent") or [], await donor_rows_for_undo(session, char, snap.get("spent") or []))
     settings = dict(char.settings or {})
     for k in _CONC_SETTINGS:
         if before[k] is None:

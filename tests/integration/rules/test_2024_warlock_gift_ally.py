@@ -109,3 +109,23 @@ async def test_damage_that_does_not_reach_zero_spends_nothing(client, test_sessi
     assert r.status_code == 200 and r.json()["current_hit_points"] == 30
     as_user(GM_ID)
     assert (await _ability(client, cid, GIFT))["uses"] == 1
+
+
+async def test_undoing_the_damage_gives_the_warlock_his_use_back(client, test_session_factory):
+    cid, hero, key = await _table(client, test_session_factory)
+    r = await _hit(client, hero, PLAYER_ID, 60, [key])
+    assert r.status_code == 200 and r.json()["current_hit_points"] == 1
+    as_user(PLAYER_ID)
+    undo = await client.post(f"/characters/{hero}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    assert undo.status_code == 200, undo.text
+    assert undo.json()["current_hit_points"] == 40
+    as_user(GM_ID)
+    assert (await _ability(client, cid, GIFT))["uses"] == 1
+
+
+async def test_a_blow_that_kills_outright_is_not_offered_the_gift(client, test_session_factory):
+    cid, hero, key = await _table(client, test_session_factory)
+    assert key in await _offered(client, hero, PLAYER_ID, damage=60)
+    assert key not in await _offered(client, hero, PLAYER_ID, damage=85)
+    as_user(GM_ID)
+    assert "warlock.gift_of_the_protectors" not in await _offered(client, cid, GM_ID, damage=1000)

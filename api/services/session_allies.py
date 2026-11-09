@@ -79,6 +79,21 @@ async def spend_donor_tokens(session: AsyncSession, receiver: Character, spent: 
     return donors
 
 
+async def donor_rows_for_undo(session: AsyncSession, receiver: Character, spent: list[str]) -> dict[int, Ability]:
+    """Le righe dei donatori dei gettoni ``donor:`` annullati, per ``refund_spent``; scrive lo storico sul donatore."""
+    rows: dict[int, Ability] = {}
+    for token in (t for t in spent if t.startswith("donor:")):
+        _, donor_id, row_id, _ = token.split(":")
+        row = await session.get(Ability, int(row_id))
+        if row is None or row.character_id != int(donor_id):
+            continue
+        rows[row.id] = row
+        session.add(CharacterHistory(
+            character_id=row.character_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
+            description=f"{row.name or row.feature_key}: uso restituito, il danno di {receiver.name} è stato annullato"))
+    return rows
+
+
 async def ally_target(session: AsyncSession, char: Character, target_id: object) -> Character:
     """Il bersaglio scelto, se siede alla stessa serata e non è ``char``; altrimenti 422 ``invalid_target``."""
     if type(target_id) is int:
