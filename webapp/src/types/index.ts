@@ -531,6 +531,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   /** Scelte di livello in sospeso (aumento caratteristiche / talento). */
   pending_choices?: PendingChoice[] | null
   concentration_save?: ConcentrationSaveResult | null
+  /** Solo da PATCH /hp: il danno che un incantesimo (Legame di Protezione) ha girato al lanciatore e il suo TS di concentrazione. */
+  shared_damage?: { amount: number; caster_name: string; concentration_save?: ConcentrationSaveResult | null } | null
   /** TS automatico a 0 PF di un privilegio (Ira Implacabile): se riesce resta in piedi. */
   zero_hp_save?: ZeroHpSaveResult | null
   /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */

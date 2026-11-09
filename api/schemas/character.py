@@ -145,6 +145,13 @@ class ActiveForm(BaseModel):
     own_hp: bool = True  # 2014: la forma ha PF propri; 2024: PF del druido con i temporanei
 
 
+class SharedDamageInfo(BaseModel):
+    """Il danno che un incantesimo (Legame di Protezione) ha girato al lanciatore e il suo TS di concentrazione, se c'è stato."""
+    amount: int
+    caster_name: str
+    concentration_save: Optional[ConcentrationSaveResult] = None
+
+
 class CharacterFull(BaseModel):
     """Complete character data with all relations."""
 
@@ -225,6 +232,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
+
+    # Populated only by PATCH /hp when a spell (Warding Bond) passed part of the damage on to its caster
+    shared_damage: Optional[SharedDamageInfo] = None
 
     # Populated only by PATCH /hp when the damage brings the character to 0 HP under a ``zero_hp_save`` feature
     zero_hp_save: Optional[ZeroHpSaveResult] = None

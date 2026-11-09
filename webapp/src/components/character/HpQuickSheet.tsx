@@ -25,6 +25,7 @@ import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
+import { sharedDamageMessage } from '@/lib/sharedDamage'
 import type { CharacterFull } from '@/types'
 
 interface HpQuickSheetProps {
@@ -126,6 +127,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         haptic.success()
         const zeroSave = zeroHpSaveMessage(updated, t)
         if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
+        const shared = sharedDamageMessage(updated, t)
+        if (shared) (shared.ok ? toast.info : toast.warning)(shared.text, { duration: 5000 })
         const conc = updated.concentration_save
         if (conc?.lost_concentration) {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })

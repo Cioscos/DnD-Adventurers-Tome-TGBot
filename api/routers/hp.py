@@ -230,9 +230,10 @@ async def update_hp(
 
 
 async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate, lang: str,
-                          shared_from: str | None = None) -> CharacterFull | None:
+                          shared_from: str | None = None, shared_out: dict | None = None) -> CharacterFull | None:
     """Un'operazione PF su ``char`` (già verificato). ``shared_from``: il danno è quello che un incantesimo gira a ``char``
-    (Legame di Protezione): stessa strada del danno, ma senza rigirarlo e senza risposta (``None``); il testo va nello storico."""
+    (Legame di Protezione): stessa strada del danno, ma senza rigirarlo e senza risposta (``None``); il testo va nello storico,
+    il TS di concentrazione di ``char`` in ``shared_out["concentration_save"]``."""
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return None if shared_from else await build_character_response(session, char)
@@ -248,6 +249,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     zero_save: ZeroHpSaveResult | None = None
     notifications: list[dict] = []
     clocks: list[dict] = []
+    shared_info: list[dict] = []  # il danno girato al lanciatore e il suo TS di concentrazione, per la risposta del bersaglio
     shared_log: list[dict] = []  # lo stato che il danno condiviso ha lasciato sui lanciatori: l'annullo lo rimette
 
     was_at_zero = char.current_hit_points == 0
@@ -433,7 +435,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             end_concentration(char)
 
         on_damage(char, applied)
-        notifications.extend(await spell_damage_effects(session, char, applied, had_temp, lang, share=shared_from is None, shared_log=shared_log))  # ritorsione, danno condiviso, fine degli incantesimi
+        notifications.extend(await spell_damage_effects(session, char, applied, had_temp, lang, share=shared_from is None, shared_log=shared_log, shared_info=shared_info))  # ritorsione, danno condiviso, fine degli incantesimi
 
         # Auto concentration save — only if still conscious and concentrating
         if (
@@ -536,6 +538,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                     "zero_after": _zero_conditions(char), "shared": shared_log,
                     "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
     if shared_from:
+        if shared_out is not None:
+            shared_out["concentration_save"] = conc_result
         return None
 
     result = await build_character_response(session, char)
@@ -545,6 +549,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     result.option_result = option_block
     if conc_result is not None:
         result.concentration_save = conc_result
+    if shared_info:
+        result.shared_damage = shared_info[0]
     if zero_save is not None:
         result.zero_hp_save = zero_save
     if notifications:

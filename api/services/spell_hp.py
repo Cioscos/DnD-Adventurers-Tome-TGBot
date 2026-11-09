@@ -72,7 +72,8 @@ async def reopen_spell_clocks(session: AsyncSession, saved: list[dict]) -> None:
         await regrant_spells(session, caster, entry["given"])
 
 
-async def _share(session: AsyncSession, char: Character, name: str, caster_id: int | None, amount: int, lang: str, log: list[dict]) -> None:
+async def _share(session: AsyncSession, char: Character, name: str, caster_id: int | None, amount: int, lang: str, log: list[dict],
+                 info: list[dict]) -> None:
     """Il lanciatore subisce lo stesso danno del bersaglio, per la stessa strada di ogni danno (PF temporanei, TS di concentrazione,
     morte, fine dell'incantesimo a 0 PF). Lo snapshot di annullo del lanciatore va in ``log``, nell'annullo del bersaglio."""
     if not caster_id or caster_id == char.id or amount <= 0:
@@ -81,15 +82,18 @@ async def _share(session: AsyncSession, char: Character, name: str, caster_id: i
     if caster.is_dead:
         return
     from api.routers.hp import apply_hp_update  # import locale: il router importa questo modulo
+    out: dict = {}
     await apply_hp_update(session, caster, HPUpdate(op=HPOp.DAMAGE, value=amount, damage_modifier="none"), lang,
-                          shared_from=f"{name}: condivisi con {char.name}")
+                          shared_from=f"{name}: condivisi con {char.name}", shared_out=out)
+    info.append({"amount": amount, "caster_name": caster.name, "concentration_save": out.get("concentration_save")})
     if caster.hp_undo:
         log.append({"id": caster.id, **caster.hp_undo})
         caster.hp_undo = None  # si annulla dal bersaglio, non dal lanciatore
 
 
 async def spell_damage_effects(session: AsyncSession, char: Character, applied: int, had_temp: bool, lang: str,
-                               share: bool = True, shared_log: list[dict] | None = None) -> list[dict]:
+                               share: bool = True, shared_log: list[dict] | None = None,
+                               shared_info: list[dict] | None = None) -> list[dict]:
     """Dopo un danno a ``char``: i promemoria di ritorsione per il GM, il danno condiviso col lanciatore e gli incantesimi
     che finiscono con i PF temporanei esauriti. Restituisce le notifiche da mostrare."""
     notes: list[dict] = []
@@ -100,7 +104,8 @@ async def spell_damage_effects(session: AsyncSession, char: Character, applied: 
         if variant.retaliation and (text := variant.retaliation(data, had_temp)):
             notes.append({"severity": "info", "message": text.get(lang) or text["it"], "rule_id": None, "rule_name": name})
         if variant.shares_damage and share:
-            await _share(session, char, name, data.get("caster_id"), applied, lang, shared_log if shared_log is not None else [])
+            await _share(session, char, name, data.get("caster_id"), applied, lang, shared_log if shared_log is not None else [],
+                         shared_info if shared_info is not None else [])
         if variant.ends_at_zero_temp and (char.temp_hp or 0) == 0:
             _spend_state_token(char, state["key"])  # l'incantesimo finisce: il flush chiude l'orologio di chi l'ha lanciato
     return notes

@@ -452,6 +452,23 @@ async def test_warding_bond_shared_damage_makes_the_caster_roll_the_concentratio
     assert any("TS Concentrazione" in h for h in await _history(client, caster))
 
 
+async def test_warding_bond_damage_response_tells_the_target_about_the_shared_damage_and_the_casters_save(client, test_session_factory):
+    """Giro 2: il bersaglio vede il danno condiviso e l'esito del TS del lanciatore; senza concentrazione, solo il danno."""
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=2)
+    body = await _damage(client, hero, 20)
+    # Legame di Protezione dà resistenza ai danni al bersaglio: 20 diventano 10, e 10 passano al lanciatore
+    shared = body["shared_damage"]
+    assert shared["amount"] == 10 and shared["caster_name"] == "Chierico"
+    assert shared["concentration_save"]["dc"] == 10 and isinstance(shared["concentration_save"]["success"], bool)
+    assert body["concentration_save"] is None  # quello del bersaglio non c'è: il TS è del lanciatore
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})).status_code == 200
+    body = await _damage(client, hero, 20)
+    assert body["shared_damage"]["amount"] == 10 and body["shared_damage"]["concentration_save"] is None
+
+
 async def test_undoing_a_death_ward_hit_reopens_the_casters_clock_too(client, test_session_factory):
     """I1: l'annullo rimette lo stato sul bersaglio E l'orologio sul lanciatore, che poi lo fa scadere."""
     hero, caster, spell = await _table(client, test_session_factory, "Death Ward", "death-ward", 4)

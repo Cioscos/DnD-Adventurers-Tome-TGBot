@@ -36,6 +36,7 @@ import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
+import { sharedDamageMessage } from '@/lib/sharedDamage'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
@@ -137,6 +138,8 @@ export default function HP() {
       maybeShowInstantDeath(updated)
       const zeroSave = zeroHpSaveMessage(updated, t)
       if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
+      const shared = sharedDamageMessage(updated, t)
+      if (shared) (shared.ok ? toast.info : toast.warning)(shared.text, { duration: 5000 })
       const conc = updated.concentration_save
       if (conc) {
         setConcSaveResult(conc)
