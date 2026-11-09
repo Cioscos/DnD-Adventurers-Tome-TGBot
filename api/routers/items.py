@@ -45,7 +45,7 @@ from api.routers._helpers import (
     weapon_attack_profile,
 )
 from api.services.durations import start_concentration
-from api.services.spell_effects import apply_spell_effects, item_spell, validate_spell_targets
+from api.services.spell_effects import apply_spell_effects, end_unarmored_spells, item_spell, validate_spell_targets
 from api.services.condition_effects import release_concentration_effects
 from api.services import weapon_bond
 from api.services.skills import check_bonus
@@ -339,6 +339,8 @@ async def update_item(
     await session.refresh(char, attribute_names=["items"])
     if item.is_equipped and item.item_type == "armor" and armor_category(char) == "heavy":
         end_states(char, "heavy_armor")  # l'Ira 2024 finisce se si indossa un'armatura pesante
+    if item.is_equipped and item.item_type == "armor":
+        end_unarmored_spells(char)
     await sync_cataloged_features(session, char, lang)
 
     # Emit item_equipped / item_unequipped events for installed homebrew rules.

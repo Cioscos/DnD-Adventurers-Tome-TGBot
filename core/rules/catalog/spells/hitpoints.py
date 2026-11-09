@@ -10,11 +10,11 @@ EIGHT_HOURS = 4800
 
 
 # --- CA impostata -------------------------------------------------------------------------------------------------
-# Armatura Magica: CA base 13 + Des solo senza armatura (lo verifica ``ac_delta``); finisce se si indossa un'armatura.
+# Armatura Magica: CA base 13 + Des solo senza armatura (lo verifica ``ac_delta``); indossare un'armatura la chiude (``end_unarmored_spells``).
 _MAGE_ARMOR = SpellVariant(
     modifiers=lambda d: (Modifier("ac_base", lambda ctx: 13 + effective_ability_mod(ctx.char, "dexterity")),), rounds=EIGHT_HOURS,
-    text=txt("CA base 13 + Destrezza finché non indossi un'armatura: con un'armatura addosso l'effetto non conta.",
-             "Base AC 13 + Dexterity while you wear no armor: with armor on, the effect doesn't count."))
+    text=txt("CA base 13 + Destrezza: l'incantesimo termina se il bersaglio indossa un'armatura (l'app lo chiude da sola).",
+             "Base AC 13 + Dexterity: the spell ends if the target puts on armor (the app ends it for you)."))
 # Pelle Coriacea: CA totale minima, qualunque armatura si indossi (2014 16 con concentrazione; 2024 17 senza)
 _BARKSKIN_2014 = SpellVariant(modifiers=lambda d: (Modifier("ac_min", 16),), concentration=True, rounds=HOUR)
 _BARKSKIN_2024 = SpellVariant(modifiers=lambda d: (Modifier("ac_min", 17),), rounds=HOUR)
@@ -52,15 +52,16 @@ _FORTIFY = SpellVariant(
 
 # --- Interdizione alla Morte -----------------------------------------------------------------------------------------
 # Il manuale (2014 e 2024) non esclude il danno massiccio: ciò che porta a 0 PF lascia a 1 PF e l'incantesimo finisce.
+DEATH_WARD_HOLD = "spell:death_ward:hold"
 _DEATH_WARD_OPTION = RollOptionSpec(
-    key="spell:death_ward:hold", phase="damage_in", rolls=("damage_taken",), holds_at_one=True, holds_vs_massive=True,
+    key=DEATH_WARD_HOLD, phase="damage_in", rolls=("damage_taken",), holds_at_one=True, holds_vs_massive=True,
     cost=Cost(state_key="spell:death_ward"),
     label=txt("Interdizione alla Morte: se il colpo ti porta a 0 PF resti a 1 PF", "Death Ward: if the hit takes you to 0 HP you stay at 1 HP"))
 _DEATH_WARD = SpellVariant(
     options=(_DEATH_WARD_OPTION,), rounds=EIGHT_HOURS,
-    text=txt("La prima volta che scendi a 0 PF resti a 1 PF e l'incantesimo finisce (confermalo al danno). Un effetto che uccide all'istante senza danni "
+    text=txt("La prima volta che scendi a 0 PF resti a 1 PF e l'incantesimo finisce (lo applica l'app da sola al danno). Un effetto che uccide all'istante senza danni "
              "viene annullato dal GM, e l'incantesimo finisce.",
-             "The first time you would drop to 0 HP you stay at 1 HP and the spell ends (confirm it on the damage). An effect that kills outright without "
+             "The first time you would drop to 0 HP you stay at 1 HP and the spell ends (the app applies it by itself on the damage). An effect that kills outright without "
              "damage is negated by the GM, and the spell ends."))
 
 # --- Legame di Protezione --------------------------------------------------------------------------------------------

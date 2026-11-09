@@ -34,6 +34,7 @@ from api.services.rules_turn import get_turn, set_damaged
 from api.services.session_allies import load_receiver, attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
+from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD
 from api.services.spell_hp import foreign_spell_clocks, reopen_spell_clocks, spell_damage_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -259,6 +260,9 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         raw = body.raw_value if body.raw_value is not None else body.value
         applied = body.value
         opts = None
+        if any(s.get("key") == "spell:death_ward" for s in char.active_states or []) and DEATH_WARD_HOLD not in body.options:
+            # Interdizione alla Morte è automatica nel manuale: la conferma la dà il server (se il colpo non porta a 0 l'uso non si spende)
+            body = body.model_copy(update={"options": [*body.options, DEATH_WARD_HOLD]})
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             await attach_party(session, char)  # aure e Dono dei Protettori dei compagni della serata

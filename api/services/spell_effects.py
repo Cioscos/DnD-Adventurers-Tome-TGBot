@@ -20,6 +20,7 @@ from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.edition import character_edition
 from core.game.stats import effective_ability_mod
 from core.rules.spellcasting import best_caster, spell_stats
+from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
 from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state, settle_closed
 from core.rules.types import StateSpec
@@ -88,6 +89,12 @@ async def validate_spell_targets(session: AsyncSession, caster: Character, spell
     """Da chiamare prima della spesa del lancio. ``None``: l'incantesimo non ha un effetto nel catalogo."""
     resolved = await _resolve(session, caster, spell, slot_level, targets, choices)
     return resolved and resolved[:3]
+
+
+def end_unarmored_spells(char: Character) -> None:
+    """Chi indossa un'armatura perde Armatura Magica: l'incantesimo termina (il flush chiude anche l'orologio di chi l'ha lanciato)."""
+    if any(s.get("key") == "spell:mage_armor" for s in char.active_states or []):
+        _spend_state_token(char, "spell:mage_armor")
 
 
 async def _drop_state(session: AsyncSession, target: Character, key: str, caster_id: int) -> None:

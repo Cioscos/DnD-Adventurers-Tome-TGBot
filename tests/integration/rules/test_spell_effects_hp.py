@@ -98,6 +98,17 @@ async def test_mage_armor_is_not_listed_among_the_sources_of_other_rolls(client,
         assert "spell:mage_armor" not in modifiers_for(char, "strength_check").notes
 
 
+async def test_mage_armor_ends_when_the_target_puts_on_armor(client, test_session_factory):
+    """M3: per il manuale l'incantesimo termina, non resta sospeso."""
+    hero, caster, spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    await _cast(client, caster, spell, [hero], level=1)
+    assert len(await _states(client, hero, "spell:mage_armor")) == 1
+    as_user(PLAYER_ID)
+    await _item(client, hero, "Cotta di maglia", item_type="armor", slot="body", base_ac=16)
+    assert await _states(client, hero, "spell:mage_armor") == []
+    assert await _states(client, caster, "spell_cast:mage_armor", GM_ID) == []
+
+
 @pytest.mark.parametrize("edition,floor", [("2014", 16), ("2024", 17)])
 async def test_barkskin_sets_a_minimum_ac(client, test_session_factory, edition, floor):
     hero, caster, spell = await _table(client, test_session_factory, "Barkskin", "barkskin", 2, hero_edition=edition, caster_edition=edition)
@@ -307,8 +318,9 @@ async def test_death_ward_is_kept_when_the_hit_does_not_reach_zero(client, test_
     assert await _hit(client, hero, 50, "slashing", options=[DEATH_WARD]) == 50
     assert len(await _states(client, hero, "spell:death_ward")) == 1
     assert len(await _states(client, caster, "spell_cast:death_ward", GM_ID)) == 1  # il rimborso toglie anche la fine in attesa
-    assert await _hit(client, hero, 500, "slashing") == 150  # senza conferma il colpo uccide
-    assert (await _sheet(client, hero))["is_dead"]
+    assert await _hit(client, hero, 500, "slashing") == 149  # M4: senza conferma tiene a 1 PF lo stesso, il manuale non chiede nulla
+    sheet = await _sheet(client, hero)
+    assert sheet["current_hit_points"] == 1 and not sheet["is_dead"] and await _states(client, hero, "spell:death_ward") == []
 
 
 # --- Legame di Protezione ------------------------------------------------------------------------------------------
