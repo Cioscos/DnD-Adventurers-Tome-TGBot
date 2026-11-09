@@ -32,6 +32,7 @@ import { stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
 import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
+import EquipmentStep from '@/pages/creation/EquipmentStep'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
@@ -73,7 +74,7 @@ type IdentityPayload = {
   personality?: { traits: string }
 }
 
-type Step = 'name' | 'class' | 'species' | 'abilities' | 'identity'
+type Step = 'name' | 'class' | 'species' | 'abilities' | 'equipment' | 'identity'
 
 // `detail` e' una stringa (413) oppure la lista di errori pydantic (422): mostriamo i primi msg con il campo.
 function importErrorText(detail: unknown): string {
@@ -123,6 +124,8 @@ export default function CharacterSelect() {
   const [scorePool, setScorePool] = useState<number[]>(STANDARD_ARRAY)
   const [scoresSkipped, setScoresSkipped] = useState(false)
   const [pickBackground, setPickBackground] = useState(false)
+  // Equipaggiamento di partenza: una alternativa per gruppo; null = saltato.
+  const [equipPicks, setEquipPicks] = useState<number[] | null>(null)
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
@@ -209,6 +212,7 @@ export default function CharacterSelect() {
     setScoresSkipped(false)
     setBackgroundSkills([])
     setPickBackground(false)
+    setEquipPicks(null)
   }
 
   const handleNameNext = () => {
@@ -234,7 +238,10 @@ export default function CharacterSelect() {
   }
 
   const handleCreate = (identity: IdentityPayload | null) => {
-    const extras = creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills })
+    const extras = {
+      ...creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills }),
+      ...(equipPicks && hasEquipmentStep ? { starting_equipment: equipPicks } : {}),
+    }
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
   }
 
@@ -246,6 +253,8 @@ export default function CharacterSelect() {
     selectedClass != null &&
     !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
 
+  const hasEquipmentStep = !!selectedClass && !isCustomSelected
+  const afterAbilities = hasEquipmentStep ? 'equipment' : 'identity'
   const classProf = useClassProficiencies('2014', selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
   const classSkillsIncomplete =
     !!selectedClass && !isCustomSelected &&
@@ -464,6 +473,8 @@ export default function CharacterSelect() {
             ? t('character.create.step_species')
             : step === 'abilities'
             ? t('character.create.step_abilities')
+            : step === 'equipment'
+            ? t('character.create.step_equipment')
             : t('character.create.step_identity')
         }
         dismissible={!createMutation.isPending}
@@ -689,15 +700,35 @@ export default function CharacterSelect() {
                 secondaryLabel={t('common.back')}
                 onSecondary={() => setStep('species')}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => { setScoresSkipped(false); setStep('identity') }}
+                onPrimary={() => { setScoresSkipped(false); setStep(afterAbilities) }}
                 primaryDisabled={!scoresValid(scoreMode, scores)}
                 primaryHaptic="medium"
               />
               <Pressable
-                onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep('identity') }}
+                onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep(afterAbilities) }}
                 className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
               >
                 {t('character.create.scores_skip')}
+              </Pressable>
+            </m.div>
+          )}
+
+          {step === 'equipment' && selectedClass && (
+            <m.div key="step-equipment" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
+              <EquipmentStep edition="2014" className={selectedClass.class_name} picks={equipPicks} onPicks={setEquipPicks} />
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.back')}
+                onSecondary={() => setStep('abilities')}
+                primaryLabel={`${t('common.next')} →`}
+                onPrimary={() => setStep('identity')}
+                primaryHaptic="medium"
+              />
+              <Pressable
+                onClick={() => { setEquipPicks(null); setStep('identity') }}
+                className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
+              >
+                {t('character.create.equipment_skip')}
               </Pressable>
             </m.div>
           )}
@@ -771,7 +802,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('abilities')}
+                onSecondary={() => setStep(afterAbilities)}
                 primaryLabel={t('character.create.create_cta')}
                 onPrimary={() => handleCreate(buildIdentityPayload())}
                 primaryDisabled={createMutation.isPending}

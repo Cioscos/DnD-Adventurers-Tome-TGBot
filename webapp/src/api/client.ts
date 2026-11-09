@@ -566,6 +566,7 @@ export const api = {
         ability_scores?: Record<string, number>
         species?: object
         skills?: Record<string, boolean>
+        starting_equipment?: number[]
       },
     ) =>
       request<CharacterFull>('/characters', {
@@ -844,6 +845,8 @@ export const api = {
         skills_count: number
         languages: string[]
       }>(`/rules/proficiencies?edition=${edition}&class_key=${encodeURIComponent(classKey)}&as_multiclass=${asMulticlass}`),
+    startingEquipment: (edition: string, classKey: string) =>
+      request<{ groups: string[][] }>(`/rules/starting-equipment?edition=${edition}&class_key=${encodeURIComponent(classKey)}`),
   },
 
   // ---------------------------------------------------------------------------

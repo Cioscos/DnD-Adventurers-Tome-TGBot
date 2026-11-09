@@ -2257,6 +2257,11 @@
       "points_left": "Points: {{left}} / {{total}}",
       "roll_4d6": "Roll 4d6 (drop lowest)",
       "reroll": "Reroll",
+      "step_equipment": "Equipment",
+      "equipment_hint": "Class starting equipment: it goes into the inventory as ordinary items, to equip by hand.",
+      "equipment_fixed": "Included",
+      "equipment_skip": "Skip: no equipment",
+      "equipment_none": "No starting equipment for this class.",
       "scores_skip": "Skip: leave all at 10",
       "background_pick": "Pick background from catalogue",
       "create_cta": "Create"

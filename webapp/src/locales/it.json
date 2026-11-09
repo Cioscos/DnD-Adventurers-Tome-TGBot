@@ -2256,6 +2256,11 @@
       "points_left": "Punti: {{left}} / {{total}}",
       "roll_4d6": "Tira 4d6 (scarta il più basso)",
       "reroll": "Ritira",
+      "step_equipment": "Equipaggiamento",
+      "equipment_hint": "Equipaggiamento di partenza della classe: finisce nell'inventario come oggetti normali, da equipaggiare a mano.",
+      "equipment_fixed": "Incluso",
+      "equipment_skip": "Salta: nessun equipaggiamento",
+      "equipment_none": "Nessun equipaggiamento di partenza per questa classe.",
       "scores_skip": "Salta: lascia tutti a 10",
       "background_pick": "Scegli background dal catalogo",
       "create_cta": "Crea"
