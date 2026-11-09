@@ -23,6 +23,11 @@ def test_lookup_by_srd_index_and_by_italian_name():
     assert spell_effect("2014", None, "Palla di Fuoco") is None
 
 
+def test_lookup_by_name_covers_both_editions_it_and_en():
+    for edition, name in (("2014", "Passo Veloce"), ("2024", "Passo Lungo"), ("2014", "Longstrider"), ("2024", "longstrider")):
+        assert spell_effect(edition, None, name)[0].key == "longstrider"
+
+
 def test_shield_of_faith_state_gives_plus_two_ac():
     char = fake_char(_state("shield_of_faith", 1, "2014"))
     applied = modifiers_for(char, "ac")

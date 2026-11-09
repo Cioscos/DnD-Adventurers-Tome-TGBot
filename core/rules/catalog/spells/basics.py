@@ -14,6 +14,6 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("shield_of_faith", ("shield-of-faith",), ("Scudo della Fede", "Shield of Faith"), SpellTarget("ally"),
                 {"2014": _SHIELD, "2024": _SHIELD}),
     SpellEffect("aid", ("aid",), ("Aiuto", "Aid"), SpellTarget("allies", lambda slot: 3), {"2014": _AID, "2024": _AID}),
-    SpellEffect("longstrider", ("longstrider",), ("Passo Veloce", "Longstrider"),
+    SpellEffect("longstrider", ("longstrider",), ("Passo Veloce", "Passo Lungo", "Longstrider"),
                 SpellTarget("allies", lambda slot: max(slot, 1)), {"2014": _LONGSTRIDER, "2024": _LONGSTRIDER}),
 )
