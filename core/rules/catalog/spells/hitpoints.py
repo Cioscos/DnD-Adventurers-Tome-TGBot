@@ -42,7 +42,10 @@ def _agathys(ends_at_zero: bool) -> SpellVariant:
 
 
 # Vita Falsata: istantanea nel 2024; nel 2014 dura un'ora ma i PF temporanei sono solo quelli tirati (nessuno stato)
-_FALSE_LIFE_2014 = SpellVariant(temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d))
+_FALSE_LIFE_2014 = SpellVariant(
+    temp_hp=lambda d: roll(1, 4, 4) + _HIGHER(d),
+    text=txt("I PF temporanei restano a fine durata (1 ora): se al tavolo li perdi alla fine, toglili tu.",
+             "The temporary HP stay when the duration ends (1 hour): if your table loses them at the end, remove them yourself."))
 _FALSE_LIFE_2024 = SpellVariant(temp_hp=lambda d: roll(2, 4, 4) + _HIGHER(d))
 # Parola del Potere: Fortificare: 120 PF temporanei divisi in parti uguali (la ripartizione a scelta non c'è)
 _FORTIFY = SpellVariant(
@@ -69,9 +72,9 @@ _WARDING_BOND = SpellVariant(
     modifiers=lambda d: (Modifier("ac", 1), Modifier("save", 1), Modifier("resistance:all", 1)),
     shares_damage=True, clock_ends_on=("unconscious",), rounds=HOUR,
     text=txt("Chi lancia subisce lo stesso danno del bersaglio (l'app lo scrive sulla sua scheda) e l'incantesimo finisce se scende a 0 PF. "
-             "La distanza (18 m) la controlla il GM.",
+             "La distanza (18 m) la controlla il GM. Il danno si gira solo dai danni sulla scheda (non da quelli di altre vie, come le azioni homebrew).",
              "The caster takes the same damage as the target (the app writes it on their sheet) and the spell ends if they drop to 0 HP. "
-             "The GM checks the distance (60 ft)."))
+             "The GM checks the distance (60 ft). The damage is shared only from damage written on the sheet (not from other paths, like homebrew actions)."))
 
 # --- Rigenerazione e cure nel tempo -----------------------------------------------------------------------------------
 _REGENERATE = SpellVariant(

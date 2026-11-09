@@ -41,6 +41,13 @@ def test_hit_point_spells_are_in_both_editions(edition, srd):
     assert spell_effect(edition, srd) is not None
 
 
+@pytest.mark.parametrize("srd,edition", [("false-life", "2014"), ("heroism", "2014"), ("heroism", "2024"), ("enhance-ability", "2014")])
+def test_temp_hp_spells_remind_the_gm_that_the_temp_hp_stay(srd, edition):
+    """M7: il manuale non dice che svaniscono a fine durata: il testo avverte il GM."""
+    _, variant = spell_effect(edition, srd)
+    assert "toglili tu" in variant.text["it"] and "remove them yourself" in variant.text["en"]
+
+
 def test_power_word_fortify_is_2024_only():
     assert spell_effect("2014", "power-word-fortify") is None and spell_effect("2024", "power-word-fortify") is not None
 
