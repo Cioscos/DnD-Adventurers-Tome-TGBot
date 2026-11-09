@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
+import { optionLabel } from '@/lib/spellChoice'
 import type { SpellEffectInfo } from '@/types'
 
 export type SpellEffectPick = { targets?: number[]; choices?: Record<string, string> }
@@ -37,7 +38,7 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
               <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{c.label[lang]}</p>
               {c.options.map((o) => (
                 <Button key={o} variant={picked[c.key] === o ? 'primary' : 'secondary'} className="justify-start break-words text-left"
-                  onClick={() => setPicked((p) => ({ ...p, [c.key]: o }))}>{c.key === 'skill' ? t(`character.skills.${o}`, { defaultValue: o }) : o}</Button>
+                  onClick={() => setPicked((p) => ({ ...p, [c.key]: o }))}>{optionLabel(t, c.key, o)}</Button>
               ))}
             </div>
           ))}

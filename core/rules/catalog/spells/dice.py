@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from core.data.skills import SKILLS
+from core.rules.catalog.spells.defenses import BLADE_WARD_2014, RESISTANCE_2024
 from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
 from core.rules.types import Cost, Modifier, RollOptionSpec
 
@@ -30,7 +31,7 @@ _GUIDANCE_2024 = SpellVariant(
     choices=(SpellChoice("skill", {"it": "Abilità", "en": "Skill"}, lambda edition: [slug for slug, _ability in SKILLS]),),
     concentration=True, rounds=10)
 
-# 2014: un solo TS, prima o dopo il tiro (qui dopo); il 2024 riduce il danno ed è un'altra primitiva, non ancora nel catalogo
+# 2014: un solo TS, prima o dopo il tiro (qui dopo); il 2024 riduce il danno e sta in defenses.py
 _RESISTANCE_2014 = SpellVariant(
     options=(_d4_option("resistance", {"it": "Resistenza: somma 1d4 al tiro salvezza", "en": "Resistance: add 1d4 to the saving throw"},
                         ("save", "death_save"), once=True),),
@@ -50,9 +51,10 @@ SPELLS: tuple[SpellEffect, ...] = (
                 {"2014": _BLESS, "2024": _BLESS}),
     SpellEffect("guidance", ("guidance",), ("Guida", "Guidance"), SpellTarget("ally"),
                 {"2014": _GUIDANCE_2014, "2024": _GUIDANCE_2024}),
-    SpellEffect("resistance", ("resistance",), ("Resistenza", "Resistance"), SpellTarget("ally"), {"2014": _RESISTANCE_2014}),
+    SpellEffect("resistance", ("resistance",), ("Resistenza", "Resistance"), SpellTarget("ally"),
+                {"2014": _RESISTANCE_2014, "2024": RESISTANCE_2024}),
     SpellEffect("pass_without_trace", ("pass-without-trace",), ("Passare Senza Tracce", "Pass without Trace"),
                 SpellTarget("aura", lambda slot: 20), {"2014": _PASS_WITHOUT_TRACE, "2024": _PASS_WITHOUT_TRACE}),
     SpellEffect("blade_ward", ("blade-ward",), ("Protezione dalle Lame", "Interdizione alle Lame", "Blade Ward"),
-                SpellTarget("self"), {"2024": _BLADE_WARD_2024}),
+                SpellTarget("self"), {"2014": BLADE_WARD_2014, "2024": _BLADE_WARD_2024}),
 )

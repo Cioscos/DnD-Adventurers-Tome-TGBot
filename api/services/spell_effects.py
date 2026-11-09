@@ -14,10 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.schemas.spell import SpellEffectsRead
 from api.services.session_allies import ally_target
 from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
-from core.rules.catalog.spells import spell_effect
+from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.edition import character_edition
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
-from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state
+from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state, settle_closed
 from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
@@ -91,6 +91,15 @@ def _drop_state(target: Character, key: str, caster_id: int) -> None:
     kept = [s for s in states if not (s.get("key") == key and (s.get("data") or {}).get("caster_id") == caster_id)]
     if len(kept) != len(states):
         target.active_states = kept
+        settle_closed(target, [s for s in states if s not in kept])  # la condizione imposta (Invisibile) cade con lo stato
+
+
+def spell_state_spec(key: str, data: dict) -> StateSpec:
+    """Lo stato ``spell:*`` di un bersaglio con ciò che la variante dell'edizione impone (condizione, immunità, fini)."""
+    effect = SPELL_EFFECTS.get(data.get("spell_key"))
+    variant = effect and effect.variants.get(data.get("edition", "2014"))
+    extra = {"condition": variant.condition, "immune_conditions": variant.immune_conditions, "ends_on": variant.ends_on} if variant else {}
+    return StateSpec(key, data=dict(data), **{"ends_on": ("manual",), **extra})
 
 
 async def apply_spell_effects(session: AsyncSession, caster: Character, spell, slot_level: int,
@@ -104,7 +113,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster),
             "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest}}
-    if not (variant.modifiers(data) or variant.options) or not chars:  # nessun personaggio: l'effetto lo applica il GM
+    if not (variant.modifiers(data) or variant.options or variant.track or variant.condition) or not chars:  # nessun personaggio: l'effetto lo applica il GM
         return SpellEffectsRead(applied=[], text=variant.text or (_OUTSIDE_TEXT if outside else _NO_SHEET_TEXT))
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})
@@ -115,7 +124,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             _drop_state(previous, key, caster.id)
     applied = []
     for target in chars:
-        begin_state(target, StateSpec(key, ends_on=("manual",), data=dict(data)), key, spell.name)
+        begin_state(target, spell_state_spec(key, data), key, spell.name)
         if variant.on_apply:
             variant.on_apply(target, data)
         applied.append({"id": target.id, "name": target.name})
@@ -151,7 +160,7 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
             if target is None or (held and (held.get("data") or {}).get("caster_id") != caster.id):
                 continue
             if held is None:
-                begin_state(target, StateSpec(key, ends_on=("manual",), data=dict(state["data"]["state_data"])), key, state.get("name"))
+                begin_state(target, spell_state_spec(key, state["data"]["state_data"]), key, state.get("name"))
             back.append(tid)
         given[clock] = back
     caster.settings = {**settings, SPELL_GIVEN: given} if given else settings

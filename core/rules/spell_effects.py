@@ -34,6 +34,10 @@ class SpellVariant:
     choices: tuple[SpellChoice, ...] = ()
     on_apply: Callable[[Any, dict], None] | None = None
     text: dict[str, str] | None = None
+    condition: str | None = None  # condizione che lo stato impone al bersaglio e toglie quando finisce (Invisibile)
+    immune_conditions: tuple[str, ...] = ()  # condizioni che il bersaglio non può avere finché dura
+    ends_on: tuple[str, ...] = ("manual",)  # fini dello stato sul bersaglio (``attack`` / ``cast``: Invisibilità)
+    track: bool = False  # lo stato (e l'orologio di concentrazione) esiste anche senza modificatori: effetti solo descrittivi
 
 
 @dataclass(frozen=True)

@@ -19,7 +19,7 @@ from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_ON, TEMP_RELEASE, immune_conditions
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 def _now() -> str:
@@ -243,6 +243,7 @@ def _drop_given_spells(session: Session, char: Character) -> None:
         kept = [s for s in states if not (s.get("key") == entry["key"] and (s.get("data") or {}).get("caster_id") == char.id)]
         if len(kept) != len(states):
             receiver.active_states = kept
+            settle_closed(receiver, [x for x in states if x not in kept])  # la condizione imposta (Invisibile) cade con lo stato
 
 
 def _end_spent_spells(session: Session, char: Character) -> None:

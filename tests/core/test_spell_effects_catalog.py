@@ -45,3 +45,12 @@ def test_longstrider_adds_ten_feet():
 
 def test_unknown_spell_key_yields_nothing():
     assert modifiers_for(fake_char(_state("nope", 1, "2014")), "ac").flat == 0
+
+
+def test_new_defense_states_are_read_by_the_rules():
+    assert modifiers_for(fake_char(_state("stoneskin", 4, "2014")), None).resistances == {"bludgeoning", "piercing", "slashing"}
+    assert modifiers_for(fake_char(_state("fly", 3, "2014")), None).fly_speed_value == 60
+    assert modifiers_for(fake_char(_state("foresight", 9, "2024")), "attack").advantage
+    assert not modifiers_for(fake_char(_state("foresight", 9, "2024")), "passive").advantage
+    assert modifiers_for(fake_char(_state("mind_blank", 8, "2014")), None).immunities == {"psychic"}
+    assert modifiers_for(fake_char(_state("true_seeing", 6, "2024")), None).senses == {"truesight": 120}

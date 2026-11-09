@@ -27,6 +27,17 @@ describe('spell dice labels', () => {
     expect(screen.queryByText('sleight_of_hand')).not.toBeInTheDocument()
   })
 
+  it('translates damage type and shield options of the defence spells', () => {
+    const energy: SpellEffectInfo = {
+      target_kind: 'ally', max_targets_by_slot: {},
+      choices: [{ key: 'damage_type', label: { it: 'Tipo di danno', en: 'Damage type' }, options: ['lightning'] },
+        { key: 'shield', label: { it: 'Scudo', en: 'Shield' }, options: ['warm'] }],
+    }
+    renderWithProviders(<SpellEffectAsk charId={1} title="Energia" effect={energy} slotLevel={3} onConfirm={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText('character.inventory.damage_types.dmg_lightning|lightning')).toBeInTheDocument()
+    expect(screen.getByText('character.spells.effect_shield.warm|warm')).toBeInTheDocument()
+  })
+
   it('names the spell in the roll notes of a bonus die and of Pass without Trace', () => {
     const { result } = renderHook(() => useRollNoteLabels(1), {
       wrapper: ({ children }) => <QueryClientProvider client={new QueryClient()}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>,
@@ -36,7 +47,7 @@ describe('spell dice labels', () => {
   })
 
   it('has the spell names in both languages for every dice spell', () => {
-    for (const key of ['bless', 'guidance', 'resistance', 'pass_without_trace', 'blade_ward']) {
+    for (const key of ['bless', 'guidance', 'resistance', 'pass_without_trace', 'blade_ward', 'stoneskin', 'invisibility', 'fly', 'enhance_ability', 'heroes_feast']) {
       expect((itLocale.character.roll_notes as { spell: Record<string, string> }).spell[key]).toBeTruthy()
       expect((enLocale.character.roll_notes as { spell: Record<string, string> }).spell[key]).toBeTruthy()
     }
