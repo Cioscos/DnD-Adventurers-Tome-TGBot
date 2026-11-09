@@ -101,7 +101,7 @@ async def test_the_roll_uses_the_type_of_the_cast_and_refuses_another(client):
     assert (await _roll(client, cid, spell, damage_type="fire")).json()["damage_type"] == "fire"
 
 
-async def test_a_new_cast_replaces_the_type_and_another_spell_drops_it(client):
+async def test_a_new_cast_replaces_the_type_and_another_spell_leaves_it(client):
     cid = (await client.post("/characters", json={"name": "Mago"})).json()["id"]
     await client.post(f"/characters/{cid}/spell_slots", json={"level": 1, "total": 4})
     spell = await _orb(client, cid)
@@ -110,8 +110,8 @@ async def test_a_new_cast_replaces_the_type_and_another_spell_drops_it(client):
     await _use(client, cid, spell, choices={"damage_type": "cold"})
     assert (await _roll(client, cid, spell, damage_type="fire")).status_code == 422
     assert (await _roll(client, cid, spell)).json()["damage_type"] == "cold"
-    assert (await _use(client, cid, other)).status_code == 200  # un altro lancio: il tipo vecchio non resta
-    assert (await _roll(client, cid, spell)).status_code == 422
+    assert (await _use(client, cid, other)).status_code == 200  # un altro lancio non tocca la voce della Sfera
+    assert (await _roll(client, cid, spell)).json()["damage_type"] == "cold"
 
 
 async def test_the_resisted_type_of_protection_from_energy_is_not_a_damage_type(client):

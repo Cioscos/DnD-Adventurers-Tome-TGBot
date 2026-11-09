@@ -119,10 +119,8 @@ def chosen_damage_type(char: Character, spell, requested: str | None) -> str | N
             raise _invalid("invalid_choice")
         return None
     effect = found[0]
-    last = (char.settings or {}).get(SPELL_CAST_TYPE) or {}
-    if last.get("spell") == effect.key:
-        stored = last.get("damage_type")
-    else:
+    stored = ((char.settings or {}).get(SPELL_CAST_TYPE) or {}).get(effect.key)
+    if stored is None:
         clock = next((s for s in char.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{effect.key}"), None)
         stored = (((clock or {}).get("data") or {}).get("state_data") or {}).get("choices", {}).get("damage_type")
     if stored is None or (requested is not None and requested != stored):
@@ -131,12 +129,16 @@ def chosen_damage_type(char: Character, spell, requested: str | None) -> str | N
 
 
 def _remember_cast_type(caster: Character, effect_key: str | None, choice_type: str | None) -> None:
-    """Un lancio qualunque sostituisce (o toglie) il tipo dell'ultimo: un tipo vecchio non resta su un lancio nuovo."""
-    settings = {k: v for k, v in (caster.settings or {}).items() if k != SPELL_CAST_TYPE}
+    """Il tipo scelto in un lancio, per incantesimo: scrive solo la voce di questo incantesimo (un lancio senza scelta la toglie,
+    gli altri non la toccano). Resta piccolo: ha solo gli incantesimi del catalogo con scelta del tipo."""
+    if not effect_key:
+        return
+    types = dict((caster.settings or {}).get(SPELL_CAST_TYPE) or {})
     if choice_type:
-        settings[SPELL_CAST_TYPE] = {"spell": effect_key, "damage_type": choice_type}
-    if settings != (caster.settings or {}):
-        caster.settings = settings
+        types[effect_key] = choice_type
+    elif not types.pop(effect_key, None):
+        return
+    caster.settings = {**(caster.settings or {}), SPELL_CAST_TYPE: types}
 
 
 def end_unarmored_spells(char: Character) -> None:

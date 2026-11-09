@@ -191,7 +191,7 @@ SPELL_TEMP_DROPPED = "spell_temp_dropped"
 # Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in
 # SPELL_RELEASE ([{"id", "key"}]), che il flush toglie ai bersagli solo se lo stato è ancora di chi lancia (``data["caster_id"]``).
 SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"
-# Ultimo lancio con un tipo di danno scelto: {"spell": chiave dell'effetto, "damage_type"}. Il tiro di danno legge il tipo da qui; ogni nuovo lancio lo sostituisce o lo toglie.
+# Tipo di danno scelto all'ultimo lancio, per incantesimo: {chiave dell'effetto: tipo}. Il tiro di danno legge la voce del proprio incantesimo; un lancio scrive (o toglie) solo la sua.
 SPELL_CAST_TYPE = "spell_cast_type"
 # Sul bersaglio: [{"caster_id", "key"}] degli stati ``spell:*`` spesi da un'opzione (Guida e Resistenza 2014: «poi l'incantesimo termina»);
 # il flush chiude la concentrazione e l'orologio di chi ha lanciato.
