@@ -150,6 +150,8 @@ PANACEA_USE = OnUse(
     # veleno come condizione; maledizioni e malattie sono note. Su sé o su un PG della serata, nel foglio comune
     removal=ConditionRemoval(("poisoned",), ("curse", "disease"), count=None, bound=True),
     heal_by=_restore_to_full,
+    # su un PG della serata i PF vanno al suo massimo (R42): lo scrive il server sul ricevente
+    heal=lambda _c, _r: 0, heal_when=lambda _c, _p: False, heal_ally_when=lambda _c, p: p.get("mode") == "other", heal_ally_full=True,
     message=lambda _c, p: {"it": "Una creatura toccata con la pietra torna a tutti i suoi PF e perde maledizioni, malattie e veleni."
                            if p["mode"] == "other" else "Recuperi tutti i tuoi PF e perdi veleno; maledizioni e malattie le toglie il tavolo.",
                            "en": "A creature touched with the stone regains all its hit points and loses curses, diseases and poisons."

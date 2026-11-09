@@ -318,6 +318,7 @@ class OnUse:
     heal_ally_when: "Callable[[RuleContext, dict], bool] | None" = None
     # Vendetta Ardente su un altro: i suoi PF salgono a metà del *suo* massimo (letto dal server sul bersaglio) e si rialza
     heal_ally_half_max: bool = False
+    heal_ally_full: bool = False  # i PF del bersaglio salgono al suo massimo, letto dal server (Panacea)
     # L'uso è possibile anche a 0 PF, da incapacitato (Vendetta Ardente): la UI non lo spegne
     usable_at_zero_hp: bool = False
     ally_needs_zero_hp: bool = False  # il bersaglio dev'essere a 0 PF, altrimenti 409 ``target_not_down`` prima di spendere (Dono dei Protettori)

@@ -462,3 +462,41 @@ async def test_calm_emotions_on_the_caster_comes_back_too(client, test_session_f
     assert not (await _full(client, cid))["conditions"].get("frightened")
     assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
     assert (await _full(client, cid))["conditions"].get("frightened") is True
+
+
+# ---------------------------------------------------------------------------
+# Giro 2: N1 (testo su sé stessi) e N2 (Panacea porta i PF al massimo)
+# ---------------------------------------------------------------------------
+
+def test_outcome_lines_on_yourself_never_name_a_target():
+    from core.rules.condition_removal import ConditionRemoval, outcome_lines
+    lines = outcome_lines(ConditionRemoval(("poisoned",)), target=None, removed=["poisoned"], absent=["blinded"], untracked=["curse"],
+                          wanted=["poisoned"])
+    text = " ".join(t[lg] for t in lines for lg in ("it", "en"))
+    assert "None" not in text and "Tolto: Avvelenato." in text and "Removed: Poisoned." in text
+
+
+async def test_an_automatic_self_removal_toast_has_no_none(client):
+    from tests.integration.rules.test_2024_barbarian import RAGE, _barbarian, _rage
+    from tests.integration.rules.test_2024_barbarian_paths import BERSERKER
+    cid = await _barbarian(client, 6, BERSERKER)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"frightened": True}})
+    r = await _rage(client, cid)
+    assert r.status_code == 200, r.text
+    lines = r.json()["removal"]
+    assert lines and not any("None" in x[lg] for x in lines for lg in ("it", "en"))
+    assert any(x["it"].startswith("Tolto: ") for x in lines)
+
+
+async def test_panacea_on_a_seated_ally_restores_all_hit_points_with_history_on_the_receiver(client, test_session_factory):
+    _sid, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _wizard(client, 14, "transmutation")
+    await _seat(test_session_factory, cid)
+    await _hero_hp(test_session_factory, hero, 7, maximum=40, conditions={"poisoned": True})
+    await _master(client, cid)
+    r = await _use(client, cid, PANACEA, params=_rm([hero], mode="other"))
+    assert r.status_code == 200, r.text
+    assert (await _hero_state(test_session_factory, hero))[0] == 40
+    assert r.json()["received"] == {"name": r.json()["received"]["name"], "healed": 33}
+    assert any("Cura: +" in h for h in await _history(test_session_factory, hero))

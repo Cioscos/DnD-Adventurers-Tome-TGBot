@@ -123,7 +123,7 @@ def outcome_lines(removal: ConditionRemoval, *, target: str | None, removed: lis
 
 def _line(kind: str, lang: str, what: str, target: str | None) -> str:
     it = lang == "it"
-    who = f" a {target}" if it else f" from {target}"
+    who = (f" a {target}" if it else f" from {target}") if target else ""  # su sé stessi non si nomina nessuno
     if kind == "removed":
         return f"Tolto{who}: {what}." if it else f"Removed{who}: {what}."
     if kind == "absent":
