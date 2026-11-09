@@ -56,6 +56,7 @@ from api.tasks.session_cleanup import run_session_cleanup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)  # a INFO stampa le URL di Telegram, che contengono il token del bot
 
 
 @asynccontextmanager
