@@ -180,4 +180,27 @@ def resolve(edition: str, class_key: str, picks: list[int], lang: str) -> tuple[
                 same["quantity"] += row["quantity"]
             else:
                 rows.append(row)
-    return rows, total_gold
+    # Poche armi (due asce) = una riga ciascuna, cosi' si impugnano una per mano; le pile (giavellotti, dardi) restano.
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        n = r["quantity"] if r["item_type"] == "weapon" and r["quantity"] <= 2 else 1
+        out += [{**r, "quantity": r["quantity"] // n} for _ in range(n)]
+    return out, total_gold
+
+
+ASSASSIN_KITS_FLAG = "assassin_kits_given"
+_KITS = (("Kit da travestimento", "Disguise Kit"), ("Kit da avvelenatore", "Poisoner's Kit"))
+
+
+def grant_assassin_kits(char, lang: str) -> None:
+    """Assassino 2024 (Strumenti dell'Assassino): i due kit entrano in inventario, inerti, una volta sola."""
+    from core.db.models import Item
+    from core.rules.edition import character_edition
+    if (char.settings or {}).get(ASSASSIN_KITS_FLAG) or character_edition(char) != "2024":
+        return
+    if not any(c.subclass_key == "assassin" for c in char.classes):
+        return
+    for it, en in _KITS:
+        char.items.append(Item(name=it if lang == "it" else en, item_type="tool", quantity=1, weight=0.0))
+    char.settings = {**(char.settings or {}), ASSASSIN_KITS_FLAG: True}
+    char.recalculate_encumbrance()

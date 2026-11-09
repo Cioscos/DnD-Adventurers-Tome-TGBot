@@ -14,6 +14,7 @@ from api.database import get_db
 from core.db.models import Character, CharacterClass
 from core.rules.edition import character_edition, class_key
 from core.rules.subclasses import match_subclass
+from core.rules.starting_equipment import grant_assassin_kits
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     CharacterClassCreate,
@@ -329,6 +330,7 @@ async def update_class(
         setattr(cls, field, value)
     if "subclass" in data:
         cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
+        grant_assassin_kits(char, lang)
     sync_level_choices(char, cls, old_level, cls.level)
 
     # When level changes, sync class-feature abilities and recalc max HP like distribute.

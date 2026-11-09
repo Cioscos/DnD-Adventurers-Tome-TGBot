@@ -105,8 +105,8 @@ def test_resolve_validates_and_merges():
     assert bow["item_type"] == "weapon" and bow["item_metadata"]["srd_index"] == "longbow"
     assert next(r for r in rows if r["name"] == "Arrows")["quantity"] == 20
     assert next(r for r in rows if r["name"] == "Studded Leather Armor")["item_type"] == "armor"
-    rows, _ = resolve("2014", "sorcerer", [1, 0, 0, 0], "it")  # pugnali: una riga sola, quantita' 2
-    assert next(r for r in rows if r["name"] == "Pugnale")["quantity"] == 2
+    rows, _ = resolve("2014", "sorcerer", [1, 0, 0, 0], "it")  # pugnali: due righe da 1
+    assert sum(r["quantity"] for r in rows if r["name"] == "Pugnale") == 2
 
 
 async def _create(client, cls, **extra):
@@ -150,3 +150,33 @@ async def test_options_endpoint(client):
     assert len(groups) == 1 and len(groups[0]) == 3 and groups[0][2].startswith("155")
     r = await client.get("/rules/starting-equipment", params={"edition": "2014", "class_key": "custom"})
     assert r.json()["groups"] == []
+
+
+def test_few_weapons_split_one_row_each_but_stacks_stay():
+    rows, _ = resolve("2014", "sorcerer", [1, 0, 0, 0], "it")  # due pugnali
+    assert [r["quantity"] for r in rows if r["name"] == "Pugnale"] == [1, 1]
+    rows, _ = resolve("2014", "barbarian", [0, 0, 0, 0], "it")  # giavellotti x4: pila unica
+    assert [r["quantity"] for r in rows if r["name"] == "Giavellotto"] == [4]
+
+
+async def _assassin(client, edition):
+    r = await _create(client, "rogue", rules_edition=edition)
+    body = r.json()
+    cid, lid = body["id"], body["classes"][0]["id"]
+    r = await client.patch(f"/characters/{cid}/classes/{lid}", json={"level": 3, "subclass": "Assassino"})
+    assert r.status_code == 200, r.text
+    return cid, lid, r.json()
+
+
+async def test_assassin_2024_gets_kits_once(client):
+    cid, lid, body = await _assassin(client, "2024")
+    kits = sorted(i["name"] for i in body["items"] if i["item_type"] == "tool")
+    assert kits == ["Kit da avvelenatore", "Kit da travestimento"]
+    assert all(not i["is_equipped"] for i in body["items"])
+    r = await client.patch(f"/characters/{cid}/classes/{lid}", json={"subclass": "Assassino"})
+    assert len(r.json()["items"]) == 2  # una volta sola
+
+
+async def test_assassin_2014_gets_no_kits(client):
+    _, _, body = await _assassin(client, "2014")
+    assert body["items"] == []

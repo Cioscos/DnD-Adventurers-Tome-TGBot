@@ -72,7 +72,7 @@ from api.services.rules_options import (
 from api.services.effects import cap_current_hp, sync_zero_hp
 from core.data.spell_slots import normalize_class_name
 from core.rules.edition import character_edition
-from core.rules.starting_equipment import resolve as resolve_starting_equipment, starting_groups
+from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import attach_party_auras
 from core.rules.modifiers import effective_hp_max, modifiers_for, rule_hp_bonus
@@ -93,7 +93,7 @@ SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_lev
                          GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
                          RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
-                         SEEDED_FLAG, FEATURE_GRANTS_KEY)
+                         SEEDED_FLAG, FEATURE_GRANTS_KEY, ASSASSIN_KITS_FLAG)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
