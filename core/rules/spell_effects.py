@@ -37,6 +37,7 @@ class SpellVariant:
     condition: str | None = None  # condizione che lo stato impone al bersaglio e toglie quando finisce (Invisibile)
     immune_conditions: tuple[str, ...] = ()  # condizioni che il bersaglio non può avere finché dura
     ends_on: tuple[str, ...] = ("manual",)  # fini dello stato sul bersaglio (``attack`` / ``cast``: Invisibilità)
+    max_targets: Callable[[int], int] | None = None  # sostituisce ``target.count`` quando il numero di bersagli cambia con l'edizione (Saltare 2014)
     track: bool = False  # lo stato (e l'orologio di concentrazione) esiste anche senza modificatori: effetti solo descrittivi
 
 
@@ -47,6 +48,10 @@ class SpellEffect:
     names: tuple[str, ...]  # it, en, e gli altri nomi (2024)
     target: SpellTarget
     variants: dict[str, SpellVariant] = field(default_factory=dict)  # "2014" / "2024"
+
+    def max_targets(self, edition: str, slot: int) -> int:
+        variant = self.variants.get(edition)
+        return (variant.max_targets if variant and variant.max_targets else self.target.count)(slot)
 
 
 def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:

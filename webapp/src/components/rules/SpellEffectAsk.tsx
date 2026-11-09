@@ -32,7 +32,7 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
     const ready = effect.choices.every((c) => picked[c.key])
     return (
       <Sheet open onClose={onClose} title={title} zClassName="z-[60]">
-        <div className="flex flex-col gap-2 px-4 pb-4">
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-3">
           {effect.choices.map((c) => (
             <div key={c.key} className="flex flex-col gap-2">
               <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{c.label[lang]}</p>

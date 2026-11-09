@@ -36,7 +36,7 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
         return None
     fx, variant = found
     return {"target_kind": fx.target.kind,
-            "max_targets_by_slot": {lvl: fx.target.count(lvl) for lvl in range(max(level, 1), 10)},
+            "max_targets_by_slot": {lvl: fx.max_targets(edition, lvl) for lvl in range(max(level, 1), 10)},
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition)} for c in variant.choices]}
 
 

@@ -64,7 +64,7 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
     chosen = _check_choices(variant, edition, choices)
     if effect.target.kind == "self" or targets is None:
         return effect, variant, [caster], chosen, False
-    if len(targets) != len(set(targets)) or len(targets) > effect.target.count(slot_level):
+    if len(targets) != len(set(targets)) or len(targets) > effect.max_targets(edition, slot_level):
         raise _invalid("invalid_target")
     others = [t for t in targets if t != caster.id]
     outside = bool(others) and not await _seated(session, caster)

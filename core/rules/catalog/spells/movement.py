@@ -1,6 +1,8 @@
 """Incantesimi di movimento, sensi e tratti: Volare, Velocità, Saltare, Scurovisione, Potenziamento Caratteristica..."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.rules.catalog.spells.defenses import DAY, HOUR, MIN10, adv, both, txt
 from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
 from core.rules.types import Modifier
@@ -23,15 +25,22 @@ _HASTE = SpellVariant(
     concentration=True, rounds=10,
     text=txt("Azione extra (un attacco, Scatto, Disimpegno, Nascondersi o Usare un Oggetto). Alla fine non può muoversi né agire fino alla fine del turno successivo: lo applica il GM.",
              "Extra action (one attack, Dash, Disengage, Hide or Use an Object). When it ends it can't move or act until the end of its next turn: the GM applies it."))
+_HASTE_2024 = replace(_HASTE, text=txt(
+    "Azione extra (solo un attacco, Scatto, Disimpegno, Nascondersi o Utilizzare). Alla fine il bersaglio è Incapacitato e ha Velocità 0 fino alla fine del suo turno successivo: lo applica il GM.",
+    "Extra action (only one attack, Dash, Disengage, Hide or Utilize). When it ends the target is Incapacitated with Speed 0 until the end of its next turn: the GM applies it."))
 
-_JUMP_2014 = SpellVariant(  # distanza triplicata: +2 volte il salto base (punteggio di Forza in piedi)
-    modifiers=lambda d: (Modifier("jump_bonus", lambda ctx: 2 * ability_score(ctx.char, "strength")),), rounds=10)
+_JUMP_2014 = SpellVariant(  # distanza triplicata: +2 volte il salto base (punteggio di Forza in piedi); un solo bersaglio, senza scalata
+    modifiers=lambda d: (Modifier("jump_bonus", lambda ctx: 2 * ability_score(ctx.char, "strength")),), rounds=10,
+    max_targets=lambda slot: 1,
+    text=txt("La distanza dei salti è triplicata: la scheda triplica il salto in lungo, il salto in alto lo triplichi tu.",
+             "Jump distance is tripled: the sheet triples the long jump, you triple the high jump yourself."))
 _JUMP_2024 = _described(10, "Una volta per turno puoi saltare fino a 9 m spendendo 3 m di movimento.",
                         "Once per turn you can jump up to 30 ft by spending 10 ft of movement.")
 
 _FREEDOM_2014 = _described(
     HOUR, "Ignori il terreno difficile; la velocità non si riduce e la magia non ti paralizza né ti trattiene. Sott'acqua nessuna penalità a movimento e attacchi.",
     "You ignore difficult terrain; your speed can't be reduced and magic can't paralyze or restrain you. No penalty to movement and attacks underwater.")
+_FREEDOM_2014 = replace(_FREEDOM_2014, max_targets=lambda slot: 1)  # il 2014 non scala
 _FREEDOM_2024 = SpellVariant(
     modifiers=lambda d: (Modifier("swim_speed", 1),), rounds=HOUR,
     text=txt("Ignori il terreno difficile; effetti magici non riducono la velocità né ti paralizzano o trattengono.",
@@ -40,7 +49,7 @@ _FREEDOM_2024 = SpellVariant(
 
 def _enhance(d: dict) -> tuple[Modifier, ...]:
     ability = (d.get("choices") or {}).get("ability")
-    out = [adv(lambda c: c.roll in ("skill", "ability") and c.ability == ability)]
+    out = [adv(lambda c: (c.roll in ("skill", "ability") and c.ability == ability) or (c.roll == "initiative" and ability == "dexterity"))]
     if ability == "strength" and d.get("edition") != "2024":
         out.append(Modifier("carry_double", 1))
     return tuple(out)
@@ -53,8 +62,8 @@ _ENHANCE_2014 = SpellVariant(
              "Constitution: 2d6 temporary HP (roll them). Dexterity: no fall damage up to 20 ft. Strength: double carrying capacity (already applied)."))
 _ENHANCE_2024 = SpellVariant(
     modifiers=_enhance, choices=_ENHANCE_CHOICE, concentration=True, rounds=HOUR,
-    text=txt("Ogni bersaglio riceve la stessa caratteristica: per sceglierne altre lancia l'incantesimo più volte.",
-             "Every target gets the same ability: cast the spell several times to pick others."))
+    text=txt("Ogni bersaglio riceve la stessa caratteristica; se ognuno ne sceglie una diversa, le altre le applica il GM (un nuovo lancio toglie l'effetto ai bersagli precedenti).",
+             "Every target gets the same ability; if each picks a different one, the GM applies the others (casting again removes the effect from the previous targets)."))
 
 _DARKVISION_2014 = SpellVariant(modifiers=lambda d: (Modifier("sense:darkvision", 60),), rounds=DAY // 3)
 _DARKVISION_2024 = SpellVariant(modifiers=lambda d: (Modifier("sense:darkvision", 150),), rounds=DAY // 3)
@@ -70,7 +79,7 @@ _FEATHER_FALL = _described(10, "Discesa rallentata a 18 m per round e nessun dan
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("fly", ("fly",), ("Volare", "Fly"), SpellTarget("allies", lambda slot: max(slot - 2, 1)), both(_FLY)),
-    SpellEffect("haste", ("haste",), ("Velocità", "Haste"), SpellTarget("ally"), both(_HASTE)),
+    SpellEffect("haste", ("haste",), ("Velocità", "Haste"), SpellTarget("ally"), {"2014": _HASTE, "2024": _HASTE_2024}),
     SpellEffect("jump", ("jump",), ("Saltare", "Jump"), SpellTarget("allies", lambda slot: max(slot, 1)),
                 {"2014": _JUMP_2014, "2024": _JUMP_2024}),
     SpellEffect("freedom_of_movement", ("freedom-of-movement",), ("Libertà di Movimento", "Freedom of Movement"),

@@ -48,7 +48,8 @@ def test_unknown_spell_key_yields_nothing():
 
 
 def test_new_defense_states_are_read_by_the_rules():
-    assert modifiers_for(fake_char(_state("stoneskin", 4, "2014")), None).resistances == {"bludgeoning", "piercing", "slashing"}
+    assert modifiers_for(fake_char(_state("stoneskin", 4, "2024")), None).resistances == {"bludgeoning", "piercing", "slashing"}
+    assert not modifiers_for(fake_char(_state("stoneskin", 4, "2014")), None).resistances  # 2014: solo con la conferma «non magico» al danno
     assert modifiers_for(fake_char(_state("fly", 3, "2014")), None).fly_speed_value == 60
     assert modifiers_for(fake_char(_state("foresight", 9, "2024")), "attack").advantage
     assert not modifiers_for(fake_char(_state("foresight", 9, "2024")), "passive").advantage

@@ -206,4 +206,4 @@ def test_bless_targets_grow_with_the_slot_and_blade_ward_is_only_text():
     assert [effect.target.count(s) for s in (1, 2, 3)] == [3, 4, 5]
     _, ward = spell_effect("2024", "blade-ward")
     assert ward.text and not ward.options and not ward.modifiers({})
-    assert spell_effect("2014", "blade-ward")[1].modifiers({})  # 2014: resistenza ai danni fisici (test_spell_effects_defenses)
+    assert spell_effect("2014", "blade-ward")[1].options  # 2014: resistenza con conferma «da arma» (test_spell_effects_defenses)

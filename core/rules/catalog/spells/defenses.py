@@ -33,11 +33,19 @@ def confirm_save(spell: str, label: dict[str, str]) -> RollOptionSpec:
     return RollOptionSpec(key=f"spell:{spell}:save", phase="before", rolls=("save",), mode="advantage", label=label)
 
 
+def confirm_physical(key: str, label: dict[str, str]) -> RollOptionSpec:
+    """Resistenza ai soli colpi fisici «non magici» / «da arma»: l'app non lo vede, la applica il giocatore confermando (come Avatar della Battaglia)."""
+    return RollOptionSpec(key=key, phase="damage_in", rolls=("damage_taken",), multiplier=0.5, label=label,
+                          available=lambda c: c.damage_type in PHYSICAL)
+
+
 # --- Resistenze ---------------------------------------------------------------------------------------------------
 _STONESKIN_2014 = SpellVariant(
-    modifiers=res(*PHYSICAL), concentration=True, rounds=HOUR,
-    text=txt("Resistenza ai danni contundenti, perforanti e taglienti non magici: l'app la applica a ogni danno di quei tipi, il GM giudica se è magico.",
-             "Resistance to non-magical bludgeoning, piercing and slashing: the app applies it to any damage of those types, the GM judges if it is magical."))
+    options=(confirm_physical("spell:stoneskin:nonmagical", txt("Pelle di Pietra: il colpo è di un'arma non magica?",
+                                                                "Stoneskin: is the hit from a nonmagical weapon?")),),
+    concentration=True, rounds=HOUR,
+    text=txt("Resistenza ai danni contundenti, perforanti e taglienti non magici: conferma al danno che il colpo non è magico.",
+             "Resistance to non-magical bludgeoning, piercing and slashing: confirm on the damage that the hit is not magical."))
 _STONESKIN_2024 = SpellVariant(modifiers=res(*PHYSICAL), concentration=True, rounds=HOUR)
 
 _AURA_LIFE = SpellVariant(
@@ -55,9 +63,11 @@ _AURA_PURITY_2024 = SpellVariant(modifiers=res("poison"), options=(_PURITY_OPTIO
 
 # Interdizione alle Lame 2014 (la 2024 sta in dice.py): resistenza fino alla fine del turno successivo
 BLADE_WARD_2014 = SpellVariant(
-    modifiers=res(*PHYSICAL), rounds=1,
-    text=txt("Resistenza ai danni degli attacchi con armi fino alla fine del tuo turno successivo (qui vale per ogni danno di quei tipi).",
-             "Resistance to weapon attack damage until the end of your next turn (here it covers any damage of those types)."))
+    options=(confirm_physical("spell:blade_ward:weapon", txt("Interdizione alle Lame: è il danno di un attacco con arma?",
+                                                             "Blade Ward: is it the damage of a weapon attack?")),),
+    rounds=1,
+    text=txt("Resistenza ai danni degli attacchi con armi fino alla fine del tuo turno successivo: conferma al danno che viene da un attacco con arma.",
+             "Resistance to weapon attack damage until the end of your next turn: confirm on the damage that it comes from a weapon attack."))
 
 _FIRE_SHIELD = SpellVariant(
     modifiers=lambda d: (Modifier(f"resistance:{'cold' if (d.get('choices') or {}).get('shield') == 'warm' else 'fire'}", 1),),
