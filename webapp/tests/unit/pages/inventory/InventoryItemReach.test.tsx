@@ -41,4 +41,14 @@ describe('InventoryItem reach', () => {
     show(axe())
     expect(screen.queryByText(/character\.inventory\.reach_bonus/)).toBeNull()
   })
+
+  it('shows xN next to any stack bigger than 1, weapons included', () => {
+    show(axe({ quantity: 4, name: 'Giavellotto' }))
+    expect(screen.getByText(/×4/)).toBeInTheDocument()
+  })
+
+  it('shows no xN for a single weapon', () => {
+    show(axe())
+    expect(screen.queryByText(/×1/)).toBeNull()
+  })
 })

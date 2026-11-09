@@ -33,6 +33,7 @@ import languagesSrd from '@/data/languages-srd.json'
 import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import EquipmentStep from '@/pages/creation/EquipmentStep'
+import { useEquipPicks } from '@/pages/creation/useEquipPicks'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
@@ -125,7 +126,9 @@ export default function CharacterSelect() {
   const [scoresSkipped, setScoresSkipped] = useState(false)
   const [pickBackground, setPickBackground] = useState(false)
   // Equipaggiamento di partenza: una alternativa per gruppo; null = saltato.
-  const [equipPicks, setEquipPicks] = useState<number[] | null>(null)
+  // Edizione delle regole del nuovo personaggio: guida competenze, equipaggiamento e rules_edition.
+  const [edition, setEdition] = useState<'2014' | '2024'>('2014')
+  const [equipPicks, setEquipPicks] = useEquipPicks(`${edition}:${selectedClass?.class_name ?? ''}`)
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
@@ -212,7 +215,7 @@ export default function CharacterSelect() {
     setScoresSkipped(false)
     setBackgroundSkills([])
     setPickBackground(false)
-    setEquipPicks(null)
+    setEdition('2014')
   }
 
   const handleNameNext = () => {
@@ -240,6 +243,7 @@ export default function CharacterSelect() {
   const handleCreate = (identity: IdentityPayload | null) => {
     const extras = {
       ...creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills }),
+      rules_edition: edition,
       ...(equipPicks && hasEquipmentStep ? { starting_equipment: equipPicks } : {}),
     }
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
@@ -255,7 +259,7 @@ export default function CharacterSelect() {
 
   const hasEquipmentStep = !!selectedClass && !isCustomSelected
   const afterAbilities = hasEquipmentStep ? 'equipment' : 'identity'
-  const classProf = useClassProficiencies('2014', selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
+  const classProf = useClassProficiencies(edition, selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
   const classSkillsIncomplete =
     !!selectedClass && !isCustomSelected &&
     (classProf.isLoading || (selectedClass.skills?.length ?? 0) !== (classProf.data?.skills_count ?? 0))
@@ -564,10 +568,36 @@ export default function CharacterSelect() {
                     ))}
                   </m.div>
 
+                  <div className="mb-3">
+                    <p className="text-xs text-dnd-text-muted font-body italic text-center mb-2">
+                      {t('character.create.edition_hint')}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['2014', '2024'] as const).map((ed) => (
+                        <Pressable
+                          key={ed}
+                          aria-pressed={edition === ed}
+                          onClick={() => {
+                            if (ed === edition) return
+                            setEdition(ed)
+                            // le abilità di classe offerte cambiano con l'edizione
+                            if (selectedClass && !isCustomSelected) setSelectedClass({ ...selectedClass, skills: [] })
+                          }}
+                          className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                            ${edition === ed
+                              ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                              : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+                        >
+                          {t(`character.settings.rules_edition.${ed}`)}
+                        </Pressable>
+                      ))}
+                    </div>
+                  </div>
+
                   {selectedClass && !isCustomSelected && (
                     <div className="mb-3">
                       <ClassSkillChoice
-                        edition="2014"
+                        edition={edition}
                         className={selectedClass.class_name}
                         asMulticlass={false}
                         value={selectedClass.skills ?? []}
@@ -715,7 +745,7 @@ export default function CharacterSelect() {
 
           {step === 'equipment' && selectedClass && (
             <m.div key="step-equipment" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <EquipmentStep edition="2014" className={selectedClass.class_name} picks={equipPicks} onPicks={setEquipPicks} />
+              <EquipmentStep edition={edition} className={selectedClass.class_name} picks={equipPicks} onPicks={setEquipPicks} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}

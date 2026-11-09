@@ -567,6 +567,7 @@ export const api = {
         species?: object
         skills?: Record<string, boolean>
         starting_equipment?: number[]
+        rules_edition?: '2014' | '2024'
       },
     ) =>
       request<CharacterFull>('/characters', {

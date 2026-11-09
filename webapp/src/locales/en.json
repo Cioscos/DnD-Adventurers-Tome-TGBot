@@ -2258,6 +2258,7 @@
       "roll_4d6": "Roll 4d6 (drop lowest)",
       "reroll": "Reroll",
       "step_equipment": "Equipment",
+      "edition_hint": "Rules edition for this character: it decides proficiencies and starting equipment.",
       "equipment_hint": "Class starting equipment: it goes into the inventory as ordinary items, to equip by hand.",
       "equipment_fixed": "Included",
       "equipment_skip": "Skip: no equipment",

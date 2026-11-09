@@ -2257,6 +2257,7 @@
       "roll_4d6": "Tira 4d6 (scarta il più basso)",
       "reroll": "Ritira",
       "step_equipment": "Equipaggiamento",
+      "edition_hint": "Edizione delle regole del personaggio: decide competenze ed equipaggiamento di partenza.",
       "equipment_hint": "Equipaggiamento di partenza della classe: finisce nell'inventario come oggetti normali, da equipaggiare a mano.",
       "equipment_fixed": "Incluso",
       "equipment_skip": "Salta: nessun equipaggiamento",

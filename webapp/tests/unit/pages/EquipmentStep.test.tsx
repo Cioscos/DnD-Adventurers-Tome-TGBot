@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useState } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, renderHook, act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import EquipmentStep from '@/pages/creation/EquipmentStep'
+import { useEquipPicks } from '@/pages/creation/useEquipPicks'
 
 const { startingEquipment } = vi.hoisted(() => ({ startingEquipment: vi.fn() }))
 
@@ -54,5 +55,17 @@ describe('EquipmentStep', () => {
     )
     await screen.findByText('character.create.equipment_none')
     expect(seen).not.toHaveBeenCalled()
+  })
+})
+
+describe('useEquipPicks', () => {
+  it('azzera le scelte quando cambia classe o edizione', () => {
+    const { result, rerender } = renderHook(({ k }) => useEquipPicks(k), { initialProps: { k: '2014:Guerriero' } })
+    act(() => result.current[1]([0, 1, 0, 1]))
+    expect(result.current[0]).toEqual([0, 1, 0, 1])
+    rerender({ k: '2014:Mago' })
+    expect(result.current[0]).toBeNull()
+    rerender({ k: '2014:Guerriero' })
+    expect(result.current[0]).toBeNull()
   })
 })

@@ -452,7 +452,7 @@ function InventoryItemInner({
           <p className="text-xs text-dnd-text-muted mt-0.5">
             {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
             {item.weight > 0 && ` · ${formatWeight(item.weight, system)}`}
-            {!hasSingleQuantity(item.item_type) && ` · ×${item.quantity}`}
+            {(!hasSingleQuantity(item.item_type) || item.quantity > 1) && ` · ×${item.quantity}`}
           </p>
         </div>
         <ExpandChevron open={isExpanded} className="ml-1 text-dnd-gold-dim" />
