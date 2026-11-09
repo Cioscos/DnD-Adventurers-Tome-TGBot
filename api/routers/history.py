@@ -32,7 +32,7 @@ async def _verify_ownership(char_id: int, user_id: int, session: AsyncSession) -
 async def get_history(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[CharacterHistory]:
     await _verify_ownership(char_id, user_id, session)
     result = await session.execute(
@@ -51,7 +51,7 @@ async def get_history(
 async def history_retention_preview(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     events: int = Query(100, ge=1, le=10000),
     days: int = Query(30, ge=1, le=3650),
 ) -> HistoryRetentionPreview:
@@ -90,7 +90,7 @@ async def history_retention_preview(
 async def clear_history(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _verify_ownership(char_id, user_id, session)
     await session.execute(

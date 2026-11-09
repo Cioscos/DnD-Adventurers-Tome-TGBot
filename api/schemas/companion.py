@@ -6,7 +6,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from api.schemas.common import D20Dice, RollMode
+from core.rules.companions import COMPANION_FEATURES, MAX_HIT_DICE, MAX_MULTIATTACK
+from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
 DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -32,6 +33,16 @@ def validate_statblock(sb: Any) -> dict:
         dt = a.get("damage_type")
         if dt is not None and not isinstance(dt, str):
             raise ValueError("damage_type must be a string")
+    # numeri che il server legge per la bestia del ranger (ordini, Dadi Vita): mai fidarsi del tipo
+    hd = sb.get("hit_dice")
+    if hd is not None:
+        m = DICE_RE.match(hd.strip()) if isinstance(hd, str) else None
+        if m is None or not 1 <= int(m.group(1)) <= MAX_HIT_DICE or not 2 <= int(m.group(2)) <= 100:
+            raise ValueError("hit_dice must be NdM")
+    for key, high in (("hit_dice_spent", MAX_HIT_DICE), ("multiattack", MAX_MULTIATTACK)):
+        v = sb.get(key)
+        if v is not None and (isinstance(v, bool) or not isinstance(v, int) or not 0 <= v <= high):
+            raise ValueError(f"{key} must be an integer between 0 and {high}")
     return sb
 
 
@@ -46,11 +57,22 @@ class CompanionCreate(BaseModel):
     armor_class: int = Field(default=10, ge=0, le=100)
     notes: Optional[str] = Field(default=None, max_length=5000)
     is_active: bool = False
+    feature_key: Optional[str] = Field(default=None, max_length=80)  # compagno di privilegio: PF e bonus dal livello
+    # Scuola dell'incantesimo che ha creato l'evocato (``conjuration``, ``necromancy``): non è una colonna, i privilegi del Mago
+    # (Evocazioni Perduranti, Servitori Non Morti) la leggono alla creazione
+    spell_school: Optional[Literal["conjuration", "necromancy"]] = None
 
     @field_validator("statblock", mode="before")
     @classmethod
     def _sb(cls, v):
         return validate_statblock(v)
+
+    @field_validator("feature_key")
+    @classmethod
+    def _feature(cls, v):
+        if v is not None and v not in COMPANION_FEATURES:
+            raise ValueError("unknown feature_key")
+        return v
 
 
 class CompanionUpdate(BaseModel):
@@ -87,23 +109,69 @@ class CompanionRead(BaseModel):
     notes: Optional[str] = None
     is_active: bool
     created_at: str
+    feature_key: Optional[str] = None
+    attack_bonus_extra: int = 0  # compagno di privilegio: si somma al bonus dello statblock
+    damage_bonus_extra: int = 0
+    save_dc: Optional[int] = None  # Investitura del Padrone delle Catene: la CD del warlock per i TS del famiglio
+    fly_or_swim_m: int = 0  # idem: volo o nuoto a scelta, in metri
+    damage_type_options: list[str] = []  # idem: necrotico o radioso al posto dei danni fisici
+    can_resist: bool = False  # idem: resistenza in reazione (``resist`` su PATCH /hp)
     down: bool = False  # set by the hp endpoint: 0 HP means "a terra" (no death saves)
+    concentration_save: Optional[ConcentrationSaveResult] = None  # danno alla forma attiva: il TS del personaggio
 
 
 class CompanionActivate(BaseModel):
     force: bool = False  # activate even with no Wild Shape uses left
 
 
+class WildHealRequest(BaseModel):
+    slot_level: int = Field(ge=1, le=9)  # Forma Selvatica da Combattimento: il livello dello slot da spendere
+
+
+class WildHealResult(BaseModel):
+    companion: CompanionRead
+    slot_level: int
+    rolls: list[int]
+    healed: int  # PF che la forma ha recuperato davvero (il massimo della forma non si supera)
+
+
 class CompanionHp(BaseModel):
     op: Literal["damage", "heal", "set_temp"]
     value: int = Field(ge=0, le=100_000)
+    resist: bool = False  # Investitura del Padrone delle Catene: reazione del warlock, il famiglio resiste (metà danno)
 
 
-class CompanionAttack(BaseModel):
+class CompanionAttack(RollOptionsBody):
     action_index: int = Field(ge=0)
+    reaction: bool = False  # la reazione della bestia del ranger (attacco di opportunità) non ha bisogno di un ordine
     mode: RollMode = "normal"
     dice: D20Dice | None = None
     damage_rolls: Optional[list[int]] = Field(default=None, max_length=100)
+    bonus: bool = False  # Investitura del Padrone delle Catene: l'attacco è ordinato con l'azione bonus del warlock
+    damage_type: Optional[Literal["necrotic", "radiant"]] = None  # idem: al posto di contundente, perforante o tagliente
+
+
+class CompanionCommand(BaseModel):
+    """Ordine del ranger alla bestia compagna: con l'azione, o con l'azione bonus (Addestramento Straordinario)."""
+    command: Literal["attack", "help", "disengage", "dash", "dodge"]
+    bonus: bool = False
+
+
+class CompanionCommandResult(BaseModel):
+    command: str
+    bonus: bool
+    attacks_left: int  # attacchi che la bestia può ancora fare in questo turno
+
+
+class HitDiceRequest(BaseModel):
+    count: int = Field(default=1, ge=1, le=20)
+
+
+class HitDiceResult(BaseModel):
+    companion: CompanionRead
+    rolls: list[int]
+    healed: int  # PF che la bestia ha recuperato davvero (il massimo non si supera)
+    hit_dice_left: int
 
 
 class CompanionAttackResult(BaseModel):
@@ -112,7 +180,11 @@ class CompanionAttackResult(BaseModel):
     to_hit_total: int
     dice: list[int]
     mode: RollMode
+    notes: list[str] = []
     is_critical: bool
     damage_rolls: list[int]
     damage_total: int
     damage_type: Optional[str] = None
+    is_magical: bool = False  # Colpo Primordiale: l'attacco in forma bestiale conta come magico per resistenze e immunità
+    option_result: OptionResult | None = absent_when_none()
+    reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server

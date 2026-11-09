@@ -33,7 +33,7 @@ async def test_milestone_level_up_without_xp(client):
     assert body["experience_points"] == 0
     assert body["hit_points"] == 10 + 3 * 6
     # ASI choices still created on the milestone path (Task 21)
-    assert [c["level"] for c in body["pending_choices"]] == [4]
+    assert [c["level"] for c in body["pending_choices"] if c["kind"] == "asi"] == [4]
 
 
 async def test_milestone_xp_does_not_change_level(client):
@@ -94,7 +94,7 @@ async def test_update_class_level_recalculates_hp(client):
     assert body["current_hit_points"] == 22
     r = await client.patch(f"/characters/{cid}/classes/{gid}", json={"level": 4, "hp_rolls": [9]})
     assert r.json()["hit_points"] == 22 + 9
-    assert [c["level"] for c in r.json()["pending_choices"]] == [4]
+    assert [c["level"] for c in r.json()["pending_choices"] if c["kind"] == "asi"] == [4]
 
 
 async def test_xp_mode_unchanged(client):

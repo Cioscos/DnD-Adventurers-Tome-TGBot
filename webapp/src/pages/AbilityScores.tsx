@@ -4,7 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, m } from 'framer-motion'
 import { toast } from 'sonner'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
+import RollResultModal, { type RollResult } from '@/components/RollResultModal'
+import { askRollOptions, canRerollInspiration, refreshAfterOptions } from '@/lib/rollOptions'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useDiceSettings } from '@/store/diceSettings'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import Layout from '@/components/Layout'
 import Reveal from '@/components/ui/Reveal'
 import { haptic } from '@/auth/telegram'
@@ -27,6 +33,11 @@ export default function AbilityScores() {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [rollState, setRollState] = useState<{ result: RollResult; ability: string; wasRerolled: boolean } | null>(null)
+  const rollD20 = useD20Roll()
+  const dice = useDiceAnimation()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -50,6 +61,39 @@ export default function AbilityScores() {
     },
     onError: () => {
       notifyMutationError()
+    },
+  })
+
+  // Prova pura: modificatore, nessuna competenza; opzioni al tiro e ritiro con l'Ispirazione come per le abilità.
+  const rollMutation = useMutation({
+    mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
+      const choice = await askRollOptions(charId, { roll: 'ability', ability })
+      return { result: await api.characters.rollAbilityCheck(charId, ability, d20Arg(mode, await rollD20(mode), choice)), ability }
+    },
+    onSuccess: ({ result, ability }) => {
+      refreshAfterOptions(qc, charId, result.option_result)
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+      setRollState({ result: { ...result, description: undefined }, ability, wasRerolled: false })
+      haptic.success()
+    },
+    onError: () => notifyMutationError(),
+  })
+  const rerollMutation = useMutation({
+    mutationFn: async (ability: string) => {
+      let die: number | undefined
+      if (animate3d && !reducedMotion) die = (await dice.playAndCollect([{ kind: 'd20', count: 1 }]))[0]?.value
+      return api.characters.rollAbilityCheck(charId, ability, die, true)
+    },
+    onSuccess: (result) => {
+      setRollState((prev) => prev && { ...prev, result: { ...result, description: undefined }, wasRerolled: true })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.inspiration.unavailable_error'))
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      } else haptic.error()
     },
   })
 
@@ -85,6 +129,8 @@ export default function AbilityScores() {
               expanded={expanded === score.name}
               onToggle={() => setExpanded((p) => (p === score.name ? null : score.name))}
               onEdit={() => setEditing(score.name)}
+              onRoll={(mode) => rollMutation.mutate({ ability: score.name, mode })}
+              rolling={rollMutation.isPending && rollMutation.variables?.ability === score.name}
             />
             <AnimatePresence initial={false}>
               {expanded === score.name && (
@@ -119,6 +165,19 @@ export default function AbilityScores() {
           />
         )
       })()}
+
+      {rollState && (
+        <RollResultModal
+          result={rollState.result}
+          title={`${t('character.stats.check_title')}: ${t(`character.stats.${rollState.ability}`)}`}
+          inspirationAvailable={canRerollInspiration(char)}
+          isRerolling={rerollMutation.isPending}
+          wasRerolled={rollState.wasRerolled}
+          onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
+          afterRoll={{ charId, query: { roll: 'ability', ability: rollState.ability } }}
+          onClose={() => setRollState(null)}
+        />
+      )}
     </Layout>
   )
 }

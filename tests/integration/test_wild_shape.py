@@ -45,7 +45,7 @@ async def test_wild_shape_activation_spends_use(client, test_session_factory):
     assert await _uses(test_session_factory, cid) == 1
     full = (await client.get(f"/characters/{cid}")).json()
     assert full["active_form"] == {"companion_id": f["id"], "name": "Orso", "current_hp": 10,
-                                   "max_hp": 10, "temp_hp": 0, "armor_class": 11}
+                                   "max_hp": 10, "temp_hp": 0, "armor_class": 11, "own_hp": True}
     # activating another deactivates the previous one
     g = await _form(client, cid, hp=6)
     assert (await _activate(client, cid, g["id"])).status_code == 200

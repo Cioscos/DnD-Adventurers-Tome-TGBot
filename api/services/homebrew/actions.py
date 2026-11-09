@@ -286,6 +286,10 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
 
     before = char.current_hit_points
     char.current_hit_points = max(0, char.current_hit_points - amount)
+    from api.services.rules_states import on_damage  # import locale: evita il ciclo fra servizi
+    on_damage(char, gross)
+    from api.services.effects import sync_zero_hp  # import locale: effects importa il dispatcher homebrew
+    await sync_zero_hp(session, char, before == 0)
     await session.flush()
 
     # Re-emit events with depth+1; existing stack + this rule's id.
@@ -315,8 +319,10 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     # Use effective max HP (base + passive homebrew modifier) as the heal cap.
     from api.services.homebrew.passive import get_passive_modifiers
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    effective_max = char.hit_points + hb_hp_bonus
-    char.current_hit_points = min(effective_max, char.current_hit_points + amount)
+    from core.rules.modifiers import effective_hp_max
+    await session.refresh(char, attribute_names=["classes", "items"])  # /turn-start non carica le relazioni
+    effective_max = effective_hp_max(char, hb_hp_bonus)
+    char.current_hit_points = max(before, min(effective_max, char.current_hit_points + amount))
     actual = char.current_hit_points - before
 
     # D&D 5e rule: HP above 0 resets death saves (per CLAUDE.md "HEAL/SET_CURRENT
@@ -324,6 +330,8 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     if before == 0 and char.current_hit_points > 0:
         char.death_save_successes = 0
         char.death_save_failures = 0
+    from api.services.effects import sync_zero_hp  # import locale: effects importa il dispatcher homebrew
+    await sync_zero_hp(session, char, before == 0)
 
     await session.flush()
 
@@ -486,6 +494,8 @@ async def execute_apply_modifier_once(action, ctx, rfr, session, char, **kw):
         char.hit_points = max(0, char.hit_points + delta)
         # Clamp current HP to new max
         char.current_hit_points = min(char.current_hit_points, char.hit_points)
+        from api.services.effects import cap_current_hp  # import locale: effects usa il dispatcher
+        await cap_current_hp(session, char)
     elif target == "character.speed":
         char.speed = max(0, char.speed + delta)
     else:

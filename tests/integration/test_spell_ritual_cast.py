@@ -34,14 +34,18 @@ async def _fighter(client) -> int:
 
 
 async def _add_spell(client, cid: int, *, name="Rito", level=1,
-                     is_ritual=True, is_concentration=False) -> int:
+                     is_ritual=True, is_concentration=False, in_book=True) -> int:
     r = await client.post(
         f"/characters/{cid}/spells",
         json={"name": name, "level": level, "is_ritual": is_ritual,
               "is_concentration": is_concentration},
     )
     assert r.status_code == 201, r.text
-    return r.json()["id"]
+    sid = r.json()["id"]
+    if in_book:  # il Mago celebra i rituali dal libro: l'incantesimo ci sta già
+        await client.patch(f"/characters/{cid}/currency", json={"gold": 1000})
+        assert (await client.post(f"/characters/{cid}/spells/{sid}/copy", json={"mode": "copy"})).status_code in (200, 422)
+    return sid
 
 
 async def test_ritual_cast_leaves_slots_untouched(client):
@@ -59,8 +63,8 @@ async def test_ritual_cast_leaves_slots_untouched(client):
 async def test_ritual_cast_works_without_matching_slot(client):
     # Rituale di 5° su un Mago L3 (nessuno slot di 5°): lanciabile comunque.
     cid = await _wizard(client)
-    sid = await _add_spell(client, cid, level=5)
-    r = await client.post(f"/characters/{cid}/spells/{sid}/use", json={"as_ritual": True})
+    sid = await _add_spell(client, cid, level=5, in_book=False)  # troppo alto per il libro: si conferma, come ogni rituale fuori dal libro
+    r = await client.post(f"/characters/{cid}/spells/{sid}/use", json={"as_ritual": True, "confirm": ["ritual_unprepared"]})
     assert r.status_code == 200, r.text
 
 

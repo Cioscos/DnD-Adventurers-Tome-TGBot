@@ -28,7 +28,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
   const carryCap = char.carry_capacity
   const overload = encumbrance > carryCap
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
+  const speedTotal = char.computed?.speed ?? (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
 
   const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
   const carryFormula = char.carry_capacity_override

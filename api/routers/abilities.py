@@ -47,7 +47,7 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
 async def list_abilities(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[Ability]:
     char = await _get_owned_full(char_id, user_id, session)
     return char.abilities
@@ -58,7 +58,7 @@ async def add_ability(
     char_id: int,
     body: AbilityCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Ability:
     await _get_owned_full(char_id, user_id, session)
     ability = Ability(character_id=char_id, **body.model_dump())
@@ -73,7 +73,7 @@ async def update_ability(
     ability_id: int,
     body: AbilityUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> AbilityRead:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
@@ -102,6 +102,8 @@ async def update_ability(
     if ability.uses is not None:
         floor = max(0, ability.uses)
         ability.uses = floor if ability.max_uses is None else min(floor, ability.max_uses)
+        if ability.is_class_feature and ability.max_uses is None:  # illimitata: nessun contatore
+            ability.uses = None
     await session.flush()
 
     notifications: list[dict] = []
@@ -138,7 +140,7 @@ async def delete_ability(
     char_id: int,
     ability_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _get_owned_full(char_id, user_id, session)
     result = await session.execute(

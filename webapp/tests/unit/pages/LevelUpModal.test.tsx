@@ -81,8 +81,8 @@ describe('LevelUpModal', () => {
 
   it('renders a selector button per class with its current level', () => {
     renderWithProviders(<LevelUpModal char={char()} xpLevel={6} onClose={vi.fn()} />)
-    expect(screen.getByText('wizard')).toBeInTheDocument()
-    expect(screen.getByText('fighter')).toBeInTheDocument()
+    expect(screen.getByText('dnd.classes.wizard')).toBeInTheDocument()
+    expect(screen.getByText('dnd.classes.fighter')).toBeInTheDocument()
   })
 
   it('confirming distributes a +1 to the default (first) class, others unchanged', async () => {
@@ -103,7 +103,7 @@ describe('LevelUpModal', () => {
   it('selecting another class redirects the +1 to it', async () => {
     distributeSpy.mockResolvedValue({ id: 5, hp_gained: 0, classes: [] })
     renderWithProviders(<LevelUpModal char={char()} xpLevel={6} onClose={vi.fn()} />)
-    await userEvent.click(screen.getByText('fighter'))
+    await userEvent.click(screen.getByText('dnd.classes.fighter'))
     await userEvent.click(screen.getByRole('button', { name: 'character.multiclass.level_up.confirm' }))
     await waitFor(() =>
       expect(distributeSpy).toHaveBeenCalledWith(5, [

@@ -6,19 +6,33 @@ import logging
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import telegram_notify
-from api.services.d20 import resolve_d20
+from api.routers._helpers import initiative_bonus
+from api.services.d20 import d20_records, resolve_body, resolve_d20, spend_inspiration_reroll
 from api.services.dice_stats import record_dice
+from api.services.effects import apply_heal
+from api.services.rules_options import (
+    LAST_ROLL_FIELDS,
+    merge_options,
+    option_result,
+    remember_roll,
+    roll_option_dice,
+    use_options,
+)
 from core.db.models import Character, CharacterHistory
-from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
+from core.rules.modifiers import modifiers_for
+from api.schemas.common import (
+    D20Dice, DiceResultEntry, DiceResultRequest, DiceRollResult, RollMode, RollOptionsBody, RollResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +63,94 @@ _RANGES_PER_KIND = {
 }
 
 
+def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list[int], total: int, modifier: int,
+              source: str, label: str | None, with_inspiration: bool = False) -> None:
+    """Storico dei dadi e feed generale, così il tiro compare anche in /history."""
+    history = list(char.rolls_history or [])
+    history.append({
+        "notation": notation,
+        "rolls": rolls,
+        "total": total,
+        "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
+        "source": source,
+        "label": label,
+    })
+    char.rolls_history = history[-_MAX_HISTORY:]
+    flag_modified(char, "rolls_history")
+
+    if len(rolls) > 1:
+        rolls_str = "+".join(str(r) for r in rolls)
+        description = f"🎲 {notation}: [{rolls_str}] = {total}"
+    else:
+        description = f"🎲 {notation}: {total}"
+    if label:
+        description = f"{label}: {description}"
+    if with_inspiration:
+        description = f"Reroll ispirazione: {description}"
+    session.add(CharacterHistory(
+        character_id=char.id,
+        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
+        event_type="dice_roll",
+        description=description,
+        meta={"notation": notation, "rolls": rolls, "total": total, "modifier": modifier},
+    ))
+
+
+class InitiativeSubmission(RollOptionsBody):
+    """Facce lette dai dadi 3D (senza, tira il server) ed etichetta tradotta per lo storico."""
+    die: int | None = Field(default=None, ge=1, le=20)
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
+    label: str | None = Field(default=None, max_length=120)
+
+
+@router.post("/{char_id}/dice/initiative", response_model=RollResult)
+async def roll_character_initiative(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    body: Annotated[InitiativeSubmission | None, Body()] = None,
+) -> RollResult:
+    """Iniziativa fuori da un incontro: stesso bonus della scheda, modo e note come gli altri tiri."""
+    await _get_owned(char_id, user_id, session)
+    char = (await session.execute(
+        select(Character)
+        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores),
+                 selectinload(Character.abilities), selectinload(Character.spell_slots))
+        .where(Character.id == char_id)
+        .execution_options(populate_existing=True)
+    )).scalar_one()
+    applied = modifiers_for(char, "initiative", ability="dexterity")
+    opts = use_options(session, char, "initiative", body, ability="dexterity")
+    merge_options(applied, opts)
+    if opts.self_heal:  # Metabolismo Prodigioso: la cura passa dal percorso comune (massimo, tiri salvezza morte, storico)
+        await apply_heal(session, char, opts.self_heal)
+    bonus = await initiative_bonus(session, char) + opts.bonus
+    outcome = resolve_body(body, applied)
+    die = outcome.kept
+    option_rolls, option_total = roll_option_dice(char, opts)
+    total = die + bonus + option_total
+    keep = {"advantage": "kh1", "disadvantage": "kl1"}.get(outcome.mode, "")
+    record_dice(char, d20_records(outcome))
+    _log_roll(session, char, f"{len(outcome.dice)}d20{keep}{bonus:+d}", outcome.dice, total, bonus, "init",
+              body.label if body else None)
+    await session.flush()
+    result = RollResult(
+        die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
+        auto_fail=applied.auto_fail, bonus=bonus, total=total,
+        is_critical=die == 20 and not applied.auto_fail, is_fumble=die == 1, description="initiative",
+        option_result=option_result(opts, option_rolls, option_total),
+    )
+    remember_roll(char, "initiative", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS), ability="dexterity")
+    return result
+
+
 @router.post("/{char_id}/dice/result", response_model=DiceRollResult)
 async def post_dice_result(
     char_id: int,
     body: DiceResultRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> DiceRollResult:
     # validate ranges
     for entry in body.rolls:
@@ -86,40 +182,11 @@ async def post_dice_result(
     char = await _get_owned(char_id, user_id, session)
 
     if body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
-    history = list(char.rolls_history or [])
-    history.append({
-        "notation": notation,
-        "rolls": rolls,
-        "total": total,
-        "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
-        "source": body.source or "manual",
-        "label": body.label,
-    })
-    char.rolls_history = history[-_MAX_HISTORY:]
-    flag_modified(char, "rolls_history")
     record_dice(char, [(e.kind, e.value) for e in body.rolls])
-
-    # Log to CharacterHistory (general events feed) so the roll appears in /history.
-    if len(rolls) > 1:
-        rolls_str = "+".join(str(r) for r in rolls)
-        description = f"🎲 {notation}: [{rolls_str}] = {total}"
-    else:
-        description = f"🎲 {notation}: {total}"
-    if body.label:
-        description = f"{body.label}: {description}"
-    if body.with_inspiration:
-        description = f"Reroll ispirazione: {description}"
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-        event_type="dice_roll",
-        description=description,
-        meta={"notation": notation, "rolls": rolls, "total": total, "modifier": body.modifier},
-    ))
+    _log_roll(session, char, notation, rolls, total, body.modifier, body.source or "manual", body.label,
+              body.with_inspiration)
 
     await session.flush()
     logger.info(
@@ -134,7 +201,7 @@ async def post_dice_result(
 async def get_dice_history(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[DiceRollResult]:
     char = await _get_owned(char_id, user_id, session)
     history = list(char.rolls_history or [])
@@ -162,7 +229,7 @@ async def post_dice_to_chat(
     char_id: int,
     body: DicePostToChatRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Send a dice roll result to the user's private Telegram chat.
 
@@ -195,7 +262,7 @@ async def post_dice_to_chat(
 async def clear_dice_history(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
     char.rolls_history = []
@@ -205,7 +272,7 @@ async def clear_dice_history(
 async def get_dice_stats(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Contatori cumulativi raw {kind: {faccia: conteggio}}; il FE deriva il resto."""
     char = await _get_owned(char_id, user_id, session)
@@ -216,7 +283,7 @@ async def get_dice_stats(
 async def reset_dice_stats(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
     char.dice_stats = {}

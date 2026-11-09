@@ -33,9 +33,12 @@ import { ContainerFields } from './ContainerForm'
 import { defaultContainer, roundLb, type ContainerFormValue } from '@/lib/containers'
 import type { Item } from '@/types'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
+import { WEAPON_KINDS } from '@/data/weaponMastery'
 
 interface ItemFormProps {
   initialData?: Item | null
+  /** L'arma base serve alla maestria: esiste solo nel 2024. */
+  edition?: string
   onSubmit: (data: ItemFormData) => void
   onCancel: () => void
   isPending: boolean
@@ -43,7 +46,7 @@ interface ItemFormProps {
 
 type WizardStep = 'type' | 'base' | 'advanced'
 
-export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
+export default function ItemForm({ initialData, edition, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const toast = useToast()
@@ -331,6 +334,23 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                 ))}
               </div>
             </div>
+
+            {edition === '2024' && (
+              <div>
+                <label htmlFor="base-weapon" className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                  {t('character.inventory.base_weapon_label')}
+                </label>
+                <select
+                  id="base-weapon"
+                  value={form.base_weapon}
+                  onChange={(e) => setForm((f) => ({ ...f, base_weapon: e.target.value }))}
+                  className="w-full min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm font-body text-dnd-text focus:border-dnd-gold/60 focus:outline-none"
+                >
+                  <option value="">{t('character.inventory.base_weapon_auto')}</option>
+                  {WEAPON_KINDS.map((w) => <option key={w.key} value={w.key}>{w[lang]} · {w.mastery}</option>)}
+                </select>
+              </div>
+            )}
           </>
         )}
 

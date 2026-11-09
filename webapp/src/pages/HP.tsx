@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,36 +10,35 @@ import {
   GiHeartPlus as Heart,
 } from 'react-icons/gi'
 import { toast } from 'sonner'
-import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
+import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type RollOption } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
-import ConfirmSheet from '@/components/ui/ConfirmSheet'
-import RestPreviewList from '@/components/character/RestPreviewList'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import HpOperationForm from '@/pages/hp/HpOperationForm'
 import DeathSaves from '@/pages/hp/DeathSaves'
-import HitDiceModal from '@/pages/hp/HitDiceModal'
-import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
+import RestDialogs from '@/components/character/RestDialogs'
+import { useRest } from '@/hooks/useRest'
 import DeadState from '@/pages/hp/DeadState'
 import InstantDeathDialog from '@/pages/hp/InstantDeathDialog'
 import type { CharacterFull } from '@/types'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
-import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
+import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
+import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { hpNumeralTone } from '@/lib/hpTone'
-import { applyDamageModifier, damageMultiplier, type DamageModifier } from '@/lib/damageModifier'
+import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -57,10 +57,10 @@ export default function HP() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
-  const rollDice = useAnimatedRoll()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
+  const [knockOut, setKnockOut] = useState(false)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [damageType, setDamageType] = useState('')
   const [instantDeathOpen, setInstantDeathOpen] = useState(false)
@@ -70,15 +70,18 @@ export default function HP() {
   // AbilityScores.tsx. Without it every Conferma sent 2 identical PATCH /hp (finding #1).
   const savingRef = useRef(false)
 
-  const [showShortRest, setShowShortRest] = useState(false)
-  const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
-  const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
+  // Reazioni che l'ultimo danno ha aperto (Ritorsione): si propongono con l'attacco in un tocco.
+  const [reactions, setReactions] = useState<RollOption[]>([])
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
+  })
+  const rest = useRest(charId, char)
+  const offers = useReactionOffers({
+    charId, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
   })
   // Pop del valore solo quando CAMBIA, non all'ingresso nella pagina.
   const isFirstValue = useIsFirstValue(char)
@@ -100,23 +103,40 @@ export default function HP() {
   }
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, val, wasCritical, modifier }: {
+    mutationFn: async ({ op, val, wasCritical, modifier }: {
       op: HPOp; val: number; wasCritical?: boolean
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
-    }) =>
-      modifier
-        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, modifier)
-        : api.characters.updateHp(charId, op, val, wasCritical ?? false),
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; knock_out?: boolean }
+    }) => {
+      const choice = op === 'damage'
+        ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in')
+        : undefined
+      const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
+      return withOptions
+        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, withOptions)
+        : api.characters.updateHp(charId, op, val, wasCritical ?? false)
+    },
     onSuccess: (updated, { op, val }) => {
       qc.setQueryData(['character', charId], updated)
+      setReactions(op === 'damage' ? updated.reactions ?? [] : [])
+      if (updated.option_result) {
+        refreshAfterOptions(qc, charId, updated.option_result)
+        if (updated.option_result.damage_before != null && updated.option_result.damage_after != null) { // senza riduzione il server non li manda
+          toast.info(t('character.roll_options.damage_changed', {
+            before: updated.option_result.damage_before, after: updated.option_result.damage_after,
+          }))
+        }
+      }
       // HP events (damage/heal) can drive homebrew change_resource rules (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setValue('')
       setCrit(false)
+      setKnockOut(false)
       setDamageModifier(null)
       setDamageType('')
       haptic.success()
       maybeShowInstantDeath(updated)
+      const zeroSave = zeroHpSaveMessage(updated, t)
+      if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
       const conc = updated.concentration_save
       if (conc) {
         setConcSaveResult(conc)
@@ -128,7 +148,7 @@ export default function HP() {
       // Stesso annullamento per scorciatoie e valore scritto a mano.
       const undoId = updated.hp_undo_id
       if (!undoId) return
-      const base = t(UNDO_MESSAGE_KEYS[op], { n: val })
+      const base = t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? val })
       const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
       showUndoToast({
         message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
@@ -151,6 +171,7 @@ export default function HP() {
       // I dialog raccontavano l'operazione appena annullata.
       setInstantDeathOpen(false)
       setConcSaveResult(null)
+      setReactions([])  // la reazione era del danno annullato
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
@@ -159,17 +180,6 @@ export default function HP() {
       } else {
         notifyMutationError()
       }
-    },
-  })
-
-  const restMutation = useMutation({
-    mutationFn: (restType: 'long' | 'short') =>
-      api.characters.rest(charId, restType),
-    onSuccess: (updated) => {
-      qc.setQueryData(['character', charId], updated)
-      // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
-      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
-      haptic.success()
     },
   })
 
@@ -183,24 +193,14 @@ export default function HP() {
   })
 
   const deathRollMutation = useMutation({
-    mutationFn: async (mode: RollMode) =>
-      api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode))),
+    mutationFn: async (mode: RollMode) => {
+      const choice = await askRollOptions(charId, { roll: 'death_save' })
+      return api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode), choice))
+    },
     onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
-      haptic.success()
-    },
-  })
-
-  const hitDiceMutation = useMutation({
-    mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
-      const hitDie = char?.classes.find((c) => c.id === classId)?.hit_die
-      const rolls = await rollDice(`d${hitDie ?? 8}`, count)
-      return api.characters.spendHitDice(charId, classId, count, rolls)
-    },
-    onSuccess: (result) => {
-      setHitDiceResult(result)
-      qc.invalidateQueries({ queryKey: ['character', charId] })
+      refreshAfterOptions(qc, charId, result.option_result)
       haptic.success()
     },
   })
@@ -217,14 +217,18 @@ export default function HP() {
   // Il modificatore vale solo per il danno: `val` è già il valore applicato, il grezzo
   // viaggia come annotazione.
   const runHpMutation = (op: HPOp, raw: number, wasCritical: boolean) => {
-    const type = damageType ? { damage_type: damageType } : {}
+    // Tramortire vale per il solo danno che porta a 0 PF: il server lo ignora altrimenti.
+    const type = {
+      ...(damageType ? { damage_type: damageType } : {}),
+      ...(op === 'damage' && knockOut ? { knock_out: true } : {}),
+    }
     if (op === 'damage' && damageModifier) {
       // Override dell'utente: il client applica il moltiplicatore, il server annota (e azzera se immune).
       hpMutation.mutate({
         op, val: applyDamageModifier(raw, damageModifier), wasCritical,
         modifier: { damage_modifier: damageModifier, raw_value: raw, ...type },
       })
-    } else if (op === 'damage' && damageType) {
+    } else if (op === 'damage' && (damageType || knockOut)) {
       // Nessun override: il server applica le resistenze del personaggio al tipo.
       hpMutation.mutate({ op, val: raw, wasCritical, modifier: type })
     } else {
@@ -259,11 +263,10 @@ export default function HP() {
   const isDying = atZero && !ds.stable && !isDead
   const concentrating = isConcentrating(char)
   const concentrationName = concentrationLabel(char)
-  const classes = char.classes ?? []
   const hbHp = char.hp_max_homebrew_modifier ?? 0
-  const hpMax = char.hit_points + hbHp
+  const hpMax = char.computed?.hp_max_effective ?? char.hit_points + hbHp
   // In forma selvatica il numero grande e la barra sono quelli della forma (come in Eroe).
-  const form = char.active_form ?? null
+  const form = char.active_form?.own_hp === false ? null : char.active_form ?? null // 2024: i PF sono del druido
   const shownHp = form ? form.current_hp : char.current_hit_points
   const shownMax = form ? form.max_hp : hpMax
   const shownTemp = form ? form.temp_hp : char.temp_hp
@@ -409,13 +412,18 @@ export default function HP() {
           atZero={atZero}
           crit={crit}
           setCrit={setCrit}
+          knockOut={knockOut}
+          setKnockOut={setKnockOut}
+          canKnockOut={char.current_hit_points > 0}
           damageModifier={damageModifier}
           setDamageModifier={setDamageModifier}
           damageType={damageType}
           setDamageType={setDamageType}
-          proposedModifier={damageMultiplier(char.damage_modifiers, damageType)}
+          proposedModifier={damageMultiplier(effectiveDamageMods(char), damageType)}
         />
       )}
+
+      {offers.card}
 
       {/* Rest buttons — nascosti da morto */}
       {!isDead && (
@@ -424,8 +432,8 @@ export default function HP() {
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={() => setShowShortRest(true)}
-          loading={restMutation.isPending}
+          onClick={rest.openShort}
+          loading={rest.pending}
           icon={<Campfire size={18} />}
           haptic="medium"
         >
@@ -435,8 +443,8 @@ export default function HP() {
           variant="secondary"
           size="lg"
           fullWidth
-          onClick={() => setShowLongRestConfirm(true)}
-          loading={restMutation.isPending}
+          onClick={rest.openLong}
+          loading={rest.pending}
           icon={<Moon size={18} />}
           haptic="success"
         >
@@ -445,52 +453,13 @@ export default function HP() {
       </div>
       )}
 
-      <ConfirmSheet
-        open={showLongRestConfirm}
-        onClose={() => setShowLongRestConfirm(false)}
-        onConfirm={() => {
-          setShowLongRestConfirm(false)
-          restMutation.mutate('long')
-        }}
-        title={t('character.hp.long_rest_confirm_title')}
-        body={
-          <div className="space-y-3">
-            <p>{t('character.hp.long_rest_confirm_body')}</p>
-            {showLongRestConfirm && <RestPreviewList charId={charId} restType="long" />}
-          </div>
-        }
-        confirmLabel={t('character.hp.long_rest_confirm_action')}
-        confirmVariant="primary"
-        loading={restMutation.isPending}
-      />
-
-      {/* Hit dice modal */}
-      {showShortRest && (
-        <HitDiceModal
-          classes={classes}
-          onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
-          onConfirmRest={() => {
-            restMutation.mutate('short')
-            setShowShortRest(false)
-          }}
-          onClose={() => setShowShortRest(false)}
-          isPending={hitDiceMutation.isPending}
-          pendingClassId={hitDiceMutation.isPending ? hitDiceMutation.variables?.classId : undefined}
-          restPending={restMutation.isPending}
-        />
-      )}
-
-      {hitDiceResult && (
-        <HitDiceResultDialog
-          result={hitDiceResult}
-          onClose={() => setHitDiceResult(null)}
-        />
-      )}
+      {char && <RestDialogs char={char} rest={rest} />}
 
       {deathRollResult && (
         <DeathSaveResultDialog
           result={deathRollResult}
           onClose={() => setDeathRollResult(null)}
+          afterRoll={{ charId }}
         />
       )}
 
@@ -498,8 +467,10 @@ export default function HP() {
         <ConcentrationSaveDialog
           result={concSaveResult}
           onClose={() => setConcSaveResult(null)}
+          afterRoll={{ charId }}
         />
       )}
+      {offers.elements}
       <InstantDeathDialog open={instantDeathOpen} onClose={() => setInstantDeathOpen(false)} />
     </Layout>
   )

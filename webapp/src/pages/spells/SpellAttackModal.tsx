@@ -1,3 +1,5 @@
+import type React from 'react'
+import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,6 +13,8 @@ import D20Faces from '@/components/ui/D20Faces'
 import type { SpellAttackResult } from '@/types'
 
 type Props = {
+  /** Serve al bersaglio delle opzioni del lancio. */
+  charId?: number
   result: SpellAttackResult
   /** L'incantesimo ha un dado del danno: mostra "Tira danni" (mai su un 1 naturale). */
   canRollDamage: boolean
@@ -20,10 +24,13 @@ type Props = {
   isRerolling?: boolean
   wasRerolled?: boolean
   onInspirationReroll?: () => void | Promise<void>
+  /** Riga dei privilegi usati dopo aver visto il d20. */
+  afterRollRow?: React.ReactNode
 }
 
 /** Esito del tiro per colpire di un incantesimo d'attacco (modellato su WeaponAttackModal). */
 export default function SpellAttackModal({
+  charId,
   result,
   canRollDamage,
   onRollDamage,
@@ -32,13 +39,15 @@ export default function SpellAttackModal({
   isRerolling = false,
   wasRerolled = false,
   onInspirationReroll,
+  afterRollRow,
 }: Props) {
   const { t } = useTranslation()
   const { spell_name, to_hit_die, dice, mode, to_hit_bonus, to_hit_total, is_critical, is_fumble, caster_class } = result
 
   const bonusStr = `${to_hit_bonus >= 0 ? '+' : '-'}${Math.abs(to_hit_bonus)}`
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
-  const showDamage = canRollDamage && !is_fumble
+  // Raddoppiato: il 1 naturale di un bersaglio non toglie il tiro dei danni all'altro.
+  const showDamage = canRollDamage && (!is_fumble || (!!result.twinned_attack && !result.twinned_attack.is_fumble))
   const showInspirationButton = inspirationAvailable && !wasRerolled && onInspirationReroll != null
   const toHitColor = is_critical
     ? 'text-dnd-gold-bright'
@@ -69,6 +78,7 @@ export default function SpellAttackModal({
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
       extraActions={
         <div className="space-y-2">
+          {afterRollRow}
           {showInspirationButton && (
             <InspirationRerollButton available pending={isRerolling} onClick={onInspirationReroll} />
           )}
@@ -97,6 +107,12 @@ export default function SpellAttackModal({
         </p>
       )}
 
+      {result.forced_hit && (
+        <p className="text-dnd-emerald-bright font-bold font-cinzel uppercase tracking-wider">
+          {t('character.roll_options.forced_hit')}
+        </p>
+      )}
+      <RollNotes notes={result.notes} charId={charId} optionResult={result.cast_option_result} />
       <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
         initial={{ opacity: 0, y: 10 }}
@@ -113,6 +129,25 @@ export default function SpellAttackModal({
           {to_hit_total}
         </p>
       </m.div>
+      {result.twinned_attack && (
+        <div className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3">
+          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
+            {t('character.spells.twinned_attack')}
+          </p>
+          <p className="text-xs text-dnd-text-muted font-body tabular-nums">
+            <D20Faces die={result.twinned_attack.die} dice={result.twinned_attack.dice} mode={(result.twinned_attack.mode ?? 'normal') as typeof mode} /> {bonusStr}
+          </p>
+          <p className={`text-2xl font-black font-display mt-1 tabular-nums ${result.twinned_attack.is_critical ? 'text-dnd-gold-bright' : result.twinned_attack.is_fumble ? 'text-dnd-crimson-bright' : 'text-dnd-text'}`}>
+            {result.twinned_attack.total}
+          </p>
+          {result.twinned_attack.is_critical && (
+            <p className="text-xs font-bold font-cinzel uppercase tracking-wider text-dnd-gold-bright">{t('character.dice.critical_banner')}</p>
+          )}
+          {result.twinned_attack.is_fumble && (
+            <p className="text-xs font-bold font-cinzel uppercase tracking-wider text-dnd-crimson-bright">{t('character.dice.fumble_banner')}</p>
+          )}
+        </div>
+      )}
     </ResultDialog>
   )
 }

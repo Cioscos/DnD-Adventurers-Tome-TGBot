@@ -1,6 +1,8 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { classSummary } from '@/lib/classLabel'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { m } from 'framer-motion'
 import { CircleDot, HeartPulse, SlidersHorizontal } from 'lucide-react'
@@ -26,6 +28,7 @@ import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import YourTurnBanner from '@/components/character/YourTurnBanner'
 import QuickActions from '@/components/character/QuickActions'
 import ActiveFormBanner from '@/components/character/ActiveFormBanner'
+import ActiveStatesBar from '@/components/rules/ActiveStatesBar'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
 import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
 import { DeathSaveTracker } from '@/pages/hp/DeathSaves'
@@ -69,11 +72,14 @@ export default function HeroScreen({ char }: Props) {
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
   const deathRollMutation = useMutation({
-    mutationFn: async (mode: RollMode) =>
-      api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode))),
+    mutationFn: async (mode: RollMode) => {
+      const choice = await askRollOptions(char.id, { roll: 'death_save' })
+      return api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode), choice))
+    },
     onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      refreshAfterOptions(qc, char.id, result.option_result)
       haptic.success()
     },
   })
@@ -85,9 +91,11 @@ export default function HeroScreen({ char }: Props) {
 
   const form = char.active_form ?? null
   // In forma selvatica la barra PF e la CA mostrano quelle della forma.
-  const hpMax = form ? form.max_hp : char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
-  const hpCurrent = form ? form.current_hp : char.current_hit_points
-  const tempHp = form ? form.temp_hp : char.temp_hp
+  // Nel 2024 la forma non ha PF propri: barra e PF temporanei restano quelli del personaggio.
+  const ownForm = form?.own_hp === false ? null : form
+  const hpMax = ownForm ? ownForm.max_hp : char.computed?.hp_max_effective ?? char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  const hpCurrent = ownForm ? ownForm.current_hp : char.current_hit_points
+  const tempHp = ownForm ? ownForm.temp_hp : char.temp_hp
   const acTotal = form ? form.armor_class : char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
   const unitSystem = useUnitSettings((s) => s.system)
   const encumbranceTotal = char.encumbrance_total ?? char.encumbrance
@@ -131,7 +139,7 @@ export default function HeroScreen({ char }: Props) {
           className="block w-full text-left pr-14 min-h-[44px]"
           aria-label={t('character.identity.title', { defaultValue: 'Identity' })}
         >
-          <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
+          <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{classSummary(t, char.classes ?? [])}</p>
           {char.race && (
             <p className="text-xs text-dnd-text-muted font-body">{char.race}</p>
           )}
@@ -177,6 +185,7 @@ export default function HeroScreen({ char }: Props) {
         )}
 
         {form && <ActiveFormBanner charId={char.id} form={form} />}
+        <ActiveStatesBar char={char} />
 
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">
@@ -322,7 +331,7 @@ export default function HeroScreen({ char }: Props) {
                 <StatPill
                   key={key}
                   icon={<Icon size={14} />}
-                  value={formatCondition(key, val, t)}
+                  value={formatCondition(key, val, t, char.rules_edition)}
                   tone="crimson"
                   size="sm"
                   expandHitArea
@@ -431,6 +440,7 @@ export default function HeroScreen({ char }: Props) {
               ? ((char.conditions as Record<string, unknown>)['exhaustion'] as number)
               : 0
           }
+          edition={char.rules_edition}
           onClose={() => setDetailCondKey(null)}
         />
       )}
@@ -442,7 +452,7 @@ export default function HeroScreen({ char }: Props) {
         />
       )}
       {deathRollResult && (
-        <DeathSaveResultDialog result={deathRollResult} onClose={() => setDeathRollResult(null)} />
+        <DeathSaveResultDialog result={deathRollResult} onClose={() => setDeathRollResult(null)} afterRoll={{ charId: char.id }} />
       )}
       <HpQuickSheet char={char} open={hpSheetOpen} onClose={() => setHpSheetOpen(false)} />
       <HeroLayoutSheet char={char} open={layoutSheetOpen} onClose={() => setLayoutSheetOpen(false)} />

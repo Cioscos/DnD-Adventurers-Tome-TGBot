@@ -41,6 +41,11 @@ def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
 
 # Columns to ensure on existing tables: (table, column, DDL type, default)
 _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
+    ("combatants", "surprised", "BOOLEAN NOT NULL", "0"),
+    ("combatants", "extra_turn_of", "INTEGER", None),
+    ("condition_effects", "pending", "BOOLEAN NOT NULL", "0"),
+    ("condition_effects", "immunity_key", "VARCHAR(100)", None),
+    ("condition_effects", "also_slugs", "VARCHAR(200)", None),
     # Spell extended properties
     ("spells", "casting_time", "VARCHAR(100)", None),
     ("spells", "range_area", "VARCHAR(100)", None),
@@ -54,10 +59,14 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "school", "VARCHAR(30)", None),
     ("spells", "srd_index", "VARCHAR(80)", None),
     ("spells", "higher_levels_dice", "VARCHAR(20)", None),
+    ("spells", "extra_damage_dice", "VARCHAR(20)", None),
+    ("spells", "extra_damage_type", "VARCHAR(100)", None),
     # Character concentration tracking
     ("characters", "concentrating_spell_id", "INTEGER REFERENCES spells(id) ON DELETE SET NULL", None),
     # CharacterClass subclass
     ("character_classes", "subclass", "VARCHAR(100)", None),
+    ("character_classes", "subclass_key", "VARCHAR(50)", None),
+    ("character_classes", "options", "JSON", None),
     # Conditions feature
     ("characters", "conditions", "TEXT", None),
     # Skills feature
@@ -122,6 +131,11 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "carry_capacity_override", "BOOLEAN", "0"),
     # Unarmored Defense — second ability ('wisdom'/'constitution'); NULL = disabled
     ("characters", "unarmored_defense_ability", "VARCHAR(20)", None),
+    # Edizione delle regole seguita dal personaggio (2014 | 2024)
+    ("characters", "rules_edition", "VARCHAR(4)", "'2014'"),
+    ("characters", "turn_state", "JSON", None),
+    ("characters", "active_states", "JSON", None),
+    ("characters", "last_long_rest_at", "VARCHAR(50)", None),
     # Custom paper-doll silhouette (E4)
     ("characters", "silhouette_path", "VARCHAR(500)", None),
     ("session_participants", "dice_stats_start", "JSON", None),
@@ -133,9 +147,15 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("abilities", "is_class_feature", "BOOLEAN", "0"),
     ("abilities", "feature_key", "VARCHAR(100)", None),
     ("abilities", "action_type", "VARCHAR(20)", None),
+    ("abilities", "short_rest_recovers", "INTEGER", None),
     # Incantesimi preparati — backfill legacy a 1 (preparato): nulla cambia per
     # i personaggi esistenti finché l'utente non gestisce la preparazione.
     ("spells", "is_prepared", "BOOLEAN", "1"),
+    ("spells", "class_id", "INTEGER REFERENCES character_classes(id) ON DELETE SET NULL", None),
+    ("spells", "always_prepared", "BOOLEAN", "0"),
+    # Libro del Mago: gli incantesimi che c'erano prima sono già nel libro (backfill a 1), la copia di riserva no
+    ("spells", "in_spellbook", "BOOLEAN", "1"),
+    ("spells", "in_backup", "BOOLEAN", "0"),
     # Statistiche cumulative dei tiri (contatori per faccia, per tipo di dado)
     ("characters", "dice_stats", "JSON", None),
     # Snapshot per l'annullamento dell'ultima operazione PF
@@ -146,6 +166,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("character_classes", "hit_dice_used", "INTEGER NOT NULL", "0"),
     # Snapshot per annullare l'ultimo avanzamento di turno
     ("encounters", "last_advance_undo", "JSON", None),
+    # Compagno concesso da un privilegio (PF e bonus dal livello)
+    ("companions", "feature_key", "VARCHAR(80)", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)
@@ -218,6 +240,26 @@ def _rebuild_spell_slots_for_pact(connection) -> None:
     connection.execute(text("ALTER TABLE spell_slots_new RENAME TO spell_slots"))
 
 
+def _backfill_subclass_keys(connection) -> None:
+    """Riconosce le sottoclassi gia' scritte: imposta `subclass_key` senza mai toccare `subclass` (idempotente)."""
+    from core.rules.subclasses import match_subclass
+    from core.data.spell_slots import normalize_class_name
+
+    try:
+        rows = connection.execute(text(
+            "SELECT cc.id, cc.class_name, cc.subclass, c.rules_edition FROM character_classes cc "
+            "JOIN characters c ON c.id = cc.character_id "
+            "WHERE cc.subclass IS NOT NULL AND cc.subclass_key IS NULL"
+        )).fetchall()
+        for cid, cname, sub, ed in rows:
+            key = match_subclass(sub, normalize_class_name(cname), ed if ed in ("2014", "2024") else "2014")
+            if key:
+                connection.execute(text("UPDATE character_classes SET subclass_key = :k WHERE id = :id"),
+                                   {"k": key, "id": cid})
+    except Exception as exc:
+        logger.warning("Backfill character_classes.subclass_key failed: %s", exc)
+
+
 def _migrate_schema(connection) -> None:
     """Add missing columns, drop legacy columns/tables (idempotent)."""
     _rebuild_spell_slots_for_pact(connection)
@@ -242,6 +284,8 @@ def _migrate_schema(connection) -> None:
             logger.info("Migrating: %s", ddl)
             connection.execute(text(ddl))
             column_cache[table].add(column)
+
+    _backfill_subclass_keys(connection)
 
     # Ad-hoc index for whisper filter queries
     try:
@@ -490,6 +534,33 @@ def _migrate_condition_state(connection) -> None:
         s.commit()
 
 
+def _seed_proficiencies(connection) -> None:
+    """Una tantum (`settings.proficiencies_seeded`): competenze delle classi in aggiunta a quelle esistenti."""
+    from sqlalchemy.orm import Session
+
+    from core.db.models import Character
+    from core.rules.proficiencies import SEEDED_FLAG, seed_character
+
+    with Session(bind=connection) as s:
+        for char in s.query(Character).all():
+            if not (char.settings or {}).get(SEEDED_FLAG):
+                seed_character(char)
+        s.commit()
+
+
+def _migrate_armor_class(connection) -> None:
+    """Una tantum (`settings.ac_migrated`): la CA mostrata non cambia salvo le basi copiate dalla vecchia logica."""
+    from sqlalchemy.orm import Session
+
+    from core.db.models import Character
+    from core.game.stats import migrate_character_ac
+
+    with Session(bind=connection) as s:
+        for char in s.query(Character).all():
+            migrate_character_ac(char)
+        s.commit()
+
+
 async def init_db() -> None:
     """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -499,6 +570,8 @@ async def init_db() -> None:
         await conn.run_sync(_migrate_class_resources_to_abilities)
         await conn.run_sync(_backfill_ability_action_types)
         await conn.run_sync(_migrate_condition_state)
+        await conn.run_sync(_seed_proficiencies)
+        await conn.run_sync(_migrate_armor_class)
 
 
 @asynccontextmanager

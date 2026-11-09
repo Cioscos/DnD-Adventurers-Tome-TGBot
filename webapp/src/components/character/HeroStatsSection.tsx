@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
@@ -9,7 +10,7 @@ import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
-import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
+import { d20Arg, useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
 import { api } from '@/api/client'
 import { LEDGER_LABEL, LEDGER_ROW } from '@/styles/ledger'
@@ -60,12 +61,29 @@ export default function HeroStatsSection({ char }: Props) {
   const passivePerception =
     char.passives?.perception ??
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
-  const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
+  // I sensi scritti a mano e quelli dati da un privilegio (Percezione Cieca): per ogni tipo vale la portata maggiore.
+  const senses = [...((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? []), ...(char.computed?.senses ?? [])]
     .filter((s) => s.range_ft > 0)
-  const otherSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
+    .reduce<{ type: string; range_ft: number }[]>((acc, s) => {
+      const seen = acc.find((x) => x.type === s.type)
+      if (seen) seen.range_ft = Math.max(seen.range_ft, s.range_ft)
+      else acc.push({ ...s })
+      return acc
+    }, [])
+  // Bonus al salto in lungo con rincorsa (Lavoro al Secondo Piano): c'è solo con il privilegio.
+  const longJumpBonus = char.computed?.long_jump_bonus_ft
+  const storedSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
+  // Volo, scalare e nuotare dati da un privilegio (Aquila in ira, Pantera, Salmone) valgono la velocità a terra, salvo una
+  // velocità dello stesso tipo già scritta e più alta.
+  const granted = [['fly', char.computed?.fly_speed], ['climb', char.computed?.climb_speed], ['swim', char.computed?.swim_speed]] as const
+  const otherSpeeds = granted.reduce(
+    (acc, [type, range]) => (range && range > 0 && !acc.some((s) => s.type === type && s.range_ft >= range)
+      ? [...acc.filter((s) => s.type !== type), { type, range_ft: range }] : acc),
+    storedSpeeds,
+  )
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
+  const speedTotal = char.computed?.speed ?? (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
 
   // Proficient saving throws with their total bonus (same math as SavingThrows.tsx).
@@ -73,7 +91,7 @@ export default function HeroStatsSection({ char }: Props) {
   const profSaves = ABILITY_ORDER.filter((a) => saves[a]).map((a) => ({
     key: a,
     label: t(`character.ability.${a}_short`, { defaultValue: a.slice(0, 3).toUpperCase() }),
-    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0) + (char.saves_items_modifiers?.[a] ?? 0),
+    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0) + (char.saves_items_modifiers?.[a] ?? 0) + (char.computed?.save_flat?.[a] ?? 0),
   }))
 
   // Skill proficiency counts (only keys actually set on the character).
@@ -92,34 +110,16 @@ export default function HeroStatsSection({ char }: Props) {
 
   const initiativeMutation = useMutation({
     mutationFn: async (mode: RollMode) => {
-      // Il client tira (con animazione 3D se attiva), il BE persiste nello storico.
-      const n = mode === 'normal' ? 1 : 2
-      const faces = (await rollD20(mode)) ?? Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20))
-      const value = mode === 'advantage' ? Math.max(...faces) : mode === 'disadvantage' ? Math.min(...faces) : faces[0]
-      const keep = mode === 'advantage' ? 'kh1' : mode === 'disadvantage' ? 'kl1' : ''
-      const notation = `${n}d20${keep}${initBonus >= 0 ? '+' : ''}${initBonus}`
-      await api.dice.result(char.id, {
-        rolls: faces.map((v) => ({ kind: 'd20' as const, value: v })),
-        modifier: initBonus,
-        notation,
-        label: t('character.hero.initiative'),
-        mode,
-      })
-      return { value, faces, mode }
+      // Facce dai dadi 3D se attivi; modo finale, bonus e storico li decide il server.
+      const choice = await askRollOptions(char.id, { roll: 'initiative' })
+      return api.dice.initiative(char.id, d20Arg(mode, await rollD20(mode), choice), t('character.hero.initiative'))
     },
-    onSuccess: ({ value, faces, mode }) => {
+    onSuccess: (result) => {
+      refreshAfterOptions(qc, char.id, result.option_result)
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
       qc.invalidateQueries({ queryKey: ['history', char.id] })
-      setInitResult({
-        die: value,
-        dice: faces,
-        mode,
-        bonus: initBonus,
-        total: value + initBonus,
-        is_critical: value === 20,
-        is_fumble: value === 1,
-      })
+      setInitResult(result)
       haptic.success()
     },
   })
@@ -231,6 +231,13 @@ export default function HeroStatsSection({ char }: Props) {
         </p>
       )}
 
+      {longJumpBonus != null && (
+        <p className="mt-1.5 text-xs font-body text-dnd-text-muted text-center">
+          <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.hero.long_jump_bonus')}</span>
+          {': +'}{formatLength(longJumpBonus, unitSystem)}
+        </p>
+      )}
+
       {otherSpeeds.length > 0 && (
         <p className="mt-1.5 text-xs font-body text-dnd-text-muted text-center">
           <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.identity.speed')}</span>
@@ -279,6 +286,7 @@ export default function HeroStatsSection({ char }: Props) {
           result={initResult}
           title={t('character.hero.initiative')}
           onClose={() => setInitResult(null)}
+          afterRoll={{ charId: char.id, query: { roll: 'initiative' } }}
         />
       )}
     </div>

@@ -90,6 +90,7 @@ async def test_value_out_of_range_is_400(client):
 
 async def test_with_inspiration_consumes_the_token(client):
     cid = await _create_character(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     await _grant_inspiration(client, cid)
     r = await client.post(
         f"/characters/{cid}/dice/result",

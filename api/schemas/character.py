@@ -14,13 +14,18 @@ from api.schemas.common import (
     CharacterClassCreate,
     CharacterClassRead,
     ConcentrationSaveResult,
+    ZeroHpSaveResult,
     ConsumableUseResult,
+    OptionResult,
+    absent_when_none,
     CurrencyRead,
     MapRead,
     RollMode,
 )
+from core.rules.types import Edition
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.container import CoinLocationRead
+from api.schemas.rules import RollOptionRead
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
 
@@ -33,6 +38,28 @@ class AcBreakdown(BaseModel):
     magic: int
     homebrew: int
     items: int = 0
+    rules: int = 0
+
+
+class ComputedStats(BaseModel):
+    """Valori derivati dalle regole (condizioni, privilegi) sommati a homebrew e oggetti."""
+
+    speed: int = 30
+    hp_max_effective: int = 0
+    resistances: list[str] = []
+    immunities: list[str] = []
+    vulnerabilities: list[str] = []
+    incapacitated: bool = False
+    surprised: bool = False  # 2014: è il turno della sorpresa
+    surprise_exit_features: list[str] = []  # da sorpreso: i privilegi il cui «Usa» permette di agire (Ira)
+    save_flat: dict[str, int] = {}
+    fly_speed: Optional[int] = None  # volo concesso da un privilegio: pari alla velocità a terra (Aquila in ira) o fisso (Angelo Vendicatore)
+    climb_speed: Optional[int] = None  # scalare concesso da un privilegio, pari alla velocità a terra (Pantera)
+    swim_speed: Optional[int] = None  # nuotare concesso da un privilegio, pari alla velocità a terra (Salmone)
+    senses: list[dict[str, Any]] = []  # sensi dati da un privilegio (Percezione Cieca): la scheda mostra il maggiore fra questi e i suoi
+    attunement_limit: int = 3  # sintonie ammesse: 4 con Usare Dispositivi Magici (Furfante 2024)
+    scroll_casting: bool = False  # può lanciare dalle pergamene (Usare Dispositivi Magici)
+    long_jump_bonus_ft: Optional[int] = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); assente senza il privilegio
 
 
 class SpellCasterStats(BaseModel):
@@ -45,6 +72,23 @@ class SpellCasterStats(BaseModel):
     attack_bonus: int
 
 
+class ClassSpellLimits(BaseModel):
+    """Limiti di una classe e quanti ne ha assegnati. ``None``: il limite non vale per questa classe."""
+
+    class_id: int
+    class_name: str
+    cantrips_count: int = 0
+    cantrips_limit: Optional[int] = None
+    known_count: int = 0
+    known_limit: Optional[int] = None
+    prepared_count: int = 0
+    prepared_limit: Optional[int] = None
+    # Cavaliere Mistico: scuole ammesse, quanti incantesimi conosciuti possono essere di altre scuole e quanti lo sono
+    school_names: Optional[list[str]] = None
+    school_free_limit: Optional[int] = None
+    school_outside_count: int = 0
+
+
 class SpellcastingInfo(BaseModel):
     """Blocco derivato: preparazione incantesimi + capacità rituali (spec 2026-06-10)."""
 
@@ -53,8 +97,17 @@ class SpellcastingInfo(BaseModel):
     prepared_count: int = 0
     cap_mode: str = "auto"
     has_ritual_caster: bool = False
+    ritual_only_spell_ids: list[int] = []  # concessi da un privilegio come soli rituali (Cercatore di Spiriti)
     has_wizard: bool = False
     casters: list[SpellCasterStats] = []
+    limits: list[ClassSpellLimits] = []
+
+
+class ClassBrief(BaseModel):
+    class_name: str
+    level: int
+    subclass: Optional[str] = None
+    model_config = {"from_attributes": True}
 
 
 class CharacterSummary(BaseModel):
@@ -70,9 +123,11 @@ class CharacterSummary(BaseModel):
     ac: int
     total_level: int
     class_summary: str
+    classes: list[ClassBrief] = []  # il client traduce i nomi: class_summary li ha grezzi
     heroic_inspiration: bool = False
     experience_points: int = 0
     hp_max_homebrew_modifier: int = 0
+    hp_max_effective: Optional[int] = None
     ac_homebrew_modifier: int = 0
     ac_items_modifier: int = 0
     is_dead: bool = False
@@ -87,6 +142,7 @@ class ActiveForm(BaseModel):
     max_hp: int
     temp_hp: int
     armor_class: int
+    own_hp: bool = True  # 2014: la forma ha PF propri; 2024: PF del druido con i temporanei
 
 
 class CharacterFull(BaseModel):
@@ -114,15 +170,19 @@ class CharacterFull(BaseModel):
     shield_armor_class_override: bool = False
     # Unarmored Defense second ability ('wisdom'/'constitution'); None = disabled.
     unarmored_defense_ability: Optional[str] = None
+    # Caratteristiche della formula senza armatura in vigore (privilegio o interruttore).
+    unarmored_formula: Optional[list[str]] = None
     ac: int
 
     # Homebrew passive-modifier breakdown (populated by router after model_validate)
     ac_breakdown: Optional[AcBreakdown] = None
     hp_max_homebrew_modifier: int = 0
+    hp_max_effective: Optional[int] = None
     speed_homebrew_modifier: int = 0
     speed_items_modifier: int = 0
     # DEX effective mod + item initiative bonus (+ homebrew initiative, Task 21)
     initiative_bonus: int = 0
+    computed: ComputedStats = ComputedStats()
     skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     # Server-computed totals shared by rolls and the sheet (skill_bonus / passive_score).
@@ -153,8 +213,12 @@ class CharacterFull(BaseModel):
     # Meta
     experience_points: int = 0
     heroic_inspiration: bool = False
+    inspiration_extra: bool = False  # 2024: ricevuta un'altra mentre se ne aveva già una, da cedere o persa
+    hiding_dc: Optional[int] = None  # 2024: CD per trovarlo mentre è nascosto (totale di Furtività)
     spell_slots_mode: str = "manual"
+    rules_edition: Edition = "2014"
     concentrating_spell_id: Optional[int] = None
+    active_states: Optional[list[dict[str, Any]]] = None
 
     # Populated only by PATCH /xp when a level-up occurs
     hp_gained: Optional[int] = None
@@ -162,14 +226,23 @@ class CharacterFull(BaseModel):
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
 
+    # Populated only by PATCH /hp when the damage brings the character to 0 HP under a ``zero_hp_save`` feature
+    zero_hp_save: Optional[ZeroHpSaveResult] = None
+
     # Active wild shape form (populated by build_character_response); FE shows its AC/HP.
     active_form: Optional[ActiveForm] = None
 
     # Populated only by PATCH /hp: id dell'operazione annullabile via POST /hp/undo
     hp_undo_id: Optional[str] = None
 
+    # Populated only by PATCH /hp dopo un danno: le reazioni che il danno ha aperto (Ritorsione), da proporre subito
+    reactions: list[RollOptionRead] = []
+
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None
+
+    # Populated only by POST /rest con Resilienza Celestiale: chi ha ricevuto PF temporanei (name, given, temp_hp, applied).
+    temp_received: list[dict] = []
 
     # Populated only by POST /rounds/tick: labels of effects that just expired.
     expired_effects: Optional[list[str]] = None
@@ -179,6 +252,11 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /items/{id}/use (consumable use result).
     consumable_use: Optional[ConsumableUseResult] = None
+    option_result: OptionResult | None = absent_when_none()
+    # POST /spells/{id}/use: l'incantesimo ha dadi di danno che il server non sa tirare (si lancia lo stesso, senza danno)
+    damage_unrollable: bool = False
+    # POST /spells/{id}/use: esiti delle condizioni tolte (Task 48), nelle due lingue
+    removal_result: list[dict[str, str]] | None = absent_when_none()
 
     has_custom_silhouette: bool = False
 
@@ -307,6 +385,10 @@ class CharacterCreate(BaseModel):
     initial_class: Optional[CharacterClassCreate] = None
     # Optional identity — applied in the same transaction (see create_character).
     identity: Optional[CharacterIdentityCreate] = None
+    # Edizione del personaggio (default 2014) e scelta dell'equipaggiamento di partenza della classe:
+    # una alternativa per gruppo (vedi GET /rules/starting-equipment). Richiede initial_class.
+    rules_edition: Edition = "2014"
+    starting_equipment: Optional[list[int]] = None
 
 
 class CharacterUpdate(BaseModel):
@@ -322,6 +404,7 @@ class CharacterUpdate(BaseModel):
     general_proficiencies: Optional[list[str] | dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
+    rules_edition: Optional[Edition] = None
     settings: Optional[dict[str, Any]] = None
 
     @field_validator("name")
@@ -388,10 +471,14 @@ class SpellAttackResult(BaseModel):
     to_hit_die: int
     dice: list[int] = []
     mode: RollMode = "normal"
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool
     is_fumble: bool
     caster_class: Optional[str] = None
+    cast_option_result: OptionResult | None = absent_when_none()
+    twinned_attack: dict | None = absent_when_none()  # Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio
     character: CharacterFull
     homebrew_notifications: Optional[list[dict]] = None

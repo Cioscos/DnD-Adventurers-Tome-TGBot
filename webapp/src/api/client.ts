@@ -23,6 +23,7 @@ import type {
   StashMoveRequest,
   DdbImportResult,
   ResolveChoiceBody,
+  ClassOptionsState,
   CharacterSummary,
   CombatantPatch,
   GmConditionApply,
@@ -50,6 +51,10 @@ import type {
   SessionRecap,
   CampaignStash,
   TurnState,
+  TurnBlock,
+  TurnSlot,
+  ActiveState,
+  FeatureUseResult,
   PendingSaveRollResult,
   GameSessionLive,
   HistoryEntry,
@@ -60,11 +65,16 @@ import type {
   NoteCampaign,
   ParticipantIdentity,
   RollDamageRequest,
+  RollHealingRequest,
+  RollHealingResult,
   RollDamageResult,
   SpellAttackRequest,
   SpellAttackResult,
   Companion,
   CompanionAttackResult,
+  WildHealResult,
+  BeastCommand,
+  HitDiceResult,
   CompanionPayload,
   SessionFeedResponse,
   SessionMessage,
@@ -76,22 +86,197 @@ import type {
 
 export type RollMode = 'normal' | 'advantage' | 'disadvantage'
 
+/** Come si copia un incantesimo nel Libro del Mago. */
+export type SpellCopyMode = 'copy' | 'backup' | 'retranscribe'
+export interface SpellCopyCost { hours: number; gold: number; halved: boolean }
+
 /** Legacy single die (number) or the new `{dice, mode}` pair; omit values and the server rolls. */
-export type D20Roll = number | { dice?: number[]; mode?: RollMode }
+export type D20Roll = number | ({ dice?: number[]; mode?: RollMode } & Partial<RollChoice>)
 
 function d20Fields(roll: D20Roll | undefined): Record<string, unknown> {
-  return typeof roll === 'object' ? { dice: roll.dice, mode: roll.mode } : { die: roll }
+  return typeof roll === 'object' ? { ...roll } : { die: roll }
+}
+
+// Conferma al tiro (GET /characters/{id}/roll-options)
+export type RollOptionPhase = 'before' | 'after_roll' | 'after_hit' | 'after_damage' | 'damage_in'
+
+export type RollOption = {
+  key: string
+  phase: RollOptionPhase
+  label: string
+  source: string
+  dice: string | null
+  bonus: number | null
+  mode: 'advantage' | 'disadvantage' | null
+  multiplier: number | null
+  once_per_turn: boolean
+  slot: string | null
+  needs: string | null
+  requires_input: 'slot' | 'recover' | null
+  /** PF temporanei per un PG della serata: il giocatore sceglie a chi (senza scelta resta l'esito scritto). */
+  gives_to_ally?: boolean
+  input_options: { level: number; available: number; dice: string | null }[]
+  auto_fail: boolean
+  cost: { feature_key: string | null; amount: number; spell_slot_min: number | null } | null
+  /** Una sola opzione del gruppo per richiesta. */
+  group: string | null
+  /** Quante opzioni del gruppo si scelgono insieme (assente: una). */
+  group_max?: number | null
+  /** Dadi tolti all'opzione indicata da `needs`. */
+  dice_cost: number
+  /** Solo `after_roll`: cosa fa al tiro già visto. */
+  after?: 'add' | 'reroll' | 'succeed' | null
+  /** Si rimborsa se il giocatore dichiara il tiro fallito. */
+  pay_if_success?: boolean
+  /** Si arma con ogni mancato dichiarato, anche col pulsante «Mancato». */
+  on_miss?: boolean
+  /** Portento: il d20 si sceglie fra questi valori salvati. */
+  saved_dice?: number[]
+  /** Solo `after_damage`: quanti dadi di danno ritirare; `keep_rolled`: solo al massimo, il nuovo si somma. */
+  reroll_limit?: number | null
+  keep_rolled?: boolean
+  /** Lancio a distanza senz'armi (Deviare Proiettili): mai con l'arma impugnata. */
+  ranged_unarmed?: boolean
+  /** L'attacco che apre non è dell'azione Attacco (Colpi Agili, Raffica di Colpi): non pesa sul suo limite, come uno slot proprio. */
+  outside_action?: boolean
+  /** Scelta prima del tiro, apre opzioni dopo il colpo che ora non sono in elenco: il danno aspetta. */
+  defers_damage?: boolean
+}
+
+/** Un risultato della tabella degli Impulsi di Magia Selvaggia (d100). */
+export type WildSurgeEntry = { roll: number; lo: number; hi: number; label: string; name: { it: string; en: string }; text: { it: string; en: string } }
+
+/** Esito di `POST /wild-magic/surge`: `pending` = Caos Controllato, due risultati fra cui scegliere. */
+export type WildSurgeResult = {
+  die: number | null
+  triggered: boolean
+  pending: boolean
+  options: WildSurgeEntry[]
+  applied: (WildSurgeEntry & {
+    healed: number
+    ignored?: boolean
+    slot_level: number | null
+    points: boolean
+    extra_action: boolean
+    dc: number | null
+    state: { key: string; rounds_left: number | null } | null
+    damage: { dice: string; type: string; rolls: number[]; total: number } | null
+    extra_roll: { dice: string; rolls: number[]; total: number } | null
+  }) | null
+  tides_restored: boolean
+}
+
+export type RollOptionsQuery = {
+  casting_level?: number
+  /** Solo `cast`: lancio senza slot (gratuito o rituale), dove Magia Ammaliante non vale. */
+  slotless?: boolean
+  roll: 'attack' | 'spell_damage' | 'spell_healing' | 'weapon_damage' | 'skill' | 'ability' | 'save' | 'initiative' | 'damage_taken' | 'death_save' | 'cast'
+  item_id?: number
+  attack_mode?: string
+  grip?: string
+  spell_id?: number
+  ability?: string
+  skill?: string
+  damage_type?: string
+  /** Solo `damage_taken`: il danno che sta per essere inserito, per le opzioni che valgono solo se porta a 0 PF. */
+  damage?: number
+}
+
+/** Corpo di POST /spells/{id}/use: `slot_id` sceglie il pool, `confirm` le regole accettate dal giocatore. */
+export type SpellUseBody = Partial<RollChoice> & {
+  slot_id?: number
+  slot_level?: number | null
+  as_ritual?: boolean
+  /** Senza slot: lo autorizza uno stato attivo sul server (Lettura del Pensiero). */
+  free_cast?: boolean
+  /** Coi punti ki di un privilegio invece di uno slot; `ki_extra` ne aggiunge, uno per livello dell'incantesimo in più. */
+  ki?: boolean
+  ki_extra?: number
+  confirm?: string[]
+  /** Togliere condizioni (Task 48): `"self"`, l'id di un PG della serata o `"other"`; `conditions` assente se toglie tutto. */
+  removal?: { targets: (number | string)[]; conditions?: string[] }
+}
+
+export type RollChoice = {
+  options: string[]
+  option_inputs: Record<string, { slot_level: number } | { die: number } | { declared_only: number } | { target_character_id: number }>
+  defer_damage?: boolean
+  /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato, ritira con l'ispirazione o usa un'opzione. */
+  outcome?: 'miss' | 'reroll' | 'after_roll'
+  after_option?: RollOption
+  /** Solo lato client (mai inviato): una delle opzioni scelte ha uno slot di turno proprio (Frenesia, Ritorsione). */
+  own_slot?: boolean
+  /** Solo lato client: una delle opzioni scelte è il lancio a distanza senz'armi (le opzioni da mischia non valgono). */
+  ranged?: boolean
+}
+
+export type TargetEffect = {
+  condition: string | null
+  save_ability: string | null
+  save_dc: number | null
+  rounds: number | null
+  ends_at: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number } | null
+  on_failure_only: boolean
+  damage_dice: string | null
+  /** Altre condizioni che arrivano insieme alla prima, con lo stesso TS e la stessa durata (Sguardo Ipnotico). */
+  also?: string[]
+  /** Se il bersaglio porta già la condizione da te, la durata si rinnova senza un nuovo TS. */
+  extends?: boolean
+  /** Chi supera il TS non è più bersaglio di questo effetto fino al tuo prossimo riposo lungo. */
+  immune_on_success?: boolean
+  /** Il TS si ripete a inizio o fine turno del bersaglio (Collera della Natura). */
+  repeat_save?: 'start' | 'end' | null
+  /** Chiave del testo che il foglio traduce: ciò che il GM chiude o applica a mano. */
+  note?: string | null
+}
+
+export type TargetEffectPreview = {
+  result: TargetEffect
+  combatants: { id: number; name: string; kind: 'pc' | 'monster'; immune?: boolean }[]
+}
+
+export type TargetEffectResult = {
+  applied: boolean
+  result: TargetEffect
+  target_name: string | null
+  pending_save_id: number | null
+}
+
+export type OptionResult = {
+  keys: string[]
+  extra_rolls: number[]
+  extra_total: number
+  bonus: number
+  multiplier: number
+  spent: string[]
+  /** Danno a parte: non scala col moltiplicatore e non si somma ai dadi extra. */
+  separate_rolls?: number[]
+  separate_total?: number
+  /** Esiti da mostrare al giocatore (CD, durata). */
+  effects?: { it: string; en: string }[]
+  /** Opzioni con un effetto da applicare a un combattente dell'incontro. */
+  targets?: string[]
+  /** Secondo tiro per colpire dell'opzione, fatto dal server. */
+  second_die?: number | null
+  second_total?: number | null
+  damage_before?: number | null
+  damage_after?: number | null
+  /** Danno tenuto a 1 PF: i PF persi davvero (il toast non dice il colpo intero). */
+  hp_lost?: number | null
 }
 
 export type RollResult = {
   die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
+  auto_fail?: boolean
   bonus: number
   total: number
   is_critical: boolean
   is_fumble: boolean
   description?: string
+  option_result?: OptionResult
 }
 
 export type GrantItemPayload = {
@@ -120,6 +305,7 @@ export type WeaponAttackResult = {
   to_hit_die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
   to_hit_bonus: number
   to_hit_total: number
   is_critical: boolean
@@ -132,6 +318,36 @@ export type WeaponAttackResult = {
   damage_total: number
   ammo?: { item_id: number; name: string; remaining: number } | null
   ammo_missing?: boolean
+  option_result?: OptionResult
+  /** Dadi bassi che un privilegio ha fatto ritirare, `[vecchio, nuovo]` (Combattere con Armi Possenti). */
+  rerolled?: [number, number][]
+  /** Attacco in sospeso: il danno finale passa da `attackDamage`. */
+  attack_id?: string
+  /** Colpo a segno per un privilegio, qualunque sia il d20. */
+  forced_hit?: boolean
+  /** Mancato, con il danno di un'opzione (Graze). */
+  grazed?: boolean
+  /** Colpo senz'armi 2024: niente tiro per colpire, il bersaglio fa un TS contro `save_dc`. */
+  effect?: 'grapple' | 'shove'
+  save_dc?: number
+  /** Tipo di danno del colpo senz'armi e se conta come magico (Colpi Ki Potenziati). */
+  damage_type?: string
+  is_magic?: boolean
+  /** `[lati, valore]` dei dadi ritirabili (arma e dadi delle opzioni), con l'indice con cui il server li conosce. */
+  reroll_dice?: [number, number][]
+}
+
+/** Il tiro dopo un privilegio usato a esito noto. */
+export type LastRollResult = RollResult & {
+  /** Opzioni da rimborsare se il giocatore dichiara il fallimento. */
+  refundable?: string[]
+  forced_hit?: boolean
+  passed?: boolean
+  condition_removed?: boolean
+  save?: PendingSaveRollResult['save']
+  attack?: WeaponAttackResult
+  death?: DeathSaveRollResult
+  concentration?: ConcentrationSaveResult
 }
 
 export type HitDiceSpendResult = {
@@ -139,6 +355,10 @@ export type HitDiceSpendResult = {
   con_bonus: number
   healed: number
   new_current_hp: number
+  homebrew_notifications?: Array<Record<string, unknown>> | null
+  /** Canto di Riposo di un bardo al tavolo: il dado extra, già compreso in `healed`. */
+  song_die?: number | null
+  song_rolls?: number[]
 }
 
 export type RestPreview = {
@@ -157,12 +377,14 @@ export type DeathSaveRollResult = {
   die: number
   dice?: number[]
   mode?: RollMode
-  outcome: 'nat20' | 'nat1' | 'success' | 'failure'
+  notes?: string[]
+  outcome: 'nat20' | 'nat1' | 'success' | 'failure' | 'revived'
   successes: number
   failures: number
   stable: boolean
   revived: boolean
   current_hp: number
+  option_result?: OptionResult
 }
 
 export type DiceResultEntryBody = {
@@ -295,10 +517,18 @@ function requestFormDataWithProgress<T>(
 // Characters
 // ---------------------------------------------------------------------------
 
+type AttackChoice = {
+  grip?: 'one' | 'two'
+  attack_mode?: 'melee' | 'thrown' | 'offhand'
+  ability?: 'strength' | 'dexterity'
+  confirm_extra_attack?: boolean
+  effect?: 'grapple' | 'shove'
+}
+
 function attackBody(
   withInspiration: boolean,
   roll: D20Roll | undefined,
-  choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+  choice?: AttackChoice,
 ): string | undefined {
   const fields = roll === undefined ? {} : d20Fields(roll)
   if (!withInspiration && roll === undefined && !choice) return undefined
@@ -324,6 +554,7 @@ export const api = {
         level?: number
         hit_die?: number
         spellcasting_ability?: string | null
+        skill_choices?: string[]
       } | null,
       identity?: {
         race?: string
@@ -337,6 +568,8 @@ export const api = {
         ability_scores?: Record<string, number>
         species?: object
         skills?: Record<string, boolean>
+        starting_equipment?: number[]
+        rules_edition?: '2014' | '2024'
       },
     ) =>
       request<CharacterFull>('/characters', {
@@ -367,10 +600,10 @@ export const api = {
     },
     duplicate: (id: number) =>
       request<CharacterFull>(`/characters/${id}/duplicate`, { method: 'POST' }),
-    importDdb: (url: string) =>
+    importDdb: (url: string, rules_edition?: '2014' | '2024') =>
       request<DdbImportResult>('/characters/import/ddb', {
         method: 'POST',
-        body: JSON.stringify({ url }),
+        body: JSON.stringify(rules_edition ? { url, rules_edition } : { url }),
       }),
 
     // HP
@@ -379,7 +612,7 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string },
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string } & Partial<RollChoice>,
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
@@ -394,10 +627,14 @@ export const api = {
       request<CharacterFull>(`/characters/${id}/revive`, {
         method: 'POST',
       }),
-    rest: (id: number, restType: 'long' | 'short', hitDiceUsed?: number) =>
+    rest: (
+      id: number,
+      restType: 'long' | 'short',
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean; temp_hp_allies?: number[] },
+    ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',
-        body: JSON.stringify({ rest_type: restType, hit_dice_used: hitDiceUsed }),
+        body: JSON.stringify({ rest_type: restType, ...opts }),
       }),
     restPreview: (id: number, restType: 'long' | 'short') =>
       request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}`),
@@ -455,8 +692,59 @@ export const api = {
       }),
     tickRound: (id: number) =>
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
-    turnState: (id: number) =>
-      request<TurnState>(`/characters/${id}/turn-state`),
+    turnState: (id: number, itemId?: number | null) =>
+      request<TurnState>(`/characters/${id}/turn-state${itemId ? `?item_id=${itemId}` : ''}`),
+    turnUse: (id: number, slot: TurnSlot, used: boolean = true) =>
+      request<TurnBlock>(`/characters/${id}/turn/use`, { method: 'POST', body: JSON.stringify({ slot, used }) }),
+    rollOptions: (id: number, query: RollOptionsQuery) =>
+      request<RollOption[]>(
+        `/characters/${id}/roll-options?${new URLSearchParams(
+          Object.entries(query).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]),
+        )}`,
+      ),
+    lastRollOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; mode: RollMode; dice?: number[] }) =>
+      request<LastRollResult>(`/characters/${id}/last-roll/options`, { method: 'POST', body: JSON.stringify(body) }),
+    /** Privilegi sui dadi di danno già tirati: `reroll` sono le posizioni in `reroll_dice` del tiro. */
+    lastDamageOptions: (id: number, body: { options: string[]; option_inputs: RollChoice['option_inputs']; reroll: number[] }) =>
+      request<RollDamageResult | WeaponAttackResult | CompanionAttackResult>(`/characters/${id}/last-damage/options`, { method: 'POST', body: JSON.stringify(body) }),
+    /** Risponde a «Il tiro è riuscito?»: `succeeded` tiene il pagamento, altrimenti torna. */
+    lastRollRefund: (id: number, succeeded: boolean = false) =>
+      request<TurnBlock>(`/characters/${id}/last-roll/refund`, { method: 'POST', body: JSON.stringify({ succeeded }) }),
+    /** Effetto confermato col tiro (Topple, Sap...) e combattenti a cui applicarlo. */
+    targetEffectPreview: (id: number, effectKey: string) =>
+      request<TargetEffectPreview>(`/characters/${id}/target-effects/${encodeURIComponent(effectKey)}`),
+    targetEffectApply: (id: number, effectKey: string, combatantId: number) =>
+      request<TargetEffectResult>(`/characters/${id}/target-effects`, {
+        method: 'POST', body: JSON.stringify({ effect_key: effectKey, combatant_id: combatantId }),
+      }),
+    featureUse: (id: number, featureKey: string, amount: number = 1, params?: Record<string, boolean | number | string | number[] | { targets: (number | string)[]; conditions?: string[] }>) =>
+      request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
+        method: 'POST', body: JSON.stringify(params ? { amount, params } : { amount }),
+      }),
+    /** Gli altri personaggi seduti alla stessa serata attiva (vuoto fuori serata). */
+    sessionAllies: (id: number) => request<{ id: number; name: string; die?: number | null; dead?: boolean }[]>(`/characters/${id}/session-allies`),
+    /** Preservare Vita: la riserva e il tetto di ciascun destinatario, calcolati dal server. */
+    preserveLifeInfo: (id: number) =>
+      request<{ pool: number; uses_left: number | null; targets: { id: number; name: string; cap: number; self: boolean }[]; needs_confirm: boolean }>(`/characters/${id}/preserve-life`),
+    preserveLife: (id: number, body: { allocations: { character_id: number; amount: number }[]; confirm_living: boolean }) =>
+      request<{ pool: number; spent: number; healed: { character_id: number; name: string; healed: number }[] }>(
+        `/characters/${id}/preserve-life`, { method: 'POST', body: JSON.stringify(body) }),
+    /** Impulso di Magia Selvaggia: d20 (una volta per turno) e, con 1, la tabella; `tides` salta il d20 dopo Onde di Caos, `repeat` lo salta durante l'impulso 01-02. */
+    wildMagicSurge: (id: number, body: { die?: number; percentile?: number[]; tides?: boolean; repeat?: boolean; tamed?: boolean }) =>
+      request<WildSurgeResult>(`/characters/${id}/wild-magic/surge`, { method: 'POST', body: JSON.stringify(body) }),
+    /** La tabella degli impulsi dell'edizione del personaggio (per scegliere l'effetto di Impulso Domato). */
+    wildMagicTable: (id: number) => request<WildSurgeEntry[]>(`/characters/${id}/wild-magic/table`),
+    /** Caos Controllato: sceglie fra i due risultati tirati. */
+    wildMagicChoose: (id: number, index: number) =>
+      request<WildSurgeResult>(`/characters/${id}/wild-magic/surge/choose`, { method: 'POST', body: JSON.stringify({ index }) }),
+    /** Ispirazione in Combattimento alla CA: spende la reazione e il dado, restituisce il valore da sommare. */
+    bardicDieAc: (id: number) => request<{ die: number; roll: number }>(`/characters/${id}/bardic-die/ac`, { method: 'POST' }),
+    endActiveState: (id: number, key: string) =>
+      request<ActiveState[]>(`/characters/${id}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+    turnNew: (id: number) =>
+      request<TurnBlock>(`/characters/${id}/turn/new`, { method: 'POST' }),
+    turnOther: (id: number) =>
+      request<TurnBlock>(`/characters/${id}/turn/other`, { method: 'POST' }),
     pendingSaves: {
       roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false) =>
         request<PendingSaveRollResult>(`/characters/${id}/pending-saves/${saveId}/roll`, {
@@ -466,6 +754,11 @@ export const api = {
       dismiss: (id: number, saveId: number) =>
         request<void>(`/characters/${id}/pending-saves/${saveId}/dismiss`, { method: 'POST' }),
     },
+    /** Nascondersi 2024: il server legge il totale dall'ultima prova di Furtività. */
+    hide: (id: number) => request<CharacterFull>(`/characters/${id}/hide`, { method: 'POST' }),
+    /** Scarta l'Ispirazione ricevuta in più (quella propria resta). */
+    discardExtraInspiration: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/inspiration/extra`, { method: 'DELETE' }),
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',
@@ -485,6 +778,20 @@ export const api = {
       withInspiration: boolean = false,
     ) =>
       request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
+        method: 'POST',
+        body:
+          die != null || withInspiration
+            ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
+            : undefined,
+      }),
+    /** Prova di caratteristica pura (senza abilità), con i modi e le opzioni al tiro di `rollSkill`. */
+    rollAbilityCheck: (
+      id: number,
+      ability: string,
+      die?: D20Roll,
+      withInspiration: boolean = false,
+    ) =>
+      request<RollResult>(`/characters/${id}/ability_checks/${encodeURIComponent(ability)}/roll`, {
         method: 'POST',
         body:
           die != null || withInspiration
@@ -526,6 +833,25 @@ export const api = {
       }),
   },
 
+  rules: {
+    subclasses: (edition: string, classKey: string) =>
+      request<{ key: string; name: Record<string, string>; choice_level: number }[]>(
+        `/rules/subclasses?edition=${edition}&class_key=${classKey}`,
+      ),
+    proficiencies: (edition: string, classKey: string, asMulticlass: boolean) =>
+      request<{
+        armor: string[]
+        weapons: string[]
+        tools: string[]
+        saves: string[]
+        skills_from: string[]
+        skills_count: number
+        languages: string[]
+      }>(`/rules/proficiencies?edition=${edition}&class_key=${encodeURIComponent(classKey)}&as_multiclass=${asMulticlass}`),
+    startingEquipment: (edition: string, classKey: string) =>
+      request<{ groups: string[][] }>(`/rules/starting-equipment?edition=${edition}&class_key=${encodeURIComponent(classKey)}`),
+  },
+
   // ---------------------------------------------------------------------------
   // Classes
   // ---------------------------------------------------------------------------
@@ -557,7 +883,7 @@ export const api = {
   spells: {
     list: (charId: number, q?: string) =>
       request<Spell[]>(`/characters/${charId}/spells${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-    add: (charId: number, data: Partial<Spell>) =>
+    add: (charId: number, data: Partial<Spell> & { pick_id?: string }) =>
       request<Spell>(`/characters/${charId}/spells`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -569,11 +895,23 @@ export const api = {
       }),
     remove: (charId: number, spellId: number) =>
       request<void>(`/characters/${charId}/spells/${spellId}`, { method: 'DELETE' }),
-    use: (charId: number, spellId: number, slotLevel: number | null, asRitual = false) =>
+    use: (charId: number, spellId: number, body: SpellUseBody) =>
       request<CharacterFull>(`/characters/${charId}/spells/${spellId}/use`, {
         method: 'POST',
-        body: JSON.stringify({ slot_level: slotLevel, as_ritual: asRitual }),
+        body: JSON.stringify(body),
       }),
+    /** Regole che il lancio violerebbe, da confermare prima di tirare i dadi. */
+    castCheck: (charId: number, spellId: number, ritual: boolean) =>
+      request<string[]>(`/characters/${charId}/spells/${spellId}/cast-check?ritual=${ritual}`),
+    /** Tempo e oro per copiare un incantesimo nel Libro del Mago (dimezzati da un «Sapiente»). */
+    spellbookCost: (charId: number, level: number, school: string | null, mode: SpellCopyMode) =>
+      request<SpellCopyCost>(`/characters/${charId}/spellbook/cost?level=${level}&mode=${mode}${school ? `&school=${encodeURIComponent(school)}` : ''}`),
+    /** Copia nel libro (`copy`), copia di riserva (`backup`) o ritrascrizione dopo la perdita (`retranscribe`); paga l'oro. */
+    copyToBook: (charId: number, spellId: number, mode: SpellCopyMode) =>
+      request<CharacterFull>(`/characters/${charId}/spells/${spellId}/copy`, { method: 'POST', body: JSON.stringify({ mode }) }),
+    /** Il libro è perso: resta la copia di riserva, il resto si ritrascrive se preparato. */
+    loseSpellbook: (charId: number) =>
+      request<CharacterFull>(`/characters/${charId}/spellbook/lost`, { method: 'POST' }),
     updateConcentration: (charId: number, spellId: number | null) =>
       request<CharacterFull>(`/characters/${charId}/concentration`, {
         method: 'PATCH',
@@ -586,6 +924,11 @@ export const api = {
       }),
     rollDamage: (charId: number, spellId: number, body: RollDamageRequest): Promise<RollDamageResult> =>
       request<RollDamageResult>(`/characters/${charId}/spells/${spellId}/roll_damage`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    rollHealing: (charId: number, spellId: number, body: RollHealingRequest): Promise<RollHealingResult> =>
+      request<RollHealingResult>(`/characters/${charId}/spells/${spellId}/roll_healing`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -633,10 +976,17 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
-    charges: (charId: number, itemId: number, delta: number) =>
+    /** `spend`: una spesa vera (non una correzione a mano), dove Usare Dispositivi Magici tira il d6. */
+    charges: (charId: number, itemId: number, delta: number, spend = false) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/charges`, {
         method: 'POST',
-        body: JSON.stringify({ delta }),
+        body: JSON.stringify({ delta, spend }),
+      }),
+    /** Lancio da pergamena (Usare Dispositivi Magici): l'esito arriva nelle notifiche della risposta. */
+    scroll: (charId: number, itemId: number, spellLevel: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/scroll`, {
+        method: 'POST',
+        body: JSON.stringify({ spell_level: spellLevel }),
       }),
     cast: (charId: number, itemId: number, spellIndex: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
@@ -644,17 +994,30 @@ export const api = {
         body: JSON.stringify({ spell_index: spellIndex }),
       }),
     attack: (
-      charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll,
-      choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+      charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll, choice?: AttackChoice,
     ) =>
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
         body: attackBody(withInspiration, die, choice),
       }),
-    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll) =>
+    /** Arma Vincolata (Cavaliere Mistico): vincola (con `replaceItemId` si spezza un altro vincolo), spezza, evoca in mano. */
+    bond: (charId: number, itemId: number, replaceItemId?: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/bond`, {
+        method: 'POST', body: JSON.stringify(replaceItemId === undefined ? {} : { replace_item_id: replaceItemId }),
+      }),
+    breakBond: (charId: number, itemId: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/bond`, { method: 'DELETE' }),
+    summon: (charId: number, itemId: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/summon`, { method: 'POST' }),
+    attackDamage: (charId: number, attackId: string, choice: RollChoice) =>
+      request<WeaponAttackResult>(`/characters/${charId}/attack/${attackId}/damage`, {
+        method: 'POST',
+        body: JSON.stringify({ options: choice.options, option_inputs: choice.option_inputs }),
+      }),
+    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll, choice?: AttackChoice) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {
         method: 'POST',
-        body: attackBody(withInspiration, die),
+        body: attackBody(withInspiration, die, choice),
       }),
     use: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/use`, {
@@ -711,16 +1074,26 @@ export const api = {
       request<Companion>(`/characters/${charId}/companions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     remove: (charId: number, id: number) =>
       request<void>(`/characters/${charId}/companions/${id}`, { method: 'DELETE' }),
-    hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number) =>
-      request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value }) }),
-    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[]) =>
+    hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number, resist = false) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value, ...(resist ? { resist } : {}) }) }),
+    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[], choice?: Pick<RollChoice, 'options' | 'option_inputs'>, reaction = false, chain?: { bonus?: boolean; damage_type?: string }) =>
       request<CompanionAttackResult>(`/characters/${charId}/companions/${id}/attack`, {
-        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice }),
+        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice, ...(reaction ? { reaction } : {}), ...chain, ...choice }),
       }),
+    command: (charId: number, id: number, command: BeastCommand, bonus = false) =>
+      request<{ command: string; bonus: boolean; attacks_left: number }>(`/characters/${charId}/companions/${id}/command`, {
+        method: 'POST', body: JSON.stringify({ command, bonus }),
+      }),
+    hitDice: (charId: number, id: number, count = 1) =>
+      request<HitDiceResult>(`/characters/${charId}/companions/${id}/hit-dice`, { method: 'POST', body: JSON.stringify({ count }) }),
     activate: (charId: number, id: number, force = false) =>
       request<Companion>(`/characters/${charId}/companions/${id}/activate`, { method: 'POST', body: JSON.stringify({ force }) }),
     deactivate: (charId: number, id: number) =>
       request<Companion>(`/characters/${charId}/companions/${id}/deactivate`, { method: 'POST' }),
+    wildHeal: (charId: number, id: number, slotLevel: number) =>
+      request<WildHealResult>(`/characters/${charId}/companions/${id}/wild-heal`, {
+        method: 'POST', body: JSON.stringify({ slot_level: slotLevel }),
+      }),
   },
 
   abilities: {
@@ -742,6 +1115,13 @@ export const api = {
   choices: {
     resolve: (charId: number, choiceId: string, body: ResolveChoiceBody) =>
       request<CharacterFull>(`/characters/${charId}/choices/${choiceId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    classOptions: (charId: number, classId: number, group: string) =>
+      request<ClassOptionsState>(`/characters/${charId}/classes/${classId}/options/${group}`),
+    replaceOption: (charId: number, classId: number, body: { group: string; old_key: string; new_key: string }) =>
+      request<CharacterFull>(`/characters/${charId}/classes/${classId}/options/replace`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -908,6 +1288,12 @@ export const api = {
       request<DiceRollResult>(`/characters/${charId}/dice/result`, {
         method: 'POST',
         body: JSON.stringify(body),
+      }),
+    /** Iniziativa fuori da un incontro: modo automatico e bonus li decide il server. */
+    initiative: (charId: number, roll: D20Roll | undefined, label: string) =>
+      request<RollResult>(`/characters/${charId}/dice/initiative`, {
+        method: 'POST',
+        body: JSON.stringify({ ...d20Fields(roll), label }),
       }),
     history: (charId: number) => request<DiceRollResult[]>(`/characters/${charId}/dice/history`),
     clearHistory: (charId: number) =>
@@ -1121,6 +1507,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    giveInspiration: (sessionId: number, body: { from_character_id: number; to_user_id: number }) =>
+      request<CharacterFull>(`/sessions/${sessionId}/inspiration/give`, { method: 'POST', body: JSON.stringify(body) }),
     stashPut: (sessionId: number, body: StashMoveRequest & { from_character_id: number }) =>
       request<CharacterFull>(`/sessions/${sessionId}/stash/put`, { method: 'POST', body: JSON.stringify(body) }),
     stashTake: (sessionId: number, body: StashMoveRequest & { to_character_id: number }) =>

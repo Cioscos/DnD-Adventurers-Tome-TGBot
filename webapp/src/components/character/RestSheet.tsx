@@ -1,19 +1,10 @@
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { GiNightSleep, GiCampfire } from 'react-icons/gi'
-import { api, ApiError } from '@/api/client'
-import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
-import ConfirmSheet from '@/components/ui/ConfirmSheet'
-import RestPreviewList from '@/components/character/RestPreviewList'
-import HitDiceModal from '@/pages/hp/HitDiceModal'
-import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
+import RestDialogs from '@/components/character/RestDialogs'
+import { useRest } from '@/hooks/useRest'
 import { haptic } from '@/auth/telegram'
-import { useToast } from '@/hooks/useToast'
-import { notifyMutationError } from '@/lib/mutationError'
-import type { HitDiceSpendResult } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 interface Props {
@@ -22,50 +13,10 @@ interface Props {
   onClose: () => void
 }
 
-/** Riposo dal menu: breve (dadi vita) o lungo (con conferma). Stesso flusso di QuickActions. */
+/** Riposo dal menu: breve (dadi vita) o lungo (con conferma). Le domande sono quelle di `useRest`, uguali ad azioni rapide e PF. */
 export default function RestSheet({ char, open, onClose }: Props) {
   const { t } = useTranslation()
-  const qc = useQueryClient()
-  const toast = useToast()
-  const [shortRestOpen, setShortRestOpen] = useState(false)
-  const [confirmLongRest, setConfirmLongRest] = useState(false)
-  const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
-
-  const rollDice = useAnimatedRoll()
-
-  const hitDieMutation = useMutation({
-    mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
-      const hitDie = char.classes.find((c) => c.id === classId)?.hit_die
-      const rolls = await rollDice(`d${hitDie ?? 8}`, count)
-      return api.characters.spendHitDice(char.id, classId, count, rolls)
-    },
-    onSuccess: (result) => {
-      setHitDieResult(result)
-      qc.invalidateQueries({ queryKey: ['character', char.id] })
-      haptic.success()
-    },
-    onError: (err) => {
-      if (err instanceof ApiError && err.status === 409) {
-        toast.error(t('character.quick_actions.hit_die_exhausted'))
-        qc.invalidateQueries({ queryKey: ['character', char.id] })
-      } else {
-        notifyMutationError()
-      }
-    },
-  })
-
-  const restMutation = useMutation({
-    mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
-    onSuccess: (updated) => {
-      qc.setQueryData(['character', char.id], updated)
-      qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
-      setConfirmLongRest(false)
-      setShortRestOpen(false)
-      onClose()
-      toast.success(t('character.quick_actions.rest_done'))
-      haptic.success()
-    },
-  })
+  const rest = useRest(char.id, char, onClose)
 
   const rowClass = `w-full min-h-[44px] flex items-center gap-3 px-4 py-3 rounded-2xl
                     bg-dnd-surface border border-dnd-border text-left
@@ -76,14 +27,14 @@ export default function RestSheet({ char, open, onClose }: Props) {
       <Sheet open={open} onClose={onClose} title={t('character.menu.rest')}>
         <div className="p-5 space-y-2">
           <Pressable
-            onClick={() => { haptic.light(); setShortRestOpen(true) }}
+            onClick={() => { haptic.light(); rest.openShort() }}
             className={rowClass}
           >
             <GiNightSleep size={22} className="text-dnd-cobalt-bright" />
             <span className="text-sm text-dnd-text font-body">{t('character.quick_actions.rest_short')}</span>
           </Pressable>
           <Pressable
-            onClick={() => { haptic.light(); setConfirmLongRest(true) }}
+            onClick={() => { haptic.light(); rest.openLong() }}
             className={rowClass}
           >
             <GiCampfire size={22} className="text-dnd-amber" />
@@ -92,38 +43,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
         </div>
       </Sheet>
 
-      <ConfirmSheet
-        open={confirmLongRest}
-        onClose={() => setConfirmLongRest(false)}
-        title={t('character.quick_actions.confirm_long_rest_title')}
-        body={
-          <div className="space-y-3">
-            <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
-            {confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
-          </div>
-        }
-        confirmLabel={t('character.quick_actions.rest_long')}
-        confirmVariant="primary"
-        loading={restMutation.isPending}
-        onConfirm={() => restMutation.mutate('long')}
-      />
-
-      {shortRestOpen && (
-        <HitDiceModal
-          classes={char.classes ?? []}
-          onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
-          onConfirmRest={() => restMutation.mutate('short')}
-          preview={<RestPreviewList charId={char.id} restType="short" />}
-          onClose={() => setShortRestOpen(false)}
-          isPending={hitDieMutation.isPending}
-          pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}
-          restPending={restMutation.isPending}
-        />
-      )}
-
-      {hitDieResult && (
-        <HitDiceResultDialog result={hitDieResult} onClose={() => setHitDieResult(null)} />
-      )}
+      <RestDialogs char={char} rest={rest} />
     </>
   )
 }

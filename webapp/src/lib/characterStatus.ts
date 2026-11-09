@@ -7,7 +7,7 @@ export type CardStatus = 'dead' | 'unconfigured' | 'down' | 'ok'
 
 /** PF massimi effettivi: base + modificatore homebrew. */
 export function effectiveHpMax(c: CharacterSummary): number {
-  return c.hit_points + (c.hp_max_homebrew_modifier ?? 0)
+  return c.hp_max_effective ?? c.hit_points + (c.hp_max_homebrew_modifier ?? 0)
 }
 
 /** CA effettiva: base + modificatore homebrew. */

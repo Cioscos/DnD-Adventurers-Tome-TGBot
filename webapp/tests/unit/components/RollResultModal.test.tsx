@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
+import { renderWithProviders } from '../utils/renderWithProviders'
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -80,6 +81,31 @@ describe('RollResultModal', () => {
     )
     expect(screen.queryByTestId('inspiration')).not.toBeInTheDocument()
     expect(screen.getByTestId('rd-subtitle')).toBeInTheDocument() // reroll badge
+  })
+
+  it('explains the automatic mode and the automatic failure', () => {
+    renderWithProviders(
+      <RollResultModal
+        result={result({ notes: ['condition:poisoned', 'armor:untrained'], auto_fail: true })}
+        title="T" onClose={() => {}}
+      />,
+    )
+    expect(screen.getByText('character.roll_notes.auto_fail')).toBeInTheDocument()
+    expect(screen.getByTestId('roll-notes')).toHaveTextContent(
+      'character.conditions.poisoned · character.roll_notes.armor_untrained',
+    )
+  })
+
+  it('an automatic failure is crimson and shows no critical banner, even on a natural 20', () => {
+    render(<RollResultModal result={result({ die: 20, is_critical: false, auto_fail: true })} title="T" onClose={() => {}} />)
+    expect(screen.queryByText('character.dice.critical_banner')).toBeNull()
+    expect(screen.getByText('character.roll_notes.auto_fail')).toBeInTheDocument()
+    expect(screen.getByText(String(result().total)).className).toContain('crimson')
+  })
+
+  it('shows no explanation without notes', () => {
+    render(<RollResultModal result={result()} title="T" onClose={() => {}} />)
+    expect(screen.queryByTestId('roll-notes')).toBeNull()
   })
 
   it('closes via the dialog', async () => {

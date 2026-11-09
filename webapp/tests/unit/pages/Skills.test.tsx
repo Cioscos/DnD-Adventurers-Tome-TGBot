@@ -216,7 +216,7 @@ describe('Skills page', () => {
 
   it('shows an error toast when an inspiration reroll 409s', async () => {
     const { ApiError } = await import('@/api/client')
-    getChar.mockResolvedValue({ ...baseChar, heroic_inspiration: true })
+    getChar.mockResolvedValue({ ...baseChar, heroic_inspiration: true, rules_edition: '2024' })
     rollSkill
       .mockResolvedValueOnce(rollResult)
       .mockRejectedValueOnce(new (ApiError as new (s: number) => Error)(409))

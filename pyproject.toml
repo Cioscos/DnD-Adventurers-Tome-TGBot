@@ -1,6 +1,6 @@
 [project]
 name = "dnd-bot-revamped"
-version = "2.38.0"
+version = "3.0.0"
 requires-python = ">=3.11"
 dependencies = [
     # Bot
@@ -29,3 +29,7 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"

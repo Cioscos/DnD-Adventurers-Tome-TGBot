@@ -31,6 +31,11 @@ export default function HitDiceResultDialog({ result, onClose }: Props) {
       <p className="text-xs text-dnd-text-muted font-mono">
         [{result.rolls.join(', ')}] +{result.con_bonus} (COS)
       </p>
+      {(result.song_rolls?.length ?? 0) > 0 && (
+        <p className="text-xs text-dnd-text-muted font-mono">
+          {t('character.hp.song_of_rest', { die: result.song_die })}: +{result.song_rolls?.reduce((a, b) => a + b, 0)}
+        </p>
+      )}
       <p className="text-sm font-body">
         {t('character.hp.new_hp')}:{' '}
         <span className="font-bold font-mono text-dnd-gold-bright">

@@ -4,10 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SaveRollSheet from '@/components/SaveRollSheet'
 
-const { rollSpy, dismissSpy, toastError } = vi.hoisted(() => ({ rollSpy: vi.fn(), dismissSpy: vi.fn(), toastError: vi.fn() }))
+const { rollSpy, dismissSpy, toastError, rollOptionsSpy, lastRollSpy } = vi.hoisted(() => ({
+  rollSpy: vi.fn(), dismissSpy: vi.fn(), toastError: vi.fn(), rollOptionsSpy: vi.fn(async () => [] as unknown[]), lastRollSpy: vi.fn(),
+}))
 
 vi.mock('@/api/client', () => ({
-  api: { characters: { get: vi.fn(), pendingSaves: { roll: rollSpy, dismiss: dismissSpy } } },
+  api: { characters: { get: vi.fn(), rollOptions: rollOptionsSpy, lastRollOptions: lastRollSpy, pendingSaves: { roll: rollSpy, dismiss: dismissSpy } } },
   ApiError: class ApiError extends Error {
     constructor(public status: number, public detail: unknown) { super('api error') }
   },
@@ -34,7 +36,7 @@ const result = (passed: boolean) => ({
 
 function setup(inspiration = false) {
   const qc = new QueryClient()
-  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration })
+  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration, rules_edition: '2024' })
   const invalidate = vi.spyOn(qc, 'invalidateQueries')
   const onClose = vi.fn()
   render(
@@ -47,7 +49,7 @@ function setup(inspiration = false) {
 
 function setupLive(saves: (typeof save)[], inspiration = false) {
   const qc = new QueryClient()
-  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration })
+  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration, rules_edition: '2024' })
   const onClose = vi.fn()
   const ui = (list: (typeof save)[]) => (
     <QueryClientProvider client={qc}>
@@ -60,11 +62,26 @@ function setupLive(saves: (typeof save)[], inspiration = false) {
 
 beforeEach(() => {
   rollSpy.mockReset()
+  rollOptionsSpy.mockReset()
+  rollOptionsSpy.mockResolvedValue([])
   dismissSpy.mockReset()
   toastError.mockReset()
 })
 
 describe('SaveRollSheet', () => {
+  it('un privilegio dopo il tiro ricalcola l\'esito: da fallito a riuscito', async () => {
+    rollSpy.mockResolvedValue(result(false))
+    rollOptionsSpy.mockResolvedValue([{ key: 'luck', phase: 'after_roll', label: 'Fortuna?', dice: null, bonus: null, mode: null, multiplier: null, slot: null, once_per_turn: false, auto_fail: false, cost: null, dice_cost: 0, needs: null, after: 'succeed' }])
+    lastRollSpy.mockResolvedValue({ ...result(true).roll, die: 20, total: 22, passed: true, condition_removed: true, save: result(true).save })
+    setup()
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
+    await userEvent.click(await screen.findByRole('button', { name: /Fortuna\?/ }))
+    expect(await screen.findByText('pendingSaves.passed')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Fortuna\?/ })).toBeNull()
+    await userEvent.click(screen.getByText('pendingSaves.ok'))
+    expect(dismissSpy).not.toHaveBeenCalled()
+  })
+
   it('Advantage sends mode advantage', async () => {
     rollSpy.mockResolvedValue(result(true))
     setup()
@@ -73,6 +90,33 @@ describe('SaveRollSheet', () => {
     await waitFor(() => expect(rollSpy).toHaveBeenCalled())
     expect(rollSpy.mock.calls[0][2]).toEqual({ dice: undefined, mode: 'advantage' })
     expect(rollSpy.mock.calls[0][3]).toBe(false)
+  })
+
+  it('explains why a high total failed', async () => {
+    rollSpy.mockResolvedValue({
+      ...result(false),
+      roll: { die: 20, bonus: 5, total: 25, is_critical: false, is_fumble: false, auto_fail: true, notes: ['condition:stunned'] },
+    })
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'pendingSaves.roll' }))
+    expect(await screen.findByTestId('roll-notes')).toHaveTextContent(
+      'character.roll_notes.auto_fail · character.conditions.stunned',
+    )
+  })
+
+  it('reopening a failed save keeps the reason stored on the server', async () => {
+    const failed = {
+      ...save, status: 'failed' as const,
+      last_roll: { total: 25, auto_fail: true, notes: ['condition:stunned'] },
+    }
+    const qc = new QueryClient()
+    qc.setQueryData(['character', 7], { heroic_inspiration: false })
+    render(
+      <QueryClientProvider client={qc}>
+        <SaveRollSheet charId={7} saves={[failed as unknown as typeof save]} onClose={vi.fn()} />
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByTestId('roll-notes')).toHaveTextContent('character.roll_notes.auto_fail')
   })
 
   it('passed shows the freedom text', async () => {

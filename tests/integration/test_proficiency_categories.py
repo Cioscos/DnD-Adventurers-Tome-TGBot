@@ -76,22 +76,23 @@ async def test_weapon_warning_reads_weapons_category(client):
     assert warned.json() != ok.json() or "proficien" in str(warned.json()).lower()
 
 
-def test_lacks_weapon_proficiency_accepts_categories_and_legacy_other():
-    from api.routers.items import _lacks_weapon_proficiency as lacks
+def test_weapon_proficiency_accepts_categories_and_legacy_other():
+    from types import SimpleNamespace as NS
 
-    class C:
-        general_proficiencies = None
+    from core.rules.proficiencies import is_weapon_proficient as ok
 
-    c = C()
+    c = NS(general_proficiencies=None, settings={})
+    martial = NS(name="Spadone", item_metadata={"weapon_category": "martial"})
+    simple = NS(name="Pugnale", item_metadata={"weapon_category": "simple"})
     c.general_proficiencies = {"weapons": ["Armi da guerra"]}
-    assert not lacks(c, "Spadone", "martial")
-    assert lacks(c, "Pugnale", "simple")
+    assert ok(c, martial)
+    assert not ok(c, simple)
     c.general_proficiencies = {"other": ["Armi semplici"]}
-    assert not lacks(c, "Pugnale", "simple")
+    assert ok(c, simple)
     c.general_proficiencies = ["Armi semplici"]
-    assert not lacks(c, "Pugnale", "simple")
+    assert ok(c, simple)
     c.general_proficiencies = {}
-    assert not lacks(c, "Pugnale", "simple")
+    assert ok(c, simple)
 
 
 async def test_import_accepts_legacy_list_and_object(client, test_session_factory):

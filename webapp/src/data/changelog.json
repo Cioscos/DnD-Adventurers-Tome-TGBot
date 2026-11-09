@@ -1,6 +1,54 @@
 {
   "entries": [
     {
+      "version": "3.0.0",
+      "date": "2026-11-09",
+      "added": {
+        "it": [
+          "Attenzione: è un aggiornamento molto grande e potrebbe non essere ancora stabile. Se una regola si comporta in modo strano, segnalalo e intanto risolvi a voce al tavolo.",
+          "Regole di classe per edizione: ogni personaggio segue il Manuale del Giocatore 2014 o 2024, e privilegi, riposi e incantesimi si comportano secondo quell'edizione.",
+          "I privilegi di tutte le classi e sottoclassi delle due edizioni sono nel catalogo: usi, risorse, stati a tempo, reazioni e scelte proposte al momento del tiro.",
+          "PF temporanei e cure dei privilegi si possono dare a un altro personaggio della serata.",
+          "Gli incantesimi e i privilegi che tolgono condizioni funzionano tutti allo stesso modo: scegli bersagli e condizioni in un'unica scheda.",
+          "Il Dono dei Protettori di un compagno della serata ti può tenere a 1 PF; annullando il danno l'uso gli torna.",
+          "Equipaggiamento iniziale della classe nel wizard di creazione, con la scelta fra 2014 e 2024."
+        ],
+        "en": [
+          "Heads up: this is a very large update and it may not be stable yet. If a rule behaves oddly, report it and settle it by voice at the table meanwhile.",
+          "Class rules by edition: every character follows the 2014 or 2024 Player's Handbook, and features, rests and spells behave by that edition.",
+          "Features of every class and subclass of both editions are in the catalog: uses, resources, timed states, reactions and choices offered when you roll.",
+          "Temporary HP and healing from features can be given to another character at the evening.",
+          "Spells and features that remove conditions all work the same way: pick targets and conditions in a single sheet.",
+          "A companion's Gift of the Protectors can keep you at 1 HP at the evening; undoing the damage gives the use back.",
+          "Class starting equipment in the creation wizard, with the choice between 2014 and 2024."
+        ]
+      },
+      "improved": {
+        "it": [
+          "I personaggi esistenti restano alle regole 2014. Quelli costruiti col manuale 2024 vanno passati all'edizione 2024 dalla scheda o reimportati da D&D Beyond.",
+          "Le sottoclassi non riconosciute restano testo finché non scegli quella del catalogo.",
+          "Le regole homebrew che imitavano un privilegio ora automatico vanno disattivate, altrimenti l'effetto si applica due volte.",
+          "Alcuni talenti e Doni Epici 2024 hanno ancora effetti solo descritti a testo.",
+          "Lo storico dei danni riporta i PF persi davvero."
+        ],
+        "en": [
+          "Existing characters stay on the 2014 rules. Characters built with the 2024 book must be switched to the 2024 edition from the sheet or reimported from D&D Beyond.",
+          "Unrecognised subclasses stay as text until you pick the catalog one.",
+          "Homebrew rules that imitated a feature now automated must be turned off, or the effect applies twice.",
+          "Some 2024 feats and Epic Boons still have text-only effects.",
+          "Damage history shows the HP actually lost."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "I log del server non riportano più gli indirizzi delle chiamate a Telegram."
+        ],
+        "en": [
+          "Server logs no longer show the addresses of Telegram calls."
+        ]
+      }
+    },
+    {
       "version": "2.38.0",
       "date": "2026-11-04",
       "improved": {

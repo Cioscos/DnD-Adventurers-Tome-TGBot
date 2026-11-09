@@ -125,6 +125,7 @@ async def test_finesse_picks_best_of_str_dex(client, monkeypatch):
 
 async def test_attack_consumes_inspiration(client, monkeypatch):
     cid = await _create_character(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     wid = await _add_weapon(client, cid)
     ri = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     assert ri.status_code == 200, ri.text

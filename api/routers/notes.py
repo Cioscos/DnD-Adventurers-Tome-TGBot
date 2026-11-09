@@ -142,7 +142,7 @@ async def _notes_list(char: Character, session: AsyncSession) -> list[NoteRead]:
 async def list_note_campaigns(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[NoteCampaign]:
     """Current campaign plus every still-existing campaign referenced by the notes."""
     char = await _get_owned(char_id, user_id, session)
@@ -158,7 +158,7 @@ async def list_note_campaigns(
 async def list_notes(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[NoteRead]:
     char = await _get_owned(char_id, user_id, session)
     return await _notes_list(char, session)
@@ -169,7 +169,7 @@ async def add_note(
     char_id: int,
     body: NoteCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[NoteRead]:
     char = await _get_owned(char_id, user_id, session)
     notes = dict(char.notes or {})
@@ -192,7 +192,7 @@ async def update_note(
     title: str,
     body: NoteUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[NoteRead]:
     char = await _get_owned(char_id, user_id, session)
     notes = dict(char.notes or {})
@@ -221,7 +221,7 @@ async def delete_note(
     char_id: int,
     title: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[NoteRead]:
     char = await _get_owned(char_id, user_id, session)
     notes = dict(char.notes or {})
@@ -246,7 +246,7 @@ async def delete_note(
 async def upload_voice_note(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     title: str = Form(...),
     file: UploadFile = File(...),
     campaign_id: int | None = Form(None),
@@ -295,7 +295,7 @@ async def upload_voice_note(
 async def get_voice_file(
     char_id: int,
     filename: str,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
     init_data: str = Query(""),
 ):

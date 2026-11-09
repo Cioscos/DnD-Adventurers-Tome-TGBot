@@ -2,12 +2,15 @@ import { useCallback } from 'react'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import type { D20Roll, RollMode } from '@/api/client'
+import type { D20Roll, RollChoice, RollMode } from '@/api/client'
 
 export type { RollMode }
 
-/** Faces to send to the API: legacy single die for normal rolls, `{dice, mode}` for adv/dis. */
-export function d20Arg(mode: RollMode, dice: number[] | undefined): D20Roll | undefined {
+/** Faces to send to the API: legacy single die for normal rolls, `{dice, mode}` for adv/dis or with confirmed options. */
+// shortcut: con un dado salvato (Portento) il dado 3D gira comunque e il server lo ignora; il modale mostra quello giusto.
+// Da togliere facendo saltare `rollD20` ai chiamanti quando la scelta ha `replace_die`.
+export function d20Arg(mode: RollMode, dice: number[] | undefined, choice?: RollChoice): D20Roll | undefined {
+  if (choice && (choice.options.length > 0 || choice.defer_damage)) return { dice, mode, ...choice }
   return mode === 'normal' ? dice?.[0] : { dice, mode }
 }
 

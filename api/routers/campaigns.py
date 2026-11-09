@@ -181,7 +181,7 @@ async def _detail(db: AsyncSession, camp: Campaign, user_id: int) -> CampaignDet
 async def create(
     body: CampaignCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignRead:
     camp = await create_campaign(db, user_id, body.name.strip())
     return CampaignRead(id=camp.id, name=camp.name, invite_code=camp.invite_code, is_gm=True)
@@ -190,7 +190,7 @@ async def create(
 @router.get("", response_model=list[CampaignSummary])
 async def list_campaigns(
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[CampaignSummary]:
     mine = select(CampaignMember.campaign_id).where(CampaignMember.user_id == user_id)
     camps = (await db.execute(
@@ -232,7 +232,7 @@ async def list_campaigns(
 async def enroll(
     body: CampaignEnroll,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignDetail:
     user_id = tg_user.id
     camp = (await db.execute(
@@ -262,7 +262,7 @@ async def enroll(
 @router.get("/active-for-me", response_model=list[ActiveCampaignSession])
 async def active_for_me(
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[ActiveCampaignSession]:
     """Campaigns with a live session the caller can join (drives the player banner)."""
     rows = (await db.execute(
@@ -294,7 +294,7 @@ async def active_for_me(
 async def get_campaign(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignDetail:
     return await _detail(db, await _get_campaign(db, campaign_id, user_id), user_id)
 
@@ -304,7 +304,7 @@ async def rename(
     campaign_id: int,
     body: CampaignCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignRead:
     camp = await _get_campaign(db, campaign_id, user_id, gm_only=True)
     camp.name = body.name.strip()
@@ -317,7 +317,7 @@ async def rename(
 async def delete_campaign(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Response:
     camp = await _get_campaign(db, campaign_id, user_id, gm_only=True)
     if await _active_session_id(db, camp.id) is not None:
@@ -363,7 +363,7 @@ async def _get_schedule(db: AsyncSession, campaign_id: int, sid: int) -> Campaig
 async def list_schedule(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[ScheduleRead]:
     await _get_campaign(db, campaign_id, user_id)
     rows = (await db.execute(
@@ -378,7 +378,7 @@ async def create_schedule(
     campaign_id: int,
     body: ScheduleCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> ScheduleRead:
     await _get_campaign(db, campaign_id, user_id, gm_only=True)
     if body.starts_at <= _naive_now():
@@ -396,7 +396,7 @@ async def update_schedule(
     sid: int,
     body: ScheduleUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> ScheduleRead:
     await _get_campaign(db, campaign_id, user_id, gm_only=True)
     row = await _get_schedule(db, campaign_id, sid)
@@ -416,7 +416,7 @@ async def delete_schedule(
     campaign_id: int,
     sid: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Response:
     await _get_campaign(db, campaign_id, user_id, gm_only=True)
     await db.delete(await _get_schedule(db, campaign_id, sid))
@@ -427,7 +427,7 @@ async def delete_schedule(
 async def regenerate_invite_code(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> InviteCodeRead:
     camp = await _get_campaign(db, campaign_id, user_id, gm_only=True)
     camp.invite_code = await generate_campaign_code(db)
@@ -453,7 +453,7 @@ async def set_member_status(
     character_id: int,
     body: MemberStatusUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CampaignDetail:
     member = await _get_member(db, campaign_id, character_id, user_id)
     member.status = body.status
@@ -466,7 +466,7 @@ async def remove_member(
     campaign_id: int,
     character_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Response:
     member = await _get_member(db, campaign_id, character_id, user_id)
     # also drop the PG from the campaign's live session (it would keep stash access)
@@ -486,7 +486,7 @@ async def join_campaign_session(
     campaign_id: int,
     body: CampaignSessionJoin,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GameSessionRead:
     """One-tap join of the campaign's active session with a chosen enrolled PG."""
     camp = await _get_campaign(db, campaign_id, user_id)

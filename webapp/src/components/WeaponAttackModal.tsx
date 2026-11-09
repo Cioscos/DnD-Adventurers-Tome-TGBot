@@ -1,3 +1,7 @@
+import RollNotes from '@/components/rules/RollNotes'
+import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import { rerollDiceOf } from '@/lib/rollOptions'
+import { useState } from 'react'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -13,6 +17,8 @@ export type { WeaponAttackResult }
 
 type Props = {
   result: WeaponAttackResult
+  /** Con il personaggio, l'esito offre di applicare gli effetti ai combattenti. */
+  charId?: number
   onClose: () => void
   inspirationAvailable?: boolean
   isRerolling?: boolean
@@ -21,7 +27,8 @@ type Props = {
 }
 
 export default function WeaponAttackModal({
-  result,
+  result: attack,
+  charId,
   onClose,
   inspirationAvailable = false,
   isRerolling = false,
@@ -29,6 +36,12 @@ export default function WeaponAttackModal({
   onInspirationReroll,
 }: Props) {
   const { t } = useTranslation()
+  // Il danno ritirato con l'Ispirazione sostituisce quello del tiro, finché il tiro è lo stesso.
+  const [rerolled, setRerolled] = useState<{ base: WeaponAttackResult; value: WeaponAttackResult } | null>(null)
+  const result = rerolled?.base === attack ? rerolled.value : attack
+  const dieSides = Number(/\d+d(\d+)/.exec(result.damage_dice ?? '')?.[1])
+  // Con un danno base fisso ("1") non ci sono facce nel testo: i dadi ritirabili li dice il server.
+  const canRerollDamage = !!charId && (!!result.reroll_dice?.length || !!dieSides) && !result.attack_id && !result.is_fumble && !result.grazed && !result.effect
   const {
     weapon_name, to_hit_die, dice, mode, magic_bonus, proficiency_warning, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
@@ -39,7 +52,8 @@ export default function WeaponAttackModal({
 
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
   const showInspirationButton =
-    inspirationAvailable && !wasRerolled && onInspirationReroll != null
+    inspirationAvailable && !wasRerolled && onInspirationReroll != null && !result.attack_id
+    && !result.effect && !result.grazed
 
   const toHitColor = is_critical
     ? 'text-dnd-gold-bright'
@@ -82,7 +96,23 @@ export default function WeaponAttackModal({
         </p>
       )}
 
-      <m.div
+      {result.forced_hit && (
+        <p className="text-dnd-emerald-bright font-bold font-cinzel uppercase tracking-wider">
+          {t('character.roll_options.forced_hit')}
+        </p>
+      )}
+      <RollNotes notes={result.notes} optionResult={result.option_result} charId={charId} />
+      {!!result.rerolled?.length && (
+        <p data-testid="rerolled-dice" className="text-xs font-mono tabular-nums text-dnd-text-muted">
+          {t('character.attack.rerolled', { dice: result.rerolled.map(([from, to]) => `${from} → ${to}`).join(', ') })}
+        </p>
+      )}
+      {result.effect && (
+        <p data-testid="unarmed-effect" className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3 text-sm font-body text-dnd-text">
+          {t(`character.attack.effect_${result.effect}`, { dc: result.save_dc })}
+        </p>
+      )}
+      {!result.effect && <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -98,9 +128,22 @@ export default function WeaponAttackModal({
         <p className={`text-4xl font-black font-display mt-1 ${toHitColor}`}>
           {to_hit_total}
         </p>
-      </m.div>
+      </m.div>}
 
-      {!is_fumble && (
+      {result.grazed && (
+        <m.div
+          data-testid="grazed-damage"
+          className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">{t(damage_total > 0 ? 'character.attack.grazed' : 'character.attack.missed_noted')}</p>
+          {damage_total > 0 && <p className="text-4xl font-black font-display mt-1 text-dnd-crimson-bright">{damage_total}</p>}
+        </m.div>
+      )}
+
+      {!is_fumble && !result.effect && !result.grazed && (
         <m.div
           className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
           initial={{ opacity: 0, y: 10 }}
@@ -116,7 +159,22 @@ export default function WeaponAttackModal({
           <p className="text-4xl font-black font-display mt-1 text-dnd-crimson-bright">
             {damage_total}
           </p>
+          {(result.damage_type || result.is_magic) && (
+            <p data-testid="damage-type" className="mt-1 text-xs font-body text-dnd-text-muted">
+              {result.damage_type && t(`character.inventory.damage_types.dmg_${result.damage_type}`, { defaultValue: result.damage_type })}
+              {result.damage_type && result.is_magic && ' · '}
+              {result.is_magic && t('character.attack.magic_strike')}
+            </p>
+          )}
         </m.div>
+      )}
+      {canRerollDamage && (
+        <AfterDamageOptions
+          charId={charId}
+          query={{ roll: 'weapon_damage' }}
+          dice={result.reroll_dice ? rerollDiceOf(result.reroll_dice) : damage_rolls.map((value, index) => ({ value, index, sides: dieSides }))}
+          onResult={(r) => setRerolled({ base: attack, value: r as WeaponAttackResult })}
+        />
       )}
 
       {proficiency_warning && (

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from fastapi import HTTPException
 
 from api.schemas.common import RollMode
+from core.rules.edition import character_edition
+from core.rules.modifiers import Applied, final_mode
 
 
 @dataclass
@@ -15,6 +17,22 @@ class D20Outcome:
     dice: list[int]
     kept: int
     mode: RollMode
+
+
+def spend_inspiration_reroll(char) -> None:
+    """Il rilancio è del 2024. Nel 2014 l'Ispirazione si spende prima del tiro, con l'opzione ``inspiration:advantage``."""
+    if character_edition(char) == "2014":
+        raise HTTPException(status_code=409, detail="inspiration_before_roll")
+    if not char.heroic_inspiration:
+        raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+    spend_inspiration(char)
+
+
+def spend_inspiration(char) -> None:
+    """Spesa l'Ispirazione, cade anche quella «in più» da cedere: non ce n'è più nessuna."""
+    char.heroic_inspiration = False
+    if (char.settings or {}).get("inspiration_extra"):
+        char.settings = {k: v for k, v in char.settings.items() if k != "inspiration_extra"}
 
 
 def resolve_d20(mode: RollMode, dice: list[int] | None, die: int | None) -> D20Outcome:
@@ -30,12 +48,32 @@ def resolve_d20(mode: RollMode, dice: list[int] | None, die: int | None) -> D20O
     return D20Outcome(dice=list(dice), kept=kept, mode=mode)
 
 
-def resolve_body(body) -> D20Outcome:
-    """resolve_d20 from an optional request body; inspiration is a single-die reroll."""
+def resolve_applied(
+    player_mode: RollMode, dice: list[int] | None, die: int | None, applied: Applied, reroll: bool = False,
+) -> D20Outcome:
+    """Tiro con i modificatori automatici. Il client conosce solo il modo scelto dal giocatore: se quello
+    finale chiede un altro numero di dadi si tengono i suoi e si tira il mancante (mai un 422)."""
+    mode: RollMode = player_mode if reroll else final_mode(player_mode, applied)
+    if applied.replace_die is not None:
+        mode, dice = "normal", [applied.replace_die]
+    elif mode != player_mode:
+        given = dice if dice is not None else [die] if die is not None else None
+        if given is not None:
+            need = 1 if mode == "normal" else 2
+            dice = [*given[:need], *(random.randint(1, 20) for _ in range(need - len(given)))]
+    outcome = resolve_d20(mode, dice, die)
+    if applied.min_d20 is not None:
+        outcome.kept = max(outcome.kept, applied.min_d20)
+    return outcome
+
+
+def resolve_body(body, applied: Applied | None = None) -> D20Outcome:
+    """resolve_d20 from an optional request body; inspiration (2024 only) is a single-die reroll."""
+    applied = applied or Applied()
     if body is None:
-        return resolve_d20("normal", None, None)
-    mode = "normal" if getattr(body, "with_inspiration", False) else body.mode
-    return resolve_d20(mode, body.dice, body.die)
+        return resolve_applied("normal", None, None, applied)
+    reroll = getattr(body, "with_inspiration", False)
+    return resolve_applied("normal" if reroll else body.mode, body.dice, body.die, applied, reroll)
 
 
 def d20_history_label(o: D20Outcome) -> str:

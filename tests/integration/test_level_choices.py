@@ -10,7 +10,15 @@ async def _fighter(client, level: int = 1, scores: dict | None = None) -> dict:
         body["ability_scores"] = scores
     r = await client.post("/characters", json=body)
     assert r.status_code == 201, r.text
-    return r.json()
+    created = r.json()
+    # Il Guerriero sceglie lo stile di combattimento al 1° livello (Task 23): questi test parlano degli ASI.
+    style = next((c for c in created["pending_choices"] if c.get("group") == "fighting_style"), None)
+    if style is not None:
+        r = await client.post(f"/characters/{created['id']}/choices/{style['id']}/resolve",
+                              json={"kind": "class_option", "options": ["defense"]})
+        assert r.status_code == 200, r.text
+        created = r.json()
+    return created
 
 
 async def _to_level_4(client) -> dict:
@@ -49,7 +57,8 @@ async def test_level_up_creates_choice_via_distribute(client):
     r = await client.patch(f"/characters/{ch['id']}/classes/distribute", json={"classes": [
         {"class_id": ch["classes"][0]["id"], "level": 4}, {"class_id": rogue, "level": 1}]})
     assert r.status_code == 200, r.text
-    assert [(c["class_key"], c["level"]) for c in r.json()["pending_choices"]] == [("Guerriero", 4)]
+    # il Ladro di 1° livello porta la Maestria (Task 27), non un ASI
+    assert sorted((c["class_key"], c["level"]) for c in r.json()["pending_choices"]) == [("Guerriero", 4), ("Ladro", 1)]
 
 
 async def test_fighter_has_extra_asi_at_6(client):
@@ -58,12 +67,15 @@ async def test_fighter_has_extra_asi_at_6(client):
     assert [c["level"] for c in r.json()["pending_choices"]] == [4, 6]
 
 
-async def test_no_choice_on_creation_or_add_class(client):
+async def test_choices_offered_on_creation_and_add_class_above_level_1(client):
+    # Task 5: una classe nata sopra il livello 1 offre gli ASI dei livelli già raggiunti.
     ch = await _fighter(client, level=8)
-    assert ch["pending_choices"] == []
+    assert [c["level"] for c in ch["pending_choices"]] == [4, 6, 8]
     r = await client.post(f"/characters/{ch['id']}/classes",
                           json={"class_name": "Ladro", "level": 8, "hit_die": 8})
-    assert r.json()["pending_choices"] == []
+    # ASI al 4 e all'8; la Maestria (Task 27) al 6°
+    assert sorted((c["class_key"], c["level"]) for c in r.json()["pending_choices"] if c["class_key"] == "Ladro") == [
+        ("Ladro", 4), ("Ladro", 6), ("Ladro", 8)]
 
 
 async def test_resolve_asi_caps_20(client):

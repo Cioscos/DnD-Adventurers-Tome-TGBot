@@ -98,7 +98,7 @@ async def get_template_detail(template_id: str) -> dict:
 async def list_rules(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[HomebrewRule]:
     char = await _get_owned_char(char_id, user_id, session)
     res = await session.execute(
@@ -116,7 +116,7 @@ async def list_rules(
 async def get_rule(
     char_id: int, rule_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     return await _get_owned_rule(char_id, rule_id, user_id, session)
 
@@ -288,7 +288,7 @@ async def _materialize_resources(
 async def install_template(
     char_id: int, template_id: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     char = await _get_owned_char(char_id, user_id, session)
     template = get_template(template_id)
@@ -320,7 +320,7 @@ async def install_template(
 async def delete_rule(
     char_id: int, rule_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     char = await _get_owned_char(char_id, user_id, session)
@@ -360,7 +360,7 @@ async def create_rule(
     char_id: int,
     body: HomebrewRuleCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     char = await _get_owned_char(char_id, user_id, session)
     now = _now()
@@ -393,7 +393,7 @@ async def update_rule(
     char_id: int, rule_id: int,
     body: HomebrewRuleUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     char = await _get_owned_char(char_id, user_id, session)
@@ -426,7 +426,7 @@ async def toggle_enabled(
     char_id: int, rule_id: int,
     body: EnableBody,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     rule.enabled = body.enabled
@@ -444,7 +444,7 @@ async def toggle_enabled(
 async def list_resources(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[HomebrewResource]:
     char = await _get_owned_char(char_id, user_id, session)
     res = await session.execute(
@@ -463,7 +463,7 @@ async def patch_resource(
     char_id: int, resource_id: int,
     body: HomebrewResourceUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewResourceRead:
     """Update a homebrew resource's current value with clamp + event dispatch.
 
@@ -521,7 +521,7 @@ async def patch_resource(
 async def delete_resource(
     char_id: int, resource_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     """Delete a homebrew resource — manual orphan cleanup (#31).
 
@@ -556,7 +556,7 @@ async def delete_resource(
 async def turn_start(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Fire the `turn_started` event for the character.
 
@@ -575,7 +575,7 @@ async def turn_start(
 async def manual_trigger(
     char_id: int, rule_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """Fire the `manual_trigger` event for the targeted rule only.
 

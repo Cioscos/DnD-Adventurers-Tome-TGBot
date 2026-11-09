@@ -9,25 +9,35 @@ const FAMILIAR_FORMS = new Set([
   'rat', 'raven', 'sea-horse', 'spider', 'weasel',
 ])
 
+// Patto della Catena (Warlock 2014): oltre alle forme di trova famiglio, imp, pseudodrago, quasit e spiritello.
+const PACT_CHAIN_FORMS = new Set(['imp', 'pseudodragon', 'quasit', 'sprite'])
+
 type Rule = Pick<MonsterEntry, 'index' | 'type' | 'challenge_rating' | 'speed'>
 
+// Forma Selvatica Elementale (Circolo della Luna 2014, dal 10°): i quattro elementali, senza limiti di GS (mirror di `core/rules/forms.py`).
+const ELEMENTALS = new Set(['air-elemental', 'earth-elemental', 'fire-elemental', 'water-elemental'])
+
 /** i18n key of the advisory warning, or null when the form is allowed. */
-export function familiarWarning(entry: Pick<MonsterEntry, 'index'>): string | null {
-  return FAMILIAR_FORMS.has(entry.index) ? null : 'character.extras.warn.familiar_form'
+export function familiarWarning(entry: Pick<MonsterEntry, 'index'>, hasPactOfTheChain = false): string | null {
+  return FAMILIAR_FORMS.has(entry.index) || (hasPactOfTheChain && PACT_CHAIN_FORMS.has(entry.index)) ? null : 'character.extras.warn.familiar_form'
 }
 
-/** Highest CR a druid can assume (Moon circle: 1 at level 2, level/3 from 6). */
-export function wildShapeMaxCr(druidLevel: number, isMoon: boolean): number {
-  if (isMoon) return druidLevel < 6 ? 1 : Math.floor(druidLevel / 3)
+/** Highest CR a druid can assume: mirrors `core/rules/forms.py` (the server blocks what breaks it).
+ * 2014 Moon: 1 up to level 5, then level/3; 2024 Moon: level/3 from level 3. */
+export function wildShapeMaxCr(druidLevel: number, isMoon: boolean, edition: string = '2014'): number {
+  if (isMoon && edition !== '2024') return druidLevel < 6 ? 1 : Math.floor(druidLevel / 3)
+  if (isMoon && druidLevel >= 3) return Math.floor(druidLevel / 3)
   return druidLevel < 4 ? 0.25 : druidLevel < 8 ? 0.5 : 1
 }
 
-/** i18n key of the first broken Wild Shape limit, or null. Advisory only. */
-export function wildShapeWarning(entry: Rule, druidLevel: number, isMoon: boolean): string | null {
+/** i18n key of the first broken Wild Shape limit, or null. Advisory: the server asks to confirm on activation. */
+export function wildShapeWarning(entry: Rule, druidLevel: number, isMoon: boolean, edition: string = '2014'): string | null {
+  if (edition !== '2024' && isMoon && druidLevel >= 10 && ELEMENTALS.has(entry.index)) return null // Forma Selvatica Elementale
   if (entry.type !== 'beast') return 'character.extras.warn.not_beast'
-  if (entry.challenge_rating > wildShapeMaxCr(druidLevel, isMoon)) return 'character.extras.warn.cr'
+  if (entry.challenge_rating > wildShapeMaxCr(druidLevel, isMoon, edition)) return 'character.extras.warn.cr'
   if ((entry.speed.fly_ft ?? 0) > 0 && druidLevel < 8) return 'character.extras.warn.fly'
-  if ((entry.speed.swim_ft ?? 0) > 0 && druidLevel < 4) return 'character.extras.warn.swim'
+  // 2024 limits only CR and flying: swimming is free
+  if (edition !== '2024' && (entry.speed.swim_ft ?? 0) > 0 && druidLevel < 4) return 'character.extras.warn.swim'
   return null
 }
 
@@ -37,6 +47,8 @@ export function formatCr(cr: number): string {
 }
 
 const loc = (f: Parameters<typeof localized>[0], lang: Lang) => localized(f, lang)
+
+const nonEmpty = (o?: Record<string, number>) => !!o && Object.keys(o).length > 0
 
 /** Catalogue monster -> companion statblock; flat damage ("1") becomes "1d1" for the server's NdX rule. */
 export function monsterToStatblock(e: MonsterEntry, lang: Lang): CompanionStatblock {
@@ -53,6 +65,11 @@ export function monsterToStatblock(e: MonsterEntry, lang: Lang): CompanionStatbl
   }))
   return {
     size: e.size, type: e.type, speed: e.speed, abilities: e.abilities, challenge_rating: e.challenge_rating,
+    // Dadi Vita del profilo: la bestia del Signore delle Bestie li spende nei riposi brevi
+    ...(e.hit_dice ? { hit_dice: e.hit_dice } : {}),
+    // competenze della creatura (bonus totali): il server le dà al druido in Forma Selvatica
+    ...(nonEmpty(e.skills) ? { skills: e.skills } : {}),
+    ...(nonEmpty(e.saves) ? { saves: e.saves } : {}),
     traits: e.traits.map((tr) => convert(tr.name, tr.desc)),
     actions,
   }

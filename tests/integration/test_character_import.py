@@ -41,6 +41,12 @@ def _norm(d: dict) -> dict:
     d = json.loads(json.dumps(d))
     d.pop("exported_at")
     d["character"].pop("name")
+    d["character"]["settings"].pop("ac_migrated", None)  # il personaggio di prova nasce senza passare dalla migrazione
+    # ...e senza passare dal sync del catalogo, che l'import fa: segno del retrofit e scelte di livello della classe (Warlock)
+    d["character"]["settings"].pop("retrofit_done", None)
+    d["character"]["pending_choices"] = [c for c in d["character"]["pending_choices"] if c.get("kind") != "class_option"]
+    # ...e le righe delle classi a catalogo (il Mago): l'import le riscrive dal catalogo, con testo e stato suoi
+    d["abilities"] = [a for a in d["abilities"] if not (a.get("feature_key") or "").startswith("wizard.")]
     return d
 
 

@@ -54,7 +54,7 @@ def _prepared_or_502(prep_id: str | None) -> dict:
 async def share_character_card(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     _require_token()
     char = await _get_owned_char(char_id, user_id, db)
@@ -84,7 +84,7 @@ async def share_item(
     char_id: int,
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     _require_token()
     char = await _get_owned_char(char_id, user_id, db)
@@ -121,7 +121,7 @@ async def share_note(
     char_id: int,
     title: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     _require_token()
     char = await _get_owned_char(char_id, user_id, db)
@@ -160,7 +160,7 @@ async def share_note(
 async def share_campaign_invite(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     _require_token()
     camp = await db.get(Campaign, campaign_id)
@@ -190,7 +190,7 @@ async def share_campaign_invite(
 async def share_session_invite(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     _require_token()
     result = await db.execute(select(GameSession).where(GameSession.id == session_id))
@@ -230,7 +230,7 @@ async def share_session_invite(
 async def share_recap(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """GM only: prepared message with the evening recap, to forward into the party chat."""
     _require_token()

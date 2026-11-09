@@ -107,4 +107,29 @@ describe('CombatantRow', () => {
     expect(onResolveSave).toHaveBeenCalledWith(5, true)
     expect(onTap).not.toHaveBeenCalled()
   })
+
+  it('PG: sotto il nome gli stati con effetti su altri, per il GM (Orso 14, Attacco Irruento)', () => {
+    render(
+      <CombatantRow
+        combatant={monster({
+          id: 2, kind: 'pc', character_id: 7, name: 'Eroe',
+          active_states: [
+            { key: 'rage', name: 'Ira', rounds_left: 8, others: [{ key: 'barbarian.attunement_bear', name: 'Orso', text: 'Svantaggio a chi ti sta vicino' }] },
+            { key: 'reckless', name: 'Attacco Irruento', rounds_left: 1, others: [{ key: 'barbarian.reckless_attack', name: 'Attacco Irruento', text: 'Gli attacchi contro di lui hanno vantaggio' }] },
+          ],
+        })}
+        snapshot={pcSnapshot} isActive={false} amGm={true} mode="full"
+      />,
+    )
+    const states = screen.getByTestId('public-states')
+    expect(states).toHaveTextContent('Ira')
+    expect(states).toHaveTextContent('Svantaggio a chi ti sta vicino')
+    expect(states).toHaveTextContent('Gli attacchi contro di lui hanno vantaggio')
+  })
+
+  it('senza stati con effetti su altri non compare nulla', () => {
+    render(<CombatantRow combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe', active_states: [] })}
+      snapshot={pcSnapshot} isActive={false} amGm={true} mode="full" />)
+    expect(screen.queryByTestId('public-states')).toBeNull()
+  })
 })

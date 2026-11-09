@@ -62,6 +62,7 @@ async def test_ammo_consumed_on_fumble(client):
 
 async def test_inspiration_reroll_does_not_consume(client):
     cid = await _char(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     wid = await _bow(client, cid)
     aid = await _arrows(client, cid)
     r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})

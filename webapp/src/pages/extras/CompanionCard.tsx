@@ -1,3 +1,4 @@
+import RollNotes from '@/components/rules/RollNotes'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,14 +9,20 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import HPGauge from '@/components/ui/HPGauge'
 import Pressable from '@/components/ui/Pressable'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
+import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
+import { askRollOptions, refreshAfterOptions, rerollDiceOf } from '@/lib/rollOptions'
 import { notifyMutationError } from '@/lib/mutationError'
+import { bonusSpentOnReturn } from '@/lib/formReturn'
 import { haptic } from '@/auth/telegram'
-import type { Companion, CompanionAction, CompanionAttackResult } from '@/types'
+import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
+import WildHealSheet, { type HealSlot } from '@/pages/extras/WildHealSheet'
+import type { Companion, CompanionAction, CompanionAttackResult, ConcentrationSaveResult } from '@/types'
 
 function EnBadge() {
   const { t } = useTranslation()
@@ -31,9 +38,13 @@ interface Props {
   comp: Companion
   /** Remaining Wild Shape uses (null when the character has no such ability). */
   wildShapeUses: number | null
+  /** 2024: la forma non ha PF propri (sono quelli del druido con i temporanei): niente barra né pulsanti PF. */
+  formHasNoHp?: boolean
+  /** Circolo della Luna: i livelli di slot con cui curare la forma (azione bonus); `null` se il personaggio non ha il privilegio. */
+  healSlots?: HealSlot[] | null
 }
 
-export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
+export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp, healSlots }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
@@ -42,7 +53,13 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [forceAsk, setForceAsk] = useState(false)
+  const [healing, setHealing] = useState(false)
+  const [concSave, setConcSave] = useState<ConcentrationSaveResult | null>(null)
+  const [formReasons, setFormReasons] = useState<string[] | null>(null)
   const [result, setResult] = useState<{ name: string; r: CompanionAttackResult } | null>(null)
+  const [chainBonus, setChainBonus] = useState(false)  // Investitura del Padrone delle Catene: attacco ordinato con l'azione bonus
+  const [chainType, setChainType] = useState('')
+  const chainOptions = comp.damage_type_options ?? []
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['companions', charId] })
@@ -50,29 +67,74 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
   }
 
   const hp = useMutation({
-    mutationFn: (op: 'damage' | 'heal') => api.companions.hp(charId, comp.id, op, Number(amount)),
-    onSuccess: () => { setAmount(''); haptic.success(); refresh() },
-    onError: () => notifyMutationError(),
+    mutationFn: (op: 'damage' | 'heal' | 'resist') => api.companions.hp(charId, comp.id, op === 'resist' ? 'damage' : op, Number(amount), op === 'resist'),
+    onSuccess: (updated) => {
+      setAmount(''); haptic.success(); refresh()
+      if (updated.concentration_save) setConcSave(updated.concentration_save)
+    },
+    onError: (err) => {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (code === 'turn_slot_used') toast.error(t('character.extras.chain_master.reaction_used'))
+      else notifyMutationError()
+    },
   })
 
   const attack = useMutation({
-    mutationFn: async ({ idx, mode }: { idx: number; mode: RollMode }) => {
+    mutationFn: async ({ idx, mode, reaction }: { idx: number; mode: RollMode; reaction?: boolean }) => {
+      // In forma l'attacco ha un passaggio solo: le opzioni del colpo (Colpo Primordiale, Radianza Lunare) si scelgono prima del tiro.
+      const inForm = comp.kind === 'wild_shape' && comp.is_active
+      const choice = await askRollOptions(charId, { roll: 'attack', ...(inForm ? { attack_mode: 'form' } : comp.feature_key === 'ranger.primal_companion' ? { attack_mode: 'beast' } : { attack_mode: 'companion' }) })
       const dice = await rollD20(mode)
-      return api.companions.attack(charId, comp.id, idx, mode, dice)
+      const chain = chainOptions.length ? { ...(chainBonus ? { bonus: true } : {}), ...(chainType ? { damage_type: chainType } : {}) } : undefined
+      return api.companions.attack(charId, comp.id, idx, mode, dice, { options: choice.options, option_inputs: choice.option_inputs }, reaction, chain)
     },
     onSuccess: (r, { idx }) => {
+      refreshAfterOptions(qc, charId, r.option_result)
       setResult({ name: comp.statblock.actions?.[idx]?.name ?? '', r })
       haptic.success()
       refresh()
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (code === 'incapacitated') {
+        toast.error(t('character.attack.incapacitated'))
+      } else if (code === 'no_order') {
+        toast.error(t('character.extras.beast.no_order'))
+      } else if (code === 'turn_slot_used') {
+        toast.error(t('character.attack.bonus_used'))
+      } else if (code === 'companion_down') {
+        toast.error(t('character.extras.beast.errors.companion_down'))
+      } else {
+        notifyMutationError()
+      }
+    },
   })
+
+  // Signore delle Bestie: i Dadi Vita del profilo della bestia, spesi in un riposo breve
+  const isBeast = comp.feature_key === 'ranger.rangers_companion'  // i Dadi Vita sono del 2014: la bestia primordiale 2024 non li spende
+  const hitDice = useMutation({
+    mutationFn: () => api.companions.hitDice(charId, comp.id, 1),
+    onSuccess: (r) => {
+      haptic.success(); refresh()
+      toast.info(t('character.extras.beast.hit_dice_healed', { n: r.healed }), { description: t('character.extras.beast.hit_dice_left', { n: r.hit_dice_left }) })
+    },
+    onError: (err) => {
+      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      if (code && ['no_hit_dice', 'hp_full', 'companion_down'].includes(code)) toast.error(t(`character.extras.beast.hit_dice_errors.${code}`))
+      else notifyMutationError()
+    },
+  })
+  const hdTotal = Number(/^(\d+)d\d+$/.exec(String(comp.statblock.hit_dice ?? ''))?.[1] ?? 0)
+  const hdLeft = Math.max(0, hdTotal - Number(comp.statblock.hit_dice_spent ?? 0))
 
   const activate = useMutation({
     mutationFn: (force: boolean) => api.companions.activate(charId, comp.id, force),
-    onSuccess: () => { setForceAsk(false); haptic.success(); refresh() },
+    onSuccess: () => { setForceAsk(false); setFormReasons(null); haptic.success(); refresh() },
     onError: (err) => {
-      if (err instanceof ApiError && err.status === 409 && err.detail === 'no_wild_shape_uses') setForceAsk(true)
+      const detail = err instanceof ApiError ? (err.detail as { code?: string; reasons?: string[]; slot?: string } | string | null) : null
+      if (typeof detail === 'object' && detail?.code === 'form_not_allowed') setFormReasons(detail.reasons ?? [])
+      else if (typeof detail === 'object' && detail?.code === 'turn_slot_used') toast.error(t(detail.slot === 'action' ? 'character.extras.action_used' : 'character.attack.bonus_used'))
+      else if (err instanceof ApiError && err.status === 409 && err.detail === 'no_wild_shape_uses') setForceAsk(true)
       else if (err instanceof ApiError && err.status === 409 && err.detail === 'character_down') toast.error(t('character.extras.character_down'))
       else notifyMutationError()
     },
@@ -81,13 +143,21 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
   const deactivate = useMutation({
     mutationFn: () => api.companions.deactivate(charId, comp.id),
     onSuccess: refresh,
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
+      else notifyMutationError()
+    },
   })
 
   const remove = useMutation({
     mutationFn: () => api.companions.remove(charId, comp.id),
     onSuccess: () => { setConfirmDelete(false); refresh() },
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      setConfirmDelete(false)  // rifiutata: la scheda e la forma restano dove sono
+      if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
+      else notifyMutationError()
+      refresh()
+    },
   })
 
   const amountOk = Number(amount) > 0
@@ -115,6 +185,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
         </div>
       </div>
 
+      {!(formHasNoHp && comp.is_active) && <>
       <div>
         <div className="flex justify-between text-sm font-mono tabular-nums mb-1">
           <span className="text-dnd-text font-bold">{comp.current_hp}/{comp.max_hp}</span>
@@ -136,6 +207,33 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
         <Button variant="primary" className="min-h-11" disabled={!amountOk} loading={hp.isPending && hp.variables === 'heal'}
           onClick={() => hp.mutate('heal')}>{t('character.hp.quick_heal')}</Button>
       </div>
+      {comp.can_resist && (
+        <Button variant="secondary" fullWidth className="min-h-11" disabled={!amountOk} loading={hp.isPending && hp.variables === 'resist'}
+          onClick={() => hp.mutate('resist')}>{t('character.extras.chain_master.resist')}</Button>
+      )}
+      </>}
+
+      {isBeast && comp.current_hp > 0 && hdTotal > 0 && (
+        <Button variant="secondary" fullWidth className="min-h-11" disabled={comp.current_hp >= comp.max_hp || hdLeft === 0}
+          loading={hitDice.isPending} onClick={() => hitDice.mutate()}>
+          {t('character.extras.beast.hit_dice')} ({hdLeft}/{hdTotal})
+        </Button>
+      )}
+
+      {chainOptions.length > 0 && (
+        <div className="space-y-2" data-testid="chain-master">
+          <p className="text-xs font-mono text-dnd-text-muted tabular-nums">{t('character.extras.chain_master.stats', { dc: comp.save_dc, m: comp.fly_or_swim_m })}</p>
+          <SwitchToggle checked={chainBonus} onChange={setChainBonus} label={t('character.extras.chain_master.bonus')} />
+          <label className="flex items-center gap-2 text-sm font-body text-dnd-text">
+            <span className="flex-1 min-w-0">{t('character.extras.chain_master.damage_type')}</span>
+            <select value={chainType} onChange={(e) => setChainType(e.target.value)}
+              className="min-h-11 rounded-lg border border-dnd-border bg-dnd-surface text-dnd-text px-3">
+              <option value="">{t('character.extras.chain_master.as_listed')}</option>
+              {chainOptions.map((o) => <option key={o} value={o}>{t(`character.extras.chain_master.${o}`)}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
 
       {attacks.length > 0 && (
         <ul className="space-y-1.5">
@@ -144,7 +242,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
               <span className="flex-1 min-w-0 text-sm font-body text-dnd-text break-words">
                 {a.name}
                 <span className="block text-xs font-mono text-dnd-text-muted tabular-nums">
-                  {a.attack_bonus! >= 0 ? '+' : ''}{a.attack_bonus}{a.damage_dice ? ` · ${a.damage_dice}` : ''}
+                  {a.attack_bonus! + (comp.attack_bonus_extra ?? 0) >= 0 ? '+' : ''}{a.attack_bonus! + (comp.attack_bonus_extra ?? 0)}
+                  {a.damage_dice ? ` · ${a.damage_dice}${comp.damage_bonus_extra ? `+${comp.damage_bonus_extra}` : ''}` : ''}
                 </span>
               </span>
               <RollButton
@@ -155,6 +254,16 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
               >
                 <Swords size={14} />{t('character.turn.attack')}
               </RollButton>
+              {isBeast && (
+                <RollButton
+                  onRoll={(mode) => attack.mutate({ idx, mode, reaction: true })}
+                  pending={attack.isPending}
+                  ariaLabel={`${t('character.extras.beast.reaction_attack')} ${a.name}`}
+                  className="flex items-center gap-1 text-sm font-medium px-3 min-h-11 rounded-lg border bg-dnd-surface text-dnd-text border-dnd-border"
+                >
+                  {t('character.extras.beast.reaction_attack')}
+                </RollButton>
+              )}
             </li>
           ))}
         </ul>
@@ -164,14 +273,31 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
           {result.name}: {result.r.to_hit_die}{result.r.to_hit_bonus >= 0 ? '+' : ''}{result.r.to_hit_bonus} = {result.r.to_hit_total}
           {result.r.is_critical && ` · ${t('character.extras.critical')}`}
           {' · '}{result.r.damage_total} {result.r.damage_type ?? ''}
+          {result.r.is_magical && ` · ${t('character.extras.magical')}`}
+          <RollNotes notes={result.r.notes} className="mt-1" />
         </p>
+      )}
+      {result?.r.reroll_dice && (
+        <AfterDamageOptions
+          charId={charId}
+          query={{ roll: 'weapon_damage' }}
+          dice={rerollDiceOf(result.r.reroll_dice)}
+          onResult={(r) => setResult({ name: result.name, r: r as CompanionAttackResult })}
+        />
       )}
 
       {comp.kind === 'wild_shape' && (
         comp.is_active ? (
-          <Button variant="secondary" fullWidth className="min-h-11" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>
-            {t('character.extras.end_form')}
-          </Button>
+          <div className="space-y-2">
+            {healSlots && (
+              <Button variant="primary" fullWidth className="min-h-11" onClick={() => setHealing(true)}>
+                {t('character.extras.wild_heal')}
+              </Button>
+            )}
+            <Button variant="secondary" fullWidth className="min-h-11" loading={deactivate.isPending} onClick={() => deactivate.mutate()}>
+              {t('character.extras.end_form')}
+            </Button>
+          </div>
         ) : (
           <Button fullWidth className="min-h-11" loading={activate.isPending} onClick={() => activate.mutate(false)}>
             {t('character.extras.activate')}{wildShapeUses != null ? ` (${wildShapeUses})` : ''}
@@ -200,8 +326,14 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
 
       <ConfirmSheet open={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={() => remove.mutate()}
         title={t('character.extras.delete_title', { name: comp.name })} confirmLabel={t('common.delete')} loading={remove.isPending} />
+      {concSave && <ConcentrationSaveDialog result={concSave} onClose={() => setConcSave(null)} afterRoll={{ charId }} />}
+      {healing && healSlots && <WildHealSheet charId={charId} comp={comp} slots={healSlots} onClose={() => setHealing(false)} />}
       <ConfirmSheet open={forceAsk} onClose={() => setForceAsk(false)} onConfirm={() => activate.mutate(true)}
         title={t('character.extras.force_title')} body={t('character.extras.force_body')}
+        confirmLabel={t('character.extras.force_confirm')} confirmVariant="primary" loading={activate.isPending} />
+      <ConfirmSheet open={formReasons !== null} onClose={() => setFormReasons(null)} onConfirm={() => activate.mutate(true)}
+        title={t('character.extras.form_not_allowed_title')}
+        body={(formReasons ?? []).map((r) => t(`character.extras.reasons.${r}`)).join(' ')}
         confirmLabel={t('character.extras.force_confirm')} confirmVariant="primary" loading={activate.isPending} />
     </Surface>
   )

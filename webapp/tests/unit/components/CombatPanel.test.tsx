@@ -162,6 +162,15 @@ describe('CombatPanel', () => {
       expect(screen.getByText('session.combat.end_my_turn')).toBeInTheDocument()
     })
 
+    it('giocatore con il secondo turno dei Riflessi da Furfante: la sua scheda è quella del PG, anche se la riga viene prima', () => {
+      // Il secondo turno è una riga a parte, senza `character_id`: «Termina turno» e «Apri il mio turno» restano del PG.
+      const extra = combatant({ id: 9, character_id: null, name: 'Eroe (Riflessi da Furfante)', initiative: 5, sort_order: 5 })
+      renderPanel(active(9, [extra, goblin, me, ally]))
+      expect(screen.getByText('session.combat.end_my_turn')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('session.combat.open_my_turn'))
+      expect(navigateSpy).toHaveBeenCalledWith('/char/7/turn')
+    })
+
     it('giocatore senza PG nel combattimento: niente card, nastro e tracciato sì', () => {
       renderPanel(active(2, [goblin, ally]))
       expect(screen.queryByTestId('my-combatant-card')).not.toBeInTheDocument()

@@ -26,6 +26,10 @@ interface HpOperationFormProps {
   atZero: boolean
   crit: boolean
   setCrit: (c: boolean) => void
+  /** Tramortire: chi porta a 0 PF con un attacco in mischia può non uccidere. Senza `setKnockOut` il pulsante non compare. */
+  knockOut?: boolean
+  setKnockOut?: (k: boolean) => void
+  canKnockOut?: boolean
   damageModifier: DamageModifier
   setDamageModifier: (m: DamageModifier) => void
   /** Tipo di danno opzionale ('' = nessuno); senza `setDamageType` il picker non compare. */
@@ -56,6 +60,9 @@ export default function HpOperationForm({
   atZero,
   crit,
   setCrit,
+  knockOut = false,
+  setKnockOut,
+  canKnockOut = false,
   damageModifier,
   setDamageModifier,
   damageType = '',
@@ -137,6 +144,18 @@ export default function HpOperationForm({
             >
               <Skull size={16} />
               {t('character.hp.critical_hit')}
+            </Pressable>
+          )}
+          {setKnockOut && canKnockOut && (
+            <Pressable
+              onClick={() => { setKnockOut(!knockOut); haptic.selection() }}
+              aria-pressed={knockOut}
+              className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border px-2 font-cinzel text-xs uppercase tracking-wider max-xs:tracking-normal transition-colors
+                ${knockOut
+                  ? '!bg-dnd-amber/10 !text-dnd-amber !border-dnd-amber/60'
+                  : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
+            >
+              {t('character.hp.knock_out')}
             </Pressable>
           )}
         </div>

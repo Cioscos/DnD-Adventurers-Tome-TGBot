@@ -1,0 +1,115 @@
+"""Compagni concessi da un privilegio: PF, CA e bonus dal livello di classe, dal bonus di competenza e dalla Saggezza."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Callable
+
+from core.game.stats import effective_ability_mod
+from core.rules.edition import character_edition, class_key
+
+
+@dataclass(frozen=True)
+class CompanionStats:
+    """``max_hp``/``armor_class`` ``None``: restano i valori scritti. I bonus si sommano a quelli dello statblock."""
+    max_hp: int | None = None
+    armor_class: int | None = None
+    attack_bonus: int = 0
+    damage_bonus: int = 0
+    # Investitura del Padrone delle Catene (Warlock 2024): CD dei TS che impone, volo o nuoto in metri, tipi di danno a scelta al
+    # posto di contundente/perforante/tagliente e resistenza in reazione
+    save_dc: int | None = None
+    fly_or_swim_m: int = 0
+    damage_types: tuple[str, ...] = ()
+    can_resist: bool = False
+
+
+def _rangers_companion(base_hp: int, base_ac: int, level: int, pb: int, _wis: int, _statblock: dict) -> CompanionStats:
+    # 2014: PF il maggiore fra la scheda e 4 x livello; CA, attacco e danni sommano il bonus di competenza.
+    return CompanionStats(max(base_hp, 4 * level), base_ac + pb, pb, pb)
+
+
+def _primal_companion(_hp: int, _ac: int, level: int, pb: int, wis: int, statblock: dict) -> CompanionStats:
+    # 2024: PF 5 + 5 x livello (Cielo 4 + 4 x livello), CA 13 + SAG, attacco = attacco con incantesimi, danno + SAG.
+    per_level = 4 if statblock.get("primal_type") == "sky" else 5
+    return CompanionStats(per_level * (level + 1), 13 + wis, pb + wis, wis)
+
+
+BEAST_COMPANION = "ranger.rangers_companion"  # il compagno del Signore delle Bestie 2014: agisce solo se il ranger glielo ordina
+PRIMAL_COMPANION = "ranger.primal_companion"  # la bestia primordiale 2024: Schiva da sola, il Colpo della Bestia solo su ordine
+BEAST_KEYS = (BEAST_COMPANION, PRIMAL_COMPANION)
+BEAST_ORDERS = ("attack", "help", "disengage", "dash", "dodge")
+MAX_MULTIATTACK, MAX_HIT_DICE = 6, 40  # tetti dei numeri dello statblock che il server legge (validati al salvataggio)
+
+
+def stat_int(statblock: dict, key: str, default: int = 0, *, high: int = 10_000) -> int:
+    """Numero dello statblock letto in modo difensivo: un dato salvato prima della validazione (testo, bool, negativo,
+    enorme) vale ``default`` invece di far cadere la richiesta con un 500."""
+    value = (statblock or {}).get(key)
+    return value if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= high else default
+
+
+BEAST_BONUS_ORDERS = ("help", "disengage", "dash", "dodge")  # Addestramento Straordinario: tutti tranne l'attacco
+
+
+# chiave -> (classe, edizione, formula)
+COMPANION_FEATURES: dict[str, tuple[str, str, Callable[..., CompanionStats]]] = {
+    "ranger.rangers_companion": ("ranger", "2014", _rangers_companion),
+    PRIMAL_COMPANION: ("ranger", "2024", _primal_companion),
+}
+
+
+THRALLS = "wizard.undead_thralls"  # Servitori Non Morti (Mago 2014, Scuola di Necromanzia 6)
+THRALL_KEY = "thrall"  # statblock: il non morto è stato creato con un incantesimo di necromanzia
+
+
+def thrall_stats(char, comp) -> CompanionStats | None:
+    """Un non morto creato con la necromanzia da un mago con Servitori Non Morti: PF massimi + livello da mago, e il bonus di
+    competenza ai danni con le armi."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    if not (comp.statblock or {}).get(THRALL_KEY):
+        return None
+    found = next((row for spec, row in active_features(char) if spec.key == THRALLS), None)
+    if found is None:
+        return None
+    return CompanionStats(max_hp=comp.max_hp + found.level, damage_bonus=char.proficiency_bonus)
+
+
+CHAIN_MASTER = "warlock.investment_of_the_chain_master"  # Investitura del Padrone delle Catene (Warlock 2024)
+
+
+def chain_master_stats(char, comp) -> CompanionStats | None:
+    """Il famiglio (non un compagno di privilegio) di un warlock 2024 con l'Investitura: volo o nuoto 12 m, necrotico o radioso al posto
+    dei danni fisici, la CD del warlock per i suoi TS e la resistenza in reazione."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    if comp.kind != "familiar" or comp.feature_key or character_edition(char) != "2024":
+        return None
+    if not any(spec.key == CHAIN_MASTER for spec, _row in active_features(char)):
+        return None
+    return CompanionStats(save_dc=8 + char.proficiency_bonus + effective_ability_mod(char, "charisma"), fly_or_swim_m=12,
+                          damage_types=("necrotic", "radiant"), can_resist=True)
+
+
+def companion_stats(char, comp) -> CompanionStats | None:
+    """Valori del compagno di privilegio per il personaggio; ``None`` se non ne ha uno o il privilegio non è dell'edizione."""
+    if (thrall := thrall_stats(char, comp)) is not None:
+        return thrall
+    if (chain := chain_master_stats(char, comp)) is not None:
+        return chain
+    entry = COMPANION_FEATURES.get(comp.feature_key or "")
+    if entry is None or entry[1] != character_edition(char):
+        return None
+    level = sum(c.level for c in char.classes if class_key(c) == entry[0])
+    if not level:
+        return None
+    wis = effective_ability_mod(char, "wisdom")
+    return entry[2](comp.max_hp, comp.armor_class, level, char.proficiency_bonus, wis, comp.statblock or {})
+
+
+DURABLE_SUMMONS = "wizard.durable_summons"  # Evocazioni Perduranti (Mago 2014, Scuola di Evocazione 14)
+
+
+def summon_temp_hp(char, school: str | None) -> int:
+    """PF temporanei con cui nasce una creatura evocata da un incantesimo di ``school``: 30 per un mago con Evocazioni Perduranti
+    (solo se l'incantesimo è di evocazione)."""
+    from core.rules.catalog import active_features  # import locale: il catalogo importa questo modulo
+    return 30 if school == "conjuration" and any(spec.key == DURABLE_SUMMONS for spec, _row in active_features(char)) else 0

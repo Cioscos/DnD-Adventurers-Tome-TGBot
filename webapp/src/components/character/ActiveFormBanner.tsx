@@ -4,19 +4,25 @@ import { GiPawPrint } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import { notifyMutationError } from '@/lib/mutationError'
+import { bonusSpentOnReturn } from '@/lib/formReturn'
+import { useToast } from '@/hooks/useToast'
 import type { ActiveForm } from '@/types'
 
 /** "In forma di <nome>" with the one-tap exit from Wild Shape. */
 export default function ActiveFormBanner({ charId, form }: { charId: number; form: ActiveForm }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const toast = useToast()
   const end = useMutation({
     mutationFn: () => api.companions.deactivate(charId, form.companion_id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       qc.invalidateQueries({ queryKey: ['companions', charId] })
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => {
+      if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
+      else notifyMutationError()
+    },
   })
   return (
     <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl border border-dnd-emerald/50 bg-dnd-emerald/10">

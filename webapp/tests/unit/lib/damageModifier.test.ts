@@ -1,10 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import {
   applyDamageModifier, canonicalDamageType, damageMultiplier, damagePreviewText, damageTypeLabel,
-  type DamageModifier,
+  effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
 import itLocale from '@/locales/it.json'
 import enLocale from '@/locales/en.json'
+
+describe('effectiveDamageMods', () => {
+  it('uses the temporary resistances of conditions without losing vulnerabilities', () => {
+    const char = {
+      damage_modifiers: { vulnerabilities: ['fire'], resistances: [] },
+      computed: { resistances: ['all'], immunities: ['poison'] },
+    }
+    expect(damageMultiplier(effectiveDamageMods(char), 'slashing')).toBe('half')
+    expect(damageMultiplier(effectiveDamageMods(char), 'poison')).toBe('immune')
+    expect(damageMultiplier(effectiveDamageMods(char), 'fire')).toBe('half_double')
+    expect(effectiveDamageMods({ damage_modifiers: { resistances: ['fire'] } })).toEqual({ resistances: ['fire'] })
+  })
+})
 
 describe('applyDamageModifier', () => {
   it.each<[number, DamageModifier, number]>([
@@ -14,6 +27,7 @@ describe('applyDamageModifier', () => {
     [15, null, 15],
     [15, 'none', 15],
     [15, 'immune', 0],
+    [25, 'half_double', 24],
   ])('applyDamageModifier(%i, %s) = %i', (value, mod, expected) => {
     expect(applyDamageModifier(value, mod)).toBe(expected)
   })
@@ -49,8 +63,8 @@ describe('damageMultiplier', () => {
     expect(damageMultiplier(undefined, 'fire')).toBe('none')
     expect(damageMultiplier(mods, null)).toBe('none')
   })
-  it('resistance + vulnerability cancel; immunity wins', () => {
-    expect(damageMultiplier({ resistances: ['fire'], vulnerabilities: ['Fuoco'] }, 'fire')).toBe('none')
+  it('resistance then vulnerability apply in order; immunity wins', () => {
+    expect(damageMultiplier({ resistances: ['fire'], vulnerabilities: ['Fuoco'] }, 'fire')).toBe('half_double')
     expect(damageMultiplier({ resistances: ['fire'], immunities: ['fire'] }, 'fire')).toBe('immune')
   })
 })

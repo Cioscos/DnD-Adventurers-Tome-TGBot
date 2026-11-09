@@ -1,4 +1,5 @@
 import CasterStats from '@/pages/spells/CasterStats'
+import SpellLimits from '@/pages/spells/SpellLimits'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -6,7 +7,8 @@ import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Ban, ChevronRight, FilterX } from 'lucide-react'
 import { GiPotionBall as FlaskConical, GiSparkles as Sparkles } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
+import { notifyMutationError } from '@/lib/mutationError'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -18,8 +20,10 @@ import FilterChip from '@/components/ui/FilterChip'
 import FilterRow from '@/components/ui/FilterRow'
 import { haptic } from '@/auth/telegram'
 import { toast } from 'sonner'
+import OwnedSecrets from '@/pages/spells/OwnedSecrets'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
+import SpellbookSheet from '@/pages/spells/SpellbookSheet'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
 import { totalLevelOf } from '@/lib/dnd'
 import { itemSpellConcentration } from '@/lib/concentration'
@@ -95,6 +99,37 @@ export default function Spells() {
   })
 
   const castFlow = useCastFlow(charId, char)
+  const [bookSpell, setBookSpell] = useState<Spell | null>(null)  // Libro del Mago: l'incantesimo da copiare
+  const [confirmLost, setConfirmLost] = useState(false)
+  const loseBook = useMutation({
+    mutationFn: () => api.spells.loseSpellbook(charId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setConfirmLost(false)
+      toast.info(t('character.spells.book.lost_done'))
+    },
+  })
+
+  const onPrepareError = (e: unknown) => {
+    const detail = e instanceof ApiError ? e.detail as { code?: string; n?: number; cap?: number; per_class?: boolean } : null
+    if (detail?.code === 'not_in_spellbook' || detail?.code === 'spell_above_slots') {
+      haptic.warning()
+      toast.warning(t(`character.spells.${detail.code}`))
+      return
+    }
+    if (detail?.code !== 'prepared_cap') {
+      notifyMutationError()
+      return
+    }
+    haptic.warning()
+    toast.warning(t(`character.spells.${detail.per_class ? 'prepared_cap_class_reached' : 'prepared_cap_reached'}`, {
+      n: detail.n, cap: detail.cap,
+    }))
+  }
+
+  // Segreti Magici: la scelta in sospeso a cui l'incantesimo che si sta aggiungendo risponde (`?pick=<id>` dalla scheda).
+  const pickId = searchParams.get('pick')
+  const pick = char?.pending_choices?.find((c) => c.id === pickId && c.spell_pick) ?? null
 
   const addMutation = useMutation({
     mutationFn: (data: SpellFormData) =>
@@ -116,12 +151,25 @@ export default function Spells() {
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || undefined,
         is_pinned: false,
+        // Una scelta di incantesimi va sempre alla classe che la dà: la sceglie il server.
+        class_id: pick ? null : data.class_id ? Number(data.class_id) : null,
+        always_prepared: data.always_prepared,
+        ...(pick ? { pick_id: pick.id } : {}),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       setShowAdd(false)
       setEditingSpell(null)
       haptic.success()
+    },
+    onError: (e) => {
+      const code = e instanceof ApiError ? (e.detail as { code?: string } | null)?.code : undefined
+      if (code === 'spell_pick_level' || code === 'spell_already_known') {
+        haptic.warning()
+        toast.warning(t(`character.spells.${code}`))
+        return
+      }
+      onPrepareError(e)
     },
   })
 
@@ -145,6 +193,8 @@ export default function Spells() {
         school: data.school || undefined,
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || null,
+        class_id: data.class_id ? Number(data.class_id) : null,
+        always_prepared: data.always_prepared,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -179,10 +229,7 @@ export default function Spells() {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.light()
     },
-    onError: (e) => {
-      haptic.error()
-      toast.error(e instanceof Error ? e.message : String(e))
-    },
+    onError: onPrepareError,
   })
 
   const handlePreparedToggle = useCallback((spell: Spell) => {
@@ -341,6 +388,31 @@ export default function Spells() {
   return (
     <Layout title={t('character.spells.title')} backTo={`/char/${charId}`} group="magic" page="spells">
       <CasterStats casters={spellcasting?.casters ?? []} />
+      <SpellLimits limits={spellcasting?.limits ?? []} />
+
+      {pick?.spell_pick && (
+        <Surface variant="arcane">
+          <div data-testid="spell-pick-banner" className="space-y-1">
+            <p className="font-body text-sm text-dnd-text">
+              {pick.spell_pick.book
+                ? t('character.spells.pick_book_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })
+                : pick.spell_pick.ritual
+                ? t('character.spells.pick_ritual_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
+                : pick.spell_pick.exact
+                  ? t('character.spells.pick_exact_banner', { count: pick.count ?? 0, level: pick.spell_pick.max_level })
+                  : pick.spell_pick.max_level === 0
+                    ? t(pick.spell_pick.list ? 'character.spells.pick_cantrip_banner' : 'character.spells.pick_cantrip_any_banner', { count: pick.count ?? 0, list: t(`dnd.classes.${pick.spell_pick.list}`) })
+                    : t('character.spells.pick_banner', { count: pick.count ?? 0, max: pick.spell_pick.max_level })}
+            </p>
+            {pick.spell_pick.free && (
+              <p className="font-body text-xs text-dnd-text-muted">{t('character.spells.pick_free')}</p>
+            )}
+          </div>
+          {pick.retrofit && (pick.spell_pick.owned?.length ?? 0) > 0 && (
+            <OwnedSecrets charId={charId} pick={pick} />
+          )}
+        </Surface>
+      )}
 
       <SpellFilter
         search={search}
@@ -380,7 +452,8 @@ export default function Spells() {
 
       {/* Contatore di preparazione: etichetta in Cinzel, numeri mono tabulari
           (Tabular Numerics). Rosso solo oltre il tetto (legacy grandfathered). */}
-      {spellcasting?.has_preparing_class && spells.length > 0 && (
+      {spellcasting?.has_preparing_class && spells.length > 0
+        && (spellcasting.limits?.length !== 1 || spellcasting.cap_mode === 'manual') && (
         <div className="flex items-center justify-end gap-1.5 px-1">
           <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
             {t('character.spells.prepared_counter')}
@@ -392,6 +465,14 @@ export default function Spells() {
           }`}>
             {spellcasting.prepared_count}/{spellcasting.prepared_cap ?? 0}
           </span>
+        </div>
+      )}
+
+      {spellcasting?.has_wizard && spells.some((s) => s.has_book) && (
+        <div className="flex justify-end px-1">
+          <Button variant="secondary" size="sm" className="min-h-11" onClick={() => setConfirmLost(true)}>
+            {t('character.spells.book.lost_button')}
+          </Button>
         </div>
       )}
 
@@ -468,7 +549,7 @@ export default function Spells() {
           />
         )}
         {sortedLevels.map((level) => {
-          const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
+          const slots = level > 0 ? spellSlots.filter((s) => s.level === level && s.total > 0) : []
           return (
             <div key={level} className="mb-4">
               {/* -top-4 compensa il p-4 del contenitore di scroll del Layout
@@ -488,8 +569,11 @@ export default function Spells() {
                     {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
                   </span>
                 </Pressable>
-                {slot && slot.total > 0 && (
-                  <div className="flex gap-1 items-center shrink-0">
+                {slots.map((slot) => (
+                  <div key={slot.id} className="flex gap-1 items-center shrink-0">
+                    {slot.is_pact && slots.length > 1 && (
+                      <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">{t('character.slots.pact_badge')}</span>
+                    )}
                     {Array.from({ length: slot.total }).map((_, i) => (
                       <Pressable
                         key={i}
@@ -518,7 +602,7 @@ export default function Spells() {
                       />
                     ))}
                   </div>
-                )}
+                ))}
               </div>
               <AnimatePresence>
                 {!collapsedLevels.has(level) && (
@@ -550,9 +634,10 @@ export default function Spells() {
                             onRemove={() => setConfirmForget(spell)}
                             concentratingSpellId={concentratingId ?? null}
                             usePending={castFlow.isSpellPending(spell.id)}
-                            showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1}
+                            showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.always_prepared}
                             onPreparedToggle={() => handlePreparedToggle(spell)}
                             preparedPending={preparedMutation.isPending && preparedMutation.variables?.spellId === spell.id}
+                            onBook={() => setBookSpell(spell)}
                             concentrationPending={
                               concentrationMutation.isPending &&
                               (concentrationMutation.variables === spell.id ||
@@ -569,6 +654,25 @@ export default function Spells() {
           )
         })}
       </ScrollArea>
+
+      {spellcasting?.has_wizard && (
+        <SpellbookSheet
+          charId={charId}
+          spell={bookSpell ?? ({ id: 0, name: '', level: 1, is_concentration: false, is_ritual: false, is_pinned: false, is_prepared: false } as Spell)}
+          open={bookSpell !== null}
+          onClose={() => setBookSpell(null)}
+        />
+      )}
+
+      <ConfirmSheet
+        open={confirmLost}
+        onClose={() => setConfirmLost(false)}
+        title={t('character.spells.book.lost_title')}
+        body={t('character.spells.book.lost_body')}
+        confirmLabel={t('character.spells.book.lost_button')}
+        loading={loseBook.isPending}
+        onConfirm={() => loseBook.mutate()}
+      />
 
       {/* Dimentica: eliminazione definitiva, sempre confermata (audit #9). */}
       <ConfirmSheet
@@ -591,6 +695,8 @@ export default function Spells() {
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
+          casters={spellcasting?.casters ?? []}
+          pickFilter={pick?.spell_pick ? { max_level: pick.spell_pick.max_level, list: pick.spell_pick.list, exact: pick.spell_pick.exact, ritual: pick.spell_pick.ritual, school: pick.spell_pick.school } : undefined}
         />
       )}
 

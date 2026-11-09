@@ -5,12 +5,14 @@ import Button from '@/components/ui/Button'
 interface ConditionDetailModalProps {
   condKey: string
   exhaustionLevel?: number
+  edition?: string
   onClose: () => void
 }
 
 export default function ConditionDetailModal({
   condKey,
   exhaustionLevel = 0,
+  edition,
   onClose,
 }: ConditionDetailModalProps) {
   const { t } = useTranslation()
@@ -18,15 +20,16 @@ export default function ConditionDetailModal({
 
   const title = isExhaustion
     ? (exhaustionLevel > 0
-        ? t('character.conditions.exhaustion', { level: exhaustionLevel })
-        : t('character.conditions.exhaustion_condition'))
+        ? t('character.conditions.exhaustion', { level: exhaustionLevel, context: edition })
+        : t('character.conditions.exhaustion_condition', { context: edition }))
     : t(`character.conditions.${condKey}`)
 
-  const description = t(`character.conditions.desc.${condKey}`)
+  const description = t(`character.conditions.desc.${condKey}`, { context: edition })
 
   const levels = isExhaustion
     ? (t('character.conditions.desc.exhaustion_levels', {
         returnObjects: true,
+        context: edition,
       }) as string[])
     : []
 

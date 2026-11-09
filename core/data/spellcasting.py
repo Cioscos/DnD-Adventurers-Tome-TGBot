@@ -1,4 +1,4 @@
-"""D&D 5e (2014) — regole di preparazione incantesimi e Ritual Casting.
+"""D&D 5e (2014) — regole di preparazione incantesimi e Ritual Casting. Il 2024 è in ``core.rules.spellcasting``.
 
 Complementare a ``core.data.spell_slots`` (stessa normalizzazione dei nomi
 classe IT/EN). Qui vivono solo regole pure, senza DB né settings: l'override

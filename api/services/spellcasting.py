@@ -3,62 +3,100 @@
 Funzione sincrona e senza query: richiede ``char.classes``,
 ``char.ability_scores`` e ``char.spells`` già caricati — vero per ogni chiamante
 di ``build_character_response`` (le stesse relazioni sono serializzate da
-``CharacterFull.model_validate``).
-
-Il tetto usa i modificatori BASE delle caratteristiche (non gli effective con
-bonus da oggetti): approssimazione documentata, compensabile con l'override
-manuale (``settings.prepared_cap_mode = 'manual'``).
+``CharacterFull.model_validate``). Le regole sono in ``core.rules.spellcasting``.
 """
 
 from __future__ import annotations
 
-from api.routers._helpers import effective_ability_mod
-from api.schemas.character import SpellCasterStats, SpellcastingInfo
-from core.data.spellcasting import (
-    compute_prepared_cap,
-    has_preparing_class,
-    has_ritual_caster,
-    has_wizard,
+from dataclasses import asdict
+from typing import Iterable
+
+from api.schemas.character import ClassSpellLimits, SpellCasterStats, SpellcastingInfo
+from api.schemas.spell import SpellRead
+from core.data.spell_slots import caster_kind
+from core.data.spellcasting import has_wizard
+from core.db.models import Character, Spell
+from core.game.stats import effective_ability_mod
+from core.rules.condition_removal import spell_removal, view as removal_view
+from core.rules.edition import character_edition, class_key
+from core.rules.level_choices import FREE_KNOWN_KEY
+from core.rules.pact_casts import pact_cast
+from core.rules.spellbook import wizard_row
+from core.rules.spellcasting import (
+    at_will, caster_stats, can_ritual, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
-from core.db.models import Character
-from core.game.item_bonuses import item_bonus_total
 
 
-def _caster_stats(char: Character) -> list[SpellCasterStats]:
-    pb = char.proficiency_bonus
-    out: list[SpellCasterStats] = []
-    for cls in char.classes:
-        ability = (cls.spellcasting_ability or "").strip().lower()
-        if not ability:
-            continue
-        mod = effective_ability_mod(char, ability)
-        dc_item = item_bonus_total(char.items, "spell_dc")
-        atk_item = item_bonus_total(char.items, "spell_attack")
-        out.append(
-            SpellCasterStats(
-                class_id=cls.id,
-                class_name=cls.class_name,
-                ability=ability,
-                save_dc=8 + pb + mod + dc_item,
-                attack_bonus=pb + mod + atk_item,
-            )
-        )
+def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
+    for spell in spells:
+        stats = spell_stats(char, spell)
+        if stats:
+            spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
+        spell.at_will = at_will(char, spell)
+        spell.has_book = spell.level >= 1 and wizard_row(char, spell) is not None
+        if (shown := spell_range_override(char, spell)) is not None:
+            spell.range_area = shown
+        if spell.components and no_verbal(char, spell):  # Illusioni Migliorate
+            spell.components = ", ".join(c for c in (x.strip() for x in spell.components.split(",")) if c.upper() != "V")
+        pact = pact_cast(char, spell)
+        if pact is not None:
+            spell.pact_cast = {"kind": pact.kind, "feature_key": pact.feature_key, "pact_only": pact.pact_only,
+                               "uses_left": pact.uses_left, **({"also_slot": True} if pact.also_slot else {})}
+        if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
+            spell.removal = removal_view(rm)
+        ki = ki_cast_info(char, spell)
+        if ki is not None:
+            spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,
+                             **({"self_only": True} if ki.self_only else {})}
+            if not stats:  # chi lancia solo col ki ha la CD del ki, non quella di un incantatore
+                spell.save_dc, spell.attack_bonus = ki.dc, char.proficiency_bonus + effective_ability_mod(char, "wisdom")
+
+
+def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
+    edition = character_edition(char)
+    casters = [c for c in char.classes if class_key(c) and caster_kind(c, edition)]
+    out: list[ClassSpellLimits] = []
+    free = set((char.settings or {}).get(FREE_KNOWN_KEY) or [])  # Segreti Magici Aggiuntivi: fuori dai conosciuti
+    for cls in casters:
+        key = class_key(cls)
+        limits = known_limits(edition, key, cls.level)
+        # Non assegnati: appartengono all'unica classe che lancia incantesimi, altrimenti solo al totale.
+        mine = [s for s in char.spells if not s.always_prepared and s.id not in free
+                and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))]
+        leveled = [s for s in mine if s.level >= 1]
+        cap = prepared_limit(edition, key, cls.level, char)
+        school = school_limit(edition, cls)
+        # senza scuola salvata non si sa: non conta come fuori scuola
+        outside = sum(1 for s in leveled if school and (found := normalize_school(s.school)) and found not in school.names)
+        out.append(ClassSpellLimits(
+            school_names=list(school.names) if school else None, school_free_limit=school.free if school else None,
+            school_outside_count=outside,
+            class_id=cls.id, class_name=cls.class_name,
+            cantrips_count=len(mine) - len(leveled), cantrips_limit=limits.cantrips or None,
+            known_count=len(leveled), known_limit=limits.spells,
+            prepared_count=sum(1 for s in leveled if s.is_prepared),
+            prepared_limit=cap if cap and not manual_cap else None,
+        ))
     return out
 
 
-def best_caster(char: Character) -> SpellCasterStats | None:
-    """Caster con il bonus di attacco più alto (il primo in caso di parità)."""
-    best: SpellCasterStats | None = None
-    for c in _caster_stats(char):
-        if best is None or c.attack_bonus > best.attack_bonus:
-            best = c
-    return best
+def prepared_class_room(char: Character, class_id: int) -> tuple[int, int] | None:
+    """(preparati, limite) di una classe; ``None`` se il limite per classe non vale (classe assente, tetto a mano)."""
+    manual = (char.settings or {}).get("prepared_cap_mode") == "manual"
+    row = next((x for x in _class_limits(char, manual) if x.class_id == class_id), None)
+    if row is None or row.prepared_limit is None:
+        return None
+    count = sum(1 for s in char.spells if s.class_id == class_id and s.level >= 1 and s.is_prepared and not s.always_prepared)
+    return count, row.prepared_limit
 
 
 def build_spellcasting_info(char: Character) -> SpellcastingInfo:
     classes = char.classes
     settings = char.settings or {}
-    preparing = has_preparing_class(classes)
+    edition = character_edition(char)
+    preparing_rows = [c for c in classes if prepares(edition, c, char)]
+    preparing = bool(preparing_rows)
     cap_mode = settings.get("prepared_cap_mode") or "auto"
 
     cap: int | None = None
@@ -66,17 +104,22 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         if cap_mode == "manual":
             cap = max(0, int(settings.get("prepared_cap_value") or 0))
         else:
-            modifiers = {a.name: effective_ability_mod(char, a.name) for a in char.ability_scores}
-            cap = compute_prepared_cap(classes, modifiers)
+            cap = sum(prepared_limit(edition, class_key(c), c.level, char) for c in preparing_rows)
 
-    count = sum(1 for s in char.spells if s.level >= 1 and s.is_prepared)
+    count = sum(1 for s in char.spells if counts_as_prepared(s))
 
     return SpellcastingInfo(
         has_preparing_class=preparing,
         prepared_cap=cap,
         prepared_count=count,
         cap_mode=cap_mode if preparing else "auto",
-        has_ritual_caster=has_ritual_caster(classes),
+        has_ritual_caster=can_ritual(char),
+        ritual_only_spell_ids=[sp.id for sp in char.spells if granted_ritual_only(char, sp)],
         has_wizard=has_wizard(classes),
-        casters=_caster_stats(char),
+        casters=[SpellCasterStats(**asdict(c)) for c in caster_stats(char)],
+        limits=_class_limits(char, cap_mode == "manual"),
     )
+
+
+def counts_as_prepared(spell: Spell) -> bool:
+    return spell.level >= 1 and bool(spell.is_prepared) and not spell.always_prepared

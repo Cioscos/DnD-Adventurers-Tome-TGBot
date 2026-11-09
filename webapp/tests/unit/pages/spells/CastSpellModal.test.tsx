@@ -22,7 +22,19 @@ describe('CastSpellModal', () => {
     const slots = [{ id: 10, level: 3, available: 2, used: 1, total: 3 }] as SpellSlot[]
     render(<CastSpellModal spell={spell} availableSlots={slots} onCast={onCast} onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
     await userEvent.click(screen.getByText('character.slots.available_count'))
-    expect(onCast).toHaveBeenCalledWith(3)
+    expect(onCast).toHaveBeenCalledWith(slots[0])
+  })
+
+  it('tells the two pools of the same level apart and casts from the chosen one', async () => {
+    const onCast = vi.fn()
+    const slots = [
+      { id: 10, level: 3, available: 2, used: 0, total: 2, is_pact: false },
+      { id: 11, level: 3, available: 1, used: 1, total: 2, is_pact: true },
+    ] as SpellSlot[]
+    render(<CastSpellModal spell={spell} availableSlots={slots} onCast={onCast} onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
+    await userEvent.click(screen.getByRole('button', { name: /character.slots.pact_badge/ }))
+    expect(onCast).toHaveBeenCalledWith(slots[1])
+    expect(screen.getAllByText(/character.slots.pact_badge/)).toHaveLength(1)
   })
 
   it('with no slots, prompts to create one at the spell level', async () => {
@@ -33,10 +45,77 @@ describe('CastSpellModal', () => {
     expect(onCreateSlot).toHaveBeenCalledWith(3)
   })
 
+  it('an Arcanum offers only the free cast: no slot list and no invitation to create a slot', async () => {
+    const onCastFree = vi.fn()
+    render(<CastSpellModal spell={{ ...spell, level: 6 }} availableSlots={[]} freeOnly canFreeCast onCastFree={onCastFree} onCast={noop}
+      onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
+    expect(screen.queryByText('character.spells.no_slots')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'character.spells.go_create_slot' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.cast_free' }))
+    expect(onCastFree).toHaveBeenCalledTimes(1)
+  })
+
   it('cancels', async () => {
     const onCancel = vi.fn()
     render(<CastSpellModal spell={spell} availableSlots={[]} onCast={noop} onCreateSlot={noop} onCancel={onCancel} isPending={false} isCreatingSlot={false} />)
     await userEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
     expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  describe('ki cast (Shadow Arts, Four Elements disciplines)', () => {
+    const common = { spell, availableSlots: [] as SpellSlot[], onCast: vi.fn(), onCreateSlot: noop, onCancel: noop, isPending: false, isCreatingSlot: false }
+    const ki = { cost: 2, max_extra: 0, ki_left: 5, feature_key: 'monk.discipline_sweeping_cinder_strike' }
+
+    it('casts with the ki and, with no slots at all, hides the invitation to create one', async () => {
+      const onCastKi = vi.fn()
+      render(<CastSpellModal {...common} kiCast={ki} onCastKi={onCastKi} />)
+      expect(screen.queryByText('character.spells.no_slots')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'character.spells.go_create_slot' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'character.spells.cast_ki' }))
+      expect(onCastKi).toHaveBeenCalledWith(0)
+    })
+
+    it('reminds that a discipline works on the caster alone (Ride the Wind)', () => {
+      const { rerender } = render(<CastSpellModal {...common} kiCast={ki} onCastKi={vi.fn()} />)
+      expect(screen.queryByText('character.spells.cast_ki_self_only')).not.toBeInTheDocument()
+      rerender(<CastSpellModal {...common} kiCast={{ ...ki, self_only: true }} onCastKi={vi.fn()} />)
+      expect(screen.getByText('character.spells.cast_ki_self_only')).toBeInTheDocument()
+    })
+
+    it('lets the player add extra ki up to the allowed maximum and sends it', async () => {
+      const onCastKi = vi.fn()
+      render(<CastSpellModal {...common} kiCast={{ ...ki, max_extra: 1 }} onCastKi={onCastKi} />)
+      const more = screen.getByLabelText('character.turn.amount_more')
+      await userEvent.click(more)
+      await userEvent.click(more)
+      expect(screen.getByTestId('use-amount')).toHaveTextContent('1')  // mai oltre il tetto
+      await userEvent.click(screen.getByRole('button', { name: 'character.spells.cast_ki' }))
+      expect(onCastKi).toHaveBeenCalledWith(1)
+    })
+
+    it('shows no extra selector when the spell cannot be raised, and turns the cast off without enough ki', () => {
+      const { rerender } = render(<CastSpellModal {...common} kiCast={ki} onCastKi={vi.fn()} />)
+      expect(screen.queryByTestId('use-amount')).not.toBeInTheDocument()
+      rerender(<CastSpellModal {...common} kiCast={{ ...ki, ki_left: 1 }} onCastKi={vi.fn()} />)
+      expect(screen.getByRole('button', { name: 'character.spells.cast_ki' })).toBeDisabled()
+      expect(screen.getByText('character.spells.cast_ki_none')).toBeInTheDocument()
+    })
+
+    it('keeps the slots when the character has some, next to the ki cast', async () => {
+      const slots = [{ id: 10, level: 3, available: 2, used: 0, total: 2 }] as SpellSlot[]
+      render(<CastSpellModal {...common} availableSlots={slots} kiCast={ki} onCastKi={vi.fn()} />)
+      expect(screen.getByText('character.slots.available_count')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'character.spells.cast_ki' })).toBeInTheDocument()
+    })
+  })
+
+  it('offers the free cast only when an active effect allows it, even with no slots left', async () => {
+    const onCastFree = vi.fn()
+    const common = { spell, availableSlots: [] as SpellSlot[], onCast: vi.fn(), onCreateSlot: noop, onCancel: noop, isPending: false, isCreatingSlot: false }
+    const { rerender } = render(<CastSpellModal {...common} />)
+    expect(screen.queryByText('character.spells.cast_free')).not.toBeInTheDocument()
+    rerender(<CastSpellModal {...common} canFreeCast onCastFree={onCastFree} />)
+    await userEvent.click(screen.getByText('character.spells.cast_free'))
+    expect(onCastFree).toHaveBeenCalledTimes(1)
   })
 })

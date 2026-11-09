@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { Minus, Plus } from 'lucide-react'
 import { GiNightSleep as Moon, GiDiceSixFacesOne as Dice1 } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
@@ -59,7 +60,7 @@ export default function HitDiceModal({
             return (
               <div key={cls.id} className="flex items-center gap-3 p-2 rounded-xl bg-dnd-surface border border-dnd-border">
                 <div className="flex-1 min-w-0">
-                  <p className="font-display font-bold text-sm text-dnd-gold-bright truncate">{cls.class_name}</p>
+                  <p className="font-display font-bold text-sm text-dnd-gold-bright truncate">{classLabel(t, cls.class_name)}</p>
                   <p className="text-xs text-dnd-text-faint font-mono">
                     d{cls.hit_die ?? 8} · <span className="tabular-nums">{remaining}/{cls.level}</span>
                     <span className="max-xs:hidden">{' '}{t('character.hp.hit_dice_remaining_label')}</span>

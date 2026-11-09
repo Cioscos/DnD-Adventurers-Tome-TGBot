@@ -13,8 +13,19 @@ from sqlalchemy.orm import selectinload
 from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
+from api.services.wild_shape import start_form
 from api.version import APP_VERSION
 from core.game.containers import is_container
+from core.game.stats import migrate_character_ac
+from core.rules.feature_sync import (
+    ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE, clean_ability_bonus, clean_archive, clean_granted_keys,
+    clean_target_immunity, clean_zero_hp_uses,
+)
+from core.rules.level_choices import FREE_KNOWN_KEY
+from api.services.spell_slots import CREATED_SLOTS, clean_created_slots
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.rules.subclasses import sync_subclass_keys
+from api.services.item_charges import attunement_limit
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
     Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
@@ -91,6 +102,11 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     for k in ("languages", "pending_choices"):
         cols[k] = cols[k] or []
     cols["general_proficiencies"] = normalize_proficiencies(cols["general_proficiencies"])
+    # Gli incantesimi che non contano fra i conosciuti stanno per id: nel file usano le chiavi "s{i}" degli incantesimi.
+    free = cols["settings"].get(FREE_KNOWN_KEY)
+    if free is not None:
+        cols["settings"] = {**cols["settings"],
+                            FREE_KNOWN_KEY: [spell_key[i] for i in free if isinstance(i, int) and i in spell_key]}
     # hp_rolls e' indicizzato per class_id: nel file usa le stesse chiavi "c{i}" delle abilita'.
     raw_rolls = cols["settings"].get("hp_rolls")
     if raw_rolls is not None:  # dati legacy/corrotti: scarta quel che non e' {id: {...}}
@@ -117,7 +133,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
              "ref": item_ref[i.id], "container_ref": item_ref.get(i.container_id)}
             for i in sorted_items
         ],
-        "spells": [{**s.__dict__, "export_key": spell_key[s.id]} for s in spells],
+        "spells": [{**s.__dict__, "export_key": spell_key[s.id], "source_class_key": class_key.get(s.class_id)}
+                   for s in spells],
         "concentrating_spell_key": spell_key.get(char.concentrating_spell_id),
         "spell_slots": [s.__dict__ for s in sorted(char.spell_slots, key=lambda s: (s.is_pact, s.level))],
         "abilities": [
@@ -183,8 +200,8 @@ async def import_character(
     for a in data.abilities:
         if a.source_class_key is not None and a.source_class_key not in class_keys:
             raise _unprocessable("Unknown source_class_key")
-    if sum(1 for it in data.items if is_attuned(it)) > 3:
-        raise _unprocessable("attunement_limit")
+    if any(sp.source_class_key is not None and sp.source_class_key not in class_keys for sp in data.spells):
+        raise _unprocessable("Unknown source_class_key")
     for h in data.homebrew_resources:
         if h.rule_index >= len(data.homebrew_rules):
             raise _unprocessable("Unknown rule_index")
@@ -209,7 +226,7 @@ async def import_character(
         spell_slots_mode=SpellSlotsMode(data.character.spell_slots_mode), **cols,
     )
     classes = [CharacterClass(**c.model_dump()) for c in data.classes]
-    spells = [Spell(**sp.model_dump(exclude={"export_key"})) for sp in data.spells]
+    spells = [Spell(**sp.model_dump(exclude={"export_key", "source_class_key"})) for sp in data.spells]
     seen_slots: set = set()
     items = []
     for it in data.items:  # un contenitore e' sempre singolo: la quantita' si normalizza a 1, il contenuto (monete incluse) resta
@@ -230,10 +247,13 @@ async def import_character(
             item_metadata=json.dumps(it.item_metadata), equipment_slot=slot, is_equipped=equipped,
         ))
     char.classes = classes
+    sync_subclass_keys(char)
     char.ability_scores = [AbilityScore(**a.model_dump()) for a in data.ability_scores]
     char.spells = spells
     char.spell_slots = [SpellSlot(**s.model_dump()) for s in data.spell_slots]
     char.items = items
+    if sum(1 for it in items if is_attuned(it)) > attunement_limit(char):  # il limite dipende dalla scheda importata
+        raise _unprocessable("attunement_limit")
     char.currency = Currency(**(data.currency.model_dump() if data.currency else {}))
     session.add(char)
     await session.flush()  # assegna gli id nuovi
@@ -249,6 +269,26 @@ async def import_character(
     elif rolls is not None:  # non-dict (file artefatto): ignora
         char.settings = {k: v for k, v in char.settings.items() if k != "hp_rolls"}
 
+    if ARCHIVED_FEATURES in (char.settings or {}):  # server-owned: il client non potrebbe più ripararlo
+        char.settings = {**char.settings, ARCHIVED_FEATURES: clean_archive(char.settings[ARCHIVED_FEATURES])}
+    if FREE_KNOWN_KEY in (char.settings or {}):  # chiavi "s{i}" del file -> id nuovi; il resto è scartato
+        by_key = {sp.export_key: row.id for sp, row in zip(data.spells, spells)}
+        wanted = char.settings[FREE_KNOWN_KEY]
+        char.settings = {**char.settings, FREE_KNOWN_KEY: [by_key[k] for k in wanted if isinstance(k, str) and k in by_key]
+                         if isinstance(wanted, list) else []}
+    if GRANTED_SPELL_KEYS in (char.settings or {}):
+        char.settings = {**char.settings, GRANTED_SPELL_KEYS: clean_granted_keys(char.settings[GRANTED_SPELL_KEYS])}
+    for key, clean in ((ABILITY_BONUS_KEY, clean_ability_bonus), (ZERO_HP_USES, clean_zero_hp_uses),
+                       (TARGET_IMMUNITY, clean_target_immunity), (CREATED_SLOTS, clean_created_slots)):
+        if key in (char.settings or {}):
+            char.settings = {**char.settings, key: clean(char.settings[key])}
+
+    # un file importato passa dal retrofit per le sue classi (R34, R39): il segno del file non vale
+    # gli id dei personaggi di un altro database non valgono qui
+    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON)}
+
+    for sp, row in zip(data.spells, spells):
+        row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None
     for a in data.abilities:
         src = classes[int(a.source_class_key[1:])].id if a.source_class_key else None
         session.add(Ability(
@@ -268,16 +308,23 @@ async def import_character(
             restoration_type=RestorationType(h.restoration_type),
             **h.model_dump(exclude={"rule_index", "restoration_type"}),
         ))
-    active_seen = False
+    active_seen, active_form = False, None
     for c in data.companions:  # al massimo una forma attiva, solo per wild_shape
         active = c.is_active and c.kind == "wild_shape" and not active_seen
         active_seen = active_seen or active
-        session.add(Companion(
+        comp = Companion(
             character_id=char.id, created_at=now,
             **c.model_dump(exclude={"is_active", "current_hp"}),
             current_hp=min(c.current_hp, c.max_hp), is_active=active,
-        ))
+        )
+        session.add(comp)
+        if active:
+            active_form = comp
     if data.concentrating_spell_key is not None:
         char.concentrating_spell_id = spells[spell_keys.index(data.concentrating_spell_key)].id
+    migrate_character_ac(char)  # file vecchi: valore del file, Destrezza già inclusa, altra scheda
     await session.flush()
+    if active_form is not None:  # la forma attiva del file riprende con il suo stato (senza nuovi PF temporanei)
+        await session.refresh(char, attribute_names=["classes"])
+        start_form(char, active_form, grant=False)
     return char

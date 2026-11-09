@@ -75,3 +75,73 @@ describe('groupForTurn', () => {
     expect(all).not.toContain('ability:21')
   })
 })
+
+describe('azioni standard per edizione', () => {
+  const std = (c: CharacterFull) => groupForTurn(c).action.filter((e) => e.kind === 'standard').map((e) => e.id)
+  it('2014 non ha Influenzare e Studiare', () => {
+    expect(std({ ...char, rules_edition: '2014' } as CharacterFull)).not.toEqual(expect.arrayContaining(['influence']))
+    expect(std({ ...char, rules_edition: '2014' } as CharacterFull)).not.toContain('study')
+  })
+  it('2024 aggiunge Influenzare e Studiare', () => {
+    expect(std({ ...char, rules_edition: '2024' } as CharacterFull)).toEqual(expect.arrayContaining(['influence', 'study']))
+  })
+})
+
+describe('Campione degli Antichi', () => {
+  const paladin = {
+    ...char,
+    classes: [{ id: 1, class_name: 'paladin' }, { id: 2, class_name: 'wizard' }],
+    spells: [
+      spell(30, { casting_time: '1 azione', class_id: 1 }),
+      spell(31, { casting_time: '1 azione', class_id: 2 }),
+      spell(32, { casting_time: '1 reazione', class_id: 1 }),
+      spell(33, { casting_time: '1 minuto', class_id: 1 }),
+    ],
+  }
+  const ids = (list: { kind: string; id: string }[]) => list.map((e) => `${e.kind}:${e.id}`)
+
+  it('moves the 1-action paladin spells to the bonus action while the state is on, and only those', () => {
+    const g = groupForTurn({ ...paladin, active_states: [{ key: 'elder_champion' }] } as unknown as CharacterFull)
+    expect(ids(g.bonus_action)).toContain('spell:30')
+    expect(ids(g.action)).toContain('spell:31')
+    expect(ids(g.action)).not.toContain('spell:30')
+    expect(ids(g.reaction)).toContain('spell:32')
+    expect(ids(g.other)).toContain('spell:33')
+  })
+
+  it('leaves everything on the action when the state is off', () => {
+    const g = groupForTurn(paladin as unknown as CharacterFull)
+    expect(ids(g.action)).toEqual(expect.arrayContaining(['spell:30', 'spell:31']))
+  })
+
+  it('also moves a paladin spell added by hand without a class, when the paladin is the only caster', () => {
+    const solo = {
+      ...char,
+      classes: [{ id: 1, class_name: 'paladin' }],
+      spellcasting: { casters: [{ class_id: 1, class_name: 'paladin' }] },
+      active_states: [{ key: 'elder_champion' }],
+      spells: [spell(40, { casting_time: '1 azione', class_id: null }), spell(41, { casting_time: '1 azione', class_id: 1 })],
+    }
+    const g = groupForTurn(solo as unknown as CharacterFull)
+    expect(ids(g.bonus_action)).toEqual(expect.arrayContaining(['spell:40', 'spell:41']))
+  })
+
+  it('leaves a spell without a class on the action when another class casts too, as the server cannot tell them apart', () => {
+    const two = {
+      ...paladin,
+      spellcasting: { casters: [{ class_id: 1, class_name: 'paladin' }, { class_id: 2, class_name: 'wizard' }] },
+      active_states: [{ key: 'elder_champion' }],
+      spells: [spell(42, { casting_time: '1 azione', class_id: null })],
+    }
+    expect(ids(groupForTurn(two as unknown as CharacterFull).action)).toContain('spell:42')
+  })
+})
+
+describe('Punizione Divina 2024', () => {
+  const ids = (list: { kind: string; id: string }[]) => list.map((e) => `${e.kind}:${e.id}`)
+  it('has no row in the turn: it is chosen after a hit, never cast from the list', () => {
+    const c = { items: [], abilities: [], rules_edition: '2024', active_states: [], classes: [],
+      spells: [spell(7, { casting_time: '1 azione bonus', srd_index: 'divine-smite' }), spell(8, { casting_time: '1 azione bonus' })] }
+    expect(ids(groupForTurn(c as unknown as CharacterFull).bonus_action)).toEqual(['spell:8'])
+  })
+})

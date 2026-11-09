@@ -165,6 +165,27 @@ describe('Abilities page', () => {
     expect(screen.getByText('character.abilities.custom_section')).toBeInTheDocument()
   })
 
+  it('shows an unlimited class feature without a counter, a passive one without the label', async () => {
+    const unlimited = { ...classFeature, id: 3, name: 'Ira', max_uses: null, uses: null }
+    const passive = { ...classFeature, id: 4, name: 'Attacco Furtivo', max_uses: null, uses: null, is_passive: true }
+    const noCounter = { ...classFeature, id: 5, name: 'Azione Scaltra', max_uses: null, uses: null, restoration_type: 'none' }
+    getChar.mockResolvedValue(char([unlimited, passive, noCounter]))
+    renderWithProviders(<Abilities />)
+    await screen.findByText('Ira')
+    expect(screen.getAllByText('character.abilities.unlimited')).toHaveLength(1)
+    await userEvent.click(screen.getByText('Ira'))
+    expect(screen.queryByRole('button', { pressed: false })).not.toBeInTheDocument()
+  })
+
+  it('shows the save DC the server computed on the ability row, and nothing on the others', async () => {
+    const ki = { ...classFeature, id: 6, name: 'Ki', max_uses: 5, uses: 5, dc: 14 }
+    getChar.mockResolvedValue(char([ki, classFeature]))
+    renderWithProviders(<Abilities />)
+    await screen.findByText('Ki')
+    expect(screen.getAllByTestId('ability-dc')).toHaveLength(1)
+    expect(screen.getByTestId('ability-dc')).toHaveTextContent('character.abilities.dc')
+  })
+
   it('add wizard: applies the detected restoration and posts the AbilityCreate contract', async () => {
     getChar.mockResolvedValue(char([]))
     addSpy.mockResolvedValue({ id: 9 })

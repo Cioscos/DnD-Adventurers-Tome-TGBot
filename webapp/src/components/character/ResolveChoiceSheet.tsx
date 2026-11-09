@@ -6,7 +6,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { ABILITY_KEYS, FEAT_OPTIONS } from '@/lib/feats'
+import { ABILITY_KEYS, FEAT_OPTIONS, FEATS_2024, meetsPrerequisites } from '@/lib/feats'
 import { CLASS_NAME_TO_PROGRESSION_KEY } from '@/lib/classProgression'
 import type { CharacterFull, PendingChoice, ResolveChoiceBody } from '@/types'
 
@@ -18,14 +18,26 @@ interface Props {
 }
 
 const CAP = 20
+
+interface FeatItem {
+  key: string
+  name?: string
+  summary?: string
+  abilities?: readonly string[]
+  cap?: number
+  unmet?: boolean
+}
 const POINTS = 2
 const FIELD = 'w-full min-h-[44px] px-3 rounded-xl bg-dnd-surface border border-dnd-border text-sm font-body text-dnd-text'
 
 /** Risolve una scelta di livello: aumento caratteristiche (+2 / +1+1, max 20) o talento. */
 export default function ResolveChoiceSheet({ char, choice, open, onClose }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const qc = useQueryClient()
-  const [mode, setMode] = useState<'asi' | 'feat'>('asi')
+  const isBoon = choice.kind === 'epic_boon'
+  const is2024 = char.rules_edition === '2024'
+  const [mode, setMode] = useState<'asi' | 'feat'>(isBoon ? 'feat' : 'asi')
   const [inc, setInc] = useState<Record<string, number>>({})
   const [featKey, setFeatKey] = useState<string>('')
   const [ability, setAbility] = useState('')
@@ -34,7 +46,17 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
 
   const score = (name: string) => char.ability_scores.find((s) => s.name === name)?.value ?? 10
   const spent = Object.values(inc).reduce((a, b) => a + b, 0)
-  const feat = FEAT_OPTIONS.find((f) => f.key === featKey)
+  // Elenco unificato: 2014 con testi nei locale, 2024 e Doni Epici dal catalogo (testo solo, D3).
+  const featList: FeatItem[] = is2024 || isBoon
+    ? FEATS_2024.filter((f) => (f.category === 'epic_boon') === isBoon).map((f) => ({
+      key: f.key, name: f.name[lang], summary: f.summary[lang], abilities: f.abilities ?? undefined,
+      cap: f.max_score, unmet: !meetsPrerequisites(f, char),
+    }))
+    : FEAT_OPTIONS.map((f) => ({
+      key: f.key, name: t(`character.level_choice.feats.${f.key}.name`),
+      summary: t(`character.level_choice.feats.${f.key}.summary`), abilities: f.abilities, cap: CAP, unmet: false,
+    }))
+  const feat = featList.find((f) => f.key === featKey)
   const taken = new Set((char.abilities ?? []).map((a) => a.feature_key))
   // class_key e' il nome-tabella italiano ("Guerriero"): lo traduciamo nella lingua UI.
   const classEn = Object.entries(CLASS_NAME_TO_PROGRESSION_KEY).find(([, v]) => v === choice.class_key)?.[0]
@@ -70,7 +92,9 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
       ? { kind: 'asi', increases: picked }
       : featKey === 'custom'
         ? { kind: 'feat', feat_key: 'custom', custom_name: customName.trim(), custom_text: customText.trim() || null }
-        : { kind: 'feat', feat_key: featKey, ability: feat?.abilities ? ability : null })
+        : isBoon
+          ? { kind: 'epic_boon', feat_key: featKey, ability: feat?.abilities ? ability : null }
+          : { kind: 'feat', feat_key: featKey, ability: feat?.abilities ? ability : null })
   }
 
   const tab = (m: 'asi' | 'feat', label: string) => (
@@ -85,12 +109,14 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
   )
 
   return (
-    <Sheet open={open} onClose={onClose} title={`${t('character.level_choice.title')} · ${classLabel} ${choice.level}`}>
+    <Sheet open={open} onClose={onClose} title={`${t(isBoon ? 'character.level_choice.epic_boon' : 'character.level_choice.title')} · ${classLabel} ${choice.level}`}>
       <div className="p-5 space-y-3">
-        <div className="flex gap-2">
-          {tab('asi', t('character.level_choice.asi'))}
-          {tab('feat', t('character.level_choice.feat'))}
-        </div>
+        {!isBoon && (
+          <div className="flex gap-2">
+            {tab('asi', t('character.level_choice.asi'))}
+            {tab('feat', t('character.level_choice.feat'))}
+          </div>
+        )}
 
         {mode === 'asi' ? (
           <div className="space-y-2">
@@ -127,23 +153,23 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
           </div>
         ) : (
           <div className="space-y-2">
-            {[...FEAT_OPTIONS, { key: 'custom' }].map((f) => (
+            {[...featList, ...(isBoon ? [] : [{ key: 'custom' } as FeatItem])].map((f) => (
               <Pressable
                 key={f.key}
                 onClick={() => { setFeatKey(f.key); setAbility('') }}
-                disabled={taken.has(`feat.${f.key}`)}
+                disabled={taken.has(`feat.${f.key}`) || !!f.unmet}
                 className={`w-full disabled:opacity-40 min-h-[44px] px-3 py-2 rounded-xl border text-left ${
                   featKey === f.key ? 'bg-dnd-gold/15 border-dnd-gold' : 'border-dnd-border'
                 }`}
               >
                 <span className="block text-sm font-body text-dnd-text">
-                  {f.key === 'custom' ? t('character.level_choice.custom') : t(`character.level_choice.feats.${f.key}.name`)}
+                  {f.key === 'custom' ? t('character.level_choice.custom') : f.name}
                 </span>
                 {f.key !== 'custom' && (
                   <span className="block text-xs font-body text-dnd-text-muted">
                     {taken.has(`feat.${f.key}`)
                       ? t('character.level_choice.already_taken')
-                      : t(`character.level_choice.feats.${f.key}.summary`)}
+                      : f.unmet ? t('character.level_choice.prerequisites_unmet') : f.summary}
                   </span>
                 )}
               </Pressable>
@@ -156,7 +182,7 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
                 className={FIELD}
               >
                 <option value="">{t('character.level_choice.pick_ability')}</option>
-                {feat.abilities.filter((a) => score(a) < CAP).map((a) => (
+                {feat.abilities.filter((a) => score(a) < (feat.cap ?? CAP)).map((a) => (
                   <option key={a} value={a}>{t(`common.abilities.${a}`)}</option>
                 ))}
               </select>

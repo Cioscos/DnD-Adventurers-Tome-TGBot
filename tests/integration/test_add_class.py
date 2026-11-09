@@ -48,14 +48,14 @@ async def test_first_class_bootstraps_hp_and_saves(client):
     assert body["saving_throws"]["constitution"] is True
 
 
-async def test_second_class_keeps_hp_and_grants_no_saves(client):
+async def test_second_class_adds_hp_and_grants_no_saves(client):
     cid = await _fighter(client)            # 10 HP, STR/CON saves
     r = await client.post(f"/characters/{cid}/classes",
                           json={"class_name": "Ladro", "level": 1, "hit_die": 8})
     assert r.status_code == 201, r.text
     body = r.json()
     assert len(body["classes"]) == 2
-    assert body["hit_points"] == 10          # second class does not bootstrap HP
+    assert body["hit_points"] == 15          # 10 + 5 (d8 fisso del 1° livello da multiclasse)
     # Rogue saves (DEX/INT) are NOT granted by multiclassing.
     assert not body["saving_throws"].get("dexterity")
     assert not body["saving_throws"].get("intelligence")

@@ -1,13 +1,19 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { Spell, RollDamageResult } from '@/types'
 
-const { rollDamage, useSpell, updateConc } = vi.hoisted(() => ({ rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn() }))
+const { rollDamage, useSpell, updateConc, askRollOptions } = vi.hoisted(() => ({
+  rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn(), askRollOptions: vi.fn(),
+}))
+vi.mock('@/lib/rollOptions', async (orig) => ({ ...((await orig()) as object), askRollOptions }))
 
-vi.mock('@/api/client', () => ({ api: { spells: { rollDamage, use: useSpell, updateConcentration: updateConc } } }))
+vi.mock('@/api/client', () => ({
+  api: { spells: { rollDamage, use: useSpell, updateConcentration: updateConc } },
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
+}))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -42,7 +48,8 @@ const result: RollDamageResult = { total: 14, half_damage: 7, breakdown: '2d6+2 
 const cantrip = { id: 1, name: 'Mano Magica', level: 0, attack_save: 'ATK', is_concentration: false, damage_dice: '1d8' } as Spell
 const leveled = { id: 2, name: 'Palla di Fuoco', level: 3, attack_save: 'DEX', is_concentration: false, damage_dice: '8d6' } as Spell
 
-afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset() })
+beforeEach(() => askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }))
+afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset() })
 
 describe('SpellDamageSheet', () => {
   it('renders nothing without a spell', () => {
@@ -52,20 +59,91 @@ describe('SpellDamageSheet', () => {
 
   it('a cantrip roll posts to rollDamage and shows the total (no slot consumed)', async () => {
     rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
     renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={null} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 1, expect.objectContaining({ casting_level: 0, is_critical: false })))
-    expect(useSpell).not.toHaveBeenCalled()
+    expect(useSpell).toHaveBeenCalledTimes(1)  // il lancio passa dal server: conferme e opzioni, nessuno slot
+    expect(useSpell.mock.calls[0][2].slot_id).toBeUndefined()
     expect(await screen.findByText('14')).toBeInTheDocument()
   })
 
   it('a leveled spell consumes the slot (api.spells.use) on the first roll', async () => {
     useSpell.mockResolvedValue({ id: 7 })
     rollDamage.mockResolvedValue(result)
-    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)
+    const concentrating = { ...leveled, is_concentration: true }
+    renderWithProviders(<SpellDamageSheet charId={7} spell={concentrating} slotLevel={3} slotId={21} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
-    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 2, 3))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 2, expect.objectContaining({ slot_id: 21, slot_level: 3 })))
     await waitFor(() => expect(rollDamage).toHaveBeenCalled())
+    expect(updateConc).not.toHaveBeenCalled()  // il contatore dei round resta quello del lancio
+  })
+
+  it('asks for the damage options at the level the spell is cast at, not at its base level (Overchannel is for 1st-5th)', async () => {
+    useSpell.mockResolvedValue({ id: 7 })
+    rollDamage.mockResolvedValue(result)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={6} slotId={21} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', spell_id: 2, casting_level: 6 })))
+  })
+
+
+  it('shows the second damage part before the roll, and the dice typed by hand do not replace it', async () => {
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    const strike = { ...leveled, damage_dice: '4d6', extra_damage_dice: '4d6', extra_damage_type: 'radiant' } as Spell
+    renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={5} onClose={() => {}} />)
+    expect(screen.getByText(/character.spells.roll_damage.second_part/)).toBeInTheDocument()
+    // il mock di framer-motion rimonta l'Input a ogni render: si scrive con un solo evento
+    fireEvent.change(screen.getByPlaceholderText('character.spells.roll_damage.extra_dice_placeholder'), { target: { value: '1d4' } })
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_dice: '1d4' })))
+  })
+
+  it('lets the player choose the type of a second part that has two (radiant or necrotic)', async () => {
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    const wave = { ...leveled, damage_dice: '5d6', damage_type: 'thunder', extra_damage_dice: '5d6', extra_damage_type: 'radiant|necrotic' } as Spell
+    renderWithProviders(<SpellDamageSheet charId={7} spell={wave} slotLevel={5} onClose={() => {}} />)
+    await userEvent.click(screen.getByText('character.inventory.damage_types.dmg_necrotic'))
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_damage_type: 'necrotic' })))
+  })
+
+  it('names each group of dice by its damage type in the result', async () => {
+    rollDamage.mockResolvedValue({ ...result, parts: [
+      { label: 'main', type: 'fire', kind: 'd6', rolls: [1, 2] }, { label: 'second', type: 'radiant', kind: 'd6', rolls: [3, 4] }] })
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={5} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText(/dmg_radiant/)).toBeInTheDocument()
+    expect(screen.getByText(/dmg_fire/)).toBeInTheDocument()
+  })
+
+  it('says the dice cannot be rolled, in plain words, when the spell is cast but its damage is not computable', async () => {
+    useSpell.mockResolvedValue({ id: 7, damage_unrollable: true })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotId={21} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('character.spells.roll_damage.unrollable')).toBeInTheDocument()
+    expect(rollDamage).not.toHaveBeenCalled()
+  })
+
+  it('says it too when the server refuses the dice after an attack roll', async () => {
+    const { ApiError } = await import('@/api/client')
+    rollDamage.mockRejectedValue(new ApiError(422, { code: 'bad_damage_dice' }))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('character.spells.roll_damage.unrollable')).toBeInTheDocument()
+  })
+
+  it('shows what the damage did to the caster, written by the server in the option result (Overchannel)', async () => {
+    rollDamage.mockResolvedValue({ ...result, option_result: {
+      keys: ['wizard.overchannel'], extra_rolls: [], extra_total: 0, bonus: 0, multiplier: 1, spent: [], targets: [],
+      effects: [{ it: 'Subisci 24 danni necrotici', en: 'You take 24 necrotic damage' }] } })
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={null} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('Subisci 24 danni necrotici')).toBeInTheDocument()
   })
 
   it('a save spell shows the half-damage cell in the result', async () => {

@@ -1,6 +1,9 @@
+import { askRollOptions } from '@/lib/rollOptions'
+import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import { lazy, Suspense, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { Plus, Check, Minus, RotateCcw } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook,
@@ -12,17 +15,19 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import IconButton from '@/components/ui/IconButton'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
-import RestPreviewList from '@/components/character/RestPreviewList'
 import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
-import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
+import RestDialogs from '@/components/character/RestDialogs'
+import { useRest } from '@/hooks/useRest'
 import { haptic } from '@/auth/telegram'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { isAttackSpell } from '@/lib/spellType'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
+import { canRerollInspiration } from '@/lib/rollOptions'
+import type { WeaponChoice } from '@/lib/weaponOptions'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -53,7 +58,7 @@ interface Props {
   char: CharacterFull
 }
 
-type AttackState = { result: WeaponAttackResult; itemId: number; wasRerolled: boolean }
+type AttackState = { result: WeaponAttackResult; itemId: number; choice: WeaponChoice; wasRerolled: boolean }
 type SaveRollState = { result: RollResult; ability: string; wasRerolled: boolean }
 type CounterEditState = { kind: 'ability'; ability: Ability } | { kind: 'ammo'; item: Item }
 type EditorGroup = { labelKey: string; rows: { entry: QuickActionEntry; label: string }[]; emptyKey: string | null }
@@ -79,17 +84,17 @@ export default function QuickActions({ char }: Props) {
   const toast = useToast()
   const rollDice = useAnimatedRoll()
   const rollD20 = useD20Roll()
+  const attack = useAttackRoll()
   const weaponChoices = useWeaponChoices((s) => s.choices)
   const setWeaponChoice = useWeaponChoices((s) => s.setChoice)
   const castFlow = useCastFlow(char.id, char)
+  const rest = useRest(char.id, char)
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   const [saveState, setSaveState] = useState<SaveRollState | null>(null)
   const [confirmHitDie, setConfirmHitDie] = useState<{ cls: CharacterClass; remaining: number } | null>(null)
   const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
-  const [confirmLongRest, setConfirmLongRest] = useState(false)
-  const [shortRestOpen, setShortRestOpen] = useState(false)
   const [confirmRestore, setConfirmRestore] = useState(false)
   const [orderDraft, setOrderDraft] = useState<string[] | null>(null)
   const orderRef = useRef<string[] | null>(null)
@@ -124,26 +129,27 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
+  const inspiration = canRerollInspiration(char)
+  const incapacitated = !!char.computed?.incapacitated
+
   const attackMutation = useMutation({
-    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      api.items.attack(
-        char.id, itemId, false, d20Arg(mode, await rollD20(mode)), choiceOf(weaponChoices, itemId),
-      ),
-    onSuccess: (result, { itemId }) => {
-      setAttackState({ result, itemId, wasRerolled: false })
+    onMutate: ({ itemId }: { itemId: number; mode: RollMode }) => ({ choice: choiceOf(weaponChoices, itemId) }),
+    mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      attack.roll(char.id, itemId, mode, inspiration, choiceOf(weaponChoices, itemId)),
+    onSuccess: (result, { itemId }, context) => {
+      if (result) setAttackState({ result, itemId, choice: context.choice, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       haptic.success()
     },
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: async (itemId: number) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(char.id, itemId, true, die, choiceOf(weaponChoices, itemId))
-    },
+    mutationFn: ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => attack.reroll(char.id, itemId, choice),
     onSuccess: (result) => {
-      setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
+      setAttackState((prev) => (result && prev ? { ...prev, result, wasRerolled: true } : null))
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       haptic.success()
     },
     onError: (err) => {
@@ -158,7 +164,8 @@ export default function QuickActions({ char }: Props) {
 
   const saveMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
-      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode)))
+      const choice = await askRollOptions(char.id, { roll: 'save', ability })
+      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode), choice))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
@@ -292,18 +299,6 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
-  const restMutation = useMutation({
-    mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
-    onSuccess: (updated) => {
-      qc.setQueryData(['character', char.id], updated)
-      qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
-      setConfirmLongRest(false)
-      setShortRestOpen(false)
-      toast.success(t('character.quick_actions.rest_done'))
-      haptic.success()
-    },
-  })
-
   const run = (action: ResolvedQuickAction, mode: RollMode = 'normal') => {
     haptic.light()
     switch (action.type) {
@@ -315,8 +310,8 @@ export default function QuickActions({ char }: Props) {
         if (action.remaining > 0) setConfirmHitDie({ cls: action.cls, remaining: action.remaining })
         break
       case 'rest':
-        if (action.rest === 'long') setConfirmLongRest(true)
-        else setShortRestOpen(true)
+        if (action.rest === 'long') rest.openLong()
+        else rest.openShort()
         break
       default: break // i contatori hanno i propri bottoni, non passano da run
     }
@@ -384,7 +379,7 @@ export default function QuickActions({ char }: Props) {
       case 'ability': case 'counter_ability': return a.ability.name
       case 'counter_inspiration': return t('character.quick_actions.inspiration')
       case 'counter_ammo': case 'item_charges': return a.item.name
-      case 'hit_die': return `d${a.cls.hit_die ?? 8} · ${a.cls.class_name}`
+      case 'hit_die': return `d${a.cls.hit_die ?? 8} · ${classLabel(t, a.cls.class_name)}`
       case 'rest': return t(`character.quick_actions.rest_${a.rest}`)
     }
   }
@@ -442,7 +437,7 @@ export default function QuickActions({ char }: Props) {
         })),
         ...(char.classes ?? []).map((cls) => ({
           entry: { type: 'hit_die', classId: cls.id } as QuickActionEntry,
-          label: `${t('character.quick_actions.spend_hit_die_title')} · d${cls.hit_die ?? 8} ${cls.class_name}`,
+          label: `${t('character.quick_actions.spend_hit_die_title')} · d${cls.hit_die ?? 8} ${classLabel(t, cls.class_name)}`,
         })),
       ],
       emptyKey: null,
@@ -509,6 +504,9 @@ export default function QuickActions({ char }: Props) {
           </Pressable>
         </div>
 
+        {incapacitated && (
+          <p role="status" className="px-1 pb-1 text-sm font-body text-dnd-crimson-bright">{t('character.turn.incapacitated')}</p>
+        )}
         {resolved.length === 0 ? (
           <p className="border-t border-dnd-border px-1 py-3 text-xs text-dnd-text-muted font-body italic">
             {t('character.quick_actions.empty_hint')}
@@ -626,6 +624,7 @@ export default function QuickActions({ char }: Props) {
                     <RollButton
                       onRoll={(mode) => run(a, mode)}
                       pending={isActionPending(a)}
+                      disabled={incapacitated && a.type !== 'save'}
                       ariaLabel={actionLabel(a)}
                       className={rowClass}
                     >
@@ -639,6 +638,7 @@ export default function QuickActions({ char }: Props) {
                       <div className="pb-2 empty:hidden">
                         <WeaponChoiceRow
                           item={a.item}
+                          char={char}
                           choice={choiceOf(weaponChoices, a.item.id)}
                           onChange={(c) => setWeaponChoice(a.item.id, c)}
                         />
@@ -652,6 +652,7 @@ export default function QuickActions({ char }: Props) {
                   <Pressable
                     type="button"
                     pending={isActionPending(a)}
+                    disabled={incapacitated && (a.type === 'ability' || a.type === 'spell')}
                     onClick={() => run(a)}
                     whileTap={{ scale: 0.96 }}
                     className={rowClass}
@@ -809,11 +810,12 @@ export default function QuickActions({ char }: Props) {
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}
+          charId={char.id}
           onClose={() => setAttackState(null)}
-          inspirationAvailable={!!char.heroic_inspiration}
+          inspirationAvailable={inspiration}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
-          onInspirationReroll={() => attackRerollMutation.mutate(attackState.itemId)}
+          onInspirationReroll={() => attackRerollMutation.mutate({ itemId: attackState.itemId, choice: attackState.choice })}
         />
       )}
       {saveState && (
@@ -821,10 +823,11 @@ export default function QuickActions({ char }: Props) {
           result={saveState.result}
           title={`${t('character.saves.title')}: ${t(`character.stats.${saveState.ability}`)}`}
           onClose={() => setSaveState(null)}
-          inspirationAvailable={!!char.heroic_inspiration}
+          inspirationAvailable={inspiration}
           isRerolling={saveRerollMutation.isPending}
           wasRerolled={saveState.wasRerolled}
           onInspirationReroll={() => saveRerollMutation.mutate(saveState.ability)}
+          afterRoll={{ charId: char.id, query: { roll: 'save', ability: saveState.ability } }}
         />
       )}
 
@@ -841,34 +844,7 @@ export default function QuickActions({ char }: Props) {
         onConfirm={() => restoreMutation.mutate()}
       />
 
-      <ConfirmSheet
-        open={confirmLongRest}
-        onClose={() => setConfirmLongRest(false)}
-        title={t('character.quick_actions.confirm_long_rest_title')}
-        body={
-          <div className="space-y-3">
-            <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
-            {confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
-          </div>
-        }
-        confirmLabel={t('character.quick_actions.rest_long')}
-        confirmVariant="primary"
-        loading={restMutation.isPending}
-        onConfirm={() => restMutation.mutate('long')}
-      />
-
-      {shortRestOpen && (
-        <HitDiceModal
-          classes={char.classes ?? []}
-          onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
-          onConfirmRest={() => restMutation.mutate('short')}
-          preview={<RestPreviewList charId={char.id} restType="short" />}
-          onClose={() => setShortRestOpen(false)}
-          isPending={hitDieMutation.isPending}
-          pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}
-          restPending={restMutation.isPending}
-        />
-      )}
+      <RestDialogs char={char} rest={rest} />
 
       <ConfirmSheet
         open={confirmHitDie !== null}
@@ -876,7 +852,7 @@ export default function QuickActions({ char }: Props) {
         title={t('character.quick_actions.spend_hit_die_title')}
         body={confirmHitDie
           ? t('character.quick_actions.spend_hit_die_body', {
-              cls: confirmHitDie.cls.class_name,
+              cls: classLabel(t, confirmHitDie.cls.class_name),
               die: confirmHitDie.cls.hit_die ?? 8,
               remaining: confirmHitDie.remaining,
             })

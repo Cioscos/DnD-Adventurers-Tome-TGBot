@@ -15,7 +15,10 @@ from api.routers.classes import _get_owned_full, _refresh_char_full
 from api.routers.stats import apply_ability_change
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
-from api.services.choices import remove_feat, resolve_asi, resolve_feat
+from api.services.class_features import sync_cataloged_features
+from api.services.choices import (
+    class_options_state, mark_resolved, remove_feat, replace_class_option, resolve_asi, resolve_class_option,
+    resolve_feat)
 from core.db.models import HomebrewRule
 
 router = APIRouter(prefix="/characters", tags=["choices"])
@@ -34,30 +37,59 @@ class FeatResolve(BaseModel):
     custom_text: Optional[str] = Field(None, max_length=2000)
 
 
+class EpicBoonResolve(BaseModel):
+    kind: Literal["epic_boon"]
+    feat_key: str = Field(max_length=50)
+    ability: Optional[str] = Field(None, max_length=20)
+
+
+class ClassOptionResolve(BaseModel):
+    kind: Literal["class_option"]
+    options: list[Annotated[str, Field(max_length=50)]] = Field(max_length=20)
+
+
+# kind della scelta in sospeso -> kind di risposta ammessi
+_ALLOWED = {"asi": ("asi", "feat"), "epic_boon": ("epic_boon",), "class_option": ("class_option",)}
+
+
 @router.post("/{char_id}/choices/{choice_id}/resolve", response_model=CharacterFull)
 async def resolve_choice(
     char_id: int,
     choice_id: str,
-    body: Annotated[Union[AsiResolve, FeatResolve], Field(discriminator="kind")],
+    body: Annotated[Union[AsiResolve, FeatResolve, EpicBoonResolve, ClassOptionResolve], Field(discriminator="kind")],
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     choices = list(char.pending_choices or [])
-    if not any(c["id"] == choice_id for c in choices):
+    choice = next((c for c in choices if c["id"] == choice_id), None)
+    if choice is None:
         raise HTTPException(404, "Choice not found")
+    if body.kind not in _ALLOWED.get(choice.get("kind", "asi"), ()):
+        raise HTTPException(422, "choice_kind_mismatch")
     old_con_mod = effective_con_mod(char)
     if isinstance(body, AsiResolve):
         resolve_asi(session, char, body.increases)
         changed = list(body.increases)
+    elif isinstance(body, ClassOptionResolve):
+        resolve_class_option(session, char, choice, body.options)
+        changed = []
+        await sync_cataloged_features(session, char, lang)
+    elif isinstance(body, EpicBoonResolve):
+        resolve_feat(session, char, body.feat_key, body.ability, None, None, lang, boon=True)
+        changed = [body.ability] if body.ability else []
     else:
         resolve_feat(session, char, body.feat_key, body.ability,
                      body.custom_name, body.custom_text, lang)
         changed = [body.ability] if body.ability else []
     for ability in changed:  # same side effects as PATCH /ability_scores (CON HP, STR carry, AC)
-        apply_ability_change(char, ability, old_con_mod)
-    char.pending_choices = [c for c in choices if c["id"] != choice_id]
+        await apply_ability_change(session, char, ability, old_con_mod)
+    if changed:
+        await sync_cataloged_features(session, char, lang)
+    if not isinstance(body, ClassOptionResolve):  # le scelte di opzioni le riconcilia il sync, anche il resto che aspetta
+        mark_resolved(char, choice)
+        char.pending_choices = [c for c in choices if c["id"] != choice_id]
     char = await _refresh_char_full(char_id, user_id, session)
     return await build_character_response(session, char)
 
@@ -85,7 +117,7 @@ async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id:
 async def delete_feat_by_rule(
     char_id: int, rule_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     return await _remove(char_id, user_id, session, None, rule_id)
 
@@ -94,6 +126,43 @@ async def delete_feat_by_rule(
 async def delete_feat(
     char_id: int, ability_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     return await _remove(char_id, user_id, session, ability_id)
+
+
+class OptionReplace(BaseModel):
+    group: str = Field(max_length=50)
+    old_key: str = Field(max_length=50)
+    new_key: str = Field(max_length=50)
+
+
+def _class_of(char, class_id: int):
+    cls = next((c for c in char.classes if c.id == class_id), None)
+    if cls is None:
+        raise HTTPException(404, "Class not found")
+    return cls
+
+
+@router.get("/{char_id}/classes/{class_id}/options/{group}")
+async def class_options(
+    char_id: int, class_id: int, group: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> dict:
+    char = await _get_owned_full(char_id, user_id, session)
+    return class_options_state(char, _class_of(char, class_id), group)
+
+
+@router.post("/{char_id}/classes/{class_id}/options/replace", response_model=CharacterFull)
+async def replace_option(
+    char_id: int, class_id: int, body: OptionReplace,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    replace_class_option(session, char, _class_of(char, class_id), body.group, body.old_key, body.new_key)
+    await sync_cataloged_features(session, char, lang)
+    char = await _refresh_char_full(char_id, user_id, session)
+    return await build_character_response(session, char)

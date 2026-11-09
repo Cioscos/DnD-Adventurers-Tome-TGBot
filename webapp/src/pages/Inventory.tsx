@@ -1,3 +1,4 @@
+import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import type React from 'react'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -8,8 +9,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Plus, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, HandHeart, Trash2, ListChecks, Check } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
-import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
-import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import type { RollMode } from '@/hooks/useD20Roll'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import Layout from '@/components/Layout'
@@ -45,6 +45,7 @@ import GiveSheet from '@/pages/inventory/GiveSheet'
 import { useTradePartners } from '@/hooks/useTradePartners'
 import ContainerForm from '@/pages/inventory/ContainerForm'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
+import { canRerollInspiration } from '@/lib/rollOptions'
 
 const COIN_KEYS = ['platinum', 'gold', 'electrum', 'silver', 'copper'] as const
 const COIN_ABBR = { platinum: 'pp', gold: 'gp', electrum: 'ep', silver: 'sp', copper: 'cp' } as const
@@ -338,7 +339,7 @@ export default function Inventory() {
   })
 
   const chargesMutation = useMutation({
-    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) => api.items.charges(charId, itemId, delta),
+    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) => api.items.charges(charId, itemId, delta, delta < 0),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
@@ -346,34 +347,41 @@ export default function Inventory() {
     onError: () => toast.error(t('common.action_failed')),
   })
   const itemCast = useItemCast(charId)
+  const scrollMutation = useMutation({
+    mutationFn: ({ itemId, level }: { itemId: number; level: number }) => api.items.scroll(charId, itemId, level),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.light()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
-  const rollDice = useAnimatedRoll()
-  const rollD20 = useD20Roll()
+  const attack = useAttackRoll()
 
   const attackMutation = useMutation({
-    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      api.items.attack(
-        charId, itemId, false, d20Arg(mode, await rollD20(mode)),
-        choiceOf(weaponChoices, itemId),
-      ),
-    onSuccess: (result, { itemId }) => {
-      setAttackState({
-        result, itemId, choice: choiceOf(weaponChoices, itemId), wasRerolled: false,
-      })
+    onMutate: ({ itemId }: { itemId: number; mode: RollMode }) => ({ choice: choiceOf(weaponChoices, itemId) }),
+    mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      attack.roll(charId, itemId, mode, canRerollInspiration(char), choiceOf(weaponChoices, itemId)),
+    onSuccess: (result, { itemId }, context) => {
+      if (result) {
+        setAttackState({
+          result, itemId, choice: context.choice, wasRerolled: false,
+        })
+      }
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: async ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, true, die, choice)
-    },
+    mutationFn: ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => attack.reroll(charId, itemId, choice),
     onSuccess: (result) => {
-      setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
+      setAttackState((prev) => (result && prev ? { ...prev, result, wasRerolled: true } : null))
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
     onError: (err) => {
@@ -784,7 +792,7 @@ export default function Inventory() {
         <EmptyState icon={<Backpack size={32} />} title={t(pc + 'empty')} />
       )}
 
-      {!current && <AttunementSection charId={charId} items={items} />}
+      {!current && <AttunementSection charId={charId} items={items} limit={char?.computed?.attunement_limit} />}
 
       {childBoxes.length > 0 && (
         <section className="mb-4">
@@ -848,6 +856,7 @@ export default function Inventory() {
                             onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
                             onAttack={(mode) => attackMutation.mutate({ itemId: item.id, mode })}
+                            char={char}
                             weaponChoice={choiceOf(weaponChoices, item.id)}
                             onWeaponChoice={(c) => setWeaponChoice(item.id, c)}
                             onUse={() => setUseTarget(item)}
@@ -865,6 +874,9 @@ export default function Inventory() {
                             setPropertyPending={setPropertyMutation.isPending && setPropertyMutation.variables?.itemId === item.id}
                             onCharges={(delta) => chargesMutation.mutate({ itemId: item.id, delta })}
                             onCastSpell={(i) => itemCast.mutate({ itemId: item.id, spellIndex: i, name: itemGrantedSpells(item)[i]?.name ?? '' })}
+                            onScroll={char?.computed?.scroll_casting && item.item_type === 'consumable' && item.item_metadata?.subtype === 'scroll'
+                              ? (level) => scrollMutation.mutate({ itemId: item.id, level }) : undefined}
+                            scrollPending={scrollMutation.isPending && scrollMutation.variables?.itemId === item.id}
                             chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
                             castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                             onMove={() => setMoveTargets([item])}
@@ -884,6 +896,7 @@ export default function Inventory() {
       {showAdd && (
         <ItemForm
           initialData={editingItem}
+          edition={char?.rules_edition}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
@@ -923,7 +936,8 @@ export default function Inventory() {
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}
-          inspirationAvailable={Boolean(char?.heroic_inspiration)}
+          charId={char?.id}
+          inspirationAvailable={canRerollInspiration(char)}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
           onInspirationReroll={() => attackRerollMutation.mutate({ itemId: attackState.itemId, choice: attackState.choice })}

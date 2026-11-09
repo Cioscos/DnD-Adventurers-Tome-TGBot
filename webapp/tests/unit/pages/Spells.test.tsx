@@ -5,8 +5,9 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import Spells from '@/pages/Spells'
 
 const {
-  getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo,
+  getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo, toastWarning, toastError, ApiError, resolveChoice,
 } = vi.hoisted(() => ({
+  resolveChoice: vi.fn(),
   getChar: vi.fn(),
   updateChar: vi.fn(),
   addSpy: vi.fn(),
@@ -17,19 +18,26 @@ const {
   slotUpdateSpy: vi.fn(),
   slotAddSpy: vi.fn(),
   toastInfo: vi.fn(),
+  toastWarning: vi.fn(),
+  toastError: vi.fn(),
+  ApiError: class extends Error {
+    constructor(public status: number, public detail: unknown) { super(`API ${status}: ${JSON.stringify(detail)}`) }
+  },
 }))
 
 vi.mock('@/api/client', () => ({
+  ApiError,
   api: {
     characters: { get: getChar, update: updateChar },
     spells: { add: addSpy, update: updateSpy, remove: removeSpy, use: useSpy, updateConcentration: concSpy },
     spellSlots: { update: slotUpdateSpy, add: slotAddSpy },
+    choices: { resolve: resolveChoice },
   },
 }))
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { list?: string }) => (o?.list ? `${k}[${o.list}]` : k), i18n: { language: 'it' } }) }
 })
 
 // react-router-dom: pin the id; keep the real useSearchParams (MemoryRouter provides it).
@@ -53,9 +61,9 @@ vi.mock('framer-motion', async () => {
   }
 })
 
-vi.mock('sonner', () => ({ toast: { info: toastInfo, error: vi.fn(), success: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { info: toastInfo, warning: toastWarning, error: toastError, success: vi.fn() } }))
 vi.mock('@/auth/telegram', () => ({
-  haptic: { light: () => {}, medium: () => {}, success: () => {}, error: () => {} },
+  haptic: { light: () => {}, medium: () => {}, success: () => {}, error: () => {}, warning: () => {} },
 }))
 
 const passthrough = vi.hoisted(() => async () => {
@@ -108,12 +116,13 @@ vi.mock('@/pages/spells/SpellFilter', async () => {
 vi.mock('@/pages/spells/SpellItem', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: { name: string }; onUse?: (mode: string) => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void }) =>
+    default: (p: { spell: { name: string }; onUse?: (mode: string) => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void; onPreparedToggle?: () => void }) =>
       React.createElement('div', null, [
         React.createElement('span', { key: 'n' }, p.spell.name),
         React.createElement('button', { key: 'u', onClick: () => p.onUse?.('normal') }, `use-${p.spell.name}`),
         React.createElement('button', { key: 'c', onClick: p.onConcentrationToggle }, `conc-${p.spell.name}`),
         React.createElement('button', { key: 'r', onClick: p.onRemove }, `remove-${p.spell.name}`),
+        React.createElement('button', { key: 'p', onClick: p.onPreparedToggle }, `prepare-${p.spell.name}`),
       ]),
   }
 })
@@ -125,16 +134,17 @@ vi.mock('@/pages/spells/SpellForm', async () => {
     components: '', duration: '', is_concentration: false, is_ritual: false,
     damage_dice: '3d4+3', damage_type: 'force', higher_level: '', school: 'evocation', srd_index: 'magic-missile', higher_levels_dice: '',
   }
-  return { default: (p: { onSubmit?: (d: unknown) => void }) => React.createElement('button', { onClick: () => p.onSubmit?.(FORM_DATA) }, 'submit-spell') }
+  return { default: (p: { onSubmit?: (d: unknown) => void; pickFilter?: { max_level: number; list?: string | null } }) =>
+    React.createElement('button', { onClick: () => p.onSubmit?.(FORM_DATA), 'data-pick-list': p.pickFilter ? `${p.pickFilter.max_level}:${p.pickFilter.list ?? ''}` : '' }, 'submit-spell') }
 })
 // CastSpellModal → a cast button per available slot + a create-slot button.
 vi.mock('@/pages/spells/CastSpellModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: { level: number }; availableSlots: { id: number; level: number }[]; onCast?: (l: number) => void; onCreateSlot?: (l: number) => void }) =>
+    default: (p: { spell: { level: number }; availableSlots: { id: number; level: number }[]; onCast?: (s: { id: number; level: number }) => void; onCreateSlot?: (l: number) => void }) =>
       React.createElement('div', { 'data-testid': 'cast-modal' }, [
         ...p.availableSlots.map((s) =>
-          React.createElement('button', { key: `cast-${s.id}`, onClick: () => p.onCast?.(s.level) }, `cast-slot-${s.level}`)),
+          React.createElement('button', { key: `cast-${s.id}`, onClick: () => p.onCast?.(s) }, `cast-slot-${s.level}`)),
         React.createElement('button', { key: 'create', onClick: () => p.onCreateSlot?.(p.spell.level) }, `create-slot-${p.spell.level}`),
       ]),
   }
@@ -172,10 +182,154 @@ const manualChar = () => ({
 })
 
 afterEach(() => {
-  for (const s of [getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo]) s.mockReset()
+  for (const s of [getChar, updateChar, addSpy, updateSpy, removeSpy, useSpy, concSpy, slotUpdateSpy, slotAddSpy, toastInfo, toastWarning, toastError]) s.mockReset()
 })
 
 describe('Spells page', () => {
+  const preparingChar = () => ({
+    ...manualChar(),
+    spellcasting: { has_preparing_class: true, prepared_cap: 8, prepared_count: 4, cap_mode: 'auto', limits: [] },
+  })
+  const capError = (per_class: boolean) => new ApiError(400, { code: 'prepared_cap', n: 4, cap: 4, per_class })
+
+  it('toggle: the class cap of a multiclass reaches the player translated, without the technical text', async () => {
+    getChar.mockResolvedValue(preparingChar())
+    updateSpy.mockRejectedValue(capError(true))
+    renderWithProviders(<Spells />)
+    await userEvent.click(await screen.findByText('prepare-Bless'))
+    await waitFor(() => expect(toastWarning).toHaveBeenCalledWith('character.spells.prepared_cap_class_reached'))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('adding a spell over the total cap shows the translated total message', async () => {
+    getChar.mockResolvedValue(preparingChar())
+    addSpy.mockRejectedValue(capError(false))
+    renderWithProviders(<Spells />)
+    await userEvent.click(await screen.findByText('add-spell'))
+    await userEvent.click(await screen.findByText('submit-spell'))
+    await waitFor(() => expect(toastWarning).toHaveBeenCalledWith('character.spells.prepared_cap_reached'))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  describe('spell pick (Magical Secrets)', () => {
+    const pickChar = (free = false) => ({
+      ...manualChar(),
+      pending_choices: [{
+        id: 'sec1', kind: 'class_option', class_key: 'Bardo', level: 10, created_at: '', group: 'magical_secrets', count: 2,
+        options: [], spell_pick: { free, max_level: 5 },
+      }],
+    })
+    const renderPick = () => renderWithProviders(<Spells />, { route: '/char/9/spells?pick=sec1' })
+
+    it('lets a saved character say which known spells already are the secrets (R39)', async () => {
+      const owned = [{ id: 11, name: 'Palla di fuoco', level: 3 }, { id: 12, name: 'Volare', level: 3 }]
+      getChar.mockResolvedValue({ ...pickChar(), pending_choices: [{ ...pickChar().pending_choices[0], retrofit: true,
+        spell_pick: { free: false, max_level: 5, owned } }] })
+      resolveChoice.mockResolvedValue(pickChar())
+      renderPick()
+      await userEvent.click(await screen.findByText('Palla di fuoco'))
+      await userEvent.click(screen.getByText('character.spells.pick_already_known'))
+      await waitFor(() => expect(resolveChoice).toHaveBeenCalledWith(9, 'sec1', { kind: 'class_option', options: ['11'] }))
+    })
+
+    it('does not offer that shortcut to a character that is not a saved one', async () => {
+      getChar.mockResolvedValue(pickChar())
+      renderPick()
+      await screen.findByTestId('spell-pick-banner')
+      expect(screen.queryByText('character.spells.pick_already_known')).not.toBeInTheDocument()
+    })
+
+    it('announces the picks left and the highest level, and adds the spell against the pending choice', async () => {
+      getChar.mockResolvedValue(pickChar())
+      addSpy.mockResolvedValue({ id: 500 })
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_banner')
+      await userEvent.click(await screen.findByText('add-spell'))
+      await userEvent.click(await screen.findByText('submit-spell'))
+      await waitFor(() => expect(addSpy).toHaveBeenCalledWith(9, expect.objectContaining({ name: 'Magic Missile', pick_id: 'sec1', class_id: null })))
+    })
+
+    it('a cantrip-only pick says so instead of announcing a spell level', async () => {
+      const base = pickChar(true)
+      getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'bonus_cantrip', count: 1,
+        spell_pick: { free: true, max_level: 0, list: 'druid' } }] })
+      renderPick()
+      const banner = await screen.findByTestId('spell-pick-banner')
+      expect(banner).toHaveTextContent('character.spells.pick_cantrip_banner[dnd.classes.druid]')
+      expect(banner).not.toHaveTextContent('character.spells.pick_banner')
+    })
+
+    it('a cleric Thaumaturge cantrip pick names the cleric list, not the druid one', async () => {
+      const base = pickChar(true)
+      getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'thaumaturge_cantrip', count: 1,
+        spell_pick: { free: true, max_level: 0, list: 'cleric' } }] })
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_cantrip_banner[dnd.classes.cleric]')
+    })
+
+    it('a cantrip pick from any list (Pact of the Tome), a ritual pick and an exact-level pick (Arcanum) say what they ask', async () => {
+      const base = pickChar(true)
+      const withPick = (spell_pick: object) => ({ ...base, pending_choices: [{ ...base.pending_choices[0], count: 2, spell_pick }] })
+      getChar.mockResolvedValue(withPick({ free: true, max_level: 0 }))
+      const first = renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_cantrip_any_banner')
+      first.unmount()
+      getChar.mockResolvedValue(withPick({ free: true, max_level: 1, exact: true, ritual: true }))
+      const second = renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_ritual_banner')
+      second.unmount()
+      getChar.mockResolvedValue(withPick({ free: true, max_level: 6, exact: true }))
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_exact_banner')
+    })
+
+    it('hands the form the level limit and the spell list of the pick, and nothing without a pick', async () => {
+      const base = pickChar(true)
+      getChar.mockResolvedValue({ ...base, pending_choices: [{ ...base.pending_choices[0], group: 'bonus_cantrip', count: 1,
+        spell_pick: { free: true, max_level: 0, list: 'druid' } }] })
+      renderPick()
+      await userEvent.click(await screen.findByText('add-spell'))
+      expect(await screen.findByText('submit-spell')).toHaveAttribute('data-pick-list', '0:druid')
+    })
+
+    it('says an extra secret does not count among the known spells', async () => {
+      getChar.mockResolvedValue(pickChar(true))
+      renderPick()
+      expect(await screen.findByTestId('spell-pick-banner')).toHaveTextContent('character.spells.pick_free')
+    })
+
+    it('never sends a pick id without a pending pick', async () => {
+      getChar.mockResolvedValue(manualChar())
+      addSpy.mockResolvedValue({ id: 500 })
+      renderPick()
+      await userEvent.click(await screen.findByText('add-spell'))
+      await userEvent.click(await screen.findByText('submit-spell'))
+      await waitFor(() => expect(addSpy).toHaveBeenCalled())
+      expect(addSpy.mock.calls[0][1]).not.toHaveProperty('pick_id')
+      expect(screen.queryByTestId('spell-pick-banner')).not.toBeInTheDocument()
+    })
+
+    it.each([['spell_pick_level', 422], ['spell_already_known', 409]])('tells the player why a pick failed (%s)', async (code, status) => {
+      getChar.mockResolvedValue(pickChar())
+      addSpy.mockRejectedValue(new ApiError(status as number, { code }))
+      renderPick()
+      await userEvent.click(await screen.findByText('add-spell'))
+      await userEvent.click(await screen.findByText('submit-spell'))
+      await waitFor(() => expect(toastWarning).toHaveBeenCalledWith(`character.spells.${code}`))
+      expect(toastError).not.toHaveBeenCalled()
+    })
+  })
+
+  it('another toggle failure never shows the technical message', async () => {
+    getChar.mockResolvedValue(preparingChar())
+    updateSpy.mockRejectedValue(new ApiError(500, 'boom'))
+    renderWithProviders(<Spells />)
+    await userEvent.click(await screen.findByText('prepare-Bless'))
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(toastError.mock.calls[0][0]).not.toContain('API 500')
+    expect(toastWarning).not.toHaveBeenCalled()
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Spells />)
@@ -198,8 +352,8 @@ describe('Spells page', () => {
     renderWithProviders(<Spells />)
     await userEvent.click(await screen.findByText('use-Bless'))
     await userEvent.click(await screen.findByText('cast-slot-1'))
-    await waitFor(() => expect(useSpy).toHaveBeenCalledWith(9, 102, 1))
-    await waitFor(() => expect(concSpy).toHaveBeenCalledWith(9, 102)) // Bless is_concentration
+    await waitFor(() => expect(useSpy).toHaveBeenCalledWith(9, 102, expect.objectContaining({ slot_level: 1 })))
+    expect(concSpy).not.toHaveBeenCalled() // il lancio avvia la concentrazione col suo contatore
   })
 
   it('casting a leveled damage spell defers to the damage sheet (no slot consumed yet)', async () => {
@@ -222,12 +376,12 @@ describe('Spells page', () => {
     expect(sheet).toHaveAttribute('data-slot', '0')
   })
 
-  it('using a concentration cantrip toggles concentration without a slot', async () => {
+  it('using a concentration cantrip casts it without a slot', async () => {
     getChar.mockResolvedValue(manualChar())
-    concSpy.mockResolvedValue(manualChar())
+    useSpy.mockResolvedValue(manualChar())
     renderWithProviders(<Spells />)
     await userEvent.click(await screen.findByText('use-Guidance'))
-    await waitFor(() => expect(concSpy).toHaveBeenCalledWith(9, 104))
+    await waitFor(() => expect(useSpy).toHaveBeenCalledWith(9, 104, expect.objectContaining({ slot_level: null })))
   })
 
   // gems[0..2] = level-1 slot (used 1): index 0 lit, indices 1-2 available.
@@ -293,6 +447,7 @@ describe('Spells page', () => {
         school: 'evocation',
         srd_index: 'magic-missile',
         is_pinned: false,
+        class_id: null,
       }),
     )
   })

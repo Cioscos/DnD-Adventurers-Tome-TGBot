@@ -21,6 +21,7 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import HPGauge from '@/components/ui/HPGauge'
 import { LEDGER_INDEX_ROW } from '@/styles/ledger'
 import ConditionBadge from '@/components/ui/ConditionBadge'
+import PublicStates from '@/components/session/PublicStates'
 import { api, ApiError } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
@@ -175,6 +176,7 @@ function ParticipantRow({
                 ))}
               </div>
             )}
+            <PublicStates states={snapshot.active_states} />
             {snapshot.last_roll && (
               <div className="mt-1 text-xs text-dnd-text-muted flex items-center gap-1">
                 <Dices size={11} />

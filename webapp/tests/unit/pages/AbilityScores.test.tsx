@@ -4,17 +4,28 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import AbilityScores from '@/pages/AbilityScores'
 
-const { getChar, updateAbilityScore, toastSuccess } = vi.hoisted(() => ({
+const { getChar, updateAbilityScore, toastSuccess, rollAbilityCheck, rollOptions } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateAbilityScore: vi.fn(),
   toastSuccess: vi.fn(),
+  rollAbilityCheck: vi.fn(),
+  rollOptions: vi.fn().mockResolvedValue([]),
 }))
 
 // Compat contract: AbilityScores → api.characters.updateAbilityScore(id, ability, value)
 // → PATCH /characters/{id}/ability_scores/{ability} {value} → CharacterFull.
 vi.mock('@/api/client', () => ({
-  api: { characters: { get: getChar, updateAbilityScore } },
+  api: { characters: { get: getChar, updateAbilityScore, rollAbilityCheck, rollOptions } },
+  ApiError: class ApiError extends Error {},
 }))
+vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn().mockResolvedValue(undefined), d20Arg: () => undefined }))
+vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: vi.fn() }) }))
+vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
+vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }) }))
+vi.mock('@/components/RollResultModal', async () => {
+  const React = await import('react')
+  return { default: (p: { title: string; result: { total: number } }) => React.createElement('div', { 'data-testid': 'roll-modal' }, `${p.title}:${p.result.total}`) }
+})
 
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -67,11 +78,12 @@ vi.mock('@/components/skeletons/AbilityScoresSkeleton', async () => {
 vi.mock('@/components/character/AbilityScoreCard', async () => {
   const React = await import('react')
   return {
-    default: (p: { score: { name: string; value: number }; onEdit: () => void }) =>
+    default: (p: { score: { name: string; value: number }; onEdit: () => void; onRoll: (mode: string) => void }) =>
       React.createElement(
-        'button',
-        { 'data-testid': `edit-${p.score.name}`, onClick: p.onEdit },
-        String(p.score.value),
+        'div',
+        null,
+        React.createElement('button', { 'data-testid': `edit-${p.score.name}`, onClick: p.onEdit }, String(p.score.value)),
+        React.createElement('button', { 'data-testid': `roll-${p.score.name}`, onClick: () => p.onRoll('normal') }, 'roll'),
       ),
   }
 })
@@ -109,6 +121,16 @@ afterEach(() => {
 })
 
 describe('AbilityScores page', () => {
+  it('rolls a pure ability check from the score row and shows the outcome', async () => {
+    getChar.mockResolvedValue(baseChar)
+    rollAbilityCheck.mockResolvedValue({ die: 11, dice: [11], total: 13, bonus: 2, notes: [], mode: 'normal', mode_applied: 'normal' })
+    renderWithProviders(<AbilityScores />)
+    await userEvent.click(await screen.findByTestId('roll-strength'))
+    await waitFor(() => expect(rollAbilityCheck).toHaveBeenCalledWith(5, 'strength', undefined))
+    expect(rollOptions).toHaveBeenCalledWith(5, { roll: 'ability', ability: 'strength' })
+    expect(await screen.findByTestId('roll-modal')).toHaveTextContent('character.stats.check_title: character.stats.strength:13')
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<AbilityScores />)

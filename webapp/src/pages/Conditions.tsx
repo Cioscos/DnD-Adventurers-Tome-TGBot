@@ -15,7 +15,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
-import { CONDITION_ICONS } from '@/lib/conditions'
+import { CONDITION_ICONS, conditionLabel } from '@/lib/conditions'
 import CustomConditionCard from '@/components/homebrew/CustomConditionCard'
 import {
   showHomebrewNotifications,
@@ -107,6 +107,9 @@ export default function Conditions() {
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
   const [filterActive, setFilterActive] = useState(false)
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
+  const [confirmLethalOpen, setConfirmLethalOpen] = useState(false)
+  // Interdizione della Natura: affascinato o spaventato che chiede da dove viene (elementale o folletto = immune).
+  const [wardAsk, setWardAsk] = useState<'charmed' | 'frightened' | null>(null)
   // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
   const [nextDuration, setNextDuration] = useState<number | null>(null)
   const tick = useTickRound(charId)
@@ -205,8 +208,24 @@ export default function Conditions() {
     (c) => !conditions[c.key] || typeof conditions[c.key] !== 'object',
   )
 
+  const hasWard = (char.abilities ?? []).some((a) => a.feature_key === 'druid.natures_ward')
+
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
+    if (!current && hasWard) {
+      if (key === 'poisoned') {  // il server la rifiuterebbe: lo diciamo prima
+        toast.info(t('character.conditions.ward.poisoned'))
+        return
+      }
+      if (key === 'charmed' || key === 'frightened') {
+        setWardAsk(key)
+        return
+      }
+    }
+    apply(key, current)
+  }
+
+  const apply = (key: string, current: unknown) => {
     setPendingConditionKey(key)
     setJustActivated(current ? null : key)
     mutation.mutate({
@@ -216,6 +235,12 @@ export default function Conditions() {
   }
 
   const setExhaustion = (level: number) => {
+    // Il livello 6 uccide: un tocco sbagliato non deve costare il personaggio.
+    if (level === 6 && currentExhaustion < 6 && !confirmLethalOpen) {
+      setConfirmLethalOpen(true)
+      return
+    }
+    setConfirmLethalOpen(false)
     setPendingExhaustion(level)
     mutation.mutate({ conditions: { ...conditions, exhaustion: level } })
   }
@@ -349,7 +374,7 @@ export default function Conditions() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className={LEDGER_LABEL}>
-              {t('character.conditions.exhaustion_condition')}
+              {t('character.conditions.exhaustion_condition', { context: char.rules_edition })}
             </span>
             <Pressable
               aria-label={t('character.conditions.detail_aria')}
@@ -398,9 +423,10 @@ export default function Conditions() {
         </div>
         {/* Exhaustion details — intro + 6 level descriptions, toggled by Info button */}
         {showExhaustionDetails && (() => {
-          const intro = t('character.conditions.desc.exhaustion') as string
+          const intro = t('character.conditions.desc.exhaustion', { context: char.rules_edition }) as string
           const levels = t('character.conditions.desc.exhaustion_levels', {
             returnObjects: true,
+            context: char.rules_edition,
           }) as string[]
           return (
             <div className="mt-4 space-y-2">
@@ -442,7 +468,7 @@ export default function Conditions() {
             {effectRows.map(({ e, expiry, save }) => (
               <li key={e.slug} className="text-sm font-body">
                 <span className="font-semibold text-dnd-text">
-                  {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : e.slug}
+                  {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : conditionLabel(e.slug, t)}
                 </span>
                 {e.applied_by_gm && (
                   <span className="ml-2 text-xs uppercase tracking-wider text-dnd-amber">
@@ -578,9 +604,32 @@ export default function Conditions() {
         <ConditionDetailModal
           condKey={detailKey}
           exhaustionLevel={currentExhaustion}
+          edition={char.rules_edition}
           onClose={() => setDetailKey(null)}
         />
       )}
+
+      <ConfirmSheet
+        open={wardAsk !== null}
+        onClose={() => { setWardAsk(null); toast.info(t('character.conditions.ward.immune_done')) }}
+        title={t('character.conditions.ward.title')}
+        body={t('character.conditions.ward.body')}
+        confirmLabel={t('character.conditions.ward.apply')}
+        cancelLabel={t('character.conditions.ward.immune')}
+        confirmVariant="primary"
+        onConfirm={() => { if (wardAsk) apply(wardAsk, false); setWardAsk(null) }}
+      />
+
+      <ConfirmSheet
+        open={confirmLethalOpen}
+        onClose={() => setConfirmLethalOpen(false)}
+        title={t('character.conditions.exhaustion_condition', { context: char.rules_edition })}
+        body={t('character.conditions.exhaustion_lethal_body')}
+        confirmLabel={t('character.conditions.exhaustion_lethal_confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => setExhaustion(6)}
+        loading={mutation.isPending}
+      />
 
       <ConfirmSheet
         open={confirmResetOpen}

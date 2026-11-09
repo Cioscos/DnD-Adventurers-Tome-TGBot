@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_serializer
 
 from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
 from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
+from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
 
 
@@ -39,13 +40,25 @@ Restoration = Literal["long_rest", "short_rest", "none", "manual"]
 
 class ExportChoice(BaseModel):
     id: str = Field(max_length=64)
-    kind: Literal["asi"] = "asi"
+    kind: Literal["asi", "feat", "class_option", "epic_boon"] = "asi"
     class_key: str = Field(max_length=100)
     level: Annotated[int, _rng(1, 20)]
+    group: Optional[str] = Field(None, max_length=50)  # solo class_option
+    count: Optional[Annotated[int, _rng(1, 20)]] = None  # solo class_option
+
+    @model_serializer(mode="wrap")
+    def _drop_unused(self, handler):
+        data = handler(self)
+        return {k: v for k, v in data.items() if v is not None or k not in ("group", "count")}
     created_at: str = Field("", max_length=50)
 
 
 class ExportCharacter(BaseModel):
+    @field_validator("rules_edition", mode="before")
+    @classmethod
+    def _edition(cls, v):
+        return v if v in EDITIONS else "2014"
+
     name: str = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
     gender: Optional[str] = Field(None, max_length=50)
@@ -61,6 +74,7 @@ class ExportCharacter(BaseModel):
     carry_capacity: Int0 = 150
     carry_capacity_override: bool = False
     spell_slots_mode: Literal["automatic", "manual"] = "manual"
+    rules_edition: str = "2014"
     heroic_inspiration: bool = False
     experience_points: Int0 = 0
     is_dead: bool = False
@@ -78,6 +92,13 @@ class ExportCharacter(BaseModel):
     general_proficiencies: list | dict = Field(default_factory=list)
     damage_modifiers: dict = Field(default_factory=dict)
     pending_choices: list[ExportChoice] = Field(default_factory=list, max_length=40)
+
+    @field_validator("pending_choices", mode="before")
+    @classmethod
+    def _drop_incomplete_options(cls, v):
+        # una class_option senza gruppo o conteggio non è risolvibile: va scartata
+        return [c for c in v if not (isinstance(c, dict) and c.get("kind") == "class_option"
+                                     and not (c.get("group") and c.get("count")))] if isinstance(v, list) else v
     # {titolo: {body, created_at, updated_at, tags, was_voice}}; le note vocali hanno body ""
     notes: dict = Field(default_factory=dict)
 
@@ -89,6 +110,21 @@ class ExportClass(BaseModel):
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[Annotated[int, _rng(1, 100)]] = None
     hit_dice_used: Int0 = 0
+    # {gruppo: [chiave_opzione]}: scelte di classe (core/rules/types.py::ChoiceSpec)
+    options: dict[str, Annotated[list[str], _cap(40)]] = Field(default_factory=dict)
+
+    @field_validator("options", mode="before")
+    @classmethod
+    def _options_none(cls, v):
+        return v or {}
+
+    @field_validator("options")
+    @classmethod
+    def _options_keys(cls, v, info: ValidationInfo):
+        if not (info.context or {}).get("lenient") and (
+                len(v) > 40 or any(len(k) > 50 or any(len(o) > 50 for o in opts) for k, opts in v.items())):
+            raise ValueError("options too large")
+        return v
 
 
 class ExportAbilityScore(BaseModel):
@@ -139,6 +175,12 @@ class ExportSpell(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=r"^\d+d\d+([+-]\d+)?$")
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
+    always_prepared: bool = False
+    in_spellbook: bool = True  # un file senza il campo: l'incantesimo era già nel libro
+    in_backup: bool = False
+    source_class_key: Optional[str] = Field(default=None, max_length=20)
 
 
 class ExportSpellSlot(BaseModel):
@@ -159,6 +201,7 @@ class ExportAbility(BaseModel):
     is_class_feature: bool = False
     feature_key: Optional[str] = None
     action_type: Optional[ActionType] = None
+    short_rest_recovers: Optional[Int0] = None
     source_class_key: Optional[str] = None  # "c<indice in classes>"
 
     @field_validator("action_type", mode="wrap")
@@ -210,6 +253,7 @@ class ExportCompanion(BaseModel):
     armor_class: Annotated[int, _rng(0, 100)] = 10
     notes: Optional[str] = None
     is_active: bool = False
+    feature_key: Optional[str] = Field(default=None, max_length=80)
 
     @field_validator("statblock")
     @classmethod

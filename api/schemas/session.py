@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field
 
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
-from api.schemas.encounter import EncounterLive
+from api.schemas.encounter import EncounterLive, PublicState
 from api.schemas.item import ItemCreate
 
 
@@ -65,6 +65,8 @@ class CharacterLiveSnapshot(BaseModel):
     condition_effects: list[ConditionEffectRead] = []
     has_pending_save: bool = False
     is_concentrating: bool = False
+    # Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti (R36)
+    active_states: list[PublicState] = []
 
 
 class SessionParticipantRead(BaseModel):
@@ -183,6 +185,13 @@ class TradeRequest(BaseModel):
     coins: Optional[dict[str, int]] = None
 
 
+class InspirationGiveRequest(BaseModel):
+    """2024: chi ha già l'Ispirazione Eroica la cede a un personaggio del gruppo che ne è privo."""
+
+    from_character_id: int
+    to_user_id: int
+
+
 class StashPutRequest(BaseModel):
     from_character_id: int
     item_id: Optional[int] = None
@@ -219,7 +228,37 @@ class GMGrantItemResponse(BaseModel):
     results: list[GMGrantItemResult]
 
 
+class StartHealNotice(BaseModel):
+    """Cura ricevuta all'inizio del turno da un privilegio (Sopravvissuto): quanto e perché."""
+    feature_key: str
+    name: dict[str, str]
+    amount: int
+    message: Optional[dict[str, str]] = None  # un avviso che non è una cura (Guerriero Eroico): sostituisce il testo di default
+
+
+class TurnBlock(BaseModel):
+    action_used: bool = False
+    bonus_used: bool = False
+    reaction_used: bool = False
+    attacks_made: int = 0
+    action_attacks: int = 0  # solo quelli dell'azione Attacco: gli attacchi con slot proprio non contano
+    extra_actions: int = 0
+    once_per_turn: list[str] = []
+    spell_slot_cast: bool = False
+    bonus_spell_cast: bool = False
+    free_interaction_used: bool = False
+    damaged: bool = False
+    start_heal: list[StartHealNotice] = []  # le cure d'inizio turno di questo turno (avviso al giocatore)
+    action_spell_level: Optional[int] = None  # livello dell'ultimo incantesimo lanciato con l'azione in questo turno (0: trucchetto)
+    pending_attack: Optional[dict] = None
+    beast: Optional[dict] = None  # gli ordini alla bestia del Signore delle Bestie in questo turno (attacchi che le restano)
+    last_roll: Optional[dict] = None  # la domanda «Riuscito?» resta finché ``refundable`` non è vuoto
+
+
 class TurnState(BaseModel):
+    turn: TurnBlock = TurnBlock()
+    attacks_allowed: int = 1
+    attacks_allowed_pact: int = 1  # il limite con l'arma del patto (Lama Assetata)
     in_encounter: bool
     is_my_turn: bool
     round: Optional[int] = None

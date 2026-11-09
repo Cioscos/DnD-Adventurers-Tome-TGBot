@@ -52,6 +52,7 @@ type SettingKey =
   | `slot_mode:${'auto' | 'manual'}`
   | `prep_cap_mode:${'auto' | 'manual'}`
   | 'prep_cap_value'
+  | `rules_edition:${'2014' | '2024'}`
   | 'reset'
 
 function D20Thumb({ body, accent }: { body: string; accent: string }) {
@@ -154,8 +155,22 @@ export default function Settings() {
     onSettled: () => setActiveSetting(null),
   })
 
+  const editionMutation = useMutation({
+    mutationFn: (rules_edition: '2014' | '2024') => api.characters.update(charId, { rules_edition }),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.success()
+    },
+    onError: () => {
+      haptic.error()
+      toast.error(t('common.error'))
+    },
+    onSettled: () => setActiveSetting(null),
+  })
+
   const [showRecalcConfirm, setShowRecalcConfirm] = useState(false)
   const [showSlotModeConfirm, setShowSlotModeConfirm] = useState(false)
+  const [pendingEdition, setPendingEdition] = useState<'2014' | '2024' | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   // Tetto preparazione manuale: input mai precompilato (placeholder only).
@@ -272,6 +287,14 @@ export default function Settings() {
     setActiveSetting('slot_mode:auto')
     updateMutation.mutate({ ...settings, spell_slots_mode: 'auto' })
     setShowSlotModeConfirm(false)
+  }
+
+  // Il ricalcolo dei privilegi arriva col sync: per ora aggiorna solo il campo.
+  const confirmEdition = () => {
+    if (!pendingEdition) return
+    setActiveSetting(`rules_edition:${pendingEdition}`)
+    editionMutation.mutate(pendingEdition)
+    setPendingEdition(null)
   }
 
   const confirmReset = () => {
@@ -684,6 +707,34 @@ export default function Settings() {
         />
       </div>
 
+      <SectionDivider>
+        {t('character.settings.rules_edition.title')}
+      </SectionDivider>
+
+      <div className="border-b border-dnd-border/60 px-1 py-3">
+        <p className="mb-3 text-xs text-dnd-text-muted font-body italic">
+          {t('character.settings.rules_edition.hint')}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(['2014', '2024'] as const).map((ed) => (
+            <Pressable
+              key={ed}
+              aria-pressed={char.rules_edition === ed}
+              onClick={() => char.rules_edition !== ed && setPendingEdition(ed)}
+              pending={editionMutation.isPending && activeSetting === `rules_edition:${ed}`}
+              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                ${char.rules_edition === ed
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+            >
+              {t(`character.settings.rules_edition.${ed}`)}
+            </Pressable>
+          ))}
+        </div>
+      </div>
+
       {/* Advanced — spell slots mode (Auto/Manual). Less commonly toggled than
           language/theme, so kept near the bottom per U082. */}
       <SectionDivider>
@@ -908,6 +959,17 @@ export default function Settings() {
         confirmVariant="primary"
         loading={updateMutation.isPending && activeSetting === 'slot_mode:auto'}
         onConfirm={confirmManualToAuto}
+      />
+
+      <ConfirmSheet
+        open={pendingEdition !== null}
+        onClose={() => setPendingEdition(null)}
+        title={t('character.settings.rules_edition.confirm_title')}
+        body={t('character.settings.rules_edition.confirm_body', { edition: pendingEdition ?? '' })}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="primary"
+        onConfirm={confirmEdition}
       />
 
       <ConfirmSheet

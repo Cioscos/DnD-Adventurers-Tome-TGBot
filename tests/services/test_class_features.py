@@ -41,7 +41,7 @@ async def test_creates_ki_ability_at_level_2(session):
     assert ki.is_class_feature is True
     assert ki.source_class_id == cls.id
     assert ki.max_uses == 2 and ki.uses == 2
-    assert ki.is_active is True and ki.is_passive is False
+    assert ki.is_active is True and ki.is_passive is True  # riserva: si spende dalle azioni che la alimentano
     assert ki.description and "monaco" in ki.description.lower()
 
 
@@ -73,4 +73,4 @@ async def test_english_lang_picks_en_description(session):
     await sync_class_feature_abilities(session, char, cls, lang="en")
     await session.flush()
     ki = next(a for a in char.abilities if a.feature_key == "monk.ki")
-    assert ki.description and "energy" in ki.description.lower()
+    assert ki.description and "pool" in ki.description.lower()

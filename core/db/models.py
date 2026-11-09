@@ -104,6 +104,11 @@ class Character(Base):
     # base AC is kept in sync as 10 + DEX mod + this ability's mod. NULL = disabled.
     unarmored_defense_ability: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
+    # Edizione delle regole seguita dal personaggio ("2014" | "2024")
+    rules_edition: Mapped[str] = mapped_column(String(4), default="2014", server_default="2014")
+    # Ultimo riposo lungo completo (ISO UTC): serve all'avviso sul limite di 24 h (2014) / 16 h (2024)
+    last_long_rest_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
     # Encumbrance
     carry_capacity: Mapped[int] = mapped_column(Integer, default=150)
     encumbrance: Mapped[float] = mapped_column(Float, default=0.0)
@@ -128,6 +133,10 @@ class Character(Base):
     rolls_history: Mapped[Optional[list]] = mapped_column(JSON, default=list)
     notes: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     settings: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+    # Stato del turno in corso (azione/bonus/reazione usate, attacchi fatti...): vedi api/services/rules_turn.py
+    turn_state: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Stati attivi dei privilegi (Ira...): lista di {key, feature_key, rounds_left, ends_on, data}; vedi api/services/rules_states.py
+    active_states: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     # Contatori cumulativi dei tiri: {"d20": {"1": 3, "20": 2}, ...} (faccia → conteggio)
     dice_stats: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     # Snapshot server-side dell'ultima operazione PF per l'annullamento:
@@ -284,6 +293,10 @@ class CharacterClass(Base):
     class_name: Mapped[str] = mapped_column(String(100), nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1)
     subclass: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Chiave di catalogo (core/rules/subclasses.py) riconosciuta dal testo; None se testo libero
+    subclass_key: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # Opzioni di classe scelte: {gruppo: [chiave_opzione]} (core/rules/types.py::ChoiceSpec)
+    options: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
     # Spellcasting ability for this class (e.g. "intelligence", "wisdom", "charisma")
     spellcasting_ability: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     # Hit die size for this class (e.g. 6, 8, 10, 12)
@@ -353,10 +366,22 @@ class Spell(Base):
     school: Mapped[Optional[str]] = mapped_column(String(30))
     srd_index: Mapped[Optional[str]] = mapped_column(String(80))
     higher_levels_dice: Mapped[Optional[str]] = mapped_column(String(20))
+    # Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso); si tira insieme alla prima.
+    extra_damage_dice: Mapped[Optional[str]] = mapped_column(String(20))
+    extra_damage_type: Mapped[Optional[str]] = mapped_column(String(100))
     # Preparazione (solo classi che preparano: Chierico/Druido/Paladino/Mago).
     # Backfill legacy a True in _MIGRATIONS; i nuovi incantesimi nascono False
     # (default in SpellCreate). Ignorata per i known caster.
     is_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Classe di CD e attacco; NULL (tutti i personaggi esistenti) = la classe migliore.
+    class_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("character_classes.id", ondelete="SET NULL"), nullable=True
+    )
+    # Fuori dal limite dei preparati e non togliibile con «non preparare».
+    always_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Libro degli Incantesimi del Mago: nel libro, e nella copia di riserva (solo gli incantesimi di livello 1+ del Mago)
+    in_spellbook: Mapped[bool] = mapped_column(Boolean, default=False)
+    in_backup: Mapped[bool] = mapped_column(Boolean, default=False)
 
     character: Mapped["Character"] = relationship(
         back_populates="spells", foreign_keys=[character_id]
@@ -513,6 +538,8 @@ class Ability(Base):
     feature_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     # Costo in azioni: action | bonus_action | reaction | free | special (NULL = non indicato).
     action_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    # Usi recuperati a ogni riposo breve (NULL = la ricarica segue solo restoration_type).
+    short_rest_recovers: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="abilities")
 
@@ -870,8 +897,13 @@ class Combatant(Base):
     ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     is_dead: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Colto di sorpresa nel primo turno: lo segna il GM; cade a fine del primo turno del combattente.
+    surprised: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sort_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Secondo turno del primo round (Riflessi da Furfante): id del personaggio di cui è il turno. Ha ``character_id`` nullo
+    # (la coppia incontro-personaggio è unica) e dopo il primo round l'ordine di turno lo salta.
+    extra_turn_of: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     encounter: Mapped["Encounter"] = relationship(back_populates="combatants")
 
@@ -915,6 +947,14 @@ class ConditionEffect(Base):
     encounter_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("encounters.id", ondelete="SET NULL"), nullable=True
     )
+    # True: effetto di un privilegio in attesa del TS del bersaglio. La condizione non è sulla scheda e la durata non
+    # decorre; un TS fallito lo attiva, uno superato lo elimina.
+    pending: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Chiave dell'effetto di un privilegio (`TargetEffect.immune_on_success`): un TS superato rende il bersaglio immune a
+    # quell'effetto per chi l'ha usato (`source_character_id`) fino al suo prossimo riposo lungo.
+    immunity_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Altre condizioni dello stesso effetto (`TargetEffect.also`), separate da virgola: arrivano insieme alla prima col TS fallito.
+    also_slugs: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
@@ -1041,6 +1081,7 @@ class Companion(Base):
     armor_class: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    feature_key: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
     character: Mapped["Character"] = relationship(back_populates="companions")

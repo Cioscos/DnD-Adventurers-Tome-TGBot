@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from api.schemas.common import D20Dice, RollMode
+from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
@@ -36,6 +36,23 @@ class SpellRead(BaseModel):
     school: Optional[str] = None
     srd_index: Optional[str] = None
     higher_levels_dice: Optional[str] = None
+    extra_damage_dice: Optional[str] = None
+    extra_damage_type: Optional[str] = None
+    class_id: Optional[int] = None
+    always_prepared: bool = False
+    in_spellbook: bool = False  # Libro del Mago: solo la copia nel libro lo cambia (``POST .../copy``)
+    in_backup: bool = False
+    has_book: bool = False  # l'incantesimo è del Libro del Mago (di livello 1+, di un mago 2014): il client mostra le azioni del libro
+    # CD e attacco della classe dell'incantesimo; li riempie il server dove serve la scheda.
+    save_dc: Optional[int] = None
+    attack_bonus: Optional[int] = None
+    at_will: bool = False  # un privilegio lo concede a volontà: si lancia senza slot (Mille Forme)
+    # Lancio coi punti ki (Arti dell'Ombra, Quattro Elementi): `{cost, max_extra, ki_left, feature_key}`; `None` se non vale
+    ki_cast: Optional[dict] = None
+    # Lancio pagato da un privilegio del Warlock (Arcanum Mistico, suppliche a uso singolo): `{kind, feature_key, pact_only, uses_left}`
+    pact_cast: Optional[dict] = None
+    # Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48): `{conditions, untracked, count, max_targets, ally}`
+    removal: Optional[dict] = None
 
     model_config = {"from_attributes": True}
 
@@ -59,6 +76,10 @@ class SpellCreate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    class_id: Optional[int] = None
+    always_prepared: bool = False
+    # Scelta di incantesimi in sospeso (Segreti Magici) che questo incantesimo risolve; non è una colonna.
+    pick_id: Optional[str] = Field(default=None, max_length=64)
 
 
 class SpellUpdate(BaseModel):
@@ -80,18 +101,51 @@ class SpellUpdate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    class_id: Optional[int] = None
+    always_prepared: Optional[bool] = None
 
 
-class SpellUseRequest(BaseModel):
-    # slot_level è obbligatorio per il lancio normale (validato nel router con
-    # 400, non 422, per coerenza con gli altri errori di dominio dell'endpoint).
+class SpellCopyRequest(BaseModel):
+    """Copia nel Libro del Mago: ``copy`` (incantesimo trovato), ``backup`` (copia di riserva di uno già nel libro),
+    ``retranscribe`` (libro perso: si riscrive un incantesimo preparato)."""
+    mode: Literal["copy", "backup", "retranscribe"] = "copy"
+
+
+class SpellCopyCost(BaseModel):
+    hours: float
+    gold: int
+    halved: bool = False  # un «Sapiente» della scuola ha dimezzato tempo e costo
+
+
+class SpellRemovalBody(BaseModel):
+    """Chi e cosa toglie il lancio (Task 48). ``targets``: ``"self"``, l'id di un PG della serata o ``"other"`` (una creatura
+    fuori dalla serata: solo una nota). ``conditions``: la scelta, assente se l'incantesimo le toglie tutte."""
+    targets: list[int | str] = Field(min_length=1, max_length=12)
+    conditions: list[str] | None = Field(None, max_length=10)
+
+
+class SpellUseRequest(RollOptionsBody):
+    """Le opzioni sono quelle di ``roll="cast"``. ``slot_id`` sceglie il pool; ``slot_level`` da solo prende il primo
+    con posto. Uno dei due è obbligatorio per un incantesimo di livello (400, non 422, come gli altri errori di
+    dominio dell'endpoint). ``confirm``: avvisi di ``cast_warnings`` accettati dal giocatore."""
+    slot_id: int | None = None
     slot_level: int | None = None
     as_ritual: bool = False
+    free_cast: bool = False  # senza slot, autorizzato da uno stato attivo (Lettura del Pensiero, R43)
+    ki: bool = False  # senza slot, coi punti ki di un privilegio (Arti dell'Ombra, discipline dei Quattro Elementi)
+    ki_extra: int = Field(0, ge=0, le=9)  # punti ki in più: uno per livello dell'incantesimo in più
+    confirm: list[str] = Field(default_factory=list, max_length=10)
+    removal: SpellRemovalBody | None = None
 
 
-class SpellAttackRequest(BaseModel):
+class SpellAttackRequest(RollOptionsBody):
+    """``options``: ``roll="attack"``; ``cast_options``: ``roll="cast"``."""
+    slot_id: int | None = None
     slot_level: int | None = None
     ritual: bool = False
+    confirm: list[str] = Field(default_factory=list, max_length=10)
+    cast_options: list[str] = Field(default_factory=list, max_length=30)
+    cast_option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
     die: int | None = Field(None, ge=1, le=20)
     with_inspiration: bool = False
     mode: RollMode = "normal"
@@ -130,14 +184,16 @@ class ConcentrationUpdate(BaseModel):
     rounds: Optional[int] = None
 
 
-class RollDamageRequest(BaseModel):
+class RollDamageRequest(RollOptionsBody):
     casting_level: int | None = None
     extra_dice: str | None = None
     is_critical: bool = False
     # Optional client-supplied face values from 3D physics. When present, the
     # server validates count/range and uses them instead of random.randint.
     main_rolls: list[int] | None = None
-    extra_rolls: list[int] | None = None
+    extra_rolls: list[int] | None = None  # prima i dadi della seconda parte dell'incantesimo, poi quelli a mano
+    # Tipo della seconda parte, se l'incantesimo ne offre piu' d'uno (Onda distruttiva: radioso o necrotico)
+    extra_damage_type: str | None = None
 
     @field_validator("extra_dice")
     @classmethod
@@ -150,6 +206,41 @@ class RollDamageRequest(BaseModel):
                 f"(e.g. '2d6', '1d8+3'), got {v!r}"
             )
         return v.strip()
+
+
+class LastDamageBody(RollOptionsBody):
+    """``reroll``: posizioni dei dadi di danno (in ``main_rolls`` + ``extra_rolls``) da ritirare."""
+    reroll: list[int] = Field(default_factory=list, max_length=30)
+
+
+class RollHealingRequest(RollOptionsBody):
+    """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali né dadi.
+    ``apply_to_self``: chi lancia è anche il bersaglio."""
+    casting_level: int | None = None
+    apply_to_self: bool = False
+
+
+class RollHealingResult(BaseModel):
+    rolls: list[int]
+    total: int
+    breakdown: str
+    casting_level: int
+    main_kind: str | None = None
+    main_rolls: list[int] = []
+    modifier: int = 0           # modificatore da incantatore, più i fissi della cura
+    bonus: int = 0              # fisso dei privilegi (Discepolo della Vita)
+    maximized: bool = False
+    healed: int = 0             # PF davvero aggiunti a chi lancia (``apply_to_self``)
+    self_healed: int = 0        # PF che chi lancia recupera per un privilegio (Guaritore Benedetto)
+    option_result: OptionResult | None = absent_when_none()
+    model_config = {"from_attributes": True}
+
+
+class DamagePart(BaseModel):
+    label: str   # main, second, extra
+    type: str | None = None
+    kind: str    # d6
+    rolls: list[int]
 
 
 class RollDamageResult(BaseModel):
@@ -166,4 +257,10 @@ class RollDamageResult(BaseModel):
     main_rolls: list[int]    # only main dice (not extras)
     extra_kind: str | None = None   # "d4" or None
     extra_rolls: list[int] = []     # [] if no extra_dice
+    extra_damage_type: str | None = None  # tipo della seconda parte di danno dell'incantesimo, se c'è
+    parts: list[DamagePart] = []  # i gruppi di dadi, ciascuno col suo tipo
+    option_result: OptionResult | None = absent_when_none()
+    reroll_dice: list[list[int]] | None = absent_when_none()  # [lati, valore] dei dadi ritirabili, con l'indice del server
+    twinned_damage: dict | None = absent_when_none()  # Incantesimo Raddoppiato: {rolls, total} del secondo bersaglio
+    save_success_damage: int | None = absent_when_none()  # Trucchetto Potente: il danno di chi supera il TS (metà del totale)
     model_config = {"from_attributes": True}

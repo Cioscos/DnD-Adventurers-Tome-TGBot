@@ -126,6 +126,12 @@ A partial test suite **and** a frontend linter are configured. Coverage is curre
 - **Frontend lint (ESLint)** — `cd webapp && npm run lint` (`eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0`).
 - No backend linter/formatter (ruff/black/mypy) is configured.
 
+## Code Navigation (LSP)
+
+Language servers are configured for this project: Pyright for `.py` and typescript-language-server for `.ts`/`.tsx`/`.js`/`.jsx`. Use the `LSP` tool for code intelligence instead of grep when the question is about symbols: `goToDefinition`, `findReferences` (every caller before changing a function), `hover` (types and signatures), `documentSymbol`, `workspaceSymbol`, `incomingCalls`/`outgoingCalls`. Use grep for text, strings, i18n keys and config. Subagents should do the same.
+
+Local setup (Windows): the plugins are `pyright-node-lsp@local-lsp` and `typescript-node-lsp@local-lsp` (local marketplace in `~/.claude-personal/local-lsp`), which start the servers through `node` because Claude Code cannot launch npm's `.cmd` shims. The official `pyright-lsp` and `typescript-lsp` are disabled for that reason. The TypeScript server uses its own TypeScript 5.9 copy in `local-lsp/tsserver`, since the global TypeScript 7 has no `tsserver.js`. If the `LSP` tool says "not found or is in an unsafe location", check that these plugins are enabled and run `/reload-plugins`.
+
 ## Architecture Overview
 
 Four-package system:
@@ -259,13 +265,23 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 
 ### D&D 5e Rule Compliance Notes
 - **Death save roll**: nat 20 → revive with 1 HP + reset saves; nat 1 → 2 failures; 10+ → 1 success; 2-9 → 1 failure
-- **Rests break concentration**: both short and long rest clear `concentrating_spell_id`
+- **Rests and concentration (D8)**: the short rest keeps concentration, the long rest ends it
+- **Rests by edition**: rest refused (409 `rest_needs_hp`) at 0 HP (long rest; 2024 also short rest); `last_long_rest_at` + 409 `long_rest_too_soon` under 24 h (2014) / 16 h (2024) unless `confirm_early`; hit dice regained on a long rest: half (min 1) in 2014, all in 2024; hit die heals roll + CON, minimum 0 (2014) / 1 (2024) via `apply_heal`; `interrupted` (2014 long: no benefits; 2024 long: short-rest benefits; 2024 short: none); `ate_and_drank=false` blocks the exhaustion reduction in 2014. `/rest` no longer heals: healing is `POST /hit_dice/spend`
 - **HP above 0 resets death saves**: HEAL/SET_CURRENT automatically clears death saves when HP crosses from 0 to positive
 - **Long rest includes short-rest resources**: long rest restores abilities/resources with `restoration_type` of `long_rest` OR `short_rest`
 - **d20 modes**: advantage/disadvantage on all d20 rolls (skills, saves, initiative, death saves); advantage and disadvantage cancel out
 - **Damage types**: resistance halves, vulnerability doubles, immunity zeroes damage before it hits HP
 - **Durations**: conditions and concentration expire after a round count, decremented by `rounds/tick`
 - **Wild shape**: damage beyond the beast form's HP carries over to the normal form; a form at 0 HP ends
+
+### Class rules by edition (2014 / 2024)
+- Every character has `Character.rules_edition` (`"2014"` default, `"2024"`): class features, rests and spells follow that edition. Existing characters stay 2014 until switched; 2024 Beyond imports set it.
+- Feature catalog: `core/rules/catalog/y2014/` and `y2024/` (one module per class and per subclass group), built from the types in `core/rules/types.py` (`OnUse` for usable features, `RollOptionSpec` for choices offered on a roll, `StateSpec` for timed states). No DB access in `core/`: the API attaches what the rules need to the character before evaluating them.
+- Roll options (reactions, rerolls, damage reductions, spend-a-resource prompts): `core/rules/roll_options.py`. `_spend` pays, `refund_spent` undoes from the spent tokens; options paid by another character (`for_ally`) are spent and refunded on the donor's row with atomic UPDATEs (`api/services/session_allies.py`).
+- Party effects (auras, temp HP or healing to an ally, a companion's Gift of the Protectors) only reach characters seated in the same active evening, verified by the server (`attach_party`); outside an evening the result is text for the GM.
+- Condition removal by features and spells goes through `core/rules/condition_removal.py` (one `removal {targets, conditions}` contract; spells recognised by name it/en).
+- Starting equipment per edition: `core/rules/starting_equipment.py` (inserted into the inventory, no mechanical effect).
+- Homebrew rules that model a feature the catalog now automates must be turned off, or the effect applies twice.
 
 ## i18n
 

@@ -10,7 +10,7 @@ Two pools are produced separately:
   single spellcasting class the class's own table is used (full / half /
   third caster). With two or more spellcasting classes the *multiclass
   spellcaster* rule applies: a combined caster level is computed (full ×1,
-  half ⌊/2⌋, third ⌊/3⌋) and read against the full-caster table (which is the
+  half ⌊/2⌋ in 2014 and ⌈/2⌉ in 2024, third ⌊/3⌋) and read against the full-caster table (which is the
   same as the PHB "Multiclass Spellcaster" table).
 - **Pact Magic slots** (Warlock) — a separate pool. Warlock levels never
   count toward the combined caster level (Pact Magic is not the Spellcasting
@@ -18,8 +18,8 @@ Two pools are produced separately:
 
 Class identity is resolved through ``normalize_class_name`` which accepts the
 localized ``CharacterClass.class_name`` (Italian or English) and custom names
-case-insensitively. Eldritch Knight / Arcane Trickster are detected as third
-casters via a non-null ``spellcasting_ability`` on a fighter / rogue class.
+case-insensitively. Eldritch Knight / Arcane Trickster are third casters by
+``subclass_key``; see ``caster_kind`` for characters saved before that column.
 
 Tables are transcribed verbatim from the PHB (chap. 3 class tables + chap. 6
 multiclassing rules).
@@ -56,8 +56,9 @@ _NAME_TO_KEY: dict[str, str] = {
 FULL_CASTERS: frozenset[str] = frozenset({"bard", "cleric", "druid", "sorcerer", "wizard"})
 HALF_CASTERS: frozenset[str] = frozenset({"paladin", "ranger"})
 # Fighter (Eldritch Knight) / Rogue (Arcane Trickster) are third casters only
-# when they have a spellcasting subclass — detected via spellcasting_ability.
+# when they have a spellcasting subclass.
 THIRD_CASTER_BASE: frozenset[str] = frozenset({"fighter", "rogue"})
+THIRD_SUBCLASSES: frozenset[str] = frozenset({"eldritch_knight", "arcane_trickster"})
 WARLOCK_KEY = "warlock"
 
 
@@ -125,6 +126,9 @@ HALF_CASTER_SLOTS: list[tuple[int, ...]] = [
     (4, 3, 3, 3, 2, 0, 0, 0, 0),  # 20
 ]
 
+# 2024: Paladin and Ranger cast from level 1, the rest of the table is unchanged.
+HALF_CASTER_SLOTS_2024: list[tuple[int, ...]] = [(2, 0, 0, 0, 0, 0, 0, 0, 0), *HALF_CASTER_SLOTS[1:]]
+
 # Third casters: Eldritch Knight (Fighter), Arcane Trickster (Rogue).
 # First slots at class level 3; up to 4th.
 THIRD_CASTER_SLOTS: list[tuple[int, ...]] = [
@@ -185,8 +189,13 @@ def _row(table: list[tuple[int, ...]], level: int) -> tuple[int, ...]:
 # Computation
 # ---------------------------------------------------------------------------
 
-def _caster_kind(cls: "CharacterClass") -> str | None:
-    """Return 'full' / 'half' / 'third' / 'pact' for a class, else None."""
+def caster_kind(cls: "CharacterClass", edition: str = "2014") -> str | None:
+    """Return 'full' / 'half' / 'third' / 'pact' for a class, else None.
+
+    A third caster is decided by ``subclass_key``. A saved ``spellcasting_ability``
+    keeps the slots of characters that had them before that column: without a
+    recognised subclass in any edition, always in 2014 (their default edition).
+    """
     key = normalize_class_name(cls.class_name)
     if key is None:
         return None
@@ -196,12 +205,16 @@ def _caster_kind(cls: "CharacterClass") -> str | None:
         return "full"
     if key in HALF_CASTERS:
         return "half"
-    if key in THIRD_CASTER_BASE and cls.spellcasting_ability:
-        return "third"
+    if key in THIRD_CASTER_BASE:
+        subclass = getattr(cls, "subclass_key", None)
+        if subclass in THIRD_SUBCLASSES:
+            return "third"
+        if cls.spellcasting_ability and (subclass is None or edition == "2014"):
+            return "third"
     return None
 
 
-def compute_regular_slots(classes: Iterable["CharacterClass"]) -> dict[int, int]:
+def compute_regular_slots(classes: Iterable["CharacterClass"], edition: str = "2014") -> dict[int, int]:
     """Compute the shared (non-pact) spell slots: ``{spell_level: total}``.
 
     Single spellcasting class → that class's own table (full/half/third).
@@ -210,7 +223,7 @@ def compute_regular_slots(classes: Iterable["CharacterClass"]) -> dict[int, int]
     """
     regular: list[tuple[str, int]] = []  # (kind, level)
     for cls in classes:
-        kind = _caster_kind(cls)
+        kind = caster_kind(cls, edition)
         if kind in ("full", "half", "third"):
             regular.append((kind, cls.level))
 
@@ -221,7 +234,7 @@ def compute_regular_slots(classes: Iterable["CharacterClass"]) -> dict[int, int]
         kind, level = regular[0]
         table = {
             "full": FULL_CASTER_SLOTS,
-            "half": HALF_CASTER_SLOTS,
+            "half": HALF_CASTER_SLOTS_2024 if edition == "2024" else HALF_CASTER_SLOTS,
             "third": THIRD_CASTER_SLOTS,
         }[kind]
         row = _row(table, level)
@@ -231,7 +244,7 @@ def compute_regular_slots(classes: Iterable["CharacterClass"]) -> dict[int, int]
             if kind == "full":
                 combined += level
             elif kind == "half":
-                combined += level // 2
+                combined += (level + 1) // 2 if edition == "2024" else level // 2
             else:  # third
                 combined += level // 3
         if combined < 1:

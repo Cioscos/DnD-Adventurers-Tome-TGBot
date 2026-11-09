@@ -51,6 +51,17 @@ describe('HitDiceResultDialog', () => {
     expect(screen.getByText('character.hp.hit_dice_result')).toBeInTheDocument()
   })
 
+  it('shows the extra die of the Song of Rest, already counted in the healing', () => {
+    render(<HitDiceResultDialog result={{ ...result, healed: 14, song_die: 6, song_rolls: [3] }} onClose={() => {}} />)
+    expect(screen.getByText('+14')).toBeInTheDocument()
+    expect(screen.getByText(/character\.hp\.song_of_rest/)).toHaveTextContent('+3')
+  })
+
+  it('shows no Song of Rest line without the extra die', () => {
+    render(<HitDiceResultDialog result={{ ...result, song_rolls: [] }} onClose={() => {}} />)
+    expect(screen.queryByText(/song_of_rest/)).not.toBeInTheDocument()
+  })
+
   it('forwards onClose', async () => {
     const onClose = vi.fn()
     render(<HitDiceResultDialog result={result} onClose={onClose} />)

@@ -13,8 +13,13 @@ import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
 import SelectSheet from '@/components/ui/SelectSheet'
+import SubclassSelect from '@/pages/multiclass/SubclassSelect'
+import ClassSkillChoice from '@/components/ClassSkillChoice'
+import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
-import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
+import { multiclassWarnings, type AbilityKey } from '@/data/multiclassPrereqs'
+import { classKey } from '@/lib/classProgression'
+import { classLabel } from '@/lib/classLabel'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
@@ -39,6 +44,7 @@ type NewEntry = {
   subclass: string
   hitDie: number
   spellcasting?: string
+  skillChoices: string[]
   level: number
 }
 
@@ -82,6 +88,10 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   const [pickerKey, setPickerKey] = useState<string>('')
   const [pickerCustomName, setPickerCustomName] = useState('')
   const [pickerSubclass, setPickerSubclass] = useState('')
+  const [pickerSkills, setPickerSkills] = useState<string[]>([])
+  const pickerProf = useClassProficiencies(
+    char.rules_edition, pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null, true,
+  )
   // Il picker annidato ha un toggle reale (showPicker): il blur si spegne
   // subito quando il picker si chiude, coerentemente col resto del pattern.
   const pickerBlur = useDeferredBlur(showPicker)
@@ -91,6 +101,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     setPickerKey('')
     setPickerCustomName('')
     setPickerSubclass('')
+    setPickerSkills([])
   }
 
   // ESC/back coerenti: il picker annidato sta in cima allo stack, poi il modale.
@@ -105,9 +116,13 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   const isValid = entries.length > 0 && allLevelsValid && (milestone ? currentSum <= targetLevel : currentSum === targetLevel)
 
   const isDirty = useMemo(() => {
-    const initial = new Map((char.classes ?? []).map((c) => [c.id, c.level]))
+    const initial = new Map((char.classes ?? []).map((c) => [c.id, c]))
     if (entries.some((e) => e.kind === 'new')) return true
-    return entries.some((e) => e.kind === 'existing' && initial.get(e.classId) !== e.level)
+    return entries.some(
+      (e) =>
+        e.kind === 'existing' &&
+        (initial.get(e.classId)?.level !== e.level || (initial.get(e.classId)?.subclass ?? '') !== (e.subclass ?? '')),
+    )
   }, [entries, char.classes])
 
   // Accetta la stringa grezza così il campo può essere svuotato durante la
@@ -161,6 +176,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
         subclass: pickerSubclass,
         hitDie,
         spellcasting,
+        skillChoices: pickerSkills,
         level: 1,
       },
     ])
@@ -181,10 +197,18 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
           hit_die: ne.hitDie,
           spellcasting_ability: ne.spellcasting,
           subclass: ne.subclass.trim() || undefined,
+          skill_choices: ne.skillChoices.length ? ne.skillChoices : undefined,
         })) as CharacterFull
         const newId = updatedChar.classes.find((c) => !previousIds.has(c.id))?.id
         if (newId == null) throw new Error('new class id missing after add')
         newIdByTempId.set(ne.tempId, newId)
+      }
+
+      for (const e of entries) {
+        const before = (char.classes ?? []).find((c) => c.id === (e.kind === 'existing' ? e.classId : -1))
+        if (e.kind === 'existing' && (before?.subclass ?? '') !== (e.subclass ?? '')) {
+          await api.classes.update(char.id, e.classId, { subclass: (e.subclass ?? '').trim() || null })
+        }
       }
 
       const payload = entries.map((e) => {
@@ -220,13 +244,14 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     },
   })
 
-  // Non-blocking multiclass prerequisite advisory for the currently picked class.
+  // Avviso non bloccante (D2): requisiti della classe scelta e di ogni classe già posseduta.
   const pickerUnmet = useMemo(() => {
     if (!pickerKey || pickerKey === CUSTOM_KEY) return []
     const scoreOf = (ability: AbilityKey) =>
       (char.ability_scores ?? []).find((s) => s.name === ability)?.value ?? 0
-    return unmetPrereqGroups(pickerKey, scoreOf)
-  }, [pickerKey, char.ability_scores])
+    const owned = entries.map((e) => (e.kind === 'new' ? (e.classKey === CUSTOM_KEY ? null : e.classKey) : classKey(e.className)))
+    return multiclassWarnings(pickerKey, owned, scoreOf)
+  }, [pickerKey, char.ability_scores, entries])
 
   // Portal: dentro il contenitore animato della pagina il `fixed` resta sotto l'header e viene tagliato.
   return createPortal(
@@ -291,17 +316,17 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
               {t('character.multiclass.edit.classes_label')}
             </p>
             {entries.map((e) => (
-              <Surface key={e.tempId} variant="elevated" className="flex items-center gap-4 !py-3 !px-4">
+              <Surface key={e.tempId} variant="elevated" className="flex flex-wrap items-center gap-x-4 gap-y-2 !py-3 !px-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-display font-bold text-dnd-gold-bright truncate">
-                    {e.className}
+                    {classLabel(t, e.className)}
                     {e.kind === 'new' && (
                       <span className="ml-2 text-xs font-cinzel uppercase tracking-widest text-dnd-amber">
                         {t('character.multiclass.edit.new_tag')}
                       </span>
                     )}
                   </p>
-                  {e.subclass && (
+                  {e.kind === 'new' && e.subclass && (
                     <p className="text-xs text-dnd-text-muted italic truncate">{e.subclass}</p>
                   )}
                 </div>
@@ -314,7 +339,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   onChange={(ev) => setEntryLevel(e.tempId, ev.target.value)}
                   onBlur={() => normalizeEntryLevel(e.tempId)}
                   className="w-20 min-h-[44px] rounded-lg bg-dnd-surface border border-dnd-border text-dnd-gold-bright font-mono text-center focus:border-dnd-gold/60 focus:outline-none"
-                  aria-label={`${e.className} · ${t('character.multiclass.level')}`}
+                  aria-label={`${classLabel(t, e.className)} · ${t('character.multiclass.level')}`}
                 />
                 {e.kind === 'new' && (
                   <Pressable
@@ -324,6 +349,18 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   >
                     <Trash2 size={14} />
                   </Pressable>
+                )}
+                {e.kind === 'existing' && (
+                  <div className="basis-full order-last">
+                    <SubclassSelect
+                      edition={char.rules_edition}
+                      className={e.className}
+                      value={e.subclass ?? ''}
+                      onChange={(text) =>
+                        setEntries((es) => es.map((x) => (x.tempId === e.tempId ? { ...x, subclass: text } : x)))
+                      }
+                    />
+                  </div>
                 )}
               </Surface>
             ))}
@@ -394,7 +431,10 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   title={t('character.multiclass.class_name')}
                   options={classOptions(t)}
                   value={pickerKey}
-                  onChange={setPickerKey}
+                  onChange={(k) => {
+                    setPickerKey(k)
+                    setPickerSkills([])
+                  }}
                   placeholder={t('character.multiclass.class_name')}
                   zClassName="z-[70]"
                 />
@@ -407,10 +447,20 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   />
                 )}
 
-                <Input
+                <SubclassSelect
+                  edition={char.rules_edition}
+                  className={pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null}
                   value={pickerSubclass}
                   onChange={setPickerSubclass}
-                  placeholder={t('character.multiclass.subclass')}
+                  zClassName="z-[70]"
+                />
+
+                <ClassSkillChoice
+                  edition={char.rules_edition}
+                  className={pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null}
+                  asMulticlass
+                  value={pickerSkills}
+                  onChange={setPickerSkills}
                 />
 
                 {pickerUnmet.length > 0 && (
@@ -422,14 +472,15 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                       </p>
                     </div>
                     <ul className="text-xs text-dnd-text-muted font-body space-y-0.5">
-                      {pickerUnmet.map((g, i) => (
-                        <li key={i}>
+                      {pickerUnmet.flatMap((w) => w.groups.map((g, i) => (
+                        <li key={`${w.classKey}-${i}`}>
+                          <span className="text-dnd-text">{t(`dnd.classes.${w.classKey}`)}</span>:{' '}
                           {g.abilities
                             .map((a) => t(`character.ability.${a}_short`))
                             .join(` ${t('character.multiclass.prereq_or')} `)}{' '}
                           ≥ {g.min}
                         </li>
-                      ))}
+                      )))}
                     </ul>
                     <p className="text-xs text-dnd-text-faint font-body italic">
                       {t('character.multiclass.prereq_can_proceed')}
@@ -452,7 +503,12 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   variant="primary"
                   size="md"
                   fullWidth
-                  disabled={!pickerKey || (pickerKey === CUSTOM_KEY && !pickerCustomName.trim())}
+                  disabled={
+                    !pickerKey ||
+                    (pickerKey === CUSTOM_KEY && !pickerCustomName.trim()) ||
+                    pickerProf.isLoading ||
+                    pickerSkills.length !== (pickerProf.data?.skills_count ?? 0)
+                  }
                   onClick={addPickedClass}
                   icon={<Plus size={16} />}
                   haptic="light"

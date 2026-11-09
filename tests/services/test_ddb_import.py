@@ -256,7 +256,8 @@ def test_monk_unarmored_defense_and_hp():
 
 
 def test_monk_speed_lineage_plus_unarmored_movement():
-    assert convert(monk())[0].character.speed == 65  # lignaggio silvano 35 + movimento senza armatura 30
+    # la scheda è 2024: dal Task 36 il +30 lo calcola il catalogo (R45), la base resta il lignaggio silvano 35
+    assert convert(monk())[0].character.speed == 35
 
 
 def test_unarmored_movement_lost_with_armor():
@@ -286,7 +287,7 @@ def test_barbarian_core_values():
     ch = exp.character
     assert ch.hit_points == 245  # d12 + CON 4 + Robustezza nanica, livello 20
     assert ch.unarmored_defense_ability == "constitution" and ch.base_armor_class == 16
-    assert ch.speed == 40  # nano 30 + Movimento veloce
+    assert ch.speed == 30  # nano 30: Movimento Veloce lo calcola il catalogo 2024 (R45), non la base
     assert {a.name: a.value for a in exp.ability_scores}["strength"] == 21
 
 
@@ -394,11 +395,11 @@ def multi() -> dict:
 
 
 def test_multiclass_saves_only_from_starting_class():  # DDB: availableToMulticlass=false sulla classe aggiunta
-    assert convert(multi())[0].character.saving_throws == {"intelligence": True, "wisdom": True}
+    assert convert(multi(), edition="2024")[0].character.saving_throws == {"intelligence": True, "wisdom": True}
 
 
 def test_multiclass_classes_and_slots():
-    exp, _, _ = convert(multi())
+    exp, _, _ = convert(multi(), edition="2024")
     assert [(c.class_name, c.level, c.subclass) for c in exp.classes] == [
         ("Mago", 17, "School of Necromancy (PHB)"), ("Warlock", 3, "The Fiend")]
     used = {(s.level, s.is_pact): s.used for s in exp.spell_slots}
@@ -536,9 +537,7 @@ def test_creatures_become_companions():  # famigli (gruppo 2) e forme selvatiche
     assert [(c.kind, c.name) for c in exp.companions] == [
         ("familiar", "Cat"), ("familiar", "Cat"), ("wild_shape", "Giant Wolf Spider"), ("wild_shape", "Dire Wolf")]
     assert not [e for e in rep.skipped if e.section == "creatures"]
-    # 2024: si tengono i propri PF; l'app usa i PF della forma (regola 2014) -> segnalato
-    assert [e.name for e in rep.approximated if e.reason == "ddb.reason.wild_shape_2024"] == [
-        "Giant Wolf Spider", "Dire Wolf"]
+    assert not [e for e in rep.approximated if e.section == "creatures"]  # la forma 2024 ha i suoi PF temporanei
 
 
 def test_creature_statblock_2024():
@@ -631,3 +630,46 @@ def test_container_capacity_junk_and_id_zero():
     exp, _, _ = convert(d)
     pack = next(i for i in exp.items if i.name == "Backpack")
     assert "container" not in pack.item_metadata and pack.ref is None
+
+
+# --- R45: la velocità calcolata dal catalogo non entra nella base ---------------------------
+
+def test_monk_2014_speed_base_has_no_unarmored_movement():
+    ch = convert(monk(), edition="2014")[0].character
+    assert ch.speed == 35  # solo il lignaggio: il +30 lo calcola il catalogo 2014
+
+
+def test_monk_2024_speed_leaves_unarmored_movement_to_the_catalog():
+    assert convert(monk(), edition="2024")[0].character.speed == 35  # Task 36: il catalogo 2024 calcola il +30 (R45)
+
+
+def test_barbarian_speed_base_has_no_fast_movement_in_either_edition():
+    # entrambe le edizioni hanno un catalogo che calcola il +10: la base è quella del lignaggio
+    assert [convert(barb(), edition=e)[0].character.speed for e in ("2014", "2024")] == [30, 30]
+
+
+# --- I5 (Task 28): la Resilienza Draconica la calcola il catalogo, non la somma l'import --------
+
+def _draconic_sorcerer(*, per_level: int, removed: int = 0) -> dict:
+    d = sorc()
+    d["classes"][0]["subclassDefinition"]["name"] = "Draconic Bloodline"
+    d["removedHitPoints"] = removed
+    d["modifiers"]["class"].append({"type": "bonus", "subType": "hit-points-per-level", "value": per_level, "componentId": 1,
+                                    "availableToMulticlass": True})
+    return d
+
+
+def test_draconic_resilience_is_not_counted_twice_in_the_2014_import():
+    base = convert(_draconic_sorcerer(per_level=0), edition="2014")[0].character
+    with_bonus = convert(_draconic_sorcerer(per_level=1), edition="2014")[0].character
+    assert with_bonus.hit_points == base.hit_points  # il +1 per livello lo calcola il catalogo 2014
+
+
+def test_the_imported_current_hit_points_keep_the_distance_from_the_sheet_maximum():
+    base = convert(_draconic_sorcerer(per_level=0), edition="2014")[0].character
+    full = convert(_draconic_sorcerer(per_level=1), edition="2014")[0].character
+    hurt = convert(_draconic_sorcerer(per_level=1, removed=7), edition="2014")[0].character
+    assert full.current_hit_points == base.hit_points + 5  # il massimo effettivo: base + 1 per livello da stregone
+    assert hurt.current_hit_points == full.current_hit_points - 7
+
+

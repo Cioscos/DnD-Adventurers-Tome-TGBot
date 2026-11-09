@@ -109,11 +109,22 @@ class CharacterClassRead(BaseModel):
     class_name: str
     level: int
     subclass: Optional[str] = None
+    subclass_key: Optional[str] = None
+    options: dict[str, list[str]] = Field(default_factory=dict)
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
     hit_dice_used: int = 0
 
+    @field_validator("options", mode="before")
+    @classmethod
+    def _options(cls, v):
+        return v or {}
+
     model_config = {"from_attributes": True}
+
+
+def _blank_to_none(v: Optional[str]) -> Optional[str]:
+    return (v.strip() or None) if isinstance(v, str) else v
 
 
 class CharacterClassCreate(BaseModel):
@@ -122,6 +133,10 @@ class CharacterClassCreate(BaseModel):
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
+    # Abilità scelte fra quelle della classe (vedi GET /rules/proficiencies); validate nel router.
+    skill_choices: Optional[list[str]] = None
+
+    _subclass_blank = field_validator("subclass")(_blank_to_none)
 
 
 class CharacterClassUpdate(BaseModel):
@@ -131,6 +146,8 @@ class CharacterClassUpdate(BaseModel):
     hit_die: Optional[int] = None
     hit_dice_used: Optional[int] = None
     hp_rolls: Optional[list[int]] = None  # one die roll per gained level (not a column)
+
+    _subclass_blank = field_validator("subclass")(_blank_to_none)
 
 
 class ClassLevelEntry(BaseModel):
@@ -197,6 +214,34 @@ class AbilityRead(BaseModel):
     is_class_feature: bool = False
     feature_key: Optional[str] = None
     action_type: Optional[str] = None
+    # Il privilegio a catalogo ha un effetto reale al «Usa» (POST /features/{key}/use); popolato da build_character_response
+    has_on_use: bool = False
+    # Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): il client chiede a chi (R38)
+    gives_to_ally: bool = False
+    # Valori della scelta «mode» rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi
+    ally_modes: list[str] = []
+    # Quante creature della serata possono ricevere i PF temporanei del «Usa» (con gives_to_ally)
+    ally_max: int = 1
+    # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
+    choose_amount: bool = False
+    max_amount: Optional[int] = None
+    min_amount: int = 1  # usi minimi da spendere insieme (Frusta d'Acqua: 2 ki)
+    # Scelte sì/no da fare all'uso (Frenesia all'ingresso in ira): `[{key, label: {it, en}}]`, già filtrate per questo personaggio
+    use_toggles: list[dict[str, Any]] = []
+    use_choices: list[dict[str, Any]] = []
+    # Testi liberi da scrivere all'uso (nome di un'identità, di un incantesimo rubato): `[{key, label, max_len, optional}]`
+    use_texts: list[dict[str, Any]] = []
+    # Il «Usa» toglie condizioni nel foglio comune (Task 48): stessa forma di ``SpellRead.removal``, già filtrata per questo personaggio
+    removal: Optional[dict[str, Any]] = None
+    use_panel: Optional[str] = None
+    # L'uso ora non costa nulla e si può fare (prolungare l'Ira 2024): il «Usa» resta acceso anche a 0 usi; lo decide il server
+    free_use: bool = False
+    # Usi che restano al privilegio di cui questo spende gli usi (Preservare Vita: la riserva di Incanalare Divinità)
+    spends_left: Optional[int] = None
+    # Riga di riserva a catalogo (Incanalare Divinita): solo contatore, l'uso passa dai privilegi che la spendono
+    is_pool: bool = False
+    # CD dei tiri salvezza del privilegio (ki del Monaco: 8 + competenza + Saggezza), calcolata dal server
+    dc: Optional[int] = None
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
@@ -251,6 +296,36 @@ class MapRead(BaseModel):
 # HP operations
 # ---------------------------------------------------------------------------
 
+class RollOptionsBody(BaseModel):
+    """Conferma al tiro: opzioni scelte e, per chiave, gli input (``{"slot_level": 2}``). Il server riconvalida."""
+    options: list[str] = Field(default_factory=list, max_length=30)
+    option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+
+class OptionResult(BaseModel):
+    """Cosa hanno prodotto le opzioni confermate. Assente nelle risposte senza opzioni."""
+    keys: list[str] = []
+    extra_rolls: list[int] = []
+    extra_total: int = 0  # dadi + eventuale fisso nell'espressione dei dadi
+    separate_rolls: list[int] = []  # danno a parte, fuori dal totale
+    separate_total: int = 0
+    bonus: int = 0
+    multiplier: float = 1
+    spent: list[str] = []
+    effects: list[dict[str, str]] = []  # {"it", "en"}: esiti da mostrare (CD, durata)
+    targets: list[str] = []  # opzioni con un effetto da applicare a un combattente (target-effects)
+    second_die: int | None = None  # secondo tiro per colpire di un'opzione (Cleave)
+    second_total: int | None = None
+    damage_before: int | None = None  # solo danno subito
+    damage_after: int | None = None
+    hp_lost: int | None = None  # danno tenuto a 1 PF: i PF persi davvero
+
+
+def absent_when_none() -> Any:
+    """Campo che sparisce dal JSON quando vale None: chi non usa le opzioni vede la risposta di prima."""
+    return Field(default=None, exclude_if=lambda v: v is None)
+
+
 class HPOp(str, Enum):
     DAMAGE = "damage"
     HEAL = "heal"
@@ -259,25 +334,41 @@ class HPOp(str, Enum):
     SET_TEMP = "set_temp"
 
 
-class HPUpdate(BaseModel):
+class HPUpdate(RollOptionsBody):
     op: HPOp
     value: int
     was_critical_hit: bool = False
     # Override esplicito: `value` è già il danno applicato dal client (annotazione),
     # tranne "immune" che azzera. Senza override il server applica le resistenze
     # del personaggio al `damage_type`.
-    damage_modifier: Literal["half", "double", "none", "immune"] | None = None
+    damage_modifier: Literal["half", "double", "half_double", "none", "immune"] | None = None
     raw_value: int | None = Field(None, ge=0)
     damage_type: str | None = Field(None, max_length=40)
+    # Chi porta a 0 PF con un attacco in mischia può tramortire invece di abbattere (2014 stabile a 0, 2024 a 1 PF).
+    knock_out: bool = False
 
 
 class HPUndoRequest(BaseModel):
     op_id: str
 
 
+class MemorizeSpellRequest(BaseModel):
+    out: int  # id dell'incantesimo preparato che si lascia
+    into: int  # id dell'incantesimo del libro che si prepara al suo posto
+
+
 class RestRequest(BaseModel):
     rest_type: str  # "long" | "short"
-    hit_dice_used: Optional[int] = None
+    interrupted: bool = False
+    ate_and_drank: bool = True  # 2014: senza cibo e acqua il riposo lungo non riduce la spossatezza
+    confirm_early: bool = False  # riposo lungo prima del limite di 24 h (2014) / 16 h (2024)
+    # Recupero Naturale (Druido 2014): livello dello slot -> quanti ne recupera durante un riposo breve
+    natural_recovery: Optional[dict[int, int]] = None
+    arcane_recovery: Optional[dict[int, int]] = None  # Recupero Arcano del Mago: stessi controlli
+    reopen_tome: bool = False  # Patto del Tomo: i trucchetti e i rituali del Libro delle Ombre tornano da scegliere
+    memorize_spell: Optional[MemorizeSpellRequest] = None  # Memorizzare Incantesimo (Mago 2024, 5°): scambio al riposo breve
+    sorcerous_restoration: Optional[int] = None  # Ripristino Stregonesco (Stregone 2024): punti stregoneria da recuperare
+    temp_hp_allies: list[int] = []  # Resilienza Celestiale: PG della serata che ricevono i PF temporanei a fine riposo (fino a 5)
 
 
 class ItemChargePreview(BaseModel):
@@ -320,12 +411,15 @@ class DeathSaveRollResult(BaseModel):
     die: int
     dice: list[int] = []
     mode: RollMode = "normal"
-    outcome: str  # "nat20" | "nat1" | "success" | "failure"
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
+    outcome: str  # "nat20" | "nat1" | "success" | "failure" | "revived" (Vendetta Ardente: nessun tiro)
     successes: int
     failures: int
     stable: bool
     revived: bool = False
     current_hp: int
+    option_result: OptionResult | None = absent_when_none()
 
 
 # ---------------------------------------------------------------------------
@@ -369,14 +463,31 @@ class RollResult(BaseModel):
     die: int = 20
     dice: list[int] = []
     mode: RollMode = "normal"
+    # Modo finale dopo gli automatismi e perché: `condition:<slug>`, `armor:untrained`, `feature:<key>`.
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
+    auto_fail: bool = False
     bonus: int
     total: int
     is_critical: bool = False
     is_fumble: bool = False
     description: str = ""
+    option_result: OptionResult | None = absent_when_none()
 
 
-class D20RollSubmission(BaseModel):
+class ZeroHpSaveResult(BaseModel):
+    """TS automatico a 0 PF di un privilegio (Ira Implacabile): se riesce, il personaggio resta in piedi."""
+    feature_key: str
+    ability: str
+    die: int
+    bonus: int
+    total: int
+    dc: int
+    success: bool
+    hp: int = 0  # PF a cui torna se riesce
+
+
+class D20RollSubmission(RollOptionsBody):
     """Optional client-supplied d20 value (from 3D physics face detection)."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
     with_inspiration: bool = False

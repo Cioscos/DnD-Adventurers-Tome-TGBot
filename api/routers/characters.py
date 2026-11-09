@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from typing import Annotated
@@ -22,6 +23,7 @@ from core.db.models import (
     CharacterHistory,
     ConditionEffect,
     Currency,
+    Item,
     PendingSave,
     GameSession,
     CampaignMember,
@@ -29,11 +31,16 @@ from core.db.models import (
     SessionStatus,
 )
 from core.data.xp_thresholds import xp_to_level
+from core.rules.subclasses import sync_subclass_keys
 from core.data.skills import SKILL_ABILITY_MAP
-from api.services.skills import skill_bonus
+from api.services.skills import check_bonus, skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
-from api.services.class_features import sync_class_feature_abilities
-from core.game.stats import hit_points_for_level
+from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
+from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE
+from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
+from core.rules.proficiencies import FEATURE_GRANTS_KEY, SEEDED_FLAG
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -46,28 +53,47 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult
-from api.schemas.condition_effects import PendingSaveRollResult
+from api.schemas.condition_effects import PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
+from api.services.rules_targets import activate_pending_effect, drop_pending_effect
 from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
-from api.services.d20 import d20_history_label, d20_records, resolve_body
+from api.services.d20 import d20_history_label, d20_records, resolve_body, spend_inspiration_reroll
+from api.services.rules_options import (
+    LAST_ROLL_FIELDS,
+    merge_options,
+    option_result,
+    remember_roll,
+    roll_option_dice,
+    use_options,
+)
+from api.services.effects import cap_current_hp, sync_zero_hp
+from core.data.spell_slots import normalize_class_name
+from core.rules.edition import character_edition
+from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
+from api.services.rules_turn import get_turn, refuse_if_incapacitated
+from api.services.session_allies import attach_party_auras
+from core.rules.modifiers import effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
 from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, upsert_effect
 from api.services.durations import tick_rounds
-from api.services.spell_slots import recalc_spell_slots
-from api.services.choices import add_asi_choices
+from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
-SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations",
-                         "concentration_rounds_left", "concentration_item_spell")
+SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
+                         "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
+                         GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
+                         "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
+                         SEEDED_FLAG, FEATURE_GRANTS_KEY, ASSASSIN_KITS_FLAG)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -184,7 +210,7 @@ async def _refresh_char_full(
 @router.get("", response_model=list[CharacterSummary])
 async def list_characters(
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
@@ -203,6 +229,8 @@ async def list_characters(
             session, c, "character.ac"
         )
         summary.ac_items_modifier = item_bonus_total(c.items, "ac")
+        summary.ac += modifiers_for(c, "ac").flat
+        summary.hp_max_effective = effective_hp_max(c, summary.hp_max_homebrew_modifier)
         summaries.append(summary)
     return summaries
 
@@ -258,14 +286,33 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
         char.languages = langs + [l for l in sp.languages if l not in langs]
 
 
+def _add_starting_equipment(char: Character, body: CharacterCreate, lang: str) -> None:
+    """Equipaggiamento di partenza (Task 47): oggetti normali non equipaggiati e monete, nessun effetto."""
+    try:
+        rows, gold = resolve_starting_equipment(
+            body.rules_edition, normalize_class_name(body.initial_class.class_name) or "", body.starting_equipment, lang)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    for r in rows:
+        meta = r.pop("item_metadata")
+        char.items.append(Item(**r, item_metadata=json.dumps(meta) if meta else None))
+    char.currency.gold += gold
+    char.recalculate_encumbrance()
+
+
 @router.post("", response_model=CharacterFull, status_code=status.HTTP_201_CREATED)
 async def create_character(
     body: CharacterCreate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0)
+    if body.starting_equipment is not None and (
+        body.initial_class is None or not starting_groups(body.rules_edition, normalize_class_name(body.initial_class.class_name) or "")
+    ):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_starting_equipment")
+    char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0,
+                     rules_edition=body.rules_edition)
     # Populate ability scores + currency via the relationships (not raw
     # character_id FKs) so the in-memory collections are loaded before the
     # flush. This lets create_class_for_character read char.ability_scores
@@ -288,6 +335,7 @@ async def create_character(
     # caricata, quindi senza questa init l'accesso scatena un lazy-load async →
     # MissingGreenlet (rompe POST /characters con initial_class).
     char.classes = []
+    char.items = []  # Stesso motivo: gli usi a catalogo leggono la caratteristica effettiva.
     # Apply optional identity in the SAME transaction (atomic create). Same
     # field→column mapping as update_character; set before flush so it lands
     # in the initial INSERT.
@@ -305,6 +353,8 @@ async def create_character(
         await create_class_for_character(
             char, body.initial_class, session, is_first_class=True, lang=lang,
         )
+        if body.starting_equipment is not None:
+            _add_starting_equipment(char, body, lang)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
     # response serialization. See _refresh_char_full for the full rationale.
@@ -322,7 +372,7 @@ async def create_character(
 async def get_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     return await build_character_response(session, char)
@@ -337,7 +387,8 @@ async def update_character(
     char_id: int,
     body: CharacterUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -347,6 +398,9 @@ async def update_character(
             value = {k: v for k, v in value.items() if k not in SERVER_OWNED_SETTINGS}
             value.update({k: old[k] for k in SERVER_OWNED_SETTINGS if k in old})
         setattr(char, field, value)
+    if "rules_edition" in body.model_fields_set:
+        sync_subclass_keys(char)  # una sottoclasse assente nell'altra edizione resta solo testo
+        await sync_cataloged_features(session, char, lang)
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See
     # _refresh_char_full() for the full rationale.
@@ -365,7 +419,7 @@ async def update_character(
 async def delete_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
 
@@ -400,7 +454,7 @@ async def update_skills(
     char_id: int,
     body: SkillsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     current = dict(char.skills or {})
@@ -420,7 +474,7 @@ async def update_saving_throws(
     char_id: int,
     body: SavingThrowsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     current = dict(char.saving_throws or {})
@@ -440,7 +494,7 @@ async def update_conditions(
     char_id: int,
     body: ConditionsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     result = await apply_conditions(session, char, body.conditions)
@@ -461,11 +515,38 @@ async def update_conditions(
     return await build_character_response(session, char)
 
 
+@router.post("/{char_id}/hide", response_model=CharacterFull)
+async def hide(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> CharacterFull:
+    """Azione Nascondersi 2024: l'ultima prova di Furtività, salvata dal server, di almeno 15 (con le condizioni
+    confermate dal giocatore) rende Invisibili; il totale è la CD per trovarti. Nel 2014 l'esito lo decide il DM."""
+    char = await _get_owned(char_id, user_id, session, full=True)
+    if character_edition(char) != "2024":
+        raise HTTPException(status_code=422, detail={"code": "hide_2024_only"})
+    refuse_if_incapacitated(char)
+    last = get_turn(char).get("last_roll") or {}
+    if last.get("roll") != "skill" or last.get("skill") != "stealth":
+        raise HTTPException(status_code=409, detail={"code": "no_stealth_roll"})
+    total = last["total"]
+    if total < 15:
+        raise HTTPException(status_code=409, detail={"code": "hide_failed"})
+    # Nascondersi di nuovo mentre ci si nasconde già: l'Invisibilità di prima è del nascondiglio, non di un'altra fonte.
+    hiding = (char.settings or {}).get("hiding")
+    was_invisible = bool(hiding.get("was_invisible")) if hiding else bool((char.conditions or {}).get("invisible"))
+    await apply_conditions(session, char, {"invisible": True})
+    char.settings = {**(char.settings or {}), "hiding": {"dc": total, "was_invisible": was_invisible}}
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
+
+
 @router.post("/{char_id}/rounds/tick", response_model=CharacterFull)
 async def tick_round(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     if await active_encounter_row(session, char_id) is not None:
@@ -488,11 +569,32 @@ async def update_inspiration(
     char_id: int,
     body: InspirationUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
+    settings = dict(char.settings or {})
+    if body.heroic_inspiration and char.heroic_inspiration and character_edition(char) == "2024":
+        settings["inspiration_extra"] = True  # se ne ha una sola: questa è da cedere a chi ne è privo, o persa
+    else:
+        settings.pop("inspiration_extra", None)
+    char.settings = settings
     char.heroic_inspiration = body.heroic_inspiration
     # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
+
+
+@router.delete("/{char_id}/inspiration/extra", response_model=CharacterFull)
+async def discard_extra_inspiration(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> CharacterFull:
+    """Scarta l'Ispirazione ricevuta in più che non si vuole cedere: quella propria resta."""
+    char = await _get_owned(char_id, user_id, session, full=True)
+    if not (char.settings or {}).get("inspiration_extra"):
+        raise HTTPException(status_code=409, detail={"code": "no_extra_inspiration"})
+    char.settings = {k: v for k, v in char.settings.items() if k != "inspiration_extra"}
     char = await _refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
@@ -506,7 +608,7 @@ async def update_xp(
     char_id: int,
     body: XPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
@@ -520,6 +622,7 @@ async def update_xp(
     auto_calc = settings.get("hp_auto_calc", True)
 
     total_hp_gained = 0
+    old_hp_bonus = rule_hp_bonus(char)  # Resilienza Draconica: sale con il livello da stregone
 
     # Milestone mode: level-ups go through classes/distribute, never from XP.
     milestone = settings.get("advancement") == "milestone"
@@ -538,13 +641,10 @@ async def update_xp(
             # Validates hp_rolls (count/range -> 422) and drops stale rolls. Omitted rolls in
             # rolled mode fall back to the fixed value so older clients keep working.
             record_rolls(char, cls, old_level, new_level, body.hp_rolls)
-            add_asi_choices(char, cls.class_name, old_level, new_level)
+            sync_level_choices(char, cls, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
-            con_row = next(
-                (a for a in char.ability_scores if a.name == "constitution"), None
-            )
-            con_mod = (con_row.value - 10) // 2 if con_row else 0
+            con_mod = effective_con_mod(char)
             if auto_calc and cls.hit_die and new_level < old_level:
                 # Symmetric to level-up: each lost level gives back its stored roll or the fixed value.
                 lost = sum(
@@ -553,7 +653,7 @@ async def update_xp(
                     for lvl in range(new_level + 1, old_level + 1)
                 )
                 char.hit_points = max(1, char.hit_points - lost)
-                char.current_hit_points = min(char.current_hit_points, char.hit_points)
+                char.current_hit_points = min(char.current_hit_points, effective_hp_max(char))
             if auto_calc and cls.hit_die and new_level > old_level:
                 for lvl in range(old_level + 1, new_level + 1):
                     if body.hp_rolls:
@@ -563,9 +663,16 @@ async def update_xp(
                         # level 1 was handled at character creation; always use level 2+ formula
                         total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
 
-    if total_hp_gained > 0:
+    if auto_calc and rule_hp_bonus(char) > old_hp_bonus:  # come i PF del livello, il massimo in più si aggiunge anche ai correnti
+        total_hp_gained_current = total_hp_gained + rule_hp_bonus(char) - old_hp_bonus
+    else:
+        total_hp_gained_current = total_hp_gained
+    if total_hp_gained_current > 0:
+        was_at_zero = char.current_hit_points == 0
         char.hit_points += total_hp_gained
-        char.current_hit_points += total_hp_gained
+        char.current_hit_points += total_hp_gained_current
+        await cap_current_hp(session, char)
+        await sync_zero_hp(session, char, was_at_zero)
 
     # Notifica best-effort: solo all'attraversamento di soglia (categoria level_up)
     old_level_from_xp = xp_to_level(old_xp)
@@ -609,7 +716,7 @@ async def roll_skill(
     char_id: int,
     skill_name: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     if skill_name not in _SKILL_ABILITY:
@@ -617,21 +724,29 @@ async def roll_skill(
     char = await _get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
-    bonus = await skill_bonus(session, char, skill_name)
+    opts = use_options(session, char, "skill", body, skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    # Una prova fatta con un'altra caratteristica (Conoscenza Primordiale) è a tutti gli effetti quella: bonus e modificatori.
+    ability = opts.ability_override or _SKILL_ABILITY[skill_name]
+    bonus = await check_bonus(session, char, ability, skill_name) if opts.ability_override else await skill_bonus(session, char, skill_name)
 
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "skill", skill=skill_name, ability=ability)
+    merge_options(applied, opts)
+    outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
-    is_crit = die == 20
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    raw_total = die + bonus + option_total
+    # Totale minimo (Potenza Indomabile): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
+    is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
     history_msg = (
         f"Abilità {skill_label(skill_name)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
@@ -639,16 +754,78 @@ async def roll_skill(
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
-    return RollResult(
+    result = RollResult(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
+        auto_fail=applied.auto_fail,
         bonus=bonus,
         total=total,
         is_critical=is_crit,
         is_fumble=is_fumble,
         description=skill_name,
+        option_result=option_result(opts, option_rolls, option_total),
     )
+    remember_roll(char, "skill", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  skill=skill_name, ability=ability)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Ability check roll (prova di caratteristica pura, R35)
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/ability_checks/{ability}/roll", response_model=RollResult)
+async def roll_ability_check(
+    char_id: int,
+    ability: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    body: Annotated[D20RollSubmission | None, Body()] = None,
+) -> RollResult:
+    """Prova di caratteristica senza abilità (spingere, sollevare, spezzare): modificatore, nessuna competenza, stessi
+    modi, opzioni al tiro e cronologia di ``skills/roll``. Per il catalogo il tiro è ``ability``."""
+    if ability not in ABILITY_NAMES:
+        raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
+    char = await _get_owned(char_id, user_id, session, full=True)
+
+    if body and body.with_inspiration:
+        spend_inspiration_reroll(char)
+
+    applied = modifiers_for(char, "ability", ability=ability)
+    bonus = await check_bonus(session, char, ability)
+    opts = use_options(session, char, "ability", body, ability=ability)
+    merge_options(applied, opts)
+    outcome = resolve_body(body, applied)
+    die = outcome.kept
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    raw_total = die + bonus + option_total
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
+    is_crit = die == 20 and not applied.auto_fail
+    is_fumble = die == 1
+
+    history_msg = (
+        f"Prova di {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
+    )
+    if body and body.with_inspiration:
+        history_msg = f"Reroll ispirazione: {history_msg}"
+    _add_history(session, char.id, "skill_roll", history_msg)
+    record_dice(char, d20_records(outcome))
+    await prune_history(session, char)
+
+    result = RollResult(
+        die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
+        auto_fail=applied.auto_fail, bonus=bonus, total=total, is_critical=is_crit, is_fumble=is_fumble,
+        description=ability, option_result=option_result(opts, option_rolls, option_total),
+    )
+    remember_roll(char, "ability", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  ability=ability)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -660,7 +837,7 @@ async def roll_saving_throw(
     char_id: int,
     ability: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     if ability not in ABILITY_NAMES:
@@ -668,21 +845,28 @@ async def roll_saving_throw(
     char = await _get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     bonus = await saving_throw_bonus(session, char, ability)
 
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "save", ability=ability)
+    await attach_party_auras(session, char)
+    opts = use_options(session, char, "save", body, ability=ability)
+    merge_options(applied, opts)
+    outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
-    is_crit = die == 20
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    raw_total = die + bonus + option_total
+    # Totale minimo (Potenza Indomabile 2024): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
+    is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
     history_msg = (
         f"TS {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
@@ -690,16 +874,23 @@ async def roll_saving_throw(
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
-    return RollResult(
+    result = RollResult(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
+        auto_fail=applied.auto_fail,
         bonus=bonus,
         total=total,
         is_critical=is_crit,
         is_fumble=is_fumble,
         description=ability,
+        option_result=option_result(opts, option_rolls, option_total),
     )
+    remember_roll(char, "save", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  ability=ability)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -713,12 +904,49 @@ async def _owned_pending_save(session: AsyncSession, char_id: int, psid: int) ->
     return ps
 
 
+async def close_pending_save(
+    session: AsyncSession, char: Character, ps: PendingSave, effect: ConditionEffect, roll: dict,
+) -> tuple[PendingSaveRead, bool]:
+    """Registra l'esito del TS e, se riuscito, libera dalla condizione. ``roll`` è ciò che resta in ``ps.last_roll``."""
+    passed = roll["total"] >= ps.dc and not roll["auto_fail"]
+    ps.status = "passed" if passed else "failed"
+    ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
+    ps.last_roll = {**roll, "passed": passed}
+    # Build the read model before apply_conditions deletes the effect and its saves.
+    save_read = pending_read(ps, effect.slug)
+    if effect.pending:  # effetto di un privilegio: il TS decide se la condizione esiste, nulla di preesistente si tocca
+        if passed:
+            await drop_pending_effect(session, effect)
+        else:
+            await activate_pending_effect(session, effect)
+            _add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
+        return save_read, passed
+    if passed:
+        _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
+        await apply_conditions(session, char, {effect.slug: False})
+    await session.flush()
+    return save_read, passed
+
+
+async def open_failed_save(session: AsyncSession, char: Character, psid: int) -> tuple[PendingSave, ConditionEffect]:
+    """Il TS in sospeso del tiro appena fatto, se fallito e ancora ritoccabile; altrimenti 409."""
+    ps = await session.get(PendingSave, psid)
+    if ps is None:  # riuscito: la condizione e i suoi TS non ci sono più
+        raise HTTPException(status_code=409, detail={"code": "no_last_roll"})
+    effect = await session.get(ConditionEffect, ps.effect_id)
+    newer = (await session.execute(select(PendingSave.id).where(
+        PendingSave.effect_id == ps.effect_id, PendingSave.id > ps.id))).first()
+    if effect is None or ps.status != "failed" or ps.dismissed or newer or not (char.conditions or {}).get(effect.slug):
+        raise HTTPException(status_code=409, detail={"code": "not_rerollable"})
+    return ps, effect
+
+
 @router.post("/{char_id}/pending-saves/{psid}/roll", response_model=PendingSaveRollResult)
 async def roll_pending_save(
     char_id: int,
     psid: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> PendingSaveRollResult:
     char = await _get_owned(char_id, user_id, session, full=True)
@@ -726,7 +954,7 @@ async def roll_pending_save(
     reroll = bool(body and body.with_inspiration)
 
     effect = await session.get(ConditionEffect, ps.effect_id)
-    if effect is None or not (char.conditions or {}).get(effect.slug):
+    if effect is None or not (effect.pending or (char.conditions or {}).get(effect.slug)):
         ps.dismissed = True
         await session.commit()  # persist before the 409 (get_db rolls back on errors)
         raise HTTPException(status_code=409, detail={"code": "condition_gone"})
@@ -741,18 +969,25 @@ async def roll_pending_save(
         if not char.heroic_inspiration:
             raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
     if reroll:
-        char.heroic_inspiration = False
+        spend_inspiration_reroll(char)
 
     bonus = await saving_throw_bonus(session, char, ps.ability)
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "save", ability=ps.ability)
+    await attach_party_auras(session, char)
+    opts = use_options(session, char, "save", body, ability=ps.ability)
+    merge_options(applied, opts)
+    outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
-    passed = total >= ps.dc
-    is_crit, is_fumble = die == 20, die == 1
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    raw_total = die + bonus + option_total
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
+    is_crit, is_fumble = die == 20 and not applied.auto_fail, die == 1
 
     history_msg = (
         f"TS {ability_label(ps.ability)} per {condition_label(effect.slug)}: "
         f"{d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total} (CD {ps.dc})"
+        + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if reroll:
         history_msg = f"Reroll ispirazione: {history_msg}"
@@ -760,22 +995,17 @@ async def roll_pending_save(
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
-    ps.status = "passed" if passed else "failed"
-    ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
-    ps.last_roll = {"die": die, "dice": outcome.dice, "bonus": bonus, "total": total,
-                    "mode": outcome.mode, "passed": passed}
-    # Build the read model before apply_conditions deletes the effect and its saves.
-    save_read = pending_read(ps, effect.slug)
-    if passed:
-        _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
-        await apply_conditions(session, char, {effect.slug: False})
-    await session.flush()
-
-    return PendingSaveRollResult(
-        save=save_read, passed=passed, condition_removed=passed,
-        roll=RollResult(die=die, dice=outcome.dice, mode=outcome.mode, bonus=bonus, total=total,
-                        is_critical=is_crit, is_fumble=is_fumble, description=ps.ability),
-    )
+    save_read, passed = await close_pending_save(session, char, ps, effect, {
+        "die": die, "dice": outcome.dice, "bonus": bonus, "total": total, "mode": outcome.mode,
+        "auto_fail": applied.auto_fail, "notes": applied.notes,
+    })
+    result = RollResult(die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode,
+                        notes=applied.notes, auto_fail=applied.auto_fail, bonus=bonus, total=total,
+                        is_critical=is_crit, is_fumble=is_fumble, description=save_read.ability,
+                        option_result=option_result(opts, option_rolls, option_total))
+    remember_roll(char, "save", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  ability=save_read.ability, pending_save_id=psid)
+    return PendingSaveRollResult(save=save_read, passed=passed, condition_removed=passed, roll=result)
 
 
 @router.post("/{char_id}/pending-saves/{psid}/dismiss", status_code=204)
@@ -783,7 +1013,7 @@ async def dismiss_pending_save(
     char_id: int,
     psid: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     await _get_owned(char_id, user_id, session)
     ps = await _owned_pending_save(session, char_id, psid)

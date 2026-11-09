@@ -14,6 +14,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
+from core.rules.edition import character_edition
+from core.rules.states import restore_exhaustion
+from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
     Character, Combatant, ConditionEffect, Encounter, PendingSave,
@@ -54,6 +57,13 @@ class UndoLog:
     skip_cleared: list[int] = field(default_factory=list)  # effect ids whose save_skip_once was consumed
     # {char_id, prev_rounds, prev_spell_id, prev_item_spell, released_effects: [snapshot]}
     concentration: dict | None = None
+    # {char_id: {active_states, damaged}} dei PG toccati, snapshot prima dell'avanzamento
+    char_states: dict[str, dict] = field(default_factory=dict)
+    # {char_id: lista} dei PG a cui l'avanzamento ha svuotato gli effetti «una volta per turno»
+    once_per_turn: dict[str, list[str]] = field(default_factory=dict)
+    # Sorpresa: combattenti a cui il turno finito l'ha tolta; PG 2014 a cui il turno iniziato l'ha imposta
+    surprise_ended: list[int] = field(default_factory=list)
+    surprise_started: list[int] = field(default_factory=list)  # non più scritto: il PG è segnato quando il GM lo segna
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -118,6 +128,32 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
                 s["concentration_item_spell"] = c["prev_item_spell"]
             char.settings = s
             await _restore_released(db, c.get("released_effects", []), created, new_ids)
+    for cid, snap in log.char_states.items():
+        pc = await db.get(Character, int(cid))
+        if pc is not None:
+            pc.active_states = list(snap["active_states"])
+            set_damaged(pc, snap["damaged"])
+            healed = snap.get("healed")  # la cura d'inizio turno: si toglie solo se i PF sono ancora quelli che ha dato
+            if healed and pc.current_hit_points == healed["after"]:
+                pc.current_hit_points = healed["before"]
+                set_start_heal(pc, [])
+            if snap.get("inspired"):
+                pc.heroic_inspiration = False
+            if "exhaustion" in snap:  # la spossatezza addebitata dagli stati chiusi dall'avanzamento
+                restore_exhaustion(pc, snap["exhaustion"])
+                if not snap["is_dead"] and pc.is_dead and snap["exhaustion"] < 6:
+                    pc.is_dead = False
+    for char_id, used in log.once_per_turn.items():
+        pc = await db.get(Character, int(char_id))
+        if pc is not None:
+            pc.turn_state = {**get_turn(pc), "once_per_turn": used}
+    for comb_id in log.surprise_ended:
+        comb = await db.get(Combatant, comb_id)
+        if comb is not None:
+            comb.surprised = True
+            pc = await db.get(Character, comb.character_id) if comb.character_id else None
+            if pc is not None and character_edition(pc) == "2014":
+                set_surprised(pc)
     for eid in log.skip_cleared:
         eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
         if eff is not None:
@@ -133,8 +169,8 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
         slug = x["slug"]
         owner = await db.get(Character if kind == "character" else Combatant, tid)
         if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
-                select(ConditionEffect.id).where(_target_filter((kind, tid)),
-                                                 ConditionEffect.slug == slug))).first():
+                select(ConditionEffect.id).where(_target_filter((kind, tid)), ConditionEffect.slug == slug,
+                                                 ConditionEffect.pending.is_(False)))).first():
             continue
         owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
         eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
@@ -142,6 +178,11 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
         for ps in x.get("pending_saves", []):
             if ps["id"] not in created:  # created by this advance: stays undone
                 await _restore_row(db, PendingSave, {**ps, "effect_id": eff.id})
+
+
+async def restore_released(db: AsyncSession, entries: list[dict]) -> None:
+    """Ricrea gli effetti fatti cadere con ``release_concentration_effects(..., undo_list)``."""
+    await _restore_released(db, entries, set(), {})
 
 
 async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | None,
@@ -206,8 +247,9 @@ async def clear_effects_for(db: AsyncSession, target: Target, slugs: Iterable[st
     slugs = list(slugs)
     if not slugs:
         return
+    # Un effetto ``pending`` (TS in attesa di un privilegio) non è una condizione attiva: non si tocca.
     rows = (await db.execute(select(ConditionEffect).where(
-        _target_filter(target), ConditionEffect.slug.in_(slugs)))).scalars().all()
+        _target_filter(target), ConditionEffect.slug.in_(slugs), ConditionEffect.pending.is_(False)))).scalars().all()
     for row in rows:
         # Explicit delete of pendings: SQLite FK cascade is not guaranteed to be enabled.
         for ps in (await db.execute(select(PendingSave).where(
@@ -265,8 +307,10 @@ async def upsert_effect(
 
 
 async def effects_for_character(db: AsyncSession, char_id: int) -> list[ConditionEffect]:
+    """Gli effetti attivi: quelli ancora in attesa del TS (``pending``) non sono sulla scheda."""
     return list((await db.execute(select(ConditionEffect).where(
-        ConditionEffect.character_id == char_id).order_by(ConditionEffect.id))).scalars())
+        ConditionEffect.character_id == char_id, ConditionEffect.pending.is_(False),
+    ).order_by(ConditionEffect.id))).scalars())
 
 
 async def open_pending_saves(db: AsyncSession, char_id: int) -> list[PendingSave]:
@@ -306,7 +350,8 @@ async def character_effect_payload(
 ) -> tuple[list[ConditionEffectRead], list[PendingSaveRead]]:
     """Read models for CharacterFull (source names resolved)."""
     effects = await effects_for_character(db, char_id)
-    slugs = {e.id: e.slug for e in effects}
+    slugs = dict((await db.execute(select(ConditionEffect.id, ConditionEffect.slug).where(
+        ConditionEffect.character_id == char_id))).all())  # anche i pending: i loro TS vanno mostrati
     pendings = [pending_read(p, slugs.get(p.effect_id, ""))
                 for p in await open_pending_saves(db, char_id)]
     return await effect_reads(db, effects), pendings

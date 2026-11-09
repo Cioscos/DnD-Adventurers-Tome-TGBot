@@ -25,10 +25,10 @@ const mk = (id: number, attuned: boolean): Item => ({
   item_metadata: { requires_attunement: true, attuned, hb_x: 1 },
 } as unknown as Item)
 
-function renderIt(items: Item[]) {
+function renderIt(items: Item[], limit?: number) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
-      <AttunementSection charId={7} items={items} />
+      <AttunementSection charId={7} items={items} limit={limit} />
     </QueryClientProvider>,
   )
 }
@@ -41,6 +41,12 @@ describe('AttunementSection', () => {
     expect(screen.getAllByTestId('attunement-slot')).toHaveLength(3)
     expect(screen.getAllByText('Anello 1').length).toBeGreaterThan(0)
     expect(screen.getAllByTestId('attunement-slot-empty')).toHaveLength(2)
+  })
+
+  it('uses the limit from the server: 4 slots and a 4/4 counter with four attuned items', () => {
+    renderIt([mk(1, true), mk(2, true), mk(3, true), mk(4, true)], 4)
+    expect(screen.getAllByTestId('attunement-slot')).toHaveLength(4)
+    expect(screen.getByText('4/4')).toBeTruthy()
   })
 
   it('attunes by sending the merged metadata', async () => {
@@ -57,7 +63,7 @@ describe('AttunementSection', () => {
     update.mockRejectedValue(new ApiError(409, 'attunement_limit'))
     renderIt([mk(1, true), mk(2, true), mk(3, true), mk(4, false)])
     await userEvent.click(screen.getByRole('button', { name: /Anello 4/ }))
-    expect(await screen.findByText('character.inventory.magic.attunement_limit')).toBeTruthy()
+    expect(await screen.findByText('character.inventory.magic.attunement_limit:3')).toBeTruthy()
   })
 })
 

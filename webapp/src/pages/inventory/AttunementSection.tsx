@@ -11,10 +11,12 @@ import type { Item } from '@/types'
 interface Props {
   charId: number
   items: Item[]
+  /** Dal server (`computed.attunement_limit`): 3, o 4 con Usare Dispositivi Magici. */
+  limit?: number
 }
 
 /** 3 slot di sintonia in cima all'inventario; sintonizza/rimuove rimandando il metadata intero. */
-export default function AttunementSection({ charId, items }: Props) {
+export default function AttunementSection({ charId, items, limit = MAX_ATTUNED }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +34,7 @@ export default function AttunementSection({ charId, items }: Props) {
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409 && err.detail === 'attunement_limit') {
-        setError(t('character.inventory.magic.attunement_limit'))
+        setError(t('character.inventory.magic.attunement_limit', { n: limit }))
         haptic.error()
       } else {
         setError(t('common.action_failed'))
@@ -42,7 +44,7 @@ export default function AttunementSection({ charId, items }: Props) {
 
   if (attuned.length === 0 && candidates.length === 0) return null
 
-  const slots = Array.from({ length: MAX_ATTUNED }, (_, i) => attuned[i] ?? null)
+  const slots = Array.from({ length: Math.max(limit, attuned.length) }, (_, i) => attuned[i] ?? null)
   const rowCls = 'w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-sm font-body'
 
   return (
@@ -53,7 +55,7 @@ export default function AttunementSection({ charId, items }: Props) {
           {t('character.inventory.magic.attunement_title')}
         </p>
         <span className="text-xs font-mono tabular-nums text-dnd-text-muted">
-          {attuned.length}/{MAX_ATTUNED}
+          {attuned.length}/{limit}
         </span>
       </div>
 

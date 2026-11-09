@@ -15,6 +15,8 @@ interface CatalogPickerProps<K extends CatalogKind> {
   onPick: (entry: CatalogEntry<K>) => void
   onClose: () => void
   filters?: (entry: CatalogEntry<K>) => boolean
+  /** Riga sotto la ricerca, per dire perché l'elenco è ristretto. */
+  note?: string
 }
 
 // Progressive rendering instead of a virtual list: the 800-row monster catalogue
@@ -22,7 +24,7 @@ interface CatalogPickerProps<K extends CatalogKind> {
 const PAGE = 100
 
 export default function CatalogPicker<K extends CatalogKind>({
-  kind, onPick, onClose, filters,
+  kind, onPick, onClose, filters, note,
 }: CatalogPickerProps<K>) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
@@ -58,6 +60,7 @@ export default function CatalogPicker<K extends CatalogKind>({
           enterKeyHint="search"
           autoFocus
         />
+        {note && <p className="text-xs text-dnd-text-muted font-body">{note}</p>}
         {loaded && rows.length === 0 && (
           <p className="text-sm text-dnd-text-muted font-body italic text-center py-6">{t('catalog.empty')}</p>
         )}

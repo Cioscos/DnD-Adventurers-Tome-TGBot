@@ -1,6 +1,8 @@
+import { canRerollInspiration, askRollOptions } from '@/lib/rollOptions'
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { conditionLabel } from '@/lib/conditions'
 import { api, ApiError, type RollMode } from '@/api/client'
 import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -9,6 +11,8 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
+import RollNotes from '@/components/rules/RollNotes'
 import type { PendingSave, PendingSaveRollResult } from '@/types'
 
 const MODES: RollMode[] = ['normal', 'advantage', 'disadvantage']
@@ -43,7 +47,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
           save: current,
           res: {
             save: current,
-            roll: { total: Number((current.last_roll as { total?: number } | null)?.total ?? 0) } as PendingSaveRollResult['roll'],
+            roll: { ...current.last_roll, total: Number(current.last_roll?.total ?? 0) } as PendingSaveRollResult['roll'],
             passed: false,
             condition_removed: false,
           },
@@ -58,7 +62,8 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
   const roll = useMutation({
     mutationFn: async ({ save, reroll }: { save: PendingSave; reroll: boolean }) => {
       const m = reroll ? 'normal' : mode
-      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m)), reroll)
+      const choice = reroll ? undefined : await askRollOptions(charId, { roll: 'save', ability: save.ability })
+      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m), choice), reroll)
       return { save, res }
     },
     onSuccess: (r) => {
@@ -95,7 +100,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
   }
 
   if (!active) return null
-  const cond = t(`character.conditions.${active.slug}`, { defaultValue: active.slug })
+  const cond = conditionLabel(active.slug, t)
   const n = Math.min(done.length + 1, Math.max(total.current, done.length + 1))
 
   return (
@@ -154,9 +159,25 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
             >
               {t(view.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
             </p>
+            <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" charId={charId} optionResult={view.res.roll.option_result} />
+            {/* Un TS già fallito riaperto non è più l'ultimo tiro: solo quello appena fatto si ritocca. */}
+            {shown && !view.res.passed && !view.res.roll.auto_fail && (
+              <AfterRollOptions
+                charId={charId}
+                query={{ roll: 'save', ability: view.save.ability }}
+                rollToken={roll.data}
+                onResult={(roll) => {
+                  setShown({
+                    save: view.save,
+                    res: { save: roll.save ?? view.res.save, roll, passed: !!roll.passed, condition_removed: !!roll.condition_removed },
+                  })
+                  if (roll.passed) haptic.success()
+                }}
+              />
+            )}
             {!view.res.passed && (
               <InspirationRerollButton
-                available={!!char?.heroic_inspiration}
+                available={canRerollInspiration(char)}
                 pending={roll.isPending}
                 onClick={() => roll.mutate({ save: view.save, reroll: true })}
               />

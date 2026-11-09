@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import QuickActions from '@/components/character/QuickActions'
+import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, update, notifyMutationError, toastError, charges } = vi.hoisted(() => ({
+const { spendHitDice, update, notifyMutationError, toastError, charges, rest } = vi.hoisted(() => ({
   charges: vi.fn(),
+  rest: vi.fn(),
   spendHitDice: vi.fn(),
   update: vi.fn(),
   notifyMutationError: vi.fn(),
@@ -15,7 +17,7 @@ const { spendHitDice, update, notifyMutationError, toastError, charges } = vi.ho
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { characters: { spendHitDice, update }, items: { charges } } }
+  return { ...actual, api: { characters: { spendHitDice, update, rest }, items: { charges } } }
 })
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
@@ -51,11 +53,12 @@ vi.mock('framer-motion', async (orig) => {
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { open: boolean; title: string; onConfirm: () => void }) =>
-      p.open ? React.createElement('button', { onClick: p.onConfirm }, `confirm:${p.title}`) : null,
+    default: (p: { open: boolean; title: string; body?: unknown; onConfirm: () => void }) =>
+      p.open ? React.createElement('div', null, p.body as never, React.createElement('button', { onClick: p.onConfirm }, `confirm:${p.title}`)) : null,
   }
 })
 vi.mock('@/pages/hp/HitDiceResultDialog', () => ({ default: () => null }))
+vi.mock('@/components/character/RestPreviewList', () => ({ default: () => null }))
 vi.mock('@/components/RollResultModal', () => ({ default: () => null }))
 vi.mock('@/components/WeaponAttackModal', () => ({ default: () => null }))
 
@@ -71,11 +74,43 @@ async function spendOneHitDie() {
       <QuickActions char={char} />
     </QueryClientProvider>,
   )
-  await userEvent.click(screen.getByText('d10 · fighter'))
+  await userEvent.click(screen.getByText('d10 · dnd.classes.fighter'))
   await userEvent.click(screen.getByText('confirm:character.quick_actions.spend_hit_die_title'))
 }
 
 afterEach(() => { vi.clearAllMocks() })
+
+describe('QuickActions when incapacitated', () => {
+  const armed = (incapacitated: boolean) => ({
+    id: 7,
+    settings: { quick_actions: [{ type: 'weapon', id: 5 }, { type: 'save', ability: 'dexterity' }] },
+    classes: [],
+    ability_scores: [],
+    items: [{ id: 5, name: 'Spada', item_type: 'weapon', item_metadata: {}, is_equipped: true }],
+    computed: { incapacitated },
+  }) as unknown as CharacterFull
+
+  const show = (c: CharacterFull) => render(
+    <QueryClientProvider client={new QueryClient()}>
+      <QuickActions char={c} />
+    </QueryClientProvider>,
+  )
+
+  it('turns off the attack and says why, leaving saves usable', () => {
+    show(armed(true))
+    expect(screen.getByText('character.turn.incapacitated')).toBeTruthy()
+    const buttons = screen.getAllByRole('button') as HTMLButtonElement[]
+    expect(buttons.find((b) => b.textContent?.includes('Spada'))?.disabled).toBe(true)
+    expect(buttons.find((b) => /dexterity/i.test(b.textContent ?? ''))?.disabled).toBe(false)
+  })
+
+  it('keeps the attack usable otherwise', () => {
+    show(armed(false))
+    expect(screen.queryByText('character.turn.incapacitated')).toBeNull()
+    const sword = (screen.getAllByRole('button') as HTMLButtonElement[]).find((b) => b.textContent?.includes('Spada'))
+    expect(sword?.disabled).toBe(false)
+  })
+})
 
 describe('QuickActions hit die', () => {
   // Un onError proprio esclude l'handler globale: senza avviso restava la sola vibrazione.
@@ -202,5 +237,76 @@ describe('QuickActions item charges', () => {
     expect(screen.getByText('Bacchetta')).toBeTruthy()
     await userEvent.click(screen.getByLabelText('Bacchetta -1'))
     await waitFor(() => expect(charges).toHaveBeenCalledWith(7, 5, -1))
+  })
+})
+
+describe('QuickActions short rest with Natural Recovery', () => {
+  const landDruid = {
+    id: 7, settings: { quick_actions: [{ type: 'rest', rest: 'short' }] }, items: [], spells: [], active_states: [],
+    classes: [{ id: 1, class_name: 'Druido', level: 5, hit_die: 8, hit_dice_used: 0 }],
+    abilities: [{ id: 9, feature_key: 'druid.natural_recovery', uses: 1, max_uses: 1 }],
+    spell_slots: [{ id: 1, level: 1, total: 4, used: 3, available: 1, is_pact: false }],
+  } as unknown as CharacterFull
+
+  it('offers the picker and sends the chosen slots with the rest', async () => {
+    rest.mockResolvedValue(landDruid)
+    renderQC(landDruid)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_short'))
+    expect(screen.getByTestId('natural-recovery')).toBeTruthy()
+    await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
+    await userEvent.click(screen.getByText('character.hp.confirm_rest'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ natural_recovery: { 1: 1 } })))
+  })
+
+  it('rests without the field when nothing was chosen', async () => {
+    rest.mockResolvedValue(landDruid)
+    renderQC(landDruid)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_short'))
+    await userEvent.click(screen.getByText('character.hp.confirm_rest'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
+  })
+})
+
+describe('QuickActions long rest questions (same as the menu)', () => {
+  const longChar = {
+    id: 7, settings: { quick_actions: [{ type: 'rest', rest: 'long' }] }, items: [], spells: [], active_states: [], rules_edition: '2014',
+    classes: [{ id: 1, class_name: 'fighter', level: 3, hit_die: 10, hit_dice_used: 0 }],
+  } as unknown as CharacterFull
+
+  it('asks about interruption and food, and confirms a too-soon long rest', async () => {
+    rest.mockRejectedValueOnce(new ApiError(409, 'long_rest_too_soon')).mockResolvedValue(longChar)
+    renderQC(longChar)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    const switches = screen.getAllByRole('switch')
+    expect(switches).toHaveLength(2)
+    await userEvent.click(switches[0])
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.confirm_long_rest_title'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ interrupted: true, ate_and_drank: true })))
+    await screen.findByText('character.quick_actions.rest_too_soon_body')
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.rest_too_soon_title'))
+    await waitFor(() => expect(rest).toHaveBeenLastCalledWith(7, 'long', expect.objectContaining({ confirm_early: true })))
+  })
+})
+
+describe('QuickActions long rest with the Pact of the Tome', () => {
+  const tomeLock = {
+    id: 7, settings: { quick_actions: [{ type: 'rest', rest: 'long' }] }, items: [], spells: [], active_states: [], rules_edition: '2024',
+    classes: [{ id: 1, class_name: 'warlock', level: 3, hit_die: 8, hit_dice_used: 0 }],
+    abilities: [{ id: 5, feature_key: 'warlock.pact_of_the_tome', name: 'Patto del Tomo' }],
+  } as unknown as CharacterFull
+
+  it('offers the switch and sends reopen_tome with the long rest', async () => {
+    rest.mockResolvedValue(tomeLock)
+    renderQC(tomeLock)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    await userEvent.click(within(screen.getByTestId('tome-reopen')).getByRole('switch'))
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.confirm_long_rest_title'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ reopen_tome: true })))
+  })
+
+  it('does not offer it to a character without the pact', async () => {
+    renderQC({ ...tomeLock, abilities: [] } as unknown as CharacterFull)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    expect(screen.queryByTestId('tome-reopen')).toBeNull()
   })
 })

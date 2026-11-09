@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,7 +7,11 @@ import HpQuickSheet from '@/components/character/HpQuickSheet'
 import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
-const { updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy } = vi.hoisted(() => ({
+const flowElements = vi.hoisted(() => vi.fn(() => null as unknown))
+const { rollOptionsSpy, updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({
+  attackWeaponSpy: vi.fn(),
+  attackUnarmedSpy: vi.fn(),
+  rollOptionsSpy: vi.fn(),
   updateHpSpy: vi.fn(),
   undoHpSpy: vi.fn(),
   showUndoToastSpy: vi.fn(),
@@ -15,7 +20,7 @@ const { updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy } = vi.h
 }))
 
 vi.mock('@/api/client', () => ({
-  api: { characters: { updateHp: updateHpSpy, undoHp: undoHpSpy } },
+  api: { characters: { updateHp: updateHpSpy, undoHp: undoHpSpy, rollOptions: rollOptionsSpy } },
   ApiError: class ApiError extends Error {
     constructor(public status: number, public detail: unknown) {
       super(`API ${status}`)
@@ -24,8 +29,14 @@ vi.mock('@/api/client', () => ({
 }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { n?: number }) => (o?.n != null ? `${k}:${o.n}` : k), i18n: { language: 'it' } }) }
 })
+vi.mock('@/hooks/useWeaponAttackFlow', () => ({
+  useWeaponAttackFlow: () => ({
+    attackWeapon: attackWeaponSpy, attackUnarmed: attackUnarmedSpy, attackUnarmedEffect: vi.fn(),
+    isWeaponPending: () => false, isUnarmedPending: false, elements: flowElements(),
+  }),
+}))
 vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: showUndoToastSpy }))
 vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ error: toastError, warning: vi.fn(), success: vi.fn() }),
@@ -40,6 +51,7 @@ vi.mock('@/components/ui/Sheet', async () => {
 const char = { id: 42, current_hit_points: 10, hit_points: 20 } as CharacterFull
 
 afterEach(() => {
+  rollOptionsSpy.mockReset()
   updateHpSpy.mockReset()
   undoHpSpy.mockReset()
   showUndoToastSpy.mockReset()
@@ -54,7 +66,24 @@ async function applyDamage() {
   await waitFor(() => expect(updateHpSpy).toHaveBeenCalled())
 }
 
+describe('HpQuickSheet held at 1 HP', () => {
+  it('the damage toast counts the hit points really lost', async () => {
+    rollOptionsSpy.mockResolvedValue([])
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc', option_result: { keys: ['x'], hp_lost: 43 } })
+    await applyDamage()
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+    expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_damage_undo:43')
+  })
+})
+
 describe('HpQuickSheet quick values', () => {
+  it('asks for the damage options with the amount, so an option valid only at 0 HP can be offered', async () => {
+    rollOptionsSpy.mockResolvedValue([])
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
+    await applyDamage()
+    expect(rollOptionsSpy).toHaveBeenCalledWith(42, expect.objectContaining({ roll: 'damage_taken', damage: 4 }))
+  })
+
   it('a chip applies at once, with the same undo as a typed value', async () => {
     updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
     const onClose = vi.fn()
@@ -158,5 +187,76 @@ describe('HpQuickSheet autofocus', () => {
     stubPointer(false)
     renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
     expect(screen.getByPlaceholderText('0')).not.toHaveFocus()
+  })
+})
+
+describe('HpQuickSheet reactions opened by the damage', () => {
+  const retaliation = { key: 'barbarian.retaliation', label: 'Ritorsione: ti ha colpito?', phase: 'before', slot: 'reaction' }
+  const sword = { id: 31, name: 'Ascia', item_type: 'weapon', is_equipped: true, equipment_slot: 'main_hand' }
+  const armed = { ...char, items: [sword] } as unknown as CharacterFull
+
+  it('keeps the sheet open, proposes the reaction and attacks in one tap', async () => {
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [retaliation], hp_undo_id: 'op1' })
+    const onClose = vi.fn()
+    renderWithProviders(<HpQuickSheet char={armed} open onClose={onClose} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByText('character.hp.reaction_attack'))
+    expect(attackWeaponSpy).toHaveBeenCalledWith(31, 'normal', ['barbarian.retaliation'])
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('throws the caught missile unarmed even with a weapon in hand', async () => {
+    attackWeaponSpy.mockClear()
+    attackUnarmedSpy.mockClear()
+    const throwBack = { key: 'monk.deflect_missiles_throw', label: 'Deviare Proiettili: rilancia', phase: 'before', slot: null, ranged_unarmed: true }
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [throwBack], hp_undo_id: 'op1' })
+    renderWithProviders(<HpQuickSheet char={armed} open onClose={() => {}} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    await userEvent.click(await screen.findByText('character.hp.reaction_attack'))
+    expect(attackUnarmedSpy).toHaveBeenCalledWith('normal', ['monk.deflect_missiles_throw'])
+    expect(attackWeaponSpy).not.toHaveBeenCalled()
+  })
+
+  it('takes the proposal away when the damage is undone', async () => {
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [retaliation], hp_undo_id: 'op1' })
+    undoHpSpy.mockResolvedValue(armed)
+    renderWithProviders(<HpQuickSheet char={armed} open onClose={() => {}} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(42, 'op1'))
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('keeps the outcome of the attack when the sheet is closed while it runs', async () => {
+    flowElements.mockReturnValue(<div>esito-attacco</div>)
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [retaliation], hp_undo_id: 'op1' })
+    function Harness() {
+      const [open, setOpen] = useState(true)
+      return <><button onClick={() => setOpen(false)}>chiudi-esterno</button><HpQuickSheet char={armed} open={open} onClose={() => setOpen(false)} /></>
+    }
+    renderWithProviders(<Harness />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    await screen.findByText('Ritorsione: ti ha colpito?')
+    await userEvent.click(screen.getByText('chiudi-esterno'))
+    expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull()
+    expect(screen.getByText('esito-attacco')).toBeInTheDocument()
+    flowElements.mockReturnValue(null)
+  })
+
+  it('closes as before when the damage opens no reaction', async () => {
+    updateHpSpy.mockResolvedValue({ ...armed, reactions: [], hp_undo_id: 'op1' })
+    const onClose = vi.fn()
+    renderWithProviders(<HpQuickSheet char={armed} open onClose={onClose} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(screen.queryByText('character.hp.reaction_title')).toBeNull()
   })
 })

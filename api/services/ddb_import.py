@@ -12,7 +12,7 @@ import logging
 import math
 import re
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import httpx
 from pydantic import BaseModel, Field
@@ -30,6 +30,11 @@ from core.data.spell_slots import normalize_class_name
 from core.db.models import EquipmentSlot
 from core.data.equipment_slots import EQUIPMENT_SLOT_COMPAT
 from core.game.stats import ability_modifier
+from core.rules.catalog import features_for
+from core.rules.edition import EDITIONS
+from core.rules.proficiencies import LABELS, SEEDED_FLAG
+from core.rules.subclasses import match_subclass
+from core.rules.types import Edition
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +67,9 @@ _UNCHOSEN_RE = re.compile(r"^(choose|select) ", re.I)
 NOTE_TITLES = {"backstory": "Backstory", "allies": "Allies", "organizations": "Organizations",
                "enemies": "Enemies", "personalPossessions": "Personal Possessions",
                "otherHoldings": "Other Holdings", "otherNotes": "Other Notes"}
+_WEAPON_ALIAS = {en.lower(): pid for pid, (_it, en) in LABELS.items()
+                 if pid not in ("light", "medium", "heavy", "shields", "thieves_tools", "herbalism_kit",
+                                "thieves_cant", "druidic")}
 _TAG_RE = re.compile(r"<[^>]+>")
 _DICE_RE = re.compile(r"^\d+d\d+$")
 
@@ -82,6 +90,25 @@ class DdbImportError(Exception):
     def __init__(self, code: str):
         super().__init__(code)
         self.code = code
+
+
+# sourceId DDB dei manuali delle classi: PHB 2014 e PHB 2024
+_SOURCE_EDITION: dict[int, Edition] = {1: "2014", 145: "2024"}
+
+
+def _class_edition(cl: dict) -> Edition | None:
+    d = _d(cl.get("definition"))
+    ids = {_int(_d(s).get("sourceId")) for s in _l(d.get("sources")) if isinstance(s, dict)}
+    ids.add(_int(d.get("sourceId")))
+    found = {_SOURCE_EDITION[i] for i in ids if i in _SOURCE_EDITION}
+    return next(iter(found)) if len(found) == 1 else None
+
+
+def detect_edition(ddb: Any) -> Edition | Literal["mixed"]:
+    """Edizione delle classi del PG DDB dal `sourceId` del manuale; classi di edizioni diverse o ignote: `mixed`."""
+    data = ddb.get("data") if isinstance(ddb, dict) and isinstance(ddb.get("data"), dict) else ddb
+    editions = {_class_edition(cl) for cl in _l(_d(data).get("classes")) if isinstance(cl, dict)}
+    return next(iter(editions)) if len(editions) == 1 and None not in editions else "mixed"
 
 
 # --- helpers difensivi ------------------------------------------------------
@@ -158,9 +185,10 @@ def _modifiers(data: dict, sources: tuple[str, ...] | None = None) -> list[dict]
 
 
 class _Ctx:
-    def __init__(self, data: dict, lang: str = "it"):
+    def __init__(self, data: dict, lang: str = "it", edition: Edition = "2014"):
         self.data = data
         self.lang = lang
+        self.edition = edition
         self.report = ImportReport()
         self.scores: dict[str, int] = {a: 10 for a in ABILITIES}
         self.total_level = 1
@@ -194,6 +222,21 @@ class _Ctx:
 
 # --- sezioni ----------------------------------------------------------------
 
+_SOURCE_TAG_RE = re.compile(r"\s*\([^()]*\)\s*$")  # "School of Necromancy (PHB)"
+
+
+def _subclass_text(text: str, class_key: str | None, edition: str) -> str | None:
+    """Testo della sottoclasse: senza l'etichetta del manuale solo se così coincide con una del catalogo.
+    Una sottoclasse non riconosciuta resta com'è, come testo libero."""
+    if not text:
+        return None
+    bare = _SOURCE_TAG_RE.sub("", text)
+    if (bare != text and match_subclass(text, class_key, edition) is None
+            and match_subclass(bare, class_key, edition) is not None):
+        return bare
+    return text
+
+
 def _classes(c: _Ctx) -> None:
     classes = sorted((x for x in _l(c.data.get("classes")) if isinstance(x, dict)),
                      key=lambda x: not x.get("isStartingClass"))
@@ -210,7 +253,7 @@ def _classes(c: _Ctx) -> None:
         # come il wizard: nome localizzato (tabelle classi in italiano, DDB in inglese)
         shown = (class_table_key(raw) if c.lang == "it" else None) or raw
         obj = {"class_name": shown, "level": _clamp(_int(cl.get("level"), 1), 1, 20),
-               "subclass": _str(_d(cl.get("subclassDefinition")).get("name"), 100) or None,
+               "subclass": _subclass_text(_str(_d(cl.get("subclassDefinition")).get("name"), 100), key, c.edition),
                "spellcasting_ability": ABILITIES[cast - 1] if 1 <= cast <= 6 else None,
                "hit_die": _clamp(_int(d.get("hitDice"), 8), 1, 100) if d.get("hitDice") else None,
                "hit_dice_used": max(0, _int(cl.get("hitDiceUsed")))}
@@ -244,14 +287,29 @@ def _scores(c: _Ctx) -> None:
     c.ok("ability_scores")
 
 
+def _catalog_computes_hp(c: _Ctx) -> bool:
+    """R45: il catalogo dell'edizione calcola già un bonus ai PF massimi per una classe del PG (Resilienza Draconica):
+    importarlo anche nella base lo sommerebbe due volte."""
+    for cl in _l(c.out.get("_raw_classes")):
+        key = normalize_class_name(_str(_d(_d(cl).get("definition")).get("name"), 100))
+        if any(m.target == "hp_max" for spec in features_for(c.edition, key) for m in spec.modifiers):
+            return True
+    return False
+
+
 def _hp(c: _Ctx) -> dict:
     d = c.data
+    kept = 0  # ciò che la scheda conta e il catalogo ricalcola: serve ai PF correnti, non al massimo
     if d.get("overrideHitPoints") is not None:
         mx = _int(d.get("overrideHitPoints"))
     else:
         per_level = 0
+        own_bonus = _catalog_computes_hp(c)
         for m in _modifiers(d):
             if m.get("type") == "bonus" and m.get("subType") == "hit-points-per-level":
+                if own_bonus and m["_src"] == "class":
+                    kept += _int(m.get("value")) * c.total_level  # R45: lo calcola il catalogo
+                    continue
                 per_level += _int(m.get("value"))
                 if m["_src"] not in ("race", "feat"):
                     c.approx("hp", "", "ddb.reason.hp_recomputed")
@@ -259,7 +317,7 @@ def _hp(c: _Ctx) -> dict:
               + (c.mod("constitution") + per_level) * c.total_level)
     mx = _clamp(mx, 1, 1_000_000)
     c.ok("hp")
-    return {"hit_points": mx, "current_hit_points": _clamp(mx - _int(d.get("removedHitPoints")), 0, mx),
+    return {"hit_points": mx, "current_hit_points": _clamp(mx + kept - _int(d.get("removedHitPoints")), 0, mx + kept),
             "temp_hp": max(0, _int(d.get("temporaryHitPoints")))}
 
 
@@ -285,8 +343,19 @@ def _senses(c: _Ctx) -> list[dict]:
     return [{"type": k, "range_ft": _clamp(v, 0, 1000)} for k, v in found.items() if v > 0]
 
 
+def _catalog_computes_speed(c: _Ctx) -> bool:
+    """R45: il catalogo dell'edizione calcola già un bonus alla velocità per una classe del PG (Movimento Senza
+    Armatura, Movimento Veloce): importarlo anche nella base lo sommerebbe due volte."""
+    for cl in _l(c.out.get("_raw_classes")):
+        key = normalize_class_name(_str(_d(_d(cl).get("definition")).get("name"), 100))
+        if any(m.target == "speed" for spec in features_for(c.edition, key) for m in spec.modifiers):
+            return True
+    return False
+
+
 def _speed(c: _Ctx, walk: int) -> tuple[int, list[dict]]:
     """(a piedi, altre) come la scheda DDB: base razza/lignaggio + bonus (l'app non li calcola)."""
+    own_bonus = _catalog_computes_speed(c)
     armored = any(isinstance(it, dict) and it.get("equipped")
                   and 1 <= _int(_d(it.get("definition")).get("armorTypeId")) <= 4  # 4 = scudo
                   for it in _l(c.data.get("inventory")))
@@ -299,6 +368,9 @@ def _speed(c: _Ctx, walk: int) -> tuple[int, list[dict]]:
             kind = OTHER_SPEEDS[sub]
             # value null = "pari alla velocità a piedi" (es. Stormborn del Chierico della Tempesta)
             other[kind] = None if m.get("value") is None else max(other.get(kind) or 0, val)
+        elif own_bonus and m["_src"] == "class" and m.get("type") == "bonus" and sub in (
+                "speed", "speed-walking", "unarmored-movement"):
+            continue  # R45: lo calcola il catalogo
         elif m.get("type") == "bonus" and (sub in ("speed", "speed-walking")
                                            or (sub == "unarmored-movement" and not armored)):
             bonus += val
@@ -356,6 +428,17 @@ def _notes(c: _Ctx) -> dict:
     return notes
 
 
+def _app_weapon_label(label: str) -> str:
+    """DDB elenca le armi specifiche al plurale («Hand Crossbows»), l'app le confronta col nome dell'oggetto."""
+    low = label.lower()
+    if low in _WEAPON_ALIAS:
+        return label
+    for singular in (low[:-1], low[:-2], low.replace("ves", "ve")):  # swords / crossbows / halberds ...
+        if singular in _WEAPON_ALIAS:
+            return LABELS[_WEAPON_ALIAS[singular]][1]
+    return label
+
+
 def _proficiencies(c: _Ctx) -> dict:
     skills: dict[str, Any] = {}
     saves: dict[str, bool] = {}
@@ -381,6 +464,7 @@ def _proficiencies(c: _Ctx) -> dict:
                        else "weapons" if sub.endswith("-weapons")
                        else "tools" if any(k in sub for k in ("tools", "kit", "supplies", "instrument"))
                        else "other")
+                label = _app_weapon_label(label) if cat in ("weapons", "other") else label
                 if label not in general[cat]:
                     general[cat].append(label)
         elif t == "language" and label not in langs:
@@ -410,6 +494,7 @@ def _proficiencies(c: _Ctx) -> dict:
             if level == 2:  # l'app non ha la mezza competenza
                 c.approx("proficiencies", slug, "ddb.reason.half_proficiency")
     c.ok("proficiencies")
+    # l'elenco di DDB è completo: l'app non deve aggiungervi le competenze di classe come a un PG vecchio
     return {"skills": skills, "saving_throws": saves, "general_proficiencies": general,
             "languages": langs[:20], "damage_modifiers": {k: v for k, v in dmg.items() if v}}
 
@@ -584,7 +669,8 @@ def _items(c: _Ctx) -> None:
     char = c.out["character"]
     armor = next((i for i in out if i.item_type == "armor" and i.equipment_slot == EquipmentSlot.BODY), None)
     shield = next((i for i in out if i.item_type == "shield" and i.equipment_slot is not None), None)
-    # la base include già la DES come sulla scheda DDB: l'app non la somma da sola
+    # stessa formula di `computed_base_ac` (DES inclusa come sulla scheda DDB): se il valore
+    # non coincide (es. CA 13 + DES di Resilienza Draconica) l'import lo fissa come override
     dex = c.mod("dexterity")
     if armor:
         cap = {"light": dex, "medium": min(dex, 2)}.get(armor.item_metadata.get("armor_type"), 0)
@@ -598,8 +684,11 @@ def _items(c: _Ctx) -> None:
             ability = ABILITIES[stat - 1] if 1 <= stat <= 6 else None
             if ability in ("wisdom", "constitution"):  # Monaco / Barbaro: l'app la tiene in sync
                 char["unarmored_defense_ability"] = ability
+            # il Monaco con uno scudo perde la formula (Difesa senza Armatura: «non indossi armature né scudi»)
+            monk_with_shield = ability == "wisdom" and shield is not None
             # come la scheda DDB: mai peggio di 10 + DES (es. Resilienza draconica con CAR negativo)
-            base += max(0, (c.mod(ability) if ability else 0) + _clamp(_int(unarmored.get("value")), 0, 10))
+            base += max(0, (c.mod(ability) if ability and not monk_with_shield else 0)
+                        + _clamp(_int(unarmored.get("value")), 0, 10))
         char["base_armor_class"] = base
     char["shield_armor_class"] = shield.item_metadata.get("ac_bonus", 2) if shield else 0
     values = [v for v in _l(c.data.get("characterValues")) if isinstance(v, dict) and v.get("value") is not None]
@@ -662,6 +751,7 @@ def _spells(c: _Ctx) -> None:
                "is_ritual": bool(d.get("ritual")), "school": _str(d.get("school"), 30).lower() or None,
                "srd_index": _slug(name)[:80] or None,
                "is_prepared": bool(always or sp.get("prepared") or sp.get("alwaysPrepared") or level == 0),
+               "always_prepared": bool(level > 0 and (always or sp.get("alwaysPrepared"))),
                **_spell_fields(d)}
         m = c.model(ExportSpell, obj, "spells", name)
         if m:
@@ -692,6 +782,23 @@ def _max_uses(c: _Ctx, lu: dict) -> int | None:
 
 DDB_DAMAGE_TYPES = {1: "Bludgeoning", 2: "Piercing", 3: "Slashing", 4: "Necrotic", 5: "Acid", 6: "Cold", 7: "Fire",
                     8: "Lightning", 9: "Thunder", 10: "Poison", 11: "Psychic", 12: "Radiant", 13: "Force"}
+
+
+def class_option_names(ddb: Any) -> list[dict]:
+    """Opzioni di classe scelte sulla scheda (Metamagia, Invocazioni, Stili...): [{class_index, name}],
+    con l'indice nell'ordine delle classi dell'export (quella iniziale per prima)."""
+    data = ddb["data"] if isinstance(ddb, dict) and isinstance(ddb.get("data"), dict) else _d(ddb)
+    classes = sorted((x for x in _l(data.get("classes")) if isinstance(x, dict)),
+                     key=lambda x: not x.get("isStartingClass"))
+    feature_owner = {_int(_d(f.get("definition")).get("id")): i
+                     for i, cl in enumerate(classes) for f in _l(cl.get("classFeatures")) if isinstance(f, dict)}
+    names = []
+    for opt in _l(_d(data.get("options")).get("class")):
+        name = _str(_d(_d(opt).get("definition")).get("name"))
+        idx = feature_owner.get(_int(_d(opt).get("componentId")))
+        if name and idx is not None:
+            names.append({"class_index": idx, "name": name})
+    return names
 
 
 def _abilities(c: _Ctx) -> None:
@@ -826,8 +933,6 @@ def _creatures(c: _Ctx) -> None:
         kind = CREATURE_KIND.get(group, "companion")
         if group not in CREATURE_KIND:  # Battle Smith, sidekick, infusione...: generico
             c.approx("creatures", name, "ddb.reason.creature_group")
-        elif group == 13:  # 2024: il druido tiene i suoi PF, l'app dà alla forma PF propri (2014)
-            c.approx("creatures", name, "ddb.reason.wild_shape_2024")
         stats = {ABILITIES[_int(s.get("statId")) - 1][:3]: _clamp(_int(s.get("value"), 10), 1, 30)
                  for s in map(_d, _l(d.get("stats"))) if 1 <= _int(s.get("statId")) <= 6}
         speed = {f"{MOVEMENT[_int(m.get('movementId'))]}_ft": _clamp(_int(m.get("speed")), 0, 1000)
@@ -952,8 +1057,11 @@ def _run(c: _Ctx, section: str, fn: Callable[[_Ctx], Any]) -> Any:
         return None
 
 
-def convert(ddb: Any, lang: str = "it") -> tuple[CharacterExport, ImportReport, list[dict]]:
+def convert(ddb: Any, lang: str = "it", edition: Edition | None = None) -> tuple[CharacterExport, ImportReport, list[dict]]:
     """JSON DDB (involucro {success, data} o `data` nudo) -> (export, report, feature_uses).
+
+    `edition`: quella scelta dall'utente; senza, si ricava dai manuali delle classi (`detect_edition`) e se le classi
+    sono di edizioni diverse o ignote serve la scelta (`DdbImportError("edition_required")`).
 
     feature_uses: [{class_index, name, used}] cariche usate dei privilegi di classe DDB,
     da riportare sulle feature generate dal nostro motore dopo l'import.
@@ -962,15 +1070,25 @@ def convert(ddb: Any, lang: str = "it") -> tuple[CharacterExport, ImportReport, 
         raise DdbImportError("ddb_invalid")
     data = ddb["data"] if isinstance(ddb.get("data"), dict) else ddb
     name = _str(data.get("name"), 100)
-    c = _Ctx(data, lang)
+    if not name or not any(_str(_d(_d(x).get("definition")).get("name")) for x in _l(data.get("classes"))):
+        raise DdbImportError("ddb_invalid")
+    if edition is None:
+        detected = detect_edition(data)
+        if detected == "mixed":
+            raise DdbImportError("edition_required")
+        edition = detected
+    elif edition not in EDITIONS:
+        raise DdbImportError("ddb_invalid")
+    c = _Ctx(data, lang, edition)
     _run(c, "classes", _classes)
     if not name or not c.out.get("classes"):
         raise DdbImportError("ddb_invalid")
     _run(c, "ability_scores", _scores)
-    char: dict[str, Any] = {"name": name, "spell_slots_mode": "automatic"}
+    char: dict[str, Any] = {"name": name, "spell_slots_mode": "automatic", "rules_edition": edition}
     c.out["character"] = char
     for section, fn in (("hp", _hp), ("identity", _identity), ("proficiencies", _proficiencies)):
         char.update(_run(c, section, fn) or {})
+    char["settings"] = {**char.get("settings", {}), SEEDED_FLAG: True}  # competenze DDB complete: niente semina di classe
     char["notes"] = _run(c, "notes", _notes) or {}
     for section, fn in (("items", _items), ("spells", _spells), ("spell_slots", _slots),
                         ("abilities", _abilities), ("currency", _currency), ("creatures", _creatures),
@@ -981,7 +1099,7 @@ def convert(ddb: Any, lang: str = "it") -> tuple[CharacterExport, ImportReport, 
     except Exception:  # un campo inatteso non deve perdere il PG: si tiene solo l'essenziale
         log.exception("ddb import: character non valido")
         c.approx("identity", name, "ddb.reason.identity_partial")
-        character = ExportCharacter(name=name, spell_slots_mode="automatic",
+        character = ExportCharacter(name=name, spell_slots_mode="automatic", rules_edition=edition,
                                     **{k: char[k] for k in ("hit_points", "current_hit_points") if k in char})
     export = CharacterExport(
         exported_at=datetime.now(timezone.utc).isoformat(), character=character,

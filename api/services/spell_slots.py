@@ -15,8 +15,10 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.data.spell_slots import compute_pact_slots, compute_regular_slots
 from core.db.models import Character, SpellSlot
+from core.rules.created_slots import CREATED_SLOTS, _created, add_created_slot, clean_created_slots, clear_created_slots  # noqa: F401
+from core.rules.edition import character_edition
+from core.rules.spellcasting import slots_for
 
 
 def _is_automatic(char: Character) -> bool:
@@ -40,9 +42,12 @@ async def recalc_spell_slots(session: AsyncSession, char: Character) -> None:
 
     # Target totals keyed by (spell_level, is_pact).
     targets: dict[tuple[int, bool], int] = {}
-    for level, total in compute_regular_slots(char.classes).items():
+    table = slots_for(character_edition(char), char.classes)
+    for level, total in table.regular.items():
         targets[(level, False)] = total
-    for level, total in compute_pact_slots(char.classes).items():
+    for level, extra in _created(char).items():  # gli slot creati con Incantesimi Flessibili restano fino al riposo lungo
+        targets[(level, False)] = targets.get((level, False), 0) + extra
+    for level, total in table.pact.items():
         targets[(level, True)] = total
 
     seen: set[tuple[int, bool]] = set()

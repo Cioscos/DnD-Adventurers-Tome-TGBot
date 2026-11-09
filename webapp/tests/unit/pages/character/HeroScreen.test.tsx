@@ -5,12 +5,13 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import HeroScreen from '@/pages/character/HeroScreen'
 import type { CharacterFull } from '@/types'
 
-const { rollSpy, empty } = vi.hoisted(() => ({
+const { rollSpy, rollOptions, empty } = vi.hoisted(() => ({
   rollSpy: vi.fn(),
+  rollOptions: vi.fn().mockResolvedValue([]),
   empty: () => ({ default: () => null }),
 }))
 
-vi.mock('@/api/client', () => ({ api: { characters: { rollDeathSave: rollSpy } } }))
+vi.mock('@/api/client', () => ({ api: { characters: { rollDeathSave: rollSpy, rollOptions } } }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -64,6 +65,7 @@ describe('HeroScreen', () => {
     renderWithProviders(<HeroScreen char={dying} />)
     await userEvent.click(screen.getByRole('button', { name: ROLL }))
     await waitFor(() => expect(rollSpy).toHaveBeenCalledWith(7, undefined))
+    expect(rollOptions).toHaveBeenCalledWith(7, { roll: 'death_save' })
     expect(await screen.findByTestId('death-result')).toBeInTheDocument()
   })
 

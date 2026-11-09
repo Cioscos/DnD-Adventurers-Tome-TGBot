@@ -21,6 +21,11 @@ vi.mock('framer-motion', async () => {
     useReducedMotion: () => false,
   }
 })
+vi.mock('@/components/ui/RollButton', async () => {
+  const React = await import('react')
+  return { default: (p: { onRoll: (m: string) => void; ariaLabel: string; children?: unknown }) =>
+    React.createElement('button', { 'aria-label': p.ariaLabel, onClick: () => p.onRoll('normal') }, p.children) }
+})
 vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 
@@ -29,21 +34,28 @@ const score = (over: Partial<AbilityScore> = {}): AbilityScore =>
 
 describe('AbilityScoreCard', () => {
   it('renders the value and signed modifier', () => {
-    render(<AbilityScoreCard score={score()} expanded={false} onToggle={() => {}} onEdit={() => {}} />)
+    render(<AbilityScoreCard score={score()} expanded={false} onToggle={() => {}} onEdit={() => {}} onRoll={() => {}} />)
     expect(screen.getByText('16')).toBeInTheDocument()
     expect(screen.getByText('+3')).toBeInTheDocument()
   })
 
+  it('has a dice button that rolls a pure check of that ability', async () => {
+    const onRoll = vi.fn()
+    render(<AbilityScoreCard score={score()} expanded={false} onToggle={() => {}} onEdit={() => {}} onRoll={onRoll} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.skills.roll: character.stats.dexterity' }))
+    expect(onRoll).toHaveBeenCalledWith('normal')
+  })
+
   it('the pencil triggers edit', async () => {
     const onEdit = vi.fn()
-    render(<AbilityScoreCard score={score()} expanded={false} onToggle={() => {}} onEdit={onEdit} />)
+    render(<AbilityScoreCard score={score()} expanded={false} onToggle={() => {}} onEdit={onEdit} onRoll={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'common.edit' }))
     expect(onEdit).toHaveBeenCalledTimes(1)
   })
 
   it('exposes an expand toggle only when there are bonuses to reveal', async () => {
     const onToggle = vi.fn()
-    render(<AbilityScoreCard score={score()} expanded={false} onToggle={onToggle} onEdit={() => {}} />)
+    render(<AbilityScoreCard score={score()} expanded={false} onToggle={onToggle} onEdit={() => {}} onRoll={() => {}} />)
     const expand = screen.getByRole('button', { name: 'character.stats.dexterity' })
     expect(expand).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(expand)
@@ -51,7 +63,7 @@ describe('AbilityScoreCard', () => {
   })
 
   it('hides the expand toggle when the score has no modifiers', () => {
-    render(<AbilityScoreCard score={score({ modifiers_applied: [] })} expanded={false} onToggle={() => {}} onEdit={() => {}} />)
+    render(<AbilityScoreCard score={score({ modifiers_applied: [] })} expanded={false} onToggle={() => {}} onEdit={() => {}} onRoll={() => {}} />)
     expect(screen.queryByRole('button', { name: 'character.stats.dexterity' })).not.toBeInTheDocument()
   })
 })

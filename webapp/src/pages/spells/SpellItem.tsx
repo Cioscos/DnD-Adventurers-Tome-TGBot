@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical, Info, Bookmark, BookmarkCheck, Pin } from 'lucide-react'
+import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical, Info, Bookmark, BookmarkCheck, Pin, BookOpen } from 'lucide-react'
 import {
   GiCrosshair as Crosshair, GiPotionBall as FlaskConical,
   GiCrossedSwords as Swords, GiCheckedShield as Shield,
@@ -11,11 +11,12 @@ import Pressable from '@/components/ui/Pressable'
 import StatPill from '@/components/ui/StatPill'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import RollButton from '@/components/ui/RollButton'
-import { isAttackSpell } from '@/lib/spellType'
+import { isAttackSpell, isHitOnlySpell } from '@/lib/spellType'
 import { scaleCantripDice } from '@/lib/dnd'
 import { ledgerEntry } from '@/styles/ledger'
 import type { RollMode } from '@/api/client'
 import type { Spell } from '@/types'
+import { bookModes } from '@/lib/spellbook'
 
 interface SpellItemProps {
   spell: Spell
@@ -35,6 +36,8 @@ interface SpellItemProps {
   preparedPending: boolean
   /** P4-scoped: true quando la concentrationMutation condivisa sta operando su questo spell. */
   concentrationPending: boolean
+  /** Libro del Mago: apre la copia nel libro (solo per un incantesimo che ne fa parte). */
+  onBook?: () => void
 }
 
 function SpellItemInner({
@@ -52,6 +55,7 @@ function SpellItemInner({
   onPreparedToggle,
   preparedPending,
   concentrationPending,
+  onBook,
 }: SpellItemProps) {
   const { t } = useTranslation()
   const attackSaveLabel = (v?: string | null) => {
@@ -121,6 +125,11 @@ function SpellItemInner({
                 <StatPill tone="cobalt" size="sm" value="R" aria-label={t('character.spells.badge_ritual')} />
               </span>
             )}
+            {spell.has_book && (
+              <span title={t(spell.in_spellbook ? (spell.in_backup ? 'character.spells.book.badge_backup' : 'character.spells.book.badge') : 'character.spells.book.badge_outside')}>
+                <BookOpen size={12} className={spell.in_spellbook ? 'text-dnd-gold-bright' : 'text-dnd-text-faint'} aria-label={t(spell.in_spellbook ? 'character.spells.book.badge' : 'character.spells.book.badge_outside')} />
+              </span>
+            )}
             {spell.is_pinned && <Pin size={12} className="text-dnd-gold-bright shrink-0" />}
           </div>
           <ExpandChevron open={isExpanded} />
@@ -179,7 +188,12 @@ function SpellItemInner({
                   {attackSaveLabel(spell.attack_save) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Shield size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{attackSaveLabel(spell.attack_save)}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">
+                        {attackSaveLabel(spell.attack_save)}
+                        {spell.attack_save?.trim().toUpperCase() === 'SAVE' && spell.save_dc != null && (
+                          <span className="tabular-nums"> · {t('character.spells.save_dc', { dc: spell.save_dc })}</span>
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -195,6 +209,9 @@ function SpellItemInner({
 
               {/* Concentration workflow hint — clarifies that conc starts on cast,
                   and the toggle button is for manual control only. */}
+              {spell.pact_cast?.feature_key === 'wizard.shapechanger' && (
+                <p className="text-xs text-dnd-text-muted font-body italic leading-snug">{t('character.spells.pact_note.shapechanger')}</p>
+              )}
               {spell.is_concentration && (
                 <div className="flex items-start gap-1.5 text-xs text-dnd-text-muted font-body italic leading-snug">
                   <Info size={11} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
@@ -204,7 +221,7 @@ function SpellItemInner({
 
               {/* Action buttons */}
               <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
-                {isAttackSpell(spell) ? (
+                {isHitOnlySpell(spell) ? null : isAttackSpell(spell) ? (
                   // Spell attack: long press opens the advantage/disadvantage menu.
                   <RollButton
                     onRoll={onUse}
@@ -247,6 +264,24 @@ function SpellItemInner({
                       ? t('character.spells.prepared')
                       : t('character.spells.prepare')}
                   </Pressable>
+                )}
+
+                {spell.has_book && onBook && bookModes(spell).length > 0 && (
+                  <Pressable
+                    onClick={onBook}
+                    className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg border border-dnd-border
+                               bg-dnd-surface-raised text-dnd-text active:opacity-60"
+                  >
+                    <BookOpen size={12} />
+                    {t('character.spells.book.action')}
+                  </Pressable>
+                )}
+
+                {spell.always_prepared && (
+                  <span className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 text-dnd-gold-bright">
+                    <BookmarkCheck size={12} />
+                    {t('character.spells.always_prepared')}
+                  </span>
                 )}
 
                 {spell.is_concentration && (

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Pencil, Trash2, RotateCcw, FilterX } from 'lucide-react'
 import { GiLightningTrio as Zap, GiAura } from 'react-icons/gi'
@@ -24,6 +25,7 @@ import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
+import { isUnlimitedFeature } from '@/lib/abilityUses'
 import type { Ability, ActionType } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
@@ -287,7 +289,7 @@ export default function Abilities() {
 
   // Mappa classId -> nome classe, per il badge sulle feature auto-generate.
   const classNameById = new Map<number, string>(
-    (char.classes ?? []).map((c) => [c.id, c.class_name]),
+    (char.classes ?? []).map((c) => [c.id, classLabel(t, c.class_name)]),
   )
 
   // Opzioni di filtro derivate dai dati (niente hardcoded). Una dimensione si
@@ -358,6 +360,8 @@ export default function Abilities() {
                 {current}/{max}
               </span>
             )}
+            {isUnlimitedFeature(ab) && <span>{t('character.abilities.unlimited')}</span>}
+            {ab.dc != null && <span data-testid="ability-dc" className="font-mono font-bold tabular-nums">{t('character.abilities.dc', { dc: ab.dc })}</span>}
           </div>
           <ExpandChevron open={isOpen} />
         </Pressable>

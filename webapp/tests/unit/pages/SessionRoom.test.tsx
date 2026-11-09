@@ -82,6 +82,25 @@ describe('SessionRoom with an encounter', () => {
   })
 })
 
+describe('SessionRoom with effects on others', () => {
+  it('shows the group the active states a character brings on others (Wolf totem)', async () => {
+    me.mockResolvedValue({ user_id: 1 })
+    live.mockResolvedValue({
+      id: 12, code: 'ABC123', gm_user_id: 1, gm_display_name: 'GM', status: 'active', title: null,
+      created_at: '', last_activity_at: '', closed_at: null, encounter: null,
+      participants: [{ id: 2, user_id: 2, role: 'player', character_id: 9, display_name: 'Grok', joined_at: '' }],
+      live_characters: [{
+        id: 9, name: 'Grok', class_summary: 'Barbaro 3', total_level: 3, hit_points: null, current_hit_points: null,
+        temp_hp: null, ac: null, conditions: {}, heroic_inspiration: false, hp_bucket: 'healthy', armor_category: null,
+        active_states: [{ key: 'rage', name: 'Ira', rounds_left: 9, others: [{ key: 'barbarian.totem_wolf', name: 'Lupo', text: 'Alleati con vantaggio in mischia' }] }],
+      }],
+    })
+    renderWithProviders(<SessionRoom />)
+    expect(await screen.findByText(/Lupo/)).toBeTruthy()
+    expect(screen.getByText(/Alleati con vantaggio in mischia/)).toBeTruthy()
+  })
+})
+
 describe('SessionRoom in a campaign', () => {
   const base = {
     id: 12, code: 'ABC123', gm_user_id: 1, gm_display_name: 'GM', status: 'active', title: 'Saga',

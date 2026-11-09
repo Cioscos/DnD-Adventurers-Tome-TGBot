@@ -9,10 +9,10 @@ import {
   GiBackpack as Backpack,
 } from 'react-icons/gi'
 import { TYPE_ICON, consumableIcon, hasSingleQuantity } from './itemMetadata'
-import type { Item } from '@/types'
+import type { CharacterFull, Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
-import { useUnitSettings, formatWeight } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, formatWeight } from '@/store/unitSettings'
 import { ledgerEntry } from '@/styles/ledger'
 import Pressable from '@/components/ui/Pressable'
 import ExpandChevron from '@/components/ui/ExpandChevron'
@@ -45,7 +45,7 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
 
 /* ---------- Type-specific stat chips ---------- */
 
-function ItemStatChips({ item }: { item: Item }) {
+function ItemStatChips({ item, edition }: { item: Item; edition?: string }) {
   const { t } = useTranslation()
   const system = useUnitSettings((s) => s.system)
   const meta = item.item_metadata as Record<string, unknown> | undefined
@@ -82,6 +82,20 @@ function ItemStatChips({ item }: { item: Item }) {
           {wpnType}
         </Chip>
       )
+      if (item.reach_bonus_ft) {
+        chips.push(
+          <Chip key="reach" icon={<Target size={12} />}>
+            {t('character.inventory.reach_bonus', { value: formatLength(item.reach_bonus_ft, system) })}
+          </Chip>
+        )
+      }
+      if (edition === '2024' && item.mastery) {
+        chips.push(
+          <Chip key="mastery" icon={<Swords size={12} />}>
+            {t('character.inventory.mastery', { name: item.mastery.charAt(0).toUpperCase() + item.mastery.slice(1) })}
+          </Chip>
+        )
+      }
     } else if (item.item_type === 'armor') {
       const armorType = t(`character.inventory.armor_type.${meta.armor_type}`, { defaultValue: String(meta.armor_type ?? '') })
       chips.push(
@@ -294,6 +308,8 @@ interface InventoryItemProps {
   onEquipToggle: () => void
   onQuantityChange: (delta: number) => void
   onAttack: (mode: RollMode) => void
+  /** Serve a edizione, altra mano e incapacitato; assente nei contesti senza scheda. */
+  char?: CharacterFull
   weaponChoice: WeaponChoice
   onWeaponChoice: (c: WeaponChoice) => void
   onUse: () => void
@@ -320,6 +336,40 @@ interface InventoryItemProps {
   onCastSpell?: (index: number) => void
   chargesPending?: boolean
   castPending?: boolean
+  /** Lancio da pergamena (Usare Dispositivi Magici): assente per chi non ha il privilegio o per oggetti che non sono pergamene. */
+  onScroll?: (level: number) => void
+  scrollPending?: boolean
+}
+
+/** Livello dell'incantesimo della pergamena e pulsante di lancio; l'esito arriva come notifica. */
+function ScrollRow({ onScroll, pending }: { onScroll: (level: number) => void; pending?: boolean }) {
+  const { t } = useTranslation()
+  const [level, setLevel] = React.useState(1)
+  return (
+    <div className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+      <label className="text-xs text-dnd-text-muted flex-1 font-medium" htmlFor="scroll-level">
+        {t('character.inventory.magic.scroll_level')}
+      </label>
+      <select
+        id="scroll-level"
+        value={level}
+        onChange={(e) => setLevel(Number(e.target.value))}
+        className="min-h-11 rounded-lg bg-dnd-surface border border-dnd-border px-2 text-sm text-dnd-text"
+      >
+        {Array.from({ length: 10 }, (_, n) => <option key={n} value={n}>{n}</option>)}
+      </select>
+      <Pressable
+        onClick={() => onScroll(level)}
+        pending={pending}
+        spinnerSize={12}
+        className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
+                   bg-dnd-arcane-deep/50 text-dnd-arcane-bright border border-dnd-arcane-bright/40 active:opacity-60 disabled:opacity-30"
+      >
+        <Sparkles size={12} />
+        {t('character.inventory.magic.scroll_cast')}
+      </Pressable>
+    </div>
+  )
 }
 
 function InventoryItemInner({
@@ -329,6 +379,7 @@ function InventoryItemInner({
   onEquipToggle,
   onQuantityChange,
   onAttack,
+  char,
   weaponChoice,
   onWeaponChoice,
   onUse,
@@ -348,6 +399,8 @@ function InventoryItemInner({
   setPropertyPending,
   onCharges,
   onCastSpell,
+  onScroll,
+  scrollPending,
   chargesPending,
   castPending,
 }: InventoryItemProps) {
@@ -399,7 +452,7 @@ function InventoryItemInner({
           <p className="text-xs text-dnd-text-muted mt-0.5">
             {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
             {item.weight > 0 && ` · ${formatWeight(item.weight, system)}`}
-            {!hasSingleQuantity(item.item_type) && ` · ×${item.quantity}`}
+            {(!hasSingleQuantity(item.item_type) || item.quantity > 1) && ` · ×${item.quantity}`}
           </p>
         </div>
         <ExpandChevron open={isExpanded} className="ml-1 text-dnd-gold-dim" />
@@ -416,7 +469,7 @@ function InventoryItemInner({
           )}
 
           {/* Stat chips */}
-          <ItemStatChips item={item} />
+          <ItemStatChips item={item} edition={char?.rules_edition} />
 
           {/* Homebrew property chips — editable, resolved against active rules */}
           <HomebrewPropertyChips
@@ -440,6 +493,7 @@ function InventoryItemInner({
             chargesPending={chargesPending}
             castPending={castPending}
           />
+          {onScroll && <ScrollRow onScroll={onScroll} pending={scrollPending} />}
 
           {/* Quantity stepper — hidden for single-equip items (weapon, armor, shield) */}
           {!hasSingleQuantity(item.item_type) && (
@@ -466,7 +520,7 @@ function InventoryItemInner({
           )}
 
           {item.item_type === 'weapon' && (
-            <WeaponChoiceRow item={item} choice={weaponChoice} onChange={onWeaponChoice} />
+            <WeaponChoiceRow item={item} char={char} choice={weaponChoice} onChange={onWeaponChoice} />
           )}
 
           {/* Action buttons — same pattern as SpellItem */}
@@ -490,6 +544,7 @@ function InventoryItemInner({
               <RollButton
                 onRoll={onAttack}
                 pending={attackPending}
+                disabled={!!char?.computed?.incapacitated}
                 ariaLabel={`${t('character.inventory.attack')} ${item.name}`}
                 className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                            bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30

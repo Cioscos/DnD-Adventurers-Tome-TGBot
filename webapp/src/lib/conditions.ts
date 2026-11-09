@@ -28,6 +28,19 @@ export const CONDITION_ICONS: Record<string, IconType> = {
   exhaustion:    GiFlame,
 }
 
+/** Condizioni `custom:<nome>` che il catalogo dei privilegi imposta su altri: hanno l'etichetta in `target_effect.custom`
+ *  (specchio di `CUSTOM_CONDITION_LABELS` in `core/data/labels.py`). Quelle scritte dal giocatore si mostrano col suo nome. */
+const CATALOG_CUSTOM = ['turned', 'thoughts_read', 'nature_ward', 'sap', 'slow', 'goaded', 'protection', 'eldritch_strike', 'no_reactions', 'no_opportunity_attacks', 'magical_ambush', 'heightened_spell', 'hurled', 'entropic_ward', 'instinctive_charm', 'altered_memory', 'commanded_undead', 'hamstring', 'staggered', 'sundered', 'dazed']
+
+/** Nome di una condizione per slug, anche `custom:<nome>`: mai la chiave grezza. */
+export function conditionLabel(slug: string, t: TFunction): string {
+  if (slug.startsWith('custom:')) {
+    const name = slug.slice('custom:'.length)
+    return CATALOG_CUSTOM.includes(name) ? t(`character.target_effect.custom.${name}`, { defaultValue: name }) : name
+  }
+  return t(`character.conditions.${slug}`, { defaultValue: slug })
+}
+
 /**
  * Localise a condition label for display in a pill / list.
  *
@@ -38,9 +51,10 @@ export function formatCondition(
   key: string,
   val: unknown,
   t: TFunction,
+  edition?: string,
 ): string {
   if (key === 'exhaustion' && typeof val === 'number' && val > 0) {
-    return t('character.conditions.exhaustion', { level: val })
+    return t('character.conditions.exhaustion', { level: val, context: edition })
   }
-  return t(`character.conditions.${key}`)
+  return key.startsWith('custom:') ? conditionLabel(key, t) : t(`character.conditions.${key}`)
 }

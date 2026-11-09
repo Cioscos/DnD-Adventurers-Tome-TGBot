@@ -12,12 +12,14 @@ const HINT_KEY = 'dnd-hint-roll-mode'
 export default function RollButton({
   onRoll,
   pending = false,
+  disabled = false,
   ariaLabel,
   className = '',
   children,
 }: {
   onRoll: (mode: RollMode) => void
   pending?: boolean
+  disabled?: boolean
   ariaLabel: string
   className?: string
   children?: React.ReactNode
@@ -51,7 +53,7 @@ export default function RollButton({
         ref={ref}
         type="button"
         {...press}
-        disabled={pending}
+        disabled={pending || disabled}
         aria-busy={pending}
         aria-label={ariaLabel}
         // Pointer/touch handlers do the rolling; a real click only matters for the keyboard (detail 0)

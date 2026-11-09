@@ -46,6 +46,13 @@ const result = (over: Partial<DeathSaveRollResult> = {}): DeathSaveRollResult =>
 })
 
 describe('DeathSaveResultDialog', () => {
+  it('shows what the confirmed options produced (Vendetta Ardente: text of the effect)', () => {
+    const option_result = { keys: ['warlock.searing_vengeance'], extra_rolls: [], extra_total: 0, bonus: 0, multiplier: 1, spent: [],
+      effects: [{ it: '2d8 + Carisma radiosi, Accecate', en: '2d8 + Charisma radiant, Blinded' }] }
+    render(<DeathSaveResultDialog result={result({ option_result })} onClose={() => {}} afterRoll={{ charId: 7 }} />)
+    expect(screen.getByText('2d8 + Carisma radiosi, Accecate', { exact: false })).toBeInTheDocument()
+  })
+
   it('nat20 → gold, pulsing, success verdict, revived message, big die value (D&D 5e revive rule)', () => {
     render(<DeathSaveResultDialog result={result()} onClose={() => {}} />)
     const dialog = screen.getByTestId('result-dialog')
@@ -98,6 +105,14 @@ describe('DeathSaveResultDialog', () => {
     expect(dialog).toHaveAttribute('data-pulse', 'false')
     expect(screen.getByText('character.death_saves.failure')).toBeInTheDocument()
     expect(screen.queryByText('character.death_saves.nat20', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('revived (Searing Vengeance): no die, a success verdict without a roll, and no "revived with 1 HP" line', () => {
+    render(<DeathSaveResultDialog result={result({ outcome: 'revived', die: 0, successes: 0, failures: 0, revived: true, current_hp: 40 })} onClose={() => {}} />)
+    expect(screen.getByTestId('result-dialog')).toHaveAttribute('data-accent', 'emerald')
+    expect(screen.getByText('character.death_saves.revived_no_roll')).toBeInTheDocument()
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
+    expect(screen.queryByText('character.death_saves.revived')).not.toBeInTheDocument()
   })
 
   it('renders the success/failure tally and forwards onClose', async () => {

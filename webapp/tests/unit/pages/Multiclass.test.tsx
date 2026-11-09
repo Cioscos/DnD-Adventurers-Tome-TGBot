@@ -137,7 +137,7 @@ describe('Multiclass page', () => {
     renderWithProviders(<Multiclass />)
     // total level = levelFromXp(900) = 3
     expect(await screen.findByText('3')).toBeInTheDocument()
-    expect(screen.getByText('wizard')).toBeInTheDocument()
+    expect(screen.getByText('dnd.classes.wizard')).toBeInTheDocument()
     expect(screen.getByText('Evocation')).toBeInTheDocument()
     expect(screen.getByText('d6')).toBeInTheDocument()
     // class level badge (read-only) = 2
@@ -153,7 +153,7 @@ describe('Multiclass page', () => {
   it('hides the level-up banner when classes already match the xp level', async () => {
     getChar.mockResolvedValue(char({ classes: [{ ...wizard, level: 3 }] })) // sum 3 == target 3
     renderWithProviders(<Multiclass />)
-    await screen.findByText('wizard')
+    await screen.findByText('dnd.classes.wizard')
     expect(screen.queryByText('levelup-banner')).not.toBeInTheDocument()
   })
 

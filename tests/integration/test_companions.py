@@ -98,6 +98,19 @@ async def test_attack_validation(client, test_session_factory):
     assert (await client.post(url, json={"action_index": 0, "dice": [10], "damage_rolls": [1, 1]})).status_code == 422
 
 
+async def test_wild_shape_attack_refused_while_incapacitated(client, test_session_factory):
+    cid = await _char(test_session_factory)
+    form = await _add(client, cid, kind="wild_shape", is_active=True)
+    familiar = await _add(client, cid)
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"stunned": True}})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/companions/{form['id']}/attack", json={"action_index": 0})
+    assert (r.status_code, r.json()["detail"]) == (409, {"code": "incapacitated"})
+    # Un compagno è un altro combattente: lo stordimento del padrone non lo ferma.
+    r = await client.post(f"/characters/{cid}/companions/{familiar['id']}/attack", json={"action_index": 0})
+    assert r.status_code == 200, r.text
+
+
 async def test_companion_limit_422(client, test_session_factory):
     cid = await _char(test_session_factory)
     for _ in range(30):
@@ -147,3 +160,23 @@ async def test_import_rejects_too_many_companions(client, test_session_factory):
     data = (await client.get(f"/characters/{cid}/export")).json()
     data["companions"] = [{"kind": "mount", "name": "H"}] * 31
     assert (await client.post("/characters/import", json=data)).status_code == 422
+
+
+async def test_companion_damage_can_be_rerolled_with_heroic_inspiration(client, test_session_factory, monkeypatch):
+    cid = await _char(test_session_factory)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.rules_edition, char.heroic_inspiration = "2024", True
+        await s.commit()
+    c = await _add(client, cid)
+    url = f"/characters/{cid}/companions/{c['id']}/attack"
+    r = await client.post(url, json={"action_index": 0, "dice": [12], "damage_rolls": [2]})
+    assert r.status_code == 200, r.text
+    assert r.json()["damage_total"] == 4 and r.json()["reroll_dice"] == [[6, 2]]
+    monkeypatch.setattr("api.routers.spells.random.randint", lambda _a, _b: 6)
+    r = await client.post(f"/characters/{cid}/last-damage/options",
+                          json={"options": ["inspiration:reroll_damage"], "reroll": [0]})
+    assert r.status_code == 200, r.text
+    assert (r.json()["damage_total"], r.json()["damage_rolls"]) == (8, [6])
+    assert r.json()["damage_type"] == "piercing" and r.json()["to_hit_total"] == 16
+    assert not (await client.get(f"/characters/{cid}")).json()["heroic_inspiration"]

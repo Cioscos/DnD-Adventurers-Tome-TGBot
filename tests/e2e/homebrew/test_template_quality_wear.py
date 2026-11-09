@@ -70,7 +70,7 @@ async def test_quality_wear_complete_lifecycle(
     #   distrutta + unequip + notify error.
     patch_random_roll([1, 5])
 
-    r2 = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
+    r2 = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack", json={"confirm_extra_attack": True})
     assert r2.status_code == 200
 
     msgs2 = [n["message"].lower() for n in r2.json().get("homebrew_notifications", [])]
@@ -119,9 +119,9 @@ async def test_quality_wear_x_outcome_destroys_immediately(
     weapon_id = await _install_with_weapon(
         client, char_id, test_session_factory, quality="pessima",
     )
-    # Roll order: to-hit, damage, wear_roll. to-hit=1 (fumble), wear_roll=1 →
+    # Roll order: to-hit, wear_roll (a fumble rolls no damage). to-hit=1 (fumble), wear_roll=1 →
     # pessima col [1,1] = "X" → distrutta + unequip.
-    patch_random_roll([1, 1, 1])
+    patch_random_roll([1, 1])
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
     msgs = [n["message"].lower() for n in r.json().get("homebrew_notifications", [])]
@@ -143,9 +143,9 @@ async def test_quality_wear_s_outcome_is_noop(
     weapon_id = await _install_with_weapon(
         client, char_id, test_session_factory, quality="pessima",
     )
-    # Roll order: to-hit, damage, wear_roll. to-hit=1 (fumble), wear_roll=18 →
+    # Roll order: to-hit, wear_roll (a fumble rolls no damage). to-hit=1 (fumble), wear_roll=18 →
     # pessima col [16,20] = "S" → no-op.
-    patch_random_roll([1, 1, 18])
+    patch_random_roll([1, 18])
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
     # No-op outcome → no homebrew notifications (the field comes back null, not absent).

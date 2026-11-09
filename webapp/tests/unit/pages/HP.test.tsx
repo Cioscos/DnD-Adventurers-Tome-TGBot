@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import HP from '@/pages/HP'
+import { ApiError } from '@/api/client'
 
 // Spies hoisted so the vi.mock factories can close over them.
 const {
   getChar, updateHpSpy, restSpy, reviveSpy, updateDeathSavesSpy,
-  rollDeathSaveSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
+  rollDeathSaveSpy, rollOptionsSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
 } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateHpSpy: vi.fn(),
@@ -15,6 +16,7 @@ const {
   reviveSpy: vi.fn(),
   updateDeathSavesSpy: vi.fn(),
   rollDeathSaveSpy: vi.fn(),
+  rollOptionsSpy: vi.fn(),
   spendHitDiceSpy: vi.fn(),
   undoHpSpy: vi.fn(),
   showUndoToastSpy: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock('@/api/client', () => ({
       revive: reviveSpy,
       updateDeathSaves: updateDeathSavesSpy,
       rollDeathSave: rollDeathSaveSpy,
+      rollOptions: rollOptionsSpy,
       spendHitDice: spendHitDiceSpy,
       undoHp: undoHpSpy,
     },
@@ -51,7 +54,7 @@ vi.mock('react-router-dom', async (orig) => {
 // Identity translator → button labels resolve to their i18n KEY (stable, locale-free).
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { n?: number }) => (o?.n != null ? `${k}:${o.n}` : k), i18n: { language: 'it' } }) }
 })
 
 // framer-motion: strip motion props, keep DOM-valid ones; AnimatePresence is a passthrough.
@@ -70,12 +73,19 @@ vi.mock('framer-motion', async () => {
 })
 
 vi.mock('sonner', () => ({ toast: { warning: toastWarning, error: vi.fn(), success: vi.fn() } }))
-vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {} } }))
+vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {}, light: () => {} } }))
 vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }) }))
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect }) }))
 vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }) }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
 vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: showUndoToastSpy }))
+const { attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({ attackWeaponSpy: vi.fn(), attackUnarmedSpy: vi.fn() }))
+vi.mock('@/hooks/useWeaponAttackFlow', () => ({
+  useWeaponAttackFlow: () => ({
+    attackWeapon: attackWeaponSpy, attackUnarmed: attackUnarmedSpy, attackUnarmedEffect: vi.fn(),
+    isWeaponPending: () => false, isUnarmedPending: false, elements: null,
+  }),
+}))
 
 // Hoisted so the (also hoisted) vi.mock factories below can use it.
 const makePassthrough = vi.hoisted(() => (testid?: string) => async () => {
@@ -108,9 +118,9 @@ vi.mock('@/components/ui/Button', async () => {
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { open: boolean; onConfirm: () => void; confirmLabel: string }) =>
+    default: (p: { open: boolean; body?: unknown; onConfirm: () => void; confirmLabel: string }) =>
       p.open
-        ? React.createElement('div', { 'data-testid': 'confirm-sheet' },
+        ? React.createElement('div', { 'data-testid': 'confirm-sheet' }, p.body as never,
             React.createElement('button', { 'data-testid': 'confirm-ok', onClick: p.onConfirm }, p.confirmLabel))
         : null,
   }
@@ -157,9 +167,10 @@ vi.mock('@/pages/hp/DeathSaves', async () => {
 vi.mock('@/pages/hp/HitDiceModal', async () => {
   const React = await import('react')
   return {
-    default: (p: { classes: { id: number }[]; onSpend: (cid: number, n: number) => void; onConfirmRest: () => void }) =>
+    default: (p: { classes: { id: number }[]; onSpend: (cid: number, n: number) => void; onConfirmRest: () => void; preview?: unknown }) =>
       React.createElement('div', { 'data-testid': 'hit-dice-modal' },
         React.createElement('button', { 'data-testid': 'hd-spend', onClick: () => p.onSpend(p.classes[0].id, 2) }, 'spend'),
+        p.preview,
         React.createElement('button', { 'data-testid': 'hd-rest', onClick: p.onConfirmRest }, 'rest'),
       ),
   }
@@ -195,6 +206,17 @@ const aliveChar = {
   classes: [{ id: 1, class_name: 'fighter', level: 5 }],
   hp_max_homebrew_modifier: 5,
   concentration_save: null,
+}
+
+const landDruid = {
+  ...aliveChar,
+  classes: [{ id: 1, class_name: 'Druido', level: 5 }],
+  active_states: [],
+  abilities: [{ id: 9, feature_key: 'druid.natural_recovery', uses: 1, max_uses: 1 }],
+  spell_slots: [
+    { id: 1, level: 1, total: 4, used: 3, available: 1, is_pact: false },
+    { id: 2, level: 2, total: 3, used: 0, available: 3, is_pact: false },
+  ],
 }
 const dyingChar = { ...aliveChar, current_hit_points: 0, death_saves: { successes: 0, failures: 0, stable: false } }
 const deadChar = { ...aliveChar, is_dead: true, current_hit_points: 0, death_saves: { successes: 0, failures: 3, stable: false } }
@@ -282,6 +304,17 @@ describe('HP page', () => {
     await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'typed'))
   })
 
+  it('the damage toast counts the hit points really lost when the damage was held at 1 HP', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'held', option_result: { keys: ['x'], hp_lost: 43 } })
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.type(screen.getByTestId('hp-value'), '50')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalledTimes(1))
+    expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_damage_undo:43')
+  })
+
   it('does not call updateHp for non-positive / NaN input (guard)', async () => {
     getChar.mockResolvedValue(aliveChar)
     renderWithProviders(<HP />)
@@ -366,12 +399,71 @@ describe('HP page', () => {
     await userEvent.click(await screen.findByTestId('hd-spend'))
     await waitFor(() => expect(spendHitDiceSpy).toHaveBeenCalledWith(7, 1, 2, undefined))
     await userEvent.click(screen.getByTestId('hd-rest'))
-    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
 
     // long rest button → opens ConfirmSheet → confirm
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
     await userEvent.click(await screen.findByTestId('confirm-ok'))
-    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
+  })
+
+  it('offers Natural Recovery in the short rest and sends the chosen slots with it', async () => {
+    getChar.mockResolvedValue(landDruid)
+    restSpy.mockResolvedValue(landDruid)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.short_rest' }))
+    expect(await screen.findByTestId('natural-recovery')).toBeInTheDocument()
+    await userEvent.click(within(screen.getByTestId('nr-plus-1')).getByRole('button'))
+    await userEvent.click(screen.getByTestId('hd-rest'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ natural_recovery: { 1: 1 } })))
+  })
+
+  it('offers the Book of Shadows switch in the long rest and sends reopen_tome', async () => {
+    const tomeLock = { ...aliveChar, rules_edition: '2024', classes: [{ id: 1, class_name: 'warlock', level: 3 }], active_states: [],
+      abilities: [{ id: 5, feature_key: 'warlock.pact_of_the_tome', name: 'Patto del Tomo' }] }
+    getChar.mockResolvedValue(tomeLock)
+    restSpy.mockResolvedValue(tomeLock)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
+    await userEvent.click(within(await screen.findByTestId('tome-reopen')).getByRole('switch'))
+    await userEvent.click(screen.getByTestId('confirm-ok'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ reopen_tome: true })))
+  })
+
+  it('asks if the rest was interrupted and if the character ate, and confirms a too-soon long rest', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    restSpy.mockRejectedValueOnce(new ApiError(409, 'long_rest_too_soon')).mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
+    const switches = await screen.findAllByRole('switch')
+    expect(switches).toHaveLength(2) // interrotto + ha mangiato e bevuto (2014)
+    await userEvent.click(switches[0])
+    await userEvent.click(screen.getByTestId('confirm-ok'))
+    await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ interrupted: true, ate_and_drank: true })))
+    await screen.findByText('character.quick_actions.rest_too_soon_body')
+    await userEvent.click(screen.getByTestId('confirm-ok'))
+    await waitFor(() => expect(restSpy).toHaveBeenLastCalledWith(7, 'long', expect.objectContaining({ confirm_early: true })))
+  })
+
+  it('does not offer the Book of Shadows switch without the pact', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.long_rest' }))
+    await screen.findByTestId('confirm-ok')
+    expect(screen.queryByTestId('tome-reopen')).toBeNull()
+  })
+
+  it('does not offer Natural Recovery to a character without the feature', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.short_rest' }))
+    await screen.findByTestId('hd-rest')
+    expect(screen.queryByTestId('natural-recovery')).toBeNull()
   })
 
   it('when dying shows DeathSaves: roll → rollDeathSave(id, undefined); action → updateDeathSaves(id, action)', async () => {
@@ -384,6 +476,7 @@ describe('HP page', () => {
     await userEvent.click(screen.getByTestId('ds-roll'))
     // reducedMotion=true → no 3D animation → die left undefined (server rolls)
     await waitFor(() => expect(rollDeathSaveSpy).toHaveBeenCalledWith(7, undefined))
+    expect(rollOptionsSpy).toHaveBeenCalledWith(7, { roll: 'death_save' })
 
     await userEvent.click(screen.getByTestId('ds-action'))
     await waitFor(() => expect(updateDeathSavesSpy).toHaveBeenCalledWith(7, 'mark_success'))
@@ -472,5 +565,57 @@ describe('HP page', () => {
       await userEvent.click(screen.getByTestId('hp-tab-heal'))
       expect(screen.getByTestId('hp-mod-state')).toHaveTextContent('null')
     })
+  })
+})
+
+describe('HP page — reactions opened by the damage', () => {
+  const retaliation = { key: 'barbarian.retaliation', label: 'Ritorsione: ti ha colpito?', phase: 'before', slot: 'reaction' }
+  const sword = { id: 31, name: 'Ascia', item_type: 'weapon', is_equipped: true, equipment_slot: 'main_hand' }
+  const withReaction = (over: Record<string, unknown> = {}) => ({ ...aliveChar, items: [sword], ...over })
+
+  it('proposes the reaction after a hit and attacks with the main-hand weapon in one tap', async () => {
+    getChar.mockResolvedValue(withReaction())
+    updateHpSpy.mockResolvedValue(withReaction({ reactions: [retaliation], hp_undo_id: 'op1' }))
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    expect(screen.getByText('character.hp.reaction_title')).toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.hp.reaction_attack'))
+    expect(attackWeaponSpy).toHaveBeenCalledWith(31, 'normal', ['barbarian.retaliation'])
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('without a weapon in hand the reaction is an unarmed strike', async () => {
+    getChar.mockResolvedValue(withReaction({ items: [] }))
+    updateHpSpy.mockResolvedValue(withReaction({ items: [], reactions: [retaliation], hp_undo_id: 'op1' }))
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await userEvent.click(await screen.findByText('character.hp.reaction_attack'))
+    expect(attackUnarmedSpy).toHaveBeenCalledWith('normal', ['barbarian.retaliation'])
+  })
+
+  it('takes the proposal away when the damage is undone', async () => {
+    getChar.mockResolvedValue(withReaction())
+    updateHpSpy.mockResolvedValue(withReaction({ reactions: [retaliation], hp_undo_id: 'op1' }))
+    undoHpSpy.mockResolvedValue(withReaction())
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    expect(await screen.findByText('Ritorsione: ti ha colpito?')).toBeInTheDocument()
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'op1'))
+    await waitFor(() => expect(screen.queryByText('Ritorsione: ti ha colpito?')).toBeNull())
+  })
+
+  it('offers nothing when the damage opens no reaction', async () => {
+    getChar.mockResolvedValue(withReaction())
+    updateHpSpy.mockResolvedValue(withReaction({ reactions: [], hp_undo_id: 'op1' }))
+    renderWithProviders(<HP />)
+    await userEvent.type(await screen.findByTestId('hp-value'), '4')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalled())
+    expect(screen.queryByText('character.hp.reaction_title')).toBeNull()
   })
 })

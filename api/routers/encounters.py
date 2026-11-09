@@ -8,7 +8,6 @@ Spec: docs/superpowers/specs/2026-06-09-combat-tracker-design.md
 from __future__ import annotations
 
 import logging
-import random
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from core.game.item_bonuses import item_bonus_total
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.routers.sessions import _assert_participant, _load_session, _now, _touch
 from api.schemas.encounter import (
@@ -25,6 +24,7 @@ from api.schemas.encounter import (
     CombatantPatchRequest,
     EncounterCreateRequest,
     EncounterLive,
+    InitiativeRollInfo,
     EncounterStartRequest,
     GmConditionApply,
     InitiativeRollRequest,
@@ -34,11 +34,22 @@ from api.schemas.encounter import (
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
+from api.services.effects import apply_heal
+from core.rules.edition import character_edition
+from core.rules.modifiers import Applied, modifiers_for
+from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
-    ExpirySpec, SaveSpec, UndoLog, clear_effects_for, undo_last_advance, upsert_effect,
+    UndoLog, clear_effects_for, undo_last_advance,
 )
-from api.services.effects import apply_conditions
 from api.services.durations import process_edge
+from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
+from api.services.rules_targets import (
+    activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
+    pc_char as _pc_char, set_condition as _set_condition,
+)
+from api.services.rules_turn import reset_turn, set_surprised
+from api.services.thiefs_reflexes import add_second_turns
+from api.services.turn_start import apply_turn_start
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -163,7 +174,9 @@ def _advance_turn(
     for step in range(1, n + 1):
         pos = idx - step if backward else idx + step
         cand = rows[pos % n]
-        if cand.is_dead:
+        round_of_cand = enc.round - 1 if backward and pos < 0 else enc.round + 1 if not backward and pos >= n else enc.round
+        # Il secondo turno dei Riflessi da Furfante esiste solo nel primo round
+        if cand.is_dead or (cand.extra_turn_of is not None and round_of_cand > 1):
             continue
         if backward and pos < 0:
             if enc.round <= 1:
@@ -254,7 +267,8 @@ async def create_encounter(
     session_id: int,
     body: EncounterCreateRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -276,7 +290,7 @@ async def create_encounter(
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     await _notify_encounter_opened(session, user_id, db)
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post(
@@ -288,7 +302,8 @@ async def add_combatants(
     session_id: int,
     body: CombatantAddRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -319,7 +334,7 @@ async def add_combatants(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post(
@@ -331,7 +346,8 @@ async def roll_initiative(
     combatant_id: int,
     body: InitiativeRollRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -350,19 +366,41 @@ async def roll_initiative(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Initiative already rolled",
         )
-    die = resolve_body(body).kept
-    comb.initiative_die = die
-    comb.initiative = die + comb.initiative_mod
+    char = await _pc_for_initiative(db, comb)
+    if char is None and body.options:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": body.options[0]})
+    if body.options and comb.owner_user_id != user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not your combatant")
+    applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    _surprise_disadvantage(comb, char, applied)
+    opts = AppliedOptions() if char is None else use_options(db, char, "initiative", body, ability="dexterity")
+    merge_options(applied, opts)
+    if char is not None and opts.self_heal:  # Metabolismo Prodigioso, come nel tiro fuori incontro
+        await apply_heal(db, char, opts.self_heal)
+    outcome = resolve_body(body, applied)
+    option_rolls, option_total = ([], 0) if char is None else roll_option_dice(char, opts)
+    comb.initiative_die = outcome.kept
+    comb.initiative = outcome.kept + comb.initiative_mod + applied.flat + opts.bonus + option_total
+    if char is not None and comb.owner_user_id == user_id:  # il GM che tira per un PG non ha i suoi privilegi
+        remember_roll(char, "initiative", opts, {
+            "die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode,
+            "bonus": comb.initiative - outcome.kept - option_total, "total": comb.initiative, "notes": applied.notes,
+            "auto_fail": False, "description": "initiative",
+        }, ability="dexterity", combatant_id=comb.id)
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=is_gm)
+    live = await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
+    live.initiative_roll = InitiativeRollInfo(mode_applied=outcome.mode, notes=applied.notes,
+                                              option_result=option_result(opts, option_rolls, option_total))
+    return live
 
 
 @router.post("/{session_id}/encounter/sync-pcs", response_model=EncounterLive)
 async def sync_pcs(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -379,7 +417,7 @@ async def sync_pcs(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post("/{session_id}/encounter/start", response_model=EncounterLive)
@@ -387,7 +425,8 @@ async def start_encounter(
     session_id: int,
     body: EncounterStartRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -405,8 +444,10 @@ async def start_encounter(
             detail={"code": "missing_initiative", "names": [c.name for c in missing]},
         )
     for c in missing:
-        c.initiative_die = random.randint(1, 20)
-        c.initiative = c.initiative_die + c.initiative_mod
+        applied = await _pc_initiative_modifiers(db, c)
+        c.initiative_die = resolve_body(None, applied).kept
+        c.initiative = c.initiative_die + c.initiative_mod + applied.flat
+    await add_second_turns(db, enc, lang, _now())
     ordered = sorted(
         enc.combatants, key=lambda c: (-(c.initiative or 0), -c.initiative_mod, c.id),
     )
@@ -419,14 +460,22 @@ async def start_encounter(
     enc.active_combatant_id = first.id if first else None
     db.add(_system_feed_message(session, "⚔️ Combattimento iniziato"))
     _touch(session)
+    for c in enc.combatants:  # badge e stato del PG partono allineati, qualunque cosa sia successo in preparazione
+        await _sync_surprise(db, c)
+    if first is not None and first.kind == "pc" and first.character_id:
+        first_char = await db.get(Character, first.character_id)
+        if first_char is not None:
+            reset_turn(first_char)  # il primo turno non passa da process_edge
+            await apply_turn_start(db, first_char)
+
     await db.flush()
     if first is not None:
         await _notify_turn(enc, first)
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 async def _turn_endpoint(
-    session_id: int, user_id: int, db: AsyncSession, *, backward: bool
+    session_id: int, user_id: int, db: AsyncSession, lang: str, *, backward: bool
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -472,25 +521,27 @@ async def _turn_endpoint(
         await _notify_saves(db, undo.created_saves)
     if moved is not None:
         await _notify_turn(enc, moved)
-    return await build_encounter_block(db, enc, viewer_is_gm=is_gm)
+    return await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
 
 
 @router.post("/{session_id}/encounter/next-turn", response_model=EncounterLive)
 async def next_turn(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    return await _turn_endpoint(session_id, user_id, db, backward=False)
+    return await _turn_endpoint(session_id, user_id, db, lang, backward=False)
 
 
 @router.post("/{session_id}/encounter/prev-turn", response_model=EncounterLive)
 async def prev_turn(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    return await _turn_endpoint(session_id, user_id, db, backward=True)
+    return await _turn_endpoint(session_id, user_id, db, lang, backward=True)
 
 
 @router.patch(
@@ -502,7 +553,8 @@ async def patch_combatant(
     combatant_id: int,
     body: CombatantPatchRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -512,6 +564,7 @@ async def patch_combatant(
     comb = next((c for c in enc.combatants if c.id == combatant_id), None)
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+    comb = _primary_row(enc, comb)
 
     if body.conditions is not None and comb.kind == "pc":
         raise HTTPException(
@@ -535,6 +588,8 @@ async def patch_combatant(
     if body.initiative is not None:
         comb.initiative = body.initiative
         comb.initiative_die = None       # valore manuale: nessuna faccia da mostrare
+        for extra in [c for c in enc.combatants if comb.character_id and c.extra_turn_of == comb.character_id]:
+            extra.initiative = body.initiative - 10  # il secondo turno segue il PG
     if body.ac is not None:
         comb.ac = body.ac
     if body.max_hp is not None:
@@ -553,16 +608,26 @@ async def patch_combatant(
         await clear_effects_for(db, ("combatant", comb.id), switched_off)
     if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
         comb.is_dead = body.is_dead
+    if body.surprised is not None:
+        comb.surprised = body.surprised
+        await _sync_surprise(db, comb)
 
     _touch(session)
     await db.flush()
 
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 # ---------------------------------------------------------------------------
 # GM conditions (spec §3): PC -> sheet via apply_conditions, monster -> Combatant
 # ---------------------------------------------------------------------------
+
+def _primary_row(enc: Encounter, comb: Combatant) -> Combatant:
+    """Il secondo turno dei Riflessi da Furfante è una riga di comodo: i comandi del GM valgono per la riga del PG."""
+    if comb.extra_turn_of is None:
+        return comb
+    return next((c for c in enc.combatants if c.character_id == comb.extra_turn_of), comb)
+
 
 async def _gm_combatant(
     session_id: int, combatant_id: int, user_id: int, db: AsyncSession,
@@ -575,24 +640,47 @@ async def _gm_combatant(
     comb = next((c for c in enc.combatants if c.id == combatant_id), None)
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
-    return session, enc, comb
+    return session, enc, _primary_row(enc, comb)
 
 
-async def _pc_char(db: AsyncSession, comb: Combatant) -> Character:
-    char = await db.get(Character, comb.character_id) if comb.character_id else None
-    if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
-    return char
+async def _pc_for_initiative(db: AsyncSession, comb: Combatant) -> Character | None:
+    """Il PG del combattente; un mostro non ha edizione né scheda (D7)."""
+    if comb.character_id is None:
+        return None
+    return (await db.execute(
+        select(Character).options(selectinload(Character.classes), selectinload(Character.items),
+                                  selectinload(Character.abilities), selectinload(Character.spell_slots))
+        .where(Character.id == comb.character_id)
+    )).scalar_one_or_none()
 
 
-async def _set_condition(db: AsyncSession, comb: Combatant, slug: str, value) -> None:
-    """Write one slug on the target's map; a falsy value drops the slug's effect."""
-    if comb.kind == "pc":
-        await apply_conditions(db, await _pc_char(db, comb), {slug: value})
+async def _sync_surprise(db: AsyncSession, comb: Combatant, released: bool = False) -> None:
+    """2014: il PG sorpreso non agisce, non si muove e non reagisce finché il suo primo turno non finisce, anche se
+    prima agiscono altri. Il flag del turno del PG segue quello del combattente (o cade, se ``released``)."""
+    if comb.kind != "pc" or comb.character_id is None:
         return
-    comb.conditions = {**(comb.conditions or {}), slug: value}
-    if not value:
-        await clear_effects_for(db, ("combatant", comb.id), [slug])
+    char = await db.get(Character, comb.character_id)
+    if char is None:
+        return
+    if released or not comb.surprised:
+        set_surprised(char, False)
+    elif character_edition(char) == "2014":
+        set_surprised(char)
+
+
+def _surprise_disadvantage(comb: Combatant, char: Character | None, applied: Applied) -> None:
+    """2024: chi è colto di sorpresa tira l'iniziativa con svantaggio. Il 2014 salta il turno (process_edge); i mostri
+    non hanno edizione e li decide il GM (D7)."""
+    if comb.surprised and char is not None and character_edition(char) == "2024":
+        applied.disadvantage = True
+        applied.notes.append("condition:surprised")
+
+
+async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
+    char = await _pc_for_initiative(db, comb)
+    applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    _surprise_disadvantage(comb, char, applied)
+    return applied
 
 
 async def _notify_gm_condition(
@@ -619,46 +707,18 @@ async def gm_apply_condition(
     combatant_id: int,
     body: GmConditionApply,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
-    if body.value is not None:
-        await _set_condition(db, comb, body.slug, body.value)
-    else:
-        src = None
-        if body.source_combatant_id is not None:
-            src = next((c for c in enc.combatants if c.id == body.source_combatant_id), None)
-            if src is None:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                    detail="source_combatant_id not in this encounter")
-        src_char = await _pc_char(db, src) if src is not None and src.kind == "pc" else None
-        spell_id = None
-        if body.ends_with_concentration:
-            if src_char is None or src_char.concentrating_spell_id is None:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                    detail={"code": "source_not_concentrating"})
-            spell_id = src_char.concentrating_spell_id
-        owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
-        if not (owner.conditions or {}).get(body.slug):  # keep custom:* payloads on re-apply
-            await _set_condition(db, comb, body.slug, True)
-        target = ("character", comb.character_id) if comb.kind == "pc" else ("combatant", comb.id)
-        await upsert_effect(
-            db, target, body.slug,
-            expiry=ExpirySpec(**body.expiry.model_dump()) if body.expiry else None,
-            save=SaveSpec(**body.save.model_dump()) if body.save else None,
-            source_combatant_id=src.id if src else None,
-            source_character_id=src_char.id if src_char else None,
-            source_spell_id=spell_id,
-            ends_with_concentration=body.ends_with_concentration,
-            applied_by_gm=True, encounter=enc,
-        )
+    await apply_condition_to_combatant(db, enc, comb, body)
     _touch(session)
     await db.flush()
     await _notify_gm_condition(
         session_id, user_id, comb, db,
         f"🌀 Il GM ha applicato {condition_label(body.slug)} a {comb.name}",
     )
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.delete(
@@ -670,7 +730,8 @@ async def gm_remove_condition(
     combatant_id: int,
     slug: str,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
     owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
@@ -683,7 +744,7 @@ async def gm_remove_condition(
             session_id, user_id, comb, db,
             f"🌀 Il GM ha rimosso {condition_label(slug)} da {comb.name}",
         )
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post(
@@ -695,7 +756,8 @@ async def gm_resolve_monster_save(
     save_id: int,
     body: PendingSaveResolve,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -713,13 +775,17 @@ async def gm_resolve_monster_save(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Save already resolved")
     ps.status = "passed" if body.passed else "failed"
     ps.resolved_at = _now()
-    if body.passed:
-        eff = await db.get(ConditionEffect, ps.effect_id)
-        if eff is not None:
-            await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
+    eff = await db.get(ConditionEffect, ps.effect_id)
+    if eff is not None and eff.pending:  # effetto di un privilegio: il TS decide se la condizione esiste
+        if body.passed:
+            await drop_pending_effect(db, eff)
+        else:
+            await activate_pending_effect(db, eff)
+    elif body.passed and eff is not None:
+        await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 def _move_pointer_off(enc: Encounter, combatants: list[Combatant], removed_id: int) -> None:
@@ -745,7 +811,8 @@ async def delete_combatant(
     session_id: int,
     combatant_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -759,11 +826,17 @@ async def delete_combatant(
         _move_pointer_off(enc, list(enc.combatants), comb.id)
     # SQLite FK cascade is not guaranteed: drop the monster's effects explicitly
     await clear_effects_for(db, ("combatant", comb.id), (comb.conditions or {}).keys())
+    await _sync_surprise(db, comb, released=True)
+    if comb.character_id is not None:  # il secondo turno dei Riflessi da Furfante non ha senso senza chi lo fa
+        for extra in [c for c in enc.combatants if c.extra_turn_of == comb.character_id]:
+            if enc.active_combatant_id == extra.id:
+                _move_pointer_off(enc, list(enc.combatants), extra.id)
+            await db.delete(extra)
     await db.delete(comb)
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post("/{session_id}/encounter/reorder", response_model=EncounterLive)
@@ -771,7 +844,8 @@ async def reorder_combatants(
     session_id: int,
     body: ReorderRequest,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -792,14 +866,15 @@ async def reorder_combatants(
         c.sort_order = position[c.id]
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
 
 @router.post("/{session_id}/encounter/end", response_model=EncounterLive)
 async def end_encounter(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
@@ -808,7 +883,12 @@ async def end_encounter(
     enc = await _require_open_encounter(session_id, db)
     enc.status = "ended"
     enc.ended_at = _now()
+    for c in enc.combatants:  # la sorpresa è del combattimento: finito quello, non resta sulla scheda
+        if c.surprised:
+            c.surprised = False
+        await _sync_surprise(db, c, released=True)
+    await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)

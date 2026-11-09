@@ -1,0 +1,1227 @@
+[
+ {
+  "key": "2024_actor",
+  "name": {
+   "it": "Attore",
+   "en": "Actor"
+  },
+  "summary": {
+   "it": "Vantaggio nel fingerti un'altra persona; imiti voci e suoni.",
+   "en": "Advantage when posing as someone else; you can mimic voices and sounds."
+  },
+  "category": "general",
+  "abilities": [
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "charisma"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_athlete",
+  "name": {
+   "it": "Atletico",
+   "en": "Athlete"
+  },
+  "summary": {
+   "it": "Scalata pari alla Velocità; ti rialzi e salti con poco movimento.",
+   "en": "Climb speed equals your speed; standing up and jumping cost little movement."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength",
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_charger",
+  "name": {
+   "it": "Assalitore",
+   "en": "Charger"
+  },
+  "summary": {
+   "it": "Scatto più veloce; dopo 10 piedi in linea retta +1d8 al danno oppure spingi il bersaglio.",
+   "en": "Faster Dash; after moving 10 feet straight, +1d8 damage or push the target."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength",
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_chef",
+  "name": {
+   "it": "Cuoco",
+   "en": "Chef"
+  },
+  "summary": {
+   "it": "Competenza con gli utensili da cuoco; pasti che curano di più e dolcetti che danno PF temporanei.",
+   "en": "Cook's utensils proficiency; meals that heal more and treats granting temporary HP."
+  },
+  "category": "general",
+  "abilities": [
+   "constitution",
+   "wisdom"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_crossbow_expert",
+  "name": {
+   "it": "Esperto di balestre",
+   "en": "Crossbow Expert"
+  },
+  "summary": {
+   "it": "Ignori Ricarica, tiri senza svantaggio da vicino e attacchi extra con balestra leggera.",
+   "en": "Ignore Loading, no disadvantage up close, and a bonus attack with a light crossbow."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_crusher",
+  "name": {
+   "it": "Frantumatore",
+   "en": "Crusher"
+  },
+  "summary": {
+   "it": "Con danni contundenti sposti il bersaglio; i critici danno vantaggio agli alleati.",
+   "en": "With bludgeoning damage you shift the target; crits grant advantage against it."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "constitution"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_defensive_duelist",
+  "name": {
+   "it": "Duellante difensivo",
+   "en": "Defensive Duelist"
+  },
+  "summary": {
+   "it": "Reazione: con arma Accurata aggiungi la competenza alla CA contro un attacco in mischia.",
+   "en": "Reaction: with a Finesse weapon add proficiency to AC against a melee attack."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_dual_wielder",
+  "name": {
+   "it": "Combattente con due armi",
+   "en": "Dual Wielder"
+  },
+  "summary": {
+   "it": "Attacco extra con due armi da mischia diverse; estrai e riponi due armi insieme.",
+   "en": "Bonus attack with two different melee weapons; draw or stow two weapons at once."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength",
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_durable",
+  "name": {
+   "it": "Durevole",
+   "en": "Durable"
+  },
+  "summary": {
+   "it": "Vantaggio ai TS contro la morte; azione Bonus per spendere un Dado Vita e curarti.",
+   "en": "Advantage on death saves; Bonus Action to spend a Hit Die and heal."
+  },
+  "category": "general",
+  "abilities": [
+   "constitution"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_elemental_adept",
+  "name": {
+   "it": "Adepto elementale",
+   "en": "Elemental Adept"
+  },
+  "summary": {
+   "it": "Un tipo di energia: i tuoi incantesimi ignorano la resistenza e i 1 valgono 2. Ripetibile.",
+   "en": "One energy type: your spells ignore resistance and 1s count as 2. Repeatable."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": true
+ },
+ {
+  "key": "2024_fey_touched",
+  "name": {
+   "it": "Toccato dalle fate",
+   "en": "Fey-Touched"
+  },
+  "summary": {
+   "it": "Passo velato e un incantesimo di 1º di Divinazione o Ammaliamento, sempre preparati.",
+   "en": "Misty Step and one 1st-level Divination or Enchantment spell, always prepared."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_grappler",
+  "name": {
+   "it": "Lottatore",
+   "en": "Grappler"
+  },
+  "summary": {
+   "it": "Colpisci e afferri insieme; vantaggio contro chi afferri; muovi i lottati a velocità piena.",
+   "en": "Hit and grapple together; advantage against grappled foes; move them at full speed."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength",
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_great_weapon_master",
+  "name": {
+   "it": "Maestro di armi pesanti",
+   "en": "Great Weapon Master"
+  },
+  "summary": {
+   "it": "Danni extra pari alla competenza con armi Pesanti; attacco Bonus dopo critico o abbattimento.",
+   "en": "Extra damage equal to proficiency with Heavy weapons; bonus attack after a crit or kill."
+  },
+  "category": "general",
+  "abilities": [
+   "strength"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_heavily_armored",
+  "name": {
+   "it": "Armatura pesante",
+   "en": "Heavily Armored"
+  },
+  "summary": {
+   "it": "Addestramento con armature pesanti. Richiede addestramento con armature medie.",
+   "en": "Heavy armor training. Requires medium armor training."
+  },
+  "category": "general",
+  "abilities": [
+   "constitution",
+   "strength"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_heavy_armor_master",
+  "name": {
+   "it": "Maestro di armature pesanti",
+   "en": "Heavy Armor Master"
+  },
+  "summary": {
+   "it": "Con armatura pesante i danni fisici sono ridotti della competenza. Richiede armature pesanti.",
+   "en": "In heavy armor, physical damage is reduced by proficiency. Requires heavy armor training."
+  },
+  "category": "general",
+  "abilities": [
+   "constitution",
+   "strength"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_inspiring_leader",
+  "name": {
+   "it": "Capo ispiratore",
+   "en": "Inspiring Leader"
+  },
+  "summary": {
+   "it": "Dopo un riposo dai PF temporanei a sei alleati.",
+   "en": "After a rest, grant temporary HP to up to six allies."
+  },
+  "category": "general",
+  "abilities": [
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "wisdom",
+    "charisma"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_keen_mind",
+  "name": {
+   "it": "Mente acuta",
+   "en": "Keen Mind"
+  },
+  "summary": {
+   "it": "Competenza o Maestria in una abilità di conoscenza.",
+   "en": "Proficiency or Expertise in a knowledge skill."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "intelligence"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_lightly_armored",
+  "name": {
+   "it": "Armatura leggera",
+   "en": "Lightly Armored"
+  },
+  "summary": {
+   "it": "Addestramento con armature leggere e scudi.",
+   "en": "Light armor and shield training."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_mage_slayer",
+  "name": {
+   "it": "Ammazzamaghi",
+   "en": "Mage Slayer"
+  },
+  "summary": {
+   "it": "Svantaggio alla concentrazione di chi colpisci; vantaggio ai TS contro incantesimi vicini.",
+   "en": "Targets you damage have disadvantage on concentration; advantage on saves against nearby spells."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_martial_weapon_training",
+  "name": {
+   "it": "Addestramento con armi marziali",
+   "en": "Martial Weapon Training"
+  },
+  "summary": {
+   "it": "Competenza con le armi da guerra.",
+   "en": "Proficiency with martial weapons."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_medium_armor_master",
+  "name": {
+   "it": "Maestro di armature medie",
+   "en": "Medium Armor Master"
+  },
+  "summary": {
+   "it": "Con armatura media sommi 3 alla CA con Destrezza 16+. Richiede armature medie.",
+   "en": "In medium armor add 3 to AC with Dexterity 16+. Requires medium armor training."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_moderately_armored",
+  "name": {
+   "it": "Armatura media",
+   "en": "Moderately Armored"
+  },
+  "summary": {
+   "it": "Addestramento con armature medie. Richiede addestramento con armature leggere.",
+   "en": "Medium armor training. Requires light armor training."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_mounted_combatant",
+  "name": {
+   "it": "Combattente in sella",
+   "en": "Mounted Combatant"
+  },
+  "summary": {
+   "it": "In sella hai vantaggio contro creature più piccole e proteggi la cavalcatura.",
+   "en": "While mounted you have advantage against smaller creatures and shield your mount."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "wisdom"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_observant",
+  "name": {
+   "it": "Osservatore",
+   "en": "Observant"
+  },
+  "summary": {
+   "it": "Competenza o Maestria in Intuizione, Indagare o Percezione.",
+   "en": "Proficiency or Expertise in Insight, Investigation or Perception."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "intelligence",
+    "wisdom"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_piercer",
+  "name": {
+   "it": "Perforatore",
+   "en": "Piercer"
+  },
+  "summary": {
+   "it": "Una volta per turno ritiri un dado di danno perforante; i critici aggiungono un dado.",
+   "en": "Once per turn reroll a piercing damage die; crits add an extra die."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_poisoner",
+  "name": {
+   "it": "Avvelenatore",
+   "en": "Poisoner"
+  },
+  "summary": {
+   "it": "I danni da veleno ignorano la resistenza; prepari veleni potenti.",
+   "en": "Your poison damage ignores resistance; you can brew potent poisons."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity",
+   "intelligence"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_polearm_master",
+  "name": {
+   "it": "Maestro di armi inastate",
+   "en": "Polearm Master"
+  },
+  "summary": {
+   "it": "Attacco Bonus con l'altra estremità; attacco di opportunità quando un nemico entra in portata.",
+   "en": "Bonus attack with the butt end; opportunity attack when a foe enters your reach."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity",
+   "strength"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength",
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_resilient",
+  "name": {
+   "it": "Resiliente",
+   "en": "Resilient"
+  },
+  "summary": {
+   "it": "+1 a una caratteristica in cui non hai competenza nei TS, e ottieni quella competenza.",
+   "en": "+1 to an ability you lack save proficiency in, and gain that proficiency."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_ritual_caster",
+  "name": {
+   "it": "Incantatore rituale",
+   "en": "Ritual Caster"
+  },
+  "summary": {
+   "it": "Conosci incantesimi rituali di 1º livello e puoi lanciarli come rituali.",
+   "en": "Know 1st-level ritual spells and cast them as rituals."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "intelligence",
+    "wisdom",
+    "charisma"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_sentinel",
+  "name": {
+   "it": "Sentinella",
+   "en": "Sentinel"
+  },
+  "summary": {
+   "it": "Blocchi i nemici che colpisci; attacco di opportunità anche contro chi si disimpegna.",
+   "en": "Stop enemies you hit; opportunity attacks even against Disengage."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength",
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_shadow_touched",
+  "name": {
+   "it": "Toccato dall'ombra",
+   "en": "Shadow-Touched"
+  },
+  "summary": {
+   "it": "Invisibilità e un incantesimo di 1º di Illusione o Necromanzia, sempre preparati.",
+   "en": "Invisibility and one 1st-level Illusion or Necromancy spell, always prepared."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_sharpshooter",
+  "name": {
+   "it": "Tiratore scelto",
+   "en": "Sharpshooter"
+  },
+  "summary": {
+   "it": "Le armi a distanza ignorano la copertura parziale e non soffrono la gittata lunga.",
+   "en": "Ranged weapons ignore partial cover and suffer no long-range penalty."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_shield_master",
+  "name": {
+   "it": "Maestro di scudi",
+   "en": "Shield Master"
+  },
+  "summary": {
+   "it": "Spingi con lo scudo e riduci i danni dei TS. Richiede addestramento con gli scudi.",
+   "en": "Shove with your shield and cut save damage. Requires shield training."
+  },
+  "category": "general",
+  "abilities": [
+   "strength"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_skill_expert",
+  "name": {
+   "it": "Esperto di abilità",
+   "en": "Skill Expert"
+  },
+  "summary": {
+   "it": "Una competenza in abilità in più e Maestria in una abilità in cui sei competente.",
+   "en": "One extra skill proficiency and Expertise in a skill you know."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_skulker",
+  "name": {
+   "it": "Furtivo",
+   "en": "Skulker"
+  },
+  "summary": {
+   "it": "Vista cieca 10 piedi; ti nascondi in luce fioca e non ti riveli mancando.",
+   "en": "Blindsight 10 ft; hide in dim light and stay hidden when you miss."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_slasher",
+  "name": {
+   "it": "Tagliente",
+   "en": "Slasher"
+  },
+  "summary": {
+   "it": "Una volta per turno riduci la Velocità del bersaglio; i critici lo rendono svantaggiato.",
+   "en": "Once per turn reduce the target's speed; crits impose disadvantage."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_speedy",
+  "name": {
+   "it": "Veloce",
+   "en": "Speedy"
+  },
+  "summary": {
+   "it": "Velocità +10 piedi e scatto su terreno difficile senza costo extra.",
+   "en": "Speed +10 ft and Dash across difficult terrain at no extra cost."
+  },
+  "category": "general",
+  "abilities": [
+   "dexterity",
+   "constitution"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity",
+    "constitution"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_spell_sniper",
+  "name": {
+   "it": "Cecchino magico",
+   "en": "Spell Sniper"
+  },
+  "summary": {
+   "it": "Gli incantesimi con tiro per colpire ignorano la copertura e hanno gittata maggiore.",
+   "en": "Attack-roll spells ignore partial cover and have longer range."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": true
+ },
+ {
+  "key": "2024_telekinetic",
+  "name": {
+   "it": "Telecinetico",
+   "en": "Telekinetic"
+  },
+  "summary": {
+   "it": "Conosci Mano magica invisibile e spingi una creatura con azione Bonus.",
+   "en": "Know an invisible Mage Hand and shove a creature as a Bonus Action."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_telepathic",
+  "name": {
+   "it": "Telepatico",
+   "en": "Telepathic"
+  },
+  "summary": {
+   "it": "Parli a distanza con chi vedi; Individuazione dei pensieri sempre preparato.",
+   "en": "Speak to creatures you see; Detect Thoughts always prepared."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_war_caster",
+  "name": {
+   "it": "Incantatore da guerra",
+   "en": "War Caster"
+  },
+  "summary": {
+   "it": "Vantaggio alla concentrazione; lanci un incantesimo come attacco di opportunità.",
+   "en": "Advantage on concentration; cast a spell as an opportunity attack."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": true
+ },
+ {
+  "key": "2024_weapon_master",
+  "name": {
+   "it": "Maestro d'armi",
+   "en": "Weapon Master"
+  },
+  "summary": {
+   "it": "Usi la proprietà di padronanza di un'arma in più, cambiabile dopo un riposo lungo.",
+   "en": "Use the mastery property of one more weapon, changeable after a long rest."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 4,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_combat_prowess",
+  "name": {
+   "it": "Dono del Prodigio in combattimento",
+   "en": "Boon of Combat Prowess"
+  },
+  "summary": {
+   "it": "Quando manchi un attacco puoi trasformarlo in colpo a segno, a turni alterni.",
+   "en": "When you miss an attack you can turn it into a hit, every other turn."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_dimensional_travel",
+  "name": {
+   "it": "Dono del Viaggio dimensionale",
+   "en": "Boon of Dimensional Travel"
+  },
+  "summary": {
+   "it": "Dopo Attacco o Magia ti teletrasporti fino a 30 piedi.",
+   "en": "After the Attack or Magic action you teleport up to 30 feet."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_energy_resistance",
+  "name": {
+   "it": "Dono della Resistenza all'energia",
+   "en": "Boon of Energy Resistance"
+  },
+  "summary": {
+   "it": "Resistenza a due tipi di energia a scelta; puoi rimandare il danno a un'altra creatura.",
+   "en": "Resistance to two chosen energy types; you can redirect that damage to another creature."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_fate",
+  "name": {
+   "it": "Dono del Fato",
+   "en": "Boon of Fate"
+  },
+  "summary": {
+   "it": "Aggiungi o togli 2d4 a un Test d20 tuo o di una creatura vicina.",
+   "en": "Add or subtract 2d4 on a d20 Test of yours or a nearby creature."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_fortitude",
+  "name": {
+   "it": "Dono della Forza d'animo",
+   "en": "Boon of Fortitude"
+  },
+  "summary": {
+   "it": "PF massimi +40 e cure potenziate dal modificatore di Costituzione.",
+   "en": "Maximum HP +40 and healing boosted by your Constitution modifier."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_irresistible_offense",
+  "name": {
+   "it": "Dono dell'Offensiva irresistibile",
+   "en": "Boon of Irresistible Offense"
+  },
+  "summary": {
+   "it": "I danni fisici ignorano la resistenza; il 20 naturale aggiunge danni extra.",
+   "en": "Physical damage ignores resistance; a natural 20 adds bonus damage."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_recovery",
+  "name": {
+   "it": "Dono del Recupero",
+   "en": "Boon of Recovery"
+  },
+  "summary": {
+   "it": "Una volta per riposo lungo resti a 1 PF invece di 0 e curi metà del massimo; riserva di dieci d10.",
+   "en": "Once per long rest drop to 1 HP instead of 0 and heal half your maximum; a pool of ten d10."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_skill",
+  "name": {
+   "it": "Dono dell'Abilità",
+   "en": "Boon of Skill"
+  },
+  "summary": {
+   "it": "Competenza in tutte le abilità e Maestria in una a scelta.",
+   "en": "Proficiency in every skill and Expertise in one of your choice."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_speed",
+  "name": {
+   "it": "Dono della Velocità",
+   "en": "Boon of Speed"
+  },
+  "summary": {
+   "it": "Velocità +30 piedi; Disimpegno come azione Bonus che ti libera dalla presa.",
+   "en": "Speed +30 ft; Disengage as a Bonus Action that also frees you from grapples."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_spell_recall",
+  "name": {
+   "it": "Dono del Richiamo degli incantesimi",
+   "en": "Boon of Spell Recall"
+  },
+  "summary": {
+   "it": "Lanciando slot di 1-4 livello tira 1d4: se uguale al livello, lo slot non si consuma.",
+   "en": "Casting with a 1st-4th level slot, roll 1d4: if it equals the slot level, it isn't spent."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": true
+ },
+ {
+  "key": "2024_boon_night_spirit",
+  "name": {
+   "it": "Dono dello Spirito della notte",
+   "en": "Boon of the Night Spirit"
+  },
+  "summary": {
+   "it": "Al buio diventi invisibile e resisti a quasi tutti i danni.",
+   "en": "In dim light or darkness you turn invisible and resist most damage."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ },
+ {
+  "key": "2024_boon_truesight",
+  "name": {
+   "it": "Dono della Vista veritiera",
+   "en": "Boon of Truesight"
+  },
+  "summary": {
+   "it": "Vista veritiera fino a 60 piedi.",
+   "en": "Truesight out to 60 feet."
+  },
+  "category": "epic_boon",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 19,
+  "max_score": 30,
+  "prereq_abilities": null,
+  "needs_spellcasting": false
+ }
+]

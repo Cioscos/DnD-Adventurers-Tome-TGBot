@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import { m } from 'framer-motion'
 import { X, Edit3, Plus } from 'lucide-react'
 import { GiCrossedSwords as Swords } from 'react-icons/gi'
@@ -17,6 +18,7 @@ import { levelFromXp } from '@/lib/xpThresholds'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
+import ClassOptionGroups from '@/pages/multiclass/ClassOptionGroups'
 import type { CharacterClass } from '@/types'
 import MulticlassSkeleton from '@/components/skeletons/MulticlassSkeleton'
 
@@ -112,7 +114,7 @@ export default function Multiclass() {
             >
               <div className="min-w-0 flex-1">
                 <p className="font-display text-lg font-bold leading-tight text-dnd-text">
-                  {cls.class_name}
+                  {classLabel(t, cls.class_name)}
                   {cls.subclass && (
                     <span className="ml-2 text-sm font-normal italic font-body text-dnd-text-muted">{cls.subclass}</span>
                   )}
@@ -136,7 +138,7 @@ export default function Multiclass() {
                 onClick={() => setRemoveTarget(cls)}
                 className="w-11 h-11 text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10 shrink-0"
                 whileTap={{ scale: 0.9 }}
-                aria-label={`${t('common.remove')} ${cls.class_name}`}
+                aria-label={`${t('common.remove')} ${classLabel(t, cls.class_name)}`}
               >
                 <X size={16} />
               </Pressable>
@@ -144,6 +146,8 @@ export default function Multiclass() {
           ))}
         </div>
       )}
+
+      {classes.map((cls) => <ClassOptionGroups key={cls.id} char={char} cls={cls} />)}
 
       {classes.length > 0 && (
         <Button
@@ -184,7 +188,7 @@ export default function Multiclass() {
         title={t('character.multiclass.remove_class_title')}
         body={
           removeTarget
-            ? t('character.multiclass.remove_class_body', { name: removeTarget.class_name })
+            ? t('character.multiclass.remove_class_body', { name: classLabel(t, removeTarget.class_name) })
             : ''
         }
         confirmLabel={t('common.delete')}

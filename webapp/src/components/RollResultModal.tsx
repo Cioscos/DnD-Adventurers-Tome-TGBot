@@ -1,3 +1,7 @@
+import { useRetouched } from '@/hooks/useRetouched'
+import type { OptionResult, RollOptionsQuery } from '@/api/client'
+import AfterRollOptions from '@/components/rules/AfterRollOptions'
+import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { GiPolarStar as Star, GiSkullCrossedBones as Skull } from 'react-icons/gi'
@@ -10,6 +14,9 @@ export type RollResult = {
   die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
+  auto_fail?: boolean
+  option_result?: OptionResult
   bonus: number
   total: number
   is_critical: boolean
@@ -27,10 +34,12 @@ type Props = {
   isRerolling?: boolean
   wasRerolled?: boolean
   onInspirationReroll?: () => void | Promise<void>
+  /** Il tiro è ritoccabile con i privilegi usati dopo averlo visto. */
+  afterRoll?: { charId: number; query: RollOptionsQuery }
 }
 
 export default function RollResultModal({
-  result,
+  result: rolled,
   title,
   note,
   onClose,
@@ -38,8 +47,10 @@ export default function RollResultModal({
   isRerolling = false,
   wasRerolled = false,
   onInspirationReroll,
+  afterRoll,
 }: Props) {
   const { t } = useTranslation()
+  const [result, retouch] = useRetouched(rolled)
   const { die, bonus, total, is_critical, is_fumble } = result
   const pair = result.dice && result.dice.length === 2 ? result.dice : null
   // The kept die is the first matching face; the other one is the discarded one (dimmed).
@@ -48,13 +59,14 @@ export default function RollResultModal({
   // Neutral rolls get the default (gold) frame; emerald/crimson are reserved
   // for nat-20/nat-1 so the accent stays semantic (Semantic Triad), not
   // decorative on an ordinary result.
-  const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'default'
+  const autoFail = !!result.auto_fail
+  const accent = is_critical ? 'gold' : is_fumble || autoFail ? 'crimson' : 'default'
   // Il numero protagonista è il TOTALE (tiro + modificatore): è quello che conta
   // per il giocatore. Il colore semantico (oro nat-20 / cremisi nat-1 / neutro)
   // si applica quindi al totale, non più al solo tiro grezzo.
   const numberColor = is_critical
     ? 'text-dnd-gold-bright'
-    : is_fumble
+    : is_fumble || autoFail
       ? 'text-dnd-crimson-bright'
       : 'text-dnd-text'
 
@@ -72,15 +84,32 @@ export default function RollResultModal({
       title={title}
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
       extraActions={
-        showInspirationButton ? (
-          <InspirationRerollButton
-            available
-            pending={isRerolling}
-            onClick={onInspirationReroll}
-          />
+        showInspirationButton || (afterRoll && !autoFail) ? (
+          <div className="space-y-2">
+            {afterRoll && !autoFail && (
+              <AfterRollOptions
+                charId={afterRoll.charId}
+                query={afterRoll.query}
+                rollToken={rolled}
+                onResult={(to) => retouch({ ...to, description: rolled.description })}
+              />
+            )}
+            {showInspirationButton && (
+              <InspirationRerollButton
+                available
+                pending={isRerolling}
+                onClick={onInspirationReroll}
+              />
+            )}
+          </div>
         ) : undefined
       }
     >
+      {autoFail && (
+        <p className="text-dnd-crimson-bright font-bold text-sm font-cinzel uppercase tracking-wider">
+          {t('character.roll_notes.auto_fail')}
+        </p>
+      )}
       {is_critical && (
         <m.p
           className="text-dnd-gold-bright font-bold text-sm font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5"
@@ -129,6 +158,7 @@ export default function RollResultModal({
         )}
       </p>
 
+      <RollNotes notes={result.notes} optionResult={result.option_result} />
       {note && <p className="text-xs text-dnd-text font-body">{note}</p>}
 
       {result.description && (

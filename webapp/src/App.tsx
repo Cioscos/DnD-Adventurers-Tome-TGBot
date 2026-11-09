@@ -1,3 +1,5 @@
+import { RefundQuestionHost } from '@/components/rules/AfterRollOptions'
+import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
 import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ModalProvider from './components/ModalProvider'
@@ -71,6 +73,8 @@ export default function App() {
     <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ModalProvider>
         <DiceAnimationProvider>
+          <RollOptionsHost />
+          <RefundQuestionHost />
           <Suspense fallback={<PageFallback />}>
             <Routes>
             <Route path="/" element={<CharacterSelect />} />

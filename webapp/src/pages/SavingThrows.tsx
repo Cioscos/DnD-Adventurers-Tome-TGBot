@@ -1,3 +1,4 @@
+import { canRerollInspiration, askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -61,10 +62,12 @@ export default function SavingThrows() {
 
   const rollMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
-      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode)))
+      const choice = await askRollOptions(charId, { roll: 'save', ability })
+      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode), choice))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
+      refreshAfterOptions(qc, charId, result.option_result)
       setRollState({
         // description è la chiave raw dell'ability ("intelligence"): il titolo
         // localizzato la copre già, mostrarla duplicherebbe in inglese grezzo.
@@ -137,7 +140,7 @@ export default function SavingThrows() {
           const isProficient = saves[ability] ?? false
           const score = char.ability_scores.find((s) => s.name === ability)
           const abilMod = score?.modifier ?? 0
-          const total = abilMod + (isProficient ? pb : 0) + (char.saves_homebrew_modifiers?.[ability] ?? 0) + (char.saves_items_modifiers?.[ability] ?? 0)
+          const total = abilMod + (isProficient ? pb : 0) + (char.saves_homebrew_modifiers?.[ability] ?? 0) + (char.saves_items_modifiers?.[ability] ?? 0) + (char.computed?.save_flat?.[ability] ?? 0)
 
           return (
             <Fragment key={ability}>
@@ -211,10 +214,11 @@ export default function SavingThrows() {
           result={rollState.result}
           title={rollState.title}
           note={rollNoteOf(char, `save.${rollState.ability}`)}
-          inspirationAvailable={Boolean(char.heroic_inspiration)}
+          inspirationAvailable={canRerollInspiration(char)}
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
+          afterRoll={{ charId, query: { roll: 'save', ability: rollState.ability } }}
           onClose={() => setRollState(null)}
         />
       )}

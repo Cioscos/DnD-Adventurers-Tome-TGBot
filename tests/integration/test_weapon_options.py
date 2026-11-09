@@ -29,7 +29,7 @@ async def _weapon(client, cid, name="Spada", **meta) -> int:
 
 async def _attack(client, cid, wid, **body):
     return await client.post(
-        f"/characters/{cid}/items/{wid}/attack", json={"die": 10, **body}
+        f"/characters/{cid}/items/{wid}/attack", json={"die": 10, "confirm_extra_attack": True, **body}
     )
 
 

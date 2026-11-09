@@ -72,7 +72,7 @@ async def test_short_preview_matches_rest(client):
     assert (await _snapshot(client, cid))[0] == before
     assert p["hp_gain"] == 0 and p["hit_dice_regain"] == {} and p["slots"] == {}
     assert p["pact_slots"] == 1 and p["abilities"] == ["Fiato"]
-    assert p["exhaustion_change"] == 0 and p["ends_concentration"] is True
+    assert p["exhaustion_change"] == 0 and p["ends_concentration"] is False  # D8
     assert [c["name"] for c in p["item_charges"]] == ["Anello"]
 
     r = (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).json()

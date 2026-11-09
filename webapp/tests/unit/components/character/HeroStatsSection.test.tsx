@@ -39,7 +39,7 @@ vi.mock('@/store/unitSettings', () => ({
   formatLength: (v: number) => `${v} ft`,
 }))
 // profBonus is the real @/lib/dnd helper (profBonus(5) === 3).
-vi.mock('@/api/client', () => ({ api: { dice: { result: diceResultSpy } } }))
+vi.mock('@/api/client', () => ({ api: { dice: { initiative: diceResultSpy } } }))
 // Il tiro d'iniziativa (fallback random, animate3d disattivata) deve girare
 // sincrono nel test — niente DiceAnimationProvider reale in giro.
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: vi.fn() }) }))
@@ -115,6 +115,42 @@ describe('HeroStatsSection', () => {
     expect(screen.getByText(/character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
   })
 
+  it('lists the sense a feature grants, and keeps the longer range of the same sense', () => {
+    renderHero(char({ computed: { senses: [{ type: 'blindsense', range_ft: 10 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.senses\.blindsense 10 ft/)).toBeInTheDocument()
+    // la Percezione Cieca non si fonde con la vista cieca scritta a mano: sono due sensi
+    renderHero(char({ computed: { senses: [{ type: 'blindsense', range_ft: 10 }] },
+      settings: { senses: [{ type: 'blindsight', range_ft: 30 }, { type: 'darkvision', range_ft: 60 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.senses\.blindsight 30 ft · character\.senses\.darkvision 60 ft · character\.senses\.blindsense 10 ft/)).toBeInTheDocument()
+  })
+
+  it('shows the running long jump bonus only for who has the feature, even when it is zero', () => {
+    renderHero(char({ computed: { long_jump_bonus_ft: 3 } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.hero\.long_jump_bonus/).parentElement).toHaveTextContent('+3 ft')
+    renderHero(char({ computed: { long_jump_bonus_ft: 0 } } as Partial<CharacterFull>))
+    expect(screen.getAllByText(/character\.hero\.long_jump_bonus/)).toHaveLength(2)
+  })
+
+  it('does not show the long jump bonus without the feature', () => {
+    renderHero(char({ computed: { long_jump_bonus_ft: null } } as Partial<CharacterFull>))
+    expect(screen.queryByText(/character\.hero\.long_jump_bonus/)).not.toBeInTheDocument()
+  })
+
+  it('shows the flying speed a feature grants, unless a higher one is already written', () => {
+    renderHero(char({ computed: { fly_speed: 40 } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.fly 40 ft/)).toBeInTheDocument()
+    renderHero(char({ computed: { fly_speed: 40 }, settings: { speeds: [{ type: 'fly', range_ft: 60 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.fly 60 ft/)).toBeInTheDocument()
+  })
+
+  it('shows the climbing and swimming speeds a feature grants, unless a higher one is already written', () => {
+    renderHero(char({ computed: { climb_speed: 40, swim_speed: 40 } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.climb 40 ft/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.speeds\.swim 40 ft/)).toBeInTheDocument()
+    renderHero(char({ computed: { climb_speed: 40 }, settings: { speeds: [{ type: 'climb', range_ft: 60 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.climb 60 ft/)).toBeInTheDocument()
+  })
+
   it('lists the other speeds', () => {
     renderHero(char({ settings: { speeds: [{ type: 'fly', range_ft: 60 }, { type: 'swim', range_ft: 0 }] } } as Partial<CharacterFull>))
     expect(screen.getByText(/character\.speeds\.fly 60 ft/)).toBeInTheDocument()
@@ -122,7 +158,7 @@ describe('HeroStatsSection', () => {
   })
 
   it('does not navigate when the initiative cell is tapped (it rolls instead)', async () => {
-    diceResultSpy.mockResolvedValue({ notation: '1d20+2', rolls: [15], total: 17, modifier: 2, label: 'character.hero.initiative' })
+    diceResultSpy.mockResolvedValue({ die: 15, dice: [15], bonus: 2, total: 17, is_critical: false, is_fumble: false })
     renderHero(char())
     await userEvent.click(screen.getByRole('button', { name: 'character.hero.initiative: +2' }))
     expect(navigateSpy).not.toHaveBeenCalled()
@@ -138,18 +174,12 @@ describe('HeroStatsSection', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/char/7/identity')
   })
 
-  it('rolls 1d20+DEX and shows the RollResultModal when the initiative cell is tapped', async () => {
-    diceResultSpy.mockResolvedValue({ notation: '1d20+2', rolls: [15], total: 17, modifier: 2, label: 'character.hero.initiative' })
+  it('rolls through the server and shows the RollResultModal when the initiative cell is tapped', async () => {
+    diceResultSpy.mockResolvedValue({ die: 15, dice: [15], bonus: 2, total: 17, is_critical: false, is_fumble: false })
     renderHero(char())
     await userEvent.click(screen.getByRole('button', { name: 'character.hero.initiative: +2' }))
     await waitFor(() =>
-      expect(diceResultSpy).toHaveBeenCalledWith(
-        7,
-        expect.objectContaining({
-          rolls: [{ kind: 'd20', value: expect.any(Number) }],
-          modifier: 2,
-        }),
-      ),
+      expect(diceResultSpy).toHaveBeenCalledWith(7, undefined, 'character.hero.initiative'),
     )
     expect(await screen.findByTestId('roll-modal-title')).toHaveTextContent('character.hero.initiative')
   })

@@ -39,10 +39,18 @@ def _contains(values: object, slug: str) -> bool:
     )
 
 
+DamageMode = Literal["immune", "half", "double", "half_double", "none"]
+
+
+def apply_damage_mode(raw: int, mode: str) -> int:
+    """Prima la resistenza (per difetto), poi la vulnerabilità; una sola istanza per effetto."""
+    return {"half": raw // 2, "double": raw * 2, "half_double": (raw // 2) * 2, "immune": 0}.get(mode, raw)
+
+
 def damage_multiplier(
     char_damage_modifiers: dict | None, damage_type: str | None,
-) -> Literal["immune", "half", "double", "none"]:
-    """Immunità prevale; resistenza + vulnerabilità si annullano (PHB 2014 p.197)."""
+) -> DamageMode:
+    """Immunità prevale; resistenza + vulnerabilità si applicano in ordine, prima la metà (``half_double``)."""
     slug = canonical_damage_type(damage_type)
     mods = char_damage_modifiers if isinstance(char_damage_modifiers, dict) else {}
     if slug is None:
@@ -51,6 +59,6 @@ def damage_multiplier(
         return "immune"
     res = _contains(mods.get("resistances"), slug)
     vul = _contains(mods.get("vulnerabilities"), slug)
-    if res == vul:
-        return "none"
-    return "half" if res else "double"
+    if res and vul:
+        return "half_double"
+    return "half" if res else "double" if vul else "none"

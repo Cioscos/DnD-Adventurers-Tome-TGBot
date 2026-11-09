@@ -126,8 +126,7 @@ async def test_patch_xp_levelup_generates_class_feature_abilities(client):
     """
     char_id = await _create_full_character(client)
 
-    # Guerriero L1 ha "Secondo Vento"; a L2 sbloccano "Azione Impetuosa" e
-    # "Dadi Superiorità".
+    # Guerriero L1 ha "Recuperare Energie"; a L2 sblocca "Azione Impetuosa" (i dadi di superiorità sono del Maestro di Battaglia).
     r = await client.post(
         f"/characters/{char_id}/classes",
         json={"class_name": "Guerriero", "level": 1, "hit_die": 10},
@@ -150,10 +149,10 @@ async def test_patch_xp_levelup_generates_class_feature_abilities(client):
     abilities = body["abilities"]
     assert isinstance(abilities, list)
     feature_names = {a["name"] for a in abilities if a["is_class_feature"]}
-    assert "Secondo Vento" in feature_names      # L1+ sempre presente
+    assert "Recuperare Energie" in feature_names      # L1+ sempre presente
     assert "Azione Impetuosa" in feature_names   # sbloccata a L2
     # Le feature di classe portano il link alla classe e la feature_key.
-    secondo_vento = next(a for a in abilities if a["name"] == "Secondo Vento")
+    secondo_vento = next(a for a in abilities if a["name"] == "Recuperare Energie")
     assert secondo_vento["is_class_feature"] is True
     assert secondo_vento["feature_key"] == "fighter.second_wind"
     assert secondo_vento["source_class_id"] == body["classes"][0]["id"]

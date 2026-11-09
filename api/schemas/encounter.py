@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from api.schemas.common import D20Dice, RollMode
+from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 
 EncounterMode = Literal["light", "full"]
@@ -25,7 +25,7 @@ class CombatantAddRequest(BaseModel):
     ac: Optional[int] = Field(default=None, ge=1, le=30)
 
 
-class InitiativeRollRequest(BaseModel):
+class InitiativeRollRequest(RollOptionsBody):
     """die is the 3D-dice detected face; None -> the server rolls."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
     mode: RollMode = "normal"
@@ -41,6 +41,7 @@ class CombatantPatchRequest(BaseModel):
     ac: Optional[int] = Field(default=None, ge=1, le=30)
     conditions: Optional[dict[str, Any]] = None
     is_dead: Optional[bool] = None
+    surprised: Optional[bool] = None
 
 
 class ExpiryIn(BaseModel):
@@ -87,6 +88,21 @@ class ReorderRequest(BaseModel):
     combatant_ids: list[int] = Field(min_length=1)
 
 
+class PublicStateOther(BaseModel):
+    """Un privilegio che agisce su altri (Lupo, Orso, Attacco Irruento), col testo che il GM e il gruppo devono vedere."""
+    key: str
+    name: str
+    text: str
+
+
+class PublicState(BaseModel):
+    """Stato attivo di un PG visibile a GM e gruppo (D1/R36): solo gli stati che portano effetti su altri."""
+    key: str
+    name: str
+    rounds_left: Optional[int] = None
+    others: list[PublicStateOther] = []
+
+
 class CombatantLive(BaseModel):
     """Viewer-redacted combatant row.
 
@@ -105,16 +121,25 @@ class CombatantLive(BaseModel):
     initiative_mod: int = 0
     sort_order: Optional[int] = None
     is_dead: bool = False
+    surprised: bool = False
     conditions: dict[str, Any] = {}
     current_hp: Optional[int] = None
     max_hp: Optional[int] = None
     ac: Optional[int] = None
     hp_bucket: Optional[str] = None
     condition_effects: list[ConditionEffectRead] = []   # monsters only
+    active_states: list[PublicState] = []               # PCs only: stati con effetti su altri (R36)
     pending_saves: list[PendingSaveRead] = []           # monsters, GM viewer only
 
 
+class InitiativeRollInfo(BaseModel):
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
+    option_result: OptionResult | None = absent_when_none()
+
+
 class EncounterLive(BaseModel):
+    initiative_roll: Optional[InitiativeRollInfo] = None  # solo in risposta al tiro di iniziativa
     id: int
     mode: EncounterMode
     status: EncounterStatus

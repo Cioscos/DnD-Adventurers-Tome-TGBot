@@ -31,6 +31,7 @@ from api.routers import (
     characters,
     choices,
     classes,
+    rules,
     companions,
     currency,
     dice,
@@ -55,6 +56,7 @@ from api.tasks.session_cleanup import run_session_cleanup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)  # a INFO stampa le URL di Telegram, che contengono il token del bot
 
 
 @asynccontextmanager
@@ -84,6 +86,16 @@ async def lifespan(_app: FastAPI):
             await conn.run_sync(_backfill_ability_action_types)
     except Exception as exc:  # non-fatal: never block startup on a data backfill
         logger.warning("backfill_ability_action_types failed (non-fatal): %s", exc)
+
+    # Passaggio una tantum dei personaggi esistenti ai cataloghi di classe (R33): errori registrati, mai bloccanti.
+    from api.database import AsyncSessionLocal as _CatalogSessions
+    from api.services.catalog_migration import migrate_catalog
+    try:
+        migrated = await migrate_catalog(_CatalogSessions)
+        if migrated:
+            logger.info("Catalog migration: %d character(s) synced", migrated)
+    except Exception as exc:  # non-fatal: l'avvio non dipende dal sync
+        logger.warning("catalog migration failed (non-fatal): %s", exc)
 
     # Cleanup best-effort delle condivisioni scadute (snapshot + file audio)
     from api.services.content_shares import cleanup_expired
@@ -174,6 +186,8 @@ app.include_router(characters.router)
 app.include_router(hp.router)
 app.include_router(stats.router)
 app.include_router(classes.router)
+app.include_router(rules.router)
+app.include_router(rules.turn_router)
 app.include_router(choices.router)
 app.include_router(spells.router)
 app.include_router(spell_slots.router)

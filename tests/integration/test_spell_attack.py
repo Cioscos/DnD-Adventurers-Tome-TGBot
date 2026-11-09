@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from api.schemas.character import SpellCasterStats
-from api.services import spellcasting
+from core.rules import spellcasting
 
 
 async def _wizard(client) -> int:
@@ -103,6 +103,7 @@ async def test_spell_attack_no_slot_is_400(client):
 
 async def test_spell_attack_reroll_needs_no_slot(client):
     cid = await _wizard(client)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     await _slot(client, cid, 1, 1, used=1)
     sid = await _spell(client, cid)
     r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
@@ -162,8 +163,8 @@ async def test_use_spell_unchanged(client):
 def test_best_caster_tie_returns_first(monkeypatch):
     a = SpellCasterStats(class_id=1, class_name="cleric", ability="wisdom", save_dc=13, attack_bonus=5)
     b = SpellCasterStats(class_id=2, class_name="wizard", ability="intelligence", save_dc=13, attack_bonus=5)
-    monkeypatch.setattr(spellcasting, "_caster_stats", lambda _c: [a, b])
+    monkeypatch.setattr(spellcasting, "caster_stats", lambda _c: [a, b])
     assert spellcasting.best_caster(object()).class_name == "cleric"
     c = b.model_copy(update={"attack_bonus": 6})
-    monkeypatch.setattr(spellcasting, "_caster_stats", lambda _c: [a, c])
+    monkeypatch.setattr(spellcasting, "caster_stats", lambda _c: [a, c])
     assert spellcasting.best_caster(object()).class_name == "wizard"

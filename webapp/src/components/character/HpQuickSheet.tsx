@@ -1,3 +1,6 @@
+import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
+import type { ConcentrationSaveResult, RollOption } from '@/api/client'
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,14 +15,16 @@ import DamageTypeControls from '@/components/ui/DamageTypeControls'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import HpQuickChips from '@/components/character/HpQuickChips'
+import { useReactionOffers } from '@/components/character/ReactionOffers'
 import {
-  applyDamageModifier, damageMultiplier, damagePreviewText, type DamageModifier,
+  applyDamageModifier, damageMultiplier, damagePreviewText, effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
+import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import type { CharacterFull } from '@/types'
 
 interface HpQuickSheetProps {
@@ -42,15 +47,36 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [damageType, setDamageType] = useState('')
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [pendingChip, setPendingChip] = useState<number | null>(null)
+  const [lostSave, setLostSave] = useState<ConcentrationSaveResult | null>(null)
+  // Reazioni che il danno ha aperto (Ritorsione): la scheda resta aperta per proporle.
+  const [reactions, setReactions] = useState<RollOption[]>([])
+
+  const offers = useReactionOffers({
+    charId: char.id, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
+  })
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, value, modifier }: {
+    mutationFn: async ({ op, value, modifier }: {
       op: 'damage' | 'heal'; value: number
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
-    }) =>
-      modifier
-        ? api.characters.updateHp(char.id, op, value, false, modifier)
-        : api.characters.updateHp(char.id, op, value),
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
+    }) => {
+      const choice = op === 'damage'
+        ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in')
+        : undefined
+      const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const updated = await (withOptions
+        ? api.characters.updateHp(char.id, op, value, false, withOptions)
+        : api.characters.updateHp(char.id, op, value))
+      if (updated.option_result) {
+        refreshAfterOptions(qc, char.id, updated.option_result)
+        if (updated.option_result.damage_before != null && updated.option_result.damage_after != null) { // senza riduzione il server non li manda
+          toast.info(t('character.roll_options.damage_changed', {
+            before: updated.option_result.damage_before, after: updated.option_result.damage_after,
+          }))
+        }
+      }
+      return updated
+    },
   })
 
   // Annulla tramite lo snapshot del server (mai set_current dal client). 409 = i PF
@@ -60,6 +86,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     onSuccess: (u) => {
       qc.setQueryData(['character', char.id], u)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
+      setReactions([])  // la reazione era del danno annullato
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
@@ -77,7 +104,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const parsedAmount = parseCounterInput(amount, null)
   const isAmountInvalid = parsedAmount === null || parsedAmount === 0
 
-  const proposedModifier = damageMultiplier(char.damage_modifiers, damageType)
+  const proposedModifier = damageMultiplier(effectiveDamageMods(char), damageType)
   const effective: DamageModifier = damageModifier ?? (damageType ? proposedModifier : null)
   const showPreview = op === 'damage' && !!effective && effective !== 'none' && !isAmountInvalid
 
@@ -97,13 +124,16 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         qc.setQueryData(['character', char.id], updated)
         qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
         haptic.success()
+        const zeroSave = zeroHpSaveMessage(updated, t)
+        if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
         const conc = updated.concentration_save
         if (conc?.lost_concentration) {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
+          setLostSave(conc)
         }
         const undoId = updated.hp_undo_id
         if (undoId) {
-          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n })
+          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? n })
           const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
           showUndoToast({
             message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
@@ -114,15 +144,21 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         setAmount('')
         setDamageType('')
         setDamageModifier(null)
-        onClose()
+        const offered = op === 'damage' ? updated.reactions ?? [] : []
+        setReactions(offered)
+        if (!offered.length) onClose()
       },
     })
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
+    <>
+    {offers.elements}
+    {lostSave && <ConcentrationSaveDialog result={lostSave} onClose={() => setLostSave(null)} afterRoll={{ charId: char.id }} />}
+    <Sheet open={open} onClose={() => { setReactions([]); onClose() }} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
-        {char.active_form && (
+        {offers.card}
+        {char.active_form?.own_hp !== false && char.active_form && (
           <div className="text-center space-y-1.5">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{char.active_form.name}</p>
             <p data-testid="form-hp-primary" className="font-mono tabular-nums">
@@ -211,5 +247,6 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         </Button>
       </div>
     </Sheet>
+    </>
   )
 }

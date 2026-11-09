@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { conditionLabel } from '@/lib/conditions'
 import { m } from 'framer-motion'
 import { Dices } from 'lucide-react'
 import { haptic } from '@/auth/telegram'
@@ -22,7 +23,7 @@ export default function PendingSavesBanner({ charId }: { charId: number }) {
   }, [strong])
 
   const first = pending[0] ?? saves[0]
-  const cond = first ? t(`character.conditions.${first.slug}`, { defaultValue: first.slug }) : ''
+  const cond = first ? conditionLabel(first.slug, t) : ''
   const label = !first
     ? ''
     : pending.length > 1
