@@ -476,3 +476,14 @@ async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_s
     assert (await _sheet(client, hero))["current_hit_points"] == 147  # 32 + 15
     await _new_turn(client, hero)
     assert (await _sheet(client, hero))["current_hit_points"] == 148
+
+
+async def test_death_ward_is_not_offered_to_the_client_because_the_server_applies_it(client, test_session_factory):
+    """Giro 2: l'interruttore nel foglio «Prima del danno» è superfluo, ma il colpo resta tenuto a 1 PF."""
+    hero, caster, spell = await _table(client, test_session_factory, "Death Ward", "death-ward", 4)
+    await _cast(client, caster, spell, [hero], level=4)
+    as_user(PLAYER_ID)
+    r = await client.get(f"/characters/{hero}/roll-options", params={"roll": "damage_taken", "damage": 50, "damage_type": "slashing"})
+    assert r.status_code == 200, r.text
+    assert DEATH_WARD not in [o["key"] for o in r.json()]
+    assert await _hit(client, hero, 500, "slashing") == 199  # senza opzioni inviate

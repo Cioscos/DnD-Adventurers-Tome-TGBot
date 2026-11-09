@@ -167,7 +167,9 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
 
 
 def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionRead]:
-    return [option_read(o, lang) for o in roll_options_for(roll_context(char, roll, **kw))]
+    from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD  # import locale, come negli altri servizi
+    # Interdizione alla Morte la applica il server da sola (``apply_hp_update``): il client non la deve offrire
+    return [option_read(o, lang) for o in roll_options_for(roll_context(char, roll, **kw)) if o.spec.key != DEATH_WARD_HOLD]
 
 
 def reaction_offers(char: Any, lang: str) -> list[RollOptionRead]:
