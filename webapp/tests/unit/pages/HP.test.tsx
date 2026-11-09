@@ -54,7 +54,7 @@ vi.mock('react-router-dom', async (orig) => {
 // Identity translator → button labels resolve to their i18n KEY (stable, locale-free).
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { n?: number }) => (o?.n != null ? `${k}:${o.n}` : k), i18n: { language: 'it' } }) }
 })
 
 // framer-motion: strip motion props, keep DOM-valid ones; AnimatePresence is a passthrough.
@@ -302,6 +302,17 @@ describe('HP page', () => {
     await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalledTimes(1))
     showUndoToastSpy.mock.calls[0][0].onUndo()
     await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'typed'))
+  })
+
+  it('the damage toast counts the hit points really lost when the damage was held at 1 HP', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'held', option_result: { keys: ['x'], hp_lost: 43 } })
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.type(screen.getByTestId('hp-value'), '50')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalledTimes(1))
+    expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_damage_undo:43')
   })
 
   it('does not call updateHp for non-positive / NaN input (guard)', async () => {

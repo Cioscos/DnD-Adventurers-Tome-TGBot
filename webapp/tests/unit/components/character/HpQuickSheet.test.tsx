@@ -29,7 +29,7 @@ vi.mock('@/api/client', () => ({
 }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { n?: number }) => (o?.n != null ? `${k}:${o.n}` : k), i18n: { language: 'it' } }) }
 })
 vi.mock('@/hooks/useWeaponAttackFlow', () => ({
   useWeaponAttackFlow: () => ({
@@ -65,6 +65,16 @@ async function applyDamage() {
   await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
   await waitFor(() => expect(updateHpSpy).toHaveBeenCalled())
 }
+
+describe('HpQuickSheet held at 1 HP', () => {
+  it('the damage toast counts the hit points really lost', async () => {
+    rollOptionsSpy.mockResolvedValue([])
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc', option_result: { keys: ['x'], hp_lost: 43 } })
+    await applyDamage()
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+    expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_damage_undo:43')
+  })
+})
 
 describe('HpQuickSheet quick values', () => {
   it('asks for the damage options with the amount, so an option valid only at 0 HP can be offered', async () => {

@@ -261,6 +261,8 @@ export type OptionResult = {
   second_total?: number | null
   damage_before?: number | null
   damage_after?: number | null
+  /** Danno tenuto a 1 PF: i PF persi davvero (il toast non dice il colpo intero). */
+  hp_lost?: number | null
 }
 
 export type RollResult = {

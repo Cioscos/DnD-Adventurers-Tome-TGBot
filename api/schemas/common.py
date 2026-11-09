@@ -318,6 +318,7 @@ class OptionResult(BaseModel):
     second_total: int | None = None
     damage_before: int | None = None  # solo danno subito
     damage_after: int | None = None
+    hp_lost: int | None = None  # danno tenuto a 1 PF: i PF persi davvero
 
 
 def absent_when_none() -> Any:

@@ -21,7 +21,7 @@ async def _table(client, factory, hero_hp=40):
         part = (await s.execute(select(SessionParticipant).where(SessionParticipant.user_id == GM_ID))).scalar_one()
         part.character_id = cid
         char = await s.get(Character, hero)
-        char.hit_points, char.current_hit_points = 40, hero_hp
+        char.hit_points, char.current_hit_points = max(40, hero_hp), hero_hp
         await s.commit()
     return cid, hero, f"ally:{cid}:{GIFT}"
 
@@ -193,3 +193,48 @@ async def test_holding_at_one_has_no_fake_reduction_and_the_history_shows_the_hi
     assert block["damage_before"] is None and block["damage_after"] is None  # il danno non è stato ridotto
     history = (await client.get(f"/characters/{hero}/history")).json()
     assert any("Danni: -39 HP (40 → 1)" in e["description"] for e in history)
+
+
+async def _lines(factory, hero):
+    async with factory() as s:
+        return (await s.execute(select(CharacterHistory).where(CharacterHistory.character_id == hero,
+                                                               CharacterHistory.event_type == "hp_change"))).scalars().all()
+
+
+async def test_held_at_one_the_history_and_the_recap_count_the_hit_points_really_lost(client, test_session_factory):
+    cid, hero, key = await _table(client, test_session_factory, hero_hp=44)
+    r = await _hit(client, hero, PLAYER_ID, 50, [key])
+    assert r.status_code == 200 and r.json()["current_hit_points"] == 1
+    rows = await _lines(test_session_factory, hero)
+    assert any("Danni: -43 HP (44 → 1)" in e.description for e in rows)
+    assert [e.meta["amount"] for e in rows if e.meta and e.meta.get("op") == "DAMAGE"] == [43]
+
+
+async def test_held_at_one_with_resistance_the_arrow_shows_the_damage_after_resistance(client, test_session_factory):
+    cid, hero, key = await _table(client, test_session_factory, hero_hp=30)
+    as_user(PLAYER_ID)
+    r = await client.patch(f"/characters/{hero}/hp", json={"op": "damage", "value": 30, "raw_value": 60, "damage_type": "fire",
+                                                         "damage_modifier": "half", "options": [key]})
+    assert r.status_code == 200 and r.json()["current_hit_points"] == 1
+    descriptions = [e.description for e in await _lines(test_session_factory, hero)]
+    assert any("→ 30 (resistenza)" in d and "-29 HP (30 → 1)" in d for d in descriptions), descriptions
+
+
+async def test_held_at_one_the_response_says_how_many_hit_points_were_lost(client, test_session_factory):
+    cid, hero, key = await _table(client, test_session_factory, hero_hp=44)
+    r = await _hit(client, hero, PLAYER_ID, 50, [key])
+    assert r.json()["option_result"]["hp_lost"] == 43
+
+
+async def test_the_auras_alone_do_not_load_the_allies_abilities(client, test_session_factory):
+    from sqlalchemy import inspect
+    from api.services.session_allies import _party
+    cid, hero, key = await _table(client, test_session_factory)
+    async with test_session_factory() as s:
+        char = await s.get(Character, hero)
+        (warlock,) = await _party(s, char)
+        assert "abilities" in inspect(warlock).unloaded
+    async with test_session_factory() as s:
+        char = await s.get(Character, hero)
+        (warlock,) = await _party(s, char, donors=True)
+        assert "abilities" not in inspect(warlock).unloaded

@@ -364,6 +364,19 @@ describe('Turn page', () => {
     expect(toastInfo).toHaveBeenCalledWith('character.turn.use_notes.water_whip')
   })
 
+  it('a heal given to a seated ally says only who recovered, not the generic «tell the GM» message', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 9, name: 'Mano della Guarigione', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'monk.hand_of_healing', max_uses: null, uses: null, action_type: 'action', restoration_type: 'none',
+    }] })
+    featureUse.mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: [], message: { it: 'riferiscili al GM', en: 'tell the GM' }, received: { name: 'Eroe', healed: 5 } })
+    toastInfo.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(within((await screen.findByText('Mano della Guarigione')).closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_received'))
+    expect(toastInfo).not.toHaveBeenCalledWith('riferiscili al GM')
+  })
+
   it('says nothing about dice when the feature rolled none', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 8, name: 'Controfascino', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

@@ -324,12 +324,14 @@ async def update_hp(
         char.current_hit_points = max(0, char.current_hit_points - amount)
         if option_block is not None and option_block.damage_before == option_block.damage_after:
             option_block.damage_before = option_block.damage_after = None  # nessuna riduzione (resta a 1 PF): niente «Danno 20 → 20»
-        lost = old - char.current_hit_points if held_at_one else pre_form  # tenuto a 1 PF si perdono meno PF del danno
+        lost = old - char.current_hit_points if old > 0 else pre_form  # i PF davvero persi (non il colpo: temporanei, Interdizione, tenuto a 1)
+        if held_at_one and option_block is not None:
+            option_block.hp_lost = lost  # il toast dice quanti PF si sono persi, non il colpo intero
         knocked = False  # 2024: il tramortito resta a 1 PF, non è «sceso a 0»
         if slug is not None and mod in ("half", "double", "half_double", "immune"):
             word = {"half": "resistenza", "double": "vulnerabilità", "half_double": "resistenza e vulnerabilità",
                     "immune": "immunità"}[mod]
-            desc = (f"Danno {raw} {LABELS_IT[slug]} → {lost} ({word}) "
+            desc = (f"Danno {raw} {LABELS_IT[slug]} → {pre_form} ({word}): -{lost} HP "
                     f"({old} → {char.current_hit_points})")
         else:
             note = ""
@@ -346,7 +348,7 @@ async def update_hp(
                      else " — Sentinella Imperitura: resta a 1 PF")
         if not form_absorbed:
             _add_history(session, char.id, "hp_change", desc,
-                         meta={"op": "DAMAGE", "amount": pre_form,
+                         meta={"op": "DAMAGE", "amount": lost if held_at_one else pre_form,
                                "to_zero": old > 0 and char.current_hit_points == 0})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---

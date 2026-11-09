@@ -34,11 +34,11 @@ async def load_receiver(session: AsyncSession, char_id: int) -> Character:
     return row.scalar_one()
 
 
-async def _party(session: AsyncSession, char: Character) -> list[Character]:
-    """Gli alleati seduti, con ciò che servono aure e doni (un solo caricamento per alleato)."""
+async def _party(session: AsyncSession, char: Character, donors: bool = False) -> list[Character]:
+    """Gli alleati seduti, con ciò che servono le aure; ``donors``: anche le capacità (i doni). Un solo caricamento per alleato."""
     allies = await seated_allies(session, char)
     for ally in allies:
-        await session.refresh(ally, ["classes", "ability_scores", "items", "abilities"])
+        await session.refresh(ally, ["classes", "ability_scores", "items", *(["abilities"] if donors else [])])
     return allies
 
 
@@ -59,7 +59,7 @@ async def attach_party(session: AsyncSession, char: Character) -> None:
     caricamento degli alleati. Mette anche ``char.party_hp_max``, i PF massimi con i bonus passivi, che il catalogo
     (senza sessione) usa per la soglia «uccide sul colpo». Tutto transitorio."""
     from core.rules.catalog import active_features  # import locale: il catalogo importa i tipi
-    allies = await _party(session, char)
+    allies = await _party(session, char, donors=True)
     char.party_auras = _auras(allies)
     char.party_donors = [{"donor": ally, "spec": option, "row": row} for ally in allies if not ally.is_dead
                          for spec, row in active_features(ally) for option in spec.roll_options if option.for_ally]
