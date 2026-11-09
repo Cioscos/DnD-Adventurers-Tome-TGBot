@@ -265,6 +265,8 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
             out.min_d20 = max(out.min_d20 or 0, m.value(mctx) if callable(m.value) else m.value)
             counted = True
         elif m.target in ("ac_base", "ac_min"):
+            if ctx.roll != "ac":  # il valore può leggere i dati della scheda: solo dove si calcola la CA (``ac_delta``)
+                continue
             current = getattr(out, m.target)
             value = m.value(mctx) if callable(m.value) else m.value
             setattr(out, m.target, value if current is None else max(current, value))
@@ -310,14 +312,15 @@ def modifiers_for(char: Any, roll: str | None, **kw: Any) -> Applied:
     return collect_modifiers(RuleContext(char=char, edition=character_edition(char), roll=roll, **kw))
 
 
-def ac_delta(char: Any, ac: int) -> int:
-    """Quanto le regole cambiano la CA ``ac`` della scheda: somme, CA di base senza armatura (Armatura Magica) e minimo (Pelle Coriacea)."""
+def ac_delta(char: Any, ac: int, extra: int = 0) -> int:
+    """Quanto le regole cambiano la CA ``ac`` della scheda: somme, CA di base senza armatura (Armatura Magica) e minimo (Pelle Coriacea).
+    ``extra`` è ciò che si somma dopo (oggetti, homebrew): il minimo vale sul totale, non su ``ac``."""
     applied = modifiers_for(char, "ac")
     total = ac + applied.flat
     if applied.ac_base is not None and not any(i.is_equipped and i.item_type == "armor" for i in char.items or []):
         total += max(0, applied.ac_base - char.base_armor_class)
     if applied.ac_min is not None:
-        total = max(total, applied.ac_min)
+        total = max(total + extra, applied.ac_min) - extra
     return total - ac
 
 

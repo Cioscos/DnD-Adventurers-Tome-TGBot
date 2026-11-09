@@ -69,11 +69,53 @@ async def test_mage_armor_does_nothing_with_armor_on(client, test_session_factor
     assert (await _sheet(client, hero))["ac"] == before
 
 
+async def test_mage_armor_does_not_break_the_character_list_nor_the_live_session(client, test_session_factory):
+    """C1: la CA con Armatura Magica si calcola anche in home e in serata, dove i dati non sono tutti caricati."""
+    hero, caster, spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    await _cast(client, caster, spell, [hero], level=1)
+    as_user(PLAYER_ID)
+    listed = await client.get("/characters")
+    assert listed.status_code == 200, listed.text
+    assert next(c for c in listed.json() if c["id"] == hero)["ac"] == 16
+    as_user(GM_ID)
+    live = await client.get("/sessions/1/live")
+    assert live.status_code == 200, live.text
+    assert next(c for c in live.json()["live_characters"] if c["id"] == hero)["ac"] == 16
+
+
+async def test_mage_armor_is_not_listed_among_the_sources_of_other_rolls(client, test_session_factory):
+    """M1: compare solo nella CA."""
+    hero, caster, spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    await _cast(client, caster, spell, [hero], level=1)
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    from core.db.models import Character
+    from core.rules.modifiers import modifiers_for
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == hero).options(
+            selectinload(Character.items), selectinload(Character.classes), selectinload(Character.ability_scores)))).scalar_one()
+        assert "spell:mage_armor" not in modifiers_for(char, "strength_check").notes
+
+
 @pytest.mark.parametrize("edition,floor", [("2014", 16), ("2024", 17)])
 async def test_barkskin_sets_a_minimum_ac(client, test_session_factory, edition, floor):
     hero, caster, spell = await _table(client, test_session_factory, "Barkskin", "barkskin", 2, hero_edition=edition, caster_edition=edition)
     await _cast(client, caster, spell, [hero], level=2)
     assert (await _sheet(client, hero))["ac"] == floor
+
+
+@pytest.mark.parametrize("edition,floor", [("2014", 16), ("2024", 17)])
+async def test_barkskin_floor_applies_to_the_final_ac_including_item_bonuses(client, test_session_factory, edition, floor):
+    """I2: base 10 + DES 3 = 13 più un anello +1 = 14: il minimo porta il totale a ``floor``, non a ``floor`` + 1."""
+    hero, caster, spell = await _table(client, test_session_factory, "Barkskin", "barkskin", 2, hero_edition=edition, caster_edition=edition)
+    as_user(PLAYER_ID)
+    await _item(client, hero, "Anello", slot="ring1", is_magic=True, bonuses=[{"target": "ac", "value": 1}])
+    await _cast(client, caster, spell, [hero], level=2)
+    sheet = await _sheet(client, hero)
+    assert sheet["ac"] + sheet["ac_breakdown"]["items"] + sheet["ac_breakdown"]["homebrew"] == floor
+    listed = next(c for c in (await client.get("/characters")).json() if c["id"] == hero)
+    assert listed["ac"] + listed["ac_items_modifier"] + listed["ac_homebrew_modifier"] == floor
 
 
 # --- PF temporanei -------------------------------------------------------------------------------------------------

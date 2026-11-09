@@ -81,7 +81,7 @@ async def build_character_response(
         magic=char.magic_armor,
         homebrew=hb_ac,
         items=item_bonus_total(char.items, "ac"),
-        rules=ac_delta(char, response.ac),
+        rules=ac_delta(char, response.ac, item_bonus_total(char.items, "ac") + hb_ac),
     )
     response.ac += response.ac_breakdown.rules
 

@@ -214,7 +214,7 @@ async def list_characters(
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
-        .options(selectinload(Character.classes), selectinload(Character.items))
+        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores))
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )
@@ -229,7 +229,7 @@ async def list_characters(
             session, c, "character.ac"
         )
         summary.ac_items_modifier = item_bonus_total(c.items, "ac")
-        summary.ac += ac_delta(c, summary.ac)
+        summary.ac += ac_delta(c, summary.ac, summary.ac_items_modifier + summary.ac_homebrew_modifier)
         summary.hp_max_effective = effective_hp_max(c, summary.hp_max_homebrew_modifier)
         summaries.append(summary)
     return summaries

@@ -234,6 +234,7 @@ async def _load_live_characters(
             selectinload(Character.classes),
             selectinload(Character.items),
             selectinload(Character.abilities),
+            selectinload(Character.ability_scores),
         )
         .where(Character.id.in_(char_ids))
     )
