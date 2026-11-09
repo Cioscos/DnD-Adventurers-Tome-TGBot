@@ -32,6 +32,16 @@ async def _new_turn(client, cid, user=PLAYER_ID) -> None:
     assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
 
 
+async def _end_spell(client, target, caster, key, how) -> None:
+    """Chiude l'incantesimo ``key`` sul bersaglio: a mano (dal bersaglio) o con la fine della concentrazione (del lanciatore)."""
+    if how == "manual":
+        as_user(PLAYER_ID if target != caster else GM_ID)
+        assert (await client.delete(f"/characters/{target}/active-states/spell:{key}")).status_code == 200
+    else:
+        as_user(GM_ID)
+        assert (await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})).status_code == 200
+
+
 # --- catalogo -----------------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("srd", ["mage-armor", "barkskin", "armor-of-agathys", "false-life", "death-ward", "warding-bond",
@@ -41,11 +51,11 @@ def test_hit_point_spells_are_in_both_editions(edition, srd):
     assert spell_effect(edition, srd) is not None
 
 
-@pytest.mark.parametrize("srd,edition", [("false-life", "2014"), ("heroism", "2014"), ("heroism", "2024"), ("enhance-ability", "2014")])
-def test_temp_hp_spells_remind_the_gm_that_the_temp_hp_stay(srd, edition):
-    """M7: il manuale non dice che svaniscono a fine durata: il testo avverte il GM."""
+@pytest.mark.parametrize("srd,edition", [("heroism", "2014"), ("heroism", "2024"), ("enhance-ability", "2014")])
+def test_temp_hp_spells_that_take_them_back_no_longer_warn_the_gm(srd, edition):
+    """Giro 2: i PF temporanei svaniscono a fine incantesimo da soli, quindi niente nota per il GM."""
     _, variant = spell_effect(edition, srd)
-    assert "toglili tu" in variant.text["it"] and "remove them yourself" in variant.text["en"]
+    assert "toglili tu" not in variant.text["it"] and "remove them yourself" not in variant.text["en"]
 
 
 def test_power_word_fortify_is_2024_only():
@@ -242,6 +252,42 @@ async def test_undoing_the_turn_advance_takes_back_the_heroism_temp_hp(client, t
     as_user(GM_ID)
     assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
     assert (await _sheet(client, hero_id))["temp_hp"] == 0
+
+
+@pytest.mark.parametrize("how", ["manual", "concentration"])
+async def test_heroism_temp_hp_vanish_when_the_spell_ends_unless_a_higher_source_took_over(client, test_session_factory, how):
+    hero, caster, spell = await _table(client, test_session_factory, "Heroism", "heroism", 1)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/classes", json={"class_name": "bard", "level": 3, "hit_die": 8})).status_code == 201
+    assert (await client.patch(f"/characters/{caster}/ability_scores/charisma", json={"value": 16})).status_code == 200
+    await _cast(client, caster, spell, [hero], level=1)
+    await _new_turn(client, hero)
+    assert (await _sheet(client, hero))["temp_hp"] == 3
+    await _end_spell(client, hero, caster, "heroism", how)
+    assert (await _sheet(client, hero))["temp_hp"] == 0
+    # una fonte più alta nel frattempo: restano
+    await _cast(client, caster, spell, [hero], level=1)
+    await _new_turn(client, hero)
+    await client.patch(f"/characters/{hero}/hp", json={"op": "set_temp", "value": 9})
+    await _end_spell(client, hero, caster, "heroism", how)
+    assert (await _sheet(client, hero))["temp_hp"] == 9
+
+
+async def test_bears_endurance_temp_hp_vanish_when_the_spell_ends(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "Enhance Ability", "enhance-ability", 2)
+    await _cast(client, caster, spell, [hero], level=2, choices={"ability": "constitution"})
+    assert (await _sheet(client, hero))["temp_hp"] == 12
+    await _end_spell(client, hero, caster, "enhance_ability", "concentration")
+    assert (await _sheet(client, hero))["temp_hp"] == 0
+
+
+async def test_false_life_temp_hp_have_no_state_to_end_so_they_stay(client, test_session_factory, monkeypatch):
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "False Life", "false-life", 1)
+    await _cast(client, caster, spell, [], level=1)
+    sheet = await _sheet(client, caster, GM_ID)
+    assert sheet["temp_hp"] == 8 and not [s for s in sheet["active_states"] or [] if s["key"].startswith("spell")]
 
 
 # --- Aiuto -----------------------------------------------------------------------------------------------------------

@@ -49,6 +49,7 @@ class SpellVariant:
     # Senza altro effetto l'incantesimo è istantaneo: nessuno stato né orologio (Vita Falsata 2024, Parola del Potere: Fortificare).
     per_target: Callable[[dict], dict] | None = None  # dati tirati per ogni bersaglio e uniti ai ``data`` dello stato (Banchetto degli Eroi: 2d10)
     temp_hp: Callable[[dict], int] | None = None
+    temp_hp_ends: bool = False  # i PF temporanei dati e rimasti al bersaglio svaniscono quando lo stato finisce (Eroismo, Resistenza dell'Orso)
     heal: Callable[[dict], int] | None = None
     # A inizio del turno del bersaglio: ``turn_heal(data, personaggio)`` (Rigenerazione, Aura di Vita) e PF temporanei (Eroismo)
     turn_heal: Callable[[dict, Any], int] | None = None

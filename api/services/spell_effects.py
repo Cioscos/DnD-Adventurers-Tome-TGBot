@@ -22,7 +22,7 @@ from core.game.stats import effective_ability_mod
 from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
-from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state, settle_closed
+from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, begin_state, note_spell_temp_hp, settle_closed
 from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
@@ -111,10 +111,11 @@ def _stateful(variant: SpellVariant, data: dict) -> bool:
                 or variant.turn_heal or variant.turn_temp_hp)
 
 
-async def _give_hp(session: AsyncSession, target: Character, variant: SpellVariant, data: dict) -> None:
+async def _give_hp(session: AsyncSession, target: Character, variant: SpellVariant, data: dict, state_key: str | None = None) -> None:
     """I PF dell'incantesimo al bersaglio: i temporanei (il maggiore vince) e la cura, dopo che lo stato ha alzato il massimo."""
     if variant.temp_hp and (amount := variant.temp_hp(data)) > 0:
-        grant_temp_hp(session, target, amount)
+        if grant_temp_hp(session, target, amount)["applied"] and variant.temp_hp_ends and state_key:
+            note_spell_temp_hp(target, state_key, amount)  # a fine incantesimo svaniscono solo se sono ancora questi
     if variant.heal and (amount := variant.heal(data)) > 0:
         if missing := {"classes", "items", "ability_scores"} & inspect(target).unloaded:  # un alleato arriva senza le relazioni dei massimi
             await session.refresh(target, attribute_names=list(missing))
@@ -163,7 +164,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         begin_state(target, spell_state_spec(key, mine), key, spell.name)
         if variant.on_apply:
             variant.on_apply(target, mine)
-        await _give_hp(session, target, variant, mine)
+        await _give_hp(session, target, variant, mine, key)
         applied.append({"id": target.id, "name": target.name})
     ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
     begin_state(caster, StateSpec(clock, rounds=variant.rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),

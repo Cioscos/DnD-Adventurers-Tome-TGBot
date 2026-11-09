@@ -180,10 +180,10 @@ _INVISIBILITY_2024 = SpellVariant(
 _GREATER_INVISIBILITY = SpellVariant(condition="invisible", concentration=True, rounds=10)
 
 _HEROISM = SpellVariant(
-    immune_conditions=("frightened",), track=True, concentration=True, rounds=10,
+    temp_hp_ends=True, immune_conditions=("frightened",), track=True, concentration=True, rounds=10,
     turn_temp_hp=lambda d: max(0, d.get("cast_mod", 0)),  # il modificatore da incantatore di chi lancia, fissato al lancio
-    text=txt("A inizio di ogni tuo turno ottieni PF temporanei pari al modificatore da incantatore di chi ha lanciato (automatico). Alla fine dell'incantesimo restano: se al tavolo si perdono, toglili tu.",
-             "At the start of each of your turns you gain temporary HP equal to the caster's spellcasting modifier (automatic). They stay when the spell ends: if your table loses them, remove them yourself."))
+    text=txt("A inizio di ogni tuo turno ottieni PF temporanei pari al modificatore da incantatore di chi ha lanciato (automatico). Alla fine dell'incantesimo quelli rimasti svaniscono (automatico).",
+             "At the start of each of your turns you gain temporary HP equal to the caster's spellcasting modifier (automatic). Those left vanish when the spell ends (automatic)."))
 _MIND_BLANK = SpellVariant(
     modifiers=lambda d: (Modifier("immunity:psychic", 1),), immune_conditions=("charmed",), rounds=DAY,
     text=txt("Immune anche a ciò che percepisce emozioni o legge i pensieri e alle divinazioni: lo applica il GM.",

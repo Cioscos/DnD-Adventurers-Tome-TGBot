@@ -81,6 +81,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     charge_exhaustion(char, closed)
     drop_stolen_spells(char, closed)
     release_given_temp_hp(char, closed)
+    drop_spell_temp_hp(char, closed)
     release_given_spells(char, closed)
     release_suspended(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
@@ -100,6 +101,21 @@ def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
     gone = [entry for s in closed for entry in given.pop(s.get("key"), [])]
     if gone:
         char.settings = {**settings, TEMP_GIVEN: given, TEMP_RELEASE: [*(settings.get(TEMP_RELEASE) or []), *gone]}
+
+
+def note_spell_temp_hp(char: Any, state_key: str, amount: int) -> None:
+    """Lo stato ``state_key`` di ``char`` ricorda i PF temporanei che ha appena dato (l'ultimo valore vince)."""
+    char.active_states = [{**s, "data": {**(s.get("data") or {}), "temp_given": amount}} if s.get("key") == state_key else s
+                         for s in char.active_states or []]
+
+
+def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
+    """Alla fine di un incantesimo i PF temporanei che aveva dato svaniscono, ma solo se non superano quanto diede: se ora ne ha di più
+    alti da un'altra fonte restano. shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo."""
+    given = [g for g in ((s.get("data") or {}).get("temp_given") for s in closed) if g]
+    temp = getattr(char, "temp_hp", 0) or 0
+    if given and 0 < temp <= max(given):
+        char.temp_hp = 0
 
 
 def release_given_spells(char: Any, closed: list[dict]) -> None:
