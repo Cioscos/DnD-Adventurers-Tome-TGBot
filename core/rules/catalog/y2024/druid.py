@@ -322,7 +322,7 @@ def _aid_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     healed = (ctx.char.turn_state or {}).get(LANDS_AID_HEAL)
     mine = params.get("mode") == "self"
     told = params.get("ally_healed")  # l'alleato della serata è già curato e ha il suo toast
-    return {"it": f"Sfera di 3 m entro 18 m: ogni creatura scelta fa un TS Costituzione (CD {data.get('dc')}) e subisce "
+    text = {"it": f"Sfera di 3 m entro 18 m: ogni creatura scelta fa un TS Costituzione (CD {data.get('dc')}) e subisce "
                   f"{data.get('damage')} danni necrotici, la metà se lo supera. "
                   + (f"Hai recuperato {healed} PF." if mine else "" if told else
                      f"Un'altra creatura scelta recupera {healed} PF: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."),
@@ -331,6 +331,7 @@ def _aid_message(ctx: RuleContext, params: dict) -> dict[str, str]:
                   + (f"You regained {healed} HP." if mine else "" if told else
                      f"Another chosen creature regains {healed} HP: if it sits at the evening and you picked it, it is already healed; "
                      "otherwise tell the GM.")}
+    return {lang: line.rstrip() for lang, line in text.items()}  # senza la frase sull'alleato resta lo spazio finale
 
 
 _AID_MODES = {"self": {"it": "Cura te", "en": "Heal yourself"}, "other": {"it": "Cura un'altra creatura", "en": "Heal another creature"}}
