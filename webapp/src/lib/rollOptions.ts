@@ -86,9 +86,18 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
 
+/** Cosa togliere col prossimo lancio di un incantesimo (Task 48): scelto nel foglio comune, consumato dal lancio, ovunque parta. */
+export const useRemovalStore = create<{ chosen: Record<number, NonNullable<SpellUseBody['removal']>> }>(() => ({ chosen: {} }))
+
 /** Il lancio senza tiro per colpire: `/use`. */
 export async function castSpell(charId: number, spellId: number, body: SpellUseBody): Promise<CharacterFull> {
-  return api.spells.use(charId, spellId, { ...body, ...(await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)) })
+  const removal = useRemovalStore.getState().chosen[spellId]
+  const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)
+  useRemovalStore.setState(({ chosen }) => ({ chosen: Object.fromEntries(Object.entries(chosen).filter(([id]) => Number(id) !== spellId)) }))
+  const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}) })
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  for (const line of updated.removal_result ?? []) toast.info(line[lang])
+  return updated
 }
 
 /** Il rilancio è del 2024: nel 2014 l'Ispirazione si spende prima del tiro, come opzione. */

@@ -193,6 +193,8 @@ export type SpellUseBody = Partial<RollChoice> & {
   ki?: boolean
   ki_extra?: number
   confirm?: string[]
+  /** Togliere condizioni (Task 48): `"self"`, l'id di un PG della serata o `"other"`; `conditions` assente se toglie tutto. */
+  removal?: { targets: (number | string)[]; conditions?: string[] }
 }
 
 export type RollChoice = {

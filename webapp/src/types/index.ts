@@ -187,6 +187,8 @@ export interface FeatureUseResult {
   temp_received?: { name: string; given: number; temp_hp: number; applied: boolean }[]
   /** PF temporanei che il privilegio ha dato a chi lo usa (Benedizione dell'Oscuro, Vigore Immondo). */
   temp_hp?: number | null
+  /** Esiti delle condizioni tolte (Task 48), nelle due lingue. */
+  removal?: { it: string; en: string }[]
   /** Esito scritto dal privilegio nelle due lingue (ore dimenticate di Alterare Ricordi, danno residuo dell'Interdizione). */
   message?: { it: string; en: string } | null
   /** Tiro per colpire di un privilegio che attacca (Arciere): senza danno se `is_fumble`, dadi doppi se `is_critical`. */
@@ -240,6 +242,8 @@ export interface Spell {
   /** Si lancia anche coi punti ki (Arti dell'Ombra, discipline dei Quattro Elementi): costo base, ki in più ammessi, ki rimasti. */
   ki_cast?: { cost: number; max_extra: number; ki_left: number; feature_key: string; self_only?: boolean } | null
   /** Lancio pagato da un privilegio del Warlock: Arcanum Mistico (senza slot) o una supplica a uso singolo (slot di Patto). */
+  /** Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48). */
+  removal?: { count: number | null; max_targets: number; ally: boolean; conditions: { key: string; label: { it: string; en: string } }[]; untracked: { key: string; label: { it: string; en: string } }[] } | null
   pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null; also_slot?: boolean } | null
 }
 
@@ -535,6 +539,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   option_result?: OptionResult
   /** Lanciato, ma i dadi di danno dell'incantesimo non sono tirabili dal server. */
   damage_unrollable?: boolean
+  /** POST /spells/{id}/use: esiti delle condizioni tolte, nelle due lingue (Task 48). */
+  removal_result?: { it: string; en: string }[]
   currency?: Currency
   abilities: Ability[]
   maps: MapEntry[]

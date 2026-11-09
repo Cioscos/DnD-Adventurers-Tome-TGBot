@@ -1,5 +1,5 @@
 import { notifyCastError } from '@/lib/mutationError'
-import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions, useRemovalStore } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -11,6 +11,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
+import AllyTargetSheet, { type Ally } from '@/components/rules/AllyTargetSheet'
 import RollNotes from '@/components/rules/RollNotes'
 import type { OptionResult } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
@@ -70,6 +71,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const [confirmCast, setConfirmCast] = useState<
     { spell: Spell; slot: SpellSlot } | null
   >(null)
+  // Incantesimo che toglie condizioni (Task 48): prima del lancio si sceglie cosa e a chi, nel foglio comune degli alleati.
+  const [removalAsk, setRemovalAsk] = useState<{ spell: Spell; allies: Ally[]; next: () => void } | null>(null)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   // Danno dopo il tiro per colpire: slot già consumato, critico preimpostato.
   const [damageAfterAttack, setDamageAfterAttack] = useState<{ critical: boolean } | null>(null)
@@ -226,7 +229,14 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     !!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.is_prepared,
   [spellcasting])
 
-  const proceedSlotCast = useCallback((spell: Spell, slot: SpellSlot) => {
+  /** Se l'incantesimo toglie condizioni, chiede cosa e a chi e poi prosegue con `next`; altrimenti prosegue subito. */
+  const withRemoval = useCallback(async (spell: Spell, next: () => void) => {
+    if (!spell.removal) { next(); return }
+    const allies = spell.removal.ally ? await api.characters.sessionAllies(charId).catch(() => []) : []
+    setRemovalAsk({ spell, allies, next })
+  }, [charId])
+
+  const proceedSlotCastNow = useCallback((spell: Spell, slot: SpellSlot) => {
     if (isAttackSpell(spell)) {
       beginAttack({ spell, slot, ritual: false, mode: castMode })
       return
@@ -241,6 +251,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     }
     castMutation.mutate({ spell, slot })
   }, [beginAttack, castMutation, castMode])
+  const proceedSlotCast = useCallback((spell: Spell, slot: SpellSlot) => { void withRemoval(spell, () => proceedSlotCastNow(spell, slot)) }, [withRemoval, proceedSlotCastNow])
 
   const proceedRitualCast = useCallback((spell: Spell) => {
     if (isAttackSpell(spell)) {
@@ -271,7 +282,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   }, [castMutation])
 
   // Senza slot: i dadi di danno passano dal foglio dei danni, che fa il lancio al primo tiro.
-  const proceedFreeCast = useCallback((spell: Spell) => {
+  const proceedFreeCastNow = useCallback((spell: Spell) => {
     if (spell.damage_dice && !isAttackSpell(spell) && !isHealingSpell(spell)) {
       setPendingRitual(false)
       setPendingSlotLevel(spell.level)
@@ -282,6 +293,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     }
     castMutation.mutate({ spell, free: true })
   }, [castMutation])
+  const proceedFreeCast = useCallback((spell: Spell) => { void withRemoval(spell, () => proceedFreeCastNow(spell)) }, [withRemoval, proceedFreeCastNow])
 
   const handleCastSlot = useCallback((slot: SpellSlot) => {
     if (!castingSpell) return
@@ -329,6 +341,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     setDamageAfterAttack(null)
   }
   const closeCastSheet = () => {
+    useRemovalStore.setState({ chosen: {} })  // la scelta di un lancio annullato non passa al prossimo
     closeDamage()
     setCastingSpell(null)
   }
@@ -420,6 +433,25 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           setConfirmCast(null)
         }}
       />
+
+      {removalAsk?.spell.removal && (
+        <AllyTargetSheet
+          title={removalAsk.spell.name}
+          allies={removalAsk.allies}
+          onPick={() => {}}
+          onClose={() => setRemovalAsk(null)}
+          removal={{
+            ...removalAsk.spell.removal,
+            maxTargets: removalAsk.spell.removal.max_targets,
+            onConfirm: (choice) => {
+              useRemovalStore.setState(({ chosen }) => ({ chosen: { ...chosen, [removalAsk.spell.id]: choice } }))
+              const { next } = removalAsk
+              setRemovalAsk(null)
+              next()
+            },
+          }}
+        />
+      )}
 
       <Sheet open={castNotes !== null} onClose={() => setCastNotes(null)} title={t('character.roll_options.title_cast')}>
         <div className="p-5 space-y-3">

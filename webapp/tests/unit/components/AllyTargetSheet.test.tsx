@@ -77,4 +77,45 @@ describe('AllyTargetSheet', () => {
     await userEvent.click(screen.getByText('character.turn.ally_confirm'))
     expect(onPickMany).toHaveBeenCalledWith([31, 32])
   })
+
+  describe('removal of conditions (Task 48)', () => {
+    const removal = (over = {}) => ({
+      conditions: [{ key: 'blinded', label: { it: 'Accecato', en: 'Blinded' } }, { key: 'deafened', label: { it: 'Assordato', en: 'Deafened' } }],
+      untracked: [{ key: 'disease', label: { it: 'malattia', en: 'disease' } }],
+      count: 1, maxTargets: 1, onConfirm: vi.fn(), ...over,
+    })
+
+    it('picks one condition and one target, then confirms; confirm stays off until both are chosen', async () => {
+      const r = removal()
+      renderWithProviders(<AllyTargetSheet title="Ristorare" allies={allies} removal={r} onPick={() => {}} onClose={() => {}} />)
+      const confirm = screen.getByText('character.turn.removal_confirm').closest('button')!
+      expect(confirm).toBeDisabled()
+      await userEvent.click(screen.getByText('Accecato'))
+      await userEvent.click(screen.getByText('Assordato'))  // count 1: la seconda sostituisce la prima
+      await userEvent.click(screen.getByText('Brun'))
+      expect(confirm).toBeEnabled()
+      await userEvent.click(confirm)
+      expect(r.onConfirm).toHaveBeenCalledWith({ targets: [31], conditions: ['deafened'] })
+    })
+
+    it('offers the untracked entry as a choice, and the creature outside the evening', async () => {
+      const r = removal()
+      renderWithProviders(<AllyTargetSheet title="Ristorare" allies={allies} removal={r} onPick={() => {}} onClose={() => {}} />)
+      await userEvent.click(screen.getByText('malattia'))
+      await userEvent.click(screen.getByText('character.turn.ally_other'))
+      await userEvent.click(screen.getByText('character.turn.removal_confirm'))
+      expect(r.onConfirm).toHaveBeenCalledWith({ targets: ['other'], conditions: ['disease'] })
+    })
+
+    it('a spell that removes everything asks only for the targets, up to the maximum', async () => {
+      const r = removal({ count: null, maxTargets: 2 })
+      renderWithProviders(<AllyTargetSheet title="Guarigione di Massa" allies={allies} removal={r} onPick={() => {}} onClose={() => {}} />)
+      expect(screen.queryByText('Accecato')).toBeNull()
+      await userEvent.click(screen.getByText('character.turn.removal_self'))
+      await userEvent.click(screen.getByText('Brun'))
+      await userEvent.click(screen.getByText('Lia'))  // oltre il massimo: ignorato
+      await userEvent.click(screen.getByText('character.turn.removal_confirm'))
+      expect(r.onConfirm).toHaveBeenCalledWith({ targets: ['self', 31] })
+    })
+  })
 })
