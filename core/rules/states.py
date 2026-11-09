@@ -119,7 +119,17 @@ def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
         # ricordati per l'annullo (``regrant_spells``) e per lo storico (il flush scrive la riga: qui non c'è una sessione)
         dropped = {s["key"]: {"caster_id": (s.get("data") or {}).get("caster_id"), "amount": temp, "name": s.get("name"), "logged": False}
                    for s in closed if (s.get("data") or {}).get("temp_given")}
-        char.settings = {**(getattr(char, "settings", None) or {}), SPELL_TEMP_DROPPED: dropped}
+        settings = getattr(char, "settings", None) or {}  # le voci d'altri incantesimi non ancora annullate restano
+        char.settings = {**settings, SPELL_TEMP_DROPPED: {**(settings.get(SPELL_TEMP_DROPPED) or {}), **dropped}}
+
+
+def forget_spell_temp_drop(char: Any, key: str | None = None) -> None:
+    """La voce di ``SPELL_TEMP_DROPPED`` per lo stato ``key`` (tutte con ``None``) non serve più: un nuovo lancio, l'annullo o il riposo lungo."""
+    settings = getattr(char, "settings", None) or {}
+    dropped = settings.get(SPELL_TEMP_DROPPED)
+    if dropped and (key is None or key in dropped):
+        left = {k: v for k, v in dropped.items() if key is not None and k != key}
+        char.settings = {**{k: v for k, v in settings.items() if k != SPELL_TEMP_DROPPED}, **({SPELL_TEMP_DROPPED: left} if left else {})}
 
 
 def release_given_spells(char: Any, closed: list[dict]) -> None:

@@ -22,7 +22,7 @@ from core.game.stats import effective_ability_mod
 from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
-from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_state, note_spell_temp_hp, settle_closed
+from core.rules.states import SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_state, forget_spell_temp_drop, note_spell_temp_hp, settle_closed
 from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
@@ -162,6 +162,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     for target in chars:
         mine = {**data, **(variant.per_target(data) if variant.per_target else {})}
         begin_state(target, spell_state_spec(key, mine), key, spell.name)
+        forget_spell_temp_drop(target, key)  # la voce del lancio precedente non vale per l'annullo di questo
         if variant.on_apply:
             variant.on_apply(target, mine)
         await _give_hp(session, target, variant, mine, key)
@@ -203,8 +204,7 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
                 if lost and lost["caster_id"] == caster.id and not target.temp_hp:
                     target.temp_hp = lost["amount"]
                     note_spell_temp_hp(target, key, lost["amount"])
-                if lost:
-                    target.settings = {**target.settings, SPELL_TEMP_DROPPED: {k: v for k, v in target.settings[SPELL_TEMP_DROPPED].items() if k != key}}
+                forget_spell_temp_drop(target, key)
             back.append(tid)
         given[clock] = back
     caster.settings = {**settings, SPELL_GIVEN: given} if given else settings

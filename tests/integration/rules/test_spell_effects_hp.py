@@ -559,6 +559,46 @@ async def test_the_end_of_a_temp_hp_spell_leaves_a_history_row_on_the_receiver(c
     assert any("PF temporanei svaniti" in h and "3 → 0" in h for h in await _history(client, hero, PLAYER_ID))
 
 
+async def test_a_stale_heroism_drop_is_not_given_back_by_the_undo_of_a_later_cast(client, test_session_factory):
+    """Giro 4, 1: la voce lasciata dalla fine del primo Eroismo non vale per l'annullo del danno che chiude il secondo."""
+    hero, caster = await _heroism_with_temp(client, test_session_factory)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 100, "damage_type": "fire"})).status_code == 200
+    spell = (await _sheet(client, caster, GM_ID))["spells"][0]["id"]
+    await _cast(client, caster, spell, [hero], level=1)
+    await _new_turn(client, hero)
+    await _damage(client, hero, 3)  # il bersaglio assorbe i 3 PF temporanei del nuovo Eroismo
+    assert (await _sheet(client, hero))["temp_hp"] == 0
+    as_user(GM_ID)
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 60, "damage_type": "fire"})
+    assert r.status_code == 200 and await _states(client, hero, "spell:heroism") == []
+    await _undo(client, caster, r.json()["hp_undo_id"], GM_ID)
+    assert len(await _states(client, hero, "spell:heroism")) == 1
+    assert (await _sheet(client, hero))["temp_hp"] == 0
+
+
+async def test_the_receivers_long_rest_forgets_the_dropped_temp_hp(client, test_session_factory):
+    """Giro 4: nessuna voce resta per sempre; dopo il riposo lungo del bersaglio l'annullo non ridà i PF temporanei."""
+    hero, caster = await _heroism_with_temp(client, test_session_factory)
+    as_user(GM_ID)
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 100, "damage_type": "fire"})
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{hero}/rest", json={"rest_type": "long"})).status_code == 200
+    await _undo(client, caster, r.json()["hp_undo_id"], GM_ID)
+    assert (await _sheet(client, hero))["temp_hp"] == 0
+
+
+def test_a_new_temp_hp_drop_keeps_the_entries_not_yet_undone():
+    """Giro 4, 2: la fine di un altro incantesimo non cancella la voce di quello prima."""
+    from types import SimpleNamespace
+    from core.rules.states import SPELL_TEMP_DROPPED, drop_spell_temp_hp
+    char = SimpleNamespace(temp_hp=3, settings={})
+    drop_spell_temp_hp(char, [{"key": "spell:heroism", "name": "Eroismo", "data": {"caster_id": 1, "temp_given": 3}}])
+    char.temp_hp = 7
+    drop_spell_temp_hp(char, [{"key": "spell:bears_endurance", "name": "Orso", "data": {"caster_id": 2, "temp_given": 7}}])
+    assert set(char.settings[SPELL_TEMP_DROPPED]) == {"spell:heroism", "spell:bears_endurance"}
+
+
 # --- Rigenerazione ---------------------------------------------------------------------------------------------------
 
 async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_session_factory, monkeypatch):

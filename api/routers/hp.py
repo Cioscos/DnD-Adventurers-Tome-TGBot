@@ -74,7 +74,7 @@ from api.routers._helpers import (
 from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext
 from api.services.character_response import build_character_response
@@ -870,6 +870,7 @@ async def rest(
         char.last_long_rest_at = _now()
         char.temp_hp = 0
         reset_target_immunity(char)  # le «24 ore» di un effetto su altri
+        forget_spell_temp_drop(char)  # i PF temporanei tolti da un incantesimo finito non tornano più con un annullo
         # Break concentration
         end_concentration(char)
         end_states_on_rest(char, "long")
