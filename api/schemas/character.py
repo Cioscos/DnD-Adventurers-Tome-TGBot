@@ -385,6 +385,10 @@ class CharacterCreate(BaseModel):
     initial_class: Optional[CharacterClassCreate] = None
     # Optional identity — applied in the same transaction (see create_character).
     identity: Optional[CharacterIdentityCreate] = None
+    # Edizione del personaggio (default 2014) e scelta dell'equipaggiamento di partenza della classe:
+    # una alternativa per gruppo (vedi GET /rules/starting-equipment). Richiede initial_class.
+    rules_edition: Edition = "2014"
+    starting_equipment: Optional[list[int]] = None
 
 
 class CharacterUpdate(BaseModel):

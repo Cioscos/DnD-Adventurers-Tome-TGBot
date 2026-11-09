@@ -54,6 +54,7 @@ from core.data.spell_slots import normalize_class_name
 from core.rules.modifiers import modifiers_for
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
 from core.rules.roll_options import AppliedOptions, refund_spent
+from core.rules.starting_equipment import describe as describe_starting_equipment
 from core.rules.subclasses import subclasses_for
 from core.rules.types import BARDIC_DIE, Edition
 
@@ -76,6 +77,15 @@ async def class_proficiency_grant(
     """Competenze che dà la classe (con elenco e numero delle abilità da scegliere)."""
     class_key = normalize_class_name(class_key) or class_key
     return ProficiencyGrantRead(**grant_to_dict(class_proficiencies(edition, class_key, as_multiclass), lang))
+
+
+@router.get("/starting-equipment")
+async def starting_equipment_options(
+    edition: Edition, class_key: str,
+    _user: Annotated[int, Depends(get_current_user)], lang: Annotated[str, Depends(get_current_lang)],
+) -> dict[str, list[list[str]]]:
+    """Equipaggiamento di partenza della classe: per ogni gruppo, le etichette delle alternative (vuoto per classi custom)."""
+    return {"groups": describe_starting_equipment(edition, normalize_class_name(class_key) or class_key, lang)}
 
 
 # ---------------------------------------------------------------------------

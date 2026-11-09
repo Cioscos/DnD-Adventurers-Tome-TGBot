@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from typing import Annotated
@@ -22,6 +23,7 @@ from core.db.models import (
     CharacterHistory,
     ConditionEffect,
     Currency,
+    Item,
     PendingSave,
     GameSession,
     CampaignMember,
@@ -68,7 +70,9 @@ from api.services.rules_options import (
     use_options,
 )
 from api.services.effects import cap_current_hp, sync_zero_hp
+from core.data.spell_slots import normalize_class_name
 from core.rules.edition import character_edition
+from core.rules.starting_equipment import resolve as resolve_starting_equipment, starting_groups
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import attach_party_auras
 from core.rules.modifiers import effective_hp_max, modifiers_for, rule_hp_bonus
@@ -282,6 +286,20 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
         char.languages = langs + [l for l in sp.languages if l not in langs]
 
 
+def _add_starting_equipment(char: Character, body: CharacterCreate, lang: str) -> None:
+    """Equipaggiamento di partenza (Task 47): oggetti normali non equipaggiati e monete, nessun effetto."""
+    try:
+        rows, gold = resolve_starting_equipment(
+            body.rules_edition, normalize_class_name(body.initial_class.class_name) or "", body.starting_equipment, lang)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    for r in rows:
+        meta = r.pop("item_metadata")
+        char.items.append(Item(**r, item_metadata=json.dumps(meta) if meta else None))
+    char.currency.gold += gold
+    char.recalculate_encumbrance()
+
+
 @router.post("", response_model=CharacterFull, status_code=status.HTTP_201_CREATED)
 async def create_character(
     body: CharacterCreate,
@@ -289,7 +307,12 @@ async def create_character(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0)
+    if body.starting_equipment is not None and (
+        body.initial_class is None or not starting_groups(body.rules_edition, normalize_class_name(body.initial_class.class_name) or "")
+    ):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_starting_equipment")
+    char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0,
+                     rules_edition=body.rules_edition)
     # Populate ability scores + currency via the relationships (not raw
     # character_id FKs) so the in-memory collections are loaded before the
     # flush. This lets create_class_for_character read char.ability_scores
@@ -330,6 +353,8 @@ async def create_character(
         await create_class_for_character(
             char, body.initial_class, session, is_first_class=True, lang=lang,
         )
+        if body.starting_equipment is not None:
+            _add_starting_equipment(char, body, lang)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
     # response serialization. See _refresh_char_full for the full rationale.
