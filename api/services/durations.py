@@ -17,7 +17,8 @@ from api.services.effects import _add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
 from core.rules.edition import character_edition
-from core.rules.states import exhaustion_level
+from api.services.spell_effects import regrant_spells
+from core.rules.states import SPELL_GIVEN, exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
 
 
@@ -140,7 +141,8 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
     def remember(pc: Character) -> None:  # prima di ogni modifica: l'annullamento li rimette com'erano
         undo.char_states.setdefault(str(pc.id), {
             "active_states": list(pc.active_states or []), "damaged": get_turn(pc)["damaged"],
-            "exhaustion": exhaustion_level(pc), "is_dead": bool(pc.is_dead)})  # lo stato che scade la addebita
+            "exhaustion": exhaustion_level(pc), "is_dead": bool(pc.is_dead),
+            "spell_given": (pc.settings or {}).get(SPELL_GIVEN)})  # lo stato che scade la addebita
 
     if char is not None:
         remember(char)

@@ -101,7 +101,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     effect, variant, chars, chosen, outside = resolved
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster)}
-    if outside or not (variant.modifiers(data) or variant.options):
+    if not (variant.modifiers(data) or variant.options) or (outside and not chars):
         return SpellEffectsRead(applied=[], text=variant.text or _OUTSIDE_TEXT)
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})
@@ -117,7 +117,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             variant.on_apply(target, data)
         applied.append({"id": target.id, "name": target.name})
     ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else [])]
-    begin_state(caster, StateSpec(clock, rounds=variant.rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key}),
+    begin_state(caster, StateSpec(clock, rounds=variant.rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}
@@ -128,7 +128,30 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     else:
         settings.pop(SPELL_RELEASE, None)
     caster.settings = settings
-    return SpellEffectsRead(applied=applied, text=variant.text)
+    return SpellEffectsRead(applied=applied, text=variant.text or (_OUTSIDE_TEXT if outside else None))
+
+
+async def regrant_spells(session: AsyncSession, caster: Character, before_given: dict | None) -> None:
+    """Un annullo ha riaperto l'orologio ``spell_cast:*`` che la chiusura aveva spento: i bersagli riavuti ritrovano lo stato
+    (ricostruito dai dati dell'orologio) e ``SPELL_GIVEN`` torna. Un bersaglio cancellato o con lo stato di un altro lanciatore si salta."""
+    settings = dict(caster.settings or {})
+    given = dict(settings.get(SPELL_GIVEN) or {})
+    for clock, ids in (before_given or {}).items():
+        state = next((s for s in caster.active_states or [] if s.get("key") == clock), None)
+        if clock in given or state is None or not (state.get("data") or {}).get("state_data"):
+            continue
+        key = SPELL_STATE_PREFIX + state["data"]["spell_key"]
+        back = []
+        for tid in ids:
+            target = caster if tid == caster.id else await session.get(Character, tid)
+            held = next((s for s in (target.active_states or []) if s.get("key") == key), None) if target is not None else None
+            if target is None or (held and (held.get("data") or {}).get("caster_id") != caster.id):
+                continue
+            if held is None:
+                begin_state(target, StateSpec(key, ends_on=("manual",), data=dict(state["data"]["state_data"])), key, state.get("name"))
+            back.append(tid)
+        given[clock] = back
+    caster.settings = {**settings, SPELL_GIVEN: given} if given else settings
 
 
 def item_spell(spell: dict) -> SimpleNamespace:

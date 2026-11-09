@@ -143,6 +143,8 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
                 restore_exhaustion(pc, snap["exhaustion"])
                 if not snap["is_dead"] and pc.is_dead and snap["exhaustion"] < 6:
                     pc.is_dead = False
+            from api.services.spell_effects import regrant_spells  # import locale: il servizio importa gli alleati di sessione
+            await regrant_spells(db, pc, snap.get("spell_given"))  # l'orologio di un incantesimo riaperto ridà lo stato ai bersagli
     for char_id, used in log.once_per_turn.items():
         pc = await db.get(Character, int(char_id))
         if pc is not None:

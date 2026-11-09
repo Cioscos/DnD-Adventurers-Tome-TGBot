@@ -1154,7 +1154,8 @@ async def cast_from_item(
     if meta.get("requires_attunement") and not meta.get("attuned"):
         raise HTTPException(status_code=409, detail="attunement_required")
     fx_spell = item_spell(spell)
-    await validate_spell_targets(session, char, fx_spell, fx_spell.level, body.targets, body.choices)  # prima di spendere
+    resolved = await validate_spell_targets(session, char, fx_spell, fx_spell.level, body.targets, body.choices)  # prima di spendere
+    variant = resolved[1] if resolved else None  # durata e concentrazione del catalogo battono i metadati dell'oggetto
     cost = int(spell.get("charges_cost") or 0)
     ch = meta.get("charges") if isinstance(meta.get("charges"), dict) else None
     current = int(ch.get("current") or 0) if ch else 0
@@ -1165,7 +1166,7 @@ async def cast_from_item(
         set_item_charges(item, current - cost)
     end_on_action(char, "cast", spell)  # come ogni lancio: il Manto di Ombre finisce
 
-    if spell.get("is_concentration"):
+    if variant.concentration if variant else spell.get("is_concentration"):
         # Match by srd_index (when both set), then by case-insensitive name.
         name = spell["name"].lower()
         idx = spell.get("srd_index")
@@ -1173,7 +1174,7 @@ async def cast_from_item(
             next((s for s in char.spells if idx and s.srd_index == idx), None)
             or next((s for s in char.spells if s.name.lower() == name), None)
         )
-        rounds = parse_duration_rounds(spell.get("duration"))
+        rounds = variant.rounds if variant else parse_duration_rounds(spell.get("duration"))
         if match:
             start_concentration(char, match.id, rounds)
         else:

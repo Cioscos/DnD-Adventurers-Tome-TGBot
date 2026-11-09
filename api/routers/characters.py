@@ -38,7 +38,7 @@ from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
 from core.rules.proficiencies import FEATURE_GRANTS_KEY, SEEDED_FLAG
 from api.schemas.character import (
@@ -442,6 +442,8 @@ async def delete_character(
             game_session.last_activity_at = _now()
 
     await session.execute(delete(CampaignMember).where(CampaignMember.character_id == char.id))
+    release_given_spells(char, [{"key": clock} for clock in (char.settings or {}).get(SPELL_GIVEN) or {}])  # i bersagli perdono gli effetti
+    await session.flush()
     await session.delete(char)
 
 

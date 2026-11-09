@@ -33,6 +33,7 @@ from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
 from api.services.session_allies import attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
+from api.services.spell_effects import regrant_spells
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -71,7 +72,7 @@ from api.routers._helpers import (
 from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
-    TEMP_GIVEN, ZERO_HP_USES, begin_state, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
+    SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
 from core.rules.types import RuleContext
 from api.services.character_response import build_character_response
@@ -149,7 +150,7 @@ async def _get_owned_full(
     return char
 
 
-_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES, TEMP_GIVEN)  # + il conteggio di Ira Implacabile
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES, TEMP_GIVEN, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
 
 
 def _hp_state(char: Character, form=None) -> dict:
@@ -594,6 +595,8 @@ async def undo_hp(
                 _add_history(session, receiver.id, "hp_change", f"PF temporanei tornati: il danno di {char.name} è stato annullato ({receiver.temp_hp or 0} → {entry['amount']})",
                              meta={"op": "TEMP_HP", "amount": entry["amount"], "restored": True})
                 receiver.temp_hp = entry["amount"]
+    await regrant_spells(session, char, before.get(SPELL_GIVEN))  # gli effetti degli incantesimi dati ad altri tornano con l'orologio
+    settings = dict(char.settings or {})
     for k in _CONC_SETTINGS:
         if k not in before:  # snapshot salvato prima che la chiave esistesse: non la tocca
             continue

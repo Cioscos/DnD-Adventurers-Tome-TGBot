@@ -208,3 +208,118 @@ async def test_transfer_clears_spell_given(client, test_session_factory):
     async with test_session_factory() as s:
         copy = await s.get(Character, r.json()["id"])
         assert "spell_given" not in (copy.settings or {})
+
+
+async def _fail_concentration(client, caster, monkeypatch) -> dict:
+    monkeypatch.setattr(random, "randint", lambda a, b: 1)
+    as_user(GM_ID)
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 5})
+    assert r.status_code == 200 and r.json()["concentrating_spell_id"] is None, r.text
+    return r.json()
+
+
+async def test_hp_undo_gives_the_effect_back_to_the_ally(client, test_session_factory, monkeypatch):
+    _, hero, caster, spell = await _table(client, test_session_factory)
+    base = await _ac(client, hero, PLAYER_ID)
+    await _cast(client, caster, spell, [hero])
+    dmg = await _fail_concentration(client, caster, monkeypatch)
+    assert await _ac(client, hero, PLAYER_ID) == base
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{caster}/hp/undo", json={"op_id": dmg["hp_undo_id"]})
+    assert r.status_code == 200, r.text
+    assert await _ac(client, hero, PLAYER_ID) == base + 2 and len(await _states(client, hero, PLAYER_ID)) == 1
+    as_user(GM_ID)
+    await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})
+    assert await _ac(client, hero, PLAYER_ID) == base
+
+
+async def test_hp_undo_on_self_leaves_no_permanent_bonus(client, test_session_factory, monkeypatch):
+    _, _, caster, spell = await _table(client, test_session_factory)
+    base = await _ac(client, caster, GM_ID)
+    await _cast(client, caster, spell, None)
+    dmg = await _fail_concentration(client, caster, monkeypatch)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/hp/undo", json={"op_id": dmg["hp_undo_id"]})).status_code == 200
+    assert await _ac(client, caster, GM_ID) == base + 2
+    await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})
+    assert await _ac(client, caster, GM_ID) == base
+
+
+async def test_deleted_caster_releases_the_ally(client, test_session_factory):
+    _, hero, caster, spell = await _table(client, test_session_factory)
+    base = await _ac(client, hero, PLAYER_ID)
+    await _cast(client, caster, spell, [hero])
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{caster}")).status_code == 204
+    assert await _ac(client, hero, PLAYER_ID) == base
+    assert await _states(client, hero, PLAYER_ID) == []
+
+
+async def _spell_for(client, cid) -> int:
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/spells", json={
+        "name": "Shield of Faith", "srd_index": SOF, "level": 1, "is_concentration": True})
+    assert r.status_code == 201, r.text
+    assert (await client.post(f"/characters/{cid}/spell_slots", json={"level": 1, "total": 2})).status_code == 201
+    return r.json()["id"]
+
+
+async def test_encounter_undo_gives_the_effect_back(client, test_session_factory, monkeypatch):
+    from tests.integration._encounter_helpers import setup_full_encounter
+    from tests.integration._telegram_stub import install_fake_telegram
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    r = await client.post(f"/sessions/{sid}/encounter/start", json={})
+    assert r.status_code == 200, r.text
+    async with test_session_factory() as s:
+        hero = (await s.execute(select(Character).where(Character.name == "Eroe"))).scalar_one().id
+    spell = await _spell_for(client, hero)
+    base = await _ac(client, hero, PLAYER_ID)
+    assert (await _cast(client, hero, spell, None, user=PLAYER_ID)).status_code == 200
+    async with test_session_factory() as s:  # ultimo round: scade all'inizio del prossimo turno del PG
+        ch = await s.get(Character, hero)
+        ch.active_states = [{**st, "rounds_left": 1} if st["key"].startswith("spell_cast:") else st for st in ch.active_states]
+        await s.commit()
+    as_user(GM_ID)
+    for _ in range(3):  # PG -> goblin -> goblin -> PG
+        assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200
+    assert await _ac(client, hero, PLAYER_ID) == base
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    assert await _ac(client, hero, PLAYER_ID) == base + 2
+    as_user(PLAYER_ID)
+    await client.patch(f"/characters/{hero}/concentration", json={"spell_id": None})
+    assert await _ac(client, hero, PLAYER_ID) == base
+
+
+async def test_outside_the_evening_the_caster_still_gets_their_own_effect(client, test_session_factory):
+    caster, _ = await _caster(client, test_session_factory, seat=False)
+    as_user(GM_ID)
+    aid = (await client.post(f"/characters/{caster}/spells", json={"name": "Aid", "srd_index": "aid", "level": 2})).json()["id"]
+    await client.post(f"/characters/{caster}/spell_slots", json={"level": 2, "total": 1})
+    async with test_session_factory() as s:
+        other = Character(user_id=GM_ID, name="Altro")
+        s.add(other)
+        await s.commit()
+        other_id = other.id
+    r = await _cast(client, caster, aid, [caster, other_id], slot_level=2)
+    assert r.status_code == 200, r.text
+    fx = r.json()["spell_effects"]
+    assert fx["applied"] == [{"id": caster, "name": "Chierico"}] and fx["text"]["it"]
+    assert len(await _states(client, caster, GM_ID, f"{SPELL_STATE_PREFIX}aid")) == 1
+    assert await _states(client, other_id, GM_ID, f"{SPELL_STATE_PREFIX}aid") == []
+
+
+async def test_item_cast_concentration_comes_from_the_catalog_variant(client, test_session_factory):
+    _, hero, caster, _ = await _table(client, test_session_factory)
+    base = await _ac(client, hero, PLAYER_ID)
+    spell = {"name": "Shield of Faith", "srd_index": SOF, "level": 1, "charges_cost": 1}  # senza is_concentration
+    as_user(GM_ID)
+    iid = await _item(client, caster, charges={"current": 3, "max": 3}, granted_spells=[spell])
+    r = await client.post(f"/characters/{caster}/items/{iid}/cast", json={"spell_index": 0, "targets": [hero]})
+    assert r.status_code == 200, r.text
+    assert r.json()["concentrating_spell_id"] is not None  # l'orologio cade con la concentrazione: deve esserci
+    assert await _ac(client, hero, PLAYER_ID) == base + 2
+    as_user(GM_ID)
+    await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})
+    assert await _ac(client, hero, PLAYER_ID) == base
