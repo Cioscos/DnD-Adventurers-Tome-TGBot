@@ -82,10 +82,11 @@ export default function SpellDamageSheet({
   const secondTypes = (spell?.extra_damage_type ?? '').split('|').filter(Boolean)
   const [secondType, setSecondType] = useState('')
   const [unrollable, setUnrollable] = useState(false)
-  const pickedType = useEffectPickStore((s) => (spell ? s.picked[spell.id]?.choices?.damage_type : undefined))  // il tipo scelto al lancio
+  // Il tipo scelto al lancio, mostrato solo a lancio confermato dal server (un lancio rifiutato non ne ha salvato nessuno).
+  const [slotConsumed, setSlotConsumed] = useState(false)
+  const pickedType = useEffectPickStore((s) => (spell && (slotConsumed || slotAlreadyConsumed) ? s.picked[spell.id]?.choices?.damage_type : undefined))
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
-  const [slotConsumed, setSlotConsumed] = useState(false)
   const [castNotes, setCastNotes] = useState<OptionResult | undefined>(undefined)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
 
@@ -115,14 +116,20 @@ export default function SpellDamageSheet({
 
       // Il tiro per colpire (/attack) ha già fatto il lancio; altrimenti lo fa il primo tiro, una volta sola.
       // Slot, rituale o trucchetto: il server consuma il dovuto e avvia la concentrazione col suo contatore.
-      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || kiExtra != null || freeCast || (slotLevel != null && slotLevel >= 1))) {
+      let cast = slotAlreadyConsumed || slotConsumed
+      if (!cast && (asRitual || spell.level === 0 || kiExtra != null || freeCast || (slotLevel != null && slotLevel >= 1))) {
+        // Se il lancio fallisce (409...) nessun tipo è stato salvato: la scelta non resta nello store.
         const updated = await castSpell(charId, spell.id, kiExtra != null
           ? { ki: true, ki_extra: kiExtra, slot_level: null, as_ritual: false }
           : freeCast
             ? { free_cast: true, slot_level: null, as_ritual: false }
           : asRitual
             ? { as_ritual: true, slot_level: null }
-            : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
+            : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false }).catch((err) => {
+          useEffectPickStore.setState(({ picked }) => ({ picked: Object.fromEntries(Object.entries(picked).filter(([id]) => Number(id) !== spell.id)) }))
+          throw err
+        })
+        cast = true
         qc.setQueryData(['character', charId], updated)
         if (updated.damage_unrollable) throw new DamageUnrollable()  // lanciato, ma questi dadi il server non li sa tirare
         qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -132,7 +139,7 @@ export default function SpellDamageSheet({
       }
 
       // Il tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida e i privilegi che lo leggono lo vedono.
-      const chosenType = useEffectPickStore.getState().picked[spell.id]?.choices?.damage_type
+      const chosenType = cast ? useEffectPickStore.getState().picked[spell.id]?.choices?.damage_type : undefined
       const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel, ...(chosenType ? { damage_type: chosenType } : {}) })
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined

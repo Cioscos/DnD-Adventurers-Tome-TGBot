@@ -100,6 +100,18 @@ describe('SpellDamageSheet', () => {
     expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', damage_type: 'cold' }))
   })
 
+  it('a rejected cast shows and sends no type, and leaves the pick out of the store', async () => {
+    useEffectPickStore.setState({ picked: { 2: { choices: { damage_type: 'cold' } } } })
+    useSpell.mockRejectedValue(new Error('409'))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)
+    expect(screen.queryByText(/chosen_type/)).toBeNull()  // non ancora confermato dal server
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(useSpell).toHaveBeenCalled())
+    await waitFor(() => expect(useEffectPickStore.getState().picked[2]).toBeUndefined())
+    expect(rollDamage).not.toHaveBeenCalled()
+    expect(screen.queryByText(/chosen_type/)).toBeNull()
+  })
+
   it('sends no damage type and shows no chosen type when the cast chose none', async () => {
     rollDamage.mockResolvedValue(result)
     useSpell.mockResolvedValue({ id: 7 })
