@@ -387,6 +387,20 @@ async def test_warding_bond_shared_damage_makes_the_caster_roll_the_concentratio
     assert any("TS Concentrazione" in h for h in await _history(client, caster))
 
 
+async def test_undoing_a_death_ward_hit_reopens_the_casters_clock_too(client, test_session_factory):
+    """I1: l'annullo rimette lo stato sul bersaglio E l'orologio sul lanciatore, che poi lo fa scadere."""
+    hero, caster, spell = await _table(client, test_session_factory, "Death Ward", "death-ward", 4)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=4)
+    dmg = await _damage(client, hero, 500, "slashing", options=[DEATH_WARD])
+    assert await _states(client, hero, "spell:death_ward") == [] and await _states(client, caster, "spell_cast:death_ward", GM_ID) == []
+    await _undo(client, hero, dmg["hp_undo_id"])
+    assert len(await _states(client, hero, "spell:death_ward")) == 1
+    assert len(await _states(client, caster, "spell_cast:death_ward", GM_ID)) == 1
+    await _caster_long_rest(client, caster)  # la durata dell'incantesimo finisce: lo perde anche il bersaglio
+    assert await _states(client, hero, "spell:death_ward") == []
+
+
 # --- Rigenerazione ---------------------------------------------------------------------------------------------------
 
 async def test_regenerate_heals_4d8_plus_15_then_one_hp_each_turn(client, test_session_factory, monkeypatch):

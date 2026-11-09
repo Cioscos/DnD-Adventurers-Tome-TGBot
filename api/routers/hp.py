@@ -34,7 +34,7 @@ from api.services.rules_turn import get_turn, set_damaged
 from api.services.session_allies import load_receiver, attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
-from api.services.spell_hp import spell_damage_effects
+from api.services.spell_hp import foreign_spell_clocks, reopen_spell_clocks, spell_damage_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -246,6 +246,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     conc_result: ConcentrationSaveResult | None = None
     zero_save: ZeroHpSaveResult | None = None
     notifications: list[dict] = []
+    clocks: list[dict] = []
     shared_log: list[dict] = []  # lo stato che il danno condiviso ha lasciato sui lanciatori: l'annullo lo rimette
 
     was_at_zero = char.current_hit_points == 0
@@ -261,6 +262,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             await attach_party(session, char)  # aure e Dono dei Protettori dei compagni della serata
+            clocks = await foreign_spell_clocks(session, char)  # prima della spesa: uno stato speso chiude l'orologio di chi l'ha lanciato
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
             rolls, reduction = roll_option_dice(char, opts)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
@@ -527,7 +529,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
                     "spent": option_block.spent if option_block else [], "zero_before": zero_before,
-                    "zero_after": _zero_conditions(char), "shared": shared_log}
+                    "zero_after": _zero_conditions(char), "shared": shared_log,
+                    "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
     if shared_from:
         return None
 
@@ -593,6 +596,7 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
     await release_concentration_effects(session, char)
     refund_spent(char, snap.get("spent") or [])
     await refund_donor_tokens(session, char, snap.get("spent") or [])
+    await reopen_spell_clocks(session, snap.get("clocks") or [])  # lo stato di un incantesimo altrui è tornato: torna l'orologio di chi l'ha lanciato
     settings = dict(char.settings or {})
     still_given = settings.get(TEMP_GIVEN) or {}
     for key, entries in (before.get(TEMP_GIVEN) or {}).items():  # l'Ira chiusa dal danno riapre: tornano i PF temporanei dati con essa

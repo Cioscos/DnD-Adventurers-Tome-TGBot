@@ -9,7 +9,8 @@ from api.services.session_allies import load_receiver
 from core.db.models import Character
 from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.roll_options import _spend_state_token
-from core.rules.spell_effects import SPELL_STATE_PREFIX, SpellVariant
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellVariant
+from core.rules.states import SPELL_GIVEN
 
 
 def spell_states(char: Character) -> list[tuple[dict, SpellVariant, dict]]:
@@ -43,6 +44,31 @@ async def spell_turn_start(session: AsyncSession, char: Character) -> tuple[int,
                 notices.append({"feature_key": state["key"], "name": {"it": name, "en": name}, "amount": 0, "message": {
                     "it": f"{name}: ottieni {amount} PF temporanei.", "en": f"{name}: you gain {amount} temporary HP."}})
     return healed, notices
+
+
+async def foreign_spell_clocks(session: AsyncSession, char: Character) -> list[dict]:
+    """Gli orologi (e ``SPELL_GIVEN``) dei lanciatori degli incantesimi altrui su ``char``, letti prima che un'opzione ne spenda lo stato
+    (che chiude l'orologio): l'annullo del danno li riapre con ``reopen_spell_clocks``."""
+    out = []
+    for state in char.active_states or []:
+        key, caster_id = str(state.get("key", "")), (state.get("data") or {}).get("caster_id")
+        if not key.startswith(SPELL_STATE_PREFIX) or caster_id in (None, char.id):
+            continue
+        caster = await load_receiver(session, caster_id)
+        clock = next((s for s in caster.active_states or [] if s.get("key") == SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]), None)
+        if clock is not None:
+            out.append({"key": key, "caster_id": caster_id, "clock": clock, "given": (caster.settings or {}).get(SPELL_GIVEN)})
+    return out
+
+
+async def reopen_spell_clocks(session: AsyncSession, saved: list[dict]) -> None:
+    """Un annullo ha rimesso lo stato di un incantesimo altrui sul bersaglio: l'orologio del lanciatore si riapre e i suoi bersagli ritrovano lo stato."""
+    from api.services.spell_effects import regrant_spells  # import locale: il servizio importa questo modulo
+    for entry in saved:
+        caster = await load_receiver(session, entry["caster_id"])
+        if not any(s.get("key") == entry["clock"]["key"] for s in caster.active_states or []):
+            caster.active_states = [*(caster.active_states or []), entry["clock"]]
+        await regrant_spells(session, caster, entry["given"])
 
 
 async def _share(session: AsyncSession, char: Character, name: str, caster_id: int | None, amount: int, lang: str, log: list[dict]) -> None:
