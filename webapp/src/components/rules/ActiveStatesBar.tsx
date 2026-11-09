@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import { notifyMutationError } from '@/lib/mutationError'
 import { bonusSpentOnReturn } from '@/lib/formReturn'
+import { formatRounds } from '@/lib/spellDuration'
 import { useToast } from '@/hooks/useToast'
 import type { CharacterFull } from '@/types'
 
@@ -14,13 +15,16 @@ type StateRow = NonNullable<CharacterFull['active_states']>[number]
 function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string, charId: number): string[] {
   const d = (s.data ?? {}) as Record<string, unknown>
   const out: string[] = []
-  if (s.key.startsWith('spell:')) {
-    // Effetto di un incantesimo: lo scandisce l'orologio del lanciatore, qui si legge da chi viene e quanto dura.
-    if (typeof d.caster_name === 'string' && d.caster_id !== charId) out.push(t('character.turn.state_from', { name: d.caster_name }))
-    const dur = d.duration as { rounds?: number | null; concentration?: boolean; until_rest?: boolean } | undefined
+  const clock = s.key.startsWith('spell_cast:')
+  if (clock || s.key.startsWith('spell:')) {
+    // Effetto di un incantesimo: lo scandisce l'orologio del lanciatore (`spell_cast:`), qui si legge da chi viene e quanto dura.
+    if (clock) out.push(t('character.turn.state_cast_by_you'))
+    else if (typeof d.caster_name === 'string' && d.caster_id !== charId) out.push(t('character.turn.state_from', { name: d.caster_name }))
+    const dur = (clock ? (d.state_data as { duration?: unknown } | undefined)?.duration : d.duration) as
+      { rounds?: number | null; concentration?: boolean; until_rest?: boolean } | undefined
     if (dur?.until_rest) out.push(t('character.turn.state_until_rest'))
     else if (dur?.concentration) out.push(t('character.turn.state_while_concentrating'))
-    else if (dur?.rounds) out.push(t('character.turn.state_rounds_total', { n: dur.rounds }))
+    else if (dur?.rounds) out.push(formatRounds(t, dur.rounds))
   }
   if (typeof d.dc === 'number') {
     out.push(t('character.turn.state_dc', { dc: d.dc, save: typeof d.save === 'string' ? t(`common.abilities.${d.save}`) : '' }))
@@ -118,7 +122,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
                   <span className="ml-2 font-mono text-dnd-text-muted">d{s.data.die}</span>
                 )}
                 {s.rounds_left != null && (
-                  <span className="ml-2 text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
+                  <span className="ml-2 text-dnd-text-muted tabular-nums">{s.rounds_left > 10 ? formatRounds(t, s.rounds_left) : t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
                 )}
               </p>
               {facts.length > 0 && <p className="mt-0.5 text-xs text-dnd-text-muted tabular-nums">{facts.join(' · ')}</p>}

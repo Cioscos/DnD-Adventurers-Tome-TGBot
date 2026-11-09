@@ -102,7 +102,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster),
             "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest}}
-    if not (variant.modifiers(data) or variant.options) or (outside and not chars):
+    if not (variant.modifiers(data) or variant.options) or not chars:  # nessun personaggio: l'effetto lo applica il GM
         return SpellEffectsRead(applied=[], text=variant.text or _OUTSIDE_TEXT)
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})

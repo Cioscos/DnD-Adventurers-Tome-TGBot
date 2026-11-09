@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from core.db.models import AbilityScore, Character, SessionParticipant, SessionRole
 from core.rules.catalog.spells import spell_effect
-from core.rules.spell_effects import SPELL_STATE_PREFIX
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from tests.integration._encounter_helpers import GM_ID, NOW, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.test_magic_items import _item
@@ -335,3 +335,24 @@ async def test_spell_list_exposes_the_effect_for_the_client(client, test_session
     aid = spells["aid"]["effect"]
     assert aid["target_kind"] == "allies" and aid["max_targets_by_slot"]["3"] == 3 and aid["choices"] == []
     assert spells["fireball"]["effect"] is None
+
+
+async def test_another_creature_gives_gm_text_and_no_clock(client, test_session_factory):
+    _, _, caster, spell = await _table(client, test_session_factory)
+    r = await _cast(client, caster, spell, [])
+    assert r.status_code == 200, r.text
+    fx = r.json()["spell_effects"]
+    assert fx["applied"] == [] and fx["text"]["it"] and fx["text"]["en"]
+    assert await _states(client, caster, GM_ID, f"{SPELL_CLOCK_PREFIX}shield_of_faith") == []
+    assert not (r.json().get("settings") or {}).get("spell_given")
+
+
+async def test_item_granted_spell_exposes_the_effect_even_if_unknown(client, test_session_factory):
+    caster, _ = await _caster(client, test_session_factory, seat=False)
+    spell = {"name": "Longstrider", "srd_index": "longstrider", "level": 1, "charges_cost": 1}
+    plain = {"name": "Fireball", "srd_index": "fireball", "level": 3, "charges_cost": 1}
+    as_user(GM_ID)
+    iid = await _item(client, caster, charges={"current": 3, "max": 3}, granted_spells=[spell, plain])
+    item = next(i for i in (await _full(client, caster))["items"] if i["id"] == iid)
+    fx = item["granted_effects"]
+    assert fx[0]["target_kind"] == "allies" and fx[0]["max_targets_by_slot"]["1"] >= 1 and fx[1] is None

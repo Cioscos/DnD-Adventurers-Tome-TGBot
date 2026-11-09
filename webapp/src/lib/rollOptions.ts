@@ -89,12 +89,17 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
 /** Cosa togliere col prossimo lancio di un incantesimo (Task 48): scelto nel foglio comune, consumato dal lancio, ovunque parta. */
 export const useRemovalStore = create<{ chosen: Record<number, NonNullable<SpellUseBody['removal']>> }>(() => ({ chosen: {} }))
 
+/** Bersagli e scelte dell'effetto del prossimo lancio di un incantesimo (catalogo), chiesti prima di qualunque via di lancio.
+ *  Si legge senza consumarlo (un lancio rifiutato si riprova dallo stesso foglio); lo azzera chi apre o chiude il flusso. */
+export const useEffectPickStore = create<{ picked: Record<number, Pick<SpellUseBody, 'targets' | 'choices'>> }>(() => ({ picked: {} }))
+
 /** Il lancio senza tiro per colpire: `/use`. */
 export async function castSpell(charId: number, spellId: number, body: SpellUseBody): Promise<CharacterFull> {
   const removal = useRemovalStore.getState().chosen[spellId]
+  const pick = useEffectPickStore.getState().picked[spellId]
   const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)
   useRemovalStore.setState(({ chosen }) => ({ chosen: Object.fromEntries(Object.entries(chosen).filter(([id]) => Number(id) !== spellId)) }))
-  const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}) })
+  const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}), ...(pick && body.targets === undefined ? pick : {}) })
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   for (const line of updated.removal_result ?? []) toast.info(line[lang])
   return updated

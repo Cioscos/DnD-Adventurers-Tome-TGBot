@@ -29,6 +29,17 @@ from core.rules.spellcasting import (
 )
 
 
+def effect_view(char: Character, srd_index: str | None, name: str | None, level: int) -> dict | None:
+    """L'effetto del catalogo per l'edizione di chi lancia (forma di ``SpellRead.effect``); ``None`` se non c'è."""
+    edition = character_edition(char)
+    if (found := spell_effect(edition, srd_index, name)) is None:
+        return None
+    fx, variant = found
+    return {"target_kind": fx.target.kind,
+            "max_targets_by_slot": {lvl: fx.target.count(lvl) for lvl in range(max(level, 1), 10)},
+            "choices": [{"key": c.key, "label": c.label, "options": c.options(edition)} for c in variant.choices]}
+
+
 def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
     for spell in spells:
         stats = spell_stats(char, spell)
@@ -46,12 +57,7 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
                                "uses_left": pact.uses_left, **({"also_slot": True} if pact.also_slot else {})}
         if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
             spell.removal = removal_view(rm)
-        if (found := spell_effect(character_edition(char), spell.srd_index, spell.name)) is not None:
-            fx, variant = found
-            edition = character_edition(char)
-            spell.effect = {"target_kind": fx.target.kind,
-                            "max_targets_by_slot": {lvl: fx.target.count(lvl) for lvl in range(max(spell.level, 1), 10)},
-                            "choices": [{"key": c.key, "label": c.label, "options": c.options(edition)} for c in variant.choices]}
+        spell.effect = effect_view(char, spell.srd_index, spell.name, spell.level)
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

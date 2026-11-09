@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
+import { notifyCastError } from '@/lib/mutationError'
 import { resolveItemCast, matchingSpell, type ResolvedItemCast } from '@/lib/itemCast'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import SpellEffectAsk, { type SpellEffectPick } from '@/components/rules/SpellEffectAsk'
@@ -31,8 +32,10 @@ export function useItemCast(charId: number) {
       setResolved(item ? resolveItemCast(updated, item, spellIndex) : null)
     },
     onError: (err) => {
-      const detail = err instanceof ApiError && err.status === 409 ? String(err.detail) : ''
-      if (detail === 'no_charges') toast.error(t('character.inventory.magic.no_charges'))
+      const raw = err instanceof ApiError ? err.detail : undefined
+      const detail = typeof raw === 'string' ? raw : (raw as { code?: string } | null)?.code ?? ''
+      if (['invalid_target', 'target_dead', 'invalid_choice'].includes(detail)) notifyCastError(err)
+      else if (detail === 'no_charges') toast.error(t('character.inventory.magic.no_charges'))
       else if (detail === 'not_enough_charges') toast.error(t('character.inventory.magic.not_enough_charges'))
       else if (detail === 'attunement_required') toast.error(t('character.inventory.magic.attunement_required'))
       else toast.error(t('common.action_failed'))
@@ -40,11 +43,11 @@ export function useItemCast(charId: number) {
   })
 
   const mutate = (vars: { itemId: number; spellIndex: number; name: string }) => {
-    // Le informazioni sull'effetto stanno sull'incantesimo del personaggio con lo stesso indice SRD o nome: senza, si lancia su di sé.
+    // L'effetto lo calcola il server anche per gli incantesimi che il personaggio non conosce; l'omonimo sulla scheda è il ripiego.
     const char = qc.getQueryData<CharacterFull>(['character', charId])
     const item = char?.items?.find((i) => i.id === vars.itemId)
     const granted = item ? itemGrantedSpells(item)[vars.spellIndex] : undefined
-    const effect = char && granted ? matchingSpell(char, granted)?.effect : undefined
+    const effect = item?.granted_effects?.[vars.spellIndex] ?? (char && granted ? matchingSpell(char, granted)?.effect : undefined)
     if (granted && effect && (effect.target_kind !== 'self' || effect.choices.length > 0)) setAsk({ ...vars, level: granted.level, effect })
     else mutation.mutate(vars)
   }

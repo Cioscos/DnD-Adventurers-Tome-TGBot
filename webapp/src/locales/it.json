@@ -788,7 +788,10 @@
           "turn_slot_used": "Hai già usato quell'azione in questo turno.",
           "no_uses": "Usi esauriti.",
           "pact_slot_required": "Serve uno slot da warlock (slot di Patto).",
-          "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia."
+          "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia.",
+          "invalid_target": "Il bersaglio non è valido.",
+          "target_dead": "Il bersaglio è morto.",
+          "invalid_choice": "La scelta non è valida."
         },
         "close": "Chiudi",
         "reroll": "Nuovo tiro",
@@ -1508,6 +1511,11 @@
       "state_until_rest": "fino al riposo lungo",
       "state_while_concentrating": "finché il lanciatore si concentra",
       "state_rounds_total": "{{n}} round",
+      "state_cast_by_you": "lanciato da te · finisce su tutti i bersagli",
+      "state_duration_minutes_one": "{{count}} minuto",
+      "state_duration_minutes_other": "{{count}} minuti",
+      "state_duration_hours_one": "{{count}} ora",
+      "state_duration_hours_other": "{{count}} ore",
       "extend_rage_save": "Prolunga: TS imposto",
       "extend_rage_done": "Ira prolungata fino alla fine del turno seguente.",
       "state_generic": "Effetto attivo",

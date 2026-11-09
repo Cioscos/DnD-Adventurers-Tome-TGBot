@@ -112,7 +112,7 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
                 {t('character.turn.ally_confirm', { n: chosen.length })}
               </Button>
             )}
-            <Button variant="ghost" className="justify-start break-words text-left" disabled={pending} onClick={() => onPick(null)}>
+            <Button variant="ghost" className="justify-start break-words text-left" disabled={pending || (many && chosen.length > 0)} onClick={() => onPick(null)}>
               {t('character.turn.ally_other')}
             </Button>
           </>

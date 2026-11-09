@@ -302,6 +302,8 @@ export interface Item {
   mastery?: string
   /** Portata in più nel proprio turno, da un privilegio (Radici Percuotenti). */
   reach_bonus_ft?: number | null
+  /** Effetto di catalogo di ogni incantesimo concesso (stesso ordine di `granted_spells`); `null` se non ne ha. */
+  granted_effects?: (SpellEffectInfo | null)[] | null
 }
 
 export interface ContainerStats {

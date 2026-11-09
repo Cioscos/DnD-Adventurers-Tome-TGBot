@@ -17,7 +17,7 @@ from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
-from api.services.spellcasting import build_spellcasting_info, fill_spell_stats
+from api.services.spellcasting import build_spellcasting_info, effect_view, fill_spell_stats
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
@@ -178,6 +178,11 @@ async def build_character_response(
             response.saves_items_modifiers[slug] = item_val
 
     owned = {i.id: i for i in char.items}
+    for it in response.items:  # effetti degli incantesimi concessi, anche se il personaggio non li conosce
+        granted = (it.item_metadata or {}).get("granted_spells")
+        if isinstance(granted, list) and granted:
+            it.granted_effects = [effect_view(char, g.get("srd_index"), g.get("name"), int(g.get("level") or 1))
+                                  if isinstance(g, dict) else None for g in granted]
     for it in response.items:  # portata in più di un'arma (Radici Percuotenti)
         if it.item_type == "weapon" and it.id in owned:
             it.reach_bonus_ft = modifiers_for(char, "reach", item=owned[it.id]).flat or None

@@ -1,5 +1,5 @@
 import { notifyCastError } from '@/lib/mutationError'
-import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions, useRemovalStore } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions, useRemovalStore, useEffectPickStore } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,7 +13,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
 import AllyTargetSheet, { type Ally } from '@/components/rules/AllyTargetSheet'
 import RollNotes from '@/components/rules/RollNotes'
-import SpellEffectAsk, { type SpellEffectPick } from '@/components/rules/SpellEffectAsk'
+import SpellEffectAsk from '@/components/rules/SpellEffectAsk'
 import type { OptionResult } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
@@ -74,8 +74,8 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   >(null)
   // Incantesimo che toglie condizioni (Task 48): prima del lancio si sceglie cosa e a chi, nel foglio comune degli alleati.
   const [removalAsk, setRemovalAsk] = useState<{ spell: Spell; allies: Ally[]; next: () => void } | null>(null)
-  // Incantesimo con effetto sui bersagli (catalogo): prima del lancio si scelgono opzioni e bersagli.
-  const [effectAsk, setEffectAsk] = useState<{ spell: Spell; slot: SpellSlot } | null>(null)
+  // Incantesimo con effetto sui bersagli (catalogo): prima del lancio, per qualunque via, si scelgono opzioni e bersagli.
+  const [effectAsk, setEffectAsk] = useState<{ spell: Spell; level: number; next: () => void } | null>(null)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   // Danno dopo il tiro per colpire: slot già consumato, critico preimpostato.
   const [damageAfterAttack, setDamageAfterAttack] = useState<{ critical: boolean } | null>(null)
@@ -98,12 +98,12 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Lancio senza dadi: slot, rituale o trucchetto. Il server avvia anche la concentrazione col suo contatore.
   const castMutation = useMutation({
-    mutationFn: ({ spell, slot, ritual = false, free = false, ki = null, effect }: { spell: Spell; slot?: SpellSlot; ritual?: boolean; free?: boolean; ki?: number | null; effect?: SpellEffectPick }) =>
+    mutationFn: ({ spell, slot, ritual = false, free = false, ki = null }: { spell: Spell; slot?: SpellSlot; ritual?: boolean; free?: boolean; ki?: number | null }) =>
       castSpell(charId, spell.id, ki != null
         ? { slot_level: null, as_ritual: false, ki: true, ki_extra: ki }
         : free
           ? { slot_level: null, as_ritual: false, free_cast: true }
-          : { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual, ...effect }),
+          : { slot_id: slot?.id, slot_level: slot?.level ?? null, as_ritual: ritual }),
     onSuccess: (updated, { spell, slot, ritual = false, ki = null }) => {
       qc.setQueryData(['character', charId], updated)
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -125,12 +125,13 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   // Tiro per colpire: il BE consuma slot/rituale e attiva la concentrazione come /use.
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
+      const pick = useEffectPickStore.getState().picked[cast.spell.id]
       const prepared = await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
       const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id })
       const roll = d20Arg(cast.mode, await rollD20(cast.mode), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
         slot_id: cast.slot?.id, slot_level: cast.slot?.level ?? null, ritual: cast.ritual, confirm: prepared.confirm,
-        cast_options: prepared.options, cast_option_inputs: prepared.option_inputs,
+        cast_options: prepared.options, cast_option_inputs: prepared.option_inputs, ...pick,
         ...(typeof roll === 'object' ? roll : { die: roll }),
       })
       return { cast, result }
@@ -205,32 +206,39 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     attackMutation.mutate(cast)
   }, [attackMutation])
 
+  /** Con un effetto sui bersagli (non su di sé) o scelte da fare, si chiede prima; il server ricontrolla tutto. */
+  const withEffect = useCallback((spell: Spell, level: number, next: () => void) => {
+    if (spell.effect && (spell.effect.target_kind !== 'self' || spell.effect.choices.length > 0)) setEffectAsk({ spell, level: Math.max(level, 1), next })
+    else next()
+  }, [])
+
   const beginCast = useCallback((spell: Spell, mode: RollMode = 'normal') => {
     setCastMode(mode)
+    useEffectPickStore.setState({ picked: {} })  // un lancio nuovo non eredita i bersagli dell'ultimo
     if (spell.level === 0) {
       // Trucchetto — nessuno slot; la concentrazione si gestisce nello sheet danni se presente.
-      if (isAttackSpell(spell)) {
-        beginAttack({ spell, slot: null, ritual: false, mode })
-        return
-      }
-      if (spell.damage_dice || isHealingSpell(spell)) {
-        setPendingRitual(false)
-        setPendingSlotLevel(0)
-        setPendingSlotId(undefined)
-        setRollDamageSpell(spell)
-        return
-      }
-      castMutation.mutate({ spell })
+      withEffect(spell, 1, () => {
+        if (isAttackSpell(spell)) {
+          beginAttack({ spell, slot: null, ritual: false, mode })
+        } else if (spell.damage_dice || isHealingSpell(spell)) {
+          setPendingRitual(false)
+          setPendingSlotLevel(0)
+          setPendingSlotId(undefined)
+          setRollDamageSpell(spell)
+        } else {
+          castMutation.mutate({ spell })
+        }
+      })
       return
     }
     // A volontà (Mille Forme): nessuno slot da scegliere. Solo per i lanci senza tiri: nessun incantesimo a volontà del catalogo li ha.
     if (spell.at_will && !isAttackSpell(spell) && !spell.damage_dice && !isHealingSpell(spell)) {
-      castMutation.mutate({ spell, free: true })
+      withEffect(spell, spell.level, () => castMutation.mutate({ spell, free: true }))
       return
     }
-    // Livellato — prima si sceglie lo slot.
+    // Livellato — prima si sceglie lo slot (da cui dipende il numero di bersagli), poi i bersagli.
     setCastingSpell(spell)
-  }, [beginAttack, castMutation])
+  }, [beginAttack, castMutation, withEffect])
 
   const needsUnpreparedWarn = useCallback((spell: Spell) =>
     !!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.is_prepared,
@@ -256,16 +264,11 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setRollDamageSpell(spell)
       return
     }
-    // Con un effetto sui bersagli (non su di sé) o scelte da fare, si chiede prima; il server ricontrolla tutto.
-    if (spell.effect && (spell.effect.target_kind !== 'self' || spell.effect.choices.length > 0)) {
-      setEffectAsk({ spell, slot })
-      return
-    }
     castMutation.mutate({ spell, slot })
   }, [beginAttack, castMutation, castMode])
-  const proceedSlotCast = useCallback((spell: Spell, slot: SpellSlot) => { void withRemoval(spell, () => proceedSlotCastNow(spell, slot)) }, [withRemoval, proceedSlotCastNow])
+  const proceedSlotCast = useCallback((spell: Spell, slot: SpellSlot) => { void withRemoval(spell, () => withEffect(spell, slot.level, () => proceedSlotCastNow(spell, slot))) }, [withRemoval, withEffect, proceedSlotCastNow])
 
-  const proceedRitualCast = useCallback((spell: Spell) => {
+  const proceedRitualCastNow = useCallback((spell: Spell) => {
     if (isAttackSpell(spell)) {
       beginAttack({ spell, slot: null, ritual: true, mode: castMode })
       return
@@ -279,9 +282,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     }
     castMutation.mutate({ spell, ritual: true })
   }, [beginAttack, castMutation, castMode])
+  const proceedRitualCast = useCallback((spell: Spell) => withEffect(spell, spell.level, () => proceedRitualCastNow(spell)), [withEffect, proceedRitualCastNow])
 
   // Coi punti ki: il costo è del privilegio, il server lo ricontrolla. Con i dadi, il lancio avviene al primo tiro (come uno slot).
-  const proceedKiCast = useCallback((spell: Spell, extra: number) => {
+  const proceedKiCastNow = useCallback((spell: Spell, extra: number) => {
     if (spell.damage_dice) {
       setPendingRitual(false)
       setPendingSlotLevel(spell.level + extra)
@@ -292,6 +296,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     }
     castMutation.mutate({ spell, ki: extra })
   }, [castMutation])
+  const proceedKiCast = useCallback((spell: Spell, extra: number) => withEffect(spell, spell.level + extra, () => proceedKiCastNow(spell, extra)), [withEffect, proceedKiCastNow])
 
   // Senza slot: i dadi di danno passano dal foglio dei danni, che fa il lancio al primo tiro.
   const proceedFreeCastNow = useCallback((spell: Spell) => {
@@ -305,7 +310,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     }
     castMutation.mutate({ spell, free: true })
   }, [castMutation])
-  const proceedFreeCast = useCallback((spell: Spell) => { void withRemoval(spell, () => proceedFreeCastNow(spell)) }, [withRemoval, proceedFreeCastNow])
+  const proceedFreeCast = useCallback((spell: Spell) => { void withRemoval(spell, () => withEffect(spell, spell.level, () => proceedFreeCastNow(spell))) }, [withRemoval, withEffect, proceedFreeCastNow])
 
   const handleCastSlot = useCallback((slot: SpellSlot) => {
     if (!castingSpell) return
@@ -354,6 +359,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   }
   const closeCastSheet = () => {
     useRemovalStore.setState({ chosen: {} })  // la scelta di un lancio annullato non passa al prossimo
+    useEffectPickStore.setState({ picked: {} })
     closeDamage()
     setCastingSpell(null)
   }
@@ -470,12 +476,13 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
           charId={charId}
           title={effectAsk.spell.name}
           effect={effectAsk.spell.effect}
-          slotLevel={effectAsk.slot.level}
-          onClose={() => setEffectAsk(null)}
-          onConfirm={(effect) => {
-            const { spell, slot } = effectAsk
+          slotLevel={effectAsk.level}
+          onClose={() => { setEffectAsk(null); useEffectPickStore.setState({ picked: {} }) }}
+          onConfirm={(pick) => {
+            const { spell, next } = effectAsk
+            useEffectPickStore.setState(({ picked }) => ({ picked: { ...picked, [spell.id]: pick } }))
             setEffectAsk(null)
-            castMutation.mutate({ spell, slot, effect })
+            next()
           }}
         />
       )}

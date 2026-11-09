@@ -205,4 +205,14 @@ describe('ActiveStatesBar, wizard states', () => {
     await userEvent.click(screen.getByText('character.turn.end_state'))
     await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'spell:shield_of_faith'))
   })
+
+  it('tells the caster own clock apart from the effect on them, and reads the clock duration', () => {
+    const data = { caster_id: 7, caster_name: 'Io', duration: { rounds: null, concentration: false, until_rest: true } }
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:aid', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Aiuto', data },
+      { key: 'spell_cast:aid', feature_key: '', rounds_left: null, ends_on: ['rest_long'], name: 'Aiuto', data: { spell_key: 'aid', state_data: data } },
+    ], [])} />)
+    expect(screen.getAllByText(/character\.turn\.state_until_rest/)).toHaveLength(2)
+    expect(screen.getAllByText(/character\.turn\.state_cast_by_you/)).toHaveLength(1)
+  })
 })

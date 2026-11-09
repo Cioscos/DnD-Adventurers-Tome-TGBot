@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
-import { useCastConfirmStore } from '@/lib/rollOptions'
+import { useCastConfirmStore, useEffectPickStore } from '@/lib/rollOptions'
+import { ApiError } from '@/api/client'
+import i18n from '@/i18n'
 import type { CharacterFull, Spell } from '@/types'
 
 const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError, toastInfo, sessionAllies } = vi.hoisted(() => ({
@@ -416,5 +418,52 @@ describe('useCastFlow spell effects', () => {
     await userEvent.click(screen.getByText('Maga'))
     await userEvent.click(screen.getByText('character.turn.ally_confirm(n=2)'))
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 9, expect.objectContaining({ targets: [21, 22] })))
+  })
+
+  it('asks for the target also on a ritual', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockResolvedValue(char)
+    castCheck.mockResolvedValue([])
+    renderFlow({ ...shield, is_ritual: true } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-ritual'))
+    expect(useSpell).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ as_ritual: true, targets: [21] })))
+  })
+
+  it('asks for the target before the damage sheet of a spell with dice and an effect', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    castCheck.mockResolvedValue([])
+    renderFlow({ ...shield, damage_dice: '1d4' } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    expect(screen.queryByTestId('damage-sheet')).toBeNull()
+    await userEvent.click(await screen.findByText('Eroe'))
+    expect(await screen.findByTestId('damage-sheet')).toBeInTheDocument()
+    expect(useEffectPickStore.getState().picked[8]).toEqual({ targets: [21], choices: undefined })
+  })
+
+  it.each(['invalid_target', 'target_dead', 'invalid_choice'])('shows a dedicated toast for %s', async (code) => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockRejectedValue(new ApiError(422, { code }))
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(i18n.t(`character.spells.roll_damage.cast_errors.${code}`)))
+  })
+
+  it('does not throw away the ticked targets when another creature is tapped', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }, { id: 22, name: 'Maga' }])
+    castCheck.mockResolvedValue([])
+    renderFlow(aid)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await userEvent.click(screen.getByText('character.turn.ally_other'))
+    expect(useSpell).not.toHaveBeenCalled()
+    expect(screen.getByText('character.turn.ally_confirm(n=1)')).toBeInTheDocument()
   })
 })

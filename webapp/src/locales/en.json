@@ -788,7 +788,10 @@
           "turn_slot_used": "You already used that action this turn.",
           "no_uses": "No uses left.",
           "pact_slot_required": "This needs a warlock (Pact Magic) slot.",
-          "surge_no_magic": "The extra action from Action Surge cannot be the Magic action."
+          "surge_no_magic": "The extra action from Action Surge cannot be the Magic action.",
+          "invalid_target": "The target is not valid.",
+          "target_dead": "The target is dead.",
+          "invalid_choice": "The choice is not valid."
         },
         "close": "Close",
         "reroll": "Roll again",
@@ -1509,6 +1512,11 @@
       "state_until_rest": "until a long rest",
       "state_while_concentrating": "while the caster concentrates",
       "state_rounds_total": "{{n}} rounds",
+      "state_cast_by_you": "cast by you · ends on all targets",
+      "state_duration_minutes_one": "{{count}} minute",
+      "state_duration_minutes_other": "{{count}} minutes",
+      "state_duration_hours_one": "{{count}} hour",
+      "state_duration_hours_other": "{{count}} hours",
       "extend_rage_save": "Extend: forced save",
       "extend_rage_done": "Rage extended until the end of your next turn.",
       "state_generic": "Active effect",
