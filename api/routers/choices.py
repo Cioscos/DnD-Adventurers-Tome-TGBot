@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.routers._helpers import effective_con_mod
-from api.routers.classes import _get_owned_full, _refresh_char_full
+from api.services.character_load import get_owned_full, refresh_char_full
 from api.routers.stats import apply_ability_change
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
@@ -61,7 +61,7 @@ async def resolve_choice(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     choices = list(char.pending_choices or [])
     choice = next((c for c in choices if c["id"] == choice_id), None)
     if choice is None:
@@ -90,13 +90,13 @@ async def resolve_choice(
     if not isinstance(body, ClassOptionResolve):  # le scelte di opzioni le riconcilia il sync, anche il resto che aspetta
         mark_resolved(char, choice)
         char.pending_choices = [c for c in choices if c["id"] != choice_id]
-    char = await _refresh_char_full(char_id, user_id, session)
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
 async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id: int | None,
                   rule_id: int | None = None) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     if rule_id is not None:
         rule = (await session.execute(select(HomebrewRule).where(
             HomebrewRule.id == rule_id, HomebrewRule.character_id == char_id,
@@ -109,7 +109,7 @@ async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id:
     if ab is None:
         raise HTTPException(404, "Feat not found")
     await remove_feat(session, char, ab)
-    char = await _refresh_char_full(char_id, user_id, session)
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -150,7 +150,7 @@ async def class_options(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     return class_options_state(char, _class_of(char, class_id), group)
 
 
@@ -161,8 +161,8 @@ async def replace_option(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     replace_class_option(session, char, _class_of(char, class_id), body.group, body.old_key, body.new_key)
     await sync_cataloged_features(session, char, lang)
-    char = await _refresh_char_full(char_id, user_id, session)
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)

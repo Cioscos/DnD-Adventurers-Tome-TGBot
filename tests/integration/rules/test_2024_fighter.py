@@ -438,7 +438,7 @@ async def test_the_2024_fighter_keeps_its_spent_uses_when_the_edition_changes(cl
 
 
 async def test_beyond_options_find_the_fighter_choices(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -447,7 +447,7 @@ async def test_beyond_options_find_the_fighter_choices(test_session_factory):
         char = await build_rules_character(s, spec, 1)
         report = ImportReport()
         names = ("Defense", "Greatsword", "Longsword", "Dagger", "Handaxe")
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         assert char.classes[0].options == {"fighting_style": ["defense"],
                                            "weapon_mastery": ["greatsword", "longsword", "dagger", "handaxe"]}
 

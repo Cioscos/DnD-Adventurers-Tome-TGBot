@@ -14,9 +14,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas.encounter import GmConditionApply
+from api.schemas.encounter import GmConditionApply, InternalConditionApply
 from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, upsert_effect
-from api.services.effects import _add_history, apply_conditions
+from api.services.effects import apply_conditions
+from api.services.history import add_history
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from core.rules.states import add_target_immunity, immune_conditions, is_target_immune
@@ -223,10 +224,10 @@ async def apply_target_effect(
     anchor_id = anchor_id or mine.id  # shortcut: con «turno in corso» la fonte registrata è chi agisce, non chi ha usato il privilegio
     if not with_save:
         for each in (slug, *effect.get("also", ())):
-            await apply_condition_to_combatant(db, enc, target, GmConditionApply(
+            await apply_condition_to_combatant(db, enc, target, InternalConditionApply(
                 slug=each, expiry=expiry, source_combatant_id=anchor_id,
                 ends_with_concentration=bool(effect.get("ends_with_concentration"))), applied_by_gm=False)
-        _add_history(db, char.id, "condition_change",
+        add_history(db, char.id, "condition_change",
                      f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))
         return True, None
     now = datetime.utcnow().isoformat(timespec="seconds")
@@ -250,5 +251,5 @@ async def apply_target_effect(
         ability=effect["save_ability"], dc=effect["save_dc"], status="pending", created_at=now)
     db.add(save)
     await db.flush()
-    _add_history(db, char.id, "condition_change", f"{condition_label(slug)} su {target.name}: TS in attesa")
+    add_history(db, char.id, "condition_change", f"{condition_label(slug)} su {target.name}: TS in attesa")
     return True, save

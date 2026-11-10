@@ -14,6 +14,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.services.d20 import d20_records, resolve_applied, resolve_body
@@ -79,6 +80,7 @@ from core.rules.states import (
 )
 from core.rules.types import RuleContext, StateSpec
 from api.services.character_response import build_character_response
+from api.services.character_load import get_owned_full_with_resources
 
 
 class HitDiceSpendRequest(BaseModel):
@@ -107,50 +109,6 @@ def _utcnow() -> datetime:
 
 def _now() -> str:
     return _utcnow().isoformat(timespec="seconds")
-
-
-def _add_history(
-    session,
-    char_id: int,
-    event_type: str,
-    description: str,
-    meta: dict | None = None,
-) -> None:
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=_now(),
-        event_type=event_type,
-        description=description,
-        meta=meta,
-    ))
-
-
-async def _get_owned_full(
-    char_id: int, user_id: int, session: AsyncSession
-) -> Character:
-    from core.db.models import CharacterClass
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-            selectinload(Character.homebrew_resources),
-            selectinload(Character.companions),  # Compagno Selvatico crea e sostituisce il famiglio
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your character")
-    return char
 
 
 _CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES, TEMP_GIVEN, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
@@ -211,7 +169,7 @@ async def _zero_hp_save(session: AsyncSession, char: Character) -> ZeroHpSaveRes
     if success:
         char.current_hit_points = min(hp, effective_hp_max(char))
     name = spec.name["it"]
-    _add_history(session, char.id, "death_save",
+    add_history(session, char.id, "death_save",
                  f"{name}: TS {rule.ability} CD {dc}, {outcome.kept}{bonus:+d} = {total} "
                  f"({'riuscito: resta in piedi' if success else 'fallito'})")
     return ZeroHpSaveResult(feature_key=spec.key, ability=rule.ability, die=outcome.kept, bonus=bonus, total=total,
@@ -226,7 +184,7 @@ async def update_hp(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     return await apply_hp_update(session, char, body, lang)
 
 
@@ -308,17 +266,17 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             if overflow > 0:
                 form_overflow = overflow
                 end_form(char, form)
-                _add_history(session, char.id, "companion_hp",
+                add_history(session, char.id, "companion_hp",
                              f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
                 applied = conc_damage = overflow
             else:
                 form_absorbed = True
                 applied = 0
-                _add_history(session, char.id, "companion_hp",
+                add_history(session, char.id, "companion_hp",
                              f"{form.name}: -{conc_damage} → PF {form.current_hp}/{form.max_hp}, temp {form.temp_hp}")
                 if form.current_hp == 0:  # 5e: the form ends at 0 HP, even with no overflow
                     end_form(char, form)
-                    _add_history(session, char.id, "companion_hp",
+                    add_history(session, char.id, "companion_hp",
                                  f"Forma selvatica terminata: {form.name} (PF a 0)")
         amount = applied
         warded = absorb_ward(char, amount)  # l'Interdizione Arcana prende il danno al posto del mago, prima dei PF temporanei
@@ -372,7 +330,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                      else " — Interdizione alla Morte: resta a 1 PF" if any(k.startswith("spell:") for k in opts.keys)
                      else " — Sentinella Imperitura: resta a 1 PF")
         if not form_absorbed:
-            _add_history(session, char.id, "hp_change", desc,
+            add_history(session, char.id, "hp_change", desc,
                          meta={"op": "DAMAGE", "amount": lost,  # come la riga di storico e il riepilogo di serata: PF persi, non il colpo
                                "to_zero": old > 0 and char.current_hit_points == 0})
 
@@ -386,7 +344,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             if overflow >= effective_max:
                 char.is_dead = True
                 await drop_primal_beast(session, char)
-                _add_history(session, char.id, "death_save", "Morte istantanea (danno massiccio)")
+                add_history(session, char.id, "death_save", "Morte istantanea (danno massiccio)")
             elif old == 0:
                 # Danno a una creatura stabile: torna morente con conteggio
                 # fresco (RAW: i conteggi si azzerano quando si diventa stabili,
@@ -400,10 +358,10 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                 if ds["failures"] >= 3:
                     char.is_dead = True
                     await drop_primal_beast(session, char)
-                    _add_history(session, char.id, "death_save", "Morto — 3 fallimenti (danno a 0 PF)",
+                    add_history(session, char.id, "death_save", "Morto — 3 fallimenti (danno a 0 PF)",
                                  meta={"ds": "failure", "n": inc})
                 else:
-                    _add_history(session, char.id, "death_save",
+                    add_history(session, char.id, "death_save",
                                  f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)",
                                  meta={"ds": "failure", "n": inc})
                 char.death_saves = ds
@@ -423,7 +381,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                         await apply_conditions(session, char, {"unconscious": True, "prone": True})
                     else:
                         char.death_saves = {"successes": 0, "failures": 0, "stable": True}
-                    _add_history(session, char.id, "hp_change", "Tramortito: non muore, è privo di sensi")
+                    add_history(session, char.id, "hp_change", "Tramortito: non muore, è privo di sensi")
 
         await sync_zero_hp(session, char, was_at_zero)
 
@@ -486,7 +444,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         # zeroed the saves, so its guard finds nothing to reset and won't double-log.
         if form is not None:  # while transformed, healing goes to the form
             form.current_hp = min(form.max_hp, form.current_hp + body.value)
-            _add_history(session, char.id, "companion_hp",
+            add_history(session, char.id, "companion_hp",
                          f"{form.name}: +{body.value} → PF {form.current_hp}/{form.max_hp}")
         else:
             result = await apply_heal(session, char, body.value)
@@ -498,7 +456,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         # Clamp current to new max
         char.current_hit_points = min(char.current_hit_points, char.hit_points)
         await cap_current_hp(session, char)
-        _add_history(session, char.id, "hp_change",
+        add_history(session, char.id, "hp_change",
                      f"HP max impostati: {old} → {char.hit_points}",
                      meta={"op": "SET_MAX"})
 
@@ -506,7 +464,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         old = char.current_hit_points
         hb_max_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
         char.current_hit_points = max(0, min(effective_hp_max(char, hb_max_bonus), body.value))
-        _add_history(session, char.id, "hp_change",
+        add_history(session, char.id, "hp_change",
                      f"HP correnti impostati: {old} → {char.current_hit_points}",
                      meta={"op": "SET_CURRENT"})
         if char.current_hit_points > old:
@@ -522,7 +480,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         and form.is_active
     ):
         end_form(char, form)
-        _add_history(session, char.id, "companion_hp",
+        add_history(session, char.id, "companion_hp",
                      f"Forma selvatica terminata: {form.name} (PF a 0)")
 
     if body.op == HPOp.SET_CURRENT:  # SET_MAX non tocca i PF correnti: un personaggio appena creato non è «a terra»
@@ -533,7 +491,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         ds = dict(char.death_saves or {})
         if ds.get("successes", 0) > 0 or ds.get("failures", 0) > 0 or ds.get("stable", False):
             char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-            _add_history(session, char.id, "death_save",
+            add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
 
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
@@ -621,7 +579,7 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
         for entry in entries:
             receiver = await session.get(Character, entry["id"])
             if receiver is not None and (receiver.temp_hp or 0) < entry["amount"]:
-                _add_history(session, receiver.id, "hp_change", f"PF temporanei tornati: il danno di {char.name} è stato annullato ({receiver.temp_hp or 0} → {entry['amount']})",
+                add_history(session, receiver.id, "hp_change", f"PF temporanei tornati: il danno di {char.name} è stato annullato ({receiver.temp_hp or 0} → {entry['amount']})",
                              meta={"op": "TEMP_HP", "amount": entry["amount"], "restored": True})
                 receiver.temp_hp = entry["amount"]
     await regrant_spells(session, char, before.get(SPELL_GIVEN))  # gli effetti degli incantesimi dati ad altri tornano con l'orologio
@@ -648,7 +606,7 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
             char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
     char.hp_undo = None
 
-    _add_history(session, char.id, "hp_change",
+    add_history(session, char.id, "hp_change",
                  note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})",
                  meta={"op": "UNDO"})
 
@@ -662,7 +620,7 @@ async def undo_hp(
 ) -> CharacterFull:
     """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa. Il danno condiviso da un incantesimo
     (Legame di Protezione) si annulla anche sulla scheda del lanciatore, se è ancora com'era dopo il danno."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     snap = char.hp_undo
     form = await _undo_form(session, char, snap)
     if not snap or snap.get("op_id") != body.op_id or not _undo_applies(char, snap, form):
@@ -718,7 +676,7 @@ def _apply_exhaustion_change(session: AsyncSession, char: Character, change: int
     old_exh = conditions["exhaustion"]
     conditions["exhaustion"] = old_exh + change
     char.conditions = conditions
-    _add_history(session, char.id, "condition_change", f"Spossatezza: livello {old_exh} → {old_exh + change} ({kind})",
+    add_history(session, char.id, "condition_change", f"Spossatezza: livello {old_exh} → {old_exh + change} ({kind})",
                  meta={"slug": "exhaustion", "active": change > 0})
 
 
@@ -778,7 +736,7 @@ async def rest_preview(
 ) -> RestPreview:
     if rest_type not in ("long", "short"):
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     return compute_rest_effects(char, rest_type, bonus)
 
@@ -833,7 +791,7 @@ async def rest(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     if body.rest_type not in ("long", "short"):
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
     # Un riposo non rianima un personaggio morto.
@@ -852,7 +810,7 @@ async def rest(
     if body.interrupted and (rest_type == "long" or edition == "2024"):
         if rest_type == "short" or edition == "2014":
             # Nessun beneficio (2014: lungo da ricominciare; 2024: breve interrotto).
-            _add_history(session, char.id, "rest", "Riposo interrotto: nessun beneficio",
+            add_history(session, char.id, "rest", "Riposo interrotto: nessun beneficio",
                          meta={"kind": rest_type, "interrupted": True})
             return await build_character_response(session, char)
         rest_type = "short"  # 2024: il lungo interrotto dopo almeno un'ora vale un riposo breve
@@ -866,27 +824,27 @@ async def rest(
         await reopen_tome(session, char)
     if body.natural_recovery:  # convalida ed effetto prima di ogni altra scrittura del riposo
         back = await recover_slots(session, char, body.natural_recovery)
-        _add_history(session, char.id, "rest",
+        add_history(session, char.id, "rest",
                      "Recupero Naturale: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
                      meta={"kind": "natural_recovery", "slots": {str(lv): n for lv, n in back.items()}})
     if body.memorize_spell:  # Memorizzare Incantesimo: si convalida prima del Recupero Arcano, che spende un uso
         swapped = memorize(char, body.memorize_spell.out, body.memorize_spell.into)
-        _add_history(session, char.id, "rest", f"Memorizzare Incantesimo: {swapped[0]} → {swapped[1]}",
+        add_history(session, char.id, "rest", f"Memorizzare Incantesimo: {swapped[0]} → {swapped[1]}",
                      meta={"kind": "memorize_spell", "out": body.memorize_spell.out, "into": body.memorize_spell.into})
     if body.arcane_recovery:  # come il Recupero Naturale: convalida ed effetto prima di ogni altra scrittura del riposo
         back = await recover_slots(session, char, body.arcane_recovery, ARCANE_FEATURE)
-        _add_history(session, char.id, "rest",
+        add_history(session, char.id, "rest",
                      "Recupero Arcano: " + ", ".join(f"slot di livello {lv} ×{n}" for lv, n in sorted(back.items())),
                      meta={"kind": "arcane_recovery", "slots": {str(lv): n for lv, n in back.items()}})
     if body.sorcerous_restoration:  # Ripristino Stregonesco: i punti tornano nel riposo breve, convalidati dal server
         gained = await restore_points(session, char, body.sorcerous_restoration)
-        _add_history(session, char.id, "rest", f"Ripristino Stregonesco: {gained} punti stregoneria",
+        add_history(session, char.id, "rest", f"Ripristino Stregonesco: {gained} punti stregoneria",
                      meta={"kind": "sorcerous_restoration", "points": gained})
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     fx = compute_rest_effects(char, rest_type, hb_hp_bonus, body.ate_and_drank)
     for r in plan_item_recharges(char.items, rest_type):
         set_item_charges(r.item, r.after)
-        _add_history(session, char.id, "item_charges",
+        add_history(session, char.id, "item_charges",
                      f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
     reset_zero_hp_uses(char)
@@ -909,7 +867,7 @@ async def rest(
             if cls.id in fx.hit_dice_regain:
                 cls.hit_dice_used = min(cls.hit_dice_used or 0, cls.level) - fx.hit_dice_regain[cls.id]
         if hd_regained:
-            _add_history(session, char.id, "hit_dice",
+            add_history(session, char.id, "hit_dice",
                          f"Dadi vita recuperati: {hd_regained} (riposo lungo)")
         # Restore long-rest AND short-rest abilities (long rest includes short rest
         # benefits). Le ex-risorse di classe sono ora Ability e rientrano qui.
@@ -927,7 +885,7 @@ async def rest(
             _apply_exhaustion_change(session, char, fx.exhaustion_change, "riposo lungo")
         # Dopo la spossatezza: il massimo effettivo dipende dal livello appena sceso.
         char.current_hit_points = effective_hp_max(char, hb_hp_bonus)
-        _add_history(session, char.id, "rest", "Riposo lungo completato",
+        add_history(session, char.id, "rest", "Riposo lungo completato",
                      meta={"kind": "long"})
         for spec, row in active_features(char):  # alla fine del riposo lungo certi privilegi avviano un loro stato (Tranquillità)
             if spec.long_rest_state:
@@ -962,7 +920,7 @@ async def rest(
         for resource in char.homebrew_resources:
             if _restores_resource(resource, "short"):
                 resource.current = resource.max
-        _add_history(session, char.id, "rest",
+        add_history(session, char.id, "rest",
                      "Riposo breve completato",
                      meta={"kind": "short"})
 
@@ -1000,7 +958,7 @@ async def spend_hit_dice(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceSpendResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
 
     # Find the class
     cls = next((c for c in char.classes if c.id == body.class_id), None)
@@ -1042,7 +1000,7 @@ async def spend_hit_dice(
 
     cls.hit_dice_used = (cls.hit_dice_used or 0) + body.count
 
-    _add_history(session, char.id, "hit_dice",
+    add_history(session, char.id, "hit_dice",
                  f"Dado vita {body.count}d{hit_die}+{con_mod}: "
                  f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})"
                  + (f", Canto di Riposo d{song_die}={song_rolls}" if song_rolls else ""),
@@ -1068,7 +1026,7 @@ async def update_death_saves(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     if char.is_dead:
         return await build_character_response(session, char)
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
@@ -1077,22 +1035,22 @@ async def update_death_saves(
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         if ds["successes"] >= 3:
             ds["stable"] = True
-            _add_history(session, char.id, "death_save", "Stabilizzato (3 successi)",
+            add_history(session, char.id, "death_save", "Stabilizzato (3 successi)",
                          meta={"ds": "success", "n": 1})
         else:
-            _add_history(session, char.id, "death_save",
+            add_history(session, char.id, "death_save",
                          f"Tiro morte: successo ({ds['successes']}/3)",
                          meta={"ds": "success", "n": 1})
 
     elif body.action == DeathSaveAction.FAILURE:
         ds["failures"] = min(3, ds.get("failures", 0) + 1)
-        _add_history(session, char.id, "death_save",
+        add_history(session, char.id, "death_save",
                      f"Tiro morte: fallimento ({ds['failures']}/3)",
                      meta={"ds": "failure", "n": 1})
         if ds["failures"] >= 3:
             char.is_dead = True
             await drop_primal_beast(session, char)
-            _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
+            add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
     elif body.action == DeathSaveAction.STABILIZE:
@@ -1100,7 +1058,7 @@ async def update_death_saves(
         # la creatura resta a 0 HP, priva di sensi ma stabile. La risalita a
         # HP positivi passa solo da cure/riposo, che azzerano il tracker.
         ds["stable"] = True
-        _add_history(session, char.id, "death_save", "Stabilizzato")
+        add_history(session, char.id, "death_save", "Stabilizzato")
 
     elif body.action == DeathSaveAction.RESET:
         ds = {"successes": 0, "failures": 0, "stable": False}
@@ -1124,7 +1082,7 @@ async def roll_death_save(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> DeathSaveRollResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     if char.is_dead:
         return DeathSaveRollResult(
             die=0, outcome="failure",
@@ -1201,7 +1159,7 @@ async def retouch_death_save(
     outcome, revived = await _apply_death_roll(session, char, dict(death["before"]["death_saves"]), die, total - die,
                                                notify=not was_dead, nat20_min=modifiers_for(char, "death_save").crit_min)
     if was_dead and not char.is_dead:
-        _add_history(session, char.id, "death_save", "Correzione: il nuovo tiro evita la morte")
+        add_history(session, char.id, "death_save", "Correzione: il nuovo tiro evita la morte")
     ds = char.death_saves
     return DeathSaveRollResult(
         die=die, dice=roll["dice"], mode=roll["mode"], mode_applied=roll["mode"], notes=roll["notes"], outcome=outcome,
@@ -1223,7 +1181,7 @@ async def _apply_death_roll(
         await sync_zero_hp(session, char, True)
         revived = True
         outcome = "nat20"
-        _add_history(session, char.id, "death_save",
+        add_history(session, char.id, "death_save",
                      f"Tiro morte d20={die}: Naturale 20! Rianimato con 1 HP",
                      meta={"ds": "success", "n": 1})
 
@@ -1231,7 +1189,7 @@ async def _apply_death_roll(
         # Natural 1: counts as 2 failures
         ds["failures"] = min(3, ds.get("failures", 0) + 2)
         outcome = "nat1"
-        _add_history(session, char.id, "death_save",
+        add_history(session, char.id, "death_save",
                      f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)",
                      meta={"ds": "failure", "n": 2})
 
@@ -1241,11 +1199,11 @@ async def _apply_death_roll(
         outcome = "success"
         if ds["successes"] >= 3:
             ds["stable"] = True
-            _add_history(session, char.id, "death_save",
+            add_history(session, char.id, "death_save",
                          f"Tiro morte d20={die}: Successo! Stabilizzato (3/3)",
                          meta={"ds": "success", "n": 1})
         else:
-            _add_history(session, char.id, "death_save",
+            add_history(session, char.id, "death_save",
                          f"Tiro morte d20={die}: Successo ({ds['successes']}/3)",
                          meta={"ds": "success", "n": 1})
 
@@ -1253,7 +1211,7 @@ async def _apply_death_roll(
         # 2-9: 1 failure
         ds["failures"] = min(3, ds.get("failures", 0) + 1)
         outcome = "failure"
-        _add_history(session, char.id, "death_save",
+        add_history(session, char.id, "death_save",
                      f"Tiro morte d20={die}: Fallimento ({ds['failures']}/3)",
                      meta={"ds": "failure", "n": 1})
 
@@ -1262,7 +1220,7 @@ async def _apply_death_roll(
     if ds.get("failures", 0) >= 3:
         char.is_dead = True
         await drop_primal_beast(session, char)
-        _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
+        add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
         if notify:
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
@@ -1287,7 +1245,7 @@ async def recalc_hp(
     - If new_max > old_max: current += (new_max - old_max)
     - If new_max < old_max: current = min(current, new_max)
     """
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
 
     con_mod = effective_con_mod(char)
     new_max = total_base_hp(char.classes, con_mod, stored_rolls(char))
@@ -1302,7 +1260,7 @@ async def recalc_hp(
     await cap_current_hp(session, char)
     await sync_zero_hp(session, char, was_at_zero)
 
-    _add_history(session, char.id, "hp_change",
+    add_history(session, char.id, "hp_change",
                  f"HP ricalcolati da formula: {old_max} → {new_max}",
                  meta={"op": "SET_MAX"})
 
@@ -1322,7 +1280,7 @@ async def revive(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Bring a dead character back with 1 HP. No-op if not dead (idempotent)."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full_with_resources(char_id, user_id, session)
     if char.is_dead:
         char.is_dead = False
         char.current_hit_points = 1
@@ -1332,5 +1290,5 @@ async def revive(
         end_concentration(char)
         await release_concentration_effects(session, char)
         await sync_zero_hp(session, char, True)
-        _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
+        add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
     return await build_character_response(session, char)

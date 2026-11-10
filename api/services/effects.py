@@ -6,15 +6,15 @@ rising from 0, condition history logging) without duplicating logic.
 """
 from __future__ import annotations
 
-from datetime import datetime
 
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.asyncio import AsyncSession, async_object_session
 from sqlalchemy.util import await_only
 from sqlalchemy.orm import Session
 
-from core.db.models import Character, CharacterHistory
+from core.db.models import Character
 from core.data.labels import condition_label
+from api.services.history import add_history
 from api.services.beast_companion import drop_primal_beast
 from api.services.telegram_notify import notify_party_emergency
 from api.services.condition_effects import clear_effects_for, release_concentration_effects
@@ -24,21 +24,6 @@ from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
-
-
-def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
-
-
-def _add_history(session, char_id: int, event_type: str, description: str,
-                 meta: dict | None = None) -> None:
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=_now(),
-        event_type=event_type,
-        description=description,
-        meta=meta,
-    ))
 
 
 async def cap_current_hp(session: AsyncSession, char: Character) -> None:
@@ -94,7 +79,7 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     char.current_hit_points = max(old, min(effective_max, char.current_hit_points + amount))
     healed = char.current_hit_points - old
     if amount > 0:  # una cura da 0 non è un evento da ricordare
-        _add_history(session, char.id, "hp_change",
+        add_history(session, char.id, "hp_change",
                      f"Cura: +{amount} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL", "amount": healed})
     firing = await dispatch(session, char, "hp_healed", {
@@ -106,7 +91,7 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
         ds = dict(char.death_saves or {})
         if ds.get("successes", 0) > 0 or ds.get("failures", 0) > 0 or ds.get("stable", False):
             char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-            _add_history(session, char.id, "death_save",
+            add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
     await sync_zero_hp(session, char, was_at_zero)
     if amount > 0:
@@ -120,7 +105,7 @@ def grant_temp_hp(session: AsyncSession, char: Character, amount: int) -> dict:
     Ritorna ``{"old", "new", "applied"}``; ``applied`` è falso se ne aveva già altrettanti o di più."""
     old = char.temp_hp or 0
     char.temp_hp = max(old, amount)
-    _add_history(session, char.id, "hp_change",
+    add_history(session, char.id, "hp_change",
                  f"PF temporanei: {amount} ({old} → {char.temp_hp})" if char.temp_hp > old
                  else f"PF temporanei offerti: {amount}, tenuti i {old} che aveva già",
                  meta={"op": "TEMP_HP", "amount": amount, "applied": char.temp_hp > old})
@@ -153,7 +138,7 @@ def end_hide(session: AsyncSession, char: Character) -> None:
     if settings["hiding"].get("was_invisible"):
         return  # era già Invisibile per un'altra fonte: finisce solo il nascondiglio
     char.conditions = {**(char.conditions or {}), "invisible": False}
-    _add_history(session, char.id, "condition_change", "Non sei più nascosto: l'Invisibilità finisce",
+    add_history(session, char.id, "condition_change", "Non sei più nascosto: l'Invisibilità finisce",
                  meta={"slug": "invisible", "active": False})
 
 
@@ -211,15 +196,15 @@ async def apply_conditions(session: AsyncSession, char: Character,
         if new_disp != old_val:
             changed = True
             if is_exhaustion:
-                _add_history(session, char.id, "condition_change",
+                add_history(session, char.id, "condition_change",
                              f"Spossatezza: livello {old_val} → {new_disp}",
                              meta={"slug": cond, "active": new_disp > old_val})
             elif new_val:
-                _add_history(session, char.id, "condition_change",
+                add_history(session, char.id, "condition_change",
                              f"Condizione attivata: {condition_label(cond)}",
                              meta={"slug": cond, "active": True})
             else:
-                _add_history(session, char.id, "condition_change",
+                add_history(session, char.id, "condition_change",
                              f"Condizione rimossa: {condition_label(cond)}",
                              meta={"slug": cond, "active": False})
     await clear_effects_for(session, ("character", char.id),
@@ -228,7 +213,7 @@ async def apply_conditions(session: AsyncSession, char: Character,
         if exhaustion_level(char) >= 6 and not char.is_dead:
             char.is_dead = True
             await drop_primal_beast(session, char)
-            _add_history(session, char.id, "death_save", "Morto — spossatezza al 6° livello")
+            add_history(session, char.id, "death_save", "Morto — spossatezza al 6° livello")
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")  # come la morte per tiri salvezza
             return {"changed": changed}
         await cap_current_hp(session, char)
@@ -255,7 +240,7 @@ def _restore_suspended(session: Session, char: Character) -> None:
         if back:
             receiver.conditions = {**(receiver.conditions or {}), **{c: True for c in back}}
             for c in back:
-                _add_history(session, receiver.id, "condition_change", f"Condizione tornata: {condition_label(c)} (la concentrazione di {char.name} è finita)",
+                add_history(session, receiver.id, "condition_change", f"Condizione tornata: {condition_label(c)} (la concentrazione di {char.name} è finita)",
                              meta={"slug": c, "active": True, "restored": True})
 
 
@@ -327,7 +312,7 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
         if any(not e.get("logged") for e in dropped.values()):
             for e in dropped.values():
                 if not e.get("logged"):
-                    _add_history(session, char.id, "hp_change", f"PF temporanei svaniti: {e.get('name')} è finito ({e['amount']} → 0)",
+                    add_history(session, char.id, "hp_change", f"PF temporanei svaniti: {e.get('name')} è finito ({e['amount']} → 0)",
                                  meta={"op": "TEMP_HP", "amount": 0, "released": True})
             kept = {k: {**e, "logged": True} for k, e in dropped.items() if not e.get("log_only")}  # la voce che non serve più si toglie dopo la riga
             char.settings = {**{k: v for k, v in char.settings.items() if k != SPELL_TEMP_DROPPED}, **({SPELL_TEMP_DROPPED: kept} if kept else {})}
@@ -338,6 +323,6 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
         for entry in pending:
             receiver = session.get(Character, entry["id"])
             if receiver is not None and 0 < (receiver.temp_hp or 0) <= entry["amount"]:
-                _add_history(session, receiver.id, "hp_change", f"PF temporanei svaniti: l'Ira di {char.name} è finita ({receiver.temp_hp} → 0)",
+                add_history(session, receiver.id, "hp_change", f"PF temporanei svaniti: l'Ira di {char.name} è finita ({receiver.temp_hp} → 0)",
                              meta={"op": "TEMP_HP", "amount": 0, "released": True})
                 receiver.temp_hp = 0

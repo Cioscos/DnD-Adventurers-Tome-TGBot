@@ -198,7 +198,8 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
                         undo_list: list[dict] | None) -> str:
     """Switch the condition off on its target (dropping the effect row); returns its label.
     ``history`` (formatted with ``{label}``) is logged on a PC target."""
-    from api.services.effects import _add_history, apply_conditions  # circular import
+    from api.services.effects import apply_conditions  # circular import
+    from api.services.history import add_history
     label = condition_label(eff.slug)
     snapshot = effect_snapshot(eff)
     saves = [effect_snapshot(ps) for ps in (await db.execute(select(PendingSave).where(
@@ -208,7 +209,7 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
         char = await db.get(Character, eff.character_id)
         prev = (char.conditions or {}).get(eff.slug)
         if history:
-            _add_history(db, char.id, "condition_change", history.format(label=label))
+            add_history(db, char.id, "condition_change", history.format(label=label))
         await apply_conditions(db, char, {eff.slug: False})
     else:
         target = ("combatant", eff.combatant_id)

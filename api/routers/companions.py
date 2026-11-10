@@ -18,8 +18,7 @@ from api.schemas.companion import (
     CompanionCommandResult, CompanionCreate, CompanionHp, CompanionRead, CompanionUpdate, HitDiceRequest, HitDiceResult,
     WildHealRequest, WildHealResult,
 )
-from api.routers.hp import _get_owned_full, update_hp
-from api.routers.items import _option_damage
+from api.routers.hp import update_hp
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
@@ -38,6 +37,8 @@ from core.rules.edition import character_edition
 from core.rules.catalog import active_features
 from core.rules.forms import elemental_violations, form_violations, is_elemental_form
 from core.rules.modifiers import Applied, is_incapacitated, modifiers_for
+from api.services.character_load import get_owned_full_with_resources
+from api.services.weapon_damage import option_damage
 
 router = APIRouter(prefix="/characters", tags=["companions"])
 
@@ -54,7 +55,7 @@ def _history(session: AsyncSession, char_id: int, event_type: str, description: 
 
 
 async def _get_char(session: AsyncSession, char_id: int, user_id: int) -> Character:
-    return await _get_owned_full(char_id, user_id, session)
+    return await get_owned_full_with_resources(char_id, user_id, session)
 
 
 def form_limits_moon(char: Character) -> bool:
@@ -542,7 +543,7 @@ async def companion_attack(
     mod = flat + (stats.damage_bonus if stats else 0)
     if m and not is_fumble:
         base = max(0, sum(rolls) + mod)
-        option_rolls, option_total, total = _option_damage(char, opts, is_critical, base)
+        option_rolls, option_total, total = option_damage(char, opts, is_critical, base)
 
     _history(
         session, char_id, "attack_roll",

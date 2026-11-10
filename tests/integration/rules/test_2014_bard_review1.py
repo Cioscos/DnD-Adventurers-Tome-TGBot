@@ -77,7 +77,7 @@ async def test_a_recycled_spell_id_does_not_leave_the_known_limit(client):
 # M2: una sola funzione per i `grants`, anche all'import
 
 async def test_a_class_option_with_grants_applies_them_on_import(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -85,7 +85,7 @@ async def test_a_class_option_with_grants_applies_them_on_import(test_session_fa
         spec = {"name": "x", "edition": "2014", "classes": [("Bardo", 6, LORE, 8)]}
         char = await build_rules_character(s, spec, 1)
         char.skills = {"arcana": True}
-        _apply_class_options(char, [{"class_index": 0, "name": "Arcana"}], ImportReport(), "it")
+        apply_class_options(char, [{"class_index": 0, "name": "Arcana"}], ImportReport(), "it")
         assert char.classes[0].options.get("expertise") == ["arcana"]
         assert char.skills["arcana"] == "expert"  # un posto consumato porta anche la maestria
 

@@ -76,6 +76,15 @@ class GmConditionApply(BaseModel):
         return self
 
 
+class InternalExpiry(ExpiryIn):
+    """Solo per il server (privilegi e incantesimi): 0 = la condizione finisce con il turno in corso, l'API pubblica chiede almeno 1."""
+    count: int = Field(ge=0, le=100)
+
+
+class InternalConditionApply(GmConditionApply):
+    expiry: Optional[InternalExpiry] = None
+
+
 class PendingSaveResolve(BaseModel):
     passed: bool
 

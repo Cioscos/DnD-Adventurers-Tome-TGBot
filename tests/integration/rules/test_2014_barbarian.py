@@ -761,7 +761,7 @@ async def test_barbarian_added_as_second_class_keeps_one_rage_and_extra_attack_a
 
 
 async def test_beyond_totem_options_find_the_catalog_choices(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -769,7 +769,7 @@ async def test_beyond_totem_options_find_the_catalog_choices(test_session_factor
         spec = {"name": "x", "edition": "2014", "classes": [("Barbaro", 14, TOTEM, 12)]}
         char = await build_rules_character(s, spec, 1)
         report = ImportReport()
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Eagle", "Wolf", "Bear", "Otter")], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Eagle", "Wolf", "Bear", "Otter")], report, "it")
         options = char.classes[0].options
         assert options == {"totem_spirit": ["eagle"], "totem_aspect": ["wolf"], "totem_attunement": ["bear"]}
         assert [e.name for e in report.approximated] == ["Otter"]

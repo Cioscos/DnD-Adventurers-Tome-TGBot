@@ -6,7 +6,6 @@ import json
 import random
 import re
 import uuid
-from datetime import datetime
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -15,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.services.session_allies import attach_spell_auras
 from api.services.rules_options import (
@@ -32,7 +32,7 @@ from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve
 from core.rules.modifiers import modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
-from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
+from core.db.models import Character, CharacterClass, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score, roll_ability_mod
@@ -69,38 +69,13 @@ from core.rules.proficiencies import is_weapon_proficient
 from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
 from core.rules.spell_effects import enchanted_weapon
 from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
+from api.services.character_load import get_owned_full
+from api.services.dice_notation import DICE_RE, roll_dice
+from api.services.weapon_damage import option_damage
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
 
-_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
-
-
-def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
-
-
-def _add_history(session, char_id: int, event_type: str, description: str,
-                 meta: dict | None = None) -> None:
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=_now(),
-        event_type=event_type,
-        description=description,
-        meta=meta,
-    ))
-
-
-def _roll_dice(notation: str) -> tuple[list[int], int]:
-    """Roll dice from notation like '1d8' or '2d6+2'. Returns (rolls, bonus)."""
-    m = _DICE_RE.match(notation.strip())
-    if not m:
-        return [0], 0
-    count = int(m.group(1))
-    sides = int(m.group(2))
-    bonus = int(m.group(3)) if m.group(3) else 0
-    rolls = [random.randint(1, sides) for _ in range(count)]
-    return rolls, bonus
 
 
 def _record_attack_dice(
@@ -115,31 +90,8 @@ def _record_attack_dice(
 
 
 def _damage_records(damage_dice_str: str, damage_rolls: list[int]) -> list[tuple[str, int]]:
-    m = _DICE_RE.match(damage_dice_str.strip()) if damage_dice_str else None
+    m = DICE_RE.match(damage_dice_str.strip()) if damage_dice_str else None
     return [(f"d{m.group(2)}", v) for v in damage_rolls] if m else []
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
 
 
 @router.get("/{char_id}/items", response_model=list[ItemRead])
@@ -148,7 +100,7 @@ async def list_items(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[Item]:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     return char.items
 
 
@@ -205,7 +157,7 @@ async def add_item(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     old_con_mod = effective_con_mod(char)
 
     if body.container_id is not None:
@@ -273,7 +225,7 @@ async def update_item(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
     )
@@ -383,7 +335,7 @@ async def move_items_endpoint(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     old_con_mod = effective_con_mod(char)
     worn = [(i, i.equipment_slot) for i in char.items if i.id in body.item_ids and i.is_equipped]
     names = await move_items(session, char, body.item_ids, body.container_id, body.quantity)
@@ -416,7 +368,7 @@ async def delete_item(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
     )
@@ -446,7 +398,7 @@ async def use_consumable(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     # Da morto ogni uso di consumabile è inerte (coerente con /hp).
     if char.is_dead:
         return await build_character_response(session, char)
@@ -476,8 +428,8 @@ async def use_consumable(
         kind = eff.get("kind")
         if kind == "heal":
             amount_str = str(eff.get("amount", "0")).strip()
-            if _DICE_RE.match(amount_str):
-                rolls, bonus = _roll_dice(amount_str)
+            if DICE_RE.match(amount_str):
+                rolls, bonus = roll_dice(amount_str)
                 amount = max(0, sum(rolls) + bonus)
                 heal_rolls.extend(rolls)
             else:
@@ -504,7 +456,7 @@ async def use_consumable(
         await apply_conditions(session, char, cond_changes)
 
     item.quantity = max(0, item.quantity - 1)
-    _add_history(session, char.id, "item_used", f"Usato: {item.name}")
+    add_history(session, char.id, "item_used", f"Usato: {item.name}")
 
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
@@ -660,7 +612,7 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
                 pending["attack_mode"], pending["grip"], bool(pending.get("offhand")), rerolled)
             result.rerolled = rerolled or None
             record_dice(char, _damage_records(result.damage_dice, result.damage_rolls))
-            extra_rolls, extra_total, result.damage_total = _option_damage(
+            extra_rolls, extra_total, result.damage_total = option_damage(
                 char, before, roll["is_critical"], max(0, sum(result.damage_rolls) + result.damage_bonus))
             option_dice = pairs(before.rolled_dice)
         if block and before.keys:  # i dadi delle opzioni prima del tiro sono stati ritirati col danno
@@ -714,13 +666,13 @@ def _base_damage(
     if damage_dice_str == "1":
         damage_rolls = [1]
     else:
-        damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
+        damage_rolls, dice_bonus = roll_dice(damage_dice_str)
         if is_critical:
-            damage_rolls = damage_rolls + _roll_dice(damage_dice_str)[0]
+            damage_rolls = damage_rolls + roll_dice(damage_dice_str)[0]
             # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
-            if applied.crit_dice and (die := _DICE_RE.match(damage_dice_str.strip())):
+            if applied.crit_dice and (die := DICE_RE.match(damage_dice_str.strip())):
                 damage_rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
-        if applied.damage_reroll and (die := _DICE_RE.match(damage_dice_str.strip())):
+        if applied.damage_reroll and (die := DICE_RE.match(damage_dice_str.strip())):
             for i, value in enumerate(damage_rolls):  # una volta sola: il nuovo risultato vale anche se è ancora basso
                 if value <= applied.damage_reroll:
                     damage_rolls[i] = random.randint(1, int(die.group(2)))
@@ -736,13 +688,6 @@ def _base_damage(
                           + applied.flat)
 
 
-def _option_damage(char: Character, opts: AppliedOptions, is_critical: bool, damage: int) -> tuple[list[int], int, int]:
-    """Dadi delle opzioni al danno: (valori, loro totale, danno finale)."""
-    rolls, total = roll_option_dice(char, opts, is_critical)
-    opts.damage_unscaled = damage + total
-    return rolls, total, scale_damage(damage + total, opts.multiplier)
-
-
 @router.post("/{char_id}/attack/{attack_id}/damage", response_model=WeaponAttackResult)
 async def deferred_attack_damage(
     char_id: int,
@@ -752,7 +697,7 @@ async def deferred_attack_damage(
     body: Annotated[RollOptionsBody | None, Body()] = None,
 ) -> WeaponAttackResult:
     """Secondo tempo dell'attacco: opzioni ``after_hit`` confermate sul danno già tirato."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     pending = get_turn(char).get("pending_attack")
     if not pending or pending["attack_id"] != attack_id:
         raise HTTPException(status_code=404, detail={"code": "attack_not_found"})
@@ -769,7 +714,7 @@ async def deferred_attack_damage(
     if opts.self_heal:  # Succhiavita: il Dado Vita speso dall'opzione cura nello stesso uso, con lo storico dei PF
         result.self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]
     second = _second_attack(char, opts, pending, item, result.to_hit_bonus) if opts.second_attack else {}
-    rolls, extra, result.damage_total = _option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
+    rolls, extra, result.damage_total = option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
     result.damage_bonus += opts.bonus
     result.option_result = option_result(opts, rolls, extra, previous=result.option_result, **second)
     result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
@@ -779,7 +724,7 @@ async def deferred_attack_damage(
     if turn.get("last_roll"):  # il danno dice che il colpo è andato a segno: niente più da rimborsare
         char.turn_state = {**turn, "last_roll": {**turn["last_roll"], "refundable": {}}}
     if opts.keys:
-        _add_history(session, char.id, "attack_roll",
+        add_history(session, char.id, "attack_roll",
                      f"Danno {result.weapon_name} con {', '.join(opts.keys)}: {result.damage_total}")
     return result
 
@@ -792,7 +737,7 @@ async def attack_with_weapon(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     await attach_spell_auras(session, char)  # le aure vive dei compagni (Manto del Crociato)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
@@ -874,7 +819,7 @@ async def attack_with_weapon(
         damage_rolls, damage_bonus = _base_damage(
             char, item, damage_dice_str, ability, damage_mod, magic_bonus, is_critical, resolved_mode, grip, offhand,
             rerolled)
-        option_rolls, option_total, damage_total = _option_damage(
+        option_rolls, option_total, damage_total = option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
     result_str = (
@@ -884,7 +829,7 @@ async def attack_with_weapon(
     )
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
-    _add_history(session, char.id, "attack_roll", result_str)
+    add_history(session, char.id, "attack_roll", result_str)
     end_hide(session, char)
     end_on_action(char, "attack")
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
@@ -981,7 +926,7 @@ def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int
     use_options(session, char, "attack", None)  # è un tiro nuovo: il precedente non si ritocca più
     _set_pending_attack(char, None)
     spend(char, "attack")
-    _add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
+    add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
     return WeaponAttackResult(
         weapon_name="Attacco a mano libera", to_hit_die=0, to_hit_bonus=0, to_hit_total=0, is_critical=False,
         is_fumble=False, damage_dice="", damage_rolls=[], damage_bonus=0, damage_total=0, effect=effect, save_dc=dc,
@@ -996,7 +941,7 @@ async def attack_unarmed(
     body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
     """Unarmed strike: 1+STR bludgeoning; Monk uses best of STR/DEX + Martial Arts die."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     await attach_spell_auras(session, char)  # le aure vive dei compagni (Manto del Crociato)
     refuse_if_incapacitated(char)
     _check_attack_limit(char, body)
@@ -1042,7 +987,7 @@ async def attack_unarmed(
             if not opts.finesse_unarmed:
                 damage_mod, damage_ability = roll_ability_mod(char, "dexterity"), "dexterity"
         damage_rolls, damage_bonus = _base_damage(char, None, damage_dice_str, damage_ability, damage_mod, 0, is_critical, mode)
-        option_rolls, option_total, damage_total = _option_damage(
+        option_rolls, option_total, damage_total = option_damage(
             char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
     weapon_name = "Attacco a mano libera"
@@ -1053,7 +998,7 @@ async def attack_unarmed(
     )
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
-    _add_history(session, char.id, "attack_roll", result_str)
+    add_history(session, char.id, "attack_roll", result_str)
     end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio
     end_on_action(char, "attack")
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
@@ -1131,7 +1076,7 @@ async def adjust_item_charges(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
     ch = item_meta(item).get("charges")
     if not isinstance(ch, dict):
@@ -1141,7 +1086,7 @@ async def adjust_item_charges(
     delta = 0 if rolled == 6 else body.delta  # Usare Dispositivi Magici: con 6 su 1d6 non si spende nulla
     new = max(0, min(int(ch.get("max") or 0), old + delta))
     set_item_charges(item, new)
-    _add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}"
+    add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}"
                  + (f" (d6 = {rolled})" if rolled is not None else ""))
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
@@ -1158,7 +1103,7 @@ async def cast_from_item(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
     meta = item_meta(item)
     granted = meta.get("granted_spells") or []
@@ -1196,7 +1141,7 @@ async def cast_from_item(
         await release_concentration_effects(session, char)
 
     spell_fx = await apply_spell_effects(session, char, fx_spell, fx_spell.level, body.targets, body.choices)
-    _add_history(session, char.id, "spell_cast",
+    add_history(session, char.id, "spell_cast",
                  f"Lanciato {spell['name']} da {item.name} ({cost} cariche)",
                  meta={"item_id": item.id})
     await session.flush()
@@ -1221,7 +1166,7 @@ async def cast_from_scroll(
 ) -> CharacterFull:
     """Usare Dispositivi Magici (Furfante 2024, 13°): lancio da una pergamena. Livelli 0-1 riescono sempre; dal 2° prova di
     Intelligenza (Arcano) CD 10 + livello. La pergamena si consuma; l'effetto dell'incantesimo resta a parole."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
     if not has_use_magic_device(char):
         raise HTTPException(status_code=409, detail="no_scroll_casting")
@@ -1237,7 +1182,7 @@ async def cast_from_scroll(
                 + (f"{item.name} riesce, l'incantesimo di livello {level} ha effetto." if ok
                    else f"{item.name} si disintegra, l'incantesimo non ha effetto."))
     item.quantity = max(0, item.quantity - 1)
-    _add_history(session, char.id, "item_used", f"Pergamena {item.name} (livello {level}): " + ("riuscita" if ok else "disintegrata"))
+    add_history(session, char.id, "item_used", f"Pergamena {item.name} (livello {level}): " + ("riuscita" if ok else "disintegrata"))
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
     response = await build_character_response(session, char)
@@ -1266,10 +1211,10 @@ async def bond_weapon(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")], body: Annotated[BondRequest | None, Body()] = None,
 ) -> CharacterFull:
     """Il rituale di un'ora è concluso (l'app non lo cronometra): l'arma è vincolata. Al massimo due."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
     weapon_bond.bond(char, item, body.replace_item_id if body else None)
-    _add_history(session, char.id, "item_bond", f"Arma vincolata: {item.name}", meta={"item_id": item.id})
+    add_history(session, char.id, "item_bond", f"Arma vincolata: {item.name}", meta={"item_id": item.id})
     return await _bond_response(session, char)
 
 
@@ -1278,10 +1223,10 @@ async def break_weapon_bond(
     char_id: int, item_id: int, user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
     weapon_bond.break_bond(item)
-    _add_history(session, char.id, "item_bond", f"Vincolo spezzato: {item.name}", meta={"item_id": item.id})
+    add_history(session, char.id, "item_bond", f"Vincolo spezzato: {item.name}", meta={"item_id": item.id})
     return await _bond_response(session, char)
 
 
@@ -1291,9 +1236,9 @@ async def summon_bonded_weapon(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Evoca l'arma vincolata nella mano libera come azione bonus (stesso piano di esistenza: lo dichiara il giocatore)."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     refuse_if_incapacitated(char)
     item = await _get_item(session, char_id, item_id)
     slot = weapon_bond.summon(char, item)
-    _add_history(session, char.id, "item_bond", f"Arma evocata: {item.name} ({slot})", meta={"item_id": item.id})
+    add_history(session, char.id, "item_bond", f"Arma evocata: {item.name} ({slot})", meta={"item_id": item.id})
     return await _bond_response(session, char)

@@ -46,7 +46,8 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
                         targets: list[Character | None], *, explicit: bool) -> list[dict[str, str]]:
     """Toglie ``conds`` a ogni bersaglio che le ha. Sulla scheda di un altro PG lo storico dice «Condizione X tolta da <nome>»
     (non si annulla, come le cure). Ritorna gli esiti nelle due lingue, comprese le note per ciò che l'app non traccia."""
-    from api.services.effects import _add_history, apply_conditions  # import locale: effects richiama rules_states
+    from api.services.history import add_history
+    from api.services.effects import apply_conditions  # import locale: effects richiama rules_states
     lines: list[dict[str, str]] = []
     held: list[dict] = []  # condizioni sospese, non cancellate: tornano quando finisce la concentrazione di chi lancia
     for target in targets:
@@ -67,7 +68,7 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
                                                                        **{c: caster.id for c in present}}}
         if not mine:
             for c in present:
-                _add_history(session, target.id, "condition_change", f"Condizione {condition_label(c)} tolta da {caster.name}",
+                add_history(session, target.id, "condition_change", f"Condizione {condition_label(c)} tolta da {caster.name}",
                              meta={"slug": c, "active": False, "by": caster.name})
         lines += outcome_lines(removal, target=None if mine else target.name, removed=present,
                                absent=[c for c in conds if c not in present] if explicit else [], untracked=untracked, wanted=conds)

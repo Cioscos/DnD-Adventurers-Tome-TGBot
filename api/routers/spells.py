@@ -5,7 +5,6 @@ from __future__ import annotations
 import random
 import re
 import uuid
-from datetime import datetime
 from types import SimpleNamespace
 from typing import Annotated, Any
 
@@ -15,9 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
-from core.db.models import Ability, Character, CharacterClass, CharacterHistory, Spell, SpellSlot
+from core.db.models import Ability, Character, CharacterClass, Spell, SpellSlot
 from api.schemas.character import CharacterFull, SpellAttackResult
 from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode
 from api.schemas.spell import (
@@ -35,7 +35,6 @@ from api.schemas.spell import (
     SpellUpdate,
     SpellUseRequest,
 )
-from api.routers.items import _roll_dice, _DICE_RE
 from api.services.durations import end_concentration, start_concentration
 from core.data.damage_types import canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
@@ -81,6 +80,8 @@ from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
 from core.rules.spellcasting import (
     at_will, bonus_cast, can_ritual, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
 )
+from api.services.character_load import get_owned_full
+from api.services.dice_notation import DICE_RE, roll_dice
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -90,44 +91,6 @@ class ConcentrationSaveRequest(BaseModel):
 
 router = APIRouter(prefix="/characters", tags=["spells"])
 SPELL_ATTACK_DICE = "spell_attack_dice"  # turn_state: i dadi extra confermati su un attacco con incantesimo, per il suo danno
-
-
-def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
-
-
-def _add_history(session, char_id: int, event_type: str, description: str,
-                 meta: dict | None = None) -> None:
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=_now(),
-        event_type=event_type,
-        description=description,
-        meta=meta,
-    ))
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
 
 
 def _prepared_cap_error(count: int, cap: int, per_class: bool) -> HTTPException:
@@ -290,15 +253,15 @@ def _consume_cast(
         if not _LONG_CASTING.search(spell.casting_time or ""):  # un lancio di minuti o ore non è un'azione del turno
             spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
         ki_pool.uses = (ki_pool.uses or 0) - ki_total
-        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} con {ki_total} ki",
+        add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} con {ki_total} ki",
                      meta={"ki": ki_total, "slot_level": spell.level + ki_extra})
     elif arcanum is not None:
         spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
-        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} (Arcanum Mistico)",
+        add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} (Arcanum Mistico)",
                      meta={"slot_level": spell.level, "arcanum": True})
     elif free_at_will:
         spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
-        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
+        add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} a volontà")
     elif free_state is not None:
         data = free_state.get("data") or {}
         if (turn_slot := data.get("free_cast_slot", "action")) is not None:  # ``None``: parte di un'altra azione (Magia Stregata)
@@ -308,20 +271,20 @@ def _consume_cast(
         no_concentration = bool(data.get("no_concentration"))
         if data.get("then"):  # lo stato che il lancio avvia al posto della concentrazione (durata propria)
             begin_state(char, StateSpec(**data["then"]), free_state.get("feature_key") or free_state["key"], free_state.get("name"))
-        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")
+        add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} senza slot ({free_state.get('name') or free_state['key']})")
     elif ritual:
-        _add_history(
+        add_history(
             session, char.id, "spell_ritual_cast",
             f"Lancio rituale: {spell.name}",
             meta={"ritual": True},
         )
     elif slot is not None:
         slot.use_slot()
-        _add_history(session, char.id, "spell_cast",
+        add_history(session, char.id, "spell_cast",
                      f"Lanciato {spell.name} (slot {slot.level})",
                      meta={"slot_level": slot.level, **({"is_pact": True} if slot.is_pact else {})})
     else:
-        _add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
+        add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
     _mark_cast(char, spell, slot is not None)
     if slot is not None and spell.srd_index:  # Rompi-Incantesimi: lo slot dell'ultimo lancio del turno, da rendere a lancio concluso
         turn = get_turn(char)
@@ -353,7 +316,7 @@ async def list_spells(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     q: str | None = None,
 ) -> list[SpellRead]:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     spells = char.spells
     if q:
         try:
@@ -376,7 +339,7 @@ async def add_spell(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Spell:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     _check_class(char, body.class_id)
     pick = None
     if body.pick_id:  # Segreti Magici: l'incantesimo è di qualsiasi classe e passa alla classe del bardo
@@ -404,7 +367,7 @@ async def update_spell(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Spell:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Spell).where(Spell.id == spell_id, Spell.character_id == char_id)
     )
@@ -437,7 +400,7 @@ async def remove_spell(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Spell).where(Spell.id == spell_id, Spell.character_id == char_id)
     )
@@ -463,7 +426,7 @@ async def spellbook_cost(
     mode: str = "copy",
 ) -> SpellCopyCost:
     """Tempo e oro per copiare nel Libro un incantesimo di ``level`` e ``school`` (dimezzati da un «Sapiente»)."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     if mode not in MODES or not 1 <= level <= 9:
         raise HTTPException(status_code=422, detail={"code": "bad_copy_mode"})
     cost = copy_cost(char, level, school, mode)
@@ -480,7 +443,7 @@ async def copy_spell_to_book(
 ) -> CharacterFull:
     """Copia l'incantesimo nel Libro del Mago (o nella copia di riserva) pagando l'oro: ogni rifiuto viene prima di spendere."""
     from api.services.containers import withdraw  # import locale: containers importa il modello degli oggetti
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
@@ -492,7 +455,7 @@ async def copy_spell_to_book(
         spell.in_backup = True
     else:
         spell.in_spellbook = True
-    _add_history(session, char.id, "spellbook",
+    add_history(session, char.id, "spellbook",
                  f"Libro degli Incantesimi: {spell.name} ({body.mode}), {cost.hours:g} h e {cost.gold} mo",
                  meta={"mode": body.mode, "spell_id": spell.id, "hours": cost.hours, "gold": cost.gold})
     return await build_character_response(session, char)
@@ -505,13 +468,13 @@ async def lose_spellbook(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Il libro è perso: resta ciò che c'è nella copia di riserva (che diventa il libro); il resto si ritrascrive se preparato."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     if not any(wizard_row(char, SimpleNamespace(class_id=c.id)) is not None for c in char.classes):
         raise HTTPException(status_code=422, detail={"code": "no_spellbook"})
     for spell in char.spells:
         if spell.level >= 1 and wizard_row(char, spell) is not None:
             spell.in_spellbook, spell.in_backup = bool(spell.in_backup), False
-    _add_history(session, char.id, "spellbook", "Libro degli Incantesimi perso")
+    add_history(session, char.id, "spellbook", "Libro degli Incantesimi perso")
     return await build_character_response(session, char)
 
 
@@ -523,7 +486,7 @@ async def use_spell(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
 
     # Verify the spell belongs to this character
     result = await session.execute(
@@ -573,7 +536,7 @@ async def use_spell(
         removal_lines = [NOT_RECOGNIZED]
     response.removal_result = removal_lines
     # Dadi che il server non sa tirare: l'incantesimo si lancia lo stesso, senza danno, e la scheda lo dice
-    response.damage_unrollable = any(d and not _DICE_RE.match(d.strip()) for d in (spell.damage_dice, spell.extra_damage_dice))
+    response.damage_unrollable = any(d and not DICE_RE.match(d.strip()) for d in (spell.damage_dice, spell.extra_damage_dice))
     return response
 
 
@@ -586,7 +549,7 @@ async def cast_check(
     ritual: bool = False,
 ) -> list[str]:
     """Le regole che questo lancio violerebbe, da confermare prima di tirare i dadi. Il lancio le ricontrolla."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
@@ -601,7 +564,7 @@ async def spell_attack(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SpellAttackResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
@@ -655,7 +618,7 @@ async def spell_attack(
     )
     if body.with_inspiration:
         text = f"Reroll ispirazione: {text}"
-    _add_history(session, char_id, "spell_attack", text)
+    add_history(session, char_id, "spell_attack", text)
     end_hide(session, char)
     end_on_action(char, "attack")
     record_dice(char, d20_records(outcome))
@@ -761,7 +724,7 @@ async def update_concentration(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     if body.spell_id is None:
         end_concentration(char)
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:
@@ -784,7 +747,7 @@ async def concentration_save(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> ConcentrationSaveResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     return await roll_concentration_save(
         char, body.damage, session, body.mode, body.dice,
     )
@@ -806,7 +769,7 @@ async def roll_spell_damage(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> RollDamageResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
@@ -823,7 +786,7 @@ async def roll_spell_damage(
         raise HTTPException(status_code=400, detail="casting_level must be <= 9")
 
     # Parse spell.damage_dice using shared regex
-    m = _DICE_RE.match(spell.damage_dice.strip())
+    m = DICE_RE.match(spell.damage_dice.strip())
     if not m:
         raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
     base_count = int(m.group(1))
@@ -834,7 +797,7 @@ async def roll_spell_damage(
     # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo
     # incantesimi di livello >= 1, stessi lati). "sleep" no: i suoi dadi sono un pool di PF.
     if spell.level > 0 and spell.higher_levels_dice and spell.srd_index != "sleep":
-        um = _DICE_RE.match(spell.higher_levels_dice.strip())
+        um = DICE_RE.match(spell.higher_levels_dice.strip())
         if um and int(um.group(2)) == sides:
             base_count += int(um.group(1)) * (casting_level - spell.level)
             # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
@@ -865,7 +828,7 @@ async def roll_spell_damage(
     second_count = second_sides = 0
     second_type: str | None = None
     if spell.extra_damage_dice:
-        sm = _DICE_RE.match(spell.extra_damage_dice.strip())
+        sm = DICE_RE.match(spell.extra_damage_dice.strip())
         if not sm:
             raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
         second_sides = int(sm.group(2))
@@ -880,7 +843,7 @@ async def roll_spell_damage(
     extra_sides = 0
     extra_count = 0
     if body.extra_dice:
-        em = _DICE_RE.match(body.extra_dice)
+        em = DICE_RE.match(body.extra_dice)
         if em:
             extra_sides = int(em.group(2))
             extra_bonus = int(em.group(3)) if em.group(3) else 0
@@ -1055,7 +1018,7 @@ async def roll_spell_healing(
     """PF che un incantesimo di cura restituisce (R41): dadi allo slot scelto, modificatore da incantatore e privilegi
     (Discepolo della Vita, Guarigione Suprema). Il server tira e somma; con ``apply_to_self`` li aggiunge a chi lancia."""
     from api.services.effects import apply_heal  # import locale: effects importa il router degli incantesimi
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
@@ -1093,7 +1056,7 @@ async def roll_spell_healing(
     self_healed = 0
     if opts.self_heal:
         self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]
-    _add_history(session, char_id, "spell_healing", f"{spell.name}: cura {breakdown}")
+    add_history(session, char_id, "spell_healing", f"{spell.name}: cura {breakdown}")
     return RollHealingResult(
         rolls=main_rolls, total=total, breakdown=breakdown, casting_level=level, main_kind=f"d{sides}" if count else None,
         main_rolls=main_rolls, modifier=modifier, bonus=applied.flat + opts.bonus, maximized=maximized, healed=healed,
@@ -1109,7 +1072,7 @@ async def last_damage_options(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> RollDamageResult | WeaponAttackResult | CompanionAttackResult:
     """Privilegi usati dopo aver visto i dadi di danno (incantesimo, arma o compagno). Il tiro è quello salvato dal server."""
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     last = get_turn(char).get("last_damage")
     kind = (last or {}).get("kind", "spell")
     spell = next((s for s in char.spells if last and kind == "spell" and s.id == last["spell_id"]), None)
@@ -1170,7 +1133,7 @@ async def last_damage_options(
             "option_result": block, "parts": shown,
         })
         label = f"{spell.name} = {total}"
-    _add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",
+    add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",
                  f"Dopo il danno ({', '.join(opts.keys)}): {label}" + (f" = {total}" if kind != "spell" else ""))
     turn = get_turn(char)  # il pagamento ha riscritto il turno
     turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json")}

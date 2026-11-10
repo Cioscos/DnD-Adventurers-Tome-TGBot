@@ -95,15 +95,15 @@ async def test_giro1_m9_the_resilience_row_lists_the_types_the_rest_accepts(clie
 
 async def _beyond_options(factory, cid, names):
     from sqlalchemy import select
-    from api.routers.characters import _refresh_char_full
-    from api.routers.transfer import _apply_class_options
+    from api.services.character_load import refresh_char_full
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.db.models import Character
     async with factory() as s:
         owner = (await s.execute(select(Character.user_id).where(Character.id == cid))).scalar_one()
-        char = await _refresh_char_full(s, cid, owner)
+        char = await refresh_char_full(s, cid, owner)
         report = ImportReport()
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         return char.classes[0].options.get("invocations", []), [e.name for e in report.approximated]
 
 

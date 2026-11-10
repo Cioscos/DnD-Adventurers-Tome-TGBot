@@ -14,12 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
-from api.routers.campaigns import _active_session_id
-from api.routers.sessions import _touch
+from api.services.game_sessions import active_session_id, touch
 from api.schemas.campaign import LoreRead
 from api.services import campaigns as svc
 from api.services.campaigns import unlink_file
 from core.db.models import Campaign, CampaignLore, CampaignMember, GameSession, SessionMessage, SessionRole
+from api.services.campaigns import campaign_access
 
 router = APIRouter(prefix="/campaigns/{campaign_id}/lore", tags=["lore"])
 
@@ -47,22 +47,6 @@ def _read(lore: CampaignLore) -> LoreRead:
     )
 
 
-async def _access(db: AsyncSession, campaign_id: int, user_id: int) -> bool:
-    """True if the caller is the GM; 403 for non-members, 404 for a missing campaign."""
-    camp = await db.get(Campaign, campaign_id)
-    if camp is None:
-        raise HTTPException(status_code=404, detail="campaign_not_found")
-    if camp.gm_user_id == user_id:
-        return True
-    is_member = (await db.execute(
-        select(CampaignMember.id).where(
-            CampaignMember.campaign_id == campaign_id, CampaignMember.user_id == user_id)
-    )).first() is not None
-    if not is_member:
-        raise HTTPException(status_code=403, detail="not_a_member")
-    return False
-
-
 async def _lore(db: AsyncSession, campaign_id: int, lore_id: int) -> CampaignLore:
     lore = await db.get(CampaignLore, lore_id)
     if lore is None or lore.campaign_id != campaign_id:
@@ -71,7 +55,7 @@ async def _lore(db: AsyncSession, campaign_id: int, lore_id: int) -> CampaignLor
 
 
 async def _gm_lore(db: AsyncSession, campaign_id: int, lore_id: int, user_id: int) -> CampaignLore:
-    if not await _access(db, campaign_id, user_id):
+    if not await campaign_access(db, campaign_id, user_id):
         raise HTTPException(status_code=403, detail="gm_only")
     return await _lore(db, campaign_id, lore_id)
 
@@ -129,7 +113,7 @@ async def list_lore(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[LoreRead]:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     rows = (await db.execute(select(CampaignLore).where(CampaignLore.campaign_id == campaign_id))).scalars().all()
     if not is_gm:
         rows = [r for r in rows if r.revealed_at]
@@ -148,7 +132,7 @@ async def create_lore(
     image: UploadFile | None = File(None),
     audio: UploadFile | None = File(None),
 ) -> LoreRead:
-    if not await _access(db, campaign_id, user_id):
+    if not await campaign_access(db, campaign_id, user_id):
         raise HTTPException(status_code=403, detail="gm_only")
     tag_list, clean_title = _tags(tags), _title(title)  # validate before writing any file
     new_image, new_audio = await _save_both(campaign_id, image, audio)
@@ -226,9 +210,9 @@ async def reveal_lore(
     lore = await _gm_lore(db, campaign_id, lore_id, user_id)
     if lore.revealed_at is None:
         lore.revealed_at = lore.updated_at = _now()
-        session_id = await _active_session_id(db, campaign_id)
+        session_id = await active_session_id(db, campaign_id)
         if session_id is not None:
-            _touch(await db.get(GameSession, session_id))
+            touch(await db.get(GameSession, session_id))
             db.add(SessionMessage(
                 session_id=session_id, user_id=user_id, role=SessionRole.GAME_MASTER,
                 body=f"Il master ha rivelato: {lore.title}", sent_at=lore.revealed_at,
@@ -263,7 +247,7 @@ async def _serve(campaign_id: int, lore_id: int, db: AsyncSession, header: str, 
         if not raw:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth")
         user_id = verify_init_data(raw)
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     lore = await _lore(db, campaign_id, lore_id)
     stored = getattr(lore, attr)
     if (not is_gm and lore.revealed_at is None) or not stored or not Path(stored).exists():

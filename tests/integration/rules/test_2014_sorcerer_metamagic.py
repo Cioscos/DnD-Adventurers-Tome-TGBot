@@ -365,7 +365,7 @@ async def test_metamagic_points_come_back_with_a_long_rest(client):
 
 
 async def test_beyond_metamagic_options_find_the_catalog_choices(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -373,7 +373,7 @@ async def test_beyond_metamagic_options_find_the_catalog_choices(test_session_fa
         spec = {"name": "x", "edition": "2014", "classes": [("Stregone", 10, "Discendenza Draconica", 6)]}
         char = await build_rules_character(s, spec, 1)
         report = ImportReport()
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Careful Spell", "Twinned Spell", "Quickened Spell", "Mystery")],
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Careful Spell", "Twinned Spell", "Quickened Spell", "Mystery")],
                              report, "it")
         assert char.classes[0].options == {"metamagic": ["careful", "twinned", "quickened"]}
         assert [e.name for e in report.approximated] == ["Mystery"]

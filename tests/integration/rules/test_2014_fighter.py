@@ -606,7 +606,7 @@ async def test_survivor_tells_the_player_at_each_turn_of_an_encounter(client, te
 # ---------------------------------------------------------------------------
 
 async def test_beyond_option_names_find_the_styles_and_the_maneuvers(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -616,7 +616,7 @@ async def test_beyond_option_names_find_the_styles_and_the_maneuvers(test_sessio
         report = ImportReport()
         names = ("Great Weapon Fighting", "Goading Attack", "Trip Attack", "Commander's Strike", "Riposte", "Rally",
                  "Sweeping Attack", "Evasive Footwork", "Dragon Slayer")
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         options = char.classes[0].options
         assert options["fighting_style"] == ["great_weapon"]
         assert options["maneuvers"] == ["goading", "trip", "commanders_strike", "riposte", "rally", "sweeping", "evasive_footwork"]

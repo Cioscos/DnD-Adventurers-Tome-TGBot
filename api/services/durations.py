@@ -13,7 +13,7 @@ from core.db.models import Character, Combatant, ConditionEffect, Encounter, Pen
 from api.services.condition_effects import (
     UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
-from api.services.effects import _add_history
+from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
 from core.rules.edition import character_edition
@@ -85,7 +85,7 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
     if ended:
         char.concentrating_spell_id = None
         end_states(char, "concentration_end")
-        _add_history(session, char.id, "concentration",
+        add_history(session, char.id, "concentration",
                      "Concentrazione terminata: durata scaduta")
     return entry, ended
 

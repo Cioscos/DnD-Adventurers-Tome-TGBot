@@ -17,7 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
+from core.data.labels import ability_label, condition_label
+from core.db.models import Character, ConditionEffect, GameSession, PendingSave, SessionParticipant, SessionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -212,3 +213,21 @@ async def notify_party_emergency(db: AsyncSession, char: Character, text: str) -
         if not notifications_enabled(rec_char, "party_emergency"):
             continue
         await send_telegram_message(p.user_id, text, button=("Apri la sessione", url))
+
+
+async def notify_saves(db: AsyncSession, save_ids: list[int]) -> None:
+    """Best-effort ping to the PC owner for each repeated save just created."""
+    for save_id in save_ids:
+        ps = await db.get(PendingSave, save_id)
+        if ps is None or ps.character_id is None:
+            continue  # monster saves only show up to the GM
+        char = await db.get(Character, ps.character_id)
+        if char is None or not notifications_enabled(char, "gm_events"):
+            continue
+        eff = await db.get(ConditionEffect, ps.effect_id)
+        await send_telegram_message(
+            char.user_id,
+            f"🎲 Tiro salvezza: {ability_label(ps.ability)} CD {ps.dc} "
+            f"per liberarti da {condition_label(eff.slug)}",
+            button=("Apri la scheda", miniapp_url(f"/char/{char.id}")),
+        )
