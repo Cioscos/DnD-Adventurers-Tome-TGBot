@@ -296,3 +296,12 @@ async def test_gm_reapply_custom_keeps_homebrew_payload(client, test_session_fac
         assert (await s.get(Character, char_id)).conditions == {"custom:x": payload}
     [eff] = await _effects(test_session_factory, character_id=char_id)
     assert eff.slug == "custom:x" and eff.expiry_count is not None
+
+
+async def test_conditions_4_gm_exhaustion_6_kills_the_character(client, test_session_factory, monkeypatch):
+    _, sid, char_id, pc_id, *_ = await _start(client, test_session_factory, monkeypatch)
+    r = await client.post(_url(sid, pc_id), json={"slug": "exhaustion", "value": 6})
+    assert r.status_code == 200, r.text
+    async with test_session_factory() as s:
+        char = await s.get(Character, char_id)
+        assert char.is_dead and char.conditions["exhaustion"] == 6

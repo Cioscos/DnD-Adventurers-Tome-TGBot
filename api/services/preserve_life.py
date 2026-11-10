@@ -11,7 +11,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.services.effects import apply_heal
+from api.services.effects import apply_heal, get_passive_modifiers
 from api.services.rules_turn import refuse_if_incapacitated, spend
 from api.services.session_allies import load_receiver as _load, seated_allies
 from core.db.models import Ability, Character
@@ -39,9 +39,10 @@ def pool_for(level: int) -> int:
     return 5 * level
 
 
-def half_cap(char: Character) -> int:
-    """PF che si possono ancora restituire: fino alla metà dei PF massimi, mai oltre."""
-    return max(0, effective_hp_max(char) // 2 - char.current_hit_points)
+async def half_cap(session: AsyncSession, char: Character) -> int:
+    """PF che si possono ancora restituire: fino alla metà dei PF massimi effettivi (con il bonus homebrew), mai oltre."""
+    bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+    return max(0, effective_hp_max(char, bonus) // 2 - char.current_hit_points)
 
 
 @dataclass
@@ -80,7 +81,8 @@ async def info(session: AsyncSession, char: Character) -> Info:
     if row is None or (row.max_uses is not None and (row.uses or 0) < 1):
         raise _refuse(status.HTTP_409_CONFLICT, "no_uses")
     people = [char, *[await _load(session, a.id) for a in await seated_allies(session, char)]]
-    return Info(pool, row.uses, [Target(p.id, p.name, min(half_cap(p), pool), p.id == char.id) for p in people if not p.is_dead],
+    targets = [Target(p.id, p.name, min(await half_cap(session, p), pool), p.id == char.id) for p in people if not p.is_dead]
+    return Info(pool, row.uses, targets,
                 needs_confirm=character_edition(char) == "2014")
 
 
@@ -121,7 +123,7 @@ async def preserve_life(session: AsyncSession, char: Character, allocations: lis
         target = receivers.get(cid) or await _load(session, cid)
         if target.is_dead:
             raise _refuse(status.HTTP_409_CONFLICT, "target_dead")
-        if amount > half_cap(target):
+        if amount > await half_cap(session, target):
             raise _refuse(status.HTTP_422_UNPROCESSABLE_ENTITY, "over_half")
         receivers[cid] = target
     spend(char, "action")  # 409 turn_slot_used: la risposta annulla anche la spesa dell'uso

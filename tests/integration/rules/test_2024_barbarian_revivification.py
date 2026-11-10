@@ -58,13 +58,16 @@ async def test_revivification_brings_the_hit_points_to_the_level_it_does_not_add
     assert (await _hero(test_session_factory, hero)).current_hit_points == 14
 
 
-async def test_revivification_never_lowers_an_ally_already_above_the_level(client, test_session_factory):
+async def test_revivification_1_refuses_an_ally_already_at_or_above_the_level_and_spends_nothing(client, test_session_factory):
     cid, hero = await _table(client, test_session_factory)
     async with test_session_factory() as s:
         (await s.get(Character, hero)).current_hit_points = 30
         await s.commit()
+    before = await _spent(client, cid)
     r = await _revive(client, cid, hero)
-    assert r.json()["received"]["healed"] == 0 and (await _hero(test_session_factory, hero)).current_hit_points == 30
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "target_not_down"
+    assert (await _hero(test_session_factory, hero)).current_hit_points == 30
+    assert await _spent(client, cid) == before and (await _turn(client, cid))["reaction_used"] is False
 
 
 async def test_revivification_refuses_someone_not_at_the_table_and_spends_nothing(client, test_session_factory):

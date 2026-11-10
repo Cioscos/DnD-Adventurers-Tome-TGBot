@@ -171,3 +171,14 @@ async def test_only_the_life_domain_has_it_and_only_the_owner_can_ask(client):
     life = await _cleric(client, 5, "life")
     as_user(9999)
     assert (await _go(client, life, [(life, 1)])).status_code == 403
+
+
+async def test_preserve_life_2_the_half_cap_uses_the_effective_max(client, test_session_factory):
+    from core.db.models import Character
+    sid, cleric, hero = await _scene(client, test_session_factory, hero_hp=5)
+    async with test_session_factory() as s:  # spossatezza 4 (2014): massimo effettivo 20, la metà è 10, ne restano 5
+        h = await s.get(Character, hero)
+        h.conditions = {**(h.conditions or {}), "exhaustion": 4}
+        await s.commit()
+    assert (await _go(client, cleric, [(hero, 6)])).status_code == 422
+    assert (await _go(client, cleric, [(hero, 5)])).status_code == 200

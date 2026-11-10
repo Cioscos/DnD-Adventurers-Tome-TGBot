@@ -84,3 +84,14 @@ async def test_non_constitution_change_does_not_touch_hp(client):
     assert body["hit_points"] == 10
     assert body["current_hit_points"] == 10
     assert _score(body, "dexterity")["modifier"] == 4
+
+
+async def test_hp_3_constitution_drop_brings_current_hp_to_the_new_effective_max(client, test_session_factory):
+    from core.db.models import Character
+    cid = await _fighter(client)
+    await _patch(client, cid, "constitution", 14)   # 12/12
+    async with test_session_factory() as sess:  # spossatezza 4: massimo dimezzato
+        (await sess.get(Character, cid)).conditions = {"exhaustion": 4}
+        await sess.commit()
+    body = (await _patch(client, cid, "constitution", 10)).json()  # massimo base 10, effettivo 5
+    assert body["hit_points"] == 10 and body["current_hit_points"] == 5

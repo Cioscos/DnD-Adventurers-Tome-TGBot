@@ -8,6 +8,7 @@ import SelectSheet from '@/components/ui/SelectSheet'
 import ChipSelect from '@/components/ui/ChipSelect'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import IconButton from '@/components/ui/IconButton'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import { api, ApiError } from '@/api/client'
@@ -52,6 +53,7 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
   const [sourceId, setSourceId] = useState('none')
   const [conc, setConc] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmLethal, setConfirmLethal] = useState(false)
 
   const source = encounter.combatants.find((c) => String(c.id) === sourceId)
   const showConc = Boolean(snapOf(source)?.is_concentrating)
@@ -216,11 +218,26 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
           fullWidth
           disabled={!valid}
           loading={mutation.isPending}
-          onClick={() => { setError(null); mutation.mutate(buildBody()) }}
+          onClick={() => {
+            setError(null)
+            // Il livello 6 uccide il personaggio: come nella pagina Condizioni, prima si chiede conferma.
+            if (isExhaustion && target.kind === 'pc' && level === 6 && currentExhaustion < 6) setConfirmLethal(true)
+            else mutation.mutate(buildBody())
+          }}
         >
           {t(`${K}.submit`)}
         </Button>
       </div>
+      <ConfirmSheet
+        open={confirmLethal}
+        onClose={() => setConfirmLethal(false)}
+        title={t('character.conditions.exhaustion_condition')}
+        body={t('character.conditions.exhaustion_lethal_body')}
+        confirmLabel={t('character.conditions.exhaustion_lethal_confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => { setConfirmLethal(false); mutation.mutate(buildBody()) }}
+        loading={mutation.isPending}
+      />
     </Sheet>
   )
 }

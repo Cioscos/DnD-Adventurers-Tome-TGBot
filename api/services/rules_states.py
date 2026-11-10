@@ -391,6 +391,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await ally_target(session, char, params["target_character_id"])
         if on_use.ally_needs_zero_hp and target.current_hit_points > 0:
             raise _err(status.HTTP_409_CONFLICT, "target_not_down")
+        if on_use.heal_ally_to and on_use.heal and target.current_hit_points >= on_use.heal(ctx_choice, 0):
+            raise _err(status.HTTP_409_CONFLICT, "target_not_down")  # già al valore o sopra: niente da portare, niente spesa
     temp_targets: list[Character] = []
     if on_use.temp_hp_ally:  # PF temporanei a PG della serata (Task 46): tutti validati prima di spendere qualcosa
         wanted = (params or {}).get("target_character_ids")
