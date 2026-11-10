@@ -120,3 +120,11 @@ async def test_t10_75_flame_strike_asks_the_type_of_the_extra_dice_and_the_roll_
     r = await client.post(f"/characters/{cid}/spells/{spell['id']}/roll_damage", json={
         "casting_level": 6, "main_rolls": [1, 1, 1, 1, 1], "extra_rolls": [2, 2, 2, 2]})
     assert r.status_code == 200 and r.json()["total"] == 5 + 8  # il tipo scelto è il fuoco: 5d6 fuoco, 4d6 radiante
+
+
+async def test_t10_75_the_spell_list_exposes_the_saved_upcast_type_for_the_client(client):
+    cid = await _cleric(client, 11, "light", wisdom=16)
+    spell = await _spell(client, cid, "flame-strike")
+    assert spell["effect"]["cast_upcast_type"] is None
+    assert (await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 6, "choices": {"upcast_type": "radiant"}})).status_code == 200
+    assert (await _spell(client, cid, "flame-strike"))["effect"]["cast_upcast_type"] == "radiant"

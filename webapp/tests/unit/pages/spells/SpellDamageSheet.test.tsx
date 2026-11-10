@@ -6,8 +6,8 @@ import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import { useEffectPickStore } from '@/lib/rollOptions'
 import type { Spell, RollDamageResult } from '@/types'
 
-const { rollDamage, useSpell, updateConc, askRollOptions } = vi.hoisted(() => ({
-  rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn(), askRollOptions: vi.fn(),
+const { rollDamage, useSpell, updateConc, askRollOptions, playAndCollect, flags } = vi.hoisted(() => ({
+  rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn(), askRollOptions: vi.fn(), playAndCollect: vi.fn(), flags: { anim: false },
 }))
 vi.mock('@/lib/rollOptions', async (orig) => ({ ...((await orig()) as object), askRollOptions }))
 
@@ -33,9 +33,9 @@ vi.mock('framer-motion', async () => {
   }
 })
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
-vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: () => Promise.resolve([]) }) }))
-vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }) }))
-vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
+vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: (g: unknown) => (flags.anim ? playAndCollect(g) : Promise.resolve([])) }) }))
+vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: flags.anim }) }))
+vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => !flags.anim }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
@@ -50,7 +50,7 @@ const cantrip = { id: 1, name: 'Mano Magica', level: 0, attack_save: 'ATK', is_c
 const leveled = { id: 2, name: 'Palla di Fuoco', level: 3, attack_save: 'DEX', is_concentration: false, damage_dice: '8d6' } as Spell
 
 beforeEach(() => { askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }); useEffectPickStore.setState({ picked: {} }) })
-afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset() })
+afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset(); playAndCollect.mockReset(); flags.anim = false })
 
 describe('SpellDamageSheet', () => {
   it('renders nothing without a spell', () => {
@@ -161,6 +161,17 @@ describe('SpellDamageSheet', () => {
     await userEvent.click(screen.getByText('character.inventory.damage_types.dmg_necrotic'))
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_damage_type: 'necrotic' })))
+  })
+
+  it('counts the 3D dice from the upcast type the server saved, even when the pick store is empty (Flame Strike, radiant)', async () => {
+    flags.anim = true
+    playAndCollect.mockResolvedValue([])
+    rollDamage.mockResolvedValue(result)
+    const strike = { ...leveled, damage_dice: '4d6', higher_levels_dice: '1d6', extra_damage_dice: '4d6', extra_damage_type: 'radiant' } as Spell
+    useSpell.mockResolvedValue({ id: 7, spells: [{ ...strike, effect: { cast_upcast_type: 'radiant' } }] })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={4} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd6', count: 4 }, { kind: 'd6', count: 5 }]))
   })
 
   it('names each group of dice by its damage type in the result', async () => {

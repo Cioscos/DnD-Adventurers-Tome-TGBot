@@ -153,9 +153,9 @@ export default function SpellDamageSheet({
         const manual = parseDice(body.extra_dice ?? null)
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
           const cached = qc.getQueryData<CharacterFull>(['character', charId])
-          // I dadi dello slot più alto sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) vanno a lei, come sul server.
+          // I dadi dello slot più alto sono del tipo salvato dal server al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) vanno a lei, come sul server.
           const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides)
-          const upcastType = useEffectPickStore.getState().picked[spell.id]?.choices?.upcast_type
+          const upcastType = cached?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type  // lo dice il server: lo store del client può averla persa
           const moved = upcastType && upcastType === spell.extra_damage_type && second?.sides === main.sides ? gained : 0
           const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled

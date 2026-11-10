@@ -475,3 +475,31 @@ async def test_t10_76_the_2014_smite_still_needs_the_cast_first_and_one_smite_pe
     r = await _damage(client, cid, await _deferred(client, cid, wid), keys, **{k: {"slot_level": 1} for k in keys})
     assert r.status_code == 409  # stesso gruppo della Punizione Divina: una sola per colpo
     assert other["id"]
+
+
+async def test_t10_76_a_smite_cast_after_the_hit_frees_the_conditions_of_the_previous_concentration(client, test_session_factory, monkeypatch):
+    from sqlalchemy import select
+    from core.db.models import Combatant
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    for name, srd, lvl in (("Punizione Collerica", "wrathful-smite", 1), ("Punizione Splendente", "shining-smite", 2)):
+        await client.post(f"/characters/{cid}/spells", json={"name": name, "srd_index": srd, "level": lvl, "is_concentration": True})
+        await client.post(f"/characters/{cid}/spell_slots", json={"level": lvl, "total": 2})
+    wid = await _sword(client, cid)
+    assert (await _damage(client, cid, await _deferred(client, cid, wid), [WRATHFUL], **{WRATHFUL: {"slot_level": 1}})).status_code == 200
+    effect = (await client.get(f"/characters/{cid}/target-effects/{WRATHFUL}")).json()
+    goblin = next(c["id"] for c in effect["combatants"] if c["kind"] == "monster")
+    assert (await client.post(f"/characters/{cid}/target-effects", json={"combatant_id": goblin, "effect_key": WRATHFUL})).json()["applied"] is True
+    as_user(GM_ID)  # il TS del goblin è fallito: Spaventato
+    live = (await client.get(f"/sessions/{sid}/live")).json()["encounter"]
+    save = next(c for c in live["combatants"] if c["id"] == goblin)["pending_saves"][0]
+    assert (await client.post(f"/sessions/{sid}/encounter/pending-saves/{save['id']}/resolve", json={"passed": False})).status_code == 200
+    as_user(PLAYER_ID)
+    async with test_session_factory() as s:
+        assert "frightened" in (await s.get(Combatant, goblin)).conditions
+    await client.post(f"/characters/{cid}/turn/new")
+    shining = "spell:shining_smite:hit"
+    r = await _damage(client, cid, await _deferred(client, cid, wid), [shining], **{shining: {"slot_level": 2}})
+    assert r.status_code == 200, r.text
+    async with test_session_factory() as s:
+        assert "frightened" not in (await s.get(Combatant, goblin)).conditions

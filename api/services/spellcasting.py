@@ -13,6 +13,7 @@ from typing import Iterable
 
 from api.schemas.character import ClassSpellLimits, SpellCasterStats, SpellcastingInfo
 from api.schemas.spell import SpellRead
+from api.services.spell_effects import UPCAST_SUFFIX
 from core.data.spell_slots import caster_kind
 from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
@@ -23,6 +24,7 @@ from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
+from core.rules.states import SPELL_CAST_TYPE
 from core.rules.spellcasting import (
     at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
     no_verbal, prepares, school_limit, spell_range_override, spell_stats,
@@ -37,6 +39,8 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
     fx, variant = found
     return {"target_kind": fx.target.kind,
             "max_targets_by_slot": {lvl: fx.max_targets(edition, lvl) for lvl in range(max(level, 1), 10)},
+            # il tipo dei dadi in più scelto all'ultimo lancio: il client lo usa per contare i dadi 3D (decisione 42)
+            "cast_upcast_type": ((char.settings or {}).get(SPELL_CAST_TYPE) or {}).get(fx.key + UPCAST_SUFFIX),
             "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
