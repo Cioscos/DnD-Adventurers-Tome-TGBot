@@ -21,6 +21,7 @@ from api.services.condition_effects import clear_effects_for, release_concentrat
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.catalog.spells import SPELL_EFFECTS
+from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
@@ -40,12 +41,12 @@ async def cap_current_hp(session: AsyncSession, char: Character) -> None:
         char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 
 
-def raises_hp_max(closed: list[dict]) -> bool:
-    """Tra gli stati chiusi c'è un incantesimo che alzava i PF massimi (Aiuto, Banchetto degli Eroi)."""
+def raises_hp_max(closed: list[dict], char: Character) -> bool:
+    """Tra gli stati chiusi c'è un incantesimo che alzava i PF massimi (Aiuto, Banchetto degli Eroi). Senza edizione salvata nello stato vale quella di ``char``."""
     for state in closed:
         data = state.get("data") or {}
         effect = SPELL_EFFECTS.get(data.get("spell_key") or str(state.get("key", ""))[len(SPELL_STATE_PREFIX):])
-        variant = effect and effect.variants.get(data.get("edition", "2014"))
+        variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
         if variant and any(m.target == "hp_max" for m in variant.modifiers(data)):
             return True
     return False
@@ -55,7 +56,7 @@ def cap_hp_to_max(char: Character, closed: list[dict], bonus: int | None = None)
     """Finito un effetto che alzava il massimo (Aiuto, Banchetto degli Eroi) i PF attuali non lo superano; per gli altri non cambia nulla.
 
     ``bonus`` è il bonus PF homebrew; ``None`` lo legge dal database (solo dentro il flush, dove la greenlet permette l'attesa)."""
-    if not raises_hp_max(closed) or char.hit_points <= 0:
+    if not raises_hp_max(closed, char) or char.hit_points <= 0:
         return
     if bonus is None:
         aio = async_object_session(char)

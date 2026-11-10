@@ -1,11 +1,17 @@
 """Minori 94-99: test mancanti sul lancio degli effetti degli incantesimi (bersagli, rilanci, scelte, annullo del turno, istantanei)."""
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from sqlalchemy import select
 
+from api.services.effects import raises_hp_max
 from api.services.spell_effects import _NO_SHEET_TEXT, _OUTSIDE_TEXT
 from core.db.models import Character
+from core.rules.catalog.spells import SPELL_EFFECTS
+from core.rules.spell_effects import SpellEffect, SpellTarget, SpellVariant
 from core.rules.states import SPELL_CAST_TYPE
+from core.rules.types import Modifier
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration.rules.test_spell_effects_cast import SOF, STATE, _ac, _caster, _cast, _full, _slots_used, _states, _table
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
@@ -150,3 +156,14 @@ async def test_97_an_effect_without_its_own_text_in_the_evening_says_nothing_or_
     r = await _cast(client, caster, spell, [])  # su una creatura senza scheda: lo riferisce al GM, ma non con il testo «fuori serata»
     text = r.json()["spell_effects"]["text"]
     assert text == _NO_SHEET_TEXT and text != _OUTSIDE_TEXT
+
+
+# 101 (dal Task 11): lo stato chiuso senza edizione salvata usa quella del bersaglio, non il 2014 fisso
+
+def test_101_a_closed_state_without_a_saved_edition_reads_the_variant_of_the_target(monkeypatch):
+    only_2024 = SpellEffect("zz_hp", ("zz-hp",), ("Zz",), SpellTarget("ally"), {"2024": SpellVariant(modifiers=lambda d: (Modifier("hp_max", 10),))})
+    monkeypatch.setitem(SPELL_EFFECTS, "zz_hp", only_2024)
+    state = {"key": "spell:zz_hp", "data": {"spell_key": "zz_hp"}}
+    assert raises_hp_max([state], SimpleNamespace(rules_edition="2024")) is True
+    assert raises_hp_max([state], SimpleNamespace(rules_edition="2014")) is False  # nel 2014 l'incantesimo non esiste
+    assert raises_hp_max([{**state, "data": {**state["data"], "edition": "2024"}}], SimpleNamespace(rules_edition="2014")) is True  # quella salvata vince
