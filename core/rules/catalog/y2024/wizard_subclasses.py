@@ -245,11 +245,23 @@ REALITY_USE = OnUse(
     state=lambda _c, p: StateSpec("illusory_reality", rounds=10, ends_on=("manual",), data={"object": str(p["object"]).strip()}))
 
 
+def _knew_minor_illusion(ctx: RuleContext) -> bool:
+    """Illusione Minore c'era già fra gli incantesimi prima che il privilegio la concedesse (relazione non caricata: no)."""
+    from core.rules.feature_sync import GRANTED_CREATED  # import locale: feature_sync importa il catalogo
+    spells = ctx.char.__dict__.get("spells") or []
+    return any(s.srd_index == "minor-illusion" for s in spells) and "minor-illusion" not in ((ctx.char.settings or {}).get(GRANTED_CREATED) or [])
+
+
 def _phantasmal(key: str, spell: str, it: str, en: str):
+    half = RollOptionSpec(
+        key=f"{P}{key}_half_hp", phase="before", rolls=("cast",), available=lambda c: c.slotless and c.spell is not None and c.spell.srd_index == spell,
+        effect=lambda _c, _i: _both("La creatura evocata ha la metà dei Punti Ferita: riferiscilo al GM.", "The summoned creature has half its Hit Points: tell the GM."),
+        label=_both(f"Creature Fantasmatiche: {it} senza slot, la creatura ha metà dei PF", f"Phantasmal Creatures: {en} with no slot, the creature has half HP"))
     return _ILL(key, 6, "Creature Fantasmatiche", "Phantasmal Creatures", 175,
                 (f"{it} è sempre preparato e di scuola Illusione: una volta per riposo lungo lo lanci senza slot, con la creatura a PF dimezzati.",
                  f"{en} is always prepared and of the Illusion school: once per long rest cast it with no slot, the creature has half HP."),
-                granted_spells=(spell,), free_spell=spell, uses=Uses(table={6: 1}), restoration="long_rest")
+                granted_spells=(spell,), free_spell=spell, uses=Uses(table={6: 1}), restoration="long_rest",
+                school_as=("illusion", (spell,)), roll_options=(half,))
 
 
 _ILL = _sub("Illusionista", "illusionist")
@@ -258,9 +270,10 @@ ILLUSIONIST = (
     _ILL("improved_illusions", 3, "Illusioni Migliorate", "Improved Illusions", 175,
          ("Illusione senza componenti Verbali e +18 m di gittata (da 3 m in su); impari Illusione Minore (un lancio crea suono e immagine).",
           "Illusion spells lose Verbal components and gain 60 ft of range (from 10 ft up); you learn Minor Illusion (one casting makes sound and image)."),
-         passive=True, school_boost=("illusion", 18), bonus_cast_spells=("minor-illusion",),
+         passive=True, school_boost=("illusion", 18), bonus_cast_spells=("minor-illusion",), granted_spells=("minor-illusion",),
+         # lo conosci; se lo sapevi già (non l'ha creato la concessione) impari un altro trucchetto da mago, fuori dal limite
          choices=(ChoiceSpec(group="improved_illusions", levels={3: 1}, options=_no_options, spell_pick="extra", spell_level=0,
-                             spell_list="wizard"),)),
+                             spell_list="wizard", applies=_knew_minor_illusion),)),
     _phantasmal("phantasmal_beast", "summon-beast", "Evocare bestia", "Summon Beast"),
     _phantasmal("phantasmal_fey", "summon-fey", "Evocare fatato", "Summon Fey"),
     _ILL("illusory_self", 10, "Sosia Illusorio", "Illusory Self", 175,

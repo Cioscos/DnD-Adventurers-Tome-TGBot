@@ -739,6 +739,8 @@ class FeatureSpec:
     # Gli incantesimi di questa scuola non hanno componente Verbale e, con gittata di 3 m o più, hanno ``metri`` in più: ``(scuola, m)``
     # (Illusioni Migliorate)
     school_boost: "tuple[str, int] | None" = None
+    # ``(scuola, srd_index...)``: questi incantesimi, per chi ha il privilegio, contano della scuola indicata (Creature Fantasmatiche)
+    school_as: "tuple[str, tuple[str, ...]] | None" = None
     # ``srd_index`` degli incantesimi da un'azione che il privilegio fa lanciare con un'azione bonus (Rompi-Incantesimi: Dissolvi Magie)
     bonus_cast_spells: tuple[str, ...] = ()
     # Trucchetto Potente 2024: anche il trucchetto con tiro per colpire che manca fa metà danno, non solo quello con TS superato

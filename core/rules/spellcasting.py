@@ -218,9 +218,16 @@ def spell_range_override(char: Any, spell: Any) -> str | None:
     return _per_level_range(char, spell, names) or _cantrip_range_bonus(char, spell) or _school_range(char, spell)
 
 
-def school_boost_range(spell: Any, school: str, metres: int) -> str | None:
+def spell_school(char: Any, spell: Any) -> str | None:
+    """La scuola con cui l'incantesimo conta per chi lo lancia: quella scritta, o quella che un privilegio gli dà (Creature Fantasmatiche)."""
+    key = getattr(spell, "srd_index", None)
+    changed = next((spec.school_as[0] for spec, _row in active_features(char) if spec.school_as and key in spec.school_as[1]), None)
+    return changed or normalize_school(getattr(spell, "school", None))
+
+
+def school_boost_range(spell: Any, school: str, metres: int, found_school: str | None = None) -> str | None:
     """Illusioni Migliorate: la gittata di 3 m (10 ft) o più di un incantesimo della scuola cresce di ``metres`` (60 ft per 18 m)."""
-    if normalize_school(getattr(spell, "school", None)) != school:
+    if (found_school or normalize_school(getattr(spell, "school", None))) != school:
         return None
     found = _RANGE.match(getattr(spell, "range_area", None) or "")
     if not found:
@@ -233,12 +240,12 @@ def school_boost_range(spell: Any, school: str, metres: int) -> str | None:
 
 def _school_range(char: Any, spell: Any) -> str | None:
     return next((r for spec, _row in active_features(char) if spec.school_boost
-                 and (r := school_boost_range(spell, *spec.school_boost))), None)
+                 and (r := school_boost_range(spell, *spec.school_boost, spell_school(char, spell)))), None)
 
 
 def no_verbal(char: Any, spell: Any) -> bool:
     """Illusioni Migliorate: gli incantesimi di Illusione si lanciano senza componente Verbale."""
-    school = normalize_school(getattr(spell, "school", None))
+    school = spell_school(char, spell)
     return school is not None and any(spec.school_boost and spec.school_boost[0] == school for spec, _row in active_features(char))
 
 

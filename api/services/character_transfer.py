@@ -18,7 +18,7 @@ from api.version import APP_VERSION
 from core.game.containers import is_container
 from core.game.stats import migrate_character_ac
 from core.rules.feature_sync import (
-    ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE, clean_ability_bonus, clean_archive, clean_granted_keys,
+    ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, RETROFIT_DONE, clean_ability_bonus, clean_archive, clean_granted_keys,
     clean_target_immunity, clean_zero_hp_uses,
 )
 from core.rules.level_choices import FREE_KNOWN_KEY
@@ -276,8 +276,9 @@ async def import_character(
         wanted = char.settings[FREE_KNOWN_KEY]
         char.settings = {**char.settings, FREE_KNOWN_KEY: [by_key[k] for k in wanted if isinstance(k, str) and k in by_key]
                          if isinstance(wanted, list) else []}
-    if GRANTED_SPELL_KEYS in (char.settings or {}):
-        char.settings = {**char.settings, GRANTED_SPELL_KEYS: clean_granted_keys(char.settings[GRANTED_SPELL_KEYS])}
+    for granted_key in (GRANTED_SPELL_KEYS, GRANTED_CREATED):
+        if granted_key in (char.settings or {}):
+            char.settings = {**char.settings, granted_key: clean_granted_keys(char.settings[granted_key])}
     for key, clean in ((ABILITY_BONUS_KEY, clean_ability_bonus), (ZERO_HP_USES, clean_zero_hp_uses),
                        (TARGET_IMMUNITY, clean_target_immunity), (CREATED_SLOTS, clean_created_slots)):
         if key in (char.settings or {}):

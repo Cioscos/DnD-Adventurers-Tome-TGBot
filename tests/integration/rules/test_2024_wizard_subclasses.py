@@ -391,9 +391,10 @@ async def test_overchannel_maximises_the_damage_and_hurts_from_the_second_use(cl
 
 async def test_improved_illusions_gives_a_free_cantrip_and_stretches_range_and_drops_verbal(client):
     cid = await _make(client, "illusionist", 3)
-    pick = _choice(await _full(client, cid), "improved_illusions")
-    assert pick["count"] == 1 and pick["spell_pick"]["free"] is True and pick["spell_pick"]["max_level"] == 0
-    assert _choice(await _full(client, await _make(client, "evoker", 3)), "improved_illusions") is None
+    minor = (await _by_index(client, cid))["minor-illusion"]  # minori 15: concessa, non una scelta libera
+    assert minor["always_prepared"] is True and minor["level"] == 0
+    assert _choice(await _full(client, cid), "improved_illusions") is None
+    assert "minor-illusion" not in await _by_index(client, await _make(client, "evoker", 3))
     far = await _spell(client, cid, "Immagine maggiore", 3, school="illusion", range_area="36 m", components="V, S, M")
     near = await _spell(client, cid, "Prova vicina", 1, school="illusion", range_area="1,5 m", components="V, S")
     self_ = await _spell(client, cid, "Prova personale", 1, school="illusion", range_area="Personale", components="V")
@@ -555,3 +556,35 @@ async def test_minori_14_empowered_evocation_adds_intelligence_to_one_damage_rol
     assert (await _roll_damage(client, cid, ball, casting_level=3, main_rolls=[3] * 8))["total"] == 24  # lo stesso lancio: una volta sola
     assert (await client.post(f"/characters/{cid}/spells/{ball}/use", json={"slot_level": 3})).status_code == 200
     assert (await _roll_damage(client, cid, ball, casting_level=3, main_rolls=[3] * 8))["total"] == 24 + 4  # nuovo lancio
+
+
+async def test_minori_15_a_wizard_who_already_knew_minor_illusion_learns_another_cantrip_for_free(client):
+    body = {"name": "Mago", "initial_class": {"class_name": "wizard", "level": 3, "subclass": "senza sottoclasse"}}
+    cid = (await client.post("/characters", json=body)).json()["id"]
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    await _spell(client, cid, "Illusione Minore", 0, school="illusion", srd_index="minor-illusion")
+    klass = (await _full(client, cid))["classes"][0]["id"]
+    assert (await client.patch(f"/characters/{cid}/classes/{klass}", json={"subclass": NAMES["illusionist"]})).status_code == 200
+    pick = _choice(await _full(client, cid), "improved_illusions")
+    assert pick["count"] == 1 and pick["spell_pick"]["free"] is True and pick["spell_pick"]["max_level"] == 0
+    assert _choice(await _full(client, cid), "improved_illusions") is not None  # una sincronizzazione dopo, la scelta resta
+
+
+async def test_minori_15_phantasmal_creatures_count_as_illusion_for_improved_illusions(client):
+    cid = await _make(client, "illusionist", 6)
+    spells = await _by_index(client, cid)
+    assert "V" not in (spells["summon-beast"]["components"] or "").split(", ")  # Illusioni Migliorate: senza Verbale
+    beast = spells["summon-beast"]["id"]
+    half = P + "phantasmal_beast_half_hp"
+    assert half in await _roll_keys(client, cid, "cast", spell_id=beast, casting_level=2, slotless="true")
+    assert half not in await _roll_keys(client, cid, "cast", spell_id=beast, casting_level=2)
+    r = await client.post(f"/characters/{cid}/spells/{beast}/use", json={"free_cast": True, "options": [half]})
+    assert r.status_code == 200 and "metà dei Punti Ferita" in r.json()["option_result"]["effects"][0]["it"], r.text
+
+
+async def test_minori_16_dispel_magic_is_listed_as_a_bonus_action_for_the_spell_breaker(client):
+    cid = await _make(client, "abjurer", 10)
+    assert "bonus" in (await _by_index(client, cid))["dispel-magic"]["casting_time"].lower()
+    assert "counterspell" in await _by_index(client, cid)
+    plain = await _make(client, "abjurer", 9)
+    assert "bonus" not in ((await _by_index(client, plain)).get("dispel-magic") or {"casting_time": ""})["casting_time"].lower()

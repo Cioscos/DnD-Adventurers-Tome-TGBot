@@ -36,7 +36,7 @@ from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import check_bonus, skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
-from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE
+from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
 from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
@@ -90,7 +90,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
-                         GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
+                         GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
                          RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
                          SEEDED_FLAG, FEATURE_GRANTS_KEY, ASSASSIN_KITS_FLAG)

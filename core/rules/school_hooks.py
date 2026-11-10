@@ -90,7 +90,8 @@ def after_cast(char: Any, spell: Any, slot_level: int | None = None) -> None:
     """Hook dei privilegi attivi dopo un lancio; ognuno controlla il livello che gli serve (un trucchetto di illusione apre
     Illusioni Duttili, ma non crea un'interdizione). Il livello che conta è quello dell'incantesimo nel 2014 e quello dello
     slot speso nel 2024 (``None`` se il lancio è un rituale o gratuito: «con uno slot»)."""
-    school = normalize_school(spell.school)
+    from core.rules.spellcasting import spell_school  # import locale: spellcasting importa il catalogo come questo modulo
+    school = spell_school(char, spell)
     level = spell.level if character_edition(char) != "2024" else slot_level
     for spec, row in active_features(char):
         hook = HOOKS.get(spec.key)

@@ -25,6 +25,7 @@ from core.rules.uses import max_uses
 ARCHIVED_FEATURES = "archived_features"
 ABILITY_BONUS_KEY = "feature_ability_bonus"  # settings: {feature_key: {ability: punti realmente aggiunti}}
 RETROFIT_DONE = "retrofit_done"  # settings: chiavi di classe già passate dal retrofit (una volta per classe, N7)
+GRANTED_CREATED = "granted_created"  # gli incantesimi creati dalla concessione (non erano già del personaggio)
 GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
 
 
@@ -210,6 +211,7 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         if key in previous and key not in granted:
             spell.always_prepared = False
     owned: list[str] = []
+    created = list((char.settings or {}).get(GRANTED_CREATED) or [])
     for key, owner in granted.items():
         spell = have.get(key)
         if spell is None:
@@ -222,6 +224,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
                           extra_damage_dice=data.extra_damage_dice, extra_damage_type=data.extra_damage_type,
                           components=data.components, school=data.school)
             session.add(spell)
+            if key not in created:
+                created.append(key)
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
         spell.school = spell.school or GRANTED_SPELLS[key].school  # idem per la scuola (Magia Ammaliante)
@@ -231,6 +235,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         spell.class_id = spell.class_id or owner.id
     if set(owned) != set(previous):
         char.settings = {**(char.settings or {}), GRANTED_SPELL_KEYS: owned}
+    if created != list((char.settings or {}).get(GRANTED_CREATED) or []):
+        char.settings = {**(char.settings or {}), GRANTED_CREATED: created}
     # Libro del Mago: l'incantesimo c'è e sta nel libro, ma non è preparato né sempre preparato (Servitori Non Morti, Mutaforma)
     for key, owner in {key: row for spec, row in active_features(char) for key in spec.book_spells}.items():
         spell = have.get(key)
