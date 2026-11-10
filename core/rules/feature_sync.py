@@ -25,6 +25,8 @@ from core.rules.uses import max_uses
 ARCHIVED_FEATURES = "archived_features"
 ABILITY_BONUS_KEY = "feature_ability_bonus"  # settings: {feature_key: {ability: punti realmente aggiunti}}
 RETROFIT_DONE = "retrofit_done"  # settings: chiavi di classe già passate dal retrofit (una volta per classe, N7)
+LEGACY_BOOK_GRANTS = ("see-invisibility",)  # Terzo Occhio la scriveva nel libro (book_spells) prima di diventare una concessione
+REPLACED_AT_REST = "replaced_at_rest"  # per classe: in quale riposo lungo è già stata fatta la sostituzione (Maestria 2024)
 GRANTED_CREATED = "granted_created"  # gli incantesimi creati dalla concessione (non erano già del personaggio)
 GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
 
@@ -224,6 +226,11 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
                           extra_damage_dice=data.extra_damage_dice, extra_damage_type=data.extra_damage_type,
                           components=data.components, school=data.school)
             session.add(spell)
+            if key not in created:
+                created.append(key)
+        elif key in LEGACY_BOOK_GRANTS and key not in previous and spell.in_spellbook and not spell.is_prepared                 and not spell.always_prepared and spell.class_id == owner.id:
+            # shortcut: una copia a mano nel libro con lo stesso class_id è indistinguibile dalla riga del vecchio book_spells; si ripulisce lo stesso
+            spell.in_spellbook = False
             if key not in created:
                 created.append(key)
         elif not spell.components and GRANTED_SPELLS[key].components:

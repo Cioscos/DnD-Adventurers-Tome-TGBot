@@ -413,5 +413,8 @@ async def test_minori_12_spell_mastery_is_replaced_once_per_long_rest(client):
     assert (await client.post(url, json={"group": "spell_mastery_1", "old_key": "Scudo", "new_key": "Mani brucianti"})).status_code == 200
     refused = await client.post(url, json={"group": "spell_mastery_1", "old_key": "Mani brucianti", "new_key": "Dardo incantato"})
     assert refused.status_code == 409 and refused.json()["detail"]["code"] == "replace_after_long_rest"
+    assert (await client.patch(f"/characters/{cid}", json={"settings": {}})).status_code == 200  # il client non può cancellare il segno
+    again = await client.post(url, json={"group": "spell_mastery_1", "old_key": "Mani brucianti", "new_key": "Dardo incantato"})
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "replace_after_long_rest"
     await _rest(client, cid, "long")
     assert (await client.post(url, json={"group": "spell_mastery_1", "old_key": "Mani brucianti", "new_key": "Dardo incantato"})).status_code == 200

@@ -29,13 +29,6 @@ P = f"{CK}."
 SAVANT_LEVELS = {3: 2, 5: 3, 7: 4, 9: 5, 11: 6, 13: 7, 15: 8, 17: 9}  # due al 3°, poi uno a ogni nuovo livello di slot
 
 
-def _highest_slot_level(char: Any) -> int:
-    """Il livello di slot più alto della tabella multiclasse (non solo da mago): quanti incantesimi vale il Sapiente."""
-    from core.rules.edition import character_edition  # import locale: spellcasting importa il catalogo
-    from core.rules.spellcasting import slots_for
-    return max((lvl for lvl, total in slots_for(character_edition(char), char.classes).regular.items() if total > 0), default=0)
-
-
 def _both(it: str, en: str) -> dict[str, str]:
     return {"it": it, "en": en}
 
@@ -53,7 +46,7 @@ def _savant(make, school: str, it: str, en: str, page: int, school_it: str, scho
                  f"Two wizard {school_en} spells (up to 2nd level) free in the book, then one for each new slot level."),
                 passive=True,
                 choices=(ChoiceSpec(group=f"{school}_savant", levels=SAVANT_LEVELS, options=_no_options, spell_pick="book",
-                                    spell_list="wizard", spell_school=school, total_by=_highest_slot_level),))
+                                    spell_list="wizard", spell_school=school),))
 
 
 def _slot_levels(minimum: int):

@@ -570,6 +570,15 @@ async def test_minori_10_bulwark_half_cover_raises_the_users_ac_by_2(client):
     assert (await _full(client, cid))["ac"] == before + 2
 
 
+async def test_minori_10_bulwark_half_cover_adds_2_to_dexterity_saves_only(client):
+    cid = await _sub(client, "psi_warrior", 15, intelligence=16)
+    async def save(ability):
+        return (await client.post(f"/characters/{cid}/saving_throws/{ability}/roll", json={})).json()["bonus"]
+    dex, con = await save("dexterity"), await save("constitution")
+    assert (await _use(client, cid, _k("bulwark_of_force"))).status_code == 200
+    assert await save("dexterity") == dex + 2 and await save("constitution") == con
+
+
 async def test_minori_10_telekinesis_of_the_master_shows_the_intelligence_dc(client):
     cid = await _sub(client, "psi_warrior", 18, intelligence=16)
     full = await _full(client, cid)

@@ -19,6 +19,7 @@ from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
 )
 from core.rules.edition import character_edition, class_key
+from core.rules.feature_sync import REPLACED_AT_REST
 from core.rules.schools import normalize_school
 from core.rules.spellcasting import slots_for
 from core.rules.types import RuleContext
@@ -120,10 +121,10 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
     if ch.protected and old_key in ch.protected(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)):
         raise _bad("option_is_prerequisite")
     if ch.replace_per_long_rest:  # un solo cambio per riposo lungo, per classe (uno dei due incantesimi); il primo di sempre è libero (nessun riposo registrato)
-        swaps = (char.settings or {}).get("replaced_at_rest") or {}
+        swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
         if swaps.get(str(cls.id), {}).get("at", "-") == (char.last_long_rest_at or ""):
             raise HTTPException(409, detail={"code": "replace_after_long_rest"})
-        char.settings = {**(char.settings or {}), "replaced_at_rest": {**swaps, str(cls.id): {"at": char.last_long_rest_at or ""}}}
+        char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, str(cls.id): {"at": char.last_long_rest_at or ""}}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi
@@ -201,7 +202,7 @@ def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
     ``spell_exact`` (Arcanum Mistico): il livello della scelta, qualunque siano gli slot della classe."""
     if ch.spell_exact:
         return ch.spell_level
-    top = ch.total_by(char) if ch.total_by is not None else max_pick_level(char, cls)  # Sapienti: gli slot sono quelli della tabella multiclasse
+    top = max_pick_level(char, cls)
     return top if ch.spell_level is None else min(top, ch.spell_level)
 
 

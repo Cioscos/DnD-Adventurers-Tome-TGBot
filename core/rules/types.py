@@ -43,9 +43,6 @@ class ChoiceSpec:
     levels: dict[int, int]
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
-    # Totale delle opzioni dato dalla scheda e non dal solo livello di classe (Sapienti: un incantesimo per ogni livello di slot
-    # della tabella multiclasse); vale dai livelli di ``levels`` in poi e anche come tetto di livello dell'incantesimo scelto
-    total_by: "Callable[[Any], int] | None" = None
     # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
     replace_per_long_rest: bool = False
     label: Callable[[str], dict] | None = None

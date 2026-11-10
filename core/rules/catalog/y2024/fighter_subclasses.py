@@ -577,7 +577,9 @@ PSI_WARRIOR = (
           "Bonus action: up to Intelligence creatures within 30 ft (you included) have Half Cover for 1 minute. One use per long rest, or a die."),
          "bonus_action", uses=Uses(table={15: 1}), restoration="long_rest",
          modifiers=(Modifier("ac", 2, when=lambda c: c.roll == "ac" and has_state(c.char, "bulwark_of_force"),  # Mezza Copertura
-                             source=f"feature:{CK}.bulwark_of_force"),),
+                             source=f"feature:{CK}.bulwark_of_force"),
+                    Modifier("save", 2, when=lambda c: c.roll == "save" and c.ability == "dexterity" and has_state(c.char, "bulwark_of_force"),
+                             source=f"feature:{CK}.bulwark_of_force")),  # Mezza Copertura vale anche per i TS su Destrezza
          on_use=OnUse(slot="bonus", alt_spends=PSI, toggles=(_restore_toggle("Dado di Energia Psionica"),),
                       state=StateSpec("bulwark_of_force", rounds=10, ends_on=("incapacitated", "manual"),
                                       data={"others": [f"{CK}.bulwark_of_force"]}),

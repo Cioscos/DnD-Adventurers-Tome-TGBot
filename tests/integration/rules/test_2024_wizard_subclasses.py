@@ -535,11 +535,21 @@ def test_school_range_bonus_only_stretches_ranges_of_3_metres_or_more():
     assert school_boost_range(SimpleNamespace(range_area="9 m", school="evocation"), "illusion", 18) is None
 
 
-async def test_minori_13_the_savant_follows_the_multiclass_slot_table(client):
+async def test_minori_13_the_savant_follows_the_wizard_slot_levels_not_the_multiclass_table(client):
     cid = await _make(client, "diviner", 3)
-    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 4})).status_code in (200, 201)
-    pick = _choice(await _full(client, cid), "divination_savant")  # livello da incantatore 7: slot di 4° livello
-    assert pick["count"] == 4 and pick["spell_pick"]["max_level"] == 4
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 5})).status_code in (200, 201)
+    pick = _choice(await _full(client, cid), "divination_savant")  # livello da incantatore 8 (slot di 4°), ma Mago 3: «in questa classe» solo 2°
+    assert pick["count"] == 2 and pick["spell_pick"]["max_level"] == 2
+
+
+async def test_the_old_third_eye_book_copy_of_see_invisibility_is_cleaned_up(client):
+    cid = await _make(client, "diviner", 9)
+    klass = (await _full(client, cid))["classes"][0]["id"]
+    body = {"name": "Vedere Invisibilità", "level": 2, "casting_time": "1 azione", "srd_index": "see-invisibility", "in_spellbook": True, "class_id": klass}  # come la scriveva il vecchio book_spells
+    assert (await client.post(f"/characters/{cid}/spells", json=body)).status_code == 201
+    assert (await client.patch(f"/characters/{cid}/classes/{klass}", json={"level": 10})).status_code == 200
+    row = (await _by_index(client, cid))["see-invisibility"]
+    assert row["always_prepared"] is True and row["in_spellbook"] is False
 
 
 async def test_minori_14_sculpt_spells_needs_a_saving_throw(client):

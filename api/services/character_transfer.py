@@ -18,7 +18,7 @@ from api.version import APP_VERSION
 from core.game.containers import is_container
 from core.game.stats import migrate_character_ac
 from core.rules.feature_sync import (
-    ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, RETROFIT_DONE, clean_ability_bonus, clean_archive, clean_granted_keys,
+    ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, REPLACED_AT_REST, RETROFIT_DONE, clean_ability_bonus, clean_archive, clean_granted_keys,
     clean_target_immunity, clean_zero_hp_uses,
 )
 from core.rules.level_choices import FREE_KNOWN_KEY
@@ -286,7 +286,7 @@ async def import_character(
 
     # un file importato passa dal retrofit per le sue classi (R34, R39): il segno del file non vale
     # gli id dei personaggi di un altro database non valgono qui
-    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON)}
+    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, REPLACED_AT_REST, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON)}
 
     for sp, row in zip(data.spells, spells):
         row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None
