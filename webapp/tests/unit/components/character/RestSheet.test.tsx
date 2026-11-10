@@ -327,3 +327,21 @@ describe('Arcane Recovery (wizard)', () => {
     expect(rest.mock.calls[0][2].natural_recovery).toBeUndefined()
   })
 })
+
+
+describe('useRest', () => {
+  it('cancelling the long rest confirmation resets "interrupted" and "ate and drank"', async () => {
+    const { renderHook, act } = await import('@testing-library/react')
+    const { useRest } = await import('@/hooks/useRest')
+    const qc = new QueryClient()
+    const { result } = renderHook(() => useRest(7, char), {
+      wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+    })
+    act(() => { result.current.openLong(); result.current.setInterrupted(true); result.current.setAteAndDrank(false) })
+    expect(result.current.interrupted).toBe(true)
+    act(() => result.current.cancelLongRest())
+    expect(result.current.confirmLongRest).toBe(false)
+    expect(result.current.interrupted).toBe(false)
+    expect(result.current.ateAndDrank).toBe(true)
+  })
+})

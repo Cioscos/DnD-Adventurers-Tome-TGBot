@@ -46,7 +46,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         toast.error(t('character.quick_actions.hit_die_exhausted'))
         qc.invalidateQueries({ queryKey: ['character', charId] })
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })
@@ -77,7 +77,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
       } else if (code === 'invalid_target') {
         toast.error(t('character.turn.use_errors.invalid_target'))
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
     onSuccess: (updated) => {
@@ -103,11 +103,18 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     },
   })
 
+  // Annullare la conferma del riposo lungo azzera anche le domande: la volta dopo non resta «interrotto» a metà.
+  const cancelLongRest = () => {
+    setConfirmLongRest(false)
+    setInterrupted(false)
+    setAteAndDrank(true)
+  }
+
   return {
     openShort: () => setShortRestOpen(true),
     openLong: () => setConfirmLongRest(true),
     pending: restMutation.isPending,
-    shortRestOpen, setShortRestOpen, confirmLongRest, setConfirmLongRest, tooSoon, setTooSoon,
+    shortRestOpen, setShortRestOpen, confirmLongRest, setConfirmLongRest, cancelLongRest, tooSoon, setTooSoon,
     hitDieResult, setHitDieResult, interrupted, setInterrupted, ateAndDrank, setAteAndDrank,
     recovery, setRecovery, arcane, setArcane, memorize, setMemorize, restoration, setRestoration,
     reopenTome, setReopenTome, tempAllies, setTempAllies, hitDieMutation, restMutation,

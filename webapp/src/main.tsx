@@ -133,9 +133,9 @@ const queryClient = new QueryClient({
     // era silenziosa e il giocatore credeva di aver speso lo slot. Rete di
     // sicurezza globale: vibrazione + toast, solo se la mutation non gestisce
     // l'errore da sé.
-    onError: (_error, _vars, _ctx, mutation) => {
+    onError: (error, _vars, _ctx, mutation) => {
       if (mutation.options.onError) return
-      notifyMutationError()
+      notifyMutationError(error)
     },
   }),
 })

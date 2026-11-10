@@ -34,7 +34,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
     <>
       <ConfirmSheet
         open={rest.confirmLongRest}
-        onClose={() => rest.setConfirmLongRest(false)}
+        onClose={rest.cancelLongRest}
         title={t('character.quick_actions.confirm_long_rest_title')}
         body={
           <div className="space-y-3">
@@ -65,7 +65,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
 
       <ConfirmSheet
         open={rest.tooSoon}
-        onClose={() => rest.setTooSoon(false)}
+        onClose={() => { rest.setTooSoon(false); rest.cancelLongRest() }}
         title={t('character.quick_actions.rest_too_soon_title')}
         body={<p>{t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}</p>}
         confirmLabel={t('character.quick_actions.rest_long')}

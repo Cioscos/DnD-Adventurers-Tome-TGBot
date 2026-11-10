@@ -8,7 +8,7 @@ vi.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 
-import { notifyCastError } from '@/lib/mutationError'
+import { notifyCastError, notifyMutationError } from '@/lib/mutationError'
 import { ApiError } from '@/api/client'
 
 beforeEach(() => error.mockReset())
@@ -21,6 +21,14 @@ describe('notifyCastError', () => {
 
   it('keeps the generic message for anything else', () => {
     notifyCastError(new ApiError(500, { code: 'boom' }))
+    expect(error).toHaveBeenCalledWith('common.action_refused')
+    error.mockReset()
+    notifyCastError(new Error('Failed to fetch'))  // il server non ha risposto: solo qui si parla di connessione
     expect(error).toHaveBeenCalledWith('common.action_failed')
+  })
+
+  it('gives a dedicated text to a server refusal in the global handler (e.g. Rivivificazione on someone not down)', () => {
+    notifyMutationError(new ApiError(409, { code: 'target_not_down' }))
+    expect(error).toHaveBeenCalledWith('common.server_errors.target_not_down')
   })
 })
