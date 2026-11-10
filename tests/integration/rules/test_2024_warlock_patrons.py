@@ -528,10 +528,10 @@ async def test_eldritch_hex_adds_a_disadvantage_on_the_saves_of_the_chosen_abili
     abilities = ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
     assert {f"{HEX}_{a}" for a in abilities} <= set(keys)
     assert not any(k.startswith(HEX) for k in await _keys(client, cid, "cast", spell_id=await _spell(client, cid, "Altro", 1)))
-    r = await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom"])
+    r = await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom"], choices={"ability": "wisdom"})
     assert r.status_code == 200, r.text
     assert (await _effect(client, cid, f"{HEX}_wisdom"))["note"] == "eldritch_hex_wisdom"
-    assert (await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom", f"{HEX}_strength"])).status_code == 409
+    assert (await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom", f"{HEX}_strength"], choices={"ability": "wisdom"})).status_code == 409
     low = await _make(client, "great_old_one", 9)
     assert "hex" not in await _spells_by_index(client, low)
 
