@@ -125,7 +125,9 @@ def weapon_attack_profile(
         ability = "dexterity" if is_ranged else "strength"
     mode = "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
     if (enchanted := enchanted_weapon(char, item)) and enchanted[0].weapon_ability and enchanted[1].get("ability"):
-        return roll_ability_mod(char, enchanted[1]["ability"]), enchanted[1]["ability"], mode  # Randello Incantato: al posto di Forza o Destrezza
+        cast = enchanted[1]["ability"]  # Randello Incantato: al posto di Forza o Destrezza (2024: solo se è meglio, edizione del lanciatore)
+        if enchanted[1].get("edition") != "2024" or roll_ability_mod(char, cast) > mods[ability]:
+            return roll_ability_mod(char, cast), cast, mode
     if meta.get("pact_weapon") and character_edition(char) == "2024" and any(
             spec.key == "warlock.pact_of_the_blade" for spec, _ in active_features(char)):
         charisma = roll_ability_mod(char, "charisma")  # Patto della Lama: Carisma al posto di Forza o Destrezza, se e meglio

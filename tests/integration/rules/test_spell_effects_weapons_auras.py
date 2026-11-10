@@ -462,3 +462,15 @@ async def test_the_weapon_list_can_be_limited_to_the_kinds_of_a_spell(client, te
     as_user(GM_ID)
     r = await client.get(f"/characters/{caster}/session-allies/{caster}/weapons", params={"kinds": "club,quarterstaff"})
     assert r.status_code == 200 and [w["id"] for w in r.json()] == [staff]
+
+
+@pytest.mark.parametrize("edition,delta", [("2024", 0), ("2014", -2)])
+async def test_shillelagh_uses_the_better_ability_in_2024_but_always_the_spellcasting_one_in_2014(client, test_session_factory, edition, delta):
+    caster, spell, staff, _ = await _druid_table(client, test_session_factory, edition)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{caster}/ability_scores/strength", json={"value": 18})).status_code == 200
+    assert (await client.patch(f"/characters/{caster}/ability_scores/wisdom", json={"value": 14})).status_code == 200
+    before = await _gm_attack(client, caster, staff)  # Forza 18 (+4)
+    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    after = await _gm_attack(client, caster, staff)
+    assert after["to_hit_bonus"] == before["to_hit_bonus"] + delta and after["damage_bonus"] == before["damage_bonus"] + delta  # 2024: Forza +4; 2014: Saggezza +2
