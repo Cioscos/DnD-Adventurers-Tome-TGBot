@@ -175,7 +175,15 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             undo.char_states[str(char.id)]["temp"] = {"before": before_temp, "after": char.temp_hp}
         if char.heroic_inspiration and not was_inspired:  # Guerriero Eroico: l'annullamento la toglie
             undo.char_states[str(char.id)]["inspired"] = True
-        expired += tick_states(char)
+        if combatant.extra_turn_of is None:  # il secondo turno dei Riflessi è nello stesso round: gli stati scorrono una volta
+            expired += tick_states(char)
+            entry, ended = _tick_concentration(db, char)
+            if entry is not None:
+                undo.concentration = entry
+            if ended:
+                expired.append("Concentrazione")
+                expired += await release_concentration_effects(
+                    db, char, entry["released_effects"])
         entry, ended = _tick_concentration(db, char)
         if entry is not None:
             undo.concentration = entry
