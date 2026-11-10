@@ -31,4 +31,12 @@ describe('notifyCastError', () => {
     notifyMutationError(new ApiError(409, { code: 'target_not_down' }))
     expect(error).toHaveBeenCalledWith('common.server_errors.target_not_down')
   })
+
+  it('says why Nascondersi was refused instead of the generic text', () => {
+    for (const code of ['no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn']) {
+      error.mockReset()
+      notifyMutationError(new ApiError(409, { code }))
+      expect(error).toHaveBeenCalledWith(`common.server_errors.${code}`)
+    }
+  })
 })

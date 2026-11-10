@@ -650,7 +650,7 @@ async def test_i12_homing_strikes_need_the_psychic_blade(client):
     assert refused.status_code == 409
 
 
-def test_minori_46_a_feature_attack_gives_the_veil_back_only_on_a_natural_one_and_leaves_no_token():
+def test_minori_46_a_feature_attack_saves_the_roll_so_a_declared_miss_gives_the_veil_back():
     from types import SimpleNamespace
 
     from api.services.rules_states import end_on_feature_attack
@@ -658,10 +658,11 @@ def test_minori_46_a_feature_attack_gives_the_veil_back_only_on_a_natural_one_an
     from core.rules.catalog import features_for
 
     spec = next(f.on_use.state for f in features_for("2024", "rogue") if f.key.endswith("psychic_veil"))
-    for fumble, back in ((False, False), (True, True)):
+    for die, back in ((12, False), (1, True)):
         char = SimpleNamespace(conditions={}, active_states=[], settings={}, turn_state={}, spells=[], abilities=[])
         begin_state(char, spec, "psychic_veil", "rogue.psychic_veil")
-        assert char.conditions.get("invisible")
-        end_on_feature_attack(char, {"is_fumble": fumble})
-        assert bool(char.conditions.get("invisible")) is back and any(s["key"] == "psychic_veil" for s in char.active_states) is back
-        assert "miss_refund" not in char.turn_state
+        end_on_feature_attack(char, {"die": die, "dice": [die], "mode": "normal", "bonus": 5, "total": die + 5, "notes": [],
+                                     "is_fumble": die == 1, "is_critical": False})
+        last = char.turn_state["last_roll"]
+        assert last["roll"] == "attack" and last["die"] == die and "miss_refund" not in char.turn_state
+        assert bool(char.conditions.get("invisible")) is back and bool(last["refundable"]) is not back  # su un 12 il giocatore dichiara il mancato

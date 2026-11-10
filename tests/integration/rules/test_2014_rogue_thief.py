@@ -231,6 +231,7 @@ async def test_minori_5_the_second_turn_does_not_tick_the_states_again(client, t
     async with test_session_factory() as s:
         ch = await s.get(Character, cid)
         ch.active_states = [{"key": "x", "data": {}, "rounds_left": 5, "ends_on": []}]
+        ch.settings = {**(ch.settings or {}), "concentration_rounds_left": 5}
         await s.commit()
     as_user(GM_ID)
     live = await _next(client, sid)  # secondo turno del round 1: lo stesso round
@@ -241,3 +242,29 @@ async def test_minori_5_the_second_turn_does_not_tick_the_states_again(client, t
     await _next(client, sid)  # round 2: ora scorre
     async with test_session_factory() as s:
         assert (await s.get(Character, cid)).active_states[0]["rounds_left"] == 4
+
+
+async def _left(factory, cid) -> tuple[int, int]:
+    from core.db.models import Character
+    async with factory() as s:
+        ch = await s.get(Character, cid)
+        return ch.active_states[0]["rounds_left"], ch.settings["concentration_rounds_left"]
+
+
+async def test_minori_5_concentration_ticks_once_per_turn_never_on_the_second_turn_and_undo_gives_back_one_round(client, test_session_factory):
+    from core.db.models import Character
+    sid, cid, _live = await _reflexes_encounter(client, test_session_factory)
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        ch.active_states = [{"key": "x", "data": {}, "rounds_left": 5, "ends_on": []}]
+        ch.settings = {**(ch.settings or {}), "concentration_rounds_left": 5}
+        await s.commit()
+    as_user(GM_ID)
+    seen = []
+    for _ in range(3):  # secondo turno, goblin, round 2
+        await _next(client, sid)
+        seen.append(await _left(test_session_factory, cid))
+    assert seen == [(5, 5), (5, 5), (4, 4)]
+    r = await client.post(f"/sessions/{sid}/encounter/prev-turn")
+    assert r.status_code == 200, r.text
+    assert await _left(test_session_factory, cid) == (5, 5)

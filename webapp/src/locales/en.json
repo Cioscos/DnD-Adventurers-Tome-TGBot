@@ -29,13 +29,17 @@
       "turn_slot_used": "You already used that action this turn.",
       "no_uses": "No uses left.",
       "no_slot": "You have no slots left of that level.",
-      "target_not_down": "The target is not down: there is nothing to revive and no use was spent.",
+      "target_not_down": "The target already has at least that many HP: no use was spent.",
       "target_dead": "The target is dead.",
       "invalid_target": "The target is not valid.",
       "feature_unavailable": "You cannot use it now.",
       "rest_needs_hp": "You cannot rest at 0 HP: you need at least one hit point first.",
       "long_rest_too_soon": "Your last long rest is too recent.",
-      "state_locked": "This state cannot be ended by hand."
+      "state_locked": "This state cannot be ended by hand.",
+      "no_stealth_roll": "Roll a Stealth check first: your last roll was not a Stealth check.",
+      "hide_failed": "The Stealth check is under 15: you are not hidden.",
+      "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
+      "once_per_turn": "You can use it only once per turn."
     },
     "error_boundary": {
       "title": "Something went wrong",
@@ -1688,7 +1692,7 @@
       "use_rolled": "You rolled",
       "use_attack": "Attack roll: {{total}} (d20 {{die}} {{bonus}})",
       "use_errors": {
-        "target_not_down": "The target is not down: there is nothing to revive and no use was spent.",
+        "target_not_down": "The target already has at least that many HP: no use was spent.",
         "invalid_target": "A creature is not seated at your session.",
         "target_dead": "A creature is dead: it cannot be helped.",
         "already_chosen": "You already chose for this rest: the choice changes at your next short or long rest.",

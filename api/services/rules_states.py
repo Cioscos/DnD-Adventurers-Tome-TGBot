@@ -147,14 +147,14 @@ def end_on_action(char, action: str, spell=None) -> None:
 
 
 def end_on_feature_attack(char, attack: dict) -> None:
-    """Attacco di un privilegio (``spell_attack``): non ha un tiro salvato su cui dichiarare il mancato, quindi il Velo Psichico
-    chiuso torna solo su un 1 naturale (che manca sempre, come in ``remember_roll``); nessun gettone resta orfano."""
+    """Attacco di un privilegio (``spell_attack``): salva il tiro come un attacco normale (``remember_roll``), così il Velo
+    Psichico chiuso torna se il giocatore dichiara il mancato (``last-roll/refund``) o su un 1 naturale."""
+    from api.services.rules_options import remember_roll  # import locale: rules_options importa questo modulo
+    from core.rules.roll_options import AppliedOptions
     end_on_action(char, "attack")
-    turn = get_turn(char)
-    miss = turn.pop(MISS_REFUND, {})
-    char.turn_state = turn
-    if miss and attack["is_fumble"]:
-        refund_spent(char, [t for paid in miss.values() for t in paid])
+    remember_roll(char, "attack", AppliedOptions(), {
+        "die": attack["die"], "dice": attack["dice"], "mode": attack["mode"], "bonus": attack["bonus"],
+        "total": attack["total"], "notes": attack["notes"], "auto_fail": False, "description": ""})
 
 
 def state_name(char, state: dict) -> str:

@@ -29,13 +29,17 @@
       "turn_slot_used": "Hai già usato quell'azione in questo turno.",
       "no_uses": "Usi esauriti.",
       "no_slot": "Non hai più slot di quel livello.",
-      "target_not_down": "Il bersaglio non è a terra: non c'è nulla da rianimare e nessun uso è stato speso.",
+      "target_not_down": "Il bersaglio ha già almeno quei PF: nessun uso è stato speso.",
       "target_dead": "Il bersaglio è morto.",
       "invalid_target": "Il bersaglio non è valido.",
       "feature_unavailable": "Ora non puoi usarlo.",
       "rest_needs_hp": "A 0 PF non puoi riposare: serve prima almeno un punto ferita.",
       "long_rest_too_soon": "L'ultimo riposo lungo è troppo recente.",
-      "state_locked": "Questo stato non si può chiudere a mano."
+      "state_locked": "Questo stato non si può chiudere a mano.",
+      "no_stealth_roll": "Prima tira una prova di Furtività: l'ultimo tiro non è di Furtività.",
+      "hide_failed": "La prova di Furtività è sotto 15: non ti nascondi.",
+      "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
+      "once_per_turn": "Puoi usarlo una sola volta per turno."
     },
     "error_boundary": {
       "title": "Qualcosa è andato storto",
@@ -1687,7 +1691,7 @@
         "bend_luck_minus": "Piegare la Fortuna: sottrai il d4 tirato dal tiro dell'altra creatura (colpire, prova o TS)."
       },
       "use_errors": {
-        "target_not_down": "Il bersaglio non è a terra: non c'è nulla da rianimare e nessun uso è stato speso.",
+        "target_not_down": "Il bersaglio ha già almeno quei PF: nessun uso è stato speso.",
         "invalid_target": "Una creatura non siede alla tua serata.",
         "target_dead": "Una creatura è morta: non si può aiutare.",
         "already_chosen": "Hai già scelto per questo riposo: la scelta si cambia al prossimo riposo, breve o lungo.",

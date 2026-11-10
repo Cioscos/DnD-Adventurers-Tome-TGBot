@@ -184,13 +184,6 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
                 expired.append("Concentrazione")
                 expired += await release_concentration_effects(
                     db, char, entry["released_effects"])
-        entry, ended = _tick_concentration(db, char)
-        if entry is not None:
-            undo.concentration = entry
-        if ended:
-            expired.append("Concentrazione")
-            expired += await release_concentration_effects(
-                db, char, entry["released_effects"])
 
     if edge == "end":  # fine del turno di chiunque: finiscono gli stati «fino alla fine del turno» (Difesa dal Multiattacco)
         pcs = (await db.execute(select(Character).join(Combatant, Combatant.character_id == Character.id).where(
