@@ -121,7 +121,7 @@ export default function Turn() {
     },
     onSuccess: ({ result, skill }, { spendsAttack, influence }) => {
       if (spendsAttack) useSlot.mutate({ slot: 'attack' })
-      if (influence) setInfluenceRolled(true)
+      setInfluenceRolled(!!influence)  // un'altra prova non lascia l'esito di Influenzare sul tiro nuovo
       // Nascondersi legge il totale dal tiro salvato dal server: il turno lo riporta.
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       refreshAfterOptions(qc, charId, result.option_result)

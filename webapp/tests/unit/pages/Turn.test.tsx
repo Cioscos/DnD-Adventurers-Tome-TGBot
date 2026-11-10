@@ -279,6 +279,24 @@ describe('Turn page', () => {
     expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
   })
 
+  it('in 2024 the Influence outcome goes away when another skill is rolled for another reason', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Influenzare').closest('li') as HTMLElement
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 17, notes: [] })
+    server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'persuasion', total: 17 } }
+    await userEvent.click(within(row).getByText('character.skills.persuasion'))
+    expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
+    const other = screen.getByText('character.skills.perception').closest('li') as HTMLElement
+    const calls = rollSkill.mock.calls.length
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 12, notes: [] })
+    await userEvent.click(within(other).getByText('character.skills.perception'))
+    await waitFor(() => expect(rollSkill).toHaveBeenCalledTimes(calls + 1))
+    await waitFor(() => expect(within(row).queryByText('character.turn.influence_success')).toBeNull())
+  })
+
   it('in 2024 Influence has an editable DC of 15 and tells the player how the roll went', async () => {
     getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
     renderWithProviders(<Turn />)
