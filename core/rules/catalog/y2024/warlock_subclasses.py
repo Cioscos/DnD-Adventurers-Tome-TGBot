@@ -303,6 +303,12 @@ def _vengeance_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
     return (409, "not_dying") if params.get("mode") == "self" and ctx.char.current_hit_points > 0 else None
 
 
+def _half_max(ctx: RuleContext) -> int:
+    """Metà dei PF massimi effettivi (spossatezza, privilegi), non di quelli di base."""
+    from core.rules.modifiers import effective_hp_max  # import locale: modifiers usa il catalogo
+    return effective_hp_max(ctx.char) // 2
+
+
 def _vengeance_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
     mod = _cha(ctx)
     return TargetEffect(condition="blinded", rounds=1, damage_dice=f"2d8+{mod}" if mod > 0 else "2d8")
@@ -312,8 +318,8 @@ def _vengeance_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     tail = _both(" Le creature che scegli entro 9 m subiscono 2d8 + Carisma danni radiosi e sono Accecate fino alla fine del turno.",
                  " Creatures you choose within 30 ft take 2d8 + Charisma radiant damage and are Blinded until the end of the turn.")
     if params.get("mode") == "self":
-        return _both(f"Recuperi {ctx.char.hit_points // 2} PF, metà del tuo massimo, e ti rialzi." + tail["it"],
-                     f"You regain {ctx.char.hit_points // 2} hit points, half your maximum, and stand up." + tail["en"])
+        return _both(f"Recuperi {_half_max(ctx)} PF, metà del tuo massimo, e ti rialzi." + tail["it"],
+                     f"You regain {_half_max(ctx)} hit points, half your maximum, and stand up." + tail["en"])
     return _both("L'alleato entro 18 m recupera metà dei suoi PF massimi e si rialza: dillo al GM." + tail["it"],
                  "The ally within 60 ft regains half their maximum hit points and stands up: tell the GM." + tail["en"])
 
@@ -326,7 +332,7 @@ VENGEANCE_KEY = f"{P}searing_vengeance"
 # Prima del TS contro la morte (modale del tiro): metà dei PF massimi e si rialza, senza tirare. Il costo è l'uso del privilegio
 VENGEANCE_SAVE = RollOptionSpec(
     key=f"{VENGEANCE_KEY}_save", phase="before", rolls=("death_save",), cost=Cost(feature_key=VENGEANCE_KEY),
-    available=lambda c: c.char.current_hit_points <= 0, self_heal=lambda c, _i: c.char.hit_points // 2, on_confirm=_stand_up,
+    available=lambda c: c.char.current_hit_points <= 0, self_heal=lambda c, _i: _half_max(c), on_confirm=_stand_up,
     target_effect=lambda c, _i: _vengeance_effect(c, {}),
     label=_both("Vendetta Ardente: prima del TS contro la morte torni a metà dei PF massimi e ti rialzi; le creature scelte entro 9 m sono Accecate",
                 "Searing Vengeance: before the death save you regain half your maximum HP and stand up; the creatures you choose within 30 ft are Blinded"),
@@ -334,7 +340,7 @@ VENGEANCE_SAVE = RollOptionSpec(
 
 VENGEANCE_USE = OnUse(
     usable_at_zero_hp=True, heal_ally_half_max=True,
-    heal=lambda c, _r: c.char.hit_points // 2, heal_when=lambda _c, p: p.get("mode") == "self", check=_vengeance_check,
+    heal=lambda c, _r: _half_max(c), heal_when=lambda _c, p: p.get("mode") == "self", check=_vengeance_check,
     heal_ally_when=lambda _c, p: p.get("mode") == "ally", ally_modes=("ally",),
     removal=ConditionRemoval(("prone",), count=None, ally=False, auto=lambda _c, p: ["prone"] if p.get("mode") == "self" else []), target_effect=_vengeance_effect, message=_vengeance_message,
     choices=(UseChoice("mode", _both("Chi sta per tirare contro la morte", "Who is about to roll a death save"), lambda _c: list(WHO),

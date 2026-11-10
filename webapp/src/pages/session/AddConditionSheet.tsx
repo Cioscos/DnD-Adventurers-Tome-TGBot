@@ -237,6 +237,7 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
         cancelLabel={t('common.cancel')}
         onConfirm={() => { setConfirmLethal(false); mutation.mutate(buildBody()) }}
         loading={mutation.isPending}
+        zClassName="z-[70]"
       />
     </Sheet>
   )

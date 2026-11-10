@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { TFunction } from 'i18next'
-import { sharedDamageMessage } from '@/lib/sharedDamage'
+import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import type { CharacterFull } from '@/types'
 
 const t = ((key: string, vars: Record<string, unknown>) => `${key}|${JSON.stringify(vars)}`) as unknown as TFunction
 const sheet = (shared: unknown) => ({ shared_damage: shared }) as unknown as CharacterFull
+
+describe('damageTakenMessage', () => {
+  it('is null unless the damage was shared', () => {
+    expect(damageTakenMessage({ damage_taken: 10 } as unknown as CharacterFull, t)).toBeNull()
+  })
+  it('says the damage really taken and what the caster took', () => {
+    const out = damageTakenMessage({ damage_taken: 10, shared_damage: { amount: 10, caster_name: 'Mira' } } as unknown as CharacterFull, t)
+    expect(out).toBe('character.hp.damage_taken_shared|{"n":10,"shared":10,"name":"Mira"}')
+  })
+})
 
 describe('sharedDamageMessage', () => {
   it('is null without shared damage', () => {

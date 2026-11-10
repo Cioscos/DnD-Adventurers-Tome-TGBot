@@ -529,6 +529,7 @@
       "max_short": "MASSIMO",
       "temp_short": "Temporanei",
       "quick_damage_undo": "Inflitti {{n}} danni",
+      "damage_taken_shared": "Subiti {{n}} danni ({{shared}} a {{name}})",
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
       "quick_undo_action": "Annulla",

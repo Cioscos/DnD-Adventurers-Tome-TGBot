@@ -1,6 +1,7 @@
 """PF e incantesimi in corso: inizio turno del bersaglio (Rigenerazione, Eroismo), danno condiviso, ritorsione e fine a PF temporanei esauriti."""
 from __future__ import annotations
 
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import HPOp, HPUpdate
@@ -10,6 +11,27 @@ from core.db.models import Character
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellVariant, spell_instances
 from core.rules.states import SPELL_GIVEN, note_spell_temp_hp
+
+
+async def _caster(session: AsyncSession, caster_id: int) -> Character | None:
+    """Chi ha lanciato l'incantesimo, o ``None`` se la scheda non esiste più (cancellata)."""
+    try:
+        return await load_receiver(session, caster_id)
+    except NoResultFound:
+        return None
+
+
+async def drop_orphan_spell_states(session: AsyncSession, char: Character) -> None:
+    """Toglie da ``char`` gli stati ``spell:*`` il cui lanciatore non esiste più (un annullo può rimetterli)."""
+    keep = []
+    for state in char.active_states or []:
+        caster_id = (state.get("data") or {}).get("caster_id")
+        orphan = (str(state.get("key", "")).startswith(SPELL_STATE_PREFIX) and caster_id not in (None, char.id)
+                  and await _caster(session, caster_id) is None)
+        if not orphan:
+            keep.append(state)
+    if len(keep) != len(char.active_states or []):
+        char.active_states = keep
 
 
 def spell_states(char: Character) -> list[tuple[dict, SpellVariant, dict]]:
@@ -45,7 +67,9 @@ async def foreign_spell_clocks(session: AsyncSession, char: Character) -> list[d
         key, caster_id = str(state.get("key", "")), (state.get("data") or {}).get("caster_id")
         if not key.startswith(SPELL_STATE_PREFIX) or caster_id in (None, char.id):
             continue
-        caster = await load_receiver(session, caster_id)
+        caster = await _caster(session, caster_id)
+        if caster is None:
+            continue
         clock = next((s for s in caster.active_states or [] if s.get("key") == SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]), None)
         if clock is not None:
             out.append({"key": key, "caster_id": caster_id, "clock": clock, "given": (caster.settings or {}).get(SPELL_GIVEN)})
@@ -56,7 +80,9 @@ async def reopen_spell_clocks(session: AsyncSession, saved: list[dict]) -> None:
     """Un annullo ha rimesso lo stato di un incantesimo altrui sul bersaglio: l'orologio del lanciatore si riapre e i suoi bersagli ritrovano lo stato."""
     from api.services.spell_effects import regrant_spells  # import locale: il servizio importa questo modulo
     for entry in saved:
-        caster = await load_receiver(session, entry["caster_id"])
+        caster = await _caster(session, entry["caster_id"])
+        if caster is None:
+            continue
         if not any(s.get("key") == entry["clock"]["key"] for s in caster.active_states or []):
             caster.active_states = [*(caster.active_states or []), entry["clock"]]
         await regrant_spells(session, caster, entry["given"])
@@ -68,8 +94,8 @@ async def _share(session: AsyncSession, char: Character, name: str, caster_id: i
     morte, fine dell'incantesimo a 0 PF). Lo snapshot di annullo del lanciatore va in ``log``, nell'annullo del bersaglio."""
     if not caster_id or caster_id == char.id or amount <= 0:
         return
-    caster = await load_receiver(session, caster_id)
-    if caster.is_dead:
+    caster = await _caster(session, caster_id)
+    if caster is None or caster.is_dead:
         return
     from api.routers.hp import apply_hp_update  # import locale: il router importa questo modulo
     out: dict = {}

@@ -206,6 +206,7 @@ async def add_item(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    old_con_mod = effective_con_mod(char)
 
     if body.container_id is not None:
         parent = next((i for i in char.items if i.id == body.container_id), None)
@@ -255,8 +256,9 @@ async def add_item(
     await session.flush()
     # Apply homebrew property defaults from rules installed before this item (#32).
     await _apply_item_property_defaults(session, char_id, item)
-    char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
+    await _apply_con_hp(session, char, old_con_mod)  # un oggetto già indossato può alzare la Costituzione
+    char.recalculate_encumbrance()
     if item.is_equipped:
         await sync_cataloged_features(session, char, lang)
     return await build_character_response(session, char)
@@ -421,12 +423,14 @@ async def delete_item(
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    old_con_mod = effective_con_mod(char)
     if is_container(item):
         await reparent_contents(session, char, item)
     await session.delete(item)
     await session.flush()
-    char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
+    await _apply_con_hp(session, char, old_con_mod)
+    char.recalculate_encumbrance()
     await sync_cataloged_features(session, char, lang)
     return await build_character_response(session, char)
 

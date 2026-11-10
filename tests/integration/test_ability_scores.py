@@ -95,3 +95,29 @@ async def test_hp_3_constitution_drop_brings_current_hp_to_the_new_effective_max
         await sess.commit()
     body = (await _patch(client, cid, "constitution", 10)).json()  # massimo base 10, effettivo 5
     assert body["hit_points"] == 10 and body["current_hit_points"] == 5
+
+
+_AMULET = {"ability_modifiers": [{"ability": "constitution", "kind": "absolute", "value": 19}]}
+
+
+async def _amulet(client, cid: int, **extra):
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory", "item_metadata": _AMULET, **extra})
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+async def test_hp_3_deleting_a_worn_item_that_raised_constitution_brings_hp_back_to_the_new_max(client):
+    cid = await _fighter(client)
+    body = await _amulet(client, cid)
+    aid = next(i["id"] for i in body["items"] if i["name"] == "Amuleto")
+    body = (await client.patch(f"/characters/{cid}/items/{aid}", json={"is_equipped": True})).json()
+    assert body["hit_points"] == 14 and body["current_hit_points"] == 14  # COS 19: +4
+    body = (await client.delete(f"/characters/{cid}/items/{aid}")).json()
+    assert body["hit_points"] == 10 and body["current_hit_points"] == 10
+
+
+async def test_hp_3_creating_an_item_already_worn_updates_hp(client):
+    cid = await _fighter(client)
+    body = await _amulet(client, cid, is_equipped=True)
+    assert body["hit_points"] == 14 and body["current_hit_points"] == 14
+

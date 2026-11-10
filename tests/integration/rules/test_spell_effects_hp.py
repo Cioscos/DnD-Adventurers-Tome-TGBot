@@ -478,6 +478,19 @@ async def test_undo_63_shared_damage_with_a_deleted_caster_undoes_only_the_targe
     assert (await _sheet(client, hero))["current_hit_points"] == 200
 
 
+async def test_undo_63_deleting_the_caster_after_the_bond_ended_leaves_no_orphan_state_for_the_next_damage(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 5, 30)
+    await _cast(client, caster, spell, [hero], level=2)
+    dmg = await _damage(client, hero, 100)  # il lanciatore va a 0 e il legame finisce su entrambi
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{caster}")).status_code in (200, 204)
+    await _undo(client, hero, dmg["hp_undo_id"])
+    assert await _states(client, hero, "spell:warding_bond") == []  # lo stato del lanciatore sparito non torna
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{hero}/hp", json={"op": "damage", "value": 10})).status_code == 200
+
+
 async def test_undoing_a_damage_that_ended_warding_bond_brings_the_bond_back_on_both_sheets(client, test_session_factory):
     hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
     await _hp(client, caster, 5, 30)

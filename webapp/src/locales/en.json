@@ -529,6 +529,7 @@
       "max_short": "MAX",
       "temp_short": "Temporary",
       "quick_damage_undo": "{{n}} damage dealt",
+      "damage_taken_shared": "Took {{n}} damage ({{shared}} to {{name}})",
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
       "quick_undo_action": "Undo",

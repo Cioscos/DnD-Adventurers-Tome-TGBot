@@ -36,7 +36,7 @@ import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
-import { sharedDamageMessage } from '@/lib/sharedDamage'
+import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
@@ -151,7 +151,7 @@ export default function HP() {
       // Stesso annullamento per scorciatoie e valore scritto a mano.
       const undoId = updated.hp_undo_id
       if (!undoId) return
-      const base = t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? val })
+      const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? val })
       const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
       showUndoToast({
         message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,

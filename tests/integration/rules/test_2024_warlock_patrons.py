@@ -367,6 +367,25 @@ async def test_searing_vengeance_for_an_ally_reports_the_outcome_without_touchin
     assert (await _full(client, cid))["current_hit_points"] == before and "metà" in r.json()["message"]["it"]
 
 
+async def test_searing_vengeance_2_ally_heals_half_the_effective_max_not_the_base(client, test_session_factory):
+    from sqlalchemy import select
+    from core.db.models import Character, SessionParticipant
+    from tests.integration._encounter_helpers import GM_ID, as_user, seed_session
+    _, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _make(client, "celestial", 14)
+    await _hp(client, cid, op="set_max", value=80)
+    async with test_session_factory() as s:
+        part = (await s.execute(select(SessionParticipant).where(SessionParticipant.user_id == GM_ID))).scalar_one()
+        part.character_id = cid
+        char = await s.get(Character, hero)
+        char.hit_points, char.current_hit_points, char.conditions = 80, 0, {"exhaustion": 4}  # 2014: il massimo effettivo si dimezza a 40, la metà è 20
+        await s.commit()
+    r = await _use(client, cid, VENGEANCE, params={"mode": "ally", "target_character_id": hero})
+    assert r.status_code == 200, r.text
+    assert r.json()["received"] == {"name": "Eroe", "healed": 20}  # metà del massimo effettivo (20), non di quello di base (40)
+
+
 # ---------------------------------------------------------------------------
 # Patrono Immondo
 # ---------------------------------------------------------------------------

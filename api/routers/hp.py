@@ -36,7 +36,7 @@ from api.services.session_allies import load_receiver, attach_party, attach_part
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
 from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD
-from api.services.spell_hp import foreign_spell_clocks, reopen_spell_clocks, spell_damage_effects
+from api.services.spell_hp import drop_orphan_spell_states, foreign_spell_clocks, reopen_spell_clocks, spell_damage_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, end_form, form_own_hp, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -667,6 +667,7 @@ async def undo_hp(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
     shared = snap.get("shared") or []
     await _restore_hp(session, char, snap, form)
+    await drop_orphan_spell_states(session, char)  # il lanciatore cancellato: il suo stato non torna
     for entry in shared:
         try:
             caster = await load_receiver(session, entry["id"])

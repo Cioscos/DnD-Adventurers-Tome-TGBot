@@ -283,4 +283,4 @@ async def test_move_equipped_con_item_drops_hp(client):
     hp = r.json()["hit_points"]
     r = await _move(client, cid, [belt], bag)
     assert r.status_code == 200, r.text
-    assert hp == 10 and r.json()["hit_points"] == 8
+    assert hp == 12 and r.json()["hit_points"] == 10  # indossata dalla creazione: +2, e di nuovo giù nella borsa

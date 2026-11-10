@@ -25,7 +25,7 @@ import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
-import { sharedDamageMessage } from '@/lib/sharedDamage'
+import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import type { CharacterFull } from '@/types'
 
 interface HpQuickSheetProps {
@@ -136,7 +136,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         }
         const undoId = updated.hp_undo_id
         if (undoId) {
-          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? n })
+          const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? n })
           const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
           showUndoToast({
             message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,

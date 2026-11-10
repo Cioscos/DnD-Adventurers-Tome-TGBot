@@ -299,9 +299,20 @@ async def test_gm_reapply_custom_keeps_homebrew_payload(client, test_session_fac
 
 
 async def test_conditions_4_gm_exhaustion_6_kills_the_character(client, test_session_factory, monkeypatch):
-    _, sid, char_id, pc_id, *_ = await _start(client, test_session_factory, monkeypatch)
+    captured, sid, char_id, pc_id, *_ = await _start(client, test_session_factory, monkeypatch)
+    captured.clear()
     r = await client.post(_url(sid, pc_id), json={"slug": "exhaustion", "value": 6})
     assert r.status_code == 200, r.text
     async with test_session_factory() as s:
         char = await s.get(Character, char_id)
         assert char.is_dead and char.conditions["exhaustion"] == 6
+    assert any("morto" in str(c["json"].get("text", "")) for c in captured)  # 4: avviso di morte ai compagni, come per i TS
+
+
+async def test_conditions_4_exhaustion_6_from_the_conditions_page_notifies_the_party(client, test_session_factory, monkeypatch):
+    captured, _, char_id, *_ = await _start(client, test_session_factory, monkeypatch)
+    captured.clear()
+    as_user(PLAYER_ID)
+    r = await client.patch(f"/characters/{char_id}/conditions", json={"conditions": {"exhaustion": 6}})
+    assert r.status_code == 200, r.text
+    assert any("morto" in str(c["json"].get("text", "")) for c in captured)
