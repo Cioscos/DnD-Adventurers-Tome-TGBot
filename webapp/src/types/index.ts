@@ -218,6 +218,8 @@ export interface SpellEffectInfo {
   target_kind: 'self' | 'ally' | 'allies' | 'aura'
   /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
   weapon_choice?: boolean
+  /** Tipi di arma sceglibili (chiavi di `WEAPONS`: Randello Incantato); assente: qualunque arma non magica. */
+  weapon_kinds?: string[]
   max_targets_by_slot: Record<string, number>
   choices: { key: string; label: { it: string; en: string }; options: string[] }[]
 }

@@ -8,7 +8,7 @@ import type { SpellEffectInfo } from '@/types'
 vi.mock('@/api/client', () => ({
   api: { characters: {
     sessionAllies: vi.fn(async () => [{ id: 2, name: 'Eroe' }]),
-    allyWeapons: vi.fn(async (_id: number, ally: number) => (ally === 2 ? [{ id: 7, name: 'Spada lunga' }] : [])),
+    allyWeapons: vi.fn(async (_id: number, ally: number) => (ally === 2 ? [{ id: 7, name: 'Spada lunga' }] : ally === 1 ? [{ id: 9, name: 'Bastone ferrato' }] : [])),
   } },
 }))
 vi.mock('react-i18next', async (orig) => {
@@ -41,7 +41,7 @@ describe('weapon choice of Magic Weapon', () => {
     renderWithProviders(<SpellEffectAsk charId={1} title="Arma Magica" effect={magicWeapon} slotLevel={2} onConfirm={vi.fn()} onClose={vi.fn()} />)
     fireEvent.click(await screen.findByText('Eroe'))
     const weapon = await screen.findByText('Spada lunga')
-    expect(weapon.closest('button')).toHaveClass('w-full', 'justify-start', 'text-left')
+    expect(weapon.closest('button')).toHaveClass('w-full', '!justify-start', 'text-left')
     fireEvent.click(screen.getByText('common.back'))
     expect(await screen.findByText('Eroe')).toBeInTheDocument()
     expect(screen.queryByText('Spada lunga')).not.toBeInTheDocument()
@@ -60,5 +60,23 @@ describe('weapon choice of Magic Weapon', () => {
     renderWithProviders(<SpellEffectAsk charId={1} title="Arma Magica" effect={magicWeapon} slotLevel={2} onConfirm={onConfirm} onClose={vi.fn()} />)
     fireEvent.click(await screen.findByText('character.turn.removal_self'))
     await waitFor(() => expect(screen.getByText('character.spells.effect_weapon')).toBeInTheDocument())
+  })
+})
+
+describe('weapon choice of Shillelagh', () => {
+  const shillelagh: SpellEffectInfo = { target_kind: 'self', weapon_choice: true, weapon_kinds: ['club', 'quarterstaff'], max_targets_by_slot: {}, choices: [] }
+  it('lists the caster weapons of those kinds at once and confirms with no targets', async () => {
+    const onConfirm = vi.fn()
+    renderWithProviders(<SpellEffectAsk charId={1} title="Randello Incantato" effect={shillelagh} slotLevel={0} onConfirm={onConfirm} onClose={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Bastone ferrato'))
+    expect(onConfirm).toHaveBeenCalledWith({ choices: { item_id: '9' } })
+    const { api } = await import('@/api/client')
+    expect(api.characters.allyWeapons).toHaveBeenCalledWith(1, 1, ['club', 'quarterstaff'])
+  })
+  it('goes back by closing the sheet, since there are no targets to return to', async () => {
+    const onClose = vi.fn()
+    renderWithProviders(<SpellEffectAsk charId={1} title="Randello Incantato" effect={shillelagh} slotLevel={0} onConfirm={vi.fn()} onClose={onClose} />)
+    fireEvent.click(await screen.findByText('common.back'))
+    expect(onClose).toHaveBeenCalled()
   })
 })

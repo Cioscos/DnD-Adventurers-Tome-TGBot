@@ -27,8 +27,12 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
   const targeted = effect.target_kind !== 'self' && effect.target_kind !== 'aura' // l'aura è del lanciatore: nessun bersaglio
   const { data: allies = [] } = useQuery({ queryKey: ['session-allies', charId], queryFn: () => api.characters.sessionAllies(charId), enabled: targeted && !choosing })
   // Arma Magica e Arma Elementale: dopo il bersaglio si sceglie fra le sue armi non magiche
-  const [weaponFor, setWeaponFor] = useState<number | null>(null)
-  const { data: weapons = [] } = useQuery({ queryKey: ['ally-weapons', charId, weaponFor], queryFn: () => api.characters.allyWeapons(charId, weaponFor as number), enabled: weaponFor != null })
+  const [picking, setWeaponFor] = useState<number | null>(null)
+  // Randello Incantato: l'arma è la tua (nessun bersaglio) e si sceglie fra i tipi dell'incantesimo
+  const selfWeapon = !targeted && !!effect.weapon_choice && !choosing
+  const weaponFor = picking ?? (selfWeapon ? charId : null)
+  const kinds = effect.weapon_kinds?.length ? effect.weapon_kinds : undefined
+  const { data: weapons = [] } = useQuery({ queryKey: ['ally-weapons', charId, weaponFor, kinds], queryFn: () => api.characters.allyWeapons(charId, weaponFor as number, kinds), enabled: weaponFor != null })
   const choices = effect.choices.length > 0 ? picked : undefined
   const pickTargets = (targets: number[]) => (effect.weapon_choice && targets.length === 1 ? setWeaponFor(targets[0]) : onConfirm({ targets, choices }))
 
@@ -41,13 +45,13 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
             <div key={c.key} className="flex flex-col gap-2">
               <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{c.label[lang]}</p>
               {c.options.map((o) => (
-                <Button key={o} variant={picked[c.key] === o ? 'primary' : 'secondary'} className="justify-start break-words text-left"
+                <Button key={o} variant={picked[c.key] === o ? 'primary' : 'secondary'} className="!justify-start break-words text-left"
                   onClick={() => setPicked((p) => ({ ...p, [c.key]: o }))}>{optionLabel(t, c.key, o)}</Button>
               ))}
             </div>
           ))}
-          <Button variant="primary" disabled={!ready} onClick={() => (targeted ? setChoosing(false) : onConfirm({ choices }))}>
-            {t(targeted ? 'character.spells.effect_next' : 'character.spells.effect_confirm')}
+          <Button variant="primary" disabled={!ready} onClick={() => (targeted || effect.weapon_choice ? setChoosing(false) : onConfirm({ choices }))}>
+            {t(targeted || effect.weapon_choice ? 'character.spells.effect_next' : 'character.spells.effect_confirm')}
           </Button>
         </div>
       </Sheet>
@@ -60,10 +64,10 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
           <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.spells.effect_weapon')}</p>
           {weapons.length === 0 && <p className="text-sm text-dnd-text-muted">{t('character.spells.effect_no_weapons')}</p>}
           {weapons.map((w) => (
-            <Button key={w.id} variant="secondary" fullWidth className="justify-start break-words text-left"
-              onClick={() => onConfirm({ targets: [weaponFor], choices: { ...picked, item_id: String(w.id) } })}>{w.name}</Button>
+            <Button key={w.id} variant="secondary" fullWidth className="!justify-start break-words text-left"
+              onClick={() => onConfirm({ targets: selfWeapon ? undefined : [weaponFor], choices: { ...picked, item_id: String(w.id) } })}>{w.name}</Button>
           ))}
-          <Button variant="ghost" fullWidth onClick={() => setWeaponFor(null)}>{t('common.back')}</Button>
+          <Button variant="ghost" fullWidth onClick={() => (selfWeapon ? onClose() : setWeaponFor(null))}>{t('common.back')}</Button>
         </div>
       </Sheet>
     )
