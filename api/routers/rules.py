@@ -522,13 +522,15 @@ class WeaponRead(BaseModel):
 @turn_router.get("/{char_id}/session-allies/{ally_id}/weapons", response_model=list[WeaponRead])
 async def ally_weapons(
     char_id: int, ally_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    kinds: str = "",
 ) -> list[WeaponRead]:
-    """Le armi senza bonus magico di ``ally_id`` (te stesso o un compagno della serata): la scelta di Arma Magica e Arma Elementale."""
+    """Le armi senza bonus magico di ``ally_id`` (te stesso o un compagno della serata): la scelta di Arma Magica e Arma Elementale.
+    ``kinds`` (chiavi di ``WEAPONS``, separate da virgola) le limita a quei tipi, comprese le magiche (Randello Incantato)."""
     from api.services.session_allies import ally_target  # import locale
     from api.services.spell_effects import plain_weapons  # import locale: il servizio degli incantesimi importa questo modulo
     char = await _owned_char(db, char_id, user_id)
     owner = char if ally_id == char.id else await ally_target(db, char, ally_id)
-    return [WeaponRead(id=i.id, name=i.name) for i in await plain_weapons(db, owner.id)]
+    return [WeaponRead(id=i.id, name=i.name) for i in await plain_weapons(db, owner.id, tuple(k for k in kinds.split(",") if k))]
 
 
 class BardicDieAc(BaseModel):

@@ -63,6 +63,9 @@ class SpellVariant:
     needs_dc: bool = False  # la CD dei TS di chi lancia si fissa al lancio nei ``data`` dello stato (le punizioni)
     shares_damage: bool = False  # il lanciatore subisce lo stesso danno del bersaglio (Legame di Protezione)
     weapon_choice: bool = False  # il lancio sceglie un'arma non magica del bersaglio: ``choices["item_id"]`` (Arma Magica, Arma Elementale)
+    weapon_kinds: tuple[str, ...] = ()  # chiavi di ``WEAPONS`` fra cui scegliere (Randello Incantato: club, quarterstaff); vuoto: qualunque arma non magica
+    weapon_ability: bool = False  # l'arma scelta usa la caratteristica da incantatore (``data["ability"]``, fissata al lancio) per attacco e danno
+    weapon_die: Callable[[int], str] | None = None  # il dado dell'arma scelta, secondo il livello del personaggio
     on_close: Callable[[dict], dict] | None = None  # stato che lo stato sul bersaglio lascia alla fine (Velocità: la letargia), come ``data["on_close"]``
     extra_action: bool = False  # a ogni turno del bersaglio un'azione in più, limitata (Velocità)
 
@@ -133,3 +136,9 @@ def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:
 def spell_state_options(char: Any) -> list[tuple[RollOptionSpec, dict]]:
     """Le opzioni al tiro degli incantesimi che agiscono su ``char`` (variante dell'edizione del lanciatore), ognuna con i ``data`` del suo stato."""
     return [(o, data) for _s, _e, variant, data in spell_instances(char) for o in variant.options]
+
+
+def enchanted_weapon(char: Any, item: Any) -> tuple[SpellVariant, dict] | None:
+    """La variante e i ``data`` dell'incantesimo che ha cambiato caratteristica o dado di ``item`` (Randello Incantato), se ce n'è uno."""
+    return next(((variant, data) for _s, _e, variant, data in spell_instances(char)
+                 if (variant.weapon_ability or variant.weapon_die) and str((data.get("choices") or {}).get("item_id")) == str(item.id)), None)

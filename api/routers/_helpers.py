@@ -23,6 +23,7 @@ from core.game.skills import save_roll_part
 from core.game.stats import effective_ability_mod, roll_ability_mod
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.spell_effects import enchanted_weapon
 from core.rules.spellcasting import concentration_dc
 from core.rules.modifiers import modifiers_for
 from core.rules.weapons import has_property, martial_arts_level
@@ -123,6 +124,8 @@ def weapon_attack_profile(
     else:
         ability = "dexterity" if is_ranged else "strength"
     mode = "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
+    if (enchanted := enchanted_weapon(char, item)) and enchanted[0].weapon_ability and enchanted[1].get("ability"):
+        return roll_ability_mod(char, enchanted[1]["ability"]), enchanted[1]["ability"], mode  # Randello Incantato: al posto di Forza o Destrezza
     if meta.get("pact_weapon") and character_edition(char) == "2024" and any(
             spec.key == "warlock.pact_of_the_blade" for spec, _ in active_features(char)):
         charisma = roll_ability_mod(char, "charisma")  # Patto della Lama: Carisma al posto di Forza o Destrezza, se e meglio

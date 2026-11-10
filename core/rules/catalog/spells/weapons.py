@@ -135,19 +135,24 @@ _MINOR_ELEMENTALS = SpellVariant(
     text=txt("Ai tuoi attacchi che colpiscono nell'Emanazione (4,5 m) l'app chiede se il bersaglio è dentro e aggiunge 2d8 del tipo scelto (+2d8 per slot oltre il 4°). Il terreno è Difficile per i nemici: lo applica il GM.",
              "On your attacks that hit in the Emanation (15 ft) the app asks whether the target is inside and adds 2d8 of the chosen type (+2d8 per slot above 4th). The ground is Difficult for enemies: the GM applies it."))
 
-# --- Solo testo: l'effetto cambia la caratteristica, il dado o gli attacchi di un'arma e la scheda non lo modella ------------
-_SHILLELAGH_2014 = _described(  # trucchetto: 1 minuto, nessuna concentrazione
-    10, "Il randello o bastone che impugni diventa magico e usa la tua caratteristica da incantatore al posto della Forza per attacco e danni; il suo dado di danno è d8. "
-        "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
-    "The club or quarterstaff you hold becomes magical and uses your spellcasting ability instead of Strength for attack and damage rolls; its damage die is a d8. "
-    "It ends if you cast it again or let go of the weapon: you apply it.")
-_SHILLELAGH_2024 = _described(
-    10, "Il Randello o Bastone che impugni usa la tua caratteristica da incantatore al posto della Forza per tiri per colpire e danni in mischia; "
-        "il suo dado di danno diventa d8 (d10 dal 5° livello, d12 dall'11°, 2d6 dal 17°) e il danno può essere da Forza o quello normale. "
-        "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
-    "The Club or Quarterstaff you hold uses your spellcasting ability instead of Strength for melee attack and damage rolls; "
-    "its damage die becomes a d8 (d10 from level 5, d12 from 11, 2d6 from 17) and the damage can be Force or its normal type. "
-    "It ends if you cast it again or let go of the weapon: you apply it.")
+# --- Randello Incantato: l'arma scelta (bastone o randello del lanciatore) è magica, con la sua caratteristica e il suo dado ----------
+def _shillelagh(die, text: dict[str, str]) -> SpellVariant:  # trucchetto: 1 minuto, nessuna concentrazione
+    return SpellVariant(track=True, rounds=MIN1, text=text, weapon_choice=True, weapon_kinds=("club", "quarterstaff"), weapon_ability=True, weapon_die=die,
+                        modifiers=lambda d: (Modifier("magic_weapon", 1, when=_with_chosen(d, "attack")),))
+
+
+_SHILLELAGH_2014 = _shillelagh(lambda _lvl: "1d8", txt(
+    "Il randello o bastone scelto è magico e usa la tua caratteristica da incantatore al posto della Forza per attacco e danni; il suo dado di danno è d8: è già nel tiro. "
+    "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
+    "The chosen club or quarterstaff is magical and uses your spellcasting ability instead of Strength for attack and damage rolls; its damage die is a d8: already in the roll. "
+    "It ends if you cast it again or let go of the weapon: you apply it."))
+_SHILLELAGH_2024 = _shillelagh(lambda lvl: "2d6" if lvl >= 17 else "1d12" if lvl >= 11 else "1d10" if lvl >= 5 else "1d8", txt(
+    "Il Randello o Bastone scelto usa la tua caratteristica da incantatore al posto della Forza per tiri per colpire e danni; "
+    "il suo dado di danno diventa d8 (d10 dal 5° livello, d12 dall'11°, 2d6 dal 17°): è già nel tiro. Il danno può essere da Forza o quello normale: lo scegli tu. "
+    "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
+    "The chosen Club or Quarterstaff uses your spellcasting ability instead of Strength for attack and damage rolls; "
+    "its damage die becomes a d8 (d10 from level 5, d12 from 11, 2d6 from 17): already in the roll. The damage can be Force or its normal type: you choose. "
+    "It ends if you cast it again or let go of the weapon: you apply it."))
 _SWIFT_QUIVER = _described(
     MIN1, "La faretra produce munizioni non magiche; con l'azione bonus, a ogni tuo turno, fai due attacchi con un'arma che le usa (Frecce o Quadrelli): "
           "gli attacchi li fai e li registri tu dal Turno.",

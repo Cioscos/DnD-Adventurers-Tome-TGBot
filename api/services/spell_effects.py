@@ -24,6 +24,7 @@ from core.rules.spellcasting import best_caster, spell_stats
 from core.rules.roll_options import _spend_state_token
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellEffect, SpellVariant
 from core.data.damage_types import canonical_damage_type
+from core.rules.weapons import weapon_key
 from core.rules.states import SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_state, forget_spell_temp_drop, note_spell_temp_hp, settle_closed
 from core.rules.types import StateSpec
 
@@ -66,17 +67,17 @@ def _check_choices(variant: SpellVariant, edition: str, choices: dict[str, str] 
     return chosen
 
 
-async def plain_weapons(session: AsyncSession, char_id: int) -> list[Item]:
-    """Le armi senza bonus magico di un personaggio: quelle che Arma Magica e Arma Elementale possono incantare."""
+async def plain_weapons(session: AsyncSession, char_id: int, kinds: tuple[str, ...] = ()) -> list[Item]:
+    """Le armi che un incantesimo può incantare: senza bonus magico (Arma Magica, Arma Elementale) o, con ``kinds``, di quei tipi (Randello Incantato)."""
     rows = await session.execute(select(Item).where(Item.character_id == char_id, Item.item_type == "weapon").order_by(Item.id))
-    return [i for i in rows.scalars() if not is_magic_item(i)]
+    return [i for i in rows.scalars() if (weapon_key(i) in kinds if kinds else not is_magic_item(i))]
 
 
 async def _check_weapon(session: AsyncSession, variant: SpellVariant, target: Character, chosen: dict[str, str]) -> None:
     """422 ``invalid_choice`` se l'arma scelta manca o non è un'arma non magica del bersaglio."""
     if variant.weapon_choice and "item_id" not in chosen:
         raise _invalid("invalid_choice")
-    if variant.weapon_choice and int(chosen["item_id"]) not in {i.id for i in await plain_weapons(session, target.id)}:
+    if variant.weapon_choice and int(chosen["item_id"]) not in {i.id for i in await plain_weapons(session, target.id, variant.weapon_kinds)}:
         raise _invalid("invalid_choice")
 
 
@@ -227,6 +228,10 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         data["cast_mod"] = effective_ability_mod(caster, stats.ability) if stats else 0
     if variant.weapon_choice and chars and chosen.get("item_id") and (weapon := await session.get(Item, int(chosen["item_id"]))):
         data["weapon_name"] = weapon.name  # lo stato dice quale arma è incantata
+    if variant.weapon_ability:  # Randello Incantato: la caratteristica da incantatore di chi lancia, fissata ora
+        stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)
+        if stats:
+            data["ability"] = stats.ability
     if variant.on_close:  # Velocità: la letargia che il bersaglio avrà alla fine
         data["on_close"] = variant.on_close(data)
     if variant.needs_dc:  # la CD dei TS delle punizioni, fissata ora

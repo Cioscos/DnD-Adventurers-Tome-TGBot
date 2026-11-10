@@ -67,7 +67,7 @@ async def test_magic_weapon_on_an_allys_weapon_adds_to_hit_and_damage_only_with_
     before = await _attack(client, hero, sword)
     await _cast(client, caster, spell, [hero], level=2, choices={"item_id": str(sword)})
     after = await _attack(client, hero, sword)
-    assert after["to_hit_bonus"] == before["to_hit_bonus"] + 1 and after["is_magic"] is True
+    assert after["to_hit_bonus"] == before["to_hit_bonus"] + 1 and after.get("is_magic") is True
     assert after["damage_bonus"] == before["damage_bonus"] + 1
     plain = await _attack(client, hero, other)
     assert plain["to_hit_bonus"] == before["to_hit_bonus"] and plain["damage_bonus"] == before["damage_bonus"]
@@ -379,8 +379,7 @@ def test_shillelagh_text_follows_the_dice_and_ability_of_each_edition():
     assert "d10" in text24 and "d12" in text24 and "2d6" in text24 and "caratteristica da incantatore" in text24
 
 
-@pytest.mark.parametrize("srd,name,level,state", [("expeditious-retreat", "Expeditious Retreat", 1, "spell:expeditious_retreat"), ("swift-quiver", "Swift Quiver", 5, "spell:swift_quiver"),
-                                                  ("shillelagh", "Shillelagh", 0, "spell:shillelagh")])
+@pytest.mark.parametrize("srd,name,level,state", [("expeditious-retreat", "Expeditious Retreat", 1, "spell:expeditious_retreat"), ("swift-quiver", "Swift Quiver", 5, "spell:swift_quiver")])
 async def test_casting_a_text_only_entry_tracks_the_state_and_gives_the_text(client, test_session_factory, srd, name, level, state):
     hero, caster, spell = await _table(client, test_session_factory, name, srd, level)
     r = await _cast(client, caster, spell, [], level=level or None)
@@ -392,3 +391,74 @@ async def test_the_state_of_an_enchanted_weapon_says_which_weapon_it_is(client, 
     hero, caster, spell, sword, _ = await _weapon_table(client, test_session_factory)
     await _cast(client, caster, spell, [hero], level=2, choices={"item_id": str(sword)})
     assert (await _states(client, hero, PLAYER_ID, "spell:magic_weapon"))[0]["data"]["weapon_name"] == "Spada"
+
+
+# --- Randello Incantato: arma, caratteristica da incantatore e dado --------------------------------------------------
+async def _staff(client, cid, name="Bastone ferrato", dice="1d6"):
+    r = await client.post(f"/characters/{cid}/items", json={"name": name, "item_type": "weapon", "item_metadata": {"damage_dice": dice, "weapon_type": "melee", "properties": []}})
+    assert r.status_code == 201, r.text
+    return max(i["id"] for i in r.json()["items"])
+
+
+async def _druid_table(client, factory, edition, level=1):
+    """Un druido (Saggezza 16, Forza 10) con Randello Incantato, un bastone ferrato e una spada."""
+    _, caster, spell = await _table(client, factory, "Shillelagh", "shillelagh", 0, caster_edition=edition)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/classes", json={"class_name": "druid", "level": level, "hit_die": 8})).status_code == 201
+    assert (await client.patch(f"/characters/{caster}/ability_scores/wisdom", json={"value": 16})).status_code == 200
+    return caster, spell, await _staff(client, caster), await _sword(client, caster)
+
+
+async def _gm_attack(client, cid, wid):
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10, "confirm_extra_attack": True})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+async def test_shillelagh_makes_the_staff_magical_with_a_d8_and_the_spellcasting_modifier(client, test_session_factory, edition):
+    caster, spell, staff, sword = await _druid_table(client, test_session_factory, edition)
+    before, plain_before = await _gm_attack(client, caster, staff), await _gm_attack(client, caster, sword)
+    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    after = await _gm_attack(client, caster, staff)
+    assert before["damage_dice"] == "1d6" and after["damage_dice"] == "1d8" and after.get("is_magic") is True
+    assert after["to_hit_bonus"] == before["to_hit_bonus"] + 3 and after["damage_bonus"] == before["damage_bonus"] + 3  # Saggezza 16 al posto di Forza 10
+    plain = await _gm_attack(client, caster, sword)  # un'altra arma: nessun effetto
+    assert (plain["damage_dice"], plain["to_hit_bonus"], plain["damage_bonus"], plain.get("is_magic")) == (
+        plain_before["damage_dice"], plain_before["to_hit_bonus"], plain_before["damage_bonus"], plain_before.get("is_magic"))
+
+
+@pytest.mark.parametrize("edition,level,die", [("2014", 1, "1d8"), ("2014", 5, "1d8"), ("2014", 17, "1d8"), ("2024", 1, "1d8"), ("2024", 5, "1d10"),
+                                               ("2024", 11, "1d12"), ("2024", 17, "2d6")])
+async def test_shillelagh_die_follows_the_manual_of_each_edition(client, test_session_factory, edition, level, die):
+    caster, spell, staff, _ = await _druid_table(client, test_session_factory, edition, level)
+    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    assert (await _gm_attack(client, caster, staff))["damage_dice"] == die
+
+
+async def test_shillelagh_accepts_only_a_club_or_quarterstaff_of_the_caster(client, test_session_factory):
+    caster, spell, _, sword = await _druid_table(client, test_session_factory, "2014")
+    club = await _staff(client, caster, "Randello")
+    as_user(GM_ID)
+    for choices in ({"item_id": str(sword)}, {"item_id": "99999"}, {"item_id": "x"}, {}):
+        r = await client.post(f"/characters/{caster}/spells/{spell}/use", json={"targets": [], "choices": choices})
+        assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice", choices
+    await _cast(client, caster, spell, [], choices={"item_id": str(club)})
+    assert (await _states(client, caster, GM_ID, "spell:shillelagh"))[0]["data"]["weapon_name"] == "Randello"
+
+
+async def test_shillelagh_cast_again_moves_to_the_new_weapon(client, test_session_factory):
+    caster, spell, staff, _ = await _druid_table(client, test_session_factory, "2014")
+    club = await _staff(client, caster, "Randello", "1d4")
+    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    await _cast(client, caster, spell, [], choices={"item_id": str(club)})
+    assert (await _gm_attack(client, caster, staff))["damage_dice"] == "1d6"
+    assert (await _gm_attack(client, caster, club))["damage_dice"] == "1d8"
+
+
+async def test_the_weapon_list_can_be_limited_to_the_kinds_of_a_spell(client, test_session_factory):
+    caster, _, staff, _ = await _druid_table(client, test_session_factory, "2014")
+    as_user(GM_ID)
+    r = await client.get(f"/characters/{caster}/session-allies/{caster}/weapons", params={"kinds": "club,quarterstaff"})
+    assert r.status_code == 200 and [w["id"] for w in r.json()] == [staff]
