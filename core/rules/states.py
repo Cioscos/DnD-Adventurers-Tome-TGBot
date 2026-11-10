@@ -109,7 +109,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     close_wild_shape_rows(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
-        if offer:
+        if offer and not any(x.get("key") == s.get("key") for x in char.active_states or []):  # un altro lanciatore la tiene ancora (Velocità): l'effetto non è finito
             begin_state(char, StateSpec(offer["key"], ends_on=tuple(offer["ends_on"]), data=offer.get("data") or {}, condition=offer.get("condition")),
                         s["feature_key"], offer.get("name"))
     gone = {c for s in closed for c, was_on in state_conditions(s).items() if not was_on}
@@ -134,6 +134,8 @@ def end_extra_action(char: Any, closed: list[dict]) -> None:
     if not turn.get("haste_action"):
         return
     for s in closed:
+        if any(x.get("key") == s.get("key") for x in char.active_states or []):
+            continue  # la Velocità di un altro lanciatore dà ancora l'azione extra
         effect = SPELL_EFFECTS.get((s.get("data") or {}).get("spell_key"))
         variant = effect and effect.variants.get((s.get("data") or {}).get("edition", "2014"))
         if variant and variant.extra_action and str(s.get("key", "")).startswith(SPELL_STATE_PREFIX):

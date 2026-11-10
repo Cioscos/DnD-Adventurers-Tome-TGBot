@@ -265,3 +265,32 @@ async def test_spells_62_manual_end_caps_hp_and_closes_the_casters_clocks(client
     for caster, user in ((first, GM_ID), (second, 9001)):
         as_user(user)
         assert not [s for s in (await _full(client, caster))["active_states"] or [] if s["key"] == "spell_cast:aid"]
+
+
+# 70-bis (M-3): la letargia di Velocità scatta solo quando cade l'ultima Velocità del bersaglio
+
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+async def test_spells_haste_lethargy_only_when_the_last_haste_ends(client, test_session_factory, edition):
+    hero, first, spell1 = await _defense_table(client, test_session_factory, "Haste", "haste", 3, hero_edition=edition, caster_edition=edition)
+    async with test_session_factory() as s:
+        sid = (await s.execute(select(SessionParticipant.session_id).limit(1))).scalar_one()
+    as_user(9001)
+    second = (await client.post("/characters", json={"name": "Secondo"})).json()["id"]
+    await client.patch(f"/characters/{second}", json={"rules_edition": edition})
+    spell2 = (await client.post(f"/characters/{second}/spells", json={"name": "Haste", "srd_index": "haste", "level": 3, "is_concentration": True})).json()["id"]
+    assert (await client.post(f"/characters/{second}/spell_slots", json={"level": 3, "total": 1})).status_code == 201
+    async with test_session_factory() as s:
+        s.add(SessionParticipant(session_id=sid, user_id=9001, character_id=second, role=SessionRole.PLAYER, display_name="Secondo", joined_at=NOW))
+        await s.commit()
+    for caster, spell, user in ((first, spell1, GM_ID), (second, spell2, 9001)):
+        as_user(user)
+        assert (await client.post(f"/characters/{caster}/spells/{spell}/use", json={"slot_level": 3, "targets": [hero]})).status_code == 200
+    keys = lambda sheet: {s["key"] for s in sheet["active_states"] or []}  # noqa: E731
+    as_user(GM_ID)
+    await client.patch(f"/characters/{first}/concentration", json={"spell_id": None})
+    sheet = await _sheet(client, hero)
+    assert "spell:haste" in keys(sheet) and "spell:haste_lethargy" not in keys(sheet)  # resta la Velocità dell'altro
+    as_user(9001)
+    await client.patch(f"/characters/{second}/concentration", json={"spell_id": None})
+    sheet = await _sheet(client, hero)
+    assert "spell:haste" not in keys(sheet) and "spell:haste_lethargy" in keys(sheet)
