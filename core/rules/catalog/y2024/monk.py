@@ -61,6 +61,7 @@ MARTIAL_BONUS = RollOptionSpec(
 
 FORCE_STRIKE = RollOptionSpec(
     key=f"{CK}.empowered_strikes_force", phase="before", rolls=("attack",), unarmed_damage_type="force", available=_unarmed,
+    group=f"{CK}.elemental_strike",  # un solo tipo di danno per colpo: non insieme ai Colpi Elementali
     label=_both("Colpi Potenziati: il colpo senz'armi infligge danni da Forza", "Empowered Strikes: the unarmed strike deals Force damage"))
 
 
@@ -529,8 +530,8 @@ def _darkvision_range(ctx: RuleContext) -> int:
 
 
 def _begin_shadow_strike(ctx: RuleContext, _params: dict) -> None:
-    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "manual")), f"{CK}.improved_shadow_step",
-                "Passo dell'Ombra Migliorato")
+    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "manual")), SHADOW_STRIKE.key,
+                "Colpo dopo il Passo dell'Ombra")  # feature_key senza riga: il nome non si fonde con quello dello stato del Passo
 
 
 SHADOW_STRIKE = RollOptionSpec(
@@ -655,7 +656,8 @@ ELEMENTS_ROWS = (
              ("A inizio turno, 1 punto: per 10 minuti portata +3 m ai colpi senz'armi e danni elementali a scelta, con spinta di 3 m (TS Forza).",
               "At the start of your turn, 1 point: for 10 minutes +3 m reach on unarmed strikes and elemental damage of your choice, with a 3 m push (Strength save)."),
              "special", roll_options=(*ELEMENT_OPTIONS, ELEMENT_PUSH),
-             on_use=OnUse(spends=KI, state=StateSpec(ATTUNE_STATE, rounds=100, ends_on=("incapacitated", "manual"),
+             on_use=OnUse(spends=KI, check=lambda c, _p: (409, "feature_unavailable") if _is_attuned(c) else None,
+                          state=StateSpec(ATTUNE_STATE, rounds=100, ends_on=("incapacitated", "manual"),
                                                      data={"reach_bonus_ft": 10}))),
     _sub_row("elements", "manipulate_elements", 3, "Manipolare gli Elementi", "Manipulate Elements", 106,
              ("Conosci il trucchetto Elementalismo, con Saggezza come caratteristica da incantatore.",

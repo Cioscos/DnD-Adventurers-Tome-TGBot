@@ -728,3 +728,31 @@ async def test_addle_is_an_effect_on_the_target_until_the_start_of_its_next_turn
     assert effect["condition"] == "custom:no_opportunity_attacks"
     assert effect["ends_at"] == {"anchor": "owner", "edge": "start", "count": 1}
     assert "no_opportunity_attacks" in CUSTOM_CONDITION_LABELS
+
+
+# ---------------------------------------------------------------------------
+# Minori rinviati (punto 19)
+# ---------------------------------------------------------------------------
+
+async def test_monk_19_empowered_and_elemental_strikes_are_one_per_strike(client):
+    cid = await _sub(client, "elements", 6, dexterity=16)
+    await _use(client, cid, ATTUNE)
+    assert (await _strike(client, cid, "monk.empowered_strikes_force", _elemental("fire"))).status_code == 409
+    assert (await _strike(client, cid, "monk.empowered_strikes_force")).json()["damage_type"] == "force"
+
+
+async def test_monk_19_improved_shadow_step_opens_two_states_with_different_names(client):
+    cid = await _sub(client, "shadow", 11, dexterity=16)
+    assert (await _use(client, cid, IMPROVED)).status_code == 200
+    states = {s["key"]: s for s in (await _full(client, cid))["active_states"]}
+    assert {"shadow_step", "shadow_step_strike"} <= set(states)
+    abilities = {a["feature_key"]: a["name"] for a in (await _full(client, cid))["abilities"]}
+    shown = {abilities.get(s["feature_key"]) or s["name"] for s in states.values()}
+    assert len(shown) == len(states)
+
+
+async def test_monk_19_attunement_cannot_be_reused_while_active(client):
+    cid = await _sub(client, "elements", 3, dexterity=16)
+    assert (await _use(client, cid, ATTUNE)).status_code == 200
+    again = await _use(client, cid, ATTUNE)
+    assert again.status_code == 409 and await _ki(client, cid) == 2
