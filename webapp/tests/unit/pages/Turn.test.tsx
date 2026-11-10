@@ -626,6 +626,21 @@ describe('Turn page', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.insufficient_funds'))
   })
 
+  it('keeps Deflect Attacks: redirect usable under Other when the reaction is already spent (T36)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 24, name: 'Deviare Attacchi: rinvio', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'monk.deflect_redirect', max_uses: null, uses: null, action_type: 'special', restoration_type: 'none',
+    }] })
+    server.block = { ...NEW_BLOCK, reaction_used: true }  // Deviare ha già speso la reazione
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.section_other'))
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'monk.deflect_redirect'))
+  })
+
   it('sends only the toggle when the optional spell name of Spell Thief is left empty', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 23, name: 'Ladro di Incantesimi', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
