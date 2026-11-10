@@ -1,4 +1,4 @@
-"""Minori 94-99: test mancanti sul lancio degli effetti degli incantesimi (bersagli, rilanci, scelte, annullo del turno, istantanei)."""
+"""Minori 57, 94-99: test mancanti (Aiuto della Terra su un alleato della serata; lancio degli effetti degli incantesimi: bersagli, rilanci, scelte, annullo del turno, istantanei)."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -13,6 +13,7 @@ from core.rules.spell_effects import SpellEffect, SpellTarget, SpellVariant
 from core.rules.states import SPELL_CAST_TYPE
 from core.rules.types import Modifier
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration.rules.test_2014_bard import _ability
 from tests.integration.rules.test_spell_effects_cast import SOF, STATE, _ac, _caster, _cast, _full, _slots_used, _states, _table
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
 from tests.integration.rules.test_spell_effects_defenses import _cast as _cast_at
@@ -167,3 +168,30 @@ def test_101_a_closed_state_without_a_saved_edition_reads_the_variant_of_the_tar
     assert raises_hp_max([state], SimpleNamespace(rules_edition="2024")) is True
     assert raises_hp_max([state], SimpleNamespace(rules_edition="2014")) is False  # nel 2014 l'incantesimo non esiste
     assert raises_hp_max([{**state, "data": {**state["data"], "edition": "2024"}}], SimpleNamespace(rules_edition="2014")) is True  # quella salvata vince
+
+
+# 57: Aiuto della Terra su un alleato seduto alla serata, dall'inizio alla fine (finora solo il testo era provato da un test unitario)
+
+async def test_57_lands_aid_on_a_seated_ally_heals_them_spends_wild_shape_and_tells_it_without_the_gm_hint(client, test_session_factory, monkeypatch):
+    from tests.integration.rules.test_2014_bard_inspiration import _seat
+    from tests.integration.rules.test_2024_druid_circles import _circle
+    from tests.integration._encounter_helpers import seed_session
+    monkeypatch.setattr("core.rules.catalog.y2024.druid.random.randint", lambda a, b: 3)
+    _, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    druid = await _circle(client, "land", 3, wisdom=16)
+    await _seat(test_session_factory, druid, GM_ID)
+    async with test_session_factory() as s:
+        ally = await s.get(Character, hero)
+        ally.hit_points, ally.current_hit_points = 40, 5
+        await s.commit()
+    uses = lambda: _ability(client, druid, "druid.wild_shape")  # noqa: E731
+    before = (await uses())["uses"]
+    r = await client.post(f"/characters/{druid}/features/druid.lands_aid/use", json={"params": {"mode": "other", "target_character_id": hero}})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["received"] == {"name": "Eroe", "healed": 6} and body["healed"] == 0  # 2d6 con i dadi a 3: va all'alleato, non al druido
+    assert "GM" not in body["message"]["it"] + body["message"]["en"] and all(t == t.rstrip() for t in body["message"].values())
+    assert (await uses())["uses"] == before - 1  # un uso di Forma Selvatica
+    async with test_session_factory() as s:
+        assert (await s.get(Character, hero)).current_hit_points == 11
