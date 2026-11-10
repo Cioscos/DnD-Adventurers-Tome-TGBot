@@ -634,7 +634,10 @@ CIRCLE_FEATURES: tuple = (
             ("Spostare il Rifugio", "Move the Sanctuary"),
             ("Azione bonus, finché il cubo dura: lo sposti fino a 18 m su terreno entro 36 m da te.",
              "Bonus action while the cube lasts: move it up to 60 ft to ground within 120 ft of you."),
-            "bonus_action", subclass="land", on_use=OnUse(slot="bonus", cost=0, available=lambda c: state_on(c, SANCTUARY))),
+            "bonus_action", subclass="land", on_use=OnUse(
+                slot="bonus", cost=0, available=lambda c: state_on(c, SANCTUARY),
+                message=lambda _c, _p: {"it": "Sposti il cubo fino a 18 m, su terreno entro 36 m da te: lo segni sul tavolo.",
+                                        "en": "You move the cube up to 60 ft, to ground within 120 ft of you: mark it on the table."})),
 
     # Circolo della Luna
     feature("circle_forms", CK, ED, 3, "Forme del Circolo / Circle Forms (Circolo della Luna 3, pag. 86)", ("Forme del Circolo", "Circle Forms"),
@@ -727,6 +730,9 @@ CIRCLE_FEATURES: tuple = (
             ("Arciere e Calice salgono a 2d8, Drago vola; a inizio turno in Forma Stellare cambi costellazione.",
              "Archer and Chalice rise to 2d8, Dragon flies; at the start of your turn in Starry Form you change constellation."),
             subclass="stars", on_use=OnUse(cost=0, once_per_turn=True, available=lambda c: state_on(c, STARRY), effect=_change_constellation,
+                                           message=lambda _c, p: {lg: (f"La Forma Stellare passa alla costellazione {_CONSTELLATIONS[p['constellation']][lg]}, senza spendere usi né rinnovare la durata." if lg == "it"
+                                                                      else f"Starry Form switches to the {_CONSTELLATIONS[p['constellation']][lg]} constellation, with no use spent and no new duration.")
+                                                                  for lg in ("it", "en")},
                                            choices=(_CONSTELLATION_CHOICE,))),
     feature("full_of_stars", CK, ED, 14, "Pieno di Stelle / Full of Stars (Circolo delle Stelle 14, pag. 89)", ("Pieno di Stelle", "Full of Stars"),
             ("Con la Forma Stellare: Resistenza ai danni Contundenti, Perforanti e Taglienti.",

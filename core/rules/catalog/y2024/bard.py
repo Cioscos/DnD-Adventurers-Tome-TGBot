@@ -70,6 +70,8 @@ def _font_regain(ctx: RuleContext, _params: dict) -> None:
 
 FONT_USE = OnUse(
     cost=0, spends_slot="slot_level", available=_font_available, effect=_font_regain,
+    message=lambda _c, p: {"it": f"Slot di {p.get('slot_level')}° livello speso: recuperi un uso di Ispirazione Bardica.",
+                           "en": f"Level {p.get('slot_level')} slot spent: you regain one use of Bardic Inspiration."},
     choices=(UseChoice("slot_level", {"it": "Slot da spendere", "en": "Slot to spend"}, _font_levels,
                        lambda level: {"it": f"Slot di {level}° livello", "en": f"Level {level} slot"}),))
 

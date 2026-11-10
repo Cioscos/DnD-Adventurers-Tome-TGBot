@@ -459,7 +459,10 @@ DOMAIN_FEATURES = (
             ("Muovere il Duplicato", "Move the Duplicate"),
             ("Azione bonus, finché l'illusione esiste: la sposti fino a 9 m in uno spazio libero visibile entro 36 m da te.",
              "Bonus action while the illusion exists: move it up to 30 ft to an unoccupied space you can see within 120 ft of you."),
-            "bonus_action", subclass="trickery", on_use=OnUse(slot="bonus", cost=0, available=lambda c: state_on(c, "invoke_duplicity"))),
+            "bonus_action", subclass="trickery", on_use=OnUse(
+                slot="bonus", cost=0, available=lambda c: state_on(c, "invoke_duplicity"),
+                message=lambda _c, _p: {"it": "Sposti l'illusione fino a 9 m, in uno spazio libero visibile entro 36 m da te: la segni sul tavolo.",
+                                        "en": "You move the illusion up to 30 ft, to an unoccupied space you can see within 120 ft of you: mark it on the table."})),
     feature("tricksters_transposition", CK, ED, 6, "Trasposizione dell'Ingannatore / Trickster's Transposition (Inganno 6, pag. 76)",
             ("Trasposizione dell'Ingannatore", "Trickster's Transposition"),
             ("Con l'azione bonus che crea o muove l'illusione puoi scambiare il posto con lei.",

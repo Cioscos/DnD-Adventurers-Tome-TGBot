@@ -56,6 +56,10 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
     if (typeof d[k] === 'string') out.push(t(`character.turn.state_option.${d[k]}`))
   }
   if (d.until === 'next_turn_end') out.push(t('character.turn.state_until_next_turn_end'))
+  // Ira 2024: il tipo scelto (Natura Selvaggia) e la vera scadenza, non i 100 round del tetto
+  if (typeof d.wild === 'string') out.push(t(`character.turn.rage_wild.${d.wild}`, { defaultValue: d.wild }))
+  if (typeof d.power === 'string') out.push(t(`character.turn.rage_power.${d.power}`, { defaultValue: d.power }))
+  if (s.ends_on?.includes('turn_end_unextended')) out.push(t('character.turn.state_rage_unextended'))
   if (typeof d.duplicates === 'number') out.push(t('character.turn.state_duplicates', { n: d.duplicates }))
   if (s.key === 'divine_intervention') {
     out.push(t(d.success ? 'character.turn.divine_success' : 'character.turn.divine_failure', { roll: d.roll ?? '-', level: d.level }))
@@ -131,7 +135,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
                 {typeof s.data?.die === 'number' && (
                   <span className="ml-2 font-mono text-dnd-text-muted">d{s.data.die}</span>
                 )}
-                {s.rounds_left != null && (
+                {s.rounds_left != null && !s.ends_on?.includes('turn_end_unextended') && (
                   <span className="ml-2 text-dnd-text-muted tabular-nums">{s.rounds_left > 10 ? formatRounds(t, s.rounds_left) : t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
                 )}
               </p>

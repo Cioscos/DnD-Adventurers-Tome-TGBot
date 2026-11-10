@@ -56,6 +56,16 @@ describe('ActiveStatesBar', () => {
     expect(screen.queryByText('Invocare Duplicato')).not.toBeInTheDocument()
   })
 
+  it('shows the chosen Rage of the Wilds and its real end, not the 100-round cap (point 35)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { ...rage, rounds_left: 100, ends_on: ['unconscious', 'turn_end_unextended'], data: { wild: 'wolf', power: 'lion' } },
+    ], [{ id: 1, name: 'Ira', feature_key: 'barbarian.rage' }])} />)
+    expect(screen.getByText(/character\.turn\.rage_wild\.wolf/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.rage_power\.lion/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_rage_unextended/)).toBeInTheDocument()
+    expect(screen.queryByText(/100/)).not.toBeInTheDocument()
+  })
+
   it('translates the name of the Haste lethargy, which the server saves in one language', () => {
     renderWithProviders(<ActiveStatesBar char={char([
       { key: 'spell:haste_lethargy', feature_key: 'spell:haste', rounds_left: null, ends_on: ['manual'], name: 'Letargia di Velocità', data: { spell_key: 'haste_lethargy' } },

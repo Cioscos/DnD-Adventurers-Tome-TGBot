@@ -119,7 +119,7 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
     if old_key not in chosen or new_key not in _available(char, cls, ch)[0]:
         raise _bad("invalid_replacement")
     if ch.protected and old_key in ch.protected(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)):
-        raise _bad("option_is_prerequisite")
+        raise HTTPException(422, detail={"code": "option_is_prerequisite"})
     if ch.replace_per_long_rest:  # un solo cambio per riposo lungo, per classe (uno dei due incantesimi); il primo di sempre è libero (nessun riposo registrato)
         swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
         if swaps.get(str(cls.id), {}).get("at", "-") == (char.last_long_rest_at or ""):
@@ -151,7 +151,7 @@ def resolve_class_option(session: AsyncSession, char: Character, choice: dict, p
         raise _bad(f"Pick exactly {need or count} distinct valid options")
     if ch is not None and ch.batch_ok and not ch.batch_ok(RuleContext(char=char, edition=character_edition(char), class_row=cls,
                                                                         class_level=cls.level), picked):
-        raise _bad("option_prerequisite")
+        raise HTTPException(422, detail={"code": "option_prerequisite"})
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
     if ch is not None:
         apply_grants(char, ch, picked)

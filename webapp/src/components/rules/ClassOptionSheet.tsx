@@ -36,7 +36,7 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
       haptic.success()
       onClose()
     },
-    onError: () => haptic.error(),
+    onError: (err) => notifyMutationError(err),  // dice il motivo (prerequisito) invece di vibrare in silenzio
   })
 
   const toggle = (key: string) => {

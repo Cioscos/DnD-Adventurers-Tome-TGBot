@@ -268,8 +268,8 @@ async def test_an_invocation_that_fails_its_prerequisite_is_refused(client):
     assert (await _resolve(client, cid, "invocations", ["armor_of_shadows", "eldritch_smite", "devils_sight"])).status_code == 422
     assert (await _resolve(client, cid, "invocations", ["armor_of_shadows", "agonizing_blast__eldritch_blast", "devils_sight"])).status_code == 422
     cid = await _warlock24(client, 5)  # una supplica che ne richiede un'altra: va scelta insieme o gia posseduta
-    assert (await _resolve(client, cid, "invocations", ["thirsting_blade", "armor_of_shadows", "devils_sight", "eldritch_mind", "misty_visions"])
-            ).status_code == 422
+    refused = await _resolve(client, cid, "invocations", ["thirsting_blade", "armor_of_shadows", "devils_sight", "eldritch_mind", "misty_visions"])
+    assert refused.status_code == 422 and refused.json()["detail"] == {"code": "option_prerequisite"}  # punto 40: il motivo arriva alla UI
     assert (await _resolve(client, cid, "invocations", [BLADE, "thirsting_blade", "devils_sight", "eldritch_mind", "misty_visions"])).status_code == 200
 
 
@@ -288,7 +288,8 @@ async def test_a_pact_that_another_invocation_needs_cannot_be_replaced_but_a_fre
     klass = (await _full(client, cid))["classes"][0]
     replace = lambda old, new: client.post(f"/characters/{cid}/classes/{klass['id']}/options/replace",  # noqa: E731
                                            json={"group": "invocations", "old_key": old, "new_key": new})
-    assert (await replace(BLADE, "fiendish_vigor")).status_code == 422
+    blocked = await replace(BLADE, "fiendish_vigor")
+    assert blocked.status_code == 422 and blocked.json()["detail"] == {"code": "option_is_prerequisite"}
     assert (await replace("eldritch_mind", "fiendish_vigor")).status_code == 200
     assert (await replace("thirsting_blade", "misty_visions")).status_code == 200
     assert (await replace(BLADE, "otherworldly_leap")).status_code == 200

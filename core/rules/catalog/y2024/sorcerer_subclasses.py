@@ -130,7 +130,7 @@ BASTION_USE = OnUse(
     slot="action", ally_state=True, ally_exclusive=True, spends=SP, cost_by=lambda _c, p: int(p.get("points") or 1),
     state=lambda _c, p: StateSpec("bastion_of_law", ends_on=("rest_long", "manual"), data={"dice": int(p.get("points") or 1)}),
     choices=(UseChoice("points", _both("Punti stregoneria (un d8 ciascuno)", "Sorcery points (one d8 each)"), lambda _c: [str(n) for n in range(1, 6)],
-                       lambda k: _both(f"{k} punti, {k}d8", f"{k} points, {k}d8")),))
+                       lambda k: _both(f"{k} {'punto' if k == '1' else 'punti'}, {k}d8", f"{k} {'point' if k == '1' else 'points'}, {k}d8")),))
 TRANCE_USE = _restorable(f"{P}trance_of_order", 5, slot="bonus", state=StateSpec("trance_of_order", rounds=10, ends_on=("manual",)))
 CAVALCADE_USE = _restorable(
     f"{P}clockwork_cavalcade", 7, slot="action",
