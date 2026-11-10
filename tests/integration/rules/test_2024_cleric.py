@@ -365,6 +365,9 @@ async def test_wish_blocks_divine_intervention_for_2d4_long_rests_and_counts_the
     assert lock["data"] == {"roll": [1, 1], "rests_left": 2, "locked": True}
     spell = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["level"] == 9)
     assert spell["name"] == "Desiderio / Wish"  # punto 32: bilingue come i nomi dei privilegi
+    r = await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"free_cast": True})
+    assert r.status_code == 200, r.text
+    assert "Duplica un incantesimo" in r.json()["spell_effects"]["text"]["it"]  # I2: il catalogo lo riconosce ancora
     for expected_locked in (True, False):
         await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})
         r = await _use(client, cid, DI, params={"spell": "Cura ferite", "spell_level": "1"})

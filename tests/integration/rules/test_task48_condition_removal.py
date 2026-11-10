@@ -286,7 +286,7 @@ async def test_a_double_tap_on_the_same_use_spends_and_removes_once(client, test
     first = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
     assert first.status_code == 200
     again = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
-    assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used"  # azione bonus già spesa
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "nothing_to_remove"  # il veleno è già tolto
     assert await _pool(client, paladin) == 20
 
 

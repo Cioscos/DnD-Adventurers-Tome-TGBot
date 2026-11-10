@@ -56,13 +56,12 @@ describe('ActiveStatesBar', () => {
     expect(screen.queryByText('Invocare Duplicato')).not.toBeInTheDocument()
   })
 
-  it('shows the chosen Rage of the Wilds and its real end, not the 100-round cap (point 35)', () => {
+  it('shows the real end of the Rage, not the 100-round cap (the chosen types are said once, by the option rows) (point 35)', () => {
     renderWithProviders(<ActiveStatesBar char={char([
       { ...rage, rounds_left: 100, ends_on: ['unconscious', 'turn_end_unextended'], data: { wild: 'wolf', power: 'lion' } },
     ], [{ id: 1, name: 'Ira', feature_key: 'barbarian.rage' }])} />)
-    expect(screen.getByText(/character\.turn\.rage_wild\.wolf/)).toBeInTheDocument()
-    expect(screen.getByText(/character\.turn\.rage_power\.lion/)).toBeInTheDocument()
     expect(screen.getByText(/character\.turn\.state_rage_unextended/)).toBeInTheDocument()
+    expect(screen.queryByText(/rage_wild|rage_power/)).not.toBeInTheDocument()
     expect(screen.queryByText(/100/)).not.toBeInTheDocument()
   })
 

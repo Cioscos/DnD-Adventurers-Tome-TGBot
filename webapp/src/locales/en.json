@@ -42,7 +42,7 @@
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
       "once_per_turn": "You can use it only once per turn.",
       "replace_after_long_rest": "You can swap it once per long rest: rest and try again.",
-      "option_prerequisite": "One of the chosen options needs another option you do not have: pick the prerequisite first.",
+      "option_prerequisite": "One of the chosen options needs another option you do not have: pick it together with its prerequisite or after taking it.",
       "option_is_prerequisite": "This option is the prerequisite of another one you chose: you cannot swap it."
     },
     "error_boundary": {
@@ -1593,8 +1593,6 @@
       "state_start_damage": "{{n}} radiant damage to enemies at the start of their turns",
       "state_until_next_turn_end": "Until the end of your next turn",
       "state_rage_unextended": "Until the end of your next turn, unless you extend it",
-      "rage_wild": { "bear": "Bear", "eagle": "Eagle", "wolf": "Wolf" },
-      "rage_power": { "falcon": "Falcon", "lion": "Lion", "ram": "Ram" },
       "state_duplicates": "Duplicates: {{n}}",
       "wish_lock": "Locked: roll {{roll}}, {{n}} long rests left",
       "divine_success": "Success (d100 {{roll}} vs {{level}}): wait 7 days, then end the state",

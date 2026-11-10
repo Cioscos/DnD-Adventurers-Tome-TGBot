@@ -56,9 +56,7 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
     if (typeof d[k] === 'string') out.push(t(`character.turn.state_option.${d[k]}`))
   }
   if (d.until === 'next_turn_end') out.push(t('character.turn.state_until_next_turn_end'))
-  // Ira 2024: il tipo scelto (Natura Selvaggia) e la vera scadenza, non i 100 round del tetto
-  if (typeof d.wild === 'string') out.push(t(`character.turn.rage_wild.${d.wild}`, { defaultValue: d.wild }))
-  if (typeof d.power === 'string') out.push(t(`character.turn.rage_power.${d.power}`, { defaultValue: d.power }))
+  // Ira 2024: la vera scadenza, non i 100 round del tetto (i tipi scelti li dicono già le righe delle opzioni)
   if (s.ends_on?.includes('turn_end_unextended')) out.push(t('character.turn.state_rage_unextended'))
   if (typeof d.duplicates === 'number') out.push(t('character.turn.state_duplicates', { n: d.duplicates }))
   if (s.key === 'divine_intervention') {

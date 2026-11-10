@@ -290,6 +290,7 @@ async def test_life_giving_force_rolls_the_rage_damage_in_d6_for_another_creatur
     assert len(body["rolls"]) == dice and body["given"] == sum(body["rolls"])
     assert (await _use(client, cid, "life_giving_force")).status_code == 409  # una volta per turno
     assert (await _full(client, cid))["temp_hp"] == level  # i suoi PF temporanei non cambiano
+    assert "Ira" in body["message"]["it"] and "Rage" in body["message"]["en"]  # I1: svaniscono con l'Ira
 
 
 async def test_branches_of_the_tree_is_a_reaction_with_a_strength_save_dc(client):
@@ -379,6 +380,7 @@ async def test_divine_fury_adds_d6_plus_half_the_level_of_a_chosen_type_once_per
     assert r.status_code == 200, r.text
     result = r.json()["option_result"]
     assert len(result["extra_rolls"]) == 1 and result["extra_total"] == result["extra_rolls"][0] + flat
+    assert result["extra_types"] == ["radiant"]  # I1: l'esito dice il tipo scelto
     keys = await _keys(client, cid, "attack", item_id=sword)
     assert not [k for k in keys if k.startswith("barbarian.divine_fury")]
 

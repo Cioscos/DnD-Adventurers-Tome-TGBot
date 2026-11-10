@@ -42,7 +42,7 @@
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
       "once_per_turn": "Puoi usarlo una sola volta per turno.",
       "replace_after_long_rest": "Puoi sostituirla una sola volta per riposo lungo: riposa e riprova.",
-      "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: scegli prima il prerequisito.",
+      "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: sceglila insieme al prerequisito o dopo averlo preso.",
       "option_is_prerequisite": "Questa opzione è il prerequisito di un'altra che hai scelto: non puoi sostituirla."
     },
     "error_boundary": {
@@ -1592,8 +1592,6 @@
       "state_start_damage": "{{n}} danni radiosi ai nemici a inizio turno",
       "state_until_next_turn_end": "Fino alla fine del tuo prossimo turno",
       "state_rage_unextended": "Fino alla fine del tuo prossimo turno, se non la prolunghi",
-      "rage_wild": { "bear": "Orso", "eagle": "Aquila", "wolf": "Lupo" },
-      "rage_power": { "falcon": "Falco", "lion": "Leone", "ram": "Ariete" },
       "state_duplicates": "Duplicati: {{n}}",
       "wish_lock": "Bloccato: tiro {{roll}}, ancora {{n}} riposi lunghi",
       "divine_success": "Riuscito (d100 {{roll}} su {{level}}): attendi 7 giorni, poi termina lo stato",
