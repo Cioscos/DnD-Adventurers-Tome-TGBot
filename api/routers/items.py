@@ -1163,6 +1163,7 @@ async def cast_from_scroll(
     body: ScrollCast,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Usare Dispositivi Magici (Furfante 2024, 13°): lancio da una pergamena. Livelli 0-1 riescono sempre; dal 2° prova di
     Intelligenza (Arcano) CD 10 + livello. La pergamena si consuma; l'effetto dell'incantesimo resta a parole."""
@@ -1173,14 +1174,15 @@ async def cast_from_scroll(
     if item.item_type != "consumable" or item_meta(item).get("subtype") != "scroll" or item.quantity <= 0:
         raise HTTPException(status_code=409, detail="not_a_scroll")
     level = body.spell_level
-    ok, text = True, f"{item.name}: incantesimo di livello {level} lanciato."
+    it = lang != "en"
+    ok, text = True, f"{item.name}: incantesimo di livello {level} lanciato." if it else f"{item.name}: level {level} spell cast."
     if level >= 2:
         die = random.randint(1, 20)
         total = die + await check_bonus(session, char, "intelligence", "arcana")
         ok = total >= 10 + level
-        text = (f"Arcano {die} → {total} contro CD {10 + level}: "
-                + (f"{item.name} riesce, l'incantesimo di livello {level} ha effetto." if ok
-                   else f"{item.name} si disintegra, l'incantesimo non ha effetto."))
+        text = ((f"Arcano {die} → {total} contro CD {10 + level}: " if it else f"Arcana {die} → {total} against DC {10 + level}: ")
+                + ((f"{item.name} riesce, l'incantesimo di livello {level} ha effetto." if it else f"{item.name} works, the level {level} spell takes effect.") if ok
+                   else (f"{item.name} si disintegra, l'incantesimo non ha effetto." if it else f"{item.name} disintegrates, the spell has no effect.")))
     item.quantity = max(0, item.quantity - 1)
     add_history(session, char.id, "item_used", f"Pergamena {item.name} (livello {level}): " + ("riuscita" if ok else "disintegrata"))
     await session.flush()

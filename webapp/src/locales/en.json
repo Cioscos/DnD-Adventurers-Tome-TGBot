@@ -2040,6 +2040,7 @@
       "magic_bonus_label": "Magic bonus (+0 to +10)",
       "versatile_dice_label": "Two-handed die (versatile)",
       "mastery": "Mastery: {{name}}",
+      "mastery_names": { "cleave": "Cleave", "graze": "Graze", "nick": "Nick", "push": "Push", "sap": "Sap", "slow": "Slow", "topple": "Topple", "vex": "Vex" },
       "reach_bonus": "Reach +{{value}} on your turn",
       "base_weapon_label": "Base weapon (for mastery)",
       "base_weapon_auto": "From the item name",

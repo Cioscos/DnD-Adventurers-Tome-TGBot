@@ -1,4 +1,8 @@
 /** Armi della tabella 2024 (`core/rules/weapons.py:WEAPONS`), per scegliere l'arma base di un oggetto dal nome libero. */
+/** Nome della maestria nella lingua dell'interfaccia (il server manda la chiave inglese, minuscola o capitalizzata). */
+export const masteryLabel = (t: (k: string, o?: Record<string, unknown>) => string, mastery: string): string =>
+  t(`character.inventory.mastery_names.${mastery.toLowerCase()}`, { defaultValue: mastery.charAt(0).toUpperCase() + mastery.slice(1) })
+
 export const WEAPON_KINDS: { key: string; it: string; en: string; mastery: string }[] = [
   { key: 'club', it: 'Randello', en: 'Club', mastery: 'Slow' },
   { key: 'dagger', it: 'Pugnale', en: 'Dagger', mastery: 'Nick' },

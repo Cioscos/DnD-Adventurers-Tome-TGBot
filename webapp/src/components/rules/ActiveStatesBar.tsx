@@ -113,6 +113,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
           : s.key === 'shadow_step_strike' ? t('character.turn.shadow_strike_name') // nomi scritti dal server nella lingua di chi li ha creati
           : s.key === 'bastion_of_law' ? t('character.turn.bastion_of_law_name')
           : s.key === 'spell:haste_lethargy' ? t('character.roll_notes.spell.haste_lethargy') // lo stato lo scrive il server, nella lingua del lanciatore
+          : s.key === 'improved_duplicity_ready' ? char.abilities.find((a) => a.feature_key?.endsWith('.improved_duplicity'))?.name ?? s.name ?? t('character.turn.state_generic') // l'offerta di fine illusione non porta il nome di Invocare Duplicato
           : char.abilities.find((a) => a.feature_key === s.feature_key)?.name ?? s.name ?? t('character.turn.state_generic')
         // Privilegi che agiscono su altri (Lupo, Orso, Attacco Irruento): il testo sta sotto lo stato, il GM li applica (D1).
         const others = ((s.data?.others as string[] | undefined) ?? [])

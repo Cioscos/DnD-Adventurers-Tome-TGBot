@@ -48,6 +48,14 @@ describe('ActiveStatesBar', () => {
     expect(screen.getAllByText(/character\.turn\.state_radius/).length).toBeGreaterThanOrEqual(3)
   })
 
+  it('names the end-of-illusion offer after Improved Duplicity, not after Invoke Duplicity (point 32)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'improved_duplicity_ready', feature_key: 'cleric.invoke_duplicity', rounds_left: null, ends_on: ['manual'], name: 'Invocare Duplicato', data: {} },
+    ], [{ id: 1, feature_key: 'cleric.invoke_duplicity', name: 'Invocare Duplicato' }, { id: 2, feature_key: 'cleric.improved_duplicity', name: 'Improved Duplicity' }])} />)
+    expect(screen.getByText('Improved Duplicity')).toBeInTheDocument()
+    expect(screen.queryByText('Invocare Duplicato')).not.toBeInTheDocument()
+  })
+
   it('translates the name of the Haste lethargy, which the server saves in one language', () => {
     renderWithProviders(<ActiveStatesBar char={char([
       { key: 'spell:haste_lethargy', feature_key: 'spell:haste', rounds_left: null, ends_on: ['manual'], name: 'Letargia di Velocità', data: { spell_key: 'haste_lethargy' } },

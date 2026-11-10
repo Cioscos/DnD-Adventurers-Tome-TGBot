@@ -666,3 +666,20 @@ def test_minori_46_a_feature_attack_saves_the_roll_so_a_declared_miss_gives_the_
         last = char.turn_state["last_roll"]
         assert last["roll"] == "attack" and last["die"] == die and "miss_refund" not in char.turn_state
         assert bool(char.conditions.get("invisible")) is back and bool(last["refundable"]) is not back  # su un 12 il giocatore dichiara il mancato
+
+
+async def test_minori_32_scroll_outcome_follows_the_request_language(client, monkeypatch):
+    from api.auth import get_current_lang
+    from api.main import app
+    cid = await _sub(client, "thief", 13)
+    iid = await _scroll(client, cid)
+    _fixed(monkeypatch, 1)
+    app.dependency_overrides[get_current_lang] = lambda: "en"
+    try:
+        r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 3})
+        assert "disintegrates" in r.json()["homebrew_notifications"][0]["message"]
+        iid = await _scroll(client, cid)
+        r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 1})
+        assert "cast" in r.json()["homebrew_notifications"][0]["message"]
+    finally:
+        app.dependency_overrides[get_current_lang] = lambda: "it"

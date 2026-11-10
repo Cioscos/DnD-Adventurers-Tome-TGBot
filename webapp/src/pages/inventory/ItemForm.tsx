@@ -33,7 +33,7 @@ import { ContainerFields } from './ContainerForm'
 import { defaultContainer, roundLb, type ContainerFormValue } from '@/lib/containers'
 import type { Item } from '@/types'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
-import { WEAPON_KINDS } from '@/data/weaponMastery'
+import { WEAPON_KINDS, masteryLabel } from '@/data/weaponMastery'
 
 interface ItemFormProps {
   initialData?: Item | null
@@ -347,7 +347,7 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
                   className="w-full min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm font-body text-dnd-text focus:border-dnd-gold/60 focus:outline-none"
                 >
                   <option value="">{t('character.inventory.base_weapon_auto')}</option>
-                  {WEAPON_KINDS.map((w) => <option key={w.key} value={w.key}>{w[lang]} · {w.mastery}</option>)}
+                  {WEAPON_KINDS.map((w) => <option key={w.key} value={w.key}>{w[lang]} · {masteryLabel(t, w.mastery)}</option>)}
                 </select>
               </div>
             )}

@@ -2039,6 +2039,7 @@
       "magic_bonus_label": "Bonus magico (+0 a +10)",
       "versatile_dice_label": "Dado a due mani (versatile)",
       "mastery": "Maestria: {{name}}",
+      "mastery_names": { "cleave": "Fendere", "graze": "Scalfire", "nick": "Intaccare", "push": "Spingere", "sap": "Fiaccare", "slow": "Rallentare", "topple": "Atterrare", "vex": "Molestare" },
       "reach_bonus": "Portata +{{value}} nel tuo turno",
       "base_weapon_label": "Arma base (per la maestria)",
       "base_weapon_auto": "Dal nome dell'oggetto",

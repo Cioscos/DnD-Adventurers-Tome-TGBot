@@ -272,7 +272,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
         <p role="status" className="text-sm font-mono tabular-nums text-dnd-text px-3 py-2 rounded-xl bg-dnd-surface-raised border border-dnd-border">
           {result.name}: {result.r.to_hit_die}{result.r.to_hit_bonus >= 0 ? '+' : ''}{result.r.to_hit_bonus} = {result.r.to_hit_total}
           {result.r.is_critical && ` · ${t('character.extras.critical')}`}
-          {' · '}{result.r.damage_total} {result.r.damage_type ?? ''}
+          {' · '}{result.r.damage_total} {result.r.damage_type ? t(`character.inventory.damage_types.dmg_${result.r.damage_type}`, { defaultValue: result.r.damage_type }) : ''}
           {result.r.is_magical && ` · ${t('character.extras.magical')}`}
           <RollNotes notes={result.r.notes} className="mt-1" />
         </p>

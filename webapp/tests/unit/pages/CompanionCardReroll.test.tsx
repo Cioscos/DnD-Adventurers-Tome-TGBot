@@ -61,7 +61,7 @@ describe('CompanionCard damage reroll', () => {
     expect(reroll).toHaveAttribute('data-roll', 'weapon_damage')
     expect(reroll).toHaveAttribute('data-dice', '2/d6')
     await userEvent.click(reroll)
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('8 piercing'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('8 character.inventory.damage_types.dmg_piercing'))
   })
 
   it('has no reroll on a miss or a damageless action', async () => {

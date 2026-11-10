@@ -20,6 +20,7 @@ import RollButton from '@/components/ui/RollButton'
 import RarityBadge from '@/components/ui/RarityBadge'
 import { itemCharges, itemGrantedSpells, itemRarity, isAttuned, requiresAttunement, type ItemBonus } from '@/lib/itemMagic'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
+import { masteryLabel } from '@/data/weaponMastery'
 import type { RollMode } from '@/api/client'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 
@@ -92,7 +93,7 @@ function ItemStatChips({ item, edition }: { item: Item; edition?: string }) {
       if (edition === '2024' && item.mastery) {
         chips.push(
           <Chip key="mastery" icon={<Swords size={12} />}>
-            {t('character.inventory.mastery', { name: item.mastery.charAt(0).toUpperCase() + item.mastery.slice(1) })}
+            {t('character.inventory.mastery', { name: masteryLabel(t, item.mastery) })}
           </Chip>
         )
       }

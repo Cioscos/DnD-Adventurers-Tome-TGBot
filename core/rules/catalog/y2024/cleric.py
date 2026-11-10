@@ -175,7 +175,7 @@ def _di_effect(ctx: RuleContext, params: dict) -> None:
     from core.db.models import Spell  # import locale: i modelli non servono al resto del catalogo
     wish = bool(params.get("wish"))
     tag = f"{STOLEN_SPELL}{uuid.uuid4().hex[:12]}"
-    name = "Desiderio" if wish else str(params["spell"]).strip()
+    name = "Desiderio / Wish" if wish else str(params["spell"]).strip()
     ctx.char.spells.append(Spell(
         character_id=ctx.char.id, name=name, level=9 if wish else int(params["spell_level"]), srd_index=tag,
         class_id=ctx.class_row.id, is_prepared=True, always_prepared=True))
