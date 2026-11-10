@@ -24,7 +24,7 @@ _LETHARGY = "spell:haste_lethargy"
 
 def _lethargy(d: dict) -> dict:
     """Alla fine di Velocità il bersaglio resta in letargia fino alla fine del suo turno successivo (``states.settle_closed``)."""
-    edition = d.get("edition", "2014")
+    edition = d["edition"]
     # 2014: «non può muoversi né compiere azioni» (``no_actions``), senza la condizione Incapacitato e quindi senza perdere la concentrazione.
     # 2024: Incapacitato, e come ogni Incapacitato fa cadere la concentrazione del bersaglio (``drops_concentration``, la applica il flush).
     return {"key": _LETHARGY, "name": "Letargia di Velocità", "ends_on": ["new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"],
