@@ -29,7 +29,7 @@ def _lethargy(d: dict) -> dict:
     # 2024: Incapacitato, e come ogni Incapacitato fa cadere la concentrazione del bersaglio (``drops_concentration``, la applica il flush).
     return {"key": _LETHARGY, "name": "Letargia di Velocità", "ends_on": ["new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"],
             **({"condition": "incapacitated"} if edition == "2024" else {}),
-            "data": {"skip_new_turns": 1, "spell_key": "haste_lethargy", "edition": edition,
+            "data": {"skip_new_turns": 1, "spell_key": "haste_lethargy", "edition": edition, "caster_id": d.get("caster_id"),
                      **({"drops_concentration": True} if edition == "2024" else {"no_actions": True})}}
 
 

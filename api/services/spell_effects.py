@@ -29,6 +29,8 @@ from core.rules.types import StateSpec
 
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
                  "en": "Outside an evening the effect is not applied automatically: the GM applies it to the targets."}
+_AURA_TEXT = {"it": "L'aura vale per tutti i personaggi seduti alla serata finché dura: sta al GM escludere chi è lontano.",
+              "en": "The aura applies to everyone seated at the evening while it lasts: the GM leaves out whoever is far away."}
 _NO_SHEET_TEXT = {"it": "L'effetto non è sulla scheda di nessun personaggio: riferiscilo al GM.",
                   "en": "The effect is not on any character's sheet: tell the GM."}
 
@@ -253,7 +255,6 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             variant.on_apply(target, mine)
         await _give_hp(session, target, variant, mine, key)
         applied.append({"id": target.id, "name": target.name})
-    shown = [{"id": caster.id, "name": caster.name}] if aura else applied
     ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
     begin_state(caster, StateSpec(clock, rounds=variant.duration(slot_level), ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
@@ -266,7 +267,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     else:
         settings.pop(SPELL_RELEASE, None)
     caster.settings = settings
-    return SpellEffectsRead(applied=shown, text=variant.text or (_OUTSIDE_TEXT if outside else None))
+    text = {k: f"{variant.text[k]} {_AURA_TEXT[k]}" for k in _AURA_TEXT} if aura and variant.text else _AURA_TEXT if aura else variant.text  # l'aura non è «su <lanciatore>»
+    return SpellEffectsRead(applied=applied, text=text or (_OUTSIDE_TEXT if outside else None))
 
 
 async def regrant_spells(session: AsyncSession, caster: Character, before_given: dict | None) -> None:
@@ -287,6 +289,8 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
                 continue
             if held is None:
                 begin_state(target, spell_state_spec(key, state["data"]["state_data"]), key, state.get("name"))
+                if offer := state["data"]["state_data"].get("on_close"):  # lo stato che la chiusura aveva lasciato (la letargia) non ha più motivo di esserci
+                    await _drop_state(session, target, offer["key"], caster.id)
                 lost = (target.settings or {}).get(SPELL_TEMP_DROPPED, {}).get(key)  # i PF temporanei che la chiusura le aveva tolto
                 if lost and lost["caster_id"] == caster.id and not target.temp_hp:
                     target.temp_hp = lost["amount"]

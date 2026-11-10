@@ -101,8 +101,8 @@ _DIVINE_FAVOR_OPTION = _extra("divine_favor:damage", txt("Favore Divino: +1d4 ra
 _DIVINE_FAVOR_2014 = SpellVariant(options=(_DIVINE_FAVOR_OPTION,), concentration=True, rounds=MIN1)
 _DIVINE_FAVOR_2024 = SpellVariant(options=(_DIVINE_FAVOR_OPTION,), rounds=MIN1)  # 2024: niente concentrazione
 
-_MANTLE_TEXT = txt("Chi è nell'aura infligge 1d4 radiosi in più con gli attacchi con arma (già nel totale). L'aura raggiunge ogni seduto alla serata: sta al GM escludere chi è lontano.",
-                   "Whoever is in the aura deals an extra 1d4 radiant damage with weapon attacks (already in the total). The aura reaches everyone seated at the evening: the GM leaves out whoever is far away.")
+_MANTLE_TEXT = txt("Chi è nell'aura infligge 1d4 radiosi in più con gli attacchi con arma (già nel totale).",
+                   "Whoever is in the aura deals an extra 1d4 radiant damage with weapon attacks (already in the total).")
 _MANTLE_2014 = SpellVariant(
     options=(_extra("crusaders_mantle:damage", txt("Manto del Crociato: +1d4 radiosi", "Crusader's Mantle: extra 1d4 radiant"), "1d4", "radiant", _weapon),),
     concentration=True, rounds=MIN1, text=_MANTLE_TEXT)

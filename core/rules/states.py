@@ -84,6 +84,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     drop_spell_temp_hp(char, closed)
     release_given_spells(char, closed)
     release_suspended(char, closed)
+    end_extra_action(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
         if offer:
@@ -93,6 +94,20 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
     if gone:
         char.conditions = {**(char.conditions or {}), **{c: False for c in gone}}
+
+
+def end_extra_action(char: Any, closed: list[dict]) -> None:
+    """Velocità finisce nel turno in corso: l'azione extra che aveva dato a questo turno (``turn_state["haste_action"]``) non resta."""
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa i tipi degli incantesimi
+    turn = getattr(char, "turn_state", None) or {}
+    if not turn.get("haste_action"):
+        return
+    for s in closed:
+        effect = SPELL_EFFECTS.get((s.get("data") or {}).get("spell_key"))
+        variant = effect and effect.variants.get((s.get("data") or {}).get("edition", "2014"))
+        if variant and variant.extra_action and str(s.get("key", "")).startswith(SPELL_STATE_PREFIX):
+            char.turn_state = {**turn, "extra_actions": max(0, int(turn.get("extra_actions") or 0) - 1), "haste_action": False}
+            return
 
 
 def release_given_temp_hp(char: Any, closed: list[dict]) -> None:

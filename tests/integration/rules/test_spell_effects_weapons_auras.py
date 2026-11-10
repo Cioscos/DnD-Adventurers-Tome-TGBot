@@ -200,7 +200,8 @@ async def test_aura_of_life_resists_necrotic_for_every_seated_creature_without_s
     hero, caster, spell = await _table(client, test_session_factory, "Aura of Life", "aura-of-life", 4)
     assert await _hit(client, hero, 10, "necrotic") == 10
     r = await _cast(client, caster, spell, [hero], level=4)  # i bersagli indicati non servono: l'aura è del lanciatore
-    assert [a["id"] for a in r.json()["spell_effects"]["applied"]] == [caster]
+    effects = r.json()["spell_effects"]  # non «su <lanciatore>»: vale per i seduti alla serata
+    assert effects["applied"] == [] and "seduti alla serata" in effects["text"]["it"] and "everyone seated" in effects["text"]["en"]
     assert not [s for s in (await _sheet(client, hero))["active_states"] or [] if s["key"].startswith("spell:")]
     assert await _hit(client, hero, 10, "necrotic") == 5
     assert await _hit(client, hero, 10, "fire") == 10
@@ -334,3 +335,31 @@ async def test_haste_lethargy_2024_is_incapacitated_and_drops_the_concentration_
     await _end_concentration(client, caster)
     sheet = await _sheet(client, hero)
     assert sheet["conditions"].get("incapacitated") and sheet["concentrating_spell_id"] is None
+
+
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+async def test_undoing_the_damage_that_ended_haste_also_takes_away_the_lethargy_it_left(client, test_session_factory, edition):
+    hero, caster, spell = await _table(client, test_session_factory, "Haste", "haste", 3, hero_edition=edition, caster_edition=edition)
+    await _cast(client, caster, spell, [hero], level=3)
+    as_user(GM_ID)
+    assert (await client.patch(f"/characters/{caster}/hp", json={"op": "set_current", "value": 5})).status_code == 200
+    r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 100, "damage_type": "fire"})
+    assert r.status_code == 200, r.text
+    keys = {s["key"] for s in (await _sheet(client, hero))["active_states"] or []}
+    assert "spell:haste_lethargy" in keys and "spell:haste" not in keys
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})).status_code == 200
+    back = await _sheet(client, hero)
+    keys = {s["key"] for s in back["active_states"] or []}
+    assert "spell:haste" in keys and "spell:haste_lethargy" not in keys
+    assert not back["conditions"].get("incapacitated") and not back["computed"]["incapacitated"]
+
+
+async def test_the_turn_in_which_haste_ends_does_not_keep_its_extra_action(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Haste", "haste", 3)
+    await _cast(client, caster, spell, [hero], level=3)
+    assert (await _new_turn(client, hero))["extra_actions"] == 1
+    await _end_concentration(client, caster)
+    as_user(PLAYER_ID)
+    state = (await client.get(f"/characters/{hero}/turn-state")).json()
+    assert state["turn"]["extra_actions"] == 0 and state["attacks_allowed"] == 1
