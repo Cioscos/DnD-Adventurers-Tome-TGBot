@@ -215,6 +215,7 @@ def _cast_option(key: str, label: dict, cost: int | Cost = 1, **kw: Any) -> Roll
                           cost=cost if isinstance(cost, Cost) else Cost(feature_key=SP, amount=cost), label=label, **kw)
 
 
+TWINNED_KEY, EXTENDED_KEY = _meta("twinned"), _meta("extended")  # il servizio degli effetti li legge dalle opzioni di lancio
 SUBTLE_KEY = _meta("subtle")  # il router degli incantesimi non chiude il nascondiglio con la componente verbale
 SUBTLE = _cast_option(
     "subtle", {"it": "Incantesimo Celato: lancia senza componenti somatiche né verbali (1 punto)",

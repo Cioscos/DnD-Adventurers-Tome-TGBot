@@ -5,7 +5,7 @@ import { ApiError } from '@/api/client'
 
 /** Codici del server con un testo proprio (`common.server_errors.<codice>`) per i rifiuti che non hanno un messaggio di pagina. */
 const SERVER_ERRORS = [
-  'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'nothing_to_remove', 'target_dead', 'invalid_target',
+  'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'nothing_to_remove', 'target_dead', 'invalid_target', 'self_only_spell',
   'feature_unavailable', 'rest_needs_hp', 'long_rest_too_soon', 'state_locked',
   'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest',
   'option_prerequisite', 'option_is_prerequisite', 'class_already_present',
@@ -31,7 +31,7 @@ export function notifyMutationError(err?: unknown): void {
   else toast.error(i18n.t(actionFailedKey(err)))
 }
 
-const CAST_ERRORS = ['turn_slot_used', 'no_uses', 'pact_slot_required', 'surge_no_magic', 'invalid_target', 'target_dead', 'invalid_choice', 'option_unavailable']
+const CAST_ERRORS = ['turn_slot_used', 'no_uses', 'pact_slot_required', 'surge_no_magic', 'invalid_target', 'target_dead', 'self_only_spell', 'invalid_choice', 'option_unavailable']
 
 /** Un lancio rifiutato dal server per una regola (azione già spesa, usi finiti) lo dice con il suo testo; il resto è un errore generico. */
 export function notifyCastError(err: unknown): void {

@@ -81,10 +81,10 @@ _FIRE_SHIELD = SpellVariant(
              "A creature that hits you in melee within 5 ft takes 2d8 damage (fire with the warm shield, cold with the cold one): on every damage you take the app reminds you, the GM applies it."))
 
 _FEIGN_DEATH = SpellVariant(
-    condition="incapacitated", immune_conditions=("poisoned",), rounds=HOUR,
+    condition="incapacitated", also_conditions=("blinded",), immune_conditions=("poisoned",), rounds=HOUR,
     modifiers=lambda d: (Modifier("speed_zero", 1), *(Modifier(f"resistance:{t}", 1) for t in DAMAGE_TYPES if t != "psychic")),
-    text=txt("Appare morto a ogni ispezione ed è anche accecato (non segnato sulla scheda). Il veleno non ha effetto finché dura.",
-             "Appears dead to any inspection and is also blinded (not marked on the sheet). Poison has no effect while it lasts."))
+    text=txt("Appare morto a ogni ispezione ed è anche accecato. Il veleno non ha effetto finché dura.",
+             "Appears dead to any inspection and is also blinded. Poison has no effect while it lasts."))
 
 _PROT_ENERGY = SpellVariant(
     modifiers=lambda d: (Modifier(f"resistance:{(d.get('choices') or {}).get('damage_type')}", 1),),

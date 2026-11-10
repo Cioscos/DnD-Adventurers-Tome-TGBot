@@ -33,6 +33,7 @@
       "nothing_to_remove": "Nessuna delle condizioni scelte è presente: nessun punto è stato speso.",
       "target_dead": "Il bersaglio è morto.",
       "invalid_target": "Il bersaglio non è valido.",
+      "self_only_spell": "Questo incantesimo vale solo per chi lo lancia: non si può dare ad altri.",
       "feature_unavailable": "Ora non puoi usarlo.",
       "rest_needs_hp": "A 0 PF non puoi riposare: serve prima almeno un punto ferita.",
       "long_rest_too_soon": "L'ultimo riposo lungo è troppo recente.",
@@ -926,6 +927,7 @@
           "pact_slot_required": "Serve uno slot da warlock (slot di Patto).",
           "surge_no_magic": "L'azione di Azione Impetuosa non può essere Magia.",
           "invalid_target": "Il bersaglio non è valido.",
+          "self_only_spell": "Questo incantesimo vale solo per chi lo lancia: non si può dare ad altri.",
           "target_dead": "Il bersaglio è morto.",
           "invalid_choice": "La scelta non è valida.",
           "option_unavailable": "Quell'opzione non è disponibile per questo lancio."

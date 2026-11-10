@@ -34,7 +34,7 @@ def _lethargy(d: dict) -> dict:
 
 
 _HASTE = SpellVariant(
-    modifiers=lambda d: (Modifier("ac", 2), Modifier("speed", lambda ctx: ctx.char.speed),
+    modifiers=lambda d: (Modifier("ac", 2), Modifier("speed_double", 1),
                          adv(lambda c: c.roll == "save" and c.ability == "dexterity")),
     concentration=True, rounds=10, extra_action=True, on_close=_lethargy,
     text=txt("Azione extra a ogni turno (un solo attacco, Scatto, Disimpegno, Nascondersi o Usare un Oggetto): la trovi nel Turno. Alla fine non può muoversi né agire fino alla fine del turno successivo (letargia, automatica).",

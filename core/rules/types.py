@@ -138,6 +138,7 @@ class StateSpec:
     immune_conditions: tuple[str, ...] = ()
     end_slot: str | None = None
     condition: str | None = None
+    also_conditions: tuple[str, ...] = ()  # altre condizioni imposte insieme a ``condition`` (Morte Apparente: Incapacitato e Accecato)
 
     def __post_init__(self) -> None:
         unknown = set(self.ends_on) - ENDS_ON

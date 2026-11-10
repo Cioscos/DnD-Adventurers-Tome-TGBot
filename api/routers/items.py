@@ -1113,7 +1113,8 @@ async def cast_from_item(
     if meta.get("requires_attunement") and not meta.get("attuned"):
         raise HTTPException(status_code=409, detail="attunement_required")
     fx_spell = item_spell(spell)
-    resolved = await validate_spell_targets(session, char, fx_spell, fx_spell.level, body.targets, body.choices)  # prima di spendere
+    fx_level = max(fx_spell.level, int(spell.get("slot_level") or 0))  # l'oggetto può lanciarlo a un livello più alto
+    resolved = await validate_spell_targets(session, char, fx_spell, fx_level, body.targets, body.choices)  # prima di spendere
     variant = resolved[1] if resolved else None  # durata e concentrazione del catalogo battono i metadati dell'oggetto
     cost = int(spell.get("charges_cost") or 0)
     ch = meta.get("charges") if isinstance(meta.get("charges"), dict) else None
@@ -1133,14 +1134,14 @@ async def cast_from_item(
             next((s for s in char.spells if idx and s.srd_index == idx), None)
             or next((s for s in char.spells if s.name.lower() == name), None)
         )
-        rounds = variant.duration(fx_spell.level) if variant else parse_duration_rounds(spell.get("duration"))
+        rounds = variant.duration(fx_level) if variant else parse_duration_rounds(spell.get("duration"))
         if match:
             start_concentration(char, match.id, rounds)
         else:
             start_concentration(char, None, rounds, {"item_id": item.id, "name": spell["name"]})
         await release_concentration_effects(session, char)
 
-    spell_fx = await apply_spell_effects(session, char, fx_spell, fx_spell.level, body.targets, body.choices)
+    spell_fx = await apply_spell_effects(session, char, fx_spell, fx_level, body.targets, body.choices)
     add_history(session, char.id, "spell_cast",
                  f"Lanciato {spell['name']} da {item.name} ({cost} cariche)",
                  meta={"item_id": item.id})

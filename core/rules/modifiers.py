@@ -29,7 +29,7 @@ _FLAT_TARGET = {
     "initiative": "initiative", "passive": "passive", "skill": "skill", "ability": "skill",
     "reach": "reach", "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
 }
-_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed",
+_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "speed_double", "carry_double", "fly_speed",
           "climb_speed", "swim_speed",
           "maximize_healing", "magic_weapon"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
@@ -49,6 +49,7 @@ class Applied:
     notes: list[str] = field(default_factory=list)
     speed_zero: bool = False
     speed_half: bool = False
+    speed_double: bool = False  # velocità raddoppiata, dopo tutte le somme (Velocità)
     hp_half: bool = False
     replace_die: int | None = None  # d20 dichiarato (Portento): nessun dado si tira
     min_total: int | None = None  # totale minimo di una prova (Potenza Indomabile)
@@ -364,7 +365,7 @@ def effective_speed(char: Any, base: int) -> int:
     applied = modifiers_for(char, "speed")
     if applied.speed_zero:
         return 0
-    total = base + applied.flat
+    total = (base + applied.flat) * (2 if applied.speed_double else 1)
     return max(0, total // 2 if applied.speed_half else total)
 
 

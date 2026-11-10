@@ -505,13 +505,14 @@ async def use_spell(
         removal = (rule, picked, await resolve_targets(session, char, rule, body.removal.targets), body.removal.conditions is not None)
 
     fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
-    await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices)  # prima di spendere
+    await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.options or [])  # prima di spendere
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
-    spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
+    spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.options or [],
+                                         no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or [])))
     if spell.srd_index == "find-steed" and not (body.free_cast or body.as_ritual) and any(
             s.key == STEED for s, _row in active_features(char)):  # Destriero Fedele: il lancio con slot crea il destriero del suo livello
         await session.refresh(char, attribute_names=["companions"])
@@ -575,12 +576,13 @@ async def spell_attack(
         spend_inspiration_reroll(char)
     else:
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
-        await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices)  # prima di spendere
+        await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.cast_options)  # prima di spendere
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
                                                       silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.cast_options or [])),
                                                       war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
                                                       no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options or []))))
-        spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
+        spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices, body.cast_options,
+                                             no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options)))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
@@ -671,7 +673,8 @@ def _end_cast(char: Character, opts: Any = None) -> None:
     al lancio; le opzioni di Metamagia restano sul turno, perché Trasmutato (al danno) rispetti il limite di una per incantesimo."""
     turn = get_turn(char)
     meta = [k for k in (opts.keys if opts is not None else []) if k.startswith("sorcerer.metamagic_")]
-    changed = any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None])  # nuovo lancio: Invocazione Potente si riapre
+    changed = any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None,  # nuovo lancio: Invocazione Potente si riapre
+                   turn.pop(SPELL_ATTACK_DICE, None) is not None])  # e i dadi extra di un attacco precedente (forse mancato) non contano
     if meta or turn.get("cast_metamagic"):
         turn["cast_metamagic"], changed = meta, True
     if changed:
