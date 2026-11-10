@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from core.db.models import Ability, Character, CharacterClass, CharacterHistory, Spell, SpellSlot
 from api.schemas.character import CharacterFull, SpellAttackResult
@@ -779,6 +779,7 @@ async def roll_spell_damage(
     body: RollDamageRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> RollDamageResult:
     char = await _get_owned_full(char_id, user_id, session)
     spell = next((s for s in char.spells if s.id == spell_id), None)
@@ -933,9 +934,8 @@ async def roll_spell_damage(
         "casting_level": casting_level,
         "is_critical": body.is_critical,
     }
-    if hasattr(char, "rolls_history") and isinstance(char.rolls_history, list):
-        char.rolls_history.append(history_entry)
-        await session.commit()
+    if isinstance(char.rolls_history, list):  # niente commit qui: la richiesta ne fa uno solo, alla fine
+        char.rolls_history = [*char.rolls_history, history_entry]
 
     all_extra = second_rolls + extra_rolls
     extra_kind = f"d{second_sides}" if second_rolls else (f"d{extra_sides}" if extra_rolls else None)
@@ -959,7 +959,7 @@ async def roll_spell_damage(
         twinned_damage=_twinned_damage(char, spell, base_count, sides, base_bonus),
         save_success_damage=half_damage if _potent_cantrip(char, spell) else None,
     )
-    await _self_damage(session, char, opts, spell, result)
+    await _self_damage(session, char, opts, spell, result, lang)
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
     base_dice = ([[sides, v] for v in main_rolls] + [[second_sides, v] for v in second_rolls]
                  + [[extra_sides, v] for v in extra_rolls])
@@ -985,7 +985,7 @@ def _potent_cantrip(char: Character, spell: Spell) -> bool:
         spec.save_half_cantrips and (kind != "ATK" or spec.cantrip_half_on_miss) for spec, _row in active_features(char))
 
 
-async def _self_damage(session: AsyncSession, char: Character, opts: Any, spell: Spell, result: RollDamageResult) -> None:
+async def _self_damage(session: AsyncSession, char: Character, opts: Any, spell: Spell, result: RollDamageResult, lang: str) -> None:
     """Saturazione Magica dal secondo uso: i dadi necrotici si tirano e si applicano a chi lancia con lo stesso percorso di ogni
     danno, ma senza resistenze né immunità (``damage_modifier="none"``). L'esito entra fra gli effetti mostrati."""
     from api.routers.hp import update_hp  # import locale: hp importa questo modulo
@@ -996,7 +996,7 @@ async def _self_damage(session: AsyncSession, char: Character, opts: Any, spell:
         record_dice(char, [(f"d{sides}", v) for v in rolls])
         total = sum(rolls)
         await update_hp(char.id, HPUpdate(op=HPOp.DAMAGE, value=total, damage_type=damage_type, damage_modifier="none"),
-                        char.user_id, session, "it")
+                        char.user_id, session, lang)
         note = {"it": f"{spell.name}: subisci {total} danni necrotici ({expr}), senza resistenze né immunità.",
                 "en": f"{spell.name}: you take {total} necrotic damage ({expr}), ignoring resistance and immunity."}
         if result.option_result is not None:
