@@ -503,3 +503,29 @@ async def test_t10_76_a_smite_cast_after_the_hit_frees_the_conditions_of_the_pre
     assert r.status_code == 200, r.text
     async with test_session_factory() as s:
         assert "frightened" not in (await s.get(Combatant, goblin)).conditions
+
+
+async def test_t10_76_a_pending_save_effect_ends_with_the_concentration_and_a_late_save_applies_nothing(client, test_session_factory, monkeypatch):
+    from sqlalchemy import select
+    from core.db.models import Combatant, ConditionEffect, PendingSave
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    for name, srd, lvl in (("Punizione Collerica", "wrathful-smite", 1), ("Punizione Splendente", "shining-smite", 2)):
+        await client.post(f"/characters/{cid}/spells", json={"name": name, "srd_index": srd, "level": lvl, "is_concentration": True})
+        await client.post(f"/characters/{cid}/spell_slots", json={"level": lvl, "total": 2})
+    wid = await _sword(client, cid)
+    assert (await _damage(client, cid, await _deferred(client, cid, wid), [WRATHFUL], **{WRATHFUL: {"slot_level": 1}})).status_code == 200
+    effect = (await client.get(f"/characters/{cid}/target-effects/{WRATHFUL}")).json()
+    goblin = next(c["id"] for c in effect["combatants"] if c["kind"] == "monster")
+    save = (await client.post(f"/characters/{cid}/target-effects", json={"combatant_id": goblin, "effect_key": WRATHFUL})).json()["pending_save_id"]
+    await client.post(f"/characters/{cid}/turn/new")
+    shining = "spell:shining_smite:hit"  # nuova concentrazione: la Collerica finisce con il suo TS ancora in attesa
+    assert (await _damage(client, cid, await _deferred(client, cid, wid), [shining], **{shining: {"slot_level": 2}})).status_code == 200
+    async with test_session_factory() as s:
+        assert (await s.execute(select(ConditionEffect).where(ConditionEffect.combatant_id == goblin))).scalars().all() == []
+        assert await s.get(PendingSave, save) is None
+    as_user(GM_ID)
+    late = await client.post(f"/sessions/{sid}/encounter/pending-saves/{save}/resolve", json={"passed": False})
+    assert late.status_code == 404
+    async with test_session_factory() as s:
+        assert "frightened" not in ((await s.get(Combatant, goblin)).conditions or {})

@@ -201,6 +201,12 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
     from api.services.effects import apply_conditions  # circular import
     from api.services.history import add_history
     label = condition_label(eff.slug)
+    if eff.pending:  # TS ancora in attesa: la condizione non c'è mai stata (nulla di preesistente si tocca) e un TS tardivo non deve applicarla
+        for ps in (await db.execute(select(PendingSave).where(PendingSave.effect_id == eff.id))).scalars():
+            await db.delete(ps)
+        await db.delete(eff)
+        await db.flush()
+        return label
     snapshot = effect_snapshot(eff)
     saves = [effect_snapshot(ps) for ps in (await db.execute(select(PendingSave).where(
         PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
