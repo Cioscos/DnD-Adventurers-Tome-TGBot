@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from core.rules.catalog.spells import spell_effect
 from core.rules.modifiers import effective_speed, modifiers_for, rule_hp_bonus
 
@@ -55,3 +57,12 @@ def test_new_defense_states_are_read_by_the_rules():
     assert not modifiers_for(fake_char(_state("foresight", 9, "2024")), "passive").advantage
     assert modifiers_for(fake_char(_state("mind_blank", 8, "2014")), None).immunities == {"psychic"}
     assert modifiers_for(fake_char(_state("true_seeing", 6, "2024")), None).senses == {"truesight": 120}
+
+
+# 94: indice SRD e numero di bersagli di Aiuto (sempre 3) e Passo Lungo (uno per livello dello slot), uguali nelle due edizioni
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+def test_94_aid_and_longstrider_srd_index_and_number_of_targets(edition):
+    aid, longstrider = spell_effect(edition, "aid")[0], spell_effect(edition, "longstrider")[0]
+    assert (aid.key, longstrider.key) == ("aid", "longstrider")
+    assert [aid.max_targets(edition, slot) for slot in range(2, 10)] == [3] * 8
+    assert [longstrider.max_targets(edition, slot) for slot in range(1, 10)] == list(range(1, 10))

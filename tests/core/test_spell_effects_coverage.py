@@ -48,10 +48,20 @@ def test_every_inventory_spell_has_a_catalog_entry(index, edition):
 
 
 def test_text_only_entries_have_italian_and_english_text():
-    for index in TABLE_D:
-        effect, variant = spell_effect("2024" if "2024" in TABLE_D[index] else "2014", index)
-        assert variant.text and variant.text["it"] and variant.text["en"], index
-        assert not variant.modifiers({}), index
+    for index, editions in TABLE_D.items():  # ogni edizione indicata, non una sola
+        for edition in editions:
+            variant = spell_effect(edition, index)[1]
+            assert variant.text and variant.text["it"] and variant.text["en"], (index, edition)
+            assert not variant.modifiers({}), (index, edition)
+
+
+def test_99_an_instant_text_entry_is_not_tracked_and_a_lasting_one_is():
+    from core.rules.catalog.spells.texts import _instant, _text
+    instant = _instant("Subito.", "Now.")
+    assert instant.track is False and instant.rounds is None and not instant.concentration and instant.text == {"it": "Subito.", "en": "Now."}
+    assert _text("Dura.", "Lasts.", 10).track is True
+    for index, edition in (("wish", "2014"), ("wish", "2024"), ("destructive-wave", "2014"), ("destructive-wave", "2024"), ("flame-strike", "2014"), ("conjure-barrage", "2014"), ("conjure-volley", "2014")):
+        assert spell_effect(edition, index)[1].track is False, (index, edition)
 
 
 def test_registry_has_no_duplicate_srd_index():
