@@ -12,7 +12,7 @@ from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.spell_effects import SPELL_STATE_PREFIX
-from core.rules.states import SPELL_SPENT, has_state, immune_conditions
+from core.rules.states import SPELL_SPENT, has_state, immune_conditions, state_conditions
 from core.rules.uses import pool_key
 from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
@@ -380,14 +380,15 @@ def throws_unarmed(char: Any, keys: list[str]) -> bool:
 def _spend_state_token(char: Any, key: str) -> str:
     """Chiude lo stato ``key`` (o, se ha più ``data["charges"]``, ne scala una) e restituisce il gettone che
     ``refund_spent`` usa per rimetterlo com'era."""
-    state = next(s for s in char.active_states or [] if s.get("key") == key)
-    rest = [s for s in char.active_states if s.get("key") != key]
+    state = [s for s in char.active_states or [] if s.get("key") == key][-1]  # con due lanciatori (stesso incantesimo) vale, e si spende, l'ultimo
+    rest = [s for s in char.active_states if s is not state]
     charges = (state.get("data") or {}).get("charges")
     if type(charges) is int and charges > 1:
         rest.append({**state, "data": {**state["data"], "charges": charges - 1}})
     char.active_states = rest
     caster = (state.get("data") or {}).get("caster_id")
-    if key.startswith(SPELL_STATE_PREFIX) and caster is not None and not any(s.get("key") == key for s in rest):
+    if key.startswith(SPELL_STATE_PREFIX) and caster is not None and not any(
+            s.get("key") == key and (s.get("data") or {}).get("caster_id") == caster for s in rest):
         settings = char.settings or {}  # l'incantesimo termina con l'ultimo uso: il flush chiude il lanciatore
         char.settings = {**settings, SPELL_SPENT: [*(settings.get(SPELL_SPENT) or []), {"caster_id": caster, "key": key}]}
     return f"state:{key}:{json.dumps(state)}"
@@ -650,14 +651,15 @@ def refund_spent(char: Any, spent: list[str]) -> None:
         elif kind == "state":
             key, _, blob = rest.partition(":{")  # la chiave può avere i due punti (``spell:guidance``)
             state = json.loads("{" + blob)
-            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), state]
+            owner = (state.get("data") or {}).get("caster_id")  # uno stato per lanciatore: si rimette solo il suo
+            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key or (s.get("data") or {}).get("caster_id") != owner), state]
             if key.startswith(SPELL_STATE_PREFIX):  # l'incantesimo non è finito: il pagamento annullato toglie la fine in attesa
                 pending = (char.settings or {}).get(SPELL_SPENT) or []
                 mine = next((e for e in pending if e["key"] == key and e["caster_id"] == (state.get("data") or {}).get("caster_id")), None)
                 if mine is not None:
                     char.settings = {**char.settings, SPELL_SPENT: [e for e in pending if e is not mine]}
-            if state.get("condition"):  # lo stato rimesso rimette anche la condizione che imponeva
-                char.conditions = {**(char.conditions or {}), state["condition"]: True}
+            if state.get("condition"):  # lo stato rimesso rimette anche le condizioni che imponeva
+                char.conditions = {**(char.conditions or {}), **{c: True for c in state_conditions(state)}}
         elif kind == "die":
             key, _, value = rest.rpartition(":")
             _store_saved_dice(char, key, [*saved_dice(char, key), int(value)])

@@ -43,6 +43,7 @@ class SpellVariant:
     on_apply: Callable[[Any, dict], None] | None = None
     text: dict[str, str] | None = None
     condition: str | None = None  # condizione che lo stato impone al bersaglio e toglie quando finisce (Invisibile)
+    also_conditions: tuple[str, ...] = ()  # altre condizioni imposte e tolte con ``condition`` (Morte Apparente: Accecato)
     immune_conditions: tuple[str, ...] = ()  # condizioni che il bersaglio non può avere finché dura
     ends_on: tuple[str, ...] = ("manual",)  # fini dello stato sul bersaglio (``attack`` / ``cast``: Invisibilità)
     max_targets: Callable[[int], int] | None = None  # sostituisce ``target.count`` quando il numero di bersagli cambia con l'edizione (Saltare 2014)
@@ -104,11 +105,11 @@ def own_aura_clocks(char: Any) -> list[dict]:
 
 def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, dict]]:
     """Gli incantesimi che agiscono su ``char``: ``(stato, effetto, variante, data)``. Sono i suoi stati ``spell:*`` e le aure vive di incantesimi,
-    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo."""
+    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo (con due lanciatori sullo stesso bersaglio, l'ultimo)."""
     from core.rules.auras import party_auras  # import locale: auras usa il catalogo
     from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
 
-    out: list[tuple[dict, SpellEffect, SpellVariant, dict]] = []
+    by_spell: dict[str, tuple[dict, SpellEffect, SpellVariant, dict]] = {}  # due lanciatori, stesso incantesimo: vale l'ultimo
     for state in char.active_states or []:
         key = str(state.get("key", ""))
         if not key.startswith(SPELL_STATE_PREFIX):
@@ -117,7 +118,9 @@ def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, 
         effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
         variant = effect and effect.variants.get(data.get("edition", "2014"))
         if variant:
-            out.append((state, effect, variant, data))
+            by_spell.pop(effect.key, None)
+            by_spell[effect.key] = (state, effect, variant, data)
+    out = list(by_spell.values())
     seen: set[str] = set()
     for aura in [*own_aura_clocks(char), *party_auras(char, "spell")]:
         effect = SPELL_EFFECTS.get(aura["spell_key"])

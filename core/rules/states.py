@@ -15,6 +15,12 @@ def has_state(char: Any, key: str) -> bool:
     return any(s.get("key") == key for s in char.active_states or [])
 
 
+def state_conditions(state: dict) -> dict[str, bool]:
+    """Le condizioni che uno stato impone, ognuna con «c'era già»: quella principale e le ``also_conditions``."""
+    main = {state["condition"]: state.get("condition_was_on", False)} if state.get("condition") else {}
+    return {**main, **(state.get("also_conditions") or {})}
+
+
 def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
     """Avvia lo stato; se la chiave è già attiva lo rinnova. ``name``: come lo chiama il giocatore (``None``: nome generico)."""
     state = {"key": spec.key, "feature_key": feature_key, "rounds_left": spec.rounds,
@@ -24,10 +30,25 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
     if spec.condition:
         # rinnovare lo stato non cambia di chi era l'invisibilità: la prima volta ricorda se c'era già
         previous = next((s for s in get_states(char) if s.get("key") == spec.key and s.get("condition")), None)
-        was_on = previous.get("condition_was_on", False) if previous else bool((char.conditions or {}).get(spec.condition))
-        state.update(condition=spec.condition, condition_was_on=was_on)
-        char.conditions = {**(char.conditions or {}), spec.condition: True}
+        wanted = (spec.condition, *spec.also_conditions)
+        before = state_conditions(previous) if previous else {}
+        was = {c: before.get(c, bool((char.conditions or {}).get(c))) for c in wanted}
+        state.update(condition=spec.condition, condition_was_on=was[spec.condition])
+        if spec.also_conditions:
+            state["also_conditions"] = {c: was[c] for c in spec.also_conditions}
+        char.conditions = {**(char.conditions or {}), **{c: True for c in wanted}}
     char.active_states = [*(s for s in get_states(char) if s.get("key") != spec.key), state]
+    return state
+
+
+def begin_spell_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
+    """Come ``begin_state`` per uno stato ``spell:*``: uno stato per coppia (incantesimo, lanciatore). Quello di un altro lanciatore
+    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano."""
+    caster = spec.data.get("caster_id")
+    others = [s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") != caster]
+    state = begin_state(char, spec, feature_key, name)
+    if others:
+        char.active_states = [*others, *char.active_states]  # ``begin_state`` li aveva tolti
     return state
 
 
@@ -91,8 +112,8 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
         if offer:
             begin_state(char, StateSpec(offer["key"], ends_on=tuple(offer["ends_on"]), data=offer.get("data") or {}, condition=offer.get("condition")),
                         s["feature_key"], offer.get("name"))
-    gone = {s["condition"] for s in closed if s.get("condition") and not s.get("condition_was_on")}
-    gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
+    gone = {c for s in closed for c, was_on in state_conditions(s).items() if not was_on}
+    gone -= {c for s in char.active_states or [] for c in state_conditions(s)}  # un altro stato la impone ancora
     if gone:
         char.conditions = {**(char.conditions or {}), **{c: False for c in gone}}
 
@@ -129,9 +150,10 @@ def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
         char.settings = {**settings, TEMP_GIVEN: given, TEMP_RELEASE: [*(settings.get(TEMP_RELEASE) or []), *gone]}
 
 
-def note_spell_temp_hp(char: Any, state_key: str, amount: int) -> None:
-    """Lo stato ``state_key`` di ``char`` ricorda i PF temporanei che ha appena dato (l'ultimo valore vince)."""
-    char.active_states = [{**s, "data": {**(s.get("data") or {}), "temp_given": amount}} if s.get("key") == state_key else s
+def note_spell_temp_hp(char: Any, state_key: str, amount: int, caster_id: int | None = None) -> None:
+    """Lo stato ``state_key`` di ``char`` (di ``caster_id``, se indicato) ricorda i PF temporanei che ha appena dato (l'ultimo valore vince)."""
+    char.active_states = [{**s, "data": {**(s.get("data") or {}), "temp_given": amount}}
+                          if s.get("key") == state_key and (caster_id is None or (s.get("data") or {}).get("caster_id") == caster_id) else s
                          for s in char.active_states or []]
 
 

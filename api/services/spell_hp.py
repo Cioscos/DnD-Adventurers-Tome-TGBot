@@ -53,7 +53,7 @@ async def spell_turn_start(session: AsyncSession, char: Character) -> tuple[int,
                 notices.append({"feature_key": state["key"], "name": {"it": name, "en": name}, "amount": got})
         if variant.turn_temp_hp and (amount := variant.turn_temp_hp(data)) > 0:
             if grant_temp_hp(session, char, amount)["applied"]:
-                note_spell_temp_hp(char, state["key"], amount)
+                note_spell_temp_hp(char, state["key"], amount, data.get("caster_id"))
                 notices.append({"feature_key": state["key"], "name": {"it": name, "en": name}, "amount": 0, "message": {
                     "it": f"{name}: ottieni {amount} PF temporanei.", "en": f"{name}: you gain {amount} temporary HP."}})
     return healed, notices
