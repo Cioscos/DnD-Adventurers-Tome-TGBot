@@ -228,6 +228,7 @@ class AmmoState(BaseModel):
 
 class WeaponAttackResult(BaseModel):
     weapon_name: str
+    refundable: bool = False  # il tiro ha chiuso uno stato che un mancato dichiarato rimette (Velo Psichico): la domanda «riuscito?» è già in corso
     self_healed: int = 0  # PF che chi colpisce recupera per un privilegio (Succhiavita)
     to_hit_die: int
     dice: list[int] = []

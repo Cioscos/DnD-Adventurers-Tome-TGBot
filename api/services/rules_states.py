@@ -18,7 +18,7 @@ from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
-from core.rules.roll_options import keep_target_effect
+from core.rules.roll_options import keep_target_effect, refund_spent
 from core.rules.states import begin_state, has_state, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
@@ -144,6 +144,17 @@ def end_on_action(char, action: str, spell=None) -> None:
     if action == "attack":  # ogni attacco riparte da zero: un resto di quello prima non si attacca al tiro nuovo
         char.turn_state = {**{k: v for k, v in get_turn(char).items() if k != MISS_REFUND},
                            **({MISS_REFUND: {s["key"]: [f"state:{s['key']}:{json.dumps(s)}"] for s in held}} if held else {})}
+
+
+def end_on_feature_attack(char, attack: dict) -> None:
+    """Attacco di un privilegio (``spell_attack``): non ha un tiro salvato su cui dichiarare il mancato, quindi il Velo Psichico
+    chiuso torna solo su un 1 naturale (che manca sempre, come in ``remember_roll``); nessun gettone resta orfano."""
+    end_on_action(char, "attack")
+    turn = get_turn(char)
+    miss = turn.pop(MISS_REFUND, {})
+    char.turn_state = turn
+    if miss and attack["is_fumble"]:
+        refund_spent(char, [t for paid in miss.values() for t in paid])
 
 
 def state_name(char, state: dict) -> str:
@@ -445,7 +456,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     dice = parse_dice(formula) if formula else None
     if on_use.spell_attack:  # il d20 prima dei dadi: un mancato non fa danno, un critico li raddoppia
         result.attack = _feature_attack(char, on_use.spell_attack)
-        end_on_action(char, "attack")
+        end_on_feature_attack(char, result.attack)
         if dice:
             dice = (0 if result.attack["is_fumble"] else dice[0] * (2 if result.attack["is_critical"] else 1), dice[1])
     for _ in range(1 if on_use.rolls_by_amount else amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte

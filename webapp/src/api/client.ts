@@ -309,6 +309,8 @@ export type GMGrantItemResponse = {
 }
 
 export type WeaponAttackResult = {
+  /** Il tiro ha chiuso uno stato che il mancato dichiarato rimette (Velo Psichico). */
+  refundable?: boolean
   weapon_name: string
   to_hit_die: number
   dice?: number[]

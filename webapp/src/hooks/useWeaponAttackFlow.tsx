@@ -66,7 +66,7 @@ export function useAttackRoll() {
     const secondStep = async (first: WeaponAttackResult, inspiration: boolean): Promise<WeaponAttackResult | null> => {
       let result = first
       let canReroll = inspiration
-      let refundable = false  // dichiarare il mancato restituisce ciò che si paga solo se il tiro riesce
+      let refundable = !!first.refundable  // dichiarare il mancato restituisce ciò che si paga solo se il tiro riesce
       let used: string[] = []
       while (result.attack_id) {
         const bonus = `${result.to_hit_bonus >= 0 ? '+' : ''}${result.to_hit_bonus}`
@@ -107,9 +107,9 @@ export function useAttackRoll() {
           }
         }
         canReroll = false
-        refundable = false
         used = []
         result = await post(true, { dice: await rollD20('normal'), mode: 'normal', defer_damage: true })
+        refundable = !!result.refundable
       }
       return result
     }

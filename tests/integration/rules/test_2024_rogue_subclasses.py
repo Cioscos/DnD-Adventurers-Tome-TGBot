@@ -582,7 +582,7 @@ async def test_n1_a_blade_hit_ends_the_veil_and_a_declared_miss_gives_it_back(cl
     assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": False})).status_code == 409
 
     cid = await _veiled(client)
-    await _blade(client, cid, _k("psychic_blade"))
+    assert (await _blade(client, cid, _k("psychic_blade")))["refundable"]  # minori 46: il client sa che la domanda c'è già
     assert (await _turn(client, cid))["last_roll"]["refundable"]  # esce «Il tiro è riuscito?»
     assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": False})).status_code == 200
     veil = await _veil(client, cid)
@@ -648,3 +648,20 @@ async def test_i12_homing_strikes_need_the_psychic_blade(client):
     assert r.status_code == 200, r.text
     refused = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [_k("homing_strikes")]})
     assert refused.status_code == 409
+
+
+def test_minori_46_a_feature_attack_gives_the_veil_back_only_on_a_natural_one_and_leaves_no_token():
+    from types import SimpleNamespace
+
+    from api.services.rules_states import end_on_feature_attack
+    from core.rules.states import begin_state
+    from core.rules.catalog import features_for
+
+    spec = next(f.on_use.state for f in features_for("2024", "rogue") if f.key.endswith("psychic_veil"))
+    for fumble, back in ((False, False), (True, True)):
+        char = SimpleNamespace(conditions={}, active_states=[], settings={}, turn_state={}, spells=[], abilities=[])
+        begin_state(char, spec, "psychic_veil", "rogue.psychic_veil")
+        assert char.conditions.get("invisible")
+        end_on_feature_attack(char, {"is_fumble": fumble})
+        assert bool(char.conditions.get("invisible")) is back and any(s["key"] == "psychic_veil" for s in char.active_states) is back
+        assert "miss_refund" not in char.turn_state

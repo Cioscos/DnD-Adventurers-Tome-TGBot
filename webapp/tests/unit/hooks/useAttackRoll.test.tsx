@@ -218,6 +218,16 @@ describe('useAttackRoll', () => {
       expect(lastRollRefund).toHaveBeenCalledWith(1)
     })
 
+    it('a miss declared on an attack that already closed something refundable (Velo Psichico) refunds it, so the host does not ask again', async () => {
+      rollOptions.mockResolvedValue([add])
+      attack.mockResolvedValue({ ...hit, refundable: true })
+      lastRollRefund.mockResolvedValue({})
+      const done = start()
+      await userEvent.click(await screen.findByText('character.roll_options.miss'))
+      await expect(done).resolves.toBeNull()
+      expect(lastRollRefund).toHaveBeenCalledWith(1)
+    })
+
     it('the last available pay_if_success option keeps the prompt open: the miss still refunds, no automatic damage', async () => {
       rollOptions.mockResolvedValueOnce([add]).mockResolvedValueOnce([add]).mockResolvedValue([])
       attack.mockResolvedValue(hit)
