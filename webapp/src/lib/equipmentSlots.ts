@@ -123,7 +123,7 @@ export function equippedItemIcon(
     case 'weapon':
       return meta.weapon_type === 'ranged' ? BowIcon : Sword
     case 'armor': {
-      const at = typeof meta.armor_type === 'string' ? meta.armor_type : 'light'
+      const at = typeof meta.armor_type === 'string' ? meta.armor_type : 'heavy'
       if (at === 'heavy') return Shield
       if (at === 'medium') return ShieldHalf
       return Shirt // light

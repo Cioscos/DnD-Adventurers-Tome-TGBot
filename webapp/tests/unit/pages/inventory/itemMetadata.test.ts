@@ -124,3 +124,11 @@ describe('catalogPrefill', () => {
     expect(out).toEqual({ ...emptyForm, quantity: '3', name: 'Spada lunga', item_type: 'weapon' })
   })
 })
+
+describe('itemMetadata — armatura senza tipo (minori 27)', () => {
+  it('riaprire e salvare un\'armatura senza armor_type non le dà la Destrezza: il tipo resta come lo legge il server', () => {
+    const form = itemToFormData({ name: 'Maglia', item_type: 'armor', quantity: 1, weight: 0, item_metadata: { ac_value: 16 } })
+    expect(form.armor_type).toBe('heavy')
+    expect(itemToFormData({ name: 'C', item_type: 'armor', quantity: 1, weight: 0, item_metadata: { armor_type: 'light', ac_value: 11 } }).armor_type).toBe('light')
+  })
+})

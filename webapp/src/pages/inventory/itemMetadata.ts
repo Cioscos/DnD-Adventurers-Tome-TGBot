@@ -374,7 +374,7 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     versatile_dice: meta.versatile_dice ? String(meta.versatile_dice) : '',
     weapon_category: meta.weapon_category === 'simple' || meta.weapon_category === 'martial' ? meta.weapon_category : '',
     base_weapon: typeof meta.base_weapon === 'string' ? meta.base_weapon : '',
-    armor_type: String(meta.armor_type ?? 'light'),
+    armor_type: String(meta.armor_type ?? 'heavy'), // come il server: senza tipo niente Destrezza
     ac_value: String(meta.ac_value ?? '11'),
     stealth_disadvantage: !!meta.stealth_disadvantage,
     strength_req: String(meta.strength_req ?? '0'),
