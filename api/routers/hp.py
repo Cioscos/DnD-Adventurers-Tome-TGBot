@@ -271,7 +271,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             await attach_party(session, char)  # aure e Dono dei Protettori dei compagni della serata
             clocks = await foreign_spell_clocks(session, char)  # prima della spesa: uno stato speso chiude l'orologio di chi l'ha lanciato
-            opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
+            opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug, damage_in=raw)
             rolls, reduction = roll_option_dice(char, opts)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
             option_after = max(0, scale_damage(raw, opts.multiplier) - max(0, reduction + opts.bonus))

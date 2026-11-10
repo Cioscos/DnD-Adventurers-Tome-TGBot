@@ -368,13 +368,13 @@ def _form_materials(char: Any, spell: Any) -> str | None:
     return "form_materials_cost" if any(s.ignores_components for s in specs) else "form_materials"
 
 
-def _turn_warning(char: Any, spell: Any) -> str | None:
+def _turn_warning(char: Any, spell: Any, slotless: bool | None = None) -> str | None:
     kind = casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
         return None
     turn = char.turn_state or {}
     if character_edition(char) == "2024":
-        free = free_cast_state(char, spell)  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
+        free = free_cast_state(char, spell) if slotless is not False else None  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
         if free is not None and (free.get("data") or {}).get("free_cast_slot", "action") is None:
             return None
         return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") else None
@@ -383,7 +383,7 @@ def _turn_warning(char: Any, spell: Any) -> str | None:
     return "bonus_spell" if spell.level > 0 and turn.get("bonus_spell_cast") else None
 
 
-def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
+def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool | None = None) -> list[str]:
     """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char, spell):
@@ -396,7 +396,7 @@ def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
         out.append("ritual_only")
     if ritual:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
-    warning = _turn_warning(char, spell)
+    warning = _turn_warning(char, spell, slotless)
     return [*out, warning] if warning else out
 
 

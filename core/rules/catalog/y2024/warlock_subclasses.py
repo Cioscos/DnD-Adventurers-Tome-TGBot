@@ -19,6 +19,7 @@ from core.rules.catalog.y2014.warlock import (
     BLESSING_USE, THOUGHT_REFLECTION, _dc, _lock_resilience, _resilience_active, _resilience_check, _resilience_state,
 )
 from core.rules.catalog.y2014.warlock_invocations import _mod
+from core.rules.edition import class_key as row_class_key
 from core.rules.schools import normalize_school
 from core.rules.states import begin_state
 from core.rules.types import (
@@ -218,7 +219,7 @@ ESCAPE_USE = OnUse(
 
 
 def _halved(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
-    back = None if ctx.damage is None else ctx.damage // 2
+    back = None if ctx.damage_in is None else ctx.damage_in // 2
     tail = f": {back}." if back is not None else "."
     return _both(f"Difese Seducenti, CD {_dc(ctx)}: l'attaccante fa un TS Saggezza; se fallisce subisce danni psichici pari al danno che subisci tu" + tail,
                  f"Beguiling Defenses, DC {_dc(ctx)}: the attacker makes a Wisdom save; on a failure it takes psychic damage equal to the damage you take" + tail)
@@ -309,9 +310,12 @@ def _half_max(ctx: RuleContext) -> int:
     return effective_hp_max(ctx.char) // 2
 
 
-def _vengeance_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
+def _vengeance_effect(ctx: RuleContext, params: dict) -> TargetEffect:
+    """Accecate fino alla fine del turno in corso: quello di chi tira contro la morte. Per sé è il tuo (fine del tuo turno);
+    per un alleato il turno è il suo e l'app non sa quale sia, quindi resta un round."""
     mod = _cha(ctx)
-    return TargetEffect(condition="blinded", rounds=1, damage_dice=f"2d8+{mod}" if mod > 0 else "2d8")
+    when = {"ends_at": {"anchor": "source", "edge": "end", "count": 1}} if params.get("mode", "self") == "self" else {"rounds": 1}
+    return TargetEffect(condition="blinded", damage_dice=f"2d8+{mod}" if mod > 0 else "2d8", **when)
 
 
 def _vengeance_message(ctx: RuleContext, params: dict) -> dict[str, str]:
@@ -397,10 +401,27 @@ MIND_USE = OnUse(
     slot="bonus", state=lambda c, _p: StateSpec("awakened_mind", rounds=c.class_level * 10, ends_on=("rest_long", "manual")),
     message=lambda c, _p: _both(f"Legame telepatico con una creatura che vedi entro 9 m per {c.class_level} minuti; distanza: {max(1, _cha(c))} miglia. Un nuovo legame sostituisce il precedente.",
                                 f"Telepathic link with a creature you see within 30 ft for {c.class_level} minutes; range: {max(1, _cha(c))} miles. A new link replaces the old one."))
+def _warlock_spell(ctx: RuleContext) -> bool:
+    """L'incantesimo è del warlock (riga con la sua classe); senza classe segnata non si può escludere."""
+    spell = ctx.spell
+    if spell is None:
+        return False
+    if spell.class_id is None:
+        return True
+    return any(c.id == spell.class_id and row_class_key(c) == "warlock" for c in ctx.char.classes)
+
+
 PSYCHIC_TYPE = RollOptionSpec(
     key=PSYCHIC, phase="before", rolls=("spell_damage",), damage_type_to="psychic",
-    available=lambda c: c.spell is not None and bool(c.spell.damage_dice) and spell_damage_type(c) not in (None, "psychic"),
+    available=lambda c: _warlock_spell(c) and bool(c.spell.damage_dice) and spell_damage_type(c) not in (None, "psychic"),
     label=_both("Incantesimi Psichici: il danno di questo incantesimo da warlock è psichico", "Psychic Spells: this warlock spell's damage is psychic"))
+# Ammaliamento e Illusione del warlock: nessuna componente verbale né somatica (il router degli incantesimi la legge come l'Incantesimo Celato)
+PSYCHIC_SILENT = f"{P}psychic_spells_silent"
+PSYCHIC_NO_COMPONENTS = RollOptionSpec(
+    key=PSYCHIC_SILENT, phase="before", rolls=("cast",),
+    available=lambda c: _warlock_spell(c) and normalize_school(c.spell.school) in ("enchantment", "illusion"),
+    label=_both("Incantesimi Psichici: lancia senza componenti verbali né somatiche", "Psychic Spells: cast without verbal or somatic components"),
+    effect=lambda _c, _i: _both("L'incantesimo non ha componenti verbali né somatiche.", "The spell has no verbal or somatic components."))
 
 
 def _has_link(ctx: RuleContext) -> bool:
@@ -414,13 +435,18 @@ CLAIR_USE = _restorable(
                                 f"DC {_dc(c)}: the linked creature makes a Wisdom save; on a failure it has disadvantage on attack rolls against you and you have advantage against it for the link's duration."))
 
 
+_ABILITY_NAMES = {"strength": ("Forza", "Strength"), "dexterity": ("Destrezza", "Dexterity"), "constitution": ("Costituzione", "Constitution"),
+                  "intelligence": ("Intelligenza", "Intelligence"), "wisdom": ("Saggezza", "Wisdom"), "charisma": ("Carisma", "Charisma")}
+
+
 def _hex(ability: str) -> RollOptionSpec:
+    it, en = _ABILITY_NAMES[ability]
     return RollOptionSpec(
         key=f"{HEX}_{ability}", phase="before", rolls=("cast",), group="eldritch_hex", available=lambda c: _spell_is(c, "hex"),
         target_effect=lambda _c, _i: TargetEffect(note=f"eldritch_hex_{ability}"),
-        effect=lambda _c, _i: _both(f"Il bersaglio di Malia ha svantaggio anche ai tiri salvezza di {ability} per la durata.",
-                                    f"The target of Hex also has disadvantage on {ability} saving throws for the duration."),
-        label=_both(f"Maledizione Occulta: svantaggio anche ai TS di {ability}", f"Eldritch Hex: disadvantage also on {ability} saves"))
+        effect=lambda _c, _i: _both(f"Il bersaglio di Malia ha svantaggio anche ai tiri salvezza di {it} per la durata.",
+                                    f"The target of Hex also has disadvantage on {en} saving throws for the duration."),
+        label=_both(f"Maledizione Occulta: svantaggio anche ai TS di {it}", f"Eldritch Hex: disadvantage also on {en} saves"))
 
 
 def _thrall_text(ctx: RuleContext, _i: dict) -> dict[str, str]:
@@ -507,7 +533,7 @@ SUBCLASS_ROWS = (
     oldone("psychic_spells", 3, "Incantesimi Psichici", "Psychic Spells", 163,
            ("Un incantesimo da warlock che infligge danni può farli psichici. Quelli di Ammaliamento o Illusione si lanciano senza componenti verbali né somatiche.",
             "A warlock spell that deals damage can deal psychic damage. Enchantment or Illusion ones are cast without verbal or somatic components."),
-           roll_options=(PSYCHIC_TYPE,), passive=True),
+           roll_options=(PSYCHIC_TYPE, PSYCHIC_NO_COMPONENTS), passive=True),
     oldone("clairvoyant_combatant", 6, "Combattente Chiaroveggente", "Clairvoyant Combatant", 163,
            ("Formando il legame di Mente Risvegliata: TS Saggezza; se fallisce, svantaggio ai suoi attacchi contro di te e vantaggio ai tuoi contro di lei. Riposo breve o slot di Patto.",
             "Forming the Awakened Mind link: Wisdom save; on a failure, disadvantage on its attacks against you and advantage on yours against it. Short rest or a Pact slot."),

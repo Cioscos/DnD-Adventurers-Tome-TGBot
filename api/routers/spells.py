@@ -52,7 +52,7 @@ from api.services.d20 import d20_records, d20_history_label, resolve_applied, re
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
-from core.rules.catalog.y2024.warlock_subclasses import THRALL_CAST
+from core.rules.catalog.y2024.warlock_subclasses import PSYCHIC_SILENT, THRALL_CAST
 from core.rules.modifiers import modifiers_for
 from core.rules.types import RuleContext
 from api.schemas.companion import CompanionAttackResult
@@ -275,7 +275,7 @@ def _consume_cast(
             )
     slot = None if ritual or free_cast or ki or spell.level == 0 else _pick_slot(
         char, spell, slot_id, slot_level, pact_only=invocation is not None)
-    missing = [w for w in cast_warnings(char, spell, ritual) if w not in (confirm or [])]
+    missing = [w for w in cast_warnings(char, spell, ritual, slotless=bool(free_cast)) if w not in (confirm or [])]
     if missing:
         raise HTTPException(status_code=409, detail={"code": "cast_confirm", "warnings": missing})
 
@@ -547,7 +547,7 @@ async def use_spell(
     await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices)  # prima di spendere
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
-        body.ki, body.ki_extra, silent=SUBTLE_KEY in (body.options or []),
+        body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
@@ -616,7 +616,7 @@ async def spell_attack(
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
         await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices)  # prima di spendere
         await _charge_pact_use(session, _consume_cast(session, char, spell, body.slot_id, body.slot_level, body.ritual, body.confirm,
-                                                      silent=SUBTLE_KEY in (body.cast_options or []),
+                                                      silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.cast_options or [])),
                                                       war_magic=bool(WAR_MAGIC_KEYS & set(body.cast_options or [])),
                                                       no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options or []))))
         spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)

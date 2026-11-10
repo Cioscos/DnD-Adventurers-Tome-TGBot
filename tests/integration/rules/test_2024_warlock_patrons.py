@@ -353,7 +353,8 @@ async def test_searing_vengeance_raises_a_dying_warlock_to_half_hp_and_blinds_th
     full = await _full(client, cid)
     assert full["current_hit_points"] == 40 and not full["conditions"].get("prone")
     effect = await _effect(client, cid, VENGEANCE)
-    assert effect["condition"] == "blinded" and effect["damage_dice"] == "2d8+3" and effect["rounds"] == 1
+    assert effect["condition"] == "blinded" and effect["damage_dice"] == "2d8+3"
+    assert effect["ends_at"] == {"anchor": "source", "edge": "end", "count": 1} and not effect["rounds"]  # fino alla fine del turno in corso
     assert (await _ability(client, cid, VENGEANCE))["uses"] == 0
     assert (await _use(client, cid, VENGEANCE, params={"mode": "self"})).status_code == 409
 

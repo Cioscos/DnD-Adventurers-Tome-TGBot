@@ -231,6 +231,7 @@ class AppliedOptions:
     self_heal: int = 0  # PF che chi lancia una cura recupera
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
+    side_rolls: list[tuple[str, int]] = field(default_factory=list)  # dadi tirati da ``on_confirm`` fuori dal totale (d10 di Passo Rinfrescante): solo cronologia dadi
     holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
     holds_vs_massive: bool = False  # ``holds_at_one`` vale anche se il danno uccide sul colpo (Interdizione alla Morte)
     held_heal: int = 0  # PF recuperati oltre a quel 1 PF (Sentinella Imperitura 2024)
@@ -531,7 +532,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.requires_input == "recover":
             _recover_level(option, given)
         pre_dice = spec.extra_dice(option.ctx, given) if spec.extra_dice else None  # prima del pagamento: Implacabile lo cambia
+        rolled_before = given.get("rolled")
         paid = _spend(session, option, given)
+        if given.get("rolled") != rolled_before and isinstance(given.get("rolled"), int):
+            out.side_rolls.append(("d10", given["rolled"]))  # shortcut: l'unico dado che ``on_confirm`` tira e scrive in ``rolled`` è il d10 di Passo Rinfrescante
         out.spent += paid
         out.keys.append(key)
         if spec.pay_if_success or spec.holds_at_one:

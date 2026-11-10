@@ -523,12 +523,15 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.heal or on_use.heal_by:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]
+    rolled_before = (params or {}).get("rolled")
     if on_use.temp_hp or on_use.temp_hp_by:  # i PF temporanei non si sommano: vale il maggiore
         granted = max(0, on_use.temp_hp_by(ctx, sum(result.rolls), params or {}) if on_use.temp_hp_by
                       else on_use.temp_hp(ctx, sum(result.rolls)))
         if granted:  # niente toast «PF temporanei: 0» a ogni uso che non ne dà
             result.temp_hp = granted
             char.temp_hp = max(char.temp_hp or 0, granted)
+    if (params or {}).get("rolled") != rolled_before and isinstance((params or {}).get("rolled"), int):
+        record_dice(char, [("d10", params["rolled"])])  # il d10 di Passo Rinfrescante tirato dal server (shortcut: è l'unico dado che scrive ``rolled``)
     if on_use.ends_concentration:
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)
@@ -557,7 +560,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.targets.append(feature_key)
     if on_use.message:  # prima dell'effetto: vede la scheda com'era (i PF dell'interdizione prima dell'assorbimento)
         # ``ally_healed`` lo decide il server: con l'alleato già curato il testo non chiede di riferirlo al GM
-        result.message = on_use.message(ctx, {**(params or {}), "ally_healed": result.received is not None, "rolled": sum(result.rolls)})
+        result.message = on_use.message(ctx, {**(params or {}), "ally_healed": result.received is not None, "dice_total": sum(result.rolls)})
     if on_use.effect:
         on_use.effect(ctx, params or {})
     return result

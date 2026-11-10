@@ -286,7 +286,7 @@ ENTROPIC_ADVANTAGE = RollOptionSpec(
 
 def _thought_reflection(ctx: RuleContext, _inputs: dict) -> dict:
     # la resistenza dimezza il danno prima che arrivi a te; l'attaccante subisce quanto subisci tu
-    taken = None if ctx.damage is None else ctx.damage // 2
+    taken = None if ctx.damage_in is None else ctx.damage_in // 2
     it = "L'attaccante subisce lo stesso ammontare di danni psichici che subisci tu"
     en = "The attacker takes the same amount of psychic damage that you take"
     return {"it": it + (f": {taken}." if taken is not None else "."), "en": en + (f": {taken}." if taken is not None else ".")}

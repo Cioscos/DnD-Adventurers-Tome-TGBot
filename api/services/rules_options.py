@@ -119,7 +119,8 @@ def roll_option_dice(char: Any, opts: AppliedOptions, critical: bool = False) ->
         record_dice(char, apart)
         opts.separate_rolls += [v for _, v in apart]
         opts.separate_total += sum(v for _, v in apart) + apart_flat
-    record_dice(char, rolled)
+    record_dice(char, [*rolled, *opts.side_rolls])
+    opts.side_rolls = []
     opts.rolled_dice = [(int(kind[1:]), v) for kind, v in rolled]
     values = [v for _, v in rolled]
     return values, sum(values) + flat

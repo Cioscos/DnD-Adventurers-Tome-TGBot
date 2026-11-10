@@ -33,15 +33,23 @@ def pact_slots(char: Any) -> list[Any]:
 # Astuzia Magica e Maestro dell'Occulto
 # ---------------------------------------------------------------------------
 
-def _cunning(ctx: RuleContext, _params: dict) -> None:
-    """Rito di un minuto: torna metà dei massimi slot di Patto (per eccesso), tutti dal 20° livello; mai più degli slot spesi."""
+def _recovery(ctx: RuleContext) -> list[tuple[Any, int]]:
+    """``(slot di Patto, quanti ne tornano)``: metà dei massimi per eccesso (tutti dal 20°), mai più degli slot spesi."""
     slots = pact_slots(ctx.char)
     total = sum(s.total for s in slots)
     budget = total if ctx.class_level >= 20 else -(-total // 2)
+    out = []
     for slot in slots:
         back = min(slot.used, budget)
-        slot.used -= back
+        out.append((slot, back))
         budget -= back
+    return out
+
+
+def _cunning(ctx: RuleContext, _params: dict) -> None:
+    """Rito di un minuto: torna metà dei massimi slot di Patto (per eccesso), tutti dal 20° livello; mai più degli slot spesi."""
+    for slot, back in _recovery(ctx):
+        slot.used -= back
     from core.rules.catalog.y2024.warlock_subclasses import resilience_hp  # import locale: il modulo dei patroni importa questo in fondo
     if (points := resilience_hp(ctx)) is not None:  # Resilienza Celestiale: PF temporanei a ogni uso di Astuzia Magica
         ctx.char.temp_hp = max(ctx.char.temp_hp or 0, points)
@@ -49,7 +57,10 @@ def _cunning(ctx: RuleContext, _params: dict) -> None:
 
 def _cunning_message(ctx: RuleContext, params: dict) -> dict[str, str] | None:
     from core.rules.catalog.y2024.warlock_subclasses import resilience_ally_text  # import locale, come sopra
-    return None if params.get("target_character_ids") or params.get("target_character_id") is not None else resilience_ally_text(ctx)
+    back = sum(b for _s, b in _recovery(ctx))  # la scheda è ancora quella di prima dell'uso: è l'anteprima di ciò che torna
+    recovered = {"it": f"Tornano {back} slot di Patto.", "en": f"{back} Pact slot{'s' if back != 1 else ''} come back."}
+    ally = None if params.get("target_character_ids") or params.get("target_character_id") is not None else resilience_ally_text(ctx)
+    return {lg: recovered[lg] + (" " + ally[lg] if ally else "") for lg in ("it", "en")}
 
 
 def _cunning_ally_count(ctx: RuleContext) -> int:

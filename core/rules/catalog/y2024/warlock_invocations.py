@@ -244,7 +244,7 @@ def _shadows_state() -> RollOptionSpec:
 
 def _inv(key: str, it: str, en: str, suffix: str, level: int, summary: tuple[str, str], *, name: tuple[str, str] | None = None,
          action_type: str | None = None, **kw: Any):
-    return feature(key, CK, ED, 1, f"{it} / {en} ({suffix})", name or (it, en), summary, action_type,
+    return feature(key, CK, ED, level, f"{it} / {en} ({suffix})", name or (it, en), summary, action_type,  # al livello della supplica: un calo di livello la spegne
                    option_group=INVOCATIONS, option_key=key, **kw), level
 
 
@@ -321,8 +321,8 @@ _ROWS: list = [
           "The familiar from Find Familiar flies or swims at 40 ft, attacks on your bonus action, deals necrotic or radiant damage, uses your DC and resists as a reaction."),
          passive=True),
     _inv("lessons_of_the_first_ones", "Lezioni dei Primi", "Lessons of the First Ones", f"{_P}, livello 2+, pag. 156", 2,
-         ("Ripetibile: ottieni un talento di Origine a tua scelta, diverso a ogni scelta.",
-          "Repeatable: you gain an Origin feat of your choice, a different one each pick."), passive=True),
+         ("Ripetibile: un talento di Origine a tua scelta, diverso a ogni scelta. L'app non lo assegna: aggiungilo tu ai talenti.",
+          "Repeatable: an Origin feat of your choice, a different one each pick. The app does not grant it: add it to your feats yourself."), passive=True),
     _inv("lifedrinker", "Succhiavita", "Lifedrinker", f"{_P}, livello 9+, Patto della Lama, pag. 156", 9,
          ("Dopo un colpo con l'arma del patto: 1d6 danni necrotici, psichici o radiosi in più e, spendendo un Dado Vita, recuperi PF pari al tiro più COS. Una volta per turno.",
           "After a hit with the pact weapon: extra 1d6 necrotic, psychic or radiant damage and, spending a Hit Die, you regain hit points equal to the roll plus Con. Once per turn."),

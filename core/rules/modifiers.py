@@ -279,7 +279,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
         elif m.target.startswith("sense:"):
             kind = m.target.split(":", 1)[1]
             out.senses[kind] = max(out.senses.get(kind, 0), m.value(mctx) if callable(m.value) else m.value)
-            counted = True
+            counted = False  # un senso non sta dietro nessun tiro: non è una fonte del risultato (Vista del Diavolo)
         elif m.target == "jump_bonus":
             out.jump_bonus_ft = (out.jump_bonus_ft or 0) + (m.value(mctx) if callable(m.value) else m.value)
             counted = True

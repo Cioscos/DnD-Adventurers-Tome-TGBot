@@ -208,6 +208,7 @@ async def test_lay_on_hands_on_another_creature_only_spends_the_pool(client, tes
 async def test_lay_on_hands_cures_one_disease_or_poison_per_five_points_and_heals_nothing(client, test_session_factory):
     cid = await _paladin(client, 5)
     await _hurt(test_session_factory, cid, 10)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})  # una condizione assente non costa
     r = await _use(client, cid, LOH, amount=1, params=_cure(["poisoned", "disease"]))  # due voci: dieci punti
     assert r.status_code == 200, r.text
     assert r.json()["healed"] == 0 and await _hp(client, cid) == 10 and (await _ability(client, cid, LOH))["uses"] == 15
