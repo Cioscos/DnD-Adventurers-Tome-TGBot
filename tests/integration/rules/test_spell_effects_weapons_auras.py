@@ -435,6 +435,11 @@ async def _staff(client, cid, name="Bastone ferrato", dice="1d6"):
     return max(i["id"] for i in r.json()["items"])
 
 
+def _pick(staff, edition, damage="normal"):
+    """Le scelte del lancio di Randello Incantato: l'arma e, nel 2024, il tipo di danno."""
+    return {"item_id": str(staff), **({"weapon_damage": damage} if edition == "2024" else {})}
+
+
 async def _druid_table(client, factory, edition, level=1):
     """Un druido (Saggezza 16, Forza 10) con Randello Incantato, un bastone ferrato e una spada."""
     _, caster, spell = await _table(client, factory, "Shillelagh", "shillelagh", 0, caster_edition=edition)
@@ -455,7 +460,7 @@ async def _gm_attack(client, cid, wid):
 async def test_shillelagh_makes_the_staff_magical_with_a_d8_and_the_spellcasting_modifier(client, test_session_factory, edition):
     caster, spell, staff, sword = await _druid_table(client, test_session_factory, edition)
     before, plain_before = await _gm_attack(client, caster, staff), await _gm_attack(client, caster, sword)
-    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    await _cast(client, caster, spell, [], choices=_pick(staff, edition))
     after = await _gm_attack(client, caster, staff)
     assert before["damage_dice"] == "1d6" and after["damage_dice"] == "1d8" and after.get("is_magic") is True
     assert after["to_hit_bonus"] == before["to_hit_bonus"] + 3 and after["damage_bonus"] == before["damage_bonus"] + 3  # Saggezza 16 al posto di Forza 10
@@ -468,7 +473,7 @@ async def test_shillelagh_makes_the_staff_magical_with_a_d8_and_the_spellcasting
                                                ("2024", 11, "1d12"), ("2024", 17, "2d6")])
 async def test_shillelagh_die_follows_the_manual_of_each_edition(client, test_session_factory, edition, level, die):
     caster, spell, staff, _ = await _druid_table(client, test_session_factory, edition, level)
-    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    await _cast(client, caster, spell, [], choices=_pick(staff, edition))
     assert (await _gm_attack(client, caster, staff))["damage_dice"] == die
 
 
@@ -506,6 +511,18 @@ async def test_shillelagh_uses_the_better_ability_in_2024_but_always_the_spellca
     assert (await client.patch(f"/characters/{caster}/ability_scores/strength", json={"value": 18})).status_code == 200
     assert (await client.patch(f"/characters/{caster}/ability_scores/wisdom", json={"value": 14})).status_code == 200
     before = await _gm_attack(client, caster, staff)  # Forza 18 (+4)
-    await _cast(client, caster, spell, [], choices={"item_id": str(staff)})
+    await _cast(client, caster, spell, [], choices=_pick(staff, edition))
     after = await _gm_attack(client, caster, staff)
     assert after["to_hit_bonus"] == before["to_hit_bonus"] + delta and after["damage_bonus"] == before["damage_bonus"] + delta  # 2024: Forza +4; 2014: Saggezza +2
+
+
+async def test_t10_79_shillelagh_2024_asks_whether_the_damage_is_the_weapons_or_force_and_the_attack_says_it(client, test_session_factory):
+    caster, spell, staff, _ = await _druid_table(client, test_session_factory, "2024")
+    as_user(GM_ID)
+    assert spell_effect("2024", "shillelagh")[1].choices[0].options("2024") == ["normal", "force"] and not spell_effect("2014", "shillelagh")[1].choices
+    r = await client.post(f"/characters/{caster}/spells/{spell}/use", json={"targets": [], "choices": {"item_id": str(staff)}})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"  # il tipo si sceglie al lancio
+    await _cast(client, caster, spell, [], choices=_pick(staff, "2024", "force"))
+    assert (await _gm_attack(client, caster, staff))["damage_type"] == "force"
+    await _cast(client, caster, spell, [], choices=_pick(staff, "2024", "normal"))
+    assert "damage_type" not in await _gm_attack(client, caster, staff)  # il tipo normale dell'arma: nessun override

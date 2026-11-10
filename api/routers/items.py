@@ -787,6 +787,7 @@ async def attack_with_weapon(
     ability_mod, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, body.ability if body else None)
     if (enchanted := enchanted_weapon(char, item)) and enchanted[0].weapon_die:
         damage_dice_str = enchanted[0].weapon_die(char.total_level)  # Randello Incantato: il dado dell'incantesimo
+    spell_damage_type = "force" if enchanted and ((enchanted[1].get("choices") or {}).get("weapon_damage") == "force") else None  # Randello Incantato 2024
     if martial := martial_arts_level(char, item):
         damage_dice_str = best_damage_dice(damage_dice_str, martial_arts_die(martial, character_edition(char)))
     # L'attacco extra non somma la caratteristica al danno, salvo che sia negativa.
@@ -912,6 +913,7 @@ async def attack_with_weapon(
         damage_total=damage_total,
         rerolled=rerolled or None,
         is_magic=True if applied.magic_weapon else None,
+        damage_type=spell_damage_type,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
     ), item, ability, resolved_mode, grip, opts, offhand)

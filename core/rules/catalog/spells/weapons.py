@@ -136,9 +136,9 @@ _MINOR_ELEMENTALS = SpellVariant(
              "On your attacks that hit in the Emanation (15 ft) the app asks whether the target is inside and adds 2d8 of the chosen type (+2d8 per slot above 4th). The ground is Difficult for enemies: the GM applies it."))
 
 # --- Randello Incantato: l'arma scelta (bastone o randello del lanciatore) è magica, con la sua caratteristica e il suo dado ----------
-def _shillelagh(die, text: dict[str, str]) -> SpellVariant:  # trucchetto: 1 minuto, nessuna concentrazione
+def _shillelagh(die, text: dict[str, str], choices: tuple[SpellChoice, ...] = ()) -> SpellVariant:  # trucchetto: 1 minuto, nessuna concentrazione
     return SpellVariant(track=True, rounds=MIN1, text=text, weapon_choice=True, weapon_kinds=("club", "quarterstaff"), weapon_ability=True, weapon_die=die,
-                        modifiers=lambda d: (Modifier("magic_weapon", 1, when=_with_chosen(d, "attack")),))
+                        modifiers=lambda d: (Modifier("magic_weapon", 1, when=_with_chosen(d, "attack")),), choices=choices)
 
 
 _SHILLELAGH_2014 = _shillelagh(lambda _lvl: "1d8", txt(
@@ -148,11 +148,12 @@ _SHILLELAGH_2014 = _shillelagh(lambda _lvl: "1d8", txt(
     "It ends if you cast it again or let go of the weapon: you apply it."))
 _SHILLELAGH_2024 = _shillelagh(lambda lvl: "2d6" if lvl >= 17 else "1d12" if lvl >= 11 else "1d10" if lvl >= 5 else "1d8", txt(
     "Il Randello o Bastone scelto usa la tua caratteristica da incantatore al posto della Forza per tiri per colpire e danni; "
-    "il suo dado di danno diventa d8 (d10 dal 5° livello, d12 dall'11°, 2d6 dal 17°): è già nel tiro. Il danno può essere da Forza o quello normale: lo scegli tu. "
+    "il suo dado di danno diventa d8 (d10 dal 5° livello, d12 dall'11°, 2d6 dal 17°): è già nel tiro. Il danno è del tipo dell'arma o da Forza, come scelto al lancio. "
     "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
     "The chosen Club or Quarterstaff uses your spellcasting ability instead of Strength for attack and damage rolls; "
-    "its damage die becomes a d8 (d10 from level 5, d12 from 11, 2d6 from 17): already in the roll. The damage can be Force or its normal type: you choose. "
-    "It ends if you cast it again or let go of the weapon: you apply it."))
+    "its damage die becomes a d8 (d10 from level 5, d12 from 11, 2d6 from 17): already in the roll. The damage is the weapon's own type or Force, as chosen at the cast. "
+    "It ends if you cast it again or let go of the weapon: you apply it."),
+    choices=(SpellChoice("weapon_damage", txt("Tipo di danno dell'arma", "Weapon damage type"), lambda _ed: ["normal", "force"]),))
 _SWIFT_QUIVER = _described(
     MIN1, "La faretra produce munizioni non magiche; con l'azione bonus, a ogni tuo turno, fai due attacchi con un'arma che le usa (Frecce o Quadrelli): "
           "gli attacchi li fai e li registri tu dal Turno.",

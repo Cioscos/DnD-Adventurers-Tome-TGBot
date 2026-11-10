@@ -988,6 +988,7 @@
       "effect_self": "te stesso",
       "effect_next": "Avanti",
       "effect_weapon": "Scegli l'arma da incantare",
+      "effect_weapon_damage_normal": "Quello dell'arma",
       "effect_no_weapons": "Nessuna arma non magica: il bersaglio non ne ha.",
       "effect_confirm": "Lancia",
       "effect_shield": {
