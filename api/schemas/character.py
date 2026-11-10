@@ -236,6 +236,9 @@ class CharacterFull(BaseModel):
     # Populated only by PATCH /hp when a spell (Warding Bond) passed part of the damage on to its caster
     shared_damage: Optional[SharedDamageInfo] = None
 
+    # Populated only by PATCH /hp (danno): il danno subito dopo resistenze e vulnerabilità, per il toast di annullo
+    damage_taken: Optional[int] = None
+
     # Populated only by PATCH /hp when the damage brings the character to 0 HP under a ``zero_hp_save`` feature
     zero_hp_save: Optional[ZeroHpSaveResult] = None
 

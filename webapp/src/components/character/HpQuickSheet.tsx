@@ -136,7 +136,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         }
         const undoId = updated.hp_undo_id
         if (undoId) {
-          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? n })
+          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? n })
           const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
           showUndoToast({
             message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,

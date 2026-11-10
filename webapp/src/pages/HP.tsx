@@ -151,7 +151,7 @@ export default function HP() {
       // Stesso annullamento per scorciatoie e valore scritto a mano.
       const undoId = updated.hp_undo_id
       if (!undoId) return
-      const base = t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? val })
+      const base = t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? val })
       const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
       showUndoToast({
         message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,

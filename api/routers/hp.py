@@ -10,6 +10,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -250,6 +251,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     notifications: list[dict] = []
     clocks: list[dict] = []
     shared_info: list[dict] = []  # il danno girato al lanciatore e il suo TS di concentrazione, per la risposta del bersaglio
+    damage_taken: int | None = None  # danno dopo resistenze, per il toast del client
     shared_log: list[dict] = []  # lo stato che il danno condiviso ha lasciato sui lanciatori: l'annullo lo rimette
 
     was_at_zero = char.current_hit_points == 0
@@ -299,7 +301,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         # through the normal path below (temp HP, death rules, one concentration save).
         conc_damage = applied
         form_absorbed = False
-        pre_form = applied
+        pre_form = damage_taken = applied
         form_overflow = 0
         if form is not None and applied > 0:
             overflow = absorb_damage(form, applied)
@@ -371,7 +373,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                      else " — Sentinella Imperitura: resta a 1 PF")
         if not form_absorbed:
             _add_history(session, char.id, "hp_change", desc,
-                         meta={"op": "DAMAGE", "amount": lost if held_at_one else pre_form,
+                         meta={"op": "DAMAGE", "amount": lost,  # come la riga di storico e il riepilogo di serata: PF persi, non il colpo
                                "to_zero": old > 0 and char.current_hit_points == 0})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
@@ -545,6 +547,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
+    result.damage_taken = damage_taken
     if body.op == HPOp.DAMAGE and char.current_hit_points > 0:  # privo di sensi non si reagisce
         result.reactions = reaction_offers(char, lang)
     result.option_result = option_block
@@ -665,7 +668,10 @@ async def undo_hp(
     shared = snap.get("shared") or []
     await _restore_hp(session, char, snap, form)
     for entry in shared:
-        caster = await load_receiver(session, entry["id"])
+        try:
+            caster = await load_receiver(session, entry["id"])
+        except NoResultFound:  # il lanciatore è stato cancellato: si annulla solo la parte del bersaglio
+            continue
         caster_form = await _undo_form(session, caster, entry)
         if _undo_applies(caster, entry, caster_form):
             await _restore_hp(session, caster, entry, caster_form, f"Annullato il danno condiviso con {char.name}")

@@ -428,6 +428,20 @@ async def test_undoing_a_warding_bond_damage_restores_the_caster_hp_and_history(
     assert any("annullat" in h.lower() for h in await _history(client, caster))
 
 
+async def test_undo_63_shared_damage_with_a_deleted_caster_undoes_only_the_targets_part(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
+    await _hp(client, caster, 30, 30)
+    await _cast(client, caster, spell, [hero], level=2)
+    dmg = await _damage(client, hero, 20)
+    async with test_session_factory() as s:  # il lanciatore sparisce senza ripulire lo stato del bersaglio (cancellazione d'altro tipo)
+        from sqlalchemy import delete as _delete
+        from core.db.models import Character as _Character
+        await s.execute(_delete(_Character).where(_Character.id == caster))
+        await s.commit()
+    await _undo(client, hero, dmg["hp_undo_id"])
+    assert (await _sheet(client, hero))["current_hit_points"] == 200
+
+
 async def test_undoing_a_damage_that_ended_warding_bond_brings_the_bond_back_on_both_sheets(client, test_session_factory):
     hero, caster, spell = await _table(client, test_session_factory, "Warding Bond", "warding-bond", 2)
     await _hp(client, caster, 5, 30)
@@ -461,6 +475,7 @@ async def test_warding_bond_damage_response_tells_the_target_about_the_shared_da
     # Legame di Protezione dà resistenza ai danni al bersaglio: 20 diventano 10, e 10 passano al lanciatore
     shared = body["shared_damage"]
     assert shared["amount"] == 10 and shared["caster_name"] == "Chierico"
+    assert body["damage_taken"] == 10  # 73: il toast dice i danni subiti dopo la resistenza, non i 20 digitati
     assert shared["concentration_save"]["dc"] == 10 and isinstance(shared["concentration_save"]["success"], bool)
     assert body["concentration_save"] is None  # quello del bersaglio non c'è: il TS è del lanciatore
     as_user(GM_ID)
