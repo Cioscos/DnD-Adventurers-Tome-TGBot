@@ -190,3 +190,12 @@ async def test_gift_of_the_protectors_keeps_me_at_one_hp_once_until_a_long_rest(
     await _hp(client, cid, op="set_current", value=20)
     keys = [o["key"] for o in (await client.get(f"/characters/{cid}/roll-options", params={"roll": "damage_taken"})).json()]
     assert GIFT not in keys
+
+
+async def test_t10_78_the_blade_binds_only_weapons_that_are_really_magic_not_ones_with_a_rarity_or_charges(client):
+    cid = await _caster24(client, 3, BLADE, charisma=18)
+    odd = [await _weapon(client, cid, "Strana", None, rarity="rare"), await _weapon(client, cid, "Verga", None, charges={"current": 3, "max": 3})]
+    for item in odd:
+        assert (await _use(client, cid, P + BLADE, params={"weapon": f"bind:{item}"})).status_code == 422, item
+    marked = await _weapon(client, cid, "Spada magica", None, is_magic=True)
+    assert (await _use(client, cid, P + BLADE, params={"weapon": f"bind:{marked}"})).status_code == 200

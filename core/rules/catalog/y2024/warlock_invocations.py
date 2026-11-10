@@ -132,10 +132,13 @@ ORIGINAL_TYPE = "pact_original_damage_type"
 
 def _bindable(ctx: RuleContext) -> list[str]:
     """Armi da mischia magiche dell'inventario: si legano invece di evocarne una (``bind:<id>``)."""
-    from core.game.item_bonuses import is_magic_item, item_meta  # import locale
+    from core.game.item_bonuses import item_meta  # import locale
     out = []
     for item in ctx.char.items:
-        if item.item_type == "weapon" and is_magic_item(item) and item_meta(item).get("weapon_type", "melee") == "melee":
+        meta = item_meta(item)  # solo i segni di un'arma magica vera (non rarità, cariche o incantesimi da soli): il Patto non ne crea di nuove
+        bonus = str(meta.get("magic_bonus") or 0).lstrip("+")
+        magic = (bonus.isdigit() and int(bonus) > 0) or bool(meta.get("is_magic") or meta.get("magical") or meta.get("requires_attunement"))
+        if item.item_type == "weapon" and magic and meta.get("weapon_type", "melee") == "melee":
             out.append(f"bind:{item.id}")
     return out
 
