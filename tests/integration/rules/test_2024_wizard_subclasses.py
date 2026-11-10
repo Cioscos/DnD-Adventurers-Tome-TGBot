@@ -400,12 +400,18 @@ async def test_improved_illusions_gives_a_free_cantrip_and_stretches_range_and_d
     self_ = await _spell(client, cid, "Prova personale", 1, school="illusion", range_area="Personale", components="V")
     fire = await _spell(client, cid, "Fuoco", 1, school="evocation", range_area="36 m", components="V, S")
     shown = {s["id"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}
-    assert (shown[far]["range_area"], shown[far]["components"]) == ("54 m", "S, M")
-    assert (shown[near]["range_area"], shown[near]["components"]) == ("1,5 m", "S")
-    assert (shown[self_]["range_area"], shown[self_]["components"]) == ("Personale", "")
-    assert (shown[fire]["range_area"], shown[fire]["components"]) == ("36 m", "V, S")
+    assert (shown[far]["effective_range_area"], shown[far]["effective_components"]) == ("54 m", "S, M")
+    assert (shown[near]["effective_range_area"], shown[near]["effective_components"]) == ("1,5 m", "S")
+    assert (shown[self_]["effective_range_area"], shown[self_]["effective_components"]) == ("Personale", "")
+    assert (shown[fire]["effective_range_area"], shown[fire]["effective_components"]) == ("36 m", "V, S")
+    # Giro 1: i valori salvati restano intatti, anche dopo una modifica durante il privilegio.
+    assert (shown[far]["range_area"], shown[far]["components"]) == ("36 m", "V, S, M")
+    patched = await client.patch(f"/characters/{cid}/spells/{far}", json={"description": "x"})
+    assert patched.status_code == 200, patched.text
+    saved = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == far)
+    assert (saved["range_area"], saved["components"]) == ("36 m", "V, S, M")
     feet = await _spell(client, cid, "Prova piedi", 1, school="illusion", range_area="120 ft", components="S")
-    assert {s["id"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}[feet]["range_area"] == "180 ft"
+    assert {s["id"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}[feet]["effective_range_area"] == "180 ft"
 
 
 async def test_phantasmal_creatures_are_always_prepared_and_each_casts_once_without_a_slot(client):
@@ -583,7 +589,7 @@ async def test_minori_15_a_wizard_who_already_knew_minor_illusion_learns_another
 async def test_minori_15_phantasmal_creatures_count_as_illusion_for_improved_illusions(client):
     cid = await _make(client, "illusionist", 6)
     spells = await _by_index(client, cid)
-    assert "V" not in (spells["summon-beast"]["components"] or "").split(", ")  # Illusioni Migliorate: senza Verbale
+    assert "V" not in (spells["summon-beast"]["effective_components"] or "").split(", ")  # Illusioni Migliorate: senza Verbale
     beast = spells["summon-beast"]["id"]
     half = P + "phantasmal_beast_half_hp"
     assert half in await _roll_keys(client, cid, "cast", spell_id=beast, casting_level=2, slotless="true")

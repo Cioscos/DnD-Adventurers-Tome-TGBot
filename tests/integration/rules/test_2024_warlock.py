@@ -323,13 +323,13 @@ async def test_agonizing_blast_adds_charisma_to_every_beam_of_the_chosen_cantrip
 async def test_eldritch_spear_adds_nine_meters_per_warlock_level_to_the_chosen_cantrip(client):
     cid = await _caster24(client, 5, "eldritch_spear__eldritch_blast", cantrips=["eldritch-blast"])
     blast = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "eldritch-blast")
-    assert blast["range_area"] == "36 m" or True
+    assert blast["effective_range_area"] == "36 m" or True
     patched = await client.patch(f"/characters/{cid}/spells/{blast['id']}", json={"range_area": "36 m"})
     assert patched.status_code == 200, patched.text
     spells = {s["srd_index"]: s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"]}
-    assert spells["eldritch-blast"]["range_area"] == "81 m"
+    assert spells["eldritch-blast"]["effective_range_area"] == "81 m"
     other = await _spell(client, cid, "Raggio", 0, range_area="18 m")
-    assert next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == other)["range_area"] == "18 m"
+    assert next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == other)["effective_range_area"] == "18 m"
 
 
 async def test_repelling_blast_offers_a_push_only_for_its_cantrip_after_a_hit(client):

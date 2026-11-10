@@ -34,6 +34,13 @@ describe('SpellItem', () => {
     }
   })
 
+  it('shows the effective casting time, range and components, not the saved ones', () => {
+    render(<SpellItem spell={spell({ casting_time: '1 azione', effective_casting_time: '1 azione bonus', range_area: '36 m',
+      effective_range_area: '54 m', components: 'V, S', effective_components: 'S' })} isExpanded {...base} />)
+    for (const shown of ['1 azione bonus', '54 m', 'S']) expect(screen.getByText(shown)).toBeInTheDocument()
+    expect(screen.queryByText('36 m')).not.toBeInTheDocument()
+  })
+
   it('when expanded shows the description and a use action', async () => {
     const onUse = vi.fn()
     render(<SpellItem spell={spell()} isExpanded {...base} onUse={onUse} />)

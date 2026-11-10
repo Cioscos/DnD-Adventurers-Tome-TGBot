@@ -220,7 +220,7 @@ async def test_i10_potent_spellcasting_range_holds_with_feet_and_with_an_area(cl
     shown = (("Piedi", "120 ft"), ("Area", "18 m (sfera di 6 m)"), ("Corto", "10 ft"), ("Metri", "18 m"), ("Breve", "5 ft"))
     for name, rng in shown:
         await client.post(f"/characters/{cid}/spells", json={"name": name, "level": 0, "class_id": row, "range_area": rng})
-    got = {s["name"]: s["range_area"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] in dict(shown)}
+    got = {s["name"]: s["effective_range_area"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] in dict(shown)}
     assert got == {"Piedi": "420 ft", "Area": "108 m (sfera di 6 m)", "Corto": "310 ft", "Metri": "108 m", "Breve": "5 ft"}
 
 

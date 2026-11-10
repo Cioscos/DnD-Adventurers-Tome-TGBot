@@ -153,7 +153,7 @@ function SpellItemInner({
               )}
 
               {/* Stats chips */}
-              {(spell.casting_time || spell.range_area || spell.components || spell.duration || spell.damage_dice || spell.attack_save) && (
+              {((spell.effective_casting_time ?? spell.casting_time) || (spell.effective_range_area ?? spell.range_area) || (spell.effective_components ?? spell.components) || spell.duration || spell.damage_dice || spell.attack_save) && (
                 <div className="grid grid-cols-2 gap-1.5">
                   {(spell.effective_casting_time ?? spell.casting_time) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
@@ -161,16 +161,16 @@ function SpellItemInner({
                       <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_casting_time ?? spell.casting_time}</span>
                     </div>
                   )}
-                  {spell.range_area && (
+                  {(spell.effective_range_area ?? spell.range_area) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Crosshair size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.range_area}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_range_area ?? spell.range_area}</span>
                     </div>
                   )}
-                  {spell.components && (
+                  {(spell.effective_components ?? spell.components) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <FlaskConical size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.components}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_components ?? spell.components}</span>
                     </div>
                   )}
                   {spell.duration && (

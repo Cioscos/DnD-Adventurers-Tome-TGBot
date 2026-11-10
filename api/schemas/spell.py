@@ -28,6 +28,10 @@ class SpellRead(BaseModel):
     effective_casting_time: Optional[str] = None
     range_area: Optional[str] = None
     components: Optional[str] = None
+    # Gittata e componenti che valgono ora (Occhio dell'Arcimago, Illusioni Migliorate...): da mostrare; i campi sopra sono
+    # i salvati, i soli che il form rimanda. Li riempie `fill_spell_stats`.
+    effective_range_area: Optional[str] = None
+    effective_components: Optional[str] = None
     duration: Optional[str] = None
     is_concentration: bool = False
     is_ritual: bool = False

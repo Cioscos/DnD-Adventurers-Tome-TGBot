@@ -50,11 +50,12 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         spell.effective_casting_time = spell.casting_time
         if casting_kind(spell) == "action" and (bonus_cast(char, spell) or champion_bonus_cast(char, spell)):  # Rompi-Incantesimi, Campione degli Antichi: l'elenco lo dice
             spell.effective_casting_time = "1 bonus action" if "action" in (spell.casting_time or "").lower() else "1 azione bonus"
+        spell.effective_range_area, spell.effective_components = spell.range_area, spell.components
         spell.has_book = spell.level >= 1 and wizard_row(char, spell) is not None
         if (shown := spell_range_override(char, spell)) is not None:
-            spell.range_area = shown
+            spell.effective_range_area = shown
         if spell.components and no_verbal(char, spell):  # Illusioni Migliorate
-            spell.components = ", ".join(c for c in (x.strip() for x in spell.components.split(",")) if c.upper() != "V")
+            spell.effective_components = ", ".join(c for c in (x.strip() for x in spell.components.split(",")) if c.upper() != "V")
         pact = pact_cast(char, spell)
         if pact is not None:
             spell.pact_cast = {"kind": pact.kind, "feature_key": pact.feature_key, "pact_only": pact.pact_only,

@@ -186,9 +186,9 @@ async def test_agonizing_blast_is_found_from_the_italian_name_too(client):
 async def test_eldritch_spear_shows_the_blast_range_as_90_meters(client):
     cid = await _caster(client, 2, "eldritch_spear", blast=True)
     spells = {s["srd_index"]: s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"]}
-    assert spells["eldritch-blast"]["range_area"] == "90 m"
+    assert spells["eldritch-blast"]["effective_range_area"] == "90 m"
     other = await _spell(client, cid, "Raggio", 0, range_area="18 m")
-    assert next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == other)["range_area"] == "18 m"
+    assert next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["id"] == other)["effective_range_area"] == "18 m"
 
 
 async def test_repelling_blast_offers_a_push_only_for_the_blast_after_a_hit(client):

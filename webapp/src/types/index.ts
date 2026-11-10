@@ -246,6 +246,9 @@ export interface Spell {
   effective_casting_time?: string
   range_area?: string
   components?: string
+  /** Gittata e componenti che valgono ora (privilegi che le cambiano): solo da mostrare; il form usa i campi salvati. */
+  effective_range_area?: string
+  effective_components?: string
   duration?: string
   is_concentration: boolean
   is_ritual: boolean
