@@ -255,6 +255,20 @@ def _restore_suspended(session: Session, char: Character) -> None:
                              meta={"slug": c, "active": True, "restored": True})
 
 
+def _end_incapacitated_concentration(session: Session, char: Character) -> None:
+    """Uno stato ha appena reso ``char`` Incapacitato senza passare da ``apply_conditions`` (la Letargia 2024 di Velocità, ``drops_concentration``):
+    come ogni Incapacitato fa cadere la concentrazione. shortcut: gli effetti a condizione legati alla concentrazione (``ConditionEffect``)
+    restano finché non si ricarica la concentrazione, qui non c'è una sessione asincrona; da rivedere se serve."""
+    states = char.active_states or []
+    if not any((s.get("data") or {}).get("drops_concentration") for s in states):
+        return
+    char.active_states = [{**s, "data": {k: v for k, v in (s.get("data") or {}).items() if k != "drops_concentration"}} for s in states]
+    from api.services.durations import end_concentration, is_concentrating  # import locale: durations importa questo modulo
+    if is_concentrating(char):
+        end_concentration(char)
+        _drop_given_spells(session, char)
+
+
 def _drop_given_spells(session: Session, char: Character) -> None:
     """L'orologio di un incantesimo è finito, da qualunque via: i bersagli perdono lo stato, ma solo se è ancora di ``char``
     (un altro lanciatore può averlo rinnovato). Un bersaglio cancellato si salta."""
@@ -270,6 +284,7 @@ def _drop_given_spells(session: Session, char: Character) -> None:
             receiver.active_states = kept
             settle_closed(receiver, [x for x in states if x not in kept])  # la condizione imposta (Invisibile) cade con lo stato
             cap_hp_to_max(receiver, [x for x in states if x not in kept])
+            _end_incapacitated_concentration(session, receiver)
 
 
 def _end_spent_spells(session: Session, char: Character) -> None:
@@ -303,6 +318,7 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
         _restore_suspended(session, char)
         _drop_given_spells(session, char)
         _end_spent_spells(session, char)
+        _end_incapacitated_concentration(session, char)
         dropped = (char.settings or {}).get(SPELL_TEMP_DROPPED) or {}
         if any(not e.get("logged") for e in dropped.values()):
             for e in dropped.values():

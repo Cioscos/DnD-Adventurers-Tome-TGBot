@@ -24,9 +24,13 @@ _LETHARGY = "spell:haste_lethargy"
 
 def _lethargy(d: dict) -> dict:
     """Alla fine di Velocità il bersaglio resta in letargia fino alla fine del suo turno successivo (``states.settle_closed``)."""
-    return {"key": _LETHARGY, "name": "Letargia", "condition": "incapacitated",
-            "ends_on": ["new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"],
-            "data": {"skip_new_turns": 1, "spell_key": "haste_lethargy", "edition": d.get("edition", "2014")}}
+    edition = d.get("edition", "2014")
+    # 2014: «non può muoversi né compiere azioni» (``no_actions``), senza la condizione Incapacitato e quindi senza perdere la concentrazione.
+    # 2024: Incapacitato, e come ogni Incapacitato fa cadere la concentrazione del bersaglio (``drops_concentration``, la applica il flush).
+    return {"key": _LETHARGY, "name": "Letargia di Velocità", "ends_on": ["new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"],
+            **({"condition": "incapacitated"} if edition == "2024" else {}),
+            "data": {"skip_new_turns": 1, "spell_key": "haste_lethargy", "edition": edition,
+                     **({"drops_concentration": True} if edition == "2024" else {"no_actions": True})}}
 
 
 _HASTE = SpellVariant(

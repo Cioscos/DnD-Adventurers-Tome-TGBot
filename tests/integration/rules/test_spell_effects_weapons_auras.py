@@ -168,12 +168,12 @@ async def test_haste_gives_an_extra_action_each_turn_and_lethargy_at_the_end(cli
     await _end_concentration(client, caster)
     after = await _sheet(client, hero)
     assert "spell:haste" not in {s["key"] for s in after["active_states"]} and "spell:haste_lethargy" in {s["key"] for s in after["active_states"]}
-    assert after["conditions"].get("incapacitated") and after["computed"]["speed"] == 0
+    assert not after["conditions"].get("incapacitated") and after["computed"]["incapacitated"] and after["computed"]["speed"] == 0  # 2014: niente azioni, non Incapacitato
     await _new_turn(client, hero)  # fino alla fine del suo turno successivo
-    assert (await _sheet(client, hero))["conditions"].get("incapacitated")
+    assert (await _sheet(client, hero))["computed"]["incapacitated"]
     await _new_turn(client, hero)
     done = await _sheet(client, hero)
-    assert not done["conditions"].get("incapacitated") and done["computed"]["speed"] == base["computed"]["speed"]
+    assert not done["computed"]["incapacitated"] and done["computed"]["speed"] == base["computed"]["speed"]
     assert "spell:haste_lethargy" not in {s["key"] for s in done["active_states"]}
     assert (await _new_turn(client, hero))["extra_actions"] == 0
 
@@ -301,3 +301,36 @@ def test_a_non_numeric_magic_bonus_counts_as_magic_instead_of_failing():
     from types import SimpleNamespace
     from core.game.item_bonuses import is_magic_item
     assert is_magic_item(SimpleNamespace(item_metadata={"magic_bonus": "abc"})) and not is_magic_item(SimpleNamespace(item_metadata={"magic_bonus": 0}))
+
+
+async def _concentrating_hero(client, hero, edition=None):
+    as_user(PLAYER_ID)
+    spell = (await client.post(f"/characters/{hero}/spells", json={"name": "Bless", "srd_index": "bless", "level": 1, "is_concentration": True})).json()["id"]
+    assert (await client.patch(f"/characters/{hero}/concentration", json={"spell_id": spell})).status_code == 200
+    return spell
+
+
+async def test_haste_lethargy_2014_blocks_actions_without_the_incapacitated_condition(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Haste", "haste", 3)
+    sword = await _sword(client, hero)
+    bless = await _concentrating_hero(client, hero)
+    await _cast(client, caster, spell, [hero], level=3)
+    await _end_concentration(client, caster)
+    sheet = await _sheet(client, hero)
+    assert not sheet["conditions"].get("incapacitated") and sheet["computed"]["incapacitated"] and sheet["computed"]["speed"] == 0
+    assert sheet["concentrating_spell_id"] == bless  # nel 2014 il manuale non dice Incapacitato: la concentrazione resta
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{hero}/items/{sword}/attack", json={"die": 10})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "incapacitated"
+    lethargy = next(s for s in sheet["active_states"] if s["key"] == "spell:haste_lethargy")
+    assert lethargy["data"]["no_actions"] is True
+
+
+async def test_haste_lethargy_2024_is_incapacitated_and_drops_the_concentration_of_the_target(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Haste", "haste", 3, hero_edition="2024", caster_edition="2024")
+    await _concentrating_hero(client, hero)
+    await _cast(client, caster, spell, [hero], level=3)
+    assert (await _sheet(client, hero))["concentrating_spell_id"] is not None
+    await _end_concentration(client, caster)
+    sheet = await _sheet(client, hero)
+    assert sheet["conditions"].get("incapacitated") and sheet["concentrating_spell_id"] is None

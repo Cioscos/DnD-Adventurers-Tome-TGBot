@@ -111,7 +111,9 @@ def surprise_exit_features(char: Any) -> list[str]:
 
 
 def is_incapacitated(char: Any) -> bool:
-    return surprised_turn(char) or any((char.conditions or {}).get(c) for c in INCAPACITATING)
+    """Niente azioni né reazioni: una condizione che incapacita, la sorpresa o uno stato che lo dice (``data["no_actions"]``: la Letargia 2014)."""
+    return (surprised_turn(char) or any((char.conditions or {}).get(c) for c in INCAPACITATING)
+            or any((s.get("data") or {}).get("no_actions") for s in char.active_states or []))
 
 
 def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> list[Modifier]:

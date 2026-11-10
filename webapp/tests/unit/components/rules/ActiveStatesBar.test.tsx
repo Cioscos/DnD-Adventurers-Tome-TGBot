@@ -48,6 +48,13 @@ describe('ActiveStatesBar', () => {
     expect(screen.getAllByText(/character\.turn\.state_radius/).length).toBeGreaterThanOrEqual(3)
   })
 
+  it('translates the name of the Haste lethargy, which the server saves in one language', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:haste_lethargy', feature_key: 'spell:haste', rounds_left: null, ends_on: ['manual'], name: 'Letargia di Velocità', data: { spell_key: 'haste_lethargy' } },
+    ], [])} />)
+    expect(screen.getByText('character.roll_notes.spell.haste_lethargy')).toBeInTheDocument()
+  })
+
   it('shows the skill a 2024 Guidance was cast on, kept in the spell choices', () => {
     renderWithProviders(<ActiveStatesBar char={char([
       { key: 'spell:guidance', feature_key: 'spell:guidance', rounds_left: null, ends_on: ['manual'], name: 'Guida', data: { spell_key: 'guidance', choices: { skill: 'sleight_of_hand' } } },
