@@ -4,10 +4,10 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from core.rules.catalog.spells import basics, damage, defenses, dice, hitpoints, marks, movement, weapons
+from core.rules.catalog.spells import basics, damage, defenses, dice, hitpoints, marks, movement, texts, weapons
 from core.rules.spell_effects import SpellEffect, SpellVariant
 
-SPELL_EFFECTS: dict[str, SpellEffect] = {e.key: e for e in (*basics.SPELLS, *dice.SPELLS, *defenses.SPELLS, *hitpoints.SPELLS, *movement.SPELLS, *damage.SPELLS, *marks.SPELLS, *weapons.SPELLS)}
+SPELL_EFFECTS: dict[str, SpellEffect] = {e.key: e for e in (*basics.SPELLS, *dice.SPELLS, *defenses.SPELLS, *hitpoints.SPELLS, *movement.SPELLS, *damage.SPELLS, *marks.SPELLS, *weapons.SPELLS, *texts.SPELLS)}
 
 _BY_INDEX = {i: e for e in SPELL_EFFECTS.values() for i in e.srd_index}
 

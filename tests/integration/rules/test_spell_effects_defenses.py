@@ -366,3 +366,17 @@ async def test_mind_blank_is_immune_to_psychic_damage(client, test_session_facto
     hero, caster, spell = await _table(client, test_session_factory, "Mind Blank", "mind-blank", 8)
     await _cast(client, caster, spell, [hero], level=8)
     assert await _hit(client, hero, 10, "psychic") == 0
+
+
+async def test_text_only_polymorph_leaves_a_visible_state_and_a_clock(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Polymorph", "polymorph", 4)
+    await _cast(client, caster, spell, [hero], level=4)
+    assert await _states(client, hero, PLAYER_ID, "spell:polymorph")
+    assert await _states(client, caster, GM_ID, "spell_cast:polymorph")
+
+
+async def test_shield_gives_plus_five_ac_to_the_caster(client, test_session_factory):
+    _hero, caster, spell = await _table(client, test_session_factory, "Shield", "shield", 1)
+    before = (await _sheet(client, caster, GM_ID))["ac"]
+    await _cast(client, caster, spell, None, level=1)
+    assert (await _sheet(client, caster, GM_ID))["ac"] == before + 5
