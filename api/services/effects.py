@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from core.db.models import Character, CharacterHistory
 from core.data.labels import condition_label
+from api.services.beast_companion import drop_primal_beast
 from api.services.telegram_notify import notify_party_emergency
 from api.services.condition_effects import clear_effects_for, release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
@@ -226,6 +227,7 @@ async def apply_conditions(session: AsyncSession, char: Character,
     if "exhaustion" in changes:
         if exhaustion_level(char) >= 6 and not char.is_dead:
             char.is_dead = True
+            await drop_primal_beast(session, char)
             _add_history(session, char.id, "death_save", "Morto — spossatezza al 6° livello")
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")  # come la morte per tiri salvezza
             return {"changed": changed}

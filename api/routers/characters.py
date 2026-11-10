@@ -21,6 +21,7 @@ from core.db.models import (
     Character,
     CharacterClass,
     CharacterHistory,
+    Companion,
     ConditionEffect,
     Currency,
     Item,
@@ -71,6 +72,7 @@ from api.services.rules_options import (
 )
 from api.services.effects import cap_current_hp, sync_zero_hp
 from core.data.spell_slots import normalize_class_name
+from core.rules.companions import COMPANION_FEATURES
 from core.rules.edition import character_edition
 from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
@@ -400,6 +402,9 @@ async def update_character(
         setattr(char, field, value)
     if "rules_edition" in body.model_fields_set:
         sync_subclass_keys(char)  # una sottoclasse assente nell'altra edizione resta solo testo
+        await session.execute(delete(Companion).where(  # il compagno di privilegio dell'altra edizione non ha più stat né ordini
+            Companion.character_id == char.id,
+            Companion.feature_key.in_([k for k, (_c, ed, _f) in COMPANION_FEATURES.items() if ed != character_edition(char)])))
         await sync_cataloged_features(session, char, lang)
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See

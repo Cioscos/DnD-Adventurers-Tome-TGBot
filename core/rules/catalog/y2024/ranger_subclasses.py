@@ -97,6 +97,7 @@ def _primal_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
             return 422, "invalid_choice"
         if _downed(ctx) is not None:  # il ripristino non chiede la forma: torna com'era
             return None
+        return 409, "feature_unavailable"  # lo slot serve solo a rialzarla: la sostituzione è del riposo lungo
     kind = params.get("kind")
     return None if kind in BEASTS and params.get("damage_type") in BEASTS[kind]["damage"] else (422, "invalid_choice")
 
@@ -426,7 +427,7 @@ SUBCLASS_ROWS = (
          ("Iniziativa + Saggezza; Velocità +3 m nel primo turno del combattimento. Colpo Terribile: +2d6 psichici (2d8 dall'11°) una volta per turno, usi pari a Saggezza (minimo 1), riposo lungo.",
           "Initiative + Wisdom; Speed +10 ft on the first turn of combat. Dreadful Strike: +2d6 psychic (2d8 from 11th) once per turn, uses equal to Wisdom (minimum 1), long rest."),
          uses=Uses(ability="wisdom", minimum=1), restoration="long_rest", roll_options=(DREADFUL_STRIKE, AMBUSH_SPEED), passive=True,
-         modifiers=(Modifier("initiative", _wis_mod, source=f"feature:{CK}.dread_ambusher"),
+         modifiers=(Modifier("initiative", lambda c: max(0, _wis_mod(c)), source=f"feature:{CK}.dread_ambusher"),
                     Modifier("speed", 10, when=lambda c: state_on(c, "dread_ambusher_speed"), source=f"feature:{CK}.dread_ambusher"))),
     *_spell_rows(GS, "Incantesimi dello Stalker delle Tenebre / Gloom Stalker Spells (Stalker delle Tenebre 3, pag. 126)",
                  ("Incantesimi dello Stalker delle Tenebre", "Gloom Stalker Spells")),

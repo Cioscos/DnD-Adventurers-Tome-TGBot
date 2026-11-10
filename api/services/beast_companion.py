@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import re
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, Companion
-from core.rules.companions import BEAST_COMPANION, companion_stats, stat_int
+from core.rules.companions import BEAST_COMPANION, PRIMAL_COMPANION, companion_stats, stat_int
 
 
 async def long_rest_beast(session: AsyncSession, char: Character) -> None:
@@ -24,3 +24,8 @@ async def long_rest_beast(session: AsyncSession, char: Character) -> None:
         spent = stat_int(sb, "hit_dice_spent")
         if total and spent:
             comp.statblock = {**sb, "hit_dice_spent": max(0, spent - max(1, int(total.group(1)) // 2))}
+
+
+async def drop_primal_beast(session: AsyncSession, char: Character) -> None:
+    """Il ranger muore: la bestia primordiale 2024 svanisce con lui."""
+    await session.execute(delete(Companion).where(Companion.character_id == char.id, Companion.feature_key == PRIMAL_COMPANION))

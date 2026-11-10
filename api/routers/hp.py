@@ -20,7 +20,7 @@ from api.services.d20 import d20_records, resolve_applied, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
-from api.services.beast_companion import long_rest_beast
+from api.services.beast_companion import drop_primal_beast, long_rest_beast
 from api.services.wild_shape import long_rest_familiar
 from api.services.durations import end_concentration, is_concentrating
 from api.services.memorize import memorize
@@ -385,6 +385,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
             if overflow >= effective_max:
                 char.is_dead = True
+                await drop_primal_beast(session, char)
                 _add_history(session, char.id, "death_save", "Morte istantanea (danno massiccio)")
             elif old == 0:
                 # Danno a una creatura stabile: torna morente con conteggio
@@ -398,6 +399,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                 ds["stable"] = False
                 if ds["failures"] >= 3:
                     char.is_dead = True
+                    await drop_primal_beast(session, char)
                     _add_history(session, char.id, "death_save", "Morto — 3 fallimenti (danno a 0 PF)",
                                  meta={"ds": "failure", "n": inc})
                 else:
@@ -1072,6 +1074,7 @@ async def update_death_saves(
                      meta={"ds": "failure", "n": 1})
         if ds["failures"] >= 3:
             char.is_dead = True
+            await drop_primal_beast(session, char)
             _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
@@ -1241,6 +1244,7 @@ async def _apply_death_roll(
 
     if ds.get("failures", 0) >= 3:
         char.is_dead = True
+        await drop_primal_beast(session, char)
         _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
         if notify:
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
