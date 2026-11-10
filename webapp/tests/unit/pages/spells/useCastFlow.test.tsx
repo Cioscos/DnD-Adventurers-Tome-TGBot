@@ -392,7 +392,21 @@ describe('useCastFlow spell effects', () => {
     expect(useSpell).not.toHaveBeenCalled()
     await userEvent.click(await screen.findByText('Eroe'))
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ slot_level: 3, targets: [21] })))
-    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('character.spells.effect_applied(name=Scudo della Fede,targets=Eroe)'))
+    // punto 82: un solo toast, con a chi è andato l'effetto come descrizione
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith(expect.any(String), { description: 'character.spells.effect_applied(name=Scudo della Fede,targets=Eroe)' }))
+    expect(toastSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not name the caster in full when the effect lands on him (point 82)', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockResolvedValue({ ...char, spell_effects: { applied: [{ id: 7, name: 'Fratello Bartolomeo' }, { id: 21, name: 'Eroe' }] } })
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith(expect.any(String), {
+      description: 'character.spells.effect_applied(name=Scudo della Fede,targets=character.spells.effect_self, Eroe)' }))
   })
 
   it('lets the caster pick himself and shows the GM text outside an evening', async () => {

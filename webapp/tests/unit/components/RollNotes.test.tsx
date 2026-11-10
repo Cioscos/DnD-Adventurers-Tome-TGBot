@@ -22,6 +22,11 @@ describe('RollNotes', () => {
     expect(screen.getByTestId('roll-option-dice')).toHaveTextContent('[2 character.inventory.damage_types.dmg_radiant, 3] = 5')
   })
 
+  it('says which spell the extra d4 comes from (point 84)', () => {
+    render(<RollNotes optionResult={{ ...base, keys: ['spell:bless:add'], extra_rolls: [3], extra_total: 3 }} />)
+    expect(screen.getByTestId('roll-option-dice')).toHaveTextContent('(character.roll_notes.spell.bless): [3] = 3')
+  })
+
   it('shows the second attack roll next to its damage', () => {
     render(<RollNotes optionResult={{ ...base, second_die: 14, second_total: 19, separate_rolls: [7], separate_total: 7 }} />)
     expect(screen.getByText('character.roll_options.second_attack:19')).toBeInTheDocument()

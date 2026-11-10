@@ -4,7 +4,7 @@ import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import type { OptionResult } from '@/api/client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -110,6 +110,7 @@ export default function SpellDamageSheet({
 
   const effectiveCastingLevel = (slotLevel && slotLevel > 0) ? slotLevel : (spell?.level ?? 0)
 
+  const castRefused = useRef(false)
   const mutation = useMutation({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
@@ -127,6 +128,7 @@ export default function SpellDamageSheet({
             ? { as_ritual: true, slot_level: null }
             : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false }).catch((err) => {
           useEffectPickStore.setState(({ picked }) => ({ picked: Object.fromEntries(Object.entries(picked).filter(([id]) => Number(id) !== spell.id)) }))
+          castRefused.current = true
           throw err
         })
         cast = true
@@ -201,6 +203,8 @@ export default function SpellDamageSheet({
       const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
       if (err instanceof DamageUnrollable || code === 'bad_damage_dice') setUnrollable(true)  // un testo suo, non «controlla la connessione»
       else if (!(err instanceof CastCancelled)) notifyCastError(err)
+      // Un lancio rifiutato ha perso le scelte (tipo, bersagli): riprovare da qui darebbe un altro errore, si riparte dal lancio.
+      if (castRefused.current) { castRefused.current = false; handleClose() }
     },
   })
 

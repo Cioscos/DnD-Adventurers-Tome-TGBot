@@ -21,7 +21,7 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}
-      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" rolls={extra} types={optionResult!.extra_types} total={optionResult!.extra_total} className={className} />}
+      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" sources={dieSources(optionResult?.keys ?? [], t)} rolls={extra} types={optionResult!.extra_types} total={optionResult!.extra_total} className={className} />}
       {second != null && (
         <span className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
           {t('character.roll_options.second_attack', { die: optionResult!.second_die, total: second })}
@@ -41,13 +41,22 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   )
 }
 
-function ExtraDice({ testId, label, rolls, types, total, className }: { testId: string; label: string; rolls: number[]; types?: (string | null | undefined)[]; total: number; className: string }) {
+/** Da dove vengono i dadi extra: l'incantesimo (Benedizione, Guida) o l'ispirazione che li ha dati. */
+function dieSources(keys: string[], t: (k: string, o?: Record<string, unknown>) => string): string[] {
+  return keys.filter((k) => k.endsWith(':add')).map((k) => {
+    const [kind, name] = k.split(':')
+    if (kind === 'spell') return t(`character.roll_notes.spell.${name}`, { defaultValue: '' })
+    return kind === 'bardic_die' ? t('character.roll_notes.option.bardic_die_add', { defaultValue: '' }) : ''
+  }).filter(Boolean)
+}
+
+function ExtraDice({ testId, label, sources = [], rolls, types, total, className }: { testId: string; label: string; sources?: string[]; rolls: number[]; types?: (string | null | undefined)[]; total: number; className: string }) {
   const { t } = useTranslation()
   // ogni dado col suo tipo di danno (radiante, fuoco...): un dado extra non è del tipo dell'arma
   const typed = rolls.map((r, i) => (types?.[i] ? `${r} ${t(`character.inventory.damage_types.dmg_${types[i]}`, { defaultValue: types[i] })}` : String(r)))
   return (
     <span data-testid={testId} className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
-      {t(`character.roll_options.${label}`)}: [{typed.join(', ')}] = {total}
+      {t(`character.roll_options.${label}`)}{sources.length > 0 && ` (${sources.join(', ')})`}: [{typed.join(', ')}] = {total}
     </span>
   )
 }

@@ -112,6 +112,24 @@ describe('SpellDamageSheet', () => {
     expect(screen.queryByText(/chosen_type/)).toBeNull()
   })
 
+  it('closes the sheet when the cast is refused, so a retry starts again from the choices (point 85)', async () => {
+    const onClose = vi.fn()
+    useSpell.mockRejectedValue(new Error('409'))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('keeps the sheet open when the cast went through and only the damage roll failed', async () => {
+    const onClose = vi.fn()
+    useSpell.mockResolvedValue({ id: 7 })
+    rollDamage.mockRejectedValue(new Error('500'))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalled())
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('sends no damage type and shows no chosen type when the cast chose none', async () => {
     rollDamage.mockResolvedValue(result)
     useSpell.mockResolvedValue({ id: 7 })

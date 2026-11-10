@@ -9,6 +9,7 @@ import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import type { ResolvedItemCast } from '@/lib/itemCast'
 import type { SpellEffectsResult } from '@/types'
+import { appliedTargets } from '@/lib/appliedTargets'
 
 interface Props {
   charId: number
@@ -68,7 +69,7 @@ export default function ItemCastSheet({ charId, resolved, effects, onClose }: Pr
       )}
       {!!effects?.applied.length && (
         <p className="text-sm text-dnd-text font-body break-words">
-          {t('character.spells.effect_applied', { name: spell.name, targets: effects.applied.map((a) => a.name).join(', ') })}
+          {t('character.spells.effect_applied', { name: spell.name, targets: appliedTargets(effects.applied, charId, t) })}
         </p>
       )}
       {effects?.text && <p className="text-sm text-dnd-text-muted font-body">{effects.text[i18n.language?.startsWith('en') ? 'en' : 'it']}</p>}

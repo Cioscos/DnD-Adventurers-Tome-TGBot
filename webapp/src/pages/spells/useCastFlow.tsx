@@ -24,6 +24,7 @@ import SpellAttackModal from '@/pages/spells/SpellAttackModal'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { isHealingSpell } from '@/lib/spellHealing'
+import { appliedTargets } from '@/lib/appliedTargets'
 import type { CharacterFull, Spell, SpellAttackResult, SpellSlot } from '@/types'
 
 // Avanti (slot → danni) il pannello entra da destra; indietro da sinistra.
@@ -88,13 +89,14 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const spellSlots: SpellSlot[] = char?.spell_slots ?? []
 
   // Conferma dei lanci senza danno: nome + slot/rituale + concentrazione.
-  const confirmCastDone = useCallback((spell: Spell, slotLevel: number | null, ritual: boolean, ki: number | null = null) => {
+  const confirmCastDone = useCallback((spell: Spell, slotLevel: number | null, ritual: boolean, ki: number | null = null, description?: string) => {
     let msg = t('character.spells.cast_done', { name: spell.name })
     if (slotLevel != null && slotLevel >= 1) msg += t('character.spells.cast_done_slot', { level: slotLevel })
     if (ki != null && spell.ki_cast) msg += t('character.spells.cast_done_ki', { n: spell.ki_cast.cost + ki })
     if (ritual) msg += t('character.spells.cast_done_ritual')
     if (spell.is_concentration) msg += t('character.spells.cast_done_concentration')
-    toast.success(msg)
+    if (description) toast.success(msg, { description })  // un solo toast: il lancio e a chi è andato l'effetto
+    else toast.success(msg)
   }, [t])
 
   // Lancio senza dadi: slot, rituale o trucchetto. Il server avvia anche la concentrazione col suo contatore.
@@ -110,11 +112,11 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       setCastingSpell(null)
       haptic.success()
-      confirmCastDone(spell, slot?.level ?? null, ritual, ki)
-      refreshAfterOptions(qc, charId, updated.option_result)
       const fx = updated.spell_effects
+      confirmCastDone(spell, slot?.level ?? null, ritual, ki,
+        fx?.applied.length ? t('character.spells.effect_applied', { name: spell.name, targets: appliedTargets(fx.applied, charId, t) }) : undefined)
+      refreshAfterOptions(qc, charId, updated.option_result)
       const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
-      if (fx?.applied.length) toast.success(t('character.spells.effect_applied', { name: spell.name, targets: fx.applied.map((a) => a.name).join(', ') }))
       if (fx?.text) toast.info(fx.text[lang])
       if (updated.option_result?.effects?.length || updated.option_result?.targets?.length) setCastNotes(updated.option_result)
     },
