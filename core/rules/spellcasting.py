@@ -164,10 +164,20 @@ def best_caster(char: Any) -> CasterStats | None:
     return best
 
 
+def _granted_stats(char: Any, spell: Any) -> CasterStats | None:
+    """CD di un privilegio che concede l'incantesimo a chi non lancia (Maestro Telecinetico: Intelligenza)."""
+    key = getattr(spell, "srd_index", None)
+    for spec, row in active_features(char):
+        if spec.dc_ability and key and key in spec.granted_spells and getattr(spell, "class_id", row.id) in (None, row.id):
+            mod = effective_ability_mod(char, spec.dc_ability)
+            return CasterStats(row.id, row.class_name, spec.dc_ability, 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+    return None
+
+
 def spell_stats(char: Any, spell: Any) -> CasterStats | None:
     """CD e attacco della classe dell'incantesimo; non assegnato (personaggi esistenti): la classe migliore."""
     own = next((s for s in caster_stats(char) if s.class_id == spell.class_id), None)
-    return own or best_caster(char)
+    return own or _granted_stats(char, spell) or best_caster(char)
 
 
 def concentration_dc(edition: Edition, damage: int) -> int:
