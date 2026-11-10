@@ -555,6 +555,9 @@ class RollOptionSpec:
     damage_type_to: str | None = None
     # Tipo di danno dei dadi che l'opzione aggiunge (``extra_dice``): arriva nel blocco dell'esito (``extra_types``), per chi lo legge
     extra_damage_type: str | None = None
+    # Con ``after_hit``: confermarla lancia un incantesimo a concentrazione (punizioni 2024): il server avvia la concentrazione di
+    # ``ctx.spell_data["spell_id"]`` per questi round
+    starts_concentration: int | None = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):

@@ -708,6 +708,8 @@ async def deferred_attack_damage(
         raise HTTPException(status_code=409, detail={"code": "attack_missed"})
     opts = use_options(session, char, "attack", body, phase="after_hit", ability=pending["ability"], item=item,
                        attack_mode=pending["attack_mode"], grip=pending["grip"], offhand=pending.get("offhand", False))
+    for cast in opts.concentrates:  # punizione 2024 lanciata dopo il colpo: da qui si concentra su di lei (chiude la precedente)
+        start_concentration(char, cast["spell_id"], cast["rounds"])
     result = WeaponAttackResult(**pending["result"])
     result.homebrew_notifications = None  # già consegnate col tiro per colpire
     result.attack_id = None  # il danno è definitivo: da qui si può ritirare un dado

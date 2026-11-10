@@ -35,6 +35,9 @@ class SpellVariant:
     # riceve i ``data`` dello stato: slot_level, choices, caster_id, caster_name, spell_key
     modifiers: Callable[[dict], tuple[Modifier, ...]] = lambda d: ()
     options: tuple[RollOptionSpec, ...] = ()
+    # Opzioni dopo il colpo di un incantesimo che si lancia proprio lì (punizioni 2024): le offre chi ha l'incantesimo, senza uno stato;
+    # ``data`` per l'opzione: ``spell_id``, ``spell_key``, ``edition``
+    on_hit: tuple[RollOptionSpec, ...] = ()
     rounds: int | None = None
     rounds_by_slot: Callable[[int], int] | None = None  # durata in round secondo lo slot (Sortilegio, Marchio del Cacciatore)
     until_rest: bool = False
@@ -146,6 +149,23 @@ def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:
 def spell_state_options(char: Any) -> list[tuple[RollOptionSpec, dict]]:
     """Le opzioni al tiro degli incantesimi che agiscono su ``char`` (variante dell'edizione del lanciatore), ognuna con i ``data`` del suo stato."""
     return [(o, data) for _s, _e, variant, data in spell_instances(char) for o in variant.options]
+
+
+def on_hit_spell_options(char: Any) -> list[tuple[RollOptionSpec, dict]]:
+    """Le opzioni dopo il colpo degli incantesimi che ``char`` ha e lancia al momento del colpo, con i loro ``data``."""
+    from core.rules.catalog.spells import spell_effect  # import locale: il registro importa questo modulo
+    from core.rules.edition import character_edition
+    from core.rules.spellcasting import spell_stats
+
+    edition = character_edition(char)
+    out: list[tuple[RollOptionSpec, dict]] = []
+    for spell in getattr(char, "spells", None) or []:
+        found = spell_effect(edition, spell.srd_index, spell.name)
+        if found and found[1].on_hit:
+            stats = spell_stats(char, spell)
+            data = {"spell_id": spell.id, "spell_key": found[0].key, "edition": edition, "save_dc": stats.save_dc if stats else 8 + char.proficiency_bonus}
+            out += [(option, data) for option in found[1].on_hit]
+    return out
 
 
 def enchanted_weapon(char: Any, item: Any) -> tuple[SpellVariant, dict] | None:

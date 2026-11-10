@@ -428,3 +428,50 @@ async def test_a_2024_smite_without_concentration_lasts_after_the_hit_and_never_
     assert r.status_code == 200 and len(r.json()["option_result"]["extra_rolls"]) == 3
     assert "spell:blinding_smite" in await _states(client, cid)
     assert (await _full(client, cid))["concentrating_spell_id"] is None
+
+
+# 76: le punizioni 2024 si lanciano dopo il colpo a segno (azione bonus), come la Punizione Divina: niente lancio prima, mancato senza slot sprecato
+async def _slots24(client, cid) -> dict[int, int]:
+    return {s["level"]: s["available"] for s in (await _full(client, cid))["spell_slots"]}
+
+
+async def _smiter(client, name, srd, level, edition="2024"):
+    cid, spell = await _caster(client, name, srd, level, edition=edition, slots=2)
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": level + 1, "total": 1})
+    return cid, spell, await _sword(client, cid)
+
+
+async def test_t10_76_a_2024_smite_is_offered_after_the_hit_with_the_slot_chosen_there(client):
+    cid, spell, wid = await _smiter(client, "Punizione Collerica", "wrathful-smite", 1)
+    option = next(o for o in await _listed(client, cid, wid) if o["key"] == WRATHFUL)  # nessun lancio prima
+    assert {s["level"]: s["dice"] for s in option["input_options"]} == {1: "1d6", 2: "2d6"} and option["slot"] == "bonus"
+    before = await _slots24(client, cid)
+    r = await _damage(client, cid, await _deferred(client, cid, wid), [WRATHFUL], **{WRATHFUL: {"slot_level": 2}})
+    assert r.status_code == 200, r.text
+    block = r.json()["option_result"]
+    assert len(block["extra_rolls"]) == 2 and block["extra_types"] == ["necrotic", "necrotic"] and block["targets"] == [WRATHFUL]
+    assert (await _slots24(client, cid))[2] == before[2] - 1 and (await _slots24(client, cid))[1] == before[1]
+    assert (await _full(client, cid))["concentrating_spell_id"] == spell  # Punizione Collerica 2024 è a concentrazione
+    assert "spell:wrathful_smite" not in ((await _full(client, cid))["active_states"] or [])
+    assert WRATHFUL not in [o["key"] for o in await _listed(client, cid, wid)]  # un solo incantesimo con slot per turno
+
+
+async def test_t10_76_a_missed_attack_wastes_no_slot_and_a_non_concentration_smite_does_not_concentrate(client):
+    cid, spell, wid = await _smiter(client, "Punizione Tonante", "thunderous-smite", 1)
+    before = await _slots24(client, cid)
+    miss = await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 1, "defer_damage": True, "confirm_extra_attack": True})
+    assert miss.status_code == 200 and await _slots24(client, cid) == before
+    r = await _damage(client, cid, await _deferred(client, cid, wid), ["spell:thunderous_smite:hit"], **{"spell:thunderous_smite:hit": {"slot_level": 1}})
+    assert r.status_code == 200, r.text
+    assert len(r.json()["option_result"]["extra_rolls"]) == 2 and (await _full(client, cid))["concentrating_spell_id"] is None
+
+
+async def test_t10_76_the_2014_smite_still_needs_the_cast_first_and_one_smite_per_hit(client):
+    old, _ = await _caster(client, "Punizione Collerica", "wrathful-smite", 1)
+    assert WRATHFUL not in [o["key"] for o in await _listed(client, old, await _sword(client, old))]
+    cid, _, wid = await _smiter(client, "Punizione Collerica", "wrathful-smite", 1)
+    other = (await client.post(f"/characters/{cid}/spells", json={"name": "Punizione Tonante", "srd_index": "thunderous-smite", "level": 1})).json()
+    keys = [WRATHFUL, "spell:thunderous_smite:hit"]
+    r = await _damage(client, cid, await _deferred(client, cid, wid), keys, **{k: {"slot_level": 1} for k in keys})
+    assert r.status_code == 409  # stesso gruppo della Punizione Divina: una sola per colpo
+    assert other["id"]

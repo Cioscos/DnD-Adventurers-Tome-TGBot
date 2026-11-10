@@ -243,6 +243,7 @@ class AppliedOptions:
     finesse_unarmed: bool = False  # per colpire e per il danno vale la migliore fra Forza e Destrezza (Lame Psichiche)
     damage_type: str | None = None  # il danno dell'incantesimo cambia tipo (Incantesimo Trasmutato)
     gifts: list[dict] = field(default_factory=list)  # PF temporanei per un'altra creatura: {"target": id, "value": n}, consegnati dal router
+    concentrates: list[dict] = field(default_factory=list)  # {"spell_id", "rounds"}: incantesimi a concentrazione lanciati da un'opzione dopo il colpo
 
     @property
     def mode(self) -> str | None:
@@ -334,6 +335,9 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
                 found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
     from core.rules.spell_effects import spell_state_options  # import locale: il catalogo degli incantesimi usa i tipi delle regole
     for spec, data in spell_state_options(ctx.char):  # dadi e bonus degli incantesimi ricevuti
+        found.setdefault(spec.key, RollOption(spec, replace(ctx, spell_data=data), f"spell:{data.get('spell_key')}"))
+    from core.rules.spell_effects import on_hit_spell_options
+    for spec, data in on_hit_spell_options(ctx.char) if ctx.roll == "attack" else []:  # incantesimi che si lanciano dopo il colpo (punizioni 2024)
         found.setdefault(spec.key, RollOption(spec, replace(ctx, spell_data=data), f"spell:{data.get('spell_key')}"))
     for offer in getattr(ctx.char, "party_donors", None) or []:  # messi dal server (``attach_party``)
         donor, spec = offer["donor"], offer["spec"]
@@ -566,6 +570,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.target_effect:
             keep_target_effect(ctx.char, key, spec.target_effect(option.ctx, given))
             out.targets.append(key)
+        if spec.starts_concentration is not None:
+            out.concentrates.append({"spell_id": (option.ctx.spell_data or {}).get("spell_id"), "rounds": spec.starts_concentration})
         if pre_dice is not None:
             dice[key] = pre_dice
         if spec.bonus:

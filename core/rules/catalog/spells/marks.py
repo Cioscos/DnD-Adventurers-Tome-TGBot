@@ -149,6 +149,32 @@ def _variant(option: RollOptionSpec, *, concentration: bool, rounds: int = MIN1,
     return SpellVariant(options=(option, *more), concentration=concentration, rounds=rounds, needs_dc=True, text=text)
 
 
+SMITE_GROUP = "paladin.divine_smite_cast"  # lo stesso gruppo della Punizione Divina 2024: una sola punizione per colpo
+
+
+def _cast_on_hit(variant: SpellVariant, base_slot: int) -> SpellVariant:
+    """2024: la punizione è un'azione bonus «subito dopo aver colpito» (mischia o senz'armi): si offre dopo il colpo a segno, con lo slot
+    scelto lì (e i dadi che ne seguono), come la Punizione Divina. Non serve lanciarla prima, e un mancato non spreca lo slot.
+    Se l'hai già lanciata prima (stato sul lanciatore) vale l'opzione dello stato: non si conta due volte."""
+    opt = variant.options[0]
+    state = opt.key.removesuffix(":hit")
+
+    def at(ctx: RuleContext, inputs: dict) -> RuleContext:
+        return replace(ctx, spell_data={**_data(ctx), "slot_level": int(inputs.get("slot_level") or base_slot)})
+
+    def available(ctx: RuleContext) -> bool:
+        return (ctx.spell is None and ctx.attack_mode in ("melee", "offhand") and not (ctx.char.turn_state or {}).get("spell_slot_cast")
+                and not any(s.get("key") == state for s in ctx.char.active_states or []))
+
+    def cast(_session, ctx: RuleContext, _inputs: dict) -> None:
+        ctx.char.turn_state = {**(ctx.char.turn_state or {}), "spell_slot_cast": True, "leveled_cast": True, "bonus_spell_cast": True}
+
+    return replace(variant, on_hit=(replace(
+        opt, requires_input="slot", cost=Cost(spell_slot_min=base_slot), slot="bonus", group=SMITE_GROUP, available=available, on_confirm=cast,
+        extra_dice=(lambda c, i: opt.extra_dice(at(c, i), i)) if opt.extra_dice else None, effect=lambda c, i: opt.effect(at(c, i), i),
+        starts_concentration=variant.rounds if variant.concentration else None),))
+
+
 BLIND_AT = {"anchor": "owner", "edge": "end", "count": MIN1}  # 1 minuto sui turni del bersaglio (senza concentrazione)
 
 # Colpo Accecante
@@ -316,14 +342,14 @@ def _spell(key: str, srd: str, names: tuple[str, ...], variants: dict[str, Spell
 SPELLS: tuple[SpellEffect, ...] = (
     _spell("hex", "hex", ("Sortilegio", "Malocchio", "Hex"), {"2014": _HEX, "2024": replace(_HEX, rounds_by_slot=_mark_rounds(True))}),
     _spell("hunters_mark", "hunters-mark", ("Marchio del Cacciatore", "Hunter's Mark"), {"2014": _MARK_2014, "2024": _MARK_2024}),
-    _spell("blinding_smite", "blinding-smite", ("Punizione Accecante", "Colpo Accecante", "Blinding Smite"), {"2014": _BLINDING_2014, "2024": _BLINDING_2024}),
+    _spell("blinding_smite", "blinding-smite", ("Punizione Accecante", "Colpo Accecante", "Blinding Smite"), {"2014": _BLINDING_2014, "2024": _cast_on_hit(_BLINDING_2024, 3)}),
     _spell("branding_smite", "branding-smite", ("Punizione Marchiante", "Branding Smite"), {"2014": _BRANDING}),
-    _spell("searing_smite", "searing-smite", ("Punizione Incandescente", "Punizione Infuocata", "Searing Smite"), {"2014": _SEARING_2014, "2024": _SEARING_2024}),
-    _spell("shining_smite", "shining-smite", ("Punizione Splendente", "Shining Smite"), {"2024": _SHINING}),
-    _spell("wrathful_smite", "wrathful-smite", ("Punizione Collerica", "Wrathful Smite"), {"2014": _WRATHFUL_2014, "2024": _WRATHFUL_2024}),
-    _spell("thunderous_smite", "thunderous-smite", ("Punizione Tonante", "Thunderous Smite"), {"2014": _THUNDER_2014, "2024": _THUNDER_2024}),
-    _spell("staggering_smite", "staggering-smite", ("Punizione Demoralizzante", "Punizione Sconvolgente", "Staggering Smite"), {"2014": _STAGGER_2014, "2024": _STAGGER_2024}),
-    _spell("banishing_smite", "banishing-smite", ("Punizione Esiliante", "Colpo dell'Esilio", "Banishing Smite"), {"2014": _BANISH_2014, "2024": _BANISH_2024}),
+    _spell("searing_smite", "searing-smite", ("Punizione Incandescente", "Punizione Infuocata", "Searing Smite"), {"2014": _SEARING_2014, "2024": _cast_on_hit(_SEARING_2024, 1)}),
+    _spell("shining_smite", "shining-smite", ("Punizione Splendente", "Shining Smite"), {"2024": _cast_on_hit(_SHINING, 2)}),
+    _spell("wrathful_smite", "wrathful-smite", ("Punizione Collerica", "Wrathful Smite"), {"2014": _WRATHFUL_2014, "2024": _cast_on_hit(_WRATHFUL_2024, 1)}),
+    _spell("thunderous_smite", "thunderous-smite", ("Punizione Tonante", "Thunderous Smite"), {"2014": _THUNDER_2014, "2024": _cast_on_hit(_THUNDER_2024, 1)}),
+    _spell("staggering_smite", "staggering-smite", ("Punizione Demoralizzante", "Punizione Sconvolgente", "Staggering Smite"), {"2014": _STAGGER_2014, "2024": _cast_on_hit(_STAGGER_2024, 4)}),
+    _spell("banishing_smite", "banishing-smite", ("Punizione Esiliante", "Colpo dell'Esilio", "Banishing Smite"), {"2014": _BANISH_2014, "2024": _cast_on_hit(_BANISH_2024, 5)}),
     _spell("ensnaring_strike", "ensnaring-strike", ("Colpo Intrappolante", "Ensnaring Strike"), both(_ENSNARE)),
     _spell("hail_of_thorns", "hail-of-thorns", ("Raffica di Spine", "Grandine di Spine", "Hail of Thorns"), {"2014": _HAIL(True), "2024": _HAIL(False)}),
     _spell("lightning_arrow", "lightning-arrow", ("Freccia Folgorante", "Freccia Fulminea", "Lightning Arrow"), {"2014": _LIGHTNING(True), "2024": _LIGHTNING(False)}),
