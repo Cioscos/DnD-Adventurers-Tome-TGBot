@@ -127,6 +127,7 @@ class ItemRead(BaseModel):
     equipment_slot: Optional[EquipmentSlot] = None
     container_id: Optional[int] = None
     container_stats: Optional[ContainerStatsRead] = None
+    martial_arts: bool = False  # arma impugnabile con Arti Marziali (Destrezza e dado da monaco): lo calcola il server sulla scheda
     mastery: str | None = absent_when_none()  # proprietà di maestria 2024 dell'arma; l'interfaccia la mostra solo in 2024
     # Effetto di catalogo di ogni incantesimo concesso (stessa forma di SpellRead.effect, indice = granted_spells); solo sulla scheda
     granted_effects: list[dict | None] | None = absent_when_none()

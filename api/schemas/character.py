@@ -179,6 +179,10 @@ class CharacterFull(BaseModel):
     unarmored_defense_ability: Optional[str] = None
     # Caratteristiche della formula senza armatura in vigore (privilegio o interruttore).
     unarmored_formula: Optional[list[str]] = None
+    # CA senza armatura con la seconda caratteristica scelta («wisdom»/«constitution»): l'anteprima della pagina CA, dal server.
+    unarmored_previews: dict[str, int] = {}
+    # Dadi di danno del colpo senz'armi adesso (Arti Marziali compresa), come li tira il server.
+    unarmed_damage_dice: str = "1"
     ac: int
 
     # Homebrew passive-modifier breakdown (populated by router after model_validate)

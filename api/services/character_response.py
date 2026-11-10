@@ -35,7 +35,8 @@ from core.rules.modifiers import (
     ac_delta, effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
 from core.game.stats import effective_ability_mod, effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
-from api.routers._helpers import initiative_bonus
+from api.routers._helpers import initiative_bonus, unarmed_attack_profile
+from core.rules.weapons import martial_arts_level
 
 
 _READ_ONLY_ATTRS = ("base_armor_class", "base_armor_class_override", "settings")
@@ -135,6 +136,11 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         if ab.feature_key in dc_of:
             ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
+        if on_use and on_use.available and owner is not None:
+            try:
+                ab.use_blocked = not on_use.available(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
+            except Exception:  # una condizione che non sa rispondere qui non deve rompere la scheda: il server la ricontrolla all'uso
+                ab.use_blocked = False
         ab.rest_damage_choices = rest_choices.get(ab.feature_key, [])
         if on_use and on_use.preview and owner is not None:
             ab.use_preview = on_use.preview(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
@@ -212,6 +218,10 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     for it in response.items:  # portata in più di un'arma (Radici Percuotenti)
         if it.item_type == "weapon" and it.id in owned:
             it.reach_bonus_ft = modifiers_for(char, "reach", item=owned[it.id]).flat or None
+            it.martial_arts = martial_arts_level(char, owned[it.id]) > 0
+    dex = effective_ability_mod(char, "dexterity")  # mai peggio di 10 + DES, anche con la seconda caratteristica negativa
+    response.unarmored_previews = {a: 10 + dex + max(0, effective_ability_mod(char, a)) for a in ("wisdom", "constitution")}
+    response.unarmed_damage_dice = unarmed_attack_profile(char)[1]
 
     rule_damage = modifiers_for(char, None)
     stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}

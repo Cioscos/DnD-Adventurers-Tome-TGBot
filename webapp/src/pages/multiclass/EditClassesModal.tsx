@@ -204,15 +204,13 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
         newIdByTempId.set(ne.tempId, newId)
       }
 
-      for (const e of entries) {
-        const before = (char.classes ?? []).find((c) => c.id === (e.kind === 'existing' ? e.classId : -1))
-        if (e.kind === 'existing' && (before?.subclass ?? '') !== (e.subclass ?? '')) {
-          await api.classes.update(char.id, e.classId, { subclass: (e.subclass ?? '').trim() || null })
-        }
-      }
-
+      // Sottoclassi e livelli viaggiano nella stessa chiamata: se fallisce, non resta uno stato parziale.
       const payload = entries.map((e) => {
-        if (e.kind === 'existing') return { class_id: e.classId, level: e.level }
+        if (e.kind === 'existing') {
+          const before = (char.classes ?? []).find((c) => c.id === e.classId)
+          const changed = (before?.subclass ?? '') !== (e.subclass ?? '')
+          return changed ? { class_id: e.classId, level: e.level, subclass: (e.subclass ?? '').trim() || null } : { class_id: e.classId, level: e.level }
+        }
         const id = newIdByTempId.get(e.tempId)
         if (id == null) throw new Error('new class id lookup failed')
         return { class_id: id, level: e.level }

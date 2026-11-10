@@ -121,3 +121,28 @@ async def test_body_missing_a_class_is_mismatch_400(client):
     )
     assert r.status_code == 400, r.text
     assert r.json()["detail"] == "classes_mismatch"
+
+
+async def test_distribute_44_saves_subclass_and_levels_in_one_call(client):
+    """Punto 44: la sottoclasse viaggia con i livelli; se la richiesta è rifiutata non cambia nulla."""
+    cid, gid = await _create_fighter(client)
+    lid = await _add_rogue(client, cid)
+    await _set_xp(client, cid, 900)
+    bad = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2, "subclass": "Campione"}, {"class_id": lid, "level": 3}]})
+    assert bad.status_code == 400  # 5 livelli oltre il tetto di 3
+    after = (await client.get(f"/characters/{cid}")).json()
+    assert next(c["subclass"] for c in after["classes"] if c["id"] == gid) in (None, "")
+    r = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2, "subclass": "Campione"}, {"class_id": lid, "level": 1}]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert next(c["subclass"] for c in body["classes"] if c["id"] == gid) == "Campione"
+    assert _level_of(body, gid) == 2
+    # Senza il campo la sottoclasse resta; con null o stringa vuota si toglie.
+    keep = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2}, {"class_id": lid, "level": 1}]})
+    assert next(c["subclass"] for c in keep.json()["classes"] if c["id"] == gid) == "Campione"
+    cleared = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2, "subclass": ""}, {"class_id": lid, "level": 1}]})
+    assert next(c["subclass"] for c in cleared.json()["classes"] if c["id"] == gid) in (None, "")

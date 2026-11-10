@@ -327,6 +327,17 @@ def casting_kind(spell: Any) -> str:
     return "reaction" if "reazion" in text or "reaction" in text else "action"
 
 
+LONG_CASTING = re.compile(r"minut|minute|\bor[ae]\b|hour", re.IGNORECASE)
+
+
+def champion_bonus_cast(char: Any, spell: Any) -> bool:
+    """Campione degli Antichi: finché dura, un incantesimo da un'azione si lancia con un'azione bonus. 2024: qualunque
+    incantesimo; 2014: solo quelli da paladino (la classe dell'incantesimo, o l'unica classe se non è assegnato)."""
+    if casting_kind(spell) != "action" or LONG_CASTING.search(spell.casting_time or "") or not has_state(char, "elder_champion"):
+        return False
+    return character_edition(char) == "2024" or all(row_class_key(c) == "paladin" for c in _spell_rows(char, spell))
+
+
 def _armor_block(char: Any) -> bool:
     kinds = ("armor", "shield") if character_edition(char) == "2014" else ("armor",)  # 2024: lo scudo toglie solo la CA
     return any(i.is_equipped and i.item_type in kinds and not is_armor_proficient(char, i) for i in char.items)

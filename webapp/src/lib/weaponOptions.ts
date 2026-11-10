@@ -1,4 +1,4 @@
-import { isFinesse, isLight, martialArtsLevel } from '@/lib/unarmedStrike'
+import { isFinesse, isLight } from '@/lib/unarmedStrike'
 import type { CharacterFull } from '@/types'
 
 /** Pre-attack choices a weapon offers (versatile grip, thrown attack, other hand, ability). */
@@ -11,7 +11,7 @@ export type WeaponChoice = {
 
 export const DEFAULT_WEAPON_CHOICE: WeaponChoice = { grip: 'one', attack_mode: 'melee' }
 
-type ItemLike = { id?: number; item_metadata?: Record<string, unknown> | null }
+type ItemLike = { id?: number; martial_arts?: boolean; item_metadata?: Record<string, unknown> | null }
 export type ChoiceChar = Pick<CharacterFull, 'classes' | 'rules_edition' | 'items' | 'ability_scores'>
 
 function props(item: ItemLike): string[] {
@@ -28,7 +28,7 @@ export function weaponOptions(
     versatile: p.includes('prop_versatile') && !!item.item_metadata?.versatile_dice,
     thrown: p.includes('prop_thrown'),
     offhand: isLight(item) && others.some((o) => o.id !== item.id && o.item_type === 'weapon' && o.is_equipped && isLight(o)),
-    ability: !!char && (isFinesse(item) || martialArtsLevel(char.classes, char.rules_edition, char.items, item) > 0),
+    ability: !!char && (isFinesse(item) || !!item.martial_arts),  // Arti Marziali: il server dice se vale per quest'arma
   }
 }
 

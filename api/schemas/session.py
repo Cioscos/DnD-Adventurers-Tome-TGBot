@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.encounter import EncounterLive, PublicState
 from api.schemas.item import ItemCreate
+from core.game.actions import HIDE_MIN_TOTAL
 
 
 class SessionCreateRequest(BaseModel):
@@ -259,6 +260,7 @@ class TurnState(BaseModel):
     turn: TurnBlock = TurnBlock()
     attacks_allowed: int = 1
     attacks_allowed_pact: int = 1  # il limite con l'arma del patto (Lama Assetata)
+    hide_min_total: int = HIDE_MIN_TOTAL  # Nascondersi 2024: il totale di Furtività che basta
     in_encounter: bool
     is_my_turn: bool
     round: Optional[int] = None

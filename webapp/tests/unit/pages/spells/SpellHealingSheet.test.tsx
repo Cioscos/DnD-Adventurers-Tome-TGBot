@@ -40,7 +40,7 @@ vi.mock('@/components/ui/Button', async () => {
 })
 
 const result = { total: 11, breakdown: '1d8=[5] +3 +3 = 11', maximized: false, healed: 0, self_healed: 4, modifier: 3, bonus: 3, rolls: [5], main_rolls: [5], casting_level: 1, main_kind: 'd8' } as RollHealingResult
-const cure = { id: 3, name: 'Cura ferite', level: 1, srd_index: 'cure-wounds' } as Spell
+const cure = { id: 3, name: 'Cura ferite', level: 1, srd_index: 'cure-wounds', is_healing: true } as Spell
 
 afterEach(() => { rollHealing.mockReset(); useSpell.mockReset() })
 

@@ -130,6 +130,8 @@ export interface Ability {
   has_on_use?: boolean
   /** Il «Usa» ora non costa nulla e si può fare (prolungare l'Ira): acceso anche a 0 usi. Lo decide il server. */
   free_use?: boolean
+  /** Il «Usa» ora verrebbe rifiutato dal server (Rompi-Incantesimi senza un lancio da rendere): il pulsante è spento. */
+  use_blocked?: boolean
   /** Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): si chiede a chi (R38). */
   gives_to_ally?: boolean
   /** Valori della scelta `mode` rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi. */
@@ -253,6 +255,8 @@ export interface Spell {
   is_prepared: boolean
   school?: string | null
   srd_index?: string | null
+  /** Incantesimo di cura: «Lancia» apre il tiro di cura (lo decide il server). */
+  is_healing?: boolean
   higher_levels_dice?: string | null
   /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */
   extra_damage_dice?: string | null
@@ -307,6 +311,8 @@ export interface Item {
   /** Solo per i contenitori, nelle risposte CharacterFull. */
   container_stats?: ContainerStats | null
   /** Proprietà di maestria 2024 dell'arma: si mostra solo ai personaggi 2024. */
+  /** Arti Marziali vale per quest'arma (Destrezza e dado da monaco): lo calcola il server sulla scheda. */
+  martial_arts?: boolean
   mastery?: string
   /** Portata in più nel proprio turno, da un privilegio (Radici Percuotenti). */
   reach_bonus_ft?: number | null
@@ -504,6 +510,10 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   shield_armor_class_override: boolean
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   unarmored_formula?: string[] | null
+  /** CA senza armatura con la seconda caratteristica scelta, per l'anteprima (dal server). */
+  unarmored_previews?: Record<string, number>
+  /** Dadi di danno del colpo senz'armi adesso, Arti Marziali compresa (dal server). */
+  unarmed_damage_dice?: string
   ac_breakdown?: AcBreakdown | null
   speed_homebrew_modifier?: number
   speed_items_modifier?: number
@@ -1125,6 +1135,8 @@ export interface TurnState {
   attacks_allowed: number
   /** Il limite con l'arma del patto in mano (Lama Assetata). */
   attacks_allowed_pact?: number
+  /** Nascondersi 2024: il totale di Furtività che rende Invisibili (regola del server). */
+  hide_min_total?: number
   in_encounter: boolean
   is_my_turn: boolean
   round: number | null

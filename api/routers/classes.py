@@ -231,6 +231,21 @@ async def distribute_class_levels(
         raise HTTPException(status_code=422, detail="hp_rolls must have one value per gained level")
     rolls_left = list(body.hp_rolls) if body.hp_rolls is not None else None
 
+    # Sottoclassi prima dei livelli: il sync dei privilegi di un livello nuovo le vede già (e se qualcosa fallisce
+    # più avanti la richiesta si annulla intera).
+    subclass_changed = False
+    for entry in body.classes:
+        if "subclass" not in entry.model_fields_set:
+            continue
+        cls = classes_by_id[entry.class_id]
+        new_subclass = (entry.subclass or "").strip() or None
+        if new_subclass != cls.subclass:
+            cls.subclass = new_subclass
+            cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
+            subclass_changed = True
+    if subclass_changed:
+        grant_assassin_kits(char, lang)
+
     # Apply level changes + resource sync (body order = hp_rolls order)
     for entry in body.classes:
         cls = classes_by_id[entry.class_id]
@@ -246,6 +261,9 @@ async def distribute_class_levels(
         cls.level = new_level
         sync_level_choices(char, cls, prev_level, new_level)
         await sync_class_feature_abilities(session, char, cls, lang=lang)
+
+    if subclass_changed:
+        await sync_cataloged_features(session, char, lang)
 
     # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
     hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus)

@@ -154,6 +154,9 @@ class ClassLevelEntry(BaseModel):
     """One (class_id, level) pair for the distribute endpoint."""
     class_id: int
     level: int = Field(ge=1, le=20)
+    # Sottoclasse nello stesso salvataggio dei livelli (punto 44: una sola chiamata, niente stato parziale).
+    # Assente = non cambia; stringa vuota o null = la toglie.
+    subclass: Optional[str] = Field(default=None, max_length=100)
 
 
 class ClassDistribute(BaseModel):
@@ -239,6 +242,8 @@ class AbilityRead(BaseModel):
     use_panel: Optional[str] = None
     # L'uso ora non costa nulla e si può fare (prolungare l'Ira 2024): il «Usa» resta acceso anche a 0 usi; lo decide il server
     free_use: bool = False
+    # Il «Usa» ora verrebbe rifiutato (`feature_unavailable`: Rompi-Incantesimi senza un lancio da rendere): il client lo spegne
+    use_blocked: bool = False
     # Usi che restano al privilegio di cui questo spende gli usi (Preservare Vita: la riserva di Incanalare Divinità)
     spends_left: Optional[int] = None
     # Riga di riserva a catalogo (Incanalare Divinita): solo contatore, l'uso passa dai privilegi che la spendono

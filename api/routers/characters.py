@@ -58,6 +58,7 @@ from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
 from api.services.rules_targets import activate_pending_effect, drop_pending_effect
 from core.game.item_bonuses import item_bonus_total
+from core.game.actions import HIDE_MIN_TOTAL
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body, spend_inspiration_reroll
@@ -453,7 +454,7 @@ async def hide(
     if last.get("roll") != "skill" or last.get("skill") != "stealth":
         raise HTTPException(status_code=409, detail={"code": "no_stealth_roll"})
     total = last["total"]
-    if total < 15:
+    if total < HIDE_MIN_TOTAL:
         raise HTTPException(status_code=409, detail={"code": "hide_failed"})
     # Nascondersi di nuovo mentre ci si nasconde già: l'Invisibilità di prima è del nascondiglio, non di un'altra fonte.
     hiding = (char.settings or {}).get("hiding")

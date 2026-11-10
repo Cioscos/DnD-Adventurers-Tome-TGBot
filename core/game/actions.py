@@ -10,6 +10,9 @@ from core.data.spell_slots import normalize_class_name
 ActionType = Literal["action", "bonus_action", "reaction", "free", "special"]
 
 # Bonus prima di azione: "1 azione bonus" inizia con "1 azione".
+# Nascondersi 2024: totale minimo di Furtività perché il personaggio diventi Invisibile (lo legge anche il client dal turno).
+HIDE_MIN_TOTAL = 15
+
 _CASTING_TIME = re.compile(r"^1\s+(?:(azione bonus|bonus action)|(azione|action)|(reazione|reaction))\b")
 
 

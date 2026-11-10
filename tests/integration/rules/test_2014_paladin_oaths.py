@@ -326,6 +326,20 @@ async def test_elder_champion_lasts_ten_rounds_and_heals_ten_at_the_start_of_eac
     assert await _hp(client, cid) == maximum  # mai oltre il massimo
 
 
+async def test_elder_champion_42_one_action_paladin_spells_are_listed_and_cast_as_a_bonus_action(client):
+    """Punto 42: la regola vive sul server (elenco e spesa del turno); il client legge `casting_time`."""
+    cid = await _paladin(client, 20, "ancients", charisma=16)
+    spell = next(s for s in (await _spells(client, cid)).values() if s["srd_index"] == "ice-storm")
+    assert "bonus" not in spell["casting_time"].lower()
+    assert (await _use(client, cid, EC)).status_code == 200
+    await _new_turn(client, cid)
+    spell = next(s for s in (await _spells(client, cid)).values() if s["srd_index"] == "ice-storm")
+    assert "bonus" in spell["casting_time"].lower()
+    assert (await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 4})).status_code == 200
+    turn = await _turn(client, cid)
+    assert turn["bonus_spell_cast"] is True and turn["action_used"] is False
+
+
 async def test_elder_champion_does_not_heal_without_the_state(client, test_session_factory):
     cid = await _paladin(client, 20, "ancients")
     await _hurt(test_session_factory, cid, 5)

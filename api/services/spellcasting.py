@@ -24,7 +24,7 @@ from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
 from core.rules.spellcasting import (
-    at_will, bonus_cast, caster_stats, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
     no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
 
@@ -47,7 +47,7 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if stats:
             spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
         spell.at_will = at_will(char, spell)
-        if casting_kind(spell) == "action" and bonus_cast(char, spell):  # Rompi-Incantesimi, Illusioni Migliorate: l'elenco lo dice
+        if casting_kind(spell) == "action" and (bonus_cast(char, spell) or champion_bonus_cast(char, spell)):  # Rompi-Incantesimi, Campione degli Antichi: l'elenco lo dice
             spell.casting_time = "1 bonus action" if "action" in (spell.casting_time or "").lower() else "1 azione bonus"
         spell.has_book = spell.level >= 1 and wizard_row(char, spell) is not None
         if (shown := spell_range_override(char, spell)) is not None:

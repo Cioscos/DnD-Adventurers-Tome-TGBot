@@ -78,7 +78,7 @@ from api.services.spellcasting import build_spellcasting_info, fill_spell_stats,
 from core.game.stats import cantrip_dice_multiplier
 from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
 from core.rules.spellcasting import (
-    at_will, bonus_cast, can_ritual, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
+    at_will, bonus_cast, can_ritual, champion_bonus_cast, LONG_CASTING as _LONG_CASTING, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
 )
 from api.services.character_load import get_owned_full
 from api.services.dice_notation import DICE_RE, roll_dice
@@ -146,8 +146,7 @@ def _cast_kind(char: Character, spell: Spell) -> str:
     """Il slot di turno del lancio. Campione degli Antichi 2024 (Incantesimi Rapidi): finché dura, un incantesimo da un'azione
     si lancia con un'azione bonus."""
     kind = casting_kind(spell)
-    if (kind == "action" and character_edition(char) == "2024" and has_state(char, "elder_champion")
-            and not _LONG_CASTING.search(spell.casting_time or "")):
+    if champion_bonus_cast(char, spell):
         return "bonus"
     if kind == "action" and bonus_cast(char, spell):  # Rompi-Incantesimi: Dissolvi Magie come azione bonus
         return "bonus"
@@ -178,7 +177,6 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
 
 
 WAR_MAGIC_KEYS = {"fighter.war_magic", "fighter.improved_war_magic"}
-_LONG_CASTING = re.compile(r"minut|minute|\bor[ae]\b|hour", re.IGNORECASE)
 
 
 def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, extra: int) -> tuple[Any, int]:

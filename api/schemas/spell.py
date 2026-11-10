@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
+from core.rules.spell_healing import SPELL_HEALING
 from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -57,6 +58,12 @@ class SpellRead(BaseModel):
     effect: Optional[dict] = None
 
     model_config = {"from_attributes": True}
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_healing(self) -> bool:
+        """«Lancia» apre il tiro di cura (punto 42: lo dice il server, che ha la tabella delle cure)."""
+        return bool(self.srd_index) and self.srd_index in SPELL_HEALING
 
 
 class SpellCreate(BaseModel):
