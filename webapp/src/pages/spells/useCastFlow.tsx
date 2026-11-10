@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { isAttackSpell } from '@/lib/spellType'
+import { needsEffectAsk } from '@/lib/spellChoice'
 import { m, AnimatePresence } from 'framer-motion'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -208,7 +209,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   /** Con un effetto sui bersagli (non su di sé) o scelte da fare, si chiede prima; il server ricontrolla tutto. */
   const withEffect = useCallback((spell: Spell, level: number, next: () => void) => {
-    if (spell.effect && (spell.effect.target_kind !== 'self' || spell.effect.choices.length > 0)) setEffectAsk({ spell, level: Math.max(level, 1), next })
+    if (spell.effect && needsEffectAsk(spell.effect)) setEffectAsk({ spell, level: Math.max(level, 1), next })
     else next()
   }, [])
 

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_lang, get_current_user
+from api.services.session_allies import attach_spell_auras
 from api.services.rules_options import (
     merge_options,
     option_result,
@@ -786,6 +787,7 @@ async def attack_with_weapon(
     body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
     char = await _get_owned_full(char_id, user_id, session)
+    await attach_spell_auras(session, char)  # le aure vive dei compagni (Manto del Crociato)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
     )
@@ -987,6 +989,7 @@ async def attack_unarmed(
 ) -> WeaponAttackResult:
     """Unarmed strike: 1+STR bludgeoning; Monk uses best of STR/DEX + Martial Arts die."""
     char = await _get_owned_full(char_id, user_id, session)
+    await attach_spell_auras(session, char)  # le aure vive dei compagni (Manto del Crociato)
     refuse_if_incapacitated(char)
     _check_attack_limit(char, body)
 

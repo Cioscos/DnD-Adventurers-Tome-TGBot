@@ -9,6 +9,7 @@ from typing import Any
 
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.spell_effects import own_aura_clocks
 from core.rules.states import is_conscious
 from core.rules.types import RuleContext
 
@@ -23,7 +24,12 @@ def projected_auras(char: Any) -> list[dict]:
         ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
         out.append({"kind": aura.kind, "source": char.name, "bonus": aura.bonus(ctx), "range_ft": aura.range_ft(ctx),
                     "edition": ctx.edition})
-    return out
+    return out + projected_spell_auras(char)
+
+
+def projected_spell_auras(char: Any) -> list[dict]:
+    """Le aure degli incantesimi di ``char`` (Aura di Vita...): vive finché dura il suo orologio, raggiungono ogni seduto alla serata."""
+    return [{"kind": "spell", "source": char.name, "bonus": 0, "range_ft": 0, **a} for a in own_aura_clocks(char)]
 
 
 def party_auras(char: Any, kind: str | None = None) -> list[dict]:

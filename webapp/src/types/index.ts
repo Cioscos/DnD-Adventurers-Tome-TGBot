@@ -216,6 +216,8 @@ export interface MapEntry {
 
 export interface SpellEffectInfo {
   target_kind: 'self' | 'ally' | 'allies' | 'aura'
+  /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
+  weapon_choice?: boolean
   max_targets_by_slot: Record<string, number>
   choices: { key: string; label: { it: string; en: string }; options: string[] }[]
 }

@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
 from core.rules.modifiers import is_incapacitated
+from core.rules.spell_effects import spell_instances
 from core.rules.types import TURN_FLAGS as _FLAGS
 
 SLOTS = (*_FLAGS, "attack")
@@ -125,8 +126,9 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     previous = get_turn(char)
     vex = {k: previous[k] - 1 for k in ("vex", "studied") if previous.get(k, 0) > 1}  # Vex e Attacchi Studiati
     notice = {} if advances or not previous.get("start_heal") else {"start_heal": previous["start_heal"]}
-    _save(char, {**_default(), "damaged": previous["damaged"],
-                 "surprised": previous["surprised"] and keep_surprise, **vex, **notice})
+    hasted = any(variant.extra_action for _s, _e, variant, _d in spell_instances(char))  # Velocità: un'azione in più, limitata a un attacco
+    _save(char, {**_default(), "damaged": previous["damaged"], "surprised": previous["surprised"] and keep_surprise,
+                 **({"extra_actions": 1, "haste_action": True} if hasted else {}), **vex, **notice})
     return char.turn_state
 
 
@@ -167,4 +169,6 @@ def attacks_allowed(char, item=None, with_pact: bool = False) -> int:
         *(spec.attacks_per_action for spec, _ in active_features(char)),
         *(spec.attacks_with_pact_weapon for spec, _ in active_features(char) if with_pact), 1,
     )
-    return per_action * (1 + get_turn(char)["extra_actions"])
+    turn = get_turn(char)
+    hasted = 1 if turn.get("haste_action") and turn["extra_actions"] > 0 else 0  # l'azione di Velocità vale un solo attacco
+    return per_action * (1 + turn["extra_actions"] - hasted) + hasted

@@ -128,7 +128,8 @@ async def test_a_concentration_spell_remembers_the_type_chosen_at_the_cast(clien
     await client.post(f"/characters/{cid}/spell_slots", json={"level": 3, "total": 2})
     spell = await _spell(client, cid, "Arma Elementale", 3, srd_index="elemental-weapon", damage_dice="1d4", damage_type="fire",
                          is_concentration=True)
-    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 3, "choices": {"damage_type": "thunder"}})
+    sword = (await client.post(f"/characters/{cid}/items", json={"name": "Spada", "item_type": "weapon", "item_metadata": {"damage_dice": "1d8"}})).json()["items"][0]["id"]
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 3, "choices": {"damage_type": "thunder", "item_id": str(sword)}})
     assert r.status_code == 200, r.text
     assert (await _damage(client, cid, spell, casting_level=3))["damage_type"] == "thunder"
 

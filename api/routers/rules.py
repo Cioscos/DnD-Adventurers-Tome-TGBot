@@ -29,7 +29,7 @@ from api.services.spell_effects import resists_chosen_type
 from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
-from api.services.session_allies import attach_party, attach_party_auras, seated_allies
+from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
 from core.rules.states import is_target_immune
 from api.services.turn_start import apply_turn_start
 from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
@@ -175,6 +175,8 @@ async def roll_options(
         ability = "dexterity"
     if spell is not None and resists_chosen_type(char, spell):
         damage_type = None  # il tipo scelto è quello a cui si resiste: non attiva i privilegi sul danno inflitto
+    if roll not in ("save", "death_save", "damage_taken"):
+        await attach_spell_auras(db, char)  # le aure vive dei compagni (Manto del Crociato)
     if roll in ("save", "death_save", "damage_taken"):
         if roll == "damage_taken":  # aure dei compagni e Dono dei Protettori di un compagno
             await attach_party(db, char)
@@ -510,6 +512,23 @@ async def session_allies(
 
     return [AllyRead(id=a.id, name=a.name, die=held(a), dead=a.is_dead)
             for a in await seated_allies(db, char)]
+
+
+class WeaponRead(BaseModel):
+    id: int
+    name: str
+
+
+@turn_router.get("/{char_id}/session-allies/{ally_id}/weapons", response_model=list[WeaponRead])
+async def ally_weapons(
+    char_id: int, ally_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> list[WeaponRead]:
+    """Le armi senza bonus magico di ``ally_id`` (te stesso o un compagno della serata): la scelta di Arma Magica e Arma Elementale."""
+    from api.services.session_allies import ally_target  # import locale
+    from api.services.spell_effects import plain_weapons  # import locale: il servizio degli incantesimi importa questo modulo
+    char = await _owned_char(db, char_id, user_id)
+    owner = char if ally_id == char.id else await ally_target(db, char, ally_id)
+    return [WeaponRead(id=i.id, name=i.name) for i in await plain_weapons(db, owner.id)]
 
 
 class BardicDieAc(BaseModel):

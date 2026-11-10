@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast'
 import { notifyCastError } from '@/lib/mutationError'
 import { resolveItemCast, matchingSpell, type ResolvedItemCast } from '@/lib/itemCast'
 import { itemGrantedSpells } from '@/lib/itemMagic'
+import { needsEffectAsk } from '@/lib/spellChoice'
 import SpellEffectAsk, { type SpellEffectPick } from '@/components/rules/SpellEffectAsk'
 import type { CharacterFull, SpellEffectInfo, SpellEffectsResult } from '@/types'
 import ItemCastSheet from '@/pages/spells/ItemCastSheet'
@@ -48,7 +49,7 @@ export function useItemCast(charId: number) {
     const item = char?.items?.find((i) => i.id === vars.itemId)
     const granted = item ? itemGrantedSpells(item)[vars.spellIndex] : undefined
     const effect = item?.granted_effects?.[vars.spellIndex] ?? (char && granted ? matchingSpell(char, granted)?.effect : undefined)
-    if (granted && effect && (effect.target_kind !== 'self' || effect.choices.length > 0)) setAsk({ ...vars, level: granted.level, effect })
+    if (granted && effect && needsEffectAsk(effect)) setAsk({ ...vars, level: granted.level, effect })
     else mutation.mutate(vars)
   }
 

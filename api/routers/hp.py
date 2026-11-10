@@ -31,7 +31,7 @@ from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
-from api.services.session_allies import load_receiver, attach_party, attach_party_auras, refund_donor_tokens, spend_donor_tokens
+from api.services.session_allies import load_receiver, attach_party, attach_party_auras, attach_spell_auras, refund_donor_tokens, spend_donor_tokens
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
 from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD
@@ -280,6 +280,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             if option_after == 0:  # il proiettile deviato si afferra (Deviare Proiettili)
                 run_zero_damage_hooks(session, char, opts.keys)
         if mod is None:
+            await attach_spell_auras(session, char)  # la resistenza di un'aura viva dei compagni (Aura di Vita)
             # Senza tipo conta solo una resistenza a tutti i danni (Pietrificato).
             mod = damage_taken_mode(char, slug)
             if slug is not None or mod != "none":

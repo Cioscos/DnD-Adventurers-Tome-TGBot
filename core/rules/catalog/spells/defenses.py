@@ -105,10 +105,6 @@ _PROT_POISON_2014 = SpellVariant(
     text=txt("Neutralizza subito un veleno sul bersaglio: lo applica il GM.", "Neutralizes one poison on the target right away: the GM applies it."))
 _PROT_POISON_2024 = SpellVariant(modifiers=res("poison"), options=(_POISON_OPTION,), rounds=HOUR, on_apply=_cure_poisoned)
 
-_FOUNT_OF_MOONLIGHT = SpellVariant(
-    modifiers=res("radiant"), concentration=True, rounds=MIN10,
-    text=txt("I tuoi attacchi in mischia infliggono 2d6 radiosi extra; con una reazione acceca chi ti ha danneggiato (TS Costituzione): li applichi a mano.",
-             "Your melee attacks deal 2d6 extra radiant damage; as a reaction you blind a creature that damaged you (CON save): apply them by hand."))
 
 
 def _reduces(ctx: RuleContext) -> bool:
@@ -203,7 +199,7 @@ _FEAST_2014 = SpellVariant(
 _FEAST_2024 = SpellVariant(modifiers=lambda d: (Modifier("resistance:poison", 1), *_feast_hp(d)),
                            immune_conditions=("frightened", "poisoned"), rounds=DAY, text=_FEAST_TEXT, **_FEAST_HP)
 
-_AURA = SpellTarget("aura", lambda slot: 20)
+_AURA = SpellTarget("aura")  # aura viva: lo stato sta sul lanciatore e raggiunge ogni seduto alla serata
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("stoneskin", ("stoneskin",), ("Pelle di Pietra", "Stoneskin"), SpellTarget("ally"),
@@ -217,8 +213,6 @@ SPELLS: tuple[SpellEffect, ...] = (
                 SpellTarget("ally"), both(_PROT_ENERGY)),
     SpellEffect("protection_from_poison", ("protection-from-poison",), ("Protezione dai Veleni", "Protezione dal Veleno", "Protection from Poison"),
                 SpellTarget("ally"), {"2014": _PROT_POISON_2014, "2024": _PROT_POISON_2024}),
-    SpellEffect("fount_of_moonlight", ("fount-of-moonlight",), ("Fonte di Luce Lunare", "Fount of Moonlight"),
-                SpellTarget("self"), {"2024": _FOUNT_OF_MOONLIGHT}),
     SpellEffect("beacon_of_hope", ("beacon-of-hope",), ("Faro di Speranza", "Beacon of Hope"),
                 SpellTarget("allies", lambda slot: 20), both(_BEACON)),
     SpellEffect("blur", ("blur",), ("Sfocatura", "Blur"), SpellTarget("self"), both(_BLUR)),

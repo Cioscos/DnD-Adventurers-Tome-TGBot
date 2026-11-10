@@ -54,7 +54,7 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("resistance", ("resistance",), ("Resistenza", "Resistance"), SpellTarget("ally"),
                 {"2014": _RESISTANCE_2014, "2024": RESISTANCE_2024}),
     SpellEffect("pass_without_trace", ("pass-without-trace",), ("Passare Senza Tracce", "Pass without Trace"),
-                SpellTarget("aura", lambda slot: 20), {"2014": _PASS_WITHOUT_TRACE, "2024": _PASS_WITHOUT_TRACE}),
+                SpellTarget("aura"), {"2014": _PASS_WITHOUT_TRACE, "2024": _PASS_WITHOUT_TRACE}),
     SpellEffect("blade_ward", ("blade-ward",), ("Protezione dalle Lame", "Interdizione alle Lame", "Blade Ward"),
                 SpellTarget("self"), {"2014": BLADE_WARD_2014, "2024": _BLADE_WARD_2024}),
 )

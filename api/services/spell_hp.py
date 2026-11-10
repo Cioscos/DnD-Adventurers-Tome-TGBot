@@ -5,33 +5,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import HPOp, HPUpdate
 from api.services.effects import apply_heal, grant_temp_hp
-from api.services.session_allies import load_receiver
+from api.services.session_allies import attach_party_auras, load_receiver
 from core.db.models import Character
-from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.roll_options import _spend_state_token
-from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellVariant
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX, SpellVariant, spell_instances
 from core.rules.states import SPELL_GIVEN, note_spell_temp_hp
 
 
 def spell_states(char: Character) -> list[tuple[dict, SpellVariant, dict]]:
-    """Gli stati ``spell:*`` della scheda con la variante dell'edizione di chi ha lanciato e i loro ``data``."""
-    out = []
-    for state in char.active_states or []:
-        key = str(state.get("key", ""))
-        if not key.startswith(SPELL_STATE_PREFIX):
-            continue
-        data = state.get("data") or {}
-        effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
-        variant = effect and effect.variants.get(data.get("edition", "2014"))
-        if variant:
-            out.append((state, variant, data))
-    return out
+    """Gli incantesimi su ``char`` (stati ``spell:*`` e aure vive) con la variante dell'edizione di chi ha lanciato e i loro ``data``."""
+    return [(state, variant, data) for state, _effect, variant, data in spell_instances(char)]
 
 
 async def spell_turn_start(session: AsyncSession, char: Character) -> tuple[int, list[dict]]:
     """Inizio del turno di ``char``: la cura nel tempo e i PF temporanei degli incantesimi su di lui.
     Restituisce i PF curati davvero e gli avvisi per il giocatore."""
     healed, notices = 0, []
+    await attach_party_auras(session, char)  # le aure vive dei compagni (Aura di Vita)
     for state, variant, data in spell_states(char):
         name = state.get("name") or data.get("spell_key")
         if variant.turn_heal and (amount := variant.turn_heal(data, char)) > 0:

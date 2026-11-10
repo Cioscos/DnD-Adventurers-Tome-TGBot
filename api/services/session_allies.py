@@ -53,6 +53,14 @@ async def attach_party_auras(session: AsyncSession, char: Character) -> None:
     char.party_auras = _auras(await _party(session, char))
 
 
+async def attach_spell_auras(session: AsyncSession, char: Character) -> None:
+    """Solo le aure vive degli incantesimi dei compagni (``char.party_auras``), senza caricare le loro schede: per la scheda e i tiri
+    che non passano da ``attach_party_auras``. Se le aure sono già state messe non fa nulla."""
+    from core.rules.auras import projected_spell_auras  # import locale: auras usa il catalogo
+    if getattr(char, "party_auras", None) is None:
+        char.party_auras = [a for ally in await seated_allies(session, char) for a in projected_spell_auras(ally)]
+
+
 async def attach_party(session: AsyncSession, char: Character) -> None:
     """Per un danno subito: le aure (come ``attach_party_auras``) e le opzioni che i compagni gli offrono
     (``RollOptionSpec.for_ally``, es. Dono dei Protettori: ``char.party_donors``, il costo resta sul donatore), con un solo

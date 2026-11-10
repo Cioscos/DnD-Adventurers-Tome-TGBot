@@ -62,6 +62,9 @@ class SpellVariant:
     retaliation: Callable[[dict, bool], dict[str, str] | None] | None = None
     needs_dc: bool = False  # la CD dei TS di chi lancia si fissa al lancio nei ``data`` dello stato (le punizioni)
     shares_damage: bool = False  # il lanciatore subisce lo stesso danno del bersaglio (Legame di Protezione)
+    weapon_choice: bool = False  # il lancio sceglie un'arma non magica del bersaglio: ``choices["item_id"]`` (Arma Magica, Arma Elementale)
+    on_close: Callable[[dict], dict] | None = None  # stato che lo stato sul bersaglio lascia alla fine (Velocità: la letargia), come ``data["on_close"]``
+    extra_action: bool = False  # a ogni turno del bersaglio un'azione in più, limitata (Velocità)
 
     def duration(self, slot: int) -> int | None:
         """Durata in round dell'incantesimo lanciato con lo slot ``slot``."""
@@ -81,11 +84,28 @@ class SpellEffect:
         return (variant.max_targets if variant and variant.max_targets else self.target.count)(slot)
 
 
-def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:
-    """Per ogni stato ``spell:*`` i modificatori della variante dell'edizione del lanciatore (``data["edition"]``)."""
+def own_aura_clocks(char: Any) -> list[dict]:
+    """Le aure che ``char`` proietta con un suo incantesimo in corso (orologio ``spell_cast:*`` di un incantesimo con ``target.kind == "aura"``):
+    ``{spell_key, name, edition, data}``. Nessuno stato sui bersagli: chi siede alla serata le riceve da qui (``projected_auras``)."""
     from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
 
-    out: list[tuple[Modifier, str]] = []
+    out: list[dict] = []
+    for state in char.active_states or []:
+        key = str(state.get("key", ""))
+        data = (state.get("data") or {}).get("state_data")
+        effect = SPELL_EFFECTS.get(key[len(SPELL_CLOCK_PREFIX):]) if key.startswith(SPELL_CLOCK_PREFIX) and data else None
+        if effect and effect.target.kind == "aura":
+            out.append({"spell_key": effect.key, "name": state.get("name") or effect.key, "edition": data.get("edition", "2014"), "data": data})
+    return out
+
+
+def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, dict]]:
+    """Gli incantesimi che agiscono su ``char``: ``(stato, effetto, variante, data)``. Sono i suoi stati ``spell:*`` e le aure vive di incantesimi,
+    sue (orologio) e dei compagni della serata (``char.party_auras``, messe dal server): una sola per incantesimo."""
+    from core.rules.auras import party_auras  # import locale: auras usa il catalogo
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
+
+    out: list[tuple[dict, SpellEffect, SpellVariant, dict]] = []
     for state in char.active_states or []:
         key = str(state.get("key", ""))
         if not key.startswith(SPELL_STATE_PREFIX):
@@ -94,21 +114,22 @@ def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:
         effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
         variant = effect and effect.variants.get(data.get("edition", "2014"))
         if variant:
-            out += [(m, f"spell:{effect.key}") for m in variant.modifiers(data)]
+            out.append((state, effect, variant, data))
+    seen: set[str] = set()
+    for aura in [*own_aura_clocks(char), *party_auras(char, "spell")]:
+        effect = SPELL_EFFECTS.get(aura["spell_key"])
+        variant = effect and effect.variants.get(aura["edition"])
+        if variant and aura["spell_key"] not in seen:
+            seen.add(aura["spell_key"])
+            out.append(({"key": SPELL_STATE_PREFIX + effect.key, "name": aura["name"]}, effect, variant, aura["data"]))
     return out
+
+
+def spell_state_modifiers(char: Any) -> list[tuple[Modifier, str]]:
+    """Per ogni incantesimo che agisce su ``char`` i modificatori della variante dell'edizione del lanciatore (``data["edition"]``)."""
+    return [(m, f"spell:{effect.key}") for _s, effect, variant, data in spell_instances(char) for m in variant.modifiers(data)]
 
 
 def spell_state_options(char: Any) -> list[tuple[RollOptionSpec, dict]]:
-    """Le opzioni al tiro degli stati ``spell:*`` (variante dell'edizione del lanciatore), ognuna con i ``data`` del suo stato."""
-    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa questo modulo
-
-    out: list[tuple[RollOptionSpec, dict]] = []
-    for state in char.active_states or []:
-        key = str(state.get("key", ""))
-        if not key.startswith(SPELL_STATE_PREFIX):
-            continue
-        data = state.get("data") or {}
-        effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
-        variant = effect and effect.variants.get(data.get("edition", "2014"))
-        out += [(o, data) for o in variant.options] if variant else []
-    return out
+    """Le opzioni al tiro degli incantesimi che agiscono su ``char`` (variante dell'edizione del lanciatore), ognuna con i ``data`` del suo stato."""
+    return [(o, data) for _s, _e, variant, data in spell_instances(char) for o in variant.options]

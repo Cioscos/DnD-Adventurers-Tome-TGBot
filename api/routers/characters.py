@@ -74,7 +74,7 @@ from core.data.spell_slots import normalize_class_name
 from core.rules.edition import character_edition
 from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
-from api.services.session_allies import attach_party_auras
+from api.services.session_allies import attach_party_auras, attach_spell_auras
 from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
@@ -728,6 +728,7 @@ async def roll_skill(
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
+    await attach_spell_auras(session, char)  # le aure vive dei compagni (Passare Senza Tracce)
     opts = use_options(session, char, "skill", body, skill=skill_name, ability=_SKILL_ABILITY[skill_name])
     # Una prova fatta con un'altra caratteristica (Conoscenza Primordiale) è a tutti gli effetti quella: bonus e modificatori.
     ability = opts.ability_override or _SKILL_ABILITY[skill_name]
@@ -796,6 +797,7 @@ async def roll_ability_check(
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
+    await attach_spell_auras(session, char)
     applied = modifiers_for(char, "ability", ability=ability)
     bonus = await check_bonus(session, char, ability)
     opts = use_options(session, char, "ability", body, ability=ability)

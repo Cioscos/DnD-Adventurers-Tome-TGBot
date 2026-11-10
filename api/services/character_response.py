@@ -17,6 +17,7 @@ from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
+from api.services.session_allies import attach_spell_auras
 from api.services.spellcasting import build_spellcasting_info, effect_view, fill_spell_stats
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
@@ -43,6 +44,7 @@ async def build_character_response(
     # Copre ogni percorso che cambia caratteristiche o oggetti senza passare da `apply_equip_ac`.
     migrate_character_ac(char)
     sync_base_ac(char)
+    await attach_spell_auras(session, char)  # le aure vive dei compagni (risorse, abilità e resistenze della scheda)
 
     # Flush any pending mutations on `char` BEFORE serializing. CharacterFull.model_validate
     # reads ORM attributes synchronously; if the session is still dirty, that access can

@@ -24,9 +24,13 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [picked, setPicked] = useState<Record<string, string>>({})
   const [choosing, setChoosing] = useState(effect.choices.length > 0)
-  const targeted = effect.target_kind !== 'self'
+  const targeted = effect.target_kind !== 'self' && effect.target_kind !== 'aura' // l'aura è del lanciatore: nessun bersaglio
   const { data: allies = [] } = useQuery({ queryKey: ['session-allies', charId], queryFn: () => api.characters.sessionAllies(charId), enabled: targeted && !choosing })
+  // Arma Magica e Arma Elementale: dopo il bersaglio si sceglie fra le sue armi non magiche
+  const [weaponFor, setWeaponFor] = useState<number | null>(null)
+  const { data: weapons = [] } = useQuery({ queryKey: ['ally-weapons', charId, weaponFor], queryFn: () => api.characters.allyWeapons(charId, weaponFor as number), enabled: weaponFor != null })
   const choices = effect.choices.length > 0 ? picked : undefined
+  const pickTargets = (targets: number[]) => (effect.weapon_choice && targets.length === 1 ? setWeaponFor(targets[0]) : onConfirm({ targets, choices }))
 
   if (choosing) {
     const ready = effect.choices.every((c) => picked[c.key])
@@ -49,14 +53,28 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
       </Sheet>
     )
   }
+  if (weaponFor != null) {
+    return (
+      <Sheet open onClose={onClose} title={title} zClassName="z-[60]">
+        <div className="flex flex-col gap-2 px-4 pb-4 pt-3">
+          <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.spells.effect_weapon')}</p>
+          {weapons.length === 0 && <p className="text-sm text-dnd-text-muted">{t('character.spells.effect_no_weapons')}</p>}
+          {weapons.map((w) => (
+            <Button key={w.id} variant="secondary" className="justify-start break-words text-left"
+              onClick={() => onConfirm({ targets: [weaponFor], choices: { ...picked, item_id: String(w.id) } })}>{w.name}</Button>
+          ))}
+        </div>
+      </Sheet>
+    )
+  }
   const list = [{ id: charId, name: t('character.turn.removal_self') }, ...allies.filter((a) => a.id !== charId && !a.dead)]
   return (
     <AllyTargetSheet
       title={title}
       allies={list}
       max={effect.max_targets_by_slot[String(slotLevel)] ?? 1}
-      onPick={(id) => onConfirm({ targets: id == null ? [] : [id], choices })}
-      onPickMany={(ids) => onConfirm({ targets: ids, choices })}
+      onPick={(id) => pickTargets(id == null ? [] : [id])}
+      onPickMany={pickTargets}
       onClose={onClose}
     />
   )

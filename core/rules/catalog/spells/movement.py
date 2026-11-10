@@ -19,15 +19,29 @@ def _described(rounds: int, it: str, en: str, *, concentration: bool = False) ->
 _FLY = SpellVariant(modifiers=lambda d: (Modifier("fly_speed_value", 60),), concentration=True, rounds=MIN10,
                     text=txt("Cade alla fine se è ancora in aria.", "It falls at the end if still in the air."))
 
+_LETHARGY = "spell:haste_lethargy"
+
+
+def _lethargy(d: dict) -> dict:
+    """Alla fine di Velocità il bersaglio resta in letargia fino alla fine del suo turno successivo (``states.settle_closed``)."""
+    return {"key": _LETHARGY, "name": "Letargia", "condition": "incapacitated",
+            "ends_on": ["new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"],
+            "data": {"skip_new_turns": 1, "spell_key": "haste_lethargy", "edition": d.get("edition", "2014")}}
+
+
 _HASTE = SpellVariant(
     modifiers=lambda d: (Modifier("ac", 2), Modifier("speed", lambda ctx: ctx.char.speed),
                          adv(lambda c: c.roll == "save" and c.ability == "dexterity")),
-    concentration=True, rounds=10,
-    text=txt("Azione extra (un attacco, Scatto, Disimpegno, Nascondersi o Usare un Oggetto). Alla fine non può muoversi né agire fino alla fine del turno successivo: lo applica il GM.",
-             "Extra action (one attack, Dash, Disengage, Hide or Use an Object). When it ends it can't move or act until the end of its next turn: the GM applies it."))
+    concentration=True, rounds=10, extra_action=True, on_close=_lethargy,
+    text=txt("Azione extra a ogni turno (un solo attacco, Scatto, Disimpegno, Nascondersi o Usare un Oggetto): la trovi nel Turno. Alla fine non può muoversi né agire fino alla fine del turno successivo (letargia, automatica).",
+             "An extra action each turn (one attack only, Dash, Disengage, Hide or Use an Object): you find it in the Turn. When it ends it can't move or act until the end of its next turn (lethargy, automatic)."))
 _HASTE_2024 = replace(_HASTE, text=txt(
-    "Azione extra (solo un attacco, Scatto, Disimpegno, Nascondersi o Utilizzare). Alla fine il bersaglio è Incapacitato e ha Velocità 0 fino alla fine del suo turno successivo: lo applica il GM.",
-    "Extra action (only one attack, Dash, Disengage, Hide or Utilize). When it ends the target is Incapacitated with Speed 0 until the end of its next turn: the GM applies it."))
+    "Azione extra a ogni turno (solo un attacco, Scatto, Disimpegno, Nascondersi o Utilizzare): la trovi nel Turno. Alla fine il bersaglio è Incapacitato e ha Velocità 0 fino alla fine del suo turno successivo (letargia, automatica).",
+    "An extra action each turn (only one attack, Dash, Disengage, Hide or Utilize): you find it in the Turn. When it ends the target is Incapacitated with Speed 0 until the end of its next turn (lethargy, automatic)."))
+_LETHARGY_VARIANT = SpellVariant(
+    modifiers=lambda d: (Modifier("speed_zero", 1),), track=True,
+    text=txt("Letargia di Velocità: niente azioni né movimento fino alla fine del suo turno successivo.",
+             "Haste lethargy: no actions or movement until the end of its next turn."))
 
 _JUMP_2014 = SpellVariant(  # distanza triplicata: +2 volte il salto base (punteggio di Forza in piedi); un solo bersaglio, senza scalata
     modifiers=lambda d: (Modifier("jump_bonus", lambda ctx: 2 * ability_score(ctx.char, "strength")),), rounds=10,
@@ -81,6 +95,7 @@ _FEATHER_FALL = _described(10, "Discesa rallentata a 18 m per round e nessun dan
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("fly", ("fly",), ("Volare", "Fly"), SpellTarget("allies", lambda slot: max(slot - 2, 1)), both(_FLY)),
     SpellEffect("haste", ("haste",), ("Velocità", "Haste"), SpellTarget("ally"), {"2014": _HASTE, "2024": _HASTE_2024}),
+    SpellEffect("haste_lethargy", (), ("Letargia di Velocità", "Haste Lethargy"), SpellTarget("self"), both(_LETHARGY_VARIANT)),  # lo stato che Velocità lascia
     SpellEffect("jump", ("jump",), ("Saltare", "Jump"), SpellTarget("allies", lambda slot: max(slot, 1)),
                 {"2014": _JUMP_2014, "2024": _JUMP_2024}),
     SpellEffect("freedom_of_movement", ("freedom-of-movement",), ("Libertà di Movimento", "Freedom of Movement"),

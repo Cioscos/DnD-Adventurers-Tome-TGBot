@@ -15,7 +15,8 @@ from api.schemas.spell import SpellEffectsRead
 from api.services.effects import apply_heal, cap_hp_to_max, grant_temp_hp
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.session_allies import ally_target
-from core.db.models import Character, GameSession, SessionParticipant, SessionStatus
+from core.db.models import Character, GameSession, Item, SessionParticipant, SessionStatus
+from core.game.item_bonuses import item_meta
 from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.edition import character_edition
 from core.game.stats import effective_ability_mod
@@ -52,10 +53,27 @@ async def _seated(session: AsyncSession, char: Character) -> bool:
 
 def _check_choices(variant: SpellVariant, edition: str, choices: dict[str, str] | None) -> dict[str, str]:
     chosen = dict(choices or {})
+    item = chosen.pop("item_id", None) if variant.weapon_choice else None  # l'arma è del bersaglio: si controlla quando i bersagli sono noti
     wanted = {c.key: c.options(edition) for c in variant.choices}
     if set(chosen) != set(wanted) or any(chosen[k] not in opts for k, opts in wanted.items()):
         raise _invalid("invalid_choice")
+    if variant.weapon_choice:
+        if not (isinstance(item, str) and item.isdigit()):
+            raise _invalid("invalid_choice")
+        chosen["item_id"] = item
     return chosen
+
+
+async def plain_weapons(session: AsyncSession, char_id: int) -> list[Item]:
+    """Le armi senza bonus magico di un personaggio: quelle che Arma Magica e Arma Elementale possono incantare."""
+    rows = await session.execute(select(Item).where(Item.character_id == char_id, Item.item_type == "weapon").order_by(Item.id))
+    return [i for i in rows.scalars() if not int(item_meta(i).get("magic_bonus") or 0)]
+
+
+async def _check_weapon(session: AsyncSession, variant: SpellVariant, target: Character, chosen: dict[str, str]) -> None:
+    """422 ``invalid_choice`` se l'arma scelta non è un'arma senza bonus magico del bersaglio."""
+    if variant.weapon_choice and int(chosen["item_id"]) not in {i.id for i in await plain_weapons(session, target.id)}:
+        raise _invalid("invalid_choice")
 
 
 async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: int,
@@ -68,7 +86,8 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
         return None
     effect, variant = found
     chosen = _check_choices(variant, edition, choices)
-    if effect.target.kind == "self" or targets is None:
+    if effect.target.kind in ("self", "aura") or targets is None:  # l'aura è del lanciatore: nessun bersaglio
+        await _check_weapon(session, variant, caster, chosen)
         return effect, variant, [caster], chosen, False
     if len(targets) != len(set(targets)) or len(targets) > effect.max_targets(edition, slot_level):
         raise _invalid("invalid_target")
@@ -81,6 +100,8 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
             if ally.is_dead:
                 raise _invalid("target_dead", status.HTTP_409_CONFLICT)
             chars.append(ally)
+    if not outside and chars:
+        await _check_weapon(session, variant, chars[0], chosen)
     return effect, variant, chars, chosen, outside
 
 
@@ -198,6 +219,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
         data["cast_mod"] = effective_ability_mod(caster, stats.ability) if stats else 0
+    if variant.on_close:  # Velocità: la letargia che il bersaglio avrà alla fine
+        data["on_close"] = variant.on_close(data)
     if variant.needs_dc:  # la CD dei TS delle punizioni, fissata ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)
         data["save_dc"] = stats.save_dc if stats else 8 + caster.proficiency_bonus
@@ -216,8 +239,9 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         previous = caster if old == caster.id else await session.get(Character, old)
         if previous is not None:
             await _drop_state(session, previous, key, caster.id)
+    aura = effect.target.kind == "aura"  # l'aura è viva: solo l'orologio del lanciatore, nessuno stato sui bersagli
     applied = []
-    for target in chars:
+    for target in [] if aura else chars:
         mine = {**data, **(variant.per_target(data) if variant.per_target else {})}
         begin_state(target, spell_state_spec(key, mine), key, spell.name)
         forget_spell_temp_drop(target, key)  # la voce del lancio precedente non vale per l'annullo di questo
@@ -225,19 +249,20 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             variant.on_apply(target, mine)
         await _give_hp(session, target, variant, mine, key)
         applied.append({"id": target.id, "name": target.name})
+    shown = [{"id": caster.id, "name": caster.name}] if aura else applied
     ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
     begin_state(caster, StateSpec(clock, rounds=variant.duration(slot_level), ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}
     pending = [e for e in settings.get(SPELL_RELEASE) or [] if (e["id"], e["key"]) not in regranted]  # chiuso e riaperto nella stessa richiesta
-    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [a["id"] for a in applied]}
+    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [a["id"] for a in applied]}  # per l'aura: vuoto
     if pending:
         settings[SPELL_RELEASE] = pending
     else:
         settings.pop(SPELL_RELEASE, None)
     caster.settings = settings
-    return SpellEffectsRead(applied=applied, text=variant.text or (_OUTSIDE_TEXT if outside else None))
+    return SpellEffectsRead(applied=shown, text=variant.text or (_OUTSIDE_TEXT if outside else None))
 
 
 async def regrant_spells(session: AsyncSession, caster: Character, before_given: dict | None) -> None:
