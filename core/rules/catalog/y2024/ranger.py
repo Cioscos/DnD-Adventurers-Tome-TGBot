@@ -79,7 +79,7 @@ def _rangers_own_attack(ctx: RuleContext) -> bool:
 
 
 MARK_DAMAGE = RollOptionSpec(
-    key=MARK, phase="before", rolls=("attack",), extra_dice=_mark_dice, available=_rangers_own_attack,
+    key=MARK, phase="before", rolls=("attack",), extra_damage_type="force", extra_dice=_mark_dice, available=_rangers_own_attack,
     label=_both("Hunter's Mark: il bersaglio è la creatura marcata? +1d6 danni da forza (1d10 al 20°)",
                 "Hunter's Mark: is the target the marked creature? Extra 1d6 force damage (1d10 at 20th)"),
     effect=lambda _c, _i: _both("Hunter's Mark: danni da forza in più, già nel totale.", "Hunter's Mark: extra force damage, already in the total."))

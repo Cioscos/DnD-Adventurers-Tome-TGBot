@@ -229,3 +229,202 @@ async def test_a_smite_without_a_condition_offers_no_target_effect(client):
 
 def test_divine_smite_2024_stays_the_paladin_feature_and_not_a_catalog_spell():
     assert spell_effect("2024", "divine-smite") is None
+
+
+# --- Giro 1 della revisione ------------------------------------------------------------------------------------------------------
+BLAST = dict(name="Deflagrazione Occulta", srd_index="eldritch-blast", attack_save="ATK", damage_dice="1d10", damage_type="force")
+
+
+async def _blast(client, cid) -> int:
+    r = await client.post(f"/characters/{cid}/spells", json={"level": 0, "casting_time": "1 azione", **BLAST})
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+async def _spell_attack(client, cid, blast, die=12, options=()):
+    r = await client.post(f"/characters/{cid}/spells/{blast}/attack", json={"die": die, "options": list(options)})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _roll_damage(client, cid, blast, **body):
+    r = await client.post(f"/characters/{cid}/spells/{blast}/roll_damage", json={"casting_level": 0, **body})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+# I-1: i marchi valgono anche sugli attacchi con incantesimo, il dado confermato arriva al danno
+@pytest.mark.parametrize("edition,srd,name,key", [("2014", "hex", "Sortilegio", HEX), ("2024", "hex", "Sortilegio", HEX),
+                                                  ("2024", "hunters-mark", "Marchio del Cacciatore", HM)])
+async def test_a_mark_confirmed_on_a_spell_attack_adds_its_die_to_the_spell_damage(client, edition, srd, name, key):
+    cid, spell = await _caster(client, name, srd, 1, edition=edition)
+    blast = await _blast(client, cid)
+    await _cast(client, cid, spell, **({"choices": {"ability": "wisdom"}} if srd == "hex" else {}))
+    assert key in await _roll_keys(client, cid, "attack", spell_id=blast)
+    attack = await _spell_attack(client, cid, blast, options=[key])
+    carried = attack["option_result"]["extra_rolls"]
+    assert len(carried) == 1 and 1 <= carried[0] <= 6
+    damage = await _roll_damage(client, cid, blast)
+    assert damage["total"] == sum(damage["main_rolls"]) + carried[0]
+    assert damage["option_result"]["extra_rolls"] == carried and damage["option_result"]["keys"] == [key]
+    assert len(damage["reroll_dice"]) == 2 and damage["reroll_dice"][1] == [6, carried[0]]
+    again = await _roll_damage(client, cid, blast)  # il dado vale per un solo tiro di danno
+    assert again["total"] == sum(again["main_rolls"]) and again.get("option_result") is None
+
+
+async def test_the_die_of_a_mark_on_a_critical_spell_attack_doubles(client):
+    cid, spell = await _caster(client, "Sortilegio", "hex", 1)
+    blast = await _blast(client, cid)
+    await _cast(client, cid, spell, choices={"ability": "wisdom"})
+    attack = await _spell_attack(client, cid, blast, die=20, options=[HEX])
+    assert len(attack["option_result"]["extra_rolls"]) == 2
+    damage = await _roll_damage(client, cid, blast, is_critical=True)
+    assert damage["total"] == sum(damage["main_rolls"]) + sum(attack["option_result"]["extra_rolls"])
+
+
+async def test_the_die_confirmed_for_one_spell_attack_is_not_paid_out_by_another_spells_damage(client):
+    cid, spell = await _caster(client, "Sortilegio", "hex", 1)
+    blast = await _blast(client, cid)
+    other = await client.post(f"/characters/{cid}/spells", json={**BLAST, "name": "Raggio di Gelo", "srd_index": "ray-of-frost", "level": 0})
+    await _cast(client, cid, spell, choices={"ability": "wisdom"})
+    await _spell_attack(client, cid, blast, options=[HEX])
+    damage = await _roll_damage(client, cid, other.json()["id"])
+    assert damage["total"] == sum(damage["main_rolls"])
+
+
+async def test_the_weapon_only_options_are_not_offered_on_a_spell_attack(client):
+    cid, spell = await _caster(client, "Marchio del Cacciatore", "hunters-mark", 1)  # 2014: «ogni attacco con arma»
+    blast = await _blast(client, cid)
+    wid = await _sword(client, cid)
+    await _cast(client, cid, spell)
+    assert HM not in await _roll_keys(client, cid, "attack", spell_id=blast) and HM in await _roll_keys(client, cid, "attack", item_id=wid)
+    cid, spell = await _caster(client, "Colpo Accurato", "true-strike", 0, edition="2024")
+    blast = await _blast(client, cid)
+    wid = await _sword(client, cid)
+    await _cast(client, cid, spell, level=0)
+    key = "spell:true_strike:damage"
+    assert key not in await _roll_keys(client, cid, "attack", spell_id=blast) and key in await _roll_keys(client, cid, "attack", item_id=wid)
+
+
+# I-2: la concentrazione di ogni voce segue la colonna del manuale (2014/spells.md e 2024/spells.md)
+CONCENTRATION = {
+    "2014": {"hex": True, "hunters-mark": True, "blinding-smite": True, "branding-smite": True, "searing-smite": True, "wrathful-smite": True,
+             "thunderous-smite": True, "staggering-smite": True, "banishing-smite": True, "ensnaring-strike": True, "hail-of-thorns": True,
+             "lightning-arrow": True, "true-strike": True},
+    "2024": {"hex": True, "hunters-mark": True, "blinding-smite": False, "searing-smite": False, "shining-smite": True, "wrathful-smite": True,
+             "thunderous-smite": False, "staggering-smite": False, "banishing-smite": True, "ensnaring-strike": True, "hail-of-thorns": False,
+             "lightning-arrow": False, "true-strike": False},
+}
+
+
+@pytest.mark.parametrize("edition,srd,expected", [(e, s, c) for e, row in CONCENTRATION.items() for s, c in row.items()])
+def test_the_concentration_of_every_entry_follows_the_manual_column(edition, srd, expected):
+    assert spell_effect(edition, srd)[1].concentration is expected
+
+
+# I-3: i dadi extra portano il loro tipo
+async def test_the_extra_dice_of_a_mark_and_of_a_smite_carry_their_damage_type(client):
+    cid, spell = await _caster(client, "Sortilegio", "hex", 1)
+    wid = await _sword(client, cid)
+    await _cast(client, cid, spell, choices={"ability": "wisdom"})
+    r = await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 15, "confirm_extra_attack": True, "options": [HEX]})
+    assert r.json()["option_result"]["extra_types"] == ["necrotic"]
+    cid, spell = await _caster(client, "Punizione Collerica", "wrathful-smite", 1)
+    wid = await _sword(client, cid)
+    await _cast(client, cid, spell)
+    block = (await _confirm(client, cid, wid, WRATHFUL)).json()["option_result"]
+    assert block["extra_types"] == ["psychic"]
+
+
+async def test_the_type_of_the_mark_die_reaches_the_spell_damage_result(client):
+    cid, spell = await _caster(client, "Sortilegio", "hex", 1)
+    blast = await _blast(client, cid)
+    await _cast(client, cid, spell, choices={"ability": "wisdom"})
+    await _spell_attack(client, cid, blast, options=[HEX])
+    assert (await _roll_damage(client, cid, blast))["option_result"]["extra_types"] == ["necrotic"]
+
+
+def test_divine_smite_and_the_rangers_mark_declare_their_type_without_changing_their_dice():
+    from core.rules.catalog.y2014 import paladin as p14
+    from core.rules.catalog.y2024 import paladin as p24, ranger as r24
+    for spec in (p14.DIVINE_SMITE, p14.DIVINE_SMITE_FIEND, p14.IMPROVED_SMITE, p24.DIVINE_SMITE, p24.DIVINE_SMITE_FREE,
+                 p24.DIVINE_SMITE_FIEND, p24.DIVINE_SMITE_FIEND_FREE, p24.RADIANT_STRIKES):
+        assert spec.extra_damage_type == "radiant", spec.key
+    assert r24.MARK_DAMAGE.extra_damage_type == "force"
+
+
+# I-4: ogni voce del catalogo ha il nome nelle note del tiro (it/en)
+def test_every_catalog_spell_has_its_roll_note_name_in_both_locales():
+    import json
+    from pathlib import Path
+    from core.rules.catalog.spells import SPELL_EFFECTS
+    for lang in ("it", "en"):
+        names = json.loads(Path(f"webapp/src/locales/{lang}.json").read_text(encoding="utf-8"))["character"]["roll_notes"]["spell"]
+        assert [k for k in SPELL_EFFECTS if not names.get(k)] == [], lang
+
+
+# M-1: le etichette delle punizioni nominano l'incantesimo
+def test_every_smite_label_names_its_spell():
+    from core.rules.catalog.spells import marks
+    for effect in marks.SPELLS:
+        for edition, variant in effect.variants.items():
+            for option in variant.options:
+                if option.key.endswith(":hit") or option.key.endswith(":miss"):
+                    for lang in ("it", "en"):
+                        assert any(option.label[lang].startswith(f"{n}:") for n in effect.names), (effect.key, edition, lang, option.label[lang])
+
+
+# M-4: la durata dei marchi segue lo slot
+@pytest.mark.parametrize("edition,srd,slot,hours", [("2014", "hex", 1, 1), ("2014", "hex", 3, 8), ("2014", "hex", 5, 24),
+                                                    ("2024", "hex", 2, 4), ("2024", "hex", 4, 8), ("2024", "hex", 6, 24),
+                                                    ("2014", "hunters-mark", 2, 1), ("2014", "hunters-mark", 4, 8), ("2024", "hunters-mark", 5, 24)])
+def test_the_duration_of_a_mark_follows_the_slot(edition, srd, slot, hours):
+    assert spell_effect(edition, srd)[1].duration(slot) == hours * 600
+
+
+async def test_the_clock_of_a_mark_cast_with_a_high_slot_lasts_longer(client):
+    cid, spell = await _caster(client, "Sortilegio", "hex", 1, slots=2)
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": 3, "total": 1})
+    await _cast(client, cid, spell, level=3, choices={"ability": "wisdom"})
+    states = await _states(client, cid)
+    assert states["spell_cast:hex"]["rounds_left"] == 4800 and states["spell:hex"]["data"]["duration"]["rounds"] == 4800
+
+
+# M-5: Freccia Folgorante mancata: la metà del danno
+async def test_lightning_arrow_on_a_miss_deals_half_and_closes_the_spell(client):
+    cid, spell = await _caster(client, "Freccia Folgorante", "lightning-arrow", 3)
+    bow = await _sword(client, cid, weapon_type="ranged")
+    await _cast(client, cid, spell, level=3)
+    key = "spell:lightning_arrow:miss"
+    first = await client.post(f"/characters/{cid}/items/{bow}/attack", json={"die": 5, "defer_damage": True, "confirm_extra_attack": True})
+    assert first.status_code == 200, first.text
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [key]})
+    assert r.status_code == 200, r.text
+    assert r.json()["attack"]["grazed"] is True and 2 <= r.json()["attack"]["damage_total"] <= 16
+    assert "spell:lightning_arrow" not in await _states(client, cid)
+    assert (await _full(client, cid))["concentrating_spell_id"] is None
+
+
+# M-7: il TS ripetuto toglie l'effetto al bersaglio, non chiude l'incantesimo: lo dice il testo
+@pytest.mark.parametrize("edition,srd,name,level,conc", [("2024", "wrathful-smite", "Punizione Collerica", 1, True),
+                                                         ("2024", "blinding-smite", "Colpo Accecante", 3, False),
+                                                         ("2014", "blinding-smite", "Punizione Accecante", 3, True)])
+async def test_the_text_says_a_passed_repeated_save_frees_only_the_target(client, edition, srd, name, level, conc):
+    cid, spell = await _caster(client, name, srd, level, edition=edition, concentration=conc)
+    wid = await _sword(client, cid)
+    await _cast(client, cid, spell, level=level)
+    block = (await _confirm(client, cid, wid, f"spell:{srd.replace('-', '_')}:hit")).json()["option_result"]
+    assert "l'incantesimo resta" in block["effects"][0]["it"] and "the spell stays" in block["effects"][0]["en"]
+
+
+# M-8: senza concentrazione
+async def test_a_2024_smite_without_concentration_lasts_after_the_hit_and_never_holds_the_concentration(client):
+    cid, spell = await _caster(client, "Colpo Accecante", "blinding-smite", 3, edition="2024", concentration=False)
+    wid = await _sword(client, cid)
+    await _cast(client, cid, spell, level=3)
+    assert (await _full(client, cid))["concentrating_spell_id"] is None
+    assert (await _states(client, cid))["spell_cast:blinding_smite"]["rounds_left"] == 10
+    r = await _confirm(client, cid, wid, "spell:blinding_smite:hit")
+    assert r.status_code == 200 and len(r.json()["option_result"]["extra_rolls"]) == 3
+    assert "spell:blinding_smite" in await _states(client, cid)
+    assert (await _full(client, cid))["concentrating_spell_id"] is None

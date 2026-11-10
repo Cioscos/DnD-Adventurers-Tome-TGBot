@@ -548,6 +548,8 @@ class RollOptionSpec:
     finesse_unarmed: bool = False
     # Con ``spell_damage`` prima del tiro: il tipo di danno dell'incantesimo diventa questo (Incantesimo Trasmutato)
     damage_type_to: str | None = None
+    # Tipo di danno dei dadi che l'opzione aggiunge (``extra_dice``): arriva nel blocco dell'esito (``extra_types``), per chi lo legge
+    extra_damage_type: str | None = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):

@@ -658,6 +658,7 @@ def retouch_pending_attack(char: Character, pending: dict, applied: dict, roll: 
             option_dice = pairs(before.rolled_dice)
         if block and before.keys:  # i dadi delle opzioni prima del tiro sono stati ritirati col danno
             block = block.model_copy(update={"extra_rolls": extra_rolls, "extra_total": extra_total,
+                                             "extra_types": before.rolled_types if any(before.rolled_types) else [],
                                              "separate_rolls": before.separate_rolls,
                                              "separate_total": before.separate_total})
     result.to_hit_die, result.dice, result.mode, result.mode_applied = (
@@ -1176,7 +1177,7 @@ async def cast_from_item(
             next((s for s in char.spells if idx and s.srd_index == idx), None)
             or next((s for s in char.spells if s.name.lower() == name), None)
         )
-        rounds = variant.rounds if variant else parse_duration_rounds(spell.get("duration"))
+        rounds = variant.duration(fx_spell.level) if variant else parse_duration_rounds(spell.get("duration"))
         if match:
             start_concentration(char, match.id, rounds)
         else:

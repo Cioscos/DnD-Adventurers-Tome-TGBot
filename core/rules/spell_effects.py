@@ -36,6 +36,7 @@ class SpellVariant:
     modifiers: Callable[[dict], tuple[Modifier, ...]] = lambda d: ()
     options: tuple[RollOptionSpec, ...] = ()
     rounds: int | None = None
+    rounds_by_slot: Callable[[int], int] | None = None  # durata in round secondo lo slot (Sortilegio, Marchio del Cacciatore)
     until_rest: bool = False
     concentration: bool = False
     choices: tuple[SpellChoice, ...] = ()
@@ -61,6 +62,10 @@ class SpellVariant:
     retaliation: Callable[[dict, bool], dict[str, str] | None] | None = None
     needs_dc: bool = False  # la CD dei TS di chi lancia si fissa al lancio nei ``data`` dello stato (le punizioni)
     shares_damage: bool = False  # il lanciatore subisce lo stesso danno del bersaglio (Legame di Protezione)
+
+    def duration(self, slot: int) -> int | None:
+        """Durata in round dell'incantesimo lanciato con lo slot ``slot``."""
+        return self.rounds_by_slot(slot) if self.rounds_by_slot else self.rounds
 
 
 @dataclass(frozen=True)

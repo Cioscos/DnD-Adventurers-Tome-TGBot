@@ -307,6 +307,8 @@ class OptionResult(BaseModel):
     keys: list[str] = []
     extra_rolls: list[int] = []
     extra_total: int = 0  # dadi + eventuale fisso nell'espressione dei dadi
+    extra_types: list[str | None] = []  # tipo di danno di ogni valore di ``extra_rolls`` (assente se nessun dado ne ha uno)
+    separate_type: str | None = None  # tipo del danno a parte
     separate_rolls: list[int] = []  # danno a parte, fuori dal totale
     separate_total: int = 0
     bonus: int = 0

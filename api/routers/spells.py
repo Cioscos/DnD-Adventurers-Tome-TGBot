@@ -86,6 +86,7 @@ class ConcentrationSaveRequest(BaseModel):
     dice: D20Dice | None = None
 
 router = APIRouter(prefix="/characters", tags=["spells"])
+SPELL_ATTACK_DICE = "spell_attack_dice"  # turn_state: i dadi extra confermati su un attacco con incantesimo, per il suo danno
 
 
 def _now() -> str:
@@ -630,6 +631,14 @@ async def spell_attack(
     total = die + bonus
     is_fumble = die == 1
     is_critical = die >= applied.crit_min or (opts.force_crit and not is_fumble)
+    # I dadi che il giocatore ha confermato prima del tiro (Sortilegio, Marchio del Cacciatore) valgono per il danno di questo attacco
+    option_rolls, option_total = roll_option_dice(char, opts, is_critical)
+    attack_block = option_result(opts, option_rolls, option_total)
+    carry = get_turn(char)
+    carry.pop(SPELL_ATTACK_DICE, None)
+    if option_rolls:
+        carry[SPELL_ATTACK_DICE] = {"spell_id": spell.id, "dice": pairs(opts.rolled_dice), "block": attack_block.model_dump(mode="json")}
+    char.turn_state = carry
 
     text = f"Attacco incantesimo {spell.name}: {d20_history_label(outcome)}+{bonus}={total}" + (
         " (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else ""
@@ -674,6 +683,7 @@ async def spell_attack(
         is_fumble=is_fumble,
         caster_class=caster.class_name if caster else None,
         cast_option_result=cast_block,
+        option_result=attack_block,
         character=character,
         homebrew_notifications=notifications or None,
     )
@@ -881,7 +891,13 @@ async def roll_spell_damage(
         if second_rolls and maximized(second_type):
             second_rolls = [second_sides] * len(second_rolls)
     option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
-    total = (sum(main_rolls) + sum(second_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus)
+    carry = get_turn(char)
+    carried = carry.pop(SPELL_ATTACK_DICE, None)  # i dadi dell'attacco con incantesimo appena fatto: valgono per questo tiro di danno
+    char.turn_state = carry
+    carried = carried if carried and carried["spell_id"] == spell.id else None
+    carried_dice = carried["dice"] if carried else []
+    total = (sum(main_rolls) + sum(second_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
+             + sum(v for _, v in carried_dice))
     total = scale_damage(total, opts.multiplier)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
@@ -894,6 +910,8 @@ async def roll_spell_damage(
         breakdown_parts.append(f"{'+' if base_bonus >= 0 else ''}{base_bonus}")
     if extra_bonus:
         breakdown_parts.append(f"{'+' if extra_bonus >= 0 else ''}{extra_bonus}")
+    if carried_dice:
+        breakdown_parts.append(f"+{[v for _, v in carried_dice]}")
     if opts.keys:
         breakdown_parts.append(f"+{option_rolls}{opts.bonus:+d}" if option_rolls else f"{opts.bonus:+d}")
     breakdown = " ".join(breakdown_parts) + f" = {total}"
@@ -933,7 +951,7 @@ async def roll_spell_damage(
         scaled_dice=f"{base_count}d{sides}",
         main_kind=f"d{sides}",
         main_rolls=main_rolls,
-        option_result=option_result(opts, option_rolls, option_total),
+        option_result=option_result(opts, option_rolls, option_total, previous=OptionResult(**carried["block"]) if carried else None),
         extra_kind=extra_kind,
         extra_rolls=all_extra,
         extra_damage_type=second_type if second_rolls else None,
@@ -945,7 +963,7 @@ async def roll_spell_damage(
     # I dadi delle opzioni vengono dopo quelli dell'incantesimo e si ritirano come loro; il loro fisso resta nel resto.
     base_dice = ([[sides, v] for v in main_rolls] + [[second_sides, v] for v in second_rolls]
                  + [[extra_sides, v] for v in extra_rolls])
-    dice = base_dice + pairs(opts.rolled_dice)
+    dice = base_dice + pairs(opts.rolled_dice) + carried_dice
     result.reroll_dice = dice
     turn = get_turn(char)
     turn["last_damage"] = {

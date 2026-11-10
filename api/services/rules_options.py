@@ -106,9 +106,13 @@ def merge_options(applied: Applied, opts: AppliedOptions) -> None:
 
 def roll_option_dice(char: Any, opts: AppliedOptions, critical: bool = False) -> tuple[list[int], int]:
     """Tira i dadi delle opzioni e li registra nelle statistiche: (valori, totale con il fisso dell'espressione)."""
-    rolled, flat = roll_extra(opts.extra_dice, critical)
-    fixed, fixed_flat = roll_extra(opts.fixed_dice)
-    rolled += fixed
+    rolled, flat, types = [], 0, []
+    for exprs, kinds, doubles in ((opts.extra_dice, opts.extra_dice_types, critical), (opts.fixed_dice, opts.fixed_dice_types, False)):
+        for i, expr in enumerate(exprs):
+            part, part_flat = roll_extra([expr], doubles)
+            rolled, flat = rolled + part, flat + part_flat
+            types += [kinds[i] if i < len(kinds) else None] * len(part)
+    opts.rolled_types = types
     opts.separate_rolls, opts.separate_total = [], 0
     for expr, doubles in opts.separate_dice:
         apart, apart_flat = roll_extra([expr], critical and doubles)
@@ -118,7 +122,7 @@ def roll_option_dice(char: Any, opts: AppliedOptions, critical: bool = False) ->
     record_dice(char, rolled)
     opts.rolled_dice = [(int(kind[1:]), v) for kind, v in rolled]
     values = [v for _, v in rolled]
-    return values, sum(values) + flat + fixed_flat
+    return values, sum(values) + flat
 
 
 def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: OptionResult | None = None,
@@ -127,11 +131,14 @@ def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: 
     if not opts.keys:
         return previous
     before = previous or OptionResult()
+    types = opts.rolled_types if len(opts.rolled_types) == len(rolls) else [None] * len(rolls)
+    if any(types) or before.extra_types:  # il tipo di ogni dado, nell'ordine di ``extra_rolls`` (vuoto se nessun dado ne ha uno)
+        extra["extra_types"] = [*before.extra_types, *[None] * (len(before.extra_rolls) - len(before.extra_types)), *types]
     return OptionResult(
         keys=[*before.keys, *opts.keys], extra_rolls=[*before.extra_rolls, *rolls],
         extra_total=before.extra_total + total, bonus=before.bonus + opts.bonus,
         separate_rolls=[*before.separate_rolls, *opts.separate_rolls],
-        separate_total=before.separate_total + opts.separate_total, effects=[*before.effects, *opts.effects], targets=[*before.targets, *opts.targets],
+        separate_total=before.separate_total + opts.separate_total, separate_type=opts.separate_type or before.separate_type, effects=[*before.effects, *opts.effects], targets=[*before.targets, *opts.targets],
         multiplier=before.multiplier * opts.multiplier, spent=[*before.spent, *opts.spent], **extra,
     )
 

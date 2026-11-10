@@ -231,6 +231,8 @@ export type TargetEffect = {
   repeat_save?: 'start' | 'end' | null
   /** Chiave del testo che il foglio traduce: ciò che il GM chiude o applica a mano. */
   note?: string | null
+  /** La condizione cade con la concentrazione di chi l'ha imposta (le punizioni). */
+  ends_with_concentration?: boolean
 }
 
 export type TargetEffectPreview = {
@@ -255,6 +257,9 @@ export type OptionResult = {
   /** Danno a parte: non scala col moltiplicatore e non si somma ai dadi extra. */
   separate_rolls?: number[]
   separate_total?: number
+  /** Tipo di danno di ogni valore di `extra_rolls` (assente se nessun dado ne ha uno) e del danno a parte. */
+  extra_types?: (string | null)[]
+  separate_type?: string | null
   /** Esiti da mostrare al giocatore (CD, durata). */
   effects?: { it: string; en: string }[]
   /** Opzioni con un effetto da applicare a un combattente dell'incontro. */

@@ -144,24 +144,24 @@ _SMITE_LABEL = ("Punizione Divina: azione bonus, 2d8 radiosi in più (+1d8 per l
                 "Divine Smite: bonus action, extra 2d8 radiant (+1d8 per slot level above 1st)")
 DIVINE_SMITE = RollOptionSpec(
     key=SMITE, phase="after_hit", rolls=("attack",), requires_input="slot", cost=Cost(spell_slot_min=1), slot="bonus", group=SMITE_GROUP,
-    extra_dice=_smite_dice, available=_slot_smite_ok, on_confirm=_mark_slot_spell, effect=_RADIANT,
+    extra_damage_type="radiant", extra_dice=_smite_dice, available=_slot_smite_ok, on_confirm=_mark_slot_spell, effect=_RADIANT,
     label=_both(*_SMITE_LABEL))
 DIVINE_SMITE_FREE = RollOptionSpec(
     key=SMITE_FREE, phase="after_hit", rolls=("attack",), cost=Cost(feature_key=PS), slot="bonus", group=SMITE_GROUP,
-    extra_dice=lambda _c, _i: "2d8", available=_melee_or_unarmed, effect=_RADIANT, on_confirm=_mark_smite,
+    extra_damage_type="radiant", extra_dice=lambda _c, _i: "2d8", available=_melee_or_unarmed, effect=_RADIANT, on_confirm=_mark_smite,
     label=_both("Punizione del Paladino: lancio gratuito, azione bonus, 2d8 radiosi in più (un uso, riposo lungo)",
                 "Paladin's Smite: free cast, bonus action, extra 2d8 radiant (one use, long rest)"))
 _FIEND_LABEL = _both("Punizione Divina: il bersaglio è un immondo o un non morto? +1d8 radioso",
                      "Divine Smite: is the target a fiend or an undead? +1d8 radiant")
 DIVINE_SMITE_FIEND = RollOptionSpec(
-    key=SMITE_FIEND, phase="after_hit", rolls=("attack",), needs=SMITE, extra_dice=lambda _c, _i: "1d8", available=_fiend_slot_ok,
+    key=SMITE_FIEND, phase="after_hit", rolls=("attack",), needs=SMITE, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8", available=_fiend_slot_ok,
     label=_FIEND_LABEL)
 DIVINE_SMITE_FIEND_FREE = RollOptionSpec(
-    key=SMITE_FIEND_FREE, phase="after_hit", rolls=("attack",), needs=SMITE_FREE, extra_dice=lambda _c, _i: "1d8",
+    key=SMITE_FIEND_FREE, phase="after_hit", rolls=("attack",), needs=SMITE_FREE, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8",
     available=lambda c: _melee_or_unarmed(c) and (SMITE_FREE in c.confirmed or _free_left(c)), label=_FIEND_LABEL)
 
 RADIANT_STRIKES = RollOptionSpec(
-    key=f"{CK}.radiant_strikes", phase="before", rolls=("attack",), automatic=True, extra_dice=lambda _c, _i: "1d8",
+    key=f"{CK}.radiant_strikes", phase="before", rolls=("attack",), automatic=True, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8",
     available=_melee_or_unarmed, label=_both("Assalti Radianti: 1d8 radioso in più", "Radiant Strikes: extra 1d8 radiant"),
     effect=_say("Assalti Radianti: 1d8 danni radiosi in più, già nel totale.", "Radiant Strikes: an extra 1d8 radiant damage, already in the total."))
 

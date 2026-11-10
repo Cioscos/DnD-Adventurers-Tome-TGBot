@@ -193,7 +193,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     _remember_cast_type(caster, effect.key, chosen.get("damage_type") if inflicts else None)
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster),
-            "duration": {"rounds": variant.rounds, "concentration": variant.concentration, "until_rest": variant.until_rest},
+            "duration": {"rounds": variant.duration(slot_level), "concentration": variant.concentration, "until_rest": variant.until_rest},
             "targets": len(chars)}
     if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
@@ -226,7 +226,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         await _give_hp(session, target, variant, mine, key)
         applied.append({"id": target.id, "name": target.name})
     ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
-    begin_state(caster, StateSpec(clock, rounds=variant.rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
+    begin_state(caster, StateSpec(clock, rounds=variant.duration(slot_level), ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}
