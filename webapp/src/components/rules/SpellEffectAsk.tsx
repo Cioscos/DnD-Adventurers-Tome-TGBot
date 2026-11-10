@@ -60,9 +60,10 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
           <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.spells.effect_weapon')}</p>
           {weapons.length === 0 && <p className="text-sm text-dnd-text-muted">{t('character.spells.effect_no_weapons')}</p>}
           {weapons.map((w) => (
-            <Button key={w.id} variant="secondary" className="justify-start break-words text-left"
+            <Button key={w.id} variant="secondary" fullWidth className="justify-start break-words text-left"
               onClick={() => onConfirm({ targets: [weaponFor], choices: { ...picked, item_id: String(w.id) } })}>{w.name}</Button>
           ))}
+          <Button variant="ghost" fullWidth onClick={() => setWeaponFor(null)}>{t('common.back')}</Button>
         </div>
       </Sheet>
     )

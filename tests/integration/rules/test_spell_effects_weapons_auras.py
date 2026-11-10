@@ -386,3 +386,9 @@ async def test_casting_a_text_only_entry_tracks_the_state_and_gives_the_text(cli
     r = await _cast(client, caster, spell, [], level=level or None)
     assert r.json()["spell_effects"]["text"]
     assert await _states(client, caster, GM_ID, state)
+
+
+async def test_the_state_of_an_enchanted_weapon_says_which_weapon_it_is(client, test_session_factory):
+    hero, caster, spell, sword, _ = await _weapon_table(client, test_session_factory)
+    await _cast(client, caster, spell, [hero], level=2, choices={"item_id": str(sword)})
+    assert (await _states(client, hero, PLAYER_ID, "spell:magic_weapon"))[0]["data"]["weapon_name"] == "Spada"

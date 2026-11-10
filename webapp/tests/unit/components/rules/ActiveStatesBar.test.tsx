@@ -55,6 +55,15 @@ describe('ActiveStatesBar', () => {
     expect(screen.getByText('character.roll_notes.spell.haste_lethargy')).toBeInTheDocument()
   })
 
+  it('names the enchanted weapon of Magic Weapon instead of its id', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:magic_weapon', feature_key: 'spell:magic_weapon', rounds_left: null, ends_on: ['manual'], name: 'Arma Magica',
+        data: { spell_key: 'magic_weapon', choices: { item_id: '7' }, weapon_name: 'Spada lunga' } },
+    ], [])} />)
+    expect(screen.getByText(/Spada lunga/)).toBeInTheDocument()
+    expect(screen.queryByText('7')).not.toBeInTheDocument()
+  })
+
   it('shows the skill a 2024 Guidance was cast on, kept in the spell choices', () => {
     renderWithProviders(<ActiveStatesBar char={char([
       { key: 'spell:guidance', feature_key: 'spell:guidance', rounds_left: null, ends_on: ['manual'], name: 'Guida', data: { spell_key: 'guidance', choices: { skill: 'sleight_of_hand' } } },

@@ -225,6 +225,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
         data["cast_mod"] = effective_ability_mod(caster, stats.ability) if stats else 0
+    if variant.weapon_choice and chars and chosen.get("item_id") and (weapon := await session.get(Item, int(chosen["item_id"]))):
+        data["weapon_name"] = weapon.name  # lo stato dice quale arma è incantata
     if variant.on_close:  # Velocità: la letargia che il bersaglio avrà alla fine
         data["on_close"] = variant.on_close(data)
     if variant.needs_dc:  # la CD dei TS delle punizioni, fissata ora

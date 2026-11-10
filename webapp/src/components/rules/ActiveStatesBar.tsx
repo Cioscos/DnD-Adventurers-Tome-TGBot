@@ -33,8 +33,9 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   const skill = d.skill ?? (d.choices as { skill?: unknown } | undefined)?.skill  // gli incantesimi tengono la scelta in `choices`
   if (typeof skill === 'string') out.push(t(`character.skills.${skill}`))
   for (const [k, v] of Object.entries((d.choices ?? {}) as Record<string, unknown>)) {  // tipo di danno, caratteristica o scudo scelti al lancio
-    if (k !== 'skill' && typeof v === 'string') out.push(optionLabel(t, k, v))
+    if (k !== 'skill' && k !== 'item_id' && typeof v === 'string') out.push(optionLabel(t, k, v))
   }
+  if (typeof d.weapon_name === 'string') out.push(d.weapon_name)  // l'arma incantata (Arma Magica, Arma Elementale)
   if (typeof d.damage_type === 'string') out.push(t(`character.inventory.damage_types.dmg_${d.damage_type}`))
   if (d.maximized === true) out.push(t('character.turn.state_maximized'))
   if (typeof d.cr === 'string') out.push(t('character.turn.state_cr', { cr: d.cr }))

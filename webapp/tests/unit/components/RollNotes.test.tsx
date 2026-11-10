@@ -17,6 +17,11 @@ describe('RollNotes', () => {
     expect(screen.getByText('DC 13 in english')).toBeInTheDocument()
   })
 
+  it('shows each extra die with its damage type, and leaves untyped dice as they are', () => {
+    render(<RollNotes optionResult={{ ...base, extra_rolls: [2, 3], extra_types: ['radiant', null], extra_total: 5 }} />)
+    expect(screen.getByTestId('roll-option-dice')).toHaveTextContent('[2 character.inventory.damage_types.dmg_radiant, 3] = 5')
+  })
+
   it('shows the second attack roll next to its damage', () => {
     render(<RollNotes optionResult={{ ...base, second_die: 14, second_total: 19, separate_rolls: [7], separate_total: 7 }} />)
     expect(screen.getByText('character.roll_options.second_attack:19')).toBeInTheDocument()

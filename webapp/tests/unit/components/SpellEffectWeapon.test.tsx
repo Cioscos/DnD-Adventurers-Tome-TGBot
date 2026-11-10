@@ -37,6 +37,16 @@ describe('weapon choice of Magic Weapon', () => {
     fireEvent.click(screen.getByText('Spada lunga'))
     expect(onConfirm).toHaveBeenCalledWith({ targets: [2], choices: { item_id: '7' } })
   })
+  it('has a back button from the weapons to the targets, and aligns every name to the start', async () => {
+    renderWithProviders(<SpellEffectAsk charId={1} title="Arma Magica" effect={magicWeapon} slotLevel={2} onConfirm={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Eroe'))
+    const weapon = await screen.findByText('Spada lunga')
+    expect(weapon.closest('button')).toHaveClass('w-full', 'justify-start', 'text-left')
+    fireEvent.click(screen.getByText('common.back'))
+    expect(await screen.findByText('Eroe')).toBeInTheDocument()
+    expect(screen.queryByText('Spada lunga')).not.toBeInTheDocument()
+  })
+
   it('on another creature it confirms at once with no weapon to pick', async () => {
     const onConfirm = vi.fn()
     renderWithProviders(<SpellEffectAsk charId={1} title="Arma Magica" effect={magicWeapon} slotLevel={2} onConfirm={onConfirm} onClose={vi.fn()} />)

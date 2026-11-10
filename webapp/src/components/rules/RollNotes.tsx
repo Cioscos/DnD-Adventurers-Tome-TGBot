@@ -21,13 +21,13 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}
-      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" rolls={extra} total={optionResult!.extra_total} className={className} />}
+      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" rolls={extra} types={optionResult!.extra_types} total={optionResult!.extra_total} className={className} />}
       {second != null && (
         <span className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
           {t('character.roll_options.second_attack', { die: optionResult!.second_die, total: second })}
         </span>
       )}
-      {separate.length > 0 && <ExtraDice testId="roll-option-separate" label="separate_dice" rolls={separate} total={optionResult!.separate_total ?? 0} className={className} />}
+      {separate.length > 0 && <ExtraDice testId="roll-option-separate" label="separate_dice" rolls={separate} types={separate.map(() => optionResult!.separate_type)} total={optionResult!.separate_total ?? 0} className={className} />}
       {effects.map((e) => (
         <span key={e.it} className={`block text-xs font-body text-dnd-text ${className}`}>{e[lang]}</span>
       ))}
@@ -41,11 +41,13 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   )
 }
 
-function ExtraDice({ testId, label, rolls, total, className }: { testId: string; label: string; rolls: number[]; total: number; className: string }) {
+function ExtraDice({ testId, label, rolls, types, total, className }: { testId: string; label: string; rolls: number[]; types?: (string | null | undefined)[]; total: number; className: string }) {
   const { t } = useTranslation()
+  // ogni dado col suo tipo di danno (radiante, fuoco...): un dado extra non è del tipo dell'arma
+  const typed = rolls.map((r, i) => (types?.[i] ? `${r} ${t(`character.inventory.damage_types.dmg_${types[i]}`, { defaultValue: types[i] })}` : String(r)))
   return (
     <span data-testid={testId} className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
-      {t(`character.roll_options.${label}`)}: [{rolls.join(', ')}] = {total}
+      {t(`character.roll_options.${label}`)}: [{typed.join(', ')}] = {total}
     </span>
   )
 }
