@@ -102,13 +102,15 @@ def sync_level_choices(char: Any, cls: Any, old_level: int, new_level: int) -> N
     reconcile_choices(char)
 
 
-def _group_totals(specs: list, level: int) -> list[tuple[Any, list[int], int]]:
+def _group_totals(specs: list, level: int, char: Any = None) -> list[tuple[Any, list[int], int]]:
     """Per gruppo: la ``ChoiceSpec`` da usare, i suoi livelli raggiunti e quante opzioni servono in tutto. Più spec dello
     stesso gruppo (una per sottoclasse: la seconda scelta di stile del Campione) valgono il massimo, non la somma."""
     best: dict[str, tuple[Any, list[int], int]] = {}
     for ch in specs:
         reached = [lvl for lvl in ch.levels if lvl <= level]
         total = ch.levels[max(reached)] if reached else 0
+        if reached and ch.total_by is not None and char is not None:
+            total = max(total, ch.total_by(char))
         if ch.group not in best or total > best[ch.group][2]:
             best[ch.group] = (ch, reached, total)
     return list(best.values())
@@ -159,7 +161,7 @@ def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
         if edition == "2024" and cls.level >= 19 and "epic_boon:19" not in done:
             out.extend(boons or [{"id": uuid.uuid4().hex, "kind": "epic_boon", "class_key": key,
                                   "level": 19, "created_at": _now()}])
-        for ch, reached, total in _group_totals(active_choice_specs(char, cls), cls.level):
+        for ch, reached, total in _group_totals(active_choice_specs(char, cls), cls.level, char):
             needed = total - len((cls.options or {}).get(ch.group, []))
             existing = [c for c in mine if c.get("kind") == "class_option" and c.get("group") == ch.group]
             if needed <= 0:

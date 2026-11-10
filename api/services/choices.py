@@ -201,7 +201,7 @@ def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
     ``spell_exact`` (Arcanum Mistico): il livello della scelta, qualunque siano gli slot della classe."""
     if ch.spell_exact:
         return ch.spell_level
-    top = max_pick_level(char, cls)
+    top = ch.total_by(char) if ch.total_by is not None else max_pick_level(char, cls)  # Sapienti: gli slot sono quelli della tabella multiclasse
     return top if ch.spell_level is None else min(top, ch.spell_level)
 
 

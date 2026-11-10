@@ -532,3 +532,10 @@ def test_school_range_bonus_only_stretches_ranges_of_3_metres_or_more():
     assert school_boost_range(spell("1,5 m"), "illusion", 18) is None
     assert school_boost_range(spell("Contatto"), "illusion", 18) is None
     assert school_boost_range(SimpleNamespace(range_area="9 m", school="evocation"), "illusion", 18) is None
+
+
+async def test_minori_13_the_savant_follows_the_multiclass_slot_table(client):
+    cid = await _make(client, "diviner", 3)
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 4})).status_code in (200, 201)
+    pick = _choice(await _full(client, cid), "divination_savant")  # livello da incantatore 7: slot di 4° livello
+    assert pick["count"] == 4 and pick["spell_pick"]["max_level"] == 4
