@@ -15,7 +15,7 @@ from core.rules.catalog._common import feature, save_spell
 from core.rules.catalog.y2014.rogue import (
     MAGICAL_AMBUSH_CAST, SPELL_THIEF_USE, _cunning_label, _knows_mage_hand, _proficient_skill_check,
 )
-from core.rules.catalog.y2024.rogue import CK, ED, POISON, SNEAK, _both, _cunning, _dc
+from core.rules.catalog.y2024.rogue import CK, ED, POISON, SNEAK, TRIP, _both, _cunning, _dc, _subclass_from
 from core.rules.weapons import _arm_vex
 from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseChoice, UseToggle
 
@@ -42,6 +42,13 @@ MAGICAL_AMBUSH = replace(
     label=_both("Imboscata Magica: sei Invisibile? Il bersaglio ha svantaggio ai TS contro questo incantesimo, fino a fine turno",
                 "Magical Ambush: are you Invisible? The target has disadvantage on saves against this spell until the end of the turn"))
 
+VERSATILE_TRIP = RollOptionSpec(
+    key=f"{CK}.versatile_trip", phase="after_hit", rolls=("attack",), needs=TRIP.key,
+    available=lambda c: _subclass_from(c, "arcane_trickster", 13) and _knows_mage_hand(c),
+    label=_both("Ingannatore Versatile: Sgambetto anche su una seconda creatura entro 1,5 m dalla mano spettrale",
+                "Versatile Trickster: Trip also a second creature within 5 ft of the spectral hand"),
+    target_effect=TRIP.target_effect)
+
 _at = _sub(("Mistificatore Arcano", "Arcane Trickster"), "arcane_trickster")
 ARCANE_TRICKSTER = (
     _at("arcane_trickster_spellcasting", 3, "Incantesimi", "Spellcasting", 132,
@@ -60,7 +67,7 @@ ARCANE_TRICKSTER = (
     _at("versatile_trickster", 13, "Ingannatore Versatile", "Versatile Trickster", 133,
         ("Con Sgambetto del Colpo Astuto, con Mano Magica attiva, colpisci anche una seconda creatura entro 1,5 m dalla mano spettrale.",
          "With Trip from Cunning Strike, with Mage Hand active, you also affect a second creature within 5 ft of the spectral hand."),
-        passive=True),
+        roll_options=(VERSATILE_TRIP,), passive=True),
     _at("spell_thief", 17, "Ladro di Incantesimi", "Spell Thief", 133,
         ("Reazione, una volta per riposo lungo: il lanciatore fa un TS Intelligenza; se fallisce annulli l'effetto e ruba l'incantesimo per 8 ore.",
          "Reaction, once per long rest: the caster makes an Intelligence save; on a failure you cancel the effect and steal the spell for 8 hours."),
@@ -138,7 +145,7 @@ def _restore_toggle() -> UseToggle:
 
 
 def _bare(ctx: RuleContext) -> bool:
-    return ctx.item is None and ctx.spell is None
+    return ctx.item is None and ctx.spell is None and ctx.attack_mode not in ("companion", "beast", "form")  # la lama è tua, non del compagno
 
 
 def _blade_used(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
@@ -234,8 +241,8 @@ SOULKNIFE = (
          "Bonus action: spend and roll an Energy Die; you teleport 10 ft per point of the result to an unoccupied space you can see."),
         "bonus_action", parent="Lame dell'Anima",
         on_use=OnUse(slot="bonus", spends=PSI, rolls=_psi_die,
-                     message=lambda _c, _p: _both("Distanza: 3 m per ogni punto del dado, in uno spazio libero e visibile.",
-                                                  "Distance: 10 ft for each point of the die, to an unoccupied space you can see."))),
+                     message=lambda _c, p: _both(f"Distanza: {3 * p['rolled']} m (3 m per ogni punto del dado), in uno spazio libero e visibile.",
+                                                 f"Distance: {10 * p['rolled']} ft (10 ft for each point of the die), to an unoccupied space you can see."))),
     _sk("psychic_veil", 13, "Velo Psichico", "Psychic Veil", 136,
         ("Azione Magia: Invisibile per 1 ora; finisce se infliggi danno o imponi un TS. Un uso per riposo lungo, o un Dado Energia.",
          "Magic action: Invisible for 1 hour; it ends if you deal damage or force a save. One use per long rest, or an Energy Die."),

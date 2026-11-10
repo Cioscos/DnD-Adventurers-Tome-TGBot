@@ -557,7 +557,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.targets.append(feature_key)
     if on_use.message:  # prima dell'effetto: vede la scheda com'era (i PF dell'interdizione prima dell'assorbimento)
         # ``ally_healed`` lo decide il server: con l'alleato già curato il testo non chiede di riferirlo al GM
-        result.message = on_use.message(ctx, {**(params or {}), "ally_healed": result.received is not None})
+        result.message = on_use.message(ctx, {**(params or {}), "ally_healed": result.received is not None, "rolled": sum(result.rolls)})
     if on_use.effect:
         on_use.effect(ctx, params or {})
     return result
