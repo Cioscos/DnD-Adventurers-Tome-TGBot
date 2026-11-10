@@ -111,6 +111,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     setConfirmLongRest(false)
     setInterrupted(false)
     setAteAndDrank(true)
+    setReopenTome(false)  // l'interruttore del Libro non resta acceso per il riposo dopo
   }
 
   return {

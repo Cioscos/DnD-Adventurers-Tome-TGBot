@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
@@ -32,7 +33,6 @@ import { useToast } from '@/hooks/useToast'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
-import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import { standardActionsFor } from '@/data/standardActions'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
@@ -83,7 +83,8 @@ export default function Turn() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
-  const { data: turn } = useTurnState(charId, true)
+  const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me() })
+  const { data: turn } = useTurnState(charId, true, session?.status === 'active')
 
   // Lo stato del turno vive sul server: sopravvive a ricarica e cambio pagina.
   const block = turn?.turn
@@ -172,8 +173,8 @@ export default function Turn() {
       }
       if (res?.temp_hp != null) toast.info(t('character.turn.use_temp_hp', { n: res.temp_hp }))
       if (res?.attack) toast.info(t('character.turn.use_attack', { die: res.attack.die, bonus: `${res.attack.bonus >= 0 ? '+' : ''}${res.attack.bonus}`, total: res.attack.total }), { description: res.attack.is_fumble ? t('character.dice.fumble_banner') : res.attack.is_critical ? t('character.dice.critical_banner') : undefined })
-      if (res?.message) toast.info(res.message[i18n.language?.startsWith('en') ? 'en' : 'it'])
-      for (const line of res?.removal ?? []) toast.info(line[i18n.language?.startsWith('en') ? 'en' : 'it'])
+      if (res?.message) toast.info(res.message[uiLang(i18n.language)])
+      for (const line of res?.removal ?? []) toast.info(line[uiLang(i18n.language)])
       for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
     },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
@@ -235,7 +236,7 @@ export default function Turn() {
   // Stesso tiro per Influenzare: il totale è quello del server, che segue le opzioni scelte dopo il tiro.
   const influenceSkills = standardActionsFor(char.rules_edition).find((s) => s.id === 'influence')?.skills ?? []
   const influenceTotal = influenceRolled && lastRoll?.roll === 'skill' && influenceSkills.includes(lastRoll.skill ?? '') ? lastRoll.total : null
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   // Lama Assetata: con l'arma del patto in mano gli attacchi sono quelli del privilegio
   const pactInHand = char.items?.some((i) => i.is_equipped && i.item_metadata?.pact_weapon)
   const attacks = (pactInHand ? turn?.attacks_allowed_pact : undefined) ?? turn?.attacks_allowed ?? char.attacks_per_action ?? 1
@@ -302,7 +303,7 @@ export default function Turn() {
             c.hiding_dc != null ? (
               <p className="mt-2 text-xs text-dnd-text-muted">{t('character.turn.hiding', { dc: c.hiding_dc })}</p>
             ) : 
-            hideTotal >= 15 ? (
+            hideTotal >= (turn?.hide_min_total ?? Infinity) ? (
               <Button size="sm" variant="secondary" className="mt-2" loading={hide.isPending} onClick={() => hide.mutate()}>
                 {t('character.turn.hide_confirm', { total: hideTotal })}
               </Button>
@@ -336,7 +337,7 @@ export default function Turn() {
         label = t('character.turn.unarmed')
         extra = (
           <>
-            <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes, c.rules_edition, c.items) })}</p>
+            <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: c.unarmed_damage_dice ?? '1' })}</p>
             {c.rules_edition === '2024' && (
               <div className="flex flex-wrap gap-2 pt-2">
                 {(['grapple', 'shove'] as const).map((effect) => (
@@ -429,7 +430,7 @@ export default function Turn() {
             </>
           )
           control = (
-            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || short}
+            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || short || !!ab.use_blocked}
               loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
               onClick={() => triggerAbility({ ability: ab, uses: 0, amount: pickable ? amount : undefined })}>
               {short ? t('character.turn.no_uses') : t('character.turn.use')}

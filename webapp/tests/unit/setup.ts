@@ -18,4 +18,7 @@ await i18nReady
   },
 }
 
+// jsdom non implementa scrollIntoView: i componenti lo chiamano (Identity, Spells...) e i test non devono stamparne l'errore.
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
+
 afterEach(() => cleanup())

@@ -15,7 +15,7 @@ export default function SongOfRestToggle({ char }: { char: CharacterFull }) {
       if (on) await api.characters.featureUse(char.id, 'bard.song_of_rest')
       else await api.characters.endActiveState(char.id, 'song_of_rest')
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', char.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['character', char.id] }); qc.invalidateQueries({ queryKey: ['turn-state', char.id] }) },
     onError: () => notifyMutationError(),
   })
   const available = char.rules_edition !== '2024'

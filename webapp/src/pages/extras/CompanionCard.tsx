@@ -64,6 +64,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['companions', charId] })
     qc.invalidateQueries({ queryKey: ['character', charId] })
+    qc.invalidateQueries({ queryKey: ['turn-state', charId] })
   }
 
   const hp = useMutation({

@@ -337,9 +337,10 @@ describe('useRest', () => {
     const { result } = renderHook(() => useRest(7, char), {
       wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
     })
-    act(() => { result.current.openLong(); result.current.setInterrupted(true); result.current.setAteAndDrank(false) })
+    act(() => { result.current.openLong(); result.current.setInterrupted(true); result.current.setAteAndDrank(false); result.current.setReopenTome(true) })
     expect(result.current.interrupted).toBe(true)
     act(() => result.current.cancelLongRest())
+    expect(result.current.reopenTome).toBe(false)  // punto 49: il Libro del Warlock non resta acceso
     expect(result.current.confirmLongRest).toBe(false)
     expect(result.current.interrupted).toBe(false)
     expect(result.current.ateAndDrank).toBe(true)

@@ -30,7 +30,7 @@ export default function Extras() {
 
   const create = useMutation({
     mutationFn: (body: CompanionPayload) => api.companions.create(charId, body),
-    onSuccess: () => { haptic.success(); setAdding(false); qc.invalidateQueries({ queryKey: ['companions', charId] }) },
+    onSuccess: () => { haptic.success(); setAdding(false); qc.invalidateQueries({ queryKey: ['companions', charId] }); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 422 && err.detail === 'companion_limit') toast.error(t('character.extras.limit'))
       else if (err instanceof ApiError && err.status === 422 && err.detail === 'known_forms_limit') toast.error(t('character.extras.known_forms_limit'))

@@ -245,6 +245,7 @@ describe('Turn page', () => {
     await screen.findByText('character.turn.unarmed')
     await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
     const row = screen.getByText('Nascondersi').closest('li') as HTMLElement
+    server.extra = { hide_min_total: 15 }  // la soglia è del server (punto 42)
     saved(17)
     await userEvent.click(within(row).getByText('character.skills.stealth'))
     await userEvent.click(await within(row).findByText('character.turn.hide_confirm'))
@@ -353,6 +354,16 @@ describe('Turn page', () => {
     expect(screen.getAllByText('character.turn.use')).toHaveLength(2)
     await userEvent.click(within(screen.getByText('Presenza Intimidatoria').closest('li') as HTMLElement).getByText('character.turn.use'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence'))
+  })
+
+  it('switches off the Use button of a feature the server says would be refused (Spell Breaker with no cast to refund, punto 49)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [
+      { id: 9, name: 'Rompi-Incantesimi', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true, use_blocked: true,
+        feature_key: 'wizard.spell_breaker', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none' },
+    ] })
+    renderWithProviders(<Turn />)
+    const row = (await screen.findByText('Rompi-Incantesimi')).closest('li') as HTMLElement
+    expect(within(row).getByText('character.turn.use').closest('button')).toBeDisabled()
   })
 
   it('shows what the server says a feature will do before it is used (Magical Cunning: the slots that come back)', async () => {
@@ -727,8 +738,8 @@ describe('Turn page', () => {
     expect(screen.queryByLabelText('character.turn.mark_used: character.turn.section_attacks')).not.toBeInTheDocument()
   })
 
-  it('shows the unarmed damage die, following the monk level', async () => {
-    getChar.mockResolvedValue({ ...char, classes: [{ class_name: 'monk', level: 5 }] })
+  it('shows the unarmed damage die the server sends (punto 42)', async () => {
+    getChar.mockResolvedValue({ ...char, classes: [{ class_name: 'monk', level: 5 }], unarmed_damage_dice: '1d6' })
     renderWithProviders(<Turn />)
     expect(await screen.findByText('character.turn.unarmed_desc:1d6')).toBeInTheDocument()
   })

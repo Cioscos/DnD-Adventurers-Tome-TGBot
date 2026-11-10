@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GiLightningTrio } from 'react-icons/gi'
@@ -8,12 +9,13 @@ import { bonusSpentOnReturn } from '@/lib/formReturn'
 import { optionLabel } from '@/lib/spellChoice'
 import { formatRounds } from '@/lib/spellDuration'
 import { useToast } from '@/hooks/useToast'
+import { formatKm, formatLength, formatMeters, useUnitSettings, type UnitSystem } from '@/store/unitSettings'
 import type { CharacterFull } from '@/types'
 
 type StateRow = NonNullable<CharacterFull['active_states']>[number]
 
 /** I numeri che uno stato porta con sé e che il giocatore deve poter leggere: CD del TS, GS, danno fisso, esito. */
-function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string, charId: number): string[] {
+function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string, charId: number, system: UnitSystem, lang: string): string[] {
   const d = (s.data ?? {}) as Record<string, unknown>
   const out: string[] = []
   const clock = s.key.startsWith('spell_cast:')
@@ -41,12 +43,12 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   if (typeof d.cr === 'string') out.push(t('character.turn.state_cr', { cr: d.cr }))
   if (typeof d.attack_bonus === 'number') out.push(t('character.turn.state_attack_bonus', { n: d.attack_bonus }))
   if (typeof d.bonus === 'number') out.push(t('character.turn.state_bonus', { n: d.bonus }))
-  if (typeof d.range_m === 'number') out.push(t('character.turn.state_radius', { n: d.range_m }))
-  if (typeof d.radius_m === 'number') out.push(t('character.turn.state_radius', { n: d.radius_m }))
-  if (typeof d.radius_km === 'number') out.push(t('character.turn.state_radius_km', { n: String(d.radius_km).replace('.', ',') }))
+  if (typeof d.range_m === 'number') out.push(t('character.turn.state_radius', { d: formatMeters(d.range_m, system) }))
+  if (typeof d.radius_m === 'number') out.push(t('character.turn.state_radius', { d: formatMeters(d.radius_m, system) }))
+  if (typeof d.radius_km === 'number') out.push(t('character.turn.state_radius', { d: formatKm(d.radius_km, system, lang) }))
   if (typeof d.ac_bonus === 'number') out.push(t('character.turn.state_ac_bonus', { n: d.ac_bonus }))
   if (typeof d.stealth_bonus === 'number') out.push(t('character.turn.state_stealth_bonus', { n: d.stealth_bonus }))
-  if (typeof d.fly_ft === 'number') out.push(t('character.turn.state_fly', { n: Math.round(d.fly_ft * 0.3) }))
+  if (typeof d.fly_ft === 'number') out.push(t('character.turn.state_fly', { d: formatLength(d.fly_ft, system) }))
   if (typeof d.start_heal === 'number') out.push(t('character.turn.state_start_heal', { n: d.start_heal }))
   if (typeof d.start_damage === 'number') out.push(t('character.turn.state_start_damage', { n: d.start_damage }))
   if (typeof d.hp === 'number' && typeof d.max === 'number') out.push(t('character.turn.state_ward', { hp: d.hp, max: d.max }))
@@ -70,7 +72,8 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
 
 /** Stati attivi dei privilegi (Ira...) con i round rimasti e la chiusura a mano. Niente se non ce n'è nessuno. */
 export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
   const qc = useQueryClient()
   const toast = useToast()
   const end = useMutation({
@@ -78,6 +81,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['companions', char.id] })  // chiudere la Forma Selvatica la chiude anche nei compagni
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
     },
     onError: (err) => {
       if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
@@ -121,7 +125,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
         const others = ((s.data?.others as string[] | undefined) ?? [])
           .map((k) => char.abilities.find((a) => a.feature_key === k))
           .filter((a): a is NonNullable<typeof a> => !!a)
-        const facts = stateFacts(s, t, char.id)
+        const facts = stateFacts(s, t, char.id, system, uiLang(i18n.language))
         // Lo decide il server: la scelta di prolungamento c'è solo finché l'Ira si può prolungare (non dal 15°, non per le altre classi).
         const canExtend = !!s.feature_key && !!char.abilities.find((a) => a.feature_key === s.feature_key)?.use_choices?.some((x) => x.key === 'extend_via')
         return (

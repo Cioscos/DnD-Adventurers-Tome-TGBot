@@ -2,15 +2,16 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
 
-/** Turn state polled every 5 s while in a session. A turn/round change may come
+/** Turn state polled every 5 s only while `live` (an active evening; default: whenever enabled). Outside an
+ *  evening the page reads it once and mutations invalidate it. A turn/round change may come
  *  with a server-side rounds tick (GM's next-turn), so the cached character is refetched. */
-export function useTurnState(charId: number, enabled: boolean) {
+export function useTurnState(charId: number, enabled: boolean, live: boolean = enabled) {
   const qc = useQueryClient()
   const query = useQuery({
     queryKey: ['turn-state', charId],
     queryFn: () => api.characters.turnState(charId),
     enabled,
-    refetchInterval: 5000,
+    refetchInterval: live ? 5000 : false,
   })
   const key = query.data ? `${query.data.is_my_turn}:${query.data.round}` : null
   const lastKey = useRef<string | null>(null)
