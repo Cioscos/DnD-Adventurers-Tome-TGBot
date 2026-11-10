@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
-import { notifyCastError } from '@/lib/mutationError'
+import { notifyCastError, notifyMutationError } from '@/lib/mutationError'
 import { resolveItemCast, matchingSpell, type ResolvedItemCast } from '@/lib/itemCast'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import { needsEffectAsk } from '@/lib/spellChoice'
@@ -39,7 +39,7 @@ export function useItemCast(charId: number) {
       else if (detail === 'no_charges') toast.error(t('character.inventory.magic.no_charges'))
       else if (detail === 'not_enough_charges') toast.error(t('character.inventory.magic.not_enough_charges'))
       else if (detail === 'attunement_required') toast.error(t('character.inventory.magic.attunement_required'))
-      else toast.error(t('common.action_failed'))
+      else notifyMutationError(err)
     },
   })
 

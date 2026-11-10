@@ -16,7 +16,7 @@ vi.mock('@/api/client', async (orig) => {
 })
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ success: toastSuccess, error: toastError }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError: vi.fn() }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError: vi.fn() }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k), i18n: { language: 'it' } }) }

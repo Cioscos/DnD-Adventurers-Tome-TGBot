@@ -1,5 +1,5 @@
 import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions, useEffectPickStore } from '@/lib/rollOptions'
-import { notifyCastError } from '@/lib/mutationError'
+import { notifyCastError, apiErrorCode } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
@@ -11,7 +11,7 @@ import {
   GiPerspectiveDiceSixFacesRandom as Dices, GiCrossedSwords as Swords,
   GiCheckedShield as Shield,
 } from 'react-icons/gi'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -200,7 +200,7 @@ export default function SpellDamageSheet({
       setResult(data)
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (err instanceof DamageUnrollable || code === 'bad_damage_dice') setUnrollable(true)  // un testo suo, non «controlla la connessione»
       else if (!(err instanceof CastCancelled)) notifyCastError(err)
       // Un lancio rifiutato ha perso le scelte (tipo, bersagli): riprovare da qui darebbe un altro errore, si riparte dal lancio.

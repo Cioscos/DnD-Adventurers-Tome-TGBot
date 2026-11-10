@@ -81,7 +81,7 @@ export default function Campaign() {
     onError: (e) => {
       qc.invalidateQueries({ queryKey: key })
       if (e instanceof ApiError && e.status === 409 && e.detail === 'You already have an active session') toast.error(t('session.already_in_other'))
-      else notifyMutationError()
+      else notifyMutationError(e)
     },
   })
   const renameMut = useMutation({
@@ -122,7 +122,7 @@ export default function Campaign() {
     onError: (e) => {
       setConfirm(null)
       if (e instanceof ApiError && e.status === 409) toast.error(t('campaign.delete_blocked'))
-      else notifyMutationError()
+      else notifyMutationError(e)
     },
   })
 

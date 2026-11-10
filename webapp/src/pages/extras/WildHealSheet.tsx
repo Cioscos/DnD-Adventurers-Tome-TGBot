@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyMutationError, apiErrorCode } from '@/lib/mutationError'
 import type { Companion } from '@/types'
 
 export interface HealSlot { level: number; left: number }
@@ -35,11 +35,11 @@ export default function WildHealSheet({ charId, comp, slots, onClose }: Props) {
       onClose()
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))
       else if (code === 'no_slot') toast.error(t('character.extras.wild_heal_no_slot'))
       else if (code === 'form_full_hp') toast.error(t('character.extras.wild_heal_full'))
-      else notifyMutationError()
+      else notifyMutationError(err)
       qc.invalidateQueries({ queryKey: ['character', charId] })
     },
   })

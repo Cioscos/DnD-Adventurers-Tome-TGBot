@@ -1,3 +1,4 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { useCallback, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +11,6 @@ import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { useToast } from '@/hooks/useToast'
 import type { SessionParticipant } from '@/types'
 
 const toPayload = (f: ItemFormData) => ({
@@ -41,7 +41,6 @@ export default function GrantItemModal({
 }: GrantItemModalProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const toast = useToast()
   const [step, setStep] = useState<'form' | 'recipients'>('form')
   const [pendingForm, setPendingForm] = useState<ItemFormData | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -83,7 +82,7 @@ export default function GrantItemModal({
       qc.invalidateQueries({ queryKey: ['session-feed'] })
       onClose()
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
 
   const handleFormSubmit = useCallback((data: ItemFormData) => {

@@ -22,7 +22,7 @@ export default function OwnedSecrets({ charId, pick }: { charId: number; pick: P
       setPicked([])
       haptic.success()
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   const toggle = (id: number) =>
     setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < limit ? [...cur, id] : cur))

@@ -1,3 +1,4 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +8,6 @@ import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { ATLAS_COLORS, ATLAS_ICONS } from '@/lib/atlasIcons'
-import { useToast } from '@/hooks/useToast'
 import type { MarkerType } from '@/types'
 
 interface Props { open: boolean; campaignId: number; onClose: () => void; onCreated: (t: MarkerType) => void }
@@ -20,7 +20,6 @@ const cell = (on: boolean) =>
 export default function MarkerTypeSheet({ open, campaignId, onClose, onCreated }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const toast = useToast()
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('map-pin')
   const [color, setColor] = useState('gold')
@@ -29,7 +28,7 @@ export default function MarkerTypeSheet({ open, campaignId, onClose, onCreated }
   const create = useMutation({
     mutationFn: () => api.atlas.createType(campaignId, { name: name.trim(), icon, color }),
     onSuccess: (type) => { qc.invalidateQueries({ queryKey: ['atlas-types', campaignId] }); onCreated(type) },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
   const Preview = ATLAS_ICONS[icon]
 

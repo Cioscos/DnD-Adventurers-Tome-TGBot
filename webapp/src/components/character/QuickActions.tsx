@@ -217,9 +217,9 @@ export default function QuickActions({ char }: Props) {
   }
   const counterHandlers = {
     scope: { id: counterScope },
-    onError: (_e: unknown, _v: unknown, ctx: { prev?: CharacterFull } | undefined) => {
+    onError: (e: unknown, _v: unknown, ctx: { prev?: CharacterFull } | undefined) => {
       if (ctx?.prev) qc.setQueryData(charKey, ctx.prev)
-      toast.error(t('common.action_failed'))
+      notifyMutationError(e)
     },
     onSettled: () => {
       if (qc.isMutating({ predicate: (m) => m.options.scope?.id === counterScope }) <= 1) {
@@ -243,7 +243,7 @@ export default function QuickActions({ char }: Props) {
       qc.setQueryData(['character', char.id], updated)
       haptic.light()
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
 
   const usesMutation = useMutation({
@@ -294,7 +294,7 @@ export default function QuickActions({ char }: Props) {
         qc.invalidateQueries({ queryKey: ['character', char.id] })
         setConfirmHitDie(null)
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })

@@ -38,7 +38,7 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
   const del = useMutation({
     mutationFn: (r: ScheduleRead) => api.campaigns.schedule.remove(campaignId, r.id),
     onSuccess: () => { setCancelling(null); qc.invalidateQueries({ queryKey: ['schedule', campaignId] }) },
-    onError: () => { setCancelling(null); notifyMutationError() },
+    onError: (err) => { setCancelling(null); notifyMutationError(err) },
   })
 
   // Giorno locale → serate. Le righe `done` sono già nelle sessioni: non si contano due volte.

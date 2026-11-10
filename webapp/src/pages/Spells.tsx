@@ -8,7 +8,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Ban, ChevronRight, FilterX } from 'lucide-react'
 import { GiPotionBall as FlaskConical, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyMutationError, apiErrorCode } from '@/lib/mutationError'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -118,7 +118,7 @@ export default function Spells() {
       return
     }
     if (detail?.code !== 'prepared_cap') {
-      notifyMutationError()
+      notifyMutationError(e)
       return
     }
     haptic.warning()
@@ -163,7 +163,7 @@ export default function Spells() {
       haptic.success()
     },
     onError: (e) => {
-      const code = e instanceof ApiError ? (e.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(e)
       if (code === 'spell_pick_level' || code === 'spell_already_known') {
         haptic.warning()
         toast.warning(t(`character.spells.${code}`))

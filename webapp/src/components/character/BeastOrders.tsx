@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyMutationError, apiErrorCode } from '@/lib/mutationError'
 import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
 import type { BeastCommand, CharacterFull, TurnBlock } from '@/types'
 
@@ -35,9 +35,9 @@ export default function BeastOrders({ char, turn }: { char: CharacterFull; turn?
       qc.invalidateQueries({ queryKey: ['companions', char.id] })
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (code && ERRORS.includes(code)) toast.error(t(`character.extras.beast.errors.${code}`))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
   if (!present) return null

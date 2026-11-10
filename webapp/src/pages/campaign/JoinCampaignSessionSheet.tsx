@@ -1,3 +1,4 @@
+import { actionFailedKey } from '@/lib/mutationError'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -47,7 +48,7 @@ export default function JoinCampaignSessionSheet({ open, onClose, item }: Props)
       const key = err instanceof ApiError && err.status === 409 ? 'session.already_in_other'
         : d === 'character_dead' ? 'campaign.join_err_dead'
         : d === 'no_active_session' ? 'campaign.join_err_no_session'
-        : 'common.action_failed'
+        : actionFailedKey(err)
       toast.error(t(key))
       if (d === 'no_active_session') qc.invalidateQueries({ queryKey: ['campaign-active-for-me'] })
     },

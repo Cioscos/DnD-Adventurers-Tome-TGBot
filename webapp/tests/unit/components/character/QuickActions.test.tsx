@@ -19,7 +19,7 @@ vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { characters: { spendHitDice, update, rest }, items: { charges } } }
 })
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: vi.fn() }) }))

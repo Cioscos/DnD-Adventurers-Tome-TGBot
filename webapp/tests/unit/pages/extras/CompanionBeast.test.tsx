@@ -21,7 +21,7 @@ vi.mock('react-i18next', async (orig) => ({
 }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn().mockResolvedValue([12]) }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: toastInfo, success: vi.fn() }) }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError: vi.fn() }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError: vi.fn() }))
 vi.mock('@/pages/hp/ConcentrationSaveDialog', () => ({ default: () => null }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/lib/rollOptions', async (orig) => ({

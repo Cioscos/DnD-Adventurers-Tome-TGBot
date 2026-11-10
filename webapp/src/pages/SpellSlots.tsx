@@ -1,8 +1,8 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { Minus, Plus, RotateCcw, X } from 'lucide-react'
 import { GiCutDiamond as Gem } from 'react-icons/gi'
 import { api } from '@/api/client'
@@ -206,10 +206,9 @@ export default function SpellSlots() {
       }
       return { prev }
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(['character', charId], ctx.prev)
-      haptic.error()
-      toast.error(t('common.action_failed'))
+      notifyMutationError(err)
     },
     onSettled: () => {
       // Riallinea col BE solo a coda vuota: niente refetch fra un tap e l'altro.

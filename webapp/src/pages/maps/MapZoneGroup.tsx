@@ -99,7 +99,7 @@ function MapZoneGroupInner({
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(['character', charId], ctx.previous)
-      notifyMutationError()
+      notifyMutationError(_err)
       qc.invalidateQueries({ queryKey: ['character', charId] })
     },
     onSuccess: (data) => {

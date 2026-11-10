@@ -1,3 +1,4 @@
+import { actionFailedKey } from '@/lib/mutationError'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -37,7 +38,7 @@ export default function AttunementSection({ charId, items, limit = MAX_ATTUNED }
         setError(t('character.inventory.magic.attunement_limit', { n: limit }))
         haptic.error()
       } else {
-        setError(t('common.action_failed'))
+        setError(t(actionFailedKey(err)))
       }
     },
   })

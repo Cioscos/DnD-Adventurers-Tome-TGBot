@@ -1,3 +1,4 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +8,6 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Button from '@/components/ui/Button'
 import { api } from '@/api/client'
 import { resolveType, visibilityKey } from '@/lib/atlasIcons'
-import { useToast } from '@/hooks/useToast'
 import type { AtlasMarker } from '@/types'
 
 interface Props {
@@ -27,11 +27,10 @@ interface Props {
 export default function MarkerSheet({ open, campaignId, marker, isGm, linkName, onClose, onOpenLink, onEdit, onMove }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const toast = useToast()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { Icon, color, label } = resolveType(marker.type)
   const refresh = () => qc.invalidateQueries({ queryKey: ['atlas-markers', campaignId, marker.map_id] })
-  const fail = () => toast.error(t('common.action_failed'))
+  const fail = (e: unknown) => notifyMutationError(e)
 
   const next = marker.visibility === 'public' ? 'private' : 'public'
   const toggle = useMutation({

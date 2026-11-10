@@ -1,3 +1,4 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { uiLang } from '@/lib/lang'
 import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import type React from 'react'
@@ -288,7 +289,7 @@ export default function Inventory() {
       if (names.length > 0) toast.info(t('character.inventory.containers.unequipped', { names: names.join(', ') }))
       haptic.success()
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
 
   const addBoxMutation = useMutation({
@@ -322,7 +323,7 @@ export default function Inventory() {
         setNewBox(null)
         setMoveTargets(null)
         toast.error(t('character.inventory.containers.created_move_failed'))
-      } else toast.error(t('common.action_failed'))
+      } else notifyMutationError(e)
     },
   })
 
@@ -345,7 +346,7 @@ export default function Inventory() {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
   const itemCast = useItemCast(charId)
   const scrollMutation = useMutation({
@@ -354,7 +355,7 @@ export default function Inventory() {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))

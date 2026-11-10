@@ -159,8 +159,8 @@ export default function HP() {
         onUndo: () => undoMutation.mutate(undoId),
       })
     },
-    onError: () => {
-      notifyMutationError()
+    onError: (err) => {
+      notifyMutationError(err)
       savingRef.current = false
     },
   })
@@ -181,7 +181,7 @@ export default function HP() {
         toast.error(t('character.hp.undo_stale'))
         qc.invalidateQueries({ queryKey: ['character', charId] })
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })

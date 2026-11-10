@@ -13,7 +13,7 @@ vi.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('react-i18next', async (orig) => ({
   ...((await orig()) as Record<string, unknown>),
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }),

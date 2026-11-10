@@ -1,3 +1,4 @@
+import { notifyMutationError, actionFailedKey } from '@/lib/mutationError'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +27,7 @@ export default function MapManageSheet({ open, campaignId, map, onClose }: Props
   useEffect(() => { if (open) { setName(map.name); setConfirmDelete(false) } }, [open, map.name])
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['atlas-maps', campaignId] })
-  const fail = () => toast.error(t('common.action_failed'))
+  const fail = (e: unknown) => notifyMutationError(e)
 
   const rename = useMutation({
     mutationFn: () => api.atlas.renameMap(campaignId, map.id, name.trim()),
@@ -53,8 +54,8 @@ export default function MapManageSheet({ open, campaignId, map, onClose }: Props
     onSuccess: () => { refresh(); onClose() },
     onError: (e) => toast.error(t(
       e instanceof ApiError
-        ? (e.status === 400 ? 'atlas.err_upload' : 'common.action_failed')
-        : e.message === 'decode' ? 'atlas.err_image' : 'common.action_failed',
+        ? (e.status === 400 ? 'atlas.err_upload' : actionFailedKey(e))
+        : e.message === 'decode' ? 'atlas.err_image' : actionFailedKey(e),
     )),
   })
   const remove = useMutation({

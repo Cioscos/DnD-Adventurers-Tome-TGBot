@@ -12,7 +12,7 @@ vi.mock('@/api/client', () => ({
   api: { characters: { endActiveState, bardicDieAc, featureUse } },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: toastError, success: vi.fn() }) }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>

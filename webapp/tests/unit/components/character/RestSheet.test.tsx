@@ -22,7 +22,7 @@ vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { characters: { spendHitDice, rest, restPreview, featureUse, endActiveState } } }
 })
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: toastSuccess, info: toastInfo }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('react-i18next', async (orig) => {

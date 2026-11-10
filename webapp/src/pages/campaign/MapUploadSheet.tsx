@@ -1,3 +1,4 @@
+import { actionFailedKey } from '@/lib/mutationError'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -37,8 +38,8 @@ export default function MapUploadSheet({ open, campaignId, onClose }: Props) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['atlas-maps', campaignId] }); onClose() },
     onError: (e) => toast.error(t(
       e instanceof ApiError
-        ? (e.status === 400 ? 'atlas.err_upload' : 'common.action_failed')
-        : e.message === 'decode' ? 'atlas.err_image' : 'common.action_failed',
+        ? (e.status === 400 ? 'atlas.err_upload' : actionFailedKey(e))
+        : e.message === 'decode' ? 'atlas.err_image' : actionFailedKey(e),
     )),
   })
 

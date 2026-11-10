@@ -20,7 +20,7 @@ vi.mock('react-i18next', async (orig) => ({
 }))
 vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn().mockResolvedValue([12]) }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/pages/hp/ConcentrationSaveDialog', async () => {
   const React = await import('react')
   return { default: (p: { result: { dc: number } }) => React.createElement('div', { 'data-testid': 'conc-dialog' }, `dc ${p.result.dc}`) }

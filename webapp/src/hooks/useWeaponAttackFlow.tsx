@@ -1,3 +1,4 @@
+import { apiErrorCode } from '@/lib/mutationError'
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -47,7 +48,7 @@ export function useAttackRoll() {
 
   /** Il server può rifiutare ciò che la pagina non aveva ancora visto: lo si dice, senza errori muti. */
   const refused = (err: unknown): boolean => {
-    const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+    const code = apiErrorCode(err)
     if (code === 'incapacitated') toast.error(t('character.attack.incapacitated'))
     else if (code === 'attack_limit') toast.error(t('character.attack.limit_title'))
     else if (code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))

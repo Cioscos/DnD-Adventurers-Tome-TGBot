@@ -94,7 +94,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         toast.error(t('character.hp.undo_stale'))
         qc.invalidateQueries({ queryKey: ['character', char.id] })
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })

@@ -21,7 +21,7 @@ export default function ActiveFormBanner({ charId, form }: { charId: number; for
     },
     onError: (err) => {
       if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
   return (
