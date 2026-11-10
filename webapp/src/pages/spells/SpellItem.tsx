@@ -239,7 +239,7 @@ function SpellItemInner({
                     onClick={() => onUse('normal')}
                     pending={usePending}
                     spinnerSize={12}
-                    className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                    className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                                bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
                                active:opacity-60 disabled:opacity-30"
                   >
@@ -253,7 +253,7 @@ function SpellItemInner({
                     onClick={onPreparedToggle}
                     pending={preparedPending}
                     spinnerSize={12}
-                    className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                    className={`flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                                 border active:opacity-60 disabled:opacity-30
                                 ${spell.is_prepared
                                   ? 'bg-dnd-gold-bright/15 text-dnd-gold-bright border-dnd-gold-bright/40'
@@ -291,7 +291,7 @@ function SpellItemInner({
                     spinnerSize={12}
                     title={t('character.spells.concentration_button_title')}
                     aria-label={t('character.spells.concentration_button_title')}
-                    className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                    className={`flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                                 border active:opacity-60 cursor-help
                                 ${isConcentrating
                                   ? 'bg-dnd-danger/20 text-dnd-crimson-bright border-dnd-danger/30'

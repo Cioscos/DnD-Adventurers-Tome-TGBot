@@ -21,6 +21,8 @@ from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, 
 from api.database import get_db
 from core.game.containers import is_container, trade_snapshot
 from core.rules.edition import character_edition
+from core.game.item_bonuses import item_bonus_total
+from api.services.homebrew.passive import get_passive_modifiers
 from core.rules.modifiers import ac_delta
 from api.schemas.session import (
     CharacterLiveSnapshot,
@@ -210,6 +212,8 @@ async def _load_live_characters(
             if joined and (not isinstance(ts, str) or ts < joined):
                 last_roll = None
         effects, pendings = await character_effect_payload(db, char.id)
+        items_ac = item_bonus_total(char.items, "ac")  # la CA che il tavolo vede è quella della scheda: oggetti e homebrew compresi
+        homebrew_ac = await get_passive_modifiers(db, char, "character.ac")
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -220,7 +224,7 @@ async def _load_live_characters(
             hit_points=char.hit_points,
             current_hit_points=char.current_hit_points,
             temp_hp=char.temp_hp or 0,
-            ac=char.ac + ac_delta(char, char.ac),
+            ac=char.ac + items_ac + homebrew_ac + ac_delta(char, char.ac, items_ac + homebrew_ac),
             conditions=char.conditions or {},
             death_saves=char.death_saves or {},
             heroic_inspiration=bool(char.heroic_inspiration),

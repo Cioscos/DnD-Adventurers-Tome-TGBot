@@ -28,7 +28,7 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
       toast.success(t(res.applied ? (res.pending_save_id ? 'character.target_effect.applied_save' : 'character.target_effect.applied') : 'character.target_effect.nothing', { name: res.target_name }))
       onClose()
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   const fx = data?.result
   return (

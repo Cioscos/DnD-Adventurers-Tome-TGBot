@@ -26,6 +26,14 @@ describe('SpellItem', () => {
     expect(onToggle).toHaveBeenCalledTimes(1)
   })
 
+  it('the Use, Prepare and Concentration buttons of the expanded row reach 44 px (punto 90)', () => {
+    const preparing = { showPreparedToggle: true, onPreparedToggle: () => {}, preparedPending: false }
+    render(<SpellItem spell={spell({ is_concentration: true, is_prepared: false })} isExpanded {...base} {...preparing} />)
+    for (const name of [/character.spells.use/, /character.spells.prepare/, 'character.spells.concentration_button_title']) {
+      expect(screen.getByRole('button', { name }).className).toContain('min-h-11')
+    }
+  })
+
   it('when expanded shows the description and a use action', async () => {
     const onUse = vi.fn()
     render(<SpellItem spell={spell()} isExpanded {...base} onUse={onUse} />)

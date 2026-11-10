@@ -85,7 +85,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
     },
     onError: (err) => {
       if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
   // Dado di Ispirazione in Combattimento alla CA: in reazione, il valore da sommare lo dice il server.
@@ -96,7 +96,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       toast.info(t('character.turn.bardic_die_ac_result'), { description: `+${res.roll}` })
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   // Prolungare l'Ira con un TS imposto non costa l'azione bonus: il bottone sta qui, fuori dalla sezione che si richiude.
   const extend = useMutation({
@@ -106,7 +106,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       toast.info(t('character.turn.extend_rage_done'))
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   // I segni interni di un privilegio (il Canto di Riposo già ricevuto) non sono del giocatore: né si vedono né si chiudono.
   const states = (char.active_states ?? []).filter((s) => !s.data?.internal)

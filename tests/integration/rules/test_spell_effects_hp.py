@@ -684,3 +684,14 @@ async def test_death_ward_is_not_offered_to_the_client_because_the_server_applie
     assert r.status_code == 200, r.text
     assert DEATH_WARD not in [o["key"] for o in r.json()]
     assert await _hit(client, hero, 500, "slashing") == 199  # senza opzioni inviate
+
+
+async def test_89_the_ac_seen_in_the_evening_counts_items_like_the_sheet(client, test_session_factory):
+    """Punto 89: in serata la CA include gli oggetti (e l'homebrew), come la scheda; prima li lasciava fuori."""
+    hero, caster, spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    as_user(PLAYER_ID)
+    await _item(client, hero, "Anello", slot="ring1", is_magic=True, bonuses=[{"target": "ac", "value": 1}])
+    await _cast(client, caster, spell, [hero], level=1)
+    as_user(GM_ID)
+    live = await client.get("/sessions/1/live")
+    assert next(c for c in live.json()["live_characters"] if c["id"] == hero)["ac"] == 17  # 13 + 3 + anello +1

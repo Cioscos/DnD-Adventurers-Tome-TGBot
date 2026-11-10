@@ -1,7 +1,8 @@
+import { apiErrorCode } from '@/lib/mutationError'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/hooks/useToast'
@@ -27,7 +28,7 @@ export default function WeaponBondSheet({ char, onClose }: { char: CharacterFull
   }
   // Il server dice perché rifiuta (limite, mano occupata, azione bonus già spesa): si traduce, mai il messaggio tecnico.
   const fail = (err: unknown) => {
-    const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+    const code = apiErrorCode(err)
     toast.error(t(`character.weapon_bond.errors.${code && ERRORS.includes(code) ? code : 'default'}`))
     qc.invalidateQueries({ queryKey: ['character', char.id] })
   }

@@ -1,3 +1,4 @@
+import { SELECTED_CLASSES } from '@/lib/selection'
 import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -46,7 +47,7 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
             <div key={c.key} className="flex flex-col gap-2">
               <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{c.label[lang]}</p>
               {c.options.map((o) => (
-                <Button key={o} variant={picked[c.key] === o ? 'primary' : 'secondary'} className="!justify-start break-words text-left"
+                <Button key={o} variant="secondary" className={`!justify-start break-words text-left ${picked[c.key] === o ? SELECTED_CLASSES : ''}`}
                   onClick={() => setPicked((p) => ({ ...p, [c.key]: o }))}>{optionLabel(t, c.key, o)}</Button>
               ))}
             </div>
