@@ -21,6 +21,12 @@ export function levelFromXp(xp: number): number {
   return Math.min(level, 20)
 }
 
+/** Livello totale da mostrare: in milestone la somma dei livelli di classe; altrimenti quello degli XP, mai sotto la somma
+ *  (un personaggio creato con la classe a 5 e 0 XP non è di livello 1). */
+export function displayedTotalLevel(classLevelSum: number, milestone: boolean, xp: number): number {
+  return milestone ? classLevelSum : Math.max(levelFromXp(xp), classLevelSum)
+}
+
 /** XP threshold needed to reach `currentLevel + 1`. Null if at cap. */
 export function getNextLevelThreshold(currentLevel: number): number | null {
   return XP_THRESHOLDS[currentLevel] ?? null

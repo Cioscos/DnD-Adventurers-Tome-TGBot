@@ -14,7 +14,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { LEDGER_LABEL } from '@/styles/ledger'
-import { levelFromXp } from '@/lib/xpThresholds'
+import { displayedTotalLevel, levelFromXp } from '@/lib/xpThresholds'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
@@ -70,7 +70,7 @@ export default function Multiclass() {
             {t('character.multiclass.total_level', { defaultValue: 'Livello totale' })}
           </p>
           <p className="text-right font-display text-5xl font-black leading-none text-dnd-gold-bright">
-            {milestone ? classLevelSum : targetLevel}
+            {displayedTotalLevel(classLevelSum, milestone, char.experience_points ?? 0)}
           </p>
         </div>
       )}
