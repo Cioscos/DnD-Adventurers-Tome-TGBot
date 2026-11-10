@@ -97,7 +97,7 @@ def _primal_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
             return 422, "invalid_choice"
         if _downed(ctx) is not None:  # il ripristino non chiede la forma: torna com'era
             return None
-        return 409, "feature_unavailable"  # lo slot serve solo a rialzarla: la sostituzione è del riposo lungo
+        return 409, "beast_alive"  # lo slot serve solo a rialzarla: la sostituzione è del riposo lungo
     kind = params.get("kind")
     return None if kind in BEASTS and params.get("damage_type") in BEASTS[kind]["damage"] else (422, "invalid_choice")
 

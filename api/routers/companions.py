@@ -32,7 +32,7 @@ from api.services.wild_shape import (
 )
 from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
 from core.rules.companions import (
-    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, stat_int, summon_temp_hp, thrall_stats,
+    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition, stat_int, summon_temp_hp, thrall_stats,
 )
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
@@ -99,7 +99,7 @@ async def list_companions(
     res = await session.execute(
         select(Companion).where(Companion.character_id == char_id).order_by(Companion.id)
     )
-    return [_read(char, c) for c in res.scalars()]
+    return [_read(char, c) for c in res.scalars() if not other_edition(char, c)]  # quello dell'altra edizione resta nascosto
 
 
 @router.post("/{char_id}/companions", response_model=CompanionRead, status_code=status.HTTP_201_CREATED)
@@ -110,7 +110,8 @@ async def create_companion(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    rows = list((await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars())
+    rows = [c for c in (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
+            if not other_edition(char, c)]
     if len(rows) >= MAX_COMPANIONS:
         raise HTTPException(status_code=422, detail="companion_limit")
     if body.is_active and body.kind != "wild_shape":

@@ -110,6 +110,8 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
       {states.map((s) => {
         // Il dado ricevuto non ha una riga sulla scheda di chi lo riceve: il nome salvato è nella lingua del bardo, si traduce qui.
         const name = s.key === 'bardic_die' ? t('character.turn.bardic_die_name')
+          : s.key === 'shadow_step_strike' ? t('character.turn.shadow_strike_name') // nomi scritti dal server nella lingua di chi li ha creati
+          : s.key === 'bastion_of_law' ? t('character.turn.bastion_of_law_name')
           : s.key === 'spell:haste_lethargy' ? t('character.roll_notes.spell.haste_lethargy') // lo stato lo scrive il server, nella lingua del lanciatore
           : char.abilities.find((a) => a.feature_key === s.feature_key)?.name ?? s.name ?? t('character.turn.state_generic')
         // Privilegi che agiscono su altri (Lupo, Orso, Attacco Irruento): il testo sta sotto lo stato, il GM li applica (D1).
