@@ -337,11 +337,54 @@ def seed_character(char: Any, lang: str = "it") -> None:
     _keep_inventory_proficient(char, lang)
 
 
+def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
+    """Il cambio di edizione (o di sottoclasse) toglie le competenze date da un privilegio che non c'è più, salvo quelle
+    che un altro privilegio attivo o la classe danno comunque. Armature, armi e strumenti; le abilità restano."""
+    from core.rules.catalog import active_features, features_for
+    from core.rules.edition import EDITIONS
+
+    active = active_features(char)
+    lost = [k for k in done if not any(sp.key == k and getattr(sp, "proficiency_grants", None) for sp, _ in active)]
+    gone: dict[str, set[str]] = {"armor": set(), "weapons": set(), "tools": set()}
+    for key in lost:
+        for ed in EDITIONS:
+            for row in char.classes:
+                for spec in features_for(ed, row_class_key(row)):
+                    if spec.key == key and spec.proficiency_grants:
+                        for cat in gone:
+                            gone[cat].update(spec.proficiency_grants.get(cat, ()))
+    if not lost:
+        return done
+    kept: dict[str, set[str]] = {c: set() for c in gone}
+    for sp, _ in active:
+        for cat in gone:
+            kept[cat].update((sp.proficiency_grants or {}).get(cat, ()))
+    for ed in EDITIONS:
+        for i, row in enumerate(char.classes):
+            base = class_proficiencies(ed, row_class_key(row), i > 0)
+            for cat in gone:
+                kept[cat].update(getattr(base, cat))
+    cats = normalize(char.general_proficiencies)
+    changed = False
+    for cat, ids in gone.items():
+        drop = {_canon(label(p, lang)) for p in ids - kept[cat]} | {_canon(label(p, "it")) for p in ids - kept[cat]}
+        keep = [x for x in cats[cat] if _canon(x) not in drop]
+        changed |= len(keep) != len(cats[cat])
+        cats[cat] = keep
+    if changed:
+        char.general_proficiencies = cats
+    return [k for k in done if k not in lost]
+
+
 def apply_feature_grants(char: Any, lang: str = "it") -> None:
     """Competenze dei privilegi attivi (es. dominio): una volta sola per privilegio, anche da seconda classe."""
     from core.rules.catalog import active_features
 
     done = list((char.settings or {}).get(FEATURE_GRANTS_KEY) or [])
+    before = done
+    done = _drop_lost_grants(char, done, lang)
+    if done != before:
+        char.settings = {**(char.settings or {}), FEATURE_GRANTS_KEY: done}
     for spec, _row in active_features(char):
         grants = getattr(spec, "proficiency_grants", None)
         if not grants or spec.key in done:

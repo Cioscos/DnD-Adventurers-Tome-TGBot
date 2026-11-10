@@ -194,6 +194,10 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
         char.current_hit_points = max(0, min(char.current_hit_points + delta * char.total_level, char.hit_points))
 
 
+def _concentrates(data: object, edition: str) -> bool:
+    return bool(data.is_concentration or (edition == "2024" and data.concentration_2024))  # type: ignore[attr-defined]
+
+
 async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
     """Incantesimi dei privilegi attivi: sempre preparati. Mai cancellati: se il privilegio sparisce (cambio di
     edizione, livello) l'incantesimo resta e torna a contare come gli altri. Si toglie solo il segno messo da un
@@ -220,7 +224,7 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
             data = GRANTED_SPELLS[key]
             spell = Spell(character_id=char.id, name=data.name.get(lang) or data.name["it"], level=data.level,
                           casting_time=data.casting_time, range_area=data.range_area, duration=data.duration,
-                          is_concentration=data.is_concentration, is_ritual=data.is_ritual,
+                          is_concentration=_concentrates(data, character_edition(char)), is_ritual=data.is_ritual,
                           attack_save=data.attack_save, damage_dice=data.damage_dice, damage_type=data.damage_type,
                           higher_levels_dice=data.higher_levels_dice, srd_index=key,
                           extra_damage_dice=data.extra_damage_dice, extra_damage_type=data.extra_damage_type,
@@ -236,6 +240,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
         spell.school = spell.school or GRANTED_SPELLS[key].school  # idem per la scuola (Magia Ammaliante)
+        if key in created:  # riga creata da noi: la Concentrazione segue l'edizione (Arma Spirituale)
+            spell.is_concentration = _concentrates(GRANTED_SPELLS[key], character_edition(char))
         if key in previous or not spell.always_prepared:
             owned.append(key)
         spell.always_prepared = spell.is_prepared = True
