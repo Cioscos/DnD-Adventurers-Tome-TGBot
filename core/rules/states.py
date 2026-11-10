@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.rules.edition import character_edition
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.types import StateSpec
 
@@ -137,7 +138,7 @@ def end_extra_action(char: Any, closed: list[dict]) -> None:
         if any(x.get("key") == s.get("key") for x in char.active_states or []):
             continue  # la Velocità di un altro lanciatore dà ancora l'azione extra
         effect = SPELL_EFFECTS.get((s.get("data") or {}).get("spell_key"))
-        variant = effect and effect.variants.get((s.get("data") or {}).get("edition", "2014"))
+        variant = effect and effect.variants.get((s.get("data") or {}).get("edition") or character_edition(char))
         if variant and variant.extra_action and str(s.get("key", "")).startswith(SPELL_STATE_PREFIX):
             char.turn_state = {**turn, "extra_actions": max(0, int(turn.get("extra_actions") or 0) - 1), "haste_action": False}
             return

@@ -5,6 +5,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
+from core.rules.edition import character_edition
 from core.rules.types import Modifier, RollOptionSpec
 
 SPELL_STATE_PREFIX = "spell:"
@@ -41,7 +42,7 @@ class SpellVariant:
     on_hit: tuple[RollOptionSpec, ...] = ()
     rounds: int | None = None
     rounds_by_slot: Callable[[int], int] | None = None  # durata in round secondo lo slot (Sortilegio, Marchio del Cacciatore)
-    until_rest: bool = False
+    until_rest: Literal["long"] | None = None  # l'incantesimo dura fino a questo riposo (Aiuto: il lungo)
     concentration: bool = False
     choices: tuple[SpellChoice, ...] = ()
     on_apply: Callable[[Any, dict], None] | None = None
@@ -103,7 +104,7 @@ def own_aura_clocks(char: Any) -> list[dict]:
         data = (state.get("data") or {}).get("state_data")
         effect = SPELL_EFFECTS.get(key[len(SPELL_CLOCK_PREFIX):]) if key.startswith(SPELL_CLOCK_PREFIX) and data else None
         if effect and effect.target.kind == "aura":
-            out.append({"spell_key": effect.key, "name": state.get("name") or effect.key, "edition": data.get("edition", "2014"), "data": data})
+            out.append({"spell_key": effect.key, "name": state.get("name") or effect.key, "edition": data.get("edition") or character_edition(char), "data": data})
     return out
 
 
@@ -124,7 +125,7 @@ def spell_instances(char: Any) -> list[tuple[dict, "SpellEffect", SpellVariant, 
             continue
         data = state.get("data") or {}
         effect = SPELL_EFFECTS.get(data.get("spell_key") or key[len(SPELL_STATE_PREFIX):])
-        variant = effect and effect.variants.get(data.get("edition", "2014"))
+        variant = effect and effect.variants.get(data.get("edition") or character_edition(char))
         if variant:
             held = by_spell.get(effect.key)
             if held and _hp_max(held[2], held[3]) > _hp_max(variant, data):

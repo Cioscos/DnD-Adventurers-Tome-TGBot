@@ -1,16 +1,15 @@
 """Chi siede alla stessa serata di un personaggio: il bersaglio dei privilegi che aiutano un alleato (R38)."""
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.history import add_history
 from api.services.homebrew.passive import get_passive_modifiers
 from core.rules.modifiers import effective_hp_max
-from core.db.models import Ability, Character, CharacterHistory, GameSession, SessionParticipant, SessionStatus
+from core.db.models import Ability, Character, GameSession, SessionParticipant, SessionStatus
 
 
 async def seated_allies(session: AsyncSession, char: Character) -> list[Character]:
@@ -90,9 +89,7 @@ async def spend_donor_tokens(session: AsyncSession, receiver: Character, spent: 
             await _spend_atomically(session, row, int(amount))
         except HTTPException:  # l'uso è già andato (un altro danno, un altro alleato): la risposta è la stessa dell'opzione
             raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable"}) from None
-        session.add(CharacterHistory(
-            character_id=donor.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
-            description=f"{row.name or row.feature_key}: speso per {receiver.name}, che resta a 1 PF"))
+        add_history(session, donor.id, "roll_option", f"{row.name or row.feature_key}: speso per {receiver.name}, che resta a 1 PF")
         donors.append(donor)
     return donors
 
@@ -109,9 +106,8 @@ async def refund_donor_tokens(session: AsyncSession, receiver: Character, spent:
             update(Ability).where(Ability.id == row.id, Ability.max_uses.is_not(None))
             .values(uses=func.min(Ability.max_uses, func.coalesce(Ability.uses, 0) + int(amount))))
         await session.refresh(row)
-        session.add(CharacterHistory(
-            character_id=row.character_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
-            description=f"{row.name or row.feature_key}: uso restituito, il danno di {receiver.name} è stato annullato"))
+        add_history(session, row.character_id, "roll_option",
+                    f"{row.name or row.feature_key}: uso restituito, il danno di {receiver.name} è stato annullato")
 
 
 async def ally_target(session: AsyncSession, char: Character, target_id: object) -> Character:

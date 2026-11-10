@@ -16,8 +16,6 @@ from api.services.condition_effects import (
 from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
-from core.rules.edition import character_edition
-from api.services.spell_effects import regrant_spells
 from core.rules.states import SPELL_GIVEN, exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
 

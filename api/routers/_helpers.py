@@ -16,6 +16,7 @@ from api.services.durations import end_concentration, is_concentrating
 from api.services.effects import cap_current_hp, sync_zero_hp
 from api.services.condition_effects import release_concentration_effects, restore_released
 from api.services.homebrew.passive import get_passive_modifiers
+from api.services.history import add_history
 from core.db.models import Character, CharacterHistory
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
@@ -192,12 +193,7 @@ def _append_concentration_history(
         f"{label}+{con_mod}={total}: {outcome}"
         + (" → concentrazione persa" if lost_concentration else "")
     )
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-        event_type="concentration_save",
-        description=desc,
-    ))
+    add_history(session, char_id, "concentration_save", desc)
 
 
 async def _lose_concentration(session: AsyncSession, char: Character) -> dict:

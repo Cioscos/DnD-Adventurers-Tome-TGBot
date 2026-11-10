@@ -28,7 +28,8 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from core.db.models import Character, CharacterHistory
+from api.services.history import add_history
+from core.db.models import Character
 from core.rules.modifiers import modifiers_for
 from api.schemas.common import (
     D20Dice, DiceResultEntry, DiceResultRequest, DiceRollResult, RollMode, RollOptionsBody, RollResult,
@@ -87,13 +88,8 @@ def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list
         description = f"{label}: {description}"
     if with_inspiration:
         description = f"Reroll ispirazione: {description}"
-    session.add(CharacterHistory(
-        character_id=char.id,
-        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-        event_type="dice_roll",
-        description=description,
-        meta={"notation": notation, "rolls": rolls, "total": total, "modifier": modifier},
-    ))
+    add_history(session, char.id, "dice_roll", description,
+                {"notation": notation, "rolls": rolls, "total": total, "modifier": modifier})
 
 
 class InitiativeSubmission(RollOptionsBody):

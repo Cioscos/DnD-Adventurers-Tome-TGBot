@@ -29,7 +29,8 @@ from api.services.rules_turn import forgo_attack, get_turn, refuse_if_incapacita
 from api.services.wild_shape import (
     deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
 )
-from core.db.models import Ability, Character, CharacterHistory, Companion, SpellSlot
+from api.services.history import add_history
+from core.db.models import Ability, Character, Companion, SpellSlot
 from core.rules.companions import (
     BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition, stat_int, summon_temp_hp, thrall_stats,
 )
@@ -45,13 +46,6 @@ router = APIRouter(prefix="/characters", tags=["companions"])
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _history(session: AsyncSession, char_id: int, event_type: str, description: str) -> None:
-    session.add(CharacterHistory(
-        character_id=char_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-        event_type=event_type, description=description,
-    ))
 
 
 async def _get_char(session: AsyncSession, char_id: int, user_id: int) -> Character:
@@ -140,7 +134,7 @@ async def create_companion(
     if comp.is_active:
         await deactivate_other_forms(session, char_id, comp.id)
         start_form(char, comp)
-    _history(session, char_id, "companion_added", f"Aggiunto: {comp.name}")
+    add_history(session, char_id, "companion_added", f"Aggiunto: {comp.name}")
     return _read(char, comp)
 
 
@@ -229,7 +223,7 @@ async def activate_wild_shape(
     comp.temp_hp = 0
     await deactivate_other_forms(session, char_id, comp.id)
     start_form(char, comp)
-    _history(session, char_id, "companion_hp", f"Forma selvatica: {comp.name}")
+    add_history(session, char_id, "companion_hp", f"Forma selvatica: {comp.name}")
     return _read(char, comp)
 
 
@@ -246,7 +240,7 @@ async def deactivate_wild_shape(
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             return _read(char, comp)
         return_to_normal(char, comp)  # azione bonus; già spesa = 409 e la forma resta
-        _history(session, char_id, "companion_hp", "Forma selvatica terminata")
+        add_history(session, char_id, "companion_hp", "Forma selvatica terminata")
     return _read(char, comp)
 
 
@@ -285,7 +279,7 @@ async def wild_heal(
     record_dice(char, [("d8", r) for r in rolls])
     before = comp.current_hp
     comp.current_hp = min(_effective_max_hp(char, comp), before + sum(rolls))
-    _history(session, char_id, "companion_hp",
+    add_history(session, char_id, "companion_hp",
              f"Forma selvatica da combattimento: {comp.name} +{comp.current_hp - before} PF (slot di livello {body.slot_level})")
     return WildHealResult(companion=_read(char, comp), slot_level=body.slot_level, rolls=rolls,
                           healed=comp.current_hp - before)
@@ -344,7 +338,7 @@ async def companion_hp(
     else:
         comp.temp_hp = body.value
     out = _read(char, comp)
-    _history(session, char_id, "companion_hp",
+    add_history(session, char_id, "companion_hp",
              f"{comp.name}: {body.op} {value if body.op == 'damage' else body.value} → PF {out.current_hp}/{out.max_hp}, temp {comp.temp_hp}")
     out.down = comp.current_hp == 0
     return out
@@ -431,7 +425,7 @@ async def command_companion(
             forgo_attack(char)  # l'ordine è l'azione Attacco e ne consuma un attacco; 409 no_attack_left senza
         beast = {**beast, "id": comp.id, "attacks_left": _beast_attacks(char, comp) if body.command == "attack" else 0}
     _save_beast_state(char, {**beast, "commands": [*beast.get("commands", []), body.command]})
-    _history(session, char_id, "companion_hp", f"{comp.name}: ordine {body.command}")
+    add_history(session, char_id, "companion_hp", f"{comp.name}: ordine {body.command}")
     return CompanionCommandResult(command=body.command, bonus=body.bonus,
                                   attacks_left=int(_beast_state(char).get("attacks_left") or 0))
 
@@ -467,7 +461,7 @@ async def spend_beast_hit_dice(
     before = comp.current_hp
     comp.current_hp = min(top, before + sum(max(0, r + mod) for r in rolls))
     comp.statblock = {**sb, "hit_dice_spent": spent + body.count}  # nuovo dict: SQLAlchemy non vede le mutazioni in place
-    _history(session, char_id, "companion_hp", f"{comp.name}: {body.count} Dadi Vita, +{comp.current_hp - before} PF")
+    add_history(session, char_id, "companion_hp", f"{comp.name}: {body.count} Dadi Vita, +{comp.current_hp - before} PF")
     return HitDiceResult(companion=_read(char, comp), rolls=rolls, healed=comp.current_hp - before,
                          hit_dice_left=total - spent - body.count)
 
@@ -545,7 +539,7 @@ async def companion_attack(
         base = max(0, sum(rolls) + mod)
         option_rolls, option_total, total = option_damage(char, opts, is_critical, base)
 
-    _history(
+    add_history(
         session, char_id, "attack_roll",
         f"{comp.name} - {action.get('name', 'Attacco')}: colpire {d20_history_label(outcome)}+{bonus}={outcome.kept + bonus}"
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")

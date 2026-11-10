@@ -11,7 +11,7 @@ def _aid_bonus(d: dict) -> int:
 
 
 # i PF attuali salgono insieme al massimo; alla fine il massimo torna e gli attuali non lo superano
-_AID = SpellVariant(modifiers=lambda d: (Modifier("hp_max", _aid_bonus(d)),), heal=_aid_bonus, until_rest=True)
+_AID = SpellVariant(modifiers=lambda d: (Modifier("hp_max", _aid_bonus(d)),), heal=_aid_bonus, until_rest="long")
 # +3 m = +10 ft di velocità, un'ora
 _LONGSTRIDER = SpellVariant(modifiers=lambda d: (Modifier("speed", 10),), rounds=600)
 

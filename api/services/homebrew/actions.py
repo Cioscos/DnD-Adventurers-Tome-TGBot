@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.services.condition_effects import clear_effects_for
+from api.services.dice_notation import DICE_RE
 from api.services.homebrew.dsl import Filter, RuleDSL
 from api.services.homebrew.exceptions import ActionExecutionError
 from api.services.homebrew.filters import evaluate_filter
@@ -27,11 +28,8 @@ from core.db.models import Character, HomebrewResource, Item
 from core.game.stats import sync_base_ac
 
 
-_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
-
-
 def _roll(notation: str) -> int:
-    m = _DICE_RE.match(notation.strip())
+    m = DICE_RE.match(notation.strip())
     if not m:
         raise ActionExecutionError(f"Invalid dice notation: {notation}")
     count, sides = int(m.group(1)), int(m.group(2))

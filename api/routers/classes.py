@@ -220,9 +220,6 @@ async def distribute_class_levels(
     if new_sum < 1:
         raise HTTPException(status_code=400, detail="sum_too_low")
 
-    # Map id -> new_level for O(1) lookup
-    new_levels = {entry.class_id: entry.level for entry in body.classes}
-
     # Snapshot old total HP for ratio scaling
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0

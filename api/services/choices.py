@@ -13,7 +13,8 @@ from api.services.homebrew.dsl import RuleDSL
 from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES
 from core.data.feats_2024 import ALL_FEATS as FEATS
-from core.db.models import Ability, Character, CharacterClass, CharacterHistory, HomebrewRule, RestorationType
+from api.services.history import add_history
+from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType
 from core.rules.catalog import features_for
 from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
@@ -341,8 +342,7 @@ def _bump(char: Character, ability: str, amount: int, cap: int = 20) -> None:
 
 
 def _history(session: AsyncSession, char: Character, text: str) -> None:
-    session.add(CharacterHistory(character_id=char.id, timestamp=_now(),
-                                 event_type="level_choice", description=f"Scelta di livello: {text}"))
+    add_history(session, char.id, "level_choice", f"Scelta di livello: {text}")
 
 
 def resolve_asi(session: AsyncSession, char: Character, increases: dict[str, int]) -> None:
@@ -429,5 +429,4 @@ async def remove_feat(session: AsyncSession, char: Character, ability: Ability) 
             s = dict(char.settings or {})
             s.pop(setting, None)
             char.settings = s
-    session.add(CharacterHistory(character_id=char.id, timestamp=_now(),
-                                 event_type="level_choice", description=f"Talento rimosso: {name}"))
+    add_history(session, char.id, "level_choice", f"Talento rimosso: {name}")

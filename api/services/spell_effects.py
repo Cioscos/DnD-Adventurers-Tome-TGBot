@@ -244,10 +244,10 @@ async def _give_hp(session: AsyncSession, target: Character, variant: SpellVaria
         await apply_heal(session, target, amount)
 
 
-def spell_state_spec(key: str, data: dict) -> StateSpec:
+def spell_state_spec(key: str, data: dict, target: Character | None = None) -> StateSpec:
     """Lo stato ``spell:*`` di un bersaglio con ciò che la variante dell'edizione impone (condizione, immunità, fini)."""
     effect = SPELL_EFFECTS.get(data.get("spell_key"))
-    variant = effect and effect.variants.get(data.get("edition", "2014"))
+    variant = effect and effect.variants.get(data.get("edition") or character_edition(target))
     extra = {"condition": variant.condition, "also_conditions": variant.also_conditions, "immune_conditions": variant.immune_conditions, "ends_on": variant.ends_on} if variant else {}
     return StateSpec(key, data=dict(data), **{"ends_on": ("manual",), **extra})
 
@@ -272,7 +272,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         rounds = min(rounds * 2, MAX_DURATION_ROUNDS)  # Esteso: l'orologio dell'effetto raddoppia come la concentrazione
     data = {"spell_key": effect.key, "slot_level": slot_level, "choices": chosen, "caster_id": caster.id,
             "caster_name": caster.name, "edition": character_edition(caster),
-            "duration": {"rounds": rounds, "concentration": concentration, "until_rest": variant.until_rest},
+            "duration": {"rounds": rounds, "concentration": concentration, "until_rest": bool(variant.until_rest)},
             "targets": len(chars)}
     if variant.turn_temp_hp:  # Eroismo: il modificatore da incantatore di chi lancia, fissato ora
         stats = spell_stats(caster, spell) if hasattr(spell, "class_id") else best_caster(caster)  # l'oggetto concede un incantesimo senza classe
@@ -311,7 +311,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         if extra:
             rolled[str(target.id)] = extra
         mine = {**data, **extra}
-        begin_spell_state(target, spell_state_spec(key, mine), key, spell.name)
+        begin_spell_state(target, spell_state_spec(key, mine, target), key, spell.name)
         forget_spell_temp_drop(target, key)  # la voce del lancio precedente non vale per l'annullo di questo
         if variant.on_apply:
             variant.on_apply(target, mine)
@@ -320,7 +320,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         applied.append({"id": target.id, "name": target.name})
     if rolled:
         data["per_target"] = rolled
-    ends = [*(["concentration_end"] if concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
+    ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on]
     begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
@@ -355,7 +355,7 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
                 continue
             if held is None:
                 saved = state["data"]["state_data"]
-                begin_spell_state(target, spell_state_spec(key, {**saved, **(saved.get("per_target") or {}).get(str(tid), {})}), key, state.get("name"))
+                begin_spell_state(target, spell_state_spec(key, {**saved, **(saved.get("per_target") or {}).get(str(tid), {})}, target), key, state.get("name"))
                 if offer := state["data"]["state_data"].get("on_close"):  # lo stato che la chiusura aveva lasciato (la letargia) non ha più motivo di esserci
                     await _drop_state(session, target, offer["key"], caster.id)
                 lost = (target.settings or {}).get(SPELL_TEMP_DROPPED, {}).get(key)  # i PF temporanei che la chiusura le aveva tolto

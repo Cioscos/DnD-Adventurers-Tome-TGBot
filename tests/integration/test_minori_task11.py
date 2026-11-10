@@ -105,3 +105,33 @@ async def test_minori_81_death_ward_spend_and_refund_have_no_query_in_between(cl
         assert await _hit(client, hero, 50, "slashing", options=[DEATH_WARD]) == 50
     assert marks.keys() == {"spend", "refund"}
     assert marks["spend"] == marks["refund"]
+
+
+async def test_minori_101_undo_does_not_rewrite_spell_given_with_targets_that_are_gone(client, test_session_factory):
+    from api.routers.hp import _hp_state, _restore_hp
+    from api.services.session_allies import load_receiver
+    from core.rules.states import SPELL_GIVEN
+    _, hero = await seed_session(test_session_factory)
+    clock = "spell_cast:aid"
+    state_data = {"spell_key": "aid", "edition": "2014", "slot_level": 2, "choices": {}, "caster_id": hero, "targets": 1}
+    async with test_session_factory() as s:
+        caster = await load_receiver(s, hero)
+        caster.active_states = [{"key": clock, "name": "Aiuto", "data": {"spell_key": "aid", "state_data": state_data}}]
+        before = _hp_state(caster, None)
+        before[SPELL_GIVEN] = {clock: [hero, 999999]}  # 999999: un bersaglio cancellato nel frattempo
+        await _restore_hp(s, caster, {"before": before, "after": {}}, None)
+        assert caster.settings[SPELL_GIVEN] == {clock: [hero]}
+
+
+def test_minori_101_a_state_without_edition_uses_the_saved_caster_edition_then_the_targets():
+    from types import SimpleNamespace
+    from core.rules.catalog.spells import SPELL_EFFECTS
+    from core.rules.spell_effects import spell_instances
+    effect = SPELL_EFFECTS["haste"]
+    data = {"spell_key": "haste", "slot_level": 3, "choices": {}, "caster_id": 2}
+    state = {"key": "spell:haste", "data": data}
+    char = lambda ed: SimpleNamespace(active_states=[state], rules_edition=ed, party_auras=[], settings={})  # noqa: E731
+    assert spell_instances(char("2024"))[0][2] is effect.variants["2024"]  # senza edizione: quella del bersaglio, non il 2014 fisso
+    assert spell_instances(char("2014"))[0][2] is effect.variants["2014"]
+    saved = {**state, "data": {**data, "edition": "2014"}}  # con l'edizione del lanciatore salvata vale quella
+    assert spell_instances(SimpleNamespace(active_states=[saved], rules_edition="2024", party_auras=[], settings={}))[0][2] is effect.variants["2014"]

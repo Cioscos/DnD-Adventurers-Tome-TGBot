@@ -585,7 +585,7 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
     await regrant_spells(session, char, before.get(SPELL_GIVEN))  # gli effetti degli incantesimi dati ad altri tornano con l'orologio
     settings = dict(char.settings or {})
     for k in _CONC_SETTINGS:
-        if k not in before:  # snapshot salvato prima che la chiave esistesse: non la tocca
+        if k not in before or k == SPELL_GIVEN:  # snapshot salvato prima che la chiave esistesse: non la tocca; SPELL_GIVEN lo riscrive ``regrant_spells`` (solo i bersagli ancora esistenti)
             continue
         if before[k] is None:
             settings.pop(k, None)
