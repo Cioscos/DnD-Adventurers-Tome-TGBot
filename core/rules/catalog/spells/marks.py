@@ -296,7 +296,7 @@ def _lightning_miss(conc: bool) -> RollOptionSpec:
     def half(ctx: RuleContext) -> int:
         return sum(random.randint(1, 8) for _ in range(4 + max(_slot(ctx) - 3, 0))) // 2
     return RollOptionSpec(
-        key="spell:lightning_arrow:miss", phase="after_roll", after="miss", rolls=("attack",), miss_damage=half,
+        key="spell:lightning_arrow:miss", phase="after_roll", after="miss", rolls=("attack",), miss_damage=half, miss_damage_adds=True,
         cost=Cost(state_key="spell:lightning_arrow"), available=lambda c: _hit_ok(c, ranged=True),
         label=txt(("Freccia Folgorante" if conc else "Freccia Fulminea") + ": hai mancato? Il bersaglio subisce la metà dei danni da fulmine",
                   "Lightning Arrow: did you miss? The target takes half the lightning damage"),

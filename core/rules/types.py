@@ -498,6 +498,7 @@ class RollOptionSpec:
     pay_if_success: bool = False
     replace_die: bool = False
     miss_damage: "Callable[[RuleContext], int] | None" = None
+    miss_damage_adds: bool = False  # il danno al mancato si somma a quello di Graze invece di valere il maggiore dei due (Freccia Folgorante)
     on_miss: bool = False  # si arma con ogni mancato dichiarato (anche da Graze o dal pulsante «Mancato»)
     # Offerta agli altri partecipanti della serata, non a chi possiede il privilegio: l'opzione compare sul tiro del ricevente
     # (``available`` guarda lui; ``{donor}`` nel label è il nome del donatore) e il costo si spende sulla scheda del donatore.

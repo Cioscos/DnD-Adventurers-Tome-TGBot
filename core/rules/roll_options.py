@@ -522,6 +522,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     out = AppliedOptions()
     dice: dict[str, str] = {}
     groups: dict[str, int] = {}
+    graze = added = 0
     for key in keys:
         option = usable.get(key)
         if option is None or (option.spec.needs and option.spec.needs not in keys
@@ -560,7 +561,12 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.reroll_limit += spec.reroll_dice(option.ctx, given)
             out.keep_rolled = out.keep_rolled or spec.keep_rolled
         if spec.miss_damage:  # «declared_only» (pulsante Mancato): arma l'opzione senza il danno di Graze
-            out.miss_damage = max(out.miss_damage or 0, 0 if given.get("declared_only") else max(0, spec.miss_damage(option.ctx)))
+            dealt = 0 if given.get("declared_only") else max(0, spec.miss_damage(option.ctx))
+            if spec.miss_damage_adds:  # un altro danno (Freccia Folgorante): si somma a Graze
+                added += dealt
+            else:  # Graze e Attacchi Studiati sono lo stesso Graze: il maggiore
+                graze = max(graze, dealt)
+            out.miss_damage = graze + added
         if spec.self_heal:  # prima di ``effect``: l'esito può citare il tiro che `self_heal` scrive in ``given``
             out.self_heal += max(0, spec.self_heal(option.ctx, given))
         if spec.effect:
