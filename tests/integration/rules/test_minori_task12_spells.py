@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
+from api.services.spell_effects import _NO_SHEET_TEXT, _OUTSIDE_TEXT
 from core.db.models import Character
 from core.rules.states import SPELL_CAST_TYPE
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
@@ -138,3 +139,14 @@ async def test_99_an_instant_text_spell_leaves_no_state_and_no_clock(client, tes
     assert fx["applied"] == [] and fx["text"]["it"] and fx["text"]["en"]
     as_user(GM_ID)
     assert not (await _full(client, caster))["active_states"]
+
+
+# 97: un effetto senza testo proprio, lanciato dentro la serata, non dice mai «fuori da una serata»
+
+async def test_97_an_effect_without_its_own_text_in_the_evening_says_nothing_or_that_no_sheet_has_it(client, test_session_factory):
+    _, hero, caster, spell = await _table(client, test_session_factory)
+    r = await _cast(client, caster, spell, [hero])  # sulla scheda di un alleato seduto: l'effetto c'è, nessun testo da dare al GM
+    assert r.json()["spell_effects"]["text"] is None
+    r = await _cast(client, caster, spell, [])  # su una creatura senza scheda: lo riferisce al GM, ma non con il testo «fuori serata»
+    text = r.json()["spell_effects"]["text"]
+    assert text == _NO_SHEET_TEXT and text != _OUTSIDE_TEXT

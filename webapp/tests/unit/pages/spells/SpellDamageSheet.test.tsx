@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import { useEffectPickStore } from '@/lib/rollOptions'
@@ -249,5 +250,33 @@ describe('SpellDamageSheet', () => {
     renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} onClose={() => {}} onBack={onBack} />)
     await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  // 97: il secondo tiro è un nuovo lancio: serve uno slot dello stesso livello, altrimenti si avvisa senza lanciare
+  it('a new roll with no slot left of that level warns instead of casting again', async () => {
+    const empty = { id: 7, spell_slots: [{ id: 21, level: 3, available: 0 }] }
+    useSpell.mockResolvedValue(empty)
+    rollDamage.mockResolvedValue(result)
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['character', 7], empty)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotId={21} onClose={() => {}} />, { client: qc })
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.spells.roll_damage.reroll' }))
+    expect(screen.getByText('character.spells.roll_damage.no_slots_warning_title')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /roll_button/ })).not.toBeInTheDocument()  // resta sul risultato
+    expect(useSpell).toHaveBeenCalledTimes(1)
+  })
+
+  it('a new roll with a slot left goes back to the form and casts again', async () => {
+    const withSlot = { id: 7, spell_slots: [{ id: 21, level: 3, available: 1 }] }  // il lancio riscrive la scheda: il server dice quanti slot restano
+    useSpell.mockResolvedValue(withSlot)
+    rollDamage.mockResolvedValue(result)
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['character', 7], withSlot)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotId={21} onClose={() => {}} />, { client: qc })
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.spells.roll_damage.reroll' }))
+    await userEvent.click(await screen.findByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledTimes(2))
   })
 })
