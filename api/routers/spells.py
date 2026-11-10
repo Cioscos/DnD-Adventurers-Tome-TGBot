@@ -64,6 +64,7 @@ from api.services.rules_states import _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
+from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
 from core.rules.school_hooks import after_cast
@@ -550,6 +551,10 @@ async def use_spell(
         war_magic=bool(WAR_MAGIC_KEYS & set(body.options or [])),
         no_concentration_option=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.options or []))))
     spell_fx = await apply_spell_effects(session, char, spell, fx_level, body.targets, body.choices)
+    if spell.srd_index == "find-steed" and not (body.free_cast or body.as_ritual) and any(
+            s.key == STEED for s, _row in active_features(char)):  # Destriero Fedele: il lancio con slot crea il destriero del suo livello
+        await session.refresh(char, attribute_names=["companions"])
+        make_steed(char, "", fx_level)
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual), damage_type=cast_damage_type(char, spell, body.choices))

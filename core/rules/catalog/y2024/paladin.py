@@ -191,19 +191,23 @@ def _abjure_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
 STEED_SPELL_LEVEL = 2  # il lancio gratuito è al livello base dell'incantesimo
 
 
-def _steed_cast(ctx: RuleContext, params: dict) -> None:
-    """Trova Destriero (azione): crea il destriero come compagno con le statistiche del manuale (CA 10 + livello dell'incantesimo,
-    PF 5 + 10 per livello, 18 m; il volo 27 m c'è solo dal 4° livello, e il lancio gratuito è di 2°). Un nuovo lancio sostituisce il precedente."""
+def make_steed(char: Any, name: str, level: int = STEED_SPELL_LEVEL) -> None:
+    """Trova Destriero: crea il destriero come compagno con le statistiche del manuale (CA 10 + livello dell'incantesimo,
+    PF 5 + 10 per livello, 18 m; il volo 27 m c'è solo dal 4° livello). Un nuovo lancio sostituisce il precedente."""
     from core.db.models import Companion  # import locale: i modelli non servono al resto del catalogo
-    for old in [c for c in ctx.char.companions if c.feature_key == STEED]:
-        ctx.char.companions.remove(old)
-    level = STEED_SPELL_LEVEL
+    for old in [c for c in char.companions if c.feature_key == STEED]:
+        char.companions.remove(old)
     hp = 5 + 10 * level
-    ctx.char.companions.append(Companion(
-        character_id=ctx.char.id, kind="mount", name=str(params.get("name") or "").strip() or "Destriero",
-        statblock={"type": "celestial, fey o fiend", "size": "Large", "speed_ft": 60},
+    char.companions.append(Companion(
+        character_id=char.id, kind="mount", name=name.strip() or "Destriero",
+        statblock={"type": "celestial, fey o fiend", "size": "Large", "speed_ft": 60, **({"fly_speed_ft": 90} if level >= 4 else {})},
         max_hp=hp, current_hp=hp, armor_class=10 + level, feature_key=STEED,
         created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
+
+
+def _steed_cast(ctx: RuleContext, params: dict) -> None:
+    """Il lancio gratuito (azione) è al livello base dell'incantesimo."""
+    make_steed(ctx.char, str(params.get("name") or ""))
 
 
 STEED_USE = OnUse(
@@ -274,7 +278,7 @@ BASE_ROWS = (
     feature("faithful_steed", CK, ED, 5, "Destriero Fedele / Faithful Steed (Paladino 5, pag. 111)", ("Destriero Fedele", "Faithful Steed"),
             ("Trova Destriero sempre preparato; un lancio gratuito per riposo lungo: «Usa» lo lancia con l'azione e crea il destriero fra i compagni.",
              "Find Steed always prepared; one free cast per long rest: \"Use\" casts it with your action and adds the steed to your companions."),
-            "special", uses=Uses(table={5: 1}), restoration="long_rest", granted_spells=("find-steed",), on_use=STEED_USE),
+            "action", uses=Uses(table={5: 1}), restoration="long_rest", granted_spells=("find-steed",), on_use=STEED_USE),
     feature("aura_of_protection", CK, ED, 6, "Aura di Protezione / Aura of Protection (Paladino 6, pag. 111)",
             ("Aura di Protezione", "Aura of Protection"),
             ("Tu e gli alleati entro 3 m (9 m dal 18°) sommate il tuo Carisma (minimo +1) ai TS, finché non sei Incapacitato. Il tuo bonus è già nei tuoi TS.",

@@ -30,6 +30,7 @@
       "no_uses": "No uses left.",
       "no_slot": "You have no slots left of that level.",
       "target_not_down": "The target already has at least that many HP: no use was spent.",
+      "nothing_to_remove": "None of the chosen conditions is present: no points were spent.",
       "target_dead": "The target is dead.",
       "invalid_target": "The target is not valid.",
       "feature_unavailable": "You cannot use it now.",
@@ -1696,6 +1697,7 @@
       "use_attack": "Attack roll: {{total}} (d20 {{die}} {{bonus}})",
       "use_errors": {
         "target_not_down": "The target already has at least that many HP: no use was spent.",
+        "nothing_to_remove": "None of the chosen conditions is present: no points were spent.",
         "invalid_target": "A creature is not seated at your session.",
         "target_dead": "A creature is dead: it cannot be helped.",
         "beast_alive": "The beast is still alive: a slot only raises it when it falls; to replace it, wait for the long rest.",

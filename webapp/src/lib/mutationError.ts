@@ -5,7 +5,7 @@ import { ApiError } from '@/api/client'
 
 /** Codici del server con un testo proprio (`common.server_errors.<codice>`) per i rifiuti che non hanno un messaggio di pagina. */
 const SERVER_ERRORS = [
-  'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'target_dead', 'invalid_target',
+  'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'nothing_to_remove', 'target_dead', 'invalid_target',
   'feature_unavailable', 'rest_needs_hp', 'long_rest_too_soon', 'state_locked',
   'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest',
 ]

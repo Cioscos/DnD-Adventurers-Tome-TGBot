@@ -349,7 +349,12 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,
                                                                       class_level=row.level), on_use.removal, params)
         if removal_plan is not None and removal_plan[3] and on_use.removal.cost_each:  # il costo lo decide il server
-            amount = on_use.removal.cost_each * (len(removal_plan[0]) + len(removal_plan[1]))
+            conds, untracked, targets = removal_plan[0], removal_plan[1], removal_plan[2]
+            # si pagano le voci che toglie davvero: una condizione che il bersaglio non ha non costa nulla
+            paid = [c for c in conds if any(t is None or (t.conditions or {}).get(c) for t in targets)]
+            if not (paid or untracked):
+                raise _err(status.HTTP_409_CONFLICT, "nothing_to_remove")
+            amount = on_use.removal.cost_each * (len(paid) + len(untracked))
         if removal_plan is not None and removal_plan[3] and on_use.removal.bound:  # anche i PF vanno a chi si è scelto
             params["target_character_id"] = getattr(removal_plan[2][0], "id", None)
     if on_use.max_amount is not None and amount > on_use.max_amount:

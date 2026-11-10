@@ -30,6 +30,7 @@
       "no_uses": "Usi esauriti.",
       "no_slot": "Non hai più slot di quel livello.",
       "target_not_down": "Il bersaglio ha già almeno quei PF: nessun uso è stato speso.",
+      "nothing_to_remove": "Nessuna delle condizioni scelte è presente: nessun punto è stato speso.",
       "target_dead": "Il bersaglio è morto.",
       "invalid_target": "Il bersaglio non è valido.",
       "feature_unavailable": "Ora non puoi usarlo.",
@@ -1695,6 +1696,7 @@
       },
       "use_errors": {
         "target_not_down": "Il bersaglio ha già almeno quei PF: nessun uso è stato speso.",
+        "nothing_to_remove": "Nessuna delle condizioni scelte è presente: nessun punto è stato speso.",
         "invalid_target": "Una creatura non siede alla tua serata.",
         "target_dead": "Una creatura è morta: non si può aiutare.",
         "beast_alive": "La bestia è ancora viva: lo slot serve solo a rialzarla quando cade; per sostituirla aspetta il riposo lungo.",
