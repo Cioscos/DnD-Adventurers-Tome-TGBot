@@ -16,7 +16,8 @@ import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from api.locks import character_write_lock
 from fastapi.middleware.cors import CORSMiddleware
 
 # Load .env before importing routers — auth.py reads BOT_TOKEN at module level.
@@ -147,6 +148,7 @@ app = FastAPI(
     description="REST backend for the D&D Bot Telegram Mini App",
     version="1.0.0",
     lifespan=lifespan,
+    dependencies=[Depends(character_write_lock)],
 )
 
 app.add_middleware(
@@ -170,7 +172,6 @@ async def health() -> dict:
 
 
 from typing import Annotated
-from fastapi import Depends
 from api.auth import get_current_user
 
 
