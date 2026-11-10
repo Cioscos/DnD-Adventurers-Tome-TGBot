@@ -90,3 +90,9 @@ def test_other_rule_texts_match_the_manual():
     assert "incapacitati" in _v("2014", "wind-walk").text["it"]
     assert "Prono" in _v("2014", "destructive-wave").text["it"] and "Prone" in _v("2024", "destructive-wave").text["en"]
     assert "infligge danni" in _v("2024", "sanctuary").text["it"] and "deals damage" in _v("2024", "sanctuary").text["en"]
+
+
+@pytest.mark.parametrize("edition,index,types", [("2014", "flame-strike", ["fire", "radiant"]), ("2024", "hunger-of-hadar", ["cold", "acid"])])
+def test_t10_75_the_two_upcast_choices_of_table_c_ask_their_damage_type(edition, index, types):
+    (choice,) = _v(edition, index).choices
+    assert choice.key == "upcast_type" and choice.options(edition) == types

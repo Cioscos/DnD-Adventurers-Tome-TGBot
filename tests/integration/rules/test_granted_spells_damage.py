@@ -99,3 +99,24 @@ async def test_a_spell_whose_damage_cannot_be_rolled_is_cast_anyway_and_says_so(
         "name": "Dardo", "level": 1, "damage_dice": "1d4", "damage_type": "force", "is_prepared": True})
     use = await client.post(f"/characters/{cid}/spells/{normal.json()['id']}/use", json={"slot_level": 1})
     assert use.json()["damage_unrollable"] is False
+
+
+async def test_t10_75_flame_strike_asks_the_type_of_the_extra_dice_and_the_roll_gives_them_to_that_type(client):
+    cid = await _cleric(client, 11, "light", wisdom=16)
+    spell = await _spell(client, cid, "flame-strike")
+    assert spell["effect"]["choices"][0]["key"] == "upcast_type" and spell["effect"]["choices"][0]["options"] == ["fire", "radiant"]
+    refused = await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 6})
+    assert refused.status_code == 422 and refused.json()["detail"]["code"] == "invalid_choice"
+    use = await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 6, "choices": {"upcast_type": "radiant"}})
+    assert use.status_code == 200, use.text
+    r = await client.post(f"/characters/{cid}/spells/{spell['id']}/roll_damage", json={
+        "casting_level": 6, "main_rolls": [1, 1, 1, 1], "extra_rolls": [2, 2, 2, 2, 2]})  # 4d6 fuoco, 5d6 radiante (4 + 1 dello slot)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total"] == 4 + 10 and (body["damage_type"], body["extra_damage_type"]) == ("fire", "radiant")
+    cid = await _cleric(client, 11, "light", wisdom=16)
+    spell = await _spell(client, cid, "flame-strike")
+    assert (await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 6, "choices": {"upcast_type": "fire"}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells/{spell['id']}/roll_damage", json={
+        "casting_level": 6, "main_rolls": [1, 1, 1, 1, 1], "extra_rolls": [2, 2, 2, 2]})
+    assert r.status_code == 200 and r.json()["total"] == 5 + 8  # il tipo scelto è il fuoco: 5d6 fuoco, 4d6 radiante

@@ -30,6 +30,7 @@ from core.rules.weapons import weapon_key
 from core.rules.states import SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_TEMP_DROPPED, begin_spell_state, begin_state, forget_spell_temp_drop, note_spell_temp_hp, settle_closed
 from core.rules.types import StateSpec
 
+UPCAST_SUFFIX = ":upcast"  # nella voce di SPELL_CAST_TYPE: il tipo dei dadi in più dello slot più alto
 _OUTSIDE_TEXT = {"it": "Fuori da una serata l'effetto non si applica da solo: lo applica il GM ai bersagli.",
                  "en": "Outside an evening the effect is not applied automatically: the GM applies it to the targets."}
 _AURA_TEXT = {"it": "L'aura vale per tutti i personaggi seduti alla serata finché dura: sta al GM escludere chi è lontano.",
@@ -160,6 +161,12 @@ def chosen_damage_type(char: Character, spell, requested: str | None) -> str | N
     return stored
 
 
+def cast_upcast_type(char: Character, spell) -> str | None:
+    """Il tipo scelto al lancio per i dadi in più dello slot più alto (Colpo Infuocato 2014, Fame di Hadar 2024), o ``None``."""
+    found = spell_effect(character_edition(char), spell.srd_index, spell.name)
+    return ((char.settings or {}).get(SPELL_CAST_TYPE) or {}).get(found[0].key + UPCAST_SUFFIX) if found else None
+
+
 def _remember_cast_type(caster: Character, effect_key: str | None, choice_type: str | None) -> None:
     """Il tipo scelto in un lancio, per incantesimo: scrive solo la voce di questo incantesimo (un lancio senza scelta la toglie,
     gli altri non la toccano). Resta piccolo: ha solo gli incantesimi del catalogo con scelta del tipo."""
@@ -255,6 +262,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     effect, variant, chars, chosen, outside = resolved
     inflicts = any(c.key == "damage_type" and c.inflicts for c in variant.choices)
     _remember_cast_type(caster, effect.key, chosen.get("damage_type") if inflicts else None)
+    _remember_cast_type(caster, effect.key + UPCAST_SUFFIX, chosen.get("upcast_type"))
     concentration = variant.concentration and not no_concentration
     rounds = variant.duration(slot_level)
     if EXTENDED_KEY in options and rounds is not None:

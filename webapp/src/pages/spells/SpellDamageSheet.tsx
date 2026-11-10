@@ -153,8 +153,11 @@ export default function SpellDamageSheet({
         const manual = parseDice(body.extra_dice ?? null)
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
           const cached = qc.getQueryData<CharacterFull>(['character', charId])
-          const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count)
-            + upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          // I dadi dello slot più alto sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) vanno a lei, come sul server.
+          const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          const upcastType = useEffectPickStore.getState().picked[spell.id]?.choices?.upcast_type
+          const moved = upcastType && upcastType === spell.extra_damage_type && second?.sides === main.sides ? gained : 0
+          const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
             { kind: `d${main.sides}` as DiceKind, count: mainCount },
@@ -165,7 +168,7 @@ export default function SpellDamageSheet({
           for (const part of [second, manual]) {
             if (!part) continue
             if (!isAllowedDiceKind(`d${part.sides}`)) { extraOk = false; continue }
-            const count = body.is_critical ? part.count * 2 : part.count
+            const count = (body.is_critical ? part.count * 2 : part.count) + (part === second ? (body.is_critical ? moved * 2 : moved) : 0)
             extraCount += count
             groups.push({ kind: `d${part.sides}` as DiceKind, count: count })
           }

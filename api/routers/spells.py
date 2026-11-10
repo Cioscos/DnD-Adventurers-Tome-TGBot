@@ -41,7 +41,7 @@ from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
 from api.services.session_allies import deliver_temp_gifts
-from api.services.spell_effects import apply_spell_effects, cast_level, cast_damage_type, chosen_damage_type, validate_spell_targets
+from api.services.spell_effects import apply_spell_effects, cast_level, cast_damage_type, cast_upcast_type, chosen_damage_type, validate_spell_targets
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
@@ -795,12 +795,19 @@ async def roll_spell_damage(
         base_count *= cantrip_dice_multiplier(char.total_level)
     sides = int(m.group(2))
     base_bonus = int(m.group(3)) if m.group(3) else 0
+    moved_dice = 0
     # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo
     # incantesimi di livello >= 1, stessi lati). "sleep" no: i suoi dadi sono un pool di PF.
     if spell.level > 0 and spell.higher_levels_dice and spell.srd_index != "sleep":
         um = DICE_RE.match(spell.higher_levels_dice.strip())
         if um and int(um.group(2)) == sides:
-            base_count += int(um.group(1)) * (casting_level - spell.level)
+            gained = int(um.group(1)) * (casting_level - spell.level)
+            base_count += gained
+            # I dadi in più sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) passano a lei
+            second_die = DICE_RE.match((spell.extra_damage_dice or "").strip())
+            if second_die and int(second_die.group(2)) == sides and (up := cast_upcast_type(char, spell)) and up == spell.extra_damage_type:
+                base_count -= gained
+                moved_dice = gained
             # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
             base_bonus += int(um.group(3) or 0) * (casting_level - spell.level)
 
@@ -833,7 +840,7 @@ async def roll_spell_damage(
         if not sm:
             raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
         second_sides = int(sm.group(2))
-        second_count = int(sm.group(1)) * (2 if body.is_critical else 1)
+        second_count = (int(sm.group(1)) + moved_dice) * (2 if body.is_critical else 1)
         types = [t for t in (spell.extra_damage_type or "").split("|") if t]
         if body.extra_damage_type is not None and body.extra_damage_type not in types:
             raise HTTPException(status_code=422, detail={"code": "invalid_damage_type"})

@@ -92,7 +92,7 @@ async def test_psionic_sorcery_casts_with_points_equal_to_the_spell_level_and_no
     cid = await _make(client, "aberrant", 7)
     spell = (await _spells(client, cid))["hunger-of-hadar"]["id"]
     total = sum(s["available"] for s in (await _full(client, cid))["spell_slots"])
-    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True})
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True, "choices": {"upcast_type": "cold"}})
     assert r.status_code == 200, r.text
     assert await _points(client, cid) == 7 - 3 and sum(s["available"] for s in (await _full(client, cid))["spell_slots"]) == total
 

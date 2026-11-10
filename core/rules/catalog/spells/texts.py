@@ -1,8 +1,10 @@
 """Incantesimi che l'app non modella in numeri (tabella D e righe rinviate): uno stato con nome e durata (se durano) e un testo it/en, nessun modificatore."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.rules.catalog.spells.defenses import DAY, HOUR, MIN10, both, txt
-from core.rules.spell_effects import SpellEffect, SpellTarget, SpellVariant
+from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
 from core.rules.types import Modifier
 
 MIN1, HOUR8 = 10, 4800  # round (6 secondi)
@@ -16,6 +18,11 @@ def _text(it: str, en: str, rounds: int | None = None, *, concentration: bool = 
 
 def _instant(it: str, en: str) -> SpellVariant:
     return _text(it, en, track=False)
+
+
+def _upcast_type(*types: str) -> SpellChoice:
+    """Il tipo dei dadi in più dello slot più alto, scelto al lancio: il tiro di danno li dà a quel tipo (``upcast_type``)."""
+    return SpellChoice("upcast_type", txt("Tipo dei dadi in più (slot più alto)", "Type of the extra dice (higher slot)"), lambda _ed: list(types))
 
 
 _POLYMORPH = {
@@ -104,12 +111,14 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("destructive_wave", ("destructive-wave",), ("Onda Distruttiva", "Destructive Wave"), _SELF, both(_instant(
         "Onda di tuono in 9 m: 5d6 tuono più 5d6 radiante o necrotico e Prono, TS Costituzione: chi supera dimezza i danni e resta in piedi. Tira i danni a mano.",
         "A thunder wave in 30 ft: 5d6 thunder plus 5d6 radiant or necrotic and Prone, Constitution save: on a success half damage and not Prone. Roll the damage by hand."))),
-    SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Flame Strike"), _SELF, {"2014": _instant(
-        "Colonna di fuoco divino: 4d6 fuoco più 4d6 radiante, TS Destrezza. Con uno slot più alto, +1d6 di fuoco o radiante a tua scelta per livello: scegli e tira a mano.",
-        "A column of divine fire: 4d6 fire plus 4d6 radiant, Dexterity save. At a higher slot, +1d6 fire or radiant (your choice) per level: choose and roll by hand.")}),
-    SpellEffect("hunger_of_hadar", ("hunger-of-hadar",), ("Fame di Hadar", "Hunger of Hadar"), _SELF, {"2024": _text(
-        "Sfera di oscurità di 6 m che danneggia freddo e acido chi vi sta. Con uno slot più alto il danno cresce di 1d6 di freddo o acido a scelta: applicalo a mano.",
-        "A 20 ft sphere of darkness that deals cold and acid damage to those in it. At a higher slot the damage grows by 1d6 cold or acid (your choice): apply it by hand.", MIN1, concentration=True)}),
+    SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Flame Strike"), _SELF, {"2014": replace(_instant(
+        "Colonna di fuoco divino: 4d6 fuoco più 4d6 radiante, TS Destrezza. Con uno slot più alto, +1d6 per livello del tipo scelto al lancio (fuoco o radiante): li tira il tiro di danno.",
+        "A column of divine fire: 4d6 fire plus 4d6 radiant, Dexterity save. At a higher slot, +1d6 per level of the type chosen at the cast (fire or radiant): the damage roll rolls them."),
+        choices=(_upcast_type("fire", "radiant"),))}),
+    SpellEffect("hunger_of_hadar", ("hunger-of-hadar",), ("Fame di Hadar", "Hunger of Hadar"), _SELF, {"2024": replace(_text(
+        "Sfera di oscurità di 6 m che danneggia freddo e acido chi vi sta. Con uno slot più alto il danno cresce di 1d6 del tipo scelto al lancio (freddo o acido): applicalo a mano.",
+        "A 20 ft sphere of darkness that deals cold and acid damage to those in it. At a higher slot the damage grows by 1d6 of the type chosen at the cast (cold or acid): apply it by hand.", MIN1, concentration=True),
+        choices=(_upcast_type("cold", "acid"),))}),
     SpellEffect("conjure_barrage", ("conjure-barrage",), ("Evoca Raffica", "Conjure Barrage"), _SELF, {"2014": _instant(
         "Cono di 18 m: 3d8 danni del tipo dell'arma usata, TS Destrezza per metà. Tira i danni a mano.",
         "A 60 ft cone: 3d8 damage of the used weapon's type, Dexterity save for half. Roll the damage by hand.")}),
