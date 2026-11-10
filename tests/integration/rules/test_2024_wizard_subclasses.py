@@ -308,7 +308,7 @@ async def test_greater_comprehension_is_a_state_without_a_sense(client):
 async def test_see_invisibility_is_cast_without_slots_only_while_the_third_eye_lasts(client):
     cid = await _make(client, "diviner", 10)
     spell = (await _by_index(client, cid))["see-invisibility"]
-    assert spell["in_spellbook"] is True and spell["school"] == "divination"
+    assert spell["in_spellbook"] is False and spell["always_prepared"] is True and spell["school"] == "divination"  # minori 11
     nope = await _cast(client, cid, spell["id"], free_cast=True)
     assert nope.status_code == 409 and nope.json()["detail"]["code"] == "free_cast_unavailable"
     await _use(client, cid, THIRD_EYE, params={"option": "see_invisibility"})

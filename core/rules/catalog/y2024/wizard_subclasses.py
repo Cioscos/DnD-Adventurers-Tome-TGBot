@@ -168,7 +168,7 @@ DIVINER = (
     _DIV("third_eye", 10, "Terzo Occhio", "The Third Eye", 173,
          ("Azione bonus: scegli Scurovisione 36 m, Comprensione Superiore o Vedere Invisibilità fino all'inizio di un riposo. Un uso, riposo breve o lungo.",
           "Bonus action: pick Darkvision 120 ft, Greater Comprehension or See Invisibility until you start a rest. One use, short or long rest."),
-         "bonus_action", uses=Uses(table={10: 1}), restoration="short_rest", on_use=THIRD_EYE_USE, book_spells=("see-invisibility",),
+         "bonus_action", uses=Uses(table={10: 1}), restoration="short_rest", on_use=THIRD_EYE_USE, granted_spells=("see-invisibility",),  # sempre disponibile, non scritto nel libro
          modifiers=(Modifier("sense:darkvision", 120, when=_third_eye("darkvision"), source=f"feature:{P}third_eye"),)),
     _option_row(_DIV, "darkvision", "Scurovisione", "Darkvision",
                 ("Opzione di Terzo Occhio: scurovisione entro 36 m.", "Third Eye option: darkvision out to 120 ft.")),
