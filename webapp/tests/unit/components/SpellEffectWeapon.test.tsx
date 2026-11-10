@@ -37,4 +37,18 @@ describe('weapon choice of Magic Weapon', () => {
     fireEvent.click(screen.getByText('Spada lunga'))
     expect(onConfirm).toHaveBeenCalledWith({ targets: [2], choices: { item_id: '7' } })
   })
+  it('on another creature it confirms at once with no weapon to pick', async () => {
+    const onConfirm = vi.fn()
+    renderWithProviders(<SpellEffectAsk charId={1} title="Arma Magica" effect={magicWeapon} slotLevel={2} onConfirm={onConfirm} onClose={vi.fn()} />)
+    fireEvent.click(await screen.findByText('character.turn.ally_other'))
+    expect(onConfirm).toHaveBeenCalledWith({ targets: [], choices: undefined })
+    expect(screen.queryByText('character.spells.effect_weapon')).not.toBeInTheDocument()
+  })
+
+  it('on the caster it lists the caster own weapons', async () => {
+    const onConfirm = vi.fn()
+    renderWithProviders(<SpellEffectAsk charId={1} title="Arma Magica" effect={magicWeapon} slotLevel={2} onConfirm={onConfirm} onClose={vi.fn()} />)
+    fireEvent.click(await screen.findByText('character.turn.removal_self'))
+    await waitFor(() => expect(screen.getByText('character.spells.effect_weapon')).toBeInTheDocument())
+  })
 })

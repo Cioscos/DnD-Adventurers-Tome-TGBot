@@ -21,6 +21,19 @@ def item_meta(item) -> dict:
     return meta if isinstance(meta, dict) else {}
 
 
+_MAGIC_FLAGS = ("is_magic", "magical", "requires_attunement", "attuned", "rarity", "bonuses", "charges", "granted_spells")
+
+
+def is_magic_item(item) -> bool:
+    """Un oggetto magico: bonus magico diverso da zero (anche non numerico) o uno dei segni che l'inventario e l'import gli danno."""
+    meta = item_meta(item)
+    try:
+        bonus = int(meta.get("magic_bonus") or 0)
+    except (TypeError, ValueError):
+        bonus = 1
+    return bonus != 0 or any(meta.get(k) for k in _MAGIC_FLAGS)
+
+
 def is_attuned(item) -> bool:
     return bool(item_meta(item).get("attuned"))
 

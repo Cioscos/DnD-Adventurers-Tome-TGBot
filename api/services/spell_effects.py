@@ -16,7 +16,7 @@ from api.services.effects import apply_heal, cap_hp_to_max, grant_temp_hp
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.session_allies import ally_target
 from core.db.models import Character, GameSession, Item, SessionParticipant, SessionStatus
-from core.game.item_bonuses import item_meta
+from core.game.item_bonuses import is_magic_item
 from core.rules.catalog.spells import SPELL_EFFECTS, spell_effect
 from core.rules.edition import character_edition
 from core.game.stats import effective_ability_mod
@@ -54,12 +54,12 @@ async def _seated(session: AsyncSession, char: Character) -> bool:
 def _check_choices(variant: SpellVariant, edition: str, choices: dict[str, str] | None) -> dict[str, str]:
     chosen = dict(choices or {})
     item = chosen.pop("item_id", None) if variant.weapon_choice else None  # l'arma è del bersaglio: si controlla quando i bersagli sono noti
+    if item is not None and not (isinstance(item, str) and item.isdigit()):
+        raise _invalid("invalid_choice")
     wanted = {c.key: c.options(edition) for c in variant.choices}
     if set(chosen) != set(wanted) or any(chosen[k] not in opts for k, opts in wanted.items()):
         raise _invalid("invalid_choice")
-    if variant.weapon_choice:
-        if not (isinstance(item, str) and item.isdigit()):
-            raise _invalid("invalid_choice")
+    if item is not None:
         chosen["item_id"] = item
     return chosen
 
@@ -67,11 +67,13 @@ def _check_choices(variant: SpellVariant, edition: str, choices: dict[str, str] 
 async def plain_weapons(session: AsyncSession, char_id: int) -> list[Item]:
     """Le armi senza bonus magico di un personaggio: quelle che Arma Magica e Arma Elementale possono incantare."""
     rows = await session.execute(select(Item).where(Item.character_id == char_id, Item.item_type == "weapon").order_by(Item.id))
-    return [i for i in rows.scalars() if not int(item_meta(i).get("magic_bonus") or 0)]
+    return [i for i in rows.scalars() if not is_magic_item(i)]
 
 
 async def _check_weapon(session: AsyncSession, variant: SpellVariant, target: Character, chosen: dict[str, str]) -> None:
-    """422 ``invalid_choice`` se l'arma scelta non è un'arma senza bonus magico del bersaglio."""
+    """422 ``invalid_choice`` se l'arma scelta manca o non è un'arma non magica del bersaglio."""
+    if variant.weapon_choice and "item_id" not in chosen:
+        raise _invalid("invalid_choice")
     if variant.weapon_choice and int(chosen["item_id"]) not in {i.id for i in await plain_weapons(session, target.id)}:
         raise _invalid("invalid_choice")
 
@@ -102,6 +104,8 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
             chars.append(ally)
     if not outside and chars:
         await _check_weapon(session, variant, chars[0], chosen)
+    else:
+        chosen.pop("item_id", None)  # nessuna scheda bersaglio: nessuna scelta d'arma, l'effetto va al GM come testo
     return effect, variant, chars, chosen, outside
 
 

@@ -132,12 +132,10 @@ ORIGINAL_TYPE = "pact_original_damage_type"
 
 def _bindable(ctx: RuleContext) -> list[str]:
     """Armi da mischia magiche dell'inventario: si legano invece di evocarne una (``bind:<id>``)."""
-    from core.game.item_bonuses import item_meta  # import locale
+    from core.game.item_bonuses import is_magic_item, item_meta  # import locale
     out = []
     for item in ctx.char.items:
-        meta = item_meta(item)
-        magic = int(meta.get("magic_bonus") or 0) > 0 or bool(meta.get("requires_attunement") or meta.get("magical"))
-        if item.item_type == "weapon" and magic and meta.get("weapon_type", "melee") == "melee":
+        if item.item_type == "weapon" and is_magic_item(item) and item_meta(item).get("weapon_type", "melee") == "melee":
             out.append(f"bind:{item.id}")
     return out
 

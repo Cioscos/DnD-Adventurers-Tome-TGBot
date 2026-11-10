@@ -258,3 +258,46 @@ async def test_an_aura_cast_outside_an_evening_still_works_for_the_caster(client
     spell = r.json()["id"]
     assert (await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 4})).status_code == 200
     assert "necrotic" in (await client.get(f"/characters/{cid}")).json()["computed"]["resistances"]
+
+
+# --- Correzioni giro 1 ---------------------------------------------------------------------------------------------
+@pytest.mark.parametrize("srd,name,extra", [("magic-weapon", "Magic Weapon", {}), ("elemental-weapon", "Elemental Weapon", {"choices": {"damage_type": "fire"}})])
+async def test_a_weapon_spell_on_another_creature_is_cast_with_the_text_for_the_gm(client, test_session_factory, srd, name, extra):
+    hero, caster, spell = await _table(client, test_session_factory, name, srd, 3)
+    r = await _cast(client, caster, spell, [], level=3, **extra)
+    effects = r.json()["spell_effects"]
+    assert effects["applied"] == [] and effects["text"]
+    assert not [s for s in (await _sheet(client, caster, GM_ID))["active_states"] or [] if s["key"] == f"spell:{srd.replace('-', '_')}"]
+
+
+async def test_a_weapon_spell_outside_an_evening_on_another_creature_gives_the_text(client):
+    cid = (await client.post("/characters", json={"name": "Chierico"})).json()["id"]
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Magic Weapon", "srd_index": "magic-weapon", "level": 2})
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": 2, "total": 1})
+    r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/use", json={"targets": [], "slot_level": 2})
+    assert r.status_code == 200 and r.json()["spell_effects"]["applied"] == []
+
+
+async def test_a_weapon_spell_on_the_caster_still_needs_one_of_their_weapons(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Magic Weapon", "magic-weapon", 2)
+    as_user(GM_ID)
+    r = await client.post(f"/characters/{caster}/spells/{spell}/use", json={"targets": [caster], "slot_level": 2})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"
+
+
+@pytest.mark.parametrize("meta", [{"is_magic": True}, {"requires_attunement": True}, {"rarity": "rare", "is_magic": True, "requires_attunement": True, "attuned": True},
+                                  {"bonuses": [{"target": "attack", "value": 1}]}])
+async def test_a_magic_weapon_is_never_offered_nor_accepted_as_nonmagical(client, test_session_factory, meta):
+    hero, caster, spell, sword, _ = await _weapon_table(client, test_session_factory)
+    as_user(PLAYER_ID)
+    magic = await _sword(client, hero, **meta)
+    as_user(GM_ID)
+    assert magic not in [w["id"] for w in (await client.get(f"/characters/{caster}/session-allies/{hero}/weapons")).json()]
+    r = await client.post(f"/characters/{caster}/spells/{spell}/use", json={"targets": [hero], "slot_level": 2, "choices": {"item_id": str(magic)}})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "invalid_choice"
+
+
+def test_a_non_numeric_magic_bonus_counts_as_magic_instead_of_failing():
+    from types import SimpleNamespace
+    from core.game.item_bonuses import is_magic_item
+    assert is_magic_item(SimpleNamespace(item_metadata={"magic_bonus": "abc"})) and not is_magic_item(SimpleNamespace(item_metadata={"magic_bonus": 0}))
