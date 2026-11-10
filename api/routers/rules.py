@@ -24,11 +24,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
-from api.services.spell_effects import resists_chosen_type
+from api.services.spell_effects import end_by_target, resists_chosen_type
 from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
+from core.rules.spell_effects import SPELL_STATE_PREFIX
 from core.rules.states import is_target_immune
 from api.services.turn_start import apply_turn_start
 from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
@@ -564,7 +565,10 @@ async def end_active_state(
     if form is not None:  # il ritorno alla forma normale ha un solo percorso, con il suo costo (come «Termina» da Extra)
         return_to_normal(char, form)
         return char.active_states
+    closed = [s for s in char.active_states or [] if s.get("key") == key]
     remove_state(char, key, by_player=True)
+    if key.startswith(SPELL_STATE_PREFIX):
+        await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi
     return char.active_states
 
 

@@ -216,3 +216,52 @@ async def test_spells_70_feign_death_also_blinds(client, test_session_factory, e
     assert (await client.delete(f"/characters/{hero}/active-states/spell:feign_death")).status_code == 200
     after = (await _sheet(client, hero))["conditions"]
     assert not after.get("incapacitated") and not after.get("blinded")  # finito lo stato, tornano via entrambe
+
+
+# 62 (giro 1): Aiuto da due lanciatori, vale il massimo più forte e i PF correnti non lo superano mai
+
+async def _aid_second(client, factory, user=9001, slot=2):
+    """Un secondo lanciatore di Aiuto seduto alla serata del tavolo di ``_table``."""
+    async with factory() as s:
+        sid = (await s.execute(select(SessionParticipant.session_id).limit(1))).scalar_one()
+    as_user(user)
+    cid = (await client.post("/characters", json={"name": "Secondo"})).json()["id"]
+    spell = (await client.post(f"/characters/{cid}/spells", json={"name": "Aid", "srd_index": "aid", "level": 2})).json()["id"]
+    assert (await client.post(f"/characters/{cid}/spell_slots", json={"level": slot, "total": 1})).status_code == 201
+    async with factory() as s:
+        s.add(SessionParticipant(session_id=sid, user_id=user, character_id=cid, role=SessionRole.PLAYER, display_name="Secondo", joined_at=NOW))
+        await s.commit()
+    return cid, spell
+
+
+async def _two_aids(client, factory):
+    from tests.integration.rules.test_spell_effects_defenses import _cast as cast_at
+    hero, first, spell1 = await _defense_table(client, factory, "Aid", "aid", 2)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{first}/spell_slots", json={"level": 3, "total": 1})).status_code == 201
+    second, spell2 = await _aid_second(client, factory)
+    await cast_at(client, first, spell1, [hero], level=3)  # +10
+    as_user(9001)
+    assert (await client.post(f"/characters/{second}/spells/{spell2}/use", json={"slot_level": 2, "targets": [hero]})).status_code == 200  # +5
+    return hero, first, second
+
+
+async def test_spells_62_two_aids_keep_the_strongest_maximum_and_cap_hp_when_it_drops(client, test_session_factory):
+    hero, first, second = await _two_aids(client, test_session_factory)
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 210 and sheet["current_hit_points"] <= 210  # vale il 3°, non l'ultimo lanciato
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{first}/rest", json={"rest_type": "long"})).status_code == 200  # finisce quello del 3°
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 205 and sheet["current_hit_points"] <= 205  # resta il 2°, PF tagliati
+
+
+async def test_spells_62_manual_end_caps_hp_and_closes_the_casters_clocks(client, test_session_factory):
+    hero, first, second = await _two_aids(client, test_session_factory)
+    as_user(PLAYER_ID)
+    assert (await client.delete(f"/characters/{hero}/active-states/spell:aid")).status_code == 200
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 200 and sheet["current_hit_points"] <= 200
+    for caster, user in ((first, GM_ID), (second, 9001)):
+        as_user(user)
+        assert not [s for s in (await _full(client, caster))["active_states"] or [] if s["key"] == "spell_cast:aid"]

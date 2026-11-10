@@ -188,6 +188,36 @@ async def _drop_state(session: AsyncSession, target: Character, key: str, caster
         cap_hp_to_max(target, [s for s in states if s not in kept], await get_passive_modifiers(session, target, "character.hit_points_max"))
 
 
+async def _cap_hp(session: AsyncSession, char: Character, changed: list[dict]) -> None:
+    """Riporta i PF correnti al massimo effettivo se tra gli stati ``changed`` c'è un effetto che ne alza il massimo (Aiuto)."""
+    if missing := {"classes", "items", "ability_scores"} & inspect(char).unloaded:
+        await session.refresh(char, attribute_names=list(missing))
+    cap_hp_to_max(char, changed, await get_passive_modifiers(session, char, "character.hit_points_max"))
+
+
+async def end_by_target(session: AsyncSession, char: Character, closed: list[dict]) -> None:
+    """``char`` ha chiuso a mano gli stati ``closed``: i PF non superano il nuovo massimo e gli orologi dei lanciatori
+    (``spell_cast:*``) perdono questo bersaglio, e si chiudono se non ne restano altri."""
+    for state in closed:
+        data, key = state.get("data") or {}, str(state.get("key", ""))
+        caster = None if data.get("caster_id") is None else char if data["caster_id"] == char.id else await session.get(Character, data["caster_id"])
+        clock = SPELL_CLOCK_PREFIX + key[len(SPELL_STATE_PREFIX):]
+        if caster is None or not key.startswith(SPELL_STATE_PREFIX):
+            continue
+        settings = dict(caster.settings or {})
+        given = dict(settings.get(SPELL_GIVEN) or {})
+        left = [t for t in given.get(clock, []) if t != char.id]
+        if left:
+            caster.settings = {**settings, SPELL_GIVEN: {**given, clock: left}}
+            continue
+        caster.settings = {**settings, SPELL_GIVEN: {k: v for k, v in given.items() if k != clock}}
+        closing = [s for s in caster.active_states or [] if s.get("key") == clock]
+        if closing:
+            caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
+            settle_closed(caster, closing)
+    await _cap_hp(session, char, closed)
+
+
 def _stateful(variant: SpellVariant, data: dict) -> bool:
     return bool(variant.modifiers(data) or variant.options or variant.track or variant.condition
                 or variant.turn_heal or variant.turn_temp_hp)
@@ -275,6 +305,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
         if variant.on_apply:
             variant.on_apply(target, mine)
         await _give_hp(session, target, variant, mine, key)
+        await _cap_hp(session, target, [{"key": key, "data": mine}])  # un nuovo stato più debole può abbassare il massimo effettivo
         applied.append({"id": target.id, "name": target.name})
     if rolled:
         data["per_target"] = rolled

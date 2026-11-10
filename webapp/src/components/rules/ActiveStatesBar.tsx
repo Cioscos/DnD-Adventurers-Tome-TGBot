@@ -78,7 +78,9 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
   const toast = useToast()
   const end = useMutation({
     mutationFn: (key: string) => api.characters.endActiveState(char.id, key),
-    onSuccess: () => {
+    onSuccess: (states) => {
+      // la risposta ha già l'elenco aggiornato: le righe chiuse spariscono subito, la rilettura conferma
+      if (Array.isArray(states)) qc.setQueryData<CharacterFull>(['character', char.id], (old) => old && { ...old, active_states: states as CharacterFull['active_states'] })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['companions', char.id] })  // chiudere la Forma Selvatica la chiude anche nei compagni
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
@@ -129,7 +131,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
         // Lo decide il server: la scelta di prolungamento c'è solo finché l'Ira si può prolungare (non dal 15°, non per le altre classi).
         const canExtend = !!s.feature_key && !!char.abilities.find((a) => a.feature_key === s.feature_key)?.use_choices?.some((x) => x.key === 'extend_via')
         return (
-          <li key={s.key} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
+          <li key={`${s.key}:${s.data?.caster_id ?? ''}`} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
             <GiLightningTrio size={16} aria-hidden className="shrink-0 text-dnd-gold-bright" />
             <div className="flex-1 min-w-[9rem] text-sm font-body text-dnd-text break-words">
               <p>

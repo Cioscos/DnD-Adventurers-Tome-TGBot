@@ -24,6 +24,8 @@ export interface GrantedSpell {
   srd_index?: string | null
   save_dc?: number | null
   attack_bonus?: number | null
+  /** Livello a cui l'oggetto lancia l'incantesimo, se lo dichiara (Bastone del Potere: Palla di Fuoco al 5°); assente: il livello base. */
+  slot_level?: number | null
 }
 
 /** Chiavi magiche gestite dal form: tutto il resto di `item_metadata` va preservato. */

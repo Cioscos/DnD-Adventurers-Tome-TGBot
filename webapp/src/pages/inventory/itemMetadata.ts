@@ -285,8 +285,9 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
     }
     if (form.granted_spells.length > 0) {
       // CD/attacco dell'oggetto: vuoti = non impostati, quindi omessi.
-      magic.granted_spells = form.granted_spells.map(({ save_dc, attack_bonus, ...rest }) => ({
+      magic.granted_spells = form.granted_spells.map(({ save_dc, attack_bonus, slot_level, ...rest }) => ({
         ...rest,
+        ...(slot_level != null ? { slot_level } : {}),
         ...(save_dc != null ? { save_dc } : {}),
         ...(attack_bonus != null ? { attack_bonus } : {}),
       }))
@@ -340,6 +341,7 @@ export function isItemFormValid(form: ItemFormData): boolean {
     for (const g of form.granted_spells) {
       if (!g.name.trim() || g.charges_cost < 0 || g.charges_cost > cap) return false
       if (!Number.isInteger(g.level) || g.level < 0 || g.level > 9) return false
+      if (g.slot_level != null && (!Number.isInteger(g.slot_level) || g.slot_level < Math.max(1, g.level) || g.slot_level > 9)) return false
     }
   }
   return true

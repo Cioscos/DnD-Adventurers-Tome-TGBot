@@ -2033,6 +2033,7 @@
         "cast_done": "{{name}} cast",
         "spell_save_dc": "DC (optional)",
         "spell_attack_bonus": "Attack bonus (optional)",
+        "spell_cast_level": "Casting level (optional)",
         "no_charges": "This item has no charges",
         "cast_spent": "Charges spent: {{n}}",
         "cast_remaining": "{{current}}/{{max}} left",

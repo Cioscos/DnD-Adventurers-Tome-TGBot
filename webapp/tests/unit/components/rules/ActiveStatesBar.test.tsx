@@ -255,4 +255,22 @@ describe('ActiveStatesBar, wizard states', () => {
     expect(screen.getAllByText(/character\.turn\.state_until_rest/)).toHaveLength(2)
     expect(screen.getAllByText(/character\.turn\.state_cast_by_you/)).toHaveLength(1)
   })
+
+  it('keeps two spell states of the same spell from two casters apart and drops the closed ones from the cached sheet (62)', async () => {
+    const { QueryClient } = await import('@tanstack/react-query')
+    const aid = (caster: number, name: string) => ({
+      key: 'spell:aid', feature_key: 'spell:aid', rounds_left: null, ends_on: ['manual'], name: 'Aid', data: { spell_key: 'aid', caster_id: caster, caster_name: name },
+    })
+    const sheet = char([aid(1, 'Alfa'), aid(2, 'Beta')], [])
+    const client = new QueryClient()
+    client.setQueryData(['character', 7], sheet)
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
+    endActiveState.mockResolvedValueOnce([])
+    renderWithProviders(<ActiveStatesBar char={sheet} />, { client })
+    expect(screen.getAllByText('character.turn.end_state')).toHaveLength(2)
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
+    await userEvent.click(screen.getAllByText('character.turn.end_state')[0])
+    await waitFor(() => expect((client.getQueryData(['character', 7]) as CharacterFull).active_states).toEqual([]))
+    warn.mockRestore()
+  })
 })

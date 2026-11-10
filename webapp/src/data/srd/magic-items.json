@@ -5604,7 +5604,8 @@
     },
     {
      "spell": "fireball",
-     "charge_cost": 5
+     "charge_cost": 5,
+     "slot_level": 5
     },
     {
      "spell": "globe-of-invulnerability",
@@ -5620,7 +5621,8 @@
     },
     {
      "spell": "lightning-bolt",
-     "charge_cost": 5
+     "charge_cost": 5,
+     "slot_level": 5
     },
     {
      "spell": "magic-missile",
@@ -5731,7 +5733,8 @@
     },
     {
      "spell": "fireball",
-     "charge_cost": 7
+     "charge_cost": 7,
+     "slot_level": 7
     },
     {
      "spell": "flaming-sphere",
@@ -5751,7 +5754,8 @@
     },
     {
      "spell": "lightning-bolt",
-     "charge_cost": 7
+     "charge_cost": 7,
+     "slot_level": 7
     },
     {
      "spell": "passwall",

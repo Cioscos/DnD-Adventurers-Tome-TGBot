@@ -2032,6 +2032,7 @@
         "cast_done": "{{name}} lanciato",
         "spell_save_dc": "CD (opzionale)",
         "spell_attack_bonus": "Bonus attacco (opzionale)",
+        "spell_cast_level": "Livello di lancio (opzionale)",
         "no_charges": "Questo oggetto non ha cariche",
         "cast_spent": "Cariche spese: {{n}}",
         "cast_remaining": "rimaste {{current}}/{{max}}",
