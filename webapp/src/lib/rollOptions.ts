@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import type { QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { create } from 'zustand'
@@ -102,7 +103,7 @@ export async function castSpell(charId: number, spellId: number, body: SpellUseB
   const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)
   useRemovalStore.setState(({ chosen }) => ({ chosen: Object.fromEntries(Object.entries(chosen).filter(([id]) => Number(id) !== spellId)) }))
   const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}), ...(pick && body.targets === undefined ? pick : {}) })
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   for (const line of updated.removal_result ?? []) toast.info(line[lang])
   return updated
 }

@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/components/ui/Button'
@@ -17,7 +18,7 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   const second = optionResult?.second_total
   const targets = charId != null ? (optionResult?.targets ?? []) : []
   if (notes.length === 0 && !autoFail && extra.length === 0 && separate.length === 0 && effects.length === 0 && second == null && targets.length === 0) return null
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import type { SpellcastingInfo } from '@/types'
 
 type Row = NonNullable<SpellcastingInfo['limits']>[number]
@@ -25,7 +26,7 @@ export default function SpellLimits({ limits }: { limits: Row[] }) {
         <div key={row.class_id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {rows.length > 1 && (
             <span className="font-body text-sm text-dnd-text">
-              {t(`dnd.classes.${row.class_name.toLowerCase()}`, { defaultValue: row.class_name })}
+              {classLabel(t, row.class_name)}
             </span>
           )}
           {cells.map(([key, count, limit]) => (

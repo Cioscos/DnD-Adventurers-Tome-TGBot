@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -60,7 +61,7 @@ export default function EffectChainEditor({
   triggerEvent,
 }: EffectChainEditorProps) {
   const { t, i18n } = useTranslation()
-  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const locale: Locale = uiLang(i18n.language)
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)

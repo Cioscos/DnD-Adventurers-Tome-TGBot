@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +19,7 @@ interface Props {
 
 export default function InitiativeCta({ sessionId, combatant }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
   const noteLabels = useRollNoteLabels(combatant.character_id ?? undefined)

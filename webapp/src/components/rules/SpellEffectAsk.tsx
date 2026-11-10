@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -21,7 +22,7 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
   onClose: () => void
 }) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const [picked, setPicked] = useState<Record<string, string>>({})
   const [choosing, setChoosing] = useState(effect.choices.length > 0)
   const targeted = effect.target_kind !== 'self' && effect.target_kind !== 'aura' // l'aura è del lanciatore: nessun bersaglio

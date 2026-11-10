@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -180,7 +181,7 @@ function defaultTrigger(): Trigger {
  */
 export default function TriggersSection({ triggers, tables, onChange }: TriggersSectionProps) {
   const { t, i18n } = useTranslation()
-  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const locale: Locale = uiLang(i18n.language)
   const list = triggers ?? []
 
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null)

@@ -56,6 +56,12 @@ describe('RollResultModal', () => {
     expect(screen.getByText('18')).toBeInTheDocument()
   })
 
+  it('a pure ability check with a natural 20 is not a critical: no banner, neutral frame (punto 45)', () => {
+    render(<RollResultModal result={result({ die: 20, total: 23, is_critical: true })} title="T" noCritical onClose={() => {}} />)
+    expect(screen.queryByText('character.dice.critical_banner')).toBeNull()
+    expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'default')
+  })
+
   it('a critical hit is gold, pulsing and shows the CRITICO banner', () => {
     render(<RollResultModal result={result({ is_critical: true })} title="T" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'gold')

@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +20,7 @@ interface Props {
 /** Sottoclasse: catalogo dell'edizione + «Altro (testo libero)». Un testo non riconosciuto resta visibile. */
 export default function SubclassSelect({ edition, className, value, onChange, zClassName }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const [otherPicked, setOtherPicked] = useState(false)
   const { data: catalog = [] } = useQuery({
     queryKey: ['rules', 'subclasses', edition, className],

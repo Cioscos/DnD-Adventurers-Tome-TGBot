@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +20,7 @@ export default function ClassOptionGroups({ char, cls }: { char: CharacterFull; 
 
 function Group({ char, cls, group }: { char: CharacterFull; cls: CharacterClass; group: string }) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const [open, setOpen] = useState(false)
   const state = useQuery({
     queryKey: ['class-options', char.id, cls.id, group],

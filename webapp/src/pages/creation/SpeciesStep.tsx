@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookOpen } from 'lucide-react'
@@ -25,7 +26,7 @@ const ABBR: Record<string, string> = {
 
 export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: Props) {
   const { t, i18n } = useTranslation()
-  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
   const [picking, setPicking] = useState(false)
   const { race, sub } = choice

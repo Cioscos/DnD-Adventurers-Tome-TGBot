@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -72,7 +73,7 @@ export default function ItemCastSheet({ charId, resolved, effects, onClose }: Pr
           {t('character.spells.effect_applied', { name: spell.name, targets: appliedTargets(effects.applied, charId, t) })}
         </p>
       )}
-      {effects?.text && <p className="text-sm text-dnd-text-muted font-body">{effects.text[i18n.language?.startsWith('en') ? 'en' : 'it']}</p>}
+      {effects?.text && <p className="text-sm text-dnd-text-muted font-body">{effects.text[uiLang(i18n.language)]}</p>}
       {saveDc != null && !isAttack && (
         <p className="text-lg font-mono font-bold tabular-nums text-dnd-gold-bright">
           {saveAbility

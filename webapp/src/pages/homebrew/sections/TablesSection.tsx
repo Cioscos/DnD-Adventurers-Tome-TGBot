@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, X, AlertTriangle } from 'lucide-react'
@@ -276,7 +277,7 @@ function TableCard({
   onRequestDelete,
 }: TableCardProps) {
   const { t, i18n } = useTranslation()
-  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const locale: Locale = uiLang(i18n.language)
 
   const axisProp = findEnumProperty(enumProperties, table.row_axis)
   const rowValues = axisProp?.values ?? []

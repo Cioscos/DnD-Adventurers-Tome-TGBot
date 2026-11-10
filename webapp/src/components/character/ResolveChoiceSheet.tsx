@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -33,7 +34,7 @@ const FIELD = 'w-full min-h-[44px] px-3 rounded-xl bg-dnd-surface border border-
 /** Risolve una scelta di livello: aumento caratteristiche (+2 / +1+1, max 20) o talento. */
 export default function ResolveChoiceSheet({ char, choice, open, onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const qc = useQueryClient()
   const isBoon = choice.kind === 'epic_boon'
   const is2024 = char.rules_edition === '2024'

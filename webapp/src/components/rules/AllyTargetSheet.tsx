@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
@@ -41,7 +42,7 @@ type Props = {
  *  Chi ha già un dado lo perde se ne arriva un altro: prima si conferma. */
 export default function AllyTargetSheet({ title, die = false, allies, max = 1, onPickMany, pending = false, removal, onPick, onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const [who, setWho] = useState<(number | string)[]>(removal?.scope === 'self' ? ['self'] : [])
   const [what, setWhat] = useState<string[]>([])
   const [replacing, setReplacing] = useState<Ally | null>(null)

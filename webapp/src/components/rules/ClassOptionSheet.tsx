@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +20,7 @@ interface Props {
 /** Scelta di opzioni di classe (Metamagia, Invocazioni, ...): esattamente `choice.count` fra quelle offerte. */
 export default function ClassOptionSheet({ char, choice, open, onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const qc = useQueryClient()
   const [picked, setPicked] = useState<string[]>([])
   const total = choice.count ?? 1
@@ -103,7 +104,7 @@ interface ReplaceProps {
 /** Sostituisce un'opzione già scelta con un'altra (solo gruppi `replaceable`, deciso dal catalogo). */
 export function ReplaceOptionSheet({ char, classId, group, open, onClose }: ReplaceProps) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const qc = useQueryClient()
   const [oldKey, setOldKey] = useState('')
   const [newKey, setNewKey] = useState('')

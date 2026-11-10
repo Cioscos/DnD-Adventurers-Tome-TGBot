@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
@@ -48,7 +49,7 @@ type WizardStep = 'type' | 'base' | 'advanced'
 
 export default function ItemForm({ initialData, edition, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t, i18n } = useTranslation()
-  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang: Lang = uiLang(i18n.language)
   const toast = useToast()
   const [picker, setPicker] = useState<'equipment' | 'magic-items' | null>(null)
   const system = useUnitSettings((s) => s.system)

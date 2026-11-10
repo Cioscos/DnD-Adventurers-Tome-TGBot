@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { notifyCastError } from '@/lib/mutationError'
 import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions, useRemovalStore, useEffectPickStore } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
@@ -116,7 +117,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       confirmCastDone(spell, slot?.level ?? null, ritual, ki,
         fx?.applied.length ? t('character.spells.effect_applied', { name: spell.name, targets: appliedTargets(fx.applied, charId, t) }) : undefined)
       refreshAfterOptions(qc, charId, updated.option_result)
-      const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+      const lang = uiLang(i18n.language)
       if (fx?.text) toast.info(fx.text[lang])
       if (updated.option_result?.effects?.length || updated.option_result?.targets?.length) setCastNotes(updated.option_result)
     },

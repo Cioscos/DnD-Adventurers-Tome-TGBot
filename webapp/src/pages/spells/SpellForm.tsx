@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookOpen, RefreshCw } from 'lucide-react'
@@ -25,6 +26,7 @@ import {
   isConcentrationDuration,
 } from './spellPresets'
 import type { Spell } from '@/types'
+import { classLabel } from '@/lib/classLabel'
 
 export type SpellFormData = {
   name: string
@@ -69,7 +71,7 @@ interface SpellFormProps {
 
 export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter }: SpellFormProps) {
   const { t, i18n } = useTranslation()
-  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang: Lang = uiLang(i18n.language)
   const unitSystem = useUnitSettings((s) => s.system)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [confirmReload, setConfirmReload] = useState(false)
@@ -305,7 +307,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
               { value: '', label: t('character.spells.class_auto') },
               ...casters.map((c) => ({
                 value: String(c.class_id),
-                label: t(`dnd.classes.${c.class_name.toLowerCase()}`, { defaultValue: c.class_name }),
+                label: classLabel(t, c.class_name),
               })),
             ]}
             value={form.class_id}

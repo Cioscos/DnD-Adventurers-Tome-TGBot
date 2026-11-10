@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -24,7 +25,7 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const is24 = char.rules_edition === '2024'
   const [asked, setAsked] = useState(false)
   const [pick, setPick] = useState('')

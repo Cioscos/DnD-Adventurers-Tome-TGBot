@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import type React from 'react'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -65,7 +66,7 @@ export default function Inventory() {
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
-  const locale: 'it' | 'en' = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const locale: 'it' | 'en' = uiLang(i18n.language)
 
   const [showAdd, setShowAdd] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
