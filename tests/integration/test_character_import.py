@@ -293,3 +293,20 @@ async def test_import_contained_item_is_unequipped(client, test_session_factory)
     async with test_session_factory() as s:
         helm = (await s.execute(select(Item).where(Item.character_id == r.json()["id"], Item.name == "Elmo"))).scalar_one()
     assert helm.container_id is not None and not helm.is_equipped and helm.equipment_slot is None
+
+
+async def test_minori_7_the_last_long_rest_survives_the_import_and_a_bad_date_is_dropped(client, test_session_factory):
+    from datetime import datetime
+    cid = await _make_valid(test_session_factory)
+    now = datetime.utcnow().isoformat(timespec="seconds")
+    async with test_session_factory() as s:
+        (await s.get(Character, cid)).last_long_rest_at = now
+        await s.commit()
+    payload = await _export(client, cid)
+    assert payload["character"]["last_long_rest_at"] == now
+    new = (await _import(client, payload)).json()["id"]
+    assert (await client.post(f"/characters/{new}/rest", json={"rest_type": "long"})).status_code == 409  # troppo presto
+    payload["character"]["last_long_rest_at"] = "ieri sera"
+    new = (await _import(client, payload)).json()["id"]
+    async with test_session_factory() as s:
+        assert (await s.get(Character, new)).last_long_rest_at is None
