@@ -141,3 +141,14 @@ def test_minori_51_closing_the_wild_shape_state_closes_the_form_row():
     close_wild_shape_rows(char, [{"key": "wild_shape"}])
     assert form.is_active is False and familiar.is_active is True
     close_wild_shape_rows(NS(), [{"key": "wild_shape"}])  # compagni non caricati: niente da fare
+
+
+def test_expiry_count_zero_is_refused_by_the_public_schema():
+    import pytest
+    from pydantic import ValidationError
+
+    from api.schemas.encounter import ExpiryIn
+
+    with pytest.raises(ValidationError):
+        ExpiryIn(anchor="owner", edge="start", count=0)
+    assert ExpiryIn(anchor="owner", edge="start", count=1).count == 1
