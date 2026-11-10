@@ -138,6 +138,16 @@ describe('Turn page', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'false'))
   })
 
+  it('rereads the attack limit on a new turn, because an extra action (Haste) changes it', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.section_action')
+    const reads = turnState.mock.calls.length
+    server.extra = { attacks_allowed: 3 }
+    await userEvent.click(screen.getByText('character.turn.new_turn'))
+    await waitFor(() => expect(turnState.mock.calls.length).toBeGreaterThan(reads))
+  })
+
   it('tells the player what a start-of-turn heal gave and why, and says nothing when there was none', async () => {
     getChar.mockResolvedValue(char)
     renderWithProviders(<Turn />)

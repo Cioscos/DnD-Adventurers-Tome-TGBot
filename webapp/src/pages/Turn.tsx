@@ -96,13 +96,13 @@ export default function Turn() {
     qc.setQueryData(['turn-state', charId], (old: TurnState | undefined) => old && { ...old, turn: b })
   const useSlot = useMutation({
     mutationFn: ({ slot, on = true }: { slot: TurnSlot; on?: boolean }) => api.characters.turnUse(charId, slot, on),
-    onSuccess: setBlock,
+    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) }, // spendere l'azione extra cambia il limite di attacchi
     onError: () => qc.invalidateQueries({ queryKey: ['turn-state', charId] }),
   })
   const newTurn = useMutation({
     mutationFn: () => api.characters.turnNew(charId),
-    // L'inizio del turno può curare (Sopravvissuto): i PF si rileggono.
-    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['character', charId] }) },
+    // L'inizio del turno può curare (Sopravvissuto) e dare un'azione extra (Velocità): PF e limite di attacchi si rileggono.
+    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['character', charId] }); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
   })
   const setProne = useMutation({
     mutationFn: (prone: boolean) => api.characters.updateConditions(charId, { prone }),
