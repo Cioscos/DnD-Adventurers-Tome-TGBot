@@ -594,10 +594,10 @@ async def test_minori_15_phantasmal_creatures_count_as_illusion_for_improved_ill
 
 async def test_minori_16_dispel_magic_is_listed_as_a_bonus_action_for_the_spell_breaker(client):
     cid = await _make(client, "abjurer", 10)
-    assert "bonus" in (await _by_index(client, cid))["dispel-magic"]["casting_time"].lower()
+    assert "bonus" in (await _by_index(client, cid))["dispel-magic"]["effective_casting_time"].lower()
     assert "counterspell" in await _by_index(client, cid)
     plain = await _make(client, "abjurer", 9)
-    assert "bonus" not in ((await _by_index(client, plain)).get("dispel-magic") or {"casting_time": ""})["casting_time"].lower()
+    assert "bonus" not in ((await _by_index(client, plain)).get("dispel-magic") or {"effective_casting_time": ""})["effective_casting_time"].lower()
 
 
 async def test_49_spell_breaker_use_is_blocked_until_a_counter_or_dispel_cast_and_the_list_says_bonus(client):
@@ -606,10 +606,10 @@ async def test_49_spell_breaker_use_is_blocked_until_a_counter_or_dispel_cast_an
     ability = lambda full: next(a for a in full["abilities"] if a["feature_key"] == BREAKER)  # noqa: E731
     assert ability(await _full(client, cid))["use_blocked"] is True
     spells = await _by_index(client, cid)
-    assert "bonus" in spells["dispel-magic"]["casting_time"].lower()
+    assert "bonus" in spells["dispel-magic"]["effective_casting_time"].lower()
     assert (await _cast(client, cid, spells["dispel-magic"]["id"], slot_level=3)).status_code == 200
     assert ability(await _full(client, cid))["use_blocked"] is False
     ill = await _make(client, "illusionist", 3)
     minor = await _spell(client, ill, "Illusione Minore", 0, school="illusion", srd_index="minor-illusion", is_prepared=True)
     listed = next(s for s in (await client.get(f"/characters/{ill}/spells")).json() if s["id"] == minor)
-    assert "bonus" in listed["casting_time"].lower()
+    assert "bonus" in listed["effective_casting_time"].lower() and "bonus" not in listed["casting_time"].lower()

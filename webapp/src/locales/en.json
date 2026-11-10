@@ -43,7 +43,8 @@
       "once_per_turn": "You can use it only once per turn.",
       "replace_after_long_rest": "You can swap it once per long rest: rest and try again.",
       "option_prerequisite": "One of the chosen options needs another option you do not have: pick it together with its prerequisite or after taking it.",
-      "option_is_prerequisite": "This option is the prerequisite of another one you chose: you cannot swap it."
+      "option_is_prerequisite": "This option is the prerequisite of another one you chose: you cannot swap it.",
+      "class_already_present": "The character already has that class."
     },
     "error_boundary": {
       "title": "Something went wrong",

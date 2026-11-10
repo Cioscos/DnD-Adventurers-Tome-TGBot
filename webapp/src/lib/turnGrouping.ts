@@ -36,8 +36,8 @@ export function groupForTurn(char: CharacterFull): TurnGroups {
   const noPrep = char.spellcasting?.has_preparing_class === false
   for (const s of char.spells ?? []) {
     if (!(s.level === 0 || s.is_prepared || noPrep) || isHitOnlySpell(s)) continue
-    // Campione degli Antichi e simili: il server riscrive `casting_time` (azione bonus) e spende lo slot giusto.
-    const bucket: keyof TurnGroups = parseCastingTime(s.casting_time) ?? 'other'
+    // Campione degli Antichi e simili: il server dà il tempo effettivo (azione bonus) e spende lo slot giusto.
+    const bucket: keyof TurnGroups = parseCastingTime(s.effective_casting_time ?? s.casting_time) ?? 'other'
     g[bucket].push({ kind: 'spell', id: String(s.id), label: s.name })
   }
 

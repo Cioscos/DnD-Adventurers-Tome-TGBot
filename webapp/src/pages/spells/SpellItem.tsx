@@ -155,10 +155,10 @@ function SpellItemInner({
               {/* Stats chips */}
               {(spell.casting_time || spell.range_area || spell.components || spell.duration || spell.damage_dice || spell.attack_save) && (
                 <div className="grid grid-cols-2 gap-1.5">
-                  {spell.casting_time && (
+                  {(spell.effective_casting_time ?? spell.casting_time) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Clock size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.casting_time}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_casting_time ?? spell.casting_time}</span>
                     </div>
                   )}
                   {spell.range_area && (

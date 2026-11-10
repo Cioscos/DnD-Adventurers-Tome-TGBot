@@ -108,6 +108,11 @@ describe('Campione degli Antichi (punto 42)', () => {
     expect(ids(g.other)).toContain('spell:33')
   })
 
+  it('groups by effective_casting_time (the saved casting_time stays the form value)', () => {
+    const c = { ...char, spells: [spell(50, { casting_time: '1 azione', effective_casting_time: '1 azione bonus' })] }
+    expect(ids(groupForTurn(c as unknown as CharacterFull).bonus_action)).toContain('spell:50')
+  })
+
   it('does not move anything by itself: with the state on but the server time unchanged, the spell stays on the action', () => {
     const c = { ...char, classes: [{ id: 1, class_name: 'paladin' }], active_states: [{ key: 'elder_champion' }],
       spells: [spell(40, { casting_time: '1 azione', class_id: 1 })] }

@@ -734,7 +734,7 @@ async def roll_ability_check(
 
     history_msg = (
         f"Prova di {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
-        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (FUMBLE)" if is_fumble else "")
         + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:

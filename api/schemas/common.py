@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from core.db.models import RestorationType
 from core.game.actions import ActionType
@@ -151,12 +151,21 @@ class CharacterClassUpdate(BaseModel):
 
 
 class ClassLevelEntry(BaseModel):
-    """One (class_id, level) pair for the distribute endpoint."""
-    class_id: int
+    """One (class_id, level) pair for the distribute endpoint.
+
+    Una classe nuova viaggia qui con `new_class` (senza `class_id`): si crea nella stessa transazione dei livelli."""
+    class_id: Optional[int] = None
+    new_class: Optional[CharacterClassCreate] = None
     level: int = Field(ge=1, le=20)
     # Sottoclasse nello stesso salvataggio dei livelli (punto 44: una sola chiamata, niente stato parziale).
     # Assente = non cambia; stringa vuota o null = la toglie.
     subclass: Optional[str] = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def _one_of_id_or_new(self):
+        if (self.class_id is None) == (self.new_class is None):
+            raise ValueError("exactly one of class_id / new_class")
+        return self
 
 
 class ClassDistribute(BaseModel):

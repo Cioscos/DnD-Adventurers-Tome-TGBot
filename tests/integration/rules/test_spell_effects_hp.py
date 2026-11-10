@@ -695,3 +695,19 @@ async def test_89_the_ac_seen_in_the_evening_counts_items_like_the_sheet(client,
     as_user(GM_ID)
     live = await client.get("/sessions/1/live")
     assert next(c for c in live.json()["live_characters"] if c["id"] == hero)["ac"] == 17  # 13 + 3 + anello +1
+
+
+async def test_89_the_ac_seen_in_the_evening_counts_homebrew_like_the_sheet(client, test_session_factory):
+    """Giro 1 (minor 4): in serata la CA somma anche i modificatori homebrew passivi, come la scheda."""
+    hero, _caster, _spell = await _table(client, test_session_factory, "Mage Armor", "mage-armor", 1)
+    as_user(GM_ID)
+    before = next(c for c in (await client.get("/sessions/1/live")).json()["live_characters"] if c["id"] == hero)["ac"]
+    as_user(PLAYER_ID)
+    rule = {"name": "+2 AC", "enabled": True, "dsl": {"version": 1, "subject": {"type": "character"}, "triggers": [],
+            "passive_modifiers": [{"when": {"path": "$character.id", "op": "gt", "value": 0}, "target": "character.ac",
+                                   "value": 2, "label_i18n": {"it": "+2 CA", "en": "+2 AC"}}]}}
+    r = await client.post(f"/characters/{hero}/homebrew/rules", json=rule)
+    assert r.status_code in (200, 201), r.text
+    as_user(GM_ID)
+    live = await client.get("/sessions/1/live")
+    assert next(c for c in live.json()["live_characters"] if c["id"] == hero)["ac"] == before + 2

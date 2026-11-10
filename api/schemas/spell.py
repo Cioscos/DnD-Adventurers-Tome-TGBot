@@ -23,6 +23,9 @@ class SpellRead(BaseModel):
     level: int
     description: Optional[str] = None
     casting_time: Optional[str] = None
+    # Tempo di lancio che vale ora (Campione degli Antichi, Rompi-Incantesimi lo portano ad azione bonus); `casting_time` è
+    # quello salvato, il solo che il form di modifica rimanda. Lo riempie `fill_spell_stats`.
+    effective_casting_time: Optional[str] = None
     range_area: Optional[str] = None
     components: Optional[str] = None
     duration: Optional[str] = None

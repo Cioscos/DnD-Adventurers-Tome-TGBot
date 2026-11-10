@@ -242,6 +242,8 @@ export interface Spell {
   level: number
   description?: string
   casting_time?: string
+  /** Tempo di lancio che vale ora (il server lo porta ad azione bonus con Campione degli Antichi, Rompi-Incantesimi): solo da mostrare e raggruppare; il form usa `casting_time`. */
+  effective_casting_time?: string
   range_area?: string
   components?: string
   duration?: string

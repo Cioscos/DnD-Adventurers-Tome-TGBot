@@ -47,8 +47,9 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if stats:
             spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
         spell.at_will = at_will(char, spell)
+        spell.effective_casting_time = spell.casting_time
         if casting_kind(spell) == "action" and (bonus_cast(char, spell) or champion_bonus_cast(char, spell)):  # Rompi-Incantesimi, Campione degli Antichi: l'elenco lo dice
-            spell.casting_time = "1 bonus action" if "action" in (spell.casting_time or "").lower() else "1 azione bonus"
+            spell.effective_casting_time = "1 bonus action" if "action" in (spell.casting_time or "").lower() else "1 azione bonus"
         spell.has_book = spell.level >= 1 and wizard_row(char, spell) is not None
         if (shown := spell_range_override(char, spell)) is not None:
             spell.range_area = shown

@@ -330,11 +330,16 @@ async def test_elder_champion_42_one_action_paladin_spells_are_listed_and_cast_a
     """Punto 42: la regola vive sul server (elenco e spesa del turno); il client legge `casting_time`."""
     cid = await _paladin(client, 20, "ancients", charisma=16)
     spell = next(s for s in (await _spells(client, cid)).values() if s["srd_index"] == "ice-storm")
-    assert "bonus" not in spell["casting_time"].lower()
+    assert "bonus" not in spell["effective_casting_time"].lower()
     assert (await _use(client, cid, EC)).status_code == 200
     await _new_turn(client, cid)
     spell = next(s for s in (await _spells(client, cid)).values() if s["srd_index"] == "ice-storm")
-    assert "bonus" in spell["casting_time"].lower()
+    # Giro 1 (I2): il tempo effettivo è a parte; `casting_time` resta quello salvato, anche dopo una modifica durante lo stato.
+    assert "bonus" in spell["effective_casting_time"].lower() and "bonus" not in spell["casting_time"].lower()
+    saved = spell["casting_time"]
+    patched = await client.patch(f"/characters/{cid}/spells/{spell['id']}", json={"description": "x", "casting_time": saved})
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["casting_time"] == saved
     assert (await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 4})).status_code == 200
     turn = await _turn(client, cid)
     assert turn["bonus_spell_cast"] is True and turn["action_used"] is False

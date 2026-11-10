@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
+import { apiErrorCode } from '@/lib/mutationError'
 import SelectSheet from '@/components/ui/SelectSheet'
 import SubclassSelect from '@/pages/multiclass/SubclassSelect'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
@@ -184,36 +185,25 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   }
 
   const commit = useMutation({
-    mutationFn: async () => {
-      const newEntries = entries.filter((e): e is NewEntry => e.kind === 'new')
-      let updatedChar: CharacterFull = char
-      const newIdByTempId = new Map<string, number>()
-
-      for (const ne of newEntries) {
-        const previousIds = new Set(updatedChar.classes.map((c) => c.id))
-        updatedChar = (await api.classes.add(char.id, {
-          class_name: ne.className,
-          level: 1,
-          hit_die: ne.hitDie,
-          spellcasting_ability: ne.spellcasting,
-          subclass: ne.subclass.trim() || undefined,
-          skill_choices: ne.skillChoices.length ? ne.skillChoices : undefined,
-        })) as CharacterFull
-        const newId = updatedChar.classes.find((c) => !previousIds.has(c.id))?.id
-        if (newId == null) throw new Error('new class id missing after add')
-        newIdByTempId.set(ne.tempId, newId)
-      }
-
-      // Sottoclassi e livelli viaggiano nella stessa chiamata: se fallisce, non resta uno stato parziale.
+    mutationFn: () => {
+      // Una sola richiesta, tutto o niente lato server: classi nuove, sottoclassi e livelli.
       const payload = entries.map((e) => {
-        if (e.kind === 'existing') {
-          const before = (char.classes ?? []).find((c) => c.id === e.classId)
-          const changed = (before?.subclass ?? '') !== (e.subclass ?? '')
-          return changed ? { class_id: e.classId, level: e.level, subclass: (e.subclass ?? '').trim() || null } : { class_id: e.classId, level: e.level }
+        if (e.kind === 'new') {
+          return {
+            new_class: {
+              class_name: e.className,
+              level: 1,
+              hit_die: e.hitDie,
+              spellcasting_ability: e.spellcasting,
+              subclass: e.subclass.trim() || undefined,
+              skill_choices: e.skillChoices.length ? e.skillChoices : undefined,
+            },
+            level: e.level,
+          }
         }
-        const id = newIdByTempId.get(e.tempId)
-        if (id == null) throw new Error('new class id lookup failed')
-        return { class_id: id, level: e.level }
+        const before = (char.classes ?? []).find((c) => c.id === e.classId)
+        const changed = (before?.subclass ?? '') !== (e.subclass ?? '')
+        return changed ? { class_id: e.classId, level: e.level, subclass: (e.subclass ?? '').trim() || null } : { class_id: e.classId, level: e.level }
       })
       return api.classes.distribute(char.id, payload)
     },
@@ -236,9 +226,9 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
       haptic.success()
       onClose()
     },
-    onError: () => {
+    onError: (err) => {
       haptic.error()
-      toast.error(t('character.multiclass.edit.error_server'))
+      toast.error(apiErrorCode(err) === 'class_already_present' ? t('common.server_errors.class_already_present') : t('character.multiclass.edit.error_server'))
     },
   })
 

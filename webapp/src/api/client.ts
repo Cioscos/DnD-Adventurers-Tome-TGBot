@@ -882,7 +882,12 @@ export const api = {
       request<CharacterFull>(`/characters/${charId}/classes/${classId}`, {
         method: 'DELETE',
       }),
-    distribute: (charId: number, classes: { class_id: number; level: number; subclass?: string | null }[], hpRolls?: number[]) =>
+    distribute: (
+      charId: number,
+      // Una classe nuova viaggia con `new_class` (stessa transazione dei livelli: tutto o niente).
+      classes: ({ class_id: number; level: number; subclass?: string | null } | { new_class: Record<string, unknown>; level: number })[],
+      hpRolls?: number[],
+    ) =>
       request<CharacterFull>(`/characters/${charId}/classes/distribute`, {
         method: 'PATCH',
         body: JSON.stringify(hpRolls ? { classes, hp_rolls: hpRolls } : { classes }),

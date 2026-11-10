@@ -79,6 +79,9 @@ async def create_class_for_character(
     """
     if is_first_class is None:
         is_first_class = len(char.classes) == 0
+    if not is_first_class and any(c.class_name.strip().casefold() == body.class_name.strip().casefold()
+                                  for c in char.classes):
+        raise HTTPException(status_code=409, detail={"code": "class_already_present"})
 
     grant = class_proficiencies(character_edition(char), normalize_class_name(body.class_name),
                                 as_multiclass=not is_first_class)
@@ -201,7 +204,7 @@ async def distribute_class_levels(
     char = await get_owned_full(char_id, user_id, session)
 
     existing_ids = {cls.id for cls in char.classes}
-    body_ids = {entry.class_id for entry in body.classes}
+    body_ids = {entry.class_id for entry in body.classes if entry.new_class is None}
     if existing_ids != body_ids:
         raise HTTPException(status_code=400, detail="classes_mismatch")
 
@@ -224,6 +227,11 @@ async def distribute_class_levels(
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
     old_bonus = rule_hp_bonus(char)
+
+    # Classi nuove nella stessa transazione: se qualcosa fallisce più avanti (409, 400, 500) non ne resta nessuna.
+    for entry in body.classes:
+        if entry.new_class is not None:
+            entry.class_id = (await create_class_for_character(char, entry.new_class, session, lang=lang)).id
 
     classes_by_id = {c.id: c for c in char.classes}
     gained_total = sum(max(0, e.level - classes_by_id[e.class_id].level) for e in body.classes)
