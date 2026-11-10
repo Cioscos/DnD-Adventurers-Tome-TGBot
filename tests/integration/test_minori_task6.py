@@ -23,7 +23,7 @@ async def test_minori_50_a_broken_character_does_not_resync_everyone_at_every_st
     assert await catalog_migration.migrate_catalog(test_session_factory) == 1  # l'altro personaggio passa lo stesso
     seen.clear()
     assert await catalog_migration.migrate_catalog(test_session_factory) == 0
-    assert seen == []  # al secondo avvio nessuno viene risincronizzato
+    assert seen == [broken]  # al secondo avvio si riprova solo il fallito, nessun altro
 
 
 # --- 51: i GET non scrivono nel database -------------------------------------------------------------------------
@@ -152,3 +152,51 @@ def test_expiry_count_zero_is_refused_by_the_public_schema():
     with pytest.raises(ValidationError):
         ExpiryIn(anchor="owner", edge="start", count=0)
     assert ExpiryIn(anchor="owner", edge="start", count=1).count == 1
+
+
+async def test_minori_51_wild_shape_expiring_at_turn_start_closes_the_form_row(client, test_session_factory, monkeypatch):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
+    from tests.integration._telegram_stub import install_fake_telegram
+    from tests.integration.test_rules_states import _add_fighter
+
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    async with test_session_factory() as s:
+        pc = (await s.execute(select(Character.id))).scalar_one()
+    await _add_fighter(test_session_factory, pc)
+    async with test_session_factory() as s:
+        (await s.get(Character, pc)).active_states = [{"key": "wild_shape", "feature_key": "x", "rounds_left": 1, "ends_on": [], "data": {}}]
+        s.add(Companion(character_id=pc, kind="wild_shape", name="Lupo", is_active=True, max_hp=10, current_hp=10, created_at="2026-01-01T00:00:00"))
+        await s.commit()
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/start", json={})
+    for _ in range(3):  # fino al nuovo inizio del turno del PG: la durata scade senza costruire la scheda
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+    as_user(PLAYER_ID)
+    assert [c["is_active"] for c in (await client.get(f"/characters/{pc}/companions")).json()] == [False]
+    async with test_session_factory() as s:
+        assert (await s.get(Character, pc)).active_states == []
+
+
+async def test_minori_50_a_failed_character_is_retried_with_retrofit_at_the_next_start(client, test_session_factory, monkeypatch):
+    broken = await _fighter(client, 3)
+    other = await _fighter(client, 3)
+    real = catalog_migration.sync_cataloged_features
+    calls: list[tuple[int, bool]] = []
+    failing = {"on": True}
+
+    async def flaky(session, char, lang, **kw):
+        calls.append((char.id, bool(kw.get("retrofit"))))
+        if char.id == broken and failing["on"]:
+            raise ValueError("dati rotti")
+        return await real(session, char, lang, **kw)
+
+    monkeypatch.setattr(catalog_migration, "sync_cataloged_features", flaky)
+    await _bump(test_session_factory)
+    await catalog_migration.migrate_catalog(test_session_factory)
+    calls.clear()
+    failing["on"] = False
+    assert await catalog_migration.migrate_catalog(test_session_factory) == 1
+    assert calls == [(broken, True)] and other not in {c for c, _ in calls}  # solo il fallito, con retrofit
+    calls.clear()
+    assert await catalog_migration.migrate_catalog(test_session_factory) == 0 and calls == []

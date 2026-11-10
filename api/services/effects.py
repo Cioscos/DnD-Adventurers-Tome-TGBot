@@ -7,12 +7,12 @@ rising from 0, condition history logging) without duplicating logic.
 from __future__ import annotations
 
 
-from sqlalchemy import event, inspect
+from sqlalchemy import event, inspect, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_object_session
 from sqlalchemy.util import await_only
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, attributes
 
-from core.db.models import Character
+from core.db.models import Character, Companion
 from core.data.labels import condition_label
 from api.services.history import add_history
 from api.services.beast_companion import drop_primal_beast
@@ -297,6 +297,15 @@ def _end_spent_spells(session: Session, char: Character) -> None:
         _drop_given_spells(session, caster)
 
 
+def _close_ended_wild_shape(session: Session, char: Character) -> None:
+    """Lo stato «wild_shape» è sparito da qualunque via (turno dell'incontro, tick, stato chiuso su un altro PG): la riga della forma
+    si chiude qui, senza caricare i compagni nel caso comune (le letture e l'attacco del compagno si fidano della riga)."""
+    old = [s for v in attributes.get_history(char, "active_states").deleted for s in v or []]
+    if any(s.get("key") == "wild_shape" for s in old) and not any(s.get("key") == "wild_shape" for s in char.active_states or []):
+        session.execute(update(Companion).where(Companion.character_id == char.id, Companion.kind == "wild_shape", Companion.is_active.is_(True))
+                        .values(is_active=False).execution_options(synchronize_session=False))
+
+
 @event.listens_for(Session, "before_flush")
 def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     """Un'Ira (o un altro stato) è finita, da qualunque via: i PF temporanei che chi la viveva ha consegnato svaniscono.
@@ -304,6 +313,7 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     Si toglie ciò che resta solo se non supera quanto fu consegnato: se il ricevente ne ha presi di più alti nel frattempo, restano.
     shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo; da rivedere se serve la provenienza."""
     for char in [o for o in session.dirty if isinstance(o, Character)]:
+        _close_ended_wild_shape(session, char)
         _restore_suspended(session, char)
         _drop_given_spells(session, char)
         _end_spent_spells(session, char)
