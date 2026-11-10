@@ -139,12 +139,17 @@ def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
         char.settings = {**settings, SPELL_TEMP_DROPPED: {**(settings.get(SPELL_TEMP_DROPPED) or {}), **dropped}}
 
 
-def forget_spell_temp_drop(char: Any, key: str | None = None) -> None:
-    """La voce di ``SPELL_TEMP_DROPPED`` per lo stato ``key`` (tutte con ``None``) non serve più: un nuovo lancio, l'annullo o il riposo lungo."""
+def forget_spell_temp_drop(char: Any, key: str | None = None, restored: bool = False) -> None:
+    """La voce di ``SPELL_TEMP_DROPPED`` per lo stato ``key`` (tutte con ``None``) non serve più: un nuovo lancio, l'annullo o il riposo lungo.
+
+    Una voce di cui il flush non ha ancora scritto la riga di storico (la fine e il nuovo lancio cadono nello stesso salvataggio) resta
+    come ``log_only``: il flush la scrive e la toglie, e nessun annullo la ridà. ``restored``: i PF sono tornati, niente riga."""
     settings = getattr(char, "settings", None) or {}
     dropped = settings.get(SPELL_TEMP_DROPPED)
     if dropped and (key is None or key in dropped):
-        left = {k: v for k, v in dropped.items() if key is not None and k != key}
+        pending = {k: {**v, "log_only": True} for k, v in dropped.items()
+                   if not restored and not v.get("logged") and (key is None or k == key)}
+        left = {**{k: v for k, v in dropped.items() if key is not None and k != key}, **pending}
         char.settings = {**{k: v for k, v in settings.items() if k != SPELL_TEMP_DROPPED}, **({SPELL_TEMP_DROPPED: left} if left else {})}
 
 

@@ -254,14 +254,20 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
             await _drop_state(session, previous, key, caster.id)
     aura = effect.target.kind == "aura"  # l'aura è viva: solo l'orologio del lanciatore, nessuno stato sui bersagli
     applied = []
+    rolled: dict[str, dict] = {}  # i dati tirati per ogni bersaglio: l'orologio li tiene, un annullo li ridà (Banchetto degli Eroi)
     for target in [] if aura else chars:
-        mine = {**data, **(variant.per_target(data) if variant.per_target else {})}
+        extra = variant.per_target(data) if variant.per_target else {}
+        if extra:
+            rolled[str(target.id)] = extra
+        mine = {**data, **extra}
         begin_state(target, spell_state_spec(key, mine), key, spell.name)
         forget_spell_temp_drop(target, key)  # la voce del lancio precedente non vale per l'annullo di questo
         if variant.on_apply:
             variant.on_apply(target, mine)
         await _give_hp(session, target, variant, mine, key)
         applied.append({"id": target.id, "name": target.name})
+    if rolled:
+        data["per_target"] = rolled
     ends = [*(["concentration_end"] if variant.concentration else []), *(["rest_long"] if variant.until_rest else []), *variant.clock_ends_on]
     begin_state(caster, StateSpec(clock, rounds=variant.duration(slot_level), ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
                 clock, spell.name)
@@ -295,14 +301,15 @@ async def regrant_spells(session: AsyncSession, caster: Character, before_given:
             if target is None or (held and (held.get("data") or {}).get("caster_id") != caster.id):
                 continue
             if held is None:
-                begin_state(target, spell_state_spec(key, state["data"]["state_data"]), key, state.get("name"))
+                saved = state["data"]["state_data"]
+                begin_state(target, spell_state_spec(key, {**saved, **(saved.get("per_target") or {}).get(str(tid), {})}), key, state.get("name"))
                 if offer := state["data"]["state_data"].get("on_close"):  # lo stato che la chiusura aveva lasciato (la letargia) non ha più motivo di esserci
                     await _drop_state(session, target, offer["key"], caster.id)
                 lost = (target.settings or {}).get(SPELL_TEMP_DROPPED, {}).get(key)  # i PF temporanei che la chiusura le aveva tolto
-                if lost and lost["caster_id"] == caster.id and not target.temp_hp:
+                if lost and not lost.get("log_only") and lost["caster_id"] == caster.id and not target.temp_hp:
                     target.temp_hp = lost["amount"]
                     note_spell_temp_hp(target, key, lost["amount"])
-                forget_spell_temp_drop(target, key)
+                forget_spell_temp_drop(target, key, restored=True)
             back.append(tid)
         given[clock] = back
     caster.settings = {**settings, SPELL_GIVEN: given} if given else settings

@@ -325,7 +325,8 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
                 if not e.get("logged"):
                     _add_history(session, char.id, "hp_change", f"PF temporanei svaniti: {e.get('name')} è finito ({e['amount']} → 0)",
                                  meta={"op": "TEMP_HP", "amount": 0, "released": True})
-            char.settings = {**char.settings, SPELL_TEMP_DROPPED: {k: {**e, "logged": True} for k, e in dropped.items()}}
+            kept = {k: {**e, "logged": True} for k, e in dropped.items() if not e.get("log_only")}  # la voce che non serve più si toglie dopo la riga
+            char.settings = {**{k: v for k, v in char.settings.items() if k != SPELL_TEMP_DROPPED}, **({SPELL_TEMP_DROPPED: kept} if kept else {})}
         pending = (char.settings or {}).get(TEMP_RELEASE)
         if not pending:
             continue

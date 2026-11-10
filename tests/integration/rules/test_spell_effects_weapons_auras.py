@@ -220,6 +220,41 @@ async def test_aura_of_life_heals_a_creature_at_zero_hp_at_the_start_of_its_turn
     assert (await _sheet(client, hero))["current_hit_points"] == 1
 
 
+async def test_undo_71_going_back_a_turn_after_a_heal_from_zero_gives_back_the_death_saves_and_unconsciousness(client, test_session_factory):
+    from sqlalchemy import select
+    from core.db.models import GameSession
+    hero, caster, spell = await _table(client, test_session_factory, "Aura of Life", "aura-of-life", 4)
+    await _cast(client, caster, spell, [], level=4)
+    async with test_session_factory() as s:
+        sid = (await s.execute(select(GameSession.id))).scalar_one()
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})).status_code == 201
+    enc = (await client.post(f"/sessions/{sid}/encounter/combatants", json={"name": "Goblin", "count": 1, "initiative_mod": 0, "max_hp": 7, "ac": 15})).json()
+    pcs = [c for c in enc["combatants"] if c["kind"] == "pc"]
+    gob = next(c for c in enc["combatants"] if c["kind"] == "monster")
+    hero_c = next(c for c in pcs if c["character_id"] == hero)
+    caster_c = next(c for c in pcs if c["character_id"] == caster)
+    as_user(PLAYER_ID)
+    await client.post(f"/sessions/{sid}/encounter/combatants/{hero_c['id']}/initiative", json={"die": 15})
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/combatants/{gob['id']}/initiative", json={"die": 10})
+    await client.post(f"/sessions/{sid}/encounter/combatants/{caster_c['id']}/initiative", json={"die": 1})
+    assert (await client.post(f"/sessions/{sid}/encounter/start", json={})).status_code == 200
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{hero}/hp", json={"op": "set_current", "value": 0})).status_code == 200
+    assert (await client.post(f"/characters/{hero}/death_saves/roll", json={"die": 5})).status_code == 200
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # goblin
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # lanciatore
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # eroe: Aura di Vita lo cura
+    healed = await _sheet(client, hero)
+    assert healed["current_hit_points"] == 1 and healed["death_saves"]["failures"] == 0 and not healed["conditions"].get("unconscious")
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    back = await _sheet(client, hero)
+    assert back["current_hit_points"] == 0 and back["death_saves"]["failures"] == 1 and back["conditions"].get("unconscious")
+
+
 async def test_pass_without_trace_adds_ten_to_stealth_of_the_seated_ally(client, test_session_factory):
     hero, caster, spell = await _table(client, test_session_factory, "Pass without Trace", "pass-without-trace", 2)
     before = (await _sheet(client, hero))["skill_bonuses"]["stealth"]

@@ -137,6 +137,10 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             if healed and pc.current_hit_points == healed["after"]:
                 pc.current_hit_points = healed["before"]
                 set_start_heal(pc, [])
+                if "death_saves" in healed:
+                    pc.death_saves = dict(healed["death_saves"])
+                    if healed["unconscious"] and not (pc.conditions or {}).get("unconscious"):
+                        pc.conditions = {**(pc.conditions or {}), "unconscious": True}
             temp = snap.get("temp")  # i PF temporanei d'inizio turno: si tolgono solo se sono ancora quelli dati
             if temp and (pc.temp_hp or 0) == temp["after"]:
                 pc.temp_hp = temp["before"]

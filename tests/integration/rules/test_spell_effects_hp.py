@@ -348,6 +348,42 @@ async def test_heroes_feast_rolls_2d10_for_maximum_and_current(client, test_sess
     assert sheet["computed"]["hp_max_effective"] == 220 and sheet["current_hit_points"] == 220
 
 
+async def test_undo_72_a_reopened_heroes_feast_gives_back_the_rolled_hit_points(client, test_session_factory, monkeypatch):
+    from api.services.spell_effects import _drop_state, regrant_spells
+    from api.services.session_allies import load_receiver
+    from core.rules.states import SPELL_GIVEN
+    _max_dice(monkeypatch)
+    hero, caster, spell = await _table(client, test_session_factory, "Heroes' Feast", "heroes-feast", 6)
+    await _cast(client, caster, spell, [hero], level=6)
+    async with test_session_factory() as s:  # la chiusura dell'orologio toglie lo stato al bersaglio, l'annullo lo riapre
+        c = await load_receiver(s, caster)
+        given = dict((c.settings or {})[SPELL_GIVEN])
+        await _drop_state(s, await load_receiver(s, hero), "spell:heroes_feast", caster)
+        c.settings = {k: v for k, v in c.settings.items() if k != SPELL_GIVEN}
+        await regrant_spells(s, c, given)
+        await s.commit()
+    sheet = await _sheet(client, hero)
+    assert sheet["computed"]["hp_max_effective"] == 220
+
+
+async def test_undo_83_the_vanished_temp_hp_line_is_written_even_if_a_new_cast_follows_in_the_same_save(test_session_factory):
+    from sqlalchemy import select
+    from core.db.models import Character, CharacterHistory
+    from core.rules.states import drop_spell_temp_hp, forget_spell_temp_drop
+    async with test_session_factory() as s:
+        hero = Character(user_id=1, name="Eroe", hit_points=20, current_hit_points=20, temp_hp=3)
+        s.add(hero)
+        await s.flush()
+        closed = [{"key": "spell:heroism", "name": "Eroismo", "data": {"temp_given": 3, "caster_id": 99}}]
+        drop_spell_temp_hp(hero, closed)  # l'incantesimo finisce e toglie i PF temporanei
+        forget_spell_temp_drop(hero, "spell:heroism")  # un nuovo lancio (o il riposo lungo) nello stesso salvataggio
+        hero.temp_hp = 2  # forza il flush di una riga modificata
+        await s.commit()
+        rows = (await s.execute(select(CharacterHistory.description).where(CharacterHistory.character_id == hero.id))).scalars().all()
+        assert any("PF temporanei svaniti" in r for r in rows)
+        assert not (hero.settings or {}).get("spell_temp_dropped")
+
+
 # --- Interdizione alla Morte ---------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("edition", ["2014", "2024"])
