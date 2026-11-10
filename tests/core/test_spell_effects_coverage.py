@@ -57,3 +57,36 @@ def test_text_only_entries_have_italian_and_english_text():
 def test_registry_has_no_duplicate_srd_index():
     seen = [i for e in SPELL_EFFECTS.values() for i in e.srd_index]
     assert len(seen) == len(set(seen))
+
+
+def _v(edition, index):
+    return spell_effect(edition, index)[1]
+
+
+def test_mirror_image_2014_thresholds_follow_the_manual():
+    it = _v("2014", "mirror-image").text["it"]
+    assert "6+ con 3 duplicati, 8+ con 2, 11+ con 1" in it
+    assert "6+ with 3, 8+ with 2, 11+ with 1" in _v("2014", "mirror-image").text["en"]
+    assert "3 o più" in _v("2024", "mirror-image").text["it"]
+
+
+def test_animal_shapes_differs_by_edition():
+    old, new = _v("2014", "animal-shapes"), _v("2024", "animal-shapes")
+    assert old.concentration and not new.concentration
+    assert new.rounds == old.rounds
+    assert "PF temporanei" in new.text["it"] and "temporary HP" in new.text["en"]
+
+
+@pytest.mark.parametrize("index", ["gaseous-form", "wind-walk"])
+def test_gaseous_resistance_follows_edition(index):
+    old, new = _v("2014", index), _v("2024", index)
+    assert "non magic" in old.text["it"] and "nonmagical" in old.text["en"]
+    for lang, words in (("it", ("contundenti", "perforanti", "taglienti", "Prono")), ("en", ("bludgeoning", "piercing", "slashing", "Prone"))):
+        assert all(w in new.text[lang] for w in words)
+        assert "nonmagical" not in new.text[lang] and "non magic" not in new.text[lang]
+
+
+def test_other_rule_texts_match_the_manual():
+    assert "incapacitati" in _v("2014", "wind-walk").text["it"]
+    assert "Prono" in _v("2014", "destructive-wave").text["it"] and "Prone" in _v("2024", "destructive-wave").text["en"]
+    assert "infligge danni" in _v("2024", "sanctuary").text["it"] and "deals damage" in _v("2024", "sanctuary").text["en"]

@@ -24,10 +24,10 @@ _POLYMORPH = {
     "2024": _text("La creatura prende la forma di una bestia: ottiene PF temporanei pari ai PF della forma e usa il profilo della bestia. Applica il profilo a mano.",
                   "The creature takes a beast's form: it gains temporary HP equal to the form's HP and uses the beast's stat block. Apply the stat block by hand.", HOUR, concentration=True),
 }
-_MIRROR_2014 = _text("Tre duplicati illusori: quando vieni attaccato tira un d20 per vedere se il colpo va a un duplicato (11+ con 3 duplicati, 8+ con 2, 6+ con 1). Lo risolve il GM.",
-                     "Three illusory duplicates: when you are attacked roll a d20 to see whether the attack targets a duplicate (11+ with 3, 8+ with 2, 6+ with 1). The GM resolves it.", MIN1)
-_MIRROR_2024 = _text("Tre duplicati illusori: un attacco contro di te può colpire un duplicato (un d6 per duplicato). Lo risolve il GM.",
-                     "Three illusory duplicates: an attack against you may hit a duplicate (a d6 per duplicate). The GM resolves it.", MIN1)
+_MIRROR_2014 = _text("Tre duplicati illusori: quando vieni attaccato tira un d20 per vedere se il colpo va a un duplicato (6+ con 3 duplicati, 8+ con 2, 11+ con 1). Lo risolve il GM.",
+                     "Three illusory duplicates: when you are attacked roll a d20 to see whether the attack targets a duplicate (6+ with 3, 8+ with 2, 11+ with 1). The GM resolves it.", MIN1)
+_MIRROR_2024 = _text("Tre duplicati illusori: un attacco contro di te può colpire un duplicato (un d6 per duplicato: con 3 o più colpisce un duplicato, che viene distrutto). Lo risolve il GM.",
+                     "Three illusory duplicates: an attack against you may hit a duplicate (a d6 per duplicate: 3 or higher hits a duplicate, which is destroyed). The GM resolves it.", MIN1)
 _BLINK = {
     "2014": _text("A fine di ogni tuo turno tira un d20: con 11 o più sparisci nel Piano Etereo e torni all'inizio del turno dopo. Lo gestisce il GM.",
                   "At the end of each of your turns roll a d20: on 11 or higher you vanish to the Ethereal Plane and return at the start of your next turn. The GM handles it.", MIN1),
@@ -35,10 +35,10 @@ _BLINK = {
                   "At the end of each of your turns roll a d6: on 4-6 you vanish to the Ethereal Plane and return at the start of your next turn. The GM handles it.", MIN1),
 }
 _WIND_WALK = {
-    "2014": _text("Tu e fino a dieci alleati diventate nubi con volo 90 m e resistenza ai danni non magici; riassumere la forma richiede 1 minuto.",
-                  "You and up to ten allies become clouds with a 300 ft fly speed and resistance to nonmagical damage; reverting takes 1 minute.", HOUR8),
-    "2024": _text("Tu e fino a dieci alleati diventate nubi con volo 90 m e resistenza ai danni non magici; riassumere la forma richiede 1 minuto e nel frattempo si è storditi.",
-                  "You and up to ten allies become clouds with a 300 ft fly speed and resistance to nonmagical damage; reverting takes 1 minute and you are stunned meanwhile.", HOUR8),
+    "2014": _text("Tu e fino a dieci alleati diventate nubi con volo 90 m e resistenza ai danni delle armi non magiche; cambiare forma richiede 1 minuto, durante il quale si è incapacitati e immobili.",
+                  "You and up to ten allies become clouds with a 300 ft fly speed and resistance to nonmagical weapon damage; changing form takes 1 minute, during which you are incapacitated and unable to move.", HOUR8),
+    "2024": _text("Tu e fino a dieci alleati diventate nubi con volo 90 m e immunità a Prono e resistenza ai danni contundenti, perforanti e taglienti; tornare normali richiede 1 minuto, durante il quale si è storditi.",
+                  "You and up to ten allies become clouds with a 300 ft fly speed, immunity to Prone and resistance to bludgeoning, piercing and slashing damage; reverting takes 1 minute, during which you are stunned.", HOUR8),
 }
 
 SPELLS: tuple[SpellEffect, ...] = (
@@ -50,9 +50,11 @@ SPELLS: tuple[SpellEffect, ...] = (
         "Cambia taglia: se ingrandito vantaggio a prove e TS di Forza e +1d4 ai danni con le armi; se ridotto svantaggio e -1d4. Applicalo a mano.",
         "Changes size: enlarged gives advantage on Strength checks and saves and +1d4 weapon damage; reduced gives disadvantage and -1d4. Apply it by hand.", MIN1, concentration=True))),
     SpellEffect("polymorph", ("polymorph",), ("Metamorfosi", "Polymorph"), _ALLY, _POLYMORPH),
-    SpellEffect("animal_shapes", ("animal-shapes",), ("Forme Animali", "Animal Shapes"), SpellTarget("allies", lambda slot: 10), both(_text(
-        "Le creature consenzienti scelte diventano bestie: applica i profili a mano.",
-        "The chosen willing creatures become beasts: apply the stat blocks by hand.", DAY, concentration=True))),
+    SpellEffect("animal_shapes", ("animal-shapes",), ("Forme Animali", "Animal Shapes"), SpellTarget("allies", lambda slot: 10), {
+        "2014": _text("Le creature consenzienti scelte diventano bestie: usano i PF della forma e il danno in eccesso passa alla forma normale. Applica i profili a mano.",
+                      "The chosen willing creatures become beasts: they use the form's HP and excess damage carries over to the normal form. Apply the stat blocks by hand.", DAY, concentration=True),
+        "2024": _text("Le creature consenzienti scelte diventano bestie e ottengono PF temporanei pari ai PF della forma; senza concentrazione. Applica i profili a mano.",
+                      "The chosen willing creatures become beasts and gain temporary HP equal to the form's HP; no concentration. Apply the stat blocks by hand.", DAY)}),
     SpellEffect("shapechange", ("shapechange",), ("Trasformazione", "Shapechange"), _SELF, both(_text(
         "Prendi la forma di una creatura e ne usi il profilo, tenendo punteggi mentali e privilegi di classe. Applica il profilo a mano.",
         "You take the form of a creature and use its stat block, keeping mental scores and class features. Apply the stat block by hand.", HOUR, concentration=True))),
@@ -62,14 +64,18 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("alter_self", ("alter-self",), ("Alterare Se Stesso", "Alter Self"), _SELF, both(_text(
         "Scegli: respirare sott'acqua e nuotare, cambiare aspetto, oppure armi naturali (1d6, magiche). Il tipo di danno delle armi naturali lo decidi a mano.",
         "Choose: breathe underwater and swim, change appearance, or natural weapons (1d6, magical). You choose the natural weapons' damage type by hand.", HOUR, concentration=True))),
-    SpellEffect("gaseous_form", ("gaseous-form",), ("Forma Gassosa", "Gaseous Form"), _ALLY, both(_text(
-        "Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
-        "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True))),
+    SpellEffect("gaseous_form", ("gaseous-form",), ("Forma Gassosa", "Gaseous Form"), _ALLY, {
+        "2014": _text("Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
+                      "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
+        "2024": _text("Nube con volo 3 m, immunità a Prono, resistenza ai danni contundenti, perforanti e taglienti e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
+                      "A cloud with a 10 ft fly speed, immunity to Prone, resistance to bludgeoning, piercing and slashing damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True)}),
     SpellEffect("wind_walk", ("wind-walk",), ("Camminare nel Vento", "Wind Walk"), SpellTarget("allies", lambda slot: 11), _WIND_WALK),
     SpellEffect("mirror_image", ("mirror-image",), ("Immagine Speculare", "Mirror Image"), _SELF, {"2014": _MIRROR_2014, "2024": _MIRROR_2024}),
-    SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, both(_text(
-        "Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto attacca o lancia contro un nemico.",
-        "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward attacks or casts at an enemy.", MIN1))),
+    SpellEffect("sanctuary", ("sanctuary",), ("Santuario", "Sanctuary"), _ALLY, {
+        "2014": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto attacca o lancia un incantesimo su un nemico.",
+                      "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward attacks or casts a spell at an enemy.", MIN1),
+        "2024": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
+                      "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1)}),
     SpellEffect("blink", ("blink",), ("Intermittenza", "Blink"), _SELF, _BLINK),
     SpellEffect("glibness", ("glibness",), ("Loquacità", "Glibness"), _SELF, both(_text(
         "Nelle prove di Carisma, se il dado dà meno di 15 conta 15.",
@@ -96,8 +102,8 @@ SPELLS: tuple[SpellEffect, ...] = (
         "Area di 18 m consacrata finché non è dissolta, con un effetto extra a scelta. Zona: tienine conto a mano.",
         "A 60 ft area consecrated until dispelled, with a chosen extra effect. A zone: account for it by hand."))),
     SpellEffect("destructive_wave", ("destructive-wave",), ("Onda Distruttiva", "Destructive Wave"), _SELF, both(_instant(
-        "Onda di tuono in 9 m: 5d6 tuono più 5d6 radiante o necrotico, TS Costituzione. Tira i danni a mano.",
-        "A thunder wave in 30 ft: 5d6 thunder plus 5d6 radiant or necrotic, Constitution save. Roll the damage by hand."))),
+        "Onda di tuono in 9 m: 5d6 tuono più 5d6 radiante o necrotico e Prono, TS Costituzione: chi supera dimezza i danni e resta in piedi. Tira i danni a mano.",
+        "A thunder wave in 30 ft: 5d6 thunder plus 5d6 radiant or necrotic and Prone, Constitution save: on a success half damage and not Prone. Roll the damage by hand."))),
     SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Flame Strike"), _SELF, {"2014": _instant(
         "Colonna di fuoco divino: 4d6 fuoco più 4d6 radiante, TS Destrezza. Con uno slot più alto, +1d6 di fuoco o radiante a tua scelta per livello: scegli e tira a mano.",
         "A column of divine fire: 4d6 fire plus 4d6 radiant, Dexterity save. At a higher slot, +1d6 fire or radiant (your choice) per level: choose and roll by hand.")}),
