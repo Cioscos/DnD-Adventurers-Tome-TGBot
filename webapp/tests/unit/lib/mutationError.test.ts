@@ -33,7 +33,7 @@ describe('notifyCastError', () => {
   })
 
   it('says why Nascondersi was refused instead of the generic text', () => {
-    for (const code of ['no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn']) {
+    for (const code of ['no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest']) {
       error.mockReset()
       notifyMutationError(new ApiError(409, { code }))
       expect(error).toHaveBeenCalledWith(`common.server_errors.${code}`)
