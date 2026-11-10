@@ -47,6 +47,13 @@ _LETHARGY_VARIANT = SpellVariant(
     text=txt("Letargia di Velocità: niente azioni né movimento fino alla fine del suo turno successivo.",
              "Haste lethargy: no actions or movement until the end of its next turn."))
 
+_EXPEDITIOUS_RETREAT_2014 = _described(
+    MIN10, "Scatto come azione bonus a ogni tuo turno (al lancio e poi ogni turno): lo spendi tu dal Turno, la scheda non lo conta.",
+    "Dash as a bonus action on each of your turns (when you cast it and then every turn): you spend it from the Turn, the sheet does not count it.", concentration=True)
+_EXPEDITIOUS_RETREAT_2024 = _described(
+    MIN10, "Compi l'azione Scatto al lancio e per la durata puoi ripeterla come azione bonus: la spendi tu dal Turno, la scheda non la conta.",
+    "You take the Dash action when you cast it and for the duration you can repeat it as a bonus action: you spend it from the Turn, the sheet does not count it.", concentration=True)
+
 _JUMP_2014 = SpellVariant(  # distanza triplicata: +2 volte il salto base (punteggio di Forza in piedi); un solo bersaglio, senza scalata
     modifiers=lambda d: (Modifier("jump_bonus", lambda ctx: 2 * ability_score(ctx.char, "strength")),), rounds=10,
     max_targets=lambda slot: 1,
@@ -100,6 +107,8 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("fly", ("fly",), ("Volare", "Fly"), SpellTarget("allies", lambda slot: max(slot - 2, 1)), both(_FLY)),
     SpellEffect("haste", ("haste",), ("Velocità", "Haste"), SpellTarget("ally"), {"2014": _HASTE, "2024": _HASTE_2024}),
     SpellEffect("haste_lethargy", (), ("Letargia di Velocità", "Haste Lethargy"), SpellTarget("self"), both(_LETHARGY_VARIANT)),  # lo stato che Velocità lascia
+    SpellEffect("expeditious_retreat", ("expeditious-retreat",), ("Ritirata Rapida", "Ritirata rapida", "Expeditious Retreat"), SpellTarget("self"),
+                {"2014": _EXPEDITIOUS_RETREAT_2014, "2024": _EXPEDITIOUS_RETREAT_2024}),
     SpellEffect("jump", ("jump",), ("Saltare", "Jump"), SpellTarget("allies", lambda slot: max(slot, 1)),
                 {"2014": _JUMP_2014, "2024": _JUMP_2024}),
     SpellEffect("freedom_of_movement", ("freedom-of-movement",), ("Libertà di Movimento", "Freedom of Movement"),

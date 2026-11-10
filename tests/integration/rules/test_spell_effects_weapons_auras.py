@@ -363,3 +363,26 @@ async def test_the_turn_in_which_haste_ends_does_not_keep_its_extra_action(clien
     as_user(PLAYER_ID)
     state = (await client.get(f"/characters/{hero}/turn-state")).json()
     assert state["turn"]["extra_actions"] == 0 and state["attacks_allowed"] == 1
+
+
+# --- Randello Incantato, Ritirata Rapida, Faretra Rapida: voci solo testo ---------------------------------------------
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+@pytest.mark.parametrize("srd,concentration,needle", [("shillelagh", False, "d8"), ("expeditious-retreat", True, "Scatto"), ("swift-quiver", True, "due attacchi")])
+def test_the_text_only_entries_are_in_the_catalog_with_name_and_duration(edition, srd, concentration, needle):
+    effect, variant = spell_effect(edition, srd)
+    assert variant.track and variant.concentration is concentration and variant.duration(5) and needle in variant.text["it"] and variant.text["en"]
+
+
+def test_shillelagh_text_follows_the_dice_and_ability_of_each_edition():
+    text14, text24 = (spell_effect(e, "shillelagh")[1].text["it"] for e in ("2014", "2024"))
+    assert "d8" in text14 and "d10" not in text14 and "caratteristica da incantatore" in text14
+    assert "d10" in text24 and "d12" in text24 and "2d6" in text24 and "caratteristica da incantatore" in text24
+
+
+@pytest.mark.parametrize("srd,name,level,state", [("expeditious-retreat", "Expeditious Retreat", 1, "spell:expeditious_retreat"), ("swift-quiver", "Swift Quiver", 5, "spell:swift_quiver"),
+                                                  ("shillelagh", "Shillelagh", 0, "spell:shillelagh")])
+async def test_casting_a_text_only_entry_tracks_the_state_and_gives_the_text(client, test_session_factory, srd, name, level, state):
+    hero, caster, spell = await _table(client, test_session_factory, name, srd, level)
+    r = await _cast(client, caster, spell, [], level=level or None)
+    assert r.json()["spell_effects"]["text"]
+    assert await _states(client, caster, GM_ID, state)

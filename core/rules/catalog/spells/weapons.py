@@ -10,6 +10,7 @@ Fonte di Luce Lunare, Evoca Elementali Minori).
 from __future__ import annotations
 
 from core.rules.catalog.spells.defenses import HOUR, MIN10, both, res, txt
+from core.rules.catalog.spells.movement import _described
 from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
 from core.rules.types import Modifier, RollOptionSpec, RuleContext
 
@@ -134,9 +135,30 @@ _MINOR_ELEMENTALS = SpellVariant(
     text=txt("Ai tuoi attacchi che colpiscono nell'Emanazione (4,5 m) l'app chiede se il bersaglio è dentro e aggiunge 2d8 del tipo scelto (+2d8 per slot oltre il 4°). Il terreno è Difficile per i nemici: lo applica il GM.",
              "On your attacks that hit in the Emanation (15 ft) the app asks whether the target is inside and adds 2d8 of the chosen type (+2d8 per slot above 4th). The ground is Difficult for enemies: the GM applies it."))
 
+# --- Solo testo: l'effetto cambia la caratteristica, il dado o gli attacchi di un'arma e la scheda non lo modella ------------
+_SHILLELAGH_2014 = _described(  # trucchetto: 1 minuto, nessuna concentrazione
+    10, "Il randello o bastone che impugni diventa magico e usa la tua caratteristica da incantatore al posto della Forza per attacco e danni; il suo dado di danno è d8. "
+        "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
+    "The club or quarterstaff you hold becomes magical and uses your spellcasting ability instead of Strength for attack and damage rolls; its damage die is a d8. "
+    "It ends if you cast it again or let go of the weapon: you apply it.")
+_SHILLELAGH_2024 = _described(
+    10, "Il Randello o Bastone che impugni usa la tua caratteristica da incantatore al posto della Forza per tiri per colpire e danni in mischia; "
+        "il suo dado di danno diventa d8 (d10 dal 5° livello, d12 dall'11°, 2d6 dal 17°) e il danno può essere da Forza o quello normale. "
+        "Finisce se lo rilanci o lasci l'arma: lo applichi tu.",
+    "The Club or Quarterstaff you hold uses your spellcasting ability instead of Strength for melee attack and damage rolls; "
+    "its damage die becomes a d8 (d10 from level 5, d12 from 11, 2d6 from 17) and the damage can be Force or its normal type. "
+    "It ends if you cast it again or let go of the weapon: you apply it.")
+_SWIFT_QUIVER = _described(
+    MIN1, "La faretra produce munizioni non magiche; con l'azione bonus, a ogni tuo turno, fai due attacchi con un'arma che le usa (Frecce o Quadrelli): "
+          "gli attacchi li fai e li registri tu dal Turno.",
+    "The quiver produces nonmagical ammunition; as a bonus action on each of your turns you make two attacks with a weapon that uses it (arrows or bolts): "
+    "you make and record the attacks yourself from the Turn.", concentration=True)
+
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("magic_weapon", ("magic-weapon",), ("Arma Magica", "Magic Weapon"), SpellTarget("ally"), {"2014": _MAGIC_WEAPON_2014, "2024": _MAGIC_WEAPON_2024}),
     SpellEffect("elemental_weapon", ("elemental-weapon",), ("Arma Elementale", "Elemental Weapon"), SpellTarget("ally"), both(_ELEMENTAL)),
+    SpellEffect("shillelagh", ("shillelagh",), ("Randello Incantato", "Shillelagh"), SpellTarget("self"), {"2014": _SHILLELAGH_2014, "2024": _SHILLELAGH_2024}),
+    SpellEffect("swift_quiver", ("swift-quiver",), ("Faretra Rapida", "Swift Quiver"), SpellTarget("self"), both(_SWIFT_QUIVER)),
     SpellEffect("divine_favor", ("divine-favor",), ("Favore Divino", "Favore divino", "Divine Favor"), SpellTarget("self"),
                 {"2014": _DIVINE_FAVOR_2014, "2024": _DIVINE_FAVOR_2024}),
     SpellEffect("crusaders_mantle", ("crusaders-mantle",), ("Manto del Crociato", "Mantello del Crociato", "Crusader's Mantle"), SpellTarget("aura"),
