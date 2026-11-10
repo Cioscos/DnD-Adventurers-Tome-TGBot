@@ -296,3 +296,11 @@ def test_lands_aid_message_drops_the_gm_hint_when_the_seated_ally_is_already_hea
     told = _aid_message(ctx, {"mode": "other", "ally_healed": True})
     assert "Costituzione" in told["it"] and "GM" not in told["it"] and "GM" not in told["en"]
     assert "GM" in _aid_message(ctx, {"mode": "other"})["it"]
+
+
+def test_lands_aid_message_29_has_no_trailing_space_when_the_ally_is_already_healed():
+    from types import SimpleNamespace
+    from core.rules.catalog.y2024.druid import _aid_message
+    char = SimpleNamespace(active_states=[{"key": "lands_aid", "data": {"dc": 13, "damage": 9}}], turn_state={})
+    msg = _aid_message(SimpleNamespace(char=char), {"mode": "other", "ally_healed": True})
+    assert all(text == text.rstrip() for text in msg.values())

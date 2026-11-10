@@ -449,11 +449,13 @@ def _heal_message(_ctx: RuleContext, params: dict) -> dict[str, str] | None:
     if params.get("mode") == "other" and params.get("ally_healed"):
         return None  # PF e condizione hanno già i loro toast (``received``, ``removal``)
     if params.get("mode") == "other":
-        return _both("La creatura toccata recupera i PF indicati: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."
+        n = int(params.get("dice_total") or 0) + _wis(_ctx)  # la cifra che il GM deve applicare (il server non l'ha scritta su nessuna scheda)
+        return _both(f"La creatura toccata recupera {n} PF: se siede alla serata e l'hai scelta, è già curata; altrimenti riferiscili al GM."
                      + (" La condizione scelta è tolta se hai scelto un personaggio della serata; altrimenti riferiscilo al GM." if params.get("condition") else ""),
-                     "The touched creature regains the shown hit points: if it sits at the evening and you picked it, it is already healed; "
+                     f"The touched creature regains {n} hit points: if it sits at the evening and you picked it, it is already healed; "
                      "otherwise tell the GM." + (" The chosen condition is removed if you picked a character at the table; otherwise tell the GM." if params.get("condition") else ""))
-    return _both("Recuperi i PF indicati.", "You regain the shown hit points.")
+    n = params.get("healed", 0)  # i PF davvero recuperati, dopo il tetto del massimo
+    return _both(f"Recuperi {n} PF.", f"You regain {n} hit points.")
 
 
 def _spend_flurry_strike(ctx: RuleContext, _params: dict) -> None:

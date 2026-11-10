@@ -146,6 +146,7 @@ async def test_hand_of_healing_costs_a_point_and_the_action_and_heals_a_martial_
     r = await _use(client, cid, HEAL, params={"mode": "self"})
     assert r.status_code == 200, r.text
     assert r.json()["healed"] == 4 + 3 and (await _full(client, cid))["current_hit_points"] == 17
+    assert "7 PF" in r.json()["message"]["it"] and "7 hit points" in r.json()["message"]["en"]  # punto 30: la cifra, non «i PF indicati»
     assert await _ki(client, cid) == 2 and (await _turn(client, cid))["action_used"] is True
     row = await _ability(client, cid, HEAL)
     assert row["ally_modes"] == ["other"]
@@ -157,6 +158,7 @@ async def test_hand_of_healing_on_another_creature_reports_the_amount_and_spends
     r = await _use(client, cid, HEAL, params={"mode": "other"})
     assert r.status_code == 200, r.text
     assert r.json()["given"] == 5 + 3 and r.json()["healed"] == 0 and await _ki(client, cid) == 2
+    assert "8 PF" in r.json()["message"]["it"] and "8 hit points" in r.json()["message"]["en"]
 
 
 async def test_hand_of_healing_is_refused_without_points_or_action_and_costs_nothing(client):
