@@ -17,7 +17,7 @@ from core.rules.catalog.y2014.wizard import _no_options
 from core.rules.catalog.y2014.wizard_common import mod as _mod
 from core.rules.catalog.y2014.wizard_schools import PROJECTED_USE, SPELL_RESISTANCE_DAMAGE, SPELL_RESISTANCE_SAVE
 from core.rules.catalog.y2014.wizard_schools_b import EXPERT_DIVINATION, PORTENT, _third_eye
-from core.rules.catalog.y2014.wizard_schools_c import OVERCHANNEL_OPTION, _empowered, _object_text
+from core.rules.catalog.y2014.wizard_schools_c import OVERCHANNEL_OPTION, _empowered, _evocation_save, _object_text
 from core.rules.schools import WINDOW_ILLUSION_TURN, normalize_school
 from core.rules.states import has_state
 from core.rules.types import (
@@ -199,7 +199,7 @@ def _sculpt_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 SCULPT_SPELLS = RollOptionSpec(
     key=f"{P}sculpt_spells", phase="before", rolls=("cast",), effect=_sculpt_effect,
-    available=lambda c: c.spell is not None and normalize_school(c.spell.school) == "evocation",
+    available=_evocation_save,
     label=_both("Plasmare Incantesimi: proteggi alcune creature visibili dall'incantesimo",
                 "Sculpt Spells: shield some visible creatures from the spell"))
 

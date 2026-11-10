@@ -50,9 +50,11 @@ from api.routers._helpers import collect_homebrew_notifications, roll_concentrat
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.warlock_subclasses import THRALL_CAST
 from core.rules.modifiers import modifiers_for
+from core.rules.types import RuleContext
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
 from api.services.last_damage import damage_parts, last_damage_total, pairs, regroup
@@ -698,7 +700,17 @@ def _cast_level(spell: Spell, slot_level: int | None, ritual: bool = False) -> i
 def _end_cast(char: Character) -> None:
     """Le opzioni del lancio hanno visto cosa c'era prima di questo incantesimo: il segno non serve più."""
     turn = get_turn(char)
-    if turn.pop("cast_prior_slot", None) is not None:
+    if any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None]):  # nuovo lancio: Invocazione Potente si riapre
+        char.turn_state = turn
+
+
+def _mark_empowered(char: Character, spell: Spell) -> None:
+    """Invocazione Potente somma l'Intelligenza a un solo tiro di danno per lancio: il tiro appena contato chiude il bonus."""
+    if any(spec.key == "wizard.empowered_evocation" and _empowered(RuleContext(
+            char=char, edition=character_edition(char), roll="damage", spell=spell, class_row=row, class_level=row.level))
+           for spec, row in active_features(char)):
+        turn = get_turn(char)
+        turn[EMPOWERED_USED] = spell.id
         char.turn_state = turn
 
 
@@ -817,6 +829,7 @@ async def roll_spell_damage(
 
     # Privilegi che aggiungono un fisso ai danni di un incantesimo (Incantesimi Potenti)
     base_bonus += modifiers_for(char, "damage", spell=spell).flat
+    _mark_empowered(char, spell)
 
     # Apply critical (double dice count, not the flat bonus)
     dice_count = base_count * 2 if body.is_critical else base_count

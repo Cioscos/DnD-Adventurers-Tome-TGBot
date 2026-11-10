@@ -346,3 +346,12 @@ async def test_minori_8_55_the_self_damage_uses_the_request_language_and_the_rol
     assert (await _overchannel(client, cid, ball, 3)).status_code == 200
     assert langs == ["en"]
     assert len(commits) == 1  # solo quello di chiusura della richiesta
+
+
+async def test_minori_14_empowered_evocation_counts_once_per_cast(client):
+    cid = await _wizard(client, 10, "evocation", intelligence=18)
+    ball = await _evocation(client, cid)
+    assert (await _damage(client, cid, ball, casting_level=3, main_rolls=[1] * 8))["total"] == 8 + 4
+    assert (await _damage(client, cid, ball, casting_level=3, main_rolls=[1] * 8))["total"] == 8
+    assert (await client.post(f"/characters/{cid}/spells/{ball}/use", json={"slot_level": 3})).status_code == 200
+    assert (await _damage(client, cid, ball, casting_level=3, main_rolls=[1] * 8))["total"] == 8 + 4

@@ -74,9 +74,13 @@ SCULPT_SPELLS = RollOptionSpec(
            "en": "Sculpt Spells: shield some visible creatures from the spell"})
 
 
+EMPOWERED_USED = "empowered_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il bonus (un tiro per lancio)
+
+
 def _empowered(ctx: RuleContext) -> bool:
     spell = ctx.spell
     return (ctx.roll == "damage" and spell is not None and normalize_school(spell.school) == "evocation"
+            and (ctx.char.turn_state or {}).get(EMPOWERED_USED) != spell.id
             and (spell.class_id == ctx.class_row.id or (spell.class_id is None and len(ctx.char.classes) == 1)))
 
 
@@ -118,8 +122,8 @@ EVOCATION = (
             subclass="evocation", passive=True, save_half_cantrips=True),
     feature("empowered_evocation", CK, ED, 10, "Invocazione Potente / Empowered Evocation (Invocazione 10, pag. 87)",
             ("Invocazione Potente", "Empowered Evocation"),
-            ("Aggiungi il modificatore di Intelligenza al danno di ogni tuo incantesimo da mago di invocazione.",
-             "Add your Intelligence modifier to the damage of every wizard evocation spell you cast."),
+            ("Aggiungi il modificatore di Intelligenza a un tiro di danno di ogni tuo incantesimo da mago di invocazione.",
+             "Add your Intelligence modifier to one damage roll of every wizard evocation spell you cast."),
             subclass="evocation", modifiers=(Modifier("damage", lambda c: mod(c, "intelligence"), when=_empowered,
                                                        source=f"feature:{CK}.empowered_evocation"),)),
     feature("overchannel", CK, ED, 14, "Saturazione Magica / Overchannel (Invocazione 14, pag. 87)",

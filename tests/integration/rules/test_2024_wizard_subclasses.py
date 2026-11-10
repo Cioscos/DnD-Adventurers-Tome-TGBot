@@ -539,3 +539,19 @@ async def test_minori_13_the_savant_follows_the_multiclass_slot_table(client):
     assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "cleric", "level": 4})).status_code in (200, 201)
     pick = _choice(await _full(client, cid), "divination_savant")  # livello da incantatore 7: slot di 4° livello
     assert pick["count"] == 4 and pick["spell_pick"]["max_level"] == 4
+
+
+async def test_minori_14_sculpt_spells_needs_a_saving_throw(client):
+    cid = await _make(client, "evoker", 7)
+    bolt = await _spell(client, cid, "Dardo", 1, school="evocation", attack_save="ATK", casting_time="1 azione", damage_dice="3d6", damage_type="fire")
+    assert SCULPT not in await _roll_keys(client, cid, "cast", spell_id=bolt, casting_level=1)
+
+
+async def test_minori_14_empowered_evocation_adds_intelligence_to_one_damage_roll_per_cast(client):
+    cid = await _make(client, "evoker", 10, intelligence=18)
+    ball = await _evocation(client, cid)
+    first = await _roll_damage(client, cid, ball, casting_level=3, main_rolls=[3] * 8)
+    assert first["total"] == 24 + 4
+    assert (await _roll_damage(client, cid, ball, casting_level=3, main_rolls=[3] * 8))["total"] == 24  # lo stesso lancio: una volta sola
+    assert (await client.post(f"/characters/{cid}/spells/{ball}/use", json={"slot_level": 3})).status_code == 200
+    assert (await _roll_damage(client, cid, ball, casting_level=3, main_rolls=[3] * 8))["total"] == 24 + 4  # nuovo lancio
