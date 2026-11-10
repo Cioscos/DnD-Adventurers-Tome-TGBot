@@ -85,6 +85,7 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     release_given_spells(char, closed)
     release_suspended(char, closed)
     end_extra_action(char, closed)
+    close_wild_shape_rows(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
         if offer:
@@ -94,6 +95,15 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
     if gone:
         char.conditions = {**(char.conditions or {}), **{c: False for c in gone}}
+
+
+def close_wild_shape_rows(char: Any, closed: list[dict]) -> None:
+    """Finito lo stato «wild_shape» la forma non è più attiva: la riga si chiude qui, nelle scritture, così le letture non devono
+    ripararla. Solo se i compagni sono già caricati (altrimenti la lettura la tratta comunque come chiusa)."""
+    if any(s.get("key") == "wild_shape" for s in closed):
+        for c in char.__dict__.get("companions") or ():
+            if c.kind == "wild_shape":
+                c.is_active = False
 
 
 def end_extra_action(char: Any, closed: list[dict]) -> None:

@@ -8,6 +8,7 @@ the routers.
 """
 from __future__ import annotations
 
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
@@ -37,10 +38,28 @@ from core.game.stats import effective_ability_mod, effective_ability_score, migr
 from api.routers._helpers import initiative_bonus
 
 
+_READ_ONLY_ATTRS = ("base_armor_class", "base_armor_class_override", "settings")
+
+
 async def build_character_response(
-    session: AsyncSession, char: Character,
+    session: AsyncSession, char: Character, *, persist: bool = True,
 ) -> CharacterFull:
-    """Build a CharacterFull response with homebrew breakdown populated."""
+    """Build a CharacterFull response with homebrew breakdown populated.
+
+    ``persist=False`` (i GET): i valori ricalcolati (CA, migrazione della CA) vanno nella risposta ma non nel database;
+    li salvano le scritture che li cambiano."""
+    if persist:
+        return await _build(session, char, persist=True)
+    saved = {a: getattr(char, a) for a in _READ_ONLY_ATTRS}
+    try:
+        with session.no_autoflush:  # senza flush il ricalcolo non diventa un UPDATE
+            return await _build(session, char, persist=False)
+    finally:
+        for attr, value in saved.items():
+            set_committed_value(char, attr, value)
+
+
+async def _build(session: AsyncSession, char: Character, *, persist: bool) -> CharacterFull:
     # Copre ogni percorso che cambia caratteristiche o oggetti senza passare da `apply_equip_ac`.
     migrate_character_ac(char)
     sync_base_ac(char)
@@ -53,7 +72,8 @@ async def build_character_response(
     # character and then call us without a prior awaited flush (e.g. hp.py SET_MAX/SET_CURRENT,
     # death-save and skill/save PATCH endpoints) would otherwise 500. Flushing here within the
     # awaited context keeps serialization side-effect-free. No-op on read-only (clean) sessions.
-    await session.flush()
+    if persist:
+        await session.flush()
 
     # TODO (perf): each get_passive_modifiers call issues 2 SELECTs (rules + items).
     # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
@@ -69,7 +89,7 @@ async def build_character_response(
     response.attacks_per_action = attacks_per_action(char.classes)
     response.inspiration_extra = bool((char.settings or {}).get("inspiration_extra"))
     response.hiding_dc = ((char.settings or {}).get("hiding") or {}).get("dc")
-    form = await get_active_form(session, char.id)
+    form = await get_active_form(session, char.id, repair=persist)
     if form is not None:
         response.active_form = ActiveForm(
             companion_id=form.id, name=form.name, current_hp=form.current_hp,

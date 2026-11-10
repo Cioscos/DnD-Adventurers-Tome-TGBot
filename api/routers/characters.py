@@ -375,7 +375,7 @@ async def get_character(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
-    return await build_character_response(session, char)
+    return await build_character_response(session, char, persist=False)
 
 
 # ---------------------------------------------------------------------------
