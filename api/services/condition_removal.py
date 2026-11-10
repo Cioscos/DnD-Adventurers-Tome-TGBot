@@ -52,7 +52,7 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
     held: list[dict] = []  # condizioni sospese, non cancellate: tornano quando finisce la concentrazione di chi lancia
     for target in targets:
         if target is None:
-            lines += outcome_lines(removal, target="", removed=[], absent=[], untracked=untracked, wanted=conds)
+            lines += outcome_lines(removal, target="", removed=[], absent=[], untracked=untracked or list(removal.untracked if removal.quiet else ()), wanted=conds)  # fuori serata lo segna il GM
             continue
         if target.id != caster.id:  # le relazioni che servono a ricalcolare PF e velocità (Sfinimento) vanno caricate
             target = await load_receiver(session, target.id)

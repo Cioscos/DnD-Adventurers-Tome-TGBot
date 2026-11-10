@@ -148,7 +148,7 @@ _PANACEA_TARGET = {"self": ("Su di te", "On yourself"), "other": ("Su un'altra c
 PANACEA_USE = OnUse(
     **_after_stone(), choices=(_choice("mode", ("Creatura toccata", "Creature touched"), _PANACEA_TARGET),), ally_modes=("other",),
     # veleno come condizione; maledizioni e malattie sono note. Su sé o su un PG della serata, nel foglio comune
-    removal=ConditionRemoval(("poisoned",), ("curse", "disease"), count=None, bound=True),
+    removal=ConditionRemoval(("poisoned",), ("curse", "disease"), count=None, bound=True, quiet=True),
     heal_by=_restore_to_full,
     # su un PG della serata i PF vanno al suo massimo (R42): lo scrive il server sul ricevente
     heal=lambda _c, _r: 0, heal_when=lambda _c, _p: False, heal_ally_when=lambda _c, p: p.get("mode") == "other", heal_ally_full=True,
