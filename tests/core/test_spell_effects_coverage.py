@@ -96,3 +96,27 @@ def test_other_rule_texts_match_the_manual():
 def test_t10_75_the_two_upcast_choices_of_table_c_ask_their_damage_type(edition, index, types):
     (choice,) = _v(edition, index).choices
     assert choice.key == "upcast_type" and choice.options(edition) == types
+
+
+# 80: testi e alias verificati sul manuale (2014/spells.md, 2024/spells.md)
+def test_t10_80_the_two_italian_2024_names_are_recognised_without_an_srd_index():
+    assert spell_effect("2024", None, "Metamorfosi Suprema")[0].key == "shapechange"
+    assert spell_effect("2024", None, "Parlantina")[0].key == "glibness"
+
+
+def test_t10_80_animal_shapes_is_not_capped_at_ten_creatures():
+    effect, _ = spell_effect("2014", "animal-shapes")
+    assert effect.max_targets("2014", 8) > 10
+
+
+def test_t10_80_shapechange_and_alter_self_follow_each_edition():
+    old, new = _v("2014", "shapechange"), _v("2024", "shapechange")
+    assert "PF temporanei" not in old.text["it"] and "PF temporanei" in new.text["it"] and "temporary HP" in new.text["en"]
+    old, new = _v("2014", "alter-self"), _v("2024", "alter-self")
+    assert "+1 a colpire" in old.text["it"] and "+1 to attack" in old.text["en"]
+    assert "modificatore da incantatore" in new.text["it"] and "spellcasting modifier" in new.text["en"] and "+1" not in new.text["it"]
+
+
+def test_t10_80_conjure_celestial_2024_offers_both_lights():
+    text = _v("2024", "conjure-celestial").text
+    assert "Luce Ardente" in text["it"] and "6d12" in text["it"] and "Searing Light" in text["en"] and "Healing Light" in text["en"]

@@ -57,20 +57,24 @@ SPELLS: tuple[SpellEffect, ...] = (
         "Cambia taglia: se ingrandito vantaggio a prove e TS di Forza e +1d4 ai danni con le armi; se ridotto svantaggio e -1d4. Applicalo a mano.",
         "Changes size: enlarged gives advantage on Strength checks and saves and +1d4 weapon damage; reduced gives disadvantage and -1d4. Apply it by hand.", MIN1, concentration=True))),
     SpellEffect("polymorph", ("polymorph",), ("Metamorfosi", "Polymorph"), _ALLY, _POLYMORPH),
-    SpellEffect("animal_shapes", ("animal-shapes",), ("Forme Animali", "Animal Shapes"), SpellTarget("allies", lambda slot: 10), {
+    SpellEffect("animal_shapes", ("animal-shapes",), ("Forme Animali", "Animal Shapes"), SpellTarget("allies", lambda slot: 20), {  # «un numero qualsiasi»: 20 è più di ogni serata
         "2014": _text("Le creature consenzienti scelte diventano bestie: usano i PF della forma e il danno in eccesso passa alla forma normale. Applica i profili a mano.",
                       "The chosen willing creatures become beasts: they use the form's HP and excess damage carries over to the normal form. Apply the stat blocks by hand.", DAY, concentration=True),
         "2024": _text("Le creature consenzienti scelte diventano bestie e ottengono PF temporanei pari ai PF della forma; senza concentrazione. Applica i profili a mano.",
                       "The chosen willing creatures become beasts and gain temporary HP equal to the form's HP; no concentration. Apply the stat blocks by hand.", DAY)}),
-    SpellEffect("shapechange", ("shapechange",), ("Trasformazione", "Shapechange"), _SELF, both(_text(
-        "Prendi la forma di una creatura e ne usi il profilo, tenendo punteggi mentali e privilegi di classe. Applica il profilo a mano.",
-        "You take the form of a creature and use its stat block, keeping mental scores and class features. Apply the stat block by hand.", HOUR, concentration=True))),
+    SpellEffect("shapechange", ("shapechange",), ("Trasformazione", "Metamorfosi Suprema", "Shapechange"), _SELF, {
+        "2014": _text("Prendi la forma di una creatura vista e ne usi profilo, PF e Dadi Vita, tenendo allineamento e punteggi mentali; il danno in eccesso passa alla forma normale. Applica il profilo a mano.",
+                      "You take the form of a creature you have seen and use its stat block, HP and Hit Dice, keeping alignment and mental scores; excess damage carries over to your normal form. Apply the stat block by hand.", HOUR, concentration=True),
+        "2024": _text("Prendi la forma di una creatura già vista e ne usi il profilo, tenendo PF, Dadi Vita, punteggi mentali e Lancio di Incantesimi; ottieni PF temporanei pari ai PF della forma e finisce se si esauriscono. Applica il profilo a mano.",
+                      "You take the form of a creature you have seen and use its stat block, keeping your HP, Hit Dice, mental scores and spellcasting; you gain temporary HP equal to the form's HP and it ends if they run out. Apply the stat block by hand.", HOUR, concentration=True)}),
     SpellEffect("true_polymorph", ("true-polymorph",), ("Metamorfosi Pura", "True Polymorph"), _ALLY, both(_text(
         "Trasforma una creatura in un'altra o in un oggetto; se la concentrazione dura un'ora la forma diventa permanente. Applica il profilo a mano.",
         "Transforms a creature into another or an object; if concentration lasts an hour the change becomes permanent. Apply the stat block by hand.", HOUR, concentration=True))),
-    SpellEffect("alter_self", ("alter-self",), ("Alterare Se Stesso", "Alter Self"), _SELF, both(_text(
-        "Scegli: respirare sott'acqua e nuotare, cambiare aspetto, oppure armi naturali (1d6, magiche). Il tipo di danno delle armi naturali lo decidi a mano.",
-        "Choose: breathe underwater and swim, change appearance, or natural weapons (1d6, magical). You choose the natural weapons' damage type by hand.", HOUR, concentration=True))),
+    SpellEffect("alter_self", ("alter-self",), ("Alterare Se Stesso", "Alter Self"), _SELF, {
+        "2014": _text("Scegli: respirare sott'acqua e nuotare, cambiare aspetto, oppure armi naturali (colpi senz'armi 1d6, competente, magici con +1 a colpire e ai danni). Il tipo di danno delle armi naturali lo decidi a mano.",
+                      "Choose: breathe underwater and swim, change appearance, or natural weapons (unarmed strikes 1d6, proficient, magical with +1 to attack and damage). You choose the natural weapons' damage type by hand.", HOUR, concentration=True),
+        "2024": _text("Scegli: respirare sott'acqua e nuotare, cambiare aspetto, oppure armi naturali (Colpo Senz'Armi 1d6, con il modificatore da incantatore per colpire e per i danni). Il tipo di danno delle armi naturali lo decidi a mano.",
+                      "Choose: breathe underwater and swim, change appearance, or natural weapons (Unarmed Strike 1d6, using your spellcasting modifier for attack and damage). You choose the natural weapons' damage type by hand.", HOUR, concentration=True)}),
     SpellEffect("gaseous_form", ("gaseous-form",), ("Forma Gassosa", "Gaseous Form"), _ALLY, {
         "2014": _text("Nube con volo 3 m, resistenza ai danni non magici e vantaggio ai TS di Forza, Destrezza e Costituzione; non può attaccare né lanciare incantesimi.",
                       "A cloud with a 10 ft fly speed, resistance to nonmagical damage and advantage on Strength, Dexterity and Constitution saves; it cannot attack or cast spells.", HOUR, concentration=True),
@@ -84,12 +88,12 @@ SPELLS: tuple[SpellEffect, ...] = (
         "2024": _text("Chi vuole attaccare il protetto o bersagliarlo con un incantesimo fa un TS Saggezza, altrimenti sceglie un altro bersaglio. Finisce se il protetto fa un tiro per colpire, lancia un incantesimo o infligge danni.",
                       "A creature that wants to attack the ward or target it with a spell makes a Wisdom save or picks another target. It ends if the ward makes an attack roll, casts a spell or deals damage.", MIN1)}),
     SpellEffect("blink", ("blink",), ("Intermittenza", "Blink"), _SELF, _BLINK),
-    SpellEffect("glibness", ("glibness",), ("Loquacità", "Glibness"), _SELF, both(_text(
+    SpellEffect("glibness", ("glibness",), ("Loquacità", "Parlantina", "Glibness"), _SELF, both(_text(
         "Nelle prove di Carisma, se il dado dà meno di 15 conta 15.",
         "On Charisma checks, a die roll below 15 counts as 15.", HOUR))),
     SpellEffect("conjure_celestial", ("conjure-celestial",), ("Evoca Celestiale", "Conjure Celestial"), _SELF, {"2024": _text(
-        "Un cilindro di luce: puoi curare 4d12 + il tuo modificatore a una creatura a tua scelta al suo interno. Applicalo a mano.",
-        "A cylinder of light: you can heal 4d12 + your modifier to a creature of your choice inside it. Apply it by hand.", MIN10, concentration=True)}),
+        "Un cilindro di luce (raggio 3 m, alto 12 m, lo muovi di 9 m): per ogni creatura a tua scelta al suo interno scegli Luce Curativa (4d12 + il tuo modificatore PF recuperati) oppure Luce Ardente (TS Destrezza, 6d12 radiante, metà se supera); +1d12 per slot oltre il 7°. Applicali a mano.",
+        "A cylinder of light (10 ft radius, 40 ft high, you move it 30 ft): for each creature of your choice inside it, choose Healing Light (4d12 + your modifier HP regained) or Searing Light (Dexterity save, 6d12 radiant, half on a success); +1d12 per slot above 7th. Apply them by hand.", MIN10, concentration=True)}),
     SpellEffect("antilife_shell", ("antilife-shell",), ("Guscio Anti-Vita", "Antilife Shell"), _SELF, both(_text(
         "Barriera di 3 m intorno a te: le creature viventi non la attraversano. Zona, nessun effetto sulla scheda.",
         "A 10 ft barrier around you: living creatures cannot pass it. A zone, no effect on the sheet.", HOUR, concentration=True))),
