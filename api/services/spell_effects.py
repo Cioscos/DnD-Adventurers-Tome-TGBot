@@ -62,7 +62,10 @@ def _check_choices(variant: SpellVariant, edition: str, choices: dict[str, str] 
     item = chosen.pop("item_id", None) if variant.weapon_choice else None  # l'arma è del bersaglio: si controlla quando i bersagli sono noti
     if item is not None and not (isinstance(item, str) and item.isdigit()):
         raise _invalid("invalid_choice")
-    wanted = {c.key: c.options(edition) for c in variant.choices}
+    wanted: dict[str, list[str]] = {}
+    for c in variant.choices:  # una scelta condizionata si chiede solo se la precedente ha il valore che la apre
+        if c.when is None or chosen.get(c.when[0]) == c.when[1]:
+            wanted[c.key] = c.options(edition)
     if set(chosen) != set(wanted) or any(chosen[k] not in opts for k, opts in wanted.items()):
         raise _invalid("invalid_choice")
     if item is not None:

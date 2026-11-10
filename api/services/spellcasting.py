@@ -38,7 +38,7 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
     return {"target_kind": fx.target.kind,
             "max_targets_by_slot": {lvl: fx.max_targets(edition, lvl) for lvl in range(max(level, 1), 10)},
             "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
-            "choices": [{"key": c.key, "label": c.label, "options": c.options(edition)} for c in variant.choices]}
+            "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
 
 def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:

@@ -208,3 +208,18 @@ async def test_the_transmuted_spell_does_not_offer_the_type_the_orb_already_has(
     spell = await _orb(client, cid)
     keys = await _roll_keys(client, cid, "spell_damage", spell_id=spell, damage_type="cold")
     assert f"{TRANSMUTED}_cold" not in keys and f"{TRANSMUTED}_fire" in keys
+
+
+# 74: il Glifo di Interdizione chiede il tipo solo per le Rune Esplosive; il Glifo incantesimo non infligge danno
+async def test_t10_74_a_spell_glyph_asks_for_no_damage_type_and_the_explosive_runes_do(client):
+    cid = (await client.post("/characters", json={"name": "Chierico"})).json()["id"]
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": 3, "total": 3})
+    glyph = await _spell(client, cid, "Glifo di Interdizione", 3, srd_index="glyph-of-warding")
+    spells = {s["id"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}
+    shown = {c["key"]: c["when"] for c in spells[glyph]["effect"]["choices"]}
+    assert shown == {"glyph": None, "damage_type": ["glyph", "explosive"]}
+    use = lambda **choices: client.post(f"/characters/{cid}/spells/{glyph}/use", json={"slot_level": 3, "choices": choices})  # noqa: E731
+    assert (await use(glyph="spell")).status_code == 200
+    assert (await use(glyph="spell", damage_type="fire")).status_code == 422  # il tipo non c'entra col glifo incantesimo
+    assert (await use(glyph="explosive")).status_code == 422 and (await use(glyph="explosive", damage_type="force")).status_code == 422
+    assert (await use(glyph="explosive", damage_type="fire")).status_code == 200

@@ -1,6 +1,8 @@
 """Incantesimi in cui chi lancia sceglie il tipo di danno: la scelta arriva al tiro di danno (Sfera Cromatica, Esplosione Stregonesca...)."""
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core.rules.spell_effects import SpellChoice, SpellEffect, SpellTarget, SpellVariant
 
 HOUR, MIN10, MIN1 = 600, 100, 10  # round (6 secondi)
@@ -20,7 +22,10 @@ def both(variant: SpellVariant) -> dict[str, SpellVariant]:
 
 # Istantanei: nessuno stato né orologio, la scelta viaggia con la richiesta di danno
 _ORB = SpellVariant(choices=(_types("acid", "cold", "lightning", "fire", "thunder", "poison"),))
-_GLYPH = SpellVariant(choices=(_types("acid", "cold", "lightning", "fire", "thunder"),))
+# Il tipo serve solo alle Rune Esplosive: un Glifo incantesimo non infligge danno e non lo chiede
+_GLYPH = SpellVariant(choices=(
+    SpellChoice("glyph", txt("Glifo", "Glyph"), lambda _ed: ["explosive", "spell"]),
+    replace(_types("acid", "cold", "lightning", "fire", "thunder"), when=("glyph", "explosive"))))
 _BURST = SpellVariant(choices=(_types("acid", "cold", "fire", "lightning", "poison", "psychic", "thunder"),))
 
 # Con durata: lo stato sul bersaglio e l'orologio di chi lancia ricordano il tipo scelto per i danni dei round dopo

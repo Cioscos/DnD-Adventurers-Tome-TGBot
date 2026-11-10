@@ -227,7 +227,8 @@ export interface SpellEffectInfo {
   /** Tipi di arma sceglibili (chiavi di `WEAPONS`: Randello Incantato); assente: qualunque arma non magica. */
   weapon_kinds?: string[]
   max_targets_by_slot: Record<string, number>
-  choices: { key: string; label: { it: string; en: string }; options: string[] }[]
+  /** `when`: si chiede solo se la scelta `[chiave, valore]` è già stata fatta (il tipo delle Rune Esplosive del Glifo). */
+  choices: { key: string; label: { it: string; en: string }; options: string[]; when?: [string, string] | null }[]
 }
 
 /** Esito degli effetti di un lancio: bersagli che hanno ricevuto lo stato e, fuori serata, il testo per il GM. */

@@ -7,7 +7,7 @@ import { api } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import AllyTargetSheet from '@/components/rules/AllyTargetSheet'
-import { optionLabel } from '@/lib/spellChoice'
+import { optionLabel, visibleChoices } from '@/lib/spellChoice'
 import type { SpellEffectInfo } from '@/types'
 
 export type SpellEffectPick = { targets?: number[]; choices?: Record<string, string> }
@@ -35,15 +35,17 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
   const weaponFor = picking ?? (selfWeapon ? charId : null)
   const kinds = effect.weapon_kinds?.length ? effect.weapon_kinds : undefined
   const { data: weapons = [] } = useQuery({ queryKey: ['ally-weapons', charId, weaponFor, kinds], queryFn: () => api.characters.allyWeapons(charId, weaponFor as number, kinds), enabled: weaponFor != null })
-  const choices = effect.choices.length > 0 ? picked : undefined
+  const shown = visibleChoices(effect.choices, picked)
+  // Solo le scelte in vista: una messa da parte (il tipo delle rune dopo aver scelto il glifo incantesimo) non parte col lancio
+  const choices = effect.choices.length > 0 ? Object.fromEntries(shown.filter((c) => picked[c.key]).map((c) => [c.key, picked[c.key]])) : undefined
   const pickTargets = (targets: number[]) => (effect.weapon_choice && targets.length === 1 ? setWeaponFor(targets[0]) : onConfirm({ targets, choices }))
 
   if (choosing) {
-    const ready = effect.choices.every((c) => picked[c.key])
+    const ready = shown.every((c) => picked[c.key])
     return (
       <Sheet open onClose={onClose} title={title} zClassName="z-[60]">
         <div className="flex flex-col gap-2 px-4 pb-4 pt-3">
-          {effect.choices.map((c) => (
+          {shown.map((c) => (
             <div key={c.key} className="flex flex-col gap-2">
               <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{c.label[lang]}</p>
               {c.options.map((o) => (
@@ -67,7 +69,7 @@ export default function SpellEffectAsk({ charId, title, effect, slotLevel, onCon
           {weapons.length === 0 && <p className="text-sm text-dnd-text-muted">{t('character.spells.effect_no_weapons')}</p>}
           {weapons.map((w) => (
             <Button key={w.id} variant="secondary" fullWidth className="!justify-start break-words text-left"
-              onClick={() => onConfirm({ targets: selfWeapon ? undefined : [weaponFor], choices: { ...picked, item_id: String(w.id) } })}>{w.name}</Button>
+              onClick={() => onConfirm({ targets: selfWeapon ? undefined : [weaponFor], choices: { ...choices, item_id: String(w.id) } })}>{w.name}</Button>
           ))}
           <Button variant="ghost" fullWidth onClick={() => (selfWeapon ? onClose() : setWeaponFor(null))}>{t('common.back')}</Button>
         </div>

@@ -28,6 +28,7 @@ class SpellChoice:
     label: dict[str, str]
     options: Callable[[str], list[str]]  # per edizione
     inflicts: bool = True  # False: il tipo scelto è un tipo a cui si resiste (Protezione dall'Energia), non un danno inflitto
+    when: tuple[str, str] | None = None  # si chiede solo se la scelta ``(chiave, valore)`` è stata fatta prima (il tipo delle Rune Esplosive del Glifo)
 
 
 @dataclass(frozen=True)

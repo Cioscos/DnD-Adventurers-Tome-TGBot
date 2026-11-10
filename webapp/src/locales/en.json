@@ -989,6 +989,8 @@
       "effect_next": "Next",
       "effect_weapon": "Choose the weapon to enchant",
       "effect_weapon_damage_normal": "The weapon's own",
+      "effect_glyph_explosive": "Explosive runes",
+      "effect_glyph_spell": "Spell glyph",
       "effect_no_weapons": "No nonmagical weapon: the target has none.",
       "effect_confirm": "Cast",
       "effect_shield": {
