@@ -6,14 +6,14 @@
       "added": {
         "it": [
           "Gli incantesimi di potenziamento e protezione si applicano a te e agli alleati seduti alla serata: durata, concentrazione e fine automatica.",
-          "Il tipo di danno si sceglie al lancio e arriva al tiro di danno, alle resistenze e a Affinità Elementale e Incantesimo Trasmutato.",
-          "Marchi e punizioni (Sortilegio, Marchio del Cacciatore, punizioni divine) aggiungono il loro danno extra agli attacchi.",
+          "Il tipo di danno si sceglie al lancio e arriva al tiro di danno, alle resistenze, ad Affinità Elementale e a Incantesimo Trasmutato.",
+          "Marchi e punizioni (Sortilegio, Marchio del Cacciatore, Punizione Accecante e le altre) aggiungono il loro danno extra agli attacchi.",
           "Armi incantate, Velocità e aure degli incantesimi sono gestite dall'app, con la letargia di Velocità a fine incantesimo."
         ],
         "en": [
           "Buff and protection spells apply to you and to allies seated at the evening: duration, concentration and automatic end.",
-          "The damage type is chosen when casting and reaches the damage roll, resistances, and Elemental Affinity and Transmuter's Stone.",
-          "Marks and smites (Hex, Hunter's Mark, divine smites) add their extra damage to attacks.",
+          "The damage type is chosen when casting and reaches the damage roll, resistances, Elemental Affinity and Transmuted Spell.",
+          "Marks and smites (Hex, Hunter's Mark, Blinding Smite and the others) add their extra damage to attacks.",
           "Enchanted weapons, Haste and spell auras are handled by the app, including Haste's lethargy when the spell ends."
         ]
       },
