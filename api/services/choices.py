@@ -119,6 +119,11 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         raise _bad("invalid_replacement")
     if ch.protected and old_key in ch.protected(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)):
         raise _bad("option_is_prerequisite")
+    if ch.replace_per_long_rest:  # un solo cambio per riposo lungo, per classe (uno dei due incantesimi); il primo di sempre è libero (nessun riposo registrato)
+        swaps = (char.settings or {}).get("replaced_at_rest") or {}
+        if swaps.get(str(cls.id), {}).get("at", "-") == (char.last_long_rest_at or ""):
+            raise HTTPException(409, detail={"code": "replace_after_long_rest"})
+        char.settings = {**(char.settings or {}), "replaced_at_rest": {**swaps, str(cls.id): {"at": char.last_long_rest_at or ""}}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi

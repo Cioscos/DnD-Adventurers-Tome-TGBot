@@ -43,6 +43,8 @@ class ChoiceSpec:
     levels: dict[int, int]
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
+    # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
+    replace_per_long_rest: bool = False
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None

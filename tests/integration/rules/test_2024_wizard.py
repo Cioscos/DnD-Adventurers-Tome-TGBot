@@ -401,3 +401,17 @@ async def test_a_2014_wizard_that_becomes_2024_keeps_its_book_and_gets_the_2024_
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
     assert (await _spells(client, cid))["Scudo"]["in_spellbook"] is True
     assert {ARCANE, MEMORIZE} <= await _keys_of(client, cid)
+
+
+async def test_minori_12_spell_mastery_is_replaced_once_per_long_rest(client):
+    cid, _ids = await _master(client)
+    await _book(client, cid, "Mani brucianti", 1, casting_time="1 azione")
+    await _book(client, cid, "Dardo incantato", 1, casting_time="1 azione")
+    assert (await _resolve(client, cid, "spell_mastery_1", ["Scudo"])).status_code == 200
+    klass = next(c["id"] for c in (await _full(client, cid))["classes"])
+    url = f"/characters/{cid}/classes/{klass}/options/replace"
+    assert (await client.post(url, json={"group": "spell_mastery_1", "old_key": "Scudo", "new_key": "Mani brucianti"})).status_code == 200
+    refused = await client.post(url, json={"group": "spell_mastery_1", "old_key": "Mani brucianti", "new_key": "Dardo incantato"})
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "replace_after_long_rest"
+    await _rest(client, cid, "long")
+    assert (await client.post(url, json={"group": "spell_mastery_1", "old_key": "Mani brucianti", "new_key": "Dardo incantato"})).status_code == 200

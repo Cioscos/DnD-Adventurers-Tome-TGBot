@@ -7,7 +7,7 @@ import { ApiError } from '@/api/client'
 const SERVER_ERRORS = [
   'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'target_dead', 'invalid_target',
   'feature_unavailable', 'rest_needs_hp', 'long_rest_too_soon', 'state_locked',
-  'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn',
+  'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest',
 ]
 
 function errorCode(err: unknown): string | undefined {

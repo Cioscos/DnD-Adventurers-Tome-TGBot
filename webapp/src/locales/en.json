@@ -39,7 +39,8 @@
       "no_stealth_roll": "Roll a Stealth check first: your last roll was not a Stealth check.",
       "hide_failed": "The Stealth check is under 15: you are not hidden.",
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
-      "once_per_turn": "You can use it only once per turn."
+      "once_per_turn": "You can use it only once per turn.",
+      "replace_after_long_rest": "You can swap it once per long rest: rest and try again."
     },
     "error_boundary": {
       "title": "Something went wrong",

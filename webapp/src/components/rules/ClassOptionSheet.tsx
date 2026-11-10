@@ -5,6 +5,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { notifyMutationError } from '@/lib/mutationError'
 import { CLASS_NAME_TO_PROGRESSION_KEY } from '@/lib/classProgression'
 import type { CharacterFull, ClassOptionEntry, PendingChoice } from '@/types'
 
@@ -119,7 +120,7 @@ export function ReplaceOptionSheet({ char, classId, group, open, onClose }: Repl
       haptic.success()
       onClose()
     },
-    onError: () => haptic.error(),
+    onError: (err) => notifyMutationError(err),
   })
   const list = (entries: ClassOptionEntry[], current: string, set: (k: string) => void) => entries.map((o) => (
     <Pressable

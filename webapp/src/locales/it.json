@@ -39,7 +39,8 @@
       "no_stealth_roll": "Prima tira una prova di Furtività: l'ultimo tiro non è di Furtività.",
       "hide_failed": "La prova di Furtività è sotto 15: non ti nascondi.",
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
-      "once_per_turn": "Puoi usarlo una sola volta per turno."
+      "once_per_turn": "Puoi usarlo una sola volta per turno.",
+      "replace_after_long_rest": "Puoi sostituirla una sola volta per riposo lungo: riposa e riprova."
     },
     "error_boundary": {
       "title": "Qualcosa è andato storto",
