@@ -12,11 +12,11 @@ import re
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import DAMAGE_TYPES, LABELS_IT, canonical_damage_type, spell_damage_type
+from core.data.damage_types import DAMAGE_TYPES, canonical_damage_type, spell_damage_type
 from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014.warlock import (
-    BLESSING_USE, THOUGHT_REFLECTION, _dc, _lock_resilience, _resilience_active, _resilience_check, _resilience_state,
+    BLESSING_USE, THOUGHT_REFLECTION, _dc, _resilience_active,
 )
 from core.rules.catalog.y2014.warlock_invocations import _mod
 from core.rules.edition import class_key as row_class_key
@@ -311,11 +311,10 @@ def _half_max(ctx: RuleContext) -> int:
 
 
 def _vengeance_effect(ctx: RuleContext, params: dict) -> TargetEffect:
-    """Accecate fino alla fine del turno in corso: quello di chi tira contro la morte. Per sé è il tuo (fine del tuo turno);
-    per un alleato il turno è il suo e l'app non sa quale sia, quindi resta un round."""
+    """Accecate fino alla fine del turno in corso: quello di chi tira contro la morte (il tuo o quello dell'alleato)."""
     mod = _cha(ctx)
-    when = {"ends_at": {"anchor": "source", "edge": "end", "count": 1}} if params.get("mode", "self") == "self" else {"rounds": 1}
-    return TargetEffect(condition="blinded", damage_dice=f"2d8+{mod}" if mod > 0 else "2d8", **when)
+    return TargetEffect(condition="blinded", damage_dice=f"2d8+{mod}" if mod > 0 else "2d8",
+                        ends_at={"anchor": "active", "edge": "end", "count": 1})
 
 
 def _vengeance_message(ctx: RuleContext, params: dict) -> dict[str, str]:
@@ -363,9 +362,6 @@ LUCK_OPTION = RollOptionSpec(
     key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save", "death_save", "initiative"), cost=Cost(feature_key=LUCK),
     extra_dice=lambda _c, _i: "1d10", label=_both("Fortuna dell'Oscuro: spendi l'uso e somma 1d10 al tiro", "Dark One's Own Luck: spend the use and add 1d10 to the roll"))
 RESISTABLE = [t for t in DAMAGE_TYPES if t != "force"]  # il tipo forza è escluso
-RESILIENCE_USE = OnUse(
-    state=_resilience_state, effect=_lock_resilience, check=_resilience_check,
-    choices=(UseChoice("damage_type", _both("Tipo di danno", "Damage type"), lambda _c: list(RESISTABLE), lambda k: _both(LABELS_IT[k], k.title())),))
 
 
 def _hurled(ctx: RuleContext, _inputs: dict) -> TargetEffect:
@@ -517,7 +513,7 @@ SUBCLASS_ROWS = (
     fiend("fiendish_resilience", 10, "Resilienza Immonda", "Fiendish Resilience", 162,
           ("A ogni riposo breve o lungo scegli un tipo di danno, tranne forza: ne hai la resistenza finché ne scegli un altro.",
            "At each short or long rest you choose a damage type other than force: you resist it until you choose another."),
-          "special", on_use=RESILIENCE_USE,
+          "special", rest_damage_choice=("fiendish_resilience", tuple(RESISTABLE)),
           modifiers=tuple(Modifier(f"resistance:{t}", 1, when=_resilience_active(t), source=f"feature:{RESILIENCE_F}") for t in RESISTABLE)),
     fiend("hurl_through_hell", 14, "Scagliare all'Inferno", "Hurl Through Hell", 162,
           ("Su un colpo con attacco: TS Carisma, se fallisce sparisce, subisce 8d10 psichici (non gli immondi) ed è Incapacitato. Un uso, riposo lungo o slot di Patto.",

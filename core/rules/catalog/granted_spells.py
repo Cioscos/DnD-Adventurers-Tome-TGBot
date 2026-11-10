@@ -591,5 +591,9 @@ _SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "
             "divine-smite": "evocation", "find-steed": "conjuration",
             "summon-fey": "conjuration", "mislead": "illusion", "rope-trick": "transmutation", "seeming": "illusion",
             "counterspell": "abjuration", "dispel-magic": "abjuration", "see-invisibility": "divination", "summon-beast": "conjuration",
-            "fear": "illusion", "telekinesis": "transmutation", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
+            "fear": "illusion", "telekinesis": "transmutation",
+            # Patrono Grande Antico (Incantesimi Psichici legge Ammaliamento e Illusione)
+            "detect-thoughts": "divination", "dissonant-whispers": "enchantment", "phantasmal-force": "illusion",
+            "tashas-hideous-laughter": "enchantment", "clairvoyance": "divination", "hunger-of-hadar": "conjuration",
+            "confusion": "enchantment", "summon-aberration": "conjuration", "modify-memory": "enchantment", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

@@ -95,10 +95,17 @@ def pending_target_effect(char: Character, effect_key: str) -> dict:
     return found
 
 
-def _expiry(effect: dict) -> dict | None:
-    if effect.get("ends_at"):
-        return effect["ends_at"]
-    return {"anchor": "owner", "edge": "end", "count": effect["rounds"]} if effect.get("rounds") else None
+def _expiry(effect: dict, enc: Encounter | None = None) -> tuple[dict | None, int | None]:
+    """(durata, combattente che la ancora). ``anchor: "active"`` = fino alla fine del turno in corso, di chiunque sia: si
+    ancora a quel combattente (``upsert_effect`` conta già il turno in corso, quindi 0 lo fa finire a fine turno)."""
+    ends = effect.get("ends_at")
+    if ends and ends.get("anchor") == "active":
+        if enc is not None and enc.status == "active" and enc.active_combatant_id:
+            return {"anchor": "source", "edge": "end", "count": 0}, enc.active_combatant_id
+        return {"anchor": "owner", "edge": "end", "count": 1}, None  # fuori da un turno: un round sul bersaglio
+    if ends:
+        return ends, None
+    return ({"anchor": "owner", "edge": "end", "count": effect["rounds"]} if effect.get("rounds") else None), None
 
 
 async def _delete_effect(db: AsyncSession, eff: ConditionEffect) -> None:
@@ -212,11 +219,12 @@ async def apply_target_effect(
     char.turn_state = turn
     if not slug:
         return False, None
-    expiry = _expiry(effect)
+    expiry, anchor_id = _expiry(effect, enc)
+    anchor_id = anchor_id or mine.id  # shortcut: con «turno in corso» la fonte registrata è chi agisce, non chi ha usato il privilegio
     if not with_save:
         for each in (slug, *effect.get("also", ())):
             await apply_condition_to_combatant(db, enc, target, GmConditionApply(
-                slug=each, expiry=expiry, source_combatant_id=mine.id,
+                slug=each, expiry=expiry, source_combatant_id=anchor_id,
                 ends_with_concentration=bool(effect.get("ends_with_concentration"))), applied_by_gm=False)
         _add_history(db, char.id, "condition_change",
                      f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))
@@ -226,7 +234,7 @@ async def apply_target_effect(
         character_id=target.character_id if target.kind == "pc" else None,
         combatant_id=target.id if target.kind == "monster" else None, slug=slug, pending=True,
         expiry_anchor=expiry["anchor"] if expiry else None, expiry_edge=expiry["edge"] if expiry else None,
-        expiry_count=expiry["count"] if expiry else None, source_combatant_id=mine.id, source_character_id=char.id,
+        expiry_count=expiry["count"] if expiry else None, source_combatant_id=anchor_id, source_character_id=char.id,
         applied_by_gm=False, encounter_id=enc.id, created_at=now,
         ends_with_concentration=bool(effect.get("ends_with_concentration")),
         source_spell_id=char.concentrating_spell_id if effect.get("ends_with_concentration") else None,

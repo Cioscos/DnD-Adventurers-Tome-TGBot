@@ -47,7 +47,7 @@ class CombatantPatchRequest(BaseModel):
 class ExpiryIn(BaseModel):
     anchor: Literal["owner", "source"]
     edge: Literal["start", "end"]
-    count: int = Field(ge=1, le=100)
+    count: int = Field(ge=0, le=100)
 
 
 class SaveIn(BaseModel):

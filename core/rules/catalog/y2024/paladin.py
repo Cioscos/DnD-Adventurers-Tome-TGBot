@@ -195,11 +195,13 @@ def make_steed(char: Any, name: str, level: int = STEED_SPELL_LEVEL) -> None:
     """Trova Destriero: crea il destriero come compagno con le statistiche del manuale (CA 10 + livello dell'incantesimo,
     PF 5 + 10 per livello, 18 m; il volo 27 m c'è solo dal 4° livello). Un nuovo lancio sostituisce il precedente."""
     from core.db.models import Companion  # import locale: i modelli non servono al resto del catalogo
-    for old in [c for c in char.companions if c.feature_key == STEED]:
+    olds = [c for c in char.companions if c.feature_key == STEED]
+    name = name.strip() or next((c.name for c in olds), "Destriero")  # un nuovo lancio senza nome tiene quello del destriero sostituito
+    for old in olds:
         char.companions.remove(old)
     hp = 5 + 10 * level
     char.companions.append(Companion(
-        character_id=char.id, kind="mount", name=name.strip() or "Destriero",
+        character_id=char.id, kind="mount", name=name,
         statblock={"type": "celestial, fey o fiend", "size": "Large", "speed_ft": 60, **({"fly_speed_ft": 90} if level >= 4 else {})},
         max_hp=hp, current_hp=hp, armor_class=10 + level, feature_key=STEED,
         created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))

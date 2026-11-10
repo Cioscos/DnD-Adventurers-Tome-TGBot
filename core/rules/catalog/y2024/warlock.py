@@ -55,10 +55,19 @@ def _cunning(ctx: RuleContext, _params: dict) -> None:
         ctx.char.temp_hp = max(ctx.char.temp_hp or 0, points)
 
 
+def _recovered_text(ctx: RuleContext) -> dict[str, str]:
+    back = sum(b for _s, b in _recovery(ctx))  # la scheda è ancora quella di prima dell'uso
+    return {"it": f"Tornano {back} slot di Patto." if back != 1 else "Torna 1 slot di Patto.",
+            "en": f"{back} Pact slots come back." if back != 1 else "1 Pact slot comes back."}
+
+
+def _cunning_preview(ctx: RuleContext) -> dict[str, str] | None:
+    return _recovered_text(ctx) if any(b for _s, b in _recovery(ctx)) else None
+
+
 def _cunning_message(ctx: RuleContext, params: dict) -> dict[str, str] | None:
     from core.rules.catalog.y2024.warlock_subclasses import resilience_ally_text  # import locale, come sopra
-    back = sum(b for _s, b in _recovery(ctx))  # la scheda è ancora quella di prima dell'uso: è l'anteprima di ciò che torna
-    recovered = {"it": f"Tornano {back} slot di Patto.", "en": f"{back} Pact slot{'s' if back != 1 else ''} come back."}
+    recovered = _recovered_text(ctx)
     ally = None if params.get("target_character_ids") or params.get("target_character_id") is not None else resilience_ally_text(ctx)
     return {lg: recovered[lg] + (" " + ally[lg] if ally else "") for lg in ("it", "en")}
 
@@ -74,7 +83,7 @@ def _cunning_given(ctx: RuleContext, _rolled: int, _params: dict) -> int:
 
 
 CUNNING_USE = OnUse(effect=_cunning, message=_cunning_message, available=lambda c: any(s.used > 0 for s in pact_slots(c.char)),
-                    temp_hp_ally=True, ally_count=_cunning_ally_count, gives_by=_cunning_given)
+                    temp_hp_ally=True, ally_count=_cunning_ally_count, gives_by=_cunning_given, preview=_cunning_preview)
 
 
 # ---------------------------------------------------------------------------

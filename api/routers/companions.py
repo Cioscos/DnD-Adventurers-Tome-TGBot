@@ -344,7 +344,7 @@ async def companion_hp(
         comp.temp_hp = body.value
     out = _read(char, comp)
     _history(session, char_id, "companion_hp",
-             f"{comp.name}: {body.op} {body.value} → PF {out.current_hp}/{out.max_hp}, temp {comp.temp_hp}")
+             f"{comp.name}: {body.op} {value if body.op == 'damage' else body.value} → PF {out.current_hp}/{out.max_hp}, temp {comp.temp_hp}")
     out.down = comp.current_hp == 0
     return out
 

@@ -211,13 +211,17 @@ async def test_dark_ones_own_luck_adds_1d10_to_a_check_or_save_after_the_roll_on
     assert LUCK in await _keys(client, cid, "skill", skill="athletics")
 
 
+async def _choose(client, cid, damage_type, kind="short"):
+    return await client.post(f"/characters/{cid}/rest", json={"rest_type": kind, "confirm_early": True, "fiendish_resilience": damage_type})
+
+
 @pytest.mark.parametrize("damage", ["fire", "psychic", "bludgeoning"])
 async def test_fiendish_resilience_gives_resistance_to_the_chosen_type_until_another_is_chosen(client, damage):
     cid = await _patron(client, 10, "fiend")
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 100})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 100})
-    assert (await _use(client, cid, RESILIENCE, params={"damage_type": "mud"})).status_code == 422
-    r = await _use(client, cid, RESILIENCE, params={"damage_type": damage})
+    assert (await _choose(client, cid, "mud")).status_code == 422
+    r = await _choose(client, cid, damage)
     assert r.status_code == 200, r.text
     options = [RESILIENCE] if damage == "bludgeoning" else []  # i tipi fisici si confermano: armi magiche e d'argento ignorano
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": damage, "options": options})
@@ -225,13 +229,14 @@ async def test_fiendish_resilience_gives_resistance_to_the_chosen_type_until_ano
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "acid"})
     assert r.json()["current_hit_points"] == 85
     assert (await _turn(client, cid))["action_used"] is False  # nessuna azione: si sceglie al riposo
+    assert (await _use(client, cid, RESILIENCE, params={"damage_type": damage})).status_code >= 400  # niente «Usa» dopo aver visto il danno
 
 
 async def test_fiendish_resilience_to_physical_damage_needs_a_nonmagical_weapon(client):
     cid = await _patron(client, 10, "fiend")
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 100})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 100})
-    await _use(client, cid, RESILIENCE, params={"damage_type": "slashing"})
+    await _choose(client, cid, "slashing")
     assert RESILIENCE in await _roll_keys(client, cid, "damage_taken", damage_type="slashing")
     assert RESILIENCE not in await _roll_keys(client, cid, "damage_taken", damage_type="piercing")
     assert RESILIENCE not in await _roll_keys(client, cid, "damage_taken", damage_type="fire")
@@ -245,11 +250,9 @@ async def test_fiendish_resilience_is_changed_at_a_rest_and_the_old_resistance_g
     cid = await _patron(client, 10, "fiend")
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 100})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 100})
-    await _use(client, cid, RESILIENCE, params={"damage_type": "fire"})
-    r = await _use(client, cid, RESILIENCE, params={"damage_type": "cold"})
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "already_chosen"  # una scelta per riposo
-    await _rest(client, cid, "short")
-    assert (await _use(client, cid, RESILIENCE, params={"damage_type": "cold"})).status_code == 200
+    await _choose(client, cid, "fire")
+    await _rest(client, cid, "short")  # un riposo senza scelta lascia la resistenza com'e'
+    assert (await _choose(client, cid, "cold", "long")).status_code == 200  # a ogni riposo, breve o lungo, se ne sceglie un'altra
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "fire"})
     assert r.json()["current_hit_points"] == 90
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "cold"})
@@ -257,12 +260,10 @@ async def test_fiendish_resilience_is_changed_at_a_rest_and_the_old_resistance_g
     assert [s["key"] for s in (await _full(client, cid))["active_states"] if s["key"] == "fiendish_resilience"] == ["fiendish_resilience"]
 
 
-async def test_the_resistance_choice_lock_is_hidden_internal_state(client):
-    cid = await _patron(client, 10, "fiend")
-    await _use(client, cid, RESILIENCE, params={"damage_type": "fire"})
-    lock = _states(await _full(client, cid))["fiendish_resilience_lock"]
-    assert lock["data"]["internal"] is True
-    assert (await client.delete(f"/characters/{cid}/active-states/fiendish_resilience_lock")).status_code == 404
+async def test_the_resistance_choice_needs_the_feature(client):
+    cid = await _patron(client, 9, "fiend")  # non ha ancora la Resilienza Immonda
+    r = await _choose(client, cid, "fire")
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "no_resistance_choice"
 
 
 async def test_hurl_through_hell_adds_10d10_psychic_unless_the_target_is_a_fiend_and_spends_the_use(client):

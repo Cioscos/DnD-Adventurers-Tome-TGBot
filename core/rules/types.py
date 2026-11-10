@@ -292,6 +292,8 @@ class OnUse:
     once_per_turn: bool = False
     forgoes_attack: bool = False
     notes: "Callable[[RuleContext, dict], list[str]] | None" = None
+    # Testo ``{it, en}`` calcolato dal server e mostrato sulla riga prima dell'uso (Astuzia Magica: quanti slot tornano); ``None``: niente
+    preview: "Callable[[RuleContext], dict[str, str] | None] | None" = None
     gives: "Callable[[RuleContext, int], int] | None" = None
     # Come ``gives`` ma legge anche le scelte fatte all'uso (Punizione Ispiratrice: agli altri va ciò che chi usa non tiene)
     gives_by: "Callable[[RuleContext, int, dict], int] | None" = None
@@ -711,6 +713,9 @@ class FeatureSpec:
     rest_temp_hp: "Callable[[RuleContext], int] | None" = None
     # Come ``rest_temp_hp`` ma per altre creature della serata: ``f(ctx) -> (quante, PF temporanei per ciascuna)`` (Resilienza Celestiale)
     rest_temp_hp_ally: "Callable[[RuleContext], tuple[int, int]] | None" = None
+    # Resistenza che si sceglie quando finisci un riposo, breve o lungo (Resilienza Immonda): ``(chiave dello stato, tipi di danno ammessi)``;
+    # la scelta arriva col riposo (``RestRequest.fiendish_resilience``) e lo stato dura finché non se ne sceglie un'altra
+    rest_damage_choice: "tuple[str, tuple[str, ...]] | None" = None
     # Dadi d20 tirati alla fine del riposo lungo e salvati (R29, Portento): ``(chiave dell'opzione, f(ctx) -> quanti)``
     long_rest_dice: "tuple[str, Callable[[RuleContext], int]] | None" = None
     # Incantesimi (``GRANTED_SPELLS``) che il privilegio aggiunge al Libro del Mago senza prepararli (Servitori Non Morti, Mutaforma)

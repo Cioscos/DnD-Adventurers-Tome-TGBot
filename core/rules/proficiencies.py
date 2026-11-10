@@ -344,7 +344,9 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
     from core.rules.edition import EDITIONS
 
     active = active_features(char)
-    lost = [k for k in done if not any(sp.key == k and getattr(sp, "proficiency_grants", None) for sp, _ in active)]
+    unknown_subclass = {sp.key for row in char.classes if row.subclass_key is None for ed in EDITIONS
+                        for sp in features_for(ed, row_class_key(row)) if sp.subclass is not None}  # sottoclasse non riconosciuta: come in feature_sync
+    lost = [k for k in done if k not in unknown_subclass and not any(sp.key == k and getattr(sp, "proficiency_grants", None) for sp, _ in active)]
     gone: dict[str, set[str]] = {"armor": set(), "weapons": set(), "tools": set()}
     for key in lost:
         for ed in EDITIONS:

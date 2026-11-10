@@ -355,6 +355,16 @@ describe('Turn page', () => {
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence'))
   })
 
+  it('shows what the server says a feature will do before it is used (Magical Cunning: the slots that come back)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 5, name: 'Astuzia Magica', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'warlock.magical_cunning', max_uses: 1, uses: 1, action_type: 'action', restoration_type: 'long_rest',
+      use_preview: { it: 'Tornano 2 slot di Patto.', en: '2 Pact slots come back.' },
+    }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByTestId('use-preview')).toHaveTextContent(/slot di Patto|Pact slots/)
+  })
+
   it('refreshes the companions after a feature is used, because Primal Companion creates the beast', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [
       { id: 8, name: 'Compagno Primordiale', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,

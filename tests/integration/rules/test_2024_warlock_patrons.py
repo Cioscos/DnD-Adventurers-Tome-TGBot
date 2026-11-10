@@ -354,7 +354,7 @@ async def test_searing_vengeance_raises_a_dying_warlock_to_half_hp_and_blinds_th
     assert full["current_hit_points"] == 40 and not full["conditions"].get("prone")
     effect = await _effect(client, cid, VENGEANCE)
     assert effect["condition"] == "blinded" and effect["damage_dice"] == "2d8+3"
-    assert effect["ends_at"] == {"anchor": "source", "edge": "end", "count": 1} and not effect["rounds"]  # fino alla fine del turno in corso
+    assert effect["ends_at"] == {"anchor": "active", "edge": "end", "count": 1} and not effect["rounds"]  # fino alla fine del turno in corso
     assert (await _ability(client, cid, VENGEANCE))["uses"] == 0
     assert (await _use(client, cid, VENGEANCE, params={"mode": "self"})).status_code == 409
 
@@ -432,15 +432,17 @@ async def test_fiendish_resilience_is_a_resistance_to_any_type_but_force_with_no
     cid = await _make(client, "fiend", 10)
     await _hp(client, cid, op="set_max", value=100)
     await _hp(client, cid, op="set_current", value=100)
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "force"})).status_code == 422
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "slashing"})).status_code == 200
+    async def choose(damage_type, kind="short"):
+        return await client.post(f"/characters/{cid}/rest", json={"rest_type": kind, "confirm_early": True, "fiendish_resilience": damage_type})
+
+    assert (await choose("force")).status_code == 422
+    assert (await choose("slashing")).status_code == 200
     assert (await _hp(client, cid, op="damage", value=10, damage_type="slashing"))["current_hit_points"] == 95
     assert (await _hp(client, cid, op="damage", value=10, damage_type="acid"))["current_hit_points"] == 85
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "cold"})).status_code == 409  # una scelta per riposo
-    await _rest(client, cid, "short")
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "cold"})).status_code == 200
-    assert (await _hp(client, cid, op="damage", value=10, damage_type="slashing"))["current_hit_points"] == 75
-    assert (await _hp(client, cid, op="damage", value=10, damage_type="cold"))["current_hit_points"] == 70
+    assert (await choose("cold", "long")).status_code == 200  # a ogni riposo se ne sceglie un'altra
+    assert (await _hp(client, cid, op="damage", value=10, damage_type="slashing"))["current_hit_points"] == 90  # il lungo ha curato a 100; la vecchia non vale piu'
+    assert (await _hp(client, cid, op="damage", value=10, damage_type="cold"))["current_hit_points"] == 85
+    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "cold"})).status_code >= 400  # niente "Usa" dopo aver visto il danno
     assert (await _turn(client, cid))["action_used"] is False
 
 

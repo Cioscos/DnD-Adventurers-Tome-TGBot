@@ -203,10 +203,14 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
             reached = [lvl for lvl in ch.levels if lvl <= cls.level]
             limit = ch.levels[max(reached)] if reached else 0
             names: dict[str, str] = {}
+            families: dict[str, list[str]] = {}  # Ripetibili («Agonizing Blast: Eldritch Blast»): la famiglia è il nome prima dei due punti
             for key in (ch.import_options or ch.options)(ctx):
                 for spec in specs:
                     if spec.option_group == ch.group and spec.option_key == key:
                         names.update({_norm_name(n): key for n in spec.name.values()})
+                        for n in spec.name.values():
+                            if ":" in n:
+                                families.setdefault(_norm_name(n.split(":")[0]), []).append(key)
                 if ch.label is not None:
                     label = ch.label(key).get("name", "")  # una stringa, o {it, en} come lo vuole l'interfaccia
                     for text in (label.values() if isinstance(label, dict) else [label]):
@@ -215,6 +219,15 @@ def _apply_class_options(char, option_names: list[dict], report: ImportReport, l
                 key = names.get(_norm_name(name))
                 if key is not None and key not in chosen.get(ch.group, []) and len(chosen.get(ch.group, [])) < limit:
                     chosen.setdefault(ch.group, []).append(key)
+                    free.remove(name)
+            allowed: set[str] | None = None  # calcolato solo se serve: legge gli incantesimi del personaggio
+            for name in list(free):  # DDB non dice il trucchetto: se il personaggio ne conosce uno solo ammesso, è quello
+                if _norm_name(name) not in families:
+                    continue
+                allowed = set(ch.options(ctx)) if allowed is None else allowed
+                picks = [k for k in dict.fromkeys(families[_norm_name(name)]) if k in allowed and k not in chosen.get(ch.group, [])]
+                if len(picks) == 1 and len(chosen.get(ch.group, [])) < limit:
+                    chosen.setdefault(ch.group, []).append(picks[0])
                     free.remove(name)
         if chosen:
             cls.options = {**(cls.options or {}), **chosen}

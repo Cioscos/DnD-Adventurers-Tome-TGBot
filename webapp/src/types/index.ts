@@ -138,6 +138,10 @@ export interface Ability {
   removal?: RemovalInfo | null
   /** Con `gives_to_ally` per PF temporanei: quante creature della serata può raggiungere il «Usa» (Mantello di Ispirazione: più d'una). */
   ally_max?: number
+  /** Tipi di danno che il riposo accetta per la resistenza di questo privilegio (Resilienza Immonda). */
+  rest_damage_choices?: string[]
+  /** Cosa farà il «Usa» (Astuzia Magica: quanti slot di Patto tornano), calcolato dal server. */
+  use_preview?: { it: string; en: string } | null
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null

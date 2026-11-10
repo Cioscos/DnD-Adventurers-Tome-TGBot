@@ -10,11 +10,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from core.data.damage_types import DAMAGE_TYPES, LABELS_IT
-from core.rules.catalog._common import feature, state_on
+from core.data.damage_types import DAMAGE_TYPES
+from core.rules.catalog._common import feature
 from core.rules.catalog.y2014 import warlock_invocations as inv
 from core.rules.catalog.y2014.warlock_invocations import BOON_GROUP, INVOCATIONS, PACT_WEAPON, PREREQUISITES, is_blast
-from core.rules.states import begin_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, Uses, UseToggle,
 )
@@ -219,24 +218,6 @@ RESILIENCE_PHYSICAL = RollOptionSpec(
     available=lambda c: c.damage_type in _PHYSICAL and _resilience_active(c.damage_type)(c))
 
 
-def _resilience_state(_ctx: RuleContext, params: dict) -> StateSpec:
-    return StateSpec("fiendish_resilience", ends_on=("manual",), data={"damage_type": params["damage_type"]})
-
-
-def _lock_resilience(ctx: RuleContext, _params: dict) -> None:
-    """La scelta si cambia a ogni riposo, breve o lungo: fino ad allora non se ne fa un'altra."""
-    begin_state(ctx.char, StateSpec(LOCK, ends_on=("rest_short", "rest_long"), data={"internal": True}), f"{CK}.fiendish_resilience")
-
-
-def _resilience_check(ctx: RuleContext, _params: dict) -> tuple[int, str] | None:
-    return (409, "already_chosen") if state_on(ctx, LOCK) else None
-
-
-FIENDISH_RESILIENCE_USE = OnUse(
-    state=_resilience_state, effect=_lock_resilience, check=_resilience_check,
-    choices=(UseChoice("damage_type", {"it": "Tipo di danno", "en": "Damage type"}, lambda _c: list(DAMAGE_TYPES),
-                       lambda k: {"it": LABELS_IT[k], "en": k.title()}),))
-
 _HURL_LABEL = ("Scagliare all'Inferno: il bersaglio colpito scompare fino alla fine del tuo prossimo turno",
                "Hurl Through Hell: the creature you hit vanishes until the end of your next turn")
 
@@ -412,7 +393,7 @@ FEATURES = (
             ("Resilienza Immonda", "Fiendish Resilience"),
             ("A ogni riposo breve o lungo scegli un tipo di danno: ne hai la resistenza finché ne scegli un altro. Le armi magiche e d'argento ignorano la resistenza.",
              "At each short or long rest you choose a damage type: you resist it until you choose another. Magical and silvered weapons ignore the resistance."),
-            "special", on_use=FIENDISH_RESILIENCE_USE, roll_options=(RESILIENCE_PHYSICAL,),
+            "special", rest_damage_choice=("fiendish_resilience", tuple(DAMAGE_TYPES)), roll_options=(RESILIENCE_PHYSICAL,),
             modifiers=tuple(Modifier(f"resistance:{t}", 1, when=_resilience_active(t), source=f"feature:{CK}.fiendish_resilience")
                             for t in DAMAGE_TYPES if t not in _PHYSICAL)),
     _patron("hurl_through_hell", "fiend", 14, "Scagliare all'Inferno / Hurl Through Hell (Immondo 14, pag. 117)",

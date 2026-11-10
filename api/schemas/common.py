@@ -222,6 +222,9 @@ class AbilityRead(BaseModel):
     ally_modes: list[str] = []
     # Quante creature della serata possono ricevere i PF temporanei del «Usa» (con gives_to_ally)
     ally_max: int = 1
+    use_preview: Optional[dict[str, str]] = None  # ``OnUse.preview``: cosa farà il «Usa», calcolato dal server
+    # Tipi di danno che il riposo accetta per la resistenza che questo privilegio fa scegliere (Resilienza Immonda); vuoto: nessuna scelta
+    rest_damage_choices: list[str] = []
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None
@@ -370,6 +373,7 @@ class RestRequest(BaseModel):
     reopen_tome: bool = False  # Patto del Tomo: i trucchetti e i rituali del Libro delle Ombre tornano da scegliere
     memorize_spell: Optional[MemorizeSpellRequest] = None  # Memorizzare Incantesimo (Mago 2024, 5°): scambio al riposo breve
     sorcerous_restoration: Optional[int] = None  # Ripristino Stregonesco (Stregone 2024): punti stregoneria da recuperare
+    fiendish_resilience: Optional[str] = None  # Resilienza Immonda: il tipo di danno che si sceglie finendo il riposo
     temp_hp_allies: list[int] = []  # Resilienza Celestiale: PG della serata che ricevono i PF temporanei a fine riposo (fino a 5)
 
 

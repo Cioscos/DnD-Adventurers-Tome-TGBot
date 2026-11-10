@@ -218,7 +218,7 @@ export type TargetEffect = {
   save_ability: string | null
   save_dc: number | null
   rounds: number | null
-  ends_at: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number } | null
+  ends_at: { anchor: 'owner' | 'source' | 'active'; edge: 'start' | 'end'; count: number } | null
   on_failure_only: boolean
   damage_dice: string | null
   /** Altre condizioni che arrivano insieme alla prima, con lo stesso TS e la stessa durata (Sguardo Ipnotico). */
@@ -640,7 +640,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean; temp_hp_allies?: number[] },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean; fiendish_resilience?: string; temp_hp_allies?: number[] },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',

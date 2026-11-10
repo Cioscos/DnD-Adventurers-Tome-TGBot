@@ -83,6 +83,7 @@ function conditionName(t: T, slug: string): string {
 
 function durationText(t: T, fx: TargetEffect): string {
   if (fx.ends_at?.anchor === 'source' && fx.ends_at.edge === 'start') return t('character.target_effect.until_my_turn')
+  if (fx.ends_at?.anchor === 'active') return t('character.target_effect.until_current_turn_end')
   const rounds = fx.ends_at?.count ?? fx.rounds
   if (rounds) return t('character.target_effect.until_turn_end', { count: rounds })
   return t(fx.ends_with_concentration ? 'character.target_effect.while_concentrating' : 'character.target_effect.no_duration')

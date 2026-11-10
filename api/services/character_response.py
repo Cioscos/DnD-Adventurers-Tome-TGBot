@@ -108,12 +108,16 @@ async def build_character_response(
     edition = character_edition(char)
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
     dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
+    rest_choices = {spec.key: list(spec.rest_damage_choice[1]) for spec, _ in active_features(char) if spec.rest_damage_choice}
     for ab in response.abilities:
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.is_pool = ab.feature_key in pools
         if ab.feature_key in dc_of:
             ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
+        ab.rest_damage_choices = rest_choices.get(ab.feature_key, [])
+        if on_use and on_use.preview and owner is not None:
+            ab.use_preview = on_use.preview(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         if on_use and on_use.temp_hp_ally and owner is not None:  # PF temporanei a un PG della serata (Task 46)
             ab.ally_max = on_use.ally_count(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)) if on_use.ally_count else 1

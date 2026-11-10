@@ -328,6 +328,7 @@ export default function Turn() {
     }
     let control: ReactNode = null
     let extra: ReactNode = null
+    let preview: string | undefined
     let label = e.label
     if (e.kind === 'weapon') {
       const crimson = `${BTN} bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30`
@@ -377,6 +378,7 @@ export default function Turn() {
       }
     } else {
       const ab = c.abilities.find((a) => String(a.id) === e.id)
+      preview = ab?.use_preview?.[lang]
       if (ab && (ab.max_uses ?? 0) > 0) {
         // Un uso che non costa nulla (prolungare l'Ira 2024) resta possibile a 0 usi: lo dice il server.
         const running = !!ab.free_use
@@ -442,6 +444,7 @@ export default function Turn() {
           <span className="flex-1 min-w-0 truncate font-body text-sm text-dnd-text">{label}</span>
           {control}
         </div>
+        {preview && <p className="pt-1 text-sm font-body text-dnd-text-muted" data-testid="use-preview">{preview}</p>}
         {extra}
       </li>
     )

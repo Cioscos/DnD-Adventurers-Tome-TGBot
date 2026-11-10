@@ -77,7 +77,7 @@ from core.rules.catalog import active_features
 from core.rules.states import (
     SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
 )
-from core.rules.types import RuleContext
+from core.rules.types import RuleContext, StateSpec
 from api.services.character_response import build_character_response
 
 
@@ -792,6 +792,19 @@ def _rest_ally_temp_hp(char, edition) -> tuple[int, int]:
     return best
 
 
+def _rest_resistance(char, damage_type: str | None) -> tuple | None:
+    """La resistenza scelta finendo il riposo (Resilienza Immonda): ``(privilegio, chiave dello stato, tipo)``; 422 se non si può."""
+    if damage_type is None:
+        return None
+    for spec, _row in active_features(char):
+        if spec.rest_damage_choice:
+            key, allowed = spec.rest_damage_choice
+            if damage_type not in allowed:
+                raise HTTPException(status_code=422, detail={"code": "invalid_damage_type"})
+            return spec, key, damage_type
+    raise HTTPException(status_code=422, detail={"code": "no_resistance_choice"})
+
+
 async def _rest_temp_receivers(session: AsyncSession, char, edition, wanted: list[int]) -> list:
     if not wanted:
         return []
@@ -829,6 +842,7 @@ async def rest(
     edition = character_edition(char)
     rest_type = body.rest_type
     receivers = await _rest_temp_receivers(session, char, edition, body.temp_hp_allies)  # prima di ogni scrittura del riposo
+    chosen_resistance = _rest_resistance(char, body.fiendish_resilience)
     if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and rest_type != "short":
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
@@ -957,6 +971,9 @@ async def rest(
     for spec, row in active_features(char):  # Resilienza Celestiale: a ogni riposo concluso PF temporanei (non si sommano)
         if spec.rest_temp_hp:
             char.temp_hp = max(char.temp_hp or 0, spec.rest_temp_hp(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level)))
+    if chosen_resistance is not None:  # Resilienza Immonda: dopo la fine degli stati del riposo, che non toglie questo
+        spec, key, damage_type = chosen_resistance
+        begin_state(char, StateSpec(key, ends_on=("manual",), data={"damage_type": damage_type}), spec.key, spec.name["it"])
     temp_received = await _deliver_rest_temp_hp(session, char, edition, receivers)
     await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
