@@ -155,6 +155,30 @@ _CONDITION_OPTIONS = (
 )
 
 
+def _bastion_left(ctx: RuleContext) -> int:
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "bastion_of_law"), None)
+    return int(((state or {}).get("data") or {}).get("dice") or 0)
+
+
+def _spend_bastion(n: int):
+    def run(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+        left = _bastion_left(ctx) - n
+        states = [s for s in ctx.char.active_states or [] if s.get("key") != "bastion_of_law"]
+        if left > 0:
+            old = next(s for s in ctx.char.active_states if s.get("key") == "bastion_of_law")
+            states.append({**old, "data": {**(old.get("data") or {}), "dice": left}})
+        ctx.char.active_states = states
+    return run
+
+
+# Bastione della Legge (Stregone 2024): i d8 stanno sullo stato di chi è protetto, anche un altro personaggio della serata
+_CONDITION_OPTIONS += tuple(RollOptionSpec(
+    key=f"sorcerer.bastion_of_law_{n}", phase="damage_in", rolls=("damage_taken",), group="sorcerer.bastion_of_law",
+    extra_dice=lambda _c, _i, n=n: f"{n}d8", available=lambda c, n=n: _bastion_left(c) >= n, on_confirm=_spend_bastion(n),
+    label={"it": f"Bastione della Legge: spendi {n}d8 per ridurre il danno", "en": f"Bastion of Law: spend {n}d8 to reduce the damage"})
+    for n in range(1, 6))
+
+
 class OptionUnavailable(Exception):
     """Opzione non applicabile adesso: già usata, senza risorse, di un'altra fase o inesistente."""
 
@@ -460,7 +484,9 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
             event_type="roll_option", description=f"{spec.label['it']} ({', '.join(t.split(':{')[0] for t in spent)})",
         ))
     if spec.on_confirm:
-        spec.on_confirm(session, option.ctx, inputs)
+        extra = spec.on_confirm(session, option.ctx, inputs)
+        if isinstance(extra, list):  # gettoni che l'effetto ha scritto sul turno (``turnkey:``), da rimborsare con gli altri
+            spent.extend(extra)
     return spent
 
 
@@ -595,6 +621,8 @@ def refund_spent(char: Any, spent: list[str]) -> None:
         kind, _, rest = token.partition(":")
         if kind == "once":
             turn["once_per_turn"] = [k for k in turn.get("once_per_turn", []) if k != rest]
+        elif kind == "turnkey":  # un segno scritto sul turno da ``on_confirm`` (Apoteosi Arcana)
+            turn.pop(rest, None)
         elif kind == "turn" and rest == "extra_action":
             turn["extra_actions"] = turn.get("extra_actions", 0) + 1
         elif kind == "turn":

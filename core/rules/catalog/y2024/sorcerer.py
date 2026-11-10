@@ -123,11 +123,13 @@ def price(base: int) -> Cost:
 
 def _confirm(base: Any = None):
     """Segna sul turno l'opzione gratuita appena usata (prima di ``base``), così la seconda dello stesso turno si paga."""
-    def run(session: Any, ctx: RuleContext, inputs: dict) -> None:
-        if _free_available(ctx):
+    def run(session: Any, ctx: RuleContext, inputs: dict) -> list[str]:
+        marked = _free_available(ctx)
+        if marked:
             ctx.char.turn_state = {**(ctx.char.turn_state or {}), FREE_TURN_KEY: True}
         if base:
             base(session, ctx, inputs)
+        return [f"turnkey:{FREE_TURN_KEY}"] if marked else []  # un rimborso rimette gratuita l'opzione del turno
     return run
 
 
@@ -142,9 +144,14 @@ def cast_option(key: str, label: dict, cost: int = 1, on_confirm: Any = None, **
 
 
 def _prior_level_one_cast(ctx: RuleContext) -> bool:
-    """Prima di questo lancio, in questo turno, è già stato lanciato un incantesimo di livello 1 o più con uno slot?"""
+    """Prima di questo lancio, in questo turno, è già stato lanciato un incantesimo di livello 1 o più, comunque pagato?"""
     turn = ctx.char.turn_state or {}
-    return bool(turn.get("cast_prior_slot", turn.get("spell_slot_cast")))
+    return bool(turn.get("cast_prior_slot", turn.get("spell_slot_cast") or turn.get("leveled_cast")))
+
+
+def _cast_options_used(ctx: RuleContext) -> int:
+    """Opzioni di Metamagia già scelte nel lancio di questo incantesimo (Trasmutato agisce al danno, in una richiesta a parte)."""
+    return len((ctx.char.turn_state or {}).get("cast_metamagic") or [])
 
 
 def _quicken(session: Any, ctx: RuleContext, inputs: dict) -> None:
@@ -228,7 +235,7 @@ def _transmute(damage_type: str) -> RollOptionSpec:
         key=f"{_meta('transmuted')}_{damage_type}", phase="before", rolls=("spell_damage",), group=f"{CK}.transmuted", cost=price(1),
         damage_type_to=damage_type, on_confirm=_confirm(),
         available=lambda c: c.spell is not None and spell_damage_type(c) in TRANSMUTE_TYPES
-        and spell_damage_type(c) != damage_type,
+        and spell_damage_type(c) != damage_type and _cast_options_used(c) < _max_options(c),
         label=_both(f"Incantesimo Trasmutato: il danno diventa {it} (1 punto)", f"Transmuted Spell: the damage becomes {en} (1 point)"),
         effect=_say(f"Il tipo di danno dell'incantesimo diventa {it}.", f"The spell's damage type becomes {en}."))
 

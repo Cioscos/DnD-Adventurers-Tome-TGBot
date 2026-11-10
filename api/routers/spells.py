@@ -200,7 +200,10 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     if kind == "reaction":
         return
     turn = get_turn(char)
-    turn["cast_prior_slot"] = turn["spell_slot_cast"]  # Incantesimo Rapido 2024: cosa era già stato lanciato prima di questo lancio
+    # Incantesimo Rapido 2024: cosa era già stato lanciato prima di questo lancio; conta ogni incantesimo di 1° livello o più,
+    # anche pagato a punti stregoneria o gratis (``leveled_cast``), non solo con uno slot
+    turn["cast_prior_slot"] = turn["spell_slot_cast"] or bool(turn.get("leveled_cast"))
+    turn["leveled_cast"] = bool(turn.get("leveled_cast")) or spell.level >= 1
     turn["spell_slot_cast"] = turn["spell_slot_cast"] or spent_slot
     turn["bonus_spell_cast"] = turn["bonus_spell_cast"] or kind == "bonus"
     if kind == "action":  # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale)
@@ -555,7 +558,7 @@ async def use_spell(
     if removal is not None:  # stessa transazione del lancio: o paga e toglie, o nulla
         rule, (conds, untracked), targets, explicit = removal
         removal_lines = await apply_removal(session, char, rule, conds, untracked, targets, explicit=explicit)
-    _end_cast(char)
+    _end_cast(char, opts)
     rolls, total = roll_option_dice(char, opts)
     await release_concentration_effects(session, char)
     response = await build_character_response(session, char)
@@ -618,7 +621,7 @@ async def spell_attack(
                                 casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual),
                                 damage_type=cast_damage_type(char, spell, body.choices))
         await deliver_temp_gifts(session, char, cast_opts)
-        _end_cast(char)
+        _end_cast(char, cast_opts)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
         cast_block = option_result(cast_opts, cast_rolls, cast_total)
     await release_concentration_effects(session, char)
@@ -697,10 +700,15 @@ def _cast_level(spell: Spell, slot_level: int | None, ritual: bool = False) -> i
     return slot_level if slot_level and slot_level >= spell.level and not ritual else spell.level
 
 
-def _end_cast(char: Character) -> None:
-    """Le opzioni del lancio hanno visto cosa c'era prima di questo incantesimo: il segno non serve più."""
+def _end_cast(char: Character, opts: Any = None) -> None:
+    """Le opzioni del lancio hanno visto cosa c'era prima di questo incantesimo: il segno non serve più. ``opts``: quelle scelte
+    al lancio; le opzioni di Metamagia restano sul turno, perché Trasmutato (al danno) rispetti il limite di una per incantesimo."""
     turn = get_turn(char)
-    if any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None]):  # nuovo lancio: Invocazione Potente si riapre
+    meta = [k for k in (opts.keys if opts is not None else []) if k.startswith("sorcerer.metamagic_")]
+    changed = any([turn.pop("cast_prior_slot", None) is not None, turn.pop(EMPOWERED_USED, None) is not None])  # nuovo lancio: Invocazione Potente si riapre
+    if meta or turn.get("cast_metamagic"):
+        turn["cast_metamagic"], changed = meta, True
+    if changed:
         char.turn_state = turn
 
 
