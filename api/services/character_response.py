@@ -16,7 +16,7 @@ from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, Comput
 from api.services.choices import is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
-from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
+from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
 from api.services.session_allies import attach_spell_auras
 from api.services.spellcasting import build_spellcasting_info, effect_view, fill_spell_stats
@@ -76,9 +76,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     if persist:
         await session.flush()
 
-    # TODO (perf): each get_passive_modifiers call issues 2 SELECTs (rules + items).
-    # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
-    # and exposing a sum_modifiers(rules, items, target_path) helper.
+    snap = await load_snapshot(session, char)  # regole e oggetti letti una volta per i ~27 bonus della risposta
     response = CharacterFull.model_validate(char)
     response.condition_effects, response.pending_saves = await character_effect_payload(
         session, char.id)
@@ -97,7 +95,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
             max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class,
             own_hp=form_own_hp(char))
 
-    hb_ac = await get_passive_modifiers(session, char, "character.ac")
+    hb_ac = await get_passive_modifiers(session, char, "character.ac", snap)
     response.ac_breakdown = AcBreakdown(
         base=char.base_armor_class,
         shield=char.shield_armor_class,
@@ -109,10 +107,10 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     response.ac += response.ac_breakdown.rules
 
     response.hp_max_homebrew_modifier = await get_passive_modifiers(
-        session, char, "character.hit_points_max"
+        session, char, "character.hit_points_max", snap
     )
     response.speed_homebrew_modifier = await get_passive_modifiers(
-        session, char, "character.speed"
+        session, char, "character.speed", snap
     )
 
     response.speed_items_modifier = item_bonus_total(char.items, "speed")
@@ -188,7 +186,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
     # homebrew lookup once per skill instead of re-querying it.
     for slug, ability in SKILL_ABILITY_MAP.items():
-        val = await get_passive_modifiers(session, char, f"character.skill.{slug}")
+        val = await get_passive_modifiers(session, char, f"character.skill.{slug}", snap)
         if val:
             response.skills_homebrew_modifiers[slug] = val
         response.skill_bonuses[slug] = (
@@ -197,12 +195,12 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         )
     for slug in PASSIVE_SKILLS:
         response.passives[slug] = (
-            10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug)
+            10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug, snap)
             + passive_adjustment(char, slug)
         )
 
     for slug in ABILITY_NAMES:
-        val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")
+        val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}", snap)
         if val:
             response.saves_homebrew_modifiers[slug] = val
         item_val = item_bonus_total(char.items, f"save.{slug}")

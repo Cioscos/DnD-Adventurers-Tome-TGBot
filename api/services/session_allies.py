@@ -37,8 +37,9 @@ async def load_receiver(session: AsyncSession, char_id: int) -> Character:
 async def _party(session: AsyncSession, char: Character, donors: bool = False) -> list[Character]:
     """Gli alleati seduti, con ciò che servono le aure; ``donors``: anche le capacità (i doni). Un solo caricamento per alleato."""
     allies = await seated_allies(session, char)
-    for ally in allies:
-        await session.refresh(ally, ["classes", "ability_scores", "items", *(["abilities"] if donors else [])])
+    if allies:  # una query per relazione per tutti gli alleati, non per alleato
+        await session.execute(select(Character).where(Character.id.in_([a.id for a in allies])).options(*(
+            selectinload(getattr(Character, rel)) for rel in ("classes", "ability_scores", "items", *(["abilities"] if donors else [])))))
     return allies
 
 
