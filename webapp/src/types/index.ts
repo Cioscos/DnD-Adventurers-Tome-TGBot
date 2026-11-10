@@ -224,6 +224,8 @@ export interface SpellEffectInfo {
   target_kind: 'self' | 'ally' | 'allies' | 'aura'
   /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
   weapon_choice?: boolean
+  /** Punizione: il danno lo dà l'opzione al colpo, il lancio non tira i dadi dell'incantesimo. */
+  hit_damage?: boolean
   /** Tipi di arma sceglibili (chiavi di `WEAPONS`: Randello Incantato); assente: qualunque arma non magica. */
   weapon_kinds?: string[]
   /** Il tipo dei dadi in più dello slot più alto scelto all'ultimo lancio (Colpo Infuocato, Fame di Hadar); il server lo conserva. */

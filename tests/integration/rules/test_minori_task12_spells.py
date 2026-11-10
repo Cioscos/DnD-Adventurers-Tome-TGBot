@@ -195,3 +195,30 @@ async def test_57_lands_aid_on_a_seated_ally_heals_them_spends_wild_shape_and_te
     assert (await uses())["uses"] == before - 1  # un uso di Forma Selvatica
     async with test_session_factory() as s:
         assert (await s.get(Character, hero)).current_hit_points == 11
+
+
+# I2 (giro 1): una punizione lanciata da elenco non tira il danno; nel 2024 costa l'azione bonus
+
+async def test_i2_a_smite_in_the_list_says_its_damage_comes_from_the_hit_in_both_editions(client):
+    for edition in ("2014", "2024"):
+        cid = (await client.post("/characters", json={"name": "Paladina"})).json()["id"]
+        await client.patch(f"/characters/{cid}", json={"rules_edition": edition})
+        for srd, name in (("searing-smite", "Searing Smite"), ("fireball", "Fireball")):
+            assert (await client.post(f"/characters/{cid}/spells", json={"name": name, "srd_index": srd, "level": 1 if srd != "fireball" else 3})).status_code == 201
+        spells = {s["srd_index"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}
+        assert spells["searing-smite"]["effect"]["hit_damage"] is True, edition
+        assert spells["fireball"]["effect"] is None or spells["fireball"]["effect"]["hit_damage"] is False
+
+
+async def test_i2_a_2024_smite_cast_from_the_list_needs_the_bonus_action(client):
+    cid = (await client.post("/characters", json={"name": "Paladina"})).json()["id"]
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    spell = (await client.post(f"/characters/{cid}/spells", json={"name": "Searing Smite", "srd_index": "searing-smite", "level": 1})).json()["id"]
+    await client.post(f"/characters/{cid}/spell_slots", json={"level": 1, "total": 2})
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": True})
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 1})
+    assert r.status_code == 409 and _code(r) == "turn_slot_used"
+    assert await _slots_used(client, cid) == 0  # rifiutato prima di spendere
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": False})
+    assert (await client.post(f"/characters/{cid}/spells/{spell}/use", json={"slot_level": 1})).status_code == 200
+    assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]["bonus_used"] is True

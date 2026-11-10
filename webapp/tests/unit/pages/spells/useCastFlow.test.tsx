@@ -265,6 +265,16 @@ describe('useCastFlow damageless casts', () => {
     expect(updateConc).not.toHaveBeenCalled()
   })
 
+  it('a smite with damage dice casts without the damage sheet: the damage comes from the hit option (I2)', async () => {
+    useSpell.mockResolvedValue(char)
+    const smite = { ...thunder, id: 9, name: 'Punizione Infuocata', damage_dice: '1d6', effect: { target_kind: 'self', hit_damage: true, max_targets_by_slot: {}, choices: [] } } as Spell
+    renderFlow(smite)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 9, expect.objectContaining({ slot_id: 1, slot_level: 3 })))
+    expect(screen.queryByTestId('damage-sheet')).toBeNull()
+  })
+
   it('a spell granted at will is cast at once without a slot (Thousand Forms)', async () => {
     useSpell.mockResolvedValue(char)
     renderFlow({ ...bless, id: 8, name: 'Alterare se stessi', level: 2, srd_index: 'alter-self', at_will: true } as Spell)

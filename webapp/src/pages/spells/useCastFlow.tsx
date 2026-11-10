@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { isAttackSpell } from '@/lib/spellType'
+import { isAttackSpell, rollsDamageOnCast } from '@/lib/spellType'
 import { needsEffectAsk } from '@/lib/spellChoice'
 import { m, AnimatePresence } from 'framer-motion'
 import Button from '@/components/ui/Button'
@@ -224,7 +224,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       withEffect(spell, 1, () => {
         if (isAttackSpell(spell)) {
           beginAttack({ spell, slot: null, ritual: false, mode })
-        } else if (spell.damage_dice || isHealingSpell(spell)) {
+        } else if (rollsDamageOnCast(spell) || isHealingSpell(spell)) {
           setPendingRitual(false)
           setPendingSlotLevel(0)
           setPendingSlotId(undefined)
@@ -236,7 +236,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       return
     }
     // A volontà (Mille Forme): nessuno slot da scegliere. Solo per i lanci senza tiri: nessun incantesimo a volontà del catalogo li ha.
-    if (spell.at_will && !isAttackSpell(spell) && !spell.damage_dice && !isHealingSpell(spell)) {
+    if (spell.at_will && !isAttackSpell(spell) && !rollsDamageOnCast(spell) && !isHealingSpell(spell)) {
       withEffect(spell, spell.level, () => castMutation.mutate({ spell, free: true }))
       return
     }
@@ -260,7 +260,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       beginAttack({ spell, slot, ritual: false, mode: castMode })
       return
     }
-    if (spell.damage_dice || isHealingSpell(spell)) {
+    if (rollsDamageOnCast(spell) || isHealingSpell(spell)) {
       // Consumo slot differito al bottone Roll dello sheet danni.
       setPendingRitual(false)
       setPendingSlotLevel(slot.level)
@@ -277,7 +277,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       beginAttack({ spell, slot: null, ritual: true, mode: castMode })
       return
     }
-    if (spell.damage_dice || isHealingSpell(spell)) {
+    if (rollsDamageOnCast(spell) || isHealingSpell(spell)) {
       setPendingRitual(true)
       setPendingSlotLevel(null)
       setPendingSlotId(undefined)
@@ -290,7 +290,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Coi punti ki: il costo è del privilegio, il server lo ricontrolla. Con i dadi, il lancio avviene al primo tiro (come uno slot).
   const proceedKiCastNow = useCallback((spell: Spell, extra: number) => {
-    if (spell.damage_dice) {
+    if (rollsDamageOnCast(spell)) {
       setPendingRitual(false)
       setPendingSlotLevel(spell.level + extra)
       setPendingSlotId(undefined)
@@ -304,7 +304,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   // Senza slot: i dadi di danno passano dal foglio dei danni, che fa il lancio al primo tiro.
   const proceedFreeCastNow = useCallback((spell: Spell) => {
-    if (spell.damage_dice && !isAttackSpell(spell) && !isHealingSpell(spell)) {
+    if (rollsDamageOnCast(spell) && !isAttackSpell(spell) && !isHealingSpell(spell)) {
       setPendingRitual(false)
       setPendingSlotLevel(spell.level)
       setPendingSlotId(undefined)

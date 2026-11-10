@@ -63,6 +63,7 @@ from api.services.rules_states import _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
+from core.rules.catalog.spells import spell_effect
 from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
@@ -506,6 +507,9 @@ async def use_spell(
 
     fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
     await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.options or [])  # prima di spendere
+    if (character_edition(char) == "2024" and not (body.free_cast or body.ki or body.as_ritual)
+            and (found := spell_effect("2024", spell.srd_index, spell.name)) and found[1].on_hit):
+        spend(char, "bonus")  # punizione 2024 lanciata da elenco: costa l'azione bonus, 409 turn_slot_used prima di spendere lo slot
     await _charge_pact_use(session, _consume_cast(
         session, char, spell, body.slot_id, body.slot_level, body.as_ritual, body.confirm, body.free_cast,
         body.ki, body.ki_extra, silent=bool({SUBTLE_KEY, PSYCHIC_SILENT} & set(body.options or [])),

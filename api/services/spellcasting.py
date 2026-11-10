@@ -41,6 +41,8 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
             "max_targets_by_slot": {lvl: fx.max_targets(edition, lvl) for lvl in range(max(level, 1), 10)},
             # il tipo dei dadi in più scelto all'ultimo lancio: il client lo usa per contare i dadi 3D (decisione 42)
             "cast_upcast_type": ((char.settings or {}).get(SPELL_CAST_TYPE) or {}).get(fx.key + UPCAST_SUFFIX),
+            # il danno di una punizione arriva dall'opzione al colpo: il lancio non tira i dadi dell'incantesimo
+            "hit_damage": any(o.phase == "after_hit" for o in (*variant.options, *variant.on_hit)),
             "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
