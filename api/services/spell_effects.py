@@ -307,6 +307,10 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     aura = effect.target.kind == "aura"  # l'aura è viva: solo l'orologio del lanciatore, nessuno stato sui bersagli
     applied = []
     rolled: dict[str, dict] = {}  # i dati tirati per ogni bersaglio: l'orologio li tiene, un annullo li ridà (Banchetto degli Eroi)
+    if not concentration and older:  # i vecchi bersagli restano: ognuno tiene i dati e lo slot del proprio lancio, non quelli del nuovo
+        before = next(((s.get("data") or {}).get("state_data") or {} for s in caster.active_states or [] if s.get("key") == clock), {})
+        for old in older:
+            rolled[str(old)] = {"slot_level": before.get("slot_level", slot_level), **(before.get("per_target") or {}).get(str(old), {})}
     for target in [] if aura else chars:
         extra = variant.per_target(data) if variant.per_target else {}
         if extra:

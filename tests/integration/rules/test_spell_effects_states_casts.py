@@ -331,3 +331,22 @@ async def test_d4_concentration_recast_still_drops_the_old_targets(client, test_
     await _cast(client, caster, spell, [caster])
     assert await _states(client, hero, PLAYER_ID) == []
     assert len(await _states(client, caster, GM_ID)) == 1
+
+
+async def test_d4_undo_after_recast_gives_each_old_target_its_own_slot(client, test_session_factory):
+    from api.services.spell_effects import regrant_spells
+    from core.rules.states import SPELL_GIVEN
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Aid", "aid", 2)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/spell_slots", json={"level": 3, "total": 1})).status_code == 201
+    await _defense_cast(client, caster, spell, [hero], level=2)
+    await _defense_cast(client, caster, spell, [caster], level=3)
+    async with test_session_factory() as s:
+        char = await s.get(Character, caster)
+        before = dict(char.settings[SPELL_GIVEN])
+        target = await s.get(Character, hero)
+        target.active_states = [st for st in target.active_states if st["key"] != "spell:aid"]  # la chiusura dell'orologio li ha tolti
+        char.settings = {k: v for k, v in char.settings.items() if k != SPELL_GIVEN}
+        await regrant_spells(s, char, before)
+        await s.commit()
+    assert (await _sheet(client, hero))["computed"]["hp_max_effective"] == 205  # slot 2: +5, non +10
