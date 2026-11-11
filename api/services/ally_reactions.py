@@ -5,14 +5,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.history import add_history
 from api.services.rules_states import use_feature
-from api.services.rules_turn import get_turn, refuse_if_incapacitated
+from api.services.rules_turn import get_turn, refuse_if_incapacitated, release
 from api.services.session_allies import load_receiver, seated_allies
-from core.db.models import AllyReactionRequest as Req, Character, GameSession, SessionParticipant, SessionStatus
+from core.db.models import Ability, AllyReactionRequest as Req, Character, GameSession, SessionParticipant, SessionStatus
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.modifiers import is_incapacitated
@@ -24,6 +24,8 @@ CUTTING_WORDS = "bard.cutting_words"
 REACTIONS = (INTERCEPTION, CUTTING_WORDS)
 LABELS = {INTERCEPTION: "Intercettazione", CUTTING_WORDS: "Parole Taglienti"}
 OPEN_SECONDS = 30  # dopo, la richiesta si chiude da sola
+UNUSED_SECONDS = 120  # chiusa e mai usata da così: le reazioni dei donatori tornano
+KEEP_DAYS = 1  # poi la riga (già usata o rimborsata) si cancella
 PRESENCE_SECONDS = 15  # un donatore è «presente» se ha letto i suoi popup da meno di così
 
 # shortcut: presenza in memoria, un solo processo uvicorn; passare a una colonna se si scala a più worker
@@ -243,3 +245,73 @@ async def prompts_for(session: AsyncSession, donor: Character) -> list[dict]:
         out.append({"request_id": req.id, "receiver_name": (await session.get(Character, req.receiver_id)).name, "damage": req.damage,
                     "damage_type": req.damage_type, "feature_key": spec.key, "dice": dice})
     return out
+
+
+async def consume(session: AsyncSession, receiver: Character, request_id: int) -> Req:
+    """La richiesta del ricevente che il danno sta per usare: sua, chiusa, mai usata né rimborsata (altrimenti 409
+    ``request_unusable``). Si segna usata con un UPDATE condizionato, quindi una volta sola anche con due PATCH insieme."""
+    req = await _fresh(session, request_id)
+    if req is not None and req.receiver_id == receiver.id:
+        await close_if_due(session, req)  # scaduta i suoi 30 s senza che nessuno la leggesse
+    done = await session.execute(
+        update(Req).where(Req.id == request_id, Req.receiver_id == receiver.id, Req.closed_at.is_not(None),
+                          Req.used_at.is_(None), Req.refunded_at.is_(None))
+        .values(used_at=utc_now()).execution_options(synchronize_session=False))
+    if done.rowcount != 1:
+        raise _err("request_unusable")
+    return await _fresh(session, request_id)
+
+
+async def donors_of(session: AsyncSession, req: Req) -> list[dict]:
+    """Chi ha ridotto il danno e di quanto, per il blocco dei risultati."""
+    names = dict((await session.execute(select(Character.id, Character.name).where(
+        Character.id.in_([a["donor_id"] for a in req.answers])))).all())
+    return [{"name": names[a["donor_id"]], "feature_key": a["feature_key"], "reduction": a["reduction"] or 0}
+            for a in req.answers if a["status"] == "used"]
+
+
+async def refund(session: AsyncSession, req: Req, reason: str) -> None:
+    """Restituisce ai donatori reazione e usi spesi per questa richiesta, con storico. Una volta sola (UPDATE condizionato su
+    ``refunded_at``); ``reason`` ``"annullo"`` vale anche dopo l'uso, ``"scadenza"`` solo se mai usata."""
+    cond = [Req.id == req.id, Req.refunded_at.is_(None)]
+    if reason != "annullo":
+        cond.append(Req.used_at.is_(None))
+    done = await session.execute(update(Req).where(*cond).values(refunded_at=utc_now()).execution_options(synchronize_session=False))
+    if done.rowcount != 1:
+        return
+    receiver = await session.get(Character, req.receiver_id)
+    why = "il danno è stato annullato" if reason == "annullo" else "la richiesta è scaduta senza danno"
+    for a in (await _fresh(session, req.id)).answers:
+        spent = a.get("spent")
+        if a["status"] != "used" or not spent:
+            continue
+        donor = await session.get(Character, a["donor_id"])
+        if donor is None:
+            continue
+        if spent.get("slot"):
+            release(donor, spent["slot"])
+        if spent.get("ability_id"):
+            await session.execute(
+                update(Ability).where(Ability.id == spent["ability_id"], Ability.character_id == donor.id, Ability.max_uses.is_not(None))
+                .values(uses=func.min(Ability.max_uses, func.coalesce(Ability.uses, 0) + spent["uses"])))
+            row = await session.get(Ability, spent["ability_id"])
+            await session.refresh(row)
+        add_history(session, donor.id, "ally_reaction",
+                    f"{LABELS[a['feature_key']]}: reazione e usi rimborsati per {receiver.name}, {why}", {"request_id": req.id})
+
+
+async def expire_unused(session: AsyncSession, now: datetime) -> int:
+    """Chiude le richieste aperte oltre i 30 s, rimborsa quelle chiuse da più di 2 minuti e mai usate, cancella le vecchie già
+    usate o rimborsate. Non fa commit. Restituisce i rimborsi."""
+    for req in (await session.execute(select(Req).where(Req.closed_at.is_(None), Req.created_at < now - timedelta(seconds=OPEN_SECONDS))
+                                       .execution_options(populate_existing=True))).scalars().all():
+        await _close(session, req.id, req.created_at + timedelta(seconds=OPEN_SECONDS))
+    due = (await session.execute(select(Req).where(
+        Req.closed_at < now - timedelta(seconds=UNUSED_SECONDS), Req.used_at.is_(None), Req.refunded_at.is_(None))
+        .execution_options(populate_existing=True))).scalars().all()
+    for req in due:
+        await refund(session, req, "scadenza")
+    await session.execute(delete(Req).where(Req.closed_at < now - timedelta(days=KEEP_DAYS),
+                                            (Req.used_at.is_not(None)) | (Req.refunded_at.is_not(None)))
+                          .execution_options(synchronize_session=False))
+    return len(due)

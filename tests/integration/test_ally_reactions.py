@@ -321,3 +321,237 @@ async def test_concurrent_answers_both_recorded(client, test_session_factory):
     await asyncio.gather(one(fighter, FIGHTER_USER), one(bard, BARD_USER))
     body = await _read(client, hero, rid)
     assert sorted(a["status"] for a in body["answers"]) == ["used", "used"] and body["status"] == "closed"
+
+
+# ---------------------------------------------------------------------------
+# Task 2: il danno usa le riduzioni, annullo e scadenza le restituiscono, Parole Taglienti su sé stessi
+# ---------------------------------------------------------------------------
+
+def _fixed(monkeypatch, value: int) -> None:
+    monkeypatch.setattr("random.randint", lambda a, b: min(value, b))
+
+
+async def _hp(client, cid) -> int:
+    return (await client.get(f"/characters/{cid}")).json()["current_hit_points"]
+
+
+async def _hero_hp(client, hero, hp=100) -> None:
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{hero}/hp", json={"op": "set_max", "value": hp})).status_code == 200
+    assert (await client.patch(f"/characters/{hero}/hp", json={"op": "set_current", "value": hp})).status_code == 200
+
+
+async def _close(client, hero, rid, uid=PLAYER_ID) -> None:
+    as_user(uid)
+    assert (await client.post(f"/characters/{hero}/ally-reactions/{rid}/close")).status_code == 200
+
+
+async def _hit(client, hero, value, rid, uid=PLAYER_ID, **body):
+    as_user(uid)
+    return await client.patch(f"/characters/{hero}/hp", json={"op": "damage", "value": value, "damage_type": "slashing",
+                                                              "ally_reaction_id": rid, **body})
+
+
+async def _closed_with_interception(client, factory, monkeypatch, value=7):
+    """Tavolo con richiesta chiusa in cui solo il guerriero ha usato Intercettazione (riduzione ``value`` + 2)."""
+    _fixed(monkeypatch, value)
+    sid, hero, fighter, bard = await _table(client, factory)
+    await _hero_hp(client, hero)
+    rid = (await _open(client, hero))["request_id"]
+    assert (await _answer(client, fighter, FIGHTER_USER, rid, True)).status_code == 200
+    await _close(client, hero, rid)
+    return hero, fighter, bard, rid
+
+
+async def test_damage_uses_reductions(client, test_session_factory, monkeypatch):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    r = await _hit(client, hero, 20, rid)
+    assert r.status_code == 200, r.text
+    assert await _hp(client, hero) == 100 - (20 - 9)
+    block = r.json()["option_result"]
+    assert block["allies"] == [{"name": "Guerriero", "feature_key": INTERCEPTION, "reduction": 9}]
+    assert (block["damage_before"], block["damage_after"]) == (20, 11)
+
+
+async def test_reduction_never_goes_below_zero(client, test_session_factory, monkeypatch):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    assert (await _hit(client, hero, 5, rid)).status_code == 200
+    assert await _hp(client, hero) == 100
+
+
+async def test_reduction_before_resistance(client, test_session_factory, monkeypatch):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch, 4)  # R = 6
+    async with test_session_factory() as s:
+        (await s.get(Character, hero)).conditions = {"petrified": True}  # resistenza a ogni danno
+        await s.commit()
+    assert (await _hit(client, hero, 20, rid)).status_code == 200
+    assert await _hp(client, hero) == 100 - (20 - 6) // 2
+
+
+async def test_reduction_with_own_options(client, test_session_factory, monkeypatch):
+    from tests.integration.rules.test_2014_fighter_battle_master import _key, _master
+    _fixed(monkeypatch, 5)
+    sid, hero = await seed_session(test_session_factory)
+    fighter = await _fighter(client, test_session_factory, sid)
+    as_user(14)
+    master = await _master(client, 7, "parry", dexterity=14)
+    await _seat(test_session_factory, sid, 14, master, "Maestro")
+    await _poll(client, fighter, FIGHTER_USER)
+    as_user(14)
+    rid = (await client.post(f"/characters/{master}/ally-reactions", json={"damage": 30, "damage_type": "slashing"})).json()["request_id"]
+    await _answer(client, fighter, FIGHTER_USER, rid, True)  # 5 + 2
+    await _close(client, master, rid, 14)
+    as_user(14)
+    hp = await _hp(client, master)
+    r = await _hit(client, master, 30, rid, 14, options=[_key("parry")])  # Parata: 5 + 2 (Destrezza)
+    assert r.status_code == 200, r.text
+    assert await _hp(client, master) == hp - (30 - 7 - 7)
+    assert r.json()["option_result"]["allies"][0]["reduction"] == 7
+
+
+async def test_request_single_use(client, test_session_factory, monkeypatch):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    assert (await _hit(client, hero, 20, rid)).status_code == 200
+    r = await _hit(client, hero, 20, rid)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "request_unusable"
+    assert await _hp(client, hero) == 100 - 11
+
+
+async def test_request_of_other_character_409(client, test_session_factory, monkeypatch):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    as_user(BARD_USER)
+    hp = await _hp(client, bard)
+    r = await _hit(client, bard, 10, rid, BARD_USER)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "request_unusable"
+    assert await _hp(client, bard) == hp
+
+
+async def test_open_request_cannot_be_used(client, test_session_factory):
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    await _hero_hp(client, hero)
+    rid = (await _open(client, hero))["request_id"]
+    r = await _hit(client, hero, 10, rid)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "request_unusable"
+    assert await _hp(client, hero) == 100
+
+
+async def test_undo_refunds_donors(client, test_session_factory, monkeypatch):
+    _fixed(monkeypatch, 4)
+    sid, hero, fighter, bard = await _table(client, test_session_factory)
+    await _hero_hp(client, hero)
+    rid = (await _open(client, hero))["request_id"]
+    as_user(BARD_USER)
+    uses = (await _ability(client, bard, BI))["uses"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _answer(client, fighter, FIGHTER_USER, rid, True)
+    await _close(client, hero, rid)
+    r = await _hit(client, hero, 20, rid)
+    assert r.status_code == 200 and await _hp(client, hero) == 100 - (20 - 4 - 6)
+    as_user(BARD_USER)
+    assert (await _turn(client, bard))["reaction_used"] is True
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{hero}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})).status_code == 200
+    assert await _hp(client, hero) == 100
+    for cid, uid in ((bard, BARD_USER), (fighter, FIGHTER_USER)):
+        as_user(uid)
+        assert (await _turn(client, cid))["reaction_used"] is False
+    as_user(BARD_USER)
+    assert (await _ability(client, bard, BI))["uses"] == uses
+    history = (await client.get(f"/characters/{bard}/history")).json()
+    assert any("rimborsat" in e["description"] and "Eroe" in e["description"] for e in history)
+    assert (await _hit(client, hero, 20, rid)).status_code == 409  # una richiesta rimborsata non si riusa
+
+
+async def test_undo_then_expiry_no_double_refund(client, test_session_factory, monkeypatch, clock):
+    _fixed(monkeypatch, 4)
+    sid, hero, fighter, bard = await _table(client, test_session_factory)
+    await _hero_hp(client, hero)
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _close(client, hero, rid)
+    r = await _hit(client, hero, 20, rid)
+    as_user(PLAYER_ID)
+    await client.post(f"/characters/{hero}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    as_user(BARD_USER)
+    assert (await _use(client, bard, CUTTING)).status_code == 200  # il bardo la rispende per sé: il rimborso non deve ripetersi
+    uses = (await _ability(client, bard, BI))["uses"]
+    clock[0] += timedelta(seconds=300)
+    await _poll(client, bard, BARD_USER)
+    assert (await _ability(client, bard, BI))["uses"] == uses and (await _turn(client, bard))["reaction_used"] is True
+
+
+async def test_expired_unused_refunds(client, test_session_factory, monkeypatch, clock):
+    _fixed(monkeypatch, 4)
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    before = (await _ability(client, bard, BI))["uses"]
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _close(client, hero, rid)
+    as_user(BARD_USER)
+    assert (await _ability(client, bard, BI))["uses"] == before - 1
+    clock[0] += timedelta(seconds=119)
+    async with test_session_factory() as s:
+        assert await svc.expire_unused(s, svc.utc_now()) == 0
+        await s.commit()
+    clock[0] += timedelta(seconds=2)
+    async with test_session_factory() as s:
+        assert await svc.expire_unused(s, svc.utc_now()) == 1
+        await s.commit()
+    as_user(BARD_USER)
+    assert (await _ability(client, bard, BI))["uses"] == before and (await _turn(client, bard))["reaction_used"] is False
+    history = (await client.get(f"/characters/{bard}/history")).json()
+    assert any("scadut" in e["description"] for e in history)
+    async with test_session_factory() as s:
+        assert await svc.expire_unused(s, svc.utc_now()) == 0  # una volta sola
+
+
+async def test_expiry_via_donor_poll(client, test_session_factory, monkeypatch, clock):
+    _fixed(monkeypatch, 4)
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    before = (await _ability(client, bard, BI))["uses"]
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _close(client, hero, rid)
+    clock[0] += timedelta(seconds=125)
+    assert await _poll(client, bard, BARD_USER) == []
+    assert (await _ability(client, bard, BI))["uses"] == before and (await _turn(client, bard))["reaction_used"] is False
+
+
+async def test_used_request_is_never_refunded_by_expiry(client, test_session_factory, monkeypatch, clock):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    assert (await _hit(client, hero, 20, rid)).status_code == 200
+    clock[0] += timedelta(seconds=600)
+    async with test_session_factory() as s:
+        assert await svc.expire_unused(s, svc.utc_now()) == 0
+    as_user(FIGHTER_USER)
+    assert (await _turn(client, fighter))["reaction_used"] is True
+
+
+async def test_old_closed_requests_are_deleted(client, test_session_factory, monkeypatch, clock):
+    from core.db.models import AllyReactionRequest
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    assert (await _hit(client, hero, 20, rid)).status_code == 200
+    clock[0] += timedelta(days=2)
+    async with test_session_factory() as s:
+        await svc.expire_unused(s, svc.utc_now())
+        await s.commit()
+        assert await s.get(AllyReactionRequest, rid) is None
+
+
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+async def test_cutting_words_self_option(client, test_session_factory, monkeypatch, edition):
+    _fixed(monkeypatch, 4)
+    sid, hero = await seed_session(test_session_factory)
+    bard = await _lore_bard(client, test_session_factory, sid, edition)
+    as_user(BARD_USER)
+    options = (await client.get(f"/characters/{bard}/roll-options", params={"roll": "damage_taken", "damage_type": "slashing"})).json()
+    mine = next(o for o in options if o["key"] == "bard.cutting_words_self")
+    assert mine["phase"] == "damage_in" and mine["dice"] == "1d6" and mine["slot"] == "reaction"
+    await _poll(client, bard, BARD_USER)
+    assert (await client.post(f"/characters/{bard}/ally-reactions", json={"damage": 9})).json()["request_id"] is None  # per sé: niente popup
+    uses, hp = (await _ability(client, bard, BI))["uses"], await _hp(client, bard)
+    r = await client.patch(f"/characters/{bard}/hp", json={"op": "damage", "value": 9, "damage_type": "slashing",
+                                                           "options": ["bard.cutting_words_self"]})
+    assert r.status_code == 200, r.text
+    assert await _hp(client, bard) == hp - 5
+    assert (await _ability(client, bard, BI))["uses"] == uses - 1 and (await _turn(client, bard))["reaction_used"] is True

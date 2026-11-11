@@ -338,6 +338,7 @@ class OptionResult(BaseModel):
     damage_before: int | None = None  # solo danno subito
     damage_after: int | None = None
     hp_lost: int | None = None  # danno tenuto a 1 PF: i PF persi davvero
+    allies: list[dict[str, Any]] = []  # riduzioni degli alleati (Intercettazione, Parole Taglienti): {name, feature_key, reduction}
 
 
 def absent_when_none() -> Any:
@@ -356,6 +357,7 @@ class HPOp(str, Enum):
 class HPUpdate(RollOptionsBody):
     op: HPOp
     value: int
+    ally_reaction_id: int | None = None  # richiesta di reazione chiusa del ricevente: le riduzioni dei donatori entrano nel danno
     was_critical_hit: bool = False
     # Override esplicito: `value` è già il danno applicato dal client (annotazione),
     # tranne "immune" che azzera. Senza override il server applica le resistenze

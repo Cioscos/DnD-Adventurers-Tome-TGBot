@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 
 from api.database import AsyncSessionLocal
+from api.services.ally_reactions import expire_unused
 from api.services.recap import close_game_session
 from core.db.models import GameSession, SessionStatus
 
@@ -36,6 +37,8 @@ async def _sweep_once() -> int:
         for session in result.scalars().all():
             await close_game_session(db, session)  # commits per session, then messages
             closed += 1
+        await expire_unused(db, datetime.utcnow())  # reazioni degli alleati mai usate: tornano ai donatori
+        await db.commit()
     return closed
 
 
