@@ -1,10 +1,11 @@
+import { useRef } from 'react'
 import { useMatch } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { api, ApiError, type ReactionPrompt } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { notifyMutationError } from '@/lib/mutationError'
+import { apiErrorCode, notifyMutationError } from '@/lib/mutationError'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 
@@ -25,8 +26,13 @@ export default function AllyReactionPrompt({ charId }: { charId: number }) {
     enabled: inEvening,
     refetchInterval: POLL_MS,
   })
-  const prompt: ReactionPrompt | undefined = prompts[0]
-  const drop = (id: number) => qc.setQueryData<ReactionPrompt[]>(key, (all) => (all ?? []).filter((p) => p.request_id !== id))
+  // Un poll già partito può riportare una richiesta a cui ho appena risposto: la si ignora.
+  const answered = useRef(new Set<number>())
+  const prompt: ReactionPrompt | undefined = prompts.find((p) => !answered.current.has(p.request_id))
+  const drop = (id: number) => {
+    answered.current.add(id)
+    qc.setQueryData<ReactionPrompt[]>(key, (all) => (all ?? []).filter((p) => p.request_id !== id))
+  }
 
   const answer = useMutation({
     mutationFn: ({ id, use }: { id: number; use: boolean }) => api.allyReactions.answer(charId, id, use),
@@ -39,7 +45,8 @@ export default function AllyReactionPrompt({ charId }: { charId: number }) {
     },
     onError: (err, { id }) => {
       drop(id)
-      if (err instanceof ApiError && (err.status === 409 || err.status === 404)) toast.error(t('allyReaction.closed'))
+      if (apiErrorCode(err) === 'turn_slot_used') notifyMutationError(err)
+      else if (err instanceof ApiError && (err.status === 409 || err.status === 404)) toast.error(t('allyReaction.closed'))
       else notifyMutationError(err)
     },
   })

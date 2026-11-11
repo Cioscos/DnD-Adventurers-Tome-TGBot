@@ -39,6 +39,7 @@ import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { useAllyReactionWait, allyReductionText } from '@/hooks/useAllyReactionWait'
+import { sendWithAllyReaction } from '@/lib/allyReactionPatch'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
@@ -115,10 +116,10 @@ export default function HP() {
         ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in')
         : undefined
       const base = choice?.options.length ? { ...modifier, ...choice } : modifier
-      const withOptions = allyId != null ? { ...base, ally_reaction_id: allyId } : base
-      return withOptions
-        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, withOptions)
-        : api.characters.updateHp(charId, op, val, wasCritical ?? false)
+      return sendWithAllyReaction(allyId, base, (body) => body
+        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, body)
+        : api.characters.updateHp(charId, op, val, wasCritical ?? false),
+      () => toast.warning(t('allyReaction.lost'), { duration: 5000 }))
     },
     onSuccess: (updated, { op, val }) => {
       qc.setQueryData(['character', charId], updated)

@@ -52,6 +52,19 @@ describe('useAllyReactionWait', () => {
     expect(screen.queryByText(/In attesa di/)).not.toBeInTheDocument()
   })
 
+  it('leaving the page during the wait closes the request and lets the damage go on', async () => {
+    api.allyReactions.open.mockResolvedValue({ request_id: 3, expires_in: 30, waiting: [{ character_id: 1, name: 'Aldo', feature_key: 'x' }] })
+    api.allyReactions.read.mockResolvedValue({ status: 'open', ...empty })
+    api.allyReactions.close.mockResolvedValue({ status: 'closed', ...empty })
+    const done = vi.fn()
+    const { unmount } = render(<Harness onDone={done} />)
+    await userEvent.click(screen.getByText('go'))
+    await screen.findByText('In attesa di: Aldo')
+    unmount()
+    expect(api.allyReactions.close).toHaveBeenCalledWith(7, 3)
+    await waitFor(() => expect(done).toHaveBeenCalledWith(3))
+  })
+
   it('continues by itself when the poll says closed', async () => {
     api.allyReactions.open.mockResolvedValue({ request_id: 4, expires_in: 30, waiting: [{ character_id: 1, name: 'Aldo', feature_key: 'x' }] })
     api.allyReactions.read.mockResolvedValue({ status: 'closed', ...empty, total_reduction: 5 })

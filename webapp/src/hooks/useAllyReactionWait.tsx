@@ -25,8 +25,10 @@ export function useAllyReactionWait(charId: number) {
   const { t } = useTranslation()
   const [pending, setPending] = useState<Pending | null>(null)
   const finish = useRef<((id: number | null) => void) | null>(null)
+  const openId = useRef<number | null>(null)
 
   const done = useCallback((id: number | null) => {
+    openId.current = null
     setPending(null)
     finish.current?.(id)
     finish.current = null
@@ -43,8 +45,17 @@ export function useAllyReactionWait(charId: number) {
     const requestId = opened.request_id
     return new Promise<number | null>((resolve) => {
       finish.current = resolve
+      openId.current = requestId
       setPending({ requestId, waiting: opened.waiting })
     })
+  }, [charId])
+
+  // Lasciare la pagina durante l'attesa (indietro di Telegram) non deve far perdere il danno: si chiude la richiesta e si prosegue.
+  useEffect(() => () => {
+    const id = openId.current
+    if (id == null) return
+    api.allyReactions.close(charId, id).catch(() => {})
+    finish.current?.(id)
   }, [charId])
 
   const requestId = pending?.requestId

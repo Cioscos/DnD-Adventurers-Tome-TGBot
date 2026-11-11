@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
+import { sendWithAllyReaction } from '@/lib/allyReactionPatch'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import type { CharacterFull } from '@/types'
@@ -69,10 +70,10 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in')
         : undefined
       const base = choice?.options.length ? { ...modifier, ...choice } : modifier
-      const withOptions = allyId != null ? { ...base, ally_reaction_id: allyId } : base
-      const updated = await (withOptions
-        ? api.characters.updateHp(char.id, op, value, false, withOptions)
-        : api.characters.updateHp(char.id, op, value))
+      const updated = await sendWithAllyReaction(allyId, base, (body) => body
+        ? api.characters.updateHp(char.id, op, value, false, body)
+        : api.characters.updateHp(char.id, op, value),
+      () => toast.warning(t('allyReaction.lost'), { duration: 5000 }))
       if (updated.option_result) {
         refreshAfterOptions(qc, char.id, updated.option_result)
         if (updated.option_result.damage_before != null && updated.option_result.damage_after != null) { // senza riduzione il server non li manda

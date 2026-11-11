@@ -8,8 +8,9 @@ import { ApiError } from '@/api/client'
 // Spies hoisted so the vi.mock factories can close over them.
 const {
   getChar, updateHpSpy, restSpy, reviveSpy, updateDeathSavesSpy,
-  rollDeathSaveSpy, rollOptionsSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
+  rollDeathSaveSpy, rollOptionsSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect, allyWaitSpy,
 } = vi.hoisted(() => ({
+  allyWaitSpy: vi.fn(async (): Promise<number | null> => null),
   getChar: vi.fn(),
   updateHpSpy: vi.fn(),
   restSpy: vi.fn(),
@@ -24,7 +25,7 @@ const {
   playAndCollect: vi.fn(),
 }))
 
-vi.mock('@/hooks/useAllyReactionWait', () => ({ useAllyReactionWait: () => ({ wait: async () => null, elements: null }), allyReductionText: () => null }))
+vi.mock('@/hooks/useAllyReactionWait', () => ({ useAllyReactionWait: () => ({ wait: allyWaitSpy, elements: null }), allyReductionText: () => null }))
 vi.mock('@/api/client', () => ({
   api: {
     characters: {
@@ -314,6 +315,30 @@ describe('HP page', () => {
     await userEvent.click(screen.getByTestId('hp-apply'))
     await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalledTimes(1))
     expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_damage_undo:43')
+  })
+
+  it('sends ally_reaction_id in the damage PATCH after a closed request', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue(aliveChar)
+    allyWaitSpy.mockResolvedValueOnce(9)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.type(screen.getByTestId('hp-value'), '5')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 5, false, expect.objectContaining({ ally_reaction_id: 9 })))
+  })
+
+  it('on 409 request_unusable repeats the damage without ally_reaction_id and warns', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockRejectedValueOnce(new ApiError(409, { code: 'request_unusable' })).mockResolvedValue(aliveChar)
+    allyWaitSpy.mockResolvedValueOnce(9)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.type(screen.getByTestId('hp-value'), '5')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledTimes(2))
+    expect(updateHpSpy.mock.calls[1]).toEqual([7, 'damage', 5, false])
+    expect(toastWarning).toHaveBeenCalledWith('allyReaction.lost', expect.anything())
   })
 
   it('does not call updateHp for non-positive / NaN input (guard)', async () => {

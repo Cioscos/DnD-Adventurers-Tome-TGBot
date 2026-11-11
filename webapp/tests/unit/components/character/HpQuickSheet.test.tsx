@@ -8,7 +8,9 @@ import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 const flowElements = vi.hoisted(() => vi.fn(() => null as unknown))
-const { rollOptionsSpy, updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({
+const { allyWaitSpy, toastWarning, rollOptionsSpy, updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, notifySpy, attackWeaponSpy, attackUnarmedSpy } = vi.hoisted(() => ({
+  allyWaitSpy: vi.fn(async (): Promise<number | null> => null),
+  toastWarning: vi.fn(),
   attackWeaponSpy: vi.fn(),
   attackUnarmedSpy: vi.fn(),
   rollOptionsSpy: vi.fn(),
@@ -19,7 +21,7 @@ const { rollOptionsSpy, updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, no
   notifySpy: vi.fn(),
 }))
 
-vi.mock('@/hooks/useAllyReactionWait', () => ({ useAllyReactionWait: () => ({ wait: async () => null, elements: null }), allyReductionText: () => null }))
+vi.mock('@/hooks/useAllyReactionWait', () => ({ useAllyReactionWait: () => ({ wait: allyWaitSpy, elements: null }), allyReductionText: () => null }))
 vi.mock('@/api/client', () => ({
   api: { characters: { updateHp: updateHpSpy, undoHp: undoHpSpy, rollOptions: rollOptionsSpy } },
   ApiError: class ApiError extends Error {
@@ -40,7 +42,7 @@ vi.mock('@/hooks/useWeaponAttackFlow', () => ({
 }))
 vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: showUndoToastSpy }))
 vi.mock('@/hooks/useToast', () => ({
-  useToast: () => ({ error: toastError, warning: vi.fn(), success: vi.fn() }),
+  useToast: () => ({ error: toastError, warning: toastWarning, success: vi.fn() }),
 }))
 vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError: notifySpy }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
@@ -74,6 +76,28 @@ describe('HpQuickSheet held at 1 HP', () => {
     await applyDamage()
     await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
     expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_damage_undo:43')
+  })
+})
+
+describe('HpQuickSheet allies reactions', () => {
+  it('sends ally_reaction_id in the damage PATCH after a closed request', async () => {
+    rollOptionsSpy.mockResolvedValue([])
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
+    allyWaitSpy.mockResolvedValueOnce(9)
+    await applyDamage()
+    expect(updateHpSpy).toHaveBeenCalledWith(42, 'damage', 4, false, expect.objectContaining({ ally_reaction_id: 9 }))
+  })
+
+  it('on 409 request_unusable repeats the damage without ally_reaction_id and warns', async () => {
+    rollOptionsSpy.mockResolvedValue([])
+    updateHpSpy.mockRejectedValueOnce(new ApiError(409, { code: 'request_unusable' })).mockResolvedValue({ ...char, hp_undo_id: 'abc' })
+    allyWaitSpy.mockResolvedValueOnce(9)
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    await userEvent.type(screen.getByPlaceholderText('0'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledTimes(2))
+    expect(updateHpSpy.mock.calls[1]).toEqual([42, 'damage', 4])
+    expect(toastWarning).toHaveBeenCalledWith('allyReaction.lost', expect.anything())
   })
 })
 

@@ -17,7 +17,11 @@ const { api, toastMock, ApiErrorMock } = vi.hoisted(() => {
 })
 vi.mock('@/api/client', () => ({ api, ApiError: ApiErrorMock }))
 vi.mock('sonner', () => ({ toast: toastMock }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError: vi.fn() }))
+const { notifyMock } = vi.hoisted(() => ({ notifyMock: vi.fn() }))
+vi.mock('@/lib/mutationError', () => ({
+  notifyMutationError: notifyMock,
+  apiErrorCode: (e: { detail?: { code?: string } }) => e?.detail?.code,
+}))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/components/ui/Sheet', () => ({
   default: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
@@ -33,6 +37,7 @@ function setup(prompts: unknown[]) {
   api.allyReactions.prompts.mockResolvedValue(prompts)
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={qc}><AllyReactionPrompt charId={7} /></QueryClientProvider>)
+  return qc
 }
 
 describe('AllyReactionPrompt', () => {
@@ -74,7 +79,25 @@ describe('AllyReactionPrompt', () => {
     api.allyReactions.answer.mockRejectedValue(new ApiErrorMock(409, { code: 'request_closed' }))
     setup([prompt()])
     await userEvent.click(await screen.findByRole('button', { name: 'Usa' }))
-    await waitFor(() => expect(toastMock.error).toHaveBeenCalled())
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Troppo tardi: la richiesta è chiusa'))
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Usa' })).not.toBeInTheDocument())
+  })
+
+  it('a turn_slot_used 409 gives the reaction-used message, not "request closed"', async () => {
+    api.allyReactions.answer.mockRejectedValue(new ApiErrorMock(409, { code: 'turn_slot_used' }))
+    setup([prompt()])
+    await userEvent.click(await screen.findByRole('button', { name: 'Usa' }))
+    await waitFor(() => expect(notifyMock).toHaveBeenCalled())
+    expect(toastMock.error).not.toHaveBeenCalled()
+  })
+
+  it('a poll that still lists the request just answered does not bring the popup back', async () => {
+    api.allyReactions.answer.mockResolvedValue({ reduction: 0, rolls: [] })
+    const qc = setup([prompt()])
+    await userEvent.click(await screen.findByRole('button', { name: 'Lascia' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Lascia' })).not.toBeInTheDocument())
+    await qc.refetchQueries({ queryKey: ['reaction-prompts', 7] }) // la risposta vecchia di un poll già partito
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByRole('button', { name: 'Lascia' })).not.toBeInTheDocument()
   })
 })
