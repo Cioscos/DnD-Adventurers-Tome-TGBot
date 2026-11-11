@@ -26,6 +26,7 @@ load_dotenv()
 from api.database import engine
 from api.routers import (
     abilities,
+    ally_reactions,
     atlas,
     campaigns,
     lore,
@@ -211,3 +212,4 @@ app.include_router(shares.router)
 app.include_router(homebrew.router)
 app.include_router(transfer.router)
 app.include_router(companions.router)
+app.include_router(ally_reactions.router)
