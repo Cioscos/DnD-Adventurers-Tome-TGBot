@@ -131,8 +131,11 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
     for cid, snap in log.char_states.items():
         pc = await db.get(Character, int(cid))
         if pc is not None:
-            now_wild = any(s.get("key") == "wild_shape" for s in pc.active_states or [])
+            cur_wild = [s for s in pc.active_states or [] if s.get("key") == "wild_shape"]
+            now_wild = bool(cur_wild)
             pc.active_states = list(snap["active_states"])
+            if now_wild:  # una nuova forma è partita dopo l'avanzamento: resta la sua, non quella dello snapshot
+                pc.active_states = [x for x in pc.active_states if x.get("key") != "wild_shape"] + cur_wild
             set_damaged(pc, snap["damaged"])
             form = await db.get(Companion, snap["wild_closed"]) if snap.get("wild_closed") else None  # la riga che ha chiuso proprio l'avanzamento
             if form is not None and form.character_id == pc.id and form.kind == "wild_shape" and not form.is_active and not now_wild:

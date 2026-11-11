@@ -1241,7 +1241,7 @@ async def recalc_hp(
     class owning level 1), current CON mod (effective with equipped items),
     then sets hit_points to that value. current_hit_points is clamped:
     - If new_max > old_max: current += (new_max - old_max)
-    - If new_max < old_max: current = min(current, new_max)
+    - Otherwise current stays, capped to the effective max
     """
     char = await get_owned_full_with_resources(char_id, user_id, session)
 
@@ -1251,8 +1251,9 @@ async def recalc_hp(
     old_max = char.hit_points
     was_at_zero = char.current_hit_points == 0
     char.hit_points = new_max
-    char.current_hit_points = max(0, char.current_hit_points + (new_max - old_max))  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
-    await cap_current_hp(session, char)
+    if new_max > old_max:  # se cala, i PF correnti restano e il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
+        char.current_hit_points += new_max - old_max
+    await cap_current_hp(session, char, always=True)
     await sync_zero_hp(session, char, was_at_zero)
 
     add_history(session, char.id, "hp_change",

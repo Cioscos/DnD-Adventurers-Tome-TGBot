@@ -200,3 +200,62 @@ async def test_level_up_notification_does_not_wait_for_telegram(client, monkeypa
     finally:
         for t in list(tn._BACKGROUND):
             t.cancel()
+
+
+async def _recalc_to(client, test_session_factory, monkeypatch, old_max, cur, new_max):
+    import api.routers.hp as hp
+    monkeypatch.setattr(hp, "total_base_hp", lambda *a, **k: new_max)
+    cid = await _fighter(client)
+    async with test_session_factory() as s:
+        c = await s.get(Character, cid)
+        c.hit_points, c.current_hit_points = old_max, cur
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/hp/recalc", json={})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def test_hp_recalc_lower_max_keeps_current_hp_of_wounded_character(client, test_session_factory, monkeypatch):
+    body = await _recalc_to(client, test_session_factory, monkeypatch, 30, 10, 10)
+    assert body["hit_points"] == 10 and body["current_hit_points"] == 10
+    assert not body["conditions"].get("unconscious")
+
+
+async def test_hp_recalc_lower_max_only_caps_when_current_is_above(client, test_session_factory, monkeypatch):
+    body = await _recalc_to(client, test_session_factory, monkeypatch, 30, 20, 25)
+    assert body["current_hit_points"] == 20
+
+
+async def test_undo_advance_keeps_the_wild_shape_started_after_the_advance(client, test_session_factory, monkeypatch):
+    from api.services.wild_shape import get_active_form
+    from core.db.models import Companion
+    from tests.integration.test_condition_time import _advance, _start
+    from tests.integration.test_condition_undo import _back
+    _, sid, _enc, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    async with test_session_factory() as s:
+        a = Companion(character_id=cid, kind="wild_shape", name="Orso", statblock={}, max_hp=10, current_hp=7, armor_class=11,
+                      is_active=True, created_at="2026-01-01T00:00:00")
+        s.add(a)
+        await s.flush()
+        ch = await s.get(Character, cid)
+        ch.active_states = [{"key": "wild_shape", "name": "Forma selvatica", "ends_on": ["manual"], "rounds_left": 1,
+                             "data": {"companion_id": a.id, "own_hp": True}}]
+        await s.commit()
+    await _advance(client, sid, 3)  # la forma A scade
+    async with test_session_factory() as s:
+        b = Companion(character_id=cid, kind="wild_shape", name="Lupo", statblock={}, max_hp=9, current_hp=9, armor_class=12,
+                      is_active=True, created_at="2026-01-02T00:00:00")
+        s.add(b)
+        await s.flush()
+        ch = await s.get(Character, cid)
+        ch.active_states = [*ch.active_states, {"key": "wild_shape", "name": "Forma selvatica", "ends_on": ["manual"], "rounds_left": 5,
+                                                "data": {"companion_id": b.id, "own_hp": True}}]
+        bid = b.id
+        await s.commit()
+    await _back(client, sid)
+    async with test_session_factory() as s:
+        form = await get_active_form(s, cid)
+        assert form is not None and form.id == bid
+        ch = await s.get(Character, cid)
+        ws = [x for x in ch.active_states if x.get("key") == "wild_shape"]
+        assert [x["data"]["companion_id"] for x in ws] == [bid]
