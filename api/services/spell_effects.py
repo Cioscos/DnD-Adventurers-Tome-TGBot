@@ -299,7 +299,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})
     given = dict(settings.get(SPELL_GIVEN) or {})
-    for old in set(given.get(clock, [])) - {c.id for c in chars}:  # lanciato di nuovo su altri: i vecchi bersagli lo perdono
+    older = set(given.get(clock, [])) - {c.id for c in chars}
+    for old in older if concentration else ():  # a concentrazione, lanciato di nuovo su altri: i vecchi bersagli lo perdono (altrimenti restano)
         previous = caster if old == caster.id else await session.get(Character, old)
         if previous is not None:
             await _drop_state(session, previous, key, caster.id)
@@ -326,7 +327,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}
     pending = [e for e in settings.get(SPELL_RELEASE) or [] if (e["id"], e["key"]) not in regranted]  # chiuso e riaperto nella stessa richiesta
-    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [a["id"] for a in applied]}  # per l'aura: vuoto
+    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [*([] if concentration else sorted(older)), *(a["id"] for a in applied)]}  # per l'aura: vuoto
     if pending:
         settings[SPELL_RELEASE] = pending
     else:

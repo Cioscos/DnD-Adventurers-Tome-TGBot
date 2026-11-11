@@ -15,6 +15,7 @@ from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_sorcerer_metamagic import EXTENDED, TWINNED, _caster as _sorcerer_with
 from tests.integration.rules.test_spell_effects_cast import SOF, SOF_ROUNDS, STATE, _ac, _caster, _cast, _full, _states
 from tests.integration.rules.test_spell_effects_defenses import _sheet
+from tests.integration.rules.test_spell_effects_defenses import _cast as _defense_cast
 from tests.integration.rules.test_spell_effects_defenses import _table as _defense_table
 from tests.integration.test_magic_items import _item
 
@@ -294,3 +295,39 @@ async def test_spells_haste_lethargy_only_when_the_last_haste_ends(client, test_
     await client.patch(f"/characters/{second}/concentration", json={"spell_id": None})
     sheet = await _sheet(client, hero)
     assert "spell:haste" not in keys(sheet) and "spell:haste_lethargy" in keys(sheet)
+
+
+# D4: senza concentrazione il nuovo lancio non toglie lo stato ai bersagli dei lanci precedenti
+
+async def test_d4_aid_recast_on_another_target_keeps_the_first(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Aid", "aid", 2)
+    await _defense_cast(client, caster, spell, [hero], level=2)
+    await _defense_cast(client, caster, spell, [caster], level=2)
+    assert len(await _states(client, hero, PLAYER_ID, "spell:aid")) == 1
+    assert len(await _states(client, caster, GM_ID, "spell:aid")) == 1
+
+
+async def test_d4_aid_recast_on_same_target_replaces_and_clock_closes_with_last_target(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Aid", "aid", 2)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/spell_slots", json={"level": 3, "total": 1})).status_code == 201
+    await _defense_cast(client, caster, spell, [hero], level=2)
+    await _defense_cast(client, caster, spell, [hero], level=3)
+    [state] = await _states(client, hero, PLAYER_ID, "spell:aid")
+    assert state["data"]["slot_level"] == 3
+    assert (await _sheet(client, hero))["computed"]["hp_max_effective"] == 210  # +10, non +15
+    await _defense_cast(client, caster, spell, [caster], level=2)
+    as_user(PLAYER_ID)
+    assert (await client.delete(f"/characters/{hero}/active-states/spell:aid")).status_code == 200
+    assert len(await _states(client, caster, GM_ID, "spell_cast:aid")) == 1  # resta un bersaglio: l'orologio vive
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{caster}/active-states/spell:aid")).status_code == 200
+    assert await _states(client, caster, GM_ID, "spell_cast:aid") == []
+
+
+async def test_d4_concentration_recast_still_drops_the_old_targets(client, test_session_factory):
+    sid, hero, caster, spell = await _caster_table(client, test_session_factory)
+    await _cast(client, caster, spell, [hero])
+    await _cast(client, caster, spell, [caster])
+    assert await _states(client, hero, PLAYER_ID) == []
+    assert len(await _states(client, caster, GM_ID)) == 1
