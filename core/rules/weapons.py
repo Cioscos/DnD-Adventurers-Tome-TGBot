@@ -208,7 +208,7 @@ def _cleave_dice(ctx: RuleContext, _inputs: dict) -> str:
 
 def _topple_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
     dc = 8 + _modifier(ctx) + ctx.char.proficiency_bonus
-    return {"it": f"Topple: TS su Costituzione CD {dc}, se fallisce il bersaglio è Prono.",
+    return {"it": f"Rovesciamento: TS su Costituzione CD {dc}, se fallisce il bersaglio è Prono.",
             "en": f"Topple: DC {dc} Constitution save, on a failure the target is Prone."}
 
 
@@ -249,52 +249,57 @@ MASTERY_OPTIONS: tuple[RollOptionSpec, ...] = (
     RollOptionSpec(
         key="mastery_graze", phase="after_roll", after="miss", rolls=("attack",), available=_graze_available,
         miss_damage=_modifier,
-        label={"it": "Graze: hai mancato, infliggi comunque il modificatore",
+        label={"it": "Colpo di striscio: hai mancato, infliggi comunque il modificatore",
                "en": "Graze: you missed, deal your modifier anyway"},
     ),
     RollOptionSpec(
         key=NICK_OPTION, phase="before", rolls=("attack",), once_per_turn=True,
         available=lambda ctx: _has("nick")(ctx) and ctx.offhand,
-        label={"it": "Nick: attacco extra senza spendere l'azione bonus",
+        label={"it": "Graffio: attacco extra senza spendere l'azione bonus",
                "en": "Nick: extra attack without spending your bonus action"},
     ),
     RollOptionSpec(
         key="mastery_vex_advantage", phase="before", rolls=("attack",), mode="advantage", on_confirm=_use_vex,
         available=lambda ctx: bool((ctx.char.turn_state or {}).get("vex")),
-        label={"it": "Vex: attacchi la creatura che hai colpito?", "en": "Vex: attacking the creature you hit?"},
+        label={"it": "Vessazione: attacchi la creatura che hai colpito?", "en": "Vex: attacking the creature you hit?"},
     ),
     _after_hit(
-        "cleave", "Cleave: attacca una seconda creatura vicina alla prima",
+        "cleave", "Doppio fendente: attacca una seconda creatura vicina alla prima",
         "Cleave: attack a second creature next to the first",
         available=lambda ctx: _has("cleave")(ctx) and ctx.attack_mode == "melee",
         extra_dice=_cleave_dice, crit_doubles=False, separate_damage=True, once_per_turn=True, second_attack=True,
     ),
-    _after_hit("push", "Push: allontana il bersaglio di 3 m", "Push: move the target 10 ft away",
-               effect=_note("Push: bersaglio spinto di 3 m, se è Grande o più piccolo.",
+    _after_hit("push", "Spinta: allontana il bersaglio di 3 m", "Push: move the target 10 ft away",
+               effect=_note("Spinta: bersaglio spinto di 3 m, se è Grande o più piccolo.",
                             "Push: target pushed 10 ft, if Large or smaller.")),
-    _after_hit("sap", "Sap: svantaggio al prossimo attacco del bersaglio",
+    _after_hit("sap", "Fiaccare: svantaggio al prossimo attacco del bersaglio",
                "Sap: disadvantage on the target's next attack",
-               effect=_note("Sap: svantaggio al prossimo attacco del bersaglio, fino all'inizio del tuo turno.",
+               effect=_note("Fiaccare: svantaggio al prossimo attacco del bersaglio, fino all'inizio del tuo turno.",
                             "Sap: disadvantage on the target's next attack, until the start of your turn."),
                target_effect=_until_my_turn("custom:sap")),
-    _after_hit("slow", "Slow: velocità del bersaglio ridotta di 3 m", "Slow: target's speed reduced by 10 ft",
-               effect=_note("Slow: velocità del bersaglio -3 m fino all'inizio del tuo turno, non cumulabile.",
+    _after_hit("slow", "Lentezza: velocità del bersaglio ridotta di 3 m", "Slow: target's speed reduced by 10 ft",
+               effect=_note("Lentezza: velocità del bersaglio -3 m fino all'inizio del tuo turno, non cumulabile.",
                             "Slow: target's speed -10 ft until the start of your turn, doesn't stack."),
                target_effect=_until_my_turn("custom:slow")),
-    _after_hit("topple", "Topple: TS su Costituzione o il bersaglio cade Prono",
+    _after_hit("topple", "Rovesciamento: TS su Costituzione o il bersaglio cade Prono",
                "Topple: Constitution save or the target falls Prone", effect=_topple_effect,
                target_effect=_topple_target),
-    _after_hit("vex", "Vex: vantaggio al prossimo attacco contro il bersaglio",
+    _after_hit("vex", "Vessazione: vantaggio al prossimo attacco contro il bersaglio",
                "Vex: advantage on your next attack against the target", on_confirm=_arm_vex,
-               effect=_note("Vex: vantaggio al prossimo attacco contro il bersaglio, entro la fine del tuo prossimo turno.",
+               effect=_note("Vessazione: vantaggio al prossimo attacco contro il bersaglio, entro la fine del tuo prossimo turno.",
                             "Vex: advantage on your next attack against the target, by the end of your next turn.")),
 )
+
+
+# Nomi italiani del Manuale del Giocatore 2024.
+MASTERY_IT = {"cleave": "Doppio fendente", "graze": "Colpo di striscio", "nick": "Graffio", "push": "Spinta",
+              "sap": "Fiaccare", "slow": "Lentezza", "topple": "Rovesciamento", "vex": "Vessazione"}
 
 
 def _mastery_label(key: str) -> dict:
     w = WEAPONS[key]
     return {"name": {"it": w.it, "en": w.en},
-            "summary": {"it": w.mastery.capitalize(), "en": w.mastery.capitalize()}}
+            "summary": {"it": MASTERY_IT[w.mastery], "en": w.mastery.capitalize()}}
 
 
 def mastery_choice(levels: dict[int, int], melee_only: bool = False) -> ChoiceSpec:
