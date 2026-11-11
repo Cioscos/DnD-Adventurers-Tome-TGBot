@@ -26,6 +26,7 @@ export function useAllyReactionWait(charId: number) {
   const [pending, setPending] = useState<Pending | null>(null)
   const finish = useRef<((id: number | null) => void) | null>(null)
   const openId = useRef<number | null>(null)
+  const mounted = useRef(true)
 
   const done = useCallback((id: number | null) => {
     openId.current = null
@@ -43,6 +44,11 @@ export function useAllyReactionWait(charId: number) {
     }
     if (opened.request_id == null) return null
     const requestId = opened.request_id
+    // Pagina lasciata mentre la richiesta si apriva: nessuno vedrà l'attesa, si chiude e il danno prosegue.
+    if (!mounted.current) {
+      await api.allyReactions.close(charId, requestId).catch(() => {})
+      return requestId
+    }
     return new Promise<number | null>((resolve) => {
       finish.current = resolve
       openId.current = requestId
@@ -51,11 +57,18 @@ export function useAllyReactionWait(charId: number) {
   }, [charId])
 
   // Lasciare la pagina durante l'attesa (indietro di Telegram) non deve far perdere il danno: si chiude la richiesta e si prosegue.
-  useEffect(() => () => {
-    const id = openId.current
-    if (id == null) return
-    api.allyReactions.close(charId, id).catch(() => {})
-    finish.current?.(id)
+  // Si prosegue solo a richiesta chiusa, così il PATCH trova le riduzioni già registrate.
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      const id = openId.current
+      const resolve = finish.current
+      openId.current = null
+      finish.current = null
+      if (id == null) return
+      api.allyReactions.close(charId, id).catch(() => {}).finally(() => resolve?.(id))
+    }
   }, [charId])
 
   const requestId = pending?.requestId

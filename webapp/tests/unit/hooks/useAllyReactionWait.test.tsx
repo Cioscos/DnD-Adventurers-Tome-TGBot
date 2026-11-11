@@ -65,6 +65,37 @@ describe('useAllyReactionWait', () => {
     await waitFor(() => expect(done).toHaveBeenCalledWith(3))
   })
 
+  it('leaving the page goes on only after the close answered', async () => {
+    api.allyReactions.open.mockResolvedValue({ request_id: 3, expires_in: 30, waiting: [{ character_id: 1, name: 'Aldo', feature_key: 'x' }] })
+    api.allyReactions.read.mockResolvedValue({ status: 'open', ...empty })
+    let closed!: () => void
+    api.allyReactions.close.mockReturnValue(new Promise((r) => { closed = () => r({ status: 'closed', ...empty }) }))
+    const done = vi.fn()
+    const { unmount } = render(<Harness onDone={done} />)
+    await userEvent.click(screen.getByText('go'))
+    await screen.findByText('In attesa di: Aldo')
+    unmount()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(done).not.toHaveBeenCalled()
+    closed()
+    await waitFor(() => expect(done).toHaveBeenCalledWith(3))
+  })
+
+  it('leaving the page while the request opens closes it and lets the damage go on', async () => {
+    let opened!: () => void
+    api.allyReactions.open.mockReturnValue(new Promise((r) => {
+      opened = () => r({ request_id: 5, expires_in: 30, waiting: [{ character_id: 1, name: 'Aldo', feature_key: 'x' }] })
+    }))
+    api.allyReactions.close.mockResolvedValue({ status: 'closed', ...empty })
+    const done = vi.fn()
+    const { unmount } = render(<Harness onDone={done} />)
+    await userEvent.click(screen.getByText('go'))
+    unmount()
+    opened()
+    await waitFor(() => expect(done).toHaveBeenCalledWith(5))
+    expect(api.allyReactions.close).toHaveBeenCalledWith(7, 5)
+  })
+
   it('continues by itself when the poll says closed', async () => {
     api.allyReactions.open.mockResolvedValue({ request_id: 4, expires_in: 30, waiting: [{ character_id: 1, name: 'Aldo', feature_key: 'x' }] })
     api.allyReactions.read.mockResolvedValue({ status: 'closed', ...empty, total_reduction: 5 })
