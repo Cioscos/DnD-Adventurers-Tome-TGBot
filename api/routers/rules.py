@@ -264,7 +264,7 @@ async def last_roll_options(
         total = max(total, applied.min_total)
     is_fumble = die == 1 and not forced_hit
     is_critical = (die >= applied.crit_min or (AppliedOptions(**last["applied"]).force_crit and not is_fumble)
-                   if is_attack else die == 20)
+                   if is_attack else die == 20 and last["roll"] not in ("skill", "ability", "initiative"))
     notes = [*last["notes"], *(n for n in applied.notes if n not in last["notes"])]
     previous = OptionResult(**last["option_result"]) if last.get("option_result") else None
     block = option_result(opts, rolls, extra, previous=previous)

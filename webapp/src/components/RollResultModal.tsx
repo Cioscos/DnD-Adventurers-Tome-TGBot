@@ -36,8 +36,6 @@ type Props = {
   onInspirationReroll?: () => void | Promise<void>
   /** Il tiro è ritoccabile con i privilegi usati dopo averlo visto. */
   afterRoll?: { charId: number; query: RollOptionsQuery }
-  /** Prova di caratteristica pura: un 20 naturale non è un critico (il 20 vale solo per attacchi), niente banner «Critico». */
-  noCritical?: boolean
 }
 
 export default function RollResultModal({
@@ -50,12 +48,10 @@ export default function RollResultModal({
   wasRerolled = false,
   onInspirationReroll,
   afterRoll,
-  noCritical = false,
 }: Props) {
   const { t } = useTranslation()
   const [result, retouch] = useRetouched(rolled)
-  const { die, bonus, total, is_fumble } = result
-  const is_critical = result.is_critical && !noCritical
+  const { die, bonus, total, is_fumble, is_critical } = result
   const pair = result.dice && result.dice.length === 2 ? result.dice : null
   // The kept die is the first matching face; the other one is the discarded one (dimmed).
   const keptIdx = pair ? pair.indexOf(die) : -1

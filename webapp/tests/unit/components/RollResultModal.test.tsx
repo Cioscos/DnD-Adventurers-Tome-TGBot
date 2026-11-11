@@ -56,8 +56,8 @@ describe('RollResultModal', () => {
     expect(screen.getByText('18')).toBeInTheDocument()
   })
 
-  it('a pure ability check with a natural 20 is not a critical: no banner, neutral frame (punto 45)', () => {
-    render(<RollResultModal result={result({ die: 20, total: 23, is_critical: true })} title="T" noCritical onClose={() => {}} />)
+  it('a nat 20 flagged non-critical by the server (checks) shows no banner and a neutral frame', () => {
+    render(<RollResultModal result={result({ die: 20, total: 23, is_critical: false })} title="T" onClose={() => {}} />)
     expect(screen.queryByText('character.dice.critical_banner')).toBeNull()
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'default')
   })

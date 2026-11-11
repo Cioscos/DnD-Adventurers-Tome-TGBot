@@ -664,12 +664,12 @@ async def roll_skill(
     raw_total = die + bonus + option_total
     # Totale minimo (Potenza Indomabile): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
     total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
-    is_crit = die == 20 and not applied.auto_fail
+    is_crit = False  # una prova di abilità o di caratteristica non ha il critico (solo attacchi e tiri salvezza)
     is_fumble = die == 1
 
     history_msg = (
         f"Abilità {skill_label(skill_name)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
-        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (FUMBLE)" if is_fumble else "")
         + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
@@ -729,7 +729,7 @@ async def roll_ability_check(
     bonus += opts.bonus
     raw_total = die + bonus + option_total
     total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
-    is_crit = die == 20 and not applied.auto_fail
+    is_crit = False
     is_fumble = die == 1
 
     history_msg = (

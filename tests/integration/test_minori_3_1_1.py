@@ -101,3 +101,13 @@ async def test_import_drops_a_last_long_rest_in_the_future(client, test_session_
     new = (await _import(client, payload)).json()["id"]
     async with test_session_factory() as s:
         assert (await s.get(Character, new)).last_long_rest_at is None
+
+
+async def test_ability_based_checks_have_no_critical_on_a_natural_20(client):
+    cid = await _fighter(client, 1)
+    for url in (f"/characters/{cid}/skills/stealth/roll", f"/characters/{cid}/ability_checks/strength/roll", f"/characters/{cid}/dice/initiative"):
+        r = await client.post(url, json={"die": 20})
+        assert r.status_code == 200, r.text
+        assert r.json()["die"] == 20 and r.json()["is_critical"] is False, url
+    r = await client.post(f"/characters/{cid}/saving_throws/strength/roll", json={"die": 20})
+    assert r.json()["is_critical"] is True  # i tiri salvezza non cambiano

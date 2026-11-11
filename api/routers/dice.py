@@ -134,7 +134,7 @@ async def roll_character_initiative(
     result = RollResult(
         die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
         auto_fail=applied.auto_fail, bonus=bonus, total=total,
-        is_critical=die == 20 and not applied.auto_fail, is_fumble=die == 1, description="initiative",
+        is_critical=False, is_fumble=die == 1, description="initiative",
         option_result=option_result(opts, option_rolls, option_total),
     )
     remember_roll(char, "initiative", opts, result.model_dump(mode="json", include=LAST_ROLL_FIELDS), ability="dexterity")

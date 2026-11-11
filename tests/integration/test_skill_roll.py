@@ -73,7 +73,7 @@ async def test_ability_modifier_is_included(client):
 
 async def test_critical_and_fumble_flags(client):
     cid = await _fighter(client)
-    assert (await _roll(client, cid, "stealth", die=20)).json()["is_critical"] is True
+    assert (await _roll(client, cid, "stealth", die=20)).json()["is_critical"] is False  # una prova non ha critico
     assert (await _roll(client, cid, "stealth", die=1)).json()["is_fumble"] is True
 
 
