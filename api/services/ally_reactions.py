@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.history import add_history
 from api.services.rules_states import use_feature
-from api.services.rules_turn import get_turn
+from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import load_receiver, seated_allies
 from core.db.models import AllyReactionRequest as Req, Character, GameSession, SessionParticipant, SessionStatus
 from core.rules.catalog import active_features
@@ -171,6 +171,8 @@ async def answer(session: AsyncSession, donor: Character, request_id: int, use: 
     mine = next((a for a in req.answers if a["donor_id"] == donor_id and a["status"] == "waiting"), None)
     if mine is None:
         raise _err("already_answered")
+    if (await session.get(GameSession, req.session_id)).status != SessionStatus.ACTIVE:  # serata chiusa nei 30 s
+        raise _err("request_closed")
     key = mine["feature_key"]
     receiver_name = (await session.get(Character, req.receiver_id)).name
     entry = {**mine, "status": "declined"}
@@ -181,11 +183,16 @@ async def answer(session: AsyncSession, donor: Character, request_id: int, use: 
         pool_id, cost = (pool.id, found[0].on_use.cost) if pool is not None else (None, 0)
         slot = found[0].on_use.slot if found else None
         try:
+            if donor.is_dead:  # ricontrollo: dall'apertura il donatore può essere caduto o incapacitato
+                raise _err("dead")
+            refuse_if_incapacitated(donor)
             res = await use_feature(session, donor, key)
         except HTTPException:  # es. reazione già spesa nel frattempo: niente resta speso, la risposta vale «Lascia»
             await session.rollback()
-            await _record(session, request_id, donor_id, entry)
+            recorded = await _record(session, request_id, donor_id, entry)
             await session.commit()
+            if not recorded:
+                raise _err("request_closed")
             raise
         reduction = res.given if res.given is not None else sum(res.rolls)
         entry = {**mine, "status": "used", "reduction": reduction, "rolls": res.rolls,

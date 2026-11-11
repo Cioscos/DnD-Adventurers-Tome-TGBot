@@ -8,7 +8,7 @@ import pytest
 
 from api.services import ally_reactions as svc
 from api.services.character_load import get_owned_full_with_resources
-from core.db.models import SessionParticipant, SessionRole
+from core.db.models import Character, GameSession, SessionParticipant, SessionRole, SessionStatus
 from tests.integration._encounter_helpers import NOW, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard import BI, LORE as LORE_2014, _ability, _bard, _use
 from tests.integration.rules.test_2014_fighter_styles import _item
@@ -258,6 +258,43 @@ async def test_reaction_spent_meanwhile_409(client, test_session_factory):
     body = await _read(client, hero, rid)
     assert [(a["name"], a["status"]) for a in body["answers"]] == [("Guerriero", "declined")]
     assert (await _answer(client, fighter, FIGHTER_USER, rid, True)).status_code == 409  # già risposto
+
+
+@pytest.mark.parametrize("what", ["stunned", "dead"])
+async def test_donor_down_after_opening_cannot_use(client, test_session_factory, what):
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    rid = (await _open(client, hero))["request_id"]
+    async with test_session_factory() as s:
+        ch = await s.get(Character, fighter)
+        if what == "dead":
+            ch.is_dead = True
+        else:
+            ch.conditions = {"stunned": True}
+        await s.commit()
+    r = await _answer(client, fighter, FIGHTER_USER, rid, True)
+    assert r.status_code == 409
+    assert (await _turn(client, fighter))["reaction_used"] is False
+    body = await _read(client, hero, rid)
+    assert [(a["name"], a["status"]) for a in body["answers"]] == [("Guerriero", "declined")] and body["total_reduction"] == 0
+
+
+async def test_answer_after_session_closed_409(client, test_session_factory):
+    sid, hero, fighter, bard = await _table(client, test_session_factory)
+    rid = (await _open(client, hero))["request_id"]
+    async with test_session_factory() as s:
+        (await s.get(GameSession, sid)).status = SessionStatus.CLOSED
+        await s.commit()
+    r = await _answer(client, fighter, FIGHTER_USER, rid, True)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "request_closed"
+    assert (await _turn(client, fighter))["reaction_used"] is False
+
+
+async def test_answer_with_non_donor_character_404(client, test_session_factory):
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    rid = (await _open(client, hero))["request_id"]
+    as_user(PLAYER_ID)  # possiede l'eroe, che non è donatore di questa richiesta
+    r = await client.post(f"/characters/{hero}/reaction-prompts/{rid}", json={"use": True})
+    assert r.status_code == 404 and r.json()["detail"]["code"] == "request_not_found"
 
 
 async def test_other_players_cannot_read_or_answer(client, test_session_factory):
