@@ -50,7 +50,7 @@ async def test_minori_92_the_turn_start_loads_only_the_spell_auras_of_the_allies
     assert q.n <= LIMIT_92
 
 
-LIMIT_92 = 7  # prima della correzione 19
+LIMIT_92 = 8  # prima della correzione 19; +1: l'UPDATE del turno, che ora cambia sempre (marcatore turn_no)
 
 
 async def test_minori_52_a_damage_with_options_at_a_table_of_five(client, test_session_factory):

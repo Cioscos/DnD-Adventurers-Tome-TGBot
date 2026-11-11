@@ -60,8 +60,9 @@ async def close_reaction(char_id: int, request_id: int, user_id: Annotated[int, 
 async def reaction_prompts(char_id: int, user_id: Annotated[int, Depends(get_current_user)],
                            db: Annotated[AsyncSession, Depends(get_db, scope="function")]) -> list[dict]:
     await get_owned(char_id, user_id, db)
-    await svc.expire_unused(db, svc.utc_now())  # rimborsa le richieste mai usate prima di leggere la scheda del donatore
-    await db.commit()
+    if svc.sweep_due():  # rimborsa le richieste mai usate, al massimo ogni 30 s: la DELETE globale prende il lock di scrittura
+        await svc.expire_unused(db, svc.utc_now())
+        await db.commit()
     donor = await get_owned_full_with_resources(char_id, user_id, db)
     svc.mark_seen(char_id)
     return await svc.prompts_for(db, donor)

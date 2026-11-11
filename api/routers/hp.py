@@ -197,7 +197,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return None if shared_from else await build_character_response(session, char)
-    if body.options and body.op != HPOp.DAMAGE:
+    if (body.options or body.ally_reaction_id is not None) and body.op != HPOp.DAMAGE:
         raise HTTPException(status_code=422, detail={"code": "options_only_on_damage"})
     form = await get_active_form(session, char.id)  # the form involved in this op, if any
     if form is not None and not form_own_hp(char):
@@ -333,6 +333,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if warded:
             desc += f" — Interdizione Arcana assorbe {warded}"
+        if ally_block:
+            desc += " — ridotto da " + ", ".join(f"{d['name']} -{d['reduction']}" for d in ally_block)
         if shared_from:
             desc += f" — {shared_from}"
         if held_at_one:
@@ -576,12 +578,13 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
         char.active_states = [*char.active_states, now_form_state]
     set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
+    returned: list[str] = []
     refund_spent(char, snap.get("spent") or [])
     await refund_donor_tokens(session, char, snap.get("spent") or [])
     if snap.get("ally_reaction_id"):  # reazione e usi dei donatori tornano con il danno annullato
         ally_req = await session.get(ally_reactions.Req, snap["ally_reaction_id"])
         if ally_req is not None:
-            await ally_reactions.refund(session, ally_req, "annullo")
+            returned = await ally_reactions.refund(session, ally_req, "annullo")
     await reopen_spell_clocks(session, snap.get("clocks") or [])  # lo stato di un incantesimo altrui è tornato: torna l'orologio di chi l'ha lanciato
     settings = dict(char.settings or {})
     still_given = settings.get(TEMP_GIVEN) or {}
@@ -619,7 +622,8 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
     char.hp_undo = None
 
     add_history(session, char.id, "hp_change",
-                 note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})",
+                 (note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})")
+                 + (f" — reazioni rimborsate a {', '.join(returned)}" if returned else ""),
                  meta={"op": "UNDO"})
 
 

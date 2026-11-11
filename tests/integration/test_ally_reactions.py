@@ -22,8 +22,10 @@ FIGHTER_USER, BARD_USER, OUTSIDER_USER = 11, 12, 13
 @pytest.fixture(autouse=True)
 def _clean_presence():
     svc._SEEN.clear()
+    svc._LAST_SWEEP = None
     yield
     svc._SEEN.clear()
+    svc._LAST_SWEEP = None
 
 
 @pytest.fixture
@@ -189,7 +191,7 @@ async def test_the_answer_keeps_what_was_spent_for_the_refund(client, test_sessi
     row_id = (await _ability(client, bard, BI))["id"]
     async with test_session_factory() as s:
         spent = {a["donor_id"]: a["spent"] for a in (await s.get(AllyReactionRequest, rid)).answers}
-    assert spent[bard] == {"slot": "reaction", "ability_id": row_id, "uses": 1} and spent[fighter] is None
+    assert spent[bard] == {"slot": "reaction", "ability_id": row_id, "uses": 1, "turn": 0} and spent[fighter] is None
 
 
 async def test_decline_spends_nothing(client, test_session_factory):
@@ -471,7 +473,7 @@ async def test_undo_then_expiry_no_double_refund(client, test_session_factory, m
     await _close(client, hero, rid)
     r = await _hit(client, hero, 20, rid)
     as_user(PLAYER_ID)
-    await client.post(f"/characters/{hero}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    assert (await client.post(f"/characters/{hero}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})).status_code == 200
     as_user(BARD_USER)
     assert (await _use(client, bard, CUTTING)).status_code == 200  # il bardo la rispende per sé: il rimborso non deve ripetersi
     uses = (await _ability(client, bard, BI))["uses"]
@@ -555,3 +557,145 @@ async def test_cutting_words_self_option(client, test_session_factory, monkeypat
     assert r.status_code == 200, r.text
     assert await _hp(client, bard) == hp - 5
     assert (await _ability(client, bard, BI))["uses"] == uses - 1 and (await _turn(client, bard))["reaction_used"] is True
+
+
+async def test_refund_skips_reaction_spent_again_in_a_later_turn(client, test_session_factory, monkeypatch, clock):
+    _fixed(monkeypatch, 4)
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    before = (await _ability(client, bard, BI))["uses"]
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _close(client, hero, rid)
+    as_user(BARD_USER)
+    assert (await client.post(f"/characters/{bard}/turn/new")).status_code == 200  # nuovo turno: la reazione torna libera
+    assert (await _use(client, bard, CUTTING)).status_code == 200  # e si rispende (un uso in più)
+    clock[0] += timedelta(seconds=125)
+    await _poll(client, bard, BARD_USER)
+    assert (await _turn(client, bard))["reaction_used"] is True  # la reazione del turno nuovo non si tocca
+    assert (await _ability(client, bard, BI))["uses"] == before - 1  # gli usi tornano sempre: -1 risposta, -1 propria, +1 rimborso
+
+
+async def test_deleted_inspiration_row_does_not_block_expiry(client, test_session_factory, monkeypatch, clock):
+    from core.db.models import Ability
+    _fixed(monkeypatch, 4)
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _close(client, hero, rid)
+    as_user(BARD_USER)
+    row = await _ability(client, bard, BI)
+    async with test_session_factory() as s:
+        await s.delete(await s.get(Ability, row["id"]))
+        await s.commit()
+    clock[0] += timedelta(seconds=125)
+    assert await _poll(client, fighter, FIGHTER_USER) == []  # il poll di un altro donatore non si rompe
+    as_user(BARD_USER)
+    assert (await _turn(client, bard))["reaction_used"] is False  # la richiesta è comunque rimborsata
+    async with test_session_factory() as s:
+        assert await svc.expire_unused(s, svc.utc_now()) == 0
+
+
+async def test_one_broken_request_does_not_block_the_others(client, test_session_factory, monkeypatch, clock):
+    _fixed(monkeypatch, 4)
+    _, hero, fighter, bard = await _table(client, test_session_factory)
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _close(client, hero, rid)
+    rid2 = (await _open(client, hero))["request_id"]
+    await _answer(client, fighter, FIGHTER_USER, rid2, True)
+    await _close(client, hero, rid2)
+    real = svc.refund
+
+    async def broken(session, req, reason):
+        if req.id == rid:
+            raise RuntimeError("riga anomala")
+        return await real(session, req, reason)
+    monkeypatch.setattr(svc, "refund", broken)
+    clock[0] += timedelta(seconds=125)
+    assert await _poll(client, fighter, FIGHTER_USER) == []  # non solleva
+    as_user(FIGHTER_USER)
+    assert (await _turn(client, fighter))["reaction_used"] is False  # l'altra richiesta è rimborsata
+
+
+async def test_deleted_donor_does_not_break_the_hit(client, test_session_factory, monkeypatch):
+    _fixed(monkeypatch, 7)
+    sid, hero, fighter, bard = await _table(client, test_session_factory)
+    await _hero_hp(client, hero)
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _answer(client, fighter, FIGHTER_USER, rid, True)
+    await _close(client, hero, rid)
+    async with test_session_factory() as s:
+        await s.delete(await s.get(Character, bard))
+        await s.commit()
+    r = await _hit(client, hero, 30, rid)
+    assert r.status_code == 200, r.text
+    assert await _hp(client, hero) == 100 - (30 - 9 - 6)  # le riduzioni già date valgono (7+2 e 6), il nome del donatore sparito no
+    as_user(PLAYER_ID)
+    assert (await client.get(f"/characters/{hero}/ally-reactions/{rid}")).status_code == 200
+
+
+async def test_ally_reaction_id_only_on_damage(client, test_session_factory, monkeypatch):
+    hero, fighter, bard, rid = await _closed_with_interception(client, test_session_factory, monkeypatch)
+    as_user(PLAYER_ID)
+    r = await client.patch(f"/characters/{hero}/hp", json={"op": "heal", "value": 5, "ally_reaction_id": rid})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "options_only_on_damage"
+    assert (await _hit(client, hero, 20, rid)).status_code == 200  # la richiesta è ancora utilizzabile
+
+
+async def test_donor_poll_sweeps_at_most_every_30_seconds(client, test_session_factory, clock, monkeypatch):
+    calls = []
+    real = svc.expire_unused
+
+    async def counting(session, now):
+        calls.append(now)
+        return await real(session, now)
+    monkeypatch.setattr(svc, "expire_unused", counting)
+    sid, hero = await seed_session(test_session_factory)
+    fighter = await _fighter(client, test_session_factory, sid)
+    await _poll(client, fighter, FIGHTER_USER)
+    await _poll(client, fighter, FIGHTER_USER)
+    clock[0] += timedelta(seconds=29)
+    await _poll(client, fighter, FIGHTER_USER)
+    assert len(calls) == 1
+    clock[0] += timedelta(seconds=2)
+    await _poll(client, fighter, FIGHTER_USER)
+    assert len(calls) == 2
+
+
+async def test_receiver_history_names_donors_and_undo_says_refunded(client, test_session_factory, monkeypatch):
+    _fixed(monkeypatch, 4)
+    sid, hero, fighter, bard = await _table(client, test_session_factory)
+    await _hero_hp(client, hero)
+    rid = (await _open(client, hero))["request_id"]
+    await _answer(client, bard, BARD_USER, rid, True)
+    await _answer(client, fighter, FIGHTER_USER, rid, True)
+    await _close(client, hero, rid)
+    r = await _hit(client, hero, 20, rid)
+    assert r.status_code == 200
+    as_user(PLAYER_ID)
+    history = (await client.get(f"/characters/{hero}/history")).json()
+    line = next(e["description"] for e in history if e["description"].startswith("Dann"))
+    assert "Bardo" in line and "Guerriero" in line and "-4" in line and "-6" in line
+    assert (await client.post(f"/characters/{hero}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})).status_code == 200
+    history = (await client.get(f"/characters/{hero}/history")).json()
+    undo = next(e["description"] for e in history if e["description"].startswith("Annullata"))
+    assert "rimborsat" in undo and "Bardo" in undo and "Guerriero" in undo
+
+
+@pytest.mark.parametrize("what", ["reaction", "uses", "incapacitated"])
+async def test_cutting_words_self_option_not_offered(client, test_session_factory, what):
+    sid, hero = await seed_session(test_session_factory)
+    bard = await _lore_bard(client, test_session_factory, sid)
+    as_user(BARD_USER)
+    if what == "reaction":
+        assert (await client.post(f"/characters/{bard}/turn/use", json={"slot": "reaction", "used": True})).status_code == 200
+    elif what == "uses":
+        await _set_uses(client, bard, BI, 0)
+    else:
+        async with test_session_factory() as s:
+            (await s.get(Character, bard)).conditions = {"stunned": True}
+            await s.commit()
+    r = await client.get(f"/characters/{bard}/roll-options", params={"roll": "damage_taken", "damage_type": "slashing"})
+    assert r.status_code == 200
+    assert "bard.cutting_words_self" not in [o["key"] for o in r.json()]

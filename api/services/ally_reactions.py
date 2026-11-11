@@ -2,6 +2,7 @@
 richiesta, i donatori presenti rispondono con il loro lock, la richiesta si chiude con tutte le risposte, a mano o dopo 30 s."""
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
@@ -21,6 +22,7 @@ from core.rules.uses import pool_key
 
 INTERCEPTION = "fighter.style_interception"
 CUTTING_WORDS = "bard.cutting_words"
+logger = logging.getLogger(__name__)
 REACTIONS = (INTERCEPTION, CUTTING_WORDS)
 LABELS = {INTERCEPTION: "Intercettazione", CUTTING_WORDS: "Parole Taglienti"}
 OPEN_SECONDS = 30  # dopo, la richiesta si chiude da sola
@@ -30,6 +32,9 @@ PRESENCE_SECONDS = 15  # un donatore è «presente» se ha letto i suoi popup da
 
 # shortcut: presenza in memoria, un solo processo uvicorn; passare a una colonna se si scala a più worker
 _SEEN: dict[int, datetime] = {}
+SWEEP_SECONDS = 30  # la pulizia globale dal poll dei donatori non parte più spesso di così
+# shortcut: ultimo giro in memoria, per processo; con più worker ognuno ne fa uno ogni 30 s (innocuo, le scritture sono condizionate)
+_LAST_SWEEP: datetime | None = None
 
 
 def utc_now() -> datetime:
@@ -38,6 +43,16 @@ def utc_now() -> datetime:
 
 def mark_seen(char_id: int) -> None:
     _SEEN[char_id] = utc_now()
+
+
+def sweep_due() -> bool:
+    """Vero al massimo una volta ogni ``SWEEP_SECONDS``: la scadenza delle richieste non gira a ogni poll di ogni donatore."""
+    global _LAST_SWEEP
+    now = utc_now()
+    if _LAST_SWEEP is not None and now - _LAST_SWEEP < timedelta(seconds=SWEEP_SECONDS):
+        return False
+    _LAST_SWEEP = now
+    return True
 
 
 def is_present(char_id: int) -> bool:
@@ -198,7 +213,7 @@ async def answer(session: AsyncSession, donor: Character, request_id: int, use: 
             raise
         reduction = res.given if res.given is not None else sum(res.rolls)
         entry = {**mine, "status": "used", "reduction": reduction, "rolls": res.rolls,
-                 "spent": {"slot": slot, "ability_id": pool_id, "uses": cost}}
+                 "spent": {"slot": slot, "ability_id": pool_id, "uses": cost, "turn": get_turn(donor).get("turn_no", 0)}}
         result = {"reduction": reduction, "rolls": res.rolls}
     if not await _record(session, request_id, donor_id, entry):
         await session.rollback()  # chiusa mentre rispondeva: né reazione né usi restano spesi
@@ -219,9 +234,9 @@ async def describe(session: AsyncSession, req: Req) -> dict:
     return {
         "status": "open" if is_open else "closed",
         "waiting": [{"character_id": a["donor_id"], "name": names[a["donor_id"]], "feature_key": a["feature_key"]}
-                    for a in req.answers if is_open and a["status"] == "waiting"],
+                    for a in req.answers if is_open and a["status"] == "waiting" and a["donor_id"] in names],
         "answers": [{"name": names[a["donor_id"]], "feature_key": a["feature_key"], "status": a["status"], "reduction": a["reduction"]}
-                    for a in req.answers if a["status"] != "waiting"],
+                    for a in req.answers if a["status"] != "waiting" and a["donor_id"] in names],
         "total_reduction": total_reduction(req),
     }
 
@@ -267,18 +282,20 @@ async def donors_of(session: AsyncSession, req: Req) -> list[dict]:
     names = dict((await session.execute(select(Character.id, Character.name).where(
         Character.id.in_([a["donor_id"] for a in req.answers])))).all())
     return [{"name": names[a["donor_id"]], "feature_key": a["feature_key"], "reduction": a["reduction"] or 0}
-            for a in req.answers if a["status"] == "used"]
+            for a in req.answers if a["status"] == "used" and a["donor_id"] in names]  # un donatore cancellato non c'è più
 
 
-async def refund(session: AsyncSession, req: Req, reason: str) -> None:
+async def refund(session: AsyncSession, req: Req, reason: str) -> list[str]:
     """Restituisce ai donatori reazione e usi spesi per questa richiesta, con storico. Una volta sola (UPDATE condizionato su
-    ``refunded_at``); ``reason`` ``"annullo"`` vale anche dopo l'uso, ``"scadenza"`` solo se mai usata."""
+    ``refunded_at``); ``reason`` ``"annullo"`` vale anche dopo l'uso, ``"scadenza"`` solo se mai usata. La reazione torna solo se il
+    donatore è ancora nel turno in cui l'ha spesa; gli usi tornano sempre. Restituisce i nomi dei donatori rimborsati."""
     cond = [Req.id == req.id, Req.refunded_at.is_(None)]
     if reason != "annullo":
         cond.append(Req.used_at.is_(None))
     done = await session.execute(update(Req).where(*cond).values(refunded_at=utc_now()).execution_options(synchronize_session=False))
     if done.rowcount != 1:
-        return
+        return []
+    returned: list[str] = []
     receiver = await session.get(Character, req.receiver_id)
     why = "il danno è stato annullato" if reason == "annullo" else "la richiesta è scaduta senza danno"
     for a in (await _fresh(session, req.id)).answers:
@@ -288,16 +305,20 @@ async def refund(session: AsyncSession, req: Req, reason: str) -> None:
         donor = await session.get(Character, a["donor_id"])
         if donor is None:
             continue
-        if spent.get("slot"):
+        # shortcut: il rimborso scrive il turno del donatore senza il suo lock (finestra di millisecondi), come ``rules_turn._save``
+        if spent.get("slot") and get_turn(donor).get("turn_no", 0) == spent.get("turn", 0):
             release(donor, spent["slot"])
         if spent.get("ability_id"):
             await session.execute(
                 update(Ability).where(Ability.id == spent["ability_id"], Ability.character_id == donor.id, Ability.max_uses.is_not(None))
                 .values(uses=func.min(Ability.max_uses, func.coalesce(Ability.uses, 0) + spent["uses"])))
             row = await session.get(Ability, spent["ability_id"])
-            await session.refresh(row)
+            if row is not None:  # la riga può essere stata cancellata (talento tolto, cambio di livello)
+                await session.refresh(row)
         add_history(session, donor.id, "ally_reaction",
                     f"{LABELS[a['feature_key']]}: reazione e usi rimborsati per {receiver.name}, {why}", {"request_id": req.id})
+        returned.append(donor.name)
+    return returned
 
 
 async def expire_unused(session: AsyncSession, now: datetime) -> int:
@@ -310,7 +331,11 @@ async def expire_unused(session: AsyncSession, now: datetime) -> int:
         Req.closed_at < now - timedelta(seconds=UNUSED_SECONDS), Req.used_at.is_(None), Req.refunded_at.is_(None))
         .execution_options(populate_existing=True))).scalars().all()
     for req in due:
-        await refund(session, req, "scadenza")
+        try:
+            async with session.begin_nested():  # una richiesta rotta non ferma le altre (riprova al giro dopo)
+                await refund(session, req, "scadenza")
+        except Exception:
+            logger.exception("rimborso della richiesta %s fallito", req.id)
     await session.execute(delete(Req).where(Req.closed_at < now - timedelta(days=KEEP_DAYS),
                                             (Req.used_at.is_not(None)) | (Req.refunded_at.is_not(None)))
                           .execution_options(synchronize_session=False))

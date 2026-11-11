@@ -128,6 +128,7 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     notice = {} if advances or not previous.get("start_heal") else {"start_heal": previous["start_heal"]}
     hasted = any(variant.extra_action for _s, _e, variant, _d in spell_instances(char))  # Velocità: un'azione in più, limitata a un attacco
     _save(char, {**_default(), "damaged": previous["damaged"], "surprised": previous["surprised"] and keep_surprise,
+                 "turn_no": previous.get("turn_no", 0) + 1,  # marcatore del turno: i rimborsi delle reazioni lo confrontano
                  **({"extra_actions": 1, "haste_action": True} if hasted else {}), **vex, **notice})
     return char.turn_state
 
