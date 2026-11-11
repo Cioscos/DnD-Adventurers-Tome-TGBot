@@ -281,6 +281,7 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 - Party effects (auras, temp HP or healing to an ally, a companion's Gift of the Protectors) only reach characters seated in the same active evening, verified by the server (`attach_party`); outside an evening the result is text for the GM.
 - Condition removal by features and spells goes through `core/rules/condition_removal.py` (one `removal {targets, conditions}` contract; spells recognised by name it/en).
 - Starting equipment per edition: `core/rules/starting_equipment.py` (inserted into the inventory, no mechanical effect).
+- Spell catalog: `core/rules/catalog/spells/` (one entry per spell, both editions), evaluated by `core/rules/spell_effects.py`; `api/services/spell_effects.py` applies casts to the caster and to targets seated in the same active evening as `spell:<key>` states, which end with their duration, with the caster's concentration, or on undo. Rules follow the caster's edition; spells without an entry stay text.
 - Homebrew rules that model a feature the catalog now automates must be turned off, or the effect applies twice.
 
 ## i18n

@@ -7,7 +7,8 @@ import { render } from '@testing-library/react'
 import Settings from '@/pages/Settings'
 import { useUnitSettings } from '@/store/unitSettings'
 
-const { getChar, deleteChar, retentionPreview, navigateSpy, toastError } = vi.hoisted(() => ({
+const { getChar, deleteChar, retentionPreview, navigateSpy, toastError, updateChar } = vi.hoisted(() => ({
+  updateChar: vi.fn(),
   getChar: vi.fn(),
   deleteChar: vi.fn(),
   retentionPreview: vi.fn(),
@@ -17,7 +18,7 @@ const { getChar, deleteChar, retentionPreview, navigateSpy, toastError } = vi.ho
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, delete: deleteChar, update: vi.fn(), recalcHp: vi.fn() },
+    characters: { get: getChar, delete: deleteChar, update: updateChar, recalcHp: vi.fn() },
     history: { retentionPreview },
   },
 }))
@@ -135,5 +136,20 @@ describe('Settings encumbrance hints', () => {
     expect(await screen.findByText(/encumbrance_variant_hint\|−3 m\|−6 m/)).toBeTruthy()
     expect(screen.getByText(/coin_weight_hint\|0\.5 kg/)).toBeTruthy()
     useUnitSettings.setState({ system: 'imperial' })
+  })
+})
+
+describe('Settings rules edition (punto 39)', () => {
+  it('after the switch the class options, Preserve Life and the turn are read again, not served from the cache', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2014' })
+    retentionPreview.mockResolvedValue({ total: 0, would_purge_events: 0, would_purge_days: 0 })
+    updateChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    const { qc } = setup()
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    await userEvent.click(await screen.findByRole('button', { name: 'character.settings.rules_edition.2024' }))
+    await userEvent.click(screen.getByRole('button', { name: /::common\.confirm$|::character\.settings\.rules_edition\.confirm$/ }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['turn-state', 5] }))
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['class-options', 5] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['preserve-life', 5] })
   })
 })

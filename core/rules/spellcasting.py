@@ -164,10 +164,20 @@ def best_caster(char: Any) -> CasterStats | None:
     return best
 
 
+def _granted_stats(char: Any, spell: Any) -> CasterStats | None:
+    """CD di un privilegio che concede l'incantesimo a chi non lancia (Maestro Telecinetico: Intelligenza)."""
+    key = getattr(spell, "srd_index", None)
+    for spec, row in active_features(char):
+        if spec.dc_ability and key and key in spec.granted_spells and getattr(spell, "class_id", row.id) in (None, row.id):
+            mod = effective_ability_mod(char, spec.dc_ability)
+            return CasterStats(row.id, row.class_name, spec.dc_ability, 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+    return None
+
+
 def spell_stats(char: Any, spell: Any) -> CasterStats | None:
     """CD e attacco della classe dell'incantesimo; non assegnato (personaggi esistenti): la classe migliore."""
     own = next((s for s in caster_stats(char) if s.class_id == spell.class_id), None)
-    return own or best_caster(char)
+    return own or _granted_stats(char, spell) or best_caster(char)
 
 
 def concentration_dc(edition: Edition, damage: int) -> int:
@@ -208,9 +218,16 @@ def spell_range_override(char: Any, spell: Any) -> str | None:
     return _per_level_range(char, spell, names) or _cantrip_range_bonus(char, spell) or _school_range(char, spell)
 
 
-def school_boost_range(spell: Any, school: str, metres: int) -> str | None:
+def spell_school(char: Any, spell: Any) -> str | None:
+    """La scuola con cui l'incantesimo conta per chi lo lancia: quella scritta, o quella che un privilegio gli dà (Creature Fantasmatiche)."""
+    key = getattr(spell, "srd_index", None)
+    changed = next((spec.school_as[0] for spec, _row in active_features(char) if spec.school_as and key in spec.school_as[1]), None)
+    return changed or normalize_school(getattr(spell, "school", None))
+
+
+def school_boost_range(spell: Any, school: str, metres: int, found_school: str | None = None) -> str | None:
     """Illusioni Migliorate: la gittata di 3 m (10 ft) o più di un incantesimo della scuola cresce di ``metres`` (60 ft per 18 m)."""
-    if normalize_school(getattr(spell, "school", None)) != school:
+    if (found_school or normalize_school(getattr(spell, "school", None))) != school:
         return None
     found = _RANGE.match(getattr(spell, "range_area", None) or "")
     if not found:
@@ -223,12 +240,12 @@ def school_boost_range(spell: Any, school: str, metres: int) -> str | None:
 
 def _school_range(char: Any, spell: Any) -> str | None:
     return next((r for spec, _row in active_features(char) if spec.school_boost
-                 and (r := school_boost_range(spell, *spec.school_boost))), None)
+                 and (r := school_boost_range(spell, *spec.school_boost, spell_school(char, spell)))), None)
 
 
 def no_verbal(char: Any, spell: Any) -> bool:
     """Illusioni Migliorate: gli incantesimi di Illusione si lanciano senza componente Verbale."""
-    school = normalize_school(getattr(spell, "school", None))
+    school = spell_school(char, spell)
     return school is not None and any(spec.school_boost and spec.school_boost[0] == school for spec, _row in active_features(char))
 
 
@@ -310,6 +327,17 @@ def casting_kind(spell: Any) -> str:
     return "reaction" if "reazion" in text or "reaction" in text else "action"
 
 
+LONG_CASTING = re.compile(r"minut|minute|\bor[ae]\b|hour", re.IGNORECASE)
+
+
+def champion_bonus_cast(char: Any, spell: Any) -> bool:
+    """Campione degli Antichi: finché dura, un incantesimo da un'azione si lancia con un'azione bonus. 2024: qualunque
+    incantesimo; 2014: solo quelli da paladino (la classe dell'incantesimo, o l'unica classe se non è assegnato)."""
+    if casting_kind(spell) != "action" or LONG_CASTING.search(spell.casting_time or "") or not has_state(char, "elder_champion"):
+        return False
+    return character_edition(char) == "2024" or all(row_class_key(c) == "paladin" for c in _spell_rows(char, spell))
+
+
 def _armor_block(char: Any) -> bool:
     kinds = ("armor", "shield") if character_edition(char) == "2014" else ("armor",)  # 2024: lo scudo toglie solo la CA
     return any(i.is_equipped and i.item_type in kinds and not is_armor_proficient(char, i) for i in char.items)
@@ -351,13 +379,13 @@ def _form_materials(char: Any, spell: Any) -> str | None:
     return "form_materials_cost" if any(s.ignores_components for s in specs) else "form_materials"
 
 
-def _turn_warning(char: Any, spell: Any) -> str | None:
+def _turn_warning(char: Any, spell: Any, slotless: bool | None = None) -> str | None:
     kind = casting_kind(spell)
     if kind == "reaction":  # può cadere nel turno di un altro: il turno salvato non dice nulla
         return None
     turn = char.turn_state or {}
     if character_edition(char) == "2024":
-        free = free_cast_state(char, spell)  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
+        free = free_cast_state(char, spell) if slotless is not False else None  # lancio senza slot che fa parte di un'altra azione (Magia Stregata): niente secondo slot
         if free is not None and (free.get("data") or {}).get("free_cast_slot", "action") is None:
             return None
         return "one_slot_per_turn" if spell.level > 0 and turn.get("spell_slot_cast") else None
@@ -366,7 +394,7 @@ def _turn_warning(char: Any, spell: Any) -> str | None:
     return "bonus_spell" if spell.level > 0 and turn.get("bonus_spell_cast") else None
 
 
-def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
+def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool | None = None) -> list[str]:
     """Regole che il lancio viola: il giocatore le conferma, perché l'app non vede eccezioni e privilegi futuri."""
     out = ["armor"] if _armor_block(char) else []
     if _form_block(char, spell):
@@ -379,7 +407,7 @@ def cast_warnings(char: Any, spell: Any, ritual: bool) -> list[str]:
         out.append("ritual_only")
     if ritual:
         return [*out, "ritual_unprepared"] if _ritual_unprepared(char, spell) else out
-    warning = _turn_warning(char, spell)
+    warning = _turn_warning(char, spell, slotless)
     return [*out, warning] if warning else out
 
 

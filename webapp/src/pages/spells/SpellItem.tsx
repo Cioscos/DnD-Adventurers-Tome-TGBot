@@ -153,24 +153,24 @@ function SpellItemInner({
               )}
 
               {/* Stats chips */}
-              {(spell.casting_time || spell.range_area || spell.components || spell.duration || spell.damage_dice || spell.attack_save) && (
+              {((spell.effective_casting_time ?? spell.casting_time) || (spell.effective_range_area ?? spell.range_area) || (spell.effective_components ?? spell.components) || spell.duration || spell.damage_dice || spell.attack_save) && (
                 <div className="grid grid-cols-2 gap-1.5">
-                  {spell.casting_time && (
+                  {(spell.effective_casting_time ?? spell.casting_time) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Clock size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.casting_time}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_casting_time ?? spell.casting_time}</span>
                     </div>
                   )}
-                  {spell.range_area && (
+                  {(spell.effective_range_area ?? spell.range_area) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Crosshair size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.range_area}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_range_area ?? spell.range_area}</span>
                     </div>
                   )}
-                  {spell.components && (
+                  {(spell.effective_components ?? spell.components) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <FlaskConical size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.components}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_components ?? spell.components}</span>
                     </div>
                   )}
                   {spell.duration && (
@@ -182,7 +182,7 @@ function SpellItemInner({
                   {spell.damage_dice && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Swords size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.level === 0 ? scaleCantripDice(spell.damage_dice, totalLevel) : spell.damage_dice}{spell.damage_type ? ` ${spell.damage_type}` : ''}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.level === 0 ? scaleCantripDice(spell.damage_dice, totalLevel) : spell.damage_dice}{spell.effect?.choices.some((c) => c.key === 'damage_type') ? ` ${t('character.spells.damage_type_choice')}` : spell.damage_type ? ` ${spell.damage_type}` : ''}</span>
                     </div>
                   )}
                   {attackSaveLabel(spell.attack_save) && (
@@ -239,7 +239,7 @@ function SpellItemInner({
                     onClick={() => onUse('normal')}
                     pending={usePending}
                     spinnerSize={12}
-                    className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                    className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                                bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
                                active:opacity-60 disabled:opacity-30"
                   >
@@ -253,7 +253,7 @@ function SpellItemInner({
                     onClick={onPreparedToggle}
                     pending={preparedPending}
                     spinnerSize={12}
-                    className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                    className={`flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                                 border active:opacity-60 disabled:opacity-30
                                 ${spell.is_prepared
                                   ? 'bg-dnd-gold-bright/15 text-dnd-gold-bright border-dnd-gold-bright/40'
@@ -291,7 +291,7 @@ function SpellItemInner({
                     spinnerSize={12}
                     title={t('character.spells.concentration_button_title')}
                     aria-label={t('character.spells.concentration_button_title')}
-                    className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                    className={`flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                                 border active:opacity-60 cursor-help
                                 ${isConcentrating
                                   ? 'bg-dnd-danger/20 text-dnd-crimson-bright border-dnd-danger/30'

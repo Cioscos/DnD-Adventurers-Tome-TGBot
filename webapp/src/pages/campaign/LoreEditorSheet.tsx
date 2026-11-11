@@ -1,3 +1,4 @@
+import { actionFailedKey } from '@/lib/mutationError'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -79,7 +80,7 @@ export default function LoreEditorSheet({ open, campaignId, lore, onClose }: Pro
       qc.invalidateQueries({ queryKey: ['lore', campaignId] })
       onClose()
     },
-    onError: (e) => toast.error(t(e instanceof ApiError && e.status === 400 ? 'campaign.lore.err_file' : 'common.action_failed')),
+    onError: (e) => toast.error(t(e instanceof ApiError && e.status === 400 ? 'campaign.lore.err_file' : actionFailedKey(e))),
   })
 
   return (

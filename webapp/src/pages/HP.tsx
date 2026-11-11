@@ -36,6 +36,7 @@ import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
+import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
@@ -137,6 +138,8 @@ export default function HP() {
       maybeShowInstantDeath(updated)
       const zeroSave = zeroHpSaveMessage(updated, t)
       if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
+      const shared = sharedDamageMessage(updated, t)
+      if (shared) (shared.ok ? toast.info : toast.warning)(shared.text, { duration: 5000 })
       const conc = updated.concentration_save
       if (conc) {
         setConcSaveResult(conc)
@@ -148,7 +151,7 @@ export default function HP() {
       // Stesso annullamento per scorciatoie e valore scritto a mano.
       const undoId = updated.hp_undo_id
       if (!undoId) return
-      const base = t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? val })
+      const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? val })
       const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
       showUndoToast({
         message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
@@ -156,8 +159,8 @@ export default function HP() {
         onUndo: () => undoMutation.mutate(undoId),
       })
     },
-    onError: () => {
-      notifyMutationError()
+    onError: (err) => {
+      notifyMutationError(err)
       savingRef.current = false
     },
   })
@@ -178,7 +181,7 @@ export default function HP() {
         toast.error(t('character.hp.undo_stale'))
         qc.invalidateQueries({ queryKey: ['character', charId] })
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })

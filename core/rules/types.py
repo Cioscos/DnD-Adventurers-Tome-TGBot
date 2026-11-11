@@ -43,6 +43,8 @@ class ChoiceSpec:
     levels: dict[int, int]
     options: Callable[["RuleContext"], list[str]]
     replaceable: bool = False
+    # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
+    replace_per_long_rest: bool = False
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None
@@ -136,6 +138,7 @@ class StateSpec:
     immune_conditions: tuple[str, ...] = ()
     end_slot: str | None = None
     condition: str | None = None
+    also_conditions: tuple[str, ...] = ()  # altre condizioni imposte insieme a ``condition`` (Morte Apparente: Incapacitato e Accecato)
 
     def __post_init__(self) -> None:
         unknown = set(self.ends_on) - ENDS_ON
@@ -173,6 +176,8 @@ class TargetEffect:
     # Chiave di un testo che il foglio del bersaglio traduce (``character.target_effect.notes.<chiave>``): ciò che l'app non
     # applica da sola e il GM chiude a mano (fino al danno, svantaggio, velocità, vantaggio agli attacchi...)
     note: str | None = None
+    # La condizione cade con la concentrazione di chi la applica (le punizioni: Punizione Collerica, Colpo Accecante...)
+    ends_with_concentration: bool = False
 
     def __post_init__(self) -> None:
         if self.repeat_save not in (None, "start", "end"):
@@ -288,6 +293,8 @@ class OnUse:
     once_per_turn: bool = False
     forgoes_attack: bool = False
     notes: "Callable[[RuleContext, dict], list[str]] | None" = None
+    # Testo ``{it, en}`` calcolato dal server e mostrato sulla riga prima dell'uso (Astuzia Magica: quanti slot tornano); ``None``: niente
+    preview: "Callable[[RuleContext], dict[str, str] | None] | None" = None
     gives: "Callable[[RuleContext, int], int] | None" = None
     # Come ``gives`` ma legge anche le scelte fatte all'uso (Punizione Ispiratrice: agli altri va ciò che chi usa non tiene)
     gives_by: "Callable[[RuleContext, int, dict], int] | None" = None
@@ -491,6 +498,7 @@ class RollOptionSpec:
     pay_if_success: bool = False
     replace_die: bool = False
     miss_damage: "Callable[[RuleContext], int] | None" = None
+    miss_damage_adds: bool = False  # il danno al mancato si somma a quello di Graze invece di valere il maggiore dei due (Freccia Folgorante)
     on_miss: bool = False  # si arma con ogni mancato dichiarato (anche da Graze o dal pulsante «Mancato»)
     # Offerta agli altri partecipanti della serata, non a chi possiede il privilegio: l'opzione compare sul tiro del ricevente
     # (``available`` guarda lui; ``{donor}`` nel label è il nome del donatore) e il costo si spende sulla scheda del donatore.
@@ -521,6 +529,8 @@ class RollOptionSpec:
     # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
     # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
     holds_at_one: bool = False
+    # Con ``holds_at_one``: vale anche per il danno massiccio, che il manuale non esclude (Interdizione alla Morte)
+    holds_vs_massive: bool = False
     # Con ``holds_at_one``: PF che si recuperano oltre al 1 PF (Sentinella Imperitura 2024: 3 x livello da paladino)
     holds_heal: "Callable[[RuleContext], int] | None" = None
     # Danno che l'opzione fa a chi la usa, come ``f(ctx, inputs) -> "NdM"`` o ``None`` (Saturazione Magica: necrotico, ignora
@@ -544,6 +554,11 @@ class RollOptionSpec:
     finesse_unarmed: bool = False
     # Con ``spell_damage`` prima del tiro: il tipo di danno dell'incantesimo diventa questo (Incantesimo Trasmutato)
     damage_type_to: str | None = None
+    # Tipo di danno dei dadi che l'opzione aggiunge (``extra_dice``): arriva nel blocco dell'esito (``extra_types``), per chi lo legge
+    extra_damage_type: str | None = None
+    # Con ``after_hit``: confermarla lancia un incantesimo a concentrazione (punizioni 2024): il server avvia la concentrazione di
+    # ``ctx.spell_data["spell_id"]`` per questi round
+    starts_concentration: int | None = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_roll", "after_hit", "after_damage", "damage_in"):
@@ -703,6 +718,9 @@ class FeatureSpec:
     rest_temp_hp: "Callable[[RuleContext], int] | None" = None
     # Come ``rest_temp_hp`` ma per altre creature della serata: ``f(ctx) -> (quante, PF temporanei per ciascuna)`` (Resilienza Celestiale)
     rest_temp_hp_ally: "Callable[[RuleContext], tuple[int, int]] | None" = None
+    # Resistenza che si sceglie quando finisci un riposo, breve o lungo (Resilienza Immonda): ``(chiave dello stato, tipi di danno ammessi)``;
+    # la scelta arriva col riposo (``RestRequest.fiendish_resilience``) e lo stato dura finché non se ne sceglie un'altra
+    rest_damage_choice: "tuple[str, tuple[str, ...]] | None" = None
     # Dadi d20 tirati alla fine del riposo lungo e salvati (R29, Portento): ``(chiave dell'opzione, f(ctx) -> quanti)``
     long_rest_dice: "tuple[str, Callable[[RuleContext], int]] | None" = None
     # Incantesimi (``GRANTED_SPELLS``) che il privilegio aggiunge al Libro del Mago senza prepararli (Servitori Non Morti, Mutaforma)
@@ -728,6 +746,8 @@ class FeatureSpec:
     # Gli incantesimi di questa scuola non hanno componente Verbale e, con gittata di 3 m o più, hanno ``metri`` in più: ``(scuola, m)``
     # (Illusioni Migliorate)
     school_boost: "tuple[str, int] | None" = None
+    # ``(scuola, srd_index...)``: questi incantesimi, per chi ha il privilegio, contano della scuola indicata (Creature Fantasmatiche)
+    school_as: "tuple[str, tuple[str, ...]] | None" = None
     # ``srd_index`` degli incantesimi da un'azione che il privilegio fa lanciare con un'azione bonus (Rompi-Incantesimi: Dissolvi Magie)
     bonus_cast_spells: tuple[str, ...] = ()
     # Trucchetto Potente 2024: anche il trucchetto con tiro per colpire che manca fa metà danno, non solo quello con TS superato
@@ -754,3 +774,5 @@ class RuleContext:
     slotless: bool = False  # solo ``cast``: lancio gratuito o rituale, senza slot
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo
     damage: int | None = None  # solo ``damage_taken``: il danno che il giocatore sta per inserire, se lo sa
+    damage_in: int | None = None  # solo ``damage_taken`` al danno vero: serve ai testi (cosa riflettere), mai alla disponibilità
+    spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)

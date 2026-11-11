@@ -16,6 +16,8 @@ class GrantedSpell:
     range_area: str | None = None
     duration: str | None = None
     is_concentration: bool = False
+    # Richiede Concentrazione solo nel 2024 (Arma Spirituale): ``is_concentration`` vale per il 2014
+    concentration_2024: bool = False
     is_ritual: bool = False
     attack_save: str | None = None
     damage_dice: str | None = None
@@ -69,7 +71,7 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'magic-weapon': GrantedSpell(
         'magic-weapon', {"it": 'Arma magica', "en": 'Magic Weapon'}, 2, '1 azione bonus', 'Contatto', 'Concentrazione, fino a 1 ora', is_concentration=True),
     'spiritual-weapon': GrantedSpell(
-        'spiritual-weapon', {"it": 'Arma spirituale', "en": 'Spiritual Weapon'}, 2, '1 azione bonus', '18 m', '1 minuto', attack_save='ATK', damage_dice='1d8', damage_type='force'),
+        'spiritual-weapon', {"it": 'Arma spirituale', "en": 'Spiritual Weapon'}, 2, '1 azione bonus', '18 m', '1 minuto', attack_save='ATK', damage_dice='1d8', damage_type='force', concentration_2024=True),
     'spirit-guardians': GrantedSpell(
         'spirit-guardians', {"it": 'Spiriti guardiani', "en": 'Spirit Guardians'}, 3, '1 azione', 'Personale', 'Concentrazione, fino a 10 minuti', is_concentration=True),
     'crusaders-mantle': GrantedSpell(
@@ -589,5 +591,9 @@ _SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "
             "divine-smite": "evocation", "find-steed": "conjuration",
             "summon-fey": "conjuration", "mislead": "illusion", "rope-trick": "transmutation", "seeming": "illusion",
             "counterspell": "abjuration", "dispel-magic": "abjuration", "see-invisibility": "divination", "summon-beast": "conjuration",
-            "fear": "illusion", "telekinesis": "transmutation", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
+            "fear": "illusion", "telekinesis": "transmutation",
+            # Patrono Grande Antico (Incantesimi Psichici legge Ammaliamento e Illusione)
+            "detect-thoughts": "divination", "dissonant-whispers": "enchantment", "phantasmal-force": "illusion",
+            "tashas-hideous-laughter": "enchantment", "clairvoyance": "divination", "hunger-of-hadar": "conjuration",
+            "confusion": "enchantment", "summon-aberration": "conjuration", "modify-memory": "enchantment", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}

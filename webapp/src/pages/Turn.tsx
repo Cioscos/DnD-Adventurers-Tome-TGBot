@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
@@ -32,7 +33,6 @@ import { useToast } from '@/hooks/useToast'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
-import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import { standardActionsFor } from '@/data/standardActions'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
@@ -44,7 +44,7 @@ type Bucket = 'action' | 'bonus_action' | 'reaction'
 const BUCKETS: Bucket[] = ['action', 'bonus_action', 'reaction']
 const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bonus', reaction: 'reaction' }
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
-const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead']
+const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead', 'target_not_down', 'nothing_to_remove', 'beast_alive']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'lay_on_hands_other_2024', 'lay_on_hands_cure_self_2024', 'lay_on_hands_cure_other_2024', 'revivification_other', 'gift_of_the_protectors_other', 'primeval_awareness', 'vanish_hide',
   'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus']
@@ -83,7 +83,8 @@ export default function Turn() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
-  const { data: turn } = useTurnState(charId, true)
+  const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me() })
+  const { data: turn } = useTurnState(charId, true, session?.status === 'active')
 
   // Lo stato del turno vive sul server: sopravvive a ricarica e cambio pagina.
   const block = turn?.turn
@@ -96,13 +97,13 @@ export default function Turn() {
     qc.setQueryData(['turn-state', charId], (old: TurnState | undefined) => old && { ...old, turn: b })
   const useSlot = useMutation({
     mutationFn: ({ slot, on = true }: { slot: TurnSlot; on?: boolean }) => api.characters.turnUse(charId, slot, on),
-    onSuccess: setBlock,
+    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) }, // spendere l'azione extra cambia il limite di attacchi
     onError: () => qc.invalidateQueries({ queryKey: ['turn-state', charId] }),
   })
   const newTurn = useMutation({
     mutationFn: () => api.characters.turnNew(charId),
-    // L'inizio del turno può curare (Sopravvissuto): i PF si rileggono.
-    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['character', charId] }) },
+    // L'inizio del turno può curare (Sopravvissuto) e dare un'azione extra (Velocità): PF e limite di attacchi si rileggono.
+    onSuccess: (b) => { setBlock(b); qc.invalidateQueries({ queryKey: ['character', charId] }); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
   })
   const setProne = useMutation({
     mutationFn: (prone: boolean) => api.characters.updateConditions(charId, { prone }),
@@ -121,7 +122,7 @@ export default function Turn() {
     },
     onSuccess: ({ result, skill }, { spendsAttack, influence }) => {
       if (spendsAttack) useSlot.mutate({ slot: 'attack' })
-      if (influence) setInfluenceRolled(true)
+      setInfluenceRolled(!!influence)  // un'altra prova non lascia l'esito di Influenzare sul tiro nuovo
       // Nascondersi legge il totale dal tiro salvato dal server: il turno lo riporta.
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       refreshAfterOptions(qc, charId, result.option_result)
@@ -172,8 +173,8 @@ export default function Turn() {
       }
       if (res?.temp_hp != null) toast.info(t('character.turn.use_temp_hp', { n: res.temp_hp }))
       if (res?.attack) toast.info(t('character.turn.use_attack', { die: res.attack.die, bonus: `${res.attack.bonus >= 0 ? '+' : ''}${res.attack.bonus}`, total: res.attack.total }), { description: res.attack.is_fumble ? t('character.dice.fumble_banner') : res.attack.is_critical ? t('character.dice.critical_banner') : undefined })
-      if (res?.message) toast.info(res.message[i18n.language?.startsWith('en') ? 'en' : 'it'])
-      for (const line of res?.removal ?? []) toast.info(line[i18n.language?.startsWith('en') ? 'en' : 'it'])
+      if (res?.message) toast.info(res.message[uiLang(i18n.language)])
+      for (const line of res?.removal ?? []) toast.info(line[uiLang(i18n.language)])
       for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
     },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
@@ -235,7 +236,7 @@ export default function Turn() {
   // Stesso tiro per Influenzare: il totale è quello del server, che segue le opzioni scelte dopo il tiro.
   const influenceSkills = standardActionsFor(char.rules_edition).find((s) => s.id === 'influence')?.skills ?? []
   const influenceTotal = influenceRolled && lastRoll?.roll === 'skill' && influenceSkills.includes(lastRoll.skill ?? '') ? lastRoll.total : null
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   // Lama Assetata: con l'arma del patto in mano gli attacchi sono quelli del privilegio
   const pactInHand = char.items?.some((i) => i.is_equipped && i.item_metadata?.pact_weapon)
   const attacks = (pactInHand ? turn?.attacks_allowed_pact : undefined) ?? turn?.attacks_allowed ?? char.attacks_per_action ?? 1
@@ -302,7 +303,7 @@ export default function Turn() {
             c.hiding_dc != null ? (
               <p className="mt-2 text-xs text-dnd-text-muted">{t('character.turn.hiding', { dc: c.hiding_dc })}</p>
             ) : 
-            hideTotal >= 15 ? (
+            hideTotal >= (turn?.hide_min_total ?? Infinity) ? (
               <Button size="sm" variant="secondary" className="mt-2" loading={hide.isPending} onClick={() => hide.mutate()}>
                 {t('character.turn.hide_confirm', { total: hideTotal })}
               </Button>
@@ -328,6 +329,7 @@ export default function Turn() {
     }
     let control: ReactNode = null
     let extra: ReactNode = null
+    let preview: string | undefined
     let label = e.label
     if (e.kind === 'weapon') {
       const crimson = `${BTN} bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30`
@@ -335,7 +337,7 @@ export default function Turn() {
         label = t('character.turn.unarmed')
         extra = (
           <>
-            <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes, c.rules_edition, c.items) })}</p>
+            <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: c.unarmed_damage_dice ?? '1' })}</p>
             {c.rules_edition === '2024' && (
               <div className="flex flex-wrap gap-2 pt-2">
                 {(['grapple', 'shove'] as const).map((effect) => (
@@ -377,6 +379,7 @@ export default function Turn() {
       }
     } else {
       const ab = c.abilities.find((a) => String(a.id) === e.id)
+      preview = ab?.use_preview?.[lang]
       if (ab && (ab.max_uses ?? 0) > 0) {
         // Un uso che non costa nulla (prolungare l'Ira 2024) resta possibile a 0 usi: lo dice il server.
         const running = !!ab.free_use
@@ -391,7 +394,9 @@ export default function Turn() {
         const cap = Math.max(floor, Math.min(left, ab.max_amount ?? left))
         const amount = Math.min(Math.max(amounts[ab.id] ?? floor, floor), cap)
         label = `${e.label} (${left}/${ab.max_uses})`
-        if (pickable && left > 0) extra = (
+        // Il costo di una cura di condizioni lo decide il server (cinque punti per voce): niente contatore da regolare.
+        const serverPriced = !!ab.removal?.cost_each && !!ab.removal.modes?.includes(useChoices[ab.id]?.mode ?? '')
+        if (pickable && left > 0 && !serverPriced) extra = (
           <>
             {renderToggles(ab)}
             <div className="pt-2"><AmountStepper value={amount} min={floor} max={cap} onChange={(n) => setAmounts((a) => ({ ...a, [ab.id]: n }))} /></div>
@@ -425,7 +430,7 @@ export default function Turn() {
             </>
           )
           control = (
-            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || short}
+            <Button size="sm" variant="secondary" disabled={missingChoice(ab) || short || !!ab.use_blocked}
               loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
               onClick={() => triggerAbility({ ability: ab, uses: 0, amount: pickable ? amount : undefined })}>
               {short ? t('character.turn.no_uses') : t('character.turn.use')}
@@ -440,6 +445,7 @@ export default function Turn() {
           <span className="flex-1 min-w-0 truncate font-body text-sm text-dnd-text">{label}</span>
           {control}
         </div>
+        {preview && <p className="pt-1 text-sm font-body text-dnd-text-muted" data-testid="use-preview">{preview}</p>}
         {extra}
       </li>
     )

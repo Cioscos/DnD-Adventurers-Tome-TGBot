@@ -48,6 +48,28 @@ async def test_damage_meta_amount_and_to_zero(client, test_session_factory):
     ]
 
 
+async def test_hp_33_damage_meta_counts_only_the_hp_really_lost(client, test_session_factory):
+    cid = await _new(client)
+    await _setup_hp(client, cid)
+    await _hp(client, cid, "set_temp", 5)
+    await _hp(client, cid, "damage", 12)  # 5 assorbiti dai PF temporanei, 7 persi
+    await _hp(client, cid, "damage", 30)  # restano 13: se ne perdono 13, non 30
+    metas = [m for m in await _rows(test_session_factory, cid, "hp_change") if m and m.get("op") == "DAMAGE"]
+    assert [m["amount"] for m in metas[-2:]] == [7, 13]
+
+
+async def test_hp_56_history_line_counts_the_hp_really_lost_with_temp_hp_absorbed(client, test_session_factory):
+    from core.db.models import CharacterHistory
+    cid = await _new(client)
+    await _setup_hp(client, cid)
+    await _hp(client, cid, "set_temp", 5)
+    await _hp(client, cid, "damage", 12)
+    async with test_session_factory() as s:
+        rows = (await s.execute(select(CharacterHistory).where(
+            CharacterHistory.character_id == cid, CharacterHistory.event_type == "hp_change").order_by(CharacterHistory.id))).scalars().all()
+    assert rows[-1].description == "Danni: -7 HP (20 → 13)"
+
+
 async def test_damage_at_zero_logs_failure_meta(client, test_session_factory):
     cid = await _new(client)
     await _setup_hp(client, cid)

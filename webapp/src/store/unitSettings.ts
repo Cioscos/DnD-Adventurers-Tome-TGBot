@@ -62,6 +62,17 @@ export function formatLength(valueFeet: number, system: UnitSystem): string {
   return `${valueFeet} ft`
 }
 
+/** Una distanza che il server dà in metri (raggi e portate degli stati): 9 m = 30 ft sulla griglia del tavolo. */
+export function formatMeters(valueM: number, system: UnitSystem): string {
+  return formatLength(Math.round(valueM / FT_TO_M), system)
+}
+
+/** Una distanza in km (Esploratore Nato: 9 km = 6 miglia, 1,5 km = 1 miglio): km o miglia secondo il sistema. */
+export function formatKm(valueKm: number, system: UnitSystem, locale: string = 'en'): string {
+  const n = (v: number) => v.toLocaleString(locale, { maximumFractionDigits: 1 })
+  return system === 'metric' ? `${n(valueKm)} km` : `${n(valueKm / 1.5)} mi`
+}
+
 export function oppositeSystem(system: UnitSystem): UnitSystem {
   return system === 'imperial' ? 'metric' : 'imperial'
 }

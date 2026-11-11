@@ -6,6 +6,8 @@ import pytest
 from core.rules.catalog import features_for
 from core.rules.catalog.y2024.sorcerer_wild_magic import SURGES
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _roll_keys, _states, _use
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
+from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
 from tests.integration.rules.test_2014_sorcerer import SP, _points, _set_points
 from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell, _sword
@@ -90,7 +92,7 @@ async def test_psionic_sorcery_casts_with_points_equal_to_the_spell_level_and_no
     cid = await _make(client, "aberrant", 7)
     spell = (await _spells(client, cid))["hunger-of-hadar"]["id"]
     total = sum(s["available"] for s in (await _full(client, cid))["spell_slots"])
-    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True})
+    r = await client.post(f"/characters/{cid}/spells/{spell}/use", json={"ki": True, "choices": {"upcast_type": "cold"}})
     assert r.status_code == 200, r.text
     assert await _points(client, cid) == 7 - 3 and sum(s["available"] for s in (await _full(client, cid))["spell_slots"]) == total
 
@@ -383,3 +385,22 @@ def test_charm_monster_is_a_twinned_spell_and_chromatic_orb_has_a_damage_type():
     from core.rules.catalog.y2024.sorcerer import TWINNED_SPELLS
     assert "charm-monster" in TWINNED_SPELLS
     assert GRANTED_SPELLS["chromatic-orb"].damage_type == "fire"  # predefinito: il tipo si sceglie al lancio (Trasmutato lo cambia)
+
+
+async def test_sorcerer_21_bastion_of_law_on_an_ally_of_the_evening_lets_the_ally_spend_the_dice(client, test_session_factory):
+    sid, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _make(client, "clockwork", 8)
+    await _seat(test_session_factory, cid)
+    r = await _use(client, cid, P + "bastion_of_law", params={"points": "3", "target_character_id": hero})
+    assert r.status_code == 200, r.text
+    assert await _points(client, cid) == 5
+    assert not any(s["key"] == "bastion_of_law" for s in await _states(client, cid))  # sono addosso all'alleato, non al lanciatore
+    as_user(PLAYER_ID)
+    assert P + "bastion_of_law_3" in await _roll_keys(client, hero, "damage_taken")
+    assert P + "bastion_of_law_4" not in await _roll_keys(client, hero, "damage_taken")
+    as_user(GM_ID)
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _use(client, cid, P + "bastion_of_law", params={"points": "1"})).status_code == 200  # di nuovo su di sé
+    as_user(PLAYER_ID)
+    assert P + "bastion_of_law_1" not in await _roll_keys(client, hero, "damage_taken")

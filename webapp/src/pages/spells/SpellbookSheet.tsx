@@ -45,7 +45,7 @@ export default function SpellbookSheet({ charId, spell, open, onClose }: {
       if (code === 'insufficient_funds') toast.error(t('character.spells.insufficient_funds'))
       else if (code && ['not_a_wizard_spell', 'already_in_spellbook', 'already_in_backup', 'not_prepared', 'spell_above_slots'].includes(code)) {
         toast.error(t(code === 'spell_above_slots' ? 'character.spells.spell_above_slots' : `character.spells.book.${code}`))
-      } else notifyMutationError()
+      } else notifyMutationError(err)
     },
   })
 

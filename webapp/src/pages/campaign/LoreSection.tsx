@@ -32,12 +32,12 @@ export default function LoreSection({ campaignId, isGm }: { campaignId: number; 
   const toggle = useMutation({
     mutationFn: (e: LoreRead) => (e.revealed ? api.lore.hide(campaignId, e.id) : api.lore.reveal(campaignId, e.id)),
     onSuccess: () => { haptic.success(); qc.invalidateQueries({ queryKey: key }) },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   const del = useMutation({
     mutationFn: (e: LoreRead) => api.lore.remove(campaignId, e.id),
     onSuccess: () => { setDeleting(null); qc.invalidateQueries({ queryKey: key }) },
-    onError: () => { setDeleting(null); notifyMutationError() },
+    onError: (err) => { setDeleting(null); notifyMutationError(err) },
   })
 
   return (

@@ -67,6 +67,14 @@ describe('TargetEffectSheet', () => {
     expect(await screen.findByText('character.target_effect.repeat_save_end')).toBeInTheDocument()
   })
 
+  it('says the condition lasts while the concentration does, not "until removed" (Punizione Collerica)', async () => {
+    preview.mockResolvedValue({ result: { ...topple, condition: 'frightened', ends_with_concentration: true }, combatants: [] })
+    renderWithProviders(<RollNotes charId={3} optionResult={opts} />)
+    await userEvent.click(screen.getByText('character.target_effect.open'))
+    expect(await screen.findByText('character.target_effect.while_concentrating')).toBeInTheDocument()
+    expect(screen.queryByText('character.target_effect.no_duration')).not.toBeInTheDocument()
+  })
+
   it('shows the note that says what the GM closes by hand (Abjure Enemy)', async () => {
     preview.mockResolvedValue({ result: { ...topple, condition: 'frightened', note: 'abjure_enemy' }, combatants: [] })
     renderWithProviders(<RollNotes charId={3} optionResult={opts} />)

@@ -141,3 +141,23 @@ describe('AllyTargetSheet', () => {
     })
   })
 })
+
+describe('AllyTargetSheet look (punti 87 e 88)', () => {
+  const removal = { conditions: [], untracked: [], count: null, maxTargets: 2, onConfirm: vi.fn() }
+
+  it('a chosen target is tinted, not full gold: the full gold stays on the confirm button (Gold Leaf)', async () => {
+    renderWithProviders(<AllyTargetSheet title="Aiuto" allies={allies} removal={removal} onPick={() => {}} onClose={() => {}} />)
+    await userEvent.click(screen.getByText('Brun'))
+    const chosen = screen.getByText('Brun').closest('button') as HTMLElement
+    expect(chosen.className).toContain('!bg-dnd-gold/20')
+    expect(chosen.className).not.toMatch(/(^|\s)bg-dnd-gold(\s|$)/)
+    expect((screen.getByText('character.turn.removal_confirm').closest('button') as HTMLElement).className).toMatch(/(^|\s)bg-dnd-gold(\s|$)/)
+  })
+
+  it('"to yourself" and the allies share the same left alignment', () => {
+    renderWithProviders(<AllyTargetSheet title="Aiuto" allies={allies} removal={removal} onPick={() => {}} onClose={() => {}} />)
+    for (const label of ['character.turn.removal_self', 'Brun', 'Lia']) {
+      expect((screen.getByText(label).closest('button') as HTMLElement).className).toContain('!justify-start')
+    }
+  })
+})

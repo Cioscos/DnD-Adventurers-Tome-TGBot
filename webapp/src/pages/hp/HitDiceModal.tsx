@@ -85,6 +85,7 @@ export default function HitDiceModal({
                   <Button
                     variant="primary"
                     size="sm"
+                    className="min-w-11"
                     onClick={() => { if (count > 0) onSpend(cls.id, count) }}
                     disabled={!count || remaining === 0}
                     loading={thisPending}

@@ -89,6 +89,12 @@ def chain_master_stats(char, comp) -> CompanionStats | None:
                           damage_types=("necrotic", "radiant"), can_resist=True)
 
 
+def other_edition(char, comp) -> bool:
+    """Il compagno di privilegio è dell'altra edizione: resta salvato (torna se si ricambia) ma non conta per le regole di ora."""
+    entry = COMPANION_FEATURES.get(comp.feature_key or "")
+    return entry is not None and entry[1] != character_edition(char)
+
+
 def companion_stats(char, comp) -> CompanionStats | None:
     """Valori del compagno di privilegio per il personaggio; ``None`` se non ne ha uno o il privilegio non è dell'edizione."""
     if (thrall := thrall_stats(char, comp)) is not None:

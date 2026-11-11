@@ -283,7 +283,7 @@ async def test_the_catalog_has_a_row_for_every_option_group_member():
 # ---------------------------------------------------------------------------
 
 async def test_beyond_pact_boon_and_invocations_find_the_catalog_choices_even_when_the_boon_comes_with_them(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -292,7 +292,7 @@ async def test_beyond_pact_boon_and_invocations_find_the_catalog_choices_even_wh
         char.classes[0].options = {}
         report = ImportReport()
         names = ("Pact of the Blade", "Thirsting Blade", "Agonizing Blast", "Armor of Shadows", "Beast Speech", "Mystery")
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         options = char.classes[0].options
         assert options["pact_boon"] == ["blade"]
         assert options["invocations"] == ["thirsting_blade", "agonizing_blast", "armor_of_shadows", "beast_speech"]

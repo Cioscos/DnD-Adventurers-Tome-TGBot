@@ -123,3 +123,13 @@ async def test_delete_history_wipes_all_rows(client, test_session_factory):
 async def test_delete_history_unknown_character_is_404(client):
     r = await client.delete("/characters/999999/history")
     assert r.status_code == 404, r.text
+
+
+async def test_pure_ability_check_nat20_history_has_no_critical(client):
+    """Giro 1 (minor 45): una prova di caratteristica non ha «critico»."""
+    cid = await _make_char(client)
+    r = await client.post(f"/characters/{cid}/ability_checks/strength/roll", json={"die": 20})
+    assert r.status_code == 200, r.text
+    rows = (await client.get(f"/characters/{cid}/history")).json()
+    assert any(h["description"].startswith("Prova di") for h in rows)
+    assert not any("CRITICO" in h["description"] for h in rows if h["description"].startswith("Prova di"))

@@ -27,7 +27,7 @@ from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.container import CoinLocationRead
 from api.schemas.rules import RollOptionRead
 from api.schemas.item import ItemRead
-from api.schemas.spell import SpellRead, SpellSlotRead
+from api.schemas.spell import SpellEffectsRead, SpellRead, SpellSlotRead
 
 
 class AcBreakdown(BaseModel):
@@ -145,6 +145,13 @@ class ActiveForm(BaseModel):
     own_hp: bool = True  # 2014: la forma ha PF propri; 2024: PF del druido con i temporanei
 
 
+class SharedDamageInfo(BaseModel):
+    """Il danno che un incantesimo (Legame di Protezione) ha girato al lanciatore e il suo TS di concentrazione, se c'è stato."""
+    amount: int
+    caster_name: str
+    concentration_save: Optional[ConcentrationSaveResult] = None
+
+
 class CharacterFull(BaseModel):
     """Complete character data with all relations."""
 
@@ -172,6 +179,10 @@ class CharacterFull(BaseModel):
     unarmored_defense_ability: Optional[str] = None
     # Caratteristiche della formula senza armatura in vigore (privilegio o interruttore).
     unarmored_formula: Optional[list[str]] = None
+    # CA senza armatura con la seconda caratteristica scelta («wisdom»/«constitution»): l'anteprima della pagina CA, dal server.
+    unarmored_previews: dict[str, int] = {}
+    # Dadi di danno del colpo senz'armi adesso (Arti Marziali compresa), come li tira il server.
+    unarmed_damage_dice: str = "1"
     ac: int
 
     # Homebrew passive-modifier breakdown (populated by router after model_validate)
@@ -226,6 +237,12 @@ class CharacterFull(BaseModel):
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
 
+    # Populated only by PATCH /hp when a spell (Warding Bond) passed part of the damage on to its caster
+    shared_damage: Optional[SharedDamageInfo] = None
+
+    # Populated only by PATCH /hp (danno): il danno subito dopo resistenze e vulnerabilità, per il toast di annullo
+    damage_taken: Optional[int] = None
+
     # Populated only by PATCH /hp when the damage brings the character to 0 HP under a ``zero_hp_save`` feature
     zero_hp_save: Optional[ZeroHpSaveResult] = None
 
@@ -257,6 +274,8 @@ class CharacterFull(BaseModel):
     damage_unrollable: bool = False
     # POST /spells/{id}/use: esiti delle condizioni tolte (Task 48), nelle due lingue
     removal_result: list[dict[str, str]] | None = absent_when_none()
+    # POST /spells/{id}/use|attack e /items/{id}/cast: bersagli dell'effetto dell'incantesimo e testo per il GM
+    spell_effects: SpellEffectsRead | None = absent_when_none()
 
     has_custom_silhouette: bool = False
 
@@ -479,6 +498,7 @@ class SpellAttackResult(BaseModel):
     is_fumble: bool
     caster_class: Optional[str] = None
     cast_option_result: OptionResult | None = absent_when_none()
+    option_result: OptionResult | None = absent_when_none()  # le opzioni confermate prima del tiro: i dadi extra arrivano al danno
     twinned_attack: dict | None = absent_when_none()  # Incantesimo Raddoppiato: il tiro per colpire del secondo bersaglio
     character: CharacterFull
     homebrew_notifications: Optional[list[dict]] = None

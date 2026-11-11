@@ -154,16 +154,16 @@ def _fiend_available(ctx: RuleContext) -> bool:
 
 DIVINE_SMITE = RollOptionSpec(
     key=SMITE, phase="after_hit", rolls=("attack",), requires_input="slot", cost=Cost(spell_slot_min=1),
-    extra_dice=_smite_dice, available=_melee_weapon,
+    extra_damage_type="radiant", extra_dice=_smite_dice, available=_melee_weapon,
     label={"it": "Punizione Divina: spendi uno slot per danni radiosi in più (2d8, +1d8 per livello oltre il 1°, massimo 5d8)",
            "en": "Divine Smite: spend a slot for extra radiant damage (2d8, +1d8 per level above 1st, up to 5d8)"},
     effect=_say("I dadi in più sono danni radiosi.", "The extra dice are radiant damage."))
 DIVINE_SMITE_FIEND = RollOptionSpec(
-    key=SMITE_FIEND, phase="after_hit", rolls=("attack",), needs=SMITE, extra_dice=lambda _c, _i: "1d8", available=_fiend_available,
+    key=SMITE_FIEND, phase="after_hit", rolls=("attack",), needs=SMITE, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8", available=_fiend_available,
     label={"it": "Punizione Divina: il bersaglio è un non morto o un immondo? +1d8 radioso",
            "en": "Divine Smite: is the target an undead or a fiend? +1d8 radiant"})
 IMPROVED_SMITE = RollOptionSpec(
-    key=f"{CK}.improved_divine_smite", phase="before", rolls=("attack",), automatic=True, extra_dice=lambda _c, _i: "1d8",
+    key=f"{CK}.improved_divine_smite", phase="before", rolls=("attack",), automatic=True, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8",
     available=_melee_weapon,
     label={"it": "Punizione Divina Migliorata: 1d8 radioso in più", "en": "Improved Divine Smite: extra 1d8 radiant"},
     effect=_say("Punizione Divina Migliorata: 1d8 danni radiosi in più, già nel totale.",

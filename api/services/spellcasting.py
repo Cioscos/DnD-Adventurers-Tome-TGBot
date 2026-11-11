@@ -13,19 +13,38 @@ from typing import Iterable
 
 from api.schemas.character import ClassSpellLimits, SpellCasterStats, SpellcastingInfo
 from api.schemas.spell import SpellRead
+from api.services.spell_effects import UPCAST_SUFFIX
 from core.data.spell_slots import caster_kind
 from core.data.spellcasting import has_wizard
 from core.db.models import Character, Spell
 from core.game.stats import effective_ability_mod
 from core.rules.condition_removal import spell_removal, view as removal_view
+from core.rules.catalog.spells import spell_effect
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
 from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
+from core.rules.states import SPELL_CAST_TYPE
 from core.rules.spellcasting import (
-    at_will, caster_stats, can_ritual, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
     no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
+
+
+def effect_view(char: Character, srd_index: str | None, name: str | None, level: int) -> dict | None:
+    """L'effetto del catalogo per l'edizione di chi lancia (forma di ``SpellRead.effect``); ``None`` se non c'è."""
+    edition = character_edition(char)
+    if (found := spell_effect(edition, srd_index, name)) is None:
+        return None
+    fx, variant = found
+    return {"target_kind": fx.target.kind,
+            "max_targets_by_slot": {lvl: fx.max_targets(edition, lvl) for lvl in range(max(level, 1), 10)},
+            # il tipo dei dadi in più scelto all'ultimo lancio: il client lo usa per contare i dadi 3D (decisione 42)
+            "cast_upcast_type": ((char.settings or {}).get(SPELL_CAST_TYPE) or {}).get(fx.key + UPCAST_SUFFIX),
+            # il danno di una punizione arriva dall'opzione al colpo: il lancio non tira i dadi dell'incantesimo
+            "hit_damage": any(o.phase == "after_hit" for o in (*variant.options, *variant.on_hit)),
+            "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
+            "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
 
 def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
@@ -34,17 +53,22 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if stats:
             spell.save_dc, spell.attack_bonus = stats.save_dc, stats.attack_bonus
         spell.at_will = at_will(char, spell)
+        spell.effective_casting_time = spell.casting_time
+        if casting_kind(spell) == "action" and (bonus_cast(char, spell) or champion_bonus_cast(char, spell)):  # Rompi-Incantesimi, Campione degli Antichi: l'elenco lo dice
+            spell.effective_casting_time = "1 bonus action" if "action" in (spell.casting_time or "").lower() else "1 azione bonus"
+        spell.effective_range_area, spell.effective_components = spell.range_area, spell.components
         spell.has_book = spell.level >= 1 and wizard_row(char, spell) is not None
         if (shown := spell_range_override(char, spell)) is not None:
-            spell.range_area = shown
+            spell.effective_range_area = shown
         if spell.components and no_verbal(char, spell):  # Illusioni Migliorate
-            spell.components = ", ".join(c for c in (x.strip() for x in spell.components.split(",")) if c.upper() != "V")
+            spell.effective_components = ", ".join(c for c in (x.strip() for x in spell.components.split(",")) if c.upper() != "V")
         pact = pact_cast(char, spell)
         if pact is not None:
             spell.pact_cast = {"kind": pact.kind, "feature_key": pact.feature_key, "pact_only": pact.pact_only,
                                "uses_left": pact.uses_left, **({"also_slot": True} if pact.also_slot else {})}
         if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
             spell.removal = removal_view(rm)
+        spell.effect = effect_view(char, spell.srd_index, spell.name, spell.level)
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

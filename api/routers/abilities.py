@@ -16,31 +16,9 @@ from api.services.homebrew.dispatcher import dispatch
 from core.db.models import Ability, Character, CharacterClass
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityCreate, AbilityRead, AbilityUpdate
+from api.services.character_load import get_owned_full
 
 router = APIRouter(prefix="/characters", tags=["abilities"])
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
 
 
 @router.get("/{char_id}/abilities", response_model=list[AbilityRead])
@@ -49,7 +27,7 @@ async def list_abilities(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[Ability]:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     return char.abilities
 
 
@@ -60,7 +38,7 @@ async def add_ability(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Ability:
-    await _get_owned_full(char_id, user_id, session)
+    await get_owned_full(char_id, user_id, session)
     ability = Ability(character_id=char_id, **body.model_dump())
     session.add(ability)
     await session.flush()
@@ -75,7 +53,7 @@ async def update_ability(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> AbilityRead:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Ability).where(Ability.id == ability_id, Ability.character_id == char_id)
     )
@@ -142,7 +120,7 @@ async def delete_ability(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    await _get_owned_full(char_id, user_id, session)
+    await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Ability).where(Ability.id == ability_id, Ability.character_id == char_id)
     )

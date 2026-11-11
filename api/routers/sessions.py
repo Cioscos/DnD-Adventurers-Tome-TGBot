@@ -21,7 +21,9 @@ from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, 
 from api.database import get_db
 from core.game.containers import is_container, trade_snapshot
 from core.rules.edition import character_edition
-from core.rules.modifiers import modifiers_for
+from core.game.item_bonuses import item_bonus_total
+from api.services.homebrew.passive import get_passive_modifiers
+from core.rules.modifiers import ac_delta
 from api.schemas.session import (
     CharacterLiveSnapshot,
     GameSessionLiveRead,
@@ -75,6 +77,7 @@ from core.db.models import (
 )
 from core.utils.session_code import generate_session_code
 from core.utils.session_view import hp_bucket, armor_category
+from api.services.game_sessions import assert_participant, find_active_session_for_user, load_session, utc_now_iso, touch
 
 logger = logging.getLogger(__name__)
 
@@ -133,25 +136,9 @@ def _redact_event_description(
     return f"{character_name} ha modificato i PF"
 
 
-def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-async def _load_session(session_id: int, db: AsyncSession) -> GameSession:
-    result = await db.execute(
-        select(GameSession)
-        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
-        .where(GameSession.id == session_id)
-    )
-    obj = result.scalar_one_or_none()
-    if obj is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-    return obj
-
 
 async def _load_session_by_code(code: str, db: AsyncSession) -> GameSession:
     result = await db.execute(
@@ -163,27 +150,6 @@ async def _load_session_by_code(code: str, db: AsyncSession) -> GameSession:
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return obj
-
-
-def _assert_participant(session: GameSession, user_id: int) -> SessionParticipant:
-    for p in session.participants:
-        if p.user_id == user_id:
-            return p
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a session participant")
-
-
-async def _find_active_session_for_user(user_id: int, db: AsyncSession) -> Optional[GameSession]:
-    """Active session where user is GM or player."""
-    result = await db.execute(
-        select(GameSession)
-        .join(SessionParticipant, SessionParticipant.session_id == GameSession.id)
-        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
-        .where(
-            GameSession.status == SessionStatus.ACTIVE,
-            SessionParticipant.user_id == user_id,
-        )
-    )
-    return result.scalars().first()
 
 
 async def _generate_unique_code(db: AsyncSession) -> str:
@@ -204,10 +170,6 @@ async def session_read(db: AsyncSession, session: GameSession) -> GameSessionRea
     if session.campaign_id is not None:
         name = await db.scalar(select(Campaign.name).where(Campaign.id == session.campaign_id))
     return GameSessionRead.model_validate(session).model_copy(update={"campaign_name": name})
-
-
-def _touch(session: GameSession) -> None:
-    session.last_activity_at = _now()
 
 
 async def _load_live_characters(
@@ -234,6 +196,7 @@ async def _load_live_characters(
             selectinload(Character.classes),
             selectinload(Character.items),
             selectinload(Character.abilities),
+            selectinload(Character.ability_scores),
         )
         .where(Character.id.in_(char_ids))
     )
@@ -249,6 +212,8 @@ async def _load_live_characters(
             if joined and (not isinstance(ts, str) or ts < joined):
                 last_roll = None
         effects, pendings = await character_effect_payload(db, char.id)
+        items_ac = item_bonus_total(char.items, "ac")  # la CA che il tavolo vede è quella della scheda: oggetti e homebrew compresi
+        homebrew_ac = await get_passive_modifiers(db, char, "character.ac")
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -259,7 +224,7 @@ async def _load_live_characters(
             hit_points=char.hit_points,
             current_hit_points=char.current_hit_points,
             temp_hp=char.temp_hp or 0,
-            ac=char.ac + modifiers_for(char, "ac").flat,
+            ac=char.ac + items_ac + homebrew_ac + ac_delta(char, char.ac, items_ac + homebrew_ac),
             conditions=char.conditions or {},
             death_saves=char.death_saves or {},
             heroic_inspiration=bool(char.heroic_inspiration),
@@ -283,7 +248,7 @@ async def my_active_session(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Optional[GameSessionRead]:
-    session = await _find_active_session_for_user(user_id, db)
+    session = await find_active_session_for_user(user_id, db)
     if session is None:
         return None
     enc_status = (
@@ -368,7 +333,7 @@ async def create_session(
 ) -> GameSessionRead:
     user_id = tg_user.id
     # Users can only be in one active session at a time (regardless of role)
-    existing = await _find_active_session_for_user(user_id, db)
+    existing = await find_active_session_for_user(user_id, db)
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -388,7 +353,7 @@ async def create_session(
         title = title or camp.name
 
     code = await _generate_unique_code(db)
-    now = _now()
+    now = utc_now_iso()
     gm_display_name = _compute_gm_display_name(tg_user, title)
     session = GameSession(
         campaign_id=body.campaign_id,
@@ -430,7 +395,7 @@ async def join_session(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GameSessionRead:
     # Users can only be in one active session at a time
-    existing = await _find_active_session_for_user(user_id, db)
+    existing = await find_active_session_for_user(user_id, db)
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -473,10 +438,10 @@ async def join_session(
         character_id=char.id,
         character=char,
         display_name=char.name,
-        joined_at=_now(),
+        joined_at=utc_now_iso(),
         dice_stats_start=dice_baseline(session, char),
     ))
-    _touch(session)
+    touch(session)
     await db.flush()
     await db.refresh(session, attribute_names=["participants"])
     return await session_read(db, session)
@@ -488,8 +453,8 @@ async def get_session(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> GameSessionRead:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     return await session_read(db, session)
 
 
@@ -500,8 +465,8 @@ async def get_session_live(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> GameSessionLiveRead:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
 
     char_ids = [p.character_id for p in session.participants if p.character_id is not None]
     joined_at_by_char = {
@@ -562,7 +527,7 @@ async def get_session_live(
             ))
 
     if session.status == SessionStatus.ACTIVE:
-        _touch(session)
+        touch(session)
 
     enc_result = await db.execute(
         select(Encounter)
@@ -610,8 +575,8 @@ async def leave_session(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    session = await _load_session(session_id, db)
-    participant = _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    participant = assert_participant(session, user_id)
     if session.status != SessionStatus.ACTIVE:
         return None
 
@@ -621,7 +586,7 @@ async def leave_session(
     else:
         record_departure(session, participant)
         await db.delete(participant)
-    _touch(session)
+    touch(session)
     return None
 
 
@@ -631,7 +596,7 @@ async def close_session(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    session = await _load_session(session_id, db)
+    session = await load_session(session_id, db)
     if user_id != session.gm_user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -648,7 +613,7 @@ async def get_session_recap(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> dict:
     """End-of-evening snapshot: GM, participants or members of the session's campaign."""
-    session = await _load_session(session_id, db)
+    session = await load_session(session_id, db)
     allowed = (user_id == session.gm_user_id or any(p.user_id == user_id for p in session.participants)
                or any(d.get("user_id") == user_id for d in session.departed or []))
     if not allowed and session.campaign_id is not None:
@@ -670,8 +635,8 @@ async def list_messages(
     after_id: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[SessionMessage]:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     stmt = (
         select(SessionMessage)
         .where(SessionMessage.session_id == session_id)
@@ -704,8 +669,8 @@ async def post_message(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SessionMessage:
-    session = await _load_session(session_id, db)
-    sender = _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    sender = assert_participant(session, user_id)
     if session.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
 
@@ -726,7 +691,7 @@ async def post_message(
         .order_by(SessionMessage.sent_at.desc())
         .limit(1)
     )
-    now_iso = _now()
+    now_iso = utc_now_iso()
     if last_msg is not None:
         try:
             elapsed = (
@@ -757,7 +722,7 @@ async def post_message(
         sender_display_name=sender_display_name,
     )
     db.add(msg)
-    _touch(session)
+    touch(session)
     await db.flush()
     return msg
 
@@ -773,7 +738,7 @@ async def get_participant_identity(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> IdentityView:
     session = await _load_session_by_code(code, db)
-    _assert_participant(session, caller_user_id)
+    assert_participant(session, caller_user_id)
 
     target = next((p for p in session.participants if p.user_id == user_id), None)
     if target is None:
@@ -871,7 +836,7 @@ async def gm_grant_item(
     Creates the item in each recipient's inventory and posts a private whisper
     in the session feed. Players without an associated character are skipped.
     """
-    session_obj = await _load_session(session_id, db)
+    session_obj = await load_session(session_id, db)
     if user_id != session_obj.gm_user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -883,7 +848,7 @@ async def gm_grant_item(
     granting_box = isinstance((body.item.item_metadata or {}).get("container"), dict)
     if granting_box and body.item.quantity != 1:
         raise HTTPException(status_code=422, detail="container_quantity")
-    now_iso = _now()
+    now_iso = utc_now_iso()
     results: list[GMGrantItemResult] = []
 
     for rid in body.recipient_user_ids:
@@ -941,7 +906,7 @@ async def gm_grant_item(
                         telegram_notify.miniapp_url(f"/char/{char.id}/inventory")),
             )
 
-    _touch(session_obj)
+    touch(session_obj)
     await db.flush()
     return GMGrantItemResponse(results=results)
 
@@ -1011,10 +976,10 @@ async def trade(
     Posts a public feed row (no item_* columns, so it is not read as a GM grant)
     and notifies the recipient. Returns the sender's updated sheet.
     """
-    session_obj = await _load_session(session_id, db)
+    session_obj = await load_session(session_id, db)
     if session_obj.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
-    me = _assert_participant(session_obj, user_id)
+    me = assert_participant(session_obj, user_id)
     if me.role != SessionRole.PLAYER or me.character_id is None or me.character_id != body.from_character_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_your_character")
     if (body.item_id is None) == (body.coins is None):
@@ -1055,11 +1020,11 @@ async def trade(
         user_id=user_id,
         role=SessionRole.PLAYER,
         body=f"{sender.name} ha dato a {recipient.name}: {what}",
-        sent_at=_now(),
+        sent_at=utc_now_iso(),
         sender_display_name=me.display_name or sender.name,
         trade_payload=json.dumps(payload),
     ))
-    _touch(session_obj)
+    touch(session_obj)
     await db.flush()
 
     if telegram_notify.notifications_enabled(recipient, "gm_events"):
@@ -1082,10 +1047,10 @@ async def give_inspiration(
 ) -> CharacterFull:
     """Cede l'Ispirazione a un compagno che ne è privo. 2024: ricevendone un'altra (``PATCH /inspiration`` con una
     già in mano) quella in più si può cedere e chi cede tiene la propria. 2014: si cede la propria e la si perde."""
-    session_obj = await _load_session(session_id, db)
+    session_obj = await load_session(session_id, db)
     if session_obj.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
-    me = _assert_participant(session_obj, user_id)
+    me = assert_participant(session_obj, user_id)
     if me.role != SessionRole.PLAYER or me.character_id is None or me.character_id != body.from_character_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_your_character")
     other = next((p for p in session_obj.participants if p.user_id == body.to_user_id), None)
@@ -1108,13 +1073,13 @@ async def give_inspiration(
     recipient.heroic_inspiration = True
     for char, text in ((sender, f"Ispirazione Eroica ceduta a {recipient.name}"),
                        (recipient, f"Ispirazione Eroica ricevuta da {sender.name}")):
-        db.add(CharacterHistory(character_id=char.id, timestamp=_now(), event_type="other", description=text))
+        db.add(CharacterHistory(character_id=char.id, timestamp=utc_now_iso(), event_type="other", description=text))
     db.add(SessionMessage(
         session_id=session_obj.id, user_id=session_obj.gm_user_id, role=SessionRole.GAME_MASTER,
-        body=f"{sender.name} ha ceduto l'Ispirazione Eroica a {recipient.name}", sent_at=_now(),
+        body=f"{sender.name} ha ceduto l'Ispirazione Eroica a {recipient.name}", sent_at=utc_now_iso(),
         sender_display_name="__GM__",
     ))
-    _touch(session_obj)
+    touch(session_obj)
     await db.flush()
     if telegram_notify.notifications_enabled(recipient, "gm_events"):
         await telegram_notify.send_telegram_message(
@@ -1128,8 +1093,8 @@ _GM = {"character_id": None, "name": "gm"}
 
 async def _stash_ctx(session_id: int, user_id: int, db: AsyncSession, *, mutate: bool = True):
     """Session + caller's participant row + the campaign's stash (items and currency only)."""
-    session_obj = await _load_session(session_id, db)
-    me = _assert_participant(session_obj, user_id)
+    session_obj = await load_session(session_id, db)
+    me = assert_participant(session_obj, user_id)
     if session_obj.campaign_id is None:
         raise HTTPException(status_code=422, detail="no_campaign")
     if mutate and session_obj.status != SessionStatus.ACTIVE:
@@ -1161,10 +1126,10 @@ def _coins_text(coins: dict[str, int]) -> str:
 def _post_stash_message(db, session_obj, user_id, role, display_name, body, kind, frm, to, snaps, coins):
     db.add(SessionMessage(
         session_id=session_obj.id, user_id=user_id, role=role, body=body,
-        sent_at=_now(), sender_display_name=display_name,
+        sent_at=utc_now_iso(), sender_display_name=display_name,
         trade_payload=json.dumps({"kind": kind, "from": frm, "to": to, "items": snaps, "coins": coins}),
     ))
-    _touch(session_obj)
+    touch(session_obj)
 
 
 @router.get("/{session_id}/stash", response_model=CampaignStash)
@@ -1335,7 +1300,7 @@ async def get_session_feed(
         )
 
     session = await _load_session_by_code(code, db)
-    _assert_participant(session, caller_user_id)
+    assert_participant(session, caller_user_id)
 
     is_gm = session.gm_user_id == caller_user_id
     session_start = session.created_at

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,34 +14,13 @@ from api.database import get_db
 from api.routers._helpers import collect_homebrew_notifications
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
-from core.db.models import Character, CharacterClass, CharacterHistory, SpellSlot
+from api.services.history import add_history
+from core.db.models import Character, CharacterClass, SpellSlot
 from api.schemas.character import CharacterFull
 from api.schemas.spell import SpellSlotCreate, SpellSlotRead, SpellSlotUpdate
+from api.services.character_load import get_owned_full
 
 router = APIRouter(prefix="/characters", tags=["spell_slots"])
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
 
 
 @router.post("/{char_id}/spell_slots", response_model=SpellSlotRead, status_code=201)
@@ -52,7 +30,7 @@ async def add_spell_slot(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SpellSlot:
-    await _get_owned_full(char_id, user_id, session)
+    await get_owned_full(char_id, user_id, session)
     slot = SpellSlot(
         character_id=char_id,
         level=body.level,
@@ -73,7 +51,7 @@ async def update_spell_slot(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> SpellSlotRead:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(SpellSlot).where(SpellSlot.id == slot_id, SpellSlot.character_id == char_id)
     )
@@ -91,12 +69,8 @@ async def update_spell_slot(
     # or no-op PATCH (e.g. updating only `total`) should not fire spell_cast.
     if slot.used > old_used:
         k = slot.used - old_used
-        session.add(CharacterHistory(
-            character_id=char_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-            event_type="spell_slot_used",
-            description=f"Slot di livello {slot.level} usato" + (f" ×{k}" if k > 1 else ""),
-            meta={"slot_level": slot.level, "count": k},
-        ))
+        add_history(session, char_id, "spell_slot_used", f"Slot di livello {slot.level} usato" + (f" ×{k}" if k > 1 else ""),
+                    {"slot_level": slot.level, "count": k})
         firing = await dispatch(
             session,
             char,
@@ -121,7 +95,7 @@ async def delete_spell_slot(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    await _get_owned_full(char_id, user_id, session)
+    await get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(SpellSlot).where(SpellSlot.id == slot_id, SpellSlot.character_id == char_id)
     )
@@ -137,7 +111,7 @@ async def reset_spell_slots(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     for slot in char.spell_slots:
         slot.used = 0
     return await build_character_response(session, char)

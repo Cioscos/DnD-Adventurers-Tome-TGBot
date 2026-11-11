@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -8,16 +9,20 @@ import RollButton from '@/components/ui/RollButton'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import type { ResolvedItemCast } from '@/lib/itemCast'
+import type { SpellEffectsResult } from '@/types'
+import { appliedTargets } from '@/lib/appliedTargets'
 
 interface Props {
   charId: number
   resolved: ResolvedItemCast
+  /** Chi ha ricevuto l'effetto dell'incantesimo (catalogo) e, fuori serata, il testo per il GM. */
+  effects?: SpellEffectsResult
   onClose: () => void
 }
 
 /** Esito del lancio da oggetto: cariche, CD/attacco risolti e tiro per colpire. */
-export default function ItemCastSheet({ charId, resolved, onClose }: Props) {
-  const { t } = useTranslation()
+export default function ItemCastSheet({ charId, resolved, effects, onClose }: Props) {
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
   const [result, setResult] = useState<RollResult | null>(null)
@@ -63,6 +68,12 @@ export default function ItemCastSheet({ charId, resolved, onClose }: Props) {
           {remaining != null && max != null && ` · ${t('character.inventory.magic.cast_remaining', { current: remaining, max })}`}
         </p>
       )}
+      {!!effects?.applied.length && (
+        <p className="text-sm text-dnd-text font-body break-words">
+          {t('character.spells.effect_applied', { name: spell.name, targets: appliedTargets(effects.applied, charId, t) })}
+        </p>
+      )}
+      {effects?.text && <p className="text-sm text-dnd-text-muted font-body">{effects.text[uiLang(i18n.language)]}</p>}
       {saveDc != null && !isAttack && (
         <p className="text-lg font-mono font-bold tabular-nums text-dnd-gold-bright">
           {saveAbility

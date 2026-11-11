@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from core.game.item_bonuses import item_bonus_total
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
-from api.routers.sessions import _assert_participant, _load_session, _now, _touch
+from api.services.game_sessions import assert_participant, load_session, utc_now_iso, touch
 from api.schemas.encounter import (
     CombatantAddRequest,
     CombatantPatchRequest,
@@ -64,6 +64,7 @@ from core.db.models import (
 )
 from core.data.labels import ability_label, condition_label
 from core.game.stats import effective_ability_score
+from api.services.telegram_notify import notify_saves
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +143,7 @@ async def _add_missing_pc_combatants(
             owner_user_id=p.user_id,
             name=char.name,
             initiative_mod=_dex_modifier(char) + await get_passive_modifiers(db, char, "character.initiative"),
-            created_at=_now(),
+            created_at=utc_now_iso(),
         )
         db.add(comb)
         added.append(comb)
@@ -219,7 +220,7 @@ def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
         user_id=session.gm_user_id,
         role=SessionRole.GAME_MASTER,
         body=body,
-        sent_at=_now(),
+        sent_at=utc_now_iso(),
         sender_display_name="__GM__",
     )
 
@@ -234,24 +235,6 @@ async def _notify_turn(enc: Encounter, combatant: Combatant) -> None:
         button=("Apri la sessione",
                 telegram_notify.miniapp_url(f"/session/{enc.session_id}")),
     )
-
-
-async def _notify_saves(db: AsyncSession, save_ids: list[int]) -> None:
-    """Best-effort ping to the PC owner for each repeated save just created."""
-    for save_id in save_ids:
-        ps = await db.get(PendingSave, save_id)
-        if ps is None or ps.character_id is None:
-            continue  # monster saves only show up to the GM
-        char = await db.get(Character, ps.character_id)
-        if char is None or not telegram_notify.notifications_enabled(char, "gm_events"):
-            continue
-        eff = await db.get(ConditionEffect, ps.effect_id)
-        await telegram_notify.send_telegram_message(
-            char.user_id,
-            f"🎲 Tiro salvezza: {ability_label(ps.ability)} CD {ps.dc} "
-            f"per liberarti da {condition_label(eff.slug)}",
-            button=("Apri la scheda", telegram_notify.miniapp_url(f"/char/{char.id}")),
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -270,8 +253,8 @@ async def create_encounter(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     if await _load_open_encounter(session_id, db) is not None:
@@ -281,12 +264,12 @@ async def create_encounter(
         )
     enc = Encounter(
         session_id=session_id, mode=body.mode, status="setup",
-        round=1, created_at=_now(),
+        round=1, created_at=utc_now_iso(),
     )
     db.add(enc)
     await db.flush()
     await _add_missing_pc_combatants(session, enc, db)
-    _touch(session)
+    touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     await _notify_encounter_opened(session, user_id, db)
@@ -305,8 +288,8 @@ async def add_combatants(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -329,9 +312,9 @@ async def add_combatants(
             ac=body.ac,
             # Rinforzi a combattimento avviato: in coda all'ordine corrente.
             sort_order=(next_order + i * 10) if enc.status == "active" else None,
-            created_at=_now(),
+            created_at=utc_now_iso(),
         ))
-    _touch(session)
+    touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
@@ -349,8 +332,8 @@ async def roll_initiative(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
     comb = next((c for c in enc.combatants if c.id == combatant_id), None)
@@ -387,7 +370,7 @@ async def roll_initiative(
             "bonus": comb.initiative - outcome.kept - option_total, "total": comb.initiative, "notes": applied.notes,
             "auto_fail": False, "description": "initiative",
         }, ability="dexterity", combatant_id=comb.id)
-    _touch(session)
+    touch(session)
     await db.flush()
     live = await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
     live.initiative_roll = InitiativeRollInfo(mode_applied=outcome.mode, notes=applied.notes,
@@ -402,8 +385,8 @@ async def sync_pcs(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -414,7 +397,7 @@ async def sync_pcs(
     if enc.status == "active":
         for j, comb in enumerate(added):
             comb.sort_order = next_order + j * 10
-    _touch(session)
+    touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
@@ -428,8 +411,8 @@ async def start_encounter(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -447,7 +430,7 @@ async def start_encounter(
         applied = await _pc_initiative_modifiers(db, c)
         c.initiative_die = resolve_body(None, applied).kept
         c.initiative = c.initiative_die + c.initiative_mod + applied.flat
-    await add_second_turns(db, enc, lang, _now())
+    await add_second_turns(db, enc, lang, utc_now_iso())
     ordered = sorted(
         enc.combatants, key=lambda c: (-(c.initiative or 0), -c.initiative_mod, c.id),
     )
@@ -455,11 +438,11 @@ async def start_encounter(
         c.sort_order = (i + 1) * 10
     enc.status = "active"
     enc.round = 1
-    enc.started_at = _now()
+    enc.started_at = utc_now_iso()
     first = next((c for c in ordered if not c.is_dead), None)
     enc.active_combatant_id = first.id if first else None
     db.add(_system_feed_message(session, "⚔️ Combattimento iniziato"))
-    _touch(session)
+    touch(session)
     for c in enc.combatants:  # badge e stato del PG partono allineati, qualunque cosa sia successo in preparazione
         await _sync_surprise(db, c)
     if first is not None and first.kind == "pc" and first.character_id:
@@ -477,8 +460,8 @@ async def start_encounter(
 async def _turn_endpoint(
     session_id: int, user_id: int, db: AsyncSession, lang: str, *, backward: bool
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     is_gm = user_id == session.gm_user_id
     if backward:
         _assert_gm(session, user_id)
@@ -507,7 +490,7 @@ async def _turn_endpoint(
     if backward:
         await undo_last_advance(db, enc)
     moved = _advance_turn(enc, list(enc.combatants), backward=backward)
-    _touch(session)
+    touch(session)
     await db.flush()
     if not backward and moved is not None:
         undo = UndoLog(from_combatant_id=from_id, to_combatant_id=moved.id,
@@ -518,7 +501,7 @@ async def _turn_endpoint(
         await process_edge(db, enc, moved, "start", undo)
         enc.last_advance_undo = undo.to_json()
         await db.flush()
-        await _notify_saves(db, undo.created_saves)
+        await notify_saves(db, undo.created_saves)
     if moved is not None:
         await _notify_turn(enc, moved)
     return await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
@@ -556,8 +539,8 @@ async def patch_combatant(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -612,7 +595,7 @@ async def patch_combatant(
         comb.surprised = body.surprised
         await _sync_surprise(db, comb)
 
-    _touch(session)
+    touch(session)
     await db.flush()
 
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
@@ -632,8 +615,8 @@ def _primary_row(enc: Encounter, comb: Combatant) -> Combatant:
 async def _gm_combatant(
     session_id: int, combatant_id: int, user_id: int, db: AsyncSession,
 ) -> tuple[GameSession, Encounter, Combatant]:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -712,7 +695,7 @@ async def gm_apply_condition(
 ) -> EncounterLive:
     session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
     await apply_condition_to_combatant(db, enc, comb, body)
-    _touch(session)
+    touch(session)
     await db.flush()
     await _notify_gm_condition(
         session_id, user_id, comb, db,
@@ -737,7 +720,7 @@ async def gm_remove_condition(
     owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
     was_on = bool((owner.conditions or {}).get(slug))
     await _set_condition(db, comb, slug, 0 if slug == "exhaustion" else False)
-    _touch(session)
+    touch(session)
     await db.flush()
     if was_on:
         await _notify_gm_condition(
@@ -759,8 +742,8 @@ async def gm_resolve_monster_save(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -774,7 +757,7 @@ async def gm_resolve_monster_save(
     if ps.status != "pending":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Save already resolved")
     ps.status = "passed" if body.passed else "failed"
-    ps.resolved_at = _now()
+    ps.resolved_at = utc_now_iso()
     eff = await db.get(ConditionEffect, ps.effect_id)
     if eff is not None and eff.pending:  # effetto di un privilegio: il TS decide se la condizione esiste
         if body.passed:
@@ -783,7 +766,7 @@ async def gm_resolve_monster_save(
             await activate_pending_effect(db, eff)
     elif body.passed and eff is not None:
         await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
-    _touch(session)
+    touch(session)
     await db.flush()
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
@@ -814,8 +797,8 @@ async def delete_combatant(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -833,7 +816,7 @@ async def delete_combatant(
                 _move_pointer_off(enc, list(enc.combatants), extra.id)
             await db.delete(extra)
     await db.delete(comb)
-    _touch(session)
+    touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
@@ -847,8 +830,8 @@ async def reorder_combatants(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
@@ -864,7 +847,7 @@ async def reorder_combatants(
     position = {cid: (i + 1) * 10 for i, cid in enumerate(requested)}
     for c in enc.combatants:
         c.sort_order = position[c.id]
-    _touch(session)
+    touch(session)
     await db.flush()
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
@@ -876,19 +859,19 @@ async def end_encounter(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> EncounterLive:
-    session = await _load_session(session_id, db)
-    _assert_participant(session, user_id)
+    session = await load_session(session_id, db)
+    assert_participant(session, user_id)
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
     enc.status = "ended"
-    enc.ended_at = _now()
+    enc.ended_at = utc_now_iso()
     for c in enc.combatants:  # la sorpresa è del combattimento: finito quello, non resta sulla scheda
         if c.surprised:
             c.surprised = False
         await _sync_surprise(db, c, released=True)
     await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
-    _touch(session)
+    touch(session)
     await db.flush()
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)

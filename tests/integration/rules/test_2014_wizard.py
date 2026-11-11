@@ -447,6 +447,24 @@ async def test_two_requests_at_once_recover_the_slots_only_once(client):
     assert (await _used(client, cid))[1] == 2 and (await _ability(client, cid, ARCANE))["uses"] == 0
 
 
+async def test_two_stale_snapshots_recover_the_slots_only_once(client, test_session_factory):
+    """La gara vera: due richieste leggono lo stesso personaggio (uso ancora 1) e superano entrambe i controlli; solo l'UPDATE condizionato
+    sull'uso ne ferma una. Il test con ``gather`` sopra non morde: SQLite le serializza e il controllo in memoria basta."""
+    from fastapi import HTTPException
+    from api.services.character_load import get_owned_full
+    from api.services.natural_recovery import ARCANE_FEATURE, recover
+    cid = await _wizard(client, 4)
+    await _spend(client, cid, l1=4)
+    async with test_session_factory() as one, test_session_factory() as two:
+        first, second = await get_owned_full(cid, 1234, one), await get_owned_full(cid, 1234, two)  # entrambe vedono uso = 1
+        await recover(one, first, {1: 2}, ARCANE_FEATURE)
+        await one.commit()
+        with pytest.raises(HTTPException) as refused:
+            await recover(two, second, {1: 2}, ARCANE_FEATURE)
+        assert refused.value.detail["code"] == "no_uses"
+    assert (await _used(client, cid))[1] == 2 and (await _ability(client, cid, ARCANE))["uses"] == 0
+
+
 async def test_arcane_recovery_uses_the_wizard_level_not_the_total_level(client):
     cid = await _wizard(client, 4)
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 6})
@@ -572,4 +590,26 @@ async def test_two_signature_casts_at_once_spend_the_use_once(client, test_sessi
     await client.post(f"/characters/{cid}/choices/{pick['id']}/resolve", json={"kind": "class_option", "options": ["Palla di fuoco"]})
     results = await asyncio.gather(*(_cast(client, cid, ids["fireball"], free_cast=True) for _ in range(2)))
     assert sorted(r.status_code for r in results) == [200, 409]
+    assert (await _ability(client, cid, "wizard.signature_spell_1"))["uses"] == 0
+
+
+async def test_two_stale_signature_snapshots_spend_the_use_only_once(client, test_session_factory):
+    """Come il Recupero Arcano: il ``gather`` sopra non morde (SQLite serializza e il controllo in memoria basta). Qui due richieste vedono
+    l'uso ancora disponibile e solo l'UPDATE condizionato ne ferma una."""
+    from fastapi import HTTPException
+    from api.routers.spells import _charge_pact_use
+    from api.services.character_load import get_owned_full
+    cid, _ids = await _mastered(client, test_session_factory, 20)
+    pick = _choice(await _full(client, cid), "signature_1")
+    await client.post(f"/characters/{cid}/choices/{pick['id']}/resolve", json={"kind": "class_option", "options": ["Palla di fuoco"]})
+    async with test_session_factory() as one, test_session_factory() as two:
+        rows = []
+        for session in (one, two):
+            char = await get_owned_full(cid, 1234, session)
+            rows.append(next(a for a in char.abilities if a.feature_key == "wizard.signature_spell_1"))  # entrambe: uso = 1
+        await _charge_pact_use(one, rows[0])
+        await one.commit()
+        with pytest.raises(HTTPException) as refused:
+            await _charge_pact_use(two, rows[1])
+        assert refused.value.detail["code"] == "no_uses"
     assert (await _ability(client, cid, "wizard.signature_spell_1"))["uses"] == 0

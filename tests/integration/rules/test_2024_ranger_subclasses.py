@@ -13,6 +13,7 @@ from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
 from tests.integration.rules.test_2014_rogue import _save
 from tests.integration.rules.test_2014_paladin_combat import _attack, _damage, _deferred, _listed, _slots
 from tests.integration.rules.test_2024_paladin import _conditions
+from tests.integration.rules.test_2014_ranger_beast import _companion as _companion14, _master as _master14
 from tests.integration.rules.test_2024_ranger import _cast_mark, _hit, _ranger24, _spell_id
 
 NAMES = {"beast_master": "Signore delle Bestie", "fey_wanderer": "Viandante Fatato", "gloom_stalker": "Stalker delle Tenebre",
@@ -537,3 +538,42 @@ async def test_superior_hunters_defense_does_not_stack_with_a_resistance_the_cha
         await s.commit()
     await _hurt(client, cid, 20, damage_type="fire", options=[DEFENSE])
     assert await _hp_now(client, cid) == 290  # 10, non 5
+
+
+# ---------------------------------------------------------------------------
+# Minori rinviati (punti 17 e 18)
+# ---------------------------------------------------------------------------
+
+async def test_ranger_17_the_beast_vanishes_when_the_ranger_dies(client):
+    cid = await _sub(client, 5, "beast_master")
+    await _beast(client, cid)
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 999})).status_code == 200
+    assert (await _full(client, cid))["is_dead"] and not await _companions(client, cid)
+
+
+async def test_ranger_17_a_slot_only_raises_a_fallen_beast_never_replaces_a_living_one(client):
+    cid = await _sub(client, 5, "beast_master")
+    comp = await _beast(client, cid)
+    slots = await _slots(client, cid)
+    r = await _use(client, cid, PC, params={"pay": "slot", "slot_level": "1", "kind": "sky", "damage_type": "slashing"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "beast_alive", r.text
+    beasts = [c for c in await _companions(client, cid) if c["feature_key"] == PC]
+    assert [b["id"] for b in beasts] == [comp["id"]] and beasts[0]["statblock"]["primal_type"] == "land"
+    assert await _slots(client, cid) == slots  # nessuno slot speso
+
+
+async def test_ranger_17_switching_edition_hides_the_beast_and_it_returns_with_its_data(client):
+    cid = await _master14(client)
+    made = (await _companion14(client, cid)).json()
+    hurt = await client.patch(f"/characters/{cid}/companions/{made['id']}", json={"current_hp": 3, "name": "Pantera"})
+    assert hurt.status_code == 200, hurt.text
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    assert not await _companions(client, cid)  # nascosta: non conta per le regole del 2024
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})).status_code == 200
+    back = await _companions(client, cid)
+    assert [(c["id"], c["name"], c["current_hp"]) for c in back] == [(made["id"], "Pantera", 3)]
+
+
+async def test_ranger_18_a_negative_wisdom_never_lowers_the_initiative(client):
+    cid = await _sub(client, 3, "gloom_stalker", wisdom=6)  # SAG -2, DES 10
+    assert (await _full(client, cid))["initiative_bonus"] == 0

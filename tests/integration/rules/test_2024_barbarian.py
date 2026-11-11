@@ -589,7 +589,7 @@ async def test_changing_edition_swaps_the_19th_asi_and_the_epic_boon_both_ways(c
 # ---------------------------------------------------------------------------
 
 async def test_beyond_options_find_the_catalog_choices(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -598,7 +598,7 @@ async def test_beyond_options_find_the_catalog_choices(test_session_factory):
         char = await build_rules_character(s, spec, 1)
         report = ImportReport()
         names = ("Greataxe", "Handaxe", "Owl", "Otter")
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         assert char.classes[0].options == {"weapon_mastery": ["greataxe", "handaxe"], "aspect_of_the_wilds": ["owl"]}
         assert [e.name for e in report.approximated] == ["Otter"]
 

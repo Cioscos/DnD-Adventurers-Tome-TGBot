@@ -8,6 +8,7 @@ the routers.
 """
 from __future__ import annotations
 
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
@@ -15,9 +16,10 @@ from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, Comput
 from api.services.choices import is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
-from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
+from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
-from api.services.spellcasting import build_spellcasting_info, fill_spell_stats
+from api.services.session_allies import attach_spell_auras
+from api.services.spellcasting import build_spellcasting_info, effect_view, fill_spell_stats
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
@@ -30,19 +32,39 @@ from core.rules.edition import character_edition
 from core.rules.types import RuleContext
 from core.rules.uses import pool_key
 from core.rules.modifiers import (
-    effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
+    ac_delta, effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
 from core.game.stats import effective_ability_mod, effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
-from api.routers._helpers import initiative_bonus
+from api.routers._helpers import initiative_bonus, unarmed_attack_profile
+from core.rules.weapons import martial_arts_level
+
+
+_READ_ONLY_ATTRS = ("base_armor_class", "base_armor_class_override", "settings")
 
 
 async def build_character_response(
-    session: AsyncSession, char: Character,
+    session: AsyncSession, char: Character, *, persist: bool = True,
 ) -> CharacterFull:
-    """Build a CharacterFull response with homebrew breakdown populated."""
+    """Build a CharacterFull response with homebrew breakdown populated.
+
+    ``persist=False`` (i GET): i valori ricalcolati (CA, migrazione della CA) vanno nella risposta ma non nel database;
+    li salvano le scritture che li cambiano."""
+    if persist:
+        return await _build(session, char, persist=True)
+    saved = {a: getattr(char, a) for a in _READ_ONLY_ATTRS}
+    try:
+        with session.no_autoflush:  # senza flush il ricalcolo non diventa un UPDATE
+            return await _build(session, char, persist=False)
+    finally:
+        for attr, value in saved.items():
+            set_committed_value(char, attr, value)
+
+
+async def _build(session: AsyncSession, char: Character, *, persist: bool) -> CharacterFull:
     # Copre ogni percorso che cambia caratteristiche o oggetti senza passare da `apply_equip_ac`.
     migrate_character_ac(char)
     sync_base_ac(char)
+    await attach_spell_auras(session, char)  # le aure vive dei compagni (risorse, abilità e resistenze della scheda)
 
     # Flush any pending mutations on `char` BEFORE serializing. CharacterFull.model_validate
     # reads ORM attributes synchronously; if the session is still dirty, that access can
@@ -51,11 +73,10 @@ async def build_character_response(
     # character and then call us without a prior awaited flush (e.g. hp.py SET_MAX/SET_CURRENT,
     # death-save and skill/save PATCH endpoints) would otherwise 500. Flushing here within the
     # awaited context keeps serialization side-effect-free. No-op on read-only (clean) sessions.
-    await session.flush()
+    if persist:
+        await session.flush()
 
-    # TODO (perf): each get_passive_modifiers call issues 2 SELECTs (rules + items).
-    # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
-    # and exposing a sum_modifiers(rules, items, target_path) helper.
+    snap = await load_snapshot(session, char)  # regole e oggetti letti una volta per i ~27 bonus della risposta
     response = CharacterFull.model_validate(char)
     response.condition_effects, response.pending_saves = await character_effect_payload(
         session, char.id)
@@ -67,29 +88,29 @@ async def build_character_response(
     response.attacks_per_action = attacks_per_action(char.classes)
     response.inspiration_extra = bool((char.settings or {}).get("inspiration_extra"))
     response.hiding_dc = ((char.settings or {}).get("hiding") or {}).get("dc")
-    form = await get_active_form(session, char.id)
+    form = await get_active_form(session, char.id, repair=persist)
     if form is not None:
         response.active_form = ActiveForm(
             companion_id=form.id, name=form.name, current_hp=form.current_hp,
             max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class,
             own_hp=form_own_hp(char))
 
-    hb_ac = await get_passive_modifiers(session, char, "character.ac")
+    hb_ac = await get_passive_modifiers(session, char, "character.ac", snap)
     response.ac_breakdown = AcBreakdown(
         base=char.base_armor_class,
         shield=char.shield_armor_class,
         magic=char.magic_armor,
         homebrew=hb_ac,
         items=item_bonus_total(char.items, "ac"),
-        rules=modifiers_for(char, "ac").flat,
+        rules=ac_delta(char, response.ac, item_bonus_total(char.items, "ac") + hb_ac),
     )
     response.ac += response.ac_breakdown.rules
 
     response.hp_max_homebrew_modifier = await get_passive_modifiers(
-        session, char, "character.hit_points_max"
+        session, char, "character.hit_points_max", snap
     )
     response.speed_homebrew_modifier = await get_passive_modifiers(
-        session, char, "character.speed"
+        session, char, "character.speed", snap
     )
 
     response.speed_items_modifier = item_bonus_total(char.items, "speed")
@@ -106,12 +127,21 @@ async def build_character_response(
     edition = character_edition(char)
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
     dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
+    rest_choices = {spec.key: list(spec.rest_damage_choice[1]) for spec, _ in active_features(char) if spec.rest_damage_choice}
     for ab in response.abilities:
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.is_pool = ab.feature_key in pools
         if ab.feature_key in dc_of:
             ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
+        if on_use and on_use.available and owner is not None:
+            try:
+                ab.use_blocked = not on_use.available(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
+            except Exception:  # una condizione che non sa rispondere qui non deve rompere la scheda: il server la ricontrolla all'uso
+                ab.use_blocked = False
+        ab.rest_damage_choices = rest_choices.get(ab.feature_key, [])
+        if on_use and on_use.preview and owner is not None:
+            ab.use_preview = on_use.preview(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         if on_use and on_use.temp_hp_ally and owner is not None:  # PF temporanei a un PG della serata (Task 46)
             ab.ally_max = on_use.ally_count(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)) if on_use.ally_count else 1
@@ -156,7 +186,7 @@ async def build_character_response(
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
     # homebrew lookup once per skill instead of re-querying it.
     for slug, ability in SKILL_ABILITY_MAP.items():
-        val = await get_passive_modifiers(session, char, f"character.skill.{slug}")
+        val = await get_passive_modifiers(session, char, f"character.skill.{slug}", snap)
         if val:
             response.skills_homebrew_modifiers[slug] = val
         response.skill_bonuses[slug] = (
@@ -165,12 +195,12 @@ async def build_character_response(
         )
     for slug in PASSIVE_SKILLS:
         response.passives[slug] = (
-            10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug)
+            10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug, snap)
             + passive_adjustment(char, slug)
         )
 
     for slug in ABILITY_NAMES:
-        val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")
+        val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}", snap)
         if val:
             response.saves_homebrew_modifiers[slug] = val
         item_val = item_bonus_total(char.items, f"save.{slug}")
@@ -178,9 +208,18 @@ async def build_character_response(
             response.saves_items_modifiers[slug] = item_val
 
     owned = {i.id: i for i in char.items}
+    for it in response.items:  # effetti degli incantesimi concessi, anche se il personaggio non li conosce
+        granted = (it.item_metadata or {}).get("granted_spells")
+        if isinstance(granted, list) and granted:
+            it.granted_effects = [effect_view(char, g.get("srd_index"), g.get("name"), int(g.get("level") or 1))
+                                  if isinstance(g, dict) else None for g in granted]
     for it in response.items:  # portata in più di un'arma (Radici Percuotenti)
         if it.item_type == "weapon" and it.id in owned:
             it.reach_bonus_ft = modifiers_for(char, "reach", item=owned[it.id]).flat or None
+            it.martial_arts = martial_arts_level(char, owned[it.id]) > 0
+    dex = effective_ability_mod(char, "dexterity")  # mai peggio di 10 + DES, anche con la seconda caratteristica negativa
+    response.unarmored_previews = {a: 10 + dex + max(0, effective_ability_mod(char, a)) for a in ("wisdom", "constitution")}
+    response.unarmed_damage_dice = unarmed_attack_profile(char)[1]
 
     rule_damage = modifiers_for(char, None)
     stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}

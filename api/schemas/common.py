@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from core.db.models import RestorationType
 from core.game.actions import ActionType
@@ -151,9 +151,21 @@ class CharacterClassUpdate(BaseModel):
 
 
 class ClassLevelEntry(BaseModel):
-    """One (class_id, level) pair for the distribute endpoint."""
-    class_id: int
+    """One (class_id, level) pair for the distribute endpoint.
+
+    Una classe nuova viaggia qui con `new_class` (senza `class_id`): si crea nella stessa transazione dei livelli."""
+    class_id: Optional[int] = None
+    new_class: Optional[CharacterClassCreate] = None
     level: int = Field(ge=1, le=20)
+    # Sottoclasse nello stesso salvataggio dei livelli (punto 44: una sola chiamata, niente stato parziale).
+    # Assente = non cambia; stringa vuota o null = la toglie.
+    subclass: Optional[str] = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def _one_of_id_or_new(self):
+        if (self.class_id is None) == (self.new_class is None):
+            raise ValueError("exactly one of class_id / new_class")
+        return self
 
 
 class ClassDistribute(BaseModel):
@@ -222,6 +234,9 @@ class AbilityRead(BaseModel):
     ally_modes: list[str] = []
     # Quante creature della serata possono ricevere i PF temporanei del «Usa» (con gives_to_ally)
     ally_max: int = 1
+    use_preview: Optional[dict[str, str]] = None  # ``OnUse.preview``: cosa farà il «Usa», calcolato dal server
+    # Tipi di danno che il riposo accetta per la resistenza che questo privilegio fa scegliere (Resilienza Immonda); vuoto: nessuna scelta
+    rest_damage_choices: list[str] = []
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
     choose_amount: bool = False
     max_amount: Optional[int] = None
@@ -236,6 +251,8 @@ class AbilityRead(BaseModel):
     use_panel: Optional[str] = None
     # L'uso ora non costa nulla e si può fare (prolungare l'Ira 2024): il «Usa» resta acceso anche a 0 usi; lo decide il server
     free_use: bool = False
+    # Il «Usa» ora verrebbe rifiutato (`feature_unavailable`: Rompi-Incantesimi senza un lancio da rendere): il client lo spegne
+    use_blocked: bool = False
     # Usi che restano al privilegio di cui questo spende gli usi (Preservare Vita: la riserva di Incanalare Divinità)
     spends_left: Optional[int] = None
     # Riga di riserva a catalogo (Incanalare Divinita): solo contatore, l'uso passa dai privilegi che la spendono
@@ -307,6 +324,8 @@ class OptionResult(BaseModel):
     keys: list[str] = []
     extra_rolls: list[int] = []
     extra_total: int = 0  # dadi + eventuale fisso nell'espressione dei dadi
+    extra_types: list[str | None] = []  # tipo di danno di ogni valore di ``extra_rolls`` (assente se nessun dado ne ha uno)
+    separate_type: str | None = None  # tipo del danno a parte
     separate_rolls: list[int] = []  # danno a parte, fuori dal totale
     separate_total: int = 0
     bonus: int = 0
@@ -368,6 +387,7 @@ class RestRequest(BaseModel):
     reopen_tome: bool = False  # Patto del Tomo: i trucchetti e i rituali del Libro delle Ombre tornano da scegliere
     memorize_spell: Optional[MemorizeSpellRequest] = None  # Memorizzare Incantesimo (Mago 2024, 5°): scambio al riposo breve
     sorcerous_restoration: Optional[int] = None  # Ripristino Stregonesco (Stregone 2024): punti stregoneria da recuperare
+    fiendish_resilience: Optional[str] = None  # Resilienza Immonda: il tipo di danno che si sceglie finendo il riposo
     temp_hp_allies: list[int] = []  # Resilienza Celestiale: PG della serata che ricevono i PF temporanei a fine riposo (fino a 5)
 
 

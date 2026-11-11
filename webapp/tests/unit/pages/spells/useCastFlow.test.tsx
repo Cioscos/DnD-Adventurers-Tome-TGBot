@@ -4,10 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
-import { useCastConfirmStore } from '@/lib/rollOptions'
+import { useCastConfirmStore, useEffectPickStore } from '@/lib/rollOptions'
+import { ApiError } from '@/api/client'
+import i18n from '@/i18n'
 import type { CharacterFull, Spell } from '@/types'
 
-const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError } = vi.hoisted(() => ({
+const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError, toastInfo, sessionAllies } = vi.hoisted(() => ({
+  toastInfo: vi.fn(),
+  sessionAllies: vi.fn(),
   toastError: vi.fn(),
   castCheck: vi.fn(),
   attack: vi.fn(),
@@ -19,9 +23,9 @@ const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastEr
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck } } }
+  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck }, characters: { sessionAllies } } }
 })
-vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: vi.fn(), error: toastError, warning: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: toastInfo, error: toastError, warning: vi.fn() } }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   const t = (k: string, o?: Record<string, unknown>) =>
@@ -261,6 +265,16 @@ describe('useCastFlow damageless casts', () => {
     expect(updateConc).not.toHaveBeenCalled()
   })
 
+  it('a smite with damage dice casts without the damage sheet: the damage comes from the hit option (I2)', async () => {
+    useSpell.mockResolvedValue(char)
+    const smite = { ...thunder, id: 9, name: 'Punizione Infuocata', damage_dice: '1d6', effect: { target_kind: 'self', hit_damage: true, max_targets_by_slot: {}, choices: [] } } as Spell
+    renderFlow(smite)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 9, expect.objectContaining({ slot_id: 1, slot_level: 3 })))
+    expect(screen.queryByTestId('damage-sheet')).toBeNull()
+  })
+
   it('a spell granted at will is cast at once without a slot (Thousand Forms)', async () => {
     useSpell.mockResolvedValue(char)
     renderFlow({ ...bless, id: 8, name: 'Alterare se stessi', level: 2, srd_index: 'alter-self', at_will: true } as Spell)
@@ -365,5 +379,115 @@ describe('useCastFlow damageless casts', () => {
     await waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('one_slot_per_turn'))
     useCastConfirmStore.getState().request!.answer(true)
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 4, expect.objectContaining({ confirm: ['one_slot_per_turn'] })))
+  })
+})
+
+describe('useCastFlow spell effects', () => {
+  const shield = {
+    id: 8, name: 'Scudo della Fede', level: 1, attack_save: null, is_concentration: true, is_ritual: false, is_prepared: true,
+    effect: { target_kind: 'ally', max_targets_by_slot: { '3': 1 }, choices: [] },
+  } as unknown as Spell
+  const aid = {
+    id: 9, name: 'Aiuto', level: 2, attack_save: null, is_concentration: false, is_ritual: false, is_prepared: true,
+    effect: { target_kind: 'allies', max_targets_by_slot: { '3': 3 }, choices: [] },
+  } as unknown as Spell
+
+  it('asks for a target and sends it with the cast', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockResolvedValue({ ...char, spell_effects: { applied: [{ id: 21, name: 'Eroe' }] } })
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    expect(useSpell).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ slot_level: 3, targets: [21] })))
+    // punto 82: un solo toast, con a chi è andato l'effetto come descrizione
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith(expect.any(String), { description: 'character.spells.effect_applied(name=Scudo della Fede,targets=Eroe)' }))
+    expect(toastSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not name the caster in full when the effect lands on him (point 82)', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockResolvedValue({ ...char, spell_effects: { applied: [{ id: 7, name: 'Fratello Bartolomeo' }, { id: 21, name: 'Eroe' }] } })
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith(expect.any(String), {
+      description: 'character.spells.effect_applied(name=Scudo della Fede,targets=character.spells.effect_self, Eroe)' }))
+  })
+
+  it('lets the caster pick himself and shows the GM text outside an evening', async () => {
+    sessionAllies.mockResolvedValue([])
+    useSpell.mockResolvedValue({ ...char, spell_effects: { applied: [], text: { it: 'Lo applica il GM', en: 'GM applies it' } } })
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('character.turn.removal_self'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ targets: [7] })))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('Lo applica il GM'))
+  })
+
+  it('picks several targets up to the slot limit', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }, { id: 22, name: 'Maga' }])
+    useSpell.mockResolvedValue(char)
+    castCheck.mockResolvedValue([])
+    renderFlow(aid)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await userEvent.click(screen.getByText('Maga'))
+    await userEvent.click(screen.getByText('character.turn.ally_confirm(n=2)'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 9, expect.objectContaining({ targets: [21, 22] })))
+  })
+
+  it('asks for the target also on a ritual', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockResolvedValue(char)
+    castCheck.mockResolvedValue([])
+    renderFlow({ ...shield, is_ritual: true } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-ritual'))
+    expect(useSpell).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 8, expect.objectContaining({ as_ritual: true, targets: [21] })))
+  })
+
+  it('asks for the target before the damage sheet of a spell with dice and an effect', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    castCheck.mockResolvedValue([])
+    renderFlow({ ...shield, damage_dice: '1d4' } as Spell)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    expect(screen.queryByTestId('damage-sheet')).toBeNull()
+    await userEvent.click(await screen.findByText('Eroe'))
+    expect(await screen.findByTestId('damage-sheet')).toBeInTheDocument()
+    expect(useEffectPickStore.getState().picked[8]).toEqual({ targets: [21], choices: undefined })
+  })
+
+  it.each(['invalid_target', 'target_dead', 'invalid_choice'])('shows a dedicated toast for %s', async (code) => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }])
+    useSpell.mockRejectedValue(new ApiError(422, { code }))
+    castCheck.mockResolvedValue([])
+    renderFlow(shield)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(i18n.t(`character.spells.roll_damage.cast_errors.${code}`)))
+  })
+
+  it('does not throw away the ticked targets when another creature is tapped', async () => {
+    sessionAllies.mockResolvedValue([{ id: 21, name: 'Eroe' }, { id: 22, name: 'Maga' }])
+    castCheck.mockResolvedValue([])
+    renderFlow(aid)
+    await userEvent.click(screen.getByText('begin'))
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    await userEvent.click(await screen.findByText('Eroe'))
+    await userEvent.click(screen.getByText('character.turn.ally_other'))
+    expect(useSpell).not.toHaveBeenCalled()
+    expect(screen.getByText('character.turn.ally_confirm(n=1)')).toBeInTheDocument()
   })
 })

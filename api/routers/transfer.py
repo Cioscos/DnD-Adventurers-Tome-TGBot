@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
-from api.routers.characters import _refresh_char_full
+from api.services.character_load import refresh_char_full
 from api.schemas.character import CharacterFull
 from api.schemas.ddb_import import DdbImportRequest, DdbImportResult
 from api.schemas.transfer import CharacterExport
@@ -21,15 +21,13 @@ from api.services.character_transfer import build_export, import_character, load
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import mark_ability_bonuses
 from api.services.ddb_import import (
-    DdbImportError, ImportReport, ReportEntry, class_option_names, convert, fetch_ddb, parse_ddb_id,
+    DdbImportError, ImportReport, ReportEntry, apply_class_options, class_option_names, convert, fetch_ddb, parse_ddb_id,
 )
 from api.services.spell_slots import recalc_spell_slots
 from api.services.telegram_notify import bot_token_configured, send_telegram_document
 from core.data.classes import class_table_key
 from core.rules.catalog import features_for
 from core.rules.edition import character_edition, class_key
-from core.rules.level_choices import active_choice_specs, apply_grants
-from core.rules.types import RuleContext
 
 router = APIRouter(prefix="/characters", tags=["transfer"])
 
@@ -117,13 +115,13 @@ async def _import_body(request: Request) -> bytes:
 
 async def _create_from(session: AsyncSession, user_id: int, data: CharacterExport, lang: str, kind: str) -> CharacterFull:
     char = await import_character(session, user_id, data, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])[kind])
-    char = await _refresh_char_full(session, char.id, user_id)
+    char = await refresh_char_full(session, char.id, user_id)
     if "rules_edition" in data.character.model_fields_set:
         await sync_cataloged_features(session, char, lang, retrofit=True)  # i punteggi del file sono già quelli finali (R34)
     else:  # un file vecchio resta com'è, ma i bonus ai punteggi si segnano comunque come applicati
         mark_ability_bonuses(char)
         await session.flush()
-    char = await _refresh_char_full(session, char.id, user_id)
+    char = await refresh_char_full(session, char.id, user_id)
     return await build_character_response(session, char)
 
 
@@ -171,57 +169,15 @@ async def import_ddb_character(
     except DdbImportError as e:
         raise _ddb_error(e.code)
     char = await import_character(session, user_id, export, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])["import"])
-    char = await _refresh_char_full(session, char.id, user_id)
-    _apply_class_options(char, class_option_names(ddb), report, lang)
+    char = await refresh_char_full(session, char.id, user_id)
+    apply_class_options(char, class_option_names(ddb), report, lang)
     for cls in char.classes:
         if class_table_key(cls.class_name) is not None:
             await sync_class_feature_abilities(session, char, cls, lang=lang, retrofit=True)  # Beyond somma già i modificatori di classe
     await _apply_feature_uses(session, char, feature_uses)
     await recalc_spell_slots(session, char)
-    char = await _refresh_char_full(session, char.id, user_id)
+    char = await refresh_char_full(session, char.id, user_id)
     return DdbImportResult(character=await build_character_response(session, char), report=report)
-
-
-def _norm_name(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()).strip()
-
-
-def _apply_class_options(char, option_names: list[dict], report: ImportReport, lang: str) -> None:
-    """Opzioni scelte su DDB (Metamagia, Invocazioni...) -> `CharacterClass.options` secondo il catalogo
-    dell'edizione. Quelle che nessun gruppo della classe riconosce restano nel report."""
-    edition = character_edition(char)
-    classes = sorted(char.classes, key=lambda c: c.id)  # stesso ordine di export.classes
-    for idx, cls in enumerate(classes):
-        wanted = [o["name"] for o in option_names if o["class_index"] == idx]
-        if not wanted:
-            continue
-        ctx = RuleContext(char=char, edition=edition, class_row=cls, class_level=cls.level)
-        specs = features_for(edition, class_key(cls))
-        chosen: dict[str, list[str]] = {}
-        free = list(wanted)  # ogni nome sulla scheda DDB riempie un posto solo (l'Aquila scelta due volte sono due nomi)
-        for ch in active_choice_specs(char, cls):
-            reached = [lvl for lvl in ch.levels if lvl <= cls.level]
-            limit = ch.levels[max(reached)] if reached else 0
-            names: dict[str, str] = {}
-            for key in (ch.import_options or ch.options)(ctx):
-                for spec in specs:
-                    if spec.option_group == ch.group and spec.option_key == key:
-                        names.update({_norm_name(n): key for n in spec.name.values()})
-                if ch.label is not None:
-                    label = ch.label(key).get("name", "")  # una stringa, o {it, en} come lo vuole l'interfaccia
-                    for text in (label.values() if isinstance(label, dict) else [label]):
-                        names[_norm_name(text)] = key
-            for name in list(free):
-                key = names.get(_norm_name(name))
-                if key is not None and key not in chosen.get(ch.group, []) and len(chosen.get(ch.group, [])) < limit:
-                    chosen.setdefault(ch.group, []).append(key)
-                    free.remove(name)
-        if chosen:
-            cls.options = {**(cls.options or {}), **chosen}
-            for ch in active_choice_specs(char, cls):
-                apply_grants(char, ch, chosen.get(ch.group, []))
-        for name in free:
-            report.approximated.append(ReportEntry(section="options", name=name, reason="ddb.reason.option_unknown"))
 
 
 def _find_feature(char, cls_id: int, slug: str):

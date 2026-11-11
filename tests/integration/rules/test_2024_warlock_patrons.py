@@ -353,7 +353,8 @@ async def test_searing_vengeance_raises_a_dying_warlock_to_half_hp_and_blinds_th
     full = await _full(client, cid)
     assert full["current_hit_points"] == 40 and not full["conditions"].get("prone")
     effect = await _effect(client, cid, VENGEANCE)
-    assert effect["condition"] == "blinded" and effect["damage_dice"] == "2d8+3" and effect["rounds"] == 1
+    assert effect["condition"] == "blinded" and effect["damage_dice"] == "2d8+3"
+    assert effect["ends_at"] == {"anchor": "active", "edge": "end", "count": 1} and not effect["rounds"]  # fino alla fine del turno in corso
     assert (await _ability(client, cid, VENGEANCE))["uses"] == 0
     assert (await _use(client, cid, VENGEANCE, params={"mode": "self"})).status_code == 409
 
@@ -365,6 +366,25 @@ async def test_searing_vengeance_for_an_ally_reports_the_outcome_without_touchin
     r = await _use(client, cid, VENGEANCE, params={"mode": "ally"})
     assert r.status_code == 200, r.text
     assert (await _full(client, cid))["current_hit_points"] == before and "metà" in r.json()["message"]["it"]
+
+
+async def test_searing_vengeance_2_ally_heals_half_the_effective_max_not_the_base(client, test_session_factory):
+    from sqlalchemy import select
+    from core.db.models import Character, SessionParticipant
+    from tests.integration._encounter_helpers import GM_ID, as_user, seed_session
+    _, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _make(client, "celestial", 14)
+    await _hp(client, cid, op="set_max", value=80)
+    async with test_session_factory() as s:
+        part = (await s.execute(select(SessionParticipant).where(SessionParticipant.user_id == GM_ID))).scalar_one()
+        part.character_id = cid
+        char = await s.get(Character, hero)
+        char.hit_points, char.current_hit_points, char.conditions = 80, 0, {"exhaustion": 4}  # 2014: il massimo effettivo si dimezza a 40, la metà è 20
+        await s.commit()
+    r = await _use(client, cid, VENGEANCE, params={"mode": "ally", "target_character_id": hero})
+    assert r.status_code == 200, r.text
+    assert r.json()["received"] == {"name": "Eroe", "healed": 20}  # metà del massimo effettivo (20), non di quello di base (40)
 
 
 # ---------------------------------------------------------------------------
@@ -412,15 +432,17 @@ async def test_fiendish_resilience_is_a_resistance_to_any_type_but_force_with_no
     cid = await _make(client, "fiend", 10)
     await _hp(client, cid, op="set_max", value=100)
     await _hp(client, cid, op="set_current", value=100)
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "force"})).status_code == 422
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "slashing"})).status_code == 200
+    async def choose(damage_type, kind="short"):
+        return await client.post(f"/characters/{cid}/rest", json={"rest_type": kind, "confirm_early": True, "fiendish_resilience": damage_type})
+
+    assert (await choose("force")).status_code == 422
+    assert (await choose("slashing")).status_code == 200
     assert (await _hp(client, cid, op="damage", value=10, damage_type="slashing"))["current_hit_points"] == 95
     assert (await _hp(client, cid, op="damage", value=10, damage_type="acid"))["current_hit_points"] == 85
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "cold"})).status_code == 409  # una scelta per riposo
-    await _rest(client, cid, "short")
-    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "cold"})).status_code == 200
-    assert (await _hp(client, cid, op="damage", value=10, damage_type="slashing"))["current_hit_points"] == 75
-    assert (await _hp(client, cid, op="damage", value=10, damage_type="cold"))["current_hit_points"] == 70
+    assert (await choose("cold", "long")).status_code == 200  # a ogni riposo se ne sceglie un'altra
+    assert (await _hp(client, cid, op="damage", value=10, damage_type="slashing"))["current_hit_points"] == 90  # il lungo ha curato a 100; la vecchia non vale piu'
+    assert (await _hp(client, cid, op="damage", value=10, damage_type="cold"))["current_hit_points"] == 85
+    assert (await _use(client, cid, RESILIENCE_F, params={"damage_type": "cold"})).status_code >= 400  # niente "Usa" dopo aver visto il danno
     assert (await _turn(client, cid))["action_used"] is False
 
 
@@ -528,10 +550,10 @@ async def test_eldritch_hex_adds_a_disadvantage_on_the_saves_of_the_chosen_abili
     abilities = ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
     assert {f"{HEX}_{a}" for a in abilities} <= set(keys)
     assert not any(k.startswith(HEX) for k in await _keys(client, cid, "cast", spell_id=await _spell(client, cid, "Altro", 1)))
-    r = await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom"])
+    r = await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom"], choices={"ability": "wisdom"})
     assert r.status_code == 200, r.text
     assert (await _effect(client, cid, f"{HEX}_wisdom"))["note"] == "eldritch_hex_wisdom"
-    assert (await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom", f"{HEX}_strength"])).status_code == 409
+    assert (await _cast(client, cid, hex_id, slot_level=await _level(client, cid), options=[f"{HEX}_wisdom", f"{HEX}_strength"], choices={"ability": "wisdom"})).status_code == 409
     low = await _make(client, "great_old_one", 9)
     assert "hex" not in await _spells_by_index(client, low)
 

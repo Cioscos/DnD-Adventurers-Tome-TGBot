@@ -110,6 +110,7 @@ class TargetEffectRead(BaseModel):
     immune_on_success: bool = False
     repeat_save: str | None = None  # il TS si ripete a inizio o fine turno del bersaglio (Collera della Natura)
     note: str | None = None  # chiave del testo che il foglio traduce: ciò che il GM chiude o applica a mano
+    ends_with_concentration: bool = False  # cade con la concentrazione di chi la applica (le punizioni)
 
 
 class TargetCandidate(BaseModel):

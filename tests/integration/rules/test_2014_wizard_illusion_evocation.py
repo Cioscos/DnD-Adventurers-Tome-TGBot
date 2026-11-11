@@ -318,3 +318,40 @@ async def test_the_player_cannot_end_the_overchannel_count_by_hand(client, monke
     r = await client.delete(f"/characters/{cid}/active-states/overchannel")
     assert r.status_code == 409 and r.json()["detail"]["code"] == "state_locked"
     assert (await _states(client, cid))["overchannel"]["data"]["uses"] == 1
+
+
+async def test_minori_8_55_the_self_damage_uses_the_request_language_and_the_roll_commits_once(client, monkeypatch):
+    from sqlalchemy.ext.asyncio import AsyncSession
+    import api.routers.hp as hp_router
+    from api.auth import get_current_lang
+    from api.main import app
+    cid = await _wizard(client, 14, "evocation")
+    await _hp(client, cid, 1000)
+    ball = await _evocation(client, cid, "Palla di fuoco", 3)
+    await _overchannel(client, cid, ball, 3)
+    app.dependency_overrides[get_current_lang] = lambda: "en"
+    langs, commits = [], []
+    real_update, real_commit = hp_router.update_hp, AsyncSession.commit
+
+    async def spy_update(char_id, body, user_id, session, lang):
+        langs.append(lang)
+        return await real_update(char_id, body, user_id, session, lang)
+
+    async def spy_commit(self):
+        commits.append(1)
+        return await real_commit(self)
+
+    monkeypatch.setattr(hp_router, "update_hp", spy_update)
+    monkeypatch.setattr(AsyncSession, "commit", spy_commit)
+    assert (await _overchannel(client, cid, ball, 3)).status_code == 200
+    assert langs == ["en"]
+    assert len(commits) == 1  # solo quello di chiusura della richiesta
+
+
+async def test_minori_14_empowered_evocation_counts_once_per_cast(client):
+    cid = await _wizard(client, 10, "evocation", intelligence=18)
+    ball = await _evocation(client, cid)
+    assert (await _damage(client, cid, ball, casting_level=3, main_rolls=[1] * 8))["total"] == 8 + 4
+    assert (await _damage(client, cid, ball, casting_level=3, main_rolls=[1] * 8))["total"] == 8
+    assert (await client.post(f"/characters/{cid}/spells/{ball}/use", json={"slot_level": 3})).status_code == 200
+    assert (await _damage(client, cid, ball, casting_level=3, main_rolls=[1] * 8))["total"] == 8 + 4

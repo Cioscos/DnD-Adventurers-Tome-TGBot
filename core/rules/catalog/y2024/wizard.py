@@ -38,7 +38,7 @@ def _book_spells(level: int, groups: tuple[str, ...], one_action: bool = False):
 
 def _mastery(n: int, level: int) -> ChoiceSpec:
     return ChoiceSpec(group=MASTERY_GROUPS[n], levels={18: 1}, options=_book_spells(level, (MASTERY_GROUPS[n],), one_action=True),
-                      replaceable=True, label=_name_label, always_prepared=True)
+                      replaceable=True, replace_per_long_rest=True, label=_name_label, always_prepared=True)
 
 
 def _signature(n: int) -> ChoiceSpec:

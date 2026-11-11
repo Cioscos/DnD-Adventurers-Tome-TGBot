@@ -7,8 +7,8 @@ export default function PublicStates({ states }: { states?: PublicState[] | null
   if (!states?.length) return null
   return (
     <ul data-testid="public-states" className="mt-1.5 flex flex-col gap-1">
-      {states.map((s) => (
-        <li key={s.key} className="min-w-0 text-xs font-body text-dnd-text">
+      {states.map((s, i) => (
+        <li key={`${s.key}:${i}`} className="min-w-0 text-xs font-body text-dnd-text">
           <span className="font-semibold text-dnd-gold-bright">{s.name}</span>
           {s.rounds_left != null && (
             <span className="ml-1.5 tabular-nums text-dnd-text-muted">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>

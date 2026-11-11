@@ -1,3 +1,4 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -11,7 +12,6 @@ import SelectSheet from '@/components/ui/SelectSheet'
 import MarkerTypeSheet from '@/pages/atlas/MarkerTypeSheet'
 import { api } from '@/api/client'
 import { resolveType, typeValue, visibilityKey } from '@/lib/atlasIcons'
-import { useToast } from '@/hooks/useToast'
 import type { AtlasMap, AtlasMarker, MarkerVisibility } from '@/types'
 
 interface Props {
@@ -32,7 +32,6 @@ interface Props {
 export default function MarkerFormSheet({ open, campaignId, mapId, isGm, maps, point, marker, onClose, onSaved }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const toast = useToast()
   const [type, setType] = useState('b:poi')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -53,7 +52,7 @@ export default function MarkerFormSheet({ open, campaignId, mapId, isGm, maps, p
   const typesQ = useQuery({ queryKey: ['atlas-types', campaignId], queryFn: () => api.atlas.types(campaignId), enabled: open })
   const types = typesQ.data ?? []
   const selected = types.find((tp) => typeValue(tp) === type)
-  const fail = () => toast.error(t('common.action_failed'))
+  const fail = (e: unknown) => notifyMutationError(e)
   const refreshMarkers = () => qc.invalidateQueries({ queryKey: ['atlas-markers', campaignId] })
 
   const save = useMutation({

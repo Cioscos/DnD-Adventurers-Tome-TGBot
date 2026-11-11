@@ -16,6 +16,7 @@ from api.services.durations import end_concentration, is_concentrating
 from api.services.effects import cap_current_hp, sync_zero_hp
 from api.services.condition_effects import release_concentration_effects, restore_released
 from api.services.homebrew.passive import get_passive_modifiers
+from api.services.history import add_history
 from core.db.models import Character, CharacterHistory
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
@@ -23,6 +24,7 @@ from core.game.skills import save_roll_part
 from core.game.stats import effective_ability_mod, roll_ability_mod
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
+from core.rules.spell_effects import enchanted_weapon
 from core.rules.spellcasting import concentration_dc
 from core.rules.modifiers import modifiers_for
 from core.rules.weapons import has_property, martial_arts_level
@@ -123,6 +125,10 @@ def weapon_attack_profile(
     else:
         ability = "dexterity" if is_ranged else "strength"
     mode = "ranged" if is_ranged else "melee" if attack_mode == "offhand" else attack_mode
+    if (enchanted := enchanted_weapon(char, item)) and enchanted[0].weapon_ability and enchanted[1].get("ability"):
+        cast = enchanted[1]["ability"]  # Randello Incantato: al posto di Forza o Destrezza (2024: solo se è meglio, edizione del lanciatore)
+        if enchanted[1].get("edition") != "2024" or roll_ability_mod(char, cast) > mods[ability]:
+            return roll_ability_mod(char, cast), cast, mode
     if meta.get("pact_weapon") and character_edition(char) == "2024" and any(
             spec.key == "warlock.pact_of_the_blade" for spec, _ in active_features(char)):
         charisma = roll_ability_mod(char, "charisma")  # Patto della Lama: Carisma al posto di Forza o Destrezza, se e meglio
@@ -187,12 +193,7 @@ def _append_concentration_history(
         f"{label}+{con_mod}={total}: {outcome}"
         + (" → concentrazione persa" if lost_concentration else "")
     )
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-        event_type="concentration_save",
-        description=desc,
-    ))
+    add_history(session, char_id, "concentration_save", desc)
 
 
 async def _lose_concentration(session: AsyncSession, char: Character) -> dict:

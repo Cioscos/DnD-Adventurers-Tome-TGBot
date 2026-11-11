@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -5,6 +6,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { notifyMutationError } from '@/lib/mutationError'
 import { CLASS_NAME_TO_PROGRESSION_KEY } from '@/lib/classProgression'
 import type { CharacterFull, ClassOptionEntry, PendingChoice } from '@/types'
 
@@ -18,7 +20,7 @@ interface Props {
 /** Scelta di opzioni di classe (Metamagia, Invocazioni, ...): esattamente `choice.count` fra quelle offerte. */
 export default function ClassOptionSheet({ char, choice, open, onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const qc = useQueryClient()
   const [picked, setPicked] = useState<string[]>([])
   const total = choice.count ?? 1
@@ -35,7 +37,7 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
       haptic.success()
       onClose()
     },
-    onError: () => haptic.error(),
+    onError: (err) => notifyMutationError(err),  // dice il motivo (prerequisito) invece di vibrare in silenzio
   })
 
   const toggle = (key: string) => {
@@ -102,7 +104,7 @@ interface ReplaceProps {
 /** Sostituisce un'opzione già scelta con un'altra (solo gruppi `replaceable`, deciso dal catalogo). */
 export function ReplaceOptionSheet({ char, classId, group, open, onClose }: ReplaceProps) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const qc = useQueryClient()
   const [oldKey, setOldKey] = useState('')
   const [newKey, setNewKey] = useState('')
@@ -119,7 +121,7 @@ export function ReplaceOptionSheet({ char, classId, group, open, onClose }: Repl
       haptic.success()
       onClose()
     },
-    onError: () => haptic.error(),
+    onError: (err) => notifyMutationError(err),
   })
   const list = (entries: ClassOptionEntry[], current: string, set: (k: string) => void) => entries.map((o) => (
     <Pressable

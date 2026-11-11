@@ -286,7 +286,7 @@ async def test_a_double_tap_on_the_same_use_spends_and_removes_once(client, test
     first = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
     assert first.status_code == 200
     again = await _use(client, paladin, LOH, amount=1, params=_rm([hero], ["poisoned"], mode="cure"))
-    assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used"  # azione bonus già spesa
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "nothing_to_remove"  # il veleno è già tolto
     assert await _pool(client, paladin) == 20
 
 
@@ -347,8 +347,20 @@ async def test_panacea_on_a_seated_ally_removes_poison_and_notes_curses_and_dise
     assert r.status_code == 200, r.text
     assert await _hero(test_session_factory, hero) == {"blinded": True}
     lines = " ".join(x["it"] for x in r.json()["removal"]).lower()
-    assert "maledizione" in lines and "malattia" in lines
+    assert "l'app non la traccia" not in lines  # punto 28: senza una scelta il promemoria sarebbe superfluo, il testo del privilegio lo dice già
     assert "Condizione Avvelenato tolta da" in " ".join(await _history(test_session_factory, hero))
+
+
+async def test_panacea_28_notes_the_untracked_entries_only_when_chosen(client, test_session_factory):
+    _sid, hero = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = await _wizard(client, 14, "transmutation")
+    await _seat(test_session_factory, cid)
+    await _master(client, cid)
+    r = await _use(client, cid, PANACEA, params=_rm([hero], ["curse"], mode="other"))
+    assert r.status_code == 200, r.text
+    lines = " ".join(x["it"] for x in r.json()["removal"]).lower()
+    assert "maledizione" in lines and "malattia" not in lines
 
 
 async def test_there_is_no_second_path_clears_is_gone():

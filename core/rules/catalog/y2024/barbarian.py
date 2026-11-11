@@ -317,7 +317,7 @@ FRENZY = RollOptionSpec(
 def _divine_fury(kind: str, it: str, en: str) -> RollOptionSpec:
     return RollOptionSpec(
         key=f"{CK}.divine_fury_{kind}", phase="after_hit", rolls=("attack",), group="divine_fury", once_per_turn=True,
-        extra_dice=lambda c, _i: f"1d6+{c.class_level // 2}", label=_both(it, en),
+        extra_dice=lambda c, _i: f"1d6+{c.class_level // 2}", extra_damage_type=kind, label=_both(it, en),
         available=lambda c: raging(c) and c.spell is None)
 
 
@@ -699,7 +699,9 @@ FEATURES = (
              "At the start of your turn while raging, another creature within 10 ft gains temporary HP: d6s equal to your Rage damage bonus. They vanish when the Rage ends."),
             "special", subclass="world_tree",
             on_use=OnUse(rolls=lambda c: f"{rage_damage(c.class_level)}d6", gives=lambda _c, rolled: rolled, once_per_turn=True, temp_hp_ally=True, temp_hp_ends_with="rage",
-                         available=lambda c: state_on(c, "rage"))),
+                         available=lambda c: state_on(c, "rage"),
+                         message=lambda _c, _p: _both("I PF temporanei dell'altra creatura svaniscono quando finisce la tua Ira.",
+                                                      "The other creature's temporary HP vanish when your Rage ends."))),
     feature("branches_of_the_tree", CK, ED, 6, "Rami dell'Albero / Branches of the Tree (Cammino dell'Albero del Mondo 6, pag. 56)",
             ("Rami dell'Albero", "Branches of the Tree"),
             ("Reazione in Ira: una creatura che vedi entro 9 m a inizio turno fa un TS Forza (CD 8 + Forza + competenza) o si teletrasporta vicino a te.",

@@ -8,8 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from core.rules.catalog import active_features
-
-GRANTED_SPELL_KEYS = "granted_spell_keys"  # settings, scritto dal sync: gli incantesimi che un privilegio ha concesso
+from core.rules.feature_sync import GRANTED_SPELL_KEYS  # settings, scritto dal sync: gli incantesimi che un privilegio ha concesso
 
 
 @dataclass(frozen=True)

@@ -12,6 +12,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.history import add_history
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.db.models import (
@@ -20,7 +21,6 @@ from core.db.models import (
     ABILITY_NAMES,
     Character,
     CharacterClass,
-    CharacterHistory,
     ConditionEffect,
     Currency,
     Item,
@@ -36,9 +36,9 @@ from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import check_bonus, skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
-from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_SPELL_KEYS, RETROFIT_DONE
+from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, REPLACED_AT_REST, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
 from core.rules.proficiencies import FEATURE_GRANTS_KEY, SEEDED_FLAG
 from api.schemas.character import (
@@ -58,6 +58,7 @@ from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
 from api.services.rules_targets import activate_pending_effect, drop_pending_effect
 from core.game.item_bonuses import item_bonus_total
+from core.game.actions import HIDE_MIN_TOTAL
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body, spend_inspiration_reroll
@@ -74,8 +75,8 @@ from core.data.spell_slots import normalize_class_name
 from core.rules.edition import character_edition
 from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
-from api.services.session_allies import attach_party_auras
-from core.rules.modifiers import effective_hp_max, modifiers_for, rule_hp_bonus
+from api.services.session_allies import attach_party_auras, attach_spell_auras
+from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
@@ -84,14 +85,15 @@ from api.services.durations import tick_rounds
 from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
+from api.services.character_load import full_load, get_owned, refresh_char_full
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_levels",
-                         "concentration_rounds_left", "concentration_item_spell", ARCHIVED_FEATURES,
-                         GRANTED_SPELL_KEYS, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
-                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
+                         "concentration_rounds_left", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
+                         GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
                          SEEDED_FLAG, FEATURE_GRANTS_KEY, ASSASSIN_KITS_FLAG)
 
@@ -122,87 +124,6 @@ def _now() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
 
 
-def _add_history(
-    session,
-    char_id: int,
-    event_type: str,
-    description: str,
-    meta: dict | None = None,
-) -> None:
-    session.add(CharacterHistory(
-        character_id=char_id,
-        timestamp=_now(),
-        event_type=event_type,
-        description=description,
-        meta=meta,
-    ))
-
-
-def _full_load():
-    """Return selectinload options for a fully-populated character."""
-    return [
-        selectinload(Character.classes),
-        selectinload(Character.ability_scores),
-        selectinload(Character.spells),
-        selectinload(Character.spell_slots),
-        selectinload(Character.items),
-        selectinload(Character.currency),
-        selectinload(Character.abilities),
-        selectinload(Character.maps),
-    ]
-
-
-async def _get_owned(
-    char_id: int,
-    user_id: int,
-    session: AsyncSession,
-    *,
-    full: bool = False,
-) -> Character:
-    """Fetch a character by id, verifying ownership. Raises 404/403."""
-    opts = _full_load() if full else []
-    result = await session.execute(
-        select(Character).options(*opts).where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your character")
-    return char
-
-
-async def _refresh_char_full(
-    session: AsyncSession, char_id: int, user_id: int
-) -> Character:
-    """Flush pending mutations, then re-SELECT a fully-loaded character.
-
-    Use this in PATCH endpoints that mutate ``char.*`` and return
-    ``CharacterFull`` via FastAPI's ``response_model``. A bare
-    ``session.refresh(char, attribute_names=[...])`` is insufficient: it
-    re-runs each relation's *default* loader strategy (lazy="select") and
-    strips the nested ``selectinload`` chains set up by ``_full_load()`` —
-    notably ``classes.resources``. Pydantic serialization of the nested
-    ``CharacterClassRead.resources`` list field then either triggers
-    ``MissingGreenlet`` (lazy-load in sync context) or silently returns an
-    empty list — in either case, newly-added ``ClassResource`` rows from the
-    same transaction never appear in the response body.
-
-    The reliable fix is to ``session.expunge_all()`` (autoflush may have
-    pulled related objects into the identity map; ``expunge(char)`` alone
-    isn't enough) and then re-issue the full eager-load query. This matches
-    the pattern already used by ``create_character`` after the
-    ``initial_class`` branch.
-
-    Caller pattern: replace ``await session.refresh(char, attribute_names=[
-    "classes", ...]); return char`` with ``return await _refresh_char_full(
-    session, char.id, user_id)``.
-    """
-    await session.flush()
-    session.expunge_all()
-    return await _get_owned(char_id, user_id, session, full=True)
-
-
 # ---------------------------------------------------------------------------
 # List
 # ---------------------------------------------------------------------------
@@ -214,7 +135,7 @@ async def list_characters(
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
-        .options(selectinload(Character.classes), selectinload(Character.items))
+        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores))
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )
@@ -229,7 +150,7 @@ async def list_characters(
             session, c, "character.ac"
         )
         summary.ac_items_modifier = item_bonus_total(c.items, "ac")
-        summary.ac += modifiers_for(c, "ac").flat
+        summary.ac += ac_delta(c, summary.ac, summary.ac_items_modifier + summary.ac_homebrew_modifier)
         summary.hp_max_effective = effective_hp_max(c, summary.hp_max_homebrew_modifier)
         summaries.append(summary)
     return summaries
@@ -357,8 +278,8 @@ async def create_character(
             _add_starting_equipment(char, body, lang)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
-    # response serialization. See _refresh_char_full for the full rationale.
-    char = await _refresh_char_full(session, char.id, user_id)
+    # response serialization. See refresh_char_full for the full rationale.
+    char = await refresh_char_full(session, char.id, user_id)
     # Seed spell slots for a caster initial class (automatic mode is the default).
     await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
@@ -374,8 +295,8 @@ async def get_character(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
-    return await build_character_response(session, char)
+    char = await get_owned(char_id, user_id, session, full=True)
+    return await build_character_response(session, char, persist=False)
 
 
 # ---------------------------------------------------------------------------
@@ -390,7 +311,7 @@ async def update_character(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
         if field == "settings" and value is not None:
             # Server-owned keys: a stale client snapshot must never overwrite them.
@@ -403,8 +324,8 @@ async def update_character(
         await sync_cataloged_features(session, char, lang)
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See
-    # _refresh_char_full() for the full rationale.
-    char = await _refresh_char_full(session, char_id, user_id)
+    # refresh_char_full() for the full rationale.
+    char = await refresh_char_full(session, char_id, user_id)
     # Re-derive spell slots when automatic mode is active (e.g. the user just
     # switched manual → automatic, or edited a class through this endpoint).
     await recalc_spell_slots(session, char)
@@ -421,7 +342,7 @@ async def delete_character(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    char = await _get_owned(char_id, user_id, session)
+    char = await get_owned(char_id, user_id, session)
 
     # Auto-leave any active session where this character is pinned as a player.
     # GM participants have character_id=None so they're never matched here.
@@ -442,6 +363,8 @@ async def delete_character(
             game_session.last_activity_at = _now()
 
     await session.execute(delete(CampaignMember).where(CampaignMember.character_id == char.id))
+    release_given_spells(char, [{"key": clock} for clock in (char.settings or {}).get(SPELL_GIVEN) or {}])  # i bersagli perdono gli effetti
+    await session.flush()
     await session.delete(char)
 
 
@@ -456,12 +379,12 @@ async def update_skills(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     current = dict(char.skills or {})
     current.update(body.skills)
     char.skills = current
-    # See _refresh_char_full() for why expunge + re-SELECT is required here.
-    char = await _refresh_char_full(session, char_id, user_id)
+    # See refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -476,12 +399,12 @@ async def update_saving_throws(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     current = dict(char.saving_throws or {})
     current.update(body.saving_throws)
     char.saving_throws = current
-    # See _refresh_char_full() for why expunge + re-SELECT is required here.
-    char = await _refresh_char_full(session, char_id, user_id)
+    # See refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -496,7 +419,7 @@ async def update_conditions(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     result = await apply_conditions(session, char, body.conditions)
     # apply_conditions already dropped the effects of conditions turned off
     gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
@@ -507,11 +430,11 @@ async def update_conditions(
     if result["changed"]:
         await prune_history(session, char)
 
-    # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    # See refresh_char_full() for why expunge + re-SELECT is required here.
     # The CharacterHistory side-effect rows added above are exactly the kind
     # of mutation that triggers autoflush → column expiration during response
     # serialization.
-    char = await _refresh_char_full(session, char_id, user_id)
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -523,7 +446,7 @@ async def hide(
 ) -> CharacterFull:
     """Azione Nascondersi 2024: l'ultima prova di Furtività, salvata dal server, di almeno 15 (con le condizioni
     confermate dal giocatore) rende Invisibili; il totale è la CD per trovarti. Nel 2014 l'esito lo decide il DM."""
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     if character_edition(char) != "2024":
         raise HTTPException(status_code=422, detail={"code": "hide_2024_only"})
     refuse_if_incapacitated(char)
@@ -531,14 +454,14 @@ async def hide(
     if last.get("roll") != "skill" or last.get("skill") != "stealth":
         raise HTTPException(status_code=409, detail={"code": "no_stealth_roll"})
     total = last["total"]
-    if total < 15:
+    if total < HIDE_MIN_TOTAL:
         raise HTTPException(status_code=409, detail={"code": "hide_failed"})
     # Nascondersi di nuovo mentre ci si nasconde già: l'Invisibilità di prima è del nascondiglio, non di un'altra fonte.
     hiding = (char.settings or {}).get("hiding")
     was_invisible = bool(hiding.get("was_invisible")) if hiding else bool((char.conditions or {}).get("invisible"))
     await apply_conditions(session, char, {"invisible": True})
     char.settings = {**(char.settings or {}), "hiding": {"dc": total, "was_invisible": was_invisible}}
-    char = await _refresh_char_full(session, char_id, user_id)
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -548,13 +471,13 @@ async def tick_round(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     if await active_encounter_row(session, char_id) is not None:
         # In combat the turn edges drive durations: a manual tick would double-count.
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"code": "in_encounter"})
     expired = await tick_rounds(session, char)
     await prune_history(session, char)
-    char = await _refresh_char_full(session, char_id, user_id)
+    char = await refresh_char_full(session, char_id, user_id)
     resp = await build_character_response(session, char)
     resp.expired_effects = expired
     return resp
@@ -571,7 +494,7 @@ async def update_inspiration(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     settings = dict(char.settings or {})
     if body.heroic_inspiration and char.heroic_inspiration and character_edition(char) == "2024":
         settings["inspiration_extra"] = True  # se ne ha una sola: questa è da cedere a chi ne è privo, o persa
@@ -579,8 +502,8 @@ async def update_inspiration(
         settings.pop("inspiration_extra", None)
     char.settings = settings
     char.heroic_inspiration = body.heroic_inspiration
-    # See _refresh_char_full() for why expunge + re-SELECT is required here.
-    char = await _refresh_char_full(session, char_id, user_id)
+    # See refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -591,11 +514,11 @@ async def discard_extra_inspiration(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     """Scarta l'Ispirazione ricevuta in più che non si vuole cedere: quella propria resta."""
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     if not (char.settings or {}).get("inspiration_extra"):
         raise HTTPException(status_code=409, detail={"code": "no_extra_inspiration"})
     char.settings = {k: v for k, v in char.settings.items() if k != "inspiration_extra"}
-    char = await _refresh_char_full(session, char_id, user_id)
+    char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
 
@@ -611,7 +534,7 @@ async def update_xp(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     old_xp = char.experience_points or 0
     if body.set is not None:
         char.experience_points = max(0, body.set)
@@ -694,8 +617,8 @@ async def update_xp(
 
     # Re-SELECT so model_validate sees non-expired columns AND the freshly
     # generated class-feature Ability rows are loaded via selectinload. See
-    # _refresh_char_full() for the full rationale.
-    fresh = await _refresh_char_full(session, char_id, user_id)
+    # refresh_char_full() for the full rationale.
+    fresh = await refresh_char_full(session, char_id, user_id)
 
     # Single-class level may have changed above; re-derive spell slots when
     # automatic mode is active so the XP-driven level-up grows the slots.
@@ -721,11 +644,12 @@ async def roll_skill(
 ) -> RollResult:
     if skill_name not in _SKILL_ABILITY:
         raise HTTPException(status_code=400, detail=f"Unknown skill: {skill_name}")
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
+    await attach_spell_auras(session, char)  # le aure vive dei compagni (Passare Senza Tracce)
     opts = use_options(session, char, "skill", body, skill=skill_name, ability=_SKILL_ABILITY[skill_name])
     # Una prova fatta con un'altra caratteristica (Conoscenza Primordiale) è a tutti gli effetti quella: bonus e modificatori.
     ability = opts.ability_override or _SKILL_ABILITY[skill_name]
@@ -750,7 +674,7 @@ async def roll_skill(
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
-    _add_history(session, char.id, "skill_roll", history_msg)
+    add_history(session, char.id, "skill_roll", history_msg)
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
@@ -789,11 +713,12 @@ async def roll_ability_check(
     modi, opzioni al tiro e cronologia di ``skills/roll``. Per il catalogo il tiro è ``ability``."""
     if ability not in ABILITY_NAMES:
         raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
 
+    await attach_spell_auras(session, char)
     applied = modifiers_for(char, "ability", ability=ability)
     bonus = await check_bonus(session, char, ability)
     opts = use_options(session, char, "ability", body, ability=ability)
@@ -809,12 +734,12 @@ async def roll_ability_check(
 
     history_msg = (
         f"Prova di {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
-        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (FUMBLE)" if is_fumble else "")
         + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
-    _add_history(session, char.id, "skill_roll", history_msg)
+    add_history(session, char.id, "skill_roll", history_msg)
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
@@ -842,7 +767,7 @@ async def roll_saving_throw(
 ) -> RollResult:
     if ability not in ABILITY_NAMES:
         raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
 
     if body and body.with_inspiration:
         spend_inspiration_reroll(char)
@@ -870,7 +795,7 @@ async def roll_saving_throw(
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
-    _add_history(session, char.id, "saving_throw", history_msg)
+    add_history(session, char.id, "saving_throw", history_msg)
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
@@ -919,10 +844,10 @@ async def close_pending_save(
             await drop_pending_effect(session, effect)
         else:
             await activate_pending_effect(session, effect)
-            _add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
+            add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
         return save_read, passed
     if passed:
-        _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
+        add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
         await apply_conditions(session, char, {effect.slug: False})
     await session.flush()
     return save_read, passed
@@ -949,7 +874,7 @@ async def roll_pending_save(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> PendingSaveRollResult:
-    char = await _get_owned(char_id, user_id, session, full=True)
+    char = await get_owned(char_id, user_id, session, full=True)
     ps = await _owned_pending_save(session, char_id, psid)
     reroll = bool(body and body.with_inspiration)
 
@@ -991,7 +916,7 @@ async def roll_pending_save(
     )
     if reroll:
         history_msg = f"Reroll ispirazione: {history_msg}"
-    _add_history(session, char.id, "saving_throw", history_msg)
+    add_history(session, char.id, "saving_throw", history_msg)
     record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
@@ -1015,7 +940,7 @@ async def dismiss_pending_save(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    await _get_owned(char_id, user_id, session)
+    await get_owned(char_id, user_id, session)
     ps = await _owned_pending_save(session, char_id, psid)
     if ps.status not in ("failed", "passed"):
         raise HTTPException(status_code=409, detail={"code": "not_dismissable"})

@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
@@ -27,7 +28,7 @@ export default function CatalogPicker<K extends CatalogKind>({
   kind, onPick, onClose, filters, note,
 }: CatalogPickerProps<K>) {
   const { t, i18n } = useTranslation()
-  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang: Lang = uiLang(i18n.language)
   const [entries, setEntries] = useState<CatalogEntry<K>[]>([])
   const [loaded, setLoaded] = useState(false)
   const [query, setQuery] = useState('')

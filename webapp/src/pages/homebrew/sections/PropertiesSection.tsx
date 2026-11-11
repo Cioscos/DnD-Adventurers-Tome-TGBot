@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
@@ -39,7 +40,7 @@ function formatDefault(prop: Property): string {
  */
 export default function PropertiesSection({ properties, onChange }: PropertiesSectionProps) {
   const { t, i18n } = useTranslation()
-  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const locale: Locale = uiLang(i18n.language)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null)

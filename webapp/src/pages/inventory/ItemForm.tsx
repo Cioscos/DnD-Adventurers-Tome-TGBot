@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
@@ -33,7 +34,7 @@ import { ContainerFields } from './ContainerForm'
 import { defaultContainer, roundLb, type ContainerFormValue } from '@/lib/containers'
 import type { Item } from '@/types'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
-import { WEAPON_KINDS } from '@/data/weaponMastery'
+import { WEAPON_KINDS, masteryLabel } from '@/data/weaponMastery'
 
 interface ItemFormProps {
   initialData?: Item | null
@@ -48,7 +49,7 @@ type WizardStep = 'type' | 'base' | 'advanced'
 
 export default function ItemForm({ initialData, edition, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t, i18n } = useTranslation()
-  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang: Lang = uiLang(i18n.language)
   const toast = useToast()
   const [picker, setPicker] = useState<'equipment' | 'magic-items' | null>(null)
   const system = useUnitSettings((s) => s.system)
@@ -347,7 +348,7 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
                   className="w-full min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm font-body text-dnd-text focus:border-dnd-gold/60 focus:outline-none"
                 >
                   <option value="">{t('character.inventory.base_weapon_auto')}</option>
-                  {WEAPON_KINDS.map((w) => <option key={w.key} value={w.key}>{w[lang]} · {w.mastery}</option>)}
+                  {WEAPON_KINDS.map((w) => <option key={w.key} value={w.key}>{w[lang]} · {masteryLabel(t, w.mastery)}</option>)}
                 </select>
               </div>
             )}

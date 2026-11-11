@@ -12,6 +12,7 @@ from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_armor_proficient
+from core.rules.spell_effects import spell_state_modifiers
 from core.rules.states import exhaustion_level, immune_conditions
 from core.rules.types import Edition, Modifier, RuleContext
 from core.rules.weapons import ability_score, has_property, small_race
@@ -28,7 +29,7 @@ _FLAT_TARGET = {
     "initiative": "initiative", "passive": "passive", "skill": "skill", "ability": "skill",
     "reach": "reach", "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
 }
-_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "carry_double", "fly_speed",
+_FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "speed_double", "carry_double", "fly_speed",
           "climb_speed", "swim_speed",
           "maximize_healing", "magic_weapon"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
@@ -48,6 +49,7 @@ class Applied:
     notes: list[str] = field(default_factory=list)
     speed_zero: bool = False
     speed_half: bool = False
+    speed_double: bool = False  # velocità raddoppiata, dopo tutte le somme (Velocità)
     hp_half: bool = False
     replace_die: int | None = None  # d20 dichiarato (Portento): nessun dado si tira
     min_total: int | None = None  # totale minimo di una prova (Potenza Indomabile)
@@ -59,6 +61,8 @@ class Applied:
     climb_speed: bool = False  # velocità di scalare pari a quella a terra (Pantera)
     swim_speed: bool = False  # idem per nuotare (Salmone)
     fly_speed_value: int = 0  # velocità di volo fissa, in piedi (Angelo Vendicatore)
+    ac_base: int | None = None  # CA di base minima se non si indossa armatura (Armatura Magica: 13 + Des)
+    ac_min: int | None = None  # CA totale minima (Pelle Coriacea)
     maximize_healing: bool = False  # i dadi di cura di un incantesimo valgono il massimo
     magic_weapon: bool = False  # l'arma del colpo conta come magica (Arma Consacrata)
     senses: dict[str, int] = field(default_factory=dict)  # tipo -> portata in piedi (Percezione Cieca)
@@ -108,7 +112,9 @@ def surprise_exit_features(char: Any) -> list[str]:
 
 
 def is_incapacitated(char: Any) -> bool:
-    return surprised_turn(char) or any((char.conditions or {}).get(c) for c in INCAPACITATING)
+    """Niente azioni né reazioni: una condizione che incapacita, la sorpresa o uno stato che lo dice (``data["no_actions"]``: la Letargia 2014)."""
+    return (surprised_turn(char) or any((char.conditions or {}).get(c) for c in INCAPACITATING)
+            or any((s.get("data") or {}).get("no_actions") for s in char.active_states or []))
 
 
 def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> list[Modifier]:
@@ -234,6 +240,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         pairs += [(m, feature_ctx, m.source or f"feature:{spec.key}") for m in spec.modifiers]
+    pairs += [(m, ctx, src) for m, src in spell_state_modifiers(ctx.char)]
 
     out = Applied()
     half_prof = False
@@ -260,13 +267,20 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
         elif m.target == "min_d20":
             out.min_d20 = max(out.min_d20 or 0, m.value(mctx) if callable(m.value) else m.value)
             counted = True
+        elif m.target in ("ac_base", "ac_min"):
+            if ctx.roll != "ac":  # il valore può leggere i dati della scheda: solo dove si calcola la CA (``ac_delta``)
+                continue
+            current = getattr(out, m.target)
+            value = m.value(mctx) if callable(m.value) else m.value
+            setattr(out, m.target, value if current is None else max(current, value))
+            counted = True
         elif m.target == "min_total":
             out.min_total = max(out.min_total or 0, m.value(mctx) if callable(m.value) else m.value)
             counted = True
         elif m.target.startswith("sense:"):
             kind = m.target.split(":", 1)[1]
             out.senses[kind] = max(out.senses.get(kind, 0), m.value(mctx) if callable(m.value) else m.value)
-            counted = True
+            counted = False  # un senso non sta dietro nessun tiro: non è una fonte del risultato (Vista del Diavolo)
         elif m.target == "jump_bonus":
             out.jump_bonus_ft = (out.jump_bonus_ft or 0) + (m.value(mctx) if callable(m.value) else m.value)
             counted = True
@@ -299,6 +313,18 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
 
 def modifiers_for(char: Any, roll: str | None, **kw: Any) -> Applied:
     return collect_modifiers(RuleContext(char=char, edition=character_edition(char), roll=roll, **kw))
+
+
+def ac_delta(char: Any, ac: int, extra: int = 0) -> int:
+    """Quanto le regole cambiano la CA ``ac`` della scheda: somme, CA di base senza armatura (Armatura Magica) e minimo (Pelle Coriacea).
+    ``extra`` è ciò che si somma dopo (oggetti, homebrew): il minimo vale sul totale, non su ``ac``."""
+    applied = modifiers_for(char, "ac")
+    total = ac + applied.flat
+    if applied.ac_base is not None and not any(i.is_equipped and i.item_type == "armor" for i in char.items or []):
+        total += max(0, applied.ac_base - char.base_armor_class)
+    if applied.ac_min is not None:
+        total = max(total + extra, applied.ac_min) - extra
+    return total - ac
 
 
 def final_mode(player_mode: str, applied: Applied) -> str:
@@ -339,7 +365,7 @@ def effective_speed(char: Any, base: int) -> int:
     applied = modifiers_for(char, "speed")
     if applied.speed_zero:
         return 0
-    total = base + applied.flat
+    total = (base + applied.flat) * (2 if applied.speed_double else 1)
     return max(0, total // 2 if applied.speed_half else total)
 
 

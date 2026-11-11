@@ -25,6 +25,7 @@ import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
+import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import type { CharacterFull } from '@/types'
 
 interface HpQuickSheetProps {
@@ -93,7 +94,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         toast.error(t('character.hp.undo_stale'))
         qc.invalidateQueries({ queryKey: ['character', char.id] })
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })
@@ -126,6 +127,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         haptic.success()
         const zeroSave = zeroHpSaveMessage(updated, t)
         if (zeroSave) (zeroSave.ok ? toast.success : toast.warning)(zeroSave.text, { duration: 5000 })
+        const shared = sharedDamageMessage(updated, t)
+        if (shared) (shared.ok ? toast.info : toast.warning)(shared.text, { duration: 5000 })
         const conc = updated.concentration_save
         if (conc?.lost_concentration) {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
@@ -133,7 +136,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         }
         const undoId = updated.hp_undo_id
         if (undoId) {
-          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? n })
+          const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? n })
           const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
           showUndoToast({
             message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,

@@ -13,12 +13,14 @@ from api.services.homebrew.dsl import RuleDSL
 from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES
 from core.data.feats_2024 import ALL_FEATS as FEATS
-from core.db.models import Ability, Character, CharacterClass, CharacterHistory, HomebrewRule, RestorationType
+from api.services.history import add_history
+from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType
 from core.rules.catalog import features_for
 from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
 )
 from core.rules.edition import character_edition, class_key
+from core.rules.feature_sync import REPLACED_AT_REST
 from core.rules.schools import normalize_school
 from core.rules.spellcasting import slots_for
 from core.rules.types import RuleContext
@@ -118,7 +120,12 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
     if old_key not in chosen or new_key not in _available(char, cls, ch)[0]:
         raise _bad("invalid_replacement")
     if ch.protected and old_key in ch.protected(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)):
-        raise _bad("option_is_prerequisite")
+        raise HTTPException(422, detail={"code": "option_is_prerequisite"})
+    if ch.replace_per_long_rest:  # un solo cambio per riposo lungo, per classe (uno dei due incantesimi); il primo di sempre è libero (nessun riposo registrato)
+        swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+        if swaps.get(str(cls.id), {}).get("at", "-") == (char.last_long_rest_at or ""):
+            raise HTTPException(409, detail={"code": "replace_after_long_rest"})
+        char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, str(cls.id): {"at": char.last_long_rest_at or ""}}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi
@@ -145,7 +152,7 @@ def resolve_class_option(session: AsyncSession, char: Character, choice: dict, p
         raise _bad(f"Pick exactly {need or count} distinct valid options")
     if ch is not None and ch.batch_ok and not ch.batch_ok(RuleContext(char=char, edition=character_edition(char), class_row=cls,
                                                                         class_level=cls.level), picked):
-        raise _bad("option_prerequisite")
+        raise HTTPException(422, detail={"code": "option_prerequisite"})
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
     if ch is not None:
         apply_grants(char, ch, picked)
@@ -335,8 +342,7 @@ def _bump(char: Character, ability: str, amount: int, cap: int = 20) -> None:
 
 
 def _history(session: AsyncSession, char: Character, text: str) -> None:
-    session.add(CharacterHistory(character_id=char.id, timestamp=_now(),
-                                 event_type="level_choice", description=f"Scelta di livello: {text}"))
+    add_history(session, char.id, "level_choice", f"Scelta di livello: {text}")
 
 
 def resolve_asi(session: AsyncSession, char: Character, increases: dict[str, int]) -> None:
@@ -423,5 +429,4 @@ async def remove_feat(session: AsyncSession, char: Character, ability: Ability) 
             s = dict(char.settings or {})
             s.pop(setting, None)
             char.settings = s
-    session.add(CharacterHistory(character_id=char.id, timestamp=_now(),
-                                 event_type="level_choice", description=f"Talento rimosso: {name}"))
+    add_history(session, char.id, "level_choice", f"Talento rimosso: {name}")

@@ -17,33 +17,11 @@ from api.schemas.common import CurrencyConvert, CurrencyRead, CurrencyUpdate
 from api.schemas.container import CoinAdjustRequest, CoinAdjustResult, CoinMoveRequest, CoinPlacement
 from api.services.containers import _coin_places, apply_coin_placements, withdraw
 from core.game.containers import COINS, allocate
+from api.services.character_load import get_owned_full
 
 router = APIRouter(prefix="/characters", tags=["currency"])
 
 _VALID_COINS = {"copper", "silver", "electrum", "gold", "platinum"}
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
 
 
 async def _get_or_create_currency(char_id: int, session: AsyncSession) -> Currency:
@@ -64,7 +42,7 @@ async def get_currency(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Currency:
-    await _get_owned_full(char_id, user_id, session)
+    await get_owned_full(char_id, user_id, session)
     return await _get_or_create_currency(char_id, session)
 
 
@@ -75,7 +53,7 @@ async def update_currency(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Currency:
-    await _get_owned_full(char_id, user_id, session)
+    await get_owned_full(char_id, user_id, session)
     currency = await _get_or_create_currency(char_id, session)
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(currency, field, max(0, value))
@@ -89,7 +67,7 @@ async def convert_currency(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Currency:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     if body.source not in _VALID_COINS or body.target not in _VALID_COINS:
         raise HTTPException(status_code=400, detail="Invalid coin type")
     if body.source == body.target:
@@ -127,7 +105,7 @@ async def adjust_currency(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CoinAdjustResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     await _get_or_create_currency(char_id, session)
     await session.refresh(char, attribute_names=["currency"])
     if body.placements is None:
@@ -148,7 +126,7 @@ async def move_currency(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CoinAdjustResult:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     await _get_or_create_currency(char_id, session)
     await session.refresh(char, attribute_names=["currency"])
     places = _coin_places(char)

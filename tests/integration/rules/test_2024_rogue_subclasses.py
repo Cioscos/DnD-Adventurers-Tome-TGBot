@@ -582,7 +582,7 @@ async def test_n1_a_blade_hit_ends_the_veil_and_a_declared_miss_gives_it_back(cl
     assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": False})).status_code == 409
 
     cid = await _veiled(client)
-    await _blade(client, cid, _k("psychic_blade"))
+    assert (await _blade(client, cid, _k("psychic_blade")))["refundable"]  # minori 46: il client sa che la domanda c'è già
     assert (await _turn(client, cid))["last_roll"]["refundable"]  # esce «Il tiro è riuscito?»
     assert (await client.post(f"/characters/{cid}/last-roll/refund", json={"succeeded": False})).status_code == 200
     veil = await _veil(client, cid)
@@ -648,3 +648,38 @@ async def test_i12_homing_strikes_need_the_psychic_blade(client):
     assert r.status_code == 200, r.text
     refused = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [_k("homing_strikes")]})
     assert refused.status_code == 409
+
+
+def test_minori_46_a_feature_attack_saves_the_roll_so_a_declared_miss_gives_the_veil_back():
+    from types import SimpleNamespace
+
+    from api.services.rules_states import end_on_feature_attack
+    from core.rules.states import begin_state
+    from core.rules.catalog import features_for
+
+    spec = next(f.on_use.state for f in features_for("2024", "rogue") if f.key.endswith("psychic_veil"))
+    for die, back in ((12, False), (1, True)):
+        char = SimpleNamespace(conditions={}, active_states=[], settings={}, turn_state={}, spells=[], abilities=[])
+        begin_state(char, spec, "psychic_veil", "rogue.psychic_veil")
+        end_on_feature_attack(char, {"die": die, "dice": [die], "mode": "normal", "bonus": 5, "total": die + 5, "notes": [],
+                                     "is_fumble": die == 1, "is_critical": False})
+        last = char.turn_state["last_roll"]
+        assert last["roll"] == "attack" and last["die"] == die and "miss_refund" not in char.turn_state
+        assert bool(char.conditions.get("invisible")) is back and bool(last["refundable"]) is not back  # su un 12 il giocatore dichiara il mancato
+
+
+async def test_minori_32_scroll_outcome_follows_the_request_language(client, monkeypatch):
+    from api.auth import get_current_lang
+    from api.main import app
+    cid = await _sub(client, "thief", 13)
+    iid = await _scroll(client, cid)
+    _fixed(monkeypatch, 1)
+    app.dependency_overrides[get_current_lang] = lambda: "en"
+    try:
+        r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 3})
+        assert "disintegrates" in r.json()["homebrew_notifications"][0]["message"]
+        iid = await _scroll(client, cid)
+        r = await client.post(f"/characters/{cid}/items/{iid}/scroll", json={"spell_level": 1})
+        assert "cast" in r.json()["homebrew_notifications"][0]["message"]
+    finally:
+        app.dependency_overrides[get_current_lang] = lambda: "it"

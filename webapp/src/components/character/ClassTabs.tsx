@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import Pressable from '@/components/ui/Pressable'
+import { classLabel } from '@/lib/classLabel'
 
 interface ClassEntry {
   class_name: string
@@ -33,7 +34,7 @@ export default function ClassTabs({ classes, selected, onSelect }: Props) {
                 : 'bg-dnd-surface border-dnd-gold-dim/30 text-dnd-text-muted'
             }`}
           >
-            {t(`dnd.classes.${c.class_name}`, { defaultValue: c.class_name })}
+            {classLabel(t, c.class_name)}
             <span className="ml-1 opacity-70">L{c.level}</span>
           </Pressable>
         )

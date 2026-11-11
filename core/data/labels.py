@@ -15,13 +15,13 @@ from __future__ import annotations
 # Skill slug → Italian label (18 standard D&D 5e skills)
 SKILL_LABELS_IT: dict[str, str] = {
     "acrobatics":      "Acrobazie",
-    "animal_handling": "Gestione Animali",
+    "animal_handling": "Addestrare Animali",
     "arcana":          "Arcana",
     "athletics":       "Atletica",
     "deception":       "Inganno",
     "history":         "Storia",
     "insight":         "Intuizione",
-    "intimidation":    "Intimidazione",
+    "intimidation":    "Intimidire",
     "investigation":   "Indagare",
     "medicine":        "Medicina",
     "nature":          "Natura",

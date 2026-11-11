@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   XP_THRESHOLDS,
   levelFromXp,
+  displayedTotalLevel,
   getNextLevelThreshold,
   quickXpAmounts,
 } from '@/lib/xpThresholds'
@@ -58,5 +59,17 @@ describe('quickXpAmounts', () => {
   it('collapses adjacent duplicates and enforces the 5 XP minimum', () => {
     // 1→5, 3.5→5 (dup dropped), 10→10, 25→30 ⇒ [5, 10, 30]
     expect(quickXpAmounts(50)).toEqual([5, 10, 30])
+  })
+})
+
+describe('displayedTotalLevel (minori 26)', () => {
+  it('non scende sotto la somma dei livelli di classe con 0 XP', () => {
+    expect(displayedTotalLevel(5, false, 0)).toBe(5)
+  })
+  it('con XP oltre la somma mostra il livello degli XP', () => {
+    expect(displayedTotalLevel(3, false, 6500)).toBe(5)
+  })
+  it('in milestone mostra la somma', () => {
+    expect(displayedTotalLevel(4, true, 0)).toBe(4)
   })
 })

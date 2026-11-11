@@ -21,6 +21,7 @@ from api.schemas.character import CharacterFull
 from api.schemas.common import MapRead
 from api.services.character_response import build_character_response
 from core.db.models import Character, CharacterClass, Map
+from api.services.character_load import get_owned_full
 
 router = APIRouter(prefix="/characters", tags=["maps"])
 
@@ -33,29 +34,6 @@ _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Character:
     result = await session.execute(
         select(Character).where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
     )
     char = result.scalar_one_or_none()
     if char is None:
@@ -246,7 +224,7 @@ async def reorder_maps(
     `order` must contain every map id belonging to (char_id, zone_name);
     `position` is assigned by list index.
     """
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     zone_name = payload.zone_name.strip()
 
     zone_maps = [m for m in char.maps if m.zone_name == zone_name]

@@ -17,7 +17,7 @@ from core.rules.catalog.y2014.wizard import _no_options
 from core.rules.catalog.y2014.wizard_common import mod as _mod
 from core.rules.catalog.y2014.wizard_schools import PROJECTED_USE, SPELL_RESISTANCE_DAMAGE, SPELL_RESISTANCE_SAVE
 from core.rules.catalog.y2014.wizard_schools_b import EXPERT_DIVINATION, PORTENT, _third_eye
-from core.rules.catalog.y2014.wizard_schools_c import OVERCHANNEL_OPTION, _empowered, _object_text
+from core.rules.catalog.y2014.wizard_schools_c import OVERCHANNEL_OPTION, _empowered, _evocation_save, _object_text
 from core.rules.schools import WINDOW_ILLUSION_TURN, normalize_school
 from core.rules.states import has_state
 from core.rules.types import (
@@ -168,7 +168,7 @@ DIVINER = (
     _DIV("third_eye", 10, "Terzo Occhio", "The Third Eye", 173,
          ("Azione bonus: scegli Scurovisione 36 m, Comprensione Superiore o Vedere Invisibilità fino all'inizio di un riposo. Un uso, riposo breve o lungo.",
           "Bonus action: pick Darkvision 120 ft, Greater Comprehension or See Invisibility until you start a rest. One use, short or long rest."),
-         "bonus_action", uses=Uses(table={10: 1}), restoration="short_rest", on_use=THIRD_EYE_USE, book_spells=("see-invisibility",),
+         "bonus_action", uses=Uses(table={10: 1}), restoration="short_rest", on_use=THIRD_EYE_USE, granted_spells=("see-invisibility",),  # sempre disponibile, non scritto nel libro
          modifiers=(Modifier("sense:darkvision", 120, when=_third_eye("darkvision"), source=f"feature:{P}third_eye"),)),
     _option_row(_DIV, "darkvision", "Scurovisione", "Darkvision",
                 ("Opzione di Terzo Occhio: scurovisione entro 36 m.", "Third Eye option: darkvision out to 120 ft.")),
@@ -192,7 +192,7 @@ def _sculpt_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 SCULPT_SPELLS = RollOptionSpec(
     key=f"{P}sculpt_spells", phase="before", rolls=("cast",), effect=_sculpt_effect,
-    available=lambda c: c.spell is not None and normalize_school(c.spell.school) == "evocation",
+    available=_evocation_save,
     label=_both("Plasmare Incantesimi: proteggi alcune creature visibili dall'incantesimo",
                 "Sculpt Spells: shield some visible creatures from the spell"))
 
@@ -238,11 +238,23 @@ REALITY_USE = OnUse(
     state=lambda _c, p: StateSpec("illusory_reality", rounds=10, ends_on=("manual",), data={"object": str(p["object"]).strip()}))
 
 
+def _knew_minor_illusion(ctx: RuleContext) -> bool:
+    """Illusione Minore c'era già fra gli incantesimi prima che il privilegio la concedesse (relazione non caricata: no)."""
+    from core.rules.feature_sync import GRANTED_CREATED  # import locale: feature_sync importa il catalogo
+    spells = ctx.char.__dict__.get("spells") or []
+    return any(s.srd_index == "minor-illusion" for s in spells) and "minor-illusion" not in ((ctx.char.settings or {}).get(GRANTED_CREATED) or [])
+
+
 def _phantasmal(key: str, spell: str, it: str, en: str):
+    half = RollOptionSpec(
+        key=f"{P}{key}_half_hp", phase="before", rolls=("cast",), available=lambda c: c.slotless and c.spell is not None and c.spell.srd_index == spell,
+        effect=lambda _c, _i: _both("La creatura evocata ha la metà dei Punti Ferita: riferiscilo al GM.", "The summoned creature has half its Hit Points: tell the GM."),
+        label=_both(f"Creature Fantasmatiche: {it} senza slot, la creatura ha metà dei PF", f"Phantasmal Creatures: {en} with no slot, the creature has half HP"))
     return _ILL(key, 6, "Creature Fantasmatiche", "Phantasmal Creatures", 175,
                 (f"{it} è sempre preparato e di scuola Illusione: una volta per riposo lungo lo lanci senza slot, con la creatura a PF dimezzati.",
                  f"{en} is always prepared and of the Illusion school: once per long rest cast it with no slot, the creature has half HP."),
-                granted_spells=(spell,), free_spell=spell, uses=Uses(table={6: 1}), restoration="long_rest")
+                granted_spells=(spell,), free_spell=spell, uses=Uses(table={6: 1}), restoration="long_rest",
+                school_as=("illusion", (spell,)), roll_options=(half,))
 
 
 _ILL = _sub("Illusionista", "illusionist")
@@ -251,9 +263,10 @@ ILLUSIONIST = (
     _ILL("improved_illusions", 3, "Illusioni Migliorate", "Improved Illusions", 175,
          ("Illusione senza componenti Verbali e +18 m di gittata (da 3 m in su); impari Illusione Minore (un lancio crea suono e immagine).",
           "Illusion spells lose Verbal components and gain 60 ft of range (from 10 ft up); you learn Minor Illusion (one casting makes sound and image)."),
-         passive=True, school_boost=("illusion", 18), bonus_cast_spells=("minor-illusion",),
+         passive=True, school_boost=("illusion", 18), bonus_cast_spells=("minor-illusion",), granted_spells=("minor-illusion",),
+         # lo conosci; se lo sapevi già (non l'ha creato la concessione) impari un altro trucchetto da mago, fuori dal limite
          choices=(ChoiceSpec(group="improved_illusions", levels={3: 1}, options=_no_options, spell_pick="extra", spell_level=0,
-                             spell_list="wizard"),)),
+                             spell_list="wizard", applies=_knew_minor_illusion),)),
     _phantasmal("phantasmal_beast", "summon-beast", "Evocare bestia", "Summon Beast"),
     _phantasmal("phantasmal_fey", "summon-fey", "Evocare fatato", "Summon Fey"),
     _ILL("illusory_self", 10, "Sosia Illusorio", "Illusory Self", 175,

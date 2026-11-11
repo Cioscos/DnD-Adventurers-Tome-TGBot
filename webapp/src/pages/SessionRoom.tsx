@@ -231,7 +231,7 @@ export default function SessionRoom() {
     },
     onError: (err) => {
       console.error('leave session failed', err)
-      notifyMutationError()
+      notifyMutationError(err)
     },
   })
 
@@ -245,7 +245,7 @@ export default function SessionRoom() {
     },
     onError: (err) => {
       console.error('close session failed', err)
-      notifyMutationError()
+      notifyMutationError(err)
     },
   })
 

@@ -57,6 +57,13 @@ describe('item catalogue mapping', () => {
       name: 'Magic Missile', level: 1, charges_cost: 1, srd_index: 'magic-missile',
     })])
   })
+  it('staff of power casts fireball and lightning bolt at the 5th level, the other spells at their own (67)', async () => {
+    const f = magicItemToForm(await mi('staff-of-power'), 'en', await loadCatalog('spells'))
+    const at = (i: string) => f.granted_spells!.find((g) => g.srd_index === i)!
+    expect(at('fireball').slot_level).toBe(5)
+    expect(at('lightning-bolt').slot_level).toBe(5)
+    expect(at('cone-of-cold').slot_level).toBeUndefined()
+  })
   it('generic +N weapon becomes magic_bonus; very rare uses underscore', async () => {
     expect(magicItemToForm(await mi('weapon-2'), 'en')).toMatchObject({ item_type: 'weapon', magic_bonus: '2', bonuses: [] })
     expect(magicItemToForm(await mi('staff-of-fire'), 'en').rarity).toBe('very_rare')

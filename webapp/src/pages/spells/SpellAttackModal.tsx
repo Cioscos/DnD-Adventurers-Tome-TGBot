@@ -10,6 +10,7 @@ import ResultDialog from '@/components/ui/ResultDialog'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
 import Button from '@/components/ui/Button'
 import D20Faces from '@/components/ui/D20Faces'
+import { classLabel } from '@/lib/classLabel'
 import type { SpellAttackResult } from '@/types'
 
 type Props = {
@@ -56,7 +57,7 @@ export default function SpellAttackModal({
       : 'text-dnd-text'
   const casterLabel = caster_class
     ? t('character.spells.attack_caster', {
-        class: t(`dnd.classes.${caster_class.toLowerCase()}`, { defaultValue: caster_class }),
+        class: classLabel(t, caster_class),
         bonus: bonusStr,
       })
     : null

@@ -674,7 +674,7 @@ async def test_free_known_spells_survive_export_and_import(client):
 
 
 async def test_beyond_skill_names_do_not_break_the_class_option_import(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -682,5 +682,5 @@ async def test_beyond_skill_names_do_not_break_the_class_option_import(test_sess
         spec = {"name": "x", "edition": "2014", "classes": [("Bardo", 6, LORE, 8)]}
         char = await build_rules_character(s, spec, 1)
         report = ImportReport()
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Stealth", "Mystery")], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Stealth", "Mystery")], report, "it")
         assert [e.name for e in report.approximated] == ["Mystery"]  # il nome dell'abilità non rompe nulla, l'altro si segnala

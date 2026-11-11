@@ -18,7 +18,7 @@ from api.services.session_allies import ally_target, load_receiver
 from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
-from core.rules.roll_options import keep_target_effect
+from core.rules.roll_options import keep_target_effect, refund_spent
 from core.rules.states import begin_state, has_state, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
@@ -144,6 +144,17 @@ def end_on_action(char, action: str, spell=None) -> None:
     if action == "attack":  # ogni attacco riparte da zero: un resto di quello prima non si attacca al tiro nuovo
         char.turn_state = {**{k: v for k, v in get_turn(char).items() if k != MISS_REFUND},
                            **({MISS_REFUND: {s["key"]: [f"state:{s['key']}:{json.dumps(s)}"] for s in held}} if held else {})}
+
+
+def end_on_feature_attack(char, attack: dict) -> None:
+    """Attacco di un privilegio (``spell_attack``): salva il tiro come un attacco normale (``remember_roll``), così il Velo
+    Psichico chiuso torna se il giocatore dichiara il mancato (``last-roll/refund``) o su un 1 naturale."""
+    from api.services.rules_options import remember_roll  # import locale: rules_options importa questo modulo
+    from core.rules.roll_options import AppliedOptions
+    end_on_action(char, "attack")
+    remember_roll(char, "attack", AppliedOptions(), {
+        "die": attack["die"], "dice": attack["dice"], "mode": attack["mode"], "bonus": attack["bonus"],
+        "total": attack["total"], "notes": attack["notes"], "auto_fail": False, "description": ""})
 
 
 def state_name(char, state: dict) -> str:
@@ -338,7 +349,12 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         removal_plan = await _plan_removal(session, char, RuleContext(char=char, edition=character_edition(char), class_row=row,
                                                                       class_level=row.level), on_use.removal, params)
         if removal_plan is not None and removal_plan[3] and on_use.removal.cost_each:  # il costo lo decide il server
-            amount = on_use.removal.cost_each * (len(removal_plan[0]) + len(removal_plan[1]))
+            conds, untracked, targets = removal_plan[0], removal_plan[1], removal_plan[2]
+            # si pagano le voci che toglie davvero: una condizione che il bersaglio non ha non costa nulla
+            paid = [c for c in conds if any(t is None or (t.conditions or {}).get(c) for t in targets)]
+            if not (paid or untracked):
+                raise _err(status.HTTP_409_CONFLICT, "nothing_to_remove")
+            amount = on_use.removal.cost_each * (len(paid) + len(untracked))
         if removal_plan is not None and removal_plan[3] and on_use.removal.bound:  # anche i PF vanno a chi si è scelto
             params["target_character_id"] = getattr(removal_plan[2][0], "id", None)
     if on_use.max_amount is not None and amount > on_use.max_amount:
@@ -391,6 +407,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         target = await ally_target(session, char, params["target_character_id"])
         if on_use.ally_needs_zero_hp and target.current_hit_points > 0:
             raise _err(status.HTTP_409_CONFLICT, "target_not_down")
+        if on_use.heal_ally_to and on_use.heal and target.current_hit_points >= on_use.heal(ctx_choice, 0):
+            raise _err(status.HTTP_409_CONFLICT, "target_not_down")  # già al valore o sopra: niente da portare, niente spesa
     temp_targets: list[Character] = []
     if on_use.temp_hp_ally:  # PF temporanei a PG della serata (Task 46): tutti validati prima di spendere qualcosa
         wanted = (params or {}).get("target_character_ids")
@@ -443,7 +461,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     dice = parse_dice(formula) if formula else None
     if on_use.spell_attack:  # il d20 prima dei dadi: un mancato non fa danno, un critico li raddoppia
         result.attack = _feature_attack(char, on_use.spell_attack)
-        end_on_action(char, "attack")
+        end_on_feature_attack(char, result.attack)
         if dice:
             dice = (0 if result.attack["is_fumble"] else dice[0] * (2 if result.attack["is_critical"] else 1), dice[1])
     for _ in range(1 if on_use.rolls_by_amount else amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
@@ -489,7 +507,9 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                 from core.rules.modifiers import effective_hp_max as _max
                 healed_ally = max(0, _max(target, await _hb(session, target, "character.hit_points_max")) - target.current_hit_points)
             if on_use.heal_ally_half_max:  # R42: il tetto è metà dei PF massimi del bersaglio, letto qui e mai dal client
-                healed_ally = max(0, target.hit_points // 2 - target.current_hit_points)
+                from api.services.effects import get_passive_modifiers as _hb
+                from core.rules.modifiers import effective_hp_max as _max
+                healed_ally = max(0, _max(target, await _hb(session, target, "character.hit_points_max")) // 2 - target.current_hit_points)
                 if (target.conditions or {}).get("prone"):
                     from api.services.effects import apply_conditions as _conditions  # import locale, come sopra
                     await _conditions(session, target, {"prone": False})
@@ -503,12 +523,15 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.heal or on_use.heal_by:
         from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         result.healed = (await apply_heal(session, char, healed))["healed"]
+    rolled_before = (params or {}).get("rolled")
     if on_use.temp_hp or on_use.temp_hp_by:  # i PF temporanei non si sommano: vale il maggiore
         granted = max(0, on_use.temp_hp_by(ctx, sum(result.rolls), params or {}) if on_use.temp_hp_by
                       else on_use.temp_hp(ctx, sum(result.rolls)))
         if granted:  # niente toast «PF temporanei: 0» a ogni uso che non ne dà
             result.temp_hp = granted
             char.temp_hp = max(char.temp_hp or 0, granted)
+    if (params or {}).get("rolled") != rolled_before and isinstance((params or {}).get("rolled"), int):
+        record_dice(char, [("d10", params["rolled"])])  # il d10 di Passo Rinfrescante tirato dal server (shortcut: è l'unico dado che scrive ``rolled``)
     if on_use.ends_concentration:
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)
@@ -537,7 +560,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.targets.append(feature_key)
     if on_use.message:  # prima dell'effetto: vede la scheda com'era (i PF dell'interdizione prima dell'assorbimento)
         # ``ally_healed`` lo decide il server: con l'alleato già curato il testo non chiede di riferirlo al GM
-        result.message = on_use.message(ctx, {**(params or {}), "ally_healed": result.received is not None})
+        result.message = on_use.message(ctx, {**(params or {}), "ally_healed": result.received is not None, "healed": result.healed, "dice_total": sum(result.rolls)})
     if on_use.effect:
         on_use.effect(ctx, params or {})
     return result

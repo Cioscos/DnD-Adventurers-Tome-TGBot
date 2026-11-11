@@ -116,11 +116,33 @@ describe('granted spell DC / attack bonus', () => {
   })
 })
 
+describe('granted spell casting level (67)', () => {
+  const base = { ...emptyForm, name: 'Bastone', is_magic: true, charges: { max: 20, current: 20, recharge: 'dawn' as const, recharge_amount: '1d6' } }
+  const spell = { name: 'Palla di Fuoco', level: 3, charges_cost: 5, is_concentration: false }
+  it('round-trips slot_level, omitting it when empty, and refuses a level below the spell or above 9', () => {
+    const set = buildItemMetadata({ ...base, granted_spells: [{ ...spell, slot_level: 5 }] })!
+    expect(set.granted_spells).toEqual([{ ...spell, slot_level: 5 }])
+    expect(itemToFormData({ name: 'B', item_type: 'generic', quantity: 1, weight: 0, item_metadata: set } as unknown as Item).granted_spells[0].slot_level).toBe(5)
+    expect(buildItemMetadata({ ...base, granted_spells: [{ ...spell, slot_level: undefined }] })!.granted_spells).toEqual([spell])
+    expect(isItemFormValid({ ...base, granted_spells: [{ ...spell, slot_level: 5 }] })).toBe(true)
+    expect(isItemFormValid({ ...base, granted_spells: [{ ...spell, slot_level: 2 }] })).toBe(false)
+    expect(isItemFormValid({ ...base, granted_spells: [{ ...spell, slot_level: 10 }] })).toBe(false)
+  })
+})
+
 describe('catalogPrefill', () => {
   it('drops the previous pick fields and keeps the typed quantity', () => {
     const magic = { ...emptyForm, quantity: '3', name: 'Anello', is_magic: true, rarity: 'rare',
       bonuses: [{ target: 'ac', value: 1 }], charges: { max: 3, current: 3 } } as typeof emptyForm
     const out = catalogPrefill(magic, { name: 'Spada lunga', item_type: 'weapon' })
     expect(out).toEqual({ ...emptyForm, quantity: '3', name: 'Spada lunga', item_type: 'weapon' })
+  })
+})
+
+describe('itemMetadata — armatura senza tipo (minori 27)', () => {
+  it('riaprire e salvare un\'armatura senza armor_type non le dà la Destrezza: il tipo resta come lo legge il server', () => {
+    const form = itemToFormData({ name: 'Maglia', item_type: 'armor', quantity: 1, weight: 0, item_metadata: { ac_value: 16 } })
+    expect(form.armor_type).toBe('heavy')
+    expect(itemToFormData({ name: 'C', item_type: 'armor', quantity: 1, weight: 0, item_metadata: { armor_type: 'light', ac_value: 11 } }).armor_type).toBe('light')
   })
 })

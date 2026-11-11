@@ -7,6 +7,7 @@ import NaturalRecoveryPicker, { ArcaneRecoveryPicker } from '@/components/charac
 import MemorizeSpellPicker from '@/components/character/MemorizeSpellPicker'
 import SorcerousRestorationPicker from '@/components/character/SorcerousRestorationPicker'
 import TomeReopenToggle from '@/components/character/TomeReopenToggle'
+import RestResistancePicker from '@/components/character/RestResistancePicker'
 import RestAllyTempPicker from '@/components/character/RestAllyTempPicker'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
@@ -34,13 +35,14 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
     <>
       <ConfirmSheet
         open={rest.confirmLongRest}
-        onClose={() => rest.setConfirmLongRest(false)}
+        onClose={rest.cancelLongRest}
         title={t('character.quick_actions.confirm_long_rest_title')}
         body={
           <div className="space-y-3">
             <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
             {rest.confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
             <TomeReopenToggle char={char} value={rest.reopenTome} onChange={rest.setReopenTome} />
+            <RestResistancePicker char={char} value={rest.resistance} onChange={rest.setResistance} />
             <RestAllyTempPicker char={char} value={rest.tempAllies} onChange={rest.setTempAllies} />
             {interruptedToggle(t(is2024
               ? 'character.quick_actions.rest_interrupted_long_2024'
@@ -65,7 +67,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
 
       <ConfirmSheet
         open={rest.tooSoon}
-        onClose={() => rest.setTooSoon(false)}
+        onClose={() => { rest.setTooSoon(false); rest.cancelLongRest() }}
         title={t('character.quick_actions.rest_too_soon_title')}
         body={<p>{t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}</p>}
         confirmLabel={t('character.quick_actions.rest_long')}
@@ -87,6 +89,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
               <ArcaneRecoveryPicker char={char} value={rest.arcane} onChange={rest.setArcane} />
               <SorcerousRestorationPicker char={char} value={rest.restoration} onChange={rest.setRestoration} />
               <MemorizeSpellPicker char={char} onChange={rest.setMemorize} />
+              <RestResistancePicker char={char} value={rest.resistance} onChange={rest.setResistance} />
               <RestAllyTempPicker char={char} value={rest.tempAllies} onChange={rest.setTempAllies} />
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
             </>

@@ -20,6 +20,7 @@ import RollButton from '@/components/ui/RollButton'
 import RarityBadge from '@/components/ui/RarityBadge'
 import { itemCharges, itemGrantedSpells, itemRarity, isAttuned, requiresAttunement, type ItemBonus } from '@/lib/itemMagic'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
+import { masteryLabel } from '@/data/weaponMastery'
 import type { RollMode } from '@/api/client'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 
@@ -92,7 +93,7 @@ function ItemStatChips({ item, edition }: { item: Item; edition?: string }) {
       if (edition === '2024' && item.mastery) {
         chips.push(
           <Chip key="mastery" icon={<Swords size={12} />}>
-            {t('character.inventory.mastery', { name: item.mastery.charAt(0).toUpperCase() + item.mastery.slice(1) })}
+            {t('character.inventory.mastery', { name: masteryLabel(t, item.mastery) })}
           </Chip>
         )
       }
@@ -342,16 +343,17 @@ interface InventoryItemProps {
 }
 
 /** Livello dell'incantesimo della pergamena e pulsante di lancio; l'esito arriva come notifica. */
-function ScrollRow({ onScroll, pending }: { onScroll: (level: number) => void; pending?: boolean }) {
+export function ScrollRow({ onScroll, pending }: { onScroll: (level: number) => void; pending?: boolean }) {
   const { t } = useTranslation()
   const [level, setLevel] = React.useState(1)
+  const levelId = React.useId()  // più pergamene aperte insieme: un id fisso sarebbe duplicato
   return (
-    <div className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
-      <label className="text-xs text-dnd-text-muted flex-1 font-medium" htmlFor="scroll-level">
+    <div className="flex flex-wrap items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+      <label className="text-xs text-dnd-text-muted flex-1 font-medium" htmlFor={levelId}>
         {t('character.inventory.magic.scroll_level')}
       </label>
       <select
-        id="scroll-level"
+        id={levelId}
         value={level}
         onChange={(e) => setLevel(Number(e.target.value))}
         className="min-h-11 rounded-lg bg-dnd-surface border border-dnd-border px-2 text-sm text-dnd-text"
@@ -362,8 +364,8 @@ function ScrollRow({ onScroll, pending }: { onScroll: (level: number) => void; p
         onClick={() => onScroll(level)}
         pending={pending}
         spinnerSize={12}
-        className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
-                   bg-dnd-arcane-deep/50 text-dnd-arcane-bright border border-dnd-arcane-bright/40 active:opacity-60 disabled:opacity-30"
+        className="flex items-center gap-1 text-sm font-medium px-3 min-h-11 rounded-lg whitespace-nowrap
+                   bg-dnd-arcane-deep text-dnd-parchment border border-dnd-arcane-bright/60 active:opacity-60 disabled:opacity-30"
       >
         <Sparkles size={12} />
         {t('character.inventory.magic.scroll_cast')}

@@ -11,13 +11,22 @@ from api.services.homebrew.filters import evaluate_filter
 from core.db.models import Character, CharacterClass, HomebrewRule, Item
 
 
-async def passive_modifier(session: AsyncSession, char: Character, skill: str) -> int:
+async def load_snapshot(session: AsyncSession, char: Character) -> tuple[list[HomebrewRule], list[Item]]:
+    """Regole attive e oggetti fuori dai contenitori, letti una volta: chi calcola molti bonus di fila li passa come ``snapshot``."""
+    rules = list((await session.execute(select(HomebrewRule).where(
+        HomebrewRule.character_id == char.id, HomebrewRule.enabled == True))).scalars())  # noqa: E712
+    items = [i for i in (await session.execute(select(Item).where(Item.character_id == char.id))).scalars()
+             if i.container_id is None]  # contained items give no bonus
+    return rules, items
+
+
+async def passive_modifier(session: AsyncSession, char: Character, skill: str, snapshot=None) -> int:
     """Homebrew bonus to the passive score of `skill` (e.g. "perception")."""
-    return await get_passive_modifiers(session, char, f"character.passive.{skill}")
+    return await get_passive_modifiers(session, char, f"character.passive.{skill}", snapshot)
 
 
 async def get_passive_modifiers(
-    session: AsyncSession, char: Character, target_path: str,
+    session: AsyncSession, char: Character, target_path: str, snapshot=None,
 ) -> int:
     """Sum all passive modifiers matching target_path across enabled rules.
 
@@ -29,24 +38,14 @@ async def get_passive_modifiers(
             select(func.coalesce(func.sum(CharacterClass.level), 0))
             .where(CharacterClass.character_id == char.id)
         )).scalar_one()
-        return (await _sum_modifiers(session, char, target_path)
-                + int(lv) * await _sum_modifiers(session, char, "character.hit_points_max_per_level"))
-    return await _sum_modifiers(session, char, target_path)
+        snapshot = snapshot or await load_snapshot(session, char)
+        return (_sum_modifiers(snapshot, char, target_path)
+                + int(lv) * _sum_modifiers(snapshot, char, "character.hit_points_max_per_level"))
+    return _sum_modifiers(snapshot or await load_snapshot(session, char), char, target_path)
 
 
-async def _sum_modifiers(session: AsyncSession, char: Character, target_path: str) -> int:
-    rules_res = await session.execute(
-        select(HomebrewRule).where(
-            HomebrewRule.character_id == char.id,
-            HomebrewRule.enabled == True,  # noqa: E712
-        )
-    )
-    rules = list(rules_res.scalars())
-
-    items_res = await session.execute(
-        select(Item).where(Item.character_id == char.id)
-    )
-    all_items = [i for i in items_res.scalars() if i.container_id is None]  # contained items give no bonus
+def _sum_modifiers(snapshot: tuple[list[HomebrewRule], list[Item]], char: Character, target_path: str) -> int:
+    rules, all_items = snapshot
 
     total = 0
     for rule in rules:

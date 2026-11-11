@@ -53,6 +53,7 @@ class ConditionRemoval:
     optional: bool = False
     cost_each: int = 0
     auto: "Callable[[Any, dict], list[str]] | None" = None
+    quiet: bool = False  # senza scelta esplicita le voci non tracciate non fanno nota (Panacea: il testo del privilegio le dice già)
 
     def allowed_for(self, ctx: Any = None) -> tuple[str, ...]:
         return self.allowed(ctx) if self.allowed and ctx is not None else self.conditions
@@ -72,7 +73,7 @@ def resolve_picks(removal: ConditionRemoval, chosen: list[str] | None, allowed: 
     if chosen is None:
         if removal.count is not None:
             raise ValueError("invalid_choice")
-        return list(allowed), list(removal.untracked)
+        return list(allowed), [] if removal.quiet else list(removal.untracked)
     picks = list(dict.fromkeys(chosen))
     if any(p not in allowed and p not in removal.untracked for p in picks):
         raise ValueError("invalid_condition")

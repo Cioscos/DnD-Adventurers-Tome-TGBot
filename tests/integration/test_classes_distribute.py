@@ -121,3 +121,63 @@ async def test_body_missing_a_class_is_mismatch_400(client):
     )
     assert r.status_code == 400, r.text
     assert r.json()["detail"] == "classes_mismatch"
+
+
+async def test_distribute_44_saves_subclass_and_levels_in_one_call(client):
+    """Punto 44: la sottoclasse viaggia con i livelli; se la richiesta è rifiutata non cambia nulla."""
+    cid, gid = await _create_fighter(client)
+    lid = await _add_rogue(client, cid)
+    await _set_xp(client, cid, 900)
+    bad = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2, "subclass": "Campione"}, {"class_id": lid, "level": 3}]})
+    assert bad.status_code == 400  # 5 livelli oltre il tetto di 3
+    after = (await client.get(f"/characters/{cid}")).json()
+    assert next(c["subclass"] for c in after["classes"] if c["id"] == gid) in (None, "")
+    r = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2, "subclass": "Campione"}, {"class_id": lid, "level": 1}]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert next(c["subclass"] for c in body["classes"] if c["id"] == gid) == "Campione"
+    assert _level_of(body, gid) == 2
+    # Senza il campo la sottoclasse resta; con null o stringa vuota si toglie.
+    keep = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2}, {"class_id": lid, "level": 1}]})
+    assert next(c["subclass"] for c in keep.json()["classes"] if c["id"] == gid) == "Campione"
+    cleared = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2, "subclass": ""}, {"class_id": lid, "level": 1}]})
+    assert next(c["subclass"] for c in cleared.json()["classes"] if c["id"] == gid) in (None, "")
+
+
+async def test_distribute_44_new_class_in_same_call_all_or_nothing(client):
+    """Giro 1 (I1): la classe nuova viaggia nella stessa chiamata; se la richiesta è rifiutata non resta aggiunta."""
+    cid, gid = await _create_fighter(client)
+    await _set_xp(client, cid, 900)  # tetto 3
+    new = {"new_class": {"class_name": "Ladro", "level": 1, "hit_die": 8}, "level": 1}
+    bad = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 3}, new]})
+    assert bad.status_code == 400  # 4 livelli oltre il tetto
+    after = (await client.get(f"/characters/{cid}")).json()
+    assert [c["class_name"] for c in after["classes"]] == ["Guerriero"]
+    ok = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2}, new]})
+    assert ok.status_code == 200, ok.text
+    assert sorted(c["class_name"] for c in ok.json()["classes"]) == ["Guerriero", "Ladro"]
+    assert ok.json()["hit_points"] == 21
+    # Riprova identica: la classe c'è già, rifiutata e nessun doppione.
+    again = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 2}, new]})
+    assert again.status_code in (400, 409), again.text
+    assert len((await client.get(f"/characters/{cid}")).json()["classes"]) == 2
+    # Anche con tutte le classi esistenti nel corpo, una classe nuova già presente è 409.
+    lid = next(c["id"] for c in ok.json()["classes"] if c["class_name"] == "Ladro")
+    dup = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": gid, "level": 1}, {"class_id": lid, "level": 1}, new]})
+    assert dup.status_code == 409, dup.text
+    assert dup.json()["detail"]["code"] == "class_already_present"
+
+
+async def test_add_existing_class_is_409_not_500(client):
+    cid, _gid = await _create_fighter(client)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "Guerriero", "level": 1})
+    assert r.status_code == 409, r.text
+    assert r.json()["detail"]["code"] == "class_already_present"

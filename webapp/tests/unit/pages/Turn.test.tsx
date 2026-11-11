@@ -138,6 +138,16 @@ describe('Turn page', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'false'))
   })
 
+  it('rereads the attack limit on a new turn, because an extra action (Haste) changes it', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.section_action')
+    const reads = turnState.mock.calls.length
+    server.extra = { attacks_allowed: 3 }
+    await userEvent.click(screen.getByText('character.turn.new_turn'))
+    await waitFor(() => expect(turnState.mock.calls.length).toBeGreaterThan(reads))
+  })
+
   it('tells the player what a start-of-turn heal gave and why, and says nothing when there was none', async () => {
     getChar.mockResolvedValue(char)
     renderWithProviders(<Turn />)
@@ -235,6 +245,7 @@ describe('Turn page', () => {
     await screen.findByText('character.turn.unarmed')
     await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
     const row = screen.getByText('Nascondersi').closest('li') as HTMLElement
+    server.extra = { hide_min_total: 15 }  // la soglia è del server (punto 42)
     saved(17)
     await userEvent.click(within(row).getByText('character.skills.stealth'))
     await userEvent.click(await within(row).findByText('character.turn.hide_confirm'))
@@ -267,6 +278,24 @@ describe('Turn page', () => {
     server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'persuasion', total: 16 } }  // Ispirazione dopo il tiro
     await userEvent.click(within(row).getByText('character.skills.persuasion'))
     expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
+  })
+
+  it('in 2024 the Influence outcome goes away when another skill is rolled for another reason', async () => {
+    getChar.mockResolvedValue({ ...char, rules_edition: '2024' })
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.unarmed')
+    await userEvent.click(screen.getAllByRole('button', { name: 'character.turn.standard_actions' })[0])
+    const row = screen.getByText('Influenzare').closest('li') as HTMLElement
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 17, notes: [] })
+    server.block = { ...server.block, last_roll: { roll_id: 'r', roll: 'skill', skill: 'persuasion', total: 17 } }
+    await userEvent.click(within(row).getByText('character.skills.persuasion'))
+    expect(await within(row).findByText('character.turn.influence_success')).toBeInTheDocument()
+    const other = screen.getByText('character.skills.perception').closest('li') as HTMLElement
+    const calls = rollSkill.mock.calls.length
+    rollSkill.mockResolvedValueOnce({ die: 10, total: 12, notes: [] })
+    await userEvent.click(within(other).getByText('character.skills.perception'))
+    await waitFor(() => expect(rollSkill).toHaveBeenCalledTimes(calls + 1))
+    await waitFor(() => expect(within(row).queryByText('character.turn.influence_success')).toBeNull())
   })
 
   it('in 2024 Influence has an editable DC of 15 and tells the player how the roll went', async () => {
@@ -325,6 +354,26 @@ describe('Turn page', () => {
     expect(screen.getAllByText('character.turn.use')).toHaveLength(2)
     await userEvent.click(within(screen.getByText('Presenza Intimidatoria').closest('li') as HTMLElement).getByText('character.turn.use'))
     await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'barbarian.intimidating_presence'))
+  })
+
+  it('switches off the Use button of a feature the server says would be refused (Spell Breaker with no cast to refund, punto 49)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [
+      { id: 9, name: 'Rompi-Incantesimi', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true, use_blocked: true,
+        feature_key: 'wizard.spell_breaker', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none' },
+    ] })
+    renderWithProviders(<Turn />)
+    const row = (await screen.findByText('Rompi-Incantesimi')).closest('li') as HTMLElement
+    expect(within(row).getByText('character.turn.use').closest('button')).toBeDisabled()
+  })
+
+  it('shows what the server says a feature will do before it is used (Magical Cunning: the slots that come back)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 5, name: 'Astuzia Magica', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'warlock.magical_cunning', max_uses: 1, uses: 1, action_type: 'action', restoration_type: 'long_rest',
+      use_preview: { it: 'Tornano 2 slot di Patto.', en: '2 Pact slots come back.' },
+    }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByTestId('use-preview')).toHaveTextContent(/slot di Patto|Pact slots/)
   })
 
   it('refreshes the companions after a feature is used, because Primal Companion creates the beast', async () => {
@@ -577,6 +626,21 @@ describe('Turn page', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.turn.use_errors.insufficient_funds'))
   })
 
+  it('keeps Deflect Attacks: redirect usable under Other when the reaction is already spent (T36)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 24, name: 'Deviare Attacchi: rinvio', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'monk.deflect_redirect', max_uses: null, uses: null, action_type: 'special', restoration_type: 'none',
+    }] })
+    server.block = { ...NEW_BLOCK, reaction_used: true }  // Deviare ha già speso la reazione
+    featureUse.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.section_other'))
+    const use = (await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement
+    expect(use).toBeEnabled()
+    await userEvent.click(use)
+    await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'monk.deflect_redirect'))
+  })
+
   it('sends only the toggle when the optional spell name of Spell Thief is left empty', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 23, name: 'Ladro di Incantesimi', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
@@ -689,8 +753,8 @@ describe('Turn page', () => {
     expect(screen.queryByLabelText('character.turn.mark_used: character.turn.section_attacks')).not.toBeInTheDocument()
   })
 
-  it('shows the unarmed damage die, following the monk level', async () => {
-    getChar.mockResolvedValue({ ...char, classes: [{ class_name: 'monk', level: 5 }] })
+  it('shows the unarmed damage die the server sends (punto 42)', async () => {
+    getChar.mockResolvedValue({ ...char, classes: [{ class_name: 'monk', level: 5 }], unarmed_damage_dice: '1d6' })
     renderWithProviders(<Turn />)
     expect(await screen.findByText('character.turn.unarmed_desc:1d6')).toBeInTheDocument()
   })

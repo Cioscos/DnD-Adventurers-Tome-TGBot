@@ -104,10 +104,8 @@ export default function ArmorClass() {
 
   const unarmoredAbility = char.unarmored_defense_ability ?? null
   const unarmoredActive = unarmoredAbility !== null
-  const abilityMod = (name: string) => char.ability_scores?.find((a) => a.name === name)?.modifier ?? 0
-  // Come il backend: mai peggio di 10 + DES, anche con la seconda caratteristica negativa.
-  const unarmoredPreview = (ability: 'wisdom' | 'constitution') =>
-    10 + abilityMod('dexterity') + Math.max(0, abilityMod(ability))
+  // L'anteprima viene dal server (mai peggio di 10 + DES); senza il campo non si mostra.
+  const unarmoredPreview = (ability: 'wisdom' | 'constitution') => char.unarmored_previews?.[ability] ?? null
 
   const baseHint = char.base_armor_class_override
     ? null
@@ -298,7 +296,7 @@ export default function ArmorClass() {
                 aria-pressed={active}
               >
                 <span className="block">{opt.label}</span>
-                {opt.preview !== undefined && (
+                {opt.preview != null && (
                   <span className="block text-xs font-mono tabular-nums mt-0.5 opacity-80">
                     {t('character.ac.unarmored_formula', { value: opt.preview })}
                   </span>

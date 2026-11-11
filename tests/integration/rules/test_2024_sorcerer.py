@@ -592,7 +592,7 @@ async def test_multiclass_uses_the_multiclass_slot_table_and_prepares_per_class(
 
 
 async def test_beyond_metamagic_options_find_the_catalog_choices(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -600,7 +600,38 @@ async def test_beyond_metamagic_options_find_the_catalog_choices(test_session_fa
         spec = {"name": "x", "edition": "2024", "classes": [("Stregone", 10, None, 6)]}
         char = await build_rules_character(s, spec, 1)
         report = ImportReport()
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Careful Spell", "Seeking Spell", "Transmuted Spell", "Mystery")],
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in ("Careful Spell", "Seeking Spell", "Transmuted Spell", "Mystery")],
                              report, "it")
         assert char.classes[0].options == {"metamagic": ["careful", "seeking", "transmuted"]}
         assert [e.name for e in report.approximated] == ["Mystery"]
+
+
+# ---------------------------------------------------------------------------
+# Minori rinviati (punto 20)
+# ---------------------------------------------------------------------------
+
+async def test_sorcerer_20_quickened_is_blocked_by_a_leveled_spell_cast_without_a_slot(client):
+    cid = await _caster24(client, 6, "quickened")
+    ritual = await _spell(client, cid, "Rito", 1, is_ritual=True)
+    spell = await _spell(client, cid, "Charme", 1)
+    assert QUICKENED in await _roll_keys(client, cid, "cast", spell_id=spell)
+    r = await client.post(f"/characters/{cid}/spells/{ritual}/use", json={"as_ritual": True, "confirm": ["ritual_unprepared"]})
+    assert r.status_code == 200, r.text
+    assert QUICKENED not in await _roll_keys(client, cid, "cast", spell_id=spell)
+    assert (await _cast(client, cid, spell, QUICKENED, slot_level=1)).status_code == 409
+
+
+async def test_sorcerer_20_transmuted_counts_as_the_one_option_of_the_cast(client):
+    cid = await _caster24(client, 6, "transmuted", "quickened")
+    spell = await _spell(client, cid, "Fiamma", 1, attack_save="DEX", damage_dice="2d6", damage_type="fire")
+    assert f"{TRANSMUTED}_cold" in await _roll_keys(client, cid, "spell_damage", spell_id=spell)
+    assert (await _cast(client, cid, spell, QUICKENED, slot_level=1)).status_code == 200
+    assert not [k for k in await _roll_keys(client, cid, "spell_damage", spell_id=spell) if k.startswith(TRANSMUTED)]
+
+
+def test_sorcerer_20_a_refund_gives_back_the_free_option_of_arcane_apotheosis():
+    from types import SimpleNamespace
+    from core.rules.roll_options import refund_spent
+    char = SimpleNamespace(turn_state={"apotheosis_free_used": True})
+    refund_spent(char, ["turnkey:apotheosis_free_used"])
+    assert "apotheosis_free_used" not in char.turn_state

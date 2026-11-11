@@ -112,8 +112,8 @@ export default function Experience() {
       }
       savingRef.current = false
     },
-    onError: () => {
-      notifyMutationError()
+    onError: (err) => {
+      notifyMutationError(err)
       savingRef.current = false
     },
   })

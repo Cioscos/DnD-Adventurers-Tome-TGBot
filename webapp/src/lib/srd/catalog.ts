@@ -62,7 +62,7 @@ export interface MagicItemEntry extends BaseEntry {
   desc: LocalizedField
   charges: { max: number; recharge: Recharge; recharge_dice: string | null } | null
   bonuses: ItemBonus[]
-  granted_spells: { spell: string; charge_cost: number }[]
+  granted_spells: { spell: string; charge_cost: number; slot_level?: number }[]
 }
 
 export interface MonsterAction {
@@ -280,6 +280,7 @@ export function magicItemToForm(
       is_concentration: !!sp?.concentration,
       duration: sp ? localized(sp.duration, lang).text : null,
       srd_index: g.spell,
+      ...(g.slot_level ? { slot_level: g.slot_level } : {}),
     }
   })
   return {

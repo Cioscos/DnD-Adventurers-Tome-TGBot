@@ -16,6 +16,7 @@ from api.database import get_db
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
 from core.db.models import Character, CharacterClass
+from api.services.character_load import get_owned_full
 
 router = APIRouter(prefix="/characters", tags=["silhouette"])
 
@@ -38,29 +39,6 @@ async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Chara
     return char
 
 
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
-
-
 @router.post("/{char_id}/silhouette", response_model=CharacterFull)
 async def upload_silhouette(
     char_id: int,
@@ -68,7 +46,7 @@ async def upload_silhouette(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     file: UploadFile = File(...),
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
 
     suffix = Path(file.filename or "upload").suffix.lower()
     if suffix not in _ALLOWED_EXTENSIONS:
@@ -126,7 +104,7 @@ async def delete_silhouette(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     if char.silhouette_path:
         path = Path(char.silhouette_path)
         if path.exists():

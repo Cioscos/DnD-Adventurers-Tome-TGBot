@@ -22,7 +22,7 @@ vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { characters: { spendHitDice, rest, restPreview, featureUse, endActiveState } } }
 })
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: toastSuccess, info: toastInfo }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('react-i18next', async (orig) => {
@@ -325,5 +325,24 @@ describe('Arcane Recovery (wizard)', () => {
     await userEvent.click(screen.getByText('rest'))
     await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ arcane_recovery: { 2: 1 } })))
     expect(rest.mock.calls[0][2].natural_recovery).toBeUndefined()
+  })
+})
+
+
+describe('useRest', () => {
+  it('cancelling the long rest confirmation resets "interrupted" and "ate and drank"', async () => {
+    const { renderHook, act } = await import('@testing-library/react')
+    const { useRest } = await import('@/hooks/useRest')
+    const qc = new QueryClient()
+    const { result } = renderHook(() => useRest(7, char), {
+      wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+    })
+    act(() => { result.current.openLong(); result.current.setInterrupted(true); result.current.setAteAndDrank(false); result.current.setReopenTome(true) })
+    expect(result.current.interrupted).toBe(true)
+    act(() => result.current.cancelLongRest())
+    expect(result.current.reopenTome).toBe(false)  // punto 49: il Libro del Warlock non resta acceso
+    expect(result.current.confirmLongRest).toBe(false)
+    expect(result.current.interrupted).toBe(false)
+    expect(result.current.ateAndDrank).toBe(true)
   })
 })

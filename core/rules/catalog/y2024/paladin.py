@@ -144,24 +144,24 @@ _SMITE_LABEL = ("Punizione Divina: azione bonus, 2d8 radiosi in più (+1d8 per l
                 "Divine Smite: bonus action, extra 2d8 radiant (+1d8 per slot level above 1st)")
 DIVINE_SMITE = RollOptionSpec(
     key=SMITE, phase="after_hit", rolls=("attack",), requires_input="slot", cost=Cost(spell_slot_min=1), slot="bonus", group=SMITE_GROUP,
-    extra_dice=_smite_dice, available=_slot_smite_ok, on_confirm=_mark_slot_spell, effect=_RADIANT,
+    extra_damage_type="radiant", extra_dice=_smite_dice, available=_slot_smite_ok, on_confirm=_mark_slot_spell, effect=_RADIANT,
     label=_both(*_SMITE_LABEL))
 DIVINE_SMITE_FREE = RollOptionSpec(
     key=SMITE_FREE, phase="after_hit", rolls=("attack",), cost=Cost(feature_key=PS), slot="bonus", group=SMITE_GROUP,
-    extra_dice=lambda _c, _i: "2d8", available=_melee_or_unarmed, effect=_RADIANT, on_confirm=_mark_smite,
+    extra_damage_type="radiant", extra_dice=lambda _c, _i: "2d8", available=_melee_or_unarmed, effect=_RADIANT, on_confirm=_mark_smite,
     label=_both("Punizione del Paladino: lancio gratuito, azione bonus, 2d8 radiosi in più (un uso, riposo lungo)",
                 "Paladin's Smite: free cast, bonus action, extra 2d8 radiant (one use, long rest)"))
 _FIEND_LABEL = _both("Punizione Divina: il bersaglio è un immondo o un non morto? +1d8 radioso",
                      "Divine Smite: is the target a fiend or an undead? +1d8 radiant")
 DIVINE_SMITE_FIEND = RollOptionSpec(
-    key=SMITE_FIEND, phase="after_hit", rolls=("attack",), needs=SMITE, extra_dice=lambda _c, _i: "1d8", available=_fiend_slot_ok,
+    key=SMITE_FIEND, phase="after_hit", rolls=("attack",), needs=SMITE, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8", available=_fiend_slot_ok,
     label=_FIEND_LABEL)
 DIVINE_SMITE_FIEND_FREE = RollOptionSpec(
-    key=SMITE_FIEND_FREE, phase="after_hit", rolls=("attack",), needs=SMITE_FREE, extra_dice=lambda _c, _i: "1d8",
+    key=SMITE_FIEND_FREE, phase="after_hit", rolls=("attack",), needs=SMITE_FREE, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8",
     available=lambda c: _melee_or_unarmed(c) and (SMITE_FREE in c.confirmed or _free_left(c)), label=_FIEND_LABEL)
 
 RADIANT_STRIKES = RollOptionSpec(
-    key=f"{CK}.radiant_strikes", phase="before", rolls=("attack",), automatic=True, extra_dice=lambda _c, _i: "1d8",
+    key=f"{CK}.radiant_strikes", phase="before", rolls=("attack",), automatic=True, extra_damage_type="radiant", extra_dice=lambda _c, _i: "1d8",
     available=_melee_or_unarmed, label=_both("Assalti Radianti: 1d8 radioso in più", "Radiant Strikes: extra 1d8 radiant"),
     effect=_say("Assalti Radianti: 1d8 danni radiosi in più, già nel totale.", "Radiant Strikes: an extra 1d8 radiant damage, already in the total."))
 
@@ -191,19 +191,25 @@ def _abjure_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
 STEED_SPELL_LEVEL = 2  # il lancio gratuito è al livello base dell'incantesimo
 
 
-def _steed_cast(ctx: RuleContext, params: dict) -> None:
-    """Trova Destriero (azione): crea il destriero come compagno con le statistiche del manuale (CA 10 + livello dell'incantesimo,
-    PF 5 + 10 per livello, 18 m; il volo 27 m c'è solo dal 4° livello, e il lancio gratuito è di 2°). Un nuovo lancio sostituisce il precedente."""
+def make_steed(char: Any, name: str, level: int = STEED_SPELL_LEVEL) -> None:
+    """Trova Destriero: crea il destriero come compagno con le statistiche del manuale (CA 10 + livello dell'incantesimo,
+    PF 5 + 10 per livello, 18 m; il volo 27 m c'è solo dal 4° livello). Un nuovo lancio sostituisce il precedente."""
     from core.db.models import Companion  # import locale: i modelli non servono al resto del catalogo
-    for old in [c for c in ctx.char.companions if c.feature_key == STEED]:
-        ctx.char.companions.remove(old)
-    level = STEED_SPELL_LEVEL
+    olds = [c for c in char.companions if c.feature_key == STEED]
+    name = name.strip() or next((c.name for c in olds), "Destriero")  # un nuovo lancio senza nome tiene quello del destriero sostituito
+    for old in olds:
+        char.companions.remove(old)
     hp = 5 + 10 * level
-    ctx.char.companions.append(Companion(
-        character_id=ctx.char.id, kind="mount", name=str(params.get("name") or "").strip() or "Destriero",
-        statblock={"type": "celestial, fey o fiend", "size": "Large", "speed_ft": 60},
+    char.companions.append(Companion(
+        character_id=char.id, kind="mount", name=name,
+        statblock={"type": "celestial, fey o fiend", "size": "Large", "speed_ft": 60, **({"fly_speed_ft": 90} if level >= 4 else {})},
         max_hp=hp, current_hp=hp, armor_class=10 + level, feature_key=STEED,
         created_at=datetime.now(timezone.utc).isoformat(timespec="seconds")))
+
+
+def _steed_cast(ctx: RuleContext, params: dict) -> None:
+    """Il lancio gratuito (azione) è al livello base dell'incantesimo."""
+    make_steed(ctx.char, str(params.get("name") or ""))
 
 
 STEED_USE = OnUse(
@@ -274,7 +280,7 @@ BASE_ROWS = (
     feature("faithful_steed", CK, ED, 5, "Destriero Fedele / Faithful Steed (Paladino 5, pag. 111)", ("Destriero Fedele", "Faithful Steed"),
             ("Trova Destriero sempre preparato; un lancio gratuito per riposo lungo: «Usa» lo lancia con l'azione e crea il destriero fra i compagni.",
              "Find Steed always prepared; one free cast per long rest: \"Use\" casts it with your action and adds the steed to your companions."),
-            "special", uses=Uses(table={5: 1}), restoration="long_rest", granted_spells=("find-steed",), on_use=STEED_USE),
+            "action", uses=Uses(table={5: 1}), restoration="long_rest", granted_spells=("find-steed",), on_use=STEED_USE),
     feature("aura_of_protection", CK, ED, 6, "Aura di Protezione / Aura of Protection (Paladino 6, pag. 111)",
             ("Aura di Protezione", "Aura of Protection"),
             ("Tu e gli alleati entro 3 m (9 m dal 18°) sommate il tuo Carisma (minimo +1) ai TS, finché non sei Incapacitato. Il tuo bonus è già nei tuoi TS.",

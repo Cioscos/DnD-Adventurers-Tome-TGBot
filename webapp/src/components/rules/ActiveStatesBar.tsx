@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GiLightningTrio } from 'react-icons/gi'
@@ -5,30 +6,49 @@ import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import { notifyMutationError } from '@/lib/mutationError'
 import { bonusSpentOnReturn } from '@/lib/formReturn'
+import { optionLabel } from '@/lib/spellChoice'
+import { formatRounds } from '@/lib/spellDuration'
 import { useToast } from '@/hooks/useToast'
+import { formatKm, formatLength, formatMeters, useUnitSettings, type UnitSystem } from '@/store/unitSettings'
 import type { CharacterFull } from '@/types'
 
 type StateRow = NonNullable<CharacterFull['active_states']>[number]
 
 /** I numeri che uno stato porta con sé e che il giocatore deve poter leggere: CD del TS, GS, danno fisso, esito. */
-function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string): string[] {
+function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => string, charId: number, system: UnitSystem, lang: string): string[] {
   const d = (s.data ?? {}) as Record<string, unknown>
   const out: string[] = []
+  const clock = s.key.startsWith('spell_cast:')
+  if (clock || s.key.startsWith('spell:')) {
+    // Effetto di un incantesimo: lo scandisce l'orologio del lanciatore (`spell_cast:`), qui si legge da chi viene e quanto dura.
+    if (clock) out.push(t('character.turn.state_cast_by_you'))
+    else if (typeof d.caster_name === 'string' && d.caster_id !== charId) out.push(t('character.turn.state_from', { name: d.caster_name }))
+    const dur = (clock ? (d.state_data as { duration?: unknown } | undefined)?.duration : d.duration) as
+      { rounds?: number | null; concentration?: boolean; until_rest?: boolean } | undefined
+    if (dur?.until_rest) out.push(t('character.turn.state_until_rest'))
+    else if (dur?.concentration) out.push(t('character.turn.state_while_concentrating'))
+    else if (dur?.rounds) out.push(formatRounds(t, dur.rounds))
+  }
   if (typeof d.dc === 'number') {
     out.push(t('character.turn.state_dc', { dc: d.dc, save: typeof d.save === 'string' ? t(`common.abilities.${d.save}`) : '' }))
   }
-  if (typeof d.skill === 'string') out.push(t(`character.skills.${d.skill}`))
+  const skill = d.skill ?? (d.choices as { skill?: unknown } | undefined)?.skill  // gli incantesimi tengono la scelta in `choices`
+  if (typeof skill === 'string') out.push(t(`character.skills.${skill}`))
+  for (const [k, v] of Object.entries((d.choices ?? {}) as Record<string, unknown>)) {  // tipo di danno, caratteristica o scudo scelti al lancio
+    if (k !== 'skill' && k !== 'item_id' && typeof v === 'string') out.push(optionLabel(t, k, v))
+  }
+  if (typeof d.weapon_name === 'string') out.push(d.weapon_name)  // l'arma incantata (Arma Magica, Arma Elementale)
   if (typeof d.damage_type === 'string') out.push(t(`character.inventory.damage_types.dmg_${d.damage_type}`))
   if (d.maximized === true) out.push(t('character.turn.state_maximized'))
   if (typeof d.cr === 'string') out.push(t('character.turn.state_cr', { cr: d.cr }))
   if (typeof d.attack_bonus === 'number') out.push(t('character.turn.state_attack_bonus', { n: d.attack_bonus }))
   if (typeof d.bonus === 'number') out.push(t('character.turn.state_bonus', { n: d.bonus }))
-  if (typeof d.range_m === 'number') out.push(t('character.turn.state_radius', { n: d.range_m }))
-  if (typeof d.radius_m === 'number') out.push(t('character.turn.state_radius', { n: d.radius_m }))
-  if (typeof d.radius_km === 'number') out.push(t('character.turn.state_radius_km', { n: String(d.radius_km).replace('.', ',') }))
+  if (typeof d.range_m === 'number') out.push(t('character.turn.state_radius', { d: formatMeters(d.range_m, system) }))
+  if (typeof d.radius_m === 'number') out.push(t('character.turn.state_radius', { d: formatMeters(d.radius_m, system) }))
+  if (typeof d.radius_km === 'number') out.push(t('character.turn.state_radius', { d: formatKm(d.radius_km, system, lang) }))
   if (typeof d.ac_bonus === 'number') out.push(t('character.turn.state_ac_bonus', { n: d.ac_bonus }))
   if (typeof d.stealth_bonus === 'number') out.push(t('character.turn.state_stealth_bonus', { n: d.stealth_bonus }))
-  if (typeof d.fly_ft === 'number') out.push(t('character.turn.state_fly', { n: Math.round(d.fly_ft * 0.3) }))
+  if (typeof d.fly_ft === 'number') out.push(t('character.turn.state_fly', { d: formatLength(d.fly_ft, system) }))
   if (typeof d.start_heal === 'number') out.push(t('character.turn.state_start_heal', { n: d.start_heal }))
   if (typeof d.start_damage === 'number') out.push(t('character.turn.state_start_damage', { n: d.start_damage }))
   if (typeof d.hp === 'number' && typeof d.max === 'number') out.push(t('character.turn.state_ward', { hp: d.hp, max: d.max }))
@@ -38,6 +58,8 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
     if (typeof d[k] === 'string') out.push(t(`character.turn.state_option.${d[k]}`))
   }
   if (d.until === 'next_turn_end') out.push(t('character.turn.state_until_next_turn_end'))
+  // Ira 2024: la vera scadenza, non i 100 round del tetto (i tipi scelti li dicono già le righe delle opzioni)
+  if (s.ends_on?.includes('turn_end_unextended')) out.push(t('character.turn.state_rage_unextended'))
   if (typeof d.duplicates === 'number') out.push(t('character.turn.state_duplicates', { n: d.duplicates }))
   if (s.key === 'divine_intervention') {
     out.push(t(d.success ? 'character.turn.divine_success' : 'character.turn.divine_failure', { roll: d.roll ?? '-', level: d.level }))
@@ -50,18 +72,22 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
 
 /** Stati attivi dei privilegi (Ira...) con i round rimasti e la chiusura a mano. Niente se non ce n'è nessuno. */
 export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
   const qc = useQueryClient()
   const toast = useToast()
   const end = useMutation({
     mutationFn: (key: string) => api.characters.endActiveState(char.id, key),
-    onSuccess: () => {
+    onSuccess: (states) => {
+      // la risposta ha già l'elenco aggiornato: le righe chiuse spariscono subito, la rilettura conferma
+      if (Array.isArray(states)) qc.setQueryData<CharacterFull>(['character', char.id], (old) => old && { ...old, active_states: states as CharacterFull['active_states'] })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['companions', char.id] })  // chiudere la Forma Selvatica la chiude anche nei compagni
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
     },
     onError: (err) => {
       if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
   // Dado di Ispirazione in Combattimento alla CA: in reazione, il valore da sommare lo dice il server.
@@ -72,7 +98,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       toast.info(t('character.turn.bardic_die_ac_result'), { description: `+${res.roll}` })
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   // Prolungare l'Ira con un TS imposto non costa l'azione bonus: il bottone sta qui, fuori dalla sezione che si richiude.
   const extend = useMutation({
@@ -82,7 +108,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
       qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       toast.info(t('character.turn.extend_rage_done'))
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   // I segni interni di un privilegio (il Canto di Riposo già ricevuto) non sono del giocatore: né si vedono né si chiudono.
   const states = (char.active_states ?? []).filter((s) => !s.data?.internal)
@@ -92,16 +118,20 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
       {states.map((s) => {
         // Il dado ricevuto non ha una riga sulla scheda di chi lo riceve: il nome salvato è nella lingua del bardo, si traduce qui.
         const name = s.key === 'bardic_die' ? t('character.turn.bardic_die_name')
+          : s.key === 'shadow_step_strike' ? t('character.turn.shadow_strike_name') // nomi scritti dal server nella lingua di chi li ha creati
+          : s.key === 'bastion_of_law' ? t('character.turn.bastion_of_law_name')
+          : s.key === 'spell:haste_lethargy' ? t('character.roll_notes.spell.haste_lethargy') // lo stato lo scrive il server, nella lingua del lanciatore
+          : s.key === 'improved_duplicity_ready' ? char.abilities.find((a) => a.feature_key?.endsWith('.improved_duplicity'))?.name ?? s.name ?? t('character.turn.state_generic') // l'offerta di fine illusione non porta il nome di Invocare Duplicato
           : char.abilities.find((a) => a.feature_key === s.feature_key)?.name ?? s.name ?? t('character.turn.state_generic')
         // Privilegi che agiscono su altri (Lupo, Orso, Attacco Irruento): il testo sta sotto lo stato, il GM li applica (D1).
         const others = ((s.data?.others as string[] | undefined) ?? [])
           .map((k) => char.abilities.find((a) => a.feature_key === k))
           .filter((a): a is NonNullable<typeof a> => !!a)
-        const facts = stateFacts(s, t)
+        const facts = stateFacts(s, t, char.id, system, uiLang(i18n.language))
         // Lo decide il server: la scelta di prolungamento c'è solo finché l'Ira si può prolungare (non dal 15°, non per le altre classi).
         const canExtend = !!s.feature_key && !!char.abilities.find((a) => a.feature_key === s.feature_key)?.use_choices?.some((x) => x.key === 'extend_via')
         return (
-          <li key={s.key} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
+          <li key={`${s.key}:${s.data?.caster_id ?? ''}`} className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border border-dnd-gold-dim/50 bg-dnd-gold/10">
             <GiLightningTrio size={16} aria-hidden className="shrink-0 text-dnd-gold-bright" />
             <div className="flex-1 min-w-[9rem] text-sm font-body text-dnd-text break-words">
               <p>
@@ -109,8 +139,8 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
                 {typeof s.data?.die === 'number' && (
                   <span className="ml-2 font-mono text-dnd-text-muted">d{s.data.die}</span>
                 )}
-                {s.rounds_left != null && (
-                  <span className="ml-2 text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
+                {s.rounds_left != null && !s.ends_on?.includes('turn_end_unextended') && (
+                  <span className="ml-2 text-dnd-text-muted tabular-nums">{s.rounds_left > 10 ? formatRounds(t, s.rounds_left) : t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
                 )}
               </p>
               {facts.length > 0 && <p className="mt-0.5 text-xs text-dnd-text-muted tabular-nums">{facts.join(' · ')}</p>}

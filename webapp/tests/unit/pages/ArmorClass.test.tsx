@@ -187,10 +187,11 @@ describe('ArmorClass page', () => {
     expect(screen.getByPlaceholderText('14')).toBeEnabled()
   })
 
-  it('unarmored previews use the effective modifier, like the backend', async () => {
-    // `value` e `modifier` volutamente discordi: un oggetto porta il modificatore DES a +4.
+  it('unarmored previews are the ones the server sends (punto 42), not recomputed from the scores', async () => {
+    // I punteggi qui discordano di proposito: conta `unarmored_previews`.
     getChar.mockResolvedValue({
       ...acChar,
+      unarmored_previews: { wisdom: 16, constitution: 14 },
       ability_scores: [
         { name: 'dexterity', value: 10, modifier: 4 },
         { name: 'wisdom', value: 14, modifier: 2 },

@@ -14,6 +14,8 @@ interface ConfirmSheetProps {
   confirmVariant?: ButtonVariant
   loading?: boolean
   centered?: boolean
+  /** Livello z: da alzare quando la conferma si apre sopra un altro foglio. */
+  zClassName?: string
 }
 
 /** Standard confirm dialog matching the bottom-sheet / centered modal pattern
@@ -29,10 +31,11 @@ export default function ConfirmSheet({
   confirmVariant = 'danger',
   loading = false,
   centered = true,
+  zClassName,
 }: ConfirmSheetProps) {
   const { t } = useTranslation()
   return (
-    <Sheet open={open} onClose={onClose} centered={centered} title={title}>
+    <Sheet open={open} onClose={onClose} centered={centered} title={title} zClassName={zClassName}>
       <div className="p-5 space-y-4">
         {body && (
           <div className="text-sm text-dnd-text font-body text-center">

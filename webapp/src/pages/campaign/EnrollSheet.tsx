@@ -1,3 +1,4 @@
+import { actionFailedKey } from '@/lib/mutationError'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -48,7 +49,7 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
     },
     onError: (err) => {
       const key = err instanceof ApiError && typeof err.detail === 'string' ? ERROR_KEYS[err.detail] : undefined
-      toast.error(t(key ?? 'common.action_failed'))
+      toast.error(t(key ?? actionFailedKey(err)))
     },
   })
 

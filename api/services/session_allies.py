@@ -1,16 +1,15 @@
 """Chi siede alla stessa serata di un personaggio: il bersaglio dei privilegi che aiutano un alleato (R38)."""
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.history import add_history
 from api.services.homebrew.passive import get_passive_modifiers
 from core.rules.modifiers import effective_hp_max
-from core.db.models import Ability, Character, CharacterHistory, GameSession, SessionParticipant, SessionStatus
+from core.db.models import Ability, Character, GameSession, SessionParticipant, SessionStatus
 
 
 async def seated_allies(session: AsyncSession, char: Character) -> list[Character]:
@@ -37,8 +36,9 @@ async def load_receiver(session: AsyncSession, char_id: int) -> Character:
 async def _party(session: AsyncSession, char: Character, donors: bool = False) -> list[Character]:
     """Gli alleati seduti, con ciò che servono le aure; ``donors``: anche le capacità (i doni). Un solo caricamento per alleato."""
     allies = await seated_allies(session, char)
-    for ally in allies:
-        await session.refresh(ally, ["classes", "ability_scores", "items", *(["abilities"] if donors else [])])
+    if allies:  # una query per relazione per tutti gli alleati, non per alleato
+        await session.execute(select(Character).where(Character.id.in_([a.id for a in allies])).options(*(
+            selectinload(getattr(Character, rel)) for rel in ("classes", "ability_scores", "items", *(["abilities"] if donors else [])))))
     return allies
 
 
@@ -51,6 +51,14 @@ async def attach_party_auras(session: AsyncSession, char: Character) -> None:
     """Mette su ``char`` le aure che i compagni della serata proiettano su di lui (``char.party_auras``, transitorio):
     le opzioni al tiro `aura:*` le leggono. Fuori serata non ce ne sono."""
     char.party_auras = _auras(await _party(session, char))
+
+
+async def attach_spell_auras(session: AsyncSession, char: Character) -> None:
+    """Solo le aure vive degli incantesimi dei compagni (``char.party_auras``), senza caricare le loro schede: per la scheda e i tiri
+    che non passano da ``attach_party_auras``. Se le aure sono già state messe non fa nulla."""
+    from core.rules.auras import projected_spell_auras  # import locale: auras usa il catalogo
+    if getattr(char, "party_auras", None) is None:
+        char.party_auras = [a for ally in await seated_allies(session, char) for a in projected_spell_auras(ally)]
 
 
 async def attach_party(session: AsyncSession, char: Character) -> None:
@@ -81,9 +89,7 @@ async def spend_donor_tokens(session: AsyncSession, receiver: Character, spent: 
             await _spend_atomically(session, row, int(amount))
         except HTTPException:  # l'uso è già andato (un altro danno, un altro alleato): la risposta è la stessa dell'opzione
             raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable"}) from None
-        session.add(CharacterHistory(
-            character_id=donor.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
-            description=f"{row.name or row.feature_key}: speso per {receiver.name}, che resta a 1 PF"))
+        add_history(session, donor.id, "roll_option", f"{row.name or row.feature_key}: speso per {receiver.name}, che resta a 1 PF")
         donors.append(donor)
     return donors
 
@@ -100,9 +106,8 @@ async def refund_donor_tokens(session: AsyncSession, receiver: Character, spent:
             update(Ability).where(Ability.id == row.id, Ability.max_uses.is_not(None))
             .values(uses=func.min(Ability.max_uses, func.coalesce(Ability.uses, 0) + int(amount))))
         await session.refresh(row)
-        session.add(CharacterHistory(
-            character_id=row.character_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="roll_option",
-            description=f"{row.name or row.feature_key}: uso restituito, il danno di {receiver.name} è stato annullato"))
+        add_history(session, row.character_id, "roll_option",
+                    f"{row.name or row.feature_key}: uso restituito, il danno di {receiver.name} è stato annullato")
 
 
 async def ally_target(session: AsyncSession, char: Character, target_id: object) -> Character:

@@ -41,7 +41,7 @@ vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: showUndoToastSpy })
 vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ error: toastError, warning: vi.fn(), success: vi.fn() }),
 }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError: notifySpy }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError: notifySpy }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')

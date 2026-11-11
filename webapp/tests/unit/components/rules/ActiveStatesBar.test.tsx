@@ -12,7 +12,7 @@ vi.mock('@/api/client', () => ({
   api: { characters: { endActiveState, bardicDieAc, featureUse } },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
-vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
+vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: toastError, success: vi.fn() }) }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -46,6 +46,46 @@ describe('ActiveStatesBar', () => {
     expect(screen.getByText(/character\.turn\.state_start_heal/)).toBeInTheDocument()
     expect(screen.getByText(/character\.turn\.state_start_damage/)).toBeInTheDocument()
     expect(screen.getAllByText(/character\.turn\.state_radius/).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('names the end-of-illusion offer after Improved Duplicity, not after Invoke Duplicity (point 32)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'improved_duplicity_ready', feature_key: 'cleric.invoke_duplicity', rounds_left: null, ends_on: ['manual'], name: 'Invocare Duplicato', data: {} },
+    ], [{ id: 1, feature_key: 'cleric.invoke_duplicity', name: 'Invocare Duplicato' }, { id: 2, feature_key: 'cleric.improved_duplicity', name: 'Improved Duplicity' }])} />)
+    expect(screen.getByText('Improved Duplicity')).toBeInTheDocument()
+    expect(screen.queryByText('Invocare Duplicato')).not.toBeInTheDocument()
+  })
+
+  it('shows the real end of the Rage, not the 100-round cap (the chosen types are said once, by the option rows) (point 35)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { ...rage, rounds_left: 100, ends_on: ['unconscious', 'turn_end_unextended'], data: { wild: 'wolf', power: 'lion' } },
+    ], [{ id: 1, name: 'Ira', feature_key: 'barbarian.rage' }])} />)
+    expect(screen.getByText(/character\.turn\.state_rage_unextended/)).toBeInTheDocument()
+    expect(screen.queryByText(/rage_wild|rage_power/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/100/)).not.toBeInTheDocument()
+  })
+
+  it('translates the name of the Haste lethargy, which the server saves in one language', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:haste_lethargy', feature_key: 'spell:haste', rounds_left: null, ends_on: ['manual'], name: 'Letargia di Velocità', data: { spell_key: 'haste_lethargy' } },
+    ], [])} />)
+    expect(screen.getByText('character.roll_notes.spell.haste_lethargy')).toBeInTheDocument()
+  })
+
+  it('names the enchanted weapon of Magic Weapon instead of its id', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:magic_weapon', feature_key: 'spell:magic_weapon', rounds_left: null, ends_on: ['manual'], name: 'Arma Magica',
+        data: { spell_key: 'magic_weapon', choices: { item_id: '7' }, weapon_name: 'Spada lunga' } },
+    ], [])} />)
+    expect(screen.getByText(/Spada lunga/)).toBeInTheDocument()
+    expect(screen.queryByText('7')).not.toBeInTheDocument()
+  })
+
+  it('shows the skill a 2024 Guidance was cast on, kept in the spell choices', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:guidance', feature_key: 'spell:guidance', rounds_left: null, ends_on: ['manual'], name: 'Guida', data: { spell_key: 'guidance', choices: { skill: 'sleight_of_hand' } } },
+    ], [])} />)
+    expect(screen.getByText(/character\.skills\.sleight_of_hand/)).toBeInTheDocument()
   })
 
   it('does not offer to end a state that only a long rest closes (ward, Overchannel)', () => {
@@ -191,5 +231,46 @@ describe('ActiveStatesBar, wizard states', () => {
       { key: 'window_enchantment', feature_key: 'wizard.alter_memories', rounds_left: null, ends_on: ['cast'], data: { internal: true } },
     ], [])} />)
     expect(screen.queryByText('character.turn.end_state')).toBeNull()
+  })
+
+  it('shows a spell effect with its name, caster and duration, and the target can end it by hand', async () => {
+    endActiveState.mockResolvedValue([])
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:shield_of_faith', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Scudo della Fede',
+        data: { caster_id: 3, caster_name: 'Chierico', duration: { rounds: 100, concentration: true, until_rest: false } } },
+    ], [])} />)
+    expect(screen.getByText(/Scudo della Fede/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_from/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_while_concentrating/)).toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.turn.end_state'))
+    await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'spell:shield_of_faith'))
+  })
+
+  it('tells the caster own clock apart from the effect on them, and reads the clock duration', () => {
+    const data = { caster_id: 7, caster_name: 'Io', duration: { rounds: null, concentration: false, until_rest: true } }
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:aid', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Aiuto', data },
+      { key: 'spell_cast:aid', feature_key: '', rounds_left: null, ends_on: ['rest_long'], name: 'Aiuto', data: { spell_key: 'aid', state_data: data } },
+    ], [])} />)
+    expect(screen.getAllByText(/character\.turn\.state_until_rest/)).toHaveLength(2)
+    expect(screen.getAllByText(/character\.turn\.state_cast_by_you/)).toHaveLength(1)
+  })
+
+  it('keeps two spell states of the same spell from two casters apart and drops the closed ones from the cached sheet (62)', async () => {
+    const { QueryClient } = await import('@tanstack/react-query')
+    const aid = (caster: number, name: string) => ({
+      key: 'spell:aid', feature_key: 'spell:aid', rounds_left: null, ends_on: ['manual'], name: 'Aid', data: { spell_key: 'aid', caster_id: caster, caster_name: name },
+    })
+    const sheet = char([aid(1, 'Alfa'), aid(2, 'Beta')], [])
+    const client = new QueryClient()
+    client.setQueryData(['character', 7], sheet)
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
+    endActiveState.mockResolvedValueOnce([])
+    renderWithProviders(<ActiveStatesBar char={sheet} />, { client })
+    expect(screen.getAllByText('character.turn.end_state')).toHaveLength(2)
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
+    await userEvent.click(screen.getAllByText('character.turn.end_state')[0])
+    await waitFor(() => expect((client.getQueryData(['character', 7]) as CharacterFull).active_states).toEqual([]))
+    warn.mockRestore()
   })
 })

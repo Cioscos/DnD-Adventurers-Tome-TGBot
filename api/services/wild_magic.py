@@ -8,7 +8,6 @@ far tirare la tabella senza il d20 e l'uso torna disponibile. L'incantesimo prod
 from __future__ import annotations
 
 import random
-from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +16,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.rules_states import remove_state
 from api.services.rules_turn import get_turn, grant_action, mark_once, once_used
-from core.db.models import CharacterHistory
+from api.services.history import add_history
 from core.game.stats import effective_ability_mod
 from core.rules.catalog import active_features
 from core.rules.catalog.y2014.sorcerer import CK, SP, SURGE, TIDES
@@ -131,9 +130,7 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
         mark_once(char, REPEAT)
     if spec is not None:  # il nome dell'impulso, non quello del privilegio: la barra degli stati mostra cosa è successo
         out["state"] = begin_state(char, spec, f"{SURGE}:{s.lo}", s.name["it"])
-    session.add(CharacterHistory(
-        character_id=char.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"), event_type="wild_magic",
-        description=f"Impulso di Magia Selvaggia {s.label}: {s.name['it']}"))
+    add_history(session, char.id, "wild_magic", f"Impulso di Magia Selvaggia {s.label}: {s.name['it']}")
     return out
 
 

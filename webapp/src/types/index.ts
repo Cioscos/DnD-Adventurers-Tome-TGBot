@@ -130,6 +130,8 @@ export interface Ability {
   has_on_use?: boolean
   /** Il «Usa» ora non costa nulla e si può fare (prolungare l'Ira): acceso anche a 0 usi. Lo decide il server. */
   free_use?: boolean
+  /** Il «Usa» ora verrebbe rifiutato dal server (Rompi-Incantesimi senza un lancio da rendere): il pulsante è spento. */
+  use_blocked?: boolean
   /** Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): si chiede a chi (R38). */
   gives_to_ally?: boolean
   /** Valori della scelta `mode` rivolti a un'altra creatura (Imposizione delle Mani): il client chiede a chi. */
@@ -138,6 +140,10 @@ export interface Ability {
   removal?: RemovalInfo | null
   /** Con `gives_to_ally` per PF temporanei: quante creature della serata può raggiungere il «Usa» (Mantello di Ispirazione: più d'una). */
   ally_max?: number
+  /** Tipi di danno che il riposo accetta per la resistenza di questo privilegio (Resilienza Immonda). */
+  rest_damage_choices?: string[]
+  /** Cosa farà il «Usa» (Astuzia Magica: quanti slot di Patto tornano), calcolato dal server. */
+  use_preview?: { it: string; en: string } | null
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null
@@ -214,14 +220,40 @@ export interface MapEntry {
   size_bytes?: number
 }
 
+export interface SpellEffectInfo {
+  target_kind: 'self' | 'ally' | 'allies' | 'aura'
+  /** Il lancio sceglie un'arma non magica del bersaglio (Arma Magica, Arma Elementale): `choices.item_id`. */
+  weapon_choice?: boolean
+  /** Punizione: il danno lo dà l'opzione al colpo, il lancio non tira i dadi dell'incantesimo. */
+  hit_damage?: boolean
+  /** Tipi di arma sceglibili (chiavi di `WEAPONS`: Randello Incantato); assente: qualunque arma non magica. */
+  weapon_kinds?: string[]
+  /** Il tipo dei dadi in più dello slot più alto scelto all'ultimo lancio (Colpo Infuocato, Fame di Hadar); il server lo conserva. */
+  cast_upcast_type?: string | null
+  max_targets_by_slot: Record<string, number>
+  /** `when`: si chiede solo se la scelta `[chiave, valore]` è già stata fatta (il tipo delle Rune Esplosive del Glifo). */
+  choices: { key: string; label: { it: string; en: string }; options: string[]; when?: [string, string] | null }[]
+}
+
+/** Esito degli effetti di un lancio: bersagli che hanno ricevuto lo stato e, fuori serata, il testo per il GM. */
+export interface SpellEffectsResult {
+  applied: { id: number; name: string }[]
+  text?: { it: string; en: string } | null
+}
+
 export interface Spell {
   id: number
   name: string
   level: number
   description?: string
   casting_time?: string
+  /** Tempo di lancio che vale ora (il server lo porta ad azione bonus con Campione degli Antichi, Rompi-Incantesimi): solo da mostrare e raggruppare; il form usa `casting_time`. */
+  effective_casting_time?: string
   range_area?: string
   components?: string
+  /** Gittata e componenti che valgono ora (privilegi che le cambiano): solo da mostrare; il form usa i campi salvati. */
+  effective_range_area?: string
+  effective_components?: string
   duration?: string
   is_concentration: boolean
   is_ritual: boolean
@@ -233,6 +265,8 @@ export interface Spell {
   is_prepared: boolean
   school?: string | null
   srd_index?: string | null
+  /** Incantesimo di cura: «Lancia» apre il tiro di cura (lo decide il server). */
+  is_healing?: boolean
   higher_levels_dice?: string | null
   /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */
   extra_damage_dice?: string | null
@@ -253,6 +287,8 @@ export interface Spell {
   /** Lancio pagato da un privilegio del Warlock: Arcanum Mistico (senza slot) o una supplica a uso singolo (slot di Patto). */
   /** Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48). */
   removal?: RemovalInfo | null
+  /** Effetto dell'incantesimo nel catalogo (edizione di chi lancia): chi può riceverlo, quanti per livello di slot, le scelte. */
+  effect?: SpellEffectInfo | null
   pact_cast?: { kind: 'arcanum' | 'invocation'; feature_key: string; pact_only: boolean; uses_left: number | null; also_slot?: boolean } | null
 }
 
@@ -285,9 +321,13 @@ export interface Item {
   /** Solo per i contenitori, nelle risposte CharacterFull. */
   container_stats?: ContainerStats | null
   /** Proprietà di maestria 2024 dell'arma: si mostra solo ai personaggi 2024. */
+  /** Arti Marziali vale per quest'arma (Destrezza e dado da monaco): lo calcola il server sulla scheda. */
+  martial_arts?: boolean
   mastery?: string
   /** Portata in più nel proprio turno, da un privilegio (Radici Percuotenti). */
   reach_bonus_ft?: number | null
+  /** Effetto di catalogo di ogni incantesimo concesso (stesso ordine di `granted_spells`); `null` se non ne ha. */
+  granted_effects?: (SpellEffectInfo | null)[] | null
 }
 
 export interface ContainerStats {
@@ -480,6 +520,10 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   shield_armor_class_override: boolean
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   unarmored_formula?: string[] | null
+  /** CA senza armatura con la seconda caratteristica scelta, per l'anteprima (dal server). */
+  unarmored_previews?: Record<string, number>
+  /** Dadi di danno del colpo senz'armi adesso, Arti Marziali compresa (dal server). */
+  unarmed_damage_dice?: string
   ac_breakdown?: AcBreakdown | null
   speed_homebrew_modifier?: number
   speed_items_modifier?: number
@@ -515,6 +559,10 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   /** Scelte di livello in sospeso (aumento caratteristiche / talento). */
   pending_choices?: PendingChoice[] | null
   concentration_save?: ConcentrationSaveResult | null
+  /** Solo da PATCH /hp (danno): il danno subito dopo resistenze e vulnerabilità. */
+  damage_taken?: number | null
+  /** Solo da PATCH /hp: il danno che un incantesimo (Legame di Protezione) ha girato al lanciatore e il suo TS di concentrazione. */
+  shared_damage?: { amount: number; caster_name: string; concentration_save?: ConcentrationSaveResult | null } | null
   /** TS automatico a 0 PF di un privilegio (Ira Implacabile): se riesce resta in piedi. */
   zero_hp_save?: ZeroHpSaveResult | null
   /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
@@ -550,6 +598,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   damage_unrollable?: boolean
   /** POST /spells/{id}/use: esiti delle condizioni tolte, nelle due lingue (Task 48). */
   removal_result?: { it: string; en: string }[]
+  /** POST /spells/{id}/use|attack e /items/{id}/cast: chi ha ricevuto l'effetto dell'incantesimo. */
+  spell_effects?: SpellEffectsResult
   currency?: Currency
   abilities: Ability[]
   maps: MapEntry[]
@@ -899,6 +949,8 @@ export interface RollDamageRequest extends Partial<RollChoice> {
   extra_rolls?: number[]
   /** Tipo della seconda parte, se l'incantesimo ne offre più d'uno (radioso o necrotico). */
   extra_damage_type?: string
+  /** Tipo di danno scelto al lancio (Sfera Cromatica...); il server lo riconvalida. */
+  damage_type?: string
 }
 
 export interface RollHealingRequest extends Partial<RollChoice> {
@@ -1093,6 +1145,8 @@ export interface TurnState {
   attacks_allowed: number
   /** Il limite con l'arma del patto in mano (Lama Assetata). */
   attacks_allowed_pact?: number
+  /** Nascondersi 2024: il totale di Furtività che rende Invisibili (regola del server). */
+  hide_min_total?: number
   in_encounter: boolean
   is_my_turn: boolean
   round: number | null

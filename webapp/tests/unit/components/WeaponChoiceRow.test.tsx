@@ -37,13 +37,12 @@ describe('WeaponChoiceRow', () => {
     expect(onChange).toHaveBeenCalledWith({ ...DEFAULT_WEAPON_CHOICE, ability: 'dexterity' })
   })
 
-  it('a monk weapon has the choice too, only while Martial Arts holds', () => {
-    const staff = { id: 4, item_type: 'weapon', item_metadata: { weapon_category: 'simple' } }
+  it('a weapon the server marks for Martial Arts has the choice too (punto 42: the rule belongs to the server)', () => {
+    const staff = { id: 4, item_type: 'weapon', martial_arts: true, item_metadata: { weapon_category: 'simple' } }
     const monk = char({ items: [], classes: [{ class_name: 'monk', level: 1 }] })
     const { rerender } = render(<WeaponChoiceRow item={staff} char={monk} choice={DEFAULT_WEAPON_CHOICE} onChange={vi.fn()} />)
     expect(screen.getByText('character.attack.ability_dexterity')).toBeInTheDocument()
-    const armored = { ...monk, items: [{ id: 9, item_type: 'armor', is_equipped: true }] }
-    rerender(<WeaponChoiceRow item={staff} char={armored} choice={DEFAULT_WEAPON_CHOICE} onChange={vi.fn()} />)
+    rerender(<WeaponChoiceRow item={{ ...staff, martial_arts: false }} char={monk} choice={DEFAULT_WEAPON_CHOICE} onChange={vi.fn()} />)
     expect(screen.queryByText('character.attack.ability_dexterity')).toBeNull()
   })
 })

@@ -137,12 +137,21 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             if healed and pc.current_hit_points == healed["after"]:
                 pc.current_hit_points = healed["before"]
                 set_start_heal(pc, [])
+                if "death_saves" in healed:
+                    pc.death_saves = dict(healed["death_saves"])
+                    if healed["unconscious"] and not (pc.conditions or {}).get("unconscious"):
+                        pc.conditions = {**(pc.conditions or {}), "unconscious": True}
+            temp = snap.get("temp")  # i PF temporanei d'inizio turno: si tolgono solo se sono ancora quelli dati
+            if temp and (pc.temp_hp or 0) == temp["after"]:
+                pc.temp_hp = temp["before"]
             if snap.get("inspired"):
                 pc.heroic_inspiration = False
             if "exhaustion" in snap:  # la spossatezza addebitata dagli stati chiusi dall'avanzamento
                 restore_exhaustion(pc, snap["exhaustion"])
                 if not snap["is_dead"] and pc.is_dead and snap["exhaustion"] < 6:
                     pc.is_dead = False
+            from api.services.spell_effects import regrant_spells  # import locale: il servizio importa gli alleati di sessione
+            await regrant_spells(db, pc, snap.get("spell_given"))  # l'orologio di un incantesimo riaperto ridà lo stato ai bersagli
     for char_id, used in log.once_per_turn.items():
         pc = await db.get(Character, int(char_id))
         if pc is not None:
@@ -189,8 +198,15 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
                         undo_list: list[dict] | None) -> str:
     """Switch the condition off on its target (dropping the effect row); returns its label.
     ``history`` (formatted with ``{label}``) is logged on a PC target."""
-    from api.services.effects import _add_history, apply_conditions  # circular import
+    from api.services.effects import apply_conditions  # circular import
+    from api.services.history import add_history
     label = condition_label(eff.slug)
+    if eff.pending:  # TS ancora in attesa: la condizione non c'è mai stata (nulla di preesistente si tocca) e un TS tardivo non deve applicarla
+        for ps in (await db.execute(select(PendingSave).where(PendingSave.effect_id == eff.id))).scalars():
+            await db.delete(ps)
+        await db.delete(eff)
+        await db.flush()
+        return label
     snapshot = effect_snapshot(eff)
     saves = [effect_snapshot(ps) for ps in (await db.execute(select(PendingSave).where(
         PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
@@ -199,7 +215,7 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
         char = await db.get(Character, eff.character_id)
         prev = (char.conditions or {}).get(eff.slug)
         if history:
-            _add_history(db, char.id, "condition_change", history.format(label=label))
+            add_history(db, char.id, "condition_change", history.format(label=label))
         await apply_conditions(db, char, {eff.slug: False})
     else:
         target = ("combatant", eff.combatant_id)

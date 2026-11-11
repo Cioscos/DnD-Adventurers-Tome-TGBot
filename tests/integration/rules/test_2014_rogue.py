@@ -448,3 +448,13 @@ async def test_stroke_of_luck_also_saves_a_pure_ability_check_and_is_recovered_b
 def test_the_catalog_has_no_duplicate_keys_and_every_row_is_level_1_to_20():
     rows = features_for("2014", "rogue")
     assert len({f.key for f in rows}) == len(rows) and all(1 <= f.level <= 20 for f in rows)
+
+
+async def test_minori_6_a_double_tap_on_a_roll_with_options_spends_the_use_once(client):
+    import asyncio
+    cid = await _rogue(client, 20, dexterity=14)
+    await _skills(client, cid, stealth=True)
+    await _skill_roll(client, cid, "stealth", die=3)
+    rs = await asyncio.gather(*(client.post(f"/characters/{cid}/last-roll/options", json={"options": [LUCK]}) for _ in range(3)))
+    assert sorted(r.status_code for r in rs) == [200, 409, 409]
+    assert (await _ability(client, cid, LUCK))["uses"] == 0

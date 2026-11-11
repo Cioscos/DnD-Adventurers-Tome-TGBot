@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -106,19 +106,24 @@ def merge_options(applied: Applied, opts: AppliedOptions) -> None:
 
 def roll_option_dice(char: Any, opts: AppliedOptions, critical: bool = False) -> tuple[list[int], int]:
     """Tira i dadi delle opzioni e li registra nelle statistiche: (valori, totale con il fisso dell'espressione)."""
-    rolled, flat = roll_extra(opts.extra_dice, critical)
-    fixed, fixed_flat = roll_extra(opts.fixed_dice)
-    rolled += fixed
+    rolled, flat, types = [], 0, []
+    for exprs, kinds, doubles in ((opts.extra_dice, opts.extra_dice_types, critical), (opts.fixed_dice, opts.fixed_dice_types, False)):
+        for i, expr in enumerate(exprs):
+            part, part_flat = roll_extra([expr], doubles)
+            rolled, flat = rolled + part, flat + part_flat
+            types += [kinds[i] if i < len(kinds) else None] * len(part)
+    opts.rolled_types = types
     opts.separate_rolls, opts.separate_total = [], 0
     for expr, doubles in opts.separate_dice:
         apart, apart_flat = roll_extra([expr], critical and doubles)
         record_dice(char, apart)
         opts.separate_rolls += [v for _, v in apart]
         opts.separate_total += sum(v for _, v in apart) + apart_flat
-    record_dice(char, rolled)
+    record_dice(char, [*rolled, *opts.side_rolls])
+    opts.side_rolls = []
     opts.rolled_dice = [(int(kind[1:]), v) for kind, v in rolled]
     values = [v for _, v in rolled]
-    return values, sum(values) + flat + fixed_flat
+    return values, sum(values) + flat
 
 
 def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: OptionResult | None = None,
@@ -127,11 +132,14 @@ def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: 
     if not opts.keys:
         return previous
     before = previous or OptionResult()
+    types = opts.rolled_types if len(opts.rolled_types) == len(rolls) else [None] * len(rolls)
+    if any(types) or before.extra_types:  # il tipo di ogni dado, nell'ordine di ``extra_rolls`` (vuoto se nessun dado ne ha uno)
+        extra["extra_types"] = [*before.extra_types, *[None] * (len(before.extra_rolls) - len(before.extra_types)), *types]
     return OptionResult(
         keys=[*before.keys, *opts.keys], extra_rolls=[*before.extra_rolls, *rolls],
         extra_total=before.extra_total + total, bonus=before.bonus + opts.bonus,
         separate_rolls=[*before.separate_rolls, *opts.separate_rolls],
-        separate_total=before.separate_total + opts.separate_total, effects=[*before.effects, *opts.effects], targets=[*before.targets, *opts.targets],
+        separate_total=before.separate_total + opts.separate_total, separate_type=opts.separate_type or before.separate_type, effects=[*before.effects, *opts.effects], targets=[*before.targets, *opts.targets],
         multiplier=before.multiplier * opts.multiplier, spent=[*before.spent, *opts.spent], **extra,
     )
 
@@ -167,7 +175,18 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
 
 
 def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionRead]:
-    return [option_read(o, lang) for o in roll_options_for(roll_context(char, roll, **kw))]
+    from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD  # import locale, come negli altri servizi
+    # Interdizione alla Morte la applica il server da sola (``apply_hp_update``): il client non la deve offrire
+    ctx = roll_context(char, roll, **kw)
+    offered = [o for o in roll_options_for(ctx) if o.spec.key != DEATH_WARD_HOLD]
+    out = [option_read(o, lang) for o in offered]
+    for turn in (o for o in offered if o.spec.damage_type_to and o.spec.phase == "before"):
+        # Incantesimo Trasmutato: le opzioni che compaiono solo sul tipo nuovo (Affinità Elementale) si scelgono dopo di lui
+        have = {r.key for r in out}
+        out += [option_read(o, lang).model_copy(update={"needs": turn.spec.key})
+                for o in roll_options_for(replace(ctx, damage_type=turn.spec.damage_type_to))
+                if o.spec.key not in have and o.spec.phase == "before" and not o.spec.damage_type_to and o.spec.key != DEATH_WARD_HOLD]
+    return out
 
 
 def reaction_offers(char: Any, lang: str) -> list[RollOptionRead]:

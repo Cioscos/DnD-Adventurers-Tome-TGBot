@@ -78,6 +78,18 @@ def _arm_relentless(ctx: RuleContext, _params: dict) -> None:
 SD_COST = Cost(feature_key=SD, amount_by=_sd_cost)
 
 
+def _stamped_state(key: str) -> Any:
+    """Lo stato di Finta/Affondo ricorda se l'Usa è stato pagato con Implacabile: il colpo successivo tira allora 1d8."""
+    return lambda ctx, _p: StateSpec(key, rounds=1, ends_on=("new_turn", "manual"), data={"relentless": _armed(ctx)})
+
+
+def _strike_dice(key: str) -> Any:
+    def dice(ctx: RuleContext, _inputs: dict) -> str:
+        data = next(((s.get("data") or {}) for s in ctx.char.active_states or [] if s.get("key") == key), {})
+        return "1d8" if data.get("relentless") else f"1d{_die_sides(ctx.class_level)}"
+    return dice
+
+
 def _chain(first: Any, second: Any) -> Any:
     def run(session: Any, ctx: RuleContext, inputs: dict) -> None:
         if first is not None:
@@ -136,7 +148,7 @@ ASSESSMENT = _check("tactical_assessment", ("skill",), lambda c: c.skill in ("hi
                     ("Valutazione Tattica: somma il dado di superiorità alla prova", "Tactical Assessment: add the superiority die to the check"))
 
 LUNGING_STRIKE = RollOptionSpec(
-    key=LUNGING_STRIKE_KEY, phase="before", rolls=("attack",), group=ONE_MANEUVER, extra_dice=lambda c, _i: f"1d{_die_sides(c.class_level)}",
+    key=LUNGING_STRIKE_KEY, phase="before", rolls=("attack",), group=ONE_MANEUVER, extra_dice=_strike_dice("lunging_attack"),
     cost=Cost(state_key="lunging_attack"), available=lambda c: _weapon_attack(c) and _melee(c) and state_on(c, "lunging_attack"),
     label=_both("Affondo: ti sei mosso di almeno 1,5 m in linea retta prima di colpire? (+dado al danno)",
                 "Lunging: did you move at least 5 ft straight before the hit? (+die to damage)"))
@@ -199,9 +211,10 @@ MANEUVER_ROWS = (
     _maneuver("feinting", "Attacco con Finta", "Feinting Attack", 95,
               ("Azione bonus e un dado: vantaggio al prossimo attacco del turno contro una creatura entro 1,5 m, +dado al danno se colpisce.",
                "Bonus action and a die: advantage on your next attack this turn against a creature within 5 ft, +die to damage on a hit."),
-              "bonus_action", roll_options=(replace(FEINT_STRIKE, available=lambda c: _weapon_attack(c) and state_on(c, "feinting_attack")),),
+              "bonus_action", roll_options=(replace(FEINT_STRIKE, extra_dice=_strike_dice("feinting_attack"),
+                                         available=lambda c: _weapon_attack(c) and state_on(c, "feinting_attack")),),
               on_use=OnUse(slot="bonus", spends=SD, cost_by=lambda c, _p: _sd_cost(c), effect=_clear_relentless,
-                           state=StateSpec("feinting_attack", rounds=1, ends_on=("new_turn", "manual")))),
+                           state=_stamped_state("feinting_attack"))),
     _maneuver("goading", "Attacco Adescante", "Goading Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Saggezza o il bersaglio ha svantaggio contro chi non sei tu fino al tuo prossimo turno.",
                "After a hit, +die to damage; Wisdom save or the target has disadvantage against anyone but you until your next turn."),
@@ -210,7 +223,8 @@ MANEUVER_ROWS = (
               ("Azione bonus: Scatto; se ti sei mosso in linea retta di 1,5 m prima di colpire in mischia, +dado al danno.",
                "Bonus action: Dash; if you moved 5 ft in a straight line before a melee hit, +die to damage."),
               "bonus_action", roll_options=(LUNGING_STRIKE,),
-              on_use=_sd_use(slot="bonus", state=StateSpec("lunging_attack", rounds=1, ends_on=("new_turn", "manual")),
+              on_use=OnUse(slot="bonus", spends=SD, cost_by=lambda c, _p: _sd_cost(c), effect=_clear_relentless,  # il dado si tira al colpo, non all'Usa
+                           state=_stamped_state("lunging_attack"),
                              message=lambda _c, _p: _both("Scatto con questa azione bonus: poi il primo colpo in mischia del turno può portare il dado.",
                                                           "Dash with this bonus action: the first melee hit of the turn can carry the die."))),
     _maneuver("maneuvering", "Attacco con Manovra", "Maneuvering Attack", 95,
@@ -562,6 +576,10 @@ PSI_WARRIOR = (
          ("Azione bonus: fino a Intelligenza creature entro 9 m (tu compreso) hanno Mezza Copertura per 1 minuto. Un uso per riposo lungo, o un dado.",
           "Bonus action: up to Intelligence creatures within 30 ft (you included) have Half Cover for 1 minute. One use per long rest, or a die."),
          "bonus_action", uses=Uses(table={15: 1}), restoration="long_rest",
+         modifiers=(Modifier("ac", 2, when=lambda c: c.roll == "ac" and has_state(c.char, "bulwark_of_force"),  # Mezza Copertura
+                             source=f"feature:{CK}.bulwark_of_force"),
+                    Modifier("save", 2, when=lambda c: c.roll == "save" and c.ability == "dexterity" and has_state(c.char, "bulwark_of_force"),
+                             source=f"feature:{CK}.bulwark_of_force")),  # Mezza Copertura vale anche per i TS su Destrezza
          on_use=OnUse(slot="bonus", alt_spends=PSI, toggles=(_restore_toggle("Dado di Energia Psionica"),),
                       state=StateSpec("bulwark_of_force", rounds=10, ends_on=("incapacitated", "manual"),
                                       data={"others": [f"{CK}.bulwark_of_force"]}),

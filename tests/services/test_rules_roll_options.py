@@ -411,3 +411,14 @@ def test_refund_never_exceeds_the_maximum():
     char = _char(abilities=[ki])
     refund_spent(char, ["feature:monk.ki:2"])
     assert ki.uses == 5
+
+
+def test_t10_77_the_damage_of_a_miss_from_two_sources_adds_up_but_graze_and_studied_attacks_stay_one_graze(registry):
+    def miss(key, amount, adds=False):
+        return RollOptionSpec(key=key, phase="after_roll", after="miss", rolls=("attack",), label=_LABEL, miss_damage=lambda _c: amount,
+                              miss_damage_adds=adds)
+    registry(miss("graze", 3), miss("studied", 3), miss("arrow", 5, adds=True))
+    ctx = _ctx(_char(), "attack")
+    assert apply_options(_Session(), ctx, ["graze", "arrow"], {}, phase="after_roll").miss_damage == 8
+    assert apply_options(_Session(), ctx, ["graze", "studied"], {}, phase="after_roll").miss_damage == 3
+    assert apply_options(_Session(), ctx, ["arrow", "graze", "studied"], {}, phase="after_roll").miss_damage == 8

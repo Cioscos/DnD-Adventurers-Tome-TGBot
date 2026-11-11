@@ -11,7 +11,8 @@ from typing import Any
 from core.db.models import CharacterHistory
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
-from core.rules.states import has_state, immune_conditions
+from core.rules.spell_effects import SPELL_STATE_PREFIX
+from core.rules.states import SPELL_SPENT, has_state, immune_conditions, state_conditions
 from core.rules.uses import pool_key
 from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
@@ -154,6 +155,30 @@ _CONDITION_OPTIONS = (
 )
 
 
+def _bastion_left(ctx: RuleContext) -> int:
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "bastion_of_law"), None)
+    return int(((state or {}).get("data") or {}).get("dice") or 0)
+
+
+def _spend_bastion(n: int):
+    def run(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+        left = _bastion_left(ctx) - n
+        states = [s for s in ctx.char.active_states or [] if s.get("key") != "bastion_of_law"]
+        if left > 0:
+            old = next(s for s in ctx.char.active_states if s.get("key") == "bastion_of_law")
+            states.append({**old, "data": {**(old.get("data") or {}), "dice": left}})
+        ctx.char.active_states = states
+    return run
+
+
+# Bastione della Legge (Stregone 2024): i d8 stanno sullo stato di chi è protetto, anche un altro personaggio della serata
+_CONDITION_OPTIONS += tuple(RollOptionSpec(
+    key=f"sorcerer.bastion_of_law_{n}", phase="damage_in", rolls=("damage_taken",), group="sorcerer.bastion_of_law",
+    extra_dice=lambda _c, _i, n=n: f"{n}d8", available=lambda c, n=n: _bastion_left(c) >= n, on_confirm=_spend_bastion(n),
+    label={"it": f"Bastione della Legge: spendi {n}d8 per ridurre il danno", "en": f"Bastion of Law: spend {n}d8 to reduce the damage"})
+    for n in range(1, 6))
+
+
 class OptionUnavailable(Exception):
     """Opzione non applicabile adesso: già usata, senza risorse, di un'altra fase o inesistente."""
 
@@ -175,6 +200,10 @@ class AppliedOptions:
     keys: list[str] = field(default_factory=list)
     extra_dice: list[str] = field(default_factory=list)  # raddoppiano al critico
     fixed_dice: list[str] = field(default_factory=list)  # nel totale, senza raddoppio
+    extra_dice_types: list[str | None] = field(default_factory=list)  # tipo di danno di ogni espressione di ``extra_dice``
+    fixed_dice_types: list[str | None] = field(default_factory=list)  # ... e di ``fixed_dice``
+    rolled_types: list[str | None] = field(default_factory=list)  # tipo di ogni dado tirato, nell'ordine di ``rolled_dice``
+    separate_type: str | None = None  # tipo del danno a parte
     separate_dice: list[list] = field(default_factory=list)  # [espressione, raddoppia], fuori dal totale
     separate_rolls: list[int] = field(default_factory=list)
     separate_total: int = 0
@@ -202,7 +231,9 @@ class AppliedOptions:
     self_heal: int = 0  # PF che chi lancia una cura recupera
     damage_unscaled: int | None = None  # danno dell'arma prima del moltiplicatore, per rilanciare i dadi
     rolled_dice: list[tuple[int, int]] = field(default_factory=list)  # (lati, valore) dei dadi nel totale, ritirabili
+    side_rolls: list[tuple[str, int]] = field(default_factory=list)  # dadi tirati da ``on_confirm`` fuori dal totale (d10 di Passo Rinfrescante): solo cronologia dadi
     holds_at_one: bool = False  # il danno che porta a 0 PF lascia il personaggio a 1 PF
+    holds_vs_massive: bool = False  # ``holds_at_one`` vale anche se il danno uccide sul colpo (Interdizione alla Morte)
     held_heal: int = 0  # PF recuperati oltre a quel 1 PF (Sentinella Imperitura 2024)
     resistance: bool = False  # un'opzione dà resistenza al danno subito, che non si cumula con quella già presente
     self_damage: list[tuple[str, str]] = field(default_factory=list)  # (dadi, tipo) che chi usa le opzioni subisce
@@ -212,6 +243,7 @@ class AppliedOptions:
     finesse_unarmed: bool = False  # per colpire e per il danno vale la migliore fra Forza e Destrezza (Lame Psichiche)
     damage_type: str | None = None  # il danno dell'incantesimo cambia tipo (Incantesimo Trasmutato)
     gifts: list[dict] = field(default_factory=list)  # PF temporanei per un'altra creatura: {"target": id, "value": n}, consegnati dal router
+    concentrates: list[dict] = field(default_factory=list)  # {"spell_id", "rounds"}: incantesimi a concentrazione lanciati da un'opzione dopo il colpo
 
     @property
     def mode(self) -> str | None:
@@ -301,6 +333,12 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
         for option in spec.roll_options:
             if not option.for_ally:  # le ``for_ally`` le offre ai compagni, non a chi le possiede
                 found.setdefault(option.key, RollOption(option, feature_ctx, f"feature:{spec.key}"))
+    from core.rules.spell_effects import spell_state_options  # import locale: il catalogo degli incantesimi usa i tipi delle regole
+    for spec, data in spell_state_options(ctx.char):  # dadi e bonus degli incantesimi ricevuti
+        found.setdefault(spec.key, RollOption(spec, replace(ctx, spell_data=data), f"spell:{data.get('spell_key')}"))
+    from core.rules.spell_effects import on_hit_spell_options
+    for spec, data in on_hit_spell_options(ctx.char) if ctx.roll == "attack" else []:  # incantesimi che si lanciano dopo il colpo (punizioni 2024)
+        found.setdefault(spec.key, RollOption(spec, replace(ctx, spell_data=data), f"spell:{data.get('spell_key')}"))
     for offer in getattr(ctx.char, "party_donors", None) or []:  # messi dal server (``attach_party``)
         donor, spec = offer["donor"], offer["spec"]
         key = f"ally:{donor.id}:{spec.key}"
@@ -346,12 +384,17 @@ def throws_unarmed(char: Any, keys: list[str]) -> bool:
 def _spend_state_token(char: Any, key: str) -> str:
     """Chiude lo stato ``key`` (o, se ha più ``data["charges"]``, ne scala una) e restituisce il gettone che
     ``refund_spent`` usa per rimetterlo com'era."""
-    state = next(s for s in char.active_states or [] if s.get("key") == key)
-    rest = [s for s in char.active_states if s.get("key") != key]
+    state = [s for s in char.active_states or [] if s.get("key") == key][-1]  # con due lanciatori (stesso incantesimo) vale, e si spende, l'ultimo
+    rest = [s for s in char.active_states if s is not state]
     charges = (state.get("data") or {}).get("charges")
     if type(charges) is int and charges > 1:
         rest.append({**state, "data": {**state["data"], "charges": charges - 1}})
     char.active_states = rest
+    caster = (state.get("data") or {}).get("caster_id")
+    if key.startswith(SPELL_STATE_PREFIX) and caster is not None and not any(
+            s.get("key") == key and (s.get("data") or {}).get("caster_id") == caster for s in rest):
+        settings = char.settings or {}  # l'incantesimo termina con l'ultimo uso: il flush chiude il lanciatore
+        char.settings = {**settings, SPELL_SPENT: [*(settings.get(SPELL_SPENT) or []), {"caster_id": caster, "key": key}]}
     return f"state:{key}:{json.dumps(state)}"
 
 
@@ -447,7 +490,9 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
             event_type="roll_option", description=f"{spec.label['it']} ({', '.join(t.split(':{')[0] for t in spent)})",
         ))
     if spec.on_confirm:
-        spec.on_confirm(session, option.ctx, inputs)
+        extra = spec.on_confirm(session, option.ctx, inputs)
+        if isinstance(extra, list):  # gettoni che l'effetto ha scritto sul turno (``turnkey:``), da rimborsare con gli altri
+            spent.extend(extra)
     return spent
 
 
@@ -466,6 +511,10 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     automatic = [o for o in automatic_options_for(ctx) if o.spec.phase == phase]
     keys = list(dict.fromkeys([*(o.spec.key for o in automatic), *keys]))  # le automatiche per prime, una volta sola
     usable = {o.spec.key: o for o in [*roll_options_for(ctx), *automatic] if o.spec.phase == phase}
+    turned = next((usable[k].spec.damage_type_to for k in keys if k in usable and usable[k].spec.damage_type_to), None)
+    if turned and phase == "before":  # Incantesimo Trasmutato: le altre opzioni leggono il tipo nuovo (Affinità Elementale)
+        fixed = {k: o for k, o in usable.items() if o.spec.damage_type_to or o.spec.automatic}
+        usable = {**{o.spec.key: o for o in roll_options_for(replace(ctx, damage_type=turned)) if o.spec.phase == phase}, **fixed}
     confirmed = ctx.confirmed if phase != "before" else ()
     # Prima del tiro ``needs`` è soddisfatto anche da un'opzione «una volta per turno» già dichiarata in questo turno (Colpo
     # Brutale su un attacco successivo a quello dell'Attacco Irruento)
@@ -473,6 +522,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     out = AppliedOptions()
     dice: dict[str, str] = {}
     groups: dict[str, int] = {}
+    graze = added = 0
     for key in keys:
         option = usable.get(key)
         if option is None or (option.spec.needs and option.spec.needs not in keys
@@ -488,12 +538,16 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.requires_input == "recover":
             _recover_level(option, given)
         pre_dice = spec.extra_dice(option.ctx, given) if spec.extra_dice else None  # prima del pagamento: Implacabile lo cambia
+        rolled_before = given.get("rolled")
         paid = _spend(session, option, given)
+        if given.get("rolled") != rolled_before and isinstance(given.get("rolled"), int):
+            out.side_rolls.append(("d10", given["rolled"]))  # shortcut: l'unico dado che ``on_confirm`` tira e scrive in ``rolled`` è il d10 di Passo Rinfrescante
         out.spent += paid
         out.keys.append(key)
         if spec.pay_if_success or spec.holds_at_one:
             out.refundable[key] = paid
         out.holds_at_one = out.holds_at_one or spec.holds_at_one
+        out.holds_vs_massive = out.holds_vs_massive or spec.holds_vs_massive
         if spec.holds_heal:
             out.held_heal = max(out.held_heal, spec.holds_heal(option.ctx))
         out.resistance = out.resistance or spec.grants_resistance
@@ -507,7 +561,12 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
             out.reroll_limit += spec.reroll_dice(option.ctx, given)
             out.keep_rolled = out.keep_rolled or spec.keep_rolled
         if spec.miss_damage:  # «declared_only» (pulsante Mancato): arma l'opzione senza il danno di Graze
-            out.miss_damage = max(out.miss_damage or 0, 0 if given.get("declared_only") else max(0, spec.miss_damage(option.ctx)))
+            dealt = 0 if given.get("declared_only") else max(0, spec.miss_damage(option.ctx))
+            if spec.miss_damage_adds:  # un altro danno (Freccia Folgorante): si somma a Graze
+                added += dealt
+            else:  # Graze e Attacchi Studiati sono lo stesso Graze: il maggiore
+                graze = max(graze, dealt)
+            out.miss_damage = graze + added
         if spec.self_heal:  # prima di ``effect``: l'esito può citare il tiro che `self_heal` scrive in ``given``
             out.self_heal += max(0, spec.self_heal(option.ctx, given))
         if spec.effect:
@@ -517,6 +576,8 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.target_effect:
             keep_target_effect(ctx.char, key, spec.target_effect(option.ctx, given))
             out.targets.append(key)
+        if spec.starts_concentration is not None:
+            out.concentrates.append({"spell_id": (option.ctx.spell_data or {}).get("spell_id"), "rounds": spec.starts_concentration})
         if pre_dice is not None:
             dice[key] = pre_dice
         if spec.bonus:
@@ -559,8 +620,13 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         spec = usable[key].spec
         if spec.separate_damage:
             out.separate_dice.append([expr, spec.crit_doubles])
+            out.separate_type = spec.extra_damage_type or out.separate_type
+        elif spec.crit_doubles:
+            out.extra_dice.append(expr)
+            out.extra_dice_types.append(spec.extra_damage_type)
         else:
-            (out.extra_dice if spec.crit_doubles else out.fixed_dice).append(expr)
+            out.fixed_dice.append(expr)
+            out.fixed_dice_types.append(spec.extra_damage_type)
     return out
 
 
@@ -572,6 +638,8 @@ def refund_spent(char: Any, spent: list[str]) -> None:
         kind, _, rest = token.partition(":")
         if kind == "once":
             turn["once_per_turn"] = [k for k in turn.get("once_per_turn", []) if k != rest]
+        elif kind == "turnkey":  # un segno scritto sul turno da ``on_confirm`` (Apoteosi Arcana)
+            turn.pop(rest, None)
         elif kind == "turn" and rest == "extra_action":
             turn["extra_actions"] = turn.get("extra_actions", 0) + 1
         elif kind == "turn":
@@ -593,11 +661,17 @@ def refund_spent(char: Any, spent: list[str]) -> None:
             if slot is not None:
                 slot.used -= 1
         elif kind == "state":
-            key, _, blob = rest.partition(":")
-            state = json.loads(blob)
-            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key), state]
-            if state.get("condition"):  # lo stato rimesso rimette anche la condizione che imponeva
-                char.conditions = {**(char.conditions or {}), state["condition"]: True}
+            key, _, blob = rest.partition(":{")  # la chiave può avere i due punti (``spell:guidance``)
+            state = json.loads("{" + blob)
+            owner = (state.get("data") or {}).get("caster_id")  # uno stato per lanciatore: si rimette solo il suo
+            char.active_states = [*(s for s in char.active_states or [] if s.get("key") != key or (s.get("data") or {}).get("caster_id") != owner), state]
+            if key.startswith(SPELL_STATE_PREFIX):  # l'incantesimo non è finito: il pagamento annullato toglie la fine in attesa
+                pending = (char.settings or {}).get(SPELL_SPENT) or []
+                mine = next((e for e in pending if e["key"] == key and e["caster_id"] == (state.get("data") or {}).get("caster_id")), None)
+                if mine is not None:
+                    char.settings = {**char.settings, SPELL_SPENT: [e for e in pending if e is not mine]}
+            if state.get("condition"):  # lo stato rimesso rimette anche le condizioni che imponeva
+                char.conditions = {**(char.conditions or {}), **{c: True for c in state_conditions(state)}}
         elif kind == "die":
             key, _, value = rest.rpartition(":")
             _store_saved_dice(char, key, [*saved_dice(char, key), int(value)])

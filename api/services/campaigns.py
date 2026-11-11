@@ -6,10 +6,11 @@ import string
 from pathlib import Path
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db.models import Campaign, Character, Currency
+from core.db.models import Campaign, CampaignMember, Character, Currency
 
 STASH_USER_ID = 0  # owner of stash characters: never a real Telegram user
 _ALPHABET = string.ascii_uppercase + string.digits
@@ -50,3 +51,19 @@ def unlink_file(path: str | None) -> None:
             Path(path).unlink(missing_ok=True)
         except OSError:
             pass
+
+
+async def campaign_access(db: AsyncSession, campaign_id: int, user_id: int) -> bool:
+    """True if the caller is the GM; 403 for non-members, 404 for a missing campaign."""
+    camp = await db.get(Campaign, campaign_id)
+    if camp is None:
+        raise HTTPException(status_code=404, detail="campaign_not_found")
+    if camp.gm_user_id == user_id:
+        return True
+    is_member = (await db.execute(
+        select(CampaignMember.id).where(
+            CampaignMember.campaign_id == campaign_id, CampaignMember.user_id == user_id)
+    )).first() is not None
+    if not is_member:
+        raise HTTPException(status_code=403, detail="not_a_member")
+    return False

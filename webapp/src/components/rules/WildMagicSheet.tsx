@@ -1,7 +1,9 @@
+import { apiErrorCode } from '@/lib/mutationError'
+import { uiLang } from '@/lib/lang'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import type { WildSurgeEntry, WildSurgeResult } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
@@ -24,7 +26,7 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const is24 = char.rules_edition === '2024'
   const [asked, setAsked] = useState(false)
   const [pick, setPick] = useState('')
@@ -47,7 +49,7 @@ export default function WildMagicSheet({ char, onClose }: { char: CharacterFull;
     qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
   }
   const fail = (err: unknown) => {
-    const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+    const code = apiErrorCode(err)
     toast.error(t(`character.turn.wild.errors.${code && ERRORS.includes(code) ? code : 'default'}`))
     qc.invalidateQueries({ queryKey: ['character', char.id] })
   }

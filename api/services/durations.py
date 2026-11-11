@@ -13,11 +13,10 @@ from core.db.models import Character, Combatant, ConditionEffect, Encounter, Pen
 from api.services.condition_effects import (
     UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
-from api.services.effects import _add_history
+from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
-from core.rules.edition import character_edition
-from core.rules.states import exhaustion_level
+from core.rules.states import SPELL_GIVEN, exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
 
 
@@ -84,7 +83,7 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
     if ended:
         char.concentrating_spell_id = None
         end_states(char, "concentration_end")
-        _add_history(session, char.id, "concentration",
+        add_history(session, char.id, "concentration",
                      "Concentrazione terminata: durata scaduta")
     return entry, ended
 
@@ -140,7 +139,8 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
     def remember(pc: Character) -> None:  # prima di ogni modifica: l'annullamento li rimette com'erano
         undo.char_states.setdefault(str(pc.id), {
             "active_states": list(pc.active_states or []), "damaged": get_turn(pc)["damaged"],
-            "exhaustion": exhaustion_level(pc), "is_dead": bool(pc.is_dead)})  # lo stato che scade la addebita
+            "exhaustion": exhaustion_level(pc), "is_dead": bool(pc.is_dead),
+            "spell_given": (pc.settings or {}).get(SPELL_GIVEN)})  # lo stato che scade la addebita
 
     if char is not None:
         remember(char)
@@ -162,19 +162,26 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
 
     if char is not None and edge == "start":
         reset_turn(char)
-        before_hp, was_inspired = char.current_hit_points, bool(char.heroic_inspiration)
+        before_hp, before_temp, was_inspired = char.current_hit_points, char.temp_hp or 0, bool(char.heroic_inspiration)
+        before_saves, was_unconscious = dict(char.death_saves or {}), bool((char.conditions or {}).get("unconscious"))
         if await apply_turn_start(db, char):  # Sopravvissuto: la cura d'inizio turno si annulla con l'avanzamento
-            undo.char_states[str(char.id)]["healed"] = {"before": before_hp, "after": char.current_hit_points}
+            undo.char_states[str(char.id)]["healed"] = {
+                "before": before_hp, "after": char.current_hit_points,
+                # curato da 0 PF: tornano anche i tiri salvezza contro la morte e lo stato privo di sensi
+                **({"death_saves": before_saves, "unconscious": was_unconscious} if before_hp == 0 else {})}
+        if (char.temp_hp or 0) != before_temp:  # Eroismo: i PF temporanei di inizio turno
+            undo.char_states[str(char.id)]["temp"] = {"before": before_temp, "after": char.temp_hp}
         if char.heroic_inspiration and not was_inspired:  # Guerriero Eroico: l'annullamento la toglie
             undo.char_states[str(char.id)]["inspired"] = True
-        expired += tick_states(char)
-        entry, ended = _tick_concentration(db, char)
-        if entry is not None:
-            undo.concentration = entry
-        if ended:
-            expired.append("Concentrazione")
-            expired += await release_concentration_effects(
-                db, char, entry["released_effects"])
+        if combatant.extra_turn_of is None:  # il secondo turno dei Riflessi è nello stesso round: gli stati scorrono una volta
+            expired += tick_states(char)
+            entry, ended = _tick_concentration(db, char)
+            if entry is not None:
+                undo.concentration = entry
+            if ended:
+                expired.append("Concentrazione")
+                expired += await release_concentration_effects(
+                    db, char, entry["released_effects"])
 
     if edge == "end":  # fine del turno di chiunque: finiscono gli stati «fino alla fine del turno» (Difesa dal Multiattacco)
         pcs = (await db.execute(select(Character).join(Combatant, Combatant.character_id == Character.id).where(

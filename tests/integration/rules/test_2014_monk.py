@@ -357,7 +357,7 @@ async def test_hit_points_after_the_xp_that_raises_the_monk_level_follow_the_eff
 # ---------------------------------------------------------------------------
 
 async def test_beyond_option_names_find_the_elemental_disciplines(test_session_factory):
-    from api.routers.transfer import _apply_class_options
+    from api.services.ddb_import import apply_class_options
     from api.services.ddb_import import ImportReport
     from core.rules.sample_characters import build_rules_character
 
@@ -366,7 +366,7 @@ async def test_beyond_option_names_find_the_elemental_disciplines(test_session_f
                                                "classes": [("Monaco", 6, "Via dei Quattro Elementi", 8)]}, 1)
         report = ImportReport()
         names = ("Fist of Four Thunders", "Gong of the Summit", "Water Whip", "Ride the Wind", "Dragon Slayer")
-        _apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
+        apply_class_options(char, [{"class_index": 0, "name": n} for n in names], report, "it")
         # al 6° livello sono due: la terza è fuori limite e la quarta (11°) non è ancora disponibile; il resto resta nel report
         assert char.classes[0].options["elemental_disciplines"] == ["fist_of_four_thunders", "gong_of_the_summit"]
         assert [e.name for e in report.approximated] == ["Water Whip", "Ride the Wind", "Dragon Slayer"]

@@ -17,7 +17,7 @@ import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { askRollOptions, refreshAfterOptions, rerollDiceOf } from '@/lib/rollOptions'
-import { notifyMutationError } from '@/lib/mutationError'
+import { notifyMutationError, apiErrorCode } from '@/lib/mutationError'
 import { bonusSpentOnReturn } from '@/lib/formReturn'
 import { haptic } from '@/auth/telegram'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
@@ -64,6 +64,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['companions', charId] })
     qc.invalidateQueries({ queryKey: ['character', charId] })
+    qc.invalidateQueries({ queryKey: ['turn-state', charId] })
   }
 
   const hp = useMutation({
@@ -73,9 +74,9 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       if (updated.concentration_save) setConcSave(updated.concentration_save)
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (code === 'turn_slot_used') toast.error(t('character.extras.chain_master.reaction_used'))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
 
@@ -95,7 +96,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       refresh()
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (code === 'incapacitated') {
         toast.error(t('character.attack.incapacitated'))
       } else if (code === 'no_order') {
@@ -105,7 +106,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       } else if (code === 'companion_down') {
         toast.error(t('character.extras.beast.errors.companion_down'))
       } else {
-        notifyMutationError()
+        notifyMutationError(err)
       }
     },
   })
@@ -119,9 +120,9 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       toast.info(t('character.extras.beast.hit_dice_healed', { n: r.healed }), { description: t('character.extras.beast.hit_dice_left', { n: r.hit_dice_left }) })
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (code && ['no_hit_dice', 'hp_full', 'companion_down'].includes(code)) toast.error(t(`character.extras.beast.hit_dice_errors.${code}`))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
   const hdTotal = Number(/^(\d+)d\d+$/.exec(String(comp.statblock.hit_dice ?? ''))?.[1] ?? 0)
@@ -136,7 +137,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
       else if (typeof detail === 'object' && detail?.code === 'turn_slot_used') toast.error(t(detail.slot === 'action' ? 'character.extras.action_used' : 'character.attack.bonus_used'))
       else if (err instanceof ApiError && err.status === 409 && err.detail === 'no_wild_shape_uses') setForceAsk(true)
       else if (err instanceof ApiError && err.status === 409 && err.detail === 'character_down') toast.error(t('character.extras.character_down'))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
 
@@ -145,7 +146,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
     onSuccess: refresh,
     onError: (err) => {
       if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
-      else notifyMutationError()
+      else notifyMutationError(err)
     },
   })
 
@@ -155,7 +156,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
     onError: (err) => {
       setConfirmDelete(false)  // rifiutata: la scheda e la forma restano dove sono
       if (bonusSpentOnReturn(err)) toast.error(t('character.extras.return_bonus_used'))
-      else notifyMutationError()
+      else notifyMutationError(err)
       refresh()
     },
   })
@@ -272,7 +273,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
         <p role="status" className="text-sm font-mono tabular-nums text-dnd-text px-3 py-2 rounded-xl bg-dnd-surface-raised border border-dnd-border">
           {result.name}: {result.r.to_hit_die}{result.r.to_hit_bonus >= 0 ? '+' : ''}{result.r.to_hit_bonus} = {result.r.to_hit_total}
           {result.r.is_critical && ` · ${t('character.extras.critical')}`}
-          {' · '}{result.r.damage_total} {result.r.damage_type ?? ''}
+          {' · '}{result.r.damage_total} {result.r.damage_type ? t(`character.inventory.damage_types.dmg_${result.r.damage_type}`, { defaultValue: result.r.damage_type }) : ''}
           {result.r.is_magical && ` · ${t('character.extras.magical')}`}
           <RollNotes notes={result.r.notes} className="mt-1" />
         </p>

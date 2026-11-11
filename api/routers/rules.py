@@ -1,9 +1,7 @@
 """Cataloghi delle regole di classe (sola lettura)."""
 from __future__ import annotations
 
-import asyncio
 import random
-from collections import defaultdict
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -15,20 +13,23 @@ from api.database import get_db
 from api.schemas.session import TurnBlock
 from api.routers._helpers import unarmed_attack_profile, weapon_attack_profile
 from api.routers._helpers import retouch_concentration
-from api.routers.characters import _add_history, close_pending_save, open_failed_save
-from api.routers.hp import _get_owned_full, death_state, retouch_death_save
+from api.routers.characters import close_pending_save, open_failed_save
+from api.services.history import add_history
+from api.routers.hp import death_state, retouch_death_save
 from api.routers.items import close_grazed_attack, retouch_pending_attack
-from api.routers.encounters import _notify_saves
-from api.routers.sessions import _touch, active_encounter_row
+from api.routers.sessions import active_encounter_row
+from api.services.game_sessions import touch
 from api.services.rules_targets import apply_target_effect, pending_target_effect
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
+from api.services.spell_effects import end_by_target, resists_chosen_type
 from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
-from api.services.session_allies import attach_party, attach_party_auras, seated_allies
+from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
+from core.rules.spell_effects import SPELL_STATE_PREFIX
 from core.rules.states import is_target_immune
 from api.services.turn_start import apply_turn_start
 from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
@@ -57,6 +58,8 @@ from core.rules.roll_options import AppliedOptions, refund_spent
 from core.rules.starting_equipment import describe as describe_starting_equipment
 from core.rules.subclasses import subclasses_for
 from core.rules.types import BARDIC_DIE, Edition
+from api.services.character_load import get_owned_full_with_resources
+from api.services.telegram_notify import notify_saves
 
 router = APIRouter(prefix="/rules", tags=["rules"])
 
@@ -165,13 +168,17 @@ async def roll_options(
     damage: int | None = None,
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     item = next((i for i in char.items if i.id == item_id), None)
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if (item_id is not None and item is None) or (spell_id is not None and spell is None):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not found")
     if roll == "initiative":
         ability = "dexterity"
+    if spell is not None and resists_chosen_type(char, spell):
+        damage_type = None  # il tipo scelto è quello a cui si resiste: non attiva i privilegi sul danno inflitto
+    if roll not in ("save", "death_save", "damage_taken"):
+        await attach_spell_auras(db, char)  # le aure vive dei compagni (Manto del Crociato)
     if roll in ("save", "death_save", "damage_taken"):
         if roll == "damage_taken":  # aure dei compagni e Dono dei Protettori di un compagno
             await attach_party(db, char)
@@ -207,7 +214,7 @@ async def last_roll_options(
     body: Annotated[LastRollBody | None, Body()] = None,
 ) -> LastRollResult:
     """Privilegi usati dopo aver visto il d20. Il tiro è quello salvato dal server, non quello del client."""
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     body = body or LastRollBody()
     turn = get_turn(char)
     last, pending = turn.get("last_roll"), turn.get("pending_attack")
@@ -263,7 +270,7 @@ async def last_roll_options(
     block = option_result(opts, rolls, extra, previous=previous)
     refundable = {**last["refundable"], **opts.refundable}
     if opts.keys:
-        _add_history(db, char.id, "concentration_save" if conc else _HISTORY_EVENT[last["roll"]],
+        add_history(db, char.id, "concentration_save" if conc else _HISTORY_EVENT[last["roll"]],
                      f"Dopo il tiro ({', '.join(opts.keys)}): d20={die} {bonus:+d} = {total}")
 
     closed: dict = {}
@@ -285,7 +292,7 @@ async def last_roll_options(
         failed = closed["death"].outcome in ("failure", "nat1")
     elif combatant:
         combatant.initiative, combatant.initiative_die = total, die
-        _touch(await db.get(GameSession, encounter.session_id))
+        touch(await db.get(GameSession, encounter.session_id))
     if failed is not None:
         if failed:
             refund_spent(char, [token for spent in refundable.values() for token in spent])
@@ -322,14 +329,14 @@ async def last_roll_refund(
     body: Annotated[LastRollRefund | None, Body()] = None,
 ) -> dict:
     """Il giocatore dichiara l'esito: se è fallito tornano le opzioni che si pagano solo se riesce."""
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     last = get_turn(char).get("last_roll") or {}
     refundable = last.get("refundable")
     if not refundable:
         raise _refuse("nothing_to_refund")
     if not (body and body.succeeded):
         refund_spent(char, [token for spent in refundable.values() for token in spent])
-        _add_history(db, char.id, _HISTORY_EVENT[last["roll"]], f"Tiro fallito, rimborsato: {', '.join(refundable)}")
+        add_history(db, char.id, _HISTORY_EVENT[last["roll"]], f"Tiro fallito, rimborsato: {', '.join(refundable)}")
     turn = {**get_turn(char), "last_roll": {**last, "refundable": {}}}
     char.turn_state = turn
     await db.commit()  # come sopra: una rilettura immediata non deve riproporre la domanda
@@ -360,20 +367,15 @@ class FeatureUseResult(BaseModel):
     removal: list[dict[str, str]] = []  # esiti delle condizioni tolte (Task 48), nelle due lingue
 
 
-_FEATURE_LOCKS: defaultdict[tuple[int, int], asyncio.Lock] = defaultdict(asyncio.Lock)  # (event loop, personaggio)
-
-
 @turn_router.post("/{char_id}/features/{feature_key}/use", response_model=FeatureUseResult)
 async def feature_use(
     char_id: int, feature_key: str, body: FeatureUse, user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> FeatureUseResult:
-    # Un uso alla volta per personaggio: la seconda richiesta rilegge il turno e i totali già scritti dalla prima, così un doppio
-    # tocco non paga due volte ciò che ottiene una (slot creato). shortcut: un solo processo API, con più worker serve un lock nel DB.
-    async with _FEATURE_LOCKS[id(asyncio.get_running_loop()), char_id]:
-        char = await _get_owned_full(char_id, user_id, db)
-        res = await use_feature(db, char, feature_key, body.amount, body.params)
-        await db.commit()
+    # Un uso alla volta per personaggio: lo garantisce il lock globale (api/locks.py).
+    char = await get_owned_full_with_resources(char_id, user_id, db)
+    res = await use_feature(db, char, feature_key, body.amount, body.params)
+    await db.commit()
     return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets,
                             given=res.given, received=res.received, temp_hp=res.temp_hp, temp_received=res.temp_received, message=res.message, attack=res.attack, removal=res.removal)
 
@@ -397,7 +399,7 @@ async def preserve_life_endpoint(
     """Preservare Vita (R42): distribuisce 5 × livello PF fra chi usa il privilegio e gli altri partecipanti della serata."""
     from dataclasses import asdict
     from api.services.preserve_life import preserve_life
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     try:
         allocations = [(int(a["character_id"]), int(a["amount"])) for a in body.allocations]
     except (KeyError, TypeError, ValueError):
@@ -428,7 +430,7 @@ async def preserve_life_info(
     per chi può usare il privilegio adesso."""
     from dataclasses import asdict
     from api.services.preserve_life import info
-    res = await info(db, await _get_owned_full(char_id, user_id, db))
+    res = await info(db, await get_owned_full_with_resources(char_id, user_id, db))
     return PreserveLifeInfo(pool=res.pool, uses_left=res.uses_left, targets=[asdict(t) for t in res.targets],
                             needs_confirm=res.needs_confirm)
 
@@ -463,7 +465,7 @@ async def wild_magic_surge(
     from api.services.wild_magic import roll_surge
     if body.percentile is not None and any(not 1 <= p <= 100 for p in body.percentile):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "bad_percentile"})
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     return await roll_surge(db, char, body.die, body.percentile, body.tides, body.repeat, body.tamed)
 
 
@@ -473,7 +475,7 @@ async def wild_magic_table(
 ) -> list[dict]:
     """La tabella degli impulsi dell'edizione del personaggio (per scegliere l'effetto di Impulso Domato)."""
     from api.services.wild_magic import surge_table
-    return surge_table(await _get_owned_full(char_id, user_id, db))
+    return surge_table(await get_owned_full_with_resources(char_id, user_id, db))
 
 
 @turn_router.post("/{char_id}/wild-magic/surge/choose", response_model=SurgeResult)
@@ -483,7 +485,7 @@ async def wild_magic_choose(
 ) -> dict:
     """Caos Controllato: il giocatore sceglie fra i due risultati tirati."""
     from api.services.wild_magic import choose_surge
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     return await choose_surge(db, char, body.index)
 
 
@@ -509,6 +511,25 @@ async def session_allies(
             for a in await seated_allies(db, char)]
 
 
+class WeaponRead(BaseModel):
+    id: int
+    name: str
+
+
+@turn_router.get("/{char_id}/session-allies/{ally_id}/weapons", response_model=list[WeaponRead])
+async def ally_weapons(
+    char_id: int, ally_id: int, user_id: Annotated[int, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    kinds: str = "",
+) -> list[WeaponRead]:
+    """Le armi senza bonus magico di ``ally_id`` (te stesso o un compagno della serata): la scelta di Arma Magica e Arma Elementale.
+    ``kinds`` (chiavi di ``WEAPONS``, separate da virgola) le limita a quei tipi, comprese le magiche (Randello Incantato)."""
+    from api.services.session_allies import ally_target  # import locale
+    from api.services.spell_effects import plain_weapons  # import locale: il servizio degli incantesimi importa questo modulo
+    char = await _owned_char(db, char_id, user_id)
+    owner = char if ally_id == char.id else await ally_target(db, char, ally_id)
+    return [WeaponRead(id=i.id, name=i.name) for i in await plain_weapons(db, owner.id, tuple(k for k in kinds.split(",") if k))]
+
+
 class BardicDieAc(BaseModel):
     die: int
     roll: int
@@ -520,7 +541,7 @@ async def bardic_die_ac(
 ) -> BardicDieAc:
     """Ispirazione in Combattimento (Collegio del Valore): in reazione, il dado ricevuto si somma alla CA contro un attacco.
     Spende la reazione e il dado; il valore da sommare lo dice la risposta. Con la reazione già spesa non perde il dado."""
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     refuse_if_incapacitated(char)
     state = next((s for s in char.active_states or [] if s.get("key") == BARDIC_DIE), None)
     if state is None or not (state.get("data") or {}).get("combat"):
@@ -530,7 +551,7 @@ async def bardic_die_ac(
     roll = random.randint(1, die)
     record_dice(char, [(f"d{die}", roll)])
     remove_state(char, BARDIC_DIE)
-    _add_history(db, char.id, "dice_roll", f"Ispirazione in Combattimento: +{roll} alla CA (d{die})")
+    add_history(db, char.id, "dice_roll", f"Ispirazione in Combattimento: +{roll} alla CA (d{die})")
     return BardicDieAc(die=die, roll=roll)
 
 
@@ -539,12 +560,15 @@ async def end_active_state(
     char_id: int, key: str, user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[dict]:
-    char = await _get_owned_full(char_id, user_id, db)
+    char = await get_owned_full_with_resources(char_id, user_id, db)
     form = await get_active_form(db, char.id) if key == WILD_SHAPE_STATE else None
     if form is not None:  # il ritorno alla forma normale ha un solo percorso, con il suo costo (come «Termina» da Extra)
         return_to_normal(char, form)
         return char.active_states
+    closed = [s for s in char.active_states or [] if s.get("key") == key]
     remove_state(char, key, by_player=True)
+    if key.startswith(SPELL_STATE_PREFIX):
+        await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi
     return char.active_states
 
 
@@ -593,9 +617,9 @@ async def target_effect_apply(
     if target is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Combatant not found")
     applied, save = await apply_target_effect(db, char, enc, mine, target, body.effect_key)
-    _touch(await db.get(GameSession, enc.session_id))
+    touch(await db.get(GameSession, enc.session_id))
     await db.flush()
     if save is not None:
-        await _notify_saves(db, [save.id])
+        await notify_saves(db, [save.id])
     return TargetEffectResult(applied=applied, result=result, target_name=target.name,
                               pending_save_id=save.id if save else None)

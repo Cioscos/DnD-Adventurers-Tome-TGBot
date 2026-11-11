@@ -159,6 +159,8 @@ export default function Settings() {
     mutationFn: (rules_edition: '2014' | '2024') => api.characters.update(charId, { rules_edition }),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
+      // L'edizione cambia opzioni di classe, «Preservare la Vita» e azioni del Turno: non aspettano la cache da 30 s.
+      for (const k of ['class-options', 'preserve-life', 'turn-state']) qc.invalidateQueries({ queryKey: [k, charId] })
       haptic.success()
     },
     onError: () => {

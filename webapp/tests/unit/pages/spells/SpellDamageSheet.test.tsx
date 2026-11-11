@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
+import { useEffectPickStore } from '@/lib/rollOptions'
 import type { Spell, RollDamageResult } from '@/types'
 
-const { rollDamage, useSpell, updateConc, askRollOptions } = vi.hoisted(() => ({
-  rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn(), askRollOptions: vi.fn(),
+const { rollDamage, useSpell, updateConc, askRollOptions, playAndCollect, flags } = vi.hoisted(() => ({
+  rollDamage: vi.fn(), useSpell: vi.fn(), updateConc: vi.fn(), askRollOptions: vi.fn(), playAndCollect: vi.fn(), flags: { anim: false },
 }))
 vi.mock('@/lib/rollOptions', async (orig) => ({ ...((await orig()) as object), askRollOptions }))
 
@@ -32,9 +34,9 @@ vi.mock('framer-motion', async () => {
   }
 })
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
-vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: () => Promise.resolve([]) }) }))
-vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }) }))
-vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
+vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: (g: unknown) => (flags.anim ? playAndCollect(g) : Promise.resolve([])) }) }))
+vi.mock('@/store/diceSettings', () => ({ useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: flags.anim }) }))
+vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => !flags.anim }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
@@ -48,8 +50,8 @@ const result: RollDamageResult = { total: 14, half_damage: 7, breakdown: '2d6+2 
 const cantrip = { id: 1, name: 'Mano Magica', level: 0, attack_save: 'ATK', is_concentration: false, damage_dice: '1d8' } as Spell
 const leveled = { id: 2, name: 'Palla di Fuoco', level: 3, attack_save: 'DEX', is_concentration: false, damage_dice: '8d6' } as Spell
 
-beforeEach(() => askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }))
-afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset() })
+beforeEach(() => { askRollOptions.mockResolvedValue({ options: [], option_inputs: {} }); useEffectPickStore.setState({ picked: {} }) })
+afterEach(() => { rollDamage.mockReset(); useSpell.mockReset(); updateConc.mockReset(); askRollOptions.mockReset(); playAndCollect.mockReset(); flags.anim = false })
 
 describe('SpellDamageSheet', () => {
   it('renders nothing without a spell', () => {
@@ -88,6 +90,58 @@ describe('SpellDamageSheet', () => {
   })
 
 
+  it('shows the damage type chosen at the cast before the roll and sends it with the options and the roll', async () => {
+    useEffectPickStore.setState({ picked: { 2: { choices: { damage_type: 'cold' } } } })
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    expect(screen.getByText(/character.spells.roll_damage.chosen_type/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ damage_type: 'cold' })))
+    expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', damage_type: 'cold' }))
+  })
+
+  it('a rejected cast shows and sends no type, and leaves the pick out of the store', async () => {
+    useEffectPickStore.setState({ picked: { 2: { choices: { damage_type: 'cold' } } } })
+    useSpell.mockRejectedValue(new Error('409'))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)
+    expect(screen.queryByText(/chosen_type/)).toBeNull()  // non ancora confermato dal server
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(useSpell).toHaveBeenCalled())
+    await waitFor(() => expect(useEffectPickStore.getState().picked[2]).toBeUndefined())
+    expect(rollDamage).not.toHaveBeenCalled()
+    expect(screen.queryByText(/chosen_type/)).toBeNull()
+  })
+
+  it('closes the sheet when the cast is refused, so a retry starts again from the choices (point 85)', async () => {
+    const onClose = vi.fn()
+    useSpell.mockRejectedValue(new Error('409'))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('keeps the sheet open when the cast went through and only the damage roll failed', async () => {
+    const onClose = vi.fn()
+    useSpell.mockResolvedValue({ id: 7 })
+    rollDamage.mockRejectedValue(new Error('500'))
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalled())
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('sends no damage type and shows no chosen type when the cast chose none', async () => {
+    rollDamage.mockResolvedValue(result)
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    expect(screen.queryByText(/chosen_type/)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalled())
+    expect(rollDamage.mock.calls[0][2]).not.toHaveProperty('damage_type')
+    expect(askRollOptions.mock.calls[0][1]).not.toHaveProperty('damage_type')
+  })
+
   it('shows the second damage part before the roll, and the dice typed by hand do not replace it', async () => {
     rollDamage.mockResolvedValue(result)
     useSpell.mockResolvedValue({ id: 7 })
@@ -108,6 +162,17 @@ describe('SpellDamageSheet', () => {
     await userEvent.click(screen.getByText('character.inventory.damage_types.dmg_necrotic'))
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ extra_damage_type: 'necrotic' })))
+  })
+
+  it('counts the 3D dice from the upcast type the server saved, even when the pick store is empty (Flame Strike, radiant)', async () => {
+    flags.anim = true
+    playAndCollect.mockResolvedValue([])
+    rollDamage.mockResolvedValue(result)
+    const strike = { ...leveled, damage_dice: '4d6', higher_levels_dice: '1d6', extra_damage_dice: '4d6', extra_damage_type: 'radiant' } as Spell
+    useSpell.mockResolvedValue({ id: 7, spells: [{ ...strike, effect: { cast_upcast_type: 'radiant' } }] })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={strike} slotLevel={4} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd6', count: 4 }, { kind: 'd6', count: 5 }]))
   })
 
   it('names each group of dice by its damage type in the result', async () => {
@@ -185,5 +250,33 @@ describe('SpellDamageSheet', () => {
     renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} onClose={() => {}} onBack={onBack} />)
     await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+
+  // 97: il secondo tiro è un nuovo lancio: serve uno slot dello stesso livello, altrimenti si avvisa senza lanciare
+  it('a new roll with no slot left of that level warns instead of casting again', async () => {
+    const empty = { id: 7, spell_slots: [{ id: 21, level: 3, available: 0 }] }
+    useSpell.mockResolvedValue(empty)
+    rollDamage.mockResolvedValue(result)
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['character', 7], empty)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotId={21} onClose={() => {}} />, { client: qc })
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.spells.roll_damage.reroll' }))
+    expect(screen.getByText('character.spells.roll_damage.no_slots_warning_title')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /roll_button/ })).not.toBeInTheDocument()  // resta sul risultato
+    expect(useSpell).toHaveBeenCalledTimes(1)
+  })
+
+  it('a new roll with a slot left goes back to the form and casts again', async () => {
+    const withSlot = { id: 7, spell_slots: [{ id: 21, level: 3, available: 1 }] }  // il lancio riscrive la scheda: il server dice quanti slot restano
+    useSpell.mockResolvedValue(withSlot)
+    rollDamage.mockResolvedValue(result)
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['character', 7], withSlot)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} slotId={21} onClose={() => {}} />, { client: qc })
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.spells.roll_damage.reroll' }))
+    await userEvent.click(await screen.findByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(useSpell).toHaveBeenCalledTimes(2))
   })
 })

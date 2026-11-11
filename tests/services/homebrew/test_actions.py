@@ -381,6 +381,28 @@ async def test_unequip_armor_resets_base_ac(db_session):
 
 
 @pytest.mark.asyncio
+async def test_unequip_armor_recomputes_base_ac_from_dexterity(db_session):  # minori 27 (M4): non scrive 10 fisso
+    from core.db.models import AbilityScore
+
+    char = Character(user_id=1, name="Agile", base_armor_class=14, base_armor_class_override=False)
+    db_session.add(char)
+    await db_session.flush()
+    db_session.add(AbilityScore(character_id=char.id, name="dexterity", value=16))
+    armor = Item(character_id=char.id, name="Cuoio", item_type="armor",
+                 item_metadata=json.dumps({"ac_value": 11, "armor_type": "light"}), is_equipped=True)
+    db_session.add(armor)
+    await db_session.flush()
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": armor.id, "metadata": json.loads(armor.item_metadata)},
+        character={"id": char.id},
+    )
+    await execute_unequip({"action": "unequip", "target": "subject"}, ctx, RuleFiringResult(rule_id=1, rule_name="r"), db_session, char)
+    await db_session.refresh(char)
+    assert char.base_armor_class == 13  # 10 + Des 3
+
+
+@pytest.mark.asyncio
 async def test_unequip_armor_respects_override(db_session):
     char = Character(user_id=1, name="Tank", base_armor_class=16,
                      base_armor_class_override=True)

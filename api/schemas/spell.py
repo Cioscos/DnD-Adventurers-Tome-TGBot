@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
+from core.rules.spell_healing import SPELL_HEALING
 from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -22,8 +23,15 @@ class SpellRead(BaseModel):
     level: int
     description: Optional[str] = None
     casting_time: Optional[str] = None
+    # Tempo di lancio che vale ora (Campione degli Antichi, Rompi-Incantesimi lo portano ad azione bonus); `casting_time` è
+    # quello salvato, il solo che il form di modifica rimanda. Lo riempie `fill_spell_stats`.
+    effective_casting_time: Optional[str] = None
     range_area: Optional[str] = None
     components: Optional[str] = None
+    # Gittata e componenti che valgono ora (Occhio dell'Arcimago, Illusioni Migliorate...): da mostrare; i campi sopra sono
+    # i salvati, i soli che il form rimanda. Li riempie `fill_spell_stats`.
+    effective_range_area: Optional[str] = None
+    effective_components: Optional[str] = None
     duration: Optional[str] = None
     is_concentration: bool = False
     is_ritual: bool = False
@@ -53,8 +61,16 @@ class SpellRead(BaseModel):
     pact_cast: Optional[dict] = None
     # Condizioni che il lancio può togliere nell'edizione di chi lancia (Task 48): `{conditions, untracked, count, max_targets, ally}`
     removal: Optional[dict] = None
+    # Effetto dell'incantesimo nel catalogo (edizione di chi lancia): `{target_kind, max_targets_by_slot, choices}`; `None` se non c'è
+    effect: Optional[dict] = None
 
     model_config = {"from_attributes": True}
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_healing(self) -> bool:
+        """«Lancia» apre il tiro di cura (punto 42: lo dice il server, che ha la tabella delle cure)."""
+        return bool(self.srd_index) and self.srd_index in SPELL_HEALING
 
 
 class SpellCreate(BaseModel):
@@ -124,6 +140,18 @@ class SpellRemovalBody(BaseModel):
     conditions: list[str] | None = Field(None, max_length=10)
 
 
+class SpellEffectTarget(BaseModel):
+    id: int
+    name: str
+
+
+class SpellEffectsRead(BaseModel):
+    """Esito degli effetti di un incantesimo nel catalogo: i bersagli che hanno ricevuto lo stato e, fuori serata o per un
+    effetto solo descrittivo, il testo (it/en) per il GM."""
+    applied: list[SpellEffectTarget] = []
+    text: dict[str, str] | None = None
+
+
 class SpellUseRequest(RollOptionsBody):
     """Le opzioni sono quelle di ``roll="cast"``. ``slot_id`` sceglie il pool; ``slot_level`` da solo prende il primo
     con posto. Uno dei due è obbligatorio per un incantesimo di livello (400, non 422, come gli altri errori di
@@ -136,6 +164,8 @@ class SpellUseRequest(RollOptionsBody):
     ki_extra: int = Field(0, ge=0, le=9)  # punti ki in più: uno per livello dell'incantesimo in più
     confirm: list[str] = Field(default_factory=list, max_length=10)
     removal: SpellRemovalBody | None = None
+    targets: list[int] | None = Field(None, max_length=20)  # id dei personaggi bersaglio; assente = chi lancia
+    choices: dict[str, str] | None = None  # scelte dell'incantesimo (tipo di danno, ...)
 
 
 class SpellAttackRequest(RollOptionsBody):
@@ -146,6 +176,8 @@ class SpellAttackRequest(RollOptionsBody):
     confirm: list[str] = Field(default_factory=list, max_length=10)
     cast_options: list[str] = Field(default_factory=list, max_length=30)
     cast_option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
+    targets: list[int] | None = Field(None, max_length=20)  # come in SpellUseRequest, per gli effetti del lancio
+    choices: dict[str, str] | None = None
     die: int | None = Field(None, ge=1, le=20)
     with_inspiration: bool = False
     mode: RollMode = "normal"
@@ -194,6 +226,8 @@ class RollDamageRequest(RollOptionsBody):
     extra_rolls: list[int] | None = None  # prima i dadi della seconda parte dell'incantesimo, poi quelli a mano
     # Tipo della seconda parte, se l'incantesimo ne offre piu' d'uno (Onda distruttiva: radioso o necrotico)
     extra_damage_type: str | None = None
+    # Tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida contro le scelte dell'incantesimo
+    damage_type: str | None = None
 
     @field_validator("extra_dice")
     @classmethod

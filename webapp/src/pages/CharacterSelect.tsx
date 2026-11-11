@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -130,7 +131,7 @@ export default function CharacterSelect() {
   const [edition, setEdition] = useState<'2014' | '2024'>('2014')
   const [equipPicks, setEquipPicks] = useEquipPicks(`${edition}:${selectedClass?.class_name ?? ''}`)
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
 
   const charactersQuery = useQuery({

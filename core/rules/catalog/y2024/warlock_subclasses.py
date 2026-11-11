@@ -12,13 +12,14 @@ import re
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import DAMAGE_TYPES, LABELS_IT, canonical_damage_type
+from core.data.damage_types import DAMAGE_TYPES, canonical_damage_type, spell_damage_type
 from core.rules.condition_removal import ConditionRemoval
 from core.rules.catalog._common import feature
 from core.rules.catalog.y2014.warlock import (
-    BLESSING_USE, THOUGHT_REFLECTION, _dc, _lock_resilience, _resilience_active, _resilience_check, _resilience_state,
+    BLESSING_USE, THOUGHT_REFLECTION, _dc, _resilience_active,
 )
 from core.rules.catalog.y2014.warlock_invocations import _mod
+from core.rules.edition import class_key as row_class_key
 from core.rules.schools import normalize_school
 from core.rules.states import begin_state
 from core.rules.types import (
@@ -218,7 +219,7 @@ ESCAPE_USE = OnUse(
 
 
 def _halved(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
-    back = None if ctx.damage is None else ctx.damage // 2
+    back = None if ctx.damage_in is None else ctx.damage_in // 2
     tail = f": {back}." if back is not None else "."
     return _both(f"Difese Seducenti, CD {_dc(ctx)}: l'attaccante fa un TS Saggezza; se fallisce subisce danni psichici pari al danno che subisci tu" + tail,
                  f"Beguiling Defenses, DC {_dc(ctx)}: the attacker makes a Wisdom save; on a failure it takes psychic damage equal to the damage you take" + tail)
@@ -268,7 +269,7 @@ LIGHT_USE = OnUse(
 def _fire_or_radiant(ctx: RuleContext) -> bool:
     if ctx.spell is None:
         return False
-    kinds = {canonical_damage_type(ctx.spell.damage_type), canonical_damage_type(getattr(ctx.spell, "extra_damage_type", None))}
+    kinds = {spell_damage_type(ctx), canonical_damage_type(getattr(ctx.spell, "extra_damage_type", None))}
     return bool(kinds & {"radiant", "fire"})
 
 
@@ -303,17 +304,25 @@ def _vengeance_check(ctx: RuleContext, params: dict) -> tuple[int, str] | None:
     return (409, "not_dying") if params.get("mode") == "self" and ctx.char.current_hit_points > 0 else None
 
 
-def _vengeance_effect(ctx: RuleContext, _params: dict) -> TargetEffect:
+def _half_max(ctx: RuleContext) -> int:
+    """Metà dei PF massimi effettivi (spossatezza, privilegi), non di quelli di base."""
+    from core.rules.modifiers import effective_hp_max  # import locale: modifiers usa il catalogo
+    return effective_hp_max(ctx.char) // 2
+
+
+def _vengeance_effect(ctx: RuleContext, params: dict) -> TargetEffect:
+    """Accecate fino alla fine del turno in corso: quello di chi tira contro la morte (il tuo o quello dell'alleato)."""
     mod = _cha(ctx)
-    return TargetEffect(condition="blinded", rounds=1, damage_dice=f"2d8+{mod}" if mod > 0 else "2d8")
+    return TargetEffect(condition="blinded", damage_dice=f"2d8+{mod}" if mod > 0 else "2d8",
+                        ends_at={"anchor": "active", "edge": "end", "count": 1})
 
 
 def _vengeance_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     tail = _both(" Le creature che scegli entro 9 m subiscono 2d8 + Carisma danni radiosi e sono Accecate fino alla fine del turno.",
                  " Creatures you choose within 30 ft take 2d8 + Charisma radiant damage and are Blinded until the end of the turn.")
     if params.get("mode") == "self":
-        return _both(f"Recuperi {ctx.char.hit_points // 2} PF, metà del tuo massimo, e ti rialzi." + tail["it"],
-                     f"You regain {ctx.char.hit_points // 2} hit points, half your maximum, and stand up." + tail["en"])
+        return _both(f"Recuperi {_half_max(ctx)} PF, metà del tuo massimo, e ti rialzi." + tail["it"],
+                     f"You regain {_half_max(ctx)} hit points, half your maximum, and stand up." + tail["en"])
     return _both("L'alleato entro 18 m recupera metà dei suoi PF massimi e si rialza: dillo al GM." + tail["it"],
                  "The ally within 60 ft regains half their maximum hit points and stands up: tell the GM." + tail["en"])
 
@@ -326,7 +335,7 @@ VENGEANCE_KEY = f"{P}searing_vengeance"
 # Prima del TS contro la morte (modale del tiro): metà dei PF massimi e si rialza, senza tirare. Il costo è l'uso del privilegio
 VENGEANCE_SAVE = RollOptionSpec(
     key=f"{VENGEANCE_KEY}_save", phase="before", rolls=("death_save",), cost=Cost(feature_key=VENGEANCE_KEY),
-    available=lambda c: c.char.current_hit_points <= 0, self_heal=lambda c, _i: c.char.hit_points // 2, on_confirm=_stand_up,
+    available=lambda c: c.char.current_hit_points <= 0, self_heal=lambda c, _i: _half_max(c), on_confirm=_stand_up,
     target_effect=lambda c, _i: _vengeance_effect(c, {}),
     label=_both("Vendetta Ardente: prima del TS contro la morte torni a metà dei PF massimi e ti rialzi; le creature scelte entro 9 m sono Accecate",
                 "Searing Vengeance: before the death save you regain half your maximum HP and stand up; the creatures you choose within 30 ft are Blinded"),
@@ -334,7 +343,7 @@ VENGEANCE_SAVE = RollOptionSpec(
 
 VENGEANCE_USE = OnUse(
     usable_at_zero_hp=True, heal_ally_half_max=True,
-    heal=lambda c, _r: c.char.hit_points // 2, heal_when=lambda _c, p: p.get("mode") == "self", check=_vengeance_check,
+    heal=lambda c, _r: _half_max(c), heal_when=lambda _c, p: p.get("mode") == "self", check=_vengeance_check,
     heal_ally_when=lambda _c, p: p.get("mode") == "ally", ally_modes=("ally",),
     removal=ConditionRemoval(("prone",), count=None, ally=False, auto=lambda _c, p: ["prone"] if p.get("mode") == "self" else []), target_effect=_vengeance_effect, message=_vengeance_message,
     choices=(UseChoice("mode", _both("Chi sta per tirare contro la morte", "Who is about to roll a death save"), lambda _c: list(WHO),
@@ -353,9 +362,6 @@ LUCK_OPTION = RollOptionSpec(
     key=LUCK, phase="after_roll", after="add", rolls=("skill", "ability", "save", "death_save", "initiative"), cost=Cost(feature_key=LUCK),
     extra_dice=lambda _c, _i: "1d10", label=_both("Fortuna dell'Oscuro: spendi l'uso e somma 1d10 al tiro", "Dark One's Own Luck: spend the use and add 1d10 to the roll"))
 RESISTABLE = [t for t in DAMAGE_TYPES if t != "force"]  # il tipo forza è escluso
-RESILIENCE_USE = OnUse(
-    state=_resilience_state, effect=_lock_resilience, check=_resilience_check,
-    choices=(UseChoice("damage_type", _both("Tipo di danno", "Damage type"), lambda _c: list(RESISTABLE), lambda k: _both(LABELS_IT[k], k.title())),))
 
 
 def _hurled(ctx: RuleContext, _inputs: dict) -> TargetEffect:
@@ -391,10 +397,27 @@ MIND_USE = OnUse(
     slot="bonus", state=lambda c, _p: StateSpec("awakened_mind", rounds=c.class_level * 10, ends_on=("rest_long", "manual")),
     message=lambda c, _p: _both(f"Legame telepatico con una creatura che vedi entro 9 m per {c.class_level} minuti; distanza: {max(1, _cha(c))} miglia. Un nuovo legame sostituisce il precedente.",
                                 f"Telepathic link with a creature you see within 30 ft for {c.class_level} minutes; range: {max(1, _cha(c))} miles. A new link replaces the old one."))
+def _warlock_spell(ctx: RuleContext) -> bool:
+    """L'incantesimo è del warlock (riga con la sua classe); senza classe segnata non si può escludere."""
+    spell = ctx.spell
+    if spell is None:
+        return False
+    if spell.class_id is None:
+        return True
+    return any(c.id == spell.class_id and row_class_key(c) == "warlock" for c in ctx.char.classes)
+
+
 PSYCHIC_TYPE = RollOptionSpec(
     key=PSYCHIC, phase="before", rolls=("spell_damage",), damage_type_to="psychic",
-    available=lambda c: c.spell is not None and bool(c.spell.damage_dice) and canonical_damage_type(c.spell.damage_type) not in (None, "psychic"),
+    available=lambda c: _warlock_spell(c) and bool(c.spell.damage_dice) and spell_damage_type(c) not in (None, "psychic"),
     label=_both("Incantesimi Psichici: il danno di questo incantesimo da warlock è psichico", "Psychic Spells: this warlock spell's damage is psychic"))
+# Ammaliamento e Illusione del warlock: nessuna componente verbale né somatica (il router degli incantesimi la legge come l'Incantesimo Celato)
+PSYCHIC_SILENT = f"{P}psychic_spells_silent"
+PSYCHIC_NO_COMPONENTS = RollOptionSpec(
+    key=PSYCHIC_SILENT, phase="before", rolls=("cast",),
+    available=lambda c: _warlock_spell(c) and normalize_school(c.spell.school) in ("enchantment", "illusion"),
+    label=_both("Incantesimi Psichici: lancia senza componenti verbali né somatiche", "Psychic Spells: cast without verbal or somatic components"),
+    effect=lambda _c, _i: _both("L'incantesimo non ha componenti verbali né somatiche.", "The spell has no verbal or somatic components."))
 
 
 def _has_link(ctx: RuleContext) -> bool:
@@ -408,13 +431,18 @@ CLAIR_USE = _restorable(
                                 f"DC {_dc(c)}: the linked creature makes a Wisdom save; on a failure it has disadvantage on attack rolls against you and you have advantage against it for the link's duration."))
 
 
+_ABILITY_NAMES = {"strength": ("Forza", "Strength"), "dexterity": ("Destrezza", "Dexterity"), "constitution": ("Costituzione", "Constitution"),
+                  "intelligence": ("Intelligenza", "Intelligence"), "wisdom": ("Saggezza", "Wisdom"), "charisma": ("Carisma", "Charisma")}
+
+
 def _hex(ability: str) -> RollOptionSpec:
+    it, en = _ABILITY_NAMES[ability]
     return RollOptionSpec(
         key=f"{HEX}_{ability}", phase="before", rolls=("cast",), group="eldritch_hex", available=lambda c: _spell_is(c, "hex"),
         target_effect=lambda _c, _i: TargetEffect(note=f"eldritch_hex_{ability}"),
-        effect=lambda _c, _i: _both(f"Il bersaglio di Malia ha svantaggio anche ai tiri salvezza di {ability} per la durata.",
-                                    f"The target of Hex also has disadvantage on {ability} saving throws for the duration."),
-        label=_both(f"Maledizione Occulta: svantaggio anche ai TS di {ability}", f"Eldritch Hex: disadvantage also on {ability} saves"))
+        effect=lambda _c, _i: _both(f"Il bersaglio di Malia ha svantaggio anche ai tiri salvezza di {it} per la durata.",
+                                    f"The target of Hex also has disadvantage on {en} saving throws for the duration."),
+        label=_both(f"Maledizione Occulta: svantaggio anche ai TS di {it}", f"Eldritch Hex: disadvantage also on {en} saves"))
 
 
 def _thrall_text(ctx: RuleContext, _i: dict) -> dict[str, str]:
@@ -485,7 +513,7 @@ SUBCLASS_ROWS = (
     fiend("fiendish_resilience", 10, "Resilienza Immonda", "Fiendish Resilience", 162,
           ("A ogni riposo breve o lungo scegli un tipo di danno, tranne forza: ne hai la resistenza finché ne scegli un altro.",
            "At each short or long rest you choose a damage type other than force: you resist it until you choose another."),
-          "special", on_use=RESILIENCE_USE,
+          "special", rest_damage_choice=("fiendish_resilience", tuple(RESISTABLE)),
           modifiers=tuple(Modifier(f"resistance:{t}", 1, when=_resilience_active(t), source=f"feature:{RESILIENCE_F}") for t in RESISTABLE)),
     fiend("hurl_through_hell", 14, "Scagliare all'Inferno", "Hurl Through Hell", 162,
           ("Su un colpo con attacco: TS Carisma, se fallisce sparisce, subisce 8d10 psichici (non gli immondi) ed è Incapacitato. Un uso, riposo lungo o slot di Patto.",
@@ -501,7 +529,7 @@ SUBCLASS_ROWS = (
     oldone("psychic_spells", 3, "Incantesimi Psichici", "Psychic Spells", 163,
            ("Un incantesimo da warlock che infligge danni può farli psichici. Quelli di Ammaliamento o Illusione si lanciano senza componenti verbali né somatiche.",
             "A warlock spell that deals damage can deal psychic damage. Enchantment or Illusion ones are cast without verbal or somatic components."),
-           roll_options=(PSYCHIC_TYPE,), passive=True),
+           roll_options=(PSYCHIC_TYPE, PSYCHIC_NO_COMPONENTS), passive=True),
     oldone("clairvoyant_combatant", 6, "Combattente Chiaroveggente", "Clairvoyant Combatant", 163,
            ("Formando il legame di Mente Risvegliata: TS Saggezza; se fallisce, svantaggio ai suoi attacchi contro di te e vantaggio ai tuoi contro di lei. Riposo breve o slot di Patto.",
             "Forming the Awakened Mind link: Wisdom save; on a failure, disadvantage on its attacks against you and advantage on yours against it. Short rest or a Pact slot."),

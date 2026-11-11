@@ -245,7 +245,7 @@ async def test_relentless_makes_the_next_maneuver_a_free_d8_once_per_turn(client
     assert (await _use(client, cid, _k("relentless"))).status_code == 200
     assert (await _use(client, cid, _k("relentless"))).json()["detail"]["code"] == "once_per_turn"
     body = (await _damage(client, cid, await _hit(client, cid, wid), _key("trip"))).json()
-    assert body["option_result"]["extra_rolls"] == [8] and await _dice_left(client, cid) == 6  # d8, nessun dado speso
+    assert set(body["option_result"]["extra_rolls"]) == {8} and await _dice_left(client, cid) == 6  # d8, nessun dado speso
     body = (await _damage(client, cid, await _hit(client, cid, wid), _key("menacing"))).json()
     assert body["option_result"]["extra_rolls"] == [10] and await _dice_left(client, cid) == 5  # tornato il dado normale
 
@@ -544,3 +544,43 @@ async def test_psionic_strike_die_does_not_double_on_a_critical(client, monkeypa
     assert body["damage_total"] == plain + 4 + 3  # un solo dado: il critico raddoppia l'arma, non il Colpo Psionico
     assert body["option_result"]["extra_rolls"] == [4]
 
+
+async def test_minori_9_relentless_gives_the_d8_to_the_feint_and_lunging_strikes_and_lunging_rolls_nothing(client, monkeypatch):
+    cid = await _bm(client, 15, "feinting", "lunging")
+    wid = await _sword(client, cid)
+    _fixed(monkeypatch, 99)
+    plain = (await _swing(client, cid, wid, confirm_extra_attack=True)).json()["damage_total"]
+    assert (await _use(client, cid, _k("relentless"))).status_code == 200
+    r = await _use(client, cid, _key("feinting"))
+    assert r.status_code == 200 and await _dice_left(client, cid) == 6  # Implacabile: nessun dado speso
+    body = (await _swing(client, cid, wid, confirm_extra_attack=True, options=[_key("feinting_strike")])).json()
+    assert set(body["option_result"]["extra_rolls"]) == {8}  # d8 di Implacabile, non il d10 del livello
+    await client.post(f"/characters/{cid}/turn/new")
+    assert (await _use(client, cid, _k("relentless"))).status_code == 200
+    r = await _use(client, cid, _key("lunging"))
+    assert r.status_code == 200 and r.json()["rolls"] == [] and await _dice_left(client, cid) == 6  # niente dado inutile all'Usa
+    body = (await _swing(client, cid, wid, confirm_extra_attack=True, options=[_key("lunging_strike")])).json()
+    assert set(body["option_result"]["extra_rolls"]) == {8}
+
+
+async def test_minori_10_bulwark_half_cover_raises_the_users_ac_by_2(client):
+    cid = await _sub(client, "psi_warrior", 15, intelligence=16)
+    before = (await _full(client, cid))["ac"]
+    assert (await _use(client, cid, _k("bulwark_of_force"))).status_code == 200
+    assert (await _full(client, cid))["ac"] == before + 2
+
+
+async def test_minori_10_bulwark_half_cover_adds_2_to_dexterity_saves_only(client):
+    cid = await _sub(client, "psi_warrior", 15, intelligence=16)
+    async def save(ability):
+        return (await client.post(f"/characters/{cid}/saving_throws/{ability}/roll", json={})).json()["bonus"]
+    dex, con = await save("dexterity"), await save("constitution")
+    assert (await _use(client, cid, _k("bulwark_of_force"))).status_code == 200
+    assert await save("dexterity") == dex + 2 and await save("constitution") == con
+
+
+async def test_minori_10_telekinesis_of_the_master_shows_the_intelligence_dc(client):
+    cid = await _sub(client, "psi_warrior", 18, intelligence=16)
+    full = await _full(client, cid)
+    spell = next(s for s in full["spells"] if s["name"] == "Telecinesi")
+    assert spell["save_dc"] == 8 + full["proficiency_bonus"] + 3

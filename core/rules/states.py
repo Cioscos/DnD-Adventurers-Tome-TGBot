@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.rules.edition import character_edition
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.types import StateSpec
 
 
@@ -14,6 +16,12 @@ def has_state(char: Any, key: str) -> bool:
     return any(s.get("key") == key for s in char.active_states or [])
 
 
+def state_conditions(state: dict) -> dict[str, bool]:
+    """Le condizioni che uno stato impone, ognuna con «c'era già»: quella principale e le ``also_conditions``."""
+    main = {state["condition"]: state.get("condition_was_on", False)} if state.get("condition") else {}
+    return {**main, **(state.get("also_conditions") or {})}
+
+
 def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
     """Avvia lo stato; se la chiave è già attiva lo rinnova. ``name``: come lo chiama il giocatore (``None``: nome generico)."""
     state = {"key": spec.key, "feature_key": feature_key, "rounds_left": spec.rounds,
@@ -23,10 +31,25 @@ def begin_state(char: Any, spec: StateSpec, feature_key: str, name: str | None =
     if spec.condition:
         # rinnovare lo stato non cambia di chi era l'invisibilità: la prima volta ricorda se c'era già
         previous = next((s for s in get_states(char) if s.get("key") == spec.key and s.get("condition")), None)
-        was_on = previous.get("condition_was_on", False) if previous else bool((char.conditions or {}).get(spec.condition))
-        state.update(condition=spec.condition, condition_was_on=was_on)
-        char.conditions = {**(char.conditions or {}), spec.condition: True}
+        wanted = (spec.condition, *spec.also_conditions)
+        before = state_conditions(previous) if previous else {}
+        was = {c: before.get(c, bool((char.conditions or {}).get(c))) for c in wanted}
+        state.update(condition=spec.condition, condition_was_on=was[spec.condition])
+        if spec.also_conditions:
+            state["also_conditions"] = {c: was[c] for c in spec.also_conditions}
+        char.conditions = {**(char.conditions or {}), **{c: True for c in wanted}}
     char.active_states = [*(s for s in get_states(char) if s.get("key") != spec.key), state]
+    return state
+
+
+def begin_spell_state(char: Any, spec: StateSpec, feature_key: str, name: str | None = None) -> dict:
+    """Come ``begin_state`` per uno stato ``spell:*``: uno stato per coppia (incantesimo, lanciatore). Quello di un altro lanciatore
+    resta (finisce col suo orologio) e il nuovo, ultimo nell'elenco, è quello che i lettori applicano."""
+    caster = spec.data.get("caster_id")
+    others = [s for s in get_states(char) if s.get("key") == spec.key and (s.get("data") or {}).get("caster_id") != caster]
+    state = begin_state(char, spec, feature_key, name)
+    if others:
+        char.active_states = [*others, *char.active_states]  # ``begin_state`` li aveva tolti
     return state
 
 
@@ -80,15 +103,45 @@ def settle_closed(char: Any, closed: list[dict]) -> None:
     charge_exhaustion(char, closed)
     drop_stolen_spells(char, closed)
     release_given_temp_hp(char, closed)
+    drop_spell_temp_hp(char, closed)
+    release_given_spells(char, closed)
     release_suspended(char, closed)
+    end_extra_action(char, closed)
+    close_wild_shape_rows(char, closed)
     for s in closed:  # alla fine dello stato resta ciò che dichiarava (la cura di fine illusione, Duplicato Migliorato)
         offer = (s.get("data") or {}).get("on_close")
-        if offer:
-            begin_state(char, StateSpec(offer["key"], ends_on=tuple(offer["ends_on"])), s["feature_key"], offer.get("name"))
-    gone = {s["condition"] for s in closed if s.get("condition") and not s.get("condition_was_on")}
-    gone -= {s["condition"] for s in char.active_states or [] if s.get("condition")}  # un altro stato la impone ancora
+        if offer and not any(x.get("key") == s.get("key") for x in char.active_states or []):  # un altro lanciatore la tiene ancora (Velocità): l'effetto non è finito
+            begin_state(char, StateSpec(offer["key"], ends_on=tuple(offer["ends_on"]), data=offer.get("data") or {}, condition=offer.get("condition")),
+                        s["feature_key"], offer.get("name"))
+    gone = {c for s in closed for c, was_on in state_conditions(s).items() if not was_on}
+    gone -= {c for s in char.active_states or [] for c in state_conditions(s)}  # un altro stato la impone ancora
     if gone:
         char.conditions = {**(char.conditions or {}), **{c: False for c in gone}}
+
+
+def close_wild_shape_rows(char: Any, closed: list[dict]) -> None:
+    """Finito lo stato «wild_shape» la forma non è più attiva: la riga si chiude qui, nelle scritture, così le letture non devono
+    ripararla. Solo se i compagni sono già caricati (altrimenti la lettura la tratta comunque come chiusa)."""
+    if any(s.get("key") == "wild_shape" for s in closed):
+        for c in char.__dict__.get("companions") or ():
+            if c.kind == "wild_shape":
+                c.is_active = False
+
+
+def end_extra_action(char: Any, closed: list[dict]) -> None:
+    """Velocità finisce nel turno in corso: l'azione extra che aveva dato a questo turno (``turn_state["haste_action"]``) non resta."""
+    from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa i tipi degli incantesimi
+    turn = getattr(char, "turn_state", None) or {}
+    if not turn.get("haste_action"):
+        return
+    for s in closed:
+        if any(x.get("key") == s.get("key") for x in char.active_states or []):
+            continue  # la Velocità di un altro lanciatore dà ancora l'azione extra
+        effect = SPELL_EFFECTS.get((s.get("data") or {}).get("spell_key"))
+        variant = effect and effect.variants.get((s.get("data") or {}).get("edition") or character_edition(char))
+        if variant and variant.extra_action and str(s.get("key", "")).startswith(SPELL_STATE_PREFIX):
+            char.turn_state = {**turn, "extra_actions": max(0, int(turn.get("extra_actions") or 0) - 1), "haste_action": False}
+            return
 
 
 def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
@@ -98,6 +151,52 @@ def release_given_temp_hp(char: Any, closed: list[dict]) -> None:
     gone = [entry for s in closed for entry in given.pop(s.get("key"), [])]
     if gone:
         char.settings = {**settings, TEMP_GIVEN: given, TEMP_RELEASE: [*(settings.get(TEMP_RELEASE) or []), *gone]}
+
+
+def note_spell_temp_hp(char: Any, state_key: str, amount: int, caster_id: int | None = None) -> None:
+    """Lo stato ``state_key`` di ``char`` (di ``caster_id``, se indicato) ricorda i PF temporanei che ha appena dato (l'ultimo valore vince)."""
+    char.active_states = [{**s, "data": {**(s.get("data") or {}), "temp_given": amount}}
+                          if s.get("key") == state_key and (caster_id is None or (s.get("data") or {}).get("caster_id") == caster_id) else s
+                         for s in char.active_states or []]
+
+
+def drop_spell_temp_hp(char: Any, closed: list[dict]) -> None:
+    """Alla fine di un incantesimo i PF temporanei che aveva dato svaniscono, ma solo se non superano quanto diede: se ora ne ha di più
+    alti da un'altra fonte restano. shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo."""
+    given = [g for g in ((s.get("data") or {}).get("temp_given") for s in closed) if g]
+    temp = getattr(char, "temp_hp", 0) or 0
+    if given and 0 < temp <= max(given):
+        char.temp_hp = 0
+        # ricordati per l'annullo (``regrant_spells``) e per lo storico (il flush scrive la riga: qui non c'è una sessione)
+        dropped = {s["key"]: {"caster_id": (s.get("data") or {}).get("caster_id"), "amount": temp, "name": s.get("name"), "logged": False}
+                   for s in closed if (s.get("data") or {}).get("temp_given")}
+        settings = getattr(char, "settings", None) or {}  # le voci d'altri incantesimi non ancora annullate restano
+        char.settings = {**settings, SPELL_TEMP_DROPPED: {**(settings.get(SPELL_TEMP_DROPPED) or {}), **dropped}}
+
+
+def forget_spell_temp_drop(char: Any, key: str | None = None, restored: bool = False) -> None:
+    """La voce di ``SPELL_TEMP_DROPPED`` per lo stato ``key`` (tutte con ``None``) non serve più: un nuovo lancio, l'annullo o il riposo lungo.
+
+    Una voce di cui il flush non ha ancora scritto la riga di storico (la fine e il nuovo lancio cadono nello stesso salvataggio) resta
+    come ``log_only``: il flush la scrive e la toglie, e nessun annullo la ridà. ``restored``: i PF sono tornati, niente riga."""
+    settings = getattr(char, "settings", None) or {}
+    dropped = settings.get(SPELL_TEMP_DROPPED)
+    if dropped and (key is None or key in dropped):
+        pending = {k: {**v, "log_only": True} for k, v in dropped.items()
+                   if not restored and not v.get("logged") and (key is None or k == key)}
+        left = {**{k: v for k, v in dropped.items() if key is not None and k != key}, **pending}
+        char.settings = {**{k: v for k, v in settings.items() if k != SPELL_TEMP_DROPPED}, **({SPELL_TEMP_DROPPED: left} if left else {})}
+
+
+def release_given_spells(char: Any, closed: list[dict]) -> None:
+    """Gli effetti che chi lancia ha dato ad altri con un incantesimo finiscono con il suo orologio ``spell_cast:*``: i bersagli
+    passano in ``SPELL_RELEASE``, che il flush della richiesta applica togliendo loro lo stato ``spell:*``."""
+    settings = getattr(char, "settings", None) or {}
+    given = dict(settings.get(SPELL_GIVEN) or {})
+    gone = [{"id": t, "key": SPELL_STATE_PREFIX + s["key"][len(SPELL_CLOCK_PREFIX):]}
+            for s in closed if str(s.get("key")).startswith(SPELL_CLOCK_PREFIX) for t in given.pop(s["key"], [])]
+    if gone:
+        char.settings = {**settings, SPELL_GIVEN: given, SPELL_RELEASE: [*(settings.get(SPELL_RELEASE) or []), *gone]}
 
 
 def release_suspended(char: Any, closed: list[dict]) -> None:
@@ -143,6 +242,16 @@ ZERO_HP_USES = "zero_hp_save_uses"  # settings: {feature_key: usi dal riposo}
 # svaniscono con quello stato (Forza Vivificante e l'Ira); alla chiusura dello stato passano in TEMP_RELEASE, che il flush della
 # richiesta (``api.services.effects``) applica ai riceventi. Gli id valgono solo in questo database.
 TEMP_GIVEN, TEMP_RELEASE = "temp_hp_given", "temp_hp_release"
+# PF temporanei tolti al ricevente dalla fine di un incantesimo: {chiave dello stato: {caster_id, amount, name, logged}}, per ridarli con l'annullo.
+SPELL_TEMP_DROPPED = "spell_temp_dropped"
+# Effetti di incantesimi dati ad altri. SPELL_GIVEN: {"spell_cast:<chiave>": [id dei bersagli]}; alla chiusura dell'orologio passano in
+# SPELL_RELEASE ([{"id", "key"}]), che il flush toglie ai bersagli solo se lo stato è ancora di chi lancia (``data["caster_id"]``).
+SPELL_GIVEN, SPELL_RELEASE = "spell_given", "spell_release"
+# Tipo di danno scelto all'ultimo lancio, per incantesimo: {chiave dell'effetto: tipo}. Il tiro di danno legge la voce del proprio incantesimo; un lancio scrive (o toglie) solo la sua.
+SPELL_CAST_TYPE = "spell_cast_type"
+# Sul bersaglio: [{"caster_id", "key"}] degli stati ``spell:*`` spesi da un'opzione (Guida e Resistenza 2014: «poi l'incantesimo termina»);
+# il flush chiude la concentrazione e l'orologio di chi ha lanciato.
+SPELL_SPENT = "spell_spent"
 # Condizioni sospese (Calmare Emozioni). Su chi lancia: stato ``SUSPENDED_KEY`` che finisce con la concentrazione e, in settings,
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
 # ``SUSPENDED_ON``: {condizione: id di chi la sospende}, cancellato se la condizione cambia per altra via (allora non torna).

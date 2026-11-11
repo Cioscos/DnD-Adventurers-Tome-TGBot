@@ -41,8 +41,9 @@ def form_own_hp(char: Character) -> bool:
     return state is None or state["data"].get("own_hp", True)
 
 
-async def get_active_form(session: AsyncSession, char_id: int) -> Companion | None:
-    """La forma attiva. Lo stato attivo è la verità: se è finito (durata, riposo, incapacitazione) la forma si chiude."""
+async def get_active_form(session: AsyncSession, char_id: int, *, repair: bool = True) -> Companion | None:
+    """La forma attiva. Lo stato attivo è la verità: se è finito (durata, riposo, incapacitazione) la forma si chiude.
+    ``repair=False`` (i GET): la forma senza stato risulta chiusa ma la riga non si scrive."""
     form = (await session.execute(
         select(Companion).where(
             Companion.character_id == char_id,
@@ -54,7 +55,8 @@ async def get_active_form(session: AsyncSession, char_id: int) -> Companion | No
         return None
     char = await session.get(Character, char_id)
     if all(s["key"] != STATE_KEY for s in get_states(char)):
-        form.is_active = False
+        if repair:
+            form.is_active = False
         return None
     return form
 

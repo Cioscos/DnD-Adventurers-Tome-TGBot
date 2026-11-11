@@ -34,7 +34,8 @@ from api.schemas.campaign import (
 )
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
-from api.routers.sessions import _find_active_session_for_user, _load_session, _touch, session_read
+from api.routers.sessions import session_read
+from api.services.game_sessions import active_session_id, find_active_session_for_user, load_session, touch
 from api.schemas.session import GameSessionRead
 from api.services import campaigns as svc
 from api.services.campaigns import create_campaign, generate_campaign_code
@@ -78,14 +79,6 @@ async def _get_campaign(
     if gm_only and not is_gm:
         raise _err(403, "gm_only")
     return camp
-
-
-async def _active_session_id(db: AsyncSession, campaign_id: int) -> Optional[int]:
-    return (await db.execute(
-        select(GameSession.id).where(
-            GameSession.campaign_id == campaign_id, GameSession.status == SessionStatus.ACTIVE
-        )
-    )).scalars().first()
 
 
 async def _my_last_character_id(db: AsyncSession, campaign_id: int, user_id: int) -> Optional[int]:
@@ -320,7 +313,7 @@ async def delete_campaign(
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> Response:
     camp = await _get_campaign(db, campaign_id, user_id, gm_only=True)
-    if await _active_session_id(db, camp.id) is not None:
+    if await active_session_id(db, camp.id) is not None:
         raise _err(409, "campaign_session_active")
     # game_sessions.campaign_id has no FK: detach closed sessions in code.
     await db.execute(
@@ -498,18 +491,18 @@ async def join_campaign_session(
         raise _err(422, "not_a_member")
     if member.status == "dead":
         raise _err(422, "character_dead")
-    session_id = await _active_session_id(db, camp.id)
+    session_id = await active_session_id(db, camp.id)
     if session_id is None:
         raise _err(404, "no_active_session")
-    if await _find_active_session_for_user(user_id, db) is not None:
+    if await find_active_session_for_user(user_id, db) is not None:
         raise _err(409, "You already have an active session")
-    session = await _load_session(session_id, db)
+    session = await load_session(session_id, db)
     db.add(SessionParticipant(
         session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
         character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
         dice_stats_start=dice_baseline(session, char),
     ))
-    _touch(session)
+    touch(session)
     await db.flush()
     await db.refresh(session, attribute_names=["participants"])
     return await session_read(db, session)

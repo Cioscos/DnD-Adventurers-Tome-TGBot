@@ -59,8 +59,8 @@ export default function AbilityScores() {
         }))
       }
     },
-    onError: () => {
-      notifyMutationError()
+    onError: (err) => {
+      notifyMutationError(err)
     },
   })
 
@@ -76,7 +76,7 @@ export default function AbilityScores() {
       setRollState({ result: { ...result, description: undefined }, ability, wasRerolled: false })
       haptic.success()
     },
-    onError: () => notifyMutationError(),
+    onError: (err) => notifyMutationError(err),
   })
   const rerollMutation = useMutation({
     mutationFn: async (ability: string) => {
@@ -175,6 +175,7 @@ export default function AbilityScores() {
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
           afterRoll={{ charId, query: { roll: 'ability', ability: rollState.ability } }}
+          noCritical
           onClose={() => setRollState(null)}
         />
       )}

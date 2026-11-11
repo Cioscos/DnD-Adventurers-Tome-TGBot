@@ -43,7 +43,7 @@ export default function GiveInspirationRow({ char }: { char: CharacterFull }) {
     },
     onError: (e) => {
       const code = e instanceof ApiError && typeof e.detail === 'object' && e.detail ? (e.detail as { code?: string }).code : undefined
-      toast.error(t(`character.inspiration.give_errors.${code ?? 'generic'}`, { defaultValue: t('common.action_failed') }))
+      toast.error(t(`character.inspiration.give_errors.${code ?? 'generic'}`, { defaultValue: t('common.action_refused') }))
     },
   })
 

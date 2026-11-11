@@ -19,7 +19,7 @@ from core.rules.catalog.y2024.paladin import CK, ED, POOL, SMITE, SMITE_FREE, _f
 from core.rules.states import begin_state, is_conscious
 from core.game.item_bonuses import item_meta
 from core.rules.types import (
-    AuraSpec, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, UseToggle, Uses,
+    AuraSpec, Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UseChoice, UseToggle, Uses,
 )
 
 # Due incantesimi per ogni soglia (3°, 5°, 9°, 13°, 17°): ``srd_index``, chiavi di ``GRANTED_SPELLS``.
@@ -254,6 +254,19 @@ def _glorious_bonus(ctx: RuleContext, _params: dict) -> dict[str, str]:
                  f"+{n} to the target's AC against that attack: if it misses you can attack the attacker with a weapon as part of the reaction.")
 
 
+GLORIOUS_STATE = "glorious_defense_strike"
+# Il colpo di risposta è parte della stessa reazione: non pesa sul limite dell'azione Attacco e si dichiara una sola volta
+GLORIOUS_STRIKE = RollOptionSpec(
+    key=f"{CK}.glorious_defense_strike", phase="before", rolls=("attack",), outside_action=True, cost=Cost(state_key=GLORIOUS_STATE),
+    available=lambda c: c.spell is None and state_on(c, GLORIOUS_STATE),
+    label=_both("Difesa Gloriosa: attacco con arma sull'aggressore, nella stessa reazione",
+                "Glorious Defense: weapon attack against the attacker, as part of the same reaction"))
+
+
+def _glorious_state(_ctx: RuleContext, _params: dict) -> StateSpec:
+    return StateSpec(GLORIOUS_STATE, rounds=1, ends_on=("new_turn", "manual"))
+
+
 def _legend_state(_ctx: RuleContext, _params: dict) -> StateSpec:
     return StateSpec("living_legend", rounds=100, ends_on=("manual",), data={"others": [f"{CK}.living_legend"]})
 
@@ -299,7 +312,7 @@ GLORY = (
             ("Reazione, quando tu o una creatura entro 3 m siete colpiti: bonus alla CA pari al Carisma (minimo +1); se l'attacco fallisce, un attacco con arma sull'aggressore. Usi pari al Carisma, riposo lungo.",
              "Reaction, when you or a creature within 10 ft is hit: AC bonus equal to Charisma (minimum +1); if the attack misses, a weapon attack against the attacker. Uses equal Charisma, long rest."),
             "reaction", subclass="glory", uses=Uses(ability="charisma", minimum=1), restoration="long_rest",
-            on_use=OnUse(slot="reaction", message=_glorious_bonus)),
+            roll_options=(GLORIOUS_STRIKE,), on_use=OnUse(slot="reaction", message=_glorious_bonus, state=_glorious_state)),
     feature("living_legend", CK, ED, 20, "Leggenda Vivente / Living Legend (Giuramento della Gloria, Paladino 20, pag. 115)",
             ("Leggenda Vivente", "Living Legend"),
             ("Azione bonus, 10 minuti: vantaggio alle prove di Carisma, un TS fallito ripetuto con reazione, una volta per turno un attacco con arma mancato diventa un colpo. Un uso, riposo lungo o slot di 5°.",

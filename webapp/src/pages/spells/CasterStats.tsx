@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { classLabel } from '@/lib/classLabel'
 import type { SpellcastingInfo } from '@/types'
 
 type Caster = SpellcastingInfo['casters'][number]
@@ -12,7 +13,7 @@ export default function CasterStats({ casters }: { casters: Caster[] }) {
     <div className="rounded-xl border border-dnd-border bg-dnd-surface-raised px-3 py-2 space-y-1">
       {casters.map((c) => {
         const ability = t(`character.ability.${c.ability.toLowerCase()}_short`, { defaultValue: c.ability.toUpperCase() })
-        const cls = t(`dnd.classes.${c.class_name.toLowerCase()}`, { defaultValue: c.class_name })
+        const cls = classLabel(t, c.class_name)
         const attack = `${c.attack_bonus >= 0 ? '+' : '-'}${Math.abs(c.attack_bonus)}`
         return (
           <p key={c.class_id} className="text-sm font-body text-dnd-text tabular-nums">

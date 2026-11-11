@@ -33,6 +33,12 @@ def canonical_damage_type(value: str | None) -> str | None:
     return _LOOKUP.get(v)
 
 
+def spell_damage_type(ctx: object) -> str | None:
+    """Il tipo di danno dell'incantesimo di un tiro: quello scelto al lancio (``ctx.damage_type``) o, senza scelta, il suo."""
+    spell = getattr(ctx, "spell", None)
+    return canonical_damage_type(getattr(ctx, "damage_type", None)) or canonical_damage_type(getattr(spell, "damage_type", None))
+
+
 def _contains(values: object, slug: str) -> bool:
     return isinstance(values, list) and any(
         canonical_damage_type(v) == slug for v in values if isinstance(v, str)

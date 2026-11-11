@@ -41,47 +41,10 @@ from api.routers._helpers import collect_homebrew_notifications, effective_con_m
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.spell_slots import recalc_spell_slots
+from api.services.character_load import get_owned_full
+from api.services.character_load import refresh_char_full
 
 router = APIRouter(prefix="/characters", tags=["classes"])
-
-
-async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    result = await session.execute(
-        select(Character)
-        .options(
-            selectinload(Character.classes),
-            selectinload(Character.ability_scores),
-            selectinload(Character.spells),
-            selectinload(Character.spell_slots),
-            selectinload(Character.items),
-            selectinload(Character.currency),
-            selectinload(Character.abilities),
-            selectinload(Character.maps),
-        )
-        .where(Character.id == char_id)
-    )
-    char = result.scalar_one_or_none()
-    if char is None:
-        raise HTTPException(status_code=404, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not your character")
-    return char
-
-
-async def _refresh_char_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
-    """Flush pending mutations, then re-SELECT a fully-loaded character.
-
-    Mirror of ``api.routers.characters._refresh_char_full`` (duplicated here to
-    avoid a circular import: characters.py already imports from classes.py).
-    A bare in-memory ``char`` whose ``classes.resources`` collection was loaded
-    by an earlier ``selectinload`` will NOT contain ``ClassResource`` rows added
-    in the same transaction — serializing it drops them (finding #6). ``expire``
-    alone is insufficient (autoflush may pull related objects into the identity
-    map), so we ``expunge_all()`` and re-issue the full eager-load query.
-    """
-    await session.flush()
-    session.expunge_all()
-    return await _get_owned_full(char_id, user_id, session)
 
 
 async def _get_class(class_id: int, char_id: int, session: AsyncSession) -> CharacterClass:
@@ -116,6 +79,9 @@ async def create_class_for_character(
     """
     if is_first_class is None:
         is_first_class = len(char.classes) == 0
+    if not is_first_class and any(c.class_name.strip().casefold() == body.class_name.strip().casefold()
+                                  for c in char.classes):
+        raise HTTPException(status_code=409, detail={"code": "class_already_present"})
 
     grant = class_proficiencies(character_edition(char), normalize_class_name(body.class_name),
                                 as_multiclass=not is_first_class)
@@ -144,7 +110,7 @@ async def create_class_for_character(
     cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
     await session.flush()
 
-    # char.abilities deve essere caricato per il sync (selectinload in _get_owned_full).
+    # char.abilities deve essere caricato per il sync (selectinload in get_owned_full).
     if getattr(char, "abilities", None) is None:
         char.abilities = []
     # cls deve essere visibile in char.classes per coerenza del sync.
@@ -204,14 +170,14 @@ async def add_class(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     old_total_hp, old_current_hp, old_bonus = char.hit_points or 0, char.current_hit_points or 0, rule_hp_bonus(char)
     await create_class_for_character(char, body, session, lang=lang)
     if len(char.classes) > 1:  # la prima classe imposta i PF da sé
         _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus)
     await session.flush()  # expire() scarta anche le modifiche del sync sulle abilità (cascade "all")
     session.expire(char)
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 
@@ -235,10 +201,10 @@ async def distribute_class_levels(
     abilities (grow or shrink via `sync_class_feature_abilities`),
     and recalculates HP proportionally if `settings.hp_auto_calc` is true.
     """
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
 
     existing_ids = {cls.id for cls in char.classes}
-    body_ids = {entry.class_id for entry in body.classes}
+    body_ids = {entry.class_id for entry in body.classes if entry.new_class is None}
     if existing_ids != body_ids:
         raise HTTPException(status_code=400, detail="classes_mismatch")
 
@@ -254,19 +220,36 @@ async def distribute_class_levels(
     if new_sum < 1:
         raise HTTPException(status_code=400, detail="sum_too_low")
 
-    # Map id -> new_level for O(1) lookup
-    new_levels = {entry.class_id: entry.level for entry in body.classes}
-
     # Snapshot old total HP for ratio scaling
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
     old_bonus = rule_hp_bonus(char)
+
+    # Classi nuove nella stessa transazione: se qualcosa fallisce più avanti (409, 400, 500) non ne resta nessuna.
+    for entry in body.classes:
+        if entry.new_class is not None:
+            entry.class_id = (await create_class_for_character(char, entry.new_class, session, lang=lang)).id
 
     classes_by_id = {c.id: c for c in char.classes}
     gained_total = sum(max(0, e.level - classes_by_id[e.class_id].level) for e in body.classes)
     if body.hp_rolls is not None and len(body.hp_rolls) != gained_total:
         raise HTTPException(status_code=422, detail="hp_rolls must have one value per gained level")
     rolls_left = list(body.hp_rolls) if body.hp_rolls is not None else None
+
+    # Sottoclassi prima dei livelli: il sync dei privilegi di un livello nuovo le vede già (e se qualcosa fallisce
+    # più avanti la richiesta si annulla intera).
+    subclass_changed = False
+    for entry in body.classes:
+        if "subclass" not in entry.model_fields_set:
+            continue
+        cls = classes_by_id[entry.class_id]
+        new_subclass = (entry.subclass or "").strip() or None
+        if new_subclass != cls.subclass:
+            cls.subclass = new_subclass
+            cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
+            subclass_changed = True
+    if subclass_changed:
+        grant_assassin_kits(char, lang)
 
     # Apply level changes + resource sync (body order = hp_rolls order)
     for entry in body.classes:
@@ -284,13 +267,16 @@ async def distribute_class_levels(
         sync_level_choices(char, cls, prev_level, new_level)
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
+    if subclass_changed:
+        await sync_cataloged_features(session, char, lang)
+
     # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
     hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp, old_bonus)
 
     # Re-fetch so newly-inserted ClassResource rows (e.g. Punti Ki on a fresh
     # Monaco level) appear in the response — otherwise the FE multiclass card
     # misses them until a reload (finding #6).
-    char = await _refresh_char_full(char_id, user_id, session)
+    char = await refresh_char_full(session, char_id, user_id)
     await recalc_spell_slots(session, char)
     result = await build_character_response(session, char)
     if hp_gained > 0:
@@ -309,7 +295,7 @@ async def update_class(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     # Usa la stessa istanza tracciata in char.classes (così le nuove Ability
     # puntano al source_class_id corretto e il sync vede le esistenti).
     cls = next((c for c in char.classes if c.id == class_id), None)
@@ -395,7 +381,7 @@ async def remove_class(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
 
     # Snapshot HP before the delete so we can scale current HP proportionally,
@@ -409,7 +395,7 @@ async def remove_class(
     await session.delete(cls)
     await session.flush()
     session.expire(char)
-    char = await _get_owned_full(char_id, user_id, session)
+    char = await get_owned_full(char_id, user_id, session)
     await sync_cataloged_features(session, char, lang)  # il bonus di competenza può scendere
 
     # Removing a class lowers total_level → recalc max HP from the remaining

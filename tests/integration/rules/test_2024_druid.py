@@ -409,7 +409,7 @@ async def test_potent_spellcasting_adds_90_meters_to_cantrip_range_from_level_15
         await _resolve(client, cid, "elemental_fury", [chosen])
         await _cantrip(client, cid)
         await client.post(f"/characters/{cid}/spells", json={"name": "Tocco", "level": 0, "range_area": "Contatto"})
-        return [s["range_area"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] in ("Fiamma", "Tocco")]
+        return [s["effective_range_area"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] in ("Fiamma", "Tocco")]
     assert sorted(await shown(14)) == ["18 m", "Contatto"]
     assert sorted(await shown(15)) == ["108 m", "Contatto"]
     assert sorted(await shown(15, "primal_strike")) == ["18 m", "Contatto"]

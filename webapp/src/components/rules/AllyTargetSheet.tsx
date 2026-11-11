@@ -1,3 +1,5 @@
+import { SELECTED_CLASSES } from '@/lib/selection'
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
@@ -41,7 +43,7 @@ type Props = {
  *  Chi ha già un dado lo perde se ne arriva un altro: prima si conferma. */
 export default function AllyTargetSheet({ title, die = false, allies, max = 1, onPickMany, pending = false, removal, onPick, onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   const [who, setWho] = useState<(number | string)[]>(removal?.scope === 'self' ? ['self'] : [])
   const [what, setWhat] = useState<string[]>([])
   const [replacing, setReplacing] = useState<Ally | null>(null)
@@ -63,7 +65,7 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
               <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{removal.count === null ? t('character.turn.removal_what_any') : t('character.turn.removal_what', { n: removal.count })}</p>
               <div className="flex flex-wrap gap-2">
                 {options.map((o) => (
-                  <Button key={o.key} size="sm" variant={what.includes(o.key) ? 'primary' : 'secondary'} className="break-words" disabled={pending} onClick={() => toggleWhat(o.key)}>
+                  <Button key={o.key} size="sm" variant="secondary" className={`break-words ${what.includes(o.key) ? SELECTED_CLASSES : ''}`} disabled={pending} onClick={() => toggleWhat(o.key)}>
                     {o.label[lang]}
                   </Button>
                 ))}
@@ -71,11 +73,11 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
             </>
           )}
           {scope !== 'self' && <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{removal.maxTargets > 1 ? t('character.turn.ally_pick_many', { n: removal.maxTargets }) : t('character.turn.removal_who')}</p>}
-          {scope === 'any' && <Button variant={who.includes('self') ? 'primary' : 'secondary'} className="justify-start text-left" disabled={pending} onClick={() => toggleWho('self')}>{t('character.turn.removal_self')}</Button>}
+          {scope === 'any' && <Button variant="secondary" className={`!justify-start text-left ${who.includes('self') ? SELECTED_CLASSES : ''}`} disabled={pending} onClick={() => toggleWho('self')}>{t('character.turn.removal_self')}</Button>}
           {scope !== 'self' && allies.map((a) => (
-            <Button key={a.id} variant={who.includes(a.id) ? 'primary' : 'secondary'} className="justify-start break-words text-left" disabled={pending} onClick={() => toggleWho(a.id)}>{a.name}</Button>
+            <Button key={a.id} variant="secondary" className={`!justify-start break-words text-left ${who.includes(a.id) ? SELECTED_CLASSES : ''}`} disabled={pending} onClick={() => toggleWho(a.id)}>{a.name}</Button>
           ))}
-          {scope !== 'self' && <Button variant={who.includes('other') ? 'primary' : 'ghost'} className="justify-start break-words text-left" disabled={pending} onClick={() => toggleWho('other')}>{t('character.turn.ally_other')}</Button>}
+          {scope !== 'self' && <Button variant={who.includes('other') ? 'secondary' : 'ghost'} className={`!justify-start break-words text-left ${who.includes('other') ? SELECTED_CLASSES : ''}`} disabled={pending} onClick={() => toggleWho('other')}>{t('character.turn.ally_other')}</Button>}
           {!!removal.costEach && <p className="text-sm font-body text-dnd-text-muted">{t('character.turn.removal_cost', { n: removal.costEach * what.length })}</p>}
           <Button variant="primary" disabled={pending || !ready} onClick={() => removal.onConfirm({ targets: who, ...(picks ? { conditions: what } : {}) })}>
             {t(removal.optional && picks && what.length === 0 ? 'character.turn.removal_use_only' : `character.turn.${removal.confirmKey ?? 'removal_confirm'}`)}
@@ -101,7 +103,7 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
           <>
             <p className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{many ? t('character.turn.ally_pick_many', { n: max }) : t(die ? 'character.turn.ally_pick' : 'character.turn.ally_pick_effect')}</p>
             {allies.map((a) => (
-              <Button key={a.id} variant={many && chosen.includes(a.id) ? 'primary' : 'secondary'} className="justify-start break-words text-left" disabled={pending}
+              <Button key={a.id} variant="secondary" className={`!justify-start break-words text-left ${many && chosen.includes(a.id) ? SELECTED_CLASSES : ''}`} disabled={pending}
                 onClick={() => (many ? toggle(a.id) : die && a.die ? setReplacing(a) : onPick(a.id))}>
                 {a.name}
                 {die && a.die ? <span className="ml-2 text-xs font-normal text-dnd-text-muted">d{a.die}</span> : null}
@@ -112,7 +114,7 @@ export default function AllyTargetSheet({ title, die = false, allies, max = 1, o
                 {t('character.turn.ally_confirm', { n: chosen.length })}
               </Button>
             )}
-            <Button variant="ghost" className="justify-start break-words text-left" disabled={pending} onClick={() => onPick(null)}>
+            <Button variant="ghost" className="!justify-start break-words text-left" disabled={pending || (many && chosen.length > 0)} onClick={() => onPick(null)}>
               {t('character.turn.ally_other')}
             </Button>
           </>

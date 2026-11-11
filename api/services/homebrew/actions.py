@@ -13,24 +13,23 @@ import random
 import re
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from api.services.condition_effects import clear_effects_for
+from api.services.dice_notation import DICE_RE
 from api.services.homebrew.dsl import Filter, RuleDSL
 from api.services.homebrew.exceptions import ActionExecutionError
 from api.services.homebrew.filters import evaluate_filter
 from api.services.homebrew.path_resolver import resolve_path
 from api.services.homebrew.types import ExecutionContext, Notification, RuleFiringResult
 from core.db.models import Character, HomebrewResource, Item
-
-
-_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+from core.game.stats import sync_base_ac
 
 
 def _roll(notation: str) -> int:
-    m = _DICE_RE.match(notation.strip())
+    m = DICE_RE.match(notation.strip())
     if not m:
         raise ActionExecutionError(f"Invalid dice notation: {notation}")
     count, sides = int(m.group(1)), int(m.group(2))
@@ -260,7 +259,12 @@ async def execute_unequip(action, ctx, rfr, session, char, **kw):
     item.is_equipped = False
     item.equipment_slot = None
     if item.item_type == "armor" and not char.base_armor_class_override:
-        char.base_armor_class = 10
+        # Senza armatura la base è 10 + Destrezza (o la formula di classe): serve il calcolo, non 10 fisso.
+        await session.flush()
+        unloaded = {"items", "ability_scores", "abilities", "classes"} & set(inspect(char).unloaded)
+        if unloaded:
+            await session.refresh(char, attribute_names=list(unloaded))
+        sync_base_ac(char)
     elif item.item_type == "shield" and not char.shield_armor_class_override:
         char.shield_armor_class = 0
     await session.flush()

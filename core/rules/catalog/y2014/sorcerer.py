@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import spell_damage_type
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.actions import parse_casting_time, parse_duration_rounds
 from core.rules.catalog._common import feature, save_spell, state_on
@@ -215,6 +215,7 @@ def _cast_option(key: str, label: dict, cost: int | Cost = 1, **kw: Any) -> Roll
                           cost=cost if isinstance(cost, Cost) else Cost(feature_key=SP, amount=cost), label=label, **kw)
 
 
+TWINNED_KEY, EXTENDED_KEY = _meta("twinned"), _meta("extended")  # il servizio degli effetti li legge dalle opzioni di lancio
 SUBTLE_KEY = _meta("subtle")  # il router degli incantesimi non chiude il nascondiglio con la componente verbale
 SUBTLE = _cast_option(
     "subtle", {"it": "Incantesimo Celato: lancia senza componenti somatiche né verbali (1 punto)",
@@ -291,7 +292,7 @@ DRAGON_ANCESTOR_CHECK = RollOptionSpec(
 AFFINITY_BONUS = RollOptionSpec(
     key=f"{CK}.elemental_affinity", phase="before", rolls=("spell_damage",),
     available=lambda c: c.spell is not None and _ancestor_type(c) is not None
-    and canonical_damage_type(c.spell.damage_type) == _ancestor_type(c),
+    and spell_damage_type(c) == _ancestor_type(c),
     bonus=lambda c, _i: _cha(c),
     label={"it": "Affinità Elementale: aggiungi il Carisma ai danni del tipo del tuo antenato",
            "en": "Elemental Affinity: add your Charisma modifier to damage of your ancestor's type"})
@@ -299,7 +300,7 @@ AFFINITY_BONUS = RollOptionSpec(
 
 def _affinity_spell(ctx: RuleContext) -> bool:
     """L'incantesimo che si lancia fa danni del tipo dell'antenato."""
-    return ctx.spell is not None and _ancestor_type(ctx) is not None and canonical_damage_type(ctx.spell.damage_type) == _ancestor_type(ctx)
+    return ctx.spell is not None and _ancestor_type(ctx) is not None and spell_damage_type(ctx) == _ancestor_type(ctx)
 
 
 def _start_resistance(_session: Any, ctx: RuleContext, _inputs: dict) -> None:

@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/components/ui/Button'
@@ -17,17 +18,17 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   const second = optionResult?.second_total
   const targets = charId != null ? (optionResult?.targets ?? []) : []
   if (notes.length === 0 && !autoFail && extra.length === 0 && separate.length === 0 && effects.length === 0 && second == null && targets.length === 0) return null
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang = uiLang(i18n.language)
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}
-      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" rolls={extra} total={optionResult!.extra_total} className={className} />}
+      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" sources={dieSources(optionResult?.keys ?? [], t)} rolls={extra} types={optionResult!.extra_types} total={optionResult!.extra_total} className={className} />}
       {second != null && (
         <span className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
           {t('character.roll_options.second_attack', { die: optionResult!.second_die, total: second })}
         </span>
       )}
-      {separate.length > 0 && <ExtraDice testId="roll-option-separate" label="separate_dice" rolls={separate} total={optionResult!.separate_total ?? 0} className={className} />}
+      {separate.length > 0 && <ExtraDice testId="roll-option-separate" label="separate_dice" rolls={separate} types={separate.map(() => optionResult!.separate_type)} total={optionResult!.separate_total ?? 0} className={className} />}
       {effects.map((e) => (
         <span key={e.it} className={`block text-xs font-body text-dnd-text ${className}`}>{e[lang]}</span>
       ))}
@@ -41,11 +42,22 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   )
 }
 
-function ExtraDice({ testId, label, rolls, total, className }: { testId: string; label: string; rolls: number[]; total: number; className: string }) {
+/** Da dove vengono i dadi extra: l'incantesimo (Benedizione, Guida) o l'ispirazione che li ha dati. */
+function dieSources(keys: string[], t: (k: string, o?: Record<string, unknown>) => string): string[] {
+  return keys.filter((k) => k.endsWith(':add')).map((k) => {
+    const [kind, name] = k.split(':')
+    if (kind === 'spell') return t(`character.roll_notes.spell.${name}`, { defaultValue: '' })
+    return kind === 'bardic_die' ? t('character.roll_notes.option.bardic_die_add', { defaultValue: '' }) : ''
+  }).filter(Boolean)
+}
+
+function ExtraDice({ testId, label, sources = [], rolls, types, total, className }: { testId: string; label: string; sources?: string[]; rolls: number[]; types?: (string | null | undefined)[]; total: number; className: string }) {
   const { t } = useTranslation()
+  // ogni dado col suo tipo di danno (radiante, fuoco...): un dado extra non è del tipo dell'arma
+  const typed = rolls.map((r, i) => (types?.[i] ? `${r} ${t(`character.inventory.damage_types.dmg_${types[i]}`, { defaultValue: types[i] })}` : String(r)))
   return (
     <span data-testid={testId} className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
-      {t(`character.roll_options.${label}`)}: [{rolls.join(', ')}] = {total}
+      {t(`character.roll_options.${label}`)}{sources.length > 0 && ` (${sources.join(', ')})`}: [{typed.join(', ')}] = {total}
     </span>
   )
 }

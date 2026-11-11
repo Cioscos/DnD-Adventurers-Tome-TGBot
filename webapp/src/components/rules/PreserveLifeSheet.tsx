@@ -1,7 +1,8 @@
+import { apiErrorCode } from '@/lib/mutationError'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -42,7 +43,7 @@ export default function PreserveLifeSheet({ char, onClose }: { char: CharacterFu
     },
     // Il server dice perché rifiuta (metà dei PF, riserva, azione già spesa...): si traduce, mai il messaggio tecnico.
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       toast.error(t(`character.turn.preserve_errors.${code && ERRORS.includes(code) ? code : 'default'}`))
       qc.invalidateQueries({ queryKey: ['preserve-life', char.id] })
     },

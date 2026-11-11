@@ -130,3 +130,13 @@ async def test_disciple_of_life_covers_every_spell_of_first_level_or_more_that_r
     assert r.json()["total"] == base + 2 + level and r.json()["main_rolls"] == []
     war = await _cleric(client, 1, "war", wisdom=10)
     assert (await _roll(client, war, await _heal_spell(client, war, index, level, index))).json()["total"] == base
+
+
+async def test_spell_read_says_which_spells_heal_42(client):
+    """Punto 42: il client non tiene un elenco proprio delle cure, legge `is_healing`."""
+    cid = await _cleric(client, 5, wisdom=16)
+    await _heal_spell(client, cid)
+    other = await client.post(f"/characters/{cid}/spells", json={"name": "Dardo", "level": 1, "srd_index": "magic-missile"})
+    assert other.status_code == 201 and other.json()["is_healing"] is False
+    listed = {s["srd_index"]: s["is_healing"] for s in (await client.get(f"/characters/{cid}/spells")).json()}
+    assert listed["cure-wounds"] is True and listed["magic-missile"] is False

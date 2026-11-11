@@ -220,7 +220,7 @@ async def test_i10_potent_spellcasting_range_holds_with_feet_and_with_an_area(cl
     shown = (("Piedi", "120 ft"), ("Area", "18 m (sfera di 6 m)"), ("Corto", "10 ft"), ("Metri", "18 m"), ("Breve", "5 ft"))
     for name, rng in shown:
         await client.post(f"/characters/{cid}/spells", json={"name": name, "level": 0, "class_id": row, "range_area": rng})
-    got = {s["name"]: s["range_area"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] in dict(shown)}
+    got = {s["name"]: s["effective_range_area"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["name"] in dict(shown)}
     assert got == {"Piedi": "420 ft", "Area": "108 m (sfera di 6 m)", "Corto": "310 ft", "Metri": "108 m", "Breve": "5 ft"}
 
 
@@ -296,3 +296,11 @@ def test_lands_aid_message_drops_the_gm_hint_when_the_seated_ally_is_already_hea
     told = _aid_message(ctx, {"mode": "other", "ally_healed": True})
     assert "Costituzione" in told["it"] and "GM" not in told["it"] and "GM" not in told["en"]
     assert "GM" in _aid_message(ctx, {"mode": "other"})["it"]
+
+
+def test_lands_aid_message_29_has_no_trailing_space_when_the_ally_is_already_healed():
+    from types import SimpleNamespace
+    from core.rules.catalog.y2024.druid import _aid_message
+    char = SimpleNamespace(active_states=[{"key": "lands_aid", "data": {"dc": 13, "damage": 9}}], turn_state={})
+    msg = _aid_message(SimpleNamespace(char=char), {"mode": "other", "ally_healed": True})
+    assert all(text == text.rstrip() for text in msg.values())

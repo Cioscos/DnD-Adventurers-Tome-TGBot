@@ -249,6 +249,11 @@ export default function MagicFieldsEditor({ form, onChange }: Props) {
                       onChange={(n) => setSpell(i, { attack_bonus: n })} />
                   </label>
                 </div>
+                <label className="block text-xs text-dnd-text-muted">
+                  {m('spell_cast_level')}
+                  <OptNumField label={m('spell_cast_level')} value={g.slot_level} min={Math.max(1, g.level)} max={9}
+                    onChange={(n) => setSpell(i, { slot_level: n })} />
+                </label>
                 <SwitchToggle
                   checked={g.is_concentration}
                   onChange={(v) => setSpell(i, { is_concentration: v })}

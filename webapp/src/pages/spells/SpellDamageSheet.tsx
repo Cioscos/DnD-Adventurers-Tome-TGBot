@@ -1,17 +1,17 @@
-import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
-import { notifyCastError } from '@/lib/mutationError'
+import { askRollOptions, castSpell, CastCancelled, refreshAfterOptions, useEffectPickStore } from '@/lib/rollOptions'
+import { notifyCastError, apiErrorCode } from '@/lib/mutationError'
 import AfterDamageOptions from '@/components/rules/AfterDamageOptions'
 import { rerollDiceOf, sidesOf } from '@/lib/rollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import type { OptionResult } from '@/api/client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   GiPerspectiveDiceSixFacesRandom as Dices, GiCrossedSwords as Swords,
   GiCheckedShield as Shield,
 } from 'react-icons/gi'
-import { api, ApiError } from '@/api/client'
+import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -82,9 +82,11 @@ export default function SpellDamageSheet({
   const secondTypes = (spell?.extra_damage_type ?? '').split('|').filter(Boolean)
   const [secondType, setSecondType] = useState('')
   const [unrollable, setUnrollable] = useState(false)
+  // Il tipo scelto al lancio, mostrato solo a lancio confermato dal server (un lancio rifiutato non ne ha salvato nessuno).
+  const [slotConsumed, setSlotConsumed] = useState(false)
+  const pickedType = useEffectPickStore((s) => (spell && (slotConsumed || slotAlreadyConsumed) ? s.picked[spell.id]?.choices?.damage_type : undefined))
   const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
-  const [slotConsumed, setSlotConsumed] = useState(false)
   const [castNotes, setCastNotes] = useState<OptionResult | undefined>(undefined)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
 
@@ -108,20 +110,28 @@ export default function SpellDamageSheet({
 
   const effectiveCastingLevel = (slotLevel && slotLevel > 0) ? slotLevel : (spell?.level ?? 0)
 
+  const castRefused = useRef(false)
   const mutation = useMutation({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
 
       // Il tiro per colpire (/attack) ha già fatto il lancio; altrimenti lo fa il primo tiro, una volta sola.
       // Slot, rituale o trucchetto: il server consuma il dovuto e avvia la concentrazione col suo contatore.
-      if (!slotAlreadyConsumed && !slotConsumed && (asRitual || spell.level === 0 || kiExtra != null || freeCast || (slotLevel != null && slotLevel >= 1))) {
+      let cast = slotAlreadyConsumed || slotConsumed
+      if (!cast && (asRitual || spell.level === 0 || kiExtra != null || freeCast || (slotLevel != null && slotLevel >= 1))) {
+        // Se il lancio fallisce (409...) nessun tipo è stato salvato: la scelta non resta nello store.
         const updated = await castSpell(charId, spell.id, kiExtra != null
           ? { ki: true, ki_extra: kiExtra, slot_level: null, as_ritual: false }
           : freeCast
             ? { free_cast: true, slot_level: null, as_ritual: false }
           : asRitual
             ? { as_ritual: true, slot_level: null }
-            : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false })
+            : { slot_id: slotId, slot_level: spell.level === 0 ? null : slotLevel, as_ritual: false }).catch((err) => {
+          useEffectPickStore.setState(({ picked }) => ({ picked: Object.fromEntries(Object.entries(picked).filter(([id]) => Number(id) !== spell.id)) }))
+          castRefused.current = true
+          throw err
+        })
+        cast = true
         qc.setQueryData(['character', charId], updated)
         if (updated.damage_unrollable) throw new DamageUnrollable()  // lanciato, ma questi dadi il server non li sa tirare
         qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -130,7 +140,9 @@ export default function SpellDamageSheet({
         setSlotConsumed(true)
       }
 
-      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel })
+      // Il tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida e i privilegi che lo leggono lo vedono.
+      const chosenType = cast ? useEffectPickStore.getState().picked[spell.id]?.choices?.damage_type : undefined
+      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel, ...(chosenType ? { damage_type: chosenType } : {}) })
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined
       let extra_rolls: number[] | undefined
@@ -141,8 +153,11 @@ export default function SpellDamageSheet({
         const manual = parseDice(body.extra_dice ?? null)
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
           const cached = qc.getQueryData<CharacterFull>(['character', charId])
-          const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count)
-            + upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          // I dadi dello slot più alto sono del tipo salvato dal server al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) vanno a lei, come sul server.
+          const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          const upcastType = cached?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type  // lo dice il server: lo store del client può averla persa
+          const moved = upcastType && upcastType === spell.extra_damage_type && second?.sides === main.sides ? gained : 0
+          const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
             { kind: `d${main.sides}` as DiceKind, count: mainCount },
@@ -153,7 +168,7 @@ export default function SpellDamageSheet({
           for (const part of [second, manual]) {
             if (!part) continue
             if (!isAllowedDiceKind(`d${part.sides}`)) { extraOk = false; continue }
-            const count = body.is_critical ? part.count * 2 : part.count
+            const count = (body.is_critical ? part.count * 2 : part.count) + (part === second ? (body.is_critical ? moved * 2 : moved) : 0)
             extraCount += count
             groups.push({ kind: `d${part.sides}` as DiceKind, count: count })
           }
@@ -176,6 +191,7 @@ export default function SpellDamageSheet({
 
       return api.spells.rollDamage(charId, spell.id, {
         ...body,
+        ...(chosenType ? { damage_type: chosenType } : {}),
         main_rolls,
         extra_rolls,
         ...(choice.options.length > 0 ? choice : {}),
@@ -187,9 +203,11 @@ export default function SpellDamageSheet({
       setResult(data)
     },
     onError: (err) => {
-      const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+      const code = apiErrorCode(err)
       if (err instanceof DamageUnrollable || code === 'bad_damage_dice') setUnrollable(true)  // un testo suo, non «controlla la connessione»
       else if (!(err instanceof CastCancelled)) notifyCastError(err)
+      // Un lancio rifiutato ha perso le scelte (tipo, bersagli): riprovare da qui darebbe un altro errore, si riparte dal lancio.
+      if (castRefused.current) { castRefused.current = false; handleClose() }
     },
   })
 
@@ -277,6 +295,12 @@ export default function SpellDamageSheet({
                 {t('character.slots.level', { level: effectiveCastingLevel })}
               </div>
             </div>
+          )}
+
+          {pickedType && (
+            <p className="text-sm text-center font-body text-dnd-text">
+              {t('character.spells.roll_damage.chosen_type', { type: t(`character.inventory.damage_types.dmg_${pickedType}`, { defaultValue: pickedType }) })}
+            </p>
           )}
 
           {autoExtra > 0 && (
@@ -397,7 +421,7 @@ export default function SpellDamageSheet({
           <RollNotes charId={charId} optionResult={result.option_result} />  {/* ciò che è avvenuto col danno (Saturazione Magica: i necrotici a sé) */}
           <AfterDamageOptions
             charId={charId}
-            query={{ roll: 'spell_damage', spell_id: spell.id }}
+            query={{ roll: 'spell_damage', spell_id: spell.id, ...(result.damage_type ? { damage_type: result.damage_type } : {}) }}
             dice={result.reroll_dice ? rerollDiceOf(result.reroll_dice) : [
               ...(result.main_rolls ?? []).map((value, index) => ({ value, index, sides: sidesOf(result.main_kind) })),
               ...(result.extra_rolls ?? []).map((value, i) => ({ value, index: (result.main_rolls ?? []).length + i, sides: sidesOf(result.extra_kind) })),

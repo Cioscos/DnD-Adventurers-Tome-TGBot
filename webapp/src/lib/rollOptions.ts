@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import type { QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { create } from 'zustand'
@@ -80,8 +81,10 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
   for (const code of confirm) {
     if (!(await askCastConfirm(code))) throw new CastCancelled()
   }
+  // Il tipo di danno scelto al lancio (Sfera Cromatica...): l'Affinità Elementale al lancio si offre su quello, non sul tipo di base.
+  const chosenType = useEffectPickStore.getState().picked[spellId]?.choices?.damage_type
   const choice = await askRollOptions(
-    charId, { roll: 'cast', spell_id: spellId, ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true },
+    charId, { roll: 'cast', spell_id: spellId, ...(chosenType ? { damage_type: chosenType } : {}), ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true },
   )
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
@@ -89,13 +92,18 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
 /** Cosa togliere col prossimo lancio di un incantesimo (Task 48): scelto nel foglio comune, consumato dal lancio, ovunque parta. */
 export const useRemovalStore = create<{ chosen: Record<number, NonNullable<SpellUseBody['removal']>> }>(() => ({ chosen: {} }))
 
+/** Bersagli e scelte dell'effetto del prossimo lancio di un incantesimo (catalogo), chiesti prima di qualunque via di lancio.
+ *  Si legge senza consumarlo (un lancio rifiutato si riprova dallo stesso foglio); lo azzera chi apre o chiude il flusso. */
+export const useEffectPickStore = create<{ picked: Record<number, Pick<SpellUseBody, 'targets' | 'choices'>> }>(() => ({ picked: {} }))
+
 /** Il lancio senza tiro per colpire: `/use`. */
 export async function castSpell(charId: number, spellId: number, body: SpellUseBody): Promise<CharacterFull> {
   const removal = useRemovalStore.getState().chosen[spellId]
+  const pick = useEffectPickStore.getState().picked[spellId]
   const prepared = await prepareCast(charId, spellId, !!body.as_ritual, body.slot_level, !!body.free_cast)
   useRemovalStore.setState(({ chosen }) => ({ chosen: Object.fromEntries(Object.entries(chosen).filter(([id]) => Number(id) !== spellId)) }))
-  const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}) })
-  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const updated = await api.spells.use(charId, spellId, { ...body, ...prepared, ...(removal ? { removal } : {}), ...(pick && body.targets === undefined ? pick : {}) })
+  const lang = uiLang(i18n.language)
   for (const line of updated.removal_result ?? []) toast.info(line[lang])
   return updated
 }

@@ -99,8 +99,8 @@ async def test_migration_failure_of_one_character_does_not_block_the_others(clie
     assert await migrate_catalog(test_session_factory) == 1
     assert (await _rage_row(client, second))["name"] == "Ira"
     assert (await _rage_row(client, first))["name"] == "Furia"
-    async with test_session_factory() as s:  # con un errore la versione non si segna: al prossimo avvio si riprova
-        assert await s.get(AppMeta, "catalog_version") is None
+    async with test_session_factory() as s:  # minori 50: la versione si segna lo stesso, un personaggio rotto non fa ripetere il sync a tutti
+        assert await s.get(AppMeta, "catalog_version") is not None
 
 
 # ---------------------------------------------------------------------------

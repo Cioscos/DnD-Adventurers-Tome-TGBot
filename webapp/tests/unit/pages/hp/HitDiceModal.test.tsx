@@ -29,8 +29,8 @@ vi.mock('@/components/ui/Sheet', async () => {
 vi.mock('@/components/ui/Button', async () => {
   const React = await import('react')
   return {
-    default: (p: { onClick?: () => void; disabled?: boolean; children?: unknown }) =>
-      React.createElement('button', { onClick: p.onClick, disabled: p.disabled }, p.children),
+    default: (p: { onClick?: () => void; disabled?: boolean; className?: string; children?: unknown }) =>
+      React.createElement('button', { onClick: p.onClick, disabled: p.disabled, className: p.className }, p.children),
   }
 })
 
@@ -57,6 +57,13 @@ describe('HitDiceModal', () => {
     // (die-size text and the "3/5" remaining indicator are separate nodes).
     expect(screen.getByText(/d10/)).toBeInTheDocument()
     expect(screen.getByText('3/5')).toBeInTheDocument()
+  })
+
+  it('keeps the roll button a 44px touch target: the sm button alone is 38px wide (I1)', () => {
+    render(
+      <HitDiceModal classes={classes} onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />,
+    )
+    expect(screen.getByRole('button', { name: 'Roll' })).toHaveClass('min-w-11')
   })
 
   it('keeps the roll button disabled at 0 dice, then spends the chosen count for that class', async () => {

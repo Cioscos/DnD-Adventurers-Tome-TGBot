@@ -195,6 +195,9 @@ export type SpellUseBody = Partial<RollChoice> & {
   confirm?: string[]
   /** Togliere condizioni (Task 48): `"self"`, l'id di un PG della serata o `"other"`; `conditions` assente se toglie tutto. */
   removal?: { targets: (number | string)[]; conditions?: string[] }
+  /** Effetto sui bersagli (catalogo): id dei personaggi; assente = te stesso. */
+  targets?: number[]
+  choices?: Record<string, string>
 }
 
 export type RollChoice = {
@@ -215,7 +218,7 @@ export type TargetEffect = {
   save_ability: string | null
   save_dc: number | null
   rounds: number | null
-  ends_at: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number } | null
+  ends_at: { anchor: 'owner' | 'source' | 'active'; edge: 'start' | 'end'; count: number } | null
   on_failure_only: boolean
   damage_dice: string | null
   /** Altre condizioni che arrivano insieme alla prima, con lo stesso TS e la stessa durata (Sguardo Ipnotico). */
@@ -228,6 +231,8 @@ export type TargetEffect = {
   repeat_save?: 'start' | 'end' | null
   /** Chiave del testo che il foglio traduce: ciò che il GM chiude o applica a mano. */
   note?: string | null
+  /** La condizione cade con la concentrazione di chi l'ha imposta (le punizioni). */
+  ends_with_concentration?: boolean
 }
 
 export type TargetEffectPreview = {
@@ -252,6 +257,9 @@ export type OptionResult = {
   /** Danno a parte: non scala col moltiplicatore e non si somma ai dadi extra. */
   separate_rolls?: number[]
   separate_total?: number
+  /** Tipo di danno di ogni valore di `extra_rolls` (assente se nessun dado ne ha uno) e del danno a parte. */
+  extra_types?: (string | null)[]
+  separate_type?: string | null
   /** Esiti da mostrare al giocatore (CD, durata). */
   effects?: { it: string; en: string }[]
   /** Opzioni con un effetto da applicare a un combattente dell'incontro. */
@@ -301,6 +309,8 @@ export type GMGrantItemResponse = {
 }
 
 export type WeaponAttackResult = {
+  /** Il tiro ha chiuso uno stato che il mancato dichiarato rimette (Velo Psichico). */
+  refundable?: boolean
   weapon_name: string
   to_hit_die: number
   dice?: number[]
@@ -630,7 +640,7 @@ export const api = {
     rest: (
       id: number,
       restType: 'long' | 'short',
-      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean; temp_hp_allies?: number[] },
+      opts?: { interrupted?: boolean; ate_and_drank?: boolean; confirm_early?: boolean; natural_recovery?: Record<number, number>; arcane_recovery?: Record<number, number>; sorcerous_restoration?: number; memorize_spell?: { out: number; into: number }; reopen_tome?: boolean; fiendish_resilience?: string; temp_hp_allies?: number[] },
     ) =>
       request<CharacterFull>(`/characters/${id}/rest`, {
         method: 'POST',
@@ -723,6 +733,8 @@ export const api = {
       }),
     /** Gli altri personaggi seduti alla stessa serata attiva (vuoto fuori serata). */
     sessionAllies: (id: number) => request<{ id: number; name: string; die?: number | null; dead?: boolean }[]>(`/characters/${id}/session-allies`),
+    /** Le armi senza bonus magico di te o di un compagno della serata: la scelta di Arma Magica e Arma Elementale. */
+    allyWeapons: (id: number, allyId: number, kinds?: string[]) => request<{ id: number; name: string }[]>(`/characters/${id}/session-allies/${allyId}/weapons${kinds ? `?kinds=${kinds.join(',')}` : ''}`),
     /** Preservare Vita: la riserva e il tetto di ciascun destinatario, calcolati dal server. */
     preserveLifeInfo: (id: number) =>
       request<{ pool: number; uses_left: number | null; targets: { id: number; name: string; cap: number; self: boolean }[]; needs_confirm: boolean }>(`/characters/${id}/preserve-life`),
@@ -870,7 +882,12 @@ export const api = {
       request<CharacterFull>(`/characters/${charId}/classes/${classId}`, {
         method: 'DELETE',
       }),
-    distribute: (charId: number, classes: { class_id: number; level: number }[], hpRolls?: number[]) =>
+    distribute: (
+      charId: number,
+      // Una classe nuova viaggia con `new_class` (stessa transazione dei livelli: tutto o niente).
+      classes: ({ class_id: number; level: number; subclass?: string | null } | { new_class: Record<string, unknown>; level: number })[],
+      hpRolls?: number[],
+    ) =>
       request<CharacterFull>(`/characters/${charId}/classes/distribute`, {
         method: 'PATCH',
         body: JSON.stringify(hpRolls ? { classes, hp_rolls: hpRolls } : { classes }),
@@ -988,10 +1005,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ spell_level: spellLevel }),
       }),
-    cast: (charId: number, itemId: number, spellIndex: number) =>
+    cast: (charId: number, itemId: number, spellIndex: number, effect?: { targets?: number[]; choices?: Record<string, string> }) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
         method: 'POST',
-        body: JSON.stringify({ spell_index: spellIndex }),
+        body: JSON.stringify({ spell_index: spellIndex, ...effect }),
       }),
     attack: (
       charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll, choice?: AttackChoice,

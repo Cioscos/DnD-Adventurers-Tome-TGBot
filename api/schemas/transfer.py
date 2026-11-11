@@ -1,6 +1,7 @@
 """Schema del file di esportazione/importazione personaggio (format_version 1)."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, Optional
 
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_serializer
@@ -59,6 +60,17 @@ class ExportCharacter(BaseModel):
     def _edition(cls, v):
         return v if v in EDITIONS else "2014"
 
+    @field_validator("last_long_rest_at", mode="before")
+    @classmethod
+    def _last_rest(cls, v):
+        try:  # una data illeggibile romperebbe il controllo del riposo: meglio nessun limite
+            when = datetime.fromisoformat(v) if isinstance(v, str) else None
+            if when is not None and when.tzinfo is not None:  # il server confronta con l'ora UTC senza fuso
+                when = when.astimezone(timezone.utc).replace(tzinfo=None)
+            return when.isoformat(timespec="seconds") if when else None
+        except ValueError:
+            return None
+
     name: str = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
     gender: Optional[str] = Field(None, max_length=50)
@@ -77,6 +89,7 @@ class ExportCharacter(BaseModel):
     rules_edition: str = "2014"
     heroic_inspiration: bool = False
     experience_points: Int0 = 0
+    last_long_rest_at: Optional[str] = None  # il limite delle 24/16 ore del riposo lungo sopravvive all'importazione
     is_dead: bool = False
     speed: Int0 = 30
     background: Optional[str] = None

@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import spell_damage_type
 from core.rules.catalog._common import feature, state_on
 from core.rules.catalog.y2014.sorcerer import BEND_LUCK_USE, SP, TIDES, _cha, _regeneration
 from core.rules.states import get_states
@@ -124,30 +124,13 @@ def _manifestation_label(key: str) -> dict:
     return {"name": _both(it, en), "summary": _both("Solo estetica, mentre lanci incantesimi da stregone.", "Cosmetic only, while you cast sorcerer spells.")}
 
 
-def _bastion_left(ctx: RuleContext) -> int:
-    return int((_data(ctx, "bastion_of_law") or {}).get("dice") or 0)
-
-
-def _spend_bastion(n: int):
-    def run(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-        left = _bastion_left(ctx) - n
-        states = [s for s in get_states(ctx.char) if s["key"] != "bastion_of_law"]
-        if left > 0:
-            old = next(s for s in get_states(ctx.char) if s["key"] == "bastion_of_law")
-            states.append({**old, "data": {**(old.get("data") or {}), "dice": left}})
-        ctx.char.active_states = states
-    return run
-
-
+# I d8 di Bastione della Legge si spendono dal tiro di chi li ha addosso, anche un altro personaggio della serata: le opzioni
+# del danno subito (``sorcerer.bastion_of_law_N``) sono fra le regole generali di ``core/rules/roll_options.py``.
 BASTION_USE = OnUse(
-    slot="action", spends=SP, cost_by=lambda _c, p: int(p.get("points") or 1),
+    slot="action", ally_state=True, ally_exclusive=True, spends=SP, cost_by=lambda _c, p: int(p.get("points") or 1),
     state=lambda _c, p: StateSpec("bastion_of_law", ends_on=("rest_long", "manual"), data={"dice": int(p.get("points") or 1)}),
     choices=(UseChoice("points", _both("Punti stregoneria (un d8 ciascuno)", "Sorcery points (one d8 each)"), lambda _c: [str(n) for n in range(1, 6)],
-                       lambda k: _both(f"{k} punti, {k}d8", f"{k} points, {k}d8")),))
-BASTION_DAMAGE = tuple(RollOptionSpec(
-    key=f"{P}bastion_of_law_{n}", phase="damage_in", rolls=("damage_taken",), group=f"{P}bastion_of_law", extra_dice=lambda _c, _i, n=n: f"{n}d8",
-    available=lambda c, n=n: _bastion_left(c) >= n, on_confirm=_spend_bastion(n),
-    label=_both(f"Bastione della Legge: spendi {n}d8 per ridurre il danno", f"Bastion of Law: spend {n}d8 to reduce the damage")) for n in range(1, 6))
+                       lambda k: _both(f"{k} {'punto' if k == '1' else 'punti'}, {k}d8", f"{k} {'point' if k == '1' else 'points'}, {k}d8")),))
 TRANCE_USE = _restorable(f"{P}trance_of_order", 5, slot="bonus", state=StateSpec("trance_of_order", rounds=10, ends_on=("manual",)))
 CAVALCADE_USE = _restorable(
     f"{P}clockwork_cavalcade", 7, slot="action",
@@ -179,7 +162,7 @@ def _affinity_label(key: str) -> dict:
 
 AFFINITY_BONUS = RollOptionSpec(
     key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c),
-    available=lambda c: c.spell is not None and _affinity_type(c) is not None and canonical_damage_type(c.spell.damage_type) == _affinity_type(c),
+    available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c),
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
 RESTORE_OWN_ROLL = RollOptionSpec(
     key=f"{P}restore_balance_own_roll", phase="before", rolls=D20_TESTS, cancels=("*",), slot="reaction", cost=Cost(feature_key=f"{P}restore_balance"),
@@ -264,7 +247,7 @@ SUBCLASS_ROWS: tuple = (
     clockwork("bastion_of_law", 6, "Bastione della Legge", "Bastion of Law", 147,
               ("Azione Magia, 1-5 punti: tanti d8 su di te o su una creatura entro 9 m; chi subisce danni ne spende e ne riduce il danno. Fino al riposo lungo.",
                "Magic action, 1-5 points: that many d8 on you or a creature within 30 ft; when it takes damage it spends some to reduce it. Until a long rest."),
-              "action", on_use=BASTION_USE, roll_options=BASTION_DAMAGE),
+              "action", on_use=BASTION_USE),
     clockwork("trance_of_order", 14, "Trance dell'Ordine", "Trance of Order", 147,
               ("Azione bonus, 1 minuto: i tiri per colpire contro di te non hanno vantaggio e un d20 di 9 o meno nelle Prove vale 10. Un uso.",
                "Bonus action, 1 minute: attack rolls against you lack advantage and a d20 of 9 or lower on checks counts as 10. One use."),

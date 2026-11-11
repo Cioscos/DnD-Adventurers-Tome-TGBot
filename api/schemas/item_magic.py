@@ -43,6 +43,7 @@ class GrantedSpell(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: str = Field(min_length=1, max_length=200)
     level: int = Field(ge=0, le=9)
+    slot_level: Optional[int] = Field(default=None, ge=1, le=9)  # livello a cui l'oggetto lancia l'incantesimo, se più alto di ``level``
     charges_cost: int = Field(default=0, ge=0, le=100)
     srd_index: Optional[str] = None
     save_dc: Optional[int] = None

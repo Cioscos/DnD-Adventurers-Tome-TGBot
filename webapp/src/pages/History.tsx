@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -49,7 +50,7 @@ export default function History() {
     },
   })
 
-  const locale = (i18n.language?.startsWith('en') ? 'en' : 'it') as 'it' | 'en'
+  const locale = (uiLang(i18n.language)) as 'it' | 'en'
   const formatDate = (iso: string) => formatRelative(iso, {
     locale,
     todayLabel: t('common.date.today'),

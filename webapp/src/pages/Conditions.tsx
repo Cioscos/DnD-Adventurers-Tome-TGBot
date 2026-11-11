@@ -143,10 +143,10 @@ export default function Conditions() {
       setPendingConditionKey(null)
       haptic.light()
     },
-    onError: () => {
+    onError: (err) => {
       setPendingExhaustion(null)
       setPendingConditionKey(null)
-      notifyMutationError()
+      notifyMutationError(err)
     },
   })
 

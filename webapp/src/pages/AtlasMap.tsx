@@ -1,3 +1,4 @@
+import { notifyMutationError } from '@/lib/mutationError'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -12,7 +13,6 @@ import MapManageSheet from '@/pages/atlas/MapManageSheet'
 import MarkerSheet from '@/pages/atlas/MarkerSheet'
 import MarkerFormSheet from '@/pages/atlas/MarkerFormSheet'
 import PlaceOverlay from '@/pages/atlas/PlaceOverlay'
-import { useToast } from '@/hooks/useToast'
 import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { api, ApiError } from '@/api/client'
 import type { AtlasMarker } from '@/types'
@@ -59,7 +59,6 @@ function AtlasMapView() {
   const [formPoint, setFormPoint] = useState<{ x: number; y: number } | null>(null)
   const [editing, setEditing] = useState<AtlasMarker | null>(null)
   const qc = useQueryClient()
-  const toast = useToast()
 
   const { data: camp } = useQuery({ queryKey: ['campaign', campId], queryFn: () => api.campaigns.get(campId) })
   const isGm = !!camp?.is_gm
@@ -95,7 +94,7 @@ function AtlasMapView() {
       setMode('view')
       setSelectedId(null)
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => notifyMutationError(err),
   })
   const place = () => {
     const p = canvas.current?.getCenterPoint()

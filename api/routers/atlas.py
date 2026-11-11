@@ -14,9 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
-from api.routers.campaigns import _active_session_id
-from api.routers.lore import _access
-from api.routers.sessions import _touch
+from api.services.game_sessions import active_session_id, touch
 from api.schemas.atlas import (
     AtlasMapDeleted, AtlasMapRead, AtlasMapRename, MarkerCreate, MarkerRead, MarkerTypeCreate,
     MarkerTypeRead, MarkerUpdate, MarkerVisibility,
@@ -28,6 +26,7 @@ from core.db.models import (
     Campaign, CampaignMap, CampaignMapMarker, CampaignMarkerType, CampaignMember, Character, GameSession,
     SessionMessage, SessionRole,
 )
+from api.services.campaigns import campaign_access
 
 router = APIRouter(prefix="/campaigns/{campaign_id}/atlas", tags=["atlas"])
 
@@ -56,10 +55,10 @@ async def _feed_reveal(
     db: AsyncSession, campaign_id: int, user_id: int, map_id: int, marker_id: int | None, title: str, now: str,
 ) -> None:
     """GM reveal row in the campaign's active session feed (no-op without one)."""
-    session_id = await _active_session_id(db, campaign_id)
+    session_id = await active_session_id(db, campaign_id)
     if session_id is None:
         return
-    _touch(await db.get(GameSession, session_id))
+    touch(await db.get(GameSession, session_id))
     db.add(SessionMessage(
         session_id=session_id, user_id=user_id, role=SessionRole.GAME_MASTER,
         body=f"Il master ha rivelato: {title}", sent_at=now, sender_display_name="__GM__",
@@ -76,7 +75,7 @@ async def _map(db: AsyncSession, campaign_id: int, map_id: int, is_gm: bool) -> 
 
 
 async def _gm_map(db: AsyncSession, campaign_id: int, map_id: int, user_id: int) -> CampaignMap:
-    if not await _access(db, campaign_id, user_id):
+    if not await campaign_access(db, campaign_id, user_id):
         raise HTTPException(status_code=403, detail="gm_only")
     return await _map(db, campaign_id, map_id, True)
 
@@ -101,7 +100,7 @@ async def list_maps(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[AtlasMapRead]:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     rows = (await db.execute(
         select(CampaignMap).where(CampaignMap.campaign_id == campaign_id)
         .order_by(CampaignMap.created_at, CampaignMap.id)
@@ -117,7 +116,7 @@ async def create_map(
     name: str = Form(..., min_length=1, max_length=80),
     file: UploadFile = File(...),
 ) -> AtlasMapRead:
-    if not await _access(db, campaign_id, user_id):
+    if not await campaign_access(db, campaign_id, user_id):
         raise HTTPException(status_code=403, detail="gm_only")
     clean = name.strip()
     if not clean:  # validated before any file is written
@@ -215,7 +214,7 @@ async def get_map_image(
         if not raw:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth")
         user_id = verify_init_data(raw)
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     try:
         m = await _map(db, campaign_id, map_id, is_gm)
     except HTTPException:
@@ -325,7 +324,7 @@ async def list_markers(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[MarkerRead]:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     await _map(db, campaign_id, map_id, is_gm)
     rows = (await db.execute(
         select(CampaignMapMarker).where(CampaignMapMarker.map_id == map_id, marker_clause(user_id))
@@ -339,7 +338,7 @@ async def create_marker(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerRead:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     m = await _map(db, campaign_id, map_id, is_gm)
     await _check_link(db, campaign_id, map_id, body.link_map_id, is_gm)
     await _check_type(db, campaign_id, body.type_key, body.custom_type_id)
@@ -365,7 +364,7 @@ async def update_marker(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerRead:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     mk = await _marker(db, campaign_id, marker_id, user_id, is_gm)
     _owned(mk, user_id)
     fields = body.model_dump(exclude_unset=True)
@@ -389,7 +388,7 @@ async def set_marker_visibility(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerRead:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     mk = await _marker(db, campaign_id, marker_id, user_id, is_gm)
     _owned(mk, user_id)
     if mk.visibility != body.visibility:
@@ -409,7 +408,7 @@ async def delete_marker(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     mk = await _marker(db, campaign_id, marker_id, user_id, is_gm)
     if not (mk.author_user_id == user_id or (is_gm and mk.visibility == "public")):
         raise HTTPException(status_code=403, detail="not_owner")
@@ -423,7 +422,7 @@ async def list_marker_types(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> list[MarkerTypeRead]:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     custom = (await _types(db, campaign_id)).values()
     return [_type_read(k, None, user_id, is_gm) for k in BUILTIN_TYPES] + [
         _type_read(None, t, user_id, is_gm) for t in custom]
@@ -435,7 +434,7 @@ async def create_marker_type(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> MarkerTypeRead:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     t = CampaignMarkerType(campaign_id=campaign_id, name=body.name, icon=body.icon, color=body.color,
                            created_by=user_id, created_at=_now())
     db.add(t)
@@ -449,7 +448,7 @@ async def delete_marker_type(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
-    is_gm = await _access(db, campaign_id, user_id)
+    is_gm = await campaign_access(db, campaign_id, user_id)
     t = await db.get(CampaignMarkerType, type_id)
     if t is None or t.campaign_id != campaign_id:
         raise HTTPException(status_code=404, detail="type_not_found")

@@ -1,3 +1,4 @@
+import { uiLang } from '@/lib/lang'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookOpen } from 'lucide-react'
@@ -31,7 +32,7 @@ interface Props {
 /** Creation sheet: pick a monster from the SRD catalogue or type the stats by hand. Warnings are advisory. */
 export default function CompanionForm({ druidLevel, isMoon, edition, isBeastMaster, hasPactOfTheChain, summonSchools = [], pending, onSubmit, onClose }: Props) {
   const { t, i18n } = useTranslation()
-  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const lang: Lang = uiLang(i18n.language)
   const [kind, setKind] = useState<CompanionKind>('familiar')
   const [name, setName] = useState('')
   const [hp, setHp] = useState('')

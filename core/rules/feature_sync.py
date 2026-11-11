@@ -25,6 +25,9 @@ from core.rules.uses import max_uses
 ARCHIVED_FEATURES = "archived_features"
 ABILITY_BONUS_KEY = "feature_ability_bonus"  # settings: {feature_key: {ability: punti realmente aggiunti}}
 RETROFIT_DONE = "retrofit_done"  # settings: chiavi di classe già passate dal retrofit (una volta per classe, N7)
+LEGACY_BOOK_GRANTS = ("see-invisibility",)  # Terzo Occhio la scriveva nel libro (book_spells) prima di diventare una concessione
+REPLACED_AT_REST = "replaced_at_rest"  # per classe: in quale riposo lungo è già stata fatta la sostituzione (Maestria 2024)
+GRANTED_CREATED = "granted_created"  # gli incantesimi creati dalla concessione (non erano già del personaggio)
 GRANTED_SPELL_KEYS = "granted_spell_keys"  # incantesimi il cui «sempre preparato» è stato messo da un privilegio
 
 
@@ -191,6 +194,10 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
         char.current_hit_points = max(0, min(char.current_hit_points + delta * char.total_level, char.hit_points))
 
 
+def _concentrates(data: object, edition: str) -> bool:
+    return bool(data.is_concentration or (edition == "2024" and data.concentration_2024))  # type: ignore[attr-defined]
+
+
 async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str) -> None:
     """Incantesimi dei privilegi attivi: sempre preparati. Mai cancellati: se il privilegio sparisce (cambio di
     edizione, livello) l'incantesimo resta e torna a contare come gli altri. Si toglie solo il segno messo da un
@@ -210,27 +217,39 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         if key in previous and key not in granted:
             spell.always_prepared = False
     owned: list[str] = []
+    created = list((char.settings or {}).get(GRANTED_CREATED) or [])
     for key, owner in granted.items():
         spell = have.get(key)
         if spell is None:
             data = GRANTED_SPELLS[key]
             spell = Spell(character_id=char.id, name=data.name.get(lang) or data.name["it"], level=data.level,
                           casting_time=data.casting_time, range_area=data.range_area, duration=data.duration,
-                          is_concentration=data.is_concentration, is_ritual=data.is_ritual,
+                          is_concentration=_concentrates(data, character_edition(char)), is_ritual=data.is_ritual,
                           attack_save=data.attack_save, damage_dice=data.damage_dice, damage_type=data.damage_type,
                           higher_levels_dice=data.higher_levels_dice, srd_index=key,
                           extra_damage_dice=data.extra_damage_dice, extra_damage_type=data.extra_damage_type,
                           components=data.components, school=data.school)
             session.add(spell)
+            if key not in created:
+                created.append(key)
+        elif key in LEGACY_BOOK_GRANTS and key not in previous and spell.in_spellbook and not spell.is_prepared                 and not spell.always_prepared and spell.class_id == owner.id:
+            # shortcut: una copia a mano nel libro con lo stesso class_id è indistinguibile dalla riga del vecchio book_spells; si ripulisce lo stesso
+            spell.in_spellbook = False
+            if key not in created:
+                created.append(key)
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
         spell.school = spell.school or GRANTED_SPELLS[key].school  # idem per la scuola (Magia Ammaliante)
+        if key in created:  # riga creata da noi: la Concentrazione segue l'edizione (Arma Spirituale)
+            spell.is_concentration = _concentrates(GRANTED_SPELLS[key], character_edition(char))
         if key in previous or not spell.always_prepared:
             owned.append(key)
         spell.always_prepared = spell.is_prepared = True
         spell.class_id = spell.class_id or owner.id
     if set(owned) != set(previous):
         char.settings = {**(char.settings or {}), GRANTED_SPELL_KEYS: owned}
+    if created != list((char.settings or {}).get(GRANTED_CREATED) or []):
+        char.settings = {**(char.settings or {}), GRANTED_CREATED: created}
     # Libro del Mago: l'incantesimo c'è e sta nel libro, ma non è preparato né sempre preparato (Servitori Non Morti, Mutaforma)
     for key, owner in {key: row for spec, row in active_features(char) for key in spec.book_spells}.items():
         spell = have.get(key)

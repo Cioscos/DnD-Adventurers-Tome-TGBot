@@ -1,3 +1,4 @@
+import { apiErrorCode } from '@/lib/mutationError'
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -47,7 +48,7 @@ export function useAttackRoll() {
 
   /** Il server può rifiutare ciò che la pagina non aveva ancora visto: lo si dice, senza errori muti. */
   const refused = (err: unknown): boolean => {
-    const code = err instanceof ApiError ? (err.detail as { code?: string } | null)?.code : undefined
+    const code = apiErrorCode(err)
     if (code === 'incapacitated') toast.error(t('character.attack.incapacitated'))
     else if (code === 'attack_limit') toast.error(t('character.attack.limit_title'))
     else if (code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))
@@ -66,7 +67,7 @@ export function useAttackRoll() {
     const secondStep = async (first: WeaponAttackResult, inspiration: boolean): Promise<WeaponAttackResult | null> => {
       let result = first
       let canReroll = inspiration
-      let refundable = false  // dichiarare il mancato restituisce ciò che si paga solo se il tiro riesce
+      let refundable = !!first.refundable  // dichiarare il mancato restituisce ciò che si paga solo se il tiro riesce
       let used: string[] = []
       while (result.attack_id) {
         const bonus = `${result.to_hit_bonus >= 0 ? '+' : ''}${result.to_hit_bonus}`
@@ -107,9 +108,9 @@ export function useAttackRoll() {
           }
         }
         canReroll = false
-        refundable = false
         used = []
         result = await post(true, { dice: await rollD20('normal'), mode: 'normal', defer_damage: true })
+        refundable = !!result.refundable
       }
       return result
     }
