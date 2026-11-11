@@ -7,6 +7,7 @@ Mini App (private chats only, which is where the bot writes).
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import uuid
@@ -27,8 +28,16 @@ _MINIAPP_BASE_URL = os.environ.get(
     "MINIAPP_BASE_URL",
     "https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/app/",
 )
+_BACKGROUND: set[asyncio.Task] = set()  # riferimenti agli invii staccati: senza, il task può sparire prima di finire
 # Cache di getMe — lo username serve solo per i deep link t.me/<bot>?startapp=…
 _BOT_USERNAME: Optional[str] = None
+
+
+def send_detached(coro) -> None:
+    """Lancia un invio best-effort fuori dalla richiesta: il lock del personaggio non aspetta la rete."""
+    task = asyncio.create_task(coro)
+    _BACKGROUND.add(task)
+    task.add_done_callback(_BACKGROUND.discard)
 
 
 def bot_token_configured() -> bool:
@@ -208,11 +217,15 @@ async def notify_party_emergency(db: AsyncSession, char: Character, text: str) -
         res = await db.execute(select(Character).where(Character.id.in_(char_ids)))
         chars_by_id = {c.id: c for c in res.scalars()}
     url = miniapp_url(f"/session/{game_session.id}")
-    for p in recipients:
-        rec_char = chars_by_id.get(p.character_id) if p.character_id else None
-        if not notifications_enabled(rec_char, "party_emergency"):
-            continue
-        await send_telegram_message(p.user_id, text, button=("Apri la sessione", url))
+    targets = [p.user_id for p in recipients
+               if notifications_enabled(chars_by_id.get(p.character_id) if p.character_id else None, "party_emergency")]
+
+    async def _send_all() -> None:
+        for user_id in targets:
+            await send_telegram_message(user_id, text, button=("Apri la sessione", url))
+
+    if targets:
+        send_detached(_send_all())  # le letture sono fatte: solo l'HTTP esce dalla richiesta
 
 
 async def notify_saves(db: AsyncSession, save_ids: list[int]) -> None:

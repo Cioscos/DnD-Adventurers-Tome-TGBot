@@ -609,11 +609,11 @@ async def update_xp(
             text = f"🎉 {char.name} è salito al livello {new_level_from_xp}!"
         else:
             text = f"✨ Level-up disponibile per {char.name} (liv. {new_level_from_xp})!"
-        await telegram_notify.send_telegram_message(
+        telegram_notify.send_detached(telegram_notify.send_telegram_message(
             user_id, text,
             button=("Apri Esperienza",
                     telegram_notify.miniapp_url(f"/char/{char_id}/xp")),
-        )
+        ))
 
     # Re-SELECT so model_validate sees non-expired columns AND the freshly
     # generated class-feature Ability rows are loaded via selectinload. See
