@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "version": "3.1.1",
+      "date": "2026-11-11",
+      "fixed": {
+        "it": [
+          "Se la Costituzione cala mentre hai Aiuto, tieni i PF extra dell'incantesimo.",
+          "Il turno indietro riporta anche la forma selvatica scaduta con l'avanzamento.",
+          "Le notifiche Telegram non fanno più aspettare chi tocca la scheda.",
+          "Importando un personaggio, un ultimo riposo lungo nel futuro viene ignorato.",
+          "Le prove di abilità e di caratteristica con un 20 non sono più un critico."
+        ],
+        "en": [
+          "If Constitution drops while Aid is active, you keep the spell's extra HP.",
+          "Going back a turn also brings back the wild shape that expired with the advance.",
+          "Telegram notifications no longer make you wait when you touch the sheet.",
+          "Importing a character ignores a long rest dated in the future.",
+          "Skill and ability checks with a 20 are no longer a critical."
+        ]
+      }
+    },
+    {
       "version": "3.1.0",
       "date": "2026-11-11",
       "added": {
