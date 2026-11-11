@@ -23,6 +23,7 @@ from api.schemas.common import (
     RollMode,
 )
 from core.rules.types import Edition
+from core.rules.weapons import MASTERY_GROUP, weapon_key
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.container import CoinLocationRead
 from api.schemas.rules import RollOptionRead
@@ -345,6 +346,15 @@ class CharacterFull(BaseModel):
             as_dict[k] = v
         as_dict["ability_scores"] = resolved
         return as_dict
+
+    @model_validator(mode="after")
+    def _only_chosen_masteries(self) -> "CharacterFull":
+        """Il chip di padronanza solo sulle armi scelte (stesso criterio di `_knows` all'attacco); in 2014 nessuna."""
+        chosen = {k for c in self.classes for k in c.options.get(MASTERY_GROUP, [])} if self.rules_edition == "2024" else set()
+        for item in self.items:
+            if item.mastery and weapon_key(item) not in chosen:
+                item.mastery = None
+        return self
 
     model_config = {"from_attributes": True}
 

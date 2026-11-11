@@ -156,7 +156,7 @@ BASE_ROWS = (
     feature("weapon_mastery", CK, ED, 1, "Padronanza delle Armi / Weapon Mastery (Ranger 1, pag. 120)", ("Padronanza delle Armi", "Weapon Mastery"),
             ("Usi le proprietà di padronanza di 2 tipi di arma con cui sei competente; dopo un riposo lungo ne cambi uno.",
              "You use the mastery properties of 2 kinds of weapon you are proficient with; change one after a long rest."),
-            choices=(mastery_choice({1: 2}),), roll_options=MASTERY_OPTIONS),
+            choices=(mastery_choice({1: 2}, swaps=2),), roll_options=MASTERY_OPTIONS),
     feature("deft_explorer", CK, ED, 2, "Esploratore Abile / Deft Explorer (Ranger 2, pag. 120)", ("Esploratore Abile", "Deft Explorer"),
             ("Maestria in un'abilità in cui sei già competente e conosci due lingue a tua scelta.",
              "Expertise in one skill you are already proficient in, and you know two languages of your choice."),

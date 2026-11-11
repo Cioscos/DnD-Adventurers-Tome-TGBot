@@ -231,7 +231,7 @@ BASE_ROWS = (
     feature("weapon_mastery", CK, ED, 1, "Padronanza delle Armi / Weapon Mastery (Ladro 1, pag. 129)", ("Padronanza delle Armi", "Weapon Mastery"),
             ("Usi le proprietà di padronanza di 2 tipi di arma con cui sei competente; dopo un riposo lungo ne cambi.",
              "You use the mastery properties of 2 kinds of weapon you are proficient with; change them after a long rest."),
-            choices=(mastery_choice({1: 2}),), roll_options=MASTERY_OPTIONS),
+            choices=(mastery_choice({1: 2}, swaps=2),), roll_options=MASTERY_OPTIONS),
     feature("cunning_action", CK, ED, 2, "Azione Scaltra / Cunning Action (Ladro 2, pag. 130)", ("Azione Scaltra", "Cunning Action"),
             ("Azione bonus nel tuo turno per Scatto, Disimpegno o Nascondersi.", "A bonus action on your turn for Dash, Disengage or Hide."),
             "bonus_action", on_use=CUNNING_ACTION_USE),

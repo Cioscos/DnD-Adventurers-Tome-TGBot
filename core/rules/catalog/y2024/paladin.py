@@ -239,7 +239,7 @@ BASE_ROWS = (
     feature("weapon_mastery", CK, ED, 1, "Padronanza delle Armi / Weapon Mastery (Paladino 1, pag. 110)", ("Padronanza delle Armi", "Weapon Mastery"),
             ("Usi le proprietà di padronanza di 2 tipi di arma con cui sei competente; dopo un riposo lungo ne cambi uno.",
              "You use the mastery properties of 2 kinds of weapon you are proficient with; change one after a long rest."),
-            choices=(mastery_choice({1: 2}),), roll_options=MASTERY_OPTIONS),
+            choices=(mastery_choice({1: 2}, swaps=2),), roll_options=MASTERY_OPTIONS),
     feature("fighting_style", CK, ED, 2, "Stile di Combattimento / Fighting Style (Paladino 2, pag. 110)",
             ("Stile di Combattimento", "Fighting Style"),
             ("Scegli un talento Stile di Combattimento, o Guerriero Benedetto.",
