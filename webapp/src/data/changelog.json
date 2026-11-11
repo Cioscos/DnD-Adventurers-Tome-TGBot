@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "3.2.0",
+      "date": "2026-11-11",
+      "added": {
+        "it": [
+          "Reazioni degli alleati in serata: quando un compagno segna un danno, chi ha Intercettazione o Parole Taglienti riceve un popup sul telefono e decide se usarle. La riduzione entra nel danno prima che venga applicato.",
+          "Il bardo colpito può usare le Parole Taglienti su di sé."
+        ],
+        "en": [
+          "Allies' reactions in the evening: when a companion records damage, whoever has Interception or Cutting Words gets a popup on their phone and decides whether to use it. The reduction goes into the damage before it is applied.",
+          "A bard who is hit can use Cutting Words on himself."
+        ]
+      }
+    },
+    {
       "version": "3.1.2",
       "date": "2026-11-11",
       "fixed": {

@@ -271,7 +271,22 @@ export type OptionResult = {
   damage_after?: number | null
   /** Danno tenuto a 1 PF: i PF persi davvero (il toast non dice il colpo intero). */
   hp_lost?: number | null
+  /** Riduzioni degli alleati (Intercettazione, Parole Taglienti). */
+  allies?: { name: string; feature_key: string; reduction: number }[]
 }
+
+export type WaitingDonor = { character_id: number; name: string; feature_key: string }
+export type AllyReactionOpened = { request_id: number | null; waiting: WaitingDonor[]; expires_in: number }
+export type AllyReactionRead = {
+  status: 'open' | 'closed'
+  waiting: WaitingDonor[]
+  answers: { name: string; feature_key: string; status: string; reduction: number | null }[]
+  total_reduction: number
+}
+export type ReactionPrompt = {
+  request_id: number; receiver_name: string; damage: number; damage_type: string | null; feature_key: string; dice: string
+}
+export type ReactionAnswerResult = { reduction: number; rolls: number[] }
 
 export type RollResult = {
   die: number
@@ -622,7 +637,7 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string } & Partial<RollChoice>,
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; ally_reaction_id?: number } & Partial<RollChoice>,
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
@@ -1466,6 +1481,20 @@ export const api = {
   // ---------------------------------------------------------------------------
   // Sessions (invite-code live game sessions)
   // ---------------------------------------------------------------------------
+  allyReactions: {
+    open: (charId: number, damage: number, damageType?: string | null) =>
+      request<AllyReactionOpened>(`/characters/${charId}/ally-reactions`, {
+        method: 'POST', body: JSON.stringify({ damage, damage_type: damageType || null }),
+      }),
+    read: (charId: number, requestId: number) => request<AllyReactionRead>(`/characters/${charId}/ally-reactions/${requestId}`),
+    close: (charId: number, requestId: number) =>
+      request<AllyReactionRead>(`/characters/${charId}/ally-reactions/${requestId}/close`, { method: 'POST' }),
+    prompts: (charId: number) => request<ReactionPrompt[]>(`/characters/${charId}/reaction-prompts`),
+    answer: (charId: number, requestId: number, use: boolean) =>
+      request<ReactionAnswerResult>(`/characters/${charId}/reaction-prompts/${requestId}`, {
+        method: 'POST', body: JSON.stringify({ use }),
+      }),
+  },
   sessions: {
     me: () => request<GameSession | null>('/sessions/me'),
     create: (title?: string, campaignId?: number) =>

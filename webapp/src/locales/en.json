@@ -106,6 +106,30 @@
       "go_home": "Go to your characters"
     }
   },
+  "allyReaction": {
+    "title": "You can react",
+    "hit": "{{name}} takes {{damage}} damage",
+    "of_type": "({{type}})",
+    "feature": {
+      "interception": "Interception: reduce the damage by {{dice}}.",
+      "cutting_words": "Cutting Words: reduce the damage by {{dice}}."
+    },
+    "question_interception": "Is it an attack hit and are you within 5 ft of {{name}}?",
+    "question_cutting_words": "Can you see the creature within 60 ft?",
+    "use": "Use",
+    "leave": "Pass",
+    "used": "Reaction used: damage reduced by {{n}}",
+    "closed": "Too late: the request is closed",
+    "lost": "The allies' reductions expired: the damage was applied in full.",
+    "wait_title": "Allies' reactions",
+    "waiting_for": "Waiting for: {{names}}",
+    "apply_now": "Apply without waiting",
+    "reduced": "{{name}}: {{reduction}} less ({{feature}})",
+    "feature_name": {
+      "interception": "Interception",
+      "cutting_words": "Cutting Words"
+    }
+  },
   "character": {
     "weapon_bond": {
       "title": "Weapon Bond",

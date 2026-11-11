@@ -314,6 +314,20 @@ PEERLESS_SKILL = RollOptionSpec(
            "en": "Peerless Skill: spend Bardic Inspiration and add the die to the d20 (the use comes back if the roll still fails)"})
 
 
+def _can_react(ctx: RuleContext) -> bool:
+    from core.rules.modifiers import is_incapacitated  # import locale: modifiers usa il catalogo
+    return not is_incapacitated(ctx.char)
+
+
+CUTTING_WORDS_SELF = RollOptionSpec(
+    key=f"{CK}.cutting_words_self", phase="damage_in", rolls=("damage_taken",), slot="reaction",
+    cost=Cost(feature_key=BI), extra_dice=_die,
+    label={"it": "Parole Taglienti: spendi Ispirazione Bardica, reazione, il dado riduce il danno",
+           "en": "Cutting Words: spend Bardic Inspiration, reaction, the die reduces the damage"},
+    available=_can_react,
+)
+
+
 def _lore(key: str, level: int, title: str, name: tuple[str, str], summary: tuple[str, str], action_type: str | None = None, **kw: Any):
     return feature(key, CK, ED, level, title, name, summary, action_type, subclass="lore", **kw)
 
@@ -334,7 +348,8 @@ LORE = (
               "Sottrai il dado al tiro di danno, alla prova o al tiro per colpire di una creatura entro 18 m che vedi: "
               "il danno cala, un successo può diventare un fallimento.",
               "Subtract the die from the damage roll, ability check or attack roll of a creature within 60 ft that you can see: "
-              "the damage drops, a success can become a failure."))),
+              "the damage drops, a success can become a failure.")),
+          roll_options=(CUTTING_WORDS_SELF,)),
     _lore("magical_discoveries", 6, "Scoperte Magiche / Magical Discoveries (Collegio della Sapienza 6, pag. 66)",
           ("Scoperte Magiche", "Magical Discoveries"),
           ("Due incantesimi dalle liste di Chierico, Druido o Mago (trucchetti o con slot), sempre preparati, sostituibili a ogni livello.",

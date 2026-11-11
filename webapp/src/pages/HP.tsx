@@ -38,6 +38,8 @@ import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { zeroHpSaveMessage } from '@/lib/zeroHpSave'
 import { damageTakenMessage, sharedDamageMessage } from '@/lib/sharedDamage'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
+import { useAllyReactionWait, allyReductionText } from '@/hooks/useAllyReactionWait'
+import { sendWithAllyReaction } from '@/lib/allyReactionPatch'
 import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
@@ -81,6 +83,7 @@ export default function HP() {
     queryFn: () => api.characters.get(charId),
   })
   const rest = useRest(charId, char)
+  const allyWait = useAllyReactionWait(charId)
   const offers = useReactionOffers({
     charId, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
   })
@@ -108,13 +111,15 @@ export default function HP() {
       op: HPOp; val: number; wasCritical?: boolean
       modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; knock_out?: boolean }
     }) => {
+      const allyId = op === 'damage' ? await allyWait.wait(val, modifier?.damage_type) : null
       const choice = op === 'damage'
         ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in')
         : undefined
-      const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
-      return withOptions
-        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, withOptions)
-        : api.characters.updateHp(charId, op, val, wasCritical ?? false)
+      const base = choice?.options.length ? { ...modifier, ...choice } : modifier
+      return sendWithAllyReaction(allyId, base, (body) => body
+        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, body)
+        : api.characters.updateHp(charId, op, val, wasCritical ?? false),
+      () => toast.warning(t('allyReaction.lost'), { duration: 5000 }))
     },
     onSuccess: (updated, { op, val }) => {
       qc.setQueryData(['character', charId], updated)
@@ -126,6 +131,8 @@ export default function HP() {
             before: updated.option_result.damage_before, after: updated.option_result.damage_after,
           }))
         }
+        const allies = allyReductionText(t, updated.option_result)
+        if (allies) toast.info(allies, { duration: 5000 })
       }
       // HP events (damage/heal) can drive homebrew change_resource rules (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
@@ -474,6 +481,7 @@ export default function HP() {
         />
       )}
       {offers.elements}
+      {allyWait.elements}
       <InstantDeathDialog open={instantDeathOpen} onClose={() => setInstantDeathOpen(false)} />
     </Layout>
   )

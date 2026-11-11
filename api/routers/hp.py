@@ -34,6 +34,7 @@ from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import get_turn, set_damaged
 from api.services.session_allies import load_receiver, attach_party, attach_party_auras, attach_spell_auras, refund_donor_tokens, spend_donor_tokens
+from api.services import ally_reactions
 from api.services.condition_effects import release_concentration_effects
 from api.services.spell_effects import regrant_spells
 from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD
@@ -73,7 +74,7 @@ from api.services.rules_options import (
 from api.routers._helpers import (
     collect_homebrew_notifications, effective_con_mod, roll_concentration_save, saving_throw_bonus,
 )
-from api.schemas.common import ConcentrationSaveResult, ZeroHpSaveResult
+from api.schemas.common import ConcentrationSaveResult, OptionResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
     SPELL_GIVEN, TEMP_GIVEN, ZERO_HP_USES, begin_state, forget_spell_temp_drop, has_state, reset_target_immunity, reset_zero_hp_uses, restore_exhaustion,
@@ -196,7 +197,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return None if shared_from else await build_character_response(session, char)
-    if body.options and body.op != HPOp.DAMAGE:
+    if (body.options or body.ally_reaction_id is not None) and body.op != HPOp.DAMAGE:
         raise HTTPException(status_code=422, detail={"code": "options_only_on_damage"})
     form = await get_active_form(session, char.id)  # the form involved in this op, if any
     if form is not None and not form_own_hp(char):
@@ -204,6 +205,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     before = _hp_state(char, form)
     zero_before = _zero_conditions(char)
     option_block = None
+    ally_req = None
     conc_result: ConcentrationSaveResult | None = None
     zero_save: ZeroHpSaveResult | None = None
     notifications: list[dict] = []
@@ -222,6 +224,9 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         raw = body.raw_value if body.raw_value is not None else body.value
         applied = body.value
         opts = None
+        ally_req = await ally_reactions.consume(session, char, body.ally_reaction_id) if body.ally_reaction_id is not None else None
+        ally_cut = ally_reactions.total_reduction(ally_req) if ally_req is not None else 0
+        ally_block = await ally_reactions.donors_of(session, ally_req) if ally_req is not None else []
         if any(s.get("key") == "spell:death_ward" for s in char.active_states or []) and DEATH_WARD_HOLD not in body.options:
             # Interdizione alla Morte è automatica nel manuale: la conferma la dà il server (se il colpo non porta a 0 l'uso non si spende)
             body = body.model_copy(update={"options": [*body.options, DEATH_WARD_HOLD]})
@@ -232,19 +237,24 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug, damage_in=raw)
             rolls, reduction = roll_option_dice(char, opts)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
-            option_after = max(0, scale_damage(raw, opts.multiplier) - max(0, reduction + opts.bonus))
-            option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after)
+            option_after = max(0, scale_damage(raw, opts.multiplier) - max(0, reduction + opts.bonus) - ally_cut)  # con le riduzioni degli alleati
+            option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after, allies=ally_block)
             # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
             raw = option_after
             applied = apply_damage_mode(raw, mod)
             if option_after == 0:  # il proiettile deviato si afferra (Deviare Proiettili)
                 run_zero_damage_hooks(session, char, opts.keys)
+        elif ally_cut:  # solo gli alleati: stesso punto, prima di resistenza e vulnerabilità
+            option_after = max(0, raw - ally_cut)
+            option_block = OptionResult(damage_before=raw, damage_after=option_after, allies=ally_block)
+            raw = option_after
+            applied = apply_damage_mode(raw, mod)
         if mod is None:
             await attach_spell_auras(session, char)  # la resistenza di un'aura viva dei compagni (Aura di Vita)
             # Senza tipo conta solo una resistenza a tutti i danni (Pietrificato).
             mod = damage_taken_mode(char, slug)
             if slug is not None or mod != "none":
-                if not body.options:
+                if not body.options and not ally_cut:
                     raw = body.value
                 applied = apply_damage_mode(raw, mod)
         elif mod == "immune":
@@ -323,6 +333,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if warded:
             desc += f" — Interdizione Arcana assorbe {warded}"
+        if ally_block:
+            desc += " — ridotto da " + ", ".join(f"{d['name']} -{d['reduction']}" for d in ally_block)
         if shared_from:
             desc += f" — {shared_from}"
         if held_at_one:
@@ -495,7 +507,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
-                    "spent": option_block.spent if option_block else [], "zero_before": zero_before,
+                    "spent": option_block.spent if option_block else [], "ally_reaction_id": ally_req.id if ally_req is not None else None, "zero_before": zero_before,
                     "zero_after": _zero_conditions(char), "shared": shared_log,
                     "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
     if shared_from:
@@ -566,8 +578,13 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
         char.active_states = [*char.active_states, now_form_state]
     set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
+    returned: list[str] = []
     refund_spent(char, snap.get("spent") or [])
     await refund_donor_tokens(session, char, snap.get("spent") or [])
+    if snap.get("ally_reaction_id"):  # reazione e usi dei donatori tornano con il danno annullato
+        ally_req = await session.get(ally_reactions.Req, snap["ally_reaction_id"])
+        if ally_req is not None:
+            returned = await ally_reactions.refund(session, ally_req, "annullo")
     await reopen_spell_clocks(session, snap.get("clocks") or [])  # lo stato di un incantesimo altrui è tornato: torna l'orologio di chi l'ha lanciato
     settings = dict(char.settings or {})
     still_given = settings.get(TEMP_GIVEN) or {}
@@ -605,7 +622,8 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
     char.hp_undo = None
 
     add_history(session, char.id, "hp_change",
-                 note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})",
+                 (note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})")
+                 + (f" — reazioni rimborsate a {', '.join(returned)}" if returned else ""),
                  meta={"op": "UNDO"})
 
 

@@ -113,6 +113,20 @@ PEERLESS_SKILL = RollOptionSpec(
            "en": "Peerless Skill: spend Bardic Inspiration and add the die"},
 )
 
+def _can_react(ctx: RuleContext) -> bool:
+    from core.rules.modifiers import is_incapacitated  # import locale: modifiers usa il catalogo
+    return not is_incapacitated(ctx.char)
+
+
+# Il bardo colpito si risponde da sé; per gli alleati c'è il popup (api/services/ally_reactions.py)
+CUTTING_WORDS_SELF = RollOptionSpec(
+    key=f"{CK}.cutting_words_self", phase="damage_in", rolls=("damage_taken",), slot="reaction",
+    cost=Cost(feature_key=BI), extra_dice=lambda c, _i: _inspiration_formula(c),
+    label={"it": "Parole Taglienti: spendi Ispirazione Bardica, reazione, il dado riduce il danno",
+           "en": "Cutting Words: spend Bardic Inspiration, reaction, the die reduces the damage"},
+    available=_can_react,
+)
+
 BATTLE_MAGIC = RollOptionSpec(
     key=f"{CK}.battle_magic", phase="before", rolls=("attack",), slot="bonus",
     label={"it": "Magia da Battaglia: attacco con arma come azione bonus",
@@ -214,7 +228,7 @@ FEATURES = (
             ("Reazione: spendi un uso di Ispirazione Bardica e tiri il dado da sottrarre al tiro di una creatura entro 18 m.",
              "Reaction: spend a Bardic Inspiration use and roll the die to subtract from a creature's roll within 60 ft."),
             "reaction", subclass="lore",
-            on_use=OnUse(slot="reaction", rolls=_inspiration_formula, spends=BI)),
+            on_use=OnUse(slot="reaction", rolls=_inspiration_formula, spends=BI), roll_options=(CUTTING_WORDS_SELF,)),
     feature("additional_magical_secrets", CK, ED, 6,
             "Segreti Magici Aggiuntivi / Additional Magical Secrets (Collegio della Sapienza 6, pag. 55)",
             ("Segreti Magici Aggiuntivi", "Additional Magical Secrets"),

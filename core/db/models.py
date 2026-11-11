@@ -6,6 +6,7 @@ tables so ``init_db()`` can create everything in one call.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum as PyEnum
 from typing import List, Optional
 
@@ -1109,3 +1110,30 @@ class AppMeta(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class AllyReactionRequest(Base):
+    """Richiesta di reazione agli alleati per un danno che un PG sta per subire (Intercettazione, Parole Taglienti).
+
+    ``answers``: ``[{donor_id, feature_key, status: waiting|used|declined, reduction, rolls, spent}]``; ``spent`` dice cosa
+    ha pagato il donatore (slot di turno, riga ``Ability`` e usi) per poterlo rimborsare. Le transizioni sono UPDATE
+    condizionati: ``rev`` sale a ogni scrittura di ``answers``. I tempi sono UTC senza fuso.
+    """
+
+    __tablename__ = "ally_reaction_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    receiver_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    damage: Mapped[int] = mapped_column(Integer, nullable=False)
+    damage_type: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    refunded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    answers: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    rev: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
