@@ -96,3 +96,43 @@ async def test_delete_unknown_item_is_404(client):
     cid = await _create_character(client)
     r = await client.delete(f"/characters/{cid}/items/999999")
     assert r.status_code == 404, r.text
+
+
+async def _add_equipped(client, cid, slot, **fields):
+    r = await client.post(f"/characters/{cid}/items", json=fields)
+    assert r.status_code == 201, r.text
+    iid = next(i for i in r.json()["items"] if i["name"] == fields["name"])["id"]
+    r = await client.patch(f"/characters/{cid}/items/{iid}", json={"is_equipped": True, "equipment_slot": slot})
+    assert r.status_code == 200, r.text
+    return iid
+
+
+async def test_delete_equipped_shield_resets_shield_ac(client):
+    cid = await _create_character(client)
+    sid = await _add_equipped(client, cid, "off_hand", name="Scudo", item_type="shield", item_metadata={"ac_bonus": 2})
+    assert (await client.get(f"/characters/{cid}")).json()["ac"] == 12
+
+    r = await client.delete(f"/characters/{cid}/items/{sid}")
+    assert r.status_code == 200, r.text
+    assert r.json()["ac_breakdown"]["shield"] == 0
+    assert r.json()["ac"] == 10
+    assert (await client.get(f"/characters/{cid}")).json()["ac"] == 10
+
+
+async def test_delete_equipped_armor_restores_unarmored_base(client):
+    cid = await _create_character(client)
+    aid = await _add_equipped(client, cid, "body", name="Piastre", item_type="armor", item_metadata={"ac_value": 18})
+    assert (await client.get(f"/characters/{cid}")).json()["ac"] == 18
+
+    r = await client.delete(f"/characters/{cid}/items/{aid}")
+    assert r.json()["ac_breakdown"]["base"] == 10
+    assert (await client.get(f"/characters/{cid}")).json()["ac"] == 10
+
+
+async def test_delete_equipped_shield_keeps_manual_shield_override(client):
+    cid = await _create_character(client)
+    sid = await _add_equipped(client, cid, "off_hand", name="Scudo", item_type="shield", item_metadata={"ac_bonus": 2})
+    await client.patch(f"/characters/{cid}/ac", json={"shield": 3})
+
+    r = await client.delete(f"/characters/{cid}/items/{sid}")
+    assert r.json()["ac_breakdown"]["shield"] == 3

@@ -378,6 +378,10 @@ async def delete_item(
     old_con_mod = effective_con_mod(char)
     if is_container(item):
         await reparent_contents(session, char, item)
+    if item.is_equipped:
+        # Stesso reset di «rimuovi dallo slot»: senza, lo scudo eliminato lascia il suo bonus alla CA.
+        item.is_equipped, item.equipment_slot = False, None
+        apply_equip_ac(char, item)
     await session.delete(item)
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
