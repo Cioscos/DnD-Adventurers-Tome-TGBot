@@ -19,7 +19,7 @@ from core.rules.states import restore_exhaustion
 from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
-    Character, Combatant, ConditionEffect, Encounter, PendingSave,
+    Character, Combatant, Companion, ConditionEffect, Encounter, PendingSave,
 )
 
 Target = tuple[Literal["character", "combatant"], int]
@@ -133,6 +133,10 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
         if pc is not None:
             pc.active_states = list(snap["active_states"])
             set_damaged(pc, snap["damaged"])
+            wild = next((s for s in pc.active_states if s.get("key") == "wild_shape"), None)  # la riga della forma l'ha chiusa l'avanzamento
+            form = await db.get(Companion, (wild.get("data") or {}).get("companion_id") or 0) if wild else None
+            if form is not None and form.character_id == pc.id and form.kind == "wild_shape":
+                form.is_active = True
             healed = snap.get("healed")  # la cura d'inizio turno: si toglie solo se i PF sono ancora quelli che ha dato
             if healed and pc.current_hit_points == healed["after"]:
                 pc.current_hit_points = healed["before"]
