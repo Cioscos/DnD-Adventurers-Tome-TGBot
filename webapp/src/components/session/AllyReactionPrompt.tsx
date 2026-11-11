@@ -83,9 +83,17 @@ export default function AllyReactionPrompt({ charId }: { charId: number }) {
   )
 }
 
-/** Montato una volta in App: copre la scheda e tutte le sue sottopagine. */
+/** Montato una volta in App: copre la scheda, le sue sottopagine e la pagina della serata (anche lo scontro). */
 export function AllyReactionHost() {
-  const match = useMatch('/char/:id/*')
-  const charId = Number(match?.params.id)
+  const charMatch = useMatch('/char/:id/*')
+  const sessionMatch = useMatch('/session/:id/*')
+  const onSession = !charMatch && !!sessionMatch && !!Number(sessionMatch.params.id)
+  // Sulla serata il personaggio è quello dell'utente seduto in quella serata (dati già in cache).
+  const { data: me } = useQuery({ queryKey: ['auth-me'], queryFn: () => api.me(), staleTime: Infinity, enabled: onSession })
+  const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me(), enabled: onSession })
+  const sessionCharId = onSession && me
+    ? session?.participants?.find((p) => p.user_id === me.user_id)?.character_id
+    : undefined
+  const charId = Number(charMatch?.params.id) || sessionCharId
   return charId ? <AllyReactionPrompt charId={charId} /> : null
 }
