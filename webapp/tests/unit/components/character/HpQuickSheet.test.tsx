@@ -19,6 +19,7 @@ const { rollOptionsSpy, updateHpSpy, undoHpSpy, showUndoToastSpy, toastError, no
   notifySpy: vi.fn(),
 }))
 
+vi.mock('@/hooks/useAllyReactionWait', () => ({ useAllyReactionWait: () => ({ wait: async () => null, elements: null }), allyReductionText: () => null }))
 vi.mock('@/api/client', () => ({
   api: { characters: { updateHp: updateHpSpy, undoHp: undoHpSpy, rollOptions: rollOptionsSpy } },
   ApiError: class ApiError extends Error {

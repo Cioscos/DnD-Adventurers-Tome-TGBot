@@ -24,6 +24,7 @@ const {
   playAndCollect: vi.fn(),
 }))
 
+vi.mock('@/hooks/useAllyReactionWait', () => ({ useAllyReactionWait: () => ({ wait: async () => null, elements: null }), allyReductionText: () => null }))
 vi.mock('@/api/client', () => ({
   api: {
     characters: {

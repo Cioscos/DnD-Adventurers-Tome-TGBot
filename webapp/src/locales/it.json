@@ -106,6 +106,29 @@
       "go_home": "Vai ai tuoi personaggi"
     }
   },
+  "allyReaction": {
+    "title": "Puoi reagire",
+    "hit": "{{name}} subisce {{damage}} danni",
+    "of_type": "({{type}})",
+    "feature": {
+      "interception": "Intercettazione: togli {{dice}} al danno.",
+      "cutting_words": "Parole Taglienti: togli {{dice}} al danno."
+    },
+    "question_interception": "È il colpo di un attacco e sei entro 1,5 m da {{name}}?",
+    "question_cutting_words": "Vedi la creatura entro 18 m?",
+    "use": "Usa",
+    "leave": "Lascia",
+    "used": "Reazione usata: danno ridotto di {{n}}",
+    "closed": "Troppo tardi: il danno è già stato applicato",
+    "wait_title": "Reazioni degli alleati",
+    "waiting_for": "In attesa di: {{names}}",
+    "apply_now": "Applica senza aspettare",
+    "reduced": "{{name}}: {{reduction}} in meno ({{feature}})",
+    "feature_name": {
+      "interception": "Intercettazione",
+      "cutting_words": "Parole Taglienti"
+    }
+  },
   "character": {
     "weapon_bond": {
       "title": "Arma Vincolata",

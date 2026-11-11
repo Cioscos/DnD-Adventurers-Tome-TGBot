@@ -16,6 +16,7 @@ import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import HpQuickChips from '@/components/character/HpQuickChips'
 import { useReactionOffers } from '@/components/character/ReactionOffers'
+import { useAllyReactionWait, allyReductionText } from '@/hooks/useAllyReactionWait'
 import {
   applyDamageModifier, damageMultiplier, damagePreviewText, effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
@@ -56,15 +57,19 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     charId: char.id, char, reactions, onSpent: (key) => setReactions((all) => all.filter((r) => r.key !== key)),
   })
 
+  const allyWait = useAllyReactionWait(char.id)
+
   const hpMutation = useMutation({
     mutationFn: async ({ op, value, modifier }: {
       op: 'damage' | 'heal'; value: number
       modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
     }) => {
+      const allyId = op === 'damage' ? await allyWait.wait(value, modifier?.damage_type) : null
       const choice = op === 'damage'
         ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in')
         : undefined
-      const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const base = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const withOptions = allyId != null ? { ...base, ally_reaction_id: allyId } : base
       const updated = await (withOptions
         ? api.characters.updateHp(char.id, op, value, false, withOptions)
         : api.characters.updateHp(char.id, op, value))
@@ -75,6 +80,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
             before: updated.option_result.damage_before, after: updated.option_result.damage_after,
           }))
         }
+        const allies = allyReductionText(t, updated.option_result)
+        if (allies) toast.info(allies, { duration: 5000 })
       }
       return updated
     },
@@ -157,6 +164,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   return (
     <>
     {offers.elements}
+    {allyWait.elements}
     {lostSave && <ConcentrationSaveDialog result={lostSave} onClose={() => setLostSave(null)} afterRoll={{ charId: char.id }} />}
     <Sheet open={open} onClose={() => { setReactions([]); onClose() }} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">

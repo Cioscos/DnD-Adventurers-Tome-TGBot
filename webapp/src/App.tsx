@@ -1,4 +1,5 @@
 import { RefundQuestionHost } from '@/components/rules/AfterRollOptions'
+import { AllyReactionHost } from '@/components/session/AllyReactionPrompt'
 import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
 import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
@@ -75,6 +76,7 @@ export default function App() {
         <DiceAnimationProvider>
           <RollOptionsHost />
           <RefundQuestionHost />
+          <AllyReactionHost />
           <Suspense fallback={<PageFallback />}>
             <Routes>
             <Route path="/" element={<CharacterSelect />} />
