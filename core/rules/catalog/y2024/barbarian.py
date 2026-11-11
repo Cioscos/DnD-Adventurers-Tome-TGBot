@@ -20,7 +20,7 @@ from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
     UseToggle, ZeroHpSave,
 )
-from core.rules.weapons import MASTERY_GROUP, MASTERY_OPTIONS, has_property, mastery_choice, weapon_key, weapon_mastery
+from core.rules.weapons import MASTERY_GROUP, MASTERY_IT, MASTERY_OPTIONS, has_property, mastery_choice, weapon_key, weapon_mastery
 from core.utils.session_view import armor_category
 
 ED, CK = "2024", "barbarian"
@@ -375,7 +375,7 @@ def _reach_weapon(ctx: RuleContext) -> bool:
 def _roots(prop: str) -> RollOptionSpec:
     base = next(o for o in MASTERY_OPTIONS if o.key == f"mastery_{prop}")
     return replace(base, key=f"{CK}.battering_roots_{prop}", group="battering_roots",
-                   label=_both(f"Radici Percuotenti: aggiungi {prop.capitalize()} alla padronanza dell'arma",
+                   label=_both(f"Radici Percuotenti: aggiungi {MASTERY_IT[prop]} alla padronanza dell'arma",
                                f"Battering Roots: add {prop.capitalize()} to the weapon's mastery"),
                    available=lambda c: (c.edition == "2024" and c.attack_mode == "melee" and _reach_weapon(c) and _knows_weapon(c)
                                         and weapon_mastery(c.item) != prop))
@@ -710,7 +710,7 @@ FEATURES = (
             on_use=OnUse(slot="reaction", target_effect=_branches, available=lambda c: state_on(c, "rage"))),
     feature("battering_roots", CK, ED, 10, "Radici Percuotenti / Battering Roots (Cammino dell'Albero del Mondo 10, pag. 56)",
             ("Radici Percuotenti", "Battering Roots"),
-            ("Nel tuo turno, portata +3 m con armi da mischia Pesanti o Versatili; colpendo puoi attivare Spingere o Atterrare oltre a un'altra padronanza.",
+            ("Nel tuo turno, portata +3 m con armi da mischia Pesanti o Versatili; colpendo puoi attivare Spinta o Rovesciamento oltre a un'altra padronanza.",
              "On your turn, reach +10 ft with Heavy or Versatile melee weapons; on a hit you can activate Push or Topple in addition to another mastery."),
             subclass="world_tree", roll_options=(_roots("push"), _roots("topple")),
             modifiers=(Modifier("reach", 10, source=f"feature:{CK}.battering_roots", when=_reach_weapon),)),

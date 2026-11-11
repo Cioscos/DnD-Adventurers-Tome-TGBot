@@ -236,8 +236,8 @@ BASE_ROWS = (
              "Charisma; half-caster slots from 1st level, prepared spells from 2 to 15 by table, no cantrips; a holy symbol as focus."),
             no_row=True, covered_by="core/rules/spellcasting.py (prepared_limit, slots_for) e core/data/spell_slots.py (HALF_CASTER_SLOTS_2024, "
                                     "multiclasse per eccesso); test_prepared_spells_follow_the_2024_table_and_there_are_no_cantrips"),
-    feature("weapon_mastery", CK, ED, 1, "Maestria nelle Armi / Weapon Mastery (Paladino 1, pag. 110)", ("Maestria nelle Armi", "Weapon Mastery"),
-            ("Usi le proprietà di maestria di 2 tipi di arma con cui sei competente; dopo un riposo lungo ne cambi uno.",
+    feature("weapon_mastery", CK, ED, 1, "Padronanza delle Armi / Weapon Mastery (Paladino 1, pag. 110)", ("Padronanza delle Armi", "Weapon Mastery"),
+            ("Usi le proprietà di padronanza di 2 tipi di arma con cui sei competente; dopo un riposo lungo ne cambi uno.",
              "You use the mastery properties of 2 kinds of weapon you are proficient with; change one after a long rest."),
             choices=(mastery_choice({1: 2}),), roll_options=MASTERY_OPTIONS),
     feature("fighting_style", CK, ED, 2, "Stile di Combattimento / Fighting Style (Paladino 2, pag. 110)",

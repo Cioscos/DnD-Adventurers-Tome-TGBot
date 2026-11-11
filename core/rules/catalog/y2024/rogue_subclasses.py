@@ -158,7 +158,7 @@ PSYCHIC_BLADE = RollOptionSpec(
     unarmed_dice=lambda _c, _i: "1d6", unarmed_damage_type="psychic", finesse_unarmed=True,
     label=_both("Lama Psichica: manifesta la lama (1d6 psichico, Accurata, Lanciabile 18/36 m)",
                 "Psychic Blade: manifest the blade (1d6 psychic, Finesse, Thrown 60/120 ft)"),
-    effect=lambda _c, _i: _both("Lama Psichica: maestria Vex (non conta nel limite); svanisce dopo l'attacco. Con Accurata usi la migliore fra Forza e Destrezza.",
+    effect=lambda _c, _i: _both("Lama Psichica: padronanza Vessazione (non conta nel limite); svanisce dopo l'attacco. Con Accurata usi la migliore fra Forza e Destrezza.",
                                 "Psychic Blade: Vex mastery (doesn't count toward your limit); it vanishes after the attack. Finesse: use the better of Strength and Dexterity."))
 PSYCHIC_BLADE_BONUS = RollOptionSpec(
     key=BLADE_BONUS, phase="before", rolls=("attack",), slot="bonus", group="psychic_blade", on_confirm=_blade_used,
@@ -185,7 +185,7 @@ def _blade_sneak(ctx: RuleContext) -> bool:
 
 PSYCHIC_BLADE_VEX = RollOptionSpec(
     key=f"{CK}.psychic_blade_vex", phase="after_hit", rolls=("attack",), once_per_turn=True, available=_blade_sneak, on_confirm=_arm_vex,
-    label=_both("Lama Psichica, maestria Vex: hai colpito? Vantaggio al prossimo attacco contro il bersaglio",
+    label=_both("Lama Psichica, padronanza Vessazione: hai colpito? Vantaggio al prossimo attacco contro il bersaglio",
                 "Psychic Blade, Vex mastery: did you hit? Advantage on your next attack against the target"),
     effect=lambda _c, _i: _both("Vex: vantaggio al prossimo attacco contro il bersaglio, entro la fine del tuo prossimo turno.",
                                 "Vex: advantage on your next attack against the target, by the end of your next turn."))
