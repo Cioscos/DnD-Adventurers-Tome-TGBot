@@ -453,9 +453,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points
         char.hit_points = max(0, body.value)
-        # Clamp current to new max
-        char.current_hit_points = min(char.current_hit_points, char.hit_points)
-        await cap_current_hp(session, char)
+        await cap_current_hp(session, char, always=True)  # taglia al massimo effettivo, non a quello base
         add_history(session, char.id, "hp_change",
                      f"HP max impostati: {old} → {char.hit_points}",
                      meta={"op": "SET_MAX"})
@@ -1253,10 +1251,7 @@ async def recalc_hp(
     old_max = char.hit_points
     was_at_zero = char.current_hit_points == 0
     char.hit_points = new_max
-    if new_max > old_max:
-        char.current_hit_points = max(0, char.current_hit_points + (new_max - old_max))
-    else:
-        char.current_hit_points = min(char.current_hit_points, new_max)
+    char.current_hit_points = max(0, char.current_hit_points + (new_max - old_max))  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
     await cap_current_hp(session, char)
     await sync_zero_hp(session, char, was_at_zero)
 

@@ -664,7 +664,7 @@ async def roll_skill(
     raw_total = die + bonus + option_total
     # Totale minimo (Potenza Indomabile): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
     total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
-    is_crit = False  # una prova di abilità o di caratteristica non ha il critico (solo attacchi e tiri salvezza)
+    is_crit = False  # una prova di abilità o di caratteristica non ha il critico (in 5e il 20 naturale conta solo per attacchi e tiri salvezza contro la morte)
     is_fumble = die == 1
 
     history_msg = (

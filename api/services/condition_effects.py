@@ -131,11 +131,13 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
     for cid, snap in log.char_states.items():
         pc = await db.get(Character, int(cid))
         if pc is not None:
+            now_wild = any(s.get("key") == "wild_shape" for s in pc.active_states or [])
             pc.active_states = list(snap["active_states"])
             set_damaged(pc, snap["damaged"])
-            wild = next((s for s in pc.active_states if s.get("key") == "wild_shape"), None)  # la riga della forma l'ha chiusa l'avanzamento
-            form = await db.get(Companion, (wild.get("data") or {}).get("companion_id") or 0) if wild else None
-            if form is not None and form.character_id == pc.id and form.kind == "wild_shape":
+            form = await db.get(Companion, snap["wild_closed"]) if snap.get("wild_closed") else None  # la riga che ha chiuso proprio l'avanzamento
+            if form is not None and form.character_id == pc.id and form.kind == "wild_shape" and not form.is_active and not now_wild:
+                from api.services.wild_shape import deactivate_other_forms  # import locale: il servizio importa gli stati
+                await deactivate_other_forms(db, pc.id, form.id)
                 form.is_active = True
             healed = snap.get("healed")  # la cura d'inizio turno: si toglie solo se i PF sono ancora quelli che ha dato
             if healed and pc.current_hit_points == healed["after"]:

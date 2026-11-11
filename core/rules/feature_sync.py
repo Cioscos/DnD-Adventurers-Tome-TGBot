@@ -191,7 +191,7 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
     delta = effective_ability_mod(char, "constitution") - old_con
     if delta and (char.settings or {}).get("hp_auto_calc", True):
         char.hit_points = max(0, char.hit_points + delta * char.total_level)
-        char.current_hit_points = max(0, min(char.current_hit_points + delta * char.total_level, char.hit_points))
+        char.current_hit_points = max(0, char.current_hit_points + delta * char.total_level)  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
 
 
 def _concentrates(data: object, edition: str) -> bool:

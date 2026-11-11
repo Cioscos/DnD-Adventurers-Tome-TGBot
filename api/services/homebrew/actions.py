@@ -496,10 +496,8 @@ async def execute_apply_modifier_once(action, ctx, rfr, session, char, **kw):
 
     if target == "character.hit_points_max":
         char.hit_points = max(0, char.hit_points + delta)
-        # Clamp current HP to new max
-        char.current_hit_points = min(char.current_hit_points, char.hit_points)
         from api.services.effects import cap_current_hp  # import locale: effects usa il dispatcher
-        await cap_current_hp(session, char)
+        await cap_current_hp(session, char, always=True)  # taglia al massimo effettivo, non a quello base
     elif target == "character.speed":
         char.speed = max(0, char.speed + delta)
     else:

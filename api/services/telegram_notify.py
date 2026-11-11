@@ -34,7 +34,9 @@ _BOT_USERNAME: Optional[str] = None
 
 
 def send_detached(coro) -> None:
-    """Lancia un invio best-effort fuori dalla richiesta: il lock del personaggio non aspetta la rete."""
+    """Lancia un invio best-effort fuori dalla richiesta: il lock del personaggio non aspetta la rete.
+
+    shortcut: alla chiusura del server gli invii ancora in corso vengono cancellati e quella notifica va persa; da rivedere se serve una coda con riprova."""
     task = asyncio.create_task(coro)
     _BACKGROUND.add(task)
     task.add_done_callback(_BACKGROUND.discard)
@@ -238,9 +240,9 @@ async def notify_saves(db: AsyncSession, save_ids: list[int]) -> None:
         if char is None or not notifications_enabled(char, "gm_events"):
             continue
         eff = await db.get(ConditionEffect, ps.effect_id)
-        await send_telegram_message(
+        send_detached(send_telegram_message(  # staccato: i chiamanti scrivono sotto il lock del personaggio
             char.user_id,
             f"🎲 Tiro salvezza: {ability_label(ps.ability)} CD {ps.dc} "
             f"per liberarti da {condition_label(eff.slug)}",
             button=("Apri la scheda", miniapp_url(f"/char/{char.id}")),
-        )
+        ))
