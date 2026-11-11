@@ -1,6 +1,0 @@
-import{c as i,a as l,d,h as o,s as x,f as u}from"./index-D8YmEVi1.js";import{j as c}from"./react-vendor-BGC0LuHo.js";/**
- * @license lucide-react v1.11.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const h=[["circle",{cx:"18",cy:"5",r:"3",key:"gq8acd"}],["circle",{cx:"6",cy:"12",r:"3",key:"w7nqdw"}],["circle",{cx:"18",cy:"19",r:"3",key:"1xt0gg"}],["line",{x1:"8.59",x2:"15.42",y1:"13.51",y2:"17.49",key:"47mynk"}],["line",{x1:"15.41",x2:"8.59",y1:"6.51",y2:"10.49",key:"1n3mei"}]],f=i("share-2",h);function g(s){const r=u(),{t:n}=l();return d({mutationFn:async a=>{const{prepared_message_id:e}=await s(a);return x(e)},onSuccess:a=>{a&&o.success()},onError:()=>{o.error(),r.error(n("share.error"))}})}const t=/(\*\*|__)([\s\S]+?)\1|(\*|_)([\s\S]+?)\3|`([^`]+?)`/g;function p(s){if(!s)return s;const r=[];let n=0,a=0,e;for(t.lastIndex=0;(e=t.exec(s))!==null;)e.index>n&&r.push(s.slice(n,e.index)),e[1]?r.push(c.jsx("strong",{children:e[2]},a++)):e[3]?r.push(c.jsx("em",{children:e[4]},a++)):e[5]&&r.push(c.jsx("code",{className:"px-1 rounded bg-dnd-surface-raised font-mono text-[max(0.85em,12px)]",children:e[5]},a++)),n=t.lastIndex;return n<s.length&&r.push(s.slice(n)),r}export{f as S,p as r,g as u};
