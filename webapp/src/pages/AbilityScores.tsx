@@ -175,7 +175,6 @@ export default function AbilityScores() {
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
           afterRoll={{ charId, query: { roll: 'ability', ability: rollState.ability } }}
-          noCritical
           onClose={() => setRollState(null)}
         />
       )}

@@ -224,4 +224,9 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
         db.add(ps)
         await db.flush()
         undo.created_saves.append(ps.id)
+    for cid, snap in undo.char_states.items():  # la forma selvatica chiusa da questo avanzamento (la riga si chiude al flush): l'annullo riapre solo quella
+        pc = await db.get(Character, int(cid))
+        was = next((s for s in snap["active_states"] if s.get("key") == "wild_shape"), None)
+        if pc is not None and was and not any(s.get("key") == "wild_shape" for s in pc.active_states or []):
+            snap["wild_closed"] = (was.get("data") or {}).get("companion_id")
     return expired

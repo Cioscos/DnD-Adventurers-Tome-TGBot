@@ -105,7 +105,7 @@ async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
         if delta != 0:
             was_at_zero = char.current_hit_points == 0
             char.hit_points = max(0, char.hit_points + delta)
-            char.current_hit_points = max(0, min(char.current_hit_points + delta, char.hit_points))
+            char.current_hit_points = max(0, char.current_hit_points + delta)  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
             await cap_current_hp(session, char)
             await sync_zero_hp(session, char, was_at_zero)
 

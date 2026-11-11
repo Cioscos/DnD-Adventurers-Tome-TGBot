@@ -19,7 +19,7 @@ from core.rules.states import restore_exhaustion
 from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
-    Character, Combatant, ConditionEffect, Encounter, PendingSave,
+    Character, Combatant, Companion, ConditionEffect, Encounter, PendingSave,
 )
 
 Target = tuple[Literal["character", "combatant"], int]
@@ -131,8 +131,19 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
     for cid, snap in log.char_states.items():
         pc = await db.get(Character, int(cid))
         if pc is not None:
+            snap_forms = {(s.get("data") or {}).get("companion_id") for s in snap["active_states"] if s.get("key") == "wild_shape"}
+            cur_wild = [s for s in pc.active_states or [] if s.get("key") == "wild_shape"
+                        and (s.get("data") or {}).get("companion_id") not in snap_forms]  # la stessa forma torna dallo snapshot, round compresi
+            now_wild = bool(cur_wild)
             pc.active_states = list(snap["active_states"])
+            if now_wild:  # una nuova forma è partita dopo l'avanzamento: resta la sua, non quella dello snapshot
+                pc.active_states = [x for x in pc.active_states if x.get("key") != "wild_shape"] + cur_wild
             set_damaged(pc, snap["damaged"])
+            form = await db.get(Companion, snap["wild_closed"]) if snap.get("wild_closed") else None  # la riga che ha chiuso proprio l'avanzamento
+            if form is not None and form.character_id == pc.id and form.kind == "wild_shape" and not form.is_active and not now_wild:
+                from api.services.wild_shape import deactivate_other_forms  # import locale: il servizio importa gli stati
+                await deactivate_other_forms(db, pc.id, form.id)
+                form.is_active = True
             healed = snap.get("healed")  # la cura d'inizio turno: si toglie solo se i PF sono ancora quelli che ha dato
             if healed and pc.current_hit_points == healed["after"]:
                 pc.current_hit_points = healed["before"]

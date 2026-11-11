@@ -609,11 +609,11 @@ async def update_xp(
             text = f"🎉 {char.name} è salito al livello {new_level_from_xp}!"
         else:
             text = f"✨ Level-up disponibile per {char.name} (liv. {new_level_from_xp})!"
-        await telegram_notify.send_telegram_message(
+        telegram_notify.send_detached(telegram_notify.send_telegram_message(
             user_id, text,
             button=("Apri Esperienza",
                     telegram_notify.miniapp_url(f"/char/{char_id}/xp")),
-        )
+        ))
 
     # Re-SELECT so model_validate sees non-expired columns AND the freshly
     # generated class-feature Ability rows are loaded via selectinload. See
@@ -664,12 +664,12 @@ async def roll_skill(
     raw_total = die + bonus + option_total
     # Totale minimo (Potenza Indomabile): il tiro ricordato dal server resta senza, il minimo si rimette a ogni ritocco.
     total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
-    is_crit = die == 20 and not applied.auto_fail
+    is_crit = False  # una prova di abilità o di caratteristica non ha il critico (in 5e il 20 naturale conta solo per attacchi e tiri salvezza contro la morte)
     is_fumble = die == 1
 
     history_msg = (
         f"Abilità {skill_label(skill_name)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
-        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (FUMBLE)" if is_fumble else "")
         + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
@@ -729,7 +729,7 @@ async def roll_ability_check(
     bonus += opts.bonus
     raw_total = die + bonus + option_total
     total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
-    is_crit = die == 20 and not applied.auto_fail
+    is_crit = False
     is_fumble = die == 1
 
     history_msg = (

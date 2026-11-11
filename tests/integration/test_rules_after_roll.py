@@ -132,7 +132,7 @@ async def test_succeed_turns_skill_to_20_and_attack_to_hit_not_crit(client, rule
     cid = await _char(client)
     first = await _skill(client, cid, die=4)
     body = (await _after(client, cid, "luck")).json()
-    assert body["die"] == 20 and body["total"] == first["total"] + 16 and body["is_critical"] is True
+    assert body["die"] == 20 and body["total"] == first["total"] + 16 and body["is_critical"] is False  # una prova di abilità non ha critico
 
     item = await _weapon(client, cid)
     hit = await _deferred(client, cid, item, die=4)

@@ -67,6 +67,8 @@ class ExportCharacter(BaseModel):
             when = datetime.fromisoformat(v) if isinstance(v, str) else None
             if when is not None and when.tzinfo is not None:  # il server confronta con l'ora UTC senza fuso
                 when = when.astimezone(timezone.utc).replace(tzinfo=None)
+            if when is not None and when > datetime.utcnow():  # nel futuro il riposo lungo resterebbe bloccato: come una data illeggibile
+                return None
             return when.isoformat(timespec="seconds") if when else None
         except ValueError:
             return None

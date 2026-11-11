@@ -27,7 +27,7 @@ from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
 
 
-async def cap_current_hp(session: AsyncSession, char: Character) -> None:
+async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool = False) -> None:
     """Con il massimo dimezzato (Indebolimento 4) i PF correnti non lo superano.
 
     Da chiamare dopo ogni scrittura di `hit_points`: quel valore resta il massimo reale e torna
@@ -36,7 +36,7 @@ async def cap_current_hp(session: AsyncSession, char: Character) -> None:
     unloaded = {"classes", "items"} & inspect(char).unloaded
     if unloaded:
         await session.refresh(char, attribute_names=list(unloaded))
-    if modifiers_for(char, "hp_max").hp_half:
+    if always or modifiers_for(char, "hp_max").hp_half:  # always: il massimo base è cambiato, si taglia al massimo effettivo (Aiuto compreso)
         bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
         char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 

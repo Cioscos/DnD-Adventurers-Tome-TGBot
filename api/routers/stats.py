@@ -59,10 +59,7 @@ async def apply_ability_change(session: AsyncSession, char: Character, ability: 
         if delta != 0:
             was_at_zero = char.current_hit_points == 0
             char.hit_points = max(0, char.hit_points + delta * char.total_level)
-            char.current_hit_points = max(
-                0,
-                min(char.current_hit_points + delta * char.total_level, char.hit_points),
-            )
+            char.current_hit_points = max(0, char.current_hit_points + delta * char.total_level)  # il tetto lo mette cap_current_hp
             await cap_current_hp(session, char)
             await sync_zero_hp(session, char, was_at_zero)
 
