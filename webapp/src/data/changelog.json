@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "3.1.2",
+      "date": "2026-11-11",
+      "fixed": {
+        "it": [
+          "Le padronanze delle armi usano i nomi del Manuale del Giocatore italiano: Doppio fendente, Colpo di striscio, Graffio, Spinta, Fiaccare, Lentezza, Rovesciamento, Vessazione."
+        ],
+        "en": [
+          "Weapon masteries use the Italian Player's Handbook names in the Italian app."
+        ]
+      }
+    },
+    {
       "version": "3.1.1",
       "date": "2026-11-11",
       "fixed": {
