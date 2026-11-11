@@ -32,12 +32,14 @@ SPELL_HEALING: dict[str, HealingSpec] = {
 }
 
 # Dove il manuale 2024 differisce (le altre cure valgono per entrambe le edizioni): Cura Ferite e Parola di Guarigione
-# raddoppiano i dadi, Cura Ferite di Massa parte da 5d8, Parola Guaritrice di Massa da 2d4.
+# raddoppiano i dadi, Cura Ferite di Massa parte da 5d8, Parola Guaritrice di Massa da 2d4, Preghiera di Guarigione
+# non somma più il modificatore.
 SPELL_HEALING_2024: dict[str, HealingSpec] = {
     "cure-wounds": HealingSpec("2d8", "2d8"),
     "healing-word": HealingSpec("2d4", "2d4"),
     "mass-cure-wounds": HealingSpec("5d8", "1d8"),
     "mass-healing-word": HealingSpec("2d4", "1d4"),
+    "prayer-of-healing": HealingSpec("2d8", "1d8", add_mod=False),  # il 2024 toglie il modificatore da incantatore
 }
 
 

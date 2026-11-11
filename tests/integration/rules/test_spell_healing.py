@@ -157,3 +157,14 @@ async def test_healing_dice_follow_the_casters_edition(client, index, spell_leve
         r = await _roll(client, cid, spell, casting_level=slot)
         assert r.status_code == 200, r.text
         assert len(r.json()["main_rolls"]) == expected, (edition, index, slot)
+
+
+@pytest.mark.parametrize("slot,dice", [(2, 2), (3, 3)])
+async def test_prayer_of_healing_adds_the_casting_modifier_only_in_2014(client, slot, dice):
+    for edition, bonus in (("2024", 0), ("2014", 3)):  # Saggezza 16 = +3
+        cid = await _cleric(client, 5, wisdom=16)
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
+        spell = await _heal_spell(client, cid, "prayer-of-healing", 2, "prayer-of-healing")
+        r = await _roll(client, cid, spell, casting_level=slot, main_rolls=[4] * dice)
+        assert r.status_code == 200, r.text
+        assert r.json()["modifier"] == bonus and r.json()["total"] == 4 * dice + bonus, edition
