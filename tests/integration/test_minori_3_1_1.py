@@ -259,3 +259,27 @@ async def test_undo_advance_keeps_the_wild_shape_started_after_the_advance(clien
         ch = await s.get(Character, cid)
         ws = [x for x in ch.active_states if x.get("key") == "wild_shape"]
         assert [x["data"]["companion_id"] for x in ws] == [bid]
+
+
+async def test_undo_advance_restores_rounds_of_the_same_wild_shape(client, test_session_factory, monkeypatch):
+    from core.db.models import Companion
+    from tests.integration.test_condition_time import _advance, _start
+    from tests.integration.test_condition_undo import _back
+    _, sid, _enc, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    async with test_session_factory() as s:
+        form = Companion(character_id=cid, kind="wild_shape", name="Orso", statblock={}, max_hp=10, current_hp=7, armor_class=11,
+                         is_active=True, created_at="2026-01-01T00:00:00")
+        s.add(form)
+        await s.flush()
+        ch = await s.get(Character, cid)
+        ch.active_states = [{"key": "wild_shape", "name": "Forma selvatica", "ends_on": ["manual"], "rounds_left": 5,
+                             "data": {"companion_id": form.id, "own_hp": True}}]
+        await s.commit()
+    await _advance(client, sid, 3)  # -> PG: la forma scala ma resta
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        assert [x["rounds_left"] for x in ch.active_states if x["key"] == "wild_shape"] == [4]
+    await _back(client, sid)
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        assert [x["rounds_left"] for x in ch.active_states if x["key"] == "wild_shape"] == [5]

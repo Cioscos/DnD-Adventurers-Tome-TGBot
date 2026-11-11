@@ -131,7 +131,9 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
     for cid, snap in log.char_states.items():
         pc = await db.get(Character, int(cid))
         if pc is not None:
-            cur_wild = [s for s in pc.active_states or [] if s.get("key") == "wild_shape"]
+            snap_forms = {(s.get("data") or {}).get("companion_id") for s in snap["active_states"] if s.get("key") == "wild_shape"}
+            cur_wild = [s for s in pc.active_states or [] if s.get("key") == "wild_shape"
+                        and (s.get("data") or {}).get("companion_id") not in snap_forms]  # la stessa forma torna dallo snapshot, round compresi
             now_wild = bool(cur_wild)
             pc.active_states = list(snap["active_states"])
             if now_wild:  # una nuova forma è partita dopo l'avanzamento: resta la sua, non quella dello snapshot
