@@ -41,7 +41,8 @@
           "Incantesimi e punizioni: le punizioni 2024 si offrono dopo il colpo a segno con lo slot scelto lì, Colpo Infuocato, Fame di Hadar e Randello Incantato chiedono il tipo di danno al lancio, la letargia di Velocità scatta solo quando cade l'ultima Velocità e con due Aiuto da lanciatori diversi i PF massimi non si sommano.",
           "Quando la concentrazione cade, cadono anche gli effetti con tiro salvezza ancora in attesa, e un tiro risolto dopo non applica più la condizione.",
           "Errori più chiari: le azioni fallite mostrano il motivo indicato dal server invece di un generico «connessione», e molti testi di privilegi e incantesimi sono nella lingua dell'interfaccia.",
-          "Webapp più reattiva e coerente: il Turno interroga il server solo in una serata attiva, il cambio di edizione rilegge opzioni e Turno, e i pulsanti della riga incantesimo e dei dadi vita sono grandi almeno 44 px."
+          "Webapp più reattiva e coerente: il Turno interroga il server solo in una serata attiva, il cambio di edizione rilegge opzioni e Turno, e i pulsanti della riga incantesimo e dei dadi vita sono grandi almeno 44 px.",
+          "Cambiano alcune scelte: la resistenza di Resilienza Immonda si sceglie al riposo, la Maestria negli Incantesimi 2024 si sostituisce una volta per riposo lungo, e Incantesimo Esteso e Raddoppiato valgono anche per gli effetti sugli alleati."
         ],
         "en": [
           "Temporary HP from Heroism and Bear's Endurance vanish when the spell ends, and come back only by undoing that cast.",
@@ -54,7 +55,8 @@
           "Spells and smites: 2024 smites are offered after the hit lands with the slot chosen then, Flame Strike, Hunger of Hadar and Shillelagh ask for the damage type when cast, Haste's lethargy triggers only when the last Haste ends, and two Aid spells from different casters don't stack their maximum HP.",
           "When concentration drops, effects with a pending saving throw drop too, and a save resolved afterwards no longer applies the condition.",
           "Clearer errors: failed actions show the reason given by the server instead of a generic \"connection\" message, and many feature and spell texts follow the interface language.",
-          "More responsive and consistent webapp: the Turn view queries the server only in an active evening, switching edition reloads options and Turn, and the spell-row and hit-dice buttons are at least 44 px."
+          "More responsive and consistent webapp: the Turn view queries the server only in an active evening, switching edition reloads options and Turn, and the spell-row and hit-dice buttons are at least 44 px.",
+          "Some choices changed: Fiendish Resilience's resistance is chosen at rest, 2024 Spell Mastery can be swapped once per long rest, and Extended and Twinned Spell also apply to effects on allies."
         ]
       }
     },
