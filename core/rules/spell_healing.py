@@ -31,6 +31,22 @@ SPELL_HEALING: dict[str, HealingSpec] = {
     "goodberry": HealingSpec(None, fixed=1, add_mod=False),
 }
 
+# Dove il manuale 2024 differisce (le altre cure valgono per entrambe le edizioni): Cura Ferite e Parola di Guarigione
+# raddoppiano i dadi, Cura Ferite di Massa parte da 5d8, Parola Guaritrice di Massa da 2d4.
+SPELL_HEALING_2024: dict[str, HealingSpec] = {
+    "cure-wounds": HealingSpec("2d8", "2d8"),
+    "healing-word": HealingSpec("2d4", "2d4"),
+    "mass-cure-wounds": HealingSpec("5d8", "1d8"),
+    "mass-healing-word": HealingSpec("2d4", "1d4"),
+}
+
+
+def healing_spec(srd_index: str | None, edition: str) -> HealingSpec | None:
+    """La cura di un incantesimo per l'edizione di chi lancia; ``None`` se non ridà PF."""
+    if edition == "2024" and srd_index in SPELL_HEALING_2024:
+        return SPELL_HEALING_2024[srd_index]
+    return SPELL_HEALING.get(srd_index or "")
+
 
 def healing_dice(spec: HealingSpec, spell_level: int, casting_level: int) -> tuple[int, int]:
     """(numero di dadi, lati) allo slot ``casting_level``; ``(0, 0)`` se la cura è solo fissa."""

@@ -140,3 +140,20 @@ async def test_spell_read_says_which_spells_heal_42(client):
     assert other.status_code == 201 and other.json()["is_healing"] is False
     listed = {s["srd_index"]: s["is_healing"] for s in (await client.get(f"/characters/{cid}/spells")).json()}
     assert listed["cure-wounds"] is True and listed["magic-missile"] is False
+
+
+@pytest.mark.parametrize("index,spell_level,slot,dice2024,dice2014", [
+    ("cure-wounds", 1, 1, 2, 1), ("cure-wounds", 1, 2, 4, 2),
+    ("healing-word", 1, 1, 2, 1), ("healing-word", 1, 2, 4, 2),
+    ("mass-cure-wounds", 5, 5, 5, 3), ("mass-cure-wounds", 5, 6, 6, 4),
+    ("mass-healing-word", 3, 3, 2, 1), ("mass-healing-word", 3, 4, 3, 2),
+    ("prayer-of-healing", 2, 3, 3, 3),
+])
+async def test_healing_dice_follow_the_casters_edition(client, index, spell_level, slot, dice2024, dice2014):
+    for edition, expected in (("2024", dice2024), ("2014", dice2014)):
+        cid = await _cleric(client, 11, wisdom=10)
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
+        spell = await _heal_spell(client, cid, index, spell_level, index)
+        r = await _roll(client, cid, spell, casting_level=slot)
+        assert r.status_code == 200, r.text
+        assert len(r.json()["main_rolls"]) == expected, (edition, index, slot)
