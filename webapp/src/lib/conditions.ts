@@ -67,3 +67,8 @@ export function incapacitatedMessageKey(char: {
   if (char.computed?.surprised) return 'character.turn.surprised'
   return char.active_states?.some((s) => s.data?.no_actions) ? 'character.turn.no_actions' : 'character.turn.incapacitated'
 }
+
+/** Le condizioni chieste accese che la risposta del server non ha acceso (le blocca un'immunità attiva). */
+export function refusedConditions(requested: Record<string, unknown>, returned: Record<string, unknown> | undefined): string[] {
+  return Object.keys(requested).filter((k) => requested[k] === true && !returned?.[k])
+}

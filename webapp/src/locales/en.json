@@ -1219,6 +1219,7 @@
         "refund_title": "Last roll: {{total}}"
     },
     "conditions": {
+      "immune_blocked": "{{name}} was not applied: you are immune (an active effect blocks it).",
       "ward": {
         "title": "Nature's Ward",
         "body": "Does the condition come from an elemental or a fey?",

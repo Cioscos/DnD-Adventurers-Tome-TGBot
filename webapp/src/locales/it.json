@@ -1219,6 +1219,7 @@
         "refund_title": "Ultimo tiro: {{total}}"
     },
     "conditions": {
+      "immune_blocked": "{{name}} non si applica: sei immune (un effetto attivo la blocca).",
       "ward": {
         "title": "Interdizione della Natura",
         "body": "La condizione viene da un elementale o da un folletto?",

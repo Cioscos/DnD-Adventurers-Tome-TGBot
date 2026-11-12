@@ -54,7 +54,10 @@ vi.mock('@/styles/motion', () => ({
   stagger: new Proxy({}, { get: () => 0 }),
 }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: toastError, success: vi.fn() }) }))
-vi.mock('@/lib/conditions', () => ({ CONDITION_ICONS: new Proxy({}, { get: () => () => null }) }))
+vi.mock('@/lib/conditions', async (orig) => ({
+  ...(await orig<typeof import('@/lib/conditions')>()),
+  CONDITION_ICONS: new Proxy({}, { get: () => () => null }),
+}))
 vi.mock('@/components/homebrew/HomebrewNotification', () => ({ showHomebrewNotifications: showNotif }))
 
 const passthrough = vi.hoisted(() => async () => {
@@ -143,6 +146,15 @@ describe('Conditions page', () => {
     renderWithProviders(<Conditions />)
     await userEvent.click(await screen.findByText('character.conditions.blinded'))
     await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { blinded: true }))
+  })
+
+  it('tells the player when the server drops a condition because of an immunity', async () => {
+    getChar.mockResolvedValue({ id: 5, conditions: {} })
+    listRules.mockResolvedValue([])
+    updateConditions.mockResolvedValue({ id: 5, conditions: {} })  // il server l'ha scartata
+    renderWithProviders(<Conditions />)
+    await userEvent.click(await screen.findByText('character.conditions.frightened'))
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.conditions.immune_blocked'))
   })
 
   describe("Nature's Ward (druid, level 10)", () => {
