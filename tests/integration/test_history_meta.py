@@ -141,7 +141,7 @@ async def test_condition_meta(client, test_session_factory):
         assert r.status_code == 200, r.text
     assert await _rows(test_session_factory, cid, "condition_change") == [
         {"slug": "poisoned", "active": True}, {"slug": "poisoned", "active": False},
-        {"slug": "exhaustion", "active": True}, {"slug": "exhaustion", "active": False},
+        {"slug": "exhaustion", "active": True, "level": 2}, {"slug": "exhaustion", "active": False, "level": 1},
     ]
 
 
