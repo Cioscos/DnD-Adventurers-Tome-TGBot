@@ -289,7 +289,8 @@ async def character_turn_state(
     """``item_id``: l'arma che sta per attaccare; senza, ``attacks_allowed`` è il limite generale e
     ``attacks_allowed_pact`` quello con l'arma del patto."""
     char = (await db.execute(select(Character).where(Character.id == character_id)
-                             .options(selectinload(Character.classes), selectinload(Character.items)))).scalar_one_or_none()
+                             .options(selectinload(Character.classes), selectinload(Character.items),
+                                     selectinload(Character.abilities)))).scalar_one_or_none()
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
     if char.user_id != user_id:
@@ -299,7 +300,8 @@ async def character_turn_state(
     block = {"turn": get_turn(char), "attacks_allowed": attacks_allowed(char, item),
              "attacks_allowed_pact": attacks_allowed(char, with_pact=True),
              "effects_sig": hashlib.sha1(json.dumps(
-                 [char.active_states, char.conditions, char.temp_hp],
+                 [char.active_states, char.conditions, char.temp_hp, char.current_hit_points, char.hit_points,
+                  [a.uses for a in char.abilities]],
                  sort_keys=True, default=str).encode()).hexdigest()}
     row = await active_encounter_row(db, character_id)
     if row is None:

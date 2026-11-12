@@ -1152,7 +1152,7 @@ export interface TurnState {
   round: number | null
   session_id: number | null
   pending_saves?: PendingSave[]
-  /** Firma di stati attivi, CA e PF: cambia quando un alleato dà un effetto, e la scheda va riletta. */
+  /** Firma di stati attivi, condizioni, PF e usi delle abilità: cambia quando un alleato dà un effetto, e la scheda va riletta. */
   effects_sig?: string
 }
 

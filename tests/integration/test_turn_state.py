@@ -47,3 +47,24 @@ async def test_turn_state_effects_sig_changes_with_states_and_is_stable(client, 
         (await s.get(Character, char_id)).active_states = [{"key": "spell:shield_of_faith", "data": {}}]
         await s.commit()
     assert (await sig()).json()["effects_sig"] != first
+
+
+async def test_turn_state_effects_sig_changes_with_hp_and_ability_uses(client, test_session_factory):
+    from core.db.models import Ability, Character
+    _, char_id = await seed_session(test_session_factory)
+    as_user(PLAYER_ID)
+    sig = lambda: client.get(f"/characters/{char_id}/turn-state")  # noqa: E731
+    async with test_session_factory() as s:
+        s.add(Ability(character_id=char_id, name="Ispirazione Bardica", max_uses=3, uses=3))
+        await s.commit()
+    first = (await sig()).json()["effects_sig"]
+    async with test_session_factory() as s:
+        (await s.get(Character, char_id)).current_hit_points += 5  # cura istantanea di un alleato
+        await s.commit()
+    second = (await sig()).json()["effects_sig"]
+    assert second != first
+    async with test_session_factory() as s:
+        from sqlalchemy import select
+        (await s.execute(select(Ability).where(Ability.character_id == char_id))).scalar_one().uses = 2
+        await s.commit()
+    assert (await sig()).json()["effects_sig"] != second
