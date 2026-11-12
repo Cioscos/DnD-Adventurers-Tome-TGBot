@@ -6,6 +6,9 @@ depend on env vars or production DB.
 """
 from __future__ import annotations
 
+import asyncio
+import shutil
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -41,12 +44,26 @@ def rules_catalog(monkeypatch):
     return register
 
 
+@pytest.fixture(scope="session")
+def _schema_db(tmp_path_factory):
+    """Schema creato una volta per processo: ogni test ne copia il file (create_all costa ~0,5 s, la copia ~1 ms)."""
+    path = tmp_path_factory.mktemp("schema") / "schema.db"
+
+    async def build() -> None:
+        engine = create_async_engine(f"sqlite+aiosqlite:///{path}")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
+
+    asyncio.run(build())
+    return path
+
+
 @pytest_asyncio.fixture
-async def test_session_factory(tmp_path):
+async def test_session_factory(tmp_path, _schema_db):
     db_path = tmp_path / "test.db"
+    shutil.copyfile(_schema_db, db_path)
     engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     yield factory
     await engine.dispose()
