@@ -14,7 +14,7 @@ import DamageDiceBuilder from '@/pages/inventory/DamageDiceBuilder'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { spellPickFilter } from '@/lib/spellPick'
-import { loadCatalog, spellToForm, type Lang, type SpellEntry } from '@/lib/srd/catalog'
+import { loadCatalog, spellCatalogKind, spellToForm, type Lang, type SpellEntry } from '@/lib/srd/catalog'
 import { useUnitSettings } from '@/store/unitSettings'
 import { parseComponents, serializeComponents, type ComponentToken } from './spellComponents'
 import {
@@ -67,9 +67,11 @@ interface SpellFormProps {
   casters?: { class_id: number; class_name: string }[]
   /** Scelta di incantesimi in corso: il catalogo mostra solo ciò che ammette (il modulo manuale resta per il resto). */
   pickFilter?: { max_level: number; list?: string | null; exact?: boolean; ritual?: boolean; school?: string | null }
+  /** Edizione del personaggio: sceglie il catalogo incantesimi. */
+  edition?: '2014' | '2024'
 }
 
-export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter }: SpellFormProps) {
+export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter, edition = '2014' }: SpellFormProps) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unitSystem = useUnitSettings((s) => s.system)
@@ -139,7 +141,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
   }
   const reloadFromCatalog = async () => {
     setConfirmReload(false)
-    const entry = (await loadCatalog('spells')).find((e) => e.index === form.srd_index)
+    const entry = (await loadCatalog(spellCatalogKind(edition))).find((e) => e.index === form.srd_index)
     if (entry) applyEntry(entry, ['name', 'description', 'casting_time', 'range_area', 'duration', 'higher_level'])
   }
 
@@ -382,7 +384,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
       </div>
       {pickerOpen && (
         <CatalogPicker
-          kind="spells"
+          kind={spellCatalogKind(edition)}
           filters={pickFilter ? spellPickFilter(pickFilter) : undefined}
           note={pickFilter ? t('character.spells.pick_filter_note') : undefined}
           onClose={() => setPickerOpen(false)}

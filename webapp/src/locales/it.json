@@ -1,9 +1,10 @@
 {
   "catalog": {
-    "title": "Catalogo SRD",
+    "title": "Catalogo",
     "search": "Cerca per nome (it/en)...",
     "empty": "Nessun risultato",
     "en_badge": "EN",
+    "summary_badge": "riassunto",
     "show_more": "Mostra altri ({{count}})"
   },
   "common": {

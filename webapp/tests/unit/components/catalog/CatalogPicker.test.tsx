@@ -15,7 +15,7 @@ describe('CatalogPicker', () => {
     render(<CatalogPicker kind="spells" onPick={onPick} onClose={() => {}} />)
     const box = await screen.findByRole('searchbox')
     await userEvent.type(box, 'palla di fuoco')
-    const row = await screen.findByText('Palla di fuoco')
+    const row = await screen.findByText('Palla di Fuoco')
     await userEvent.click(row)
     const entry = onPick.mock.calls[0][0] as SpellEntry
     expect(entry.index).toBe('fireball')

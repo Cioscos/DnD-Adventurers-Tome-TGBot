@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  loadCatalog, localized, searchCatalog, spellToForm, upcastExtraDice, type SpellEntry,
+  loadCatalog, localized, searchCatalog, spellCatalogKind, spellToForm, upcastExtraDice, type SpellEntry,
 } from '@/lib/srd/catalog'
 
 const find = async (index: string) => (await loadCatalog('spells')).find((e) => e.index === index) as SpellEntry
@@ -33,7 +33,7 @@ describe('catalog', () => {
   it('spellToForm builds Italian strings, metric range and srd fields', async () => {
     const f = spellToForm(await find('fireball'), 'it', 'metric')
     expect(f).toMatchObject({
-      name: 'Palla di fuoco', level: '3', casting_time: '1 azione', duration: 'Istantanea',
+      name: 'Palla di Fuoco', level: '3', casting_time: '1 azione', duration: 'Istantanea',
       damage_dice: '8d6', damage_type: 'fire', attack_save: 'SAVE', school: 'evocation',
       srd_index: 'fireball', higher_levels_dice: '1d6',
     })
@@ -60,5 +60,19 @@ describe('catalog', () => {
     expect(upcastExtraDice({ level: 3 }, 5, 6)).toBe(0)
     // Dardo incantato: un dardo (1d4+1) in più per livello, il bonus non conta come dado.
     expect(upcastExtraDice({ level: 1, higher_levels_dice: '1d4+1', srd_index: 'magic-missile' }, 3, 4)).toBe(2)
+  })
+
+  it('spell catalogue per edition', async () => {
+    expect(spellCatalogKind('2014')).toBe('spells')
+    expect(spellCatalogKind('2024')).toBe('spells-2024')
+    const y24 = await loadCatalog('spells-2024')
+    expect(y24.length).toBeGreaterThan(385)
+    expect(y24.find((e) => e.index === 'hex')?.source).toBe('srd')
+    expect((await loadCatalog('spells')).find((e) => e.index === 'hex')?.source).toBe('phb')
+  })
+
+  it('search also matches the old Italian name (aliases)', () => {
+    const e = { index: 'acid-splash', name: { en: 'Acid Splash', it: 'Fiotto Acido' }, aliases: ['Spruzzo acido'] }
+    expect(searchCatalog([e], 'spruzzo', 'it')).toEqual([e])
   })
 })

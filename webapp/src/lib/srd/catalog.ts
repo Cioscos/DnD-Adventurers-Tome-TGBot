@@ -4,7 +4,7 @@ import type { ItemFormData } from '@/pages/inventory/itemMetadata'
 import type { ItemBonus, Recharge } from '@/lib/itemMagic'
 
 export type CatalogKind =
-  'spells' | 'magic-items' | 'equipment' | 'races' | 'backgrounds' | 'feats' | 'monsters'
+  'spells' | 'spells-2024' | 'magic-items' | 'equipment' | 'races' | 'backgrounds' | 'feats' | 'monsters'
 export type Lang = 'it' | 'en'
 export interface LocalizedField { en: string; it?: string }
 
@@ -35,6 +35,10 @@ export interface SpellEntry extends BaseEntry {
   higher_levels_dice: string | null
   /** Classi che hanno l'incantesimo nel loro elenco (chiavi inglesi minuscole). */
   classes?: string[]
+  /** 'phb': fuori SRD, la descrizione è un nostro riassunto. */
+  source?: 'srd' | 'phb'
+  /** Nomi precedenti (solo ricerca). */
+  aliases?: string[]
 }
 
 export interface EquipmentEntry extends BaseEntry {
@@ -90,6 +94,7 @@ export interface MonsterEntry extends BaseEntry {
 
 export interface KindEntries {
   spells: SpellEntry
+  'spells-2024': SpellEntry
   'magic-items': MagicItemEntry
   equipment: EquipmentEntry
   races: BaseEntry
@@ -101,6 +106,7 @@ export type CatalogEntry<K extends CatalogKind> = KindEntries[K]
 
 const LOADERS: Record<CatalogKind, () => Promise<{ default: { items: unknown[] } }>> = {
   spells: () => import('@/data/srd/spells.json'),
+  'spells-2024': () => import('@/data/srd/spells-2024.json'),
   'magic-items': () => import('@/data/srd/magic-items.json'),
   equipment: () => import('@/data/srd/equipment.json'),
   races: () => import('@/data/srd/races.json'),
@@ -139,8 +145,13 @@ export function searchCatalog<E extends BaseEntry>(entries: E[], query: string, 
   const q = norm(query.trim())
   if (!q) return entries
   return entries.filter((e) =>
-    norm(e.name.en).includes(q) || norm(e.name.it ?? '').includes(q) || e.index.includes(q))
+    norm(e.name.en).includes(q) || norm(e.name.it ?? '').includes(q) || e.index.includes(q)
+    || (Array.isArray(e.aliases) && e.aliases.some((a: string) => norm(a).includes(q))))
 }
+
+/** Catalogo incantesimi dell'edizione del personaggio. */
+export const spellCatalogKind = (edition: '2014' | '2024'): 'spells' | 'spells-2024' =>
+  edition === '2024' ? 'spells-2024' : 'spells'
 
 const AREA_LABEL: Record<string, LocalizedField> = {
   sphere: { en: 'sphere', it: 'sfera' },
@@ -149,6 +160,7 @@ const AREA_LABEL: Record<string, LocalizedField> = {
   line: { en: 'line', it: 'linea' },
   cylinder: { en: 'cylinder', it: 'cilindro' },
   square: { en: 'square', it: 'quadrato' },
+  emanation: { en: 'emanation', it: 'emanazione' },
 }
 
 /** Sleep's higher-level dice are an HP pool, not damage: never prefilled. */
