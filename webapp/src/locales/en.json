@@ -2983,7 +2983,7 @@
       "monster_name_placeholder": "Monster name",
       "count_label": "Count",
       "init_mod_label": "Initiative mod",
-      "max_hp_label": "Max HP",
+      "max_hp_label": "Max HP (required)",
       "ac_label": "AC",
       "add_confirm": "Add",
       "sync_pcs": "Sync PCs",

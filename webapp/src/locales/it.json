@@ -2982,7 +2982,7 @@
       "monster_name_placeholder": "Nome del mostro",
       "count_label": "Quantità",
       "init_mod_label": "Mod. iniziativa",
-      "max_hp_label": "PF massimi",
+      "max_hp_label": "PF massimi (obbligatori)",
       "ac_label": "CA",
       "add_confirm": "Aggiungi",
       "sync_pcs": "Sincronizza PG",
