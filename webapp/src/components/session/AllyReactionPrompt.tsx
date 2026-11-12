@@ -61,7 +61,7 @@ export default function AllyReactionPrompt({ charId }: { charId: number }) {
         <div className="flex flex-col gap-4 p-5">
           <p className="break-words text-base font-body text-dnd-text">
             {t('allyReaction.hit', { name: prompt.receiver_name, damage: prompt.damage })}
-            {prompt.damage_type ? ` ${t('allyReaction.of_type', { type: prompt.damage_type })}` : ''}
+            {prompt.damage_type ? ` ${t('allyReaction.of_type', { type: t(`character.inventory.damage_types.dmg_${prompt.damage_type}`, { defaultValue: prompt.damage_type }) })}` : ''}
           </p>
           <p className="break-words text-sm font-body text-dnd-text-muted">
             {t(`allyReaction.feature.${prompt.feature_key === 'bard.cutting_words' ? 'cutting_words' : 'interception'}`, { dice: prompt.dice })}

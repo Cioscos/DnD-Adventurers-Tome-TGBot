@@ -50,6 +50,8 @@ describe('AllyReactionPrompt', () => {
     expect(await screen.findByText('È il colpo di un attacco e sei entro 1,5 m da Bruno?')).toBeInTheDocument()
     expect(screen.getAllByText(/Bruno/).length).toBeGreaterThan(0)
     expect(screen.getByText(/12/)).toBeInTheDocument()
+    expect(screen.getByText(/Taglio/)).toBeInTheDocument()
+    expect(screen.queryByText(/slashing/)).not.toBeInTheDocument()
   })
 
   it('asks the Cutting Words question', async () => {
