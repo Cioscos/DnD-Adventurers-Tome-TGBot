@@ -93,3 +93,27 @@ def srd_index_for(name_en: str, srd_indexes: set[str]) -> str | None:
         if cand in srd_indexes:
             return cand
     return None
+
+
+_SAVES = {"for": "str", "des": "dex", "cos": "con", "int": "int", "sag": "wis", "car": "cha"}
+_TYPES = {"acid": "acid", "contundent": "bludgeoning", "fredd": "cold", "fuoc": "fire", "forza": "force",
+          "fulmin": "lightning", "necrotic": "necrotic", "perforant": "piercing", "velen": "poison",
+          "psichic": "psychic", "radios": "radiant", "taglient": "slashing", "tuon": "thunder"}
+_SAVE_RE = re.compile(r"\bTS (For|Des|Cos|Int|Sag|Car)", re.I)
+_ATK_RE = re.compile(r"\battacco (?:in mischia |a distanza )?con (?:l')?incantesimo|^attacco a distanza\b", re.I)
+_DMG_RE = re.compile(r"(\d+d\d+)\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?(" + "|".join(_TYPES) + ")", re.I)
+_UP_RE = re.compile(r"\+(\d+d\d+)[^.;]{0,40}?\bper (?:ogni )?(?:slot|livello)", re.I)
+
+
+def mechanics(summary_it: str) -> dict:
+    """Campi dei tiri ricavati dal nostro riassunto; ciò che il testo non dice resta None (si corregge con override)."""
+    save = _SAVE_RE.search(summary_it)
+    dmg = _DMG_RE.search(summary_it)
+    up = _UP_RE.search(summary_it)
+    return {
+        "attack_type": "ATK" if _ATK_RE.search(summary_it) else ("SAVE" if save else None),
+        "save_ability": _SAVES[save[1].lower()] if save else None,
+        "damage_dice": dmg[1] if dmg else None,
+        "damage_type": _TYPES[dmg[2].lower()] if dmg else None,
+        "higher_levels_dice": up[1] if up else None,
+    }

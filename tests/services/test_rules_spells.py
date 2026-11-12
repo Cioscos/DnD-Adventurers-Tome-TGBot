@@ -52,3 +52,22 @@ def test_bad_row_raises(tmp_path):
                  "| x | 1 |\n", encoding="utf-8")
     with pytest.raises(ValueError, match="Book"):
         rs.parse_table(f)
+
+
+def test_mechanics_save_damage_upcast():
+    assert rs.mechanics("Emanazione 10 ft: ogni creatura fa TS For o subisce 2d6 necrotico. Slot superiore: "
+                        "+1d6 per livello oltre il 1.") == {
+        "attack_type": "SAVE", "save_ability": "str", "damage_dice": "2d6", "damage_type": "necrotic",
+        "higher_levels_dice": "1d6"}
+
+
+def test_mechanics_spell_attack():
+    m = rs.mechanics("Attacco a distanza con incantesimo: 1d12 fulmine; scalata +1d12 per slot oltre il 1°")
+    assert (m["attack_type"], m["damage_dice"], m["damage_type"], m["higher_levels_dice"]) == ("ATK", "1d12", "lightning", "1d12")
+
+
+def test_mechanics_extra_damage_and_nothing():
+    m = rs.mechanics("Arma non magica: +1 a colpire e +1d4 danni extra di acido, freddo o fuoco")
+    assert (m["damage_dice"], m["damage_type"], m["attack_type"]) == ("1d4", "acid", None)
+    assert rs.mechanics("Legame telepatico con una creatura consenziente.") == {
+        "attack_type": None, "save_ability": None, "damage_dice": None, "damage_type": None, "higher_levels_dice": None}
