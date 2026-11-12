@@ -545,6 +545,14 @@ def _undo_applies(char: Character, snap: dict, form) -> bool:
     return {**_hp_state(char, form), "form_state": None} == {**snap.get("after", {}), "form_state": None}
 
 
+async def undo_op_id(session: AsyncSession, char: Character) -> str | None:
+    """L'``op_id`` annullabile ora (stessa condizione di ``POST /hp/undo``), altrimenti None."""
+    snap = char.hp_undo
+    if snap and _undo_applies(char, snap, await _undo_form(session, char, snap)):
+        return snap.get("op_id")
+    return None
+
+
 async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, note: str | None = None) -> None:
     """Rimette ``char`` com'era prima dell'operazione descritta da ``snap``."""
     before = snap["before"]

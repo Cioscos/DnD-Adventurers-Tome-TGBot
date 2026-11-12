@@ -218,3 +218,16 @@ async def test_undo_of_a_snapshot_saved_before_a_new_key_existed(client, test_se
     r = await _undo(client, cid, dmg["hp_undo_id"])
     assert r.status_code == 200, r.text
     assert r.json()["current_hit_points"] == 20
+
+
+async def test_get_exposes_undo_id_until_hp_changes(client):
+    cid = await _make_char(client, 20)
+    dmg = await _hp(client, cid, "damage", 5)
+    got = (await client.get(f"/characters/{cid}")).json()
+    assert got["hp_undo_id"] == dmg["hp_undo_id"]
+    await _hp(client, cid, "set_current", 3)  # una nuova operazione sostituisce lo snapshot
+    assert (await client.get(f"/characters/{cid}")).json()["hp_undo_id"] != dmg["hp_undo_id"]
+    assert (await _undo(client, cid, got["hp_undo_id"])).status_code == 409
+    newest = (await client.get(f"/characters/{cid}")).json()["hp_undo_id"]
+    assert (await _undo(client, cid, newest)).status_code == 200
+    assert (await client.get(f"/characters/{cid}")).json()["hp_undo_id"] is None
