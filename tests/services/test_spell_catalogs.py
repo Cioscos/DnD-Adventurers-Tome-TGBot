@@ -111,7 +111,8 @@ def test_build_2024_concentration_duration_and_line():
 
 
 def test_build_2024_falls_back_to_2014_mechanics():
-    mm = {**FIREBALL, "index": "magic-missile", "damage": None, "description": "Three darts hit.", "higher_level": None}
+    mm = {**FIREBALL, "index": "magic-missile", "damage": None, "description": "Three darts hit for 1d4 + 1 each.",
+          "higher_level": "One more dart (1d4 + 1) for each slot level above 1."}
     prev = {"magic-missile": {"damage_dice": "1d4+1", "damage_type": "force", "higher_levels_dice": "1d4+1",
                               "attack_type": None, "save_ability": None, "area": None}}
     e = bsc.build_2024([mm], [_row("Dardo Incantato", "Magic Missile")], {}, GLOSSARY, prev)["items"][0]
@@ -162,3 +163,58 @@ def test_catalog_shape():
             assert i["name"].get("it") and i["name"].get("en"), i["index"]
             assert i["desc"].get("it") and i["desc"].get("en"), i["index"]
             assert i["classes"] and i["source"] in ("srd", "phb"), i["index"]
+
+
+_DMG_EN = r"(\d+d\d+(?:\s*\+\s*\d+)?) (?:Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder) damage"
+
+
+def test_2024_roll_fields_come_from_the_2024_text():
+    """Niente dadi o TS ereditati dal 2014 che il testo 2024 non ha (Sonno, Spada di Mordenkainen, Luce)."""
+    import re
+    wrong = []
+    for i in CATALOGS["2024"]:
+        if i["source"] != "srd":
+            continue
+        text = i["desc"]["en"] + " " + ((i.get("higher_level") or {}).get("en") or "")
+        flat = re.sub(r"\s+", "", text)
+        if i["damage_dice"] and i["damage_dice"] not in flat:
+            wrong.append(f"{i['index']}: dadi {i['damage_dice']}")
+        if i["higher_levels_dice"] and i["higher_levels_dice"] not in flat:
+            wrong.append(f"{i['index']}: slot superiori {i['higher_levels_dice']}")
+        if i["save_ability"] and "saving throw" not in text:
+            wrong.append(f"{i['index']}: TS {i['save_ability']}")
+    assert not wrong, wrong
+
+
+def test_2024_known_roll_fields():
+    by = {i["index"]: i for i in CATALOGS["2024"]}
+    assert by["sleep"]["damage_dice"] is None
+    assert by["arcane-sword"]["damage_dice"] == "4d12"
+    assert by["wall-of-ice"]["higher_levels_dice"] == "2d6"
+    assert by["spiritual-weapon"]["higher_levels_dice"] == "1d8"
+    assert by["magic-missile"]["damage_dice"] == "1d4+1"
+
+
+def test_phb_summaries_keep_their_dice():
+    import re
+    stems = r"(?:danni|acid|contundent|fredd|fuoc|forza|fulmin|necrotic|perforant|velen|psichic|radios|radiant|taglient|tuon)"
+    lost = [f"{ed}:{i['index']}" for ed, items in CATALOGS.items() for i in items
+            if i["source"] == "phb" and re.search(r"\d+d\d+\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?" + stems, i["desc"]["it"], re.I)
+            and not i["damage_dice"]]
+    assert not lost, lost
+
+
+def test_phb_known_roll_fields():
+    by14 = {i["index"]: i for i in CATALOGS["2014"]}
+    by24 = {i["index"]: i for i in CATALOGS["2024"]}
+    assert (by14["chromatic-orb"]["damage_dice"], by14["chromatic-orb"]["attack_type"]) == ("3d8", "ATK")
+    assert by24["grasping-vine"]["attack_type"] == "ATK"
+    assert by24["blinding-smite"]["damage_type"] == "radiant"
+    assert by14["silence"]["classes"] == ["bard", "cleric", "ranger"]
+
+
+def test_build_2024_no_fallback_when_2024_text_lacks_the_dice():
+    sl = {**FIREBALL, "index": "sleep", "damage": None, "description": "Wisdom saving throw or Incapacitated.", "higher_level": None}
+    prev = {"sleep": {"damage_dice": "5d8", "damage_type": None, "higher_levels_dice": "2d8"}}
+    e = bsc.build_2024([sl], [_row("Sonno", "Sleep")], {}, GLOSSARY, prev)["items"][0]
+    assert (e["damage_dice"], e["higher_levels_dice"], e["save_ability"]) == (None, None, "wis")

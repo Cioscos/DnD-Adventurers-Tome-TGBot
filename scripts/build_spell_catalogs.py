@@ -172,8 +172,11 @@ def _dice(d: str | None) -> str | None:
     return m[1].replace(" ", "") if m else None
 
 
-_MECH = ("attack_type", "save_ability", "damage_dice", "damage_type", "higher_levels_dice", "area")
-_UP_EN = re.compile(r"increases by (\d+d\d+) for each (?:spell )?slot level above", re.I)
+_UP_EN = re.compile(r"increases by (\d+d\d+)[^.]*?for (?:each|every) (?:spell )?slot level", re.I)
+_DMG_EN = re.compile(r"(\d+d\d+(?:\s*\+\s*\d+)?)(?: plus your spellcasting ability modifier)?\s+"
+                     r"(Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder) damage")
+_DMG_EQ_EN = re.compile(r"(Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder)"
+                        r" damage equal to (\d+d\d+)")
 _SAVE_EN = re.compile(r"(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw")
 _ATK_EN = re.compile(r"\b(?:melee|ranged) spell attack", re.I)
 
@@ -187,6 +190,11 @@ def srd_2024_entry(s: dict, row: RuleSpell, g: dict, prev: dict | None = None) -
     table = dmg.get("damage_at_slot_level") or dmg.get("damage_at_character_level") or {}
     keys = sorted(table, key=int)
     base = _dice(table[keys[0]]) if keys else None
+    dtype = dmg.get("damage_type", {}).get("index") if dmg else None
+    if base is None and (m := _DMG_EN.search(desc)):  # l'API spesso non ha «damage»: dal testo 2024
+        base, dtype = m[1].replace(" ", ""), m[2].lower()
+    elif base is None and (m := _DMG_EQ_EN.search(desc)):  # «takes Force damage equal to 4d12 plus …»
+        base, dtype = m[2], m[1].lower()
     inc = None
     if len(keys) > 1 and all(_dice(table[k]) for k in keys):
         parts = [tuple(map(int, _dice(table[k]).split("+")[0].split("d"))) for k in keys]
@@ -194,7 +202,7 @@ def srd_2024_entry(s: dict, row: RuleSpell, g: dict, prev: dict | None = None) -
         if len(steps) == 1 and len({p[1] for p in parts}) == 1 and (n := steps.pop()) > 0:
             inc = f"{n}d{parts[0][1]}"
     if inc is None and base and s["level"] > 0 and (m := _UP_EN.search(f"{higher or ''} {desc}")):
-        inc = m[1]
+        inc = m[1] if m[1].split("d")[1] == base.split("d")[1].split("+")[0] else None  # stesso dado del danno base
     save = _SAVE_EN.search(desc)
     raw = re.sub(r"\s*Components?:.*$", "", s["range"]).strip()  # l'API a volte accoda le componenti
     rng = raw if re.fullmatch(r"\d+ feet", raw) else range_en(raw, None)
@@ -209,13 +217,16 @@ def srd_2024_entry(s: dict, row: RuleSpell, g: dict, prev: dict | None = None) -
         "desc": {"en": desc}, "higher_level": {"en": higher} if higher else None,
         "attack_type": "ATK" if _ATK_EN.search(desc) else ("SAVE" if save else None),
         "save_ability": save[1][:3].lower() if save else None,
-        "damage_dice": base, "damage_type": dmg.get("damage_type", {}).get("index") if dmg else None,
+        "damage_dice": base, "damage_type": dtype,
         "higher_levels_dice": inc, "classes": row.classes, "source": "srd",
     }
-    # Il 2024 dell'API non dice tutto (Dardo Incantato senza danni): dove resta vuoto vale la voce 2014 omonima.
-    for f in _MECH:
-        if out[f] is None and prev and prev.get(f) is not None:
+    # Ripiego sulla voce 2014 solo se il testo 2024 contiene quei dadi (Sonno 2024 non ha più 5d8).
+    flat = re.sub(r"\s+", "", f"{desc} {higher or ''}")
+    for f in ("damage_dice", "higher_levels_dice"):
+        if out[f] is None and prev and prev.get(f) and prev[f] in flat:
             out[f] = prev[f]
+            if f == "damage_dice":
+                out["damage_type"] = out["damage_type"] or prev.get("damage_type")
     return out
 
 

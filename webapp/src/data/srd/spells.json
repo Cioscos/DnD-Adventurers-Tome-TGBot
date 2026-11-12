@@ -2498,7 +2498,7 @@
    "higher_level": null,
    "attack_type": "ATK",
    "save_ability": null,
-   "damage_dice": null,
+   "damage_dice": "3d8",
    "damage_type": null,
    "higher_levels_dice": "1d8",
    "classes": [
@@ -3349,7 +3349,7 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "dex",
-   "damage_dice": null,
+   "damage_dice": "3d8",
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
@@ -3607,7 +3607,7 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "dex",
-   "damage_dice": null,
+   "damage_dice": "8d8",
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
@@ -14836,9 +14836,7 @@
    "classes": [
     "bard",
     "cleric",
-    "ranger",
-    "sorcerer",
-    "wizard"
+    "ranger"
    ],
    "source": "srd"
   },

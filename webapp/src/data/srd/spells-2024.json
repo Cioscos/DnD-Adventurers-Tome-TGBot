@@ -2,7 +2,7 @@
  "_meta": {
   "source": "https://www.dnd5eapi.co/api/2024 (D&D 5e SRD 5.2)",
   "license": "CC-BY-4.0",
-  "generated_at": "2026-11-12",
+  "generated_at": "2026-11-13",
   "phb": "nomi dei manuali; non SRD: riassunti nostri (source: phb)"
  },
  "items": [
@@ -624,10 +624,7 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 200
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -677,10 +674,7 @@
     "en": "30 feet",
     "it": "30 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 30
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -802,7 +796,7 @@
    "save_ability": "str",
    "damage_dice": "5d8",
    "damage_type": "force",
-   "higher_levels_dice": "2d6",
+   "higher_levels_dice": "2d8",
    "classes": [
     "sorcerer",
     "wizard"
@@ -897,7 +891,7 @@
    "higher_level": null,
    "attack_type": "ATK",
    "save_ability": null,
-   "damage_dice": "3d10",
+   "damage_dice": "4d12",
    "damage_type": "force",
    "higher_levels_dice": null,
    "classes": [
@@ -1781,10 +1775,7 @@
     "en": "90 feet",
     "it": "90 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 20
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -1832,10 +1823,7 @@
     "en": "90 feet",
     "it": "90 piedi"
    },
-   "area": {
-    "type": "line",
-    "size_ft": 100
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -2046,8 +2034,8 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "con",
-   "damage_dice": null,
-   "damage_type": null,
+   "damage_dice": "3d8",
+   "damage_type": "radiant",
    "higher_levels_dice": "1d8",
    "classes": [
     "paladin"
@@ -2260,10 +2248,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 5
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -2584,7 +2569,7 @@
    },
    "attack_type": "ATK",
    "save_ability": null,
-   "damage_dice": null,
+   "damage_dice": "3d8",
    "damage_type": null,
    "higher_levels_dice": "1d8",
    "classes": [
@@ -3503,10 +3488,7 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -3576,9 +3558,9 @@
    },
    "attack_type": "ATK",
    "save_ability": null,
-   "damage_dice": null,
-   "damage_type": null,
-   "higher_levels_dice": null,
+   "damage_dice": "3d12",
+   "damage_type": "psychic",
+   "higher_levels_dice": "1d12",
    "classes": [
     "druid"
    ],
@@ -3935,10 +3917,7 @@
     "en": "300 feet",
     "it": "300 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 100
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -4404,8 +4383,8 @@
    "higher_level": null,
    "attack_type": null,
    "save_ability": null,
-   "damage_dice": null,
-   "damage_type": null,
+   "damage_dice": "1d4",
+   "damage_type": "radiant",
    "higher_levels_dice": null,
    "classes": [
     "paladin"
@@ -4869,10 +4848,7 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 30
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -4917,10 +4893,7 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 30
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -4971,10 +4944,7 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 30
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -5849,10 +5819,7 @@
     "en": "500 feet",
     "it": "500 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 100
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -5965,7 +5932,7 @@
    "higher_level": null,
    "attack_type": null,
    "save_ability": null,
-   "damage_dice": null,
+   "damage_dice": "1d4",
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
@@ -6194,10 +6161,7 @@
     "en": "90 feet",
     "it": "90 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 20
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -7058,10 +7022,7 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 5
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -7267,10 +7228,7 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": {
-    "type": "cylinder",
-    "size_ft": 40
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -7581,10 +7539,7 @@
     "en": "Touch",
     "it": "Contatto"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 40000
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -7632,10 +7587,7 @@
     "en": "100 feet",
     "it": "100 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 20
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -8235,10 +8187,7 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -8412,7 +8361,7 @@
     "it": "Una vite attacca (in mischia con incantesimo entro 9 m): 4d8 contundenti e tiro di 9 m verso la vite; Afferrato se Enorme o più piccolo (CD di fuga pari alla CD dell'incantesimo). Ripetibile con azione bonus. Scalata: una creatura afferrata in più per livello sopra il 4°."
    },
    "higher_level": null,
-   "attack_type": null,
+   "attack_type": "ATK",
    "save_ability": null,
    "damage_dice": "4d8",
    "damage_type": "bludgeoning",
@@ -8440,10 +8389,7 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -8590,10 +8536,7 @@
     "en": "30 feet",
     "it": "30 piedi"
    },
-   "area": {
-    "type": "cylinder",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V"
    ],
@@ -8636,10 +8579,7 @@
     "en": "Touch",
     "it": "Contatto"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 2500
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -8777,10 +8717,7 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": {
-    "type": "line",
-    "size_ft": 60
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -8874,10 +8811,7 @@
     "en": "Touch",
     "it": "Contatto"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 60
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -8898,8 +8832,8 @@
     "it": "Tocchi un punto e infondi un'area attorno a esso di potere sacro o empio. L'area può avere un raggio fino a 60 piedi, e l'incantesimo fallisce se il raggio include un'area già sotto l'effetto di Santificare. L'area interessata ha i seguenti effetti.\n\nProtezione santificata. Scegli uno qualsiasi di questi tipi di creatura: Aberrazione, Celestiale, Elementale, Fatato, Immondo o Non morto. Le creature dei tipi scelti non possono entrare volontariamente nell'area, e qualsiasi creatura posseduta da tali creature, o che ha la condizione Affascinato o Spaventato a causa loro, non è posseduta, Affascinata o Spaventata da esse finché si trova nell'area.\n\nEffetto extra. Vincoli all'area un effetto extra scelto dalla lista seguente: Coraggio. Le creature dei tipi che scegli non possono ottenere la condizione Spaventato finché si trovano nell'area. Oscurità. L'Oscurità riempie l'area. La luce normale, così come la luce magica creata da incantesimi di livello inferiore a questo incantesimo, non può illuminare l'area. Luce del giorno. Luce intensa riempie l'area. L'Oscurità magica creata da incantesimi di livello inferiore a questo incantesimo non può spegnere la luce. Riposo pacifico. I cadaveri sepolti nell'area non possono essere trasformati in Non morti. Interferenza extradimensionale. Le creature dei tipi che scegli non possono entrare nell'area o uscirne usando il teletrasporto o il viaggio interplanare. Paura. Le creature dei tipi che scegli hanno la condizione Spaventato finché si trovano nell'area. Resistenza. Le creature dei tipi che scegli hanno Resistenza a un tipo di danno a tua scelta finché si trovano nell'area. Silenzio. Nessun suono può propagarsi dall'interno dell'area, e nessun suono può raggiungerla dall'esterno. Lingue. Le creature dei tipi che scegli possono comunicare con qualsiasi altra creatura nell'area anche se non condividono una lingua comune. Vulnerabilità. Le creature dei tipi che scegli hanno Vulnerabilità a un tipo di danno a tua scelta finché si trovano nell'area."
    },
    "higher_level": null,
-   "attack_type": "SAVE",
-   "save_ability": "cha",
+   "attack_type": null,
+   "save_ability": null,
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -9807,7 +9741,7 @@
    "save_ability": "dex",
    "damage_dice": "1d10",
    "damage_type": "piercing",
-   "higher_levels_dice": "1d6",
+   "higher_levels_dice": null,
    "classes": [
     "druid",
     "sorcerer",
@@ -10648,8 +10582,8 @@
     "it": "Tocchi un oggetto di taglia Grande o inferiore che non sia indossato o trasportato da qualcun altro. Finché l'incantesimo non termina, l'oggetto emana Luce Intensa in un raggio di 20 piedi e Luce Fioca per ulteriori 20 piedi. La luce può essere del colore che preferisci.\n\nCoprire l'oggetto con qualcosa di opaco blocca la luce. L'incantesimo termina se lo lanci di nuovo."
    },
    "higher_level": null,
-   "attack_type": "SAVE",
-   "save_ability": "dex",
+   "attack_type": null,
+   "save_ability": null,
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -11210,7 +11144,7 @@
    },
    "attack_type": null,
    "save_ability": null,
-   "damage_dice": "3d4+3",
+   "damage_dice": "1d4+1",
    "damage_type": "force",
    "higher_levels_dice": "1d4+1",
    "classes": [
@@ -12070,10 +12004,7 @@
     "en": "Sight",
     "it": "Linea di vista"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 5280
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -12358,10 +12289,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "cone",
-    "size_ft": 40
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -12826,8 +12754,8 @@
     "it": "Tu e fino a otto creature consenzienti che si tengono per mano in cerchio venite trasportati su un diverso piano di esistenza. Puoi specificare una destinazione in termini generali, come una determinata città sul Piano Elementale del Fuoco o un palazzo sul secondo livello dei Nove Inferi, e appari in quella destinazione o nelle sue vicinanze, come stabilito dal GM.\n\nIn alternativa, se conosci la sequenza di sigilli di un cerchio di teletrasporto su un altro piano di esistenza, questo incantesimo può portarti a quel cerchio. Se il cerchio di teletrasporto è troppo piccolo per contenere tutte le creature che hai trasportato, queste appaiono negli spazi liberi più vicini accanto al cerchio."
    },
    "higher_level": null,
-   "attack_type": "ATK",
-   "save_ability": "cha",
+   "attack_type": null,
+   "save_ability": null,
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
@@ -12924,7 +12852,7 @@
    },
    "higher_level": null,
    "attack_type": "ATK",
-   "save_ability": "con",
+   "save_ability": null,
    "damage_dice": "1d12",
    "damage_type": "poison",
    "higher_levels_dice": null,
@@ -13320,10 +13248,7 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": {
-    "type": "line",
-    "size_ft": 90
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -13368,10 +13293,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 100
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -13921,7 +13843,7 @@
    },
    "higher_level": null,
    "attack_type": "ATK",
-   "save_ability": "con",
+   "save_ability": null,
    "damage_dice": "2d8",
    "damage_type": "poison",
    "higher_levels_dice": "1d8",
@@ -14232,10 +14154,7 @@
     "en": "100 feet",
     "it": "100 piedi"
    },
-   "area": {
-    "type": "cylinder",
-    "size_ft": 50
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -15373,9 +15292,9 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "wis",
-   "damage_dice": "5d8",
+   "damage_dice": null,
    "damage_type": null,
-   "higher_levels_dice": "2d8",
+   "higher_levels_dice": null,
    "classes": [
     "bard",
     "sorcerer",
@@ -15921,7 +15840,7 @@
    "save_ability": null,
    "damage_dice": "1d8",
    "damage_type": "force",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d8",
    "classes": [
     "cleric"
    ],
@@ -16234,10 +16153,7 @@
     "en": "1 mile",
     "it": "1 miglio"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 360
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -17082,10 +16998,7 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 30
-   },
+   "area": null,
    "components": [
     "V",
     "S"
@@ -17227,10 +17140,7 @@
     "en": "10 feet",
     "it": "10 piedi"
    },
-   "area": {
-    "type": "cube",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V"
    ],
@@ -17275,10 +17185,7 @@
     "en": "10 feet",
     "it": "10 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V",
     "M"
@@ -18283,10 +18190,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "line",
-    "size_ft": 60
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -18387,10 +18291,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 10
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -18418,7 +18319,7 @@
    "save_ability": "dex",
    "damage_dice": "10d6",
    "damage_type": "cold",
-   "higher_levels_dice": "1d6",
+   "higher_levels_dice": "2d6",
    "classes": [
     "wizard"
    ],
@@ -18491,10 +18392,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "line",
-    "size_ft": 60
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -18844,10 +18742,7 @@
     "en": "120 feet",
     "it": "120 piedi"
    },
-   "area": {
-    "type": "line",
-    "size_ft": 50
-   },
+   "area": null,
    "components": [
     "V",
     "S",
@@ -19037,10 +18932,7 @@
     "en": "5 feet",
     "it": "5 piedi"
    },
-   "area": {
-    "type": "sphere",
-    "size_ft": 5
-   },
+   "area": null,
    "components": [
     "V"
    ],
