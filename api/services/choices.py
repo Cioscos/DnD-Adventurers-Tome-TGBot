@@ -121,7 +121,7 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         raise _bad("invalid_replacement")
     if ch.protected and old_key in ch.protected(RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)):
         raise HTTPException(422, detail={"code": "option_is_prerequisite"})
-    if ch.replace_per_long_rest:  # un solo cambio per riposo lungo, per classe (uno dei due incantesimi); il primo di sempre è libero (nessun riposo registrato)
+    if ch.replace_per_long_rest:  # cambi per riposo lungo (`replace_per_long_rest`: 1 per Guerriero, Barbaro e Mago; 2 per Paladino, Ranger e Ladro), per classe; il primo di sempre è libero (nessun riposo registrato)
         swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
         last = swaps.get(str(cls.id), {})
         used = last.get("n", 1) if last.get("at", "-") == (char.last_long_rest_at or "") else 0

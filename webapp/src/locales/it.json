@@ -42,7 +42,7 @@
       "hide_failed": "La prova di Furtività è sotto 15: non ti nascondi.",
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
       "once_per_turn": "Puoi usarlo una sola volta per turno.",
-      "replace_after_long_rest": "Puoi sostituirla una sola volta per riposo lungo: riposa e riprova.",
+      "replace_after_long_rest": "Hai già fatto i cambi concessi per questo riposo lungo: riposa e riprova.",
       "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: sceglila insieme al prerequisito o dopo averlo preso.",
       "option_is_prerequisite": "Questa opzione è il prerequisito di un'altra che hai scelto: non puoi sostituirla.",
       "class_already_present": "Il personaggio ha già quella classe."
