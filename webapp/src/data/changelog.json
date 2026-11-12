@@ -1,6 +1,46 @@
 {
   "entries": [
     {
+      "version": "3.2.1",
+      "date": "2026-11-12",
+      "improved": {
+        "it": [
+          "Nella pagina PF il pulsante «Annulla l'ultima modifica ai PF» resta sempre a portata di mano."
+        ],
+        "en": [
+          "On the HP page the «Undo the last HP change» button is always within reach."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "I dadi delle cure seguono l'edizione di chi lancia; la Preghiera di Guarigione 2024 non somma più il modificatore da incantatore.",
+          "Rilanciare senza concentrazione non toglie più gli altri bersagli, e annullare il rilancio ridà ai vecchi bersagli i loro dati.",
+          "Eliminare uno scudo o un'armatura indossati toglie il loro bonus alla CA.",
+          "Le padronanze delle armi si cambiano una volta per riposo lungo e il chip compare solo sulle armi scelte.",
+          "Il popup delle reazioni compare anche nella pagina della serata e nello scontro.",
+          "La scheda dell'alleato si aggiorna subito quando riceve un effetto.",
+          "Riepilogo di fine serata: livello di Spossatezza, etichetta dei curati e testo delle cure ora usano i PF reali.",
+          "I riposi azzerano l'avviso del secondo slot lanciato nel turno, e l'ultimo bersaglio chiude la concentrazione di chi lancia.",
+          "L'annullo dei PF non rimborsa slot di turno dopo un nuovo turno.",
+          "Riposo a 0 PF: niente anteprima, conferma spenta e un doppio tocco invia un solo riposo.",
+          "Piccole correzioni: segno meno dei dadi vita con COS negativa, testi delle edizioni, barra XP, tabella progressione 2014 solo per i personaggi 2014, tipo di danno tradotto nel popup, letargia 2014, avviso di immunità alle condizioni, slot vuoto dell'equipaggiamento, PF massimi del mostro in modalità completa, dialogo «Annullare la serata?»."
+        ],
+        "en": [
+          "Healing dice follow the caster's edition; 2024 Prayer of Healing no longer adds the spellcasting modifier.",
+          "Recasting without concentration no longer removes the other targets, and undoing the recast gives the old targets their data back.",
+          "Deleting a worn shield or armor removes its AC bonus.",
+          "Weapon masteries can be changed once per long rest and the chip appears only on the chosen weapons.",
+          "The reaction popup also shows on the evening page and in combat.",
+          "An ally's sheet updates at once when it receives an effect.",
+          "End-of-evening recap: Exhaustion level, healed label and healing text now use the real HP.",
+          "Rests clear the second-slot-in-a-turn warning, and the last target ends the caster's concentration.",
+          "Undoing an HP change no longer refunds turn slots after a new turn.",
+          "Rest at 0 HP: no preview, confirm disabled and a double tap sends a single rest.",
+          "Small fixes: minus sign for hit dice with negative CON, edition texts, XP bar, 2014 progression table only for 2014 characters, translated damage type in the popup, 2014 Lethargy, condition immunity notice, empty equipment slot, monster max HP in full mode, the «Cancel the evening?» dialog."
+        ]
+      }
+    },
+    {
       "version": "3.2.0",
       "date": "2026-11-11",
       "added": {
