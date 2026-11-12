@@ -5,7 +5,7 @@ import AutoModeBanner from '@/components/character/AutoModeBanner'
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { edition?: string }) => (o?.edition ? `${k}|${o.edition}` : k), i18n: { language: 'it' } }) }
 })
 vi.mock('framer-motion', async () => {
   const React = await import('react')
@@ -33,8 +33,13 @@ beforeEach(() => localStorage.clear())
 describe('AutoModeBanner', () => {
   it('is expanded on first access (no stored preference) and shows the hint + settings shortcut', () => {
     render(<AutoModeBanner onGoToSettings={() => {}} />)
-    expect(screen.getByText('character.slots.auto_hint')).toBeInTheDocument()
+    expect(screen.getByText('character.slots.auto_hint|2014')).toBeInTheDocument()
     expect(screen.getByText('character.slots.go_to_settings')).toBeInTheDocument()
+  })
+
+  it('passes the character edition to the hint', () => {
+    render(<AutoModeBanner edition="2024" onGoToSettings={() => {}} />)
+    expect(screen.getByText('character.slots.auto_hint|2024')).toBeInTheDocument()
   })
 
   it('collapses when toggled and persists the closed state', async () => {
@@ -42,14 +47,14 @@ describe('AutoModeBanner', () => {
     const pill = screen.getByRole('button', { expanded: true })
     await userEvent.click(pill)
     expect(screen.getByRole('button', { expanded: false })).toBeInTheDocument()
-    expect(screen.queryByText('character.slots.auto_hint')).not.toBeInTheDocument()
+    expect(screen.queryByText('character.slots.auto_hint|2014')).not.toBeInTheDocument()
     expect(localStorage.getItem('dnd:slots-auto-banner')).toBe('closed')
   })
 
   it('starts collapsed when the stored preference is "closed"', () => {
     localStorage.setItem('dnd:slots-auto-banner', 'closed')
     render(<AutoModeBanner onGoToSettings={() => {}} />)
-    expect(screen.queryByText('character.slots.auto_hint')).not.toBeInTheDocument()
+    expect(screen.queryByText('character.slots.auto_hint|2014')).not.toBeInTheDocument()
   })
 
   it('invokes onGoToSettings from the shortcut', async () => {

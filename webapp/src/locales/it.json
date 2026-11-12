@@ -742,7 +742,7 @@
       "rerolled": "Dadi ritirati: {{dice}}",
       "effect_grapple": "Afferrare: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce è Afferrato. Serve una mano libera.",
       "effect_shove": "Spingere: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce lo sposti di 1,5 m o lo rendi Prono.",
-      "grazed": "Graze: danno sul mancato",
+      "grazed": "Colpo di striscio: danno sul mancato",
       "missed_noted": "Mancato: segnato, nessun danno",
       "limit_title": "Attacchi esauriti",
       "limit_text": "Hai già fatto {{made}} attacchi su {{allowed}} con l'azione Attacco. Attacchi comunque, per un privilegio o una reazione?",
@@ -1039,7 +1039,7 @@
       "gem_aria": "Livello {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "usato",
       "state_available": "disponibile",
-      "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
+      "auto_hint": "Modalità Auto (regole D&D 5e {{edition}}): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
       "auto_label": "Modalità Auto",
       "manual_empty_hint": "Nessuno slot. Aggiungine uno con i pulsanti \"+ Livello N\" qui sotto.",
       "add_new_level": "Aggiungi nuovo livello",
@@ -5219,7 +5219,7 @@
         {
           "title": "Modalità Auto",
           "items": [
-            "In modalità Auto, l'app calcola gli slot dalle classi e dal livello, con le regole D&D 5e 2014.",
+            "In modalità Auto, l'app calcola gli slot dalle classi e dal livello, con le regole D&D 5e dell'edizione del personaggio.",
             "In modalità Auto non puoi cambiare il totale e non puoi aggiungere o rimuovere livelli.",
             "Il riquadro \"Modalità Auto\" spiega questa regola. Tocca il riquadro per aprirlo o chiuderlo.",
             "Per passare alla modalità manuale, tocca \"Vai a Impostazioni\"."

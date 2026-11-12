@@ -1039,7 +1039,7 @@
       "gem_aria": "Level {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "used",
       "state_available": "available",
-      "auto_hint": "Auto mode (D&D 5e 2014 rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
+      "auto_hint": "Auto mode (D&D 5e {{edition}} rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
       "auto_label": "Auto Mode",
       "manual_empty_hint": "No slots yet. Add one with the \"+ Level N\" buttons below.",
       "add_new_level": "Add new level",
@@ -5220,7 +5220,7 @@
         {
           "title": "Auto mode",
           "items": [
-            "In Auto mode, the app calculates the slots from the classes and the level, with the D&D 5e 2014 rules.",
+            "In Auto mode, the app calculates the slots from the classes and the level, with the D&D 5e rules of the character's edition.",
             "In Auto mode, you cannot change the total and you cannot add or remove levels.",
             "The \"Auto Mode\" panel explains this rule. Tap the panel to open or close it.",
             "To change to manual mode, tap \"Go to Settings\"."
