@@ -266,3 +266,4 @@ class TurnState(BaseModel):
     round: Optional[int] = None
     session_id: Optional[int] = None
     pending_saves: list[PendingSaveRead] = []
+    effects_sig: str = ""  # firma di stati attivi, condizioni e PF temporanei (CA e PF massimi ne derivano): se cambia (effetto di un alleato) la scheda va riletta

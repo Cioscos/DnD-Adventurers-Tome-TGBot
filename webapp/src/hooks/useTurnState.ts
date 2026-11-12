@@ -4,7 +4,8 @@ import { api } from '@/api/client'
 
 /** Turn state polled every 5 s only while `live` (an active evening; default: whenever enabled). Outside an
  *  evening the page reads it once and mutations invalidate it. A turn/round change may come
- *  with a server-side rounds tick (GM's next-turn), so the cached character is refetched. */
+ *  with a server-side rounds tick (GM's next-turn), and `effects_sig` changes when an ally's effect
+ *  lands (active states, AC, HP), so the cached character is refetched. */
 export function useTurnState(charId: number, enabled: boolean, live: boolean = enabled) {
   const qc = useQueryClient()
   const query = useQuery({
@@ -13,7 +14,7 @@ export function useTurnState(charId: number, enabled: boolean, live: boolean = e
     enabled,
     refetchInterval: live ? 5000 : false,
   })
-  const key = query.data ? `${query.data.is_my_turn}:${query.data.round}` : null
+  const key = query.data ? `${query.data.is_my_turn}:${query.data.round}:${query.data.effects_sig ?? ''}` : null
   const lastKey = useRef<string | null>(null)
   useEffect(() => {
     if (key === null) return

@@ -7,6 +7,7 @@ for HP/AC/conditions snapshots and `/messages` for the in-session chat.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from datetime import datetime
@@ -296,7 +297,10 @@ async def character_turn_state(
     _, pendings = await character_effect_payload(db, character_id)
     item = next((i for i in char.items if i.id == item_id), None)
     block = {"turn": get_turn(char), "attacks_allowed": attacks_allowed(char, item),
-             "attacks_allowed_pact": attacks_allowed(char, with_pact=True)}
+             "attacks_allowed_pact": attacks_allowed(char, with_pact=True),
+             "effects_sig": hashlib.sha1(json.dumps(
+                 [char.active_states, char.conditions, char.temp_hp],
+                 sort_keys=True, default=str).encode()).hexdigest()}
     row = await active_encounter_row(db, character_id)
     if row is None:
         return TurnState(in_encounter=False, is_my_turn=False, pending_saves=pendings, **block)
