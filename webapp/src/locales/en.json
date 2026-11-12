@@ -2510,6 +2510,7 @@
       },
       "picker": {
         "title": "Equip",
+        "slot_free": "free",
         "empty": "No compatible items in inventory.",
         "go_to_inventory": "Go to inventory"
       },

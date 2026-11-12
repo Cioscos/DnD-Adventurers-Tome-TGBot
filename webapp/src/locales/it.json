@@ -2509,6 +2509,7 @@
       },
       "picker": {
         "title": "Equipaggia",
+        "slot_free": "libero",
         "empty": "Nessun oggetto compatibile nell'inventario.",
         "go_to_inventory": "Vai all'inventario"
       },

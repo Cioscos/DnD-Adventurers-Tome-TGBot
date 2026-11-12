@@ -39,9 +39,16 @@ describe('EquipmentSlotCell', () => {
     render(<EquipmentSlotCell slot="head" equipped={null} onTap={onTap} />)
     expect(screen.getByTestId('placeholder')).toBeInTheDocument()
     const btn = screen.getByRole('button')
-    expect(btn).toHaveAttribute('aria-label', expect.stringContaining('character.equipment.picker.empty'))
+    expect(btn).toHaveAttribute('aria-label', expect.stringContaining('character.equipment.picker.slot_free'))
     await userEvent.click(btn)
     expect(onTap).toHaveBeenCalledWith(null)
+  })
+
+  it('says "nessun oggetto compatibile" only when none fits, else just that the slot is free', () => {
+    const { rerender } = render(<EquipmentSlotCell slot="head" equipped={null} hasCompatible={false} onTap={vi.fn()} />)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', expect.stringContaining('character.equipment.picker.empty'))
+    rerender(<EquipmentSlotCell slot="head" equipped={null} hasCompatible onTap={vi.fn()} />)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', expect.stringContaining('character.equipment.picker.slot_free'))
   })
 
   it('renders the equipped item initial and a labelled cell, and taps with the item', async () => {

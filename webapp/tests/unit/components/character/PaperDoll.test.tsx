@@ -12,6 +12,7 @@ vi.mock('react-i18next', async (orig) => {
 // rule can be exercised without depending on real metadata parsing.
 vi.mock('@/lib/equipmentSlots', () => ({
   ALL_SLOTS: ['head', 'neck', 'cloak', 'body', 'hands', 'ring1', 'ring2', 'feet', 'ammunition', 'main_hand', 'off_hand'],
+  ITEM_TYPE_TO_SLOTS: {},
   isTwoHanded: (it: { two_handed?: boolean } | null) => Boolean(it && it.two_handed),
 }))
 vi.mock('@/components/character/EquipmentSlotCell', async () => {
