@@ -9,7 +9,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import rules_spells as rs  # noqa: E402
 
 RULES = ROOT / "docs" / "superpowers" / "rules"
-SRD = {x["index"] for x in json.loads((ROOT / "webapp/src/data/srd/spells.json").read_text(encoding="utf-8"))["items"]}
+SRD = {x["index"] for x in json.loads((ROOT / "webapp/src/data/srd/spells.json").read_text(encoding="utf-8"))["items"]
+       if x.get("source") != "phb"}
 
 HEADER = ("| titolo IT | titolo EN | livello | scuola | classi | tempo di lancio | gittata | componenti | durata "
           "| concentrazione | rituale | effetto meccanico | pagina |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")

@@ -117,3 +117,6 @@ def mechanics(summary_it: str) -> dict:
         "damage_type": _TYPES[dmg[2].lower()] if dmg else None,
         "higher_levels_dice": up[1] if up else None,
     }
+
+# Campi dei tiri che il riassunto non esprime bene, per indice (si applicano dopo mechanics()).
+MECHANICS_OVERRIDES: dict[str, dict] = {}

@@ -1,0 +1,325 @@
+{
+ "2014": {
+  "arcane-gate": {
+   "desc": "Two linked circular portals 10 feet in diameter, one within 10 feet and one within 500 feet of the caster, on visible points on the ground; creatures and objects entering one exit from the other (the mist inside blocks vision). If a portal would open in a creature's space the casting fails. Bonus action: rotate the portals."
+  },
+  "armor-of-agathys": {
+   "desc": "5 temporary hit points; while you have them, anyone who hits you with a melee attack takes 5 cold damage; scaling +5 temporary hit points and +5 damage per slot level above 1st",
+   "material": "a cup of water"
+  },
+  "arms-of-hadar": {
+   "desc": "Strength saving throw for creatures within 10 feet: 2d6 necrotic and no reactions until their next turn; half and no other effect on a success; scaling +1d6 per slot level above 1st"
+  },
+  "aura-of-life": {
+   "desc": "Nonhostile creatures in the aura: resistance to necrotic damage, hit point maximum can't be reduced; a living nonhostile creature at 0 hit points regains 1 hit point at the start of its turn"
+  },
+  "aura-of-purity": {
+   "desc": "Nonhostile creatures in the aura can't become diseased, have resistance to poison damage and advantage on saving throws against blinded, charmed, deafened, poisoned, paralyzed, frightened, stunned"
+  },
+  "aura-of-vitality": {
+   "desc": "As a bonus action each turn, one creature in the aura regains 2d6 hit points"
+  },
+  "banishing-smite": {
+   "desc": "On your next weapon hit: +5d10 force; if the target drops to 50 hit points or fewer it is banished (to its home plane, or to a harmless demiplane where it is incapacitated if native to the current plane) until the spell ends."
+  },
+  "beast-sense": {
+   "desc": "As an action the caster sees and hears through a willing beast it touches, gaining its special senses, until it uses an action to return to its own senses; meanwhile it is blinded and deafened with regard to its own surroundings."
+  },
+  "blade-ward": {
+   "desc": "Until the end of the caster's next turn, it has resistance to bludgeoning, piercing, and slashing damage dealt by weapon attacks."
+  },
+  "blinding-smite": {
+   "desc": "On your next melee weapon hit within the duration: +3d8 radiant; the target makes a Constitution saving throw or is blinded while the spell lasts, repeating the saving throw at the end of each of its turns."
+  },
+  "chromatic-orb": {
+   "desc": "Ranged spell attack: 3d8 damage of a type chosen from acid, cold, lightning, fire, thunder, poison. Higher slots: +1d8 per slot level above 1st.",
+   "material": "a diamond worth at least 50 gp"
+  },
+  "circle-of-power": {
+   "desc": "30-foot-radius aura centered on you: friendly creatures have advantage on saving throws against spells and magical effects; a creature that succeeds on a saving throw that halves damage takes no damage"
+  },
+  "cloud-of-daggers": {
+   "desc": "5-foot cube of daggers: a creature takes 4d4 slashing damage when it enters it for the first time on a turn or starts its turn there. Higher slots: +2d4 per slot level above 2nd."
+  },
+  "compelled-duel": {
+   "desc": "Wisdom saving throw or drawn toward you and with disadvantage on attack rolls against others; Wisdom saving throw to move more than 30 feet away; ends if you attack another creature, cast spells on a different hostile creature, an ally damages it, or you end your turn more than 30 feet away"
+  },
+  "conjure-barrage": {
+   "desc": "60-foot cone: Dexterity saving throw, 3d8 damage of the type of the weapon used (half on a success)",
+   "material": "one piece of ammunition or a thrown weapon"
+  },
+  "conjure-volley": {
+   "desc": "40-foot-radius, 20-foot-high cylinder: Dexterity saving throw, 8d8 damage of the type of the weapon used (half on a success)",
+   "material": "one piece of ammunition or a thrown weapon"
+  },
+  "cordon-of-arrows": {
+   "desc": "4 pieces of ammunition planted: when a creature not excluded enters within 30 feet or ends its turn there, one piece of ammunition strikes it; Dexterity saving throw or 1d6 piercing; ends when out of ammunition; scaling +2 pieces of ammunition per slot level above 2nd",
+   "material": "4 or more arrows or bolts"
+  },
+  "crown-of-madness": {
+   "desc": "Humanoid: Wisdom saving throw or charmed; it must use its action before moving to make a melee attack against a creature you mentally choose; it repeats the saving throw at the end of its turn; you must use your action to maintain control"
+  },
+  "crusaders-mantle": {
+   "desc": "30-foot-radius aura centered on the caster: each nonhostile creature in the aura (caster included) deals an extra 1d4 radiant damage with weapon attacks."
+  },
+  "destructive-wave": {
+   "desc": "Chosen creatures within 30 feet make a Constitution saving throw: on a failure 5d6 thunder damage plus 5d6 radiant or necrotic (your choice) and knocked prone; on a success half damage and not knocked prone."
+  },
+  "dissonant-whispers": {
+   "desc": "Wisdom saving throw: on a failure 3d6 psychic and must use its reaction to move as far as its speed allows away from the caster (not into obviously dangerous ground); on a success half damage and no movement. Deafened creatures automatically succeed. Higher slots: +1d6 per slot level above 1st."
+  },
+  "elemental-weapon": {
+   "desc": "A nonmagical weapon becomes magical: +1 to attack rolls and an extra 1d4 acid, cold, lightning, fire, or thunder damage; 5th-6th level slot: +2 and 2d4; 7th+ level slot: +3 and 3d4"
+  },
+  "ensnaring-strike": {
+   "desc": "On your next weapon hit, the target makes a Strength saving throw (advantage if Large or larger) or is restrained by vines: 1d6 piercing at the start of its turn; it can break free with a Strength check against the DC; scaling +1d6 per slot level above 1st"
+  },
+  "feign-death": {
+   "desc": "A willing creature appears dead to any inspection: blinded, incapacitated, speed 0, resistance to all damage except psychic; disease and poison have no effect while it lasts. Ends when the caster uses an action to touch it."
+  },
+  "friends": {
+   "desc": "Advantage on Charisma checks toward a nonhostile creature; when it ends the creature realizes it was influenced and may become hostile",
+   "material": "a small amount of makeup"
+  },
+  "grasping-vine": {
+   "desc": "A vine sprouts within range; when conjured and then as a bonus action each turn it can lash out at a creature within 30 feet of the vine: Dexterity saving throw or it is pulled 20 feet toward the vine."
+  },
+  "hail-of-thorns": {
+   "desc": "On your next ranged weapon hit: the target and creatures within 5 feet make a Dexterity saving throw, 1d10 piercing (half on a success). Higher slots: +1d10 per slot level above 1st (max 6d10)."
+  },
+  "hex": {
+   "desc": "+1d6 necrotic on every hit against the target and disadvantage on checks with a chosen ability; if the target drops to 0 hit points it can be moved with a bonus action. Remove curse ends it. 3rd-4th level slot: concentration up to 8 hours; 5th+: 24 hours.",
+   "material": "the petrified eye of a newt"
+  },
+  "hunger-of-hadar": {
+   "desc": "20-foot-radius sphere of darkness and cold: blinding, difficult terrain; a creature that starts its turn inside takes 2d6 cold; a creature that ends its turn inside: Dexterity saving throw or 2d6 acid",
+   "material": "a pickled octopus tentacle"
+  },
+  "lightning-arrow": {
+   "desc": "The next ranged weapon attack within the duration turns the ammunition/thrown weapon into lightning: on a hit 4d8 lightning damage instead of the weapon's damage, on a miss half; either way creatures within 10 feet of the target make a Dexterity saving throw or take 2d8 lightning (half on a success). Higher slots: +1d8 to both effects per slot level above 3rd."
+  },
+  "phantasmal-force": {
+   "desc": "Intelligence saving throw or the target alone perceives an illusion (cube up to 10 feet); doesn't work on constructs and undead; the target can use an action for an Intelligence (Investigation) check against the DC to see through it; it treats it as real and can take damage from it: 1d6 psychic per round if the illusion could logically harm",
+   "material": "a bit of fleece"
+  },
+  "power-word-heal": {
+   "desc": "The target regains all its hit points; ends charmed, paralyzed, frightened, or stunned; if prone it can stand up with its reaction. No effect on constructs and undead."
+  },
+  "ray-of-sickness": {
+   "desc": "Ranged attack: 2d8 poison and Constitution saving throw or poisoned until the end of the caster's next turn. Higher slots: +1d8 per slot level above 1st."
+  },
+  "searing-smite": {
+   "desc": "On your next melee weapon hit: +1d6 fire and the target ignites; at the start of each of its turns a Constitution saving throw: on a failure 1d6 fire, on a success the spell ends. Higher slots: +1d6 to the initial extra damage per slot level above 1st."
+  },
+  "staggering-smite": {
+   "desc": "On your next melee weapon hit: +4d6 psychic; the target makes a Wisdom saving throw or has disadvantage on attack rolls and ability checks and can't take reactions until the end of its next turn."
+  },
+  "swift-quiver": {
+   "desc": "The quiver produces endless nonmagical ammunition; as a bonus action each turn, two attacks with a weapon that uses that ammunition",
+   "material": "a quiver containing at least one piece of ammunition"
+  },
+  "telepathy": {
+   "desc": "Telepathic link with a familiar willing creature on the same plane to share words, images, and sounds; ends if either changes plane.",
+   "material": "a pair of linked silver rings"
+  },
+  "thorn-whip": {
+   "desc": "Melee spell attack: 1d6 piercing damage and, if the target is Large or smaller, it can be pulled up to 10 feet toward the caster. Damage 2d6 at 5th level, 3d6 at 11th, 4d6 at 17th."
+  },
+  "thunderous-smite": {
+   "desc": "On your next melee weapon hit: +2d6 thunder (audible within 300 feet); the target makes a Strength saving throw or is pushed 10 feet and knocked prone."
+  },
+  "tsunami": {
+   "desc": "Wall of water up to 300x300x50 feet: Strength saving throw, 6d10 bludgeoning (half on a success); at the start of each turn it moves 50 feet carrying creatures along (Huge or smaller: Strength saving throw or 5d10 bludgeoning, once per round); its height drops by 50 feet per turn and the damage by 1d10; swimming requires a Strength (Athletics) check."
+  },
+  "witch-bolt": {
+   "desc": "Ranged spell attack: 1d12 lightning; on each of your turns you can use your action to deal 1d12 lightning automatically; ends if out of range or behind total cover; scaling +1d12 per slot level above 1st",
+   "material": "a twig from a tree that has been struck by lightning"
+  },
+  "wrathful-smite": {
+   "desc": "On your next melee weapon hit: +1d6 psychic; the target makes a Wisdom saving throw or is frightened while the spell lasts; it can use an action for a Wisdom check against the DC to end it."
+  }
+ },
+ "2024": {
+  "arcane-gate": {
+   "desc": "Two linked portals in unoccupied Large spaces on the ground (one within range, one within 10 ft of you); open on one side only, which you can rotate with a Bonus Action; whoever enters exits from the other as if they were adjacent."
+  },
+  "arcane-vigor": {
+   "desc": "Roll 1 or 2 unspent Hit Point Dice and regain Hit Points equal to the total plus your spellcasting ability modifier; the dice are expended. Higher slot: +1 Hit Point Die you can roll per level above 2."
+  },
+  "armor-of-agathys": {
+   "desc": "You gain 5 Temporary Hit Points; a creature that hits you with a melee attack takes 5 Cold damage. Ends when you run out of the Temporary Hit Points. Higher slot: Temporary Hit Points and damage +5 per level above 1.",
+   "material": "a shard of blue glass"
+  },
+  "arms-of-hadar": {
+   "desc": "10-ft Emanation: each creature makes a Strength saving throw or takes 2d6 Necrotic damage and can't take Reactions until its next turn; half damage on a success. Higher slot: +1d6 per level above 1."
+  },
+  "aura-of-purity": {
+   "desc": "30-ft Emanation aura: you and your allies have Resistance to Poison damage and Advantage on saving throws to avoid or end Blinded, Charmed, Deafened, Frightened, Paralyzed, Poisoned, and Stunned."
+  },
+  "aura-of-vitality": {
+   "desc": "30-ft Emanation aura: when you cast it and at the start of each of your turns, you can restore 2d6 Hit Points to one creature in the aura."
+  },
+  "banishing-smite": {
+   "desc": "The target hit takes an extra 5d10 Force damage; if it drops to 50 Hit Points or fewer: Charisma saving throw or it is transported to a harmless demiplane (Incapacitated) for the duration."
+  },
+  "beast-sense": {
+   "desc": "Willing Beast: you perceive through its senses as well as your own, including special senses."
+  },
+  "blade-ward": {
+   "desc": "A creature that attacks you subtracts 1d4 from the attack roll."
+  },
+  "blinding-smite": {
+   "desc": "The target takes an extra 3d8 Radiant damage and is Blinded; Constitution saving throw at the end of each of its turns to end it. Higher slot: +1d8 per level above 3."
+  },
+  "circle-of-power": {
+   "desc": "30-ft Emanation aura: you and your allies have Advantage on saving throws against spells and magical effects; if a save for half damage succeeds, no damage."
+  },
+  "cloud-of-daggers": {
+   "desc": "5-ft Cube: 4d4 Slashing damage to a creature inside it, entering it, ending its turn in it, or reached by the Cube (once per turn). Magic action: you teleport the Cube up to 30 ft. Higher slot: +2d4 per level above 2.",
+   "material": "a sliver of glass"
+  },
+  "compelled-duel": {
+   "desc": "One visible creature: Wisdom saving throw or Disadvantage on attack rolls against creatures other than you, and it can't willingly move more than 30 ft away from you. Ends if you attack another creature, cast a spell on another enemy, an ally damages the target, or you move more than 30 ft away."
+  },
+  "conjure-barrage": {
+   "desc": "60-ft Cone: each chosen visible creature makes a Dexterity saving throw or takes 5d8 Force damage (half on a success). Higher slot: +1d8 per level above 3.",
+   "material": "a Melee or Ranged weapon worth at least 1 CP"
+  },
+  "conjure-volley": {
+   "desc": "Cylinder 40 ft in radius, 20 ft high on a point within range: each chosen visible creature makes a Dexterity saving throw or takes 8d8 Force damage (half on a success).",
+   "material": "a Melee or Ranged weapon worth at least 1 CP"
+  },
+  "cordon-of-arrows": {
+   "desc": "Plant up to 4 nonmagical arrows or bolts: when a creature (other than those designated) first comes within 30 ft on a turn or ends its turn there, one piece of ammunition strikes: Dexterity saving throw or 2d4 Piercing damage, then it is destroyed. Higher slot: +2 pieces of ammunition per level above 2.",
+   "material": "an ornamental braid"
+  },
+  "crown-of-madness": {
+   "desc": "One visible Humanoid: Wisdom saving throw or Charmed; it uses its action before moving to make a melee attack against a creature you mentally choose. Save repeated at the end of each of its turns. You must take the Magic action on your turns to maintain control."
+  },
+  "crusaders-mantle": {
+   "desc": "30-ft Emanation aura: you and your allies deal an extra 1d4 Radiant damage when hitting with a weapon or an Unarmed Strike."
+  },
+  "destructive-wave": {
+   "desc": "30-ft Emanation: each chosen creature makes a Constitution saving throw or takes 5d6 Thunder + 5d6 Radiant or Necrotic damage (your choice) and is Prone; half damage on a success."
+  },
+  "elemental-weapon": {
+   "desc": "A touched nonmagical weapon becomes magical: +1 to attack rolls and an extra 1d4 damage of a chosen type (Acid, Cold, Fire, Lightning, Thunder). Scaling: level 5-6 slot +2 and 2d4; level 7+ slot +3 and 3d4."
+  },
+  "feign-death": {
+   "desc": "A willing creature appears dead: Blinded and Incapacitated, Speed 0, Resistance to all damage except Psychic, Immunity to Poisoned.",
+   "material": "a pinch of graveyard dirt"
+  },
+  "fount-of-moonlight": {
+   "desc": "Bright light in a 20-ft radius and dim light for an additional 20 ft; Resistance to Radiant damage; your melee attacks deal an extra 2d6 Radiant damage. As a Reaction after taking damage from a visible creature within 60 ft, it makes a Constitution saving throw or is Blinded until the end of your next turn."
+  },
+  "friends": {
+   "desc": "One visible creature makes a Wisdom saving throw or is Charmed; it succeeds automatically if it isn't a Humanoid, if you're fighting it, or if you have cast this spell on it in the past 24 hours. Ends if you attack, deal damage, or force a saving throw; the target knows it was Charmed.",
+   "material": "some makeup"
+  },
+  "grasping-vine": {
+   "desc": "A vine attacks (melee spell attack within 30 ft): 4d8 Bludgeoning damage and pulled 30 ft toward the vine; Grappled if Huge or smaller (escape DC equals your spell save DC). Repeatable with a Bonus Action. Scaling: one additional Grappled creature per level above 4."
+  },
+  "hail-of-thorns": {
+   "desc": "The target and creatures within 5 ft make a Dexterity saving throw: 1d10 Piercing damage, half on a success. Scaling: +1d10 per level above 1."
+  },
+  "hunger-of-hadar": {
+   "desc": "20-ft-radius Sphere of darkness, Difficult Terrain, Blinding: a creature starting its turn inside takes 2d6 Cold damage; a creature ending its turn inside makes a Dexterity saving throw or takes 2d6 Acid damage. Scaling: +1d6 per level above 3 (Cold or Acid, your choice).",
+   "material": "a pickled tentacle"
+  },
+  "jallarzis-storm-of-radiance": {
+   "desc": "Cylinder 10 ft in radius and 40 ft high: Blinded and Deafened, can't cast spells with a Verbal component; Constitution saving throw (once per turn, also on entering): 2d10 Radiant and 2d10 Thunder damage, half on a success. Scaling: +1d10 of each type per level above 5.",
+   "material": "a pinch of phosphorus"
+  },
+  "lightning-arrow": {
+   "desc": "The weapon/ammunition becomes a lightning bolt: instead of normal damage the target takes 4d8 Lightning damage on a hit, half on a miss; each creature within 10 ft of the target makes a Dexterity saving throw: 2d8 Lightning damage, half on a success. Scaling: +1d8 to both per level above 3"
+  },
+  "mind-sliver": {
+   "desc": "Intelligence saving throw or 1d6 Psychic damage and it subtracts 1d4 from its next saving throw before the end of your next turn. Cantrip scaling: 2d6 at 5th, 3d6 at 11th, 4d6 at 17th"
+  },
+  "power-word-fortify": {
+   "desc": "Up to six visible creatures share 120 Temporary Hit Points"
+  },
+  "staggering-smite": {
+   "desc": "The target takes an extra 4d6 Psychic damage and makes a Wisdom saving throw or is Stunned until the end of your next turn; +1d6 per level above 4"
+  },
+  "steel-wind-strike": {
+   "desc": "Up to 5 visible creatures: a melee spell attack against each, 6d10 Force damage on a hit; then you teleport to an unoccupied space within 5 feet of a target",
+   "material": "a melee weapon worth 1+ GP"
+  },
+  "summon-aberration": {
+   "desc": "Summons an allied spirit (Beholderkin, Mind Flayer, or Slaad) with the Aberrant Spirit stat block: AC 11 + level, HP 40 + 10 per level above 4, attacks equal to half the level; shares your initiative and acts immediately after you; uses the slot level",
+   "material": "a pickled tentacle and an eyeball in a platinum vial worth 400+ GP"
+  },
+  "summon-beast": {
+   "desc": "Summons an allied bestial spirit (Air, Land, or Water) with the Bestial Spirit stat block: AC 11 + level, HP 20 (Air) or 30 (Land, Water) + 5 per level above 2, Rend attacks equal to half the level (1d8 + 4 + level Piercing)",
+   "material": "a feather, tuft of fur, and fish tail inside a gilded acorn worth 200+ GP"
+  },
+  "summon-celestial": {
+   "desc": "Summons an allied celestial spirit (Avenger or Defender) with the Celestial Spirit stat block: AC 11 + level (+2 Defender), HP 40 + 10 per level above 5, Fly 40, radiant bow 2d6+2+level or mace 1d10+3+level with 1d10 Temporary Hit Points, healing 1/day 2d8+level",
+   "material": "a reliquary worth 500+ GP"
+  },
+  "summon-construct": {
+   "desc": "Summons an allied Construct spirit (Clay, Metal, or Stone) with the Construct Spirit stat block: AC 13 + level, HP 40 + 15 per level above 4, Slam 1d8+4+level Bludgeoning; traits by material (Heated Body, Stony Lethargy, Berserk Lashing)",
+   "material": "a lockbox worth 400+ GP"
+  },
+  "summon-elemental": {
+   "desc": "Summons an allied elemental spirit (Air, Earth, Fire, or Water) with the Elemental Spirit stat block: AC 11 + level, HP 50 + 10 per level above 4, Speed 40, Breath 2d6 (Dexterity saving throw), Slam 1d10+4+level",
+   "material": "air, a pebble, ash, and water inside a gold-inlaid vial worth 400+ GP"
+  },
+  "summon-fey": {
+   "desc": "Summons an allied fey spirit (Fuming, Mirthful, or Tricksy) with the Fey Spirit stat block: AC 12 + level, HP 30 + 10 per level above 3, Fey Blade 2d6+3+level Force, Fey Step 30 feet with an effect by mood",
+   "material": "a gilded flower worth 300+ GP"
+  },
+  "summon-fiend": {
+   "desc": "Summons an allied fiendish spirit (Demon, Devil, or Yugoloth) with the Fiendish Spirit stat block: AC 12 + level, HP 50/40/60 + 15 per level above 6, Fire Resistance, Magic Resistance, type-specific attacks; the Demon explodes at 0 HP (Dexterity saving throw, 2d10 + level Fire)",
+   "material": "a vial of blood worth 600+ GP"
+  },
+  "summon-undead": {
+   "desc": "Summons an allied undead spirit (Ghostly, Putrid, or Skeletal) with the Undead Spirit stat block: AC 11 + level, HP 30 (Ghostly/Putrid) or 20 (Skeletal) + 10 per level above 3, form-specific attacks (1d8, 2d4, or 1d6 + 3 + level)",
+   "material": "a gilded skull worth 300+ GP"
+  },
+  "swift-quiver": {
+   "desc": "When you cast it and as a Bonus Action until it ends, you make two attacks with a weapon that uses Arrows or Bolts; the ammunition is created by the spell and vanishes after use",
+   "material": "a Quiver worth 1+ GP"
+  },
+  "synaptic-static": {
+   "desc": "20-foot-radius Sphere: Intelligence saving throw, 8d6 Psychic damage (half on a success); those who fail subtract 1d6 from attack rolls, ability checks, and Constitution saving throws to maintain Concentration for 1 minute, save repeated at the end of each turn"
+  },
+  "tashas-bubbling-cauldron": {
+   "desc": "A cauldron that duplicates a Common or Uncommon potion of your choice; as a Bonus Action you or an ally take one, up to a number equal to your spellcasting ability modifier (minimum 1); unused potions vanish when you cast it again",
+   "material": "a gilded ladle worth 500+ GP"
+  },
+  "telepathy": {
+   "desc": "Telepathic link with a willing creature you know on the same plane; exchange words, images, and sounds; ends if you are on different planes",
+   "material": "a pair of linked silver rings"
+  },
+  "thorn-whip": {
+   "desc": "Melee spell attack: 1d6 Piercing damage and, if Large or smaller, you pull it up to 10 feet toward you; +1d6 at levels 5, 11, 17",
+   "material": "the stem of a thorny plant"
+  },
+  "thunderclap": {
+   "desc": "5-foot Emanation: Constitution saving throw or 1d6 Thunder damage; audible within 100 feet; +1d6 at levels 5, 11, 17"
+  },
+  "thunderous-smite": {
+   "desc": "An extra 2d6 Thunder damage; if a creature, Strength saving throw or pushed 10 feet and Prone; audible within 300 feet; +1d6 per level above 1"
+  },
+  "toll-the-dead": {
+   "desc": "Wisdom saving throw or 1d8 Necrotic damage (1d12 if the target is missing any Hit Points); the die increases to 2, 3, 4 at levels 5, 11, 17"
+  },
+  "witch-bolt": {
+   "desc": "Ranged spell attack: 2d12 Lightning damage; on later turns a Bonus Action for an automatic 1d12 Lightning damage; ends if the target leaves range or has Total Cover; +1d12 initial damage per level above 1",
+   "material": "a twig struck by lightning"
+  },
+  "word-of-radiance": {
+   "desc": "5-foot Emanation: chosen visible creatures make a Constitution saving throw or take 1d6 Radiant damage; +1d6 at levels 5, 11, 17",
+   "material": "a sunburst token"
+  },
+  "wrathful-smite": {
+   "desc": "An extra 1d6 Necrotic damage and Wisdom saving throw or Frightened; save repeated at the end of each turn; +1d6 per level above 1"
+  },
+  "yolandes-regal-presence": {
+   "desc": "10-foot Emanation: you can force visible creatures that enter it or end their turn there to make a Wisdom saving throw (once per turn): 4d6 Psychic damage, Prone, and pushed up to 10 feet (half damage on a success)",
+   "material": "a miniature tiara"
+  }
+ }
+}

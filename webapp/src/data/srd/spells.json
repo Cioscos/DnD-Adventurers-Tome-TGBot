@@ -2,14 +2,15 @@
  "_meta": {
   "source": "https://www.dnd5eapi.co (D&D 5e SRD 2014)",
   "license": "CC-BY-4.0",
-  "generated_at": "2026-10-31"
+  "generated_at": "2026-10-31",
+  "phb": "nomi dei manuali; non SRD: riassunti nostri (source: phb)"
  },
  "items": [
   {
    "index": "acid-arrow",
    "name": {
-    "en": "Acid Arrow",
-    "it": "Freccia acida di Melf"
+    "en": "Melf's Acid Arrow",
+    "it": "Freccia Acida di Melf"
    },
    "level": 2,
    "school": "evocation",
@@ -53,13 +54,14 @@
    "higher_levels_dice": "1d4",
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "acid-splash",
    "name": {
     "en": "Acid Splash",
-    "it": "Spruzzo acido"
+    "it": "Fiotto Acido"
    },
    "level": 0,
    "school": "conjuration",
@@ -97,7 +99,11 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Spruzzo acido"
+   ],
+   "source": "srd"
   },
   {
    "index": "aid",
@@ -148,7 +154,8 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "alarm",
@@ -199,13 +206,14 @@
    "classes": [
     "ranger",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "alter-self",
    "name": {
     "en": "Alter Self",
-    "it": "Alterare se stessi"
+    "it": "Alterare Se Stesso"
    },
    "level": 2,
    "school": "transmutation",
@@ -243,13 +251,17 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Alterare se stessi"
+   ],
+   "source": "srd"
   },
   {
    "index": "animal-friendship",
    "name": {
     "en": "Animal Friendship",
-    "it": "Amicizia con gli animali"
+    "it": "Amicizia con gli Animali"
    },
    "level": 1,
    "school": "enchantment",
@@ -292,13 +304,14 @@
     "bard",
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "animal-messenger",
    "name": {
     "en": "Animal Messenger",
-    "it": "Messaggero animale"
+    "it": "Animale Messaggero"
    },
    "level": 2,
    "school": "enchantment",
@@ -344,13 +357,17 @@
     "bard",
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Messaggero animale"
+   ],
+   "source": "srd"
   },
   {
    "index": "animal-shapes",
    "name": {
     "en": "Animal Shapes",
-    "it": "Forme animali"
+    "it": "Forme Animali"
    },
    "level": 8,
    "school": "transmutation",
@@ -387,13 +404,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "animate-dead",
    "name": {
     "en": "Animate Dead",
-    "it": "Animare morti"
+    "it": "Animare Morti"
    },
    "level": 3,
    "school": "necromancy",
@@ -438,13 +456,14 @@
    "classes": [
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "animate-objects",
    "name": {
     "en": "Animate Objects",
-    "it": "Animare oggetti"
+    "it": "Animare Oggetti"
    },
    "level": 5,
    "school": "transmutation",
@@ -486,13 +505,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "antilife-shell",
    "name": {
     "en": "Antilife Shell",
-    "it": "Guscio anti-vita"
+    "it": "Guscio Anti-Vita"
    },
    "level": 5,
    "school": "abjuration",
@@ -532,13 +552,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "antimagic-field",
    "name": {
     "en": "Antimagic Field",
-    "it": "Campo anti-magia"
+    "it": "Campo Anti-Magia"
    },
    "level": 8,
    "school": "abjuration",
@@ -583,7 +604,8 @@
    "classes": [
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "antipathy-sympathy",
@@ -634,13 +656,14 @@
    "classes": [
     "druid",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "arcane-eye",
    "name": {
     "en": "Arcane Eye",
-    "it": "Occhio arcano"
+    "it": "Occhio Arcano"
    },
    "level": 4,
    "school": "divination",
@@ -683,15 +706,61 @@
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
-    "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "arcane-gate",
+   "name": {
+    "en": "Arcane Gate",
+    "it": "Portale Arcano"
+   },
+   "level": 6,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 500,
+   "range_text": {
+    "en": "500 feet",
+    "it": "500 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 10 minutes",
+    "it": "Concentrazione, fino a 10 minuti"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Two linked circular portals 10 feet in diameter, one within 10 feet and one within 500 feet of the caster, on visible points on the ground; creatures and objects entering one exit from the other (the mist inside blocks vision). If a portal would open in a creature's space the casting fails. Bonus action: rotate the portals.",
+    "it": "Due portali circolari di 3 m di diametro collegati, uno entro 3 m e uno entro 150 m dall'incantatore, su punti a terra visibili; creature e oggetti entrando da uno escono dall'altro (la nebbia interna blocca la visuale). Se un portale si aprirebbe su una creatura il lancio fallisce. Azione bonus: ruota i portali."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "sorcerer",
+    "warlock",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "arcane-hand",
    "name": {
-    "en": "Arcane Hand",
-    "it": "Mano arcana"
+    "en": "Bigby's Hand",
+    "it": "Mano di Bigby"
    },
    "level": 5,
    "school": "evocation",
@@ -735,13 +804,17 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Mano arcana"
+   ],
+   "source": "srd"
   },
   {
    "index": "arcane-lock",
    "name": {
     "en": "Arcane Lock",
-    "it": "Serratura arcana"
+    "it": "Serratura Arcana"
    },
    "level": 2,
    "school": "abjuration",
@@ -782,13 +855,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "arcane-sword",
    "name": {
-    "en": "Arcane Sword",
-    "it": "Spada arcana di Mordenkainen"
+    "en": "Mordenkainen's Sword",
+    "it": "Spada di Mordenkainen"
    },
    "level": 7,
    "school": "evocation",
@@ -830,13 +904,17 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Spada arcana di Mordenkainen"
+   ],
+   "source": "srd"
   },
   {
    "index": "arcanists-magic-aura",
    "name": {
-    "en": "Arcanist's Magic Aura",
-    "it": "Aura magica di Nystul"
+    "en": "Nystul's Magic Aura",
+    "it": "Aura Magica di Nystul"
    },
    "level": 2,
    "school": "illusion",
@@ -877,13 +955,109 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "armor-of-agathys",
+   "name": {
+    "en": "Armor of Agathys",
+    "it": "Armatura di Agathys"
+   },
+   "level": 1,
+   "school": "abjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a cup of water",
+    "it": "coppa d'acqua"
+   },
+   "duration": {
+    "en": "1 hour",
+    "it": "1 ora"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "5 temporary hit points; while you have them, anyone who hits you with a melee attack takes 5 cold damage; scaling +5 temporary hit points and +5 damage per slot level above 1st",
+    "it": "5 PF temporanei; chi colpisce in mischia finché li hai subisce 5 danni da freddo; scalata +5 PF temporanei e +5 danni per slot oltre il 1°"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "warlock"
+   ],
+   "source": "phb"
+  },
+  {
+   "index": "arms-of-hadar",
+   "name": {
+    "en": "Arms of Hadar",
+    "it": "Braccia di Hadar"
+   },
+   "level": 1,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "sphere",
+    "size_ft": 10
+   },
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Strength saving throw for creatures within 10 feet: 2d6 necrotic and no reactions until their next turn; half and no other effect on a success; scaling +1d6 per slot level above 1st",
+    "it": "TS Forza per le creature entro 3 m: 2d6 necrotici e niente reazioni fino al loro turno successivo; metà e nessun altro effetto se riesce; scalata +1d6 per slot oltre il 1°"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "str",
+   "damage_dice": "2d6",
+   "damage_type": "necrotic",
+   "higher_levels_dice": "1d6",
+   "classes": [
+    "warlock"
+   ],
+   "source": "phb"
   },
   {
    "index": "astral-projection",
    "name": {
     "en": "Astral Projection",
-    "it": "Proiezione astrale"
+    "it": "Proiezione Astrale"
    },
    "level": 9,
    "school": "necromancy",
@@ -926,13 +1100,14 @@
     "cleric",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "augury",
    "name": {
     "en": "Augury",
-    "it": "Auspicio"
+    "it": "Presagio"
    },
    "level": 2,
    "school": "divination",
@@ -973,7 +1148,149 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Auspicio"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "aura-of-life",
+   "name": {
+    "en": "Aura of Life",
+    "it": "Aura di Vita"
+   },
+   "level": 4,
+   "school": "abjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "sphere",
+    "size_ft": 30
+   },
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 10 minutes",
+    "it": "Concentrazione, fino a 10 minuti"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Nonhostile creatures in the aura: resistance to necrotic damage, hit point maximum can't be reduced; a living nonhostile creature at 0 hit points regains 1 hit point at the start of its turn",
+    "it": "Creature non ostili nell'aura: resistenza ai danni necrotici, PF massimi non riducibili; una creatura vivente non ostile a 0 PF recupera 1 PF a inizio turno"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
+  },
+  {
+   "index": "aura-of-purity",
+   "name": {
+    "en": "Aura of Purity",
+    "it": "Aura di Purezza"
+   },
+   "level": 4,
+   "school": "abjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "sphere",
+    "size_ft": 30
+   },
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 10 minutes",
+    "it": "Concentrazione, fino a 10 minuti"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Nonhostile creatures in the aura can't become diseased, have resistance to poison damage and advantage on saving throws against blinded, charmed, deafened, poisoned, paralyzed, frightened, stunned",
+    "it": "Creature non ostili nell'aura non possono ammalarsi, hanno resistenza al veleno e vantaggio ai TS contro accecato, affascinato, assordato, avvelenato, paralizzato, spaventato, stordito"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
+  },
+  {
+   "index": "aura-of-vitality",
+   "name": {
+    "en": "Aura of Vitality",
+    "it": "Aura di Vitalità"
+   },
+   "level": 3,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "sphere",
+    "size_ft": 30
+   },
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "As a bonus action each turn, one creature in the aura regains 2d6 hit points",
+    "it": "Con azione bonus ogni turno una creatura nell'aura recupera 2d6 PF"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "awaken",
@@ -1021,7 +1338,8 @@
    "classes": [
     "bard",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "bane",
@@ -1072,7 +1390,51 @@
    "classes": [
     "bard",
     "cleric"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "banishing-smite",
+   "name": {
+    "en": "Banishing Smite",
+    "it": "Punizione Esiliante"
+   },
+   "level": 5,
+   "school": "abjuration",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next weapon hit: +5d10 force; if the target drops to 50 hit points or fewer it is banished (to its home plane, or to a harmless demiplane where it is incapacitated if native to the current plane) until the spell ends.",
+    "it": "Al prossimo colpo con arma: +5d10 da forza; se il bersaglio scende a 50 PF o meno viene esiliato (nel piano natio, o in un semipiano innocuo dove è incapacitato se è nativo del piano corrente) fino alla fine dell'incantesimo."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": "5d10",
+   "damage_type": "force",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "banishment",
@@ -1126,13 +1488,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "barkskin",
    "name": {
     "en": "Barkskin",
-    "it": "Pelle coriacea"
+    "it": "Pelle Coriacea"
    },
    "level": 2,
    "school": "transmutation",
@@ -1174,13 +1537,14 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "beacon-of-hope",
    "name": {
     "en": "Beacon of Hope",
-    "it": "Faro di speranza"
+    "it": "Faro di Speranza"
    },
    "level": 3,
    "school": "abjuration",
@@ -1217,13 +1581,58 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "beast-sense",
+   "name": {
+    "en": "Beast Sense",
+    "it": "Percezione delle Bestie"
+   },
+   "level": 2,
+   "school": "divination",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Touch",
+    "it": "Contatto"
+   },
+   "area": null,
+   "components": [
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 hour",
+    "it": "Concentrazione, fino a 1 ora"
+   },
+   "concentration": true,
+   "ritual": true,
+   "desc": {
+    "en": "As an action the caster sees and hears through a willing beast it touches, gaining its special senses, until it uses an action to return to its own senses; meanwhile it is blinded and deafened with regard to its own surroundings.",
+    "it": "Con un'azione l'incantatore vede e sente attraverso una bestia consenziente toccata, ottenendone i sensi speciali, finché non usa un'azione per tornare ai propri; nel frattempo è accecato e assordato verso l'ambiente attorno a sé."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "druid",
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "bestow-curse",
    "name": {
     "en": "Bestow Curse",
-    "it": "Scagliare maledizione"
+    "it": "Scagliare Maledizione"
    },
    "level": 3,
    "school": "necromancy",
@@ -1265,13 +1674,14 @@
     "bard",
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "black-tentacles",
    "name": {
-    "en": "Black Tentacles",
-    "it": "Tentacoli neri di Evard"
+    "en": "Evard's Black Tentacles",
+    "it": "Tentacoli Neri di Evard"
    },
    "level": 4,
    "school": "conjuration",
@@ -1315,13 +1725,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "blade-barrier",
    "name": {
     "en": "Blade Barrier",
-    "it": "Barriera di lame"
+    "it": "Barriera di Lame"
    },
    "level": 6,
    "school": "evocation",
@@ -1361,7 +1772,55 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "blade-ward",
+   "name": {
+    "en": "Blade Ward",
+    "it": "Interdizione alle Lame"
+   },
+   "level": 0,
+   "school": "abjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "1 round",
+    "it": "1 round"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Until the end of the caster's next turn, it has resistance to bludgeoning, piercing, and slashing damage dealt by weapon attacks.",
+    "it": "Fino alla fine del turno successivo dell'incantatore ha resistenza ai danni contundenti, perforanti e taglienti inferti da attacchi con armi."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "bard",
+    "sorcerer",
+    "warlock",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "bless",
@@ -1412,13 +1871,14 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "blight",
    "name": {
     "en": "Blight",
-    "it": "Avvizzire"
+    "it": "Inaridire"
    },
    "level": 4,
    "school": "necromancy",
@@ -1461,7 +1921,54 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Avvizzire"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "blinding-smite",
+   "name": {
+    "en": "Blinding Smite",
+    "it": "Punizione Accecante"
+   },
+   "level": 3,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next melee weapon hit within the duration: +3d8 radiant; the target makes a Constitution saving throw or is blinded while the spell lasts, repeating the saving throw at the end of each of its turns.",
+    "it": "Al prossimo colpo con arma da mischia entro la durata: +3d8 radiosi; il bersaglio fa TS Costituzione o è accecato finché dura, ripetendo il TS a fine di ogni suo turno."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
+   "damage_dice": "3d8",
+   "damage_type": "radiant",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "blindness-deafness",
@@ -1509,7 +2016,8 @@
     "cleric",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "blink",
@@ -1553,13 +2061,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "blur",
    "name": {
     "en": "Blur",
-    "it": "Annebbiare"
+    "it": "Sfocatura"
    },
    "level": 2,
    "school": "illusion",
@@ -1596,13 +2105,17 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Annebbiare"
+   ],
+   "source": "srd"
   },
   {
    "index": "branding-smite",
    "name": {
     "en": "Branding Smite",
-    "it": "Punizione marchiante"
+    "it": "Punizione Marchiante"
    },
    "level": 2,
    "school": "evocation",
@@ -1641,13 +2154,14 @@
    "higher_levels_dice": "1d6",
    "classes": [
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "burning-hands",
    "name": {
     "en": "Burning Hands",
-    "it": "Mani brucianti"
+    "it": "Mani Brucianti"
    },
    "level": 1,
    "school": "evocation",
@@ -1691,13 +2205,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "call-lightning",
    "name": {
     "en": "Call Lightning",
-    "it": "Invocare fulmine"
+    "it": "Invocare il Fulmine"
    },
    "level": 3,
    "school": "conjuration",
@@ -1740,13 +2255,17 @@
    "higher_levels_dice": "1d10",
    "classes": [
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Invocare fulmine"
+   ],
+   "source": "srd"
   },
   {
    "index": "calm-emotions",
    "name": {
     "en": "Calm Emotions",
-    "it": "Calmare emozioni"
+    "it": "Calmare Emozioni"
    },
    "level": 2,
    "school": "enchantment",
@@ -1787,13 +2306,14 @@
    "classes": [
     "bard",
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "chain-lightning",
    "name": {
     "en": "Chain Lightning",
-    "it": "Catena di fulmini"
+    "it": "Catena di Fulmini"
    },
    "level": 6,
    "school": "evocation",
@@ -1838,13 +2358,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "charm-person",
    "name": {
     "en": "Charm Person",
-    "it": "Charme su persone"
+    "it": "Charme su Persone"
    },
    "level": 1,
    "school": "enchantment",
@@ -1888,13 +2409,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "chill-touch",
    "name": {
     "en": "Chill Touch",
-    "it": "Tocco gelido"
+    "it": "Tocco Gelido"
    },
    "level": 0,
    "school": "necromancy",
@@ -1933,13 +2455,63 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "chromatic-orb",
+   "name": {
+    "en": "Chromatic Orb",
+    "it": "Globo Cromatico"
+   },
+   "level": 1,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 90,
+   "range_text": {
+    "en": "90 feet",
+    "it": "90 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a diamond worth at least 50 gp",
+    "it": "diamante da almeno 50 mo"
+   },
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Ranged spell attack: 3d8 damage of a type chosen from acid, cold, lightning, fire, thunder, poison. Higher slots: +1d8 per slot level above 1st.",
+    "it": "Attacco a distanza con l'incantesimo: 3d8 danni di tipo a scelta tra acido, freddo, fulmine, fuoco, tuono, veleno. Slot superiori: +1d8 per livello oltre il 1°."
+   },
+   "higher_level": null,
+   "attack_type": "ATK",
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": "1d8",
+   "classes": [
+    "sorcerer",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "circle-of-death",
    "name": {
     "en": "Circle of Death",
-    "it": "Cerchio della morte"
+    "it": "Cerchio di Morte"
    },
    "level": 6,
    "school": "necromancy",
@@ -1988,7 +2560,57 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Cerchio della morte"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "circle-of-power",
+   "name": {
+    "en": "Circle of Power",
+    "it": "Cerchio di Potere"
+   },
+   "level": 5,
+   "school": "abjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "sphere",
+    "size_ft": 30
+   },
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 10 minutes",
+    "it": "Concentrazione, fino a 10 minuti"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "30-foot-radius aura centered on you: friendly creatures have advantage on saving throws against spells and magical effects; a creature that succeeds on a saving throw that halves damage takes no damage",
+    "it": "Aura di raggio 9 m centrata su di te: le creature amiche hanno vantaggio ai TS contro incantesimi ed effetti magici; chi supera un TS che dimezza i danni non subisce danni"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "clairvoyance",
@@ -2038,7 +2660,8 @@
     "cleric",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "clone",
@@ -2085,13 +2708,62 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "cloud-of-daggers",
+   "name": {
+    "en": "Cloud of Daggers",
+    "it": "Nube di Pugnali"
+   },
+   "level": 2,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 60,
+   "range_text": {
+    "en": "60 feet",
+    "it": "60 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "5-foot cube of daggers: a creature takes 4d4 slashing damage when it enters it for the first time on a turn or starts its turn there. Higher slots: +2d4 per slot level above 2nd.",
+    "it": "Cubo di 1,5 m di pugnali: una creatura subisce 4d4 danni taglienti quando vi entra la prima volta in un turno o vi inizia il turno. Slot superiori: +2d4 per livello oltre il 2°."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": "4d4",
+   "damage_type": "slashing",
+   "higher_levels_dice": "2d4",
+   "classes": [
+    "bard",
+    "sorcerer",
+    "warlock",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "cloudkill",
    "name": {
     "en": "Cloudkill",
-    "it": "Nube mortale"
+    "it": "Nube Mortale"
    },
    "level": 5,
    "school": "conjuration",
@@ -2135,13 +2807,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "color-spray",
    "name": {
     "en": "Color Spray",
-    "it": "Spruzzo colorato"
+    "it": "Spruzzo Colorato"
    },
    "level": 1,
    "school": "illusion",
@@ -2189,7 +2862,8 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "command",
@@ -2235,7 +2909,8 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "commune",
@@ -2282,13 +2957,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "commune-with-nature",
    "name": {
-    "en": "Commune With Nature",
-    "it": "Comunione con la natura"
+    "en": "Commune with Nature",
+    "it": "Comunione con la Natura"
    },
    "level": 5,
    "school": "divination",
@@ -2326,13 +3002,57 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "compelled-duel",
+   "name": {
+    "en": "Compelled Duel",
+    "it": "Duello Obbligato"
+   },
+   "level": 1,
+   "school": "enchantment",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": 30,
+   "range_text": {
+    "en": "30 feet",
+    "it": "30 piedi"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Wisdom saving throw or drawn toward you and with disadvantage on attack rolls against others; Wisdom saving throw to move more than 30 feet away; ends if you attack another creature, cast spells on a different hostile creature, an ally damages it, or you end your turn more than 30 feet away",
+    "it": "TS Saggezza o attratto verso di te e con svantaggio ai tiri per colpire contro altri; TS Saggezza per allontanarsi oltre 9 m; termina se attacchi un'altra creatura, lanci incantesimi su un ostile diverso, un alleato lo danneggia o finisci il turno a più di 9 m"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "comprehend-languages",
    "name": {
     "en": "Comprehend Languages",
-    "it": "Comprensione dei linguaggi"
+    "it": "Comprensione dei Linguaggi"
    },
    "level": 1,
    "school": "divination",
@@ -2376,7 +3096,8 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "compulsion",
@@ -2419,13 +3140,14 @@
    "higher_levels_dice": null,
    "classes": [
     "bard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "cone-of-cold",
    "name": {
     "en": "Cone of Cold",
-    "it": "Cono di freddo"
+    "it": "Cono di Freddo"
    },
    "level": 5,
    "school": "evocation",
@@ -2473,7 +3195,8 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "confusion",
@@ -2529,13 +3252,14 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "conjure-animals",
    "name": {
     "en": "Conjure Animals",
-    "it": "Evocare animali"
+    "it": "Evoca Animali"
    },
    "level": 3,
    "school": "conjuration",
@@ -2576,13 +3300,68 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Evocare animali"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "conjure-barrage",
+   "name": {
+    "en": "Conjure Barrage",
+    "it": "Evoca Raffica"
+   },
+   "level": 3,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "cone",
+    "size_ft": 60
+   },
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "one piece of ammunition or a thrown weapon",
+    "it": "una munizione o un'arma da lancio"
+   },
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "60-foot cone: Dexterity saving throw, 3d8 damage of the type of the weapon used (half on a success)",
+    "it": "Cono 18 m: TS Destrezza, 3d8 danni del tipo dell'arma usata (metà se riesce)"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "conjure-celestial",
    "name": {
     "en": "Conjure Celestial",
-    "it": "Evocare celestiale"
+    "it": "Evoca Celestiale"
    },
    "level": 7,
    "school": "conjuration",
@@ -2622,13 +3401,17 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Evocare celestiale"
+   ],
+   "source": "srd"
   },
   {
    "index": "conjure-elemental",
    "name": {
     "en": "Conjure Elemental",
-    "it": "Evocare elementale"
+    "it": "Evoca Elementale"
    },
    "level": 5,
    "school": "conjuration",
@@ -2676,13 +3459,17 @@
    "classes": [
     "druid",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Evocare elementale"
+   ],
+   "source": "srd"
   },
   {
    "index": "conjure-fey",
    "name": {
     "en": "Conjure Fey",
-    "it": "Evocare fatato"
+    "it": "Evoca Folletto"
    },
    "level": 6,
    "school": "conjuration",
@@ -2723,13 +3510,17 @@
    "classes": [
     "druid",
     "warlock"
-   ]
+   ],
+   "aliases": [
+    "Evocare fatato"
+   ],
+   "source": "srd"
   },
   {
    "index": "conjure-minor-elementals",
    "name": {
     "en": "Conjure Minor Elementals",
-    "it": "Evocare elementali minori"
+    "it": "Evoca Elementali Minori"
    },
    "level": 4,
    "school": "conjuration",
@@ -2770,13 +3561,65 @@
    "classes": [
     "druid",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Evocare elementali minori"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "conjure-volley",
+   "name": {
+    "en": "Conjure Volley",
+    "it": "Evoca Pioggia di Armi"
+   },
+   "level": 5,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 150,
+   "range_text": {
+    "en": "150 feet",
+    "it": "150 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "one piece of ammunition or a thrown weapon",
+    "it": "una munizione o un'arma da lancio"
+   },
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "40-foot-radius, 20-foot-high cylinder: Dexterity saving throw, 8d8 damage of the type of the weapon used (half on a success)",
+    "it": "Cilindro raggio 12 m alto 6 m: TS Destrezza, 8d8 danni del tipo dell'arma usata (metà se riesce)"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "conjure-woodland-beings",
    "name": {
     "en": "Conjure Woodland Beings",
-    "it": "Evocare esseri del bosco"
+    "it": "Evoca Creature Boschive"
    },
    "level": 4,
    "school": "conjuration",
@@ -2821,13 +3664,17 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Evocare esseri del bosco"
+   ],
+   "source": "srd"
   },
   {
    "index": "contact-other-plane",
    "name": {
     "en": "Contact Other Plane",
-    "it": "Contattare altri piani"
+    "it": "Contattare Altri Piani"
    },
    "level": 5,
    "school": "divination",
@@ -2864,7 +3711,8 @@
    "classes": [
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "contagion",
@@ -2908,7 +3756,8 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "contingency",
@@ -2955,13 +3804,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "continual-flame",
    "name": {
     "en": "Continual Flame",
-    "it": "Fiamma perenne"
+    "it": "Fiamma Perenne"
    },
    "level": 2,
    "school": "evocation",
@@ -3003,13 +3853,14 @@
    "classes": [
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "control-water",
    "name": {
     "en": "Control Water",
-    "it": "Controllare acqua"
+    "it": "Controllare Acqua"
    },
    "level": 4,
    "school": "transmutation",
@@ -3055,13 +3906,14 @@
     "cleric",
     "druid",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "control-weather",
    "name": {
     "en": "Control Weather",
-    "it": "Controllare tempo atmosferico"
+    "it": "Controllare Tempo Atmosferico"
    },
    "level": 8,
    "school": "transmutation",
@@ -3104,7 +3956,56 @@
     "cleric",
     "druid",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "cordon-of-arrows",
+   "name": {
+    "en": "Cordon of Arrows",
+    "it": "Cordone di Frecce"
+   },
+   "level": 2,
+   "school": "transmutation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 5,
+   "range_text": {
+    "en": "5 feet",
+    "it": "5 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "4 or more arrows or bolts",
+    "it": "4 o più frecce o quadrelli"
+   },
+   "duration": {
+    "en": "8 hours",
+    "it": "8 ore"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "4 pieces of ammunition planted: when a creature not excluded enters within 30 feet or ends its turn there, one piece of ammunition strikes it; Dexterity saving throw or 1d6 piercing; ends when out of ammunition; scaling +2 pieces of ammunition per slot level above 2nd",
+    "it": "4 munizioni piantate: quando una creatura non esclusa entra entro 9 m o termina il turno lì, una munizione la colpisce; TS Destrezza o 1d6 perforanti; termina senza munizioni; scalata +2 munizioni per slot oltre il 2°"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "higher_levels_dice": null,
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "counterspell",
@@ -3151,13 +4052,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "create-food-and-water",
    "name": {
     "en": "Create Food and Water",
-    "it": "Creare cibo e acqua"
+    "it": "Creare Cibo e Acqua"
    },
    "level": 3,
    "school": "conjuration",
@@ -3194,15 +4096,15 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric",
-    "druid",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "create-or-destroy-water",
    "name": {
     "en": "Create or Destroy Water",
-    "it": "Creare o distruggere acqua"
+    "it": "Creare o Distruggere Acqua"
    },
    "level": 1,
    "school": "transmutation",
@@ -3250,13 +4152,14 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "create-undead",
    "name": {
     "en": "Create Undead",
-    "it": "Creare non morti"
+    "it": "Creare Non Morti"
    },
    "level": 6,
    "school": "necromancy",
@@ -3302,7 +4205,8 @@
     "cleric",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "creation",
@@ -3356,13 +4260,104 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "crown-of-madness",
+   "name": {
+    "en": "Crown of Madness",
+    "it": "Corona di Follia"
+   },
+   "level": 2,
+   "school": "enchantment",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 120,
+   "range_text": {
+    "en": "120 feet",
+    "it": "120 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Humanoid: Wisdom saving throw or charmed; it must use its action before moving to make a melee attack against a creature you mentally choose; it repeats the saving throw at the end of its turn; you must use your action to maintain control",
+    "it": "Umanoide: TS Saggezza o affascinato; deve usare l'azione prima di muoversi per attaccare in mischia una creatura scelta da te mentalmente; deve ripetere il TS a fine turno; devi usare la tua azione per mantenere il controllo"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "bard",
+    "sorcerer",
+    "warlock",
+    "wizard"
+   ],
+   "source": "phb"
+  },
+  {
+   "index": "crusaders-mantle",
+   "name": {
+    "en": "Crusader's Mantle",
+    "it": "Manto del Crociato"
+   },
+   "level": 3,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "30-foot-radius aura centered on the caster: each nonhostile creature in the aura (caster included) deals an extra 1d4 radiant damage with weapon attacks.",
+    "it": "Aura di raggio 9 m centrata sull'incantatore: ogni creatura non ostile nell'aura (lui incluso) infligge 1d4 danni radiosi extra con gli attacchi con arma."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": "1d4",
+   "damage_type": "radiant",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "cure-wounds",
    "name": {
     "en": "Cure Wounds",
-    "it": "Cura ferite"
+    "it": "Cura Ferite"
    },
    "level": 1,
    "school": "evocation",
@@ -3406,13 +4401,14 @@
     "druid",
     "paladin",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dancing-lights",
    "name": {
     "en": "Dancing Lights",
-    "it": "Luci danzanti"
+    "it": "Luci Danzanti"
    },
    "level": 0,
    "school": "evocation",
@@ -3455,7 +4451,8 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "darkness",
@@ -3506,7 +4503,8 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "darkvision",
@@ -3556,13 +4554,14 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "daylight",
    "name": {
     "en": "Daylight",
-    "it": "Luce diurna"
+    "it": "Luce Diurna"
    },
    "level": 3,
    "school": "evocation",
@@ -3606,13 +4605,14 @@
     "paladin",
     "ranger",
     "sorcerer"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "death-ward",
    "name": {
     "en": "Death Ward",
-    "it": "Interdizione alla morte"
+    "it": "Interdizione alla Morte"
    },
    "level": 4,
    "school": "abjuration",
@@ -3650,13 +4650,14 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "delayed-blast-fireball",
    "name": {
     "en": "Delayed Blast Fireball",
-    "it": "Palla di fuoco ritardata"
+    "it": "Palla di Fuoco Ritardata"
    },
    "level": 7,
    "school": "evocation",
@@ -3704,7 +4705,8 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "demiplane",
@@ -3747,13 +4749,60 @@
    "classes": [
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "destructive-wave",
+   "name": {
+    "en": "Destructive Wave",
+    "it": "Onda Distruttiva"
+   },
+   "level": 5,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": {
+    "type": "sphere",
+    "size_ft": 30
+   },
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Chosen creatures within 30 feet make a Constitution saving throw: on a failure 5d6 thunder damage plus 5d6 radiant or necrotic (your choice) and knocked prone; on a success half damage and not knocked prone.",
+    "it": "Le creature scelte entro 9 m fanno TS Costituzione: se falliscono 5d6 danni da tuono più 5d6 radiosi o necrotici (a scelta) e cadono prone; se superano metà danni e nessuna caduta."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
+   "damage_dice": "5d6",
+   "damage_type": "thunder",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "detect-evil-and-good",
    "name": {
     "en": "Detect Evil and Good",
-    "it": "Individuazione del bene e del male"
+    "it": "Individuazione del Bene e del Male"
    },
    "level": 1,
    "school": "divination",
@@ -3794,13 +4843,14 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "detect-magic",
    "name": {
     "en": "Detect Magic",
-    "it": "Individuazione del magico"
+    "it": "Individuazione del Magico"
    },
    "level": 1,
    "school": "divination",
@@ -3846,13 +4896,14 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "detect-poison-and-disease",
    "name": {
     "en": "Detect Poison and Disease",
-    "it": "Individuazione di veleni e malattie"
+    "it": "Individuazione delle Malattie e dei Veleni"
    },
    "level": 1,
    "school": "divination",
@@ -3899,13 +4950,17 @@
     "druid",
     "paladin",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Individuazione di veleni e malattie"
+   ],
+   "source": "srd"
   },
   {
    "index": "detect-thoughts",
    "name": {
     "en": "Detect Thoughts",
-    "it": "Individuazione dei pensieri"
+    "it": "Individuazione dei Pensieri"
    },
    "level": 2,
    "school": "divination",
@@ -3948,13 +5003,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dimension-door",
    "name": {
     "en": "Dimension Door",
-    "it": "Porta dimensionale"
+    "it": "Porta Dimensionale"
    },
    "level": 4,
    "school": "conjuration",
@@ -3993,13 +5049,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "disguise-self",
    "name": {
     "en": "Disguise Self",
-    "it": "Camuffare se stesso"
+    "it": "Camuffare Se Stesso"
    },
    "level": 1,
    "school": "illusion",
@@ -4038,7 +5095,8 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "disintegrate",
@@ -4092,13 +5150,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dispel-evil-and-good",
    "name": {
     "en": "Dispel Evil and Good",
-    "it": "Dissolvi il bene e il male"
+    "it": "Dissolvi il Bene e il Male"
    },
    "level": 5,
    "school": "abjuration",
@@ -4140,13 +5199,14 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dispel-magic",
    "name": {
     "en": "Dispel Magic",
-    "it": "Dissolvi magie"
+    "it": "Dissolvi Magie"
    },
    "level": 3,
    "school": "abjuration",
@@ -4192,7 +5252,51 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "dissonant-whispers",
+   "name": {
+    "en": "Dissonant Whispers",
+    "it": "Sussurri Dissonanti"
+   },
+   "level": 1,
+   "school": "enchantment",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 60,
+   "range_text": {
+    "en": "60 feet",
+    "it": "60 piedi"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Wisdom saving throw: on a failure 3d6 psychic and must use its reaction to move as far as its speed allows away from the caster (not into obviously dangerous ground); on a success half damage and no movement. Deafened creatures automatically succeed. Higher slots: +1d6 per slot level above 1st.",
+    "it": "TS Saggezza: se fallisce 3d6 psichici e deve usare la reazione per muoversi alla massima velocità lontano dall'incantatore (non su terreno palesemente pericoloso); se supera metà danni e nessun movimento. Assordati superano automaticamente. Slot superiori: +1d6 per slot sopra il 1°."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
+   "damage_dice": "3d6",
+   "damage_type": "psychic",
+   "higher_levels_dice": "1d6",
+   "classes": [
+    "bard"
+   ],
+   "source": "phb"
   },
   {
    "index": "divination",
@@ -4238,14 +5342,15 @@
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
-    "druid"
-   ]
+    "cleric"
+   ],
+   "source": "srd"
   },
   {
    "index": "divine-favor",
    "name": {
     "en": "Divine Favor",
-    "it": "Favore divino"
+    "it": "Favore Divino"
    },
    "level": 1,
    "school": "evocation",
@@ -4282,13 +5387,14 @@
    "higher_levels_dice": null,
    "classes": [
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "divine-word",
    "name": {
     "en": "Divine Word",
-    "it": "Parola divina"
+    "it": "Parola Divina"
    },
    "level": 7,
    "school": "evocation",
@@ -4324,13 +5430,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dominate-beast",
    "name": {
     "en": "Dominate Beast",
-    "it": "Dominare bestie"
+    "it": "Dominare Bestie"
    },
    "level": 4,
    "school": "enchantment",
@@ -4371,13 +5478,14 @@
    "classes": [
     "druid",
     "sorcerer"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dominate-monster",
    "name": {
     "en": "Dominate Monster",
-    "it": "Dominare mostri"
+    "it": "Dominare Mostri"
    },
    "level": 8,
    "school": "enchantment",
@@ -4420,13 +5528,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dominate-person",
    "name": {
     "en": "Dominate Person",
-    "it": "Dominare persone"
+    "it": "Dominare Persone"
    },
    "level": 5,
    "school": "enchantment",
@@ -4468,7 +5577,8 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "dream",
@@ -4517,13 +5627,14 @@
     "bard",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "druidcraft",
    "name": {
     "en": "Druidcraft",
-    "it": "Druidismo"
+    "it": "Artificio Druidico"
    },
    "level": 0,
    "school": "transmutation",
@@ -4560,7 +5671,11 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Druidismo"
+   ],
+   "source": "srd"
   },
   {
    "index": "earthquake",
@@ -4612,13 +5727,14 @@
     "cleric",
     "druid",
     "sorcerer"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "eldritch-blast",
    "name": {
     "en": "Eldritch Blast",
-    "it": "Esplosione occulta"
+    "it": "Deflagrazione Occulta"
    },
    "level": 0,
    "school": "evocation",
@@ -4655,13 +5771,61 @@
    "higher_levels_dice": null,
    "classes": [
     "warlock"
-   ]
+   ],
+   "aliases": [
+    "Esplosione occulta"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "elemental-weapon",
+   "name": {
+    "en": "Elemental Weapon",
+    "it": "Arma Elementale"
+   },
+   "level": 3,
+   "school": "transmutation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Touch",
+    "it": "Contatto"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 hour",
+    "it": "Concentrazione, fino a 1 ora"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "A nonmagical weapon becomes magical: +1 to attack rolls and an extra 1d4 acid, cold, lightning, fire, or thunder damage; 5th-6th level slot: +2 and 2d4; 7th+ level slot: +3 and 3d4",
+    "it": "Arma non magica diventa magica: +1 a colpire e +1d4 danni extra di acido, freddo, fulmine, fuoco o tuono; slot 5-6: +2 e 2d4; slot 7+: +3 e 3d4"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": "1d4",
+   "damage_type": "acid",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "enhance-ability",
    "name": {
     "en": "Enhance Ability",
-    "it": "Potenziare caratteristica"
+    "it": "Caratteristica Potenziata"
    },
    "level": 2,
    "school": "transmutation",
@@ -4708,7 +5872,11 @@
     "cleric",
     "druid",
     "sorcerer"
-   ]
+   ],
+   "aliases": [
+    "Potenziare caratteristica"
+   ],
+   "source": "srd"
   },
   {
    "index": "enlarge-reduce",
@@ -4756,7 +5924,51 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "ensnaring-strike",
+   "name": {
+    "en": "Ensnaring Strike",
+    "it": "Colpo Intrappolante"
+   },
+   "level": 1,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next weapon hit, the target makes a Strength saving throw (advantage if Large or larger) or is restrained by vines: 1d6 piercing at the start of its turn; it can break free with a Strength check against the DC; scaling +1d6 per slot level above 1st",
+    "it": "Al prossimo colpo con arma, il bersaglio fa TS Forza (vantaggio se Grande o più) o è trattenuto da rampicanti: 1d6 perforanti a inizio suo turno; può liberarsi con prova di Forza contro la CD; scalata +1d6 per slot oltre il 1°"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "str",
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "higher_levels_dice": "1d6",
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "entangle",
@@ -4802,13 +6014,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "enthrall",
    "name": {
     "en": "Enthrall",
-    "it": "Ammaliare"
+    "it": "Estasiare"
    },
    "level": 2,
    "school": "enchantment",
@@ -4846,13 +6059,17 @@
    "classes": [
     "bard",
     "warlock"
-   ]
+   ],
+   "aliases": [
+    "Ammaliare"
+   ],
+   "source": "srd"
   },
   {
    "index": "etherealness",
    "name": {
     "en": "Etherealness",
-    "it": "Eterealità"
+    "it": "Forma Eterea"
    },
    "level": 7,
    "school": "transmutation",
@@ -4896,13 +6113,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Eterealità"
+   ],
+   "source": "srd"
   },
   {
    "index": "expeditious-retreat",
    "name": {
     "en": "Expeditious Retreat",
-    "it": "Ritirata rapida"
+    "it": "Ritirata Rapida"
    },
    "level": 1,
    "school": "transmutation",
@@ -4941,13 +6162,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "eyebite",
    "name": {
     "en": "Eyebite",
-    "it": "Malocchio"
+    "it": "Sguardo Penetrante"
    },
    "level": 6,
    "school": "necromancy",
@@ -4987,7 +6209,11 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Malocchio"
+   ],
+   "source": "srd"
   },
   {
    "index": "fabricate",
@@ -5030,13 +6256,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "faerie-fire",
    "name": {
     "en": "Faerie Fire",
-    "it": "Fuoco fatato"
+    "it": "Luminescenza"
    },
    "level": 1,
    "school": "evocation",
@@ -5074,14 +6301,19 @@
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
+    "bard",
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Fuoco fatato"
+   ],
+   "source": "srd"
   },
   {
    "index": "faithful-hound",
    "name": {
-    "en": "Faithful Hound",
-    "it": "Cane fedele di Mordenkainen"
+    "en": "Mordenkainen's Faithful Hound",
+    "it": "Segugio Fedele di Mordenkainen"
    },
    "level": 4,
    "school": "conjuration",
@@ -5122,13 +6354,17 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Cane fedele di Mordenkainen"
+   ],
+   "source": "srd"
   },
   {
    "index": "false-life",
    "name": {
     "en": "False Life",
-    "it": "Falsa vita"
+    "it": "Vita Falsata"
    },
    "level": 1,
    "school": "necromancy",
@@ -5173,7 +6409,11 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Falsa vita"
+   ],
+   "source": "srd"
   },
   {
    "index": "fear",
@@ -5226,13 +6466,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "feather-fall",
    "name": {
     "en": "Feather Fall",
-    "it": "Caduta morbida"
+    "it": "Caduta Morbida"
    },
    "level": 1,
    "school": "transmutation",
@@ -5274,13 +6515,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "feeblemind",
    "name": {
     "en": "Feeblemind",
-    "it": "Indebolimento intellettivo"
+    "it": "Regressione Mentale"
    },
    "level": 8,
    "school": "enchantment",
@@ -5324,13 +6566,65 @@
     "druid",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Indebolimento intellettivo"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "feign-death",
+   "name": {
+    "en": "Feign Death",
+    "it": "Morte Apparente"
+   },
+   "level": 3,
+   "school": "necromancy",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Touch",
+    "it": "Contatto"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": null,
+   "duration": {
+    "en": "1 hour",
+    "it": "1 ora"
+   },
+   "concentration": false,
+   "ritual": true,
+   "desc": {
+    "en": "A willing creature appears dead to any inspection: blinded, incapacitated, speed 0, resistance to all damage except psychic; disease and poison have no effect while it lasts. Ends when the caster uses an action to touch it.",
+    "it": "Una creatura consenziente appare morta a ogni ispezione: accecata, incapacitata, velocità 0, resistenza a tutti i danni tranne psichici; malattia e veleno non hanno effetto finché dura. Termina con un'azione di tocco dell'incantatore."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "bard",
+    "cleric",
+    "druid",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "find-familiar",
    "name": {
     "en": "Find Familiar",
-    "it": "Trova famiglio"
+    "it": "Trova Famiglio"
    },
    "level": 1,
    "school": "conjuration",
@@ -5371,13 +6665,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "find-steed",
    "name": {
     "en": "Find Steed",
-    "it": "Trova destriero"
+    "it": "Trova Cavalcatura"
    },
    "level": 2,
    "school": "conjuration",
@@ -5414,13 +6709,17 @@
    "higher_levels_dice": null,
    "classes": [
     "paladin"
-   ]
+   ],
+   "aliases": [
+    "Trova destriero"
+   ],
+   "source": "srd"
   },
   {
    "index": "find-the-path",
    "name": {
     "en": "Find the Path",
-    "it": "Trova il percorso"
+    "it": "Scopri il Percorso"
    },
    "level": 6,
    "school": "divination",
@@ -5463,13 +6762,17 @@
     "bard",
     "cleric",
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Trova il percorso"
+   ],
+   "source": "srd"
   },
   {
    "index": "find-traps",
    "name": {
     "en": "Find Traps",
-    "it": "Trova trappole"
+    "it": "Scopri Trappole"
    },
    "level": 2,
    "school": "divination",
@@ -5508,13 +6811,17 @@
     "cleric",
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Trova trappole"
+   ],
+   "source": "srd"
   },
   {
    "index": "finger-of-death",
    "name": {
     "en": "Finger of Death",
-    "it": "Dito della morte"
+    "it": "Dito della Morte"
    },
    "level": 7,
    "school": "necromancy",
@@ -5553,13 +6860,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "fire-bolt",
    "name": {
     "en": "Fire Bolt",
-    "it": "Dardo infuocato"
+    "it": "Dardo di Fuoco"
    },
    "level": 0,
    "school": "evocation",
@@ -5597,13 +6905,17 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Dardo infuocato"
+   ],
+   "source": "srd"
   },
   {
    "index": "fire-shield",
    "name": {
     "en": "Fire Shield",
-    "it": "Scudo di fuoco"
+    "it": "Scudo di Fuoco"
    },
    "level": 4,
    "school": "evocation",
@@ -5647,13 +6959,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "fire-storm",
    "name": {
     "en": "Fire Storm",
-    "it": "Tempesta di fuoco"
+    "it": "Tempesta di Fuoco"
    },
    "level": 7,
    "school": "evocation",
@@ -5695,13 +7008,14 @@
     "cleric",
     "druid",
     "sorcerer"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "fireball",
    "name": {
     "en": "Fireball",
-    "it": "Palla di fuoco"
+    "it": "Palla di Fuoco"
    },
    "level": 3,
    "school": "evocation",
@@ -5749,13 +7063,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "flame-blade",
    "name": {
     "en": "Flame Blade",
-    "it": "Lama infuocata"
+    "it": "Lama Infuocata"
    },
    "level": 2,
    "school": "evocation",
@@ -5799,13 +7114,14 @@
    "higher_levels_dice": "1d6",
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "flame-strike",
    "name": {
     "en": "Flame Strike",
-    "it": "Colpo infuocato"
+    "it": "Colpo Infuocato"
    },
    "level": 5,
    "school": "evocation",
@@ -5852,13 +7168,14 @@
    "higher_levels_dice": "1d6",
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "flaming-sphere",
    "name": {
     "en": "Flaming Sphere",
-    "it": "Sfera infuocata"
+    "it": "Sfera Infuocata"
    },
    "level": 2,
    "school": "conjuration",
@@ -5903,13 +7220,14 @@
    "classes": [
     "druid",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "flesh-to-stone",
    "name": {
     "en": "Flesh to Stone",
-    "it": "Carne in pietra"
+    "it": "Carne in Pietra"
    },
    "level": 6,
    "school": "transmutation",
@@ -5951,13 +7269,14 @@
    "classes": [
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "floating-disk",
    "name": {
-    "en": "Floating Disk",
-    "it": "Disco fluttuante di Tenser"
+    "en": "Tenser's Floating Disk",
+    "it": "Disco Fluttuante di Tenser"
    },
    "level": 1,
    "school": "conjuration",
@@ -5998,7 +7317,8 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "fly",
@@ -6050,13 +7370,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "fog-cloud",
    "name": {
     "en": "Fog Cloud",
-    "it": "Nube di nebbia"
+    "it": "Nube di Nebbia"
    },
    "level": 1,
    "school": "conjuration",
@@ -6102,13 +7423,14 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "forbiddance",
    "name": {
     "en": "Forbiddance",
-    "it": "Interdizione"
+    "it": "Proibizione"
    },
    "level": 6,
    "school": "abjuration",
@@ -6152,13 +7474,17 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Interdizione"
+   ],
+   "source": "srd"
   },
   {
    "index": "forcecage",
    "name": {
     "en": "Forcecage",
-    "it": "Gabbia di forza"
+    "it": "Gabbia di Forza"
    },
    "level": 7,
    "school": "evocation",
@@ -6204,13 +7530,14 @@
     "bard",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "foresight",
    "name": {
     "en": "Foresight",
-    "it": "Preveggenza"
+    "it": "Previsione"
    },
    "level": 9,
    "school": "divination",
@@ -6254,13 +7581,17 @@
     "druid",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Preveggenza"
+   ],
+   "source": "srd"
   },
   {
    "index": "freedom-of-movement",
    "name": {
     "en": "Freedom of Movement",
-    "it": "Libertà di movimento"
+    "it": "Libertà di Movimento"
    },
    "level": 4,
    "school": "abjuration",
@@ -6304,13 +7635,14 @@
     "cleric",
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "freezing-sphere",
    "name": {
-    "en": "Freezing Sphere",
-    "it": "Sfera congelante di Otiluke"
+    "en": "Otiluke's Freezing Sphere",
+    "it": "Sfera Congelante di Otiluke"
    },
    "level": 6,
    "school": "evocation",
@@ -6357,13 +7689,64 @@
    "higher_levels_dice": "1d6",
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "friends",
+   "name": {
+    "en": "Friends",
+    "it": "Amicizia"
+   },
+   "level": 0,
+   "school": "enchantment",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a small amount of makeup",
+    "it": "un po' di trucco"
+   },
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Advantage on Charisma checks toward a nonhostile creature; when it ends the creature realizes it was influenced and may become hostile",
+    "it": "Vantaggio alle prove di Carisma verso una creatura non ostile; alla fine la creatura capisce che è stata influenzata e può diventare ostile"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "bard",
+    "sorcerer",
+    "warlock",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "gaseous-form",
    "name": {
     "en": "Gaseous Form",
-    "it": "Forma gassosa"
+    "it": "Forma Gassosa"
    },
    "level": 3,
    "school": "transmutation",
@@ -6406,7 +7789,8 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "gate",
@@ -6455,13 +7839,14 @@
     "cleric",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "geas",
    "name": {
     "en": "Geas",
-    "it": "Geas"
+    "it": "Costrizione"
    },
    "level": 5,
    "school": "enchantment",
@@ -6504,13 +7889,17 @@
     "druid",
     "paladin",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Geas"
+   ],
+   "source": "srd"
   },
   {
    "index": "gentle-repose",
    "name": {
     "en": "Gentle Repose",
-    "it": "Riposo inviolato"
+    "it": "Riposo Inviolato"
    },
    "level": 2,
    "school": "necromancy",
@@ -6552,13 +7941,14 @@
    "classes": [
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "giant-insect",
    "name": {
     "en": "Giant Insect",
-    "it": "Insetto gigante"
+    "it": "Insetto Gigante"
    },
    "level": 4,
    "school": "transmutation",
@@ -6595,7 +7985,8 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "glibness",
@@ -6638,13 +8029,14 @@
    "classes": [
     "bard",
     "warlock"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "globe-of-invulnerability",
    "name": {
     "en": "Globe of Invulnerability",
-    "it": "Globo di invulnerabilità"
+    "it": "Globo di Invulnerabilità"
    },
    "level": 6,
    "school": "abjuration",
@@ -6692,13 +8084,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "glyph-of-warding",
    "name": {
     "en": "Glyph of Warding",
-    "it": "Glifo di interdizione"
+    "it": "Glifo di Interdizione"
    },
    "level": 3,
    "school": "abjuration",
@@ -6744,13 +8137,14 @@
     "bard",
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "goodberry",
    "name": {
     "en": "Goodberry",
-    "it": "Bacche benefiche"
+    "it": "Bacche Benefiche"
    },
    "level": 1,
    "school": "transmutation",
@@ -6792,7 +8186,53 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "grasping-vine",
+   "name": {
+    "en": "Grasping Vine",
+    "it": "Rampicante Afferrante"
+   },
+   "level": 4,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": 30,
+   "range_text": {
+    "en": "30 feet",
+    "it": "30 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "A vine sprouts within range; when conjured and then as a bonus action each turn it can lash out at a creature within 30 feet of the vine: Dexterity saving throw or it is pulled 20 feet toward the vine.",
+    "it": "Un rampicante spunta entro gittata; all'evocazione e poi come azione bonus ogni turno può avvinghiare una creatura entro 9 m dal rampicante: TS Destrezza o viene tirata di 6 m verso di esso."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "druid",
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "grease",
@@ -6842,13 +8282,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "greater-invisibility",
    "name": {
     "en": "Greater Invisibility",
-    "it": "Invisibilità superiore"
+    "it": "Invisibilità Superiore"
    },
    "level": 4,
    "school": "illusion",
@@ -6887,13 +8328,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "greater-restoration",
    "name": {
     "en": "Greater Restoration",
-    "it": "Ristorare superiore"
+    "it": "Ristorare Superiore"
    },
    "level": 5,
    "school": "abjuration",
@@ -6936,13 +8378,14 @@
     "bard",
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "guardian-of-faith",
    "name": {
     "en": "Guardian of Faith",
-    "it": "Guardiano della fede"
+    "it": "Guardiano della Fede"
    },
    "level": 4,
    "school": "conjuration",
@@ -6981,13 +8424,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "guards-and-wards",
    "name": {
     "en": "Guards and Wards",
-    "it": "Guardie e protezioni"
+    "it": "Vigilanza e Interdizione"
    },
    "level": 6,
    "school": "abjuration",
@@ -7032,7 +8476,11 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Guardie e protezioni"
+   ],
+   "source": "srd"
   },
   {
    "index": "guidance",
@@ -7076,13 +8524,14 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "guiding-bolt",
    "name": {
     "en": "Guiding Bolt",
-    "it": "Dardo guida"
+    "it": "Dardo Tracciante"
    },
    "level": 1,
    "school": "evocation",
@@ -7122,13 +8571,17 @@
    "higher_levels_dice": "1d6",
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Dardo guida"
+   ],
+   "source": "srd"
   },
   {
    "index": "gust-of-wind",
    "name": {
     "en": "Gust of Wind",
-    "it": "Folata di vento"
+    "it": "Folata di Vento"
    },
    "level": 2,
    "school": "evocation",
@@ -7174,7 +8627,51 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "hail-of-thorns",
+   "name": {
+    "en": "Hail of Thorns",
+    "it": "Raffica di Spine"
+   },
+   "level": 1,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next ranged weapon hit: the target and creatures within 5 feet make a Dexterity saving throw, 1d10 piercing (half on a success). Higher slots: +1d10 per slot level above 1st (max 6d10).",
+    "it": "Al prossimo colpo con arma a distanza: il bersaglio e le creature entro 1,5 m fanno TS Destrezza, 1d10 perforanti (metà se superato). Slot superiori: +1d10 per slot sopra il 1° (max 6d10)."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": "1d10",
+   "damage_type": "piercing",
+   "higher_levels_dice": "1d10",
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "hallow",
@@ -7224,13 +8721,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "hallucinatory-terrain",
    "name": {
     "en": "Hallucinatory Terrain",
-    "it": "Terreno illusorio"
+    "it": "Terreno Illusorio"
    },
    "level": 4,
    "school": "illusion",
@@ -7277,13 +8775,14 @@
     "druid",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "harm",
    "name": {
     "en": "Harm",
-    "it": "Nuocere"
+    "it": "Ferire"
    },
    "level": 6,
    "school": "necromancy",
@@ -7320,7 +8819,11 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Nuocere"
+   ],
+   "source": "srd"
   },
   {
    "index": "haste",
@@ -7368,7 +8871,8 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "heal",
@@ -7415,13 +8919,14 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "healing-word",
    "name": {
     "en": "Healing Word",
-    "it": "Parola curativa"
+    "it": "Parola Guaritrice"
    },
    "level": 1,
    "school": "evocation",
@@ -7462,13 +8967,17 @@
     "bard",
     "cleric",
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Parola curativa"
+   ],
+   "source": "srd"
   },
   {
    "index": "heat-metal",
    "name": {
     "en": "Heat Metal",
-    "it": "Scaldare il metallo"
+    "it": "Riscaldare il Metallo"
    },
    "level": 2,
    "school": "transmutation",
@@ -7513,13 +9022,17 @@
    "classes": [
     "bard",
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Scaldare il metallo"
+   ],
+   "source": "srd"
   },
   {
    "index": "hellish-rebuke",
    "name": {
     "en": "Hellish Rebuke",
-    "it": "Rimprovero infernale"
+    "it": "Intimorire Infernale"
    },
    "level": 1,
    "school": "evocation",
@@ -7559,13 +9072,17 @@
    "higher_levels_dice": "1d10",
    "classes": [
     "warlock"
-   ]
+   ],
+   "aliases": [
+    "Rimprovero infernale"
+   ],
+   "source": "srd"
   },
   {
    "index": "heroes-feast",
    "name": {
     "en": "Heroes' Feast",
-    "it": "Banchetto degli eroi"
+    "it": "Banchetto degli Eroi"
    },
    "level": 6,
    "school": "conjuration",
@@ -7607,7 +9124,8 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "heroism",
@@ -7651,13 +9169,62 @@
    "classes": [
     "bard",
     "paladin"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "hex",
+   "name": {
+    "en": "Hex",
+    "it": "Sortilegio"
+   },
+   "level": 1,
+   "school": "enchantment",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": 90,
+   "range_text": {
+    "en": "90 feet",
+    "it": "90 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "the petrified eye of a newt",
+    "it": "occhio pietrificato di un girino"
+   },
+   "duration": {
+    "en": "Up to 1 hour",
+    "it": "Concentrazione, fino a 1 ora"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "+1d6 necrotic on every hit against the target and disadvantage on checks with a chosen ability; if the target drops to 0 hit points it can be moved with a bonus action. Remove curse ends it. 3rd-4th level slot: concentration up to 8 hours; 5th+: 24 hours.",
+    "it": "+1d6 necrotici a ogni colpo contro il bersaglio e svantaggio alle prove di una caratteristica scelta; se il bersaglio scende a 0 PF si può spostare con azione bonus. Rimuovi maledizione lo termina. Slot 3-4: concentrazione fino a 8 ore; 5+: 24 ore."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": "1d6",
+   "damage_type": "necrotic",
+   "higher_levels_dice": null,
+   "classes": [
+    "warlock"
+   ],
+   "source": "phb"
   },
   {
    "index": "hideous-laughter",
    "name": {
-    "en": "Hideous Laughter",
-    "it": "Risata incontenibile di Tasha"
+    "en": "Tasha's Hideous Laughter",
+    "it": "Risata Incontenibile di Tasha"
    },
    "level": 1,
    "school": "enchantment",
@@ -7699,13 +9266,14 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "hold-monster",
    "name": {
     "en": "Hold Monster",
-    "it": "Bloccare mostri"
+    "it": "Blocca Mostri"
    },
    "level": 5,
    "school": "enchantment",
@@ -7752,13 +9320,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Bloccare mostri"
+   ],
+   "source": "srd"
   },
   {
    "index": "hold-person",
    "name": {
     "en": "Hold Person",
-    "it": "Bloccare persone"
+    "it": "Blocca Persone"
    },
    "level": 2,
    "school": "enchantment",
@@ -7807,13 +9379,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Bloccare persone"
+   ],
+   "source": "srd"
   },
   {
    "index": "holy-aura",
    "name": {
     "en": "Holy Aura",
-    "it": "Aura sacra"
+    "it": "Aura Sacra"
    },
    "level": 8,
    "school": "abjuration",
@@ -7857,13 +9433,62 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "hunger-of-hadar",
+   "name": {
+    "en": "Hunger of Hadar",
+    "it": "Fame di Hadar"
+   },
+   "level": 3,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 150,
+   "range_text": {
+    "en": "150 feet",
+    "it": "150 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a pickled octopus tentacle",
+    "it": "tentacolo di piovra sott'olio"
+   },
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "20-foot-radius sphere of darkness and cold: blinding, difficult terrain; a creature that starts its turn inside takes 2d6 cold; a creature that ends its turn inside: Dexterity saving throw or 2d6 acid",
+    "it": "Sfera raggio 6 m di oscurità e freddo: accecante, terreno difficile; chi inizia il turno dentro subisce 2d6 freddo; chi lo termina dentro: TS Destrezza o 2d6 acido"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": "2d6",
+   "damage_type": "cold",
+   "higher_levels_dice": null,
+   "classes": [
+    "warlock"
+   ],
+   "source": "phb"
   },
   {
    "index": "hunters-mark",
    "name": {
     "en": "Hunter's Mark",
-    "it": "Marchio del cacciatore"
+    "it": "Marchio del Cacciatore"
    },
    "level": 1,
    "school": "divination",
@@ -7902,13 +9527,14 @@
    "higher_levels_dice": null,
    "classes": [
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "hypnotic-pattern",
    "name": {
     "en": "Hypnotic Pattern",
-    "it": "Disegno ipnotico"
+    "it": "Trama Ipnotica"
    },
    "level": 3,
    "school": "illusion",
@@ -7951,13 +9577,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Disegno ipnotico"
+   ],
+   "source": "srd"
   },
   {
    "index": "ice-storm",
    "name": {
     "en": "Ice Storm",
-    "it": "Tempesta di ghiaccio"
+    "it": "Tempesta di Ghiaccio"
    },
    "level": 4,
    "school": "evocation",
@@ -8006,7 +9636,8 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "identify",
@@ -8054,13 +9685,14 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "illusory-script",
    "name": {
     "en": "Illusory Script",
-    "it": "Scrittura illusoria"
+    "it": "Scritto Illusorio"
    },
    "level": 1,
    "school": "illusion",
@@ -8102,7 +9734,11 @@
     "bard",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Scrittura illusoria"
+   ],
+   "source": "srd"
   },
   {
    "index": "imprisonment",
@@ -8150,13 +9786,14 @@
    "classes": [
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "incendiary-cloud",
    "name": {
     "en": "Incendiary Cloud",
-    "it": "Nube incendiaria"
+    "it": "Nube Incendiaria"
    },
    "level": 8,
    "school": "conjuration",
@@ -8197,13 +9834,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "inflict-wounds",
    "name": {
     "en": "Inflict Wounds",
-    "it": "Infliggere ferite"
+    "it": "Infliggi Ferite"
    },
    "level": 1,
    "school": "necromancy",
@@ -8243,13 +9881,17 @@
    "higher_levels_dice": "1d10",
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Infliggere ferite"
+   ],
+   "source": "srd"
   },
   {
    "index": "insect-plague",
    "name": {
     "en": "Insect Plague",
-    "it": "Piaga di insetti"
+    "it": "Piaga degli Insetti"
    },
    "level": 5,
    "school": "conjuration",
@@ -8298,13 +9940,17 @@
     "cleric",
     "druid",
     "sorcerer"
-   ]
+   ],
+   "aliases": [
+    "Piaga di insetti"
+   ],
+   "source": "srd"
   },
   {
    "index": "instant-summons",
    "name": {
-    "en": "Instant Summons",
-    "it": "Evocazione istantanea di Drawmij"
+    "en": "Drawmij's Instant Summons",
+    "it": "Evocazioni Istantanee di Drawmij"
    },
    "level": 6,
    "school": "conjuration",
@@ -8345,7 +9991,11 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Evocazione istantanea di Drawmij"
+   ],
+   "source": "srd"
   },
   {
    "index": "invisibility",
@@ -8398,13 +10048,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "irresistible-dance",
    "name": {
-    "en": "Irresistible Dance",
-    "it": "Danza irresistibile di Otto"
+    "en": "Otto's Irresistible Dance",
+    "it": "Danza Irresistibile di Otto"
    },
    "level": 6,
    "school": "enchantment",
@@ -8441,7 +10092,8 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "jump",
@@ -8491,7 +10143,8 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "knock",
@@ -8535,13 +10188,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "legend-lore",
    "name": {
     "en": "Legend Lore",
-    "it": "Conoscenza delle leggende"
+    "it": "Conoscenza delle Leggende"
    },
    "level": 5,
    "school": "divination",
@@ -8584,13 +10238,14 @@
     "bard",
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "lesser-restoration",
    "name": {
     "en": "Lesser Restoration",
-    "it": "Ristorare inferiore"
+    "it": "Ristorare Inferiore"
    },
    "level": 2,
    "school": "abjuration",
@@ -8631,7 +10286,8 @@
     "druid",
     "paladin",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "levitate",
@@ -8679,7 +10335,8 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "light",
@@ -8728,7 +10385,52 @@
     "cleric",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "lightning-arrow",
+   "name": {
+    "en": "Lightning Arrow",
+    "it": "Freccia Folgorante"
+   },
+   "level": 3,
+   "school": "transmutation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "The next ranged weapon attack within the duration turns the ammunition/thrown weapon into lightning: on a hit 4d8 lightning damage instead of the weapon's damage, on a miss half; either way creatures within 10 feet of the target make a Dexterity saving throw or take 2d8 lightning (half on a success). Higher slots: +1d8 to both effects per slot level above 3rd.",
+    "it": "Il prossimo attacco con arma a distanza entro la durata trasforma munizione/arma da lancio in fulmine: se colpisce 4d8 danni da fulmine al posto dei danni dell'arma, se manca metà; in ogni caso le creature entro 3 m dal bersaglio fanno TS Destrezza o subiscono 2d8 da fulmine (metà se superato). Slot superiori: +1d8 a entrambi gli effetti per livello oltre il 3°."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "dex",
+   "damage_dice": "4d8",
+   "damage_type": "lightning",
+   "higher_levels_dice": "1d8",
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "lightning-bolt",
@@ -8782,13 +10484,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "locate-animals-or-plants",
    "name": {
     "en": "Locate Animals or Plants",
-    "it": "Localizzare animali o piante"
+    "it": "Localizza Animali o Vegetali"
    },
    "level": 2,
    "school": "divination",
@@ -8831,13 +10534,17 @@
     "bard",
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Localizzare animali o piante"
+   ],
+   "source": "srd"
   },
   {
    "index": "locate-creature",
    "name": {
     "en": "Locate Creature",
-    "it": "Localizzare creatura"
+    "it": "Localizza Creatura"
    },
    "level": 4,
    "school": "divination",
@@ -8883,13 +10590,17 @@
     "paladin",
     "ranger",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Localizzare creatura"
+   ],
+   "source": "srd"
   },
   {
    "index": "locate-object",
    "name": {
     "en": "Locate Object",
-    "it": "Localizzare oggetto"
+    "it": "Localizza Oggetto"
    },
    "level": 2,
    "school": "divination",
@@ -8935,13 +10646,17 @@
     "paladin",
     "ranger",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Localizzare oggetto"
+   ],
+   "source": "srd"
   },
   {
    "index": "longstrider",
    "name": {
     "en": "Longstrider",
-    "it": "Passo lungo"
+    "it": "Passo Veloce"
    },
    "level": 1,
    "school": "transmutation",
@@ -8988,13 +10703,17 @@
     "druid",
     "ranger",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Passo lungo"
+   ],
+   "source": "srd"
   },
   {
    "index": "mage-armor",
    "name": {
     "en": "Mage Armor",
-    "it": "Armatura magica"
+    "it": "Armatura Magica"
    },
    "level": 1,
    "school": "abjuration",
@@ -9036,13 +10755,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mage-hand",
    "name": {
     "en": "Mage Hand",
-    "it": "Mano magica"
+    "it": "Mano Magica"
    },
    "level": 0,
    "school": "conjuration",
@@ -9082,13 +10802,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "magic-circle",
    "name": {
     "en": "Magic Circle",
-    "it": "Cerchio magico"
+    "it": "Cerchio Magico"
    },
    "level": 3,
    "school": "abjuration",
@@ -9138,13 +10859,14 @@
     "paladin",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "magic-jar",
    "name": {
     "en": "Magic Jar",
-    "it": "Giara magica"
+    "it": "Giara Magica"
    },
    "level": 6,
    "school": "necromancy",
@@ -9185,13 +10907,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "magic-missile",
    "name": {
     "en": "Magic Missile",
-    "it": "Dardo incantato"
+    "it": "Dardo Incantato"
    },
    "level": 1,
    "school": "evocation",
@@ -9232,13 +10955,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "magic-mouth",
    "name": {
     "en": "Magic Mouth",
-    "it": "Bocca magica"
+    "it": "Bocca Magica"
    },
    "level": 2,
    "school": "illusion",
@@ -9280,13 +11004,14 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "magic-weapon",
    "name": {
     "en": "Magic Weapon",
-    "it": "Arma magica"
+    "it": "Arma Magica"
    },
    "level": 2,
    "school": "transmutation",
@@ -9327,13 +11052,14 @@
    "classes": [
     "paladin",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "magnificent-mansion",
    "name": {
-    "en": "Magnificent Mansion",
-    "it": "Magnifica dimora di Mordenkainen"
+    "en": "Mordenkainen's Magnificent Mansion",
+    "it": "Reggia Meravigliosa di Mordenkainen"
    },
    "level": 7,
    "school": "conjuration",
@@ -9378,13 +11104,17 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Magnifica dimora di Mordenkainen"
+   ],
+   "source": "srd"
   },
   {
    "index": "major-image",
    "name": {
     "en": "Major Image",
-    "it": "Immagine maggiore"
+    "it": "Immagine Maggiore"
    },
    "level": 3,
    "school": "illusion",
@@ -9431,13 +11161,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mass-cure-wounds",
    "name": {
     "en": "Mass Cure Wounds",
-    "it": "Cura ferite di massa"
+    "it": "Cura Ferite di Massa"
    },
    "level": 5,
    "school": "conjuration",
@@ -9482,13 +11213,14 @@
     "bard",
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mass-heal",
    "name": {
     "en": "Mass Heal",
-    "it": "Guarigione di massa"
+    "it": "Guarigione di Massa"
    },
    "level": 9,
    "school": "conjuration",
@@ -9525,13 +11257,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mass-healing-word",
    "name": {
     "en": "Mass Healing Word",
-    "it": "Parola curativa di massa"
+    "it": "Parola Guaritrice di Massa"
    },
    "level": 3,
    "school": "evocation",
@@ -9570,13 +11303,17 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Parola curativa di massa"
+   ],
+   "source": "srd"
   },
   {
    "index": "mass-suggestion",
    "name": {
     "en": "Mass Suggestion",
-    "it": "Suggestione di massa"
+    "it": "Suggestione di Massa"
    },
    "level": 6,
    "school": "enchantment",
@@ -9622,7 +11359,8 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "maze",
@@ -9665,13 +11403,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "meld-into-stone",
    "name": {
-    "en": "Meld Into Stone",
-    "it": "Fondersi nella pietra"
+    "en": "Meld into Stone",
+    "it": "Fondersi nella Pietra"
    },
    "level": 3,
    "school": "transmutation",
@@ -9707,8 +11446,10 @@
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
-    "cleric"
-   ]
+    "cleric",
+    "druid"
+   ],
+   "source": "srd"
   },
   {
    "index": "mending",
@@ -9759,7 +11500,8 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "message",
@@ -9808,13 +11550,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "meteor-swarm",
    "name": {
     "en": "Meteor Swarm",
-    "it": "Sciame di meteore"
+    "it": "Sciame di Meteore"
    },
    "level": 9,
    "school": "evocation",
@@ -9855,13 +11598,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mind-blank",
    "name": {
     "en": "Mind Blank",
-    "it": "Vuoto mentale"
+    "it": "Vuoto Mentale"
    },
    "level": 8,
    "school": "abjuration",
@@ -9899,13 +11643,14 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "minor-illusion",
    "name": {
     "en": "Minor Illusion",
-    "it": "Illusione minore"
+    "it": "Illusione Minore"
    },
    "level": 0,
    "school": "illusion",
@@ -9948,13 +11693,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mirage-arcane",
    "name": {
     "en": "Mirage Arcane",
-    "it": "Miraggio arcano"
+    "it": "Miraggio Arcano"
    },
    "level": 7,
    "school": "illusion",
@@ -9996,13 +11742,14 @@
     "bard",
     "druid",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mirror-image",
    "name": {
     "en": "Mirror Image",
-    "it": "Immagine speculare"
+    "it": "Immagine Speculare"
    },
    "level": 2,
    "school": "illusion",
@@ -10041,13 +11788,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "mislead",
    "name": {
     "en": "Mislead",
-    "it": "Sviare"
+    "it": "Fuorviare"
    },
    "level": 5,
    "school": "illusion",
@@ -10084,13 +11832,17 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Sviare"
+   ],
+   "source": "srd"
   },
   {
    "index": "misty-step",
    "name": {
     "en": "Misty Step",
-    "it": "Passo velato"
+    "it": "Passo Velato"
    },
    "level": 2,
    "school": "conjuration",
@@ -10128,13 +11880,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "modify-memory",
    "name": {
     "en": "Modify Memory",
-    "it": "Modificare memoria"
+    "it": "Modificare Memoria"
    },
    "level": 5,
    "school": "enchantment",
@@ -10175,13 +11928,14 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "moonbeam",
    "name": {
     "en": "Moonbeam",
-    "it": "Raggio di luna"
+    "it": "Bagliore Lunare"
    },
    "level": 2,
    "school": "evocation",
@@ -10228,13 +11982,17 @@
    "higher_levels_dice": "1d10",
    "classes": [
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Raggio di luna"
+   ],
+   "source": "srd"
   },
   {
    "index": "move-earth",
    "name": {
     "en": "Move Earth",
-    "it": "Muovere il terreno"
+    "it": "Muovere il Terreno"
    },
    "level": 6,
    "school": "transmutation",
@@ -10280,13 +12038,14 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "nondetection",
    "name": {
     "en": "Nondetection",
-    "it": "Anti-individuazione"
+    "it": "Anti-Individuazione"
    },
    "level": 3,
    "school": "abjuration",
@@ -10329,13 +12088,14 @@
     "bard",
     "ranger",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "pass-without-trace",
    "name": {
-    "en": "Pass Without Trace",
-    "it": "Passare senza tracce"
+    "en": "Pass without Trace",
+    "it": "Passare Senza Tracce"
    },
    "level": 2,
    "school": "abjuration",
@@ -10377,7 +12137,8 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "passwall",
@@ -10424,13 +12185,64 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "phantasmal-force",
+   "name": {
+    "en": "Phantasmal Force",
+    "it": "Allucinazione di Forza"
+   },
+   "level": 2,
+   "school": "illusion",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 60,
+   "range_text": {
+    "en": "60 feet",
+    "it": "60 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a bit of fleece",
+    "it": "ciuffo di lana"
+   },
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Intelligence saving throw or the target alone perceives an illusion (cube up to 10 feet); doesn't work on constructs and undead; the target can use an action for an Intelligence (Investigation) check against the DC to see through it; it treats it as real and can take damage from it: 1d6 psychic per round if the illusion could logically harm",
+    "it": "TS Intelligenza o il bersaglio percepisce solo lui un'illusione (cubo max 3 m); non agisce su costrutti e non morti; il bersaglio può usare un'azione per Intelligenza (Indagare) contro la CD e smascherarla; la considera reale e può subire danni da essa: 1d6 psichici per round se l'illusione può logicamente ferire"
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "int",
+   "damage_dice": "1d6",
+   "damage_type": "psychic",
+   "higher_levels_dice": null,
+   "classes": [
+    "bard",
+    "sorcerer",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "phantasmal-killer",
    "name": {
     "en": "Phantasmal Killer",
-    "it": "Assassino fantasmatico"
+    "it": "Allucinazione Mortale"
    },
    "level": 4,
    "school": "illusion",
@@ -10470,13 +12282,17 @@
    "higher_levels_dice": "1d10",
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Assassino fantasmatico"
+   ],
+   "source": "srd"
   },
   {
    "index": "phantom-steed",
    "name": {
     "en": "Phantom Steed",
-    "it": "Destriero fantasma"
+    "it": "Destriero Fantomatico"
    },
    "level": 3,
    "school": "illusion",
@@ -10513,13 +12329,17 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Destriero fantasma"
+   ],
+   "source": "srd"
   },
   {
    "index": "planar-ally",
    "name": {
     "en": "Planar Ally",
-    "it": "Alleato planare"
+    "it": "Alleato Planare"
    },
    "level": 6,
    "school": "conjuration",
@@ -10556,13 +12376,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "planar-binding",
    "name": {
     "en": "Planar Binding",
-    "it": "Vincolo planare"
+    "it": "Legame Planare"
    },
    "level": 5,
    "school": "abjuration",
@@ -10609,13 +12430,17 @@
     "cleric",
     "druid",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Vincolo planare"
+   ],
+   "source": "srd"
   },
   {
    "index": "plane-shift",
    "name": {
     "en": "Plane Shift",
-    "it": "Spostamento planare"
+    "it": "Spostamento Planare"
    },
    "level": 7,
    "school": "conjuration",
@@ -10660,13 +12485,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "plant-growth",
    "name": {
     "en": "Plant Growth",
-    "it": "Crescita vegetale"
+    "it": "Crescita Vegetale"
    },
    "level": 3,
    "school": "transmutation",
@@ -10705,13 +12531,14 @@
     "bard",
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "poison-spray",
    "name": {
     "en": "Poison Spray",
-    "it": "Spruzzo velenoso"
+    "it": "Spruzzo Velenoso"
    },
    "level": 0,
    "school": "conjuration",
@@ -10751,7 +12578,8 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "polymorph",
@@ -10801,13 +12629,58 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "power-word-heal",
+   "name": {
+    "en": "Power Word Heal",
+    "it": "Parola del Potere Guarire"
+   },
+   "level": 9,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Touch",
+    "it": "Contatto"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "The target regains all its hit points; ends charmed, paralyzed, frightened, or stunned; if prone it can stand up with its reaction. No effect on constructs and undead.",
+    "it": "Il bersaglio recupera tutti i suoi PF; termina affascinato, paralizzato, spaventato o stordito; se è prono può rialzarsi con una reazione. Nessun effetto su costrutti e non morti."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "bard"
+   ],
+   "source": "phb"
   },
   {
    "index": "power-word-kill",
    "name": {
     "en": "Power Word Kill",
-    "it": "Parola del potere: uccidere"
+    "it": "Parola del Potere Uccidere"
    },
    "level": 9,
    "school": "enchantment",
@@ -10846,13 +12719,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Parola del potere: uccidere"
+   ],
+   "source": "srd"
   },
   {
    "index": "power-word-stun",
    "name": {
     "en": "Power Word Stun",
-    "it": "Parola del potere: stordire"
+    "it": "Parola del Potere Stordire"
    },
    "level": 8,
    "school": "enchantment",
@@ -10891,13 +12768,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Parola del potere: stordire"
+   ],
+   "source": "srd"
   },
   {
    "index": "prayer-of-healing",
    "name": {
     "en": "Prayer of Healing",
-    "it": "Preghiera di guarigione"
+    "it": "Preghiera di Guarigione"
    },
    "level": 2,
    "school": "evocation",
@@ -10936,7 +12817,8 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "prestidigitation",
@@ -10982,13 +12864,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "prismatic-spray",
    "name": {
     "en": "Prismatic Spray",
-    "it": "Spruzzo prismatico"
+    "it": "Spruzzo Prismatico"
    },
    "level": 7,
    "school": "evocation",
@@ -11029,13 +12912,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "prismatic-wall",
    "name": {
     "en": "Prismatic Wall",
-    "it": "Muro prismatico"
+    "it": "Muro Prismatico"
    },
    "level": 9,
    "school": "abjuration",
@@ -11075,13 +12959,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "private-sanctum",
    "name": {
-    "en": "Private Sanctum",
-    "it": "Santuario privato di Mordenkainen"
+    "en": "Mordenkainen's Private Sanctum",
+    "it": "Santuario Privato di Mordenkainen"
    },
    "level": 4,
    "school": "abjuration",
@@ -11128,13 +13013,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "produce-flame",
    "name": {
     "en": "Produce Flame",
-    "it": "Produrre fiamma"
+    "it": "Produrre Fiamma"
    },
    "level": 0,
    "school": "conjuration",
@@ -11171,13 +13057,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "programmed-illusion",
    "name": {
     "en": "Programmed Illusion",
-    "it": "Illusione programmata"
+    "it": "Illusione Programmata"
    },
    "level": 6,
    "school": "illusion",
@@ -11222,13 +13109,14 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "project-image",
    "name": {
     "en": "Project Image",
-    "it": "Proiettare immagine"
+    "it": "Immagine Proiettata"
    },
    "level": 7,
    "school": "illusion",
@@ -11270,13 +13158,17 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Proiettare immagine"
+   ],
+   "source": "srd"
   },
   {
    "index": "protection-from-energy",
    "name": {
-    "en": "Protection From Energy",
-    "it": "Protezione dall'energia"
+    "en": "Protection from Energy",
+    "it": "Protezione dall'Energia"
    },
    "level": 3,
    "school": "abjuration",
@@ -11317,13 +13209,14 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "protection-from-evil-and-good",
    "name": {
     "en": "Protection from Evil and Good",
-    "it": "Protezione dal bene e dal male"
+    "it": "Protezione dal Bene e dal Male"
    },
    "level": 1,
    "school": "abjuration",
@@ -11367,13 +13260,14 @@
     "paladin",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "protection-from-poison",
    "name": {
     "en": "Protection from Poison",
-    "it": "Protezione dal veleno"
+    "it": "Protezione dai Veleni"
    },
    "level": 2,
    "school": "abjuration",
@@ -11413,13 +13307,17 @@
     "druid",
     "paladin",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Protezione dal veleno"
+   ],
+   "source": "srd"
   },
   {
    "index": "purify-food-and-drink",
    "name": {
     "en": "Purify Food and Drink",
-    "it": "Purificare cibo e bevande"
+    "it": "Purificare Cibo e Bevande"
    },
    "level": 1,
    "school": "transmutation",
@@ -11458,13 +13356,14 @@
     "cleric",
     "druid",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "raise-dead",
    "name": {
     "en": "Raise Dead",
-    "it": "Rianimare morti"
+    "it": "Rianimare Morti"
    },
    "level": 5,
    "school": "necromancy",
@@ -11507,13 +13406,14 @@
     "bard",
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "ray-of-enfeeblement",
    "name": {
     "en": "Ray of Enfeeblement",
-    "it": "Raggio di indebolimento"
+    "it": "Raggio di Affaticamento"
    },
    "level": 2,
    "school": "necromancy",
@@ -11551,13 +13451,17 @@
    "classes": [
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Raggio di indebolimento"
+   ],
+   "source": "srd"
   },
   {
    "index": "ray-of-frost",
    "name": {
     "en": "Ray of Frost",
-    "it": "Raggio di gelo"
+    "it": "Raggio di Gelo"
    },
    "level": 0,
    "school": "evocation",
@@ -11595,13 +13499,59 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "ray-of-sickness",
+   "name": {
+    "en": "Ray of Sickness",
+    "it": "Raggio di Infermità"
+   },
+   "level": 1,
+   "school": "necromancy",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 60,
+   "range_text": {
+    "en": "60 feet",
+    "it": "60 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Ranged attack: 2d8 poison and Constitution saving throw or poisoned until the end of the caster's next turn. Higher slots: +1d8 per slot level above 1st.",
+    "it": "Attacco a distanza: 2d8 veleno e TS Costituzione o avvelenato fino alla fine del turno successivo dell'incantatore. Slot superiori: +1d8 per slot sopra il 1°."
+   },
+   "higher_level": null,
+   "attack_type": "ATK",
+   "save_ability": "con",
+   "damage_dice": "2d8",
+   "damage_type": "poison",
+   "higher_levels_dice": "1d8",
+   "classes": [
+    "sorcerer",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "regenerate",
    "name": {
     "en": "Regenerate",
-    "it": "Rigenerare"
+    "it": "Rigenerazione"
    },
    "level": 7,
    "school": "transmutation",
@@ -11644,7 +13594,11 @@
     "bard",
     "cleric",
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Rigenerare"
+   ],
+   "source": "srd"
   },
   {
    "index": "reincarnate",
@@ -11691,13 +13645,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "remove-curse",
    "name": {
     "en": "Remove Curse",
-    "it": "Rimuovere maledizione"
+    "it": "Rimuovi Maledizione"
    },
    "level": 3,
    "school": "abjuration",
@@ -11737,13 +13692,17 @@
     "paladin",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Rimuovere maledizione"
+   ],
+   "source": "srd"
   },
   {
    "index": "resilient-sphere",
    "name": {
-    "en": "Resilient Sphere",
-    "it": "Sfera elastica di Otiluke"
+    "en": "Otiluke's Resilient Sphere",
+    "it": "Sfera Elastica di Otiluke"
    },
    "level": 4,
    "school": "evocation",
@@ -11784,7 +13743,8 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "resistance",
@@ -11832,7 +13792,8 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "resurrection",
@@ -11880,13 +13841,14 @@
    "classes": [
     "bard",
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "reverse-gravity",
    "name": {
     "en": "Reverse Gravity",
-    "it": "Invertire la gravità"
+    "it": "Inversione della Gravità"
    },
    "level": 7,
    "school": "transmutation",
@@ -11932,13 +13894,17 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Invertire la gravità"
+   ],
+   "source": "srd"
   },
   {
    "index": "revivify",
    "name": {
     "en": "Revivify",
-    "it": "Rivivificare"
+    "it": "Rinascita"
    },
    "level": 3,
    "school": "conjuration",
@@ -11980,13 +13946,17 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "aliases": [
+    "Rivivificare"
+   ],
+   "source": "srd"
   },
   {
    "index": "rope-trick",
    "name": {
     "en": "Rope Trick",
-    "it": "Trucco della corda"
+    "it": "Trucco della Corda"
    },
    "level": 2,
    "school": "transmutation",
@@ -12027,13 +13997,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "sacred-flame",
    "name": {
     "en": "Sacred Flame",
-    "it": "Fiamma sacra"
+    "it": "Fiamma Sacra"
    },
    "level": 0,
    "school": "evocation",
@@ -12070,7 +14041,8 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "sanctuary",
@@ -12117,13 +14089,14 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "scorching-ray",
    "name": {
     "en": "Scorching Ray",
-    "it": "Raggio rovente"
+    "it": "Raggio Rovente"
    },
    "level": 2,
    "school": "evocation",
@@ -12164,7 +14137,8 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "scrying",
@@ -12215,13 +14189,57 @@
     "druid",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "searing-smite",
+   "name": {
+    "en": "Searing Smite",
+    "it": "Punizione Incandescente"
+   },
+   "level": 1,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next melee weapon hit: +1d6 fire and the target ignites; at the start of each of its turns a Constitution saving throw: on a failure 1d6 fire, on a success the spell ends. Higher slots: +1d6 to the initial extra damage per slot level above 1st.",
+    "it": "Al prossimo colpo con arma da mischia: +1d6 fuoco e il bersaglio brucia; a inizio di ogni suo turno TS Costituzione: se fallisce 1d6 fuoco, se supera l'incantesimo termina. Slot superiori: +1d6 ai danni extra iniziali per slot sopra il 1°."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "con",
+   "damage_dice": "1d6",
+   "damage_type": "fire",
+   "higher_levels_dice": "1d6",
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "secret-chest",
    "name": {
-    "en": "Secret Chest",
-    "it": "Forziere segreto di Leomund"
+    "en": "Leomund's Secret Chest",
+    "it": "Scrigno Segreto di Leomund"
    },
    "level": 4,
    "school": "conjuration",
@@ -12262,13 +14280,17 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Forziere segreto di Leomund"
+   ],
+   "source": "srd"
   },
   {
    "index": "see-invisibility",
    "name": {
     "en": "See Invisibility",
-    "it": "Vedere invisibile"
+    "it": "Vedere Invisibilità"
    },
    "level": 2,
    "school": "divination",
@@ -12311,13 +14333,17 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Vedere invisibile"
+   ],
+   "source": "srd"
   },
   {
    "index": "seeming",
    "name": {
     "en": "Seeming",
-    "it": "Aspetto illusorio"
+    "it": "Sembrare"
    },
    "level": 5,
    "school": "illusion",
@@ -12356,13 +14382,17 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Aspetto illusorio"
+   ],
+   "source": "srd"
   },
   {
    "index": "sending",
    "name": {
     "en": "Sending",
-    "it": "Messaggio a distanza"
+    "it": "Inviare"
    },
    "level": 3,
    "school": "evocation",
@@ -12405,13 +14435,17 @@
     "bard",
     "cleric",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Messaggio a distanza"
+   ],
+   "source": "srd"
   },
   {
    "index": "sequester",
    "name": {
     "en": "Sequester",
-    "it": "Isolare"
+    "it": "Celare"
    },
    "level": 7,
    "school": "transmutation",
@@ -12452,13 +14486,17 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Isolare"
+   ],
+   "source": "srd"
   },
   {
    "index": "shapechange",
    "name": {
     "en": "Shapechange",
-    "it": "Metamorfosi suprema"
+    "it": "Trasformazione"
    },
    "level": 9,
    "school": "transmutation",
@@ -12500,7 +14538,11 @@
    "classes": [
     "druid",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Metamorfosi suprema"
+   ],
+   "source": "srd"
   },
   {
    "index": "shatter",
@@ -12556,7 +14598,8 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "shield",
@@ -12600,13 +14643,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "shield-of-faith",
    "name": {
     "en": "Shield of Faith",
-    "it": "Scudo della fede"
+    "it": "Scudo della Fede"
    },
    "level": 1,
    "school": "abjuration",
@@ -12648,13 +14692,14 @@
    "classes": [
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "shillelagh",
    "name": {
     "en": "Shillelagh",
-    "it": "Randello incantato"
+    "it": "Randello Incantato"
    },
    "level": 0,
    "school": "transmutation",
@@ -12695,13 +14740,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "shocking-grasp",
    "name": {
     "en": "Shocking Grasp",
-    "it": "Presa folgorante"
+    "it": "Stretta Folgorante"
    },
    "level": 0,
    "school": "evocation",
@@ -12739,7 +14785,11 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Presa folgorante"
+   ],
+   "source": "srd"
   },
   {
    "index": "silence",
@@ -12786,14 +14836,17 @@
    "classes": [
     "bard",
     "cleric",
-    "ranger"
-   ]
+    "ranger",
+    "sorcerer",
+    "wizard"
+   ],
+   "source": "srd"
   },
   {
    "index": "silent-image",
    "name": {
     "en": "Silent Image",
-    "it": "Immagine silenziosa"
+    "it": "Immagine Silenziosa"
    },
    "level": 1,
    "school": "illusion",
@@ -12839,7 +14892,8 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "simulacrum",
@@ -12886,7 +14940,8 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "sleep",
@@ -12941,13 +14996,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "sleet-storm",
    "name": {
     "en": "Sleet Storm",
-    "it": "Tempesta di nevischio"
+    "it": "Tempesta di Nevischio"
    },
    "level": 3,
    "school": "conjuration",
@@ -12993,7 +15049,8 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "slow",
@@ -13044,13 +15101,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "spare-the-dying",
    "name": {
     "en": "Spare the Dying",
-    "it": "Risparmiare i morenti"
+    "it": "Salvare i Morenti"
    },
    "level": 0,
    "school": "necromancy",
@@ -13087,13 +15145,17 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Risparmiare i morenti"
+   ],
+   "source": "srd"
   },
   {
    "index": "speak-with-animals",
    "name": {
     "en": "Speak with Animals",
-    "it": "Parlare con gli animali"
+    "it": "Parlare con gli Animali"
    },
    "level": 1,
    "school": "divination",
@@ -13132,13 +15194,14 @@
     "bard",
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "speak-with-dead",
    "name": {
     "en": "Speak with Dead",
-    "it": "Parlare con i morti"
+    "it": "Parlare con i Morti"
    },
    "level": 3,
    "school": "necromancy",
@@ -13180,13 +15243,14 @@
    "classes": [
     "bard",
     "cleric"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "speak-with-plants",
    "name": {
     "en": "Speak with Plants",
-    "it": "Parlare con le piante"
+    "it": "Parlare con i Vegetali"
    },
    "level": 3,
    "school": "transmutation",
@@ -13228,13 +15292,17 @@
     "bard",
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Parlare con le piante"
+   ],
+   "source": "srd"
   },
   {
    "index": "spider-climb",
    "name": {
     "en": "Spider Climb",
-    "it": "Movimento del ragno"
+    "it": "Movimenti del Ragno"
    },
    "level": 2,
    "school": "transmutation",
@@ -13277,13 +15345,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Movimento del ragno"
+   ],
+   "source": "srd"
   },
   {
    "index": "spike-growth",
    "name": {
     "en": "Spike Growth",
-    "it": "Crescita di spine"
+    "it": "Crescita di Spine"
    },
    "level": 2,
    "school": "transmutation",
@@ -13328,13 +15400,14 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "spirit-guardians",
    "name": {
     "en": "Spirit Guardians",
-    "it": "Spiriti guardiani"
+    "it": "Guardiani Spirituali"
    },
    "level": 3,
    "school": "conjuration",
@@ -13378,13 +15451,17 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Spiriti guardiani"
+   ],
+   "source": "srd"
   },
   {
    "index": "spiritual-weapon",
    "name": {
     "en": "Spiritual Weapon",
-    "it": "Arma spirituale"
+    "it": "Arma Spirituale"
    },
    "level": 2,
    "school": "evocation",
@@ -13424,13 +15501,57 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "staggering-smite",
+   "name": {
+    "en": "Staggering Smite",
+    "it": "Punizione Demoralizzante"
+   },
+   "level": 4,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next melee weapon hit: +4d6 psychic; the target makes a Wisdom saving throw or has disadvantage on attack rolls and ability checks and can't take reactions until the end of its next turn.",
+    "it": "Al prossimo colpo con arma da mischia: +4d6 psichici; il bersaglio fa TS Saggezza o ha svantaggio a tiri per colpire e prove e non può usare reazioni fino alla fine del suo turno successivo."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
+   "damage_dice": "4d6",
+   "damage_type": "psychic",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "stinking-cloud",
    "name": {
     "en": "Stinking Cloud",
-    "it": "Nube maleodorante"
+    "it": "Nube Maleodorante"
    },
    "level": 3,
    "school": "conjuration",
@@ -13476,13 +15597,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "stone-shape",
    "name": {
     "en": "Stone Shape",
-    "it": "Foggiare la pietra"
+    "it": "Scolpire Pietra"
    },
    "level": 4,
    "school": "transmutation",
@@ -13525,13 +15647,17 @@
     "cleric",
     "druid",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Foggiare la pietra"
+   ],
+   "source": "srd"
   },
   {
    "index": "stoneskin",
    "name": {
     "en": "Stoneskin",
-    "it": "Pelle di pietra"
+    "it": "Pelle di Pietra"
    },
    "level": 4,
    "school": "abjuration",
@@ -13575,13 +15701,14 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "storm-of-vengeance",
    "name": {
     "en": "Storm of Vengeance",
-    "it": "Tempesta di vendetta"
+    "it": "Tempesta di Vendetta"
    },
    "level": 9,
    "school": "conjuration",
@@ -13621,7 +15748,8 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "suggestion",
@@ -13670,13 +15798,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "sunbeam",
    "name": {
     "en": "Sunbeam",
-    "it": "Raggio solare"
+    "it": "Bagliore Solare"
    },
    "level": 6,
    "school": "evocation",
@@ -13722,13 +15851,17 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Raggio solare"
+   ],
+   "source": "srd"
   },
   {
    "index": "sunburst",
    "name": {
     "en": "Sunburst",
-    "it": "Esplosione solare"
+    "it": "Esplosione Solare"
    },
    "level": 8,
    "school": "evocation",
@@ -13774,7 +15907,56 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "swift-quiver",
+   "name": {
+    "en": "Swift Quiver",
+    "it": "Faretra Rapida"
+   },
+   "level": 5,
+   "school": "transmutation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Touch",
+    "it": "Contatto"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a quiver containing at least one piece of ammunition",
+    "it": "faretra con almeno una munizione"
+   },
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "The quiver produces endless nonmagical ammunition; as a bonus action each turn, two attacks with a weapon that uses that ammunition",
+    "it": "La faretra produce munizioni non magiche all'infinito; con azione bonus a ogni turno due attacchi con un'arma che usa quelle munizioni"
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "ranger"
+   ],
+   "source": "phb"
   },
   {
    "index": "symbol",
@@ -13826,7 +16008,8 @@
     "bard",
     "cleric",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "telekinesis",
@@ -13873,13 +16056,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "telepathic-bond",
    "name": {
-    "en": "Telepathic Bond",
-    "it": "Legame telepatico di Rary"
+    "en": "Rary's Telepathic Bond",
+    "it": "Legame Telepatico di Rary"
    },
    "level": 5,
    "school": "divination",
@@ -13920,7 +16104,56 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "telepathy",
+   "name": {
+    "en": "Telepathy",
+    "it": "Telepatia"
+   },
+   "level": 8,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Unlimited",
+    "it": "Illimitata"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a pair of linked silver rings",
+    "it": "due anelli d'argento concatenati"
+   },
+   "duration": {
+    "en": "24 hours",
+    "it": "24 ore"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Telepathic link with a familiar willing creature on the same plane to share words, images, and sounds; ends if either changes plane.",
+    "it": "Legame telepatico con una creatura consenziente familiare sullo stesso piano per condividere parole, immagini e suoni; termina se cambiano piano."
+   },
+   "higher_level": null,
+   "attack_type": null,
+   "save_ability": null,
+   "damage_dice": null,
+   "damage_type": null,
+   "higher_levels_dice": null,
+   "classes": [
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "teleport",
@@ -13967,13 +16200,14 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "teleportation-circle",
    "name": {
     "en": "Teleportation Circle",
-    "it": "Cerchio di teletrasporto"
+    "it": "Cerchio di Teletrasporto"
    },
    "level": 5,
    "school": "conjuration",
@@ -14018,7 +16252,8 @@
     "bard",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "thaumaturgy",
@@ -14060,13 +16295,102 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "thorn-whip",
+   "name": {
+    "en": "Thorn Whip",
+    "it": "Frusta di Spine"
+   },
+   "level": 0,
+   "school": "transmutation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 30,
+   "range_text": {
+    "en": "30 feet",
+    "it": "30 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Instantaneous",
+    "it": "Istantanea"
+   },
+   "concentration": false,
+   "ritual": false,
+   "desc": {
+    "en": "Melee spell attack: 1d6 piercing damage and, if the target is Large or smaller, it can be pulled up to 10 feet toward the caster. Damage 2d6 at 5th level, 3d6 at 11th, 4d6 at 17th.",
+    "it": "Attacco in mischia con l'incantesimo: 1d6 danni perforanti e, se il bersaglio è di taglia Grande o inferiore, può essere trascinato fino a 3 m verso l'incantatore. Danni 2d6 al 5° livello, 3d6 all'11°, 4d6 al 17°."
+   },
+   "higher_level": null,
+   "attack_type": "ATK",
+   "save_ability": null,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "higher_levels_dice": null,
+   "classes": [
+    "druid"
+   ],
+   "source": "phb"
+  },
+  {
+   "index": "thunderous-smite",
+   "name": {
+    "en": "Thunderous Smite",
+    "it": "Punizione Tonante"
+   },
+   "level": 1,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next melee weapon hit: +2d6 thunder (audible within 300 feet); the target makes a Strength saving throw or is pushed 10 feet and knocked prone.",
+    "it": "Al prossimo colpo con arma da mischia: +2d6 tuono (udibile a 90 m); il bersaglio fa TS Forza o è spinto di 3 m e cade prono."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "str",
+   "damage_dice": "2d6",
+   "damage_type": "thunder",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "thunderwave",
    "name": {
     "en": "Thunderwave",
-    "it": "Onda tonante"
+    "it": "Onda Tonante"
    },
    "level": 1,
    "school": "evocation",
@@ -14112,13 +16436,14 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "time-stop",
    "name": {
     "en": "Time Stop",
-    "it": "Fermare il tempo"
+    "it": "Fermare il Tempo"
    },
    "level": 9,
    "school": "transmutation",
@@ -14155,13 +16480,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "tiny-hut",
    "name": {
-    "en": "Tiny Hut",
-    "it": "Rifugio di Leomund"
+    "en": "Leomund's Tiny Hut",
+    "it": "Capanna di Leomund"
    },
    "level": 3,
    "school": "evocation",
@@ -14206,13 +16532,17 @@
    "classes": [
     "bard",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Rifugio di Leomund"
+   ],
+   "source": "srd"
   },
   {
    "index": "tongues",
    "name": {
     "en": "Tongues",
-    "it": "Lingue"
+    "it": "Linguaggi"
    },
    "level": 3,
    "school": "divination",
@@ -14256,13 +16586,17 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Lingue"
+   ],
+   "source": "srd"
   },
   {
    "index": "transport-via-plants",
    "name": {
     "en": "Transport via Plants",
-    "it": "Trasporto vegetale"
+    "it": "Trasporto Vegetale"
    },
    "level": 6,
    "school": "conjuration",
@@ -14299,13 +16633,14 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "tree-stride",
    "name": {
     "en": "Tree Stride",
-    "it": "Passo arboreo"
+    "it": "Traslazione Arborea"
    },
    "level": 5,
    "school": "conjuration",
@@ -14343,13 +16678,17 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "aliases": [
+    "Passo arboreo"
+   ],
+   "source": "srd"
   },
   {
    "index": "true-polymorph",
    "name": {
     "en": "True Polymorph",
-    "it": "Metamorfosi pura"
+    "it": "Metamorfosi Pura"
    },
    "level": 9,
    "school": "transmutation",
@@ -14392,13 +16731,14 @@
     "bard",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "true-resurrection",
    "name": {
     "en": "True Resurrection",
-    "it": "Resurrezione pura"
+    "it": "Resurrezione Pura"
    },
    "level": 9,
    "school": "necromancy",
@@ -14440,13 +16780,14 @@
    "classes": [
     "cleric",
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "true-seeing",
    "name": {
     "en": "True Seeing",
-    "it": "Visione del vero"
+    "it": "Visione del Vero"
    },
    "level": 6,
    "school": "divination",
@@ -14491,13 +16832,14 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "true-strike",
    "name": {
     "en": "True Strike",
-    "it": "Colpo accurato"
+    "it": "Colpo Accurato"
    },
    "level": 0,
    "school": "divination",
@@ -14536,13 +16878,58 @@
     "sorcerer",
     "warlock",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "tsunami",
+   "name": {
+    "en": "Tsunami",
+    "it": "Tsunami"
+   },
+   "level": 8,
+   "school": "conjuration",
+   "casting_time": {
+    "en": "1 minute",
+    "it": "1 minuto"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Sight",
+    "it": "Linea di vista"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 6 rounds",
+    "it": "Concentrazione, fino a 6 round"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Wall of water up to 300x300x50 feet: Strength saving throw, 6d10 bludgeoning (half on a success); at the start of each turn it moves 50 feet carrying creatures along (Huge or smaller: Strength saving throw or 5d10 bludgeoning, once per round); its height drops by 50 feet per turn and the damage by 1d10; swimming requires a Strength (Athletics) check.",
+    "it": "Muro d'acqua fino a 90x90x15 m: TS Forza, 6d10 contundenti (metà se superato); a inizio di ogni turno avanza di 15 m trascinando le creature (Enormi o inferiori: TS Forza o 5d10 contundenti, una volta per round); l'altezza cala di 15 m a turno e i danni di 1d10; nuotare richiede prova di Forza (Atletica)."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "str",
+   "damage_dice": "6d10",
+   "damage_type": "bludgeoning",
+   "higher_levels_dice": null,
+   "classes": [
+    "druid"
+   ],
+   "source": "phb"
   },
   {
    "index": "unseen-servant",
    "name": {
     "en": "Unseen Servant",
-    "it": "Servitore invisibile"
+    "it": "Servitore Inosservato"
    },
    "level": 1,
    "school": "conjuration",
@@ -14585,13 +16972,17 @@
     "bard",
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Servitore invisibile"
+   ],
+   "source": "srd"
   },
   {
    "index": "vampiric-touch",
    "name": {
     "en": "Vampiric Touch",
-    "it": "Tocco vampirico"
+    "it": "Tocco del Vampiro"
    },
    "level": 3,
    "school": "necromancy",
@@ -14632,13 +17023,17 @@
    "classes": [
     "warlock",
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Tocco vampirico"
+   ],
+   "source": "srd"
   },
   {
    "index": "vicious-mockery",
    "name": {
     "en": "Vicious Mockery",
-    "it": "Beffa crudele"
+    "it": "Beffa Crudele"
    },
    "level": 0,
    "school": "enchantment",
@@ -14674,13 +17069,14 @@
    "higher_levels_dice": null,
    "classes": [
     "bard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "wall-of-fire",
    "name": {
     "en": "Wall of Fire",
-    "it": "Muro di fuoco"
+    "it": "Muro di Fuoco"
    },
    "level": 4,
    "school": "evocation",
@@ -14729,13 +17125,14 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "wall-of-force",
    "name": {
     "en": "Wall of Force",
-    "it": "Muro di forza"
+    "it": "Muro di Forza"
    },
    "level": 5,
    "school": "evocation",
@@ -14776,13 +17173,14 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "wall-of-ice",
    "name": {
     "en": "Wall of Ice",
-    "it": "Muro di ghiaccio"
+    "it": "Muro di Ghiaccio"
    },
    "level": 6,
    "school": "evocation",
@@ -14829,13 +17227,14 @@
    "higher_levels_dice": "2d6",
    "classes": [
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "wall-of-stone",
    "name": {
     "en": "Wall of Stone",
-    "it": "Muro di pietra"
+    "it": "Muro di Pietra"
    },
    "level": 5,
    "school": "evocation",
@@ -14878,13 +17277,14 @@
     "druid",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "wall-of-thorns",
    "name": {
     "en": "Wall of Thorns",
-    "it": "Muro di spine"
+    "it": "Muro di Spine"
    },
    "level": 6,
    "school": "conjuration",
@@ -14931,13 +17331,14 @@
    "higher_levels_dice": "1d8",
    "classes": [
     "druid"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "warding-bond",
    "name": {
     "en": "Warding Bond",
-    "it": "Legame protettivo"
+    "it": "Vincolo di Interdizione"
    },
    "level": 2,
    "school": "abjuration",
@@ -14978,13 +17379,17 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Legame protettivo"
+   ],
+   "source": "srd"
   },
   {
    "index": "water-breathing",
    "name": {
     "en": "Water Breathing",
-    "it": "Respirare sott'acqua"
+    "it": "Respirare sott'Acqua"
    },
    "level": 3,
    "school": "transmutation",
@@ -15028,13 +17433,14 @@
     "ranger",
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "water-walk",
    "name": {
     "en": "Water Walk",
-    "it": "Camminare sull'acqua"
+    "it": "Camminare sull'Acqua"
    },
    "level": 3,
    "school": "transmutation",
@@ -15078,7 +17484,8 @@
     "druid",
     "ranger",
     "sorcerer"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "web",
@@ -15129,13 +17536,14 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "weird",
    "name": {
     "en": "Weird",
-    "it": "Orrore"
+    "it": "Fatale"
    },
    "level": 9,
    "school": "illusion",
@@ -15175,13 +17583,17 @@
    "higher_levels_dice": null,
    "classes": [
     "wizard"
-   ]
+   ],
+   "aliases": [
+    "Orrore"
+   ],
+   "source": "srd"
   },
   {
    "index": "wind-walk",
    "name": {
     "en": "Wind Walk",
-    "it": "Camminare sul vento"
+    "it": "Camminare nel Vento"
    },
    "level": 6,
    "school": "transmutation",
@@ -15222,13 +17634,17 @@
    "higher_levels_dice": null,
    "classes": [
     "druid"
-   ]
+   ],
+   "aliases": [
+    "Camminare sul vento"
+   ],
+   "source": "srd"
   },
   {
    "index": "wind-wall",
    "name": {
-    "en": "Wind Wall",
-    "it": "Muro di vento"
+    "en": "Wall of Wind",
+    "it": "Muro di Vento"
    },
    "level": 3,
    "school": "evocation",
@@ -15273,7 +17689,8 @@
    "classes": [
     "druid",
     "ranger"
-   ]
+   ],
+   "source": "srd"
   },
   {
    "index": "wish",
@@ -15316,13 +17733,64 @@
    "classes": [
     "sorcerer",
     "wizard"
-   ]
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "witch-bolt",
+   "name": {
+    "en": "Witch Bolt",
+    "it": "Dardo Stregato"
+   },
+   "level": 1,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 action",
+    "it": "1 azione"
+   },
+   "range_ft": 30,
+   "range_text": {
+    "en": "30 feet",
+    "it": "30 piedi"
+   },
+   "area": null,
+   "components": [
+    "V",
+    "S",
+    "M"
+   ],
+   "material": {
+    "en": "a twig from a tree that has been struck by lightning",
+    "it": "rametto di albero colpito da un fulmine"
+   },
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "Ranged spell attack: 1d12 lightning; on each of your turns you can use your action to deal 1d12 lightning automatically; ends if out of range or behind total cover; scaling +1d12 per slot level above 1st",
+    "it": "Attacco a distanza con incantesimo: 1d12 fulmine; ogni tuo turno puoi usare l'azione per infliggere automaticamente 1d12 fulmine; termina se fuori gittata o in copertura totale; scalata +1d12 per slot oltre il 1°"
+   },
+   "higher_level": null,
+   "attack_type": "ATK",
+   "save_ability": null,
+   "damage_dice": "1d12",
+   "damage_type": "lightning",
+   "higher_levels_dice": "1d12",
+   "classes": [
+    "sorcerer",
+    "warlock",
+    "wizard"
+   ],
+   "source": "phb"
   },
   {
    "index": "word-of-recall",
    "name": {
     "en": "Word of Recall",
-    "it": "Parola di richiamo"
+    "it": "Parola del Ritiro"
    },
    "level": 6,
    "school": "conjuration",
@@ -15361,13 +17829,60 @@
    "higher_levels_dice": null,
    "classes": [
     "cleric"
-   ]
+   ],
+   "aliases": [
+    "Parola di richiamo"
+   ],
+   "source": "srd"
+  },
+  {
+   "index": "wrathful-smite",
+   "name": {
+    "en": "Wrathful Smite",
+    "it": "Punizione Collerica"
+   },
+   "level": 1,
+   "school": "evocation",
+   "casting_time": {
+    "en": "1 bonus action",
+    "it": "1 azione bonus"
+   },
+   "range_ft": null,
+   "range_text": {
+    "en": "Self",
+    "it": "Personale"
+   },
+   "area": null,
+   "components": [
+    "V"
+   ],
+   "material": null,
+   "duration": {
+    "en": "Up to 1 minute",
+    "it": "Concentrazione, fino a 1 minuto"
+   },
+   "concentration": true,
+   "ritual": false,
+   "desc": {
+    "en": "On your next melee weapon hit: +1d6 psychic; the target makes a Wisdom saving throw or is frightened while the spell lasts; it can use an action for a Wisdom check against the DC to end it.",
+    "it": "Al prossimo colpo con arma da mischia: +1d6 psichici; il bersaglio fa TS Saggezza o è spaventato finché dura; può usare un'azione per una prova di Saggezza contro la CD per terminare."
+   },
+   "higher_level": null,
+   "attack_type": "SAVE",
+   "save_ability": "wis",
+   "damage_dice": "1d6",
+   "damage_type": "psychic",
+   "higher_levels_dice": null,
+   "classes": [
+    "paladin"
+   ],
+   "source": "phb"
   },
   {
    "index": "zone-of-truth",
    "name": {
     "en": "Zone of Truth",
-    "it": "Zona di verità"
+    "it": "Zona di Verità"
    },
    "level": 2,
    "school": "enchantment",
@@ -15409,7 +17924,8 @@
     "bard",
     "cleric",
     "paladin"
-   ]
+   ],
+   "source": "srd"
   }
  ]
 }

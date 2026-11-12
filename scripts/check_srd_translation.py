@@ -22,9 +22,9 @@ def check(data_dir: Path = DATA_DIR) -> list[str]:
                     problems.append(f"{where}: missing it for {path}")
                     continue
                 en = cont["en"]
-                if path.endswith("name") and en.casefold() in official and it != official[en.casefold()]:
+                if path.endswith("name") and kind not in ("spells", "spells-2024") and en.casefold() in official and it != official[en.casefold()]:
                     problems.append(f"{where}: {path} {it!r} != glossary {official[en.casefold()]!r}")
-                if kind == "spells" and path in ("casting_time", "duration"):
+                if kind in ("spells", "spells-2024") and path in ("casting_time", "duration"):
                     table = times if path == "casting_time" else durations
                     if it not in table.values():
                         problems.append(f"{where}: {path}.it {it!r} not in glossary")
