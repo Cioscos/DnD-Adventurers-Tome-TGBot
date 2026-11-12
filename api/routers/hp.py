@@ -960,8 +960,9 @@ async def rest(
         spec, key, damage_type = chosen_resistance
         begin_state(char, StateSpec(key, ends_on=("manual",), data={"damage_type": damage_type}), spec.key, spec.name["it"])
     temp_received = await _deliver_rest_temp_hp(session, char, edition, receivers)
-    if (char.turn_state or {}).get("spell_slot_cast") or (char.turn_state or {}).get("bonus_spell_cast"):  # il riposo chiude il turno: «secondo slot» non vale più
-        char.turn_state = {**char.turn_state, "spell_slot_cast": False, "bonus_spell_cast": False}
+    spell_turn = ("spell_slot_cast", "bonus_spell_cast", "leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic")
+    if any((char.turn_state or {}).get(k) for k in spell_turn):  # il riposo chiude il turno: nulla del lancio precedente vale più
+        char.turn_state = {k: v for k, v in char.turn_state.items() if k not in spell_turn} | {"spell_slot_cast": False, "bonus_spell_cast": False}
     await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
 
