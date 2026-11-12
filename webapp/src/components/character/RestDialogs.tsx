@@ -11,6 +11,7 @@ import RestResistancePicker from '@/components/character/RestResistancePicker'
 import RestAllyTempPicker from '@/components/character/RestAllyTempPicker'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
+import { restNeedsHp } from '@/lib/restRules'
 import type { RestState } from '@/hooks/useRest'
 import type { CharacterFull } from '@/types'
 
@@ -18,7 +19,9 @@ import type { CharacterFull } from '@/types'
 export default function RestDialogs({ char, rest }: { char: CharacterFull; rest: RestState }) {
   const { t } = useTranslation()
   const is2024 = char.rules_edition === '2024'
-  const { restMutation, hitDieMutation } = rest
+  const { restMutation, hitDieMutation, startRest } = rest
+  const longBlocked = restNeedsHp(char, 'long')
+  const shortBlocked = restNeedsHp(char, 'short')
 
   const interruptedToggle = (hint: string) => (
     <div className="text-left">
@@ -40,7 +43,9 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
         body={
           <div className="space-y-3">
             <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
-            {rest.confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
+            {rest.confirmLongRest && (longBlocked
+              ? <p className="text-sm text-dnd-crimson-bright font-body">{t('character.quick_actions.rest_needs_hp')}</p>
+              : <RestPreviewList charId={char.id} restType="long" />)}
             <TomeReopenToggle char={char} value={rest.reopenTome} onChange={rest.setReopenTome} />
             <RestResistancePicker char={char} value={rest.resistance} onChange={rest.setResistance} />
             <RestAllyTempPicker char={char} value={rest.tempAllies} onChange={rest.setTempAllies} />
@@ -62,7 +67,8 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
         confirmLabel={t('character.quick_actions.rest_long')}
         confirmVariant="primary"
         loading={restMutation.isPending}
-        onConfirm={() => restMutation.mutate({ restType: 'long' })}
+        confirmDisabled={longBlocked}
+        onConfirm={() => startRest({ restType: 'long' })}
       />
 
       <ConfirmSheet
@@ -73,17 +79,20 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
         confirmLabel={t('character.quick_actions.rest_long')}
         confirmVariant="primary"
         loading={restMutation.isPending}
-        onConfirm={() => restMutation.mutate({ restType: 'long', confirmEarly: true })}
+        onConfirm={() => startRest({ restType: 'long', confirmEarly: true })}
       />
 
       {rest.shortRestOpen && (
         <HitDiceModal
           classes={char.classes ?? []}
           onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
-          onConfirmRest={() => restMutation.mutate({ restType: 'short' })}
+          onConfirmRest={() => startRest({ restType: 'short' })}
+          restBlocked={shortBlocked}
           preview={
             <>
-              <RestPreviewList charId={char.id} restType="short" />
+              {shortBlocked
+                ? <p className="text-sm text-dnd-crimson-bright font-body text-left">{t('character.quick_actions.rest_needs_hp')}</p>
+                : <RestPreviewList charId={char.id} restType="short" />}
               <SongOfRestToggle char={char} />
               <NaturalRecoveryPicker char={char} value={rest.recovery} onChange={rest.setRecovery} />
               <ArcaneRecoveryPicker char={char} value={rest.arcane} onChange={rest.setArcane} />

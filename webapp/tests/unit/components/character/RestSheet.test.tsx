@@ -346,3 +346,20 @@ describe('useRest', () => {
     expect(result.current.ateAndDrank).toBe(true)
   })
 })
+
+describe('riposo: guardie', () => {
+  it('un doppio tocco su «Riposa» invia una sola richiesta', async () => {
+    rest.mockReturnValue(new Promise(() => {}))
+    setup()
+    await openShortRest()
+    await userEvent.dblClick(screen.getByText('rest'))
+    expect(rest).toHaveBeenCalledTimes(1)
+  })
+
+  it('a 0 PF nel lungo niente anteprima e il motivo al suo posto', async () => {
+    setup({ ...char, current_hit_points: 0, hit_points: 20, rules_edition: '2014' } as unknown as CharacterFull)
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    expect(screen.getByText('character.quick_actions.rest_needs_hp')).toBeTruthy()
+    expect(restPreview).not.toHaveBeenCalled()
+  })
+})

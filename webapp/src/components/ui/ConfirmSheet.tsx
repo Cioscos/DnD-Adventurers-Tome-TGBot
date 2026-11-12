@@ -13,6 +13,7 @@ interface ConfirmSheetProps {
   cancelLabel?: string
   confirmVariant?: ButtonVariant
   loading?: boolean
+  confirmDisabled?: boolean
   centered?: boolean
   /** Livello z: da alzare quando la conferma si apre sopra un altro foglio. */
   zClassName?: string
@@ -30,6 +31,7 @@ export default function ConfirmSheet({
   cancelLabel,
   confirmVariant = 'danger',
   loading = false,
+  confirmDisabled = false,
   centered = true,
   zClassName,
 }: ConfirmSheetProps) {
@@ -51,6 +53,7 @@ export default function ConfirmSheet({
             variant={confirmVariant}
             fullWidth
             loading={loading}
+            disabled={confirmDisabled}
             haptic={confirmVariant === 'danger' ? 'error' : 'success'}
             onClick={onConfirm}
           >

@@ -19,6 +19,8 @@ interface HitDiceModalProps {
   pendingClassId?: number
   /** True while the short-rest mutation itself is in flight (onConfirmRest). */
   restPending?: boolean
+  /** Il server rifiuterebbe il riposo (0 PF): conferma spenta. */
+  restBlocked?: boolean
   /** Anteprima del riposo mostrata sopra i pulsanti. */
   preview?: ReactNode
 }
@@ -31,6 +33,7 @@ export default function HitDiceModal({
   isPending,
   pendingClassId,
   restPending,
+  restBlocked,
   preview,
 }: HitDiceModalProps) {
   const { t } = useTranslation()
@@ -111,7 +114,7 @@ export default function HitDiceModal({
             variant="primary"
             fullWidth
             onClick={onConfirmRest}
-            disabled={isPending}
+            disabled={isPending || restBlocked}
             loading={restPending}
             icon={<Moon size={16} />}
           >
