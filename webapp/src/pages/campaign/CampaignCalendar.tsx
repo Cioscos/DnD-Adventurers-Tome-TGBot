@@ -174,6 +174,7 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
         title={t('campaign.calendar.cancel_title')}
         body={t('campaign.calendar.cancel_body')}
         confirmLabel={t('campaign.calendar.cancel_confirm')}
+        cancelLabel={t('common.back')}
       />
     </>
   )
