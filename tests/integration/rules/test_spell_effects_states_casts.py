@@ -350,3 +350,36 @@ async def test_d4_undo_after_recast_gives_each_old_target_its_own_slot(client, t
         await regrant_spells(s, char, before)
         await s.commit()
     assert (await _sheet(client, hero))["computed"]["hp_max_effective"] == 205  # slot 2: +5, non +10
+
+
+# H3-b / D7: la concentrazione di chi lancia segue l'ultimo bersaglio che termina l'effetto
+
+async def test_h3b_heroism_ended_on_the_last_target_ends_the_casters_concentration(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
+    await _defense_cast(client, caster, spell, [hero], level=1)
+    assert (await _full(client, caster))["concentrating_spell_id"] == spell
+    as_user(PLAYER_ID)
+    assert (await client.delete(f"/characters/{hero}/active-states/spell:heroism")).status_code == 200
+    assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] is None
+
+
+async def test_h3b_self_cast_ended_by_the_caster_keeps_the_concentration(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
+    await _defense_cast(client, caster, spell, [caster], level=1)
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{caster}/active-states/spell:heroism")).status_code == 200
+    assert (await _full(client, caster))["concentrating_spell_id"] == spell
+
+
+async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
+    for kind in ("short", "long"):
+        as_user(GM_ID)
+        async with test_session_factory() as s:
+            row = await s.get(Character, caster)
+            row.turn_state = {"spell_slot_cast": True, "bonus_spell_cast": True}
+            await s.commit()
+        assert (await client.post(f"/characters/{caster}/rest", json={"rest_type": kind, "confirm_early": True})).status_code == 200
+        async with test_session_factory() as s:
+            turn = (await s.get(Character, caster)).turn_state
+        assert not turn.get("spell_slot_cast") and not turn.get("bonus_spell_cast"), kind

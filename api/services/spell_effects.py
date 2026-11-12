@@ -13,6 +13,7 @@ from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.spell import SpellEffectsRead
+from api.services.durations import end_concentration
 from api.services.effects import apply_heal, cap_hp_to_max, grant_temp_hp
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.session_allies import ally_target
@@ -225,6 +226,10 @@ async def end_by_target(session: AsyncSession, char: Character, closed: list[dic
         if closing:
             caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
             settle_closed(caster, closing)
+            # Concentrazione su altri: finito l'ultimo bersaglio non resta nulla da mantenere (non se l'effetto era su di sé)
+            if caster is not char and any("concentration_end" in (s.get("ends_on") or ()) for s in closing) \
+                    and not any("concentration_end" in (s.get("ends_on") or ()) for s in caster.active_states):
+                end_concentration(caster)
     await _cap_hp(session, char, closed)
 
 
