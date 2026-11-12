@@ -760,6 +760,8 @@ export interface SessionRecapCharacter {
   slots_used: Record<string, number>
   rests: { short: number; long: number }
   conditions: string[]
+  /** Livello per le condizioni a livelli (Spossatezza); assente nei recap vecchi. */
+  condition_levels?: Record<string, number>
 }
 
 export interface SessionRecap {

@@ -704,7 +704,7 @@ def _apply_exhaustion_change(session: AsyncSession, char: Character, change: int
     conditions["exhaustion"] = old_exh + change
     char.conditions = conditions
     add_history(session, char.id, "condition_change", f"Spossatezza: livello {old_exh} → {old_exh + change} ({kind})",
-                 meta={"slug": "exhaustion", "active": change > 0})
+                 meta={"slug": "exhaustion", "active": change > 0, "level": old_exh + change})
 
 
 def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,

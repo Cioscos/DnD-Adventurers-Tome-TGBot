@@ -81,7 +81,7 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     healed = char.current_hit_points - old
     if amount > 0:  # una cura da 0 non è un evento da ricordare
         add_history(session, char.id, "hp_change",
-                     f"Cura: +{amount} HP ({old} → {char.current_hit_points})",
+                     f"Cura: +{healed} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL", "amount": healed})
     firing = await dispatch(session, char, "hp_healed", {
         "amount": amount,
@@ -199,7 +199,7 @@ async def apply_conditions(session: AsyncSession, char: Character,
             if is_exhaustion:
                 add_history(session, char.id, "condition_change",
                              f"Spossatezza: livello {old_val} → {new_disp}",
-                             meta={"slug": cond, "active": new_disp > old_val})
+                             meta={"slug": cond, "active": new_disp > old_val, "level": new_disp})
             elif new_val:
                 add_history(session, char.id, "condition_change",
                              f"Condizione attivata: {condition_label(cond)}",

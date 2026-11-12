@@ -2715,6 +2715,7 @@
       "rests": "Rests",
       "rests_v": "{{s}} short · {{l}} long",
       "conditions": "Conditions",
+      "exhaustion": "Exhaustion",
       "players": "Characters",
       "combat": "Combat",
       "encounters": "Encounters",
@@ -2733,7 +2734,7 @@
       "hl_unluckiest": "Unluckiest with dice: {{name}} ({{v}}× natural 1)",
       "hl_luckiest": "Luckiest with dice: {{name}} ({{v}}× natural 20)",
       "hl_most_damage": "Took the most damage: {{name}} ({{v}})",
-      "hl_top_healer": "Top healer: {{name}} ({{v}} HP)"
+      "hl_top_healer": "Most healed: {{name}} ({{v}} HP)"
     },
     "night_n": "Night {{n}}",
     "nights": "Nights",

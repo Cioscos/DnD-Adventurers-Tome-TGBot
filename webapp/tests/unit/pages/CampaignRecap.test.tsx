@@ -61,6 +61,18 @@ const renderPage = () => renderWithProviders(
 afterEach(() => { vi.clearAllMocks() })
 
 describe('CampaignRecap', () => {
+  it('shows exhaustion with its level, or the plain name on old recaps', async () => {
+    const c = RECAP.characters[0]
+    recap.mockResolvedValue({ ...RECAP, characters: [{ ...c, conditions: ['exhaustion'], condition_levels: { exhaustion: 3 } }] })
+    campaignGet.mockResolvedValue({ id: 5, is_gm: false })
+    const { unmount } = renderPage()
+    expect(await screen.findByText(/character\.conditions\.exhaustion:\{"level":3/)).toBeInTheDocument()
+    unmount()
+    recap.mockResolvedValue({ ...RECAP, characters: [{ ...c, conditions: ['exhaustion'] }] })
+    renderPage()
+    expect(await screen.findByText('campaign.recap.exhaustion')).toBeInTheDocument()
+  })
+
   it('renders header, PC card, combat, items, lore and highlights', async () => {
     recap.mockResolvedValue(RECAP)
     campaignGet.mockResolvedValue({ id: 5, is_gm: false })

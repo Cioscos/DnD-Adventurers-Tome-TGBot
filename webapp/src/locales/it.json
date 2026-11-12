@@ -2714,6 +2714,7 @@
       "rests": "Riposi",
       "rests_v": "{{s}} brevi · {{l}} lunghi",
       "conditions": "Condizioni",
+      "exhaustion": "Indebolimento",
       "players": "Personaggi",
       "combat": "Combattimenti",
       "encounters": "Scontri",
@@ -2732,7 +2733,7 @@
       "hl_unluckiest": "Il più sfortunato ai dadi: {{name}} ({{v}}× 1 naturale)",
       "hl_luckiest": "Il più fortunato ai dadi: {{name}} ({{v}}× 20 naturale)",
       "hl_most_damage": "Chi ha subito più danni: {{name}} ({{v}})",
-      "hl_top_healer": "Chi ha curato di più: {{name}} ({{v}} PF)"
+      "hl_top_healer": "Chi è stato curato di più: {{name}} ({{v}} PF)"
     },
     "night_n": "Serata {{n}}",
     "nights": "Serate",
