@@ -58,3 +58,12 @@ export function formatCondition(
   }
   return key.startsWith('custom:') ? conditionLabel(key, t) : t(`character.conditions.${key}`)
 }
+
+/** Perché non si agisce: sorpresa, «non puoi muoverti né agire» (Letargia di Velocità 2014, senza la condizione) o incapacitato. */
+export function incapacitatedMessageKey(char: {
+  computed?: { surprised?: boolean } | null
+  active_states?: { data?: Record<string, unknown> }[] | null
+}): string {
+  if (char.computed?.surprised) return 'character.turn.surprised'
+  return char.active_states?.some((s) => s.data?.no_actions) ? 'character.turn.no_actions' : 'character.turn.incapacitated'
+}

@@ -9,6 +9,7 @@ import { api, ApiError, type RollMode } from '@/api/client'
 import { isUnlimitedFeature } from '@/lib/abilityUses'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
+import { incapacitatedMessageKey } from '@/lib/conditions'
 import Input from '@/components/ui/Input'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
@@ -545,7 +546,7 @@ export default function Turn() {
 
       {char.computed?.incapacitated && (
         <p role="status" className="px-1 text-sm font-body text-dnd-crimson-bright">
-          {t(char.computed.surprised ? 'character.turn.surprised' : 'character.turn.incapacitated')}
+          {t(incapacitatedMessageKey(char))}
         </p>
       )}
 

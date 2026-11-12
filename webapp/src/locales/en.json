@@ -1592,6 +1592,7 @@
       "mark_used": "Mark as used",
       "standard_actions": "Standard actions ({{n}})",
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
+      "no_actions": "You cannot move or act.",
       "surprised": "You are surprised: this turn you can't act, move or react.",
       "down_exit": "At 0 HP you can only:",
       "surprised_exit": "To act you must first do this:",

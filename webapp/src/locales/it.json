@@ -1591,6 +1591,7 @@
       "mark_used": "Segna come usata",
       "standard_actions": "Azioni standard ({{n}})",
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
+      "no_actions": "Non puoi muoverti né agire.",
       "surprised": "Sei colto di sorpresa: in questo turno non agisci, non ti muovi e non reagisci.",
       "down_exit": "A 0 PF puoi solo:",
       "surprised_exit": "Per agire devi prima farlo:",
