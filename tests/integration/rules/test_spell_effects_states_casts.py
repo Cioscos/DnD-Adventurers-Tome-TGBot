@@ -15,6 +15,7 @@ from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_sorcerer_metamagic import EXTENDED, TWINNED, _caster as _sorcerer_with
 from tests.integration.rules.test_spell_effects_cast import SOF, SOF_ROUNDS, STATE, _ac, _caster, _cast, _full, _states
 from tests.integration.rules.test_spell_effects_defenses import _sheet
+from tests.integration.rules.test_spell_effects_defenses import _cast as _defense_cast
 from tests.integration.rules.test_spell_effects_defenses import _table as _defense_table
 from tests.integration.test_magic_items import _item
 
@@ -294,3 +295,95 @@ async def test_spells_haste_lethargy_only_when_the_last_haste_ends(client, test_
     await client.patch(f"/characters/{second}/concentration", json={"spell_id": None})
     sheet = await _sheet(client, hero)
     assert "spell:haste" not in keys(sheet) and "spell:haste_lethargy" in keys(sheet)
+
+
+# D4: senza concentrazione il nuovo lancio non toglie lo stato ai bersagli dei lanci precedenti
+
+async def test_d4_aid_recast_on_another_target_keeps_the_first(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Aid", "aid", 2)
+    await _defense_cast(client, caster, spell, [hero], level=2)
+    await _defense_cast(client, caster, spell, [caster], level=2)
+    assert len(await _states(client, hero, PLAYER_ID, "spell:aid")) == 1
+    assert len(await _states(client, caster, GM_ID, "spell:aid")) == 1
+
+
+async def test_d4_aid_recast_on_same_target_replaces_and_clock_closes_with_last_target(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Aid", "aid", 2)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/spell_slots", json={"level": 3, "total": 1})).status_code == 201
+    await _defense_cast(client, caster, spell, [hero], level=2)
+    await _defense_cast(client, caster, spell, [hero], level=3)
+    [state] = await _states(client, hero, PLAYER_ID, "spell:aid")
+    assert state["data"]["slot_level"] == 3
+    assert (await _sheet(client, hero))["computed"]["hp_max_effective"] == 210  # +10, non +15
+    await _defense_cast(client, caster, spell, [caster], level=2)
+    as_user(PLAYER_ID)
+    assert (await client.delete(f"/characters/{hero}/active-states/spell:aid")).status_code == 200
+    assert len(await _states(client, caster, GM_ID, "spell_cast:aid")) == 1  # resta un bersaglio: l'orologio vive
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{caster}/active-states/spell:aid")).status_code == 200
+    assert await _states(client, caster, GM_ID, "spell_cast:aid") == []
+
+
+async def test_d4_concentration_recast_still_drops_the_old_targets(client, test_session_factory):
+    sid, hero, caster, spell = await _caster_table(client, test_session_factory)
+    await _cast(client, caster, spell, [hero])
+    await _cast(client, caster, spell, [caster])
+    assert await _states(client, hero, PLAYER_ID) == []
+    assert len(await _states(client, caster, GM_ID)) == 1
+
+
+async def test_d4_undo_after_recast_gives_each_old_target_its_own_slot(client, test_session_factory):
+    from api.services.spell_effects import regrant_spells
+    from core.rules.states import SPELL_GIVEN
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Aid", "aid", 2)
+    as_user(GM_ID)
+    assert (await client.post(f"/characters/{caster}/spell_slots", json={"level": 3, "total": 1})).status_code == 201
+    await _defense_cast(client, caster, spell, [hero], level=2)
+    await _defense_cast(client, caster, spell, [caster], level=3)
+    async with test_session_factory() as s:
+        char = await s.get(Character, caster)
+        before = dict(char.settings[SPELL_GIVEN])
+        target = await s.get(Character, hero)
+        target.active_states = [st for st in target.active_states if st["key"] != "spell:aid"]  # la chiusura dell'orologio li ha tolti
+        char.settings = {k: v for k, v in char.settings.items() if k != SPELL_GIVEN}
+        await regrant_spells(s, char, before)
+        await s.commit()
+    assert (await _sheet(client, hero))["computed"]["hp_max_effective"] == 205  # slot 2: +5, non +10
+
+
+# H3-b / D7: la concentrazione di chi lancia segue l'ultimo bersaglio che termina l'effetto
+
+async def test_h3b_heroism_ended_on_the_last_target_ends_the_casters_concentration(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
+    await _defense_cast(client, caster, spell, [hero], level=1)
+    assert (await _full(client, caster))["concentrating_spell_id"] == spell
+    as_user(PLAYER_ID)
+    assert (await client.delete(f"/characters/{hero}/active-states/spell:heroism")).status_code == 200
+    assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] is None
+
+
+async def test_h3b_self_cast_ended_by_the_caster_keeps_the_concentration(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
+    await _defense_cast(client, caster, spell, [caster], level=1)
+    as_user(GM_ID)
+    assert (await client.delete(f"/characters/{caster}/active-states/spell:heroism")).status_code == 200
+    assert (await _full(client, caster))["concentrating_spell_id"] == spell
+
+
+async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_factory):
+    hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
+    for kind in ("short", "long"):
+        as_user(GM_ID)
+        async with test_session_factory() as s:
+            row = await s.get(Character, caster)
+            row.turn_state = {"spell_slot_cast": True, "bonus_spell_cast": True, "leveled_cast": True, "cast_prior_slot": True,
+                              "empowered_used": "x", "spell_attack_dice": 2, "cast_metamagic": ["m"], "attacks_made": 3}
+            await s.commit()
+        assert (await client.post(f"/characters/{caster}/rest", json={"rest_type": kind, "confirm_early": True})).status_code == 200
+        async with test_session_factory() as s:
+            turn = (await s.get(Character, caster)).turn_state
+        assert not turn.get("spell_slot_cast") and not turn.get("bonus_spell_cast"), kind
+        for key in ("leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic"):
+            assert key not in turn or not turn[key], (kind, key)
+        assert turn["attacks_made"] == 3, kind

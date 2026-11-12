@@ -218,3 +218,52 @@ async def test_undo_of_a_snapshot_saved_before_a_new_key_existed(client, test_se
     r = await _undo(client, cid, dmg["hp_undo_id"])
     assert r.status_code == 200, r.text
     assert r.json()["current_hit_points"] == 20
+
+
+async def test_get_exposes_undo_id_until_hp_changes(client):
+    cid = await _make_char(client, 20)
+    dmg = await _hp(client, cid, "damage", 5)
+    got = (await client.get(f"/characters/{cid}")).json()
+    assert got["hp_undo_id"] == dmg["hp_undo_id"]
+    await _hp(client, cid, "set_current", 3)  # una nuova operazione sostituisce lo snapshot
+    assert (await client.get(f"/characters/{cid}")).json()["hp_undo_id"] != dmg["hp_undo_id"]
+    assert (await _undo(client, cid, got["hp_undo_id"])).status_code == 409
+    newest = (await client.get(f"/characters/{cid}")).json()["hp_undo_id"]
+    assert (await _undo(client, cid, newest)).status_code == 200
+    assert (await client.get(f"/characters/{cid}")).json()["hp_undo_id"] is None
+
+
+async def _damage_spending_reaction(client, test_session_factory) -> tuple[int, str]:
+    cid = await _make_char(client, 20)
+    dmg = await _hp(client, cid, "damage", 5)
+    async with test_session_factory() as session:  # come se l'opzione avesse pagato la reazione propria
+        char = (await session.execute(select(Character).where(Character.id == cid))).scalar_one()
+        char.hp_undo = {**char.hp_undo, "spent": ["turn:reaction"]}
+        char.turn_state = {**(char.turn_state or {}), "reaction_used": True}
+        await session.commit()
+    return cid, dmg["hp_undo_id"]
+
+
+async def _reaction_used(test_session_factory, cid: int) -> bool:
+    async with test_session_factory() as session:
+        char = (await session.execute(select(Character).where(Character.id == cid))).scalar_one()
+        return bool(char.turn_state["reaction_used"])
+
+
+async def test_undo_same_turn_refunds_own_reaction(client, test_session_factory):
+    cid, op_id = await _damage_spending_reaction(client, test_session_factory)
+    assert (await _undo(client, cid, op_id)).status_code == 200
+    assert not await _reaction_used(test_session_factory, cid)
+
+
+async def test_undo_after_new_turn_keeps_reaction_spent(client, test_session_factory):
+    cid, op_id = await _damage_spending_reaction(client, test_session_factory)
+    assert (await client.post(f"/characters/{cid}/turn/new")).status_code == 200
+    async with test_session_factory() as session:  # nel nuovo turno la reazione è già spesa per altro
+        char = (await session.execute(select(Character).where(Character.id == cid))).scalar_one()
+        char.turn_state = {**char.turn_state, "reaction_used": True}
+        await session.commit()
+    r = await _undo(client, cid, op_id)
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] == 20
+    assert await _reaction_used(test_session_factory, cid)

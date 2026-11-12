@@ -113,6 +113,14 @@ describe('CampaignCalendar', () => {
     expect(day(10).querySelector('[data-mark]')).toBeNull()
   })
 
+  it('master: il dialogo di annullo offre «Indietro», non un secondo «Annulla»', async () => {
+    // il dialogo di conferma ha «Indietro» (non un secondo «Annulla») e «Annulla la serata»
+    show(true, [row({})])
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.calendar.schedule' }).then(() => day(25)))
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.calendar.cancel' }))
+    expect(screen.getByRole('button', { name: 'common.back' })).toBeInTheDocument()
+  })
+
   it('master: Programma serata, Sposta e Annulla', async () => {
     show(true, [row({})])
     expect(await screen.findByRole('button', { name: 'campaign.calendar.schedule' })).toBeInTheDocument()

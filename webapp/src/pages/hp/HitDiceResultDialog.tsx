@@ -29,7 +29,7 @@ export default function HitDiceResultDialog({ result, onClose }: Props) {
         +{result.healed}
       </m.p>
       <p className="text-xs text-dnd-text-muted font-mono">
-        [{result.rolls.join(', ')}] +{result.con_bonus} (COS)
+        [{result.rolls.join(', ')}] {result.con_bonus < 0 ? `−${-result.con_bonus}` : `+${result.con_bonus}`} (COS)
       </p>
       {(result.song_rolls?.length ?? 0) > 0 && (
         <p className="text-xs text-dnd-text-muted font-mono">

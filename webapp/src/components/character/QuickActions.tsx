@@ -48,6 +48,7 @@ import {
   type ResolvedQuickAction,
 } from '@/lib/quickActions'
 import { LEDGER_INDEX_ROW, LEDGER_TITLE } from '@/styles/ledger'
+import { incapacitatedMessageKey } from '@/lib/conditions'
 import type { HitDiceSpendResult } from '@/api/client'
 import type { CharacterFull, Ability, CharacterClass, Item } from '@/types'
 
@@ -505,7 +506,7 @@ export default function QuickActions({ char }: Props) {
         </div>
 
         {incapacitated && (
-          <p role="status" className="px-1 pb-1 text-sm font-body text-dnd-crimson-bright">{t('character.turn.incapacitated')}</p>
+          <p role="status" className="px-1 pb-1 text-sm font-body text-dnd-crimson-bright">{t(incapacitatedMessageKey(char))}</p>
         )}
         {resolved.length === 0 ? (
           <p className="border-t border-dnd-border px-1 py-3 text-xs text-dnd-text-muted font-body italic">

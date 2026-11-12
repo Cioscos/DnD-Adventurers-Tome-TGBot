@@ -8,8 +8,8 @@ const names = (l: typeof itLocale) => (l.character.inventory as unknown as { mas
 describe('masteryLabel (point 32)', () => {
   it('translates the mastery key, whichever way the server or the table writes it', () => {
     const t = (k: string, o?: Record<string, unknown>) => names(itLocale)[k.split('.').pop()!] ?? String(o?.defaultValue)
-    expect(masteryLabel(t, 'topple')).toBe('Atterrare')
-    expect(masteryLabel(t, 'Slow')).toBe('Rallentare')
+    expect(masteryLabel(t, 'topple')).toBe('Rovesciamento')
+    expect(masteryLabel(t, 'Slow')).toBe('Lentezza')
     expect(masteryLabel(t, 'unknown')).toBe('Unknown')
   })
 

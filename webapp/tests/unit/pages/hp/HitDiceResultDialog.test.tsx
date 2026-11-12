@@ -42,6 +42,11 @@ const result: HitDiceSpendResult = {
 }
 
 describe('HitDiceResultDialog', () => {
+  it('shows a negative CON modifier with a single minus sign', () => {
+    render(<HitDiceResultDialog result={{ ...result, con_bonus: -3 }} onClose={() => {}} />)
+    expect(screen.getByText(/\[5, 4\] −3 \(COS\)/)).toBeInTheDocument()
+  })
+
   it('shows the healed amount, the individual rolls + CON bonus, and the new HP total', () => {
     render(<HitDiceResultDialog result={result} onClose={() => {}} />)
     expect(screen.getByTestId('result-dialog')).toHaveAttribute('data-accent', 'emerald')

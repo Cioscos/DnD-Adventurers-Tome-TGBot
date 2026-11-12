@@ -360,3 +360,46 @@ async def test_recap_text_labels_coins_and_conditions():
     assert "15 GP" in it and "15 GP" in en
     assert "Avvelenato" in it and "custom" not in it and "Fuoco Nero" in it
     assert "Poisoned" in en and "Fuoco nero" in en and "custom" not in en
+
+
+async def test_recap_exhaustion_level_spell_heal_and_real_heal_text(client, test_session_factory):
+    f = test_session_factory
+    act(GM_ID)
+    from tests.integration.test_campaigns_api import _new_campaign
+    camp = await _new_campaign(client)
+    act(PLAYER_ID)
+    r = await client.post("/characters", json={"name": "Chierico", "initial_class": {
+        "class_name": "cleric", "level": 3, "subclass": "Dominio della Vita"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    r = await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": cid})
+    assert r.status_code == 200, r.text
+    sid = await _start(client, camp["id"])
+    await _join(client, camp["id"], PLAYER_ID, cid)
+
+    act(PLAYER_ID)
+    for op, v in (("set_max", 20), ("set_current", 5)):
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": v})).status_code == 200
+    # cura oltre il massimo: 5 -> 20 sono 15 PF veri, non i 100 chiesti
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "heal", "value": 100})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 9})).status_code == 200
+    spells = {s["srd_index"]: s for s in (await client.get(f"/characters/{cid}/spells")).json()}
+    r = await client.post(f"/characters/{cid}/spells/{spells['cure-wounds']['id']}/roll_healing",
+                          json={"casting_level": 1, "apply_to_self": True})
+    assert r.status_code == 200, r.text
+    healed_by_spell = r.json()["healed"]
+    assert healed_by_spell > 0
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"exhaustion": 2}})
+    assert r.status_code == 200, r.text
+
+    hist = (await client.get(f"/characters/{cid}/history")).json()
+    texts = [h["description"] for h in (hist["items"] if isinstance(hist, dict) else hist)]
+    assert any(t.startswith("Cura: +15 HP (5 → 20)") for t in texts), texts
+
+    await _close(client, sid)
+    c = next(c for c in (await _gs(f, sid)).recap["characters"] if c["character_id"] == cid)
+    assert c["healed"] == 15 + healed_by_spell  # la cura da incantesimo conta una volta sola
+    assert c["conditions"] == ["exhaustion"] and c["condition_levels"] == {"exhaustion": 2}
+    assert "Chi è stato curato di più" in recap_svc._T["it"]["top_healer"]
+    assert "Esaurimento 2" in recap_svc.format_recap_text((await _gs(f, sid)).recap, "it").replace("\\", "")

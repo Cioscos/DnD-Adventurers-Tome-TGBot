@@ -270,7 +270,7 @@ export default function SpellSlots() {
     <Layout title={t('character.slots.title')} backTo={`/char/${charId}`} group="magic" page="slots">
       {/* Banner Auto-mode — collassabile, ricorda lo stato (localStorage). */}
       {slotsMode === 'auto' && (
-        <AutoModeBanner onGoToSettings={() => navigate(`/char/${charId}/settings`)} />
+        <AutoModeBanner edition={char.rules_edition} onGoToSettings={() => navigate(`/char/${charId}/settings`)} />
       )}
 
       {slots.length > 0 && (
@@ -290,7 +290,7 @@ export default function SpellSlots() {
         <EmptyState
           icon={<Gem size={32} />}
           title={t('common.none')}
-          hint={slotsMode === 'auto' ? t('character.slots.auto_hint') : t('character.slots.manual_empty_hint')}
+          hint={slotsMode === 'auto' ? t('character.slots.auto_hint', { edition: char.rules_edition }) : t('character.slots.manual_empty_hint')}
         />
       )}
 

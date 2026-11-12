@@ -42,7 +42,7 @@
       "hide_failed": "La prova di Furtività è sotto 15: non ti nascondi.",
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
       "once_per_turn": "Puoi usarlo una sola volta per turno.",
-      "replace_after_long_rest": "Puoi sostituirla una sola volta per riposo lungo: riposa e riprova.",
+      "replace_after_long_rest": "Hai già fatto i cambi concessi per questo riposo lungo: riposa e riprova.",
       "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: sceglila insieme al prerequisito o dopo averlo preso.",
       "option_is_prerequisite": "Questa opzione è il prerequisito di un'altra che hai scelto: non puoi sostituirla.",
       "class_already_present": "Il personaggio ha già quella classe."
@@ -584,6 +584,7 @@
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
       "quick_undo_action": "Annulla",
+      "undo_last": "Annulla l'ultima modifica ai PF",
       "undo_stale": "I PF sono cambiati, non posso annullare",
       "undo_homebrew_note": "Gli altri effetti delle regole restano",
       "quick_sheet_title": "Danno / Cura",
@@ -741,7 +742,7 @@
       "rerolled": "Dadi ritirati: {{dice}}",
       "effect_grapple": "Afferrare: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce è Afferrato. Serve una mano libera.",
       "effect_shove": "Spingere: il bersaglio fa un TS su Forza o Destrezza, CD {{dc}}. Se fallisce lo sposti di 1,5 m o lo rendi Prono.",
-      "grazed": "Graze: danno sul mancato",
+      "grazed": "Colpo di striscio: danno sul mancato",
       "missed_noted": "Mancato: segnato, nessun danno",
       "limit_title": "Attacchi esauriti",
       "limit_text": "Hai già fatto {{made}} attacchi su {{allowed}} con l'azione Attacco. Attacchi comunque, per un privilegio o una reazione?",
@@ -1038,7 +1039,7 @@
       "gem_aria": "Livello {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "usato",
       "state_available": "disponibile",
-      "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
+      "auto_hint": "Modalità Auto (regole D&D 5e {{edition}}): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
       "auto_label": "Modalità Auto",
       "manual_empty_hint": "Nessuno slot. Aggiungine uno con i pulsanti \"+ Livello N\" qui sotto.",
       "add_new_level": "Aggiungi nuovo livello",
@@ -1218,6 +1219,7 @@
         "refund_title": "Ultimo tiro: {{total}}"
     },
     "conditions": {
+      "immune_blocked": "{{name}} non si applica: sei immune (un effetto attivo la blocca).",
       "ward": {
         "title": "Interdizione della Natura",
         "body": "La condizione viene da un elementale o da un folletto?",
@@ -1590,6 +1592,7 @@
       "mark_used": "Segna come usata",
       "standard_actions": "Azioni standard ({{n}})",
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
+      "no_actions": "Non puoi muoverti né agire.",
       "surprised": "Sei colto di sorpresa: in questo turno non agisci, non ti muovi e non reagisci.",
       "down_exit": "A 0 PF puoi solo:",
       "surprised_exit": "Per agire devi prima farlo:",
@@ -2506,6 +2509,7 @@
       },
       "picker": {
         "title": "Equipaggia",
+        "slot_free": "libero",
         "empty": "Nessun oggetto compatibile nell'inventario.",
         "go_to_inventory": "Vai all'inventario"
       },
@@ -2713,6 +2717,7 @@
       "rests": "Riposi",
       "rests_v": "{{s}} brevi · {{l}} lunghi",
       "conditions": "Condizioni",
+      "exhaustion": "Indebolimento",
       "players": "Personaggi",
       "combat": "Combattimenti",
       "encounters": "Scontri",
@@ -2731,7 +2736,7 @@
       "hl_unluckiest": "Il più sfortunato ai dadi: {{name}} ({{v}}× 1 naturale)",
       "hl_luckiest": "Il più fortunato ai dadi: {{name}} ({{v}}× 20 naturale)",
       "hl_most_damage": "Chi ha subito più danni: {{name}} ({{v}})",
-      "hl_top_healer": "Chi ha curato di più: {{name}} ({{v}} PF)"
+      "hl_top_healer": "Chi è stato curato di più: {{name}} ({{v}} PF)"
     },
     "night_n": "Serata {{n}}",
     "nights": "Serate",
@@ -2977,7 +2982,7 @@
       "monster_name_placeholder": "Nome del mostro",
       "count_label": "Quantità",
       "init_mod_label": "Mod. iniziativa",
-      "max_hp_label": "PF massimi",
+      "max_hp_label": "PF massimi (obbligatori)",
       "ac_label": "CA",
       "add_confirm": "Aggiungi",
       "sync_pcs": "Sincronizza PG",
@@ -5217,7 +5222,7 @@
         {
           "title": "Modalità Auto",
           "items": [
-            "In modalità Auto, l'app calcola gli slot dalle classi e dal livello, con le regole D&D 5e 2014.",
+            "In modalità Auto, l'app calcola gli slot dalle classi e dal livello, con le regole D&D 5e dell'edizione del personaggio.",
             "In modalità Auto non puoi cambiare il totale e non puoi aggiungere o rimuovere livelli.",
             "Il riquadro \"Modalità Auto\" spiega questa regola. Tocca il riquadro per aprirlo o chiuderlo.",
             "Per passare alla modalità manuale, tocca \"Vai a Impostazioni\"."

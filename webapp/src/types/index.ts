@@ -760,6 +760,8 @@ export interface SessionRecapCharacter {
   slots_used: Record<string, number>
   rests: { short: number; long: number }
   conditions: string[]
+  /** Livello per le condizioni a livelli (Spossatezza); assente nei recap vecchi. */
+  condition_levels?: Record<string, number>
 }
 
 export interface SessionRecap {
@@ -1152,6 +1154,8 @@ export interface TurnState {
   round: number | null
   session_id: number | null
   pending_saves?: PendingSave[]
+  /** Firma di stati attivi, condizioni, PF e usi delle abilità: cambia quando un alleato dà un effetto, e la scheda va riletta. */
+  effects_sig?: string
 }
 
 export interface ActiveForm {

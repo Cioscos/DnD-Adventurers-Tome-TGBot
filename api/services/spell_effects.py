@@ -13,6 +13,7 @@ from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.spell import SpellEffectsRead
+from api.services.durations import end_concentration
 from api.services.effects import apply_heal, cap_hp_to_max, grant_temp_hp
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.session_allies import ally_target
@@ -225,6 +226,10 @@ async def end_by_target(session: AsyncSession, char: Character, closed: list[dic
         if closing:
             caster.active_states = [s for s in caster.active_states if s.get("key") != clock]
             settle_closed(caster, closing)
+            # Concentrazione su altri: finito l'ultimo bersaglio non resta nulla da mantenere (non se l'effetto era su di sé)
+            if caster is not char and any("concentration_end" in (s.get("ends_on") or ()) for s in closing) \
+                    and not any("concentration_end" in (s.get("ends_on") or ()) for s in caster.active_states):
+                end_concentration(caster)
     await _cap_hp(session, char, closed)
 
 
@@ -299,13 +304,18 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     key, clock = f"{SPELL_STATE_PREFIX}{effect.key}", f"{SPELL_CLOCK_PREFIX}{effect.key}"
     settings = dict(caster.settings or {})
     given = dict(settings.get(SPELL_GIVEN) or {})
-    for old in set(given.get(clock, [])) - {c.id for c in chars}:  # lanciato di nuovo su altri: i vecchi bersagli lo perdono
+    older = set(given.get(clock, [])) - {c.id for c in chars}
+    for old in older if concentration else ():  # a concentrazione, lanciato di nuovo su altri: i vecchi bersagli lo perdono (altrimenti restano)
         previous = caster if old == caster.id else await session.get(Character, old)
         if previous is not None:
             await _drop_state(session, previous, key, caster.id)
     aura = effect.target.kind == "aura"  # l'aura è viva: solo l'orologio del lanciatore, nessuno stato sui bersagli
     applied = []
     rolled: dict[str, dict] = {}  # i dati tirati per ogni bersaglio: l'orologio li tiene, un annullo li ridà (Banchetto degli Eroi)
+    if not concentration and older:  # i vecchi bersagli restano: ognuno tiene i dati e lo slot del proprio lancio, non quelli del nuovo
+        before = next(((s.get("data") or {}).get("state_data") or {} for s in caster.active_states or [] if s.get("key") == clock), {})
+        for old in older:
+            rolled[str(old)] = {"slot_level": before.get("slot_level", slot_level), **(before.get("per_target") or {}).get(str(old), {})}
     for target in [] if aura else chars:
         extra = variant.per_target(data) if variant.per_target else {}
         if extra:
@@ -326,7 +336,7 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}
     pending = [e for e in settings.get(SPELL_RELEASE) or [] if (e["id"], e["key"]) not in regranted]  # chiuso e riaperto nella stessa richiesta
-    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [a["id"] for a in applied]}  # per l'aura: vuoto
+    settings[SPELL_GIVEN] = {**(settings.get(SPELL_GIVEN) or {}), clock: [*([] if concentration else sorted(older)), *(a["id"] for a in applied)]}  # per l'aura: vuoto
     if pending:
         settings[SPELL_RELEASE] = pending
     else:

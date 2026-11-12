@@ -53,6 +53,11 @@ rimanda a `fe-playwright-audit`; qui il focus è **logica, dati, contratti API e
    + endpoint + BE `file:riga` + atteso-vs-reale + fix proposto + evidenza.
 7. **Mai `uv`/`uv sync`/`uv run` da WSL** (vedi `CLAUDE.md`): corrompe la `.venv` Windows. `npm`/`npx`
    da WSL sono OK. Se serve far girare pytest, lo chiedi all'utente da PowerShell.
+8. **Il coordinatore non esegue i test, li delega.** Per risparmiare token il coordinatore (la sessione
+   principale) scrive il piano, prepara ambiente e fixture, poi affida **ogni test del piano a un
+   subagente nuovo con modello `sonnet`**, uno per test. Il subagente esegue solo quel test e scrive
+   l'esito come riga del ledger dei test. Il coordinatore non guarda snapshot né pagine: legge solo il
+   ledger. Procedura in `references/delegation.md`.
 
 ## Passo 0 — Parsing input (include / exclude)
 
@@ -100,6 +105,17 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/       # Vite dev s
 - **Vite giù**: puoi avviarlo tu da WSL — `cd webapp && npm run dev` in background, poi attendi `:5173`.
   Controlla che `webapp/.env.local` punti a `http://127.0.0.1:8000`.
 
+**Ambiente isolato (preferito quando la porta 8000 o `data/dnd_bot.db` non vanno toccati):** API su
+un'altra porta con DB temporaneo, avviata con il Python della `.venv` (niente `uv`):
+`DB_PATH=<temp>/audit.db BOT_TOKEN=123:finto DEV_CHAT_ID= DEV_USER_ID=1001 SEND_CAMPAIGN_MESSAGES=0
+ANNOUNCE_RELEASES=0 .venv/Scripts/python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8010`.
+I file caricati (mappe, lore, atlante, sagome, note vocali) vanno in `data/…` **relativo alla cartella di
+lavoro** dell'API: avviala da una cartella temporanea con `--app-dir <repo>` (e il Python della `.venv`
+del repo), altrimenti gli upload di test finiscono accanto a quelli veri (stessi id di campagna = stessa
+cartella). Webapp con `VITE_API_BASE_URL=http://127.0.0.1:8010 npx vite --port 4173 --strictPort`: il CORS dell'API
+accetta solo le origini `localhost:5173` e `localhost:4173`, ogni altra porta fallisce. Più giocatori: una
+scheda per utente con `http://localhost:4173/?dev_user=<id>#/…`.
+
 Carica in contesto, prima di procedere: `references/oracles.md`, `docs/webapp-audit/known-issues.md`,
 `docs/webapp-audit/findings-tracker.md`, `docs/webapp-audit/fixture-character.md`, e
 `docs/webapp-audit/dependency-graph.json` se esiste (il grafo vivo da arricchire).
@@ -108,6 +124,10 @@ Carica in contesto, prima di procedere: `references/oracles.md`, `docs/webapp-au
 
 ```
 reports/<YYYY-MM-DD_HH-MM>-<scope>/
+├── piano-test.md   ← test numerati (ID · azione · atteso con fonte), scritto dal coordinatore
+├── fixture.md      ← ambiente, utenti, id di personaggi/campagne/serate: unica fonte per i subagenti
+├── ledger-test.md  ← una riga per test, scritta dai subagenti (vedi references/delegation.md)
+├── briefs/         ← un brief per test, generato dal coordinatore
 ├── report.md
 ├── coverage.md
 └── screens/
@@ -118,6 +138,10 @@ timestamp **una volta sola** a inizio run (`date '+%Y-%m-%d_%H-%M'`) e riusalo. 
 sessione vivono qui; l'unica eccezione è il grafo vivo (Passo 6), che vive in `docs/webapp-audit/`.
 
 ## Passo 4 — Loop full-stack per ogni nodo in scope
+
+**Chi lo esegue:** i subagenti `sonnet`, un test ciascuno, in sequenza (principio 8 e
+`references/delegation.md`). Il ciclo qui sotto è il metodo che ogni subagente applica al proprio test; il
+coordinatore crea solo la fixture iniziale (o la affida anch'essa a un subagente) e poi dispaccia.
 
 Ripeti questo ciclo per **ogni** pagina/area non esclusa. Se lo scope è "tutte le aree", il primo nodo è
 `character-create`: crea la fixture via UI (o riusa "Effervescent Barto" id=3 se presente — vedi
@@ -180,7 +204,8 @@ ancora, creali dalla matrice seed in `references/dependency-graph.md`.
 
 ## Passo 7 — Genera il report
 
-Scrivi `report.md` nella cartella di sessione. **Solo segnalazioni, nessun fix.** Severità:
+Scrivi `report.md` nella cartella di sessione partendo da `ledger-test.md` (matrice = righe del ledger,
+findings = le schede che i subagenti hanno scritto per i test non 🟢). **Solo segnalazioni, nessun fix.** Severità:
 🔴 bug funzionale / contratto rotto / crash · 🟠 regressione o comportamento errato non bloccante ·
 🟡 nit (UX/visivo → rimanda a `fe-playwright-audit`) · 🟢 ok.
 

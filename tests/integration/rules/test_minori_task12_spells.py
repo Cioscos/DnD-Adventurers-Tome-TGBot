@@ -62,13 +62,13 @@ async def test_95_targets_left_out_are_the_same_as_casting_on_yourself(client, t
 
 async def test_95_recasting_on_another_target_takes_the_effect_from_the_old_one(client, test_session_factory):
     hero, caster, _ = await _defense_table(client, test_session_factory, "Longstrider", "longstrider", 1)
-    as_user(GM_ID)  # senza concentrazione: solo il rilancio toglie lo stato al vecchio bersaglio
+    as_user(GM_ID)  # senza concentrazione il rilancio non toglie lo stato ai vecchi bersagli
     spell = (await client.post(f"/characters/{caster}/spells", json={"name": "Passo Veloce", "srd_index": "longstrider", "level": 1})).json()["id"]
     key = "spell:longstrider"
     await _cast_at(client, caster, spell, [hero], level=1)
     assert len(await _states(client, hero, PLAYER_ID, key)) == 1
     await _cast_at(client, caster, spell, [caster], level=1)
-    assert await _states(client, hero, PLAYER_ID, key) == []
+    assert len(await _states(client, hero, PLAYER_ID, key)) == 1
     assert len(await _states(client, caster, GM_ID, key)) == 1
     [clock] = await _states(client, caster, GM_ID, "spell_cast:longstrider")  # un solo orologio, quello dell'ultimo lancio
     assert clock["data"]["state_data"]["targets"] == 1

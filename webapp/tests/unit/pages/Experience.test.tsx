@@ -55,7 +55,10 @@ vi.mock('@/components/Layout', passthrough)
 vi.mock('@/components/ui/Surface', passthrough)
 vi.mock('@/components/ui/StatPill', nullModule)
 vi.mock('@/components/character/ClassTabs', nullModule)
-vi.mock('@/components/character/ProgressionPreview', nullModule)
+vi.mock('@/components/character/ProgressionPreview', async () => {
+  const React = await import('react')
+  return { default: () => React.createElement('div', { 'data-testid': 'progression' }) }
+})
 vi.mock('@/pages/multiclass/LevelUpBanner', nullModule)
 vi.mock('@/pages/multiclass/LevelUpModal', nullModule)
 vi.mock('@/components/ui/Ornament', () => ({ CornerFlourish: () => null }))
@@ -148,6 +151,19 @@ describe('Experience page', () => {
     await waitFor(() =>
       expect(updateXPSpy).toHaveBeenCalledWith(5, { add: undefined, set: 2700 }),
     )
+  })
+
+  it('the 2014-only progression table is hidden for a 2024 character and 299/300 XP reads 99%', async () => {
+    const withClass = { ...baseChar, experience_points: 299, classes: [{ id: 9, class_name: 'fighter', level: 1 }] }
+    getChar.mockResolvedValue({ ...withClass, rules_edition: '2014' })
+    const { unmount } = renderWithProviders(<Experience />)
+    expect(await screen.findByTestId('progression')).toBeInTheDocument()
+    expect(screen.getByText('99%')).toBeInTheDocument()
+    unmount()
+    getChar.mockResolvedValue({ ...withClass, rules_edition: '2024' })
+    renderWithProviders(<Experience />)
+    await screen.findByText('1')
+    expect(screen.queryByTestId('progression')).not.toBeInTheDocument()
   })
 
   it('fires a level-up toast when the new XP crosses a level boundary', async () => {

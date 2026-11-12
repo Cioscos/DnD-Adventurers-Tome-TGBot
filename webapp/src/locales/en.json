@@ -42,7 +42,7 @@
       "hide_failed": "The Stealth check is under 15: you are not hidden.",
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
       "once_per_turn": "You can use it only once per turn.",
-      "replace_after_long_rest": "You can swap it once per long rest: rest and try again.",
+      "replace_after_long_rest": "You have already made the swaps allowed for this long rest: rest and try again.",
       "option_prerequisite": "One of the chosen options needs another option you do not have: pick it together with its prerequisite or after taking it.",
       "option_is_prerequisite": "This option is the prerequisite of another one you chose: you cannot swap it.",
       "class_already_present": "The character already has that class."
@@ -584,6 +584,7 @@
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
       "quick_undo_action": "Undo",
+      "undo_last": "Undo last HP change",
       "undo_stale": "HP have changed, can't undo",
       "undo_homebrew_note": "Other rule effects stay",
       "quick_sheet_title": "Damage / Heal",
@@ -1038,7 +1039,7 @@
       "gem_aria": "Level {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "used",
       "state_available": "available",
-      "auto_hint": "Auto mode (D&D 5e 2014 rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
+      "auto_hint": "Auto mode (D&D 5e {{edition}} rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
       "auto_label": "Auto Mode",
       "manual_empty_hint": "No slots yet. Add one with the \"+ Level N\" buttons below.",
       "add_new_level": "Add new level",
@@ -1218,6 +1219,7 @@
         "refund_title": "Last roll: {{total}}"
     },
     "conditions": {
+      "immune_blocked": "{{name}} was not applied: you are immune (an active effect blocks it).",
       "ward": {
         "title": "Nature's Ward",
         "body": "Does the condition come from an elemental or a fey?",
@@ -1591,6 +1593,7 @@
       "mark_used": "Mark as used",
       "standard_actions": "Standard actions ({{n}})",
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
+      "no_actions": "You cannot move or act.",
       "surprised": "You are surprised: this turn you can't act, move or react.",
       "down_exit": "At 0 HP you can only:",
       "surprised_exit": "To act you must first do this:",
@@ -2507,6 +2510,7 @@
       },
       "picker": {
         "title": "Equip",
+        "slot_free": "free",
         "empty": "No compatible items in inventory.",
         "go_to_inventory": "Go to inventory"
       },
@@ -2714,6 +2718,7 @@
       "rests": "Rests",
       "rests_v": "{{s}} short · {{l}} long",
       "conditions": "Conditions",
+      "exhaustion": "Exhaustion",
       "players": "Characters",
       "combat": "Combat",
       "encounters": "Encounters",
@@ -2732,7 +2737,7 @@
       "hl_unluckiest": "Unluckiest with dice: {{name}} ({{v}}× natural 1)",
       "hl_luckiest": "Luckiest with dice: {{name}} ({{v}}× natural 20)",
       "hl_most_damage": "Took the most damage: {{name}} ({{v}})",
-      "hl_top_healer": "Top healer: {{name}} ({{v}} HP)"
+      "hl_top_healer": "Most healed: {{name}} ({{v}} HP)"
     },
     "night_n": "Night {{n}}",
     "nights": "Nights",
@@ -2978,7 +2983,7 @@
       "monster_name_placeholder": "Monster name",
       "count_label": "Count",
       "init_mod_label": "Initiative mod",
-      "max_hp_label": "Max HP",
+      "max_hp_label": "Max HP (required)",
       "ac_label": "AC",
       "add_confirm": "Add",
       "sync_pcs": "Sync PCs",
@@ -5218,7 +5223,7 @@
         {
           "title": "Auto mode",
           "items": [
-            "In Auto mode, the app calculates the slots from the classes and the level, with the D&D 5e 2014 rules.",
+            "In Auto mode, the app calculates the slots from the classes and the level, with the D&D 5e rules of the character's edition.",
             "In Auto mode, you cannot change the total and you cannot add or remove levels.",
             "The \"Auto Mode\" panel explains this rule. Tap the panel to open or close it.",
             "To change to manual mode, tap \"Go to Settings\"."

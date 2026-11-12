@@ -23,4 +23,22 @@ describe('useTurnState', () => {
     await qc.refetchQueries({ queryKey: ['turn-state', 7] })
     await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['character', 7] }))
   })
+
+  it('invalidates the character when the effects signature changes, not when it is stable', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    )
+    const base = { in_encounter: true, is_my_turn: false, round: 1, session_id: 1 }
+    turnState.mockResolvedValue({ ...base, effects_sig: 'a' })
+    const { result } = renderHook(() => useTurnState(7, true), { wrapper })
+    await waitFor(() => expect(result.current.data).toBeTruthy())
+    await qc.refetchQueries({ queryKey: ['turn-state', 7] })
+    expect(spy).not.toHaveBeenCalled()
+
+    turnState.mockResolvedValue({ ...base, effects_sig: 'b' })
+    await qc.refetchQueries({ queryKey: ['turn-state', 7] })
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['character', 7] }))
+  })
 })

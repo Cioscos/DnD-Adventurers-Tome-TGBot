@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { TFunction } from 'i18next'
-import { CONDITION_ICONS, conditionLabel, formatCondition } from '@/lib/conditions'
+import { CONDITION_ICONS, conditionLabel, formatCondition, incapacitatedMessageKey } from '@/lib/conditions'
 
 // The 14 standard 5e conditions + exhaustion that the hero chips and the
 // /conditions page render. Kept here as an explicit contract: if the lookup
@@ -55,5 +55,14 @@ describe('conditionLabel', () => {
 
   it('names a standard condition through the conditions dictionary', () => {
     expect(conditionLabel('charmed', t)).toBe('charmed')
+  })
+})
+
+describe('incapacitatedMessageKey', () => {
+  it('Haste lethargy (no_actions) says "cannot move or act", 2024 / conditions say incapacitated', () => {
+    expect(incapacitatedMessageKey({ active_states: [{ data: { no_actions: true } }] })).toBe('character.turn.no_actions')
+    expect(incapacitatedMessageKey({ active_states: [{ data: { drops_concentration: true } }] })).toBe('character.turn.incapacitated')
+    expect(incapacitatedMessageKey({})).toBe('character.turn.incapacitated')
+    expect(incapacitatedMessageKey({ computed: { surprised: true }, active_states: [{ data: { no_actions: true } }] })).toBe('character.turn.surprised')
   })
 })

@@ -10,12 +10,14 @@ interface Props {
   slot: EquipmentSlot
   equipped: Item | null
   size?: 'md' | 'lg'
+  /** Falso solo se nell'inventario non c'è nulla che stia in questo slot. */
+  hasCompatible?: boolean
   onTap: (equipped: Item | null) => void
 }
 
 const EQUIP_HALO_MS = 900
 
-export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }: Props) {
+export default function EquipmentSlotCell({ slot, equipped, size = 'md', hasCompatible = true, onTap }: Props) {
   const { t } = useTranslation()
   const reduced = useReducedMotion()
   const PlaceholderIcon = SLOT_PLACEHOLDER_ICON[slot]
@@ -67,7 +69,7 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
           : 'transparent',
       }}
       className="relative flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dnd-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dnd-bg"
-      aria-label={equipped ? `${slotLabel}: ${equipped.name}` : `${slotLabel} ${t('character.equipment.picker.empty', { defaultValue: 'empty' })}`}
+      aria-label={equipped ? `${slotLabel}: ${equipped.name}` : `${slotLabel} ${t(hasCompatible ? 'character.equipment.picker.slot_free' : 'character.equipment.picker.empty')}`}
       title={equipped ? equipped.name : slotLabel}
     >
       {equipped ? (

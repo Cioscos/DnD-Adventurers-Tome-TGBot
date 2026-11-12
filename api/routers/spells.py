@@ -77,7 +77,7 @@ from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
 from core.game.stats import cantrip_dice_multiplier
-from core.rules.spell_healing import SPELL_HEALING, healing_dice, healing_fixed
+from core.rules.spell_healing import healing_dice, healing_fixed, healing_spec
 from core.rules.spellcasting import (
     at_will, bonus_cast, can_ritual, champion_bonus_cast, LONG_CASTING as _LONG_CASTING, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
 )
@@ -1034,7 +1034,7 @@ async def roll_spell_healing(
     spell = next((s for s in char.spells if s.id == spell_id), None)
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
-    healing = SPELL_HEALING.get(spell.srd_index or "")
+    healing = healing_spec(spell.srd_index, character_edition(char))
     if healing is None:
         raise HTTPException(status_code=400, detail={"code": "not_a_healing_spell"})
     level = body.casting_level if body.casting_level is not None else spell.level

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import AllyReactionPrompt from '@/components/session/AllyReactionPrompt'
+import { MemoryRouter } from 'react-router-dom'
+import AllyReactionPrompt, { AllyReactionHost } from '@/components/session/AllyReactionPrompt'
 
 const { api, toastMock, ApiErrorMock } = vi.hoisted(() => {
   class ApiErrorMock extends Error { constructor(public status: number, public detail: unknown) { super('x') } }
@@ -11,6 +12,7 @@ const { api, toastMock, ApiErrorMock } = vi.hoisted(() => {
     toastMock: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn(), info: vi.fn() }),
     api: {
       sessions: { me: vi.fn() },
+      me: vi.fn(),
       allyReactions: { prompts: vi.fn(), answer: vi.fn() },
     },
   }
@@ -48,6 +50,8 @@ describe('AllyReactionPrompt', () => {
     expect(await screen.findByText('È il colpo di un attacco e sei entro 1,5 m da Bruno?')).toBeInTheDocument()
     expect(screen.getAllByText(/Bruno/).length).toBeGreaterThan(0)
     expect(screen.getByText(/12/)).toBeInTheDocument()
+    expect(screen.getByText(/Taglio/)).toBeInTheDocument()
+    expect(screen.queryByText(/slashing/)).not.toBeInTheDocument()
   })
 
   it('asks the Cutting Words question', async () => {
@@ -99,5 +103,42 @@ describe('AllyReactionPrompt', () => {
     await qc.refetchQueries({ queryKey: ['reaction-prompts', 7] }) // la risposta vecchia di un poll già partito
     await new Promise((r) => setTimeout(r, 50))
     expect(screen.queryByRole('button', { name: 'Lascia' })).not.toBeInTheDocument()
+  })
+})
+
+describe('AllyReactionHost', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    api.me.mockResolvedValue({ user_id: 99 })
+    api.sessions.me.mockResolvedValue({
+      id: 1, status: 'active',
+      participants: [{ user_id: 5, character_id: 3 }, { user_id: 99, character_id: 7 }],
+    })
+    api.allyReactions.prompts.mockResolvedValue([prompt()])
+  })
+  const renderAt = (path: string) => render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AllyReactionHost /></MemoryRouter>
+    </QueryClientProvider>,
+  )
+
+  it.each(['/session/1', '/session/1/combat'])('on %s polls for the user character and shows the popup', async (path) => {
+    renderAt(path)
+    expect(await screen.findByRole('button', { name: 'Usa' })).toBeInTheDocument()
+    expect(api.allyReactions.prompts).toHaveBeenCalledWith(7)
+    expect(api.allyReactions.prompts).not.toHaveBeenCalledWith(3)
+  })
+
+  it('on /char/:id/* keeps using the route character', async () => {
+    renderAt('/char/7/hp')
+    expect(await screen.findByRole('button', { name: 'Usa' })).toBeInTheDocument()
+    expect(api.allyReactions.prompts).toHaveBeenCalledTimes(1)
+    expect(api.me).not.toHaveBeenCalled()
+  })
+
+  it('elsewhere does not poll', async () => {
+    renderAt('/')
+    await new Promise((r) => setTimeout(r, 50))
+    expect(api.allyReactions.prompts).not.toHaveBeenCalled()
   })
 })

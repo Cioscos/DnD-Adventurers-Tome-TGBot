@@ -105,7 +105,7 @@ export default function AddMonsterSheet({ sessionId, mode, onClose }: Props) {
             fullWidth
             haptic="success"
             onClick={() => addMutation.mutate()}
-            disabled={!name.trim()}
+            disabled={!name.trim() || (mode === 'full' && !(Number(maxHp) > 0))}  // senza PF il mostro risulterebbe «Morto»
             loading={addMutation.isPending}
           >
             {t('session.combat.add_confirm')}

@@ -133,7 +133,7 @@ export default function Experience() {
   const nextThreshold = milestone ? null : (XP_THRESHOLDS[level] ?? null)
   const prevThreshold = XP_THRESHOLDS[level - 1] ?? 0
   const progress = nextThreshold
-    ? Math.round(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100)
+    ? Math.floor(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100)  // floor: a 299/300 XP non mostra 100%
     : 100
   const xpToNext = nextThreshold ? nextThreshold - xp : 0
 
@@ -393,7 +393,8 @@ export default function Experience() {
       )}
 
       {/* Class progression table */}
-      {char.classes && char.classes.length > 0 && (
+      {/* La tabella è solo 2014 (in inglese): per un personaggio 2024 non si mostra. */}
+      {char.classes && char.classes.length > 0 && char.rules_edition !== '2024' && (
         <div>
           <ClassTabs classes={char.classes} selected={selectedClass} onSelect={setSelectedClassOverride} />
           <ProgressionPreview className={selectedClass} currentLevel={currentClassLevel} isMulticlass={isMulticlass} />

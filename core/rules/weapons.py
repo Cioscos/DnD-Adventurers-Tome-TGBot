@@ -302,8 +302,8 @@ def _mastery_label(key: str) -> dict:
             "summary": {"it": MASTERY_IT[w.mastery], "en": w.mastery.capitalize()}}
 
 
-def mastery_choice(levels: dict[int, int], melee_only: bool = False) -> ChoiceSpec:
-    """La scelta delle armi: fra quelle in cui il personaggio è competente, sostituibile dopo un riposo lungo."""
+def mastery_choice(levels: dict[int, int], melee_only: bool = False, swaps: int = 1) -> ChoiceSpec:
+    """La scelta delle armi: fra quelle in cui il personaggio è competente; ``swaps`` cambi per riposo lungo (manuale 2024)."""
 
     def options(ctx: RuleContext) -> list[str]:
         out = []
@@ -314,4 +314,4 @@ def mastery_choice(levels: dict[int, int], melee_only: bool = False) -> ChoiceSp
                 out.append(key)
         return out
 
-    return ChoiceSpec(group=MASTERY_GROUP, levels=levels, options=options, replaceable=True, label=_mastery_label)
+    return ChoiceSpec(group=MASTERY_GROUP, levels=levels, options=options, replaceable=True, replace_per_long_rest=swaps, label=_mastery_label)

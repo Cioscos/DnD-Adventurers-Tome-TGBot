@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, m } from 'framer-motion'
-import { HeartPulse } from 'lucide-react'
+import { HeartPulse, Undo2 } from 'lucide-react'
 import {
   GiNightSleep as Moon, GiCampfire as Campfire, GiPotionBall as FlaskConical,
   GiHeartPlus as Heart,
@@ -431,6 +431,19 @@ export default function HP() {
           setDamageType={setDamageType}
           proposedModifier={damageMultiplier(effectiveDamageMods(char), damageType)}
         />
+      )}
+
+      {/* Annullo sempre raggiungibile: il server manda l'id solo finché l'annullo sarebbe accettato */}
+      {!isDead && char.hp_undo_id && (
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => undoMutation.mutate(char.hp_undo_id!)}
+          loading={undoMutation.isPending}
+          icon={<Undo2 size={16} />}
+        >
+          {t('character.hp.undo_last')}
+        </Button>
       )}
 
       {offers.card}

@@ -306,6 +306,22 @@ describe('HP page', () => {
     await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'typed'))
   })
 
+  it('shows a permanent undo button while the server offers an undo id, and hides it after the undo', async () => {
+    getChar.mockResolvedValue({ ...aliveChar, hp_undo_id: 'kept' })
+    undoHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: null })
+    renderWithProviders(<HP />)
+    await userEvent.click(await screen.findByText('character.hp.undo_last'))
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'kept'))
+    await waitFor(() => expect(screen.queryByText('character.hp.undo_last')).toBeNull())
+  })
+
+  it('has no undo button when the server offers no undo id', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    expect(screen.queryByText('character.hp.undo_last')).toBeNull()
+  })
+
   it('the damage toast counts the hit points really lost when the damage was held at 1 HP', async () => {
     getChar.mockResolvedValue(aliveChar)
     updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'held', option_result: { keys: ['x'], hp_lost: 43 } })

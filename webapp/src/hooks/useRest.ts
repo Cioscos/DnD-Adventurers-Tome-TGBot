@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api, ApiError } from '@/api/client'
@@ -52,6 +52,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     },
   })
 
+  const restInFlight = useRef(false)  // guardia sincrona: un doppio tocco prima del rerender non invia due POST
   const restMutation = useMutation({
     mutationFn: ({ restType, confirmEarly }: { restType: 'long' | 'short'; confirmEarly?: boolean }) =>
       api.characters.rest(charId, restType, {
@@ -66,6 +67,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         ...(resistance ? { fiendish_resilience: resistance } : {}),
         ...(tempAllies.length > 0 ? { temp_hp_allies: tempAllies } : {}),
       }),
+    onSettled: () => { restInFlight.current = false },
     onError: (err) => {
       const detail = err instanceof ApiError ? err.detail : null
       const code = (detail as { code?: string } | null)?.code
@@ -106,6 +108,12 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     },
   })
 
+  const startRest = (vars: Parameters<typeof restMutation.mutate>[0]) => {
+    if (restInFlight.current) return
+    restInFlight.current = true
+    restMutation.mutate(vars)
+  }
+
   // Annullare la conferma del riposo lungo azzera anche le domande: la volta dopo non resta «interrotto» a metà.
   const cancelLongRest = () => {
     setConfirmLongRest(false)
@@ -121,7 +129,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     shortRestOpen, setShortRestOpen, confirmLongRest, setConfirmLongRest, cancelLongRest, tooSoon, setTooSoon,
     hitDieResult, setHitDieResult, interrupted, setInterrupted, ateAndDrank, setAteAndDrank,
     recovery, setRecovery, arcane, setArcane, memorize, setMemorize, restoration, setRestoration,
-    reopenTome, setReopenTome, resistance, setResistance, tempAllies, setTempAllies, hitDieMutation, restMutation,
+    reopenTome, setReopenTome, resistance, setResistance, tempAllies, setTempAllies, hitDieMutation, restMutation, startRest,
   }
 }
 

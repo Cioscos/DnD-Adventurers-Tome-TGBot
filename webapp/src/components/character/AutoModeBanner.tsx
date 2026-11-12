@@ -15,6 +15,7 @@ const STORAGE_KEY = 'dnd:slots-auto-banner'
 
 interface AutoModeBannerProps {
   onGoToSettings: () => void
+  edition?: string
 }
 
 function readInitialOpen(): boolean {
@@ -26,7 +27,7 @@ function readInitialOpen(): boolean {
   }
 }
 
-export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) {
+export default function AutoModeBanner({ onGoToSettings, edition = '2014' }: AutoModeBannerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState<boolean>(readInitialOpen)
 
@@ -74,7 +75,7 @@ export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) 
             transition={{ duration: 0.25, ease: ease.inkSpread }}
           >
             <p className="pt-2.5 text-xs text-dnd-text font-body">
-              {t('character.slots.auto_hint')}
+              {t('character.slots.auto_hint', { edition })}
             </p>
             <Pressable
               type="button"

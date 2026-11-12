@@ -101,7 +101,7 @@ def _char_stats(char: Character, start_stats: dict | None, rows: list[CharacterH
         "dice": {"rolls": rolls, "nat20": nat20, "nat1": nat1, "highest": max(totals) if totals else None},
         "damage_taken": 0, "healed": 0, "downed": 0,
         "death_saves": {"successes": 0, "failures": 0},
-        "spells_cast": 0, "slots_used": {}, "rests": {"short": 0, "long": 0}, "conditions": [],
+        "spells_cast": 0, "slots_used": {}, "rests": {"short": 0, "long": 0}, "conditions": [], "condition_levels": {},
     }
     slots = st["slots_used"]
     for r in rows:
@@ -128,6 +128,8 @@ def _char_stats(char: Character, start_stats: dict | None, rows: list[CharacterH
         elif ev == "condition_change" and m.get("active") and m.get("slug"):
             if m["slug"] not in st["conditions"]:
                 st["conditions"].append(m["slug"])
+            if m.get("level"):  # il livello (Spossatezza) è quello dell'ultima modifica; i recap vecchi non l'hanno
+                st["condition_levels"][m["slug"]] = int(m["level"])
     return st
 
 
@@ -308,7 +310,7 @@ _T = {
         "unluckiest": "Il più sfortunato ai dadi: {name} ({v}× 1 naturale)",
         "luckiest": "Il più fortunato ai dadi: {name} ({v}× 20 naturale)",
         "most_damage": "Chi ha subito più danni: {name} ({v})",
-        "top_healer": "Chi ha curato di più: {name} ({v} PF)",
+        "top_healer": "Chi è stato curato di più: {name} ({v} PF)",
         "button": "Apri il riepilogo", "hours": "{h} h {m} min", "minutes": "{m} min",
     },
     "en": {
@@ -327,7 +329,7 @@ _T = {
         "unluckiest": "Unluckiest with dice: {name} ({v}× natural 1)",
         "luckiest": "Luckiest with dice: {name} ({v}× natural 20)",
         "most_damage": "Took the most damage: {name} ({v})",
-        "top_healer": "Top healer: {name} ({v} HP)",
+        "top_healer": "Most healed: {name} ({v} HP)",
         "button": "Open the recap", "hours": "{h} h {m} min", "minutes": "{m} min",
     },
 }
@@ -387,7 +389,9 @@ def format_recap_text(recap: dict, lang: str) -> str:
         if c["rests"]["short"] or c["rests"]["long"]:
             lines.append(tr("rests", s=c["rests"]["short"], l=c["rests"]["long"]))
         if c["conditions"]:
-            lines.append(tr("conds", c=", ".join(_cond_label(x, lang) for x in c["conditions"])))
+            lv = c.get("condition_levels") or {}
+            lines.append(tr("conds", c=", ".join(
+                _cond_label(x, lang) + (f" {lv[x]}" if x in lv else "") for x in c["conditions"])))
         blocks.append(lines)
 
     combat = recap.get("combat") or {}

@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ALL_SLOTS, isTwoHanded } from '@/lib/equipmentSlots'
+import { ALL_SLOTS, ITEM_TYPE_TO_SLOTS, isTwoHanded } from '@/lib/equipmentSlots'
 import EquipmentSlotCell from './EquipmentSlotCell'
 import WandererSilhouette from './WandererSilhouette'
 import type { EquipmentSlot, Item } from '@/types'
@@ -20,6 +20,8 @@ const BOTTOM_SLOTS: EquipmentSlot[] = ['ammunition', 'main_hand', 'off_hand']
 function findEquipped(items: Item[], slot: EquipmentSlot): Item | null {
   return items.find((i) => i.is_equipped && i.equipment_slot === slot) ?? null
 }
+
+const hasCompatible = (items: Item[], slot: EquipmentSlot) => items.some((i) => ITEM_TYPE_TO_SLOTS[i.item_type]?.includes(slot))
 
 export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteAction }: Props) {
   const { t } = useTranslation()
@@ -51,6 +53,7 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteA
               key={slot}
               slot={slot}
               equipped={findEquipped(items, slot)}
+              hasCompatible={hasCompatible(items, slot)}
               onTap={(item) => onSlotTap(slot, item)}
             />
           ))}
@@ -84,6 +87,7 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteA
               key={slot}
               slot={slot}
               equipped={findEquipped(items, slot)}
+              hasCompatible={hasCompatible(items, slot)}
               onTap={(item) => onSlotTap(slot, item)}
             />
           ))}
@@ -98,6 +102,7 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteA
             slot={slot}
             size="lg"
             equipped={findEquipped(items, slot)}
+            hasCompatible={hasCompatible(items, slot)}
             onTap={(item) => onSlotTap(slot, item)}
           />
         ))}

@@ -508,7 +508,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
                     "spent": option_block.spent if option_block else [], "ally_reaction_id": ally_req.id if ally_req is not None else None, "zero_before": zero_before,
-                    "zero_after": _zero_conditions(char), "shared": shared_log,
+                    "turn_no": get_turn(char).get("turn_no", 0), "zero_after": _zero_conditions(char), "shared": shared_log,
                     "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
     if shared_from:
         if shared_out is not None:
@@ -545,6 +545,14 @@ def _undo_applies(char: Character, snap: dict, form) -> bool:
     return {**_hp_state(char, form), "form_state": None} == {**snap.get("after", {}), "form_state": None}
 
 
+async def undo_op_id(session: AsyncSession, char: Character) -> str | None:
+    """L'``op_id`` annullabile ora (stessa condizione di ``POST /hp/undo``), altrimenti None."""
+    snap = char.hp_undo
+    if snap and _undo_applies(char, snap, await _undo_form(session, char, snap)):
+        return snap.get("op_id")
+    return None
+
+
 async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, note: str | None = None) -> None:
     """Rimette ``char`` com'era prima dell'operazione descritta da ``snap``."""
     before = snap["before"]
@@ -579,7 +587,10 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
     set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
     returned: list[str] = []
-    refund_spent(char, snap.get("spent") or [])
+    spent = snap.get("spent") or []
+    if snap.get("turn_no", 0) != get_turn(char).get("turn_no", 0):  # nuovo turno: slot e «una volta per turno» non tornano (come ally_reactions.refund)
+        spent = [t for t in spent if t.partition(":")[0] not in ("turn", "once", "turnkey")]
+    refund_spent(char, spent)
     await refund_donor_tokens(session, char, snap.get("spent") or [])
     if snap.get("ally_reaction_id"):  # reazione e usi dei donatori tornano con il danno annullato
         ally_req = await session.get(ally_reactions.Req, snap["ally_reaction_id"])
@@ -693,7 +704,7 @@ def _apply_exhaustion_change(session: AsyncSession, char: Character, change: int
     conditions["exhaustion"] = old_exh + change
     char.conditions = conditions
     add_history(session, char.id, "condition_change", f"Spossatezza: livello {old_exh} → {old_exh + change} ({kind})",
-                 meta={"slug": "exhaustion", "active": change > 0})
+                 meta={"slug": "exhaustion", "active": change > 0, "level": old_exh + change})
 
 
 def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,
@@ -949,6 +960,9 @@ async def rest(
         spec, key, damage_type = chosen_resistance
         begin_state(char, StateSpec(key, ends_on=("manual",), data={"damage_type": damage_type}), spec.key, spec.name["it"])
     temp_received = await _deliver_rest_temp_hp(session, char, edition, receivers)
+    spell_turn = ("spell_slot_cast", "bonus_spell_cast", "leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic")
+    if any((char.turn_state or {}).get(k) for k in spell_turn):  # il riposo chiude il turno: nulla del lancio precedente vale più
+        char.turn_state = {k: v for k, v in char.turn_state.items() if k not in spell_turn} | {"spell_slot_cast": False, "bonus_spell_cast": False}
     await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
 

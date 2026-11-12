@@ -526,3 +526,26 @@ async def test_2024_protection_lasts_until_the_start_of_the_knights_next_turn_an
     assert "1,5 m" in row.summary["it"] and "next turn" in row.summary["en"]
     effect = row.on_use.target_effect(None, {})
     assert effect.ends_at == {"anchor": "source", "edge": "start", "count": 1} and effect.rounds is None
+
+
+# ---------------------------------------------------------------------------
+# Padronanze: un cambio per riposo lungo e chip solo sulle armi scelte (F3)
+# ---------------------------------------------------------------------------
+
+async def test_f3_weapon_mastery_swap_once_per_long_rest_and_chip_only_on_chosen(client):
+    cid = await _fighter24(client, 1, strength=16)
+    await _masters(client, cid, "greatsword", "longsword", "dagger")
+    sword = await _weapon(client, cid, "Spada lunga", None, damage_dice="1d8")
+    club = await _weapon(client, cid, "Mazza", None, damage_dice="1d6")
+    items = {i["name"]: i for i in (await _full(client, cid))["items"]}
+    assert items["Spada lunga"]["mastery"] and not items["Mazza"].get("mastery")
+    klass = (await _full(client, cid))["classes"][0]["id"]
+    url = f"/characters/{cid}/classes/{klass}/options/replace"
+    ok = await client.post(url, json={"group": "weapon_mastery", "old_key": "dagger", "new_key": "handaxe"})
+    assert ok.status_code == 200, ok.text
+    refused = await client.post(url, json={"group": "weapon_mastery", "old_key": "longsword", "new_key": "rapier"})
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "replace_after_long_rest"
+    await _rest(client, cid, "long")
+    assert (await client.post(url, json={"group": "weapon_mastery", "old_key": "longsword", "new_key": "rapier"})).status_code == 200
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})
+    assert not [i for i in (await _full(client, cid))["items"] if i.get("mastery")]

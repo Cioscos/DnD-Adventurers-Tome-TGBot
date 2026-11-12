@@ -15,7 +15,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
-import { CONDITION_ICONS, conditionLabel } from '@/lib/conditions'
+import { CONDITION_ICONS, conditionLabel, refusedConditions } from '@/lib/conditions'
 import CustomConditionCard from '@/components/homebrew/CustomConditionCard'
 import {
   showHomebrewNotifications,
@@ -137,8 +137,12 @@ export default function Conditions() {
       durations
         ? api.characters.updateConditions(charId, conditions, durations)
         : api.characters.updateConditions(charId, conditions),
-    onSuccess: (updated) => {
+    onSuccess: (updated, { conditions: requested }) => {
+      const previous = qc.getQueryData<{ conditions?: Record<string, unknown> }>(['character', charId])?.conditions
       qc.setQueryData(['character', charId], updated)
+      for (const key of refusedConditions(requested, updated.conditions, previous)) {
+        toast.info(t('character.conditions.immune_blocked', { name: conditionLabel(key, t) }))
+      }
       setPendingExhaustion(null)
       setPendingConditionKey(null)
       haptic.light()
