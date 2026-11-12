@@ -138,8 +138,9 @@ export default function Conditions() {
         ? api.characters.updateConditions(charId, conditions, durations)
         : api.characters.updateConditions(charId, conditions),
     onSuccess: (updated, { conditions: requested }) => {
+      const previous = qc.getQueryData<{ conditions?: Record<string, unknown> }>(['character', charId])?.conditions
       qc.setQueryData(['character', charId], updated)
-      for (const key of refusedConditions(requested, updated.conditions)) {
+      for (const key of refusedConditions(requested, updated.conditions, previous)) {
         toast.info(t('character.conditions.immune_blocked', { name: conditionLabel(key, t) }))
       }
       setPendingExhaustion(null)

@@ -157,6 +157,16 @@ describe('Conditions page', () => {
     await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.conditions.immune_blocked'))
   })
 
+  it('does not claim immunity for a condition the server closed on its own', async () => {
+    getChar.mockResolvedValue({ id: 5, conditions: { invisible: true } })
+    listRules.mockResolvedValue([])
+    updateConditions.mockResolvedValue({ id: 5, conditions: { stunned: true } })  // il Mantello delle Ombre finisce
+    renderWithProviders(<Conditions />)
+    await userEvent.click(await screen.findByText('character.conditions.stunned'))
+    await waitFor(() => expect(updateConditions).toHaveBeenCalled())
+    expect(toastInfo).not.toHaveBeenCalled()
+  })
+
   describe("Nature's Ward (druid, level 10)", () => {
     const ward = { id: 5, conditions: {}, abilities: [{ feature_key: 'druid.natures_ward' }] }
 
