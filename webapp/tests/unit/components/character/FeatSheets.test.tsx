@@ -32,6 +32,7 @@ vi.mock('@/lib/srd/catalog', async (orig) => {
       entry('sleep', 'Sonno', 1, ['wizard']), entry('bless', 'Benedizione', 1, ['cleric']),
       entry('command', 'Comando', 1, ['cleric'], 'enchantment'), entry('alarm', 'Allarme', 1, ['wizard'], 'abjuration', true),
       entry('find-familiar', 'Trova famiglio', 1, ['wizard'], 'conjuration', true),
+      { ...entry('fire-bolt', 'Dardo di fuoco', 0, ['wizard']), attack_type: 'ATK' },
     ]),
   }
 })
@@ -180,5 +181,89 @@ describe('OriginFeatStep', () => {
     expect(onChange).toHaveBeenLastCalledWith('2024_tough')
     await userEvent.click(screen.getByText('character.feats.origin_skip'))
     expect(onChange).toHaveBeenLastCalledWith(null)
+  })
+})
+
+describe('FeatOptionsSheet — talenti 2014 con scelte (PR 3)', () => {
+  const row = (name: string, key: string) =>
+    ({ id: 5, name, feature_key: `feat.${key}`, feat_status: 'incomplete' }) as unknown as Ability
+  const char14 = () => ({ ...char(), rules_edition: '2014' }) as unknown as CharacterFull
+  const confirm = () => screen.getByText('character.feats.complete_confirm')
+
+  it('Linguist sends three languages', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    renderWithProviders(<FeatOptionsSheet char={char14()} ability={row('Linguista', 'linguist')} open onClose={() => {}} />)
+    const inputs = screen.getAllByRole('textbox')
+    expect(inputs).toHaveLength(3)
+    for (const [i, name] of ['Elfico', 'Nanico', 'Draconico'].entries()) await userEvent.type(inputs[i], name)
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalledWith(7, 5, { options: { languages: ['Elfico', 'Nanico', 'Draconico'] }, spells: [] }))
+  })
+
+  it('Martial Adept sends two maneuvers', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    renderWithProviders(<FeatOptionsSheet char={char14()} ability={row('Adepto Marziale', 'martial_adept')} open onClose={() => {}} />)
+    await userEvent.click(screen.getByText('Attacco Sbilanciante'))
+    expect(confirm()).toBeDisabled()
+    await userEvent.click(screen.getByText('Parata'))
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalledWith(7, 5, { options: { maneuvers: ['trip', 'parry'] }, spells: [] }))
+  })
+
+  it('Weapon Master 2014 sends four weapons', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    renderWithProviders(<FeatOptionsSheet char={char14()} ability={row("Maestro d'Armi", 'weapon_master')} open onClose={() => {}} />)
+    for (const w of ['Randello', 'Pugnale', 'Mazza']) await userEvent.click(screen.getByText(w))
+    expect(confirm()).toBeDisabled()
+    await userEvent.click(screen.getByText('Lancia'))
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalledWith(7, 5, { options: { weapons: ['club', 'dagger', 'mace', 'spear'] }, spells: [] }))
+  })
+
+  it('Magic Initiate 2014 has six lists and no ability choice', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    renderWithProviders(<FeatOptionsSheet char={char14()} ability={row('Iniziato alla Magia', 'magic_initiate')} open onClose={() => {}} />)
+    expect(screen.queryByLabelText('character.feats.mi_ability')).toBeNull()
+    await userEvent.selectOptions(screen.getByLabelText('character.feats.mi_list'), 'wizard')
+    await userEvent.click(await screen.findByText('Luce'))
+    await userEvent.click(screen.getByText('Mano Magica'))
+    await userEvent.click(screen.getByText('Sonno'))
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalled())
+    expect(complete.mock.calls[0][2].options).toEqual({ list: 'wizard' })
+    expect(screen.getAllByRole('option').map((o) => (o as HTMLOptionElement).value)).toContain('warlock')
+  })
+
+  it('Spell Sniper offers only attack cantrips of the list', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    renderWithProviders(<FeatOptionsSheet char={char14()} ability={row('Cecchino Magico', 'spell_sniper')} open onClose={() => {}} />)
+    await userEvent.selectOptions(screen.getByLabelText('character.feats.mi_list'), 'wizard')
+    await userEvent.click(await screen.findByText('Dardo di fuoco'))
+    expect(screen.queryByText('Luce')).toBeNull()
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalled())
+    expect(complete.mock.calls[0][2].spells.map((s: { srd_index: string }) => s.srd_index)).toEqual(['fire-bolt'])
+  })
+
+  it('Ritual Caster 2014 asks for two rituals of the list', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    renderWithProviders(<FeatOptionsSheet char={char14()} ability={row('Incantatore Rituale', 'ritual_caster')} open onClose={() => {}} />)
+    await userEvent.selectOptions(screen.getByLabelText('character.feats.mi_list'), 'wizard')
+    await userEvent.click(await screen.findByText('Allarme'))
+    expect(confirm()).toBeDisabled()
+    await userEvent.click(screen.getByText('Trova famiglio'))
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalled())
+    expect(complete.mock.calls[0][2]).toMatchObject({ options: { list: 'wizard' } })
+  })
+})
+
+describe('FeatOptionsSheet — Cecchino Magico senza trucchetti d\'attacco (PR 3)', () => {
+  it('says so when the chosen list has no attack cantrip', async () => {
+    const row = { id: 6, name: 'Cecchino Magico', feature_key: 'feat.spell_sniper', feat_status: 'incomplete' } as unknown as Ability
+    const char14 = { ...char(), rules_edition: '2014' } as unknown as CharacterFull
+    renderWithProviders(<FeatOptionsSheet char={char14} ability={row} open onClose={() => {}} />)
+    await userEvent.selectOptions(screen.getByLabelText('character.feats.mi_list'), 'cleric')
+    expect(await screen.findByText('character.feats.sniper_none')).toBeInTheDocument()
   })
 })

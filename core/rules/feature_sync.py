@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
-from core.data.feats import FEATS as FEATS_2014
 from core.game.stats import effective_ability_mod, sync_base_ac
 from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
@@ -326,6 +325,17 @@ def clean_archive(raw: object) -> dict[str, dict]:
 
 
 _OLD_FEAT_NAMES = {"feat.lucky": ("Punti fortuna", "Luck points")}  # la riga contatore di Fortunato prima della 3.4.0
+# Nomi e riassunti dei talenti 2014 prima della 3.6.0 (scheda di selezione e motore): una riga che li ha ancora si aggiorna
+_OLD_2014_TEXTS: dict[str, tuple[str, ...]] = {
+    'feat.grappler': ('Lottatore', 'Grappler', 'Vantaggio ai tiri per colpire le creature che stai lottando; puoi tentare di immobilizzarle.', 'Advantage on attacks against creatures you are grappling; you can try to pin them.'),
+    'feat.alert': ('Allerta', 'Alert', "+5 all'iniziativa; non puoi essere sorpreso se sei cosciente.", '+5 to initiative; you cannot be surprised while conscious.', "+5 all'iniziativa; da cosciente non puoi essere sorpreso; chi non vedi non ha vantaggio contro di te per questo.", "+5 to initiative; you can't be surprised while conscious; unseen attackers gain no advantage from it."),
+    'feat.tough': ('Robusto', 'Tough', '+2 punti ferita massimi per ogni livello.', '+2 maximum hit points per level.'),
+    'feat.mobile': ('Mobile', "+3 metri (+10 piedi) di velocita'; lo scatto non provoca attacchi di opportunita'.", '+10 feet speed; Dash does not provoke opportunity attacks.', '+10 piedi di velocità; lo Scatto ignora il terreno difficile; chi attacchi in mischia non ti fa attacchi di opportunità.', '+10 feet speed; Dash ignores difficult terrain; creatures you attack in melee get no opportunity attack on you.'),
+    'feat.observant': ('Osservatore', 'Observant', '+1 Intelligenza o Saggezza; +5 a Percezione e Indagare passive.', '+1 Intelligence or Wisdom; +5 to passive Perception and Investigation.', '+1 Intelligenza o Saggezza; +5 a Percezione e Indagare passive; leggi le labbra.', '+1 Intelligence or Wisdom; +5 to passive Perception and Investigation; you can read lips.'),
+    'feat.resilient': ('Resiliente', 'Resilient', '+1 a una caratteristica a scelta e competenza nei suoi tiri salvezza.', '+1 to one ability of your choice and proficiency in its saving throws.'),
+    'feat.war_caster': ('Incantatore Bellico', 'War Caster', 'Vantaggio ai tiri salvezza su Costituzione per mantenere la concentrazione.', 'Advantage on Constitution saves to maintain concentration.', 'Incantatore da Guerra', 'Vantaggio ai TS di Costituzione per la concentrazione; componenti somatiche con le mani occupate; un incantesimo come attacco di opportunità.', 'Advantage on Constitution saves for concentration; somatic components with full hands; a spell as an opportunity attack.'),
+    'feat.lucky': ('Fortunato', 'Lucky', '3 punti fortuna per riposo lungo per ritirare un d20.', '3 luck points per long rest to reroll a d20.', '3 punti fortuna per riposo lungo: ritiri un tuo d20 (attacco, prova, TS) o quello di un attacco contro di te.', '3 luck points per long rest: reroll your d20 (attack, check, save) or one rolled to attack you.'),
+}
 
 
 def _sync_feat_rows(char: Character, lang: str) -> None:
@@ -334,11 +344,10 @@ def _sync_feat_rows(char: Character, lang: str) -> None:
     from core.rules.catalog.feats import owned_feats  # import locale: il registro importa i tipi del catalogo
     for spec, source in owned_feats(char):
         ability = source.ability
-        old = FEATS_2014.get(spec.key[len("feat."):]) if spec.edition == "2014" else None  # testi di prima della 3.4.0
-        if ability.name in {*spec.name.values(), *(old.name.values() if old else ()), *_OLD_FEAT_NAMES.get(spec.key, ())}:
+        old = _OLD_2014_TEXTS.get(spec.key, ())
+        if ability.name in {*spec.name.values(), *old, *_OLD_FEAT_NAMES.get(spec.key, ())}:
             ability.name = spec.name.get(lang) or spec.name["it"]
-        if (ability.description is None or ability.description in spec.summary.values()
-                or (old and ability.description in old.summary.values())):
+        if ability.description is None or ability.description in {*spec.summary.values(), *old}:
             ability.description = spec.summary.get(lang) or spec.summary["it"]
         ability.is_passive = spec.passive
         ability.action_type = spec.action_type

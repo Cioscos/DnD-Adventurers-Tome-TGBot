@@ -8,6 +8,7 @@ from dataclasses import replace
 from typing import Any
 
 from core.data.damage_types import DAMAGE_TYPES, canonical_damage_type
+from core.data.feats import LIST_ABILITY, MI_ABILITIES, MI_LISTS
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import heavy_armor, state_on
@@ -228,9 +229,11 @@ _register(
 )
 
 
-def options_ok(options: dict) -> bool:
+def options_ok(options: dict, feature_key: str = "") -> bool:
     """Le scelte salvate di un talento rispettano numero e valori ammessi (import di un file: altrimenti si scartano e il
-    talento torna «da completare»)."""
+    talento torna «da completare»). Liste di classe e caratteristica dipendono dal talento (``feature_key``)."""
+    from core.data.feats_2024 import ALL_FEATS
+    from core.rules.catalog.y2014.fighter import MANEUVERS  # import locale come WEAPONS
     from core.rules.weapons import WEAPONS  # import locale: weapons legge il registro dei talenti
     count = lambda n: (lambda v: len(v) == n)  # noqa: E731
     checks = {
@@ -240,8 +243,23 @@ def options_ok(options: dict) -> bool:
         "skill": lambda v: v in SKILL_ABILITY_MAP,
         "expertise": lambda v: v in SKILL_ABILITY_MAP,
         "granted_skills": lambda v: set(v) <= set(SKILL_ABILITY_MAP),
-        "list": lambda v: v in ("cleric", "druid", "wizard"),
+        "list": lambda v: v in (MI_LISTS if feature_key.startswith("feat.2024_") else LIST_ABILITY),
+        "maneuvers": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= {k for k, _it, _en in MANEUVERS},
+        "languages": count(3),
+        "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPONS),
+        "rituals": lambda v: len(v) <= 6,
         "picks": count(3), "tools": count(3), "instruments": count(3),
         "cantrips": lambda v: len(v) <= 2, "spell": lambda v: len(v) <= 1,
     }
+    spec = ALL_FEATS.get(feature_key[len("feat."):])
+    if "ability" in options:
+        ability = options["ability"]
+        if "list" in options and not feature_key.startswith("feat.2024_"):  # talenti 2014: la caratteristica della classe
+            ok = ability == LIST_ABILITY.get(options["list"])
+        elif "list" in options:  # Iniziato alla magia 2024: scelta fra le tre da incantatore
+            ok = ability in MI_ABILITIES
+        else:  # caratteristica del +1
+            ok = spec is None or ability in (spec.ability_increase or ())
+        if not ok:
+            return False
     return all(check(v) for k, v in options.items() if (check := checks.get(k)))

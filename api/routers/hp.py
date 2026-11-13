@@ -27,6 +27,7 @@ from api.services.durations import end_concentration, is_concentrating
 from api.services.memorize import memorize
 from api.services.natural_recovery import ARCANE_FEATURE, recover as recover_slots, restore_points
 from core.rules.arcane_ward import absorb as absorb_ward
+from core.rules.catalog.feats_2014 import has_feat
 from core.rules.roll_options import set_saved_dice
 from core.rules.school_hooks import concentration_safe
 from api.services.rules_states import end_states_on_rest, on_damage
@@ -1019,6 +1020,8 @@ async def spend_hit_dice(
         rolls = [random.randint(1, hit_die) for _ in range(body.count)]
     # Ogni dado cura tiro + COS: minimo 0 nel 2014, 1 nel 2024.
     floor = 1 if character_edition(char) == "2024" else 0
+    if has_feat(char, "feat.durable"):  # Tenace 2014: almeno il doppio del modificatore di Costituzione, minimo 2
+        floor = max(2, 2 * con_mod)
     total_healed = sum(max(floor, r + con_mod) for r in rolls)
     song_die, song_rolls = await roll_song_of_rest(session, char)  # Canto di Riposo: un dado extra a testa per riposo
     total_healed += sum(song_rolls)

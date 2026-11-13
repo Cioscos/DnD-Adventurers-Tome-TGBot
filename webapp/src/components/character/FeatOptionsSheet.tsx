@@ -7,7 +7,7 @@ import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { WEAPON_KINDS } from '@/data/weaponMastery'
 import { profBonus } from '@/lib/dnd'
-import { FEATS_2024 } from '@/lib/feats'
+import { featByKey } from '@/lib/feats'
 import { uiLang } from '@/lib/lang'
 import { SKILL_KEYS } from '@/lib/species'
 import { loadSpellCatalog, localized, spellToForm, type SpellEntry } from '@/lib/srd/catalog'
@@ -23,6 +23,8 @@ interface Props {
 
 const FIELD = 'w-full min-h-[44px] px-3 rounded-xl bg-dnd-surface border border-dnd-border text-sm font-body text-dnd-text'
 const LISTS = ['cleric', 'druid', 'wizard'] as const
+// Talenti 2014 con una lista di classe: la caratteristica viene dalla classe (specchio di `_LIST_ABILITY`)
+const LISTS_2014 = ['bard', 'cleric', 'druid', 'sorcerer', 'warlock', 'wizard'] as const
 const CASTING = ['intelligence', 'wisdom', 'charisma'] as const
 
 // Specchi di api/services/choices.py e core/rules/catalog/feats_2024.py
@@ -51,7 +53,9 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const unitSystem = useUnitSettings((s) => s.system)
   const qc = useQueryClient()
   const key = (ability.feature_key ?? '').slice('feat.'.length)
-  const needs = FEATS_2024.find((f) => f.key === key)?.needs ?? []
+  const feat = featByKey(key)
+  const needs = feat?.needs ?? []
+  const is2014 = !key.startsWith('2024_')
   const [picks, setPicks] = useState<string[]>([])
   const [tool, setTool] = useState('')
   const [texts, setTexts] = useState(['', '', ''])
@@ -63,6 +67,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const [expertise, setExpertise] = useState('')
   const [types, setTypes] = useState<string[]>([])
   const [weapon, setWeapon] = useState('')
+  const [many, setMany] = useState<string[]>([]) // manovre o armi
 
   const has = (n: string) => needs.includes(n)
   const needsSpells = has('list') || has('spell') || has('rituals')
@@ -82,8 +87,13 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
     else if (sameLevel < max) setChosen([...chosen, e])
   }
 
-  const textKey = needs.find((n) => n === 'tools' || n === 'instruments')
-  const ritualCount = profBonus(char.total_level ?? 1)
+  const textKey = needs.find((n) => n === 'tools' || n === 'instruments' || n === 'languages')
+  const ritualCount = has('list') ? 2 : profBonus(char.total_level ?? 1)
+  const manyKey = needs.find((n) => n === 'maneuvers' || n === 'weapons')
+  const manyCount = manyKey === 'weapons' ? 4 : 2
+  const manyOptions = manyKey === 'maneuvers' ? (feat?.choices ?? []).map((c) => ({ key: c.key, label: c.name[lang] }))
+    : WEAPON_KINDS.map((w) => ({ key: w.key, label: lang === 'en' ? w.en : w.it }))
+  const cantripCount = has('spell') ? 2 : 1
   const typeCount = has('damage_types') ? 2 : 1
   const typeOptions = has('damage_types') ? ENERGY_TYPES : ADEPT_TYPES
   const skillOptions = SKILL_CHOICES[key] ?? SKILL_KEYS
@@ -94,7 +104,10 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
 
   const ready = has('picks') ? picks.length === 3
     : textKey ? texts.every((x) => x.trim()) && new Set(texts.map((x) => x.trim().toLowerCase())).size === 3
-      : has('list') ? !!list && !!stat && chosen.filter((c) => c.level === 0).length === 2 && chosen.filter((c) => c.level === 1).length === 1
+      : manyKey ? many.length === manyCount
+      : has('list') && has('rituals') ? !!list && chosen.length === 2
+      : has('list') ? !!list && (is2014 || !!stat) && chosen.filter((c) => c.level === 0).length === cantripCount
+        && chosen.filter((c) => c.level === 1).length === (has('spell') ? 1 : 0)
         : has('rituals') ? chosen.length === ritualCount
           : has('spell') ? chosen.length === 1
             : has('weapon_mastery') ? !!weapon
@@ -115,7 +128,8 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const payload = (): { options: Record<string, string | string[]>; spells: ReturnType<typeof spellPayload> } => {
     if (has('picks')) return { options: { picks }, spells: [] }
     if (textKey) return { options: { [textKey]: texts.map((x) => x.trim()) }, spells: [] }
-    if (has('list')) return { options: { list, ability: stat }, spells: spellPayload() }
+    if (manyKey) return { options: { [manyKey]: many }, spells: [] }
+    if (has('list')) return { options: is2014 ? { list } : { list, ability: stat }, spells: spellPayload() }
     if (has('spell') || has('rituals')) return { options: {}, spells: spellPayload() }
     if (has('weapon_mastery')) return { options: { weapon_mastery: [weapon] }, spells: [] }
     const options: Record<string, string | string[]> = {}
@@ -136,7 +150,8 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
     onError: () => haptic.error(),
   })
 
-  const ofList = (level: number) => catalog.filter((e) => e.level === level && (e.classes ?? []).includes(list))
+  const ofList = (level: number) => catalog.filter((e) => e.level === level && (e.classes ?? []).includes(list)
+    && (!has('rituals') || e.ritual) && (has('spell') || has('rituals') || e.attack_type === 'ATK'))
   const spellChips = (entries: SpellEntry[], max: number) => (
     <div className="flex flex-wrap gap-2">
       {entries.map((e) => {
@@ -228,6 +243,19 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           </>
         )}
 
+        {manyKey && (
+          <>
+            {hint(t(`character.feats.${manyKey}_hint`, { n: manyCount - many.length }))}
+            <div className="flex flex-wrap gap-2">
+              {manyOptions.map((o) => (
+                <Pressable key={o.key} onClick={() => setMany(toggled(many, o.key, manyCount))} aria-pressed={many.includes(o.key)} className={chip(many.includes(o.key))}>
+                  {o.label}
+                </Pressable>
+              ))}
+            </div>
+          </>
+        )}
+
         {has('weapon_mastery') && (
           <select value={weapon} onChange={(e) => setWeapon(e.target.value)} aria-label={t('character.feats.weapon')} className={FIELD}>
             <option value="">{t('character.feats.weapon')}</option>
@@ -239,16 +267,24 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           <>
             <select value={list} onChange={(e) => { setList(e.target.value); setChosen([]) }} aria-label={t('character.feats.mi_list')} className={FIELD}>
               <option value="">{t('character.feats.mi_list')}</option>
-              {LISTS.map((l) => <option key={l} value={l}>{t(`dnd.classes.${l}`)}</option>)}
+              {(is2014 ? LISTS_2014 : LISTS).map((l) => <option key={l} value={l}>{t(`dnd.classes.${l}`)}</option>)}
             </select>
-            <select value={stat} onChange={(e) => setStat(e.target.value)} aria-label={t('character.feats.mi_ability')} className={FIELD}>
+            {!is2014 && <select value={stat} onChange={(e) => setStat(e.target.value)} aria-label={t('character.feats.mi_ability')} className={FIELD}>
               <option value="">{t('character.feats.mi_ability')}</option>
               {CASTING.map((a) => <option key={a} value={a}>{t(`common.abilities.${a}`)}</option>)}
-            </select>
-            {list && [0, 1].map((level) => (
+            </select>}
+            {list && has('rituals') && (
+              <>
+                {hint(t('character.feats.rituals_hint', { n: ritualCount - chosen.length }))}
+                {spellChips(ofList(1), ritualCount)}
+              </>
+            )}
+            {list && !has('rituals') && (has('spell') ? [0, 1] : [0]).map((level) => (
               <div key={level} className="space-y-2">
-                {hint(t(level === 0 ? 'character.feats.mi_cantrips' : 'character.feats.mi_spell'))}
-                {spellChips(ofList(level), level === 0 ? 2 : 1)}
+                {hint(t(level === 1 ? 'character.feats.mi_spell' : has('spell') ? 'character.feats.mi_cantrips' : 'character.feats.sniper_cantrip'))}
+                {ofList(level).length === 0 && !has('spell') && catalog.length > 0
+                  ? hint(t('character.feats.sniper_none'))
+                  : spellChips(ofList(level), level === 0 ? cantripCount : 1)}
               </div>
             ))}
           </>
@@ -261,7 +297,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           </>
         )}
 
-        {has('rituals') && (
+        {has('rituals') && !has('list') && (
           <>
             {hint(t('character.feats.rituals_hint', { n: ritualCount - chosen.length }))}
             {spellChips(catalog.filter((e) => e.level === 1 && e.ritual), ritualCount)}

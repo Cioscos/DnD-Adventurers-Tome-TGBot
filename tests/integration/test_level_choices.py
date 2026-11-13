@@ -146,8 +146,9 @@ async def test_feat_lucky_counter_war_caster_setting(client):
     ab = next(a for a in r.json()["abilities"] if a["feature_key"] == "feat.lucky")
     assert ab["max_uses"] == 3 and ab["restoration_type"] == "long_rest"
     r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 23000})  # level 8
-    r = await _resolve(client, r.json(), {"kind": "feat", "feat_key": "war_caster"})
-    # il vantaggio alla concentrazione viene dal motore: le impostazioni restano quelle del giocatore
+    r = await _resolve(client, r.json(), {"kind": "feat", "feat_key": "alert"})
+    # gli effetti vengono dal motore: le impostazioni restano quelle del giocatore (Incantatore da Guerra richiede
+    # un incantatore dalla 3.6.0, il guerriero non può prenderlo)
     assert "war_caster" not in r.json()["settings"] and r.json()["settings"]["keep"] == 1
 
 
@@ -191,10 +192,10 @@ async def test_delete_feat_by_rule(client, test_session_factory):
 
 async def test_remove_war_caster_clears_setting(client):
     body = await _to_level_4(client)
-    out = await _take(client, body, "war_caster")
-    r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'war_caster')['id']}")
+    out = await _take(client, body, "mobile")
+    r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'mobile')['id']}")
     assert "war_caster" not in (r.json()["settings"] or {})
-    assert not [a for a in r.json()["abilities"] if a["feature_key"] == "feat.war_caster"]
+    assert not [a for a in r.json()["abilities"] if a["feature_key"] == "feat.mobile"]
 
 
 async def test_remove_lucky_deletes_counter(client):

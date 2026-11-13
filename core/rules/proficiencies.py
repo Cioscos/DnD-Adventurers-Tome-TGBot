@@ -48,6 +48,7 @@ LABELS: dict[str, tuple[str, str]] = {
     "thieves_tools": ("Arnesi da scasso", "Thieves' tools"),
     "herbalism_kit": ("Borsa da erborista", "Herbalism kit"),
     "disguise_kit": ("Kit da camuffamento", "Disguise kit"),
+    "improvised": ("Armi improvvisate", "Improvised weapons"),
     "poisoners_kit": ("Kit da avvelenatore", "Poisoner's kit"),
     "cooks_utensils": ("Utensili da cuoco", "Cook's utensils"),
     "thieves_cant": ("Gergo Ladresco", "Thieves' Cant"),
@@ -284,6 +285,10 @@ def is_weapon_proficient(char: Any, item: Any) -> bool:
     if category not in ("simple", "martial") or _unseeded_empty(char, profs):
         return True
     if category in profs or _canon(str(getattr(item, "name", ""))) in profs:
+        return True
+    from core.rules.weapons import WEAPONS, weapon_key  # import locale: weapons legge il registro dei talenti
+    key = weapon_key(item)
+    if key and {_canon(WEAPONS[key].it), _canon(WEAPONS[key].en)} & profs:  # arma scelta (Maestro d'Armi 2014)
         return True
     if category == "martial":
         props = " ".join(str(p).lower() for p in meta.get("properties") or [])

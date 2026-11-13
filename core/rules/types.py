@@ -684,7 +684,8 @@ class FeatureSpec:
     dc_ability: str | None = None
     magic_unarmed: bool = False  # i colpi senz'armi contano come magici (Colpi Ki Potenziati)
     unarmed_die: str | None = None  # dado minimo del colpo senz'armi (Attaccabrighe da taverna: 1d4); vale il migliore
-    weapon_damage_twice: bool = False  # una volta per turno i dadi dell'arma si tirano due volte, vale il migliore (Attaccante selvaggio)
+    # una volta per turno i dadi dell'arma si tirano due volte, vale il migliore (Attaccante selvaggio); "melee": solo in mischia (2014)
+    weapon_damage_twice: bool | str = False
     ki_spells: tuple = ()  # ``KiSpell`` che il privilegio fa lanciare coi punti invece degli slot
     # Fine di un riposo lungo: lo stato che il privilegio avvia da solo (Tranquillità); ``f(ctx) -> StateSpec | None``
     long_rest_state: "Callable[[RuleContext], StateSpec | None] | None" = None

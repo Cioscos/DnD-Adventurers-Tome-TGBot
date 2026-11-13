@@ -20,8 +20,8 @@ interface Props {
 export default function FeatChoiceList({ items, value, onPick, taken, ability = '', onAbility, score }: Props) {
   const { t } = useTranslation()
   const picked = items.find((f) => f.key === value)
-  const name = (f: FeatItem) => f.name ?? t(`character.level_choice.feats.${f.key}.name`)
-  const summary = (f: FeatItem) => f.summary ?? t(`character.level_choice.feats.${f.key}.summary`)
+  const name = (f: FeatItem) => f.name
+  const summary = (f: FeatItem) => f.summary
   const isTaken = (f: FeatItem) => !f.repeatable && !!taken?.has(`feat.${f.key}`)
 
   return (

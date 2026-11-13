@@ -71,6 +71,11 @@ class Applied:
     disadvantage_from: list[str] = field(default_factory=list)
 
 
+def _medium_armor_master(char) -> bool:
+    from core.rules.catalog.feats_2014 import medium_armor_master  # import locale: il catalogo usa i modificatori
+    return medium_armor_master(char)
+
+
 def has_state(ctx: RuleContext, key: str) -> bool:
     """Per i ``when`` dei modificatori: lo stato attivo ``key`` è in corso (Ira, Forma Selvatica...)."""
     return any(s.get("key") == key for s in ctx.char.active_states or [])
@@ -197,7 +202,8 @@ def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
             required = _strength_required(item)
             if required and ability_score(ctx.char, "strength") < required:
                 out.append(Modifier("speed", -10, source="armor:strength"))
-            if item_meta(item).get("stealth_disadvantage") and ctx.roll == "skill" and ctx.skill == "stealth":
+            if (item_meta(item).get("stealth_disadvantage") and ctx.roll == "skill" and ctx.skill == "stealth"
+                    and not _medium_armor_master(ctx.char)):
                 out.append(Modifier("disadvantage", 1, source="armor:stealth"))
         if is_armor_proficient(ctx.char, item):
             continue

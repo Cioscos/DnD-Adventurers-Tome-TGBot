@@ -52,8 +52,12 @@ async def test_observant_passives(client):
     assert await _rules(client, body["id"]) == []
 
 
-async def test_war_caster_concentration_advantage(client):
+async def test_war_caster_concentration_advantage(client, test_session_factory):
+    from core.db.models import CharacterClass
     body = await _l4(client)
+    async with test_session_factory() as s:  # Incantatore da Guerra richiede di saper lanciare (Cavaliere Mistico)
+        (await s.execute(select(CharacterClass).where(CharacterClass.character_id == body["id"]))).scalar_one()             .spellcasting_ability = "intelligence"
+        await s.commit()
     await _take(client, body, "war_caster")
     r = await client.post(f"/characters/{body['id']}/concentration/save", json={"damage": 10, "dice": [3, 18]})
     assert r.status_code == 200, r.text

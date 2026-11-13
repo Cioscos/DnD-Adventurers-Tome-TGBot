@@ -136,6 +136,7 @@ const lucky = {
 const char = (abilities: unknown[] = []) => ({
   id: 3,
   classes: [{ id: 10, class_name: 'fighter', level: 5 }],
+  ability_scores: [],
   abilities,
 })
 
