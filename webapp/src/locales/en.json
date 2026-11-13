@@ -1,9 +1,10 @@
 {
   "catalog": {
-    "title": "SRD catalogue",
+    "title": "Catalogue",
     "search": "Search by name (it/en)...",
     "empty": "No results",
     "en_badge": "EN",
+    "summary_badge": "summary",
     "show_more": "Show more ({{count}})"
   },
   "common": {
@@ -969,6 +970,7 @@
       "collapse": "Collapse",
       "from_catalog": "Add from catalogue",
       "reload_catalog": "Reload text from catalogue",
+      "reload_missing": "This spell is not in your edition’s catalogue: the text stays as it is.",
       "reload_title": "Reload from catalogue?",
       "reload_body": "Name, description, casting time, range, duration and at higher levels will be replaced with the catalogue text.",
       "reload_confirm": "Reload",

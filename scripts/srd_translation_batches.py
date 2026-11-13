@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "webapp" / "src" / "data" / "srd"
-KINDS = ["spells", "magic-items", "equipment", "races", "backgrounds", "feats", "monsters"]
+KINDS = ["spells", "spells-2024", "magic-items", "equipment", "races", "backgrounds", "feats", "monsters"]
 
 
 def _walk(node, path):

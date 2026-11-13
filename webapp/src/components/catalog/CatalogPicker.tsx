@@ -68,7 +68,7 @@ export default function CatalogPicker<K extends CatalogKind>({
         <ul className="space-y-1.5">
           {rows.slice(0, limit).map((e) => {
             const name = localized(e.name, lang)
-            const spell = kind === 'spells' ? (e as unknown as SpellEntry) : null
+            const spell = kind === 'spells' || kind === 'spells-2024' ? (e as unknown as SpellEntry) : null
             return (
               <li key={e.index}>
                 <Pressable
@@ -84,6 +84,11 @@ export default function CatalogPicker<K extends CatalogKind>({
                       </span>
                     )}
                   </span>
+                  {spell?.source === 'phb' && (
+                    <span className="shrink-0 text-xs font-bold px-1.5 py-0.5 rounded bg-dnd-surface border border-dnd-border text-dnd-text-muted">
+                      {t('catalog.summary_badge')}
+                    </span>
+                  )}
                   {name.fallback && (
                     <span className="shrink-0 text-xs font-bold px-1.5 py-0.5 rounded bg-dnd-surface border border-dnd-border text-dnd-text-muted">
                       {t('catalog.en_badge')}

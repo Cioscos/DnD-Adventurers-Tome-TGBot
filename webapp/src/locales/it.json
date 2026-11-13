@@ -1,9 +1,10 @@
 {
   "catalog": {
-    "title": "Catalogo SRD",
+    "title": "Catalogo",
     "search": "Cerca per nome (it/en)...",
     "empty": "Nessun risultato",
     "en_badge": "EN",
+    "summary_badge": "riassunto",
     "show_more": "Mostra altri ({{count}})"
   },
   "common": {
@@ -969,6 +970,7 @@
       "collapse": "Comprimi",
       "from_catalog": "Aggiungi dal catalogo",
       "reload_catalog": "Ricarica testo dal catalogo",
+      "reload_missing": "Questo incantesimo non è nel catalogo della tua edizione: il testo resta com’è.",
       "reload_title": "Ricaricare dal catalogo?",
       "reload_body": "Nome, descrizione, tempo di lancio, gittata, durata e a livelli superiori verranno sostituiti con il testo del catalogo.",
       "reload_confirm": "Ricarica",

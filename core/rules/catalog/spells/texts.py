@@ -67,7 +67,7 @@ SPELLS: tuple[SpellEffect, ...] = (
                       "You take the form of a creature you have seen and use its stat block, HP and Hit Dice, keeping alignment and mental scores; excess damage carries over to your normal form. Apply the stat block by hand.", HOUR, concentration=True),
         "2024": _text("Prendi la forma di una creatura già vista e ne usi il profilo, tenendo PF, Dadi Vita, punteggi mentali e Lancio di Incantesimi; ottieni PF temporanei pari ai PF della forma e finisce se si esauriscono. Applica il profilo a mano.",
                       "You take the form of a creature you have seen and use its stat block, keeping your HP, Hit Dice, mental scores and spellcasting; you gain temporary HP equal to the form's HP and it ends if they run out. Apply the stat block by hand.", HOUR, concentration=True)}),
-    SpellEffect("true_polymorph", ("true-polymorph",), ("Metamorfosi Pura", "True Polymorph"), _ALLY, both(_text(
+    SpellEffect("true_polymorph", ("true-polymorph",), ("Metamorfosi Pura", "Vera Metamorfosi", "True Polymorph"), _ALLY, both(_text(
         "Trasforma una creatura in un'altra o in un oggetto; se la concentrazione dura un'ora la forma diventa permanente. Applica il profilo a mano.",
         "Transforms a creature into another or an object; if concentration lasts an hour the change becomes permanent. Apply the stat block by hand.", HOUR, concentration=True))),
     SpellEffect("alter_self", ("alter-self",), ("Alterare Se Stesso", "Alter Self"), _SELF, {
@@ -106,7 +106,7 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("magic_circle", ("magic-circle",), ("Cerchio Magico", "Magic Circle"), _SELF, both(_text(
         "Cilindro di 3 m: celestiali, elementali, folletti, immondi e non morti ne sono ostacolati. Zona: tienine conto a mano.",
         "A 10 ft cylinder: celestials, elementals, fey, fiends and undead are hindered by it. A zone: account for it by hand.", HOUR))),
-    SpellEffect("leomunds_tiny_hut", ("leomunds-tiny-hut",), ("Capanna di Leomund", "Leomund's Tiny Hut"), _SELF, both(_text(
+    SpellEffect("leomunds_tiny_hut", ("tiny-hut", "leomunds-tiny-hut"), ("Capanna di Leomund", "Leomund's Tiny Hut"), _SELF, both(_text(
         "Cupola di 3 m che ripara dagli elementi e dalle creature esterne. Zona: nessun effetto sulla scheda.",
         "A 10 ft dome that shelters from the elements and outside creatures. A zone: no effect on the sheet.", HOUR8))),
     SpellEffect("hallow", ("hallow",), ("Santificare", "Hallow"), _SELF, both(_text(

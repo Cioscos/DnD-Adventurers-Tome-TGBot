@@ -145,7 +145,12 @@
   "Up to 1 hour": "Concentrazione, fino a 1 ora",
   "Up to 2 hours": "Concentrazione, fino a 2 ore",
   "Up to 8 hours": "Concentrazione, fino a 8 ore",
-  "Up to 24 hours": "Concentrazione, fino a 24 ore"
+  "Up to 24 hours": "Concentrazione, fino a 24 ore",
+  "1 day": "1 giorno",
+  "2 hours": "2 ore",
+  "6 rounds": "6 round",
+  "Up to 1 day": "Concentrazione, fino a 1 giorno",
+  "Up to 6 rounds": "Concentrazione, fino a 6 round"
  },
  "range_words": {
   "Self": "Personale",

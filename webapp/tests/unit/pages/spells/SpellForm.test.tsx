@@ -19,8 +19,8 @@ const FIREBALL = {
 }
 vi.mock('@/components/catalog/CatalogPicker', async () => {
   const React = await import('react')
-  return { default: (p: { onPick: (e: unknown) => void; note?: string; filters?: (e: unknown) => boolean }) =>
-    React.createElement('div', { 'data-filtered': p.filters ? 'yes' : 'no' },
+  return { default: (p: { kind: string; onPick: (e: unknown) => void; note?: string; filters?: (e: unknown) => boolean }) =>
+    React.createElement('div', { 'data-filtered': p.filters ? 'yes' : 'no', 'data-kind': p.kind },
       p.note && React.createElement('p', null, p.note),
       React.createElement('button', { onClick: () => p.onPick(FIREBALL) }, 'pick-fireball')) }
 })
@@ -171,5 +171,36 @@ describe('SpellForm', () => {
     const initial = { id: 1, name: 'X', level: 3, srd_index: 'fireball', is_concentration: false, is_ritual: false } as Spell
     render(<SpellForm initialData={initial} onSubmit={() => {}} onCancel={() => {}} isPending={false} />)
     expect(screen.getByRole('button', { name: 'character.spells.reload_catalog' })).toBeInTheDocument()
+  })
+
+  it('a 2024 character picks from the 2024 catalogue', async () => {
+    const { container } = render(<SpellForm edition="2024" onSubmit={() => {}} onCancel={() => {}} isPending={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.from_catalog' }))
+    expect(container.querySelector('[data-kind]')?.getAttribute('data-kind')).toBe('spells-2024')
+  })
+
+  it('reload reads the catalogue of the character edition', async () => {
+    const initial = { id: 1, name: 'X', level: 2, srd_index: 'arcane-vigor', is_concentration: false, is_ritual: false } as Spell
+    render(<SpellForm edition="2024" initialData={initial} onSubmit={() => {}} onCancel={() => {}} isPending={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.reload_catalog' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.spells.reload_confirm' }))
+    expect(await screen.findByDisplayValue('Vigore Arcano')).toBeInTheDocument()
+  })
+
+  it('reload says so when the spell is not in the edition catalogue', async () => {
+    const initial = { id: 1, name: 'Punizione Marchiante', level: 2, srd_index: 'branding-smite', is_concentration: false, is_ritual: false } as Spell
+    render(<SpellForm edition="2024" initialData={initial} onSubmit={() => {}} onCancel={() => {}} isPending={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.reload_catalog' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.spells.reload_confirm' }))
+    expect(await screen.findByText('character.spells.reload_missing')).toBeInTheDocument()
+  })
+
+  it('editing keeps the second part of the damage', async () => {
+    const onSubmit = vi.fn()
+    const saved = { id: 1, name: 'Onda', level: 5, damage_dice: '5d6', damage_type: 'thunder', extra_damage_dice: '5d6',
+      extra_damage_type: 'radiant|necrotic', is_concentration: false, is_ritual: false } as Spell
+    render(<SpellForm initialData={saved} onSubmit={onSubmit} onCancel={() => {}} isPending={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ extra_damage_dice: '5d6', extra_damage_type: 'radiant|necrotic' }))
   })
 })

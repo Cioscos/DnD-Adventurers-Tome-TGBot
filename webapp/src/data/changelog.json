@@ -1,6 +1,38 @@
 {
   "entries": [
     {
+      "version": "3.3.0",
+      "date": "2026-11-12",
+      "added": {
+        "it": [
+          "Catalogo degli incantesimi per edizione: i personaggi 2024 scelgono dalle versioni 2024 (testo completo del SRD 5.2), i personaggi 2014 da quelle 2014.",
+          "Nel catalogo ci sono anche gli incantesimi del Manuale del Giocatore fuori dal SRD (Malocchio, Armatura di Agathys, Sussurri Dissonanti...), con un nostro riassunto segnato «riassunto»: sceglierli attiva i loro effetti senza scrivere nulla."
+        ],
+        "en": [
+          "Spell catalogue per edition: 2024 characters pick from the 2024 versions (full SRD 5.2 text), 2014 characters from the 2014 ones.",
+          "The catalogue also lists the Player's Handbook spells outside the SRD (Hex, Armor of Agathys, Dissonant Whispers...), with our own summary marked «summary»: picking them turns on their effects without typing anything."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Gli incantesimi hanno i nomi dei manuali italiani; cercando il vecchio nome si trovano lo stesso.",
+          "Dal catalogo arriva anche la seconda parte del danno (Onda Distruttiva: tuono più radiante o necrotico a scelta), e «Ricarica dal catalogo» avvisa se l'incantesimo non c'è nella tua edizione."
+        ],
+        "en": [
+          "Spells carry the names of the Italian manuals; searching the old name still finds them.",
+          "The catalogue also fills in the second part of the damage (Destructive Wave: thunder plus radiant or necrotic of your choice), and «Reload from catalogue» tells you when the spell is not in your edition."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Rifugio di Leomund scelto dal catalogo attiva il suo effetto."
+        ],
+        "en": [
+          "Leomund's Tiny Hut picked from the catalogue turns on its effect."
+        ]
+      }
+    },
+    {
       "version": "3.2.1",
       "date": "2026-11-12",
       "improved": {

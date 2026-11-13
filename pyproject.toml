@@ -1,6 +1,6 @@
 [project]
 name = "dnd-bot-revamped"
-version = "3.2.1"
+version = "3.3.0"
 requires-python = ">=3.11"
 dependencies = [
     # Bot
@@ -23,6 +23,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.pytest.ini_options]

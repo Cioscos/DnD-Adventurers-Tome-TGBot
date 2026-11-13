@@ -150,6 +150,8 @@ export default function Spells() {
         school: data.school || undefined,
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || undefined,
+        extra_damage_dice: data.extra_damage_dice || undefined,
+        extra_damage_type: data.extra_damage_type || undefined,
         is_pinned: false,
         // Una scelta di incantesimi va sempre alla classe che la dà: la sceglie il server.
         class_id: pick ? null : data.class_id ? Number(data.class_id) : null,
@@ -193,6 +195,8 @@ export default function Spells() {
         school: data.school || undefined,
         srd_index: data.srd_index || undefined,
         higher_levels_dice: data.higher_levels_dice || null,
+        extra_damage_dice: data.extra_damage_dice || null,
+        extra_damage_type: data.extra_damage_type || null,
         class_id: data.class_id ? Number(data.class_id) : null,
         always_prepared: data.always_prepared,
       }),
@@ -696,6 +700,7 @@ export default function Spells() {
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
           casters={spellcasting?.casters ?? []}
+          edition={char.rules_edition}
           pickFilter={pick?.spell_pick ? { max_level: pick.spell_pick.max_level, list: pick.spell_pick.list, exact: pick.spell_pick.exact, ritual: pick.spell_pick.ritual, school: pick.spell_pick.school } : undefined}
         />
       )}

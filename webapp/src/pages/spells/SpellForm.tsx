@@ -14,7 +14,7 @@ import DamageDiceBuilder from '@/pages/inventory/DamageDiceBuilder'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { spellPickFilter } from '@/lib/spellPick'
-import { loadCatalog, spellToForm, type Lang, type SpellEntry } from '@/lib/srd/catalog'
+import { loadCatalog, spellCatalogKind, spellToForm, type Lang, type SpellEntry } from '@/lib/srd/catalog'
 import { useUnitSettings } from '@/store/unitSettings'
 import { parseComponents, serializeComponents, type ComponentToken } from './spellComponents'
 import {
@@ -45,6 +45,8 @@ export type SpellFormData = {
   school: string
   srd_index: string
   higher_levels_dice: string
+  extra_damage_dice: string
+  extra_damage_type: string
   class_id: string
   always_prepared: boolean
 }
@@ -53,7 +55,8 @@ const emptyForm: SpellFormData = {
   name: '', level: '0', description: '', casting_time: '', range_area: '',
   components: '', duration: '', is_concentration: false, is_ritual: false,
   damage_dice: '', damage_type: '', attack_save: '',
-  higher_level: '', school: '', srd_index: '', higher_levels_dice: '', class_id: '', always_prepared: false,
+  higher_level: '', school: '', srd_index: '', higher_levels_dice: '', extra_damage_dice: '', extra_damage_type: '',
+  class_id: '', always_prepared: false,
 }
 
 const COMPONENT_TOKENS: readonly ComponentToken[] = ['V', 'S', 'M']
@@ -67,14 +70,17 @@ interface SpellFormProps {
   casters?: { class_id: number; class_name: string }[]
   /** Scelta di incantesimi in corso: il catalogo mostra solo ciò che ammette (il modulo manuale resta per il resto). */
   pickFilter?: { max_level: number; list?: string | null; exact?: boolean; ritual?: boolean; school?: string | null }
+  /** Edizione del personaggio: sceglie il catalogo incantesimi. */
+  edition?: '2014' | '2024'
 }
 
-export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter }: SpellFormProps) {
+export default function SpellForm({ initialData, onSubmit, onCancel, isPending, casters = [], pickFilter, edition = '2014' }: SpellFormProps) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unitSystem = useUnitSettings((s) => s.system)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [confirmReload, setConfirmReload] = useState(false)
+  const [reloadMissing, setReloadMissing] = useState(false)
   const [form, setForm] = useState<SpellFormData>(emptyForm)
   const [dealsDamage, setDealsDamage] = useState(false)
   // Material detail kept aside so toggling M off/on doesn't lose the text
@@ -104,6 +110,8 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
         school: initialData.school || '',
         srd_index: initialData.srd_index || '',
         higher_levels_dice: initialData.higher_levels_dice || '',
+        extra_damage_dice: initialData.extra_damage_dice || '',
+        extra_damage_type: initialData.extra_damage_type || '',
         class_id: initialData.class_id != null ? String(initialData.class_id) : '',
         always_prepared: !!initialData.always_prepared,
       })
@@ -120,7 +128,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
   }, [initialData])
 
   const handleSubmit = () => {
-    onSubmit(dealsDamage ? form : { ...form, damage_dice: '', damage_type: '' })
+    onSubmit(dealsDamage ? form : { ...form, damage_dice: '', damage_type: '', extra_damage_dice: '', extra_damage_type: '' })
   }
 
   // Catalogue prefill: overwrites the form with the entry text in the current language.
@@ -139,8 +147,9 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
   }
   const reloadFromCatalog = async () => {
     setConfirmReload(false)
-    const entry = (await loadCatalog('spells')).find((e) => e.index === form.srd_index)
+    const entry = (await loadCatalog(spellCatalogKind(edition))).find((e) => e.index === form.srd_index)
     if (entry) applyEntry(entry, ['name', 'description', 'casting_time', 'range_area', 'duration', 'higher_level'])
+    setReloadMissing(!entry)
   }
 
   const componentTokens = parseComponents(form.components).tokens
@@ -188,6 +197,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
         >
           {form.srd_index ? t('character.spells.reload_catalog') : t('character.spells.from_catalog')}
         </Button>
+        {reloadMissing && <p className="text-xs text-dnd-text-muted font-body">{t('character.spells.reload_missing')}</p>}
 
         <ChipSelect
           label={t('character.spells.level')}
@@ -382,7 +392,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending, 
       </div>
       {pickerOpen && (
         <CatalogPicker
-          kind="spells"
+          kind={spellCatalogKind(edition)}
           filters={pickFilter ? spellPickFilter(pickFilter) : undefined}
           note={pickFilter ? t('character.spells.pick_filter_note') : undefined}
           onClose={() => setPickerOpen(false)}

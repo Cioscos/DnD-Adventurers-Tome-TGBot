@@ -15,7 +15,7 @@ describe('spellPickFilter', () => {
   it('a cantrip pick from the druid list offers the druid cantrips and nothing else', async () => {
     const spells = await loadCatalog('spells')
     const rows = spells.filter(spellPickFilter({ max_level: 0, list: 'druid' }))
-    expect(names(rows)).toEqual(['druidcraft', 'guidance', 'mending', 'poison-spray', 'produce-flame', 'resistance', 'shillelagh'])
+    expect(names(rows)).toEqual(['druidcraft', 'guidance', 'mending', 'poison-spray', 'produce-flame', 'resistance', 'shillelagh', 'thorn-whip'])
   })
 
   it('never offers a leveled spell or a cantrip of another class for a cantrip pick', async () => {

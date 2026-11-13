@@ -107,7 +107,7 @@ def test_checker_flags_glossary_violations(data, tmp_path):
     s["duration"]["it"] = "Boh"
     s["casting_time"]["it"] = "1 azione bonus"
     batches.save("spells", doc, data)
-    assert len(chk.check(data)) == 3
+    assert len(chk.check(data)) == 2  # il nome degli incantesimi segue le tabelle dei manuali, non il glossario
 
 
 _real = batches.load("spells")["items"]
@@ -115,9 +115,17 @@ _real = batches.load("spells")["items"]
 
 def test_real_catalogue_translated():
     by_index = {s["index"]: s for s in _real}
-    assert by_index["fireball"]["name"]["it"] == "Palla di fuoco"
-    assert by_index["cure-wounds"]["name"]["it"] == "Cura ferite"
+    assert by_index["fireball"]["name"]["it"] == "Palla di Fuoco"  # nomi dei manuali
+    assert by_index["cure-wounds"]["name"]["it"] == "Cura Ferite"
     races = batches.load("races")["items"]
     traits = [t for r in races for t in r["traits"] if t["index"] == "darkvision"]
     assert traits and all(t["name"]["it"] == "Scurovisione" for t in traits)
     assert chk.check() == []
+
+
+def test_checker_spell_names_follow_the_manual_not_the_glossary(data):
+    sp = {**SPELL, "name": {"en": "Fireball", "it": "Palla di Fuoco"}, "casting_time": {"en": "1 action", "it": "1 azione"},
+          "duration": {"en": "Instantaneous", "it": "Istantanea"}, "desc": {"en": "Boom.", "it": "Bum."}}
+    for kind in ("spells", "spells-2024"):
+        batches.save(kind, {"_meta": {}, "items": [sp]}, data)
+    assert not [p for p in chk.check(data) if p.startswith("spells")]
