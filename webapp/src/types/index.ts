@@ -316,6 +316,8 @@ export interface Item {
   description?: string
   weight: number
   quantity: number
+  /** Munizioni spese dall'ultimo recupero (metà si recupera a fine scontro). */
+  ammo_spent?: number
   item_type: string
   item_metadata?: Record<string, unknown>
   is_equipped: boolean

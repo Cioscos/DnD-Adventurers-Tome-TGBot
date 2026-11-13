@@ -444,6 +444,7 @@ class Item(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     weight: Mapped[float] = mapped_column(Float, default=0.0)
     quantity: Mapped[int] = mapped_column(Integer, default=1)
+    ammo_spent: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # munizioni spese dall'ultimo recupero
     # Item typing: "generic" | "weapon" | "armor" | "shield" | "consumable"
     #            | "tool" | "accessory" | "gear" | "potion" | "scroll" | "other"
     item_type: Mapped[str] = mapped_column(String(20), default="generic")

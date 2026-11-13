@@ -472,6 +472,7 @@
       "spend_hit_die_title": "Spend a hit die",
       "spend_hit_die_body": "{{cls}}: roll 1d{{die}} + CON and heal ({{remaining}} left).",
       "hit_die_exhausted": "No hit dice left",
+      "recover_ammo": "Recover {{n}} ammunition",
       "rest_interrupted": "Rest interrupted?",
       "rest_interrupted_long_2014": "At least an hour of strenuous activity: the rest must start over and gives no benefits.",
       "rest_interrupted_long_2024": "At least an hour of activity: only the short rest benefits apply.",

@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 from core.game.item_bonuses import item_bonus_total
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
+from api.services.ammo import recover_ammo
 from api.services.game_sessions import assert_participant, load_session, utc_now_iso, touch
 from api.schemas.encounter import (
     CombatantAddRequest,
@@ -870,6 +871,13 @@ async def end_encounter(
         if c.surprised:
             c.surprised = False
         await _sync_surprise(db, c, released=True)
+    for cid in {c.character_id for c in enc.combatants if c.character_id is not None}:  # un PG con più righe conta una volta
+        char = (await db.execute(
+            select(Character).options(selectinload(Character.items)).where(Character.id == cid)
+        )).scalar_one_or_none()
+        for item in (char.items if char else []):
+            if item.ammo_spent:
+                recover_ammo(db, char, item)
     await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     touch(session)

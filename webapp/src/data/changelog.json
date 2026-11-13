@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "3.7.0",
+      "date": "2026-11-13",
+      "added": {
+        "it": [
+          "Munizioni recuperate: alla fine del combattimento della serata ogni personaggio riprende metà delle munizioni usate (per difetto). Se giocate senza combattimento dell'app, nelle azioni rapide la casella delle munizioni mostra il pulsante per recuperarle."
+        ],
+        "en": [
+          "Ammunition recovery: when the evening's combat ends, each character gets back half of the ammunition used (rounded down). If you play without the app's combat, the ammunition box in quick actions shows a button to recover them."
+        ]
+      }
+    },
+    {
       "version": "3.6.0",
       "date": "2026-11-13",
       "added": {

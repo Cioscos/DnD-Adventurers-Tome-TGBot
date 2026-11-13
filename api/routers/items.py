@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.services.ammo import recover_ammo
 from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.services.session_allies import attach_spell_auras
@@ -892,6 +893,7 @@ async def attack_with_weapon(
             ammo_missing = True
         elif not (body and body.with_inspiration):
             source.quantity -= 1
+            source.ammo_spent = (source.ammo_spent or 0) + 1
         if source is not None:
             ammo_state = (
                 AmmoState(item_id=source.id, name=source.name, remaining=max(0, source.quantity))
@@ -1090,6 +1092,23 @@ async def _get_item(session: AsyncSession, char_id: int, item_id: int) -> Item:
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
+
+
+@router.post("/{char_id}/items/{item_id}/recover-ammo", response_model=CharacterFull)
+async def recover_item_ammo(
+    char_id: int,
+    item_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> CharacterFull:
+    char = await get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    if item.item_type != "ammunition" and item.equipment_slot != EquipmentSlot.AMMUNITION:  # come l'attacco: tipo o slot munizioni
+        raise HTTPException(status_code=422, detail="not_ammunition")
+    recover_ammo(session, char, item)
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    return await build_character_response(session, char)
 
 
 @router.post("/{char_id}/items/{item_id}/charges", response_model=CharacterFull)
