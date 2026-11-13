@@ -1,6 +1,38 @@
 {
   "entries": [
     {
+      "version": "3.4.0",
+      "date": "2026-11-13",
+      "added": {
+        "it": [
+          "Talenti d'Origine 2024 (Allerta, Artigiano, Guaritore, Fortunato, Iniziato alla magia, Musicista, Attaccante selvaggio, Abile, Attaccabrighe da taverna, Robusto) con i loro effetti: iniziativa, punti ferita, punti fortuna, il miglior tiro di danno, il colpo senz'armi da 1d4, le competenze e gli incantesimi con il lancio gratuito.",
+          "«Aggiungi talento» nella pagina delle abilità: prendi un talento fuori dalle scelte di livello (quello del background, un dono del GM), con il suo +1 alla caratteristica.",
+          "Nella creazione di un personaggio 2024 c'è il passo «Talento d'Origine», che si può saltare.",
+          "I talenti con scelte (Abile, Artigiano, Musicista, Iniziato alla magia) si completano dalla loro riga: finché manca la scelta il talento è «da completare» e non agisce."
+        ],
+        "en": [
+          "2024 Origin feats (Alert, Crafter, Healer, Lucky, Magic Initiate, Musician, Savage Attacker, Skilled, Tavern Brawler, Tough) with their effects: initiative, hit points, luck points, the better damage roll, the 1d4 unarmed strike, proficiencies and spells with the free cast.",
+          "«Add feat» on the abilities page: take a feat outside level choices (your background's, a gift from the GM), with its +1 to an ability.",
+          "Creating a 2024 character now has an «Origin feat» step, which you can skip.",
+          "Feats with choices (Skilled, Crafter, Musician, Magic Initiate) are completed from their row: until then the feat is «to complete» and has no effect."
+        ]
+      },
+      "improved": {
+        "it": [
+          "I talenti funzionano come i privilegi di classe: Allerta, Robusto, Mobile, Osservatore, Incantatore da Guerra e Fortunato 2014 ora agiscono dal motore delle regole. Le regole homebrew che l'app creava per loro vengono tolte da sole, così l'effetto non conta due volte.",
+          "Nella scelta di livello 2024 si possono prendere anche i talenti d'Origine.",
+          "L'import da D&D Beyond riconosce i talenti dal nome e li fa agire.",
+          "Un talento dell'altra edizione resta sulla scheda come testo, con un avviso."
+        ],
+        "en": [
+          "Feats work like class features: the 2014 Alert, Tough, Mobile, Observant, War Caster and Lucky now act through the rules engine. The homebrew rules the app created for them are removed automatically, so the effect is not counted twice.",
+          "A 2024 level choice can also take an Origin feat.",
+          "The D&D Beyond import recognises feats by name and makes them work.",
+          "A feat from the other edition stays on the sheet as text, with a notice."
+        ]
+      }
+    },
+    {
       "version": "3.3.0",
       "date": "2026-11-12",
       "added": {
