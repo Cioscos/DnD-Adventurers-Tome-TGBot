@@ -121,6 +121,7 @@ class ItemRead(BaseModel):
     description: Optional[str] = None
     weight: float = 0.0
     quantity: int = 1
+    ammo_spent: int = 0
     item_type: str = "generic"
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: bool = False
