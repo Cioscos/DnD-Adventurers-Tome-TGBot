@@ -12,7 +12,7 @@ export type WeaponChoice = {
 export const DEFAULT_WEAPON_CHOICE: WeaponChoice = { grip: 'one', attack_mode: 'melee' }
 
 type ItemLike = { id?: number; martial_arts?: boolean; item_metadata?: Record<string, unknown> | null }
-export type ChoiceChar = Pick<CharacterFull, 'classes' | 'rules_edition' | 'items' | 'ability_scores'>
+export type ChoiceChar = Pick<CharacterFull, 'classes' | 'rules_edition' | 'items' | 'ability_scores'> & Partial<Pick<CharacterFull, 'abilities'>>
 
 function props(item: ItemLike): string[] {
   const p = item.item_metadata?.properties
@@ -24,10 +24,15 @@ export function weaponOptions(
 ): { versatile: boolean; thrown: boolean; offhand: boolean; ability: boolean } {
   const p = props(item)
   const others = char?.items ?? []
+  const oneHanded = (o: ItemLike) => !props(o).includes('prop_two_handed')
+  // Combattente a Due Armi 2014: armi a una mano anche non leggere (come `api/routers/items.py`)
+  const dualWielder = (char?.abilities ?? []).some((a) => a.feature_key === 'feat.dual_wielder')
+  const second = (ok: (o: ItemLike) => boolean) =>
+    others.some((o) => o.id !== item.id && o.item_type === 'weapon' && o.is_equipped && ok(o))
   return {
     versatile: p.includes('prop_versatile') && !!item.item_metadata?.versatile_dice,
     thrown: p.includes('prop_thrown'),
-    offhand: isLight(item) && others.some((o) => o.id !== item.id && o.item_type === 'weapon' && o.is_equipped && isLight(o)),
+    offhand: dualWielder ? oneHanded(item) && second(oneHanded) : isLight(item) && second(isLight),
     ability: !!char && (isFinesse(item) || !!item.martial_arts),  // Arti Marziali: il server dice se vale per quest'arma
   }
 }
