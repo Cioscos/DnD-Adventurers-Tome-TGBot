@@ -60,7 +60,7 @@ async def test_skilled_complete_grants_skills_and_tools(client):
     assert r.status_code == 200, r.text
     out = r.json()
     assert out["skills"]["stealth"] and out["skills"]["arcana"]
-    assert "Arnesi da scasso" in out["general_proficiencies"]["tools"]
+    assert out["tool_proficiencies"].get("thieves_tools") is True
     assert _feat_rows(out, "2024_skilled")[0]["feat_status"] == "active"
     bad = (await _take(client, cid, "2024_skilled")).json()
     row2 = next(a for a in _feat_rows(bad, "2024_skilled") if a["feat_status"] == "incomplete")

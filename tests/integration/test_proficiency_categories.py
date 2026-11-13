@@ -29,7 +29,7 @@ async def test_empty_proficiencies_read_as_empty_categories(client):
 
 async def test_categories_roundtrip(client):
     cid = (await client.post("/characters", json={"name": "Cat"})).json()["id"]
-    body = {"armor": ["Scudi"], "weapons": ["Armi semplici"], "tools": ["Liuto"], "other": []}
+    body = {"armor": ["Scudi"], "weapons": ["Armi semplici"], "tools": [], "other": ["Nuotare"]}
     r = await client.patch(f"/characters/{cid}", json={"general_proficiencies": body})
     assert r.status_code == 200, r.text
     assert r.json()["general_proficiencies"] == body
@@ -108,4 +108,5 @@ async def test_import_accepts_legacy_list_and_object(client, test_session_factor
     data["character"]["general_proficiencies"] = obj
     r = await _import(client, data)
     assert r.status_code == 201, r.text
-    assert r.json()["general_proficiencies"] == obj
+    assert r.json()["general_proficiencies"] == EMPTY  # gli strumenti scritti passano nella colonna strutturata
+    assert r.json()["tool_proficiencies"].get("lute") is True

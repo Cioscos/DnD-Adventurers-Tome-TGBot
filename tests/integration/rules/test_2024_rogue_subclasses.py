@@ -178,8 +178,8 @@ async def test_assassinate_adds_the_rogue_level_to_a_sneak_attack_that_hits(clie
 
 async def test_assassins_tools_grant_the_proficiencies_and_the_poison_option_without_a_kit_in_the_bag(client):
     cid = await _sub(client, "assassin", 5)
-    tools = (await _full(client, cid))["general_proficiencies"]["tools"]
-    assert "Kit da camuffamento" in tools and "Kit da avvelenatore" in tools
+    tools = (await _full(client, cid))["tool_proficiencies"]
+    assert tools.get("disguise_kit") is True and tools.get("poisoners_kit") is True
     wid = await _rapier(client, cid)
     assert _k("poison") in await _roll_keys(client, cid, "attack", item_id=wid)
     other = await _sub(client, "thief", 5)

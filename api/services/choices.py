@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.rules.tools import add_tool_names
 from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES, LIST_ABILITY as _LIST_ABILITY, MI_ABILITIES as _MI_ABILITIES, MI_LISTS as _MI_LISTS
 from core.data.feats_2024 import ALL_FEATS as FEATS
@@ -447,10 +448,7 @@ def _text_list(value: Any, count: int) -> list[str]:
 
 
 def _add_tools(char: Character, names: list[str]) -> None:
-    cats = normalize(char.general_proficiencies)
-    have = {t.lower() for t in cats["tools"]}
-    cats["tools"] = [*cats["tools"], *(n for n in names if n.lower() not in have)]
-    char.general_proficiencies = cats  # riassegnato: la colonna JSON non traccia le mutazioni
+    add_tool_names(char, names)  # nomi del catalogo → colonna strutturata, gli altri in «Altro»
 
 
 # Scelte di abilità dei talenti 2024: quelle ammesse (None = tutte)

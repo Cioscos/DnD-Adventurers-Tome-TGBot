@@ -15,6 +15,8 @@ from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.services.wild_shape import start_form
 from api.version import APP_VERSION
+from core.data.tools import TOOLS
+from core.rules.tools import migrate_tools
 from core.game.containers import is_container
 from core.game.stats import migrate_character_ac
 from core.rules.feature_sync import (
@@ -97,7 +99,7 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     cols = {k: getattr(char, k) for k in ExportCharacter.model_fields if k != "notes"}
     cols["spell_slots_mode"] = _val(char.spell_slots_mode)
     for k in ("settings", "conditions", "skills", "saving_throws", "death_saves",
-              "personality", "damage_modifiers"):
+              "personality", "damage_modifiers", "tool_proficiencies"):
         cols[k] = cols[k] or {}
     for k in ("languages", "pending_choices"):
         cols[k] = cols[k] or []
@@ -221,10 +223,13 @@ async def import_character(
 
     cols = data.character.model_dump(exclude={"notes", "name", "spell_slots_mode"})
     cols["general_proficiencies"] = normalize_proficiencies(cols["general_proficiencies"])
+    cols["tool_proficiencies"] = {k: v for k, v in cols["tool_proficiencies"].items()
+                                  if k in TOOLS and v in (True, "expert")}  # file modificato a mano: solo il catalogo
     char = Character(
         user_id=user_id, name=name, notes=data.character.notes,
         spell_slots_mode=SpellSlotsMode(data.character.spell_slots_mode), **cols,
     )
+    migrate_tools(char)  # export vecchi: strumenti scritti come testo
     classes = [CharacterClass(**c.model_dump()) for c in data.classes]
     spells = [Spell(**sp.model_dump(exclude={"export_key", "source_class_key"})) for sp in data.spells]
     seen_slots: set = set()

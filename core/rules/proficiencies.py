@@ -13,6 +13,7 @@ from typing import Any
 from core.data.classes import get_saving_throw_proficiencies
 from core.data.skills import SKILL_ABILITY_MAP
 from core.rules.edition import character_edition, class_key as row_class_key
+from core.data.tools import tool_label
 from core.rules.types import Edition
 
 CATEGORIES = ("armor", "weapons", "tools", "other")
@@ -201,9 +202,11 @@ def merge_grant(char: Any, grant: ProficiencyGrant, lang: str = "it", skills: tu
     cats = normalize(char.general_proficiencies)
     changed = _add(cats["armor"], [label(p, lang) for p in grant.armor])
     changed |= _add(cats["weapons"], [label(p, lang) for p in grant.weapons])
-    changed |= _add(cats["tools"], [label(p, lang) for p in grant.tools])
     if changed or not isinstance(char.general_proficiencies, dict):
         char.general_proficiencies = cats  # riassegnato: la colonna JSON non traccia le mutazioni
+    if grant.tools:
+        from core.rules.tools import add_tools  # import locale: tools usa normalize di questo modulo
+        add_tools(char, grant.tools)
     if grant.saves:
         saves = dict(char.saving_throws or {})
         for ability in grant.saves:
@@ -236,7 +239,7 @@ def grant_to_dict(grant: ProficiencyGrant, lang: str = "it") -> dict:
     return {
         "armor": [label(p, lang) for p in grant.armor],
         "weapons": [label(p, lang) for p in grant.weapons],
-        "tools": [label(p, lang) for p in grant.tools],
+        "tools": [tool_label(p, lang) for p in grant.tools],
         "saves": list(grant.saves),
         "skills_from": list(grant.skills_from),
         "skills_count": grant.skills_count,
@@ -382,6 +385,8 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
             base = class_proficiencies(ed, row_class_key(row), i > 0)
             for cat in gone:
                 kept[cat].update(getattr(base, cat))
+    from core.rules.tools import drop_tools
+    drop_tools(char, gone.pop("tools") - kept["tools"])  # una Maestria resta: la sceglie il giocatore
     cats = normalize(char.general_proficiencies)
     changed = False
     for cat, ids in gone.items():

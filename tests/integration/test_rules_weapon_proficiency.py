@@ -44,7 +44,7 @@ async def test_second_class_grants_only_multiclass(client):
     body = r.json()
     prof = body["general_proficiencies"]
     assert prof["armor"] == ["Armature leggere"]
-    assert prof["tools"] == ["Arnesi da scasso"]
+    assert body["tool_proficiencies"] == {"thieves_tools": True}
     assert "Stocco" not in prof["weapons"]  # le armi del ladro non si ottengono da seconda classe
     assert not body["saving_throws"].get("dexterity")  # i TS solo dalla prima classe
     assert body["saving_throws"]["intelligence"] is True
