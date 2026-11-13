@@ -490,6 +490,9 @@ for _spell, _comp in (
                       attack_save="ATK", damage_dice="1d8", damage_type="radiant"), "V, S"),
         (GrantedSpell("guidance", {"it": "Guida", "en": "Guidance"}, 0, "1 azione", "Contatto", "Concentrazione, fino a 1 minuto",
                       is_concentration=True), "V, S"),
+        # Telecinetico 2024: Mano magica (invisibile e senza componenti con il talento, testo)
+        (GrantedSpell("mage-hand", {"it": "Mano magica", "en": "Mage Hand"}, 0, "1 azione", "9 m", "1 minuto",
+                      school="conjuration"), "V, S"),
         (GrantedSpell("sleep", {"it": "Sonno", "en": "Sleep"}, 1, "1 azione", "18 m", "Concentrazione, fino a 1 minuto",
                       is_concentration=True, attack_save="SAVE"), "V, S, M"),
         (GrantedSpell("ray-of-sickness", {"it": "Raggio di infermità", "en": "Ray of Sickness"}, 1, "1 azione", "18 m", "Istantanea",

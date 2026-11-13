@@ -181,7 +181,8 @@ def _feat_stats(char: Any, spell: Any) -> CasterStats | None:
     names = {getattr(spell, "srd_index", None), getattr(spell, "name", None)} - {None}
     for spec, row in active_features(char):
         opts = row.options if spec.class_key == "feat" else {}
-        if opts.get("ability") and names & {*(opts.get("cantrips") or []), *(opts.get("spell") or [])}:
+        own = {*(opts.get("cantrips") or []), *(opts.get("spell") or []), *(opts.get("rituals") or []), *spec.granted_spells}
+        if opts.get("ability") and names & own:  # anche gli incantesimi fissi del talento (Passo velato, Mano magica)
             mod = effective_ability_mod(char, opts["ability"])
             return CasterStats(None, "feat", opts["ability"], 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
     return None

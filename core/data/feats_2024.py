@@ -12,7 +12,7 @@ _AB = {"S": "strength", "D": "dexterity", "C": "constitution", "I": "intelligenc
 ALL6 = "SDCIWH"
 
 
-def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=False) -> FeatSpec:
+def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=False, armor=None, repeatable=False) -> FeatSpec:
     """`inc` = lettere delle caratteristiche aumentabili, `pre` = lettere + minimo (es. "SD13")."""
     abilities = tuple(_AB[c] for c in pre.rstrip("0123456789"))
     return FeatSpec(
@@ -20,7 +20,8 @@ def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=Fals
         ability_increase=[_AB[c] for c in inc], edition="2024",
         category="epic_boon" if boon else "general", min_level=19 if boon else 4,
         prereq_abilities=(abilities, int(pre.lstrip(ALL6))) if pre else None,
-        needs_spellcasting=caster, max_score=30 if boon else 20, save_proficiency_from_increase=save)
+        needs_spellcasting=caster, max_score=30 if boon else 20, save_proficiency_from_increase=save,
+        prereq_armor=armor, repeatable=repeatable)
 
 
 def _o24(key, it, en, sit, sen, repeatable=False) -> FeatSpec:
@@ -50,19 +51,19 @@ FEATS_2024: list[FeatSpec] = [
     _p24("defensive_duelist", "Duellante difensivo", "Defensive Duelist", "D", "Reazione: con arma Accurata aggiungi la competenza alla CA contro un attacco in mischia.", "Reaction: with a Finesse weapon add proficiency to AC against a melee attack.", "D13"),
     _p24("dual_wielder", "Combattente con due armi", "Dual Wielder", "SD", "Attacco extra con due armi da mischia diverse; estrai e riponi due armi insieme.", "Bonus attack with two different melee weapons; draw or stow two weapons at once.", "SD13"),
     _p24("durable", "Durevole", "Durable", "C", "Vantaggio ai TS contro la morte; azione Bonus per spendere un Dado Vita e curarti.", "Advantage on death saves; Bonus Action to spend a Hit Die and heal."),
-    _p24("elemental_adept", "Adepto elementale", "Elemental Adept", "IWH", "Un tipo di energia: i tuoi incantesimi ignorano la resistenza e i 1 valgono 2. Ripetibile.", "One energy type: your spells ignore resistance and 1s count as 2. Repeatable.", caster=True),
+    _p24("elemental_adept", "Adepto elementale", "Elemental Adept", "IWH", "Un tipo di energia: i tuoi incantesimi ignorano la resistenza e i 1 valgono 2. Ripetibile.", "One energy type: your spells ignore resistance and 1s count as 2. Repeatable.", caster=True, repeatable=True),
     _p24("fey_touched", "Toccato dalle fate", "Fey-Touched", "IWH", "Passo velato e un incantesimo di 1º di Divinazione o Ammaliamento, sempre preparati.", "Misty Step and one 1st-level Divination or Enchantment spell, always prepared."),
     _p24("grappler", "Lottatore", "Grappler", "SD", "Colpisci e afferri insieme; vantaggio contro chi afferri; muovi i lottati a velocità piena.", "Hit and grapple together; advantage against grappled foes; move them at full speed.", "SD13"),
     _p24("great_weapon_master", "Maestro di armi pesanti", "Great Weapon Master", "S", "Danni extra pari alla competenza con armi Pesanti; attacco Bonus dopo critico o abbattimento.", "Extra damage equal to proficiency with Heavy weapons; bonus attack after a crit or kill.", "S13"),
-    _p24("heavily_armored", "Armatura pesante", "Heavily Armored", "CS", "Addestramento con armature pesanti. Richiede addestramento con armature medie.", "Heavy armor training. Requires medium armor training."),
-    _p24("heavy_armor_master", "Maestro di armature pesanti", "Heavy Armor Master", "CS", "Con armatura pesante i danni fisici sono ridotti della competenza. Richiede armature pesanti.", "In heavy armor, physical damage is reduced by proficiency. Requires heavy armor training."),
+    _p24("heavily_armored", "Armatura pesante", "Heavily Armored", "CS", "Addestramento con armature pesanti. Richiede addestramento con armature medie.", "Heavy armor training. Requires medium armor training.", armor="medium"),
+    _p24("heavy_armor_master", "Maestro di armature pesanti", "Heavy Armor Master", "CS", "Con armatura pesante i danni fisici sono ridotti della competenza. Richiede armature pesanti.", "In heavy armor, physical damage is reduced by proficiency. Requires heavy armor training.", armor="heavy"),
     _p24("inspiring_leader", "Capo ispiratore", "Inspiring Leader", "WH", "Dopo un riposo dai PF temporanei a sei alleati.", "After a rest, grant temporary HP to up to six allies.", "WH13"),
     _p24("keen_mind", "Mente acuta", "Keen Mind", "I", "Competenza o Maestria in una abilità di conoscenza.", "Proficiency or Expertise in a knowledge skill.", "I13"),
     _p24("lightly_armored", "Armatura leggera", "Lightly Armored", "SD", "Addestramento con armature leggere e scudi.", "Light armor and shield training."),
     _p24("mage_slayer", "Ammazzamaghi", "Mage Slayer", "SD", "Svantaggio alla concentrazione di chi colpisci; vantaggio ai TS contro incantesimi vicini.", "Targets you damage have disadvantage on concentration; advantage on saves against nearby spells."),
     _p24("martial_weapon_training", "Addestramento con armi marziali", "Martial Weapon Training", "SD", "Competenza con le armi da guerra.", "Proficiency with martial weapons."),
-    _p24("medium_armor_master", "Maestro di armature medie", "Medium Armor Master", "SD", "Con armatura media sommi 3 alla CA con Destrezza 16+. Richiede armature medie.", "In medium armor add 3 to AC with Dexterity 16+. Requires medium armor training."),
-    _p24("moderately_armored", "Armatura media", "Moderately Armored", "SD", "Addestramento con armature medie. Richiede addestramento con armature leggere.", "Medium armor training. Requires light armor training."),
+    _p24("medium_armor_master", "Maestro di armature medie", "Medium Armor Master", "SD", "Con armatura media sommi 3 alla CA con Destrezza 16+. Richiede armature medie.", "In medium armor add 3 to AC with Dexterity 16+. Requires medium armor training.", armor="medium"),
+    _p24("moderately_armored", "Armatura media", "Moderately Armored", "SD", "Addestramento con armature medie. Richiede addestramento con armature leggere.", "Medium armor training. Requires light armor training.", armor="light"),
     _p24("mounted_combatant", "Combattente in sella", "Mounted Combatant", "SDW", "In sella hai vantaggio contro creature più piccole e proteggi la cavalcatura.", "While mounted you have advantage against smaller creatures and shield your mount."),
     _p24("observant", "Osservatore", "Observant", "IW", "Competenza o Maestria in Intuizione, Indagare o Percezione.", "Proficiency or Expertise in Insight, Investigation or Perception.", "IW13"),
     _p24("piercer", "Perforatore", "Piercer", "SD", "Una volta per turno ritiri un dado di danno perforante; i critici aggiungono un dado.", "Once per turn reroll a piercing damage die; crits add an extra die."),
@@ -73,7 +74,7 @@ FEATS_2024: list[FeatSpec] = [
     _p24("sentinel", "Sentinella", "Sentinel", "SD", "Blocchi i nemici che colpisci; attacco di opportunità anche contro chi si disimpegna.", "Stop enemies you hit; opportunity attacks even against Disengage.", "SD13"),
     _p24("shadow_touched", "Toccato dall'ombra", "Shadow-Touched", "IWH", "Invisibilità e un incantesimo di 1º di Illusione o Necromanzia, sempre preparati.", "Invisibility and one 1st-level Illusion or Necromancy spell, always prepared."),
     _p24("sharpshooter", "Tiratore scelto", "Sharpshooter", "D", "Le armi a distanza ignorano la copertura parziale e non soffrono la gittata lunga.", "Ranged weapons ignore partial cover and suffer no long-range penalty.", "D13"),
-    _p24("shield_master", "Maestro di scudi", "Shield Master", "S", "Spingi con lo scudo e riduci i danni dei TS. Richiede addestramento con gli scudi.", "Shove with your shield and cut save damage. Requires shield training."),
+    _p24("shield_master", "Maestro di scudi", "Shield Master", "S", "Spingi con lo scudo e riduci i danni dei TS. Richiede addestramento con gli scudi.", "Shove with your shield and cut save damage. Requires shield training.", armor="shields"),
     _p24("skill_expert", "Esperto di abilità", "Skill Expert", ALL6, "Una competenza in abilità in più e Maestria in una abilità in cui sei competente.", "One extra skill proficiency and Expertise in a skill you know."),
     _p24("skulker", "Furtivo", "Skulker", "D", "Vista cieca 10 piedi; ti nascondi in luce fioca e non ti riveli mancando.", "Blindsight 10 ft; hide in dim light and stay hidden when you miss.", "D13"),
     _p24("slasher", "Tagliente", "Slasher", "SD", "Una volta per turno riduci la Velocità del bersaglio; i critici lo rendono svantaggiato.", "Once per turn reduce the target's speed; crits impose disadvantage."),
@@ -97,6 +98,18 @@ FEATS_2024: list[FeatSpec] = [
     _p24("boon_night_spirit", "Dono dello Spirito della notte", "Boon of the Night Spirit", ALL6, "Al buio diventi invisibile e resisti a quasi tutti i danni.", "In dim light or darkness you turn invisible and resist most damage.", boon=True),
     _p24("boon_truesight", "Dono della Vista veritiera", "Boon of Truesight", ALL6, "Vista veritiera fino a 60 piedi.", "Truesight out to 60 feet.", boon=True),
 ]
+
+
+
+def _styles() -> list[FeatSpec]:
+    """Stili di Combattimento come talento (pag. 209): nomi e riassunti dello stile del Guerriero 2024, nessun +1."""
+    # import locale: il catalogo di classe non importa i dati dei talenti al caricamento (solo il registro dei talenti, pigro)
+    from core.rules.catalog.y2024.fighter import STYLE_ROWS
+    return [FeatSpec(key=f"2024_fs_{s.option_key}", name=dict(s.name), summary=dict(s.summary), edition="2024",
+                     category="fighting_style", min_level=0, needs_fighting_style=True) for s in STYLE_ROWS]
+
+
+FEATS_2024 += _styles()
 
 # Tutti i talenti selezionabili delle due edizioni.
 ALL_FEATS: dict[str, FeatSpec] = {**FEATS, **{f.key: f for f in FEATS_2024}}

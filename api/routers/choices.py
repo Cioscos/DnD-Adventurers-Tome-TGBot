@@ -97,7 +97,7 @@ async def resolve_choice(
 
 
 async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id: int | None,
-                  rule_id: int | None = None) -> CharacterFull:
+                  rule_id: int | None = None, lang: str = "it") -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
     if rule_id is not None:
         rule = (await session.execute(select(HomebrewRule).where(
@@ -111,6 +111,8 @@ async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id:
     if ab is None:
         raise HTTPException(404, "Feat not found")
     await remove_feat(session, char, ab)
+    char = await refresh_char_full(session, char_id, user_id)
+    await sync_cataloged_features(session, char, lang)  # gli effetti del talento (competenze, incantesimi) seguono il sync
     char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
@@ -166,8 +168,9 @@ async def delete_feat_by_rule(
     char_id: int, rule_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    return await _remove(char_id, user_id, session, None, rule_id)
+    return await _remove(char_id, user_id, session, None, rule_id, lang)
 
 
 @router.delete("/{char_id}/feats/{ability_id}", response_model=CharacterFull)
@@ -175,8 +178,9 @@ async def delete_feat(
     char_id: int, ability_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
-    return await _remove(char_id, user_id, session, ability_id)
+    return await _remove(char_id, user_id, session, ability_id, lang=lang)
 
 
 class OptionReplace(BaseModel):

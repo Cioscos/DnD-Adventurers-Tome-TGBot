@@ -28,6 +28,8 @@ class FeatSpec:
     needs_spellcasting: bool = False
     max_score: int = 20
     repeatable: bool = False  # si prende più volte (Abile, Iniziato alla magia): ogni riga è un'istanza
+    prereq_armor: Optional[str] = None  # addestramento richiesto: light | medium | heavy | shields
+    needs_fighting_style: bool = False  # Stile di Combattimento come talento: serve il privilegio Stile di Combattimento
 
 
 def _f(key, it, en, sit, sen, **kw) -> FeatSpec:

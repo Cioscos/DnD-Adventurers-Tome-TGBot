@@ -893,6 +893,11 @@ async def roll_spell_damage(
             main_rolls = [sides] * len(main_rolls)
         if second_rolls and maximized(second_type):
             second_rolls = [second_sides] * len(second_rolls)
+    # Adepto elementale: i dadi del tipo scelto che mostrano 1 contano come 2
+    for kind, rolls in ((main_type, main_rolls), (second_type, second_rolls)):
+        floor = modifiers_for(char, "spell_damage", spell=spell, damage_type=canonical_damage_type(kind)).damage_min_die if kind else 0
+        if floor:
+            rolls[:] = [max(v, floor) for v in rolls]
     option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
     carry = get_turn(char)
     carried = carry.pop(SPELL_ATTACK_DICE, None)  # i dadi dell'attacco con incantesimo appena fatto: valgono per questo tiro di danno

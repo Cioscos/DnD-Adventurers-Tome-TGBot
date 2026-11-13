@@ -21,10 +21,12 @@ from core.rules.types import RuleContext
 from core.rules.uses import pool_key
 
 INTERCEPTION = "fighter.style_interception"
+# Lo stesso stile preso da Paladino, Ranger o come talento 2024: ognuno ha la sua chiave
+INTERCEPTIONS = (INTERCEPTION, "paladin.style_interception", "ranger.style_interception", "feat.2024_fs_interception")
 CUTTING_WORDS = "bard.cutting_words"
 logger = logging.getLogger(__name__)
-REACTIONS = (INTERCEPTION, CUTTING_WORDS)
-LABELS = {INTERCEPTION: "Intercettazione", CUTTING_WORDS: "Parole Taglienti"}
+REACTIONS = (*INTERCEPTIONS, CUTTING_WORDS)
+LABELS = {**{k: "Intercettazione" for k in INTERCEPTIONS}, CUTTING_WORDS: "Parole Taglienti"}
 OPEN_SECONDS = 30  # dopo, la richiesta si chiude da sola
 UNUSED_SECONDS = 120  # chiusa e mai usata da così: le reazioni dei donatori tornano
 KEEP_DAYS = 1  # poi la riga (già usata o rimborsata) si cancella
@@ -255,7 +257,7 @@ async def prompts_for(session: AsyncSession, donor: Character) -> list[dict]:
         spec, row = found
         rolls = spec.on_use.rolls
         dice = rolls(RuleContext(char=donor, edition=character_edition(donor), class_row=row, class_level=row.level)) if callable(rolls) else rolls
-        if spec.key == INTERCEPTION:
+        if spec.key in INTERCEPTIONS:
             dice = f"{dice}+{donor.proficiency_bonus}"
         out.append({"request_id": req.id, "receiver_name": (await session.get(Character, req.receiver_id)).name, "damage": req.damage,
                     "damage_type": req.damage_type, "feature_key": spec.key, "dice": dice})

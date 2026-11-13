@@ -42,3 +42,38 @@ describe('featsFor', () => {
     expect(skilled?.needs).toEqual(['picks'])
   })
 })
+
+const withClass = (className: string, level: number, extra: Partial<CharacterFull> = {}) => ({
+  ...char(13, level), classes: [{ class_name: className, level, options: {} }],
+  general_proficiencies: { armor: [], weapons: [], tools: [], other: [] }, abilities: [], ...extra,
+}) as unknown as CharacterFull
+
+describe('featsFor — Stili e addestramento (PR 2)', () => {
+  it('fighting style feats need the Fighting Style feature', () => {
+    expect(featsFor(withClass('fighter', 4), '2024', 'level', 'it').find((f) => f.key === '2024_fs_defense')?.unmet).toBe(false)
+    expect(featsFor(withClass('wizard', 4), '2024', 'level', 'it').find((f) => f.key === '2024_fs_defense')?.unmet).toBe(true)
+    expect(featsFor(withClass('paladin', 1), '2024', 'level', 'it').find((f) => f.key === '2024_fs_defense')?.unmet).toBe(true)
+  })
+
+  it('a style already chosen by the class is unmet', () => {
+    const fighter = withClass('fighter', 4, { classes: [{ class_name: 'fighter', level: 4, options: { fighting_style: ['archery'] } }] } as never)
+    expect(featsFor(fighter, '2024', 'level', 'it').find((f) => f.key === '2024_fs_archery')?.unmet).toBe(true)
+  })
+
+  it('armor feats need the previous training', () => {
+    const find = (c: CharacterFull) => featsFor(c, '2024', 'level', 'it').find((f) => f.key === '2024_heavily_armored')?.unmet
+    expect(find(withClass('wizard', 4, { settings: { proficiencies_seeded: true }, general_proficiencies: { armor: [], weapons: ['Armi semplici'], tools: [], other: [] } } as never))).toBe(true)
+    expect(find(withClass('cleric', 4, { general_proficiencies: { armor: ['Armature medie'], weapons: [], tools: [], other: [] } } as never))).toBe(false)
+  })
+})
+
+describe('featsFor — addestramento come il server (revisione PR 2)', () => {
+  const find = (c: CharacterFull) => featsFor(c, '2024', 'level', 'it').find((f) => f.key === '2024_heavily_armored')?.unmet
+  it('a custom class passes the armor prerequisite', () => {
+    expect(find(withClass('Cavaliere delle rune', 4, { general_proficiencies: { armor: [], weapons: ['Armi semplici'], tools: [], other: [] } } as never))).toBe(false)
+  })
+  it('a character never seeded with no proficiencies passes, a seeded one does not', () => {
+    expect(find(withClass('wizard', 4))).toBe(false)
+    expect(find(withClass('wizard', 4, { settings: { proficiencies_seeded: true } } as never))).toBe(true)
+  })
+})
