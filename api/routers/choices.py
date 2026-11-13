@@ -85,7 +85,7 @@ async def resolve_choice(
         changed = [body.ability] if body.ability else []
     for ability in changed:  # same side effects as PATCH /ability_scores (CON HP, STR carry, AC)
         await apply_ability_change(session, char, ability, old_con_mod)
-    if changed:
+    if changed or isinstance(body, (FeatResolve, EpicBoonResolve)):  # i talenti agiscono dal motore: usi e testi al sync
         await sync_cataloged_features(session, char, lang)
     if not isinstance(body, ClassOptionResolve):  # le scelte di opzioni le riconcilia il sync, anche il resto che aspetta
         mark_resolved(char, choice)

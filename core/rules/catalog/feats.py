@@ -84,3 +84,46 @@ def owned_feats(char: Any) -> list[tuple[FeatureSpec, FeatSource]]:
     level = max(1, sum(getattr(c, "level", 0) or 0 for c in getattr(char, "classes", None) or []))
     return [(FEAT_FEATURES[a.feature_key], FeatSource(a, level)) for a in _abilities(char)
             if feat_status(char, a) == "active"]
+
+
+# ---------------------------------------------------------------------------
+# Talenti 2014 (Manuale del Giocatore 2014, pagg. 165-170): riassunti nostri, quello che l'app non modella resta testo
+# ---------------------------------------------------------------------------
+
+from core.rules.types import Cost, Modifier, RollOptionSpec, Uses  # noqa: E402  (dopo le definizioni del registro)
+
+D20_TESTS = ("attack", "save", "skill", "initiative", "death_save", "concentration")
+
+
+def _lucky_reroll(key: str, rolls: tuple[str, ...]) -> RollOptionSpec:
+    return RollOptionSpec(
+        key=key, phase="after_roll", after="reroll", rolls=rolls, cost=Cost(feature_key=key),
+        label={"it": "Fortunato: spendi un punto e ritira il d20 (scegli tu quale risultato tenere)",
+               "en": "Lucky: spend a point and reroll the d20 (you choose which result to keep)"})
+
+
+_register(
+    feat("alert", "2014", "Allerta", "Alert",
+         "+5 all'iniziativa; da cosciente non puoi essere sorpreso; chi non vedi non ha vantaggio contro di te per questo.",
+         "+5 to initiative; you can't be surprised while conscious; unseen attackers gain no advantage from it.",
+         modifiers=(Modifier("initiative", 5),)),
+    feat("tough", "2014", "Robusto", "Tough", "+2 punti ferita massimi per ogni livello.",
+         "+2 maximum hit points per level.", modifiers=(Modifier("hp_max", lambda ctx: 2 * ctx.class_level),)),
+    feat("mobile", "2014", "Mobile", "Mobile",
+         "+10 piedi di velocità; lo Scatto ignora il terreno difficile; chi attacchi in mischia non ti fa attacchi di opportunità.",
+         "+10 feet speed; Dash ignores difficult terrain; creatures you attack in melee get no opportunity attack on you.",
+         modifiers=(Modifier("speed", 10),)),
+    feat("observant", "2014", "Osservatore", "Observant",
+         "+1 Intelligenza o Saggezza; +5 a Percezione e Indagare passive; leggi le labbra.",
+         "+1 Intelligence or Wisdom; +5 to passive Perception and Investigation; you can read lips.",
+         modifiers=(Modifier("passive", 5, when=lambda ctx: ctx.skill in ("perception", "investigation")),)),
+    feat("war_caster", "2014", "Incantatore da Guerra", "War Caster",
+         "Vantaggio ai TS di Costituzione per la concentrazione; componenti somatiche con le mani occupate; un incantesimo come attacco di opportunità.",
+         "Advantage on Constitution saves for concentration; somatic components with full hands; a spell as an opportunity attack.",
+         modifiers=(Modifier("advantage", 0, when=lambda ctx: ctx.roll == "concentration"),)),
+    feat("lucky", "2014", "Fortunato", "Lucky",
+         "3 punti fortuna per riposo lungo: ritiri un tuo d20 (attacco, prova, TS) o quello di un attacco contro di te.",
+         "3 luck points per long rest: reroll your d20 (attack, check, save) or one rolled to attack you.",
+         action_type=None, passive=False, uses=Uses(table={1: 3}), restoration="long_rest",
+         roll_options=(_lucky_reroll("feat.lucky", D20_TESTS),)),
+)

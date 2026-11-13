@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from core.db.models import AppMeta, BotUser, Character
+from core.db.models import AppMeta, BotUser, Character, HomebrewRule
 from core.rules.catalog import CATALOG_VERSION, features_for
 from core.rules.edition import character_edition, class_key
 from core.rules.feature_sync import sync_cataloged_features
@@ -38,6 +38,17 @@ def _has_catalog(char: Character) -> bool:
 async def _lang(session: AsyncSession, user_id: int) -> str:
     code = (await session.execute(select(BotUser.language_code).where(BotUser.user_id == user_id))).scalar_one_or_none()
     return "en" if (code or "").lower().startswith("en") else "it"
+
+
+async def _drop_feat_rules(session: AsyncSession, char: Character) -> None:
+    """I talenti a catalogo agiscono dal motore: le regole homebrew `feat:<chiave>` che l'app creava per loro (anche
+    disattivate) e il flag `war_caster` messo dal talento si tolgono, o l'effetto varrebbe due volte. Idempotente."""
+    from core.rules.catalog.feats import FEAT_FEATURES  # import locale come in active_features
+    keys = [f"feat:{k[len('feat.'):]}" for k in FEAT_FEATURES]
+    await session.execute(delete(HomebrewRule).where(HomebrewRule.character_id == char.id,
+                                                     HomebrewRule.template_id.in_(keys)))
+    if any(a.feature_key == "feat.war_caster" for a in char.abilities) and (char.settings or {}).get("war_caster"):
+        char.settings = {k: v for k, v in char.settings.items() if k != "war_caster"}
 
 
 async def migrate_catalog(session_factory: async_sessionmaker) -> int:
@@ -66,6 +77,7 @@ async def migrate_catalog(session_factory: async_sessionmaker) -> int:
                     ).where(Character.id == char_id))).scalar_one_or_none()
                 if char is None or not _has_catalog(char):
                     continue
+                await _drop_feat_rules(session, char)
                 await sync_cataloged_features(session, char, await _lang(session, char.user_id), retrofit=True)
                 await session.commit()
                 synced += 1

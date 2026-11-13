@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.services.homebrew.dsl import RuleDSL
 from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES
 from core.data.feats_2024 import ALL_FEATS as FEATS
@@ -25,11 +23,6 @@ from core.rules.schools import normalize_school
 from core.rules.spellcasting import slots_for
 from core.rules.types import RuleContext
 
-_WHEN = {"path": "$character.id", "op": "gt", "value": 0}
-
-
-def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
 
 
 def _bad(msg: str) -> HTTPException:
@@ -360,7 +353,6 @@ def resolve_feat(
     session: AsyncSession, char: Character, feat_key: str, ability: Optional[str],
     custom_name: Optional[str], custom_text: Optional[str], lang: str, boon: bool = False,
 ) -> None:
-    now = _now()
     if feat_key == "custom":
         name = (custom_name or "").strip()
         if not name:
@@ -386,34 +378,18 @@ def resolve_feat(
             saves[ability] = True
             char.saving_throws = saves
     name = spec.name.get(lang) or spec.name["it"]
-    summary = spec.summary.get(lang) or spec.summary["it"]
-    if spec.passive_modifiers:
-        dsl = RuleDSL.model_validate({
-            "version": 1, "subject": {"type": "character"}, "triggers": [],
-            "passive_modifiers": [
-                {"when": _WHEN, "target": f"character.{m['target']}", "value": m["value"],
-                 "label_i18n": dict(spec.name)} for m in spec.passive_modifiers],
-        })
-        session.add(HomebrewRule(
-            character_id=char.id, name=name, description=summary, enabled=True,
-            dsl=dsl.model_dump(mode="json"), version=1, template_id=f"feat:{spec.key}",
-            created_at=now, updated_at=now))
-    if spec.setting:
-        s = dict(char.settings or {})
-        s[spec.setting] = True
-        char.settings = s
-    c = spec.counter
-    session.add(Ability(
-        character_id=char.id, name=(c["name"].get(lang) or c["name"]["it"]) if c else name,
-        description=summary, is_passive=c is None, feature_key=f"feat.{spec.key}",
-        max_uses=c["max"] if c else None, uses=c["max"] if c else None,
-        restoration_type=RestorationType(c["restoration"]) if c else RestorationType.NONE))
+    ability_row = Ability(
+        character_id=char.id, name=name, description=spec.summary.get(lang) or spec.summary["it"], is_passive=True,
+        feature_key=f"feat.{spec.key}", restoration_type=RestorationType.NONE,
+        options={"ability": ability} if spec.ability_increase else None)
+    session.add(ability_row)
+    char.abilities.append(ability_row)  # gli effetti e gli usi li dà il motore al sync che segue
     _history(session, char, name)
 
 
 async def remove_feat(session: AsyncSession, char: Character, ability: Ability) -> None:
-    """Rimuove un talento: abilita, regola homebrew, impostazione. Gli aumenti di
-    caratteristica e la competenza nei TS NON vengono annullati (stato precedente non tracciato)."""
+    """Rimuove un talento: la riga (e con lei gli effetti del motore) ed eventuali regole homebrew `feat:*` rimaste.
+    Gli aumenti di caratteristica e la competenza nei TS NON vengono annullati (stato precedente non tracciato)."""
     key = (ability.feature_key or "")[len("feat."):]
     name = ability.name
     if key == "custom":
@@ -421,14 +397,7 @@ async def remove_feat(session: AsyncSession, char: Character, ability: Ability) 
     else:
         await session.execute(delete(Ability).where(
             Ability.character_id == char.id, Ability.feature_key == f"feat.{key}"))
+        # Regole `feat:*` di personaggi non ancora migrati al motore (vedi ``catalog_migration``)
         await session.execute(delete(HomebrewRule).where(
             HomebrewRule.character_id == char.id, HomebrewRule.template_id == f"feat:{key}"))
-        setting = FEATS[key].setting if key in FEATS else None
-        still_set = any(
-            a.id != ability.id and (a.feature_key or "")[5:] in FEATS
-            and FEATS[a.feature_key[5:]].setting == setting for a in char.abilities)
-        if setting and not still_set:
-            s = dict(char.settings or {})
-            s.pop(setting, None)
-            char.settings = s
     add_history(session, char.id, "level_choice", f"Talento rimosso: {name}")

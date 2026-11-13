@@ -1,4 +1,6 @@
-"""Talenti (feats) selezionabili al level-up: nome e riassunto meccanico breve scritti da noi."""
+"""Talenti (feats) selezionabili al level-up: nome e riassunto meccanico breve scritti da noi.
+
+Gli effetti stanno nel motore delle regole (``core/rules/catalog/feats.py``); qui restano scelta e prerequisiti."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -38,21 +40,16 @@ FEATS: dict[str, FeatSpec] = {f.key: f for f in [
        "Advantage on attacks against creatures you are grappling; you can try to pin them."),
     _f("alert", "Allerta", "Alert",
        "+5 all'iniziativa; non puoi essere sorpreso se sei cosciente.",
-       "+5 to initiative; you cannot be surprised while conscious.",
-       passive_modifiers=[{"target": "initiative", "value": 5}]),
+       "+5 to initiative; you cannot be surprised while conscious."),
     _f("tough", "Robusto", "Tough",
        "+2 punti ferita massimi per ogni livello.",
-       "+2 maximum hit points per level.",
-       passive_modifiers=[{"target": "hit_points_max_per_level", "value": 2}]),
+       "+2 maximum hit points per level."),
     _f("mobile", "Mobile", "Mobile",
        "+3 metri (+10 piedi) di velocita'; lo scatto non provoca attacchi di opportunita'.",
-       "+10 feet speed; Dash does not provoke opportunity attacks.",
-       passive_modifiers=[{"target": "speed", "value": 10}]),
+       "+10 feet speed; Dash does not provoke opportunity attacks."),
     _f("observant", "Osservatore", "Observant",
        "+1 Intelligenza o Saggezza; +5 a Percezione e Indagare passive.",
        "+1 Intelligence or Wisdom; +5 to passive Perception and Investigation.",
-       passive_modifiers=[{"target": "passive.perception", "value": 5},
-                          {"target": "passive.investigation", "value": 5}],
        ability_increase=["intelligence", "wisdom"]),
     _f("resilient", "Resiliente", "Resilient",
        "+1 a una caratteristica a scelta e competenza nei suoi tiri salvezza.",
@@ -60,10 +57,8 @@ FEATS: dict[str, FeatSpec] = {f.key: f for f in [
        ability_increase=list(ALL_ABILITIES), save_proficiency_from_increase=True),
     _f("war_caster", "Incantatore Bellico", "War Caster",
        "Vantaggio ai tiri salvezza su Costituzione per mantenere la concentrazione.",
-       "Advantage on Constitution saves to maintain concentration.",
-       setting="war_caster"),
+       "Advantage on Constitution saves to maintain concentration."),
     _f("lucky", "Fortunato", "Lucky",
        "3 punti fortuna per riposo lungo per ritirare un d20.",
-       "3 luck points per long rest to reroll a d20.",
-       counter={"name": {"it": "Punti fortuna", "en": "Luck points"}, "max": 3, "restoration": "long_rest"}),
+       "3 luck points per long rest to reroll a d20."),
 ]}
