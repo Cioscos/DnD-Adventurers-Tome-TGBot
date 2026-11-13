@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, Optional
@@ -423,12 +424,21 @@ _MI_ABILITIES = ("intelligence", "wisdom", "charisma")
 _SRD_DIR = Path(__file__).resolve().parents[2] / "webapp" / "src" / "data" / "srd"
 
 
+@dataclass(frozen=True)
+class SrdSpell:
+    level: int
+    classes: frozenset[str]
+    school: str
+    ritual: bool
+
+
 @lru_cache(maxsize=2)
-def _srd_spells(edition: str) -> dict[str, tuple[int, set[str]]]:
-    """Catalogo SRD della webapp: indice -> (livello, liste di classe). Lo stesso file da cui la webapp sceglie."""
+def _srd_spells(edition: str) -> dict[str, SrdSpell]:
+    """Catalogo SRD della webapp, per indice. Lo stesso file da cui la webapp sceglie."""
     name = "spells-2024.json" if edition == "2024" else "spells.json"
     items = json.loads((_SRD_DIR / name).read_text(encoding="utf-8"))["items"]
-    return {e["index"]: (e["level"], set(e.get("classes") or [])) for e in items}
+    return {e["index"]: SrdSpell(e["level"], frozenset(e.get("classes") or []), str(e.get("school") or ""), bool(e.get("ritual")))
+            for e in items}
 
 
 def _text_list(value: Any, count: int) -> list[str]:
@@ -445,15 +455,76 @@ def _add_tools(char: Character, names: list[str]) -> None:
     char.general_proficiencies = cats  # riassegnato: la colonna JSON non traccia le mutazioni
 
 
+# Scelte di abilità dei talenti 2024: quelle ammesse (None = tutte)
+_SKILL_CHOICES: dict[str, tuple[str, ...] | None] = {
+    "feat.2024_keen_mind": ("arcana", "history", "investigation", "nature", "religion"),
+    "feat.2024_observant": ("insight", "investigation", "perception"),
+    "feat.2024_skill_expert": None,
+}
+_ADEPT_TYPES = ("acid", "cold", "fire", "lightning", "thunder")
+_TOUCHED_SCHOOLS = {"feat.2024_fey_touched": ("divination", "enchantment"),
+                    "feat.2024_shadow_touched": ("illusion", "necromancy")}
+
+
+def _checked_spells(char: Character, spells: list, ok) -> list[str]:
+    """Indici SRD degli incantesimi scelti, validati sul catalogo (livello e scuola dal catalogo, non dal client)."""
+    catalog = _srd_spells(character_edition(char))
+    indexes = [(sp.srd_index or "").strip() for sp in spells]
+    if (len(set(indexes)) != len(indexes) or any(i not in catalog or not ok(catalog[i]) for i in indexes)
+            or any(sp.level != catalog[i].level for sp, i in zip(spells, indexes))):
+        raise _bad("feat_options_invalid")
+    return indexes
+
+
+def _add_feat_spells(session: AsyncSession, char: Character, spells: list, indexes: list[str]) -> list[str]:
+    """Righe degli incantesimi del talento, sempre preparate e senza duplicati. Restituisce quelli che il talento ha reso
+    sempre preparati (gli altri lo erano già per un'altra fonte e lo restano alla rimozione)."""
+    granted: list[str] = []
+    for data, index in zip(spells, indexes):
+        have = next((sp for sp in char.spells if sp.srd_index == index or sp.name == data.name), None)
+        if have is None:
+            have = Spell(character_id=char.id, **data.model_dump(exclude={"pick_id", "class_id", "always_prepared", "is_prepared"}))
+            session.add(have)
+            char.spells.append(have)
+        if not have.always_prepared:
+            granted.append(index)
+        have.always_prepared = have.is_prepared = True
+    return granted
+
+
+def _choose_skill(char: Character, key: str, options: dict, needs: tuple[str, ...]) -> dict[str, Any]:
+    """Mente acuta, Osservatore: competenza, o Maestria se già competente. Esperto di abilità: una competenza nuova e
+    una Maestria in un'abilità in cui si è competenti (anche quella appena presa)."""
+    allowed = _SKILL_CHOICES.get(key, ())
+    skill = options.get("skill")
+    if skill not in (allowed if allowed is not None else SKILL_ABILITY_MAP):
+        raise _bad("feat_options_invalid")
+    current = dict(char.skills or {})
+    if "expertise" in needs:  # Esperto di abilità
+        expertise = options.get("expertise")
+        if current.get(skill) or expertise not in SKILL_ABILITY_MAP or not (current.get(expertise) or expertise == skill):
+            raise _bad("feat_options_invalid")
+        current[skill] = True
+        current[expertise] = "expert"
+        char.skills = current
+        return {"skill": skill, "expertise": expertise}
+    current[skill] = "expert" if current.get(skill) else True
+    char.skills = current
+    return {"skill": skill}
+
+
 def complete_feat(session: AsyncSession, char: Character, ability: Ability, options: dict, spells: list) -> None:
-    """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità e strumenti di Abile, strumenti di Artigiano e
-    Musicista, lista, caratteristica e incantesimi di Iniziato alla magia (sempre preparati, senza duplicati)."""
+    """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità, strumenti, tipo di danno, padronanza e
+    incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
-    needs = FEAT_NEEDS.get(ability.feature_key or "", ())
+    from core.rules.weapons import WEAPONS
+    key = ability.feature_key or ""
+    needs = FEAT_NEEDS.get(key, ())
     if not needs:
         raise _bad("feat_has_no_options")
     if feat_status(char, ability) != "incomplete":
         raise HTTPException(409, detail={"code": "feat_already_complete"})
+    others = [a for a in char.abilities if a is not ability and a.feature_key == key]  # le altre istanze (ripetibili)
     saved: dict[str, Any] = {}
     if "picks" in needs:
         picks = _text_list(options.get("picks"), 3)
@@ -467,45 +538,56 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         char.skills = current
         _add_tools(char, tools)
         saved["picks"] = picks
-    for key in ("tools", "instruments"):
-        if key in needs:
-            saved[key] = _text_list(options.get(key), 3)
-            _add_tools(char, saved[key])
-    if "list" in needs:
+    for name in ("tools", "instruments"):
+        if name in needs:
+            saved[name] = _text_list(options.get(name), 3)
+            _add_tools(char, saved[name])
+    if "skill" in needs:
+        saved.update(_choose_skill(char, key, options, needs))
+    if "damage_type" in needs:  # Adepto elementale: un tipo per istanza
+        chosen = options.get("damage_type")
+        if chosen not in _ADEPT_TYPES:
+            raise _bad("feat_options_invalid")
+        if any((a.options or {}).get("damage_type") == chosen for a in others):
+            raise _bad("feat_type_taken")
+        saved["damage_type"] = chosen
+    if "weapon_mastery" in needs:  # Maestro d'armi
+        weapons = options.get("weapon_mastery")
+        if not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS:
+            raise _bad("feat_options_invalid")
+        saved["weapon_mastery"] = list(weapons)
+    if "list" in needs:  # Iniziato alla magia
         chosen, stat = options.get("list"), options.get("ability")
         if chosen not in _MI_LISTS or stat not in _MI_ABILITIES:
             raise _bad("feat_options_invalid")
-        if any(a is not ability and a.feature_key == ability.feature_key and (a.options or {}).get("list") == chosen
-               for a in char.abilities):
+        if any((a.options or {}).get("list") == chosen for a in others):
             raise _bad("feat_list_taken")
-        catalog = _srd_spells(character_edition(char))
-        indexes = [(sp.srd_index or "").strip() for sp in spells]
-        # livello e lista dal catalogo, non dal client: il lancio gratuito vale solo per un incantesimo della lista scelta
-        if (len(set(indexes)) != 3 or any(i not in catalog or chosen not in catalog[i][1] for i in indexes)
-                or sorted(catalog[i][0] for i in indexes) != [0, 0, 1]
-                or any(sp.level != catalog[i][0] for sp, i in zip(spells, indexes))):
+        # il lancio gratuito vale solo per un incantesimo della lista scelta
+        indexes = _checked_spells(char, spells, lambda s: chosen in s.classes)
+        if len(indexes) != 3 or sorted(sp.level for sp in spells) != [0, 0, 1]:
             raise _bad("feat_options_invalid")
-        names: dict[int, list[str]] = {0: [], 1: []}
-        granted: list[str] = []
-        for data, index in zip(spells, indexes):
-            have = next((sp for sp in char.spells if sp.srd_index == index or sp.name == data.name), None)
-            if have is None:
-                have = Spell(character_id=char.id,
-                             **data.model_dump(exclude={"pick_id", "class_id", "always_prepared", "is_prepared"}))
-                session.add(have)
-                char.spells.append(have)
-            if not have.always_prepared:  # quelli già sempre preparati da un'altra fonte restano suoi alla rimozione
-                granted.append(index)
-            have.always_prepared = have.is_prepared = True
-            names[data.level].append(index)
-        saved.update({"list": chosen, "ability": stat, "cantrips": names[0], "spell": names[1], "granted": granted})
+        granted = _add_feat_spells(session, char, spells, indexes)
+        saved.update({"list": chosen, "ability": stat, "granted": granted,
+                      "cantrips": [i for sp, i in zip(spells, indexes) if sp.level == 0],
+                      "spell": [i for sp, i in zip(spells, indexes) if sp.level == 1]})
+    elif "spell" in needs:  # Toccato dalle fate / dall'ombra: un incantesimo di 1º livello delle due scuole
+        schools = _TOUCHED_SCHOOLS[key]
+        indexes = _checked_spells(char, spells, lambda s: s.level == 1 and s.school in schools)
+        if len(indexes) != 1:
+            raise _bad("feat_options_invalid")
+        saved.update({"spell": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
+    if "rituals" in needs:  # Incantatore rituale: tanti rituali di 1º livello quanto il bonus di competenza
+        indexes = _checked_spells(char, spells, lambda s: s.level == 1 and s.ritual)
+        if len(indexes) != char.proficiency_bonus:
+            raise _bad("feat_options_invalid")
+        saved.update({"rituals": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
     ability.options = {**(ability.options or {}), **saved}
     add_history(session, char.id, "level_choice", f"Talento completato: {ability.name}")
 
 
 def _feat_spells(ability: Ability) -> set[str]:
     opts = ability.options or {}
-    return {*(opts.get("cantrips") or []), *(opts.get("spell") or [])}
+    return {*(opts.get("cantrips") or []), *(opts.get("spell") or []), *(opts.get("rituals") or [])}
 
 
 async def remove_feat(session: AsyncSession, char: Character, ability: Ability) -> None:

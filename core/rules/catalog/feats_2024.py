@@ -12,7 +12,7 @@ from core.rules.catalog._common import heavy_armor, state_on
 from core.rules.catalog.feats import _f24, _register
 from core.rules.catalog.y2014.fighter import _off_hand_modifier, _weapon_in_hand
 from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
-from core.rules.weapons import has_property, weapon_key
+from core.rules.weapons import MASTERY_OPTIONS, has_property, weapon_key
 from core.utils.session_view import armor_category
 
 _PHYSICAL = ("bludgeoning", "piercing", "slashing")
@@ -73,6 +73,12 @@ def _shove_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
                  f"Telekinetic Shove: the creature within 30 ft makes a Strength save DC {dc} or is moved 5 ft.")
 
 
+def _adept_type(ctx: RuleContext) -> bool:
+    """Adepto elementale: dadi del danno di un incantesimo del tipo scelto (``options["damage_type"]``)."""
+    chosen = (getattr(ctx.class_row, "options", None) or {}).get("damage_type")
+    return ctx.spell is not None and chosen is not None and ctx.damage_type == chosen
+
+
 def _leader_hp(ctx: RuleContext) -> int:
     return _total_level(ctx) + _feat_mod(ctx)
 
@@ -93,6 +99,20 @@ _register(
          on_use=OnUse(slot="bonus", temp_hp=lambda c, _rolled: _pb(c))),
     _f24("crossbow_expert", modifiers=(Modifier("damage", _off_hand_modifier, when=_crossbow_offhand),)),
     _f24("crusher"),
+    _f24("elemental_adept", modifiers=(Modifier("damage_min_die", 2, when=_adept_type),)),
+    # Toccato dalle fate / dall'ombra: due lanci gratuiti per riposo lungo, condivisi fra l'incantesimo fisso e quello
+    # scelto (``options["spell"]``); il manuale ne dà uno per incantesimo (ruling della PR 2)
+    _f24("fey_touched", passive=False, granted_spells=("misty-step",), free_spell="misty-step", arcanum_group="spell",
+         uses=Uses(table={1: 2}), restoration="long_rest"),
+    _f24("keen_mind"),  # competenza o Maestria applicate al completamento; Studio rapido: testo
+    _f24("observant"),
+    _f24("ritual_caster", ritual_casting=True),
+    _f24("shadow_touched", passive=False, granted_spells=("invisibility",), free_spell="invisibility", arcanum_group="spell",
+         uses=Uses(table={1: 2}), restoration="long_rest"),
+    _f24("skill_expert"),
+    # la padronanza scelta (``options["weapon_mastery"]``) la legge ``core.rules.weapons._knows``; le opzioni sono quelle
+    # delle classi (stesse chiavi: con una classe che le ha già non si duplicano)
+    _f24("weapon_master", roll_options=MASTERY_OPTIONS),
     _f24("defensive_duelist", passive=False, action_type="reaction",
          on_use=OnUse(slot="reaction", available=_finesse_in_hand,
                       state=StateSpec(_DUELIST, rounds=1, ends_on=("new_turn", "manual"))),
@@ -142,4 +162,8 @@ _register(
     _f24("telepathic", passive=False, granted_spells=("detect-thoughts",), free_spell="detect-thoughts",
          uses=Uses(table={1: 1}), restoration="long_rest"),
     _f24("war_caster", modifiers=(Modifier("advantage", 0, when=lambda c: c.roll == "concentration"),)),
+    needs={"feat.2024_keen_mind": ("skill",), "feat.2024_observant": ("skill",), "feat.2024_skill_expert": ("skill", "expertise"),
+           "feat.2024_elemental_adept": ("damage_type",), "feat.2024_fey_touched": ("spell",),
+           "feat.2024_shadow_touched": ("spell",), "feat.2024_ritual_caster": ("rituals",),
+           "feat.2024_weapon_master": ("weapon_mastery",)},
 )

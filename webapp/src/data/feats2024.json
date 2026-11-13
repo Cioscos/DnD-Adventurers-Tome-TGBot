@@ -488,7 +488,9 @@
   "repeatable": true,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "damage_type"
+  ]
  },
  {
   "key": "2024_fey_touched",
@@ -513,7 +515,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "spell"
+  ]
  },
  {
   "key": "2024_grappler",
@@ -677,7 +681,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "skill"
+  ]
  },
  {
   "key": "2024_lightly_armored",
@@ -852,7 +858,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "skill"
+  ]
  },
  {
   "key": "2024_piercer",
@@ -990,7 +998,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "rituals"
+  ]
  },
  {
   "key": "2024_sentinel",
@@ -1045,7 +1055,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "spell"
+  ]
  },
  {
   "key": "2024_sharpshooter",
@@ -1124,7 +1136,10 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "skill",
+   "expertise"
+  ]
  },
  {
   "key": "2024_skulker",
@@ -1330,7 +1345,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "weapon_mastery"
+  ]
  },
  {
   "key": "2024_boon_combat_prowess",

@@ -205,8 +205,8 @@ class ExportSpellSlot(BaseModel):
     is_pact: bool = False
 
 
-_OPTION_TEXTS = {"list", "ability"}
-_OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted"}
+_OPTION_TEXTS = {"list", "ability", "skill", "expertise", "damage_type"}
+_OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted", "rituals", "weapon_mastery"}
 
 
 class ExportAbility(BaseModel):
@@ -233,7 +233,7 @@ class ExportAbility(BaseModel):
         text = lambda x: isinstance(x, str) and 0 < len(x) <= 50
         ok = all(
             (k in _OPTION_TEXTS and text(x))
-            or (k in _OPTION_LISTS and isinstance(x, list) and len(x) <= 3 and all(map(text, x)))
+            or (k in _OPTION_LISTS and isinstance(x, list) and len(x) <= 6 and all(map(text, x)))
             for k, x in v.items())
         return v if ok else None
 

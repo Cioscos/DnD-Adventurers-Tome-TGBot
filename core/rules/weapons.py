@@ -179,7 +179,9 @@ def _knows(ctx: RuleContext) -> bool:
     if ctx.edition != "2024" or ctx.item is None:
         return False
     key = weapon_key(ctx.item)
-    return bool(key) and any(key in (getattr(c, "options", None) or {}).get(MASTERY_GROUP, []) for c in ctx.char.classes)
+    from core.rules.catalog.feats import owned_feats  # import locale: il registro dei talenti importa questo modulo
+    rows = [*ctx.char.classes, *(row for _spec, row in owned_feats(ctx.char))]  # Maestro d'armi: la padronanza del talento
+    return bool(key) and any(key in (getattr(c, "options", None) or {}).get(MASTERY_GROUP, []) for c in rows)
 
 
 def _has(prop: str):
