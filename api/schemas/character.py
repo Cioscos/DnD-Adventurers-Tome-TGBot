@@ -418,6 +418,14 @@ class CharacterCreate(BaseModel):
     # una alternativa per gruppo (vedi GET /rules/starting-equipment). Richiede initial_class.
     rules_edition: Edition = "2014"
     starting_equipment: Optional[list[int]] = None
+    # Talento d'Origine 2024 scelto nella creazione guidata (chiave di core/data/feats_2024.py, categoria origin)
+    origin_feat: Optional[str] = Field(default=None, max_length=50)
+
+    @model_validator(mode="after")
+    def _origin_feat_is_2024(self) -> "CharacterCreate":
+        if self.origin_feat and self.rules_edition != "2024":
+            raise ValueError("origin_feat_needs_2024")
+        return self
 
 
 class CharacterUpdate(BaseModel):

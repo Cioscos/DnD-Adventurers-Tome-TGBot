@@ -35,6 +35,7 @@ from core.rules.subclasses import sync_subclass_keys
 from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import check_bonus, skill_bonus
 from core.data.labels import ability_label, condition_label, skill_label
+from api.services.choices import take_feat
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, REPLACED_AT_REST, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
@@ -276,6 +277,12 @@ async def create_character(
         )
         if body.starting_equipment is not None:
             _add_starting_equipment(char, body, lang)
+
+    if body.origin_feat:  # nella stessa transazione: un talento non valido annulla tutta la creazione
+        take_feat(session, char, body.origin_feat, None, lang, "creation")
+        await sync_cataloged_features(session, char, lang)
+        if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto)
+            char.current_hit_points = effective_hp_max(char)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
     # response serialization. See refresh_char_full for the full rationale.
