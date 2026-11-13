@@ -52,13 +52,16 @@ def add_tool_names(char: Any, names: Iterable[str]) -> None:
 
 
 def migrate_tools(char: Any) -> None:
-    """Sposta il testo di ``general_proficiencies["tools"]`` nella colonna (idempotente: la lista resta vuota)."""
+    """Sposta nella colonna il testo di ``general_proficiencies["tools"]`` e gli strumenti precisi scritti in ``other``
+    (idempotente: dopo restano solo voci che non sono strumenti del catalogo)."""
     from core.rules.proficiencies import normalize
 
     cats = normalize(char.general_proficiencies)
-    if not cats["tools"]:
+    in_other = [x for x in cats["other"] if tool_key(x)]
+    if not cats["tools"] and not in_other:
         return
-    names, cats["tools"] = cats["tools"], []
+    names, cats["tools"] = [*cats["tools"], *in_other], []
+    cats["other"] = [x for x in cats["other"] if not tool_key(x)]
     char.general_proficiencies = cats
     add_tool_names(char, names)
 

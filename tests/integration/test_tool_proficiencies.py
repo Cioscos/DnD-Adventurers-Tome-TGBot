@@ -78,3 +78,10 @@ async def test_existing_row_with_null_column_still_loads(client, test_session_fa
     r = await client.get(f"/characters/{cid}")
     assert r.status_code == 200, r.text
     assert r.json()["tool_proficiencies"] == {}
+
+
+def test_migrate_converts_tool_names_written_in_other():
+    c = _c(other=["Arnesi da scasso", "Nuotare", "Strumenti musicali"])
+    migrate_tools(c)
+    assert c.tool_proficiencies == {"thieves_tools": True}
+    assert c.general_proficiencies["other"] == ["Nuotare", "Strumenti musicali"]

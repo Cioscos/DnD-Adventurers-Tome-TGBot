@@ -19,6 +19,8 @@ from core.rules.types import Edition
 CATEGORIES = ("armor", "weapons", "tools", "other")
 SEEDED_FLAG = "proficiencies_seeded"
 FEATURE_GRANTS_KEY = "feature_proficiencies_granted"
+# privilegio -> strumenti che ha aggiunto davvero (non già posseduti): solo quelli si tolgono se il privilegio si perde
+FEATURE_TOOLS_KEY = "feature_tools_added"
 
 # id -> (it, en). Le armi specifiche sono al singolare: si confrontano col nome dell'oggetto.
 LABELS: dict[str, tuple[str, str]] = {
@@ -386,7 +388,16 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
             for cat in gone:
                 kept[cat].update(getattr(base, cat))
     from core.rules.tools import drop_tools
+    added = dict((char.settings or {}).get(FEATURE_TOOLS_KEY) or {})
+    tracked = {k for k in lost if k in added}
+    gone_tools = {t for k in tracked for t in added[k]}
+    if len(tracked) == len(lost):  # tutti tracciati: si tolgono solo gli strumenti che i privilegi persi avevano aggiunto
+        gone["tools"] = gone_tools
+    else:  # privilegi presi prima del tracciamento: tutti gli strumenti della concessione, come prima
+        gone["tools"] |= gone_tools
     drop_tools(char, gone.pop("tools") - kept["tools"])  # una Maestria resta: la sceglie il giocatore
+    if tracked:
+        char.settings = {**(char.settings or {}), FEATURE_TOOLS_KEY: {k: v for k, v in added.items() if k not in tracked}}
     cats = normalize(char.general_proficiencies)
     changed = False
     for cat, ids in gone.items():
@@ -412,9 +423,14 @@ def apply_feature_grants(char: Any, lang: str = "it") -> None:
         grants = getattr(spec, "proficiency_grants", None)
         if not grants or spec.key in done:
             continue
+        had = set(getattr(char, "tool_proficiencies", None) or {})
         merge_grant(char, ProficiencyGrant(armor=tuple(grants.get("armor", ())),
                                            weapons=tuple(grants.get("weapons", ())),
                                            tools=tuple(grants.get("tools", ()))), lang)
+        if grants.get("tools"):
+            new = sorted(set(char.tool_proficiencies or {}) - had)
+            added = dict((char.settings or {}).get(FEATURE_TOOLS_KEY) or {})
+            char.settings = {**(char.settings or {}), FEATURE_TOOLS_KEY: {**added, spec.key: new}}
         if grants.get("skills"):  # abilità: competenza, mai una maestria che scende (Influenza Seducente)
             skills = dict(char.skills or {})
             for slug in grants["skills"]:

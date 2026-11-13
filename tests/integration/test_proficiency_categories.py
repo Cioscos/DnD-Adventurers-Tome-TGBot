@@ -38,8 +38,9 @@ async def test_categories_roundtrip(client):
 
 async def test_patch_legacy_list_is_stored_as_categories(client):
     cid = (await client.post("/characters", json={"name": "Old"})).json()["id"]
-    r = await client.patch(f"/characters/{cid}", json={"general_proficiencies": ["Liuto"]})
-    assert r.json()["general_proficiencies"] == {**EMPTY, "other": ["Liuto"]}
+    r = await client.patch(f"/characters/{cid}", json={"general_proficiencies": ["Liuto", "Nuotare"]})
+    assert r.json()["general_proficiencies"] == {**EMPTY, "other": ["Nuotare"]}
+    assert r.json()["tool_proficiencies"] == {"lute": True}  # uno strumento del catalogo passa nella colonna
 
 
 async def test_unknown_category_rejected(client):
@@ -100,10 +101,10 @@ async def test_import_accepts_legacy_list_and_object(client, test_session_factor
 
     cid = await _make_valid(test_session_factory)
     data = await _export(client, cid)
-    data["character"]["general_proficiencies"] = ["Liuto"]
+    data["character"]["general_proficiencies"] = ["Liuto", "Nuotare"]
     r = await _import(client, data)
     assert r.status_code == 201, r.text
-    assert r.json()["general_proficiencies"] == {**EMPTY, "other": ["Liuto"]}
+    assert r.json()["general_proficiencies"] == {**EMPTY, "other": ["Nuotare"]}
     obj = {**EMPTY, "tools": ["Liuto"]}
     data["character"]["general_proficiencies"] = obj
     r = await _import(client, data)

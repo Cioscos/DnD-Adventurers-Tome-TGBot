@@ -108,3 +108,16 @@ async def test_session_identity_lists_tools(client, test_session_factory):
     r = await client.get(f"/sessions/ABC123/participants/{PLAYER_ID}/identity")
     assert r.status_code == 200, r.text
     assert "Liuto" in (r.json()["general_proficiencies"] or "")
+
+
+async def test_lost_grant_keeps_a_tool_the_player_already_had(client):
+    """Il kit da avvelenatore c'era già (es. dal background): perdere l'Assassino non lo toglie."""
+    r = await client.post("/characters", json={"name": "Avvelenatrice", "initial_class": {"class_name": "rogue", "level": 2}})
+    cid = r.json()["id"]
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True, "poisoners_kit": True}})
+    row = (await _full(client, cid))["classes"][0]["id"]
+    assert (await client.patch(f"/characters/{cid}/classes/{row}", json={"level": 3, "subclass": "Assassino"})).status_code == 200
+    assert (await _full(client, cid))["tool_proficiencies"].get("disguise_kit") is True
+    assert (await client.patch(f"/characters/{cid}/classes/{row}", json={"subclass": "Furfante"})).status_code == 200
+    after = (await _full(client, cid))["tool_proficiencies"]
+    assert after.get("poisoners_kit") is True and "disguise_kit" not in after

@@ -560,8 +560,8 @@ def _migrate_tools(connection) -> None:
 
     with Session(bind=connection) as s:
         for char in s.query(Character).all():
-            if isinstance(char.general_proficiencies, dict) and char.general_proficiencies.get("tools"):
-                migrate_tools(char)
+            if char.general_proficiencies:
+                migrate_tools(char)  # non tocca le schede senza strumenti da convertire
         s.commit()
 
 
