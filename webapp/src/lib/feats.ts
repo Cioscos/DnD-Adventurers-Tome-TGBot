@@ -21,7 +21,7 @@ export interface Feat2024 {
   key: string
   name: { it: string; en: string }
   summary: { it: string; en: string }
-  category: 'general' | 'epic_boon' | 'origin'
+  category: 'general' | 'epic_boon' | 'origin' | 'fighting_style'
   abilities: string[] | null
   min_level: number
   max_score: number
@@ -31,6 +31,46 @@ export interface Feat2024 {
   repeatable: boolean
   /** Scelte del talento da completare dopo averlo preso (`picks`, `tools`, `instruments`, `list`...). */
   needs: string[]
+  /** Addestramento richiesto (`light`, `medium`, `heavy`, `shields`). */
+  prereq_armor: string | null
+  /** Stile di Combattimento come talento: serve il privilegio Stile di Combattimento. */
+  needs_fighting_style: boolean
+}
+
+/** Testi di `general_proficiencies.armor` che valgono ogni addestramento (specchio di `core/rules/proficiencies.py`). */
+const ARMOR_ALIASES: Record<string, string[]> = {
+  light: ['light', 'armature leggere', 'light armor'],
+  medium: ['medium', 'armature medie', 'medium armor'],
+  heavy: ['heavy', 'armature pesanti', 'heavy armor'],
+  shields: ['shields', 'scudi', 'shield'],
+}
+
+/** Come `armor_trained` del server: senza nessuna competenza nota il prerequisito passa. */
+function armorTrained(char: CharacterFull, kind: string): boolean {
+  const raw = char.general_proficiencies ?? {}
+  const p = Array.isArray(raw) ? { other: raw } as Partial<Record<'armor' | 'weapons' | 'tools' | 'other', string[]>> : raw
+  const all = [...(p.armor ?? []), ...(p.weapons ?? []), ...(p.tools ?? []), ...(p.other ?? [])]
+  if (!all.length) return true
+  const have = [...(p.armor ?? []), ...(p.other ?? [])].map((x) => x.trim().toLowerCase())
+  return (ARMOR_ALIASES[kind] ?? [kind]).some((alias) => have.includes(alias))
+}
+
+/** Livello di classe dal quale le classi 2024 hanno Stile di Combattimento (specchio del catalogo). */
+const STYLE_LEVEL: Record<string, number> = { fighter: 1, paladin: 2, ranger: 2 }
+const STYLE_PREFIX = 'feat.2024_fs_'
+
+/** Stili già presi: dalle classi e come talento (`feat.2024_fs_<stile>`). */
+function stylesTaken(char: CharacterFull): Set<string> {
+  const fromClasses = char.classes.flatMap((c) => ((c.options ?? {}) as Record<string, string[]>).fighting_style ?? [])
+  const fromFeats = (char.abilities ?? []).map((a) => a.feature_key ?? '').filter((k) => k.startsWith(STYLE_PREFIX))
+    .map((k) => k.slice(STYLE_PREFIX.length))
+  return new Set([...fromClasses, ...fromFeats])
+}
+
+function styleOk(f: Feat2024, char: CharacterFull): boolean {
+  if (!f.needs_fighting_style) return true
+  const hasFeature = char.classes.some((c) => c.level >= (STYLE_LEVEL[c.class_name] ?? Infinity))
+  return hasFeature && !stylesTaken(char).has(f.key.slice('2024_fs_'.length))
 }
 
 /** Talenti d'Origine, generali e Doni Epici 2024 (specchio di core/data/feats_2024.py, rigenerato da scripts/export_feats_2024.py). */
@@ -44,6 +84,8 @@ export function meetsPrerequisites(f: Feat2024, char: CharacterFull, opts: { man
   return levelOk
     && (!f.prereq_abilities || f.prereq_abilities.any_of.some((a) => score(a) >= f.prereq_abilities!.min))
     && (!f.needs_spellcasting || char.classes.some((c) => !!c.spellcasting_ability))
+    && (!f.prereq_armor || armorTrained(char, f.prereq_armor))
+    && styleOk(f, char)
 }
 
 /** Una voce delle liste dei talenti. I talenti 2014 non hanno `name`/`summary`: i testi stanno nei locale

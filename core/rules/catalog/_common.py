@@ -52,10 +52,31 @@ def style_options(styles: Any) -> Any:
     Il manuale vieta di prendere due volte lo stesso stile anche quando una seconda classe dà il diritto di sceglierne uno
     (vale per ogni classe con lo stile: Guerriero, Paladino e le future). Gli stili della stessa classe li esclude già la scelta."""
     def options(ctx: RuleContext) -> list[str]:
-        mine = getattr(ctx.class_row, "id", None)
-        taken = {k for row in ctx.char.classes if row.id != mine for k in (row.options or {}).get(FIGHTING_STYLE_GROUP, [])}
+        taken = styles_taken(ctx.char, but=getattr(ctx.class_row, "id", None))
         return [s for s in styles if s not in taken]
     return options
+
+
+STYLE_FEAT_PREFIX = "feat.2024_fs_"
+
+
+def styles_taken(char: Any, but: Any = None) -> set[str]:
+    """Stili di combattimento già presi: dalle classi (tranne la riga ``but``) e come talento (``feat.2024_fs_<stile>``)."""
+    rows = {k for row in char.classes if row.id != but for k in (row.options or {}).get(FIGHTING_STYLE_GROUP, [])}
+    feats = {a.feature_key[len(STYLE_FEAT_PREFIX):] for a in _loaded_abilities(char)
+             if (a.feature_key or "").startswith(STYLE_FEAT_PREFIX)}
+    return rows | feats
+
+
+def _loaded_abilities(char: Any) -> list:
+    from core.rules.catalog.feats import _abilities  # import locale: il registro dei talenti importa questo modulo
+    return _abilities(char)
+
+
+def has_fighting_style(char: Any) -> bool:
+    """Il personaggio ha il privilegio Stile di Combattimento (una scelta del gruppo ``fighting_style`` attiva)."""
+    from core.rules.catalog import active_features
+    return any(c.group == FIGHTING_STYLE_GROUP for spec, _row in active_features(char) for c in spec.choices)
 
 
 def skill_label(slug: str) -> dict:

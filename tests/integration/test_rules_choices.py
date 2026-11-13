@@ -253,12 +253,13 @@ async def test_import_drops_incomplete_class_option(client):
 
 
 def test_2024_feat_catalog_is_text_only_and_bounded():
-    assert len(FEATS_2024) == 64 and len({f.key for f in FEATS_2024}) == 64  # 10 d'Origine, 42 generali, 12 Doni
+    assert len(FEATS_2024) == 74 and len({f.key for f in FEATS_2024}) == 74  # 10 d'Origine, 42 generali, 10 Stili, 12 Doni
     for f in FEATS_2024:
         assert f.edition == "2024" and f.passive_modifiers == [] and f.counter is None and f.setting is None
         assert all(len(t) <= 200 for t in f.summary.values()) and f.name["it"] and f.name["en"]
     assert sum(f.category == "epic_boon" for f in FEATS_2024) == 12
     assert sum(f.category == "origin" for f in FEATS_2024) == 10
+    assert sum(f.category == "fighting_style" for f in FEATS_2024) == 10
 
 
 def test_frontend_feat_mirror_is_up_to_date():

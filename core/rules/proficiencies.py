@@ -292,6 +292,12 @@ def is_weapon_proficient(char: Any, item: Any) -> bool:
     return False
 
 
+def armor_trained(char: Any, kind: str) -> bool:
+    """Addestramento con ``kind`` (light, medium, heavy, shields): prerequisito dei talenti. Senza competenze note passa."""
+    profs = _profs(char, "armor", "other")
+    return kind in profs or _unseeded_empty(char, profs)
+
+
 def is_armor_proficient(char: Any, item: Any) -> bool:
     """Armatura o scudo: stesso criterio di `is_weapon_proficient` (tipo ignoto = competente)."""
     if _unseeded_empty(char, _profs(char, "armor", "other")):

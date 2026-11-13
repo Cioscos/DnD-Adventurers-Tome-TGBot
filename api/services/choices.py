@@ -17,7 +17,8 @@ from core.data.feats_2024 import ALL_FEATS as FEATS
 from api.services.history import add_history
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType, Spell
-from core.rules.proficiencies import normalize
+from core.rules.catalog._common import has_fighting_style, styles_taken
+from core.rules.proficiencies import armor_trained, normalize
 from core.rules.catalog import features_for
 from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
@@ -330,6 +331,13 @@ def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> Non
             raise _bad("feat_prerequisite_ability")
     if spec.needs_spellcasting and not any(c.spellcasting_ability for c in char.classes):
         raise _bad("feat_prerequisite_spellcasting")
+    if spec.prereq_armor and not armor_trained(char, spec.prereq_armor):
+        raise _bad("feat_prerequisite_armor")
+    if spec.needs_fighting_style:
+        if not has_fighting_style(char):
+            raise _bad("feat_prerequisite_style")
+        if spec.key[len("2024_fs_"):] in styles_taken(char):
+            raise _bad("feat_style_taken")
 
 
 def _score_row(char: Character, ability: str):

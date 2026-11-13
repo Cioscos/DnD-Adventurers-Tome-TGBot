@@ -17,9 +17,10 @@ def build() -> list[dict]:
         "prereq_abilities": {"any_of": list(f.prereq_abilities[0]), "min": f.prereq_abilities[1]}
         if f.prereq_abilities else None,
         "needs_spellcasting": f.needs_spellcasting, "repeatable": f.repeatable,
+        "prereq_armor": f.prereq_armor, "needs_fighting_style": f.needs_fighting_style,
         "needs": list(FEAT_NEEDS.get(f"feat.{f.key}", ())),
     } for f in FEATS_2024]
 
 
 if __name__ == "__main__":
-    TARGET.write_text(json.dumps(build(), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    TARGET.write_text(json.dumps(build(), ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
