@@ -4,6 +4,7 @@ solo, il resto (distanze, spinte, azioni bonus d'attacco, oggetti) resta nel ria
 La riga del talento è un ``FeatSource``: ``ctx.class_row.options["ability"]`` è la caratteristica del +1 scelta."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from core.data.damage_types import canonical_damage_type
@@ -11,6 +12,7 @@ from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import heavy_armor, state_on
 from core.rules.catalog.feats import _f24, _register
 from core.rules.catalog.y2014.fighter import _off_hand_modifier, _weapon_in_hand
+from core.rules.catalog.y2024.fighter import STYLE_ROWS
 from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
 from core.rules.weapons import MASTERY_OPTIONS, has_property, weapon_key
 from core.utils.session_view import armor_category
@@ -167,3 +169,17 @@ _register(
            "feat.2024_shadow_touched": ("spell",), "feat.2024_ritual_caster": ("rituals",),
            "feat.2024_weapon_master": ("weapon_mastery",)},
 )
+
+
+# ---------------------------------------------------------------------------
+# Stili di Combattimento come talento (pag. 209): gli effetti dello stile del Guerriero, riga del talento
+# ---------------------------------------------------------------------------
+
+def _style_feat(spec: Any) -> Any:
+    key = f"feat.2024_fs_{spec.option_key}"
+    return replace(spec, key=key, class_key="feat", level=1, option_group=None, option_key=None,
+                   source_title=f"{spec.name['it']} / {spec.name['en']} (talento)",
+                   modifiers=tuple(replace(m, source=f"feature:{key}") for m in spec.modifiers))
+
+
+_register(*(_style_feat(s) for s in STYLE_ROWS))
