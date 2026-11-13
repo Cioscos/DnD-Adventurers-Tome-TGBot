@@ -237,6 +237,15 @@ export default function QuickActions({ char }: Props) {
     ...counterHandlers,
   })
 
+  const recoverAmmoMutation = useMutation({
+    mutationFn: (itemId: number) => api.items.recoverAmmo(char.id, itemId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', char.id], updated)
+      haptic.light()
+    },
+    onError: (err) => notifyMutationError(err),
+  })
+
   const chargesMutation = useMutation({
     mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) =>
       api.items.charges(char.id, itemId, delta),
@@ -576,12 +585,25 @@ export default function QuickActions({ char }: Props) {
                   else ammoMutation.mutate({ itemId: a.item.id, quantity: next })
                 }
                 const Icon = TYPE_ICONS[a.type]
+                const recoverable = isAbility ? 0 : Math.floor((a.item.ammo_spent ?? 0) / 2)
                 return (
                   <div key={a.key} className={`${cellClass} ${COUNTER_ROW}`}>
                     <Icon size={18} aria-hidden className="text-dnd-gold shrink-0" />
                     <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
                       {actionLabel(a)}
                     </span>
+                    {recoverable > 0 && !isAbility && (
+                      <Pressable
+                        type="button"
+                        onClick={() => recoverAmmoMutation.mutate(a.item.id)}
+                        disabled={recoverAmmoMutation.isPending}
+                        whileTap={{ scale: 0.92 }}
+                        aria-label={t('character.quick_actions.recover_ammo', { n: recoverable })}
+                        className={`${STEP_BUTTON} min-w-[44px] min-h-[44px] px-1.5 inline-flex items-center justify-center gap-0.5 font-mono font-bold tabular-nums text-xs text-dnd-gold-bright`}
+                      >
+                        <RotateCcw size={13} aria-hidden />{recoverable}
+                      </Pressable>
+                    )}
                     <IconButton
                       icon={<Minus size={16} />}
                       onClick={() => change(Math.max(0, current - 1))}

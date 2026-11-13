@@ -472,6 +472,7 @@
       "spend_hit_die_title": "Spendi un dado vita",
       "spend_hit_die_body": "{{cls}}: tira 1d{{die}} + COS e recupera HP ({{remaining}} rimasti).",
       "hit_die_exhausted": "Nessun dado vita rimasto",
+      "recover_ammo": "Recupera {{n}} munizioni",
       "rest_interrupted": "Riposo interrotto?",
       "rest_interrupted_long_2014": "Almeno un'ora di attività pesante: il riposo va ricominciato e non dà benefici.",
       "rest_interrupted_long_2024": "Almeno un'ora di attività: valgono solo i benefici del riposo breve.",

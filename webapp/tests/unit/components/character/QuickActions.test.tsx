@@ -6,8 +6,9 @@ import QuickActions from '@/components/character/QuickActions'
 import { ApiError } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, update, notifyMutationError, toastError, charges, rest } = vi.hoisted(() => ({
+const { spendHitDice, update, notifyMutationError, toastError, charges, rest, recoverAmmo } = vi.hoisted(() => ({
   charges: vi.fn(),
+  recoverAmmo: vi.fn(),
   rest: vi.fn(),
   spendHitDice: vi.fn(),
   update: vi.fn(),
@@ -17,7 +18,7 @@ const { spendHitDice, update, notifyMutationError, toastError, charges, rest } =
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { characters: { spendHitDice, update, rest }, items: { charges } } }
+  return { ...actual, api: { characters: { spendHitDice, update, rest }, items: { charges, recoverAmmo } } }
 })
 vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
@@ -308,5 +309,28 @@ describe('QuickActions long rest with the Pact of the Tome', () => {
     renderQC({ ...tomeLock, abilities: [] } as unknown as CharacterFull)
     await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
     expect(screen.queryByTestId('tome-reopen')).toBeNull()
+  })
+})
+
+describe('QuickActions ammo recovery', () => {
+  const archer = (spent: number) => ({
+    ...autoChar,
+    settings: { quick_actions: [{ type: 'counter_ammo', id: 20 }] },
+    items: [{ id: 20, name: 'Frecce', item_type: 'ammunition', quantity: 15, ammo_spent: spent }],
+  }) as unknown as CharacterFull
+
+  it('mostra «Recupera 2» con 5 munizioni spese e chiama recoverAmmo', async () => {
+    recoverAmmo.mockResolvedValue(archer(0))
+    renderQC(archer(5))
+    const button = screen.getByLabelText('character.quick_actions.recover_ammo')
+    expect(button.textContent).toContain('2')
+    await userEvent.click(button)
+    await waitFor(() => expect(recoverAmmo).toHaveBeenCalledWith(7, 20))
+  })
+
+  it('nasconde il pulsante con 1 sola munizione spesa', () => {
+    renderQC(archer(1))
+    expect(screen.getByText('Frecce')).toBeTruthy()
+    expect(screen.queryByLabelText('character.quick_actions.recover_ammo')).toBeNull()
   })
 })

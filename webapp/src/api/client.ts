@@ -1016,6 +1016,9 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ delta, spend }),
       }),
+    /** Recupera metà, per difetto, delle munizioni spese dall'ultimo recupero. */
+    recoverAmmo: (charId: number, itemId: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/recover-ammo`, { method: 'POST' }),
     /** Lancio da pergamena (Usare Dispositivi Magici): l'esito arriva nelle notifiche della risposta. */
     scroll: (charId: number, itemId: number, spellLevel: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/scroll`, {
