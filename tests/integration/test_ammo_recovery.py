@@ -75,3 +75,44 @@ async def test_recover_rejects_non_ammunition(client):
     wid = await _bow(client, cid)
     r = await client.post(f"/characters/{cid}/items/{wid}/recover-ammo")
     assert r.status_code == 422 and "not_ammunition" in r.text
+
+
+# ---------------------------------------------------------------------------
+# Fine dello scontro
+# ---------------------------------------------------------------------------
+
+async def _encounter_with_archer(client, test_session_factory, monkeypatch, shots: int):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+    from tests.integration.test_encounters_turns import _started
+
+    sid, _, _ = await _started(client, test_session_factory, monkeypatch)
+    as_user(PLAYER_ID)
+    cid = (await client.get("/characters")).json()[0]["id"]
+    wid = await _bow(client, cid)
+    aid = await _arrows(client, cid)
+    await _shoot(client, cid, wid, shots)
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/end")
+    assert r.status_code == 200, r.text
+    as_user(PLAYER_ID)
+    return cid, aid
+
+
+async def test_end_encounter_recovers_pc_ammo(client, test_session_factory, monkeypatch):
+    cid, aid = await _encounter_with_archer(client, test_session_factory, monkeypatch, 4)
+    assert await _qty(client, cid, aid) == 18
+    assert await _spent(client, cid, aid) == 0
+
+
+async def test_end_encounter_without_spent_ammo_is_quiet(client, test_session_factory, monkeypatch):
+    cid, aid = await _encounter_with_archer(client, test_session_factory, monkeypatch, 0)
+    assert await _qty(client, cid, aid) == 20
+    history = (await client.get(f"/characters/{cid}/history")).json()
+    assert not any("Munizioni recuperate" in h["description"] for h in history)
+
+
+async def test_button_after_end_recovers_nothing(client, test_session_factory, monkeypatch):
+    cid, aid = await _encounter_with_archer(client, test_session_factory, monkeypatch, 4)
+    r = await client.post(f"/characters/{cid}/items/{aid}/recover-ammo")
+    assert r.status_code == 200, r.text
+    assert await _qty(client, cid, aid) == 18
