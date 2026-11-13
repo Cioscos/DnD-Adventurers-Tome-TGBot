@@ -49,6 +49,7 @@ LABELS: dict[str, tuple[str, str]] = {
     "herbalism_kit": ("Borsa da erborista", "Herbalism kit"),
     "disguise_kit": ("Kit da camuffamento", "Disguise kit"),
     "poisoners_kit": ("Kit da avvelenatore", "Poisoner's kit"),
+    "cooks_utensils": ("Utensili da cuoco", "Cook's utensils"),
     "thieves_cant": ("Gergo Ladresco", "Thieves' Cant"),
     "druidic": ("Druidico", "Druidic"),
 }
@@ -354,7 +355,11 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
                         for sp in features_for(ed, row_class_key(row)) if sp.subclass is not None}  # sottoclasse non riconosciuta: come in feature_sync
     lost = [k for k in done if k not in unknown_subclass and not any(sp.key == k and getattr(sp, "proficiency_grants", None) for sp, _ in active)]
     gone: dict[str, set[str]] = {"armor": set(), "weapons": set(), "tools": set()}
+    from core.rules.catalog.feats import FEAT_FEATURES
     for key in lost:
+        feat = FEAT_FEATURES.get(key)  # talento rimosso (Armatura leggera): le sue competenze
+        for cat in gone if feat and feat.proficiency_grants else ():
+            gone[cat].update(feat.proficiency_grants.get(cat, ()))
         for ed in EDITIONS:
             for row in char.classes:
                 for spec in features_for(ed, row_class_key(row)):

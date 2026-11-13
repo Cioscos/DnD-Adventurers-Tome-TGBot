@@ -62,7 +62,7 @@ from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
 from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.roll_options import refund_spent, run_zero_damage_hooks, scale_damage
+from core.rules.roll_options import automatic_options_for, refund_spent, run_zero_damage_hooks, scale_damage
 from api.services.rules_options import (
     merge_options,
     option_result,
@@ -230,6 +230,10 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         if any(s.get("key") == "spell:death_ward" for s in char.active_states or []) and DEATH_WARD_HOLD not in body.options:
             # Interdizione alla Morte è automatica nel manuale: la conferma la dà il server (se il colpo non porta a 0 l'uso non si spende)
             body = body.model_copy(update={"options": [*body.options, DEATH_WARD_HOLD]})
+        auto = [o.spec.key for o in automatic_options_for(RuleContext(
+            char=char, edition=character_edition(char), roll="damage_taken", damage_type=slug, damage_in=raw)) if o.spec.phase == "damage_in"]
+        if auto:  # riduzioni automatiche (Maestro di armature pesanti): entrano come quelle scelte dal giocatore
+            body = body.model_copy(update={"options": [*body.options, *(k for k in auto if k not in body.options)]})
         if body.options:
             # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
             await attach_party(session, char)  # aure e Dono dei Protettori dei compagni della serata

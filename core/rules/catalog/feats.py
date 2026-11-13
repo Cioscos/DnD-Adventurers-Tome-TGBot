@@ -163,3 +163,5 @@ _register(
     needs={"feat.2024_crafter": ("tools",), "feat.2024_musician": ("instruments",), "feat.2024_skilled": ("picks",),
            "feat.2024_magic_initiate": ("list", "ability", "cantrips", "spell")},
 )
+
+from core.rules.catalog import feats_2024 as _general_2024  # noqa: E402,F401  (talenti generali 2024: si registrano)
