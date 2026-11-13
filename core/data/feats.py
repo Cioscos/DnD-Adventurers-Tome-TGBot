@@ -20,11 +20,12 @@ class FeatSpec:
     setting: Optional[str] = None
     # Talenti 2024 e Doni Epici (D3, core/data/feats_2024.py): solo scelta, prerequisiti e testo.
     edition: str = "2014"
-    category: str = "general"  # general | epic_boon
+    category: str = "general"  # general | epic_boon | origin | fighting_style
     min_level: int = 0  # livello totale del personaggio
     prereq_abilities: Optional[tuple[tuple[str, ...], int]] = None  # (una fra queste, minimo)
     needs_spellcasting: bool = False
     max_score: int = 20
+    repeatable: bool = False  # si prende più volte (Abile, Iniziato alla magia): ogni riga è un'istanza
 
 
 def _f(key, it, en, sit, sen, **kw) -> FeatSpec:

@@ -217,6 +217,7 @@ class ExportAbility(BaseModel):
     feature_key: Optional[str] = None
     action_type: Optional[ActionType] = None
     short_rest_recovers: Optional[Int0] = None
+    options: Optional[dict] = None  # scelte di un talento
     source_class_key: Optional[str] = None  # "c<indice in classes>"
 
     @field_validator("action_type", mode="wrap")
