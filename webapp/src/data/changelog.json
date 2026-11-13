@@ -1,6 +1,36 @@
 {
   "entries": [
     {
+      "version": "3.5.0",
+      "date": "2026-11-13",
+      "added": {
+        "it": [
+          "I talenti generali 2024 agiscono da soli in gioco: per esempio Veloce e Furtivo (velocità e vista cieca), Maestro di armature pesanti (danno fisico ridotto in armatura pesante), Maestro di armi pesanti, Mente protetta di Ammazzamaghi, Capo ispiratore (PF temporanei dopo il riposo), Duellante difensivo, Telepatico e Telecinetico con i loro incantesimi. Quello che l'app non modella resta nel testo per il GM.",
+          "I talenti con scelte si completano dalla loro riga: Mente acuta, Osservatore, Esperto di abilità, Adepto elementale (i dadi del tipo scelto non fanno 1), Toccato dalle fate e dall'ombra, Incantatore rituale e Maestro d'armi.",
+          "Gli Stili di Combattimento si possono prendere come talento, con gli stessi effetti dello stile di classe, se hai il privilegio Stile di Combattimento.",
+          "I Doni Epici agiscono: Forza d'animo (+40 PF), Velocità, Vista veritiera, Resistenza all'energia, Fato, Prodigio in combattimento, Recupero (riserva di d10), Abilità e Spirito della notte."
+        ],
+        "en": [
+          "2024 general feats act on their own in play: for example Speedy and Skulker (speed and blindsight), Heavy Armor Master (physical damage reduced in heavy armor), Great Weapon Master, Mage Slayer's Guarded Mind, Inspiring Leader (temporary HP after a rest), Defensive Duelist, Telepathic and Telekinetic with their spells. What the app does not model stays as text for the GM.",
+          "Feats with choices are completed from their row: Keen Mind, Observant, Skill Expert, Elemental Adept (dice of the chosen type never roll 1), Fey-Touched and Shadow-Touched, Ritual Caster and Weapon Master.",
+          "Fighting Styles can be taken as a feat, with the same effects as the class style, if you have the Fighting Style feature.",
+          "Epic Boons act: Fortitude (+40 HP), Speed, Truesight, Energy Resistance, Fate, Combat Prowess, Recovery (a pool of d10s), Skill and the Night Spirit."
+        ]
+      },
+      "improved": {
+        "it": [
+          "I prerequisiti di addestramento (armature leggere, medie, pesanti, scudi) e dello Stile di Combattimento sono verificati quando prendi un talento.",
+          "Rimuovere un talento toglie anche le competenze che dava (per esempio Armatura leggera).",
+          "Toccato dalle fate e dall'ombra: i due lanci gratuiti per riposo lungo sono condivisi fra i due incantesimi; l'Ultima resistenza del Dono del Recupero resta testo."
+        ],
+        "en": [
+          "Training prerequisites (light, medium, heavy armor, shields) and the Fighting Style prerequisite are checked when you take a feat.",
+          "Removing a feat also removes the proficiencies it granted (for example Lightly Armored).",
+          "Fey-Touched and Shadow-Touched: the two free casts per long rest are shared between the two spells; the Boon of Recovery's Last Stand stays as text."
+        ]
+      }
+    },
+    {
       "version": "3.4.0",
       "date": "2026-11-13",
       "added": {

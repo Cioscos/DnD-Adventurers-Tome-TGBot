@@ -149,3 +149,8 @@ async def test_text_only_feats_have_a_row(client):
     c = await _with(client, "sentinel", "strength")
     row = _feat_rows(c["after"], "2024_sentinel")[0]
     assert row["feat_status"] == "active" and row["is_passive"]
+
+
+def test_catalog_version_bumped():
+    from core.rules.catalog import CATALOG_VERSION
+    assert CATALOG_VERSION == 70  # i personaggi esistenti ripassano dal sync con i talenti 2024
