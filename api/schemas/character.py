@@ -300,6 +300,11 @@ class CharacterFull(BaseModel):
     tool_proficiencies: dict[str, bool | str] = Field(default_factory=dict)
     damage_modifiers: Optional[dict[str, Any]] = None
 
+    @field_validator("tool_proficiencies", mode="before")
+    @classmethod
+    def _null_tools(cls, v: Any) -> Any:
+        return v or {}  # schede nate prima della colonna: NULL
+
     @field_validator("general_proficiencies", mode="before")
     @classmethod
     def _proficiency_categories(cls, v: Any) -> dict[str, list[str]]:

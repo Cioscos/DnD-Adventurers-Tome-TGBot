@@ -79,7 +79,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("items", "equipment_slot", "VARCHAR(20)", None),
     ("items", "container_id", "INTEGER", None),
     ("items", "ammo_spent", "INTEGER NOT NULL", "0"),
-    ("characters", "tool_proficiencies", "JSON", None),
+    ("characters", "tool_proficiencies", "JSON", "'{}'"),
     # Heroic Inspiration
     ("characters", "heroic_inspiration", "BOOLEAN", "0"),
     # Saving throw proficiencies

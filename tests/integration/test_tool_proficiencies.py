@@ -64,3 +64,17 @@ async def test_patch_text_tools_are_converted(client):
     body = r.json()
     assert body["tool_proficiencies"].get("lute") is True
     assert body["general_proficiencies"]["tools"] == [] and "Pippo" in body["general_proficiencies"]["other"]
+
+
+async def test_existing_row_with_null_column_still_loads(client, test_session_factory):
+    """Una scheda nata prima della colonna ha tool_proficiencies NULL: la risposta deve restare valida."""
+    from sqlalchemy import update
+
+    from core.db.models import Character
+    cid = await _char(client)
+    async with test_session_factory() as s:
+        await s.execute(update(Character).where(Character.id == cid).values(tool_proficiencies=None))
+        await s.commit()
+    r = await client.get(f"/characters/{cid}")
+    assert r.status_code == 200, r.text
+    assert r.json()["tool_proficiencies"] == {}
