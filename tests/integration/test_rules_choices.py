@@ -264,5 +264,7 @@ def test_2024_feat_catalog_is_text_only_and_bounded():
 
 def test_frontend_feat_mirror_is_up_to_date():
     import json
-    from scripts.export_feats_2024 import TARGET, build
-    assert json.loads(TARGET.read_text(encoding="utf-8")) == build(), "uv run python -m scripts.export_feats_2024"
+    from core.data.feats import FEATS
+    from scripts.export_feats import DATA, build
+    for name, feats in (("feats2024.json", FEATS_2024), ("feats2014.json", list(FEATS.values()))):
+        assert json.loads((DATA / name).read_text(encoding="utf-8")) == build(feats), "uv run python -m scripts.export_feats"

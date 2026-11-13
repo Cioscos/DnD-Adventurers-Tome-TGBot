@@ -22,6 +22,7 @@ const mkChar = (pending = true) => ({
     { name: 'strength', value: 19 }, { name: 'dexterity', value: 14 },
   ],
   pending_choices: pending ? [{ id: 'abc', kind: 'asi', class_key: 'Guerriero', level: 4, created_at: '' }] : [],
+  classes: [],
 }) as unknown as CharacterFull
 
 describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
@@ -50,8 +51,8 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     renderWithProviders(<PendingChoicesBadge char={char} />)
     await userEvent.click(screen.getByText('character.level_choice.badge'))
     await userEvent.click(screen.getByText('character.level_choice.feat'))
-    expect(screen.getByText('character.level_choice.feats.alert.name').closest('button')).toBeDisabled()
-    expect(screen.getByText('character.level_choice.feats.tough.name').closest('button')).not.toBeDisabled()
+    expect(screen.getByText('Allerta').closest('button')).toBeDisabled()
+    expect(screen.getByText('Robusto').closest('button')).not.toBeDisabled()
   })
 
   it('posts a feat with its ability choice', async () => {
@@ -59,7 +60,7 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     renderWithProviders(<PendingChoicesBadge char={mkChar()} />)
     await userEvent.click(screen.getByText('character.level_choice.badge'))
     await userEvent.click(screen.getByText('character.level_choice.feat'))
-    await userEvent.click(screen.getByText('character.level_choice.feats.observant.name'))
+    await userEvent.click(screen.getByText('Osservatore'))
     expect(screen.getByText('character.level_choice.confirm')).toBeDisabled()
     await userEvent.selectOptions(screen.getByLabelText('character.level_choice.pick_ability'), 'wisdom')
     await userEvent.click(screen.getByText('character.level_choice.confirm'))

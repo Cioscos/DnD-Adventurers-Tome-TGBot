@@ -1,0 +1,1081 @@
+[
+ {
+  "key": "skilled",
+  "name": {
+   "it": "Abile",
+   "en": "Skilled"
+  },
+  "summary": {
+   "it": "Competenza in tre abilità o strumenti a scelta.",
+   "en": "Proficiency in any three skills or tools."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "picks"
+  ]
+ },
+ {
+  "key": "elemental_adept",
+  "name": {
+   "it": "Adepto Elementale",
+   "en": "Elemental Adept"
+  },
+  "summary": {
+   "it": "Un tipo di energia: i tuoi incantesimi ignorano la resistenza e gli 1 sui dadi valgono 2. Ripetibile.",
+   "en": "One energy type: your spells ignore resistance and 1s on damage dice count as 2. Repeatable."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": true,
+  "repeatable": true,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "damage_type"
+  ]
+ },
+ {
+  "key": "martial_adept",
+  "name": {
+   "it": "Adepto Marziale",
+   "en": "Martial Adept"
+  },
+  "summary": {
+   "it": "Due manovre del Maestro di Battaglia e un dado di superiorità d6 per riposo breve.",
+   "en": "Two Battle Master maneuvers and one d6 superiority die per short rest."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "maneuvers"
+  ],
+  "choices": [
+   {
+    "key": "goading",
+    "name": {
+     "it": "Attacco Adescante",
+     "en": "Goading Attack"
+    }
+   },
+   {
+    "key": "lunging",
+    "name": {
+     "it": "Attacco con Affondo",
+     "en": "Lunging Attack"
+    }
+   },
+   {
+    "key": "feinting",
+    "name": {
+     "it": "Attacco con Finta",
+     "en": "Feinting Attack"
+    }
+   },
+   {
+    "key": "maneuvering",
+    "name": {
+     "it": "Attacco con Manovra",
+     "en": "Maneuvering Attack"
+    }
+   },
+   {
+    "key": "sweeping",
+    "name": {
+     "it": "Attacco con Spazzata",
+     "en": "Sweeping Attack"
+    }
+   },
+   {
+    "key": "pushing",
+    "name": {
+     "it": "Attacco con Spinta",
+     "en": "Pushing Attack"
+    }
+   },
+   {
+    "key": "disarming",
+    "name": {
+     "it": "Attacco Disarmante",
+     "en": "Disarming Attack"
+    }
+   },
+   {
+    "key": "menacing",
+    "name": {
+     "it": "Attacco Minaccioso",
+     "en": "Menacing Attack"
+    }
+   },
+   {
+    "key": "precision",
+    "name": {
+     "it": "Attacco Preciso",
+     "en": "Precision Attack"
+    }
+   },
+   {
+    "key": "trip",
+    "name": {
+     "it": "Attacco Sbilanciante",
+     "en": "Trip Attack"
+    }
+   },
+   {
+    "key": "commanders_strike",
+    "name": {
+     "it": "Colpo del Comandante",
+     "en": "Commander's Strike"
+    }
+   },
+   {
+    "key": "distracting",
+    "name": {
+     "it": "Colpo Distraente",
+     "en": "Distracting Strike"
+    }
+   },
+   {
+    "key": "rally",
+    "name": {
+     "it": "Incoraggiamento",
+     "en": "Rally"
+    }
+   },
+   {
+    "key": "parry",
+    "name": {
+     "it": "Parata",
+     "en": "Parry"
+    }
+   },
+   {
+    "key": "riposte",
+    "name": {
+     "it": "Replica",
+     "en": "Riposte"
+    }
+   },
+   {
+    "key": "evasive_footwork",
+    "name": {
+     "it": "Scarto Elusivo",
+     "en": "Evasive Footwork"
+    }
+   }
+  ]
+ },
+ {
+  "key": "savage_attacker",
+  "name": {
+   "it": "Aggressore Selvaggio",
+   "en": "Savage Attacker"
+  },
+  "summary": {
+   "it": "Una volta per turno ritiri i dadi del danno di un'arma da mischia e tieni il risultato migliore.",
+   "en": "Once per turn reroll a melee weapon's damage dice and use either total."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "alert",
+  "name": {
+   "it": "Allerta",
+   "en": "Alert"
+  },
+  "summary": {
+   "it": "+5 all'iniziativa; da cosciente non puoi essere sorpreso; chi non vedi non ha vantaggio contro di te per questo.",
+   "en": "+5 to initiative; you can't be surprised while conscious; unseen attackers gain no advantage from it."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "skulker",
+  "name": {
+   "it": "Appostato",
+   "en": "Skulker"
+  },
+  "summary": {
+   "it": "Ti nascondi anche in penombra leggera; mancare a distanza non ti rivela; la luce fioca non ostacola la Percezione.",
+   "en": "Hide when lightly obscured; a ranged miss doesn't reveal you; dim light doesn't hinder your Perception."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "athlete",
+  "name": {
+   "it": "Atleta",
+   "en": "Athlete"
+  },
+  "summary": {
+   "it": "Rialzarsi costa 1,5 m; scalare non costa movimento extra; salti con rincorsa di soli 1,5 m.",
+   "en": "Standing up costs 5 feet; climbing costs no extra movement; running jumps after only 5 feet."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "actor",
+  "name": {
+   "it": "Attore",
+   "en": "Actor"
+  },
+  "summary": {
+   "it": "Vantaggio a Inganno e Intrattenere per spacciarti per un altro; imiti voci e versi.",
+   "en": "Advantage on Deception and Performance to pass as someone else; you mimic voices and sounds."
+  },
+  "category": "general",
+  "abilities": [
+   "charisma"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "charger",
+  "name": {
+   "it": "Carica",
+   "en": "Charger"
+  },
+  "summary": {
+   "it": "Dopo uno Scatto attacchi o spingi con azione bonus; dopo 3 m in linea retta +5 al danno o spinta di 3 m.",
+   "en": "After a Dash, attack or shove as a bonus action; after 10 feet in a straight line, +5 damage or a 10-foot push."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "spell_sniper",
+  "name": {
+   "it": "Cecchino Magico",
+   "en": "Spell Sniper"
+  },
+  "summary": {
+   "it": "Gittata doppia per gli incantesimi con tiro per colpire, ignori la copertura parziale e impari un trucchetto d'attacco.",
+   "en": "Double range for attack-roll spells, ignore partial cover and learn an attack cantrip."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": true,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "list",
+   "cantrips"
+  ]
+ },
+ {
+  "key": "dual_wielder",
+  "name": {
+   "it": "Combattente a Due Armi",
+   "en": "Dual Wielder"
+  },
+  "summary": {
+   "it": "+1 alla CA con un'arma da mischia in ogni mano; due armi anche non leggere; estrai due armi insieme.",
+   "en": "+1 AC with a melee weapon in each hand; fight with two non-light weapons; draw two weapons at once."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "mounted_combatant",
+  "name": {
+   "it": "Combattente in Sella",
+   "en": "Mounted Combatant"
+  },
+  "summary": {
+   "it": "In sella hai vantaggio contro creature più piccole della cavalcatura e la proteggi.",
+   "en": "While mounted you have advantage against creatures smaller than your mount and protect it."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "inspiring_leader",
+  "name": {
+   "it": "Condottiero Ispiratore",
+   "en": "Inspiring Leader"
+  },
+  "summary": {
+   "it": "Un discorso di 10 minuti dà a sei creature PF temporanei pari al livello + Carisma.",
+   "en": "A 10-minute speech gives six creatures temporary HP equal to your level + Charisma."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "charisma"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "lightly_armored",
+  "name": {
+   "it": "Corazze Leggere",
+   "en": "Lightly Armored"
+  },
+  "summary": {
+   "it": "Competenza nelle armature leggere.",
+   "en": "Proficiency with light armor."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "moderately_armored",
+  "name": {
+   "it": "Corazze Medie",
+   "en": "Moderately Armored"
+  },
+  "summary": {
+   "it": "Competenza nelle armature medie e negli scudi. Richiede le armature leggere.",
+   "en": "Proficiency with medium armor and shields. Requires light armor proficiency."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": "light",
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "heavily_armored",
+  "name": {
+   "it": "Corazze Pesanti",
+   "en": "Heavily Armored"
+  },
+  "summary": {
+   "it": "Competenza nelle armature pesanti. Richiede le armature medie.",
+   "en": "Proficiency with heavy armor. Requires medium armor proficiency."
+  },
+  "category": "general",
+  "abilities": [
+   "strength"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": "medium",
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "defensive_duelist",
+  "name": {
+   "it": "Duellante Difensivo",
+   "en": "Defensive Duelist"
+  },
+  "summary": {
+   "it": "Reazione: con un'arma accurata aggiungi la competenza alla CA contro un attacco in mischia.",
+   "en": "Reaction: with a finesse weapon add your proficiency bonus to AC against a melee attack."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "dexterity"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "crossbow_expert",
+  "name": {
+   "it": "Esperto di Balestre",
+   "en": "Crossbow Expert"
+  },
+  "summary": {
+   "it": "Ignori la ricarica, tiri da vicino senza svantaggio e attacchi con la balestra a mano come azione bonus.",
+   "en": "Ignore loading, no disadvantage up close, and a bonus-action hand crossbow attack."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "dungeon_delver",
+  "name": {
+   "it": "Esperto di Dungeon",
+   "en": "Dungeon Delver"
+  },
+  "summary": {
+   "it": "Vantaggio per trovare porte segrete e ai TS contro le trappole; resistenza ai danni delle trappole.",
+   "en": "Advantage to find secret doors and on saves against traps; resistance to trap damage."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "lucky",
+  "name": {
+   "it": "Fortunato",
+   "en": "Lucky"
+  },
+  "summary": {
+   "it": "3 punti fortuna per riposo lungo: ritiri un tuo d20 (attacco, prova, TS) o quello di un attacco contro di te.",
+   "en": "3 luck points per long rest: reroll your d20 (attack, check, save) or one rolled to attack you."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "healer",
+  "name": {
+   "it": "Guaritore",
+   "en": "Healer"
+  },
+  "summary": {
+   "it": "Con la borsa del guaritore stabilizzi a 1 PF o curi 1d6 + 4 + i Dadi Vita del bersaglio.",
+   "en": "With a healer's kit you stabilize at 1 HP or heal 1d6 + 4 + the target's Hit Dice."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "war_caster",
+  "name": {
+   "it": "Incantatore da Guerra",
+   "en": "War Caster"
+  },
+  "summary": {
+   "it": "Vantaggio ai TS di Costituzione per la concentrazione; componenti somatiche con le mani occupate; un incantesimo come attacco di opportunità.",
+   "en": "Advantage on Constitution saves for concentration; somatic components with full hands; a spell as an opportunity attack."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": true,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "ritual_caster",
+  "name": {
+   "it": "Incantatore Rituale",
+   "en": "Ritual Caster"
+  },
+  "summary": {
+   "it": "Un libro dei rituali con due rituali di 1º livello di una classe; puoi copiarne altri.",
+   "en": "A ritual book with two 1st-level rituals from one class; you can copy more."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "intelligence",
+    "wisdom"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "list",
+   "rituals"
+  ]
+ },
+ {
+  "key": "magic_initiate",
+  "name": {
+   "it": "Iniziato alla Magia",
+   "en": "Magic Initiate"
+  },
+  "summary": {
+   "it": "Due trucchetti e un incantesimo di 1º livello di una classe, lanciabile una volta per riposo lungo.",
+   "en": "Two cantrips and one 1st-level spell from one class, castable once per long rest."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "list",
+   "cantrips",
+   "spell"
+  ]
+ },
+ {
+  "key": "linguist",
+  "name": {
+   "it": "Linguista",
+   "en": "Linguist"
+  },
+  "summary": {
+   "it": "Tre linguaggi a scelta; crei codici cifrati.",
+   "en": "Three languages of your choice; you can create ciphers."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "languages"
+  ]
+ },
+ {
+  "key": "grappler",
+  "name": {
+   "it": "Lottatore",
+   "en": "Grappler"
+  },
+  "summary": {
+   "it": "Vantaggio ai tiri per colpire le creature che stai lottando; puoi tentare di immobilizzarle.",
+   "en": "Advantage on attacks against creatures you are grappling; you can try to pin them."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": {
+   "any_of": [
+    "strength"
+   ],
+   "min": 13
+  },
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "tavern_brawler",
+  "name": {
+   "it": "Lottatore da Taverna",
+   "en": "Tavern Brawler"
+  },
+  "summary": {
+   "it": "Competenza nelle armi improvvisate; colpo senz'armi 1d4; dopo un colpo afferri con azione bonus.",
+   "en": "Improvised weapon proficiency; unarmed strike 1d4; after a hit you grapple as a bonus action."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "constitution"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "weapon_master",
+  "name": {
+   "it": "Maestro d'Armi",
+   "en": "Weapon Master"
+  },
+  "summary": {
+   "it": "Competenza in quattro armi semplici o da guerra a scelta.",
+   "en": "Proficiency with four simple or martial weapons of your choice."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": [
+   "weapons"
+  ]
+ },
+ {
+  "key": "great_weapon_master",
+  "name": {
+   "it": "Maestro d'Armi Possenti",
+   "en": "Great Weapon Master"
+  },
+  "summary": {
+   "it": "Con un'arma pesante -5 al colpire per +10 al danno; attacco bonus dopo un critico o un nemico a 0 PF.",
+   "en": "With a heavy weapon take -5 to hit for +10 damage; bonus attack after a crit or a kill."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "shield_master",
+  "name": {
+   "it": "Maestro degli Scudi",
+   "en": "Shield Master"
+  },
+  "summary": {
+   "it": "Spingi con lo scudo; la sua CA si somma ai TS di Destrezza; nessun danno se superi un TS a metà danni.",
+   "en": "Shove with your shield; its AC adds to Dexterity saves; no damage on a successful half-damage save."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "medium_armor_master",
+  "name": {
+   "it": "Maestro delle Armature Medie",
+   "en": "Medium Armor Master"
+  },
+  "summary": {
+   "it": "Con armatura media niente svantaggio a Furtività e +3 di Destrezza alla CA con Destrezza 16+.",
+   "en": "In medium armor no Stealth disadvantage and +3 Dexterity to AC with Dexterity 16+."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": "medium",
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "heavy_armor_master",
+  "name": {
+   "it": "Maestro delle Armature Pesanti",
+   "en": "Heavy Armor Master"
+  },
+  "summary": {
+   "it": "Con armatura pesante subisci 3 danni in meno dalle armi non magiche contundenti, perforanti o taglienti.",
+   "en": "In heavy armor you take 3 less bludgeoning, piercing or slashing damage from nonmagical weapons."
+  },
+  "category": "general",
+  "abilities": [
+   "strength"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": "heavy",
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "polearm_master",
+  "name": {
+   "it": "Maestro delle Armi su Asta",
+   "en": "Polearm Master"
+  },
+  "summary": {
+   "it": "Attacco bonus d4 con l'altra estremità; attacco di opportunità quando un nemico entra nella portata.",
+   "en": "Bonus d4 attack with the butt end; opportunity attack when a creature enters your reach."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "keen_mind",
+  "name": {
+   "it": "Mente Acuta",
+   "en": "Keen Mind"
+  },
+  "summary": {
+   "it": "Sai dov'è il nord e quanto manca all'alba; ricordi tutto dell'ultimo mese.",
+   "en": "You always know north and the hours to sunrise; you recall everything from the past month."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "mobile",
+  "name": {
+   "it": "Mobilità",
+   "en": "Mobile"
+  },
+  "summary": {
+   "it": "+10 piedi di velocità; lo Scatto ignora il terreno difficile; chi attacchi in mischia non ti fa attacchi di opportunità.",
+   "en": "+10 feet speed; Dash ignores difficult terrain; creatures you attack in melee get no opportunity attack on you."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "observant",
+  "name": {
+   "it": "Osservatore",
+   "en": "Observant"
+  },
+  "summary": {
+   "it": "+5 a Percezione e Indagare passive; leggi le labbra.",
+   "en": "+5 to passive Perception and Investigation; you can read lips."
+  },
+  "category": "general",
+  "abilities": [
+   "intelligence",
+   "wisdom"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "resilient",
+  "name": {
+   "it": "Resiliente",
+   "en": "Resilient"
+  },
+  "summary": {
+   "it": "+1 a una caratteristica a scelta e competenza nei suoi tiri salvezza.",
+   "en": "+1 to one ability of your choice and proficiency in its saving throws."
+  },
+  "category": "general",
+  "abilities": [
+   "strength",
+   "dexterity",
+   "constitution",
+   "intelligence",
+   "wisdom",
+   "charisma"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "tough",
+  "name": {
+   "it": "Robusto",
+   "en": "Tough"
+  },
+  "summary": {
+   "it": "+2 punti ferita massimi per ogni livello.",
+   "en": "+2 maximum hit points per level."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "sentinel",
+  "name": {
+   "it": "Sentinella",
+   "en": "Sentinel"
+  },
+  "summary": {
+   "it": "Chi colpisci con un attacco di opportunità si ferma; il Disimpegno non ti sfugge; reazione contro chi attacca altri.",
+   "en": "Creatures you hit with opportunity attacks stop; Disengage doesn't avoid you; reaction against foes attacking others."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "mage_slayer",
+  "name": {
+   "it": "Sterminatore di Maghi",
+   "en": "Mage Slayer"
+  },
+  "summary": {
+   "it": "Reazione contro chi lancia vicino a te; svantaggio alla sua concentrazione; vantaggio ai TS contro incantesimi vicini.",
+   "en": "Reaction against nearby casters; they have disadvantage on concentration; advantage on saves against nearby spells."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "durable",
+  "name": {
+   "it": "Tenace",
+   "en": "Durable"
+  },
+  "summary": {
+   "it": "Ogni Dado Vita speso cura almeno il doppio del modificatore di Costituzione (minimo 2).",
+   "en": "Each Hit Die you spend heals at least twice your Constitution modifier (minimum 2)."
+  },
+  "category": "general",
+  "abilities": [
+   "constitution"
+  ],
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ },
+ {
+  "key": "sharpshooter",
+  "name": {
+   "it": "Tiratore Scelto",
+   "en": "Sharpshooter"
+  },
+  "summary": {
+   "it": "Con armi a distanza -5 al colpire per +10 al danno; niente svantaggio a gittata lunga; ignori la copertura parziale.",
+   "en": "With ranged weapons take -5 to hit for +10 damage; no long-range disadvantage; ignore partial cover."
+  },
+  "category": "general",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "prereq_armor": null,
+  "needs_fighting_style": false,
+  "needs": []
+ }
+]

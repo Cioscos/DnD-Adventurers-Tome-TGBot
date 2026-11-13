@@ -77,3 +77,19 @@ describe('featsFor — addestramento come il server (revisione PR 2)', () => {
     expect(find(withClass('wizard', 4, { settings: { proficiencies_seeded: true } } as never))).toBe(true)
   })
 })
+
+describe('featsFor — talenti 2014 (PR 3)', () => {
+  it('a 2014 level choice lists all 42 feats with names and prerequisites', () => {
+    const list = featsFor(char(13, 4, '2014'), '2014', 'level', 'it')
+    expect(list).toHaveLength(42)
+    const grappler = list.find((f) => f.key === 'grappler')
+    expect(grappler?.name).toBe('Lottatore')
+    expect(grappler?.unmet).toBe(true) // Forza 10
+    expect(list.find((f) => f.key === 'elemental_adept')?.repeatable).toBe(true)
+    expect(list.find((f) => f.key === 'linguist')?.needs).toEqual(['languages'])
+  })
+
+  it('a 2024 character does not see 2014 feats', () => {
+    expect(keys(featsFor(char(13, 4), '2024', 'level', 'it'))).not.toContain('sentinel')
+  })
+})

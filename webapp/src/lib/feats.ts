@@ -1,3 +1,4 @@
+import feats2014 from '@/data/feats2014.json'
 import feats2024 from '@/data/feats2024.json'
 import { CANONICAL_CLASSES } from '@/lib/silhouette'
 import type { CharacterFull } from '@/types'
@@ -5,18 +6,6 @@ import type { CharacterFull } from '@/types'
 export const ABILITY_KEYS = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
 ] as const
-
-/** Talenti selezionabili (specchio di core/data/feats.py); testi in `character.level_choice.feats.<key>`. */
-export const FEAT_OPTIONS: { key: string; abilities?: readonly string[] }[] = [
-  { key: 'grappler' },
-  { key: 'alert' },
-  { key: 'tough' },
-  { key: 'mobile' },
-  { key: 'observant', abilities: ['intelligence', 'wisdom'] },
-  { key: 'resilient', abilities: ABILITY_KEYS },
-  { key: 'war_caster' },
-  { key: 'lucky' },
-]
 
 export interface Feat2024 {
   key: string
@@ -36,6 +25,8 @@ export interface Feat2024 {
   prereq_armor: string | null
   /** Stile di Combattimento come talento: serve il privilegio Stile di Combattimento. */
   needs_fighting_style: boolean
+  /** Elenco fisso da cui scegliere (manovre di Adepto Marziale). */
+  choices?: { key: string; name: { it: string; en: string } }[]
 }
 
 /** Testi di `general_proficiencies.armor` che valgono ogni addestramento (specchio di `core/rules/proficiencies.py`). */
@@ -75,8 +66,14 @@ function styleOk(f: Feat2024, char: CharacterFull): boolean {
   return hasFeature && !stylesTaken(char).has(f.key.slice('2024_fs_'.length))
 }
 
-/** Talenti d'Origine, generali e Doni Epici 2024 (specchio di core/data/feats_2024.py, rigenerato da scripts/export_feats_2024.py). */
+/** Talenti d'Origine, generali e Doni Epici 2024 (specchio di core/data/feats_2024.py, rigenerato da scripts/export_feats.py). */
 export const FEATS_2024 = feats2024 as Feat2024[]
+/** I 42 talenti 2014 (specchio di core/data/feats.py, rigenerato da scripts/export_feats.py). */
+export const FEATS_2014 = feats2014 as Feat2024[]
+
+/** La scheda di un talento delle due edizioni, dalla chiave (`alert`, `2024_alert`). */
+export const featByKey = (key: string): Feat2024 | undefined =>
+  (key.startsWith('2024_') ? FEATS_2024 : FEATS_2014).find((f) => f.key === key)
 
 /** Vero se il personaggio soddisfa i prerequisiti verificabili (livello, caratteristica, incantesimi).
  *  `manual` («Aggiungi talento») ignora il livello minimo, salvo per i Doni Epici (come il server). */
@@ -90,12 +87,11 @@ export function meetsPrerequisites(f: Feat2024, char: CharacterFull, opts: { man
     && styleOk(f, char)
 }
 
-/** Una voce delle liste dei talenti. I talenti 2014 non hanno `name`/`summary`: i testi stanno nei locale
- *  (`character.level_choice.feats.<key>`). */
+/** Una voce delle liste dei talenti. */
 export interface FeatItem {
   key: string
-  name?: string
-  summary?: string
+  name: string
+  summary: string
   abilities?: readonly string[]
   cap: number
   unmet: boolean
@@ -109,17 +105,13 @@ export type FeatListMode = 'level' | 'boon' | 'manual' | 'creation'
 /** I talenti offerti in un punto dell'app: scelta di livello, Dono Epico, «Aggiungi talento» o creazione 2024.
  *  `char` nullo solo nella creazione (i talenti d'Origine non hanno prerequisiti). */
 export function featsFor(char: CharacterFull | null, edition: '2014' | '2024', mode: FeatListMode, lang: 'it' | 'en'): FeatItem[] {
-  if (edition === '2014' && mode !== 'boon') {
-    return FEAT_OPTIONS.map((f) => ({
-      key: f.key, abilities: f.abilities, cap: 20, unmet: false, repeatable: false, needs: [], category: 'general' as const,
-    }))
-  }
+  const source = edition === '2014' ? (mode === 'boon' ? [] : FEATS_2014) : FEATS_2024
   const level = char?.total_level ?? 0
   const wanted = (f: Feat2024) => mode === 'creation' ? f.category === 'origin'
     : mode === 'boon' ? f.category === 'epic_boon'
       : mode === 'level' ? f.category !== 'epic_boon'
         : f.category !== 'epic_boon' || level >= f.min_level
-  return FEATS_2024.filter(wanted).map((f) => ({
+  return source.filter(wanted).map((f) => ({
     key: f.key, name: f.name[lang], summary: f.summary[lang], abilities: f.abilities ?? undefined, cap: f.max_score,
     unmet: char ? !meetsPrerequisites(f, char, { manual: mode === 'manual' }) : false,
     repeatable: f.repeatable, needs: f.needs, category: f.category,
