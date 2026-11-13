@@ -73,7 +73,8 @@ _RANGE_IT = {"Touch": "Contatto", "Self": "Personale", "Sight": "Linea di vista"
              "Special": "Speciale"}
 _RANGE_OVERRIDES = {"1,5 km": "1 mile", "1 miglio": "1 mile", "1 mile": "1 mile", "1,6 km (1 mile)": "1 mile",
                     "750 km": "500 miles", "800 km (500 miglia)": "500 miles", "500 miles": "500 miles"}
-_AREA_IT = {"raggio": "sphere", "sfera": "sphere", "semisfera": "sphere", "cono": "cone", "linea": "line", "cubo": "cube"}
+_AREA_IT = {"raggio": "sphere", "sfera": "sphere", "semisfera": "sphere", "cono": "cone", "linea": "line", "cubo": "cube",
+            "emanazione": "emanation", "cilindro": "cylinder"}
 
 
 def range_en(text: str, ft: int | None) -> str:
@@ -101,8 +102,12 @@ def range_text(en: str) -> dict:
 
 
 def area_from_it(text: str) -> dict | None:
-    m = re.search(r"(raggio|semisfera|sfera|cono|linea|cubo)\D*?(\d+(?:,\d+)?)\s*(m|metri)\b", text, re.I)
-    return {"type": _AREA_IT[m[1].lower()], "size_ft": round(float(m[2].replace(",", ".")) / 1.5) * 5} if m else None
+    m = re.search(r"(raggio|semisfera|sfera|cono|linea|cubo|emanazione|cilindro)\D*?(\d+(?:,\d+)?)\s*(m|metri|ft|piedi)\b",
+                  text, re.I)
+    if not m:
+        return None
+    n = float(m[2].replace(",", "."))
+    return {"type": _AREA_IT[m[1].lower()], "size_ft": int(n) if m[3].lower() in ("ft", "piedi") else round(n / 1.5) * 5}
 
 
 _LINE_EN = re.compile(r"(\d+)-foot-long[^.]*?Line|Line (\d+) feet long", re.I)
@@ -125,7 +130,7 @@ def phb_entry(row: RuleSpell, index: str, en: dict, g: dict) -> dict:
         "index": index, "name": {"en": row.name_en, "it": row.name_it}, "level": row.level, "school": row.school,
         "casting_time": localize(norm_time(row.casting_time, g), g["casting_times"]),
         "range_ft": row.range_ft if rng.endswith("feet") else None, "range_text": range_text(rng),
-        "area": area_from_it(row.range_text), "components": row.components,
+        "area": area_from_it(row.range_text) or area_from_it(row.summary_it), "components": row.components,
         "material": {"en": en["material"], "it": row.material} if row.material else None,
         "duration": localize(norm_duration(row.duration, g, row.concentration), g["durations"]),
         "concentration": row.concentration, "ritual": row.ritual,
@@ -203,7 +208,8 @@ def srd_2024_entry(s: dict, row: RuleSpell, g: dict, prev: dict | None = None) -
             inc = f"{n}d{parts[0][1]}"
     if inc is None and base and s["level"] > 0 and (m := _UP_EN.search(f"{higher or ''} {desc}")):
         inc = m[1] if m[1].split("d")[1] == base.split("d")[1].split("+")[0] else None  # stesso dado del danno base
-    save = _SAVE_EN.search(desc)
+    own = desc.split("stat block")[0]  # TS e attacchi del profilo della creatura evocata non sono dell'incantesimo
+    save = _SAVE_EN.search(own)
     raw = re.sub(r"\s*Components?:.*$", "", s["range"]).strip()  # l'API a volte accoda le componenti
     rng = raw if re.fullmatch(r"\d+ feet", raw) else range_en(raw, None)
     out = {
@@ -215,7 +221,7 @@ def srd_2024_entry(s: dict, row: RuleSpell, g: dict, prev: dict | None = None) -
         "duration": localize(norm_duration(s["duration"], g, s["concentration"]), g["durations"]),
         "concentration": s["concentration"], "ritual": s["ritual"],
         "desc": {"en": desc}, "higher_level": {"en": higher} if higher else None,
-        "attack_type": "ATK" if _ATK_EN.search(desc) else ("SAVE" if save else None),
+        "attack_type": "ATK" if _ATK_EN.search(own) else ("SAVE" if save else None),
         "save_ability": save[1][:3].lower() if save else None,
         "damage_dice": base, "damage_type": dtype,
         "higher_levels_dice": inc, "classes": row.classes, "source": "srd",
@@ -244,6 +250,11 @@ def build_2024(api: list[dict], rows: list[RuleSpell], en: dict, g: dict, prev14
                       "generated_at": date.today().isoformat(),
                       "phb": "nomi dei manuali; non SRD: riassunti nostri (source: phb)"},
             "items": sorted(items, key=lambda i: i["index"])}
+
+
+def keep_meta(old: dict, new: dict) -> dict:
+    """Stesse voci: resta il _meta precedente (generated_at non sporca il diff)."""
+    return {**new, "_meta": old["_meta"]} if old.get("items") == new["items"] else new
 
 
 # --- CLI ------------------------------------------------------------------------------------------------------------
@@ -308,7 +319,7 @@ def main() -> None:
                     p = prev.get(item["index"], {}).get(f)
                     if item.get(f) and p and p.get("en") == item[f]["en"] and "it" in p:
                         item[f]["it"] = p["it"]
-        _write(old, doc)
+        _write(old, keep_meta(_read(old), doc) if old.exists() else doc)
         print(f"spells-2024: {len(doc['items'])}")
 
 

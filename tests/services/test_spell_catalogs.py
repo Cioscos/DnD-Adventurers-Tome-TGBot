@@ -218,3 +218,31 @@ def test_build_2024_no_fallback_when_2024_text_lacks_the_dice():
     prev = {"sleep": {"damage_dice": "5d8", "damage_type": None, "higher_levels_dice": "2d8"}}
     e = bsc.build_2024([sl], [_row("Sonno", "Sleep")], {}, GLOSSARY, prev)["items"][0]
     assert (e["damage_dice"], e["higher_levels_dice"], e["save_ability"]) == (None, None, "wis")
+
+
+def test_build_2024_ignores_saves_inside_the_stat_block():
+    s = {**FIREBALL, "index": "summon-elemental", "damage": None, "description": "Summons a spirit with the Elemental Spirit stat block: AC 11, "
+                                                    "Breath 2d6 (Dexterity saving throw), Slam 1d10+4"}
+    e = bsc.build_2024([s], [_row("Evoca Elementale", "Summon Elemental")], {}, GLOSSARY)["items"][0]
+    assert (e["attack_type"], e["save_ability"]) == (None, None)
+
+
+def test_area_from_italian_summary_in_feet():
+    assert bsc.area_from_it("Emanazione 10 ft: ogni creatura fa TS For") == {"type": "emanation", "size_ft": 10}
+    assert bsc.area_from_it("Sfera di 20 piedi di raggio: TS Intelligenza") == {"type": "sphere", "size_ft": 20}
+    assert bsc.area_from_it("Cubo di 1,5 m di pugnali") == {"type": "cube", "size_ft": 5}
+    assert bsc.area_from_it("creature entro 3 m") is None
+
+
+def test_phb_entry_area_falls_back_to_summary():
+    row = _row("Braccia di Hadar", "Arms of Hadar", "Emanazione 10 ft: ogni creatura fa TS For o 2d6 necrotico")
+    e = bsc.phb_entry(row, "arms-of-hadar", {"desc": "x"}, GLOSSARY)
+    assert e["area"] == {"type": "emanation", "size_ft": 10}
+
+
+def test_keep_meta_when_items_unchanged():
+    old = {"_meta": {"generated_at": "2026-11-12"}, "items": [{"index": "a"}]}
+    same = {"_meta": {"generated_at": "2026-11-13"}, "items": [{"index": "a"}]}
+    changed = {"_meta": {"generated_at": "2026-11-13"}, "items": [{"index": "b"}]}
+    assert bsc.keep_meta(old, same)["_meta"]["generated_at"] == "2026-11-12"
+    assert bsc.keep_meta(old, changed)["_meta"]["generated_at"] == "2026-11-13"

@@ -59,7 +59,7 @@ def test_mechanics_save_damage_upcast():
     assert rs.mechanics("Emanazione 10 ft: ogni creatura fa TS For o subisce 2d6 necrotico. Slot superiore: "
                         "+1d6 per livello oltre il 1.") == {
         "attack_type": "SAVE", "save_ability": "str", "damage_dice": "2d6", "damage_type": "necrotic",
-        "higher_levels_dice": "1d6"}
+        "higher_levels_dice": "1d6", "extra_damage_dice": None, "extra_damage_type": None}
 
 
 def test_mechanics_spell_attack():
@@ -69,6 +69,34 @@ def test_mechanics_spell_attack():
 
 def test_mechanics_extra_damage_and_nothing():
     m = rs.mechanics("Arma non magica: +1 a colpire e +1d4 danni extra di acido, freddo o fuoco")
-    assert (m["damage_dice"], m["damage_type"], m["attack_type"]) == ("1d4", "acid", None)
+    assert (m["damage_dice"], m["damage_type"], m["attack_type"]) == ("1d4", None, None)  # tipo a scelta
     assert rs.mechanics("Legame telepatico con una creatura consenziente.") == {
-        "attack_type": None, "save_ability": None, "damage_dice": None, "damage_type": None, "higher_levels_dice": None}
+        "attack_type": None, "save_ability": None, "damage_dice": None, "damage_type": None, "higher_levels_dice": None,
+        "extra_damage_dice": None, "extra_damage_type": None}
+
+
+def test_mechanics_type_of_choice_and_second_damage():
+    m = rs.mechanics("Arma non magica diventa magica: +1 a colpire e +1d4 danni extra di acido, freddo, fulmine, fuoco o tuono")
+    assert (m["damage_dice"], m["damage_type"]) == ("1d4", None)
+    w = rs.mechanics("TS Costituzione: se falliscono 5d6 danni da tuono più 5d6 radiosi o necrotici (a scelta) e cadono prone")
+    assert (w["damage_dice"], w["damage_type"]) == ("5d6", "thunder")
+    assert (w["extra_damage_dice"], w["extra_damage_type"]) == ("5d6", "radiant|necrotic")
+
+
+def test_bad_rows_name_the_spell(tmp_path):
+    f = tmp_path / "s.md"
+    for row in ("| Libro | Book | 1 | Evocazione | Mago | 1 azione | 9 m | V | Istantanea | no | no | x |\n",  # cella mancante
+                "| Libro | Book | 1 | Evocazione | Mago | 1 azione | 9 m | V | Istantanea | no | no | a | b | 1 |\n"):  # «|» nel testo
+        f.write_text(HEADER + row, encoding="utf-8")
+        with pytest.raises(ValueError, match="Book"):
+            rs.parse_table(f)
+
+
+def test_mechanics_ignores_the_summoned_creature_sheet():
+    m = rs.mechanics("Evoca spirito elementale alleato con scheda Elemental Spirit: CA 11, Soffio 2d6 (TS Destrezza), Schianto 1d10+4")
+    assert (m["attack_type"], m["save_ability"], m["damage_dice"]) == (None, None, None)
+
+
+def test_mechanics_second_damage_with_plus():
+    m = rs.mechanics("Emanazione 30 ft: ogni creatura fa TS Cos o 5d6 tuono + 5d6 radiante o necrotico (a scelta) e Prono")
+    assert (m["damage_type"], m["extra_damage_dice"], m["extra_damage_type"]) == ("thunder", "5d6", "radiant|necrotic")

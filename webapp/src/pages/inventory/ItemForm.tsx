@@ -8,7 +8,7 @@ import Pressable from '@/components/ui/Pressable'
 import { useToast } from '@/hooks/useToast'
 import { BookOpen } from 'lucide-react'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
-import { loadCatalog, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
+import { loadSpellCatalog, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
@@ -514,7 +514,7 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
         <CatalogPicker
           kind="magic-items"
           onClose={() => setPicker(null)}
-          onPick={(e) => { void loadCatalog('spells').then((sp) => applyCatalog(magicItemToForm(e, lang, sp)))
+          onPick={(e) => { void loadSpellCatalog(edition === '2024' ? '2024' : '2014').then((sp) => applyCatalog(magicItemToForm(e, lang, sp)))
             .catch(() => { setPicker(null); toast.error(t('common.action_failed')) }) }}
         />
       )}

@@ -104,20 +104,32 @@ _ATK_RE = re.compile(r"\battacc[oa]\s*\(?(?:in mischia |a distanza )?con (?:l')?
 _DMG_RE = re.compile(r"(\d+d\d+)\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?(" + "|".join(_TYPES) + ")", re.I)
 _DICE_RE = re.compile(r"(\d+d\d+)\s+danni", re.I)  # tipo a scelta (Sfera Cromatica, tipo dell'arma)
 _UP_RE = re.compile(r"\+(\d+d\d+)[^.;]{0,40}?\bper (?:ogni )?(?:slot|livello)", re.I)
+_STEM = "(?:" + "|".join(_TYPES) + ")"
+_MORE_TYPES_RE = re.compile(r"\w*(?:\s*,\s*|\s+o\s+)" + _STEM, re.I)  # «acido, freddo o fuoco»: tipo a scelta
+_SECOND_RE = re.compile(r"(?:\bpiù|\+)\s+(\d+d\d+)\s+(?:danni\s+)?(?:da\s+|di\s+)?((?:" + _STEM + r"\w*(?:\s*,\s*|\s+o\s+)?)+)", re.I)
+
+
+def _type(stem: str) -> str:
+    return next(v for k, v in _TYPES.items() if stem.lower().startswith(k))
 
 
 def mechanics(summary_it: str) -> dict:
     """Campi dei tiri ricavati dal nostro riassunto; ciò che il testo non dice resta None (si corregge con override)."""
+    summary_it = re.split(r"\bcon scheda\b", summary_it)[0]  # la scheda della creatura evocata non è dell'incantesimo
     save = _SAVE_RE.search(summary_it)
     dmg = _DMG_RE.search(summary_it)
     loose = None if dmg else _DICE_RE.search(summary_it)
     up = _UP_RE.search(summary_it)
+    choice = dmg and _MORE_TYPES_RE.match(summary_it, dmg.end())
+    second = _SECOND_RE.search(summary_it, dmg.end()) if dmg else None
     return {
         "attack_type": "ATK" if _ATK_RE.search(summary_it) else ("SAVE" if save else None),
         "save_ability": _SAVES[save[1].lower()] if save else None,
         "damage_dice": dmg[1] if dmg else (loose[1] if loose else None),
-        "damage_type": _TYPES[dmg[2].lower()] if dmg else None,
+        "damage_type": _TYPES[dmg[2].lower()] if dmg and not choice else None,
         "higher_levels_dice": up[1] if up else None,
+        "extra_damage_dice": second[1] if second else None,
+        "extra_damage_type": "|".join(dict.fromkeys(_type(t) for t in re.findall(_STEM, second[2], re.I))) if second else None,
     }
 
 # Campi dei tiri che il riassunto non esprime bene, per indice (si applicano dopo mechanics()).

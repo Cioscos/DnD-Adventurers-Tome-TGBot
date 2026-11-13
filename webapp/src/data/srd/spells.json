@@ -749,6 +749,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "sorcerer",
     "warlock",
@@ -1001,6 +1003,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "warlock"
    ],
@@ -1048,6 +1052,8 @@
    "damage_dice": "2d6",
    "damage_type": "necrotic",
    "higher_levels_dice": "1d6",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "warlock"
    ],
@@ -1195,6 +1201,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -1241,6 +1249,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -1287,6 +1297,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -1431,6 +1443,8 @@
    "damage_dice": "5d10",
    "damage_type": "force",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -1622,6 +1636,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "druid",
     "ranger"
@@ -1814,6 +1830,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard",
     "sorcerer",
@@ -1965,6 +1983,8 @@
    "damage_dice": "3d8",
    "damage_type": "radiant",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -2501,6 +2521,8 @@
    "damage_dice": "3d8",
    "damage_type": null,
    "higher_levels_dice": "1d8",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "sorcerer",
     "wizard"
@@ -2607,6 +2629,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -2728,7 +2752,10 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": null,
+   "area": {
+    "type": "cube",
+    "size_ft": 5
+   },
    "components": [
     "V",
     "S",
@@ -2751,6 +2778,8 @@
    "damage_dice": "4d4",
    "damage_type": "slashing",
    "higher_levels_dice": "2d4",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard",
     "sorcerer",
@@ -3043,6 +3072,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -3352,6 +3383,8 @@
    "damage_dice": "3d8",
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -3584,7 +3617,10 @@
     "en": "150 feet",
     "it": "150 piedi"
    },
-   "area": null,
+   "area": {
+    "type": "cylinder",
+    "size_ft": 40
+   },
    "components": [
     "V",
     "S",
@@ -3610,6 +3646,8 @@
    "damage_dice": "8d8",
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -4002,6 +4040,8 @@
    "damage_dice": "1d6",
    "damage_type": "piercing",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -4302,6 +4342,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard",
     "sorcerer",
@@ -4327,7 +4369,10 @@
     "en": "Self",
     "it": "Personale"
    },
-   "area": null,
+   "area": {
+    "type": "sphere",
+    "size_ft": 30
+   },
    "components": [
     "V"
    ],
@@ -4348,6 +4393,8 @@
    "damage_dice": "1d4",
    "damage_type": "radiant",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -4793,6 +4840,8 @@
    "damage_dice": "5d6",
    "damage_type": "thunder",
    "higher_levels_dice": null,
+   "extra_damage_dice": "5d6",
+   "extra_damage_type": "radiant|necrotic",
    "classes": [
     "paladin"
    ],
@@ -5293,6 +5342,8 @@
    "damage_dice": "3d6",
    "damage_type": "psychic",
    "higher_levels_dice": "1d6",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard"
    ],
@@ -5814,8 +5865,10 @@
    "attack_type": null,
    "save_ability": null,
    "damage_dice": "1d4",
-   "damage_type": "acid",
+   "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -5965,6 +6018,8 @@
    "damage_dice": "1d6",
    "damage_type": "piercing",
    "higher_levels_dice": "1d6",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -6612,6 +6667,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard",
     "cleric",
@@ -7734,6 +7791,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard",
     "sorcerer",
@@ -8228,6 +8287,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "druid",
     "ranger"
@@ -8668,6 +8729,8 @@
    "damage_dice": "1d10",
    "damage_type": "piercing",
    "higher_levels_dice": "1d10",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -9215,6 +9278,8 @@
    "damage_dice": "1d6",
    "damage_type": "necrotic",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "warlock"
    ],
@@ -9453,7 +9518,10 @@
     "en": "150 feet",
     "it": "150 piedi"
    },
-   "area": null,
+   "area": {
+    "type": "sphere",
+    "size_ft": 20
+   },
    "components": [
     "V",
     "S",
@@ -9479,6 +9547,8 @@
    "damage_dice": "2d6",
    "damage_type": "cold",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "warlock"
    ],
@@ -10427,6 +10497,8 @@
    "damage_dice": "4d8",
    "damage_type": "lightning",
    "higher_levels_dice": "1d8",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -12205,7 +12277,10 @@
     "en": "60 feet",
     "it": "60 piedi"
    },
-   "area": null,
+   "area": {
+    "type": "cube",
+    "size_ft": 10
+   },
    "components": [
     "V",
     "S",
@@ -12231,6 +12306,8 @@
    "damage_dice": "1d6",
    "damage_type": "psychic",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard",
     "sorcerer",
@@ -12671,6 +12748,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "bard"
    ],
@@ -13541,6 +13620,8 @@
    "damage_dice": "2d8",
    "damage_type": "poison",
    "higher_levels_dice": "1d8",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "sorcerer",
     "wizard"
@@ -14230,6 +14311,8 @@
    "damage_dice": "1d6",
    "damage_type": "fire",
    "higher_levels_dice": "1d6",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -15540,6 +15623,8 @@
    "damage_dice": "4d6",
    "damage_type": "psychic",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -15951,6 +16036,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "ranger"
    ],
@@ -16148,6 +16235,8 @@
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "wizard"
    ],
@@ -16336,6 +16425,8 @@
    "damage_dice": "1d6",
    "damage_type": "piercing",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "druid"
    ],
@@ -16379,6 +16470,8 @@
    "damage_dice": "2d6",
    "damage_type": "thunder",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],
@@ -16918,6 +17011,8 @@
    "damage_dice": "6d10",
    "damage_type": "bludgeoning",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "druid"
    ],
@@ -17777,6 +17872,8 @@
    "damage_dice": "1d12",
    "damage_type": "lightning",
    "higher_levels_dice": "1d12",
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "sorcerer",
     "warlock",
@@ -17871,6 +17968,8 @@
    "damage_dice": "1d6",
    "damage_type": "psychic",
    "higher_levels_dice": null,
+   "extra_damage_dice": null,
+   "extra_damage_type": null,
    "classes": [
     "paladin"
    ],

@@ -15,10 +15,12 @@
       },
       "improved": {
         "it": [
-          "Gli incantesimi hanno i nomi dei manuali italiani; cercando il vecchio nome si trovano lo stesso."
+          "Gli incantesimi hanno i nomi dei manuali italiani; cercando il vecchio nome si trovano lo stesso.",
+          "Dal catalogo arriva anche la seconda parte del danno (Onda Distruttiva: tuono più radiante o necrotico a scelta), e «Ricarica dal catalogo» avvisa se l'incantesimo non c'è nella tua edizione."
         ],
         "en": [
-          "Spells carry the names of the Italian manuals; searching the old name still finds them."
+          "Spells carry the names of the Italian manuals; searching the old name still finds them.",
+          "The catalogue also fills in the second part of the damage (Destructive Wave: thunder plus radiant or necrotic of your choice), and «Reload from catalogue» tells you when the spell is not in your edition."
         ]
       },
       "fixed": {

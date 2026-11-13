@@ -35,6 +35,9 @@ export interface SpellEntry extends BaseEntry {
   higher_levels_dice: string | null
   /** Classi che hanno l'incantesimo nel loro elenco (chiavi inglesi minuscole). */
   classes?: string[]
+  /** Seconda parte del danno (Onda Distruttiva); tipi a scelta separati da «|». */
+  extra_damage_dice?: string | null
+  extra_damage_type?: string | null
   /** 'phb': fuori SRD, la descrizione è un nostro riassunto. */
   source?: 'srd' | 'phb'
   /** Nomi precedenti (solo ricerca). */
@@ -153,6 +156,15 @@ export function searchCatalog<E extends BaseEntry>(entries: E[], query: string, 
 export const spellCatalogKind = (edition: '2014' | '2024'): 'spells' | 'spells-2024' =>
   edition === '2024' ? 'spells-2024' : 'spells'
 
+/** Catalogo dell'edizione; nel 2024 gli incantesimi che mancano (rinominati, solo 2014) vengono dal 2014. */
+export async function loadSpellCatalog(edition: '2014' | '2024'): Promise<SpellEntry[]> {
+  const y14 = await loadCatalog('spells')
+  if (edition !== '2024') return y14
+  const y24 = await loadCatalog('spells-2024')
+  const have = new Set(y24.map((e) => e.index))
+  return [...y24, ...y14.filter((e) => !have.has(e.index))]
+}
+
 const AREA_LABEL: Record<string, LocalizedField> = {
   sphere: { en: 'sphere', it: 'sfera' },
   cone: { en: 'cone', it: 'cono' },
@@ -196,6 +208,8 @@ export function spellToForm(
     school: e.school,
     srd_index: e.index,
     higher_levels_dice: e.damage_dice && !NO_UPCAST_PREFILL.has(e.index) ? e.higher_levels_dice ?? '' : '',
+    extra_damage_dice: e.extra_damage_dice ?? '',
+    extra_damage_type: e.extra_damage_type ?? '',
   }
 }
 
