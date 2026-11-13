@@ -157,7 +157,9 @@ _register(
     _f24("crafter"),  # strumenti a testo in ``general_proficiencies`` finché non c'è il catalogo degli strumenti
     _f24("musician"),  # idem; Canto incoraggiante: Ispirazione agli alleati, testo per il GM
     _f24("skilled"),
-    _f24("magic_initiate"),
+    # Lancio gratuito una volta per riposo lungo con il percorso «arcanum» (``core/rules/pact_casts.py``): l'incantesimo
+    # di 1º livello sta in ``options["spell"]``; CD e attacco con ``options["ability"]`` (``spell_stats``)
+    _f24("magic_initiate", passive=False, uses=Uses(table={1: 1}), restoration="long_rest", arcanum_group="spell"),
     needs={"feat.2024_crafter": ("tools",), "feat.2024_musician": ("instruments",), "feat.2024_skilled": ("picks",),
            "feat.2024_magic_initiate": ("list", "ability", "cantrips", "spell")},
 )

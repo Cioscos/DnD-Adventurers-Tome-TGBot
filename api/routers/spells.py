@@ -224,7 +224,8 @@ def _consume_cast(
     pact_row = None
     if arcanum is not None or invocation is not None:
         used = arcanum or invocation
-        pact_row = next((a for a in char.abilities if a.feature_key == used.feature_key), None)
+        pact_row = next((a for a in char.abilities if (a.id == used.ability_id if used.ability_id is not None
+                                                        else a.feature_key == used.feature_key)), None)
         if pact_row is None or (pact_row.uses or 0) < 1:
             raise HTTPException(status_code=409, detail={"code": "no_uses"})
     if ritual:

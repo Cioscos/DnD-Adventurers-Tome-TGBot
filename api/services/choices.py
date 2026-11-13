@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from typing import Any, Literal, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import delete
@@ -12,7 +12,9 @@ from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES
 from core.data.feats_2024 import ALL_FEATS as FEATS
 from api.services.history import add_history
-from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType
+from core.data.skills import SKILL_ABILITY_MAP
+from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType, Spell
+from core.rules.proficiencies import normalize
 from core.rules.catalog import features_for
 from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
@@ -306,13 +308,18 @@ async def reopen_tome(session: AsyncSession, char: Character) -> None:
     _history(session, char, "Libro delle Ombre: scelte da rifare")
 
 
-def _check_feat(char: Character, spec, boon: bool) -> None:
-    """Edizione, categoria e prerequisiti (livello, caratteristica, incantesimi) di un talento."""
+def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> None:
+    """Edizione, categoria e prerequisiti (livello, caratteristica, incantesimi) di un talento.
+
+    ``origin``: ``level`` (scelta ASI o Dono Epico), ``manual`` («Aggiungi talento»: nessuna categoria né livello minimo,
+    salvo i Doni Epici) o ``creation`` (solo talenti d'Origine)."""
     if spec.edition != character_edition(char):
         raise _bad("feat_wrong_edition")
-    if (spec.category == "epic_boon") != boon:
+    if origin == "creation" and spec.category != "origin":
         raise _bad("feat_wrong_category")
-    if char.total_level < spec.min_level:
+    if origin == "level" and (spec.category == "epic_boon") != boon:
+        raise _bad("feat_wrong_category")
+    if (origin == "level" or spec.category == "epic_boon") and char.total_level < spec.min_level:
         raise _bad("feat_prerequisite_level")
     if spec.prereq_abilities:
         names, minimum = spec.prereq_abilities
@@ -361,11 +368,18 @@ def resolve_feat(
                             is_passive=True, feature_key="feat.custom"))
         _history(session, char, name)
         return
+    take_feat(session, char, feat_key, ability, lang, "level", boon=boon)
+
+
+def take_feat(session: AsyncSession, char: Character, feat_key: str, ability: Optional[str], lang: str,
+              origin: Literal["level", "manual", "creation"], boon: bool = False) -> Ability:
+    """Il talento entra sulla scheda per intero (+1 alla caratteristica, TS di Resiliente); effetti e usi dal motore
+    al sync che segue. Le scelte proprie del talento (``FEAT_NEEDS``) si completano dopo, con ``complete_feat``."""
     spec = FEATS.get(feat_key)
     if spec is None:
         raise _bad(f"Unknown feat '{feat_key}'")
-    _check_feat(char, spec, boon)
-    if any(a.feature_key == f"feat.{feat_key}" for a in char.abilities):
+    _check_feat(char, spec, boon, origin)
+    if not spec.repeatable and any(a.feature_key == f"feat.{feat_key}" for a in char.abilities):
         raise _bad("feat_already_taken")
     if spec.ability_increase:
         if ability not in spec.ability_increase:
@@ -384,7 +398,85 @@ def resolve_feat(
         options={"ability": ability} if spec.ability_increase else None)
     session.add(ability_row)
     char.abilities.append(ability_row)  # gli effetti e gli usi li dà il motore al sync che segue
-    _history(session, char, name)
+    if origin == "level":
+        _history(session, char, name)
+    else:
+        add_history(session, char.id, "level_choice", f"Talento aggiunto: {name}")
+    return ability_row
+
+
+_MI_LISTS = ("cleric", "druid", "wizard")
+_MI_ABILITIES = ("intelligence", "wisdom", "charisma")
+
+
+def _text_list(value: Any, count: int) -> list[str]:
+    items = [str(v).strip()[:50] for v in value] if isinstance(value, list) else []
+    if len(items) != count or not all(items) or len({i.lower() for i in items}) != count:
+        raise _bad("feat_options_invalid")
+    return items
+
+
+def _add_tools(char: Character, names: list[str]) -> None:
+    cats = normalize(char.general_proficiencies)
+    have = {t.lower() for t in cats["tools"]}
+    cats["tools"] = [*cats["tools"], *(n for n in names if n.lower() not in have)]
+    char.general_proficiencies = cats  # riassegnato: la colonna JSON non traccia le mutazioni
+
+
+def complete_feat(session: AsyncSession, char: Character, ability: Ability, options: dict, spells: list) -> None:
+    """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità e strumenti di Abile, strumenti di Artigiano e
+    Musicista, lista, caratteristica e incantesimi di Iniziato alla magia (sempre preparati, senza duplicati)."""
+    from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
+    needs = FEAT_NEEDS.get(ability.feature_key or "", ())
+    if not needs:
+        raise _bad("feat_has_no_options")
+    if feat_status(char, ability) != "incomplete":
+        raise HTTPException(409, detail={"code": "feat_already_complete"})
+    saved: dict[str, Any] = {}
+    if "picks" in needs:
+        picks = _text_list(options.get("picks"), 3)
+        skills = [p for p in picks if not p.startswith("tool:")]
+        tools = [p[len("tool:"):].strip() for p in picks if p.startswith("tool:")]
+        if any(s not in SKILL_ABILITY_MAP for s in skills) or not all(tools):
+            raise _bad("feat_options_invalid")
+        current = dict(char.skills or {})
+        for s in skills:
+            current[s] = "expert" if current.get(s) == "expert" else True
+        char.skills = current
+        _add_tools(char, tools)
+        saved["picks"] = picks
+    for key in ("tools", "instruments"):
+        if key in needs:
+            saved[key] = _text_list(options.get(key), 3)
+            _add_tools(char, saved[key])
+    if "list" in needs:
+        chosen, stat = options.get("list"), options.get("ability")
+        if chosen not in _MI_LISTS or stat not in _MI_ABILITIES:
+            raise _bad("feat_options_invalid")
+        if any(a is not ability and a.feature_key == ability.feature_key and (a.options or {}).get("list") == chosen
+               for a in char.abilities):
+            raise _bad("feat_list_taken")
+        if sorted(sp.level for sp in spells) != [0, 0, 1]:
+            raise _bad("feat_options_invalid")
+        names: dict[int, list[str]] = {0: [], 1: []}
+        for data in spells:
+            index = (data.srd_index or "").strip() or None
+            have = next((sp for sp in char.spells if (index and sp.srd_index == index) or sp.name == data.name), None)
+            if have is None:
+                have = Spell(character_id=char.id,
+                             **data.model_dump(exclude={"pick_id", "class_id", "always_prepared", "is_prepared"}))
+                session.add(have)
+                char.spells.append(have)
+            have.always_prepared = have.is_prepared = True
+            names[data.level].append(index or data.name)
+        saved.update({"list": chosen, "ability": stat, "cantrips": names[0], "spell": names[1]})
+    ability.options = {**(ability.options or {}), **saved}
+    add_history(session, char.id, "level_choice", f"Talento completato: {ability.name}")
+
+
+def _feat_spells(ability: Ability) -> set[str]:
+    opts = ability.options or {}
+    return {*(opts.get("cantrips") or []), *(opts.get("spell") or [])}
 
 
 async def remove_feat(session: AsyncSession, char: Character, ability: Ability) -> None:
@@ -395,8 +487,10 @@ async def remove_feat(session: AsyncSession, char: Character, ability: Ability) 
     if key == "custom":
         await session.execute(delete(Ability).where(Ability.id == ability.id))
     else:
-        await session.execute(delete(Ability).where(
-            Ability.character_id == char.id, Ability.feature_key == f"feat.{key}"))
+        for spell in char.spells:  # Iniziato alla magia: gli incantesimi restano, non più sempre preparati
+            if (spell.srd_index or spell.name) in _feat_spells(ability):
+                spell.always_prepared = False
+        await session.execute(delete(Ability).where(Ability.id == ability.id))  # una sola istanza (talenti ripetibili)
         # Regole `feat:*` di personaggi non ancora migrati al motore (vedi ``catalog_migration``)
         await session.execute(delete(HomebrewRule).where(
             HomebrewRule.character_id == char.id, HomebrewRule.template_id == f"feat:{key}"))

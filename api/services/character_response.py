@@ -28,6 +28,7 @@ from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_part
 from core.rules.condition_removal import view as removal_view
 from core.rules.catalog import active_features
+from core.rules.catalog.feats import feat_status
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext
 from core.rules.uses import pool_key
@@ -128,9 +129,12 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
     dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
     rest_choices = {spec.key: list(spec.rest_damage_choice[1]) for spec, _ in active_features(char) if spec.rest_damage_choice}
+    rows = {a.id: a for a in char.abilities}
     for ab in response.abilities:
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.is_pool = ab.feature_key in pools
+        if (ab.feature_key or "").startswith("feat.") and ab.id in rows:  # attivo, da completare o di un'altra edizione
+            ab.feat_status = feat_status(char, rows[ab.id])
         if ab.feature_key in dc_of:
             ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
         ab.has_on_use = on_use is not None
