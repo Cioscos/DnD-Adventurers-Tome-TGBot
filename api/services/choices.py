@@ -419,6 +419,10 @@ def take_feat(session: AsyncSession, char: Character, feat_key: str, ability: Op
 
 _MI_LISTS = ("cleric", "druid", "wizard")
 _MI_ABILITIES = ("intelligence", "wisdom", "charisma")
+# Talenti 2014 con una lista di classe (Iniziato alla Magia, Cecchino Magico, Incantatore Rituale): la caratteristica
+# da incantatore viene dalla classe scelta
+_LIST_ABILITY = {"bard": "charisma", "sorcerer": "charisma", "warlock": "charisma", "cleric": "wisdom", "druid": "wisdom",
+                 "wizard": "intelligence"}
 
 
 _SRD_DIR = Path(__file__).resolve().parents[2] / "webapp" / "src" / "data" / "srd"
@@ -430,6 +434,7 @@ class SrdSpell:
     classes: frozenset[str]
     school: str
     ritual: bool
+    attack: bool = False  # incantesimo con tiro per colpire (Cecchino Magico)
 
 
 @lru_cache(maxsize=2)
@@ -437,7 +442,8 @@ def _srd_spells(edition: str) -> dict[str, SrdSpell]:
     """Catalogo SRD della webapp, per indice. Lo stesso file da cui la webapp sceglie."""
     name = "spells-2024.json" if edition == "2024" else "spells.json"
     items = json.loads((_SRD_DIR / name).read_text(encoding="utf-8"))["items"]
-    return {e["index"]: SrdSpell(e["level"], frozenset(e.get("classes") or []), str(e.get("school") or ""), bool(e.get("ritual")))
+    return {e["index"]: SrdSpell(e["level"], frozenset(e.get("classes") or []), str(e.get("school") or ""), bool(e.get("ritual")),
+                                e.get("attack_type") == "ATK")
             for e in items}
 
 
@@ -566,12 +572,54 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         if any((a.options or {}).get("damage_type") == chosen for a in others):
             raise _bad("feat_type_taken")
         saved["damage_type"] = chosen
+    if "maneuvers" in needs:  # Adepto Marziale: due manovre diverse del Maestro di Battaglia
+        from core.rules.catalog.y2014.fighter import MANEUVERS
+        picked = options.get("maneuvers")
+        if (not isinstance(picked, list) or len(picked) != 2 or len(set(picked)) != 2
+                or not set(picked) <= {k for k, _it, _en in MANEUVERS}):
+            raise _bad("feat_options_invalid")
+        saved["maneuvers"] = list(picked)
+    if "languages" in needs:  # Linguista: tre linguaggi
+        saved["languages"] = _text_list(options.get("languages"), 3)
+        have = {str(x).lower() for x in char.languages or []}
+        char.languages = [*(char.languages or []), *(x for x in saved["languages"] if x.lower() not in have)]
+    if "weapons" in needs:  # Maestro d'Armi 2014: quattro armi semplici o da guerra
+        weapons = options.get("weapons")
+        if not isinstance(weapons, list) or len(weapons) != 4 or len(set(weapons)) != 4 or any(w not in WEAPONS for w in weapons):
+            raise _bad("feat_options_invalid")
+        cats = normalize(char.general_proficiencies)
+        have = {w.lower() for w in cats["weapons"]}
+        cats["weapons"] = [*cats["weapons"], *(WEAPONS[w].it for w in weapons if WEAPONS[w].it.lower() not in have)]
+        char.general_proficiencies = cats
+        saved["weapons"] = list(weapons)
     if "weapon_mastery" in needs:  # Maestro d'armi
         weapons = options.get("weapon_mastery")
         if not isinstance(weapons, list) or len(weapons) != 1 or weapons[0] not in WEAPONS:
             raise _bad("feat_options_invalid")
         saved["weapon_mastery"] = list(weapons)
-    if "list" in needs:  # Iniziato alla magia
+    if "list" in needs and not key.startswith("feat.2024_"):  # talenti 2014 con una lista di classe
+        chosen = options.get("list")
+        if chosen not in _LIST_ABILITY:
+            raise _bad("feat_options_invalid")
+        saved.update({"list": chosen, "ability": _LIST_ABILITY[chosen]})
+        if "rituals" in needs:  # Incantatore Rituale: due rituali di 1º livello della lista
+            indexes = _checked_spells(char, spells, lambda s: s.level == 1 and s.ritual and chosen in s.classes)
+            if len(indexes) != 2:
+                raise _bad("feat_options_invalid")
+            saved.update({"rituals": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
+        elif "spell" in needs:  # Iniziato alla Magia: due trucchetti e un incantesimo di 1º livello della lista
+            indexes = _checked_spells(char, spells, lambda s: chosen in s.classes)
+            if len(indexes) != 3 or sorted(sp.level for sp in spells) != [0, 0, 1]:
+                raise _bad("feat_options_invalid")
+            saved.update({"granted": _add_feat_spells(session, char, spells, indexes),
+                          "cantrips": [i for sp, i in zip(spells, indexes) if sp.level == 0],
+                          "spell": [i for sp, i in zip(spells, indexes) if sp.level == 1]})
+        else:  # Cecchino Magico: un trucchetto con tiro per colpire
+            indexes = _checked_spells(char, spells, lambda s: s.level == 0 and s.attack and chosen in s.classes)
+            if len(indexes) != 1:
+                raise _bad("feat_options_invalid")
+            saved.update({"cantrips": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
+    elif "list" in needs:  # Iniziato alla magia 2024
         chosen, stat = options.get("list"), options.get("ability")
         if chosen not in _MI_LISTS or stat not in _MI_ABILITIES:
             raise _bad("feat_options_invalid")
@@ -591,7 +639,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         if len(indexes) != 1:
             raise _bad("feat_options_invalid")
         saved.update({"spell": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
-    if "rituals" in needs:  # Incantatore rituale: tanti rituali di 1º livello quanto il bonus di competenza
+    if "rituals" in needs and "list" not in needs:  # Incantatore rituale 2024: tanti rituali di 1º livello quanto il bonus di competenza
         indexes = _checked_spells(char, spells, lambda s: s.level == 1 and s.ritual)
         if len(indexes) != char.proficiency_bonus:
             raise _bad("feat_options_invalid")

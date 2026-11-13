@@ -231,6 +231,7 @@ _register(
 def options_ok(options: dict) -> bool:
     """Le scelte salvate di un talento rispettano numero e valori ammessi (import di un file: altrimenti si scartano e il
     talento torna «da completare»)."""
+    from core.rules.catalog.y2014.fighter import MANEUVERS  # import locale come WEAPONS
     from core.rules.weapons import WEAPONS  # import locale: weapons legge il registro dei talenti
     count = lambda n: (lambda v: len(v) == n)  # noqa: E731
     checks = {
@@ -240,7 +241,11 @@ def options_ok(options: dict) -> bool:
         "skill": lambda v: v in SKILL_ABILITY_MAP,
         "expertise": lambda v: v in SKILL_ABILITY_MAP,
         "granted_skills": lambda v: set(v) <= set(SKILL_ABILITY_MAP),
-        "list": lambda v: v in ("cleric", "druid", "wizard"),
+        "list": lambda v: v in ("bard", "cleric", "druid", "sorcerer", "warlock", "wizard"),
+        "maneuvers": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= {k for k, _it, _en in MANEUVERS},
+        "languages": count(3),
+        "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPONS),
+        "rituals": lambda v: len(v) <= 6,
         "picks": count(3), "tools": count(3), "instruments": count(3),
         "cantrips": lambda v: len(v) <= 2, "spell": lambda v: len(v) <= 1,
     }

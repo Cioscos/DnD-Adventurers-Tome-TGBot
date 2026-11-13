@@ -207,7 +207,7 @@ class ExportSpellSlot(BaseModel):
 
 _OPTION_TEXTS = {"list", "ability", "skill", "expertise", "damage_type"}
 _OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted", "rituals", "weapon_mastery", "damage_types",
-                 "granted_skills"}
+                 "granted_skills", "maneuvers", "languages", "weapons"}
 
 
 class ExportAbility(BaseModel):

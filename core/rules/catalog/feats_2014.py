@@ -9,7 +9,7 @@ from typing import Any
 
 from core.rules.catalog._common import heavy_armor, state_on
 from core.rules.catalog.feats import D20_TESTS, _register, feat
-from core.rules.catalog.feats_2024 import _PHYSICAL, _both, _finesse_in_hand, _medium_armor_dex, _pb
+from core.rules.catalog.feats_2024 import _PHYSICAL, _adept_type, _both, _finesse_in_hand, _medium_armor_dex, _pb
 from core.rules.types import Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
 from core.rules.weapons import has_property
 from core.utils.session_view import armor_category
@@ -40,8 +40,6 @@ _register(
     _f14("lucky", passive=False, uses=Uses(table={1: 3}), restoration="long_rest",
          roll_options=(_lucky_reroll("feat.lucky", D20_TESTS),)),
     *(_f14(k) for k in (
-        "skilled", "elemental_adept", "martial_adept", "spell_sniper", "ritual_caster", "magic_initiate", "linguist",
-        "weapon_master",  # scelte: Task 4
         # solo testo (D1): distanze, attacchi bonus o di opportunità, cure ad altri
         "skulker", "mounted_combatant", "crossbow_expert", "healer", "polearm_master", "keen_mind", "resilient",
         "sentinel")),
@@ -171,4 +169,34 @@ _register(
     _f14("sharpshooter", roll_options=(_power_attack(
         "feat.sharpshooter", "Tiratore Scelto: -5 al tiro per colpire, +10 al danno",
         "Sharpshooter: -5 to hit, +10 damage", lambda c: _weapon_kind(c) == "ranged"),)),
+)
+
+
+def _maneuver_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
+    """Adepto Marziale: le manovre scelte restano testo; il dado e la CD li dà l'app."""
+    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
+    from core.rules.catalog.y2014.fighter import MANEUVERS
+    chosen = (getattr(ctx.class_row, "options", None) or {}).get("maneuvers") or []
+    names = {k: (it, en) for k, it, en in MANEUVERS}
+    dc = 8 + _pb(ctx) + max(effective_ability_mod(ctx.char, "strength"), effective_ability_mod(ctx.char, "dexterity"))
+    it = ", ".join(names[k][0] for k in chosen if k in names)
+    en = ", ".join(names[k][1] for k in chosen if k in names)
+    return _both(f"Dado di superiorità per una manovra ({it}); CD dei TS {dc}.",
+                 f"Superiority die for a maneuver ({en}); save DC {dc}.")
+
+
+_register(
+    _f14("skilled"),  # competenze e strumenti al completamento (``complete_feat``)
+    _f14("elemental_adept", modifiers=(Modifier("damage_min_die", 2, when=_adept_type),)),
+    _f14("martial_adept", passive=False, uses=Uses(table={1: 1}), restoration="short_rest",
+         on_use=OnUse(rolls="1d6", message=_maneuver_message)),
+    _f14("linguist"),  # linguaggi aggiunti al completamento
+    _f14("weapon_master"),  # competenze nelle armi aggiunte al completamento
+    _f14("magic_initiate", passive=False, uses=Uses(table={1: 1}), restoration="long_rest", arcanum_group="spell"),
+    _f14("spell_sniper"),  # il trucchetto si aggiunge al completamento; gittata e copertura: testo
+    _f14("ritual_caster", ritual_casting=True),
+    needs={"feat.skilled": ("picks",), "feat.elemental_adept": ("damage_type",), "feat.martial_adept": ("maneuvers",),
+           "feat.linguist": ("languages",), "feat.weapon_master": ("weapons",),
+           "feat.magic_initiate": ("list", "cantrips", "spell"), "feat.spell_sniper": ("list", "cantrips"),
+           "feat.ritual_caster": ("list", "rituals")},
 )
