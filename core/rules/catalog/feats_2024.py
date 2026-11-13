@@ -7,10 +7,11 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import DAMAGE_TYPES, canonical_damage_type
+from core.data.skills import SKILL_ABILITY_MAP
 from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import heavy_armor, state_on
-from core.rules.catalog.feats import _f24, _register
+from core.rules.catalog.feats import D20_TESTS, _f24, _register
 from core.rules.catalog.y2014.fighter import _off_hand_modifier, _weapon_in_hand
 from core.rules.catalog.y2024.fighter import STYLE_ROWS
 from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
@@ -183,3 +184,44 @@ def _style_feat(spec: Any) -> Any:
 
 
 _register(*(_style_feat(s) for s in STYLE_ROWS))
+
+
+# ---------------------------------------------------------------------------
+# Doni Epici (pagg. 210-211)
+# ---------------------------------------------------------------------------
+
+ENERGY_TYPES = ("acid", "cold", "fire", "lightning", "necrotic", "poison", "psychic", "radiant", "thunder")
+_NIGHT = "feat.2024_boon_night_spirit"
+_ALL_SKILLS = tuple(SKILL_ABILITY_MAP)
+
+
+def _chosen_energy(kind: str):
+    return lambda c: kind in ((getattr(c.class_row, "options", None) or {}).get("damage_types") or [])
+
+
+_register(
+    _f24("boon_combat_prowess", roll_options=(RollOptionSpec(
+        key="feat.2024_boon_combat_prowess", phase="after_roll", after="succeed", rolls=("attack",), once_per_turn=True,
+        label=_both("Prodigio in combattimento: l'attacco mancato diventa un colpo (poi non prima del tuo prossimo turno)",
+                    "Combat Prowess: the missed attack becomes a hit (then not again until your next turn)")),)),
+    _f24("boon_dimensional_travel"),
+    _f24("boon_energy_resistance", modifiers=tuple(Modifier(f"resistance:{t}", 0, when=_chosen_energy(t)) for t in ENERGY_TYPES)),
+    _f24("boon_fate", passive=False, uses=Uses(table={1: 1}), restoration="short_rest", roll_options=(RollOptionSpec(
+        key="feat.2024_boon_fate", phase="after_roll", after="add", rolls=D20_TESTS, extra_dice=lambda _c, _i: "2d4",
+        cost=Cost(feature_key="feat.2024_boon_fate"),
+        label=_both("Dono del Fato: somma 2d4 al Test d20", "Boon of Fate: add 2d4 to the d20 Test")),)),
+    _f24("boon_fortitude", modifiers=(Modifier("hp_max", 40),)),
+    _f24("boon_irresistible_offense"),
+    # La riserva di dieci d10 è l'uso della riga; «Ultima resistenza» (1 PF invece di 0) resta testo (ruling della PR 2)
+    _f24("boon_recovery", passive=False, action_type="bonus_action", uses=Uses(table={1: 10}), restoration="long_rest",
+         on_use=OnUse(slot="bonus", choose_amount=True, rolls_by_amount=lambda _c, n: f"{n}d10", heal=lambda _c, rolled: rolled)),
+    _f24("boon_skill", proficiency_grants={"skills": _ALL_SKILLS}),
+    _f24("boon_speed", modifiers=(Modifier("speed", 30),)),
+    _f24("boon_spell_recall"),
+    _f24("boon_night_spirit", passive=False, action_type="bonus_action",
+         on_use=OnUse(slot="bonus", state=StateSpec(_NIGHT, ends_on=("manual",))),
+         modifiers=tuple(Modifier(f"resistance:{t}", 0, when=lambda c: state_on(c, _NIGHT))
+                         for t in DAMAGE_TYPES if t not in ("psychic", "radiant"))),
+    _f24("boon_truesight", modifiers=(Modifier("sense:truesight", 60),)),
+    needs={"feat.2024_boon_energy_resistance": ("damage_types",), "feat.2024_boon_skill": ("expertise",)},
+)

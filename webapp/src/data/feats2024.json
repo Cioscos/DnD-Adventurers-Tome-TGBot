@@ -1431,7 +1431,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "damage_types"
+  ]
  },
  {
   "key": "2024_boon_fate",
@@ -1567,7 +1569,9 @@
   "repeatable": false,
   "prereq_armor": null,
   "needs_fighting_style": false,
-  "needs": []
+  "needs": [
+   "expertise"
+  ]
  },
  {
   "key": "2024_boon_speed",

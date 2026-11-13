@@ -517,6 +517,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità, strumenti, tipo di danno, padronanza e
     incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
+    from core.rules.catalog.feats_2024 import ENERGY_TYPES
     from core.rules.weapons import WEAPONS
     key = ability.feature_key or ""
     needs = FEAT_NEEDS.get(key, ())
@@ -544,6 +545,17 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
             _add_tools(char, saved[name])
     if "skill" in needs:
         saved.update(_choose_skill(char, key, options, needs))
+    elif "expertise" in needs:  # Dono dell'Abilità: competenza in tutte (dal motore) e Maestria in una
+        expertise = options.get("expertise")
+        if expertise not in SKILL_ABILITY_MAP:
+            raise _bad("feat_options_invalid")
+        char.skills = {**(char.skills or {}), expertise: "expert"}
+        saved["expertise"] = expertise
+    if "damage_types" in needs:  # Dono della Resistenza all'energia: due tipi diversi
+        types = options.get("damage_types")
+        if not isinstance(types, list) or len(set(types)) != 2 or len(types) != 2 or any(t not in ENERGY_TYPES for t in types):
+            raise _bad("feat_options_invalid")
+        saved["damage_types"] = list(types)
     if "damage_type" in needs:  # Adepto elementale: un tipo per istanza
         chosen = options.get("damage_type")
         if chosen not in _ADEPT_TYPES:
