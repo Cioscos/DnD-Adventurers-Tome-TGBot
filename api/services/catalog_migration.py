@@ -28,8 +28,11 @@ RETRY_KEY = "catalog_retry"  # id dei personaggi falliti, separati da virgola
 
 
 def _has_catalog(char: Character) -> bool:
+    """Una classe a catalogo o un talento a catalogo (anche dell'altra edizione: la migrazione ne pulisce le regole)."""
+    from core.rules.catalog.feats import FEAT_FEATURES  # import locale come in active_features
     edition = character_edition(char)
-    return any(features_for(edition, class_key(cls)) for cls in char.classes)
+    return (any(features_for(edition, class_key(cls)) for cls in char.classes)
+            or any(a.feature_key in FEAT_FEATURES for a in char.abilities))
 
 
 async def _lang(session: AsyncSession, user_id: int) -> str:
