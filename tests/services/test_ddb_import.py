@@ -95,7 +95,8 @@ def test_fixture_limited_use():
 def test_alert_feat_and_racial_traits_passive():
     exp, _, _ = convert(load())
     ab = {a.name: a for a in exp.abilities}
-    assert ab["Alert"].is_passive and ab["Dwarven Resilience"].is_passive
+    # Allerta è un talento del catalogo: nome localizzato e chiave del motore (PR 1 talenti)
+    assert ab["Allerta"].feature_key == "feat.alert" and ab["Dwarven Resilience"].is_passive
     assert "Hit Points" not in ab and "Ability Score Improvement" not in ab
     assert len(ab) == len(exp.abilities)  # nessun duplicato per nome
 
@@ -270,7 +271,7 @@ def test_unarmored_movement_lost_with_armor():
 def test_monk_placeholder_features_dropped():
     names = {a.name for a in convert(monk())[0].abilities}
     assert not names & {"8: Ability Score Improvement", "Ability Score Increases", "Creature Type", "Epic Boon"}
-    assert {"Martial Arts", "Boon of Combat Prowess", "Fey Ancestry"} <= names
+    assert {"Martial Arts", "Dono del Prodigio in combattimento", "Fey Ancestry"} <= names  # il Dono è a catalogo
 
 
 # --- quarta scheda: Barbaro 20 Berserker (2024), Nano, Soldato, scelte lasciate aperte ----
