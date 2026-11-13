@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "3.6.0",
+      "date": "2026-11-13",
+      "added": {
+        "it": [
+          "Tutti i 42 talenti del Manuale del Giocatore 2014 si possono prendere, con i prerequisiti verificati (caratteristica, armature, saper lanciare incantesimi) e i nomi del manuale italiano.",
+          "I talenti 2014 agiscono da soli in gioco: per esempio Combattente a Due Armi (+1 alla CA con due armi), Esperto di Dungeon (danni da trappola dimezzati), Maestro degli Scudi, Maestro delle Armature Medie e Pesanti, Duellante Difensivo, Tenace (cura minima dei Dadi Vita), Carica, Condottiero Ispiratore e le Corazze. Quello che l'app non modella resta nel testo per il GM.",
+          "Maestro d'Armi Possenti e Tiratore Scelto: prima del tiro scegli -5 al colpire per +10 al danno, solo con l'arma giusta.",
+          "I talenti 2014 con scelte si completano dalla loro riga: Abile, Adepto Elementale, Adepto Marziale (manovre e dado d6), Linguista, Maestro d'Armi, Iniziato alla Magia, Cecchino Magico e Incantatore Rituale."
+        ],
+        "en": [
+          "All 42 feats of the 2014 Player's Handbook can be taken, with checked prerequisites (ability scores, armor, spellcasting).",
+          "2014 feats act on their own in play: for example Dual Wielder (+1 AC with two weapons), Dungeon Delver (halved trap damage), Shield Master, Medium and Heavy Armor Master, Defensive Duelist, Durable (minimum Hit Die healing), Charger, Inspiring Leader and the armor feats. What the app does not model stays as text for the GM.",
+          "Great Weapon Master and Sharpshooter: before the roll choose -5 to hit for +10 damage, only with the right weapon.",
+          "2014 feats with choices are completed from their row: Skilled, Elemental Adept, Martial Adept (maneuvers and a d6 die), Linguist, Weapon Master, Magic Initiate, Spell Sniper and Ritual Caster."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Alcuni talenti 2014 prendono il nome del manuale (Mobile diventa Mobilità, Incantatore Bellico diventa Incantatore da Guerra). Se avevi regole homebrew scritte a mano per questi talenti, spegnile: ora l'effetto lo applica l'app."
+        ],
+        "en": [
+          "If you wrote homebrew rules by hand for these 2014 feats, turn them off: the app now applies the effect."
+        ]
+      }
+    },
+    {
       "version": "3.5.0",
       "date": "2026-11-13",
       "added": {

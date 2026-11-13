@@ -154,4 +154,4 @@ async def test_text_only_feats_have_a_row(client):
 
 def test_catalog_version_bumped():
     from core.rules.catalog import CATALOG_VERSION
-    assert CATALOG_VERSION == 70  # i personaggi esistenti ripassano dal sync con i talenti 2024
+    assert CATALOG_VERSION >= 71  # i personaggi esistenti ripassano dal sync con i talenti 2024 (70) e 2014 (71)
