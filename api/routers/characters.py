@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from api.services.history import add_history
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
+from core.rules.tools import migrate_tools
 from core.db.models import (
     Ability,
     AbilityScore,
@@ -331,6 +332,8 @@ async def update_character(
             value = {k: v for k, v in value.items() if k not in SERVER_OWNED_SETTINGS}
             value.update({k: old[k] for k in SERVER_OWNED_SETTINGS if k in old})
         setattr(char, field, value)
+    if "general_proficiencies" in body.model_fields_set:
+        migrate_tools(char)  # strumenti scritti come testo (client vecchi): nella colonna strutturata
     if "rules_edition" in body.model_fields_set:
         sync_subclass_keys(char)  # una sottoclasse assente nell'altra edizione resta solo testo
         await sync_cataloged_features(session, char, lang)

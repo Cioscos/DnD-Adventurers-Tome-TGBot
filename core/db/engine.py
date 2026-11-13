@@ -79,6 +79,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("items", "equipment_slot", "VARCHAR(20)", None),
     ("items", "container_id", "INTEGER", None),
     ("items", "ammo_spent", "INTEGER NOT NULL", "0"),
+    ("characters", "tool_proficiencies", "JSON", None),
     # Heroic Inspiration
     ("characters", "heroic_inspiration", "BOOLEAN", "0"),
     # Saving throw proficiencies
@@ -550,6 +551,20 @@ def _seed_proficiencies(connection) -> None:
         s.commit()
 
 
+def _migrate_tools(connection) -> None:
+    """Le competenze negli strumenti scritte come testo passano nella colonna strutturata (idempotente)."""
+    from sqlalchemy.orm import Session
+
+    from core.db.models import Character
+    from core.rules.tools import migrate_tools
+
+    with Session(bind=connection) as s:
+        for char in s.query(Character).all():
+            if isinstance(char.general_proficiencies, dict) and char.general_proficiencies.get("tools"):
+                migrate_tools(char)
+        s.commit()
+
+
 def _migrate_armor_class(connection) -> None:
     """Una tantum (`settings.ac_migrated`): la CA mostrata non cambia salvo le basi copiate dalla vecchia logica."""
     from sqlalchemy.orm import Session
@@ -573,6 +588,7 @@ async def init_db() -> None:
         await conn.run_sync(_backfill_ability_action_types)
         await conn.run_sync(_migrate_condition_state)
         await conn.run_sync(_seed_proficiencies)
+        await conn.run_sync(_migrate_tools)
         await conn.run_sync(_migrate_armor_class)
 
 
