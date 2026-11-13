@@ -1,4 +1,5 @@
 import feats2024 from '@/data/feats2024.json'
+import { CANONICAL_CLASSES } from '@/lib/silhouette'
 import type { CharacterFull } from '@/types'
 
 export const ABILITY_KEYS = [
@@ -45,13 +46,14 @@ const ARMOR_ALIASES: Record<string, string[]> = {
   shields: ['shields', 'scudi', 'shield'],
 }
 
-/** Come `armor_trained` del server: senza nessuna competenza nota il prerequisito passa. */
+/** Come `armor_trained` del server: con una classe personalizzata, o mai seminato e senza competenze, il prerequisito passa. */
 function armorTrained(char: CharacterFull, kind: string): boolean {
+  if (char.classes.some((c) => !CANONICAL_CLASSES.has(c.class_name))) return true
   const raw = char.general_proficiencies ?? {}
   const p = Array.isArray(raw) ? { other: raw } as Partial<Record<'armor' | 'weapons' | 'tools' | 'other', string[]>> : raw
-  const all = [...(p.armor ?? []), ...(p.weapons ?? []), ...(p.tools ?? []), ...(p.other ?? [])]
-  if (!all.length) return true
-  const have = [...(p.armor ?? []), ...(p.other ?? [])].map((x) => x.trim().toLowerCase())
+  const armorOrOther = [...(p.armor ?? []), ...(p.other ?? [])]
+  if (!armorOrOther.length && !char.settings?.proficiencies_seeded) return true
+  const have = armorOrOther.map((x) => x.trim().toLowerCase())
   return (ARMOR_ALIASES[kind] ?? [kind]).some((alias) => have.includes(alias))
 }
 

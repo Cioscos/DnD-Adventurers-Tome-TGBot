@@ -21,12 +21,14 @@
         "it": [
           "I prerequisiti di addestramento (armature leggere, medie, pesanti, scudi) e dello Stile di Combattimento sono verificati quando prendi un talento.",
           "Rimuovere un talento toglie anche le competenze che dava (per esempio Armatura leggera).",
-          "Toccato dalle fate e dall'ombra: i due lanci gratuiti per riposo lungo sono condivisi fra i due incantesimi; l'Ultima resistenza del Dono del Recupero resta testo."
+          "Toccato dalle fate e dall'ombra: i due lanci gratuiti per riposo lungo sono condivisi fra i due incantesimi; l'Ultima resistenza del Dono del Recupero resta testo.",
+          "Se avevi scritto a mano regole homebrew per questi talenti (per esempio +40 PF per Forza d'animo o +3 m di velocità per Veloce), spegnile: ora il talento agisce da solo e l'effetto conterebbe due volte. Maestro di armature pesanti si sceglie nel danno subito quando viene da un attacco."
         ],
         "en": [
           "Training prerequisites (light, medium, heavy armor, shields) and the Fighting Style prerequisite are checked when you take a feat.",
           "Removing a feat also removes the proficiencies it granted (for example Lightly Armored).",
-          "Fey-Touched and Shadow-Touched: the two free casts per long rest are shared between the two spells; the Boon of Recovery's Last Stand stays as text."
+          "Fey-Touched and Shadow-Touched: the two free casts per long rest are shared between the two spells; the Boon of Recovery's Last Stand stays as text.",
+          "If you wrote homebrew rules by hand for these feats (for example +40 HP for Fortitude or +10 ft of speed for Speedy), turn them off: the feat now acts on its own and the effect would count twice. Heavy Armor Master is picked in the damage taken when it comes from an attack."
         ]
       }
     },

@@ -130,10 +130,11 @@ _register(
         Modifier("damage", _pb, when=lambda c: _weapon_damage(c) and has_property(c.item, "heavy")),)),
     _f24("heavily_armored", proficiency_grants={"armor": ("heavy",)}),
     _f24("heavy_armor_master", roll_options=(RollOptionSpec(
-        key="feat.2024_heavy_armor_master", phase="damage_in", rolls=("damage_taken",), automatic=True,
+        # offerta, non automatica: vale solo per il danno di un attacco che ti colpisce (non cadute o trappole)
+        key="feat.2024_heavy_armor_master", phase="damage_in", rolls=("damage_taken",),
         bonus=lambda c, _i: _pb(c), available=lambda c: heavy_armor(c.char) and c.damage_type in _PHYSICAL,
-        label=_both("Maestro di armature pesanti: danno ridotto della competenza",
-                    "Heavy Armor Master: damage reduced by your proficiency bonus")),)),
+        label=_both("Maestro di armature pesanti: il danno viene da un attacco che ti colpisce, riducilo della competenza",
+                    "Heavy Armor Master: the damage comes from an attack that hits you, reduce it by your proficiency bonus")),)),
     _f24("inspiring_leader", rest_temp_hp=_leader_hp, rest_temp_hp_ally=lambda c: (5, _leader_hp(c))),
     _f24("lightly_armored", proficiency_grants={"armor": ("light", "shields")}),
     _f24("mage_slayer", uses=Uses(table={1: 1}), restoration="short_rest", passive=False, roll_options=(RollOptionSpec(
@@ -191,8 +192,8 @@ _register(*(_style_feat(s) for s in STYLE_ROWS))
 # ---------------------------------------------------------------------------
 
 ENERGY_TYPES = ("acid", "cold", "fire", "lightning", "necrotic", "poison", "psychic", "radiant", "thunder")
+ADEPT_TYPES = ("acid", "cold", "fire", "lightning", "thunder")
 _NIGHT = "feat.2024_boon_night_spirit"
-_ALL_SKILLS = tuple(SKILL_ABILITY_MAP)
 
 
 def _chosen_energy(kind: str):
@@ -215,7 +216,7 @@ _register(
     # La riserva di dieci d10 è l'uso della riga; «Ultima resistenza» (1 PF invece di 0) resta testo (ruling della PR 2)
     _f24("boon_recovery", passive=False, action_type="bonus_action", uses=Uses(table={1: 10}), restoration="long_rest",
          on_use=OnUse(slot="bonus", choose_amount=True, rolls_by_amount=lambda _c, n: f"{n}d10", heal=lambda _c, rolled: rolled)),
-    _f24("boon_skill", proficiency_grants={"skills": _ALL_SKILLS}),
+    _f24("boon_skill"),  # competenze e Maestria le dà ``complete_feat``, che segna quelle nuove (la rimozione le toglie)
     _f24("boon_speed", modifiers=(Modifier("speed", 30),)),
     _f24("boon_spell_recall"),
     _f24("boon_night_spirit", passive=False, action_type="bonus_action",
@@ -225,3 +226,22 @@ _register(
     _f24("boon_truesight", modifiers=(Modifier("sense:truesight", 60),)),
     needs={"feat.2024_boon_energy_resistance": ("damage_types",), "feat.2024_boon_skill": ("expertise",)},
 )
+
+
+def options_ok(options: dict) -> bool:
+    """Le scelte salvate di un talento rispettano numero e valori ammessi (import di un file: altrimenti si scartano e il
+    talento torna «da completare»)."""
+    from core.rules.weapons import WEAPONS  # import locale: weapons legge il registro dei talenti
+    count = lambda n: (lambda v: len(v) == n)  # noqa: E731
+    checks = {
+        "damage_types": lambda v: len(v) == 2 and len(set(v)) == 2 and set(v) <= set(ENERGY_TYPES),
+        "damage_type": lambda v: v in ADEPT_TYPES,
+        "weapon_mastery": lambda v: len(v) == 1 and v[0] in WEAPONS,
+        "skill": lambda v: v in SKILL_ABILITY_MAP,
+        "expertise": lambda v: v in SKILL_ABILITY_MAP,
+        "granted_skills": lambda v: set(v) <= set(SKILL_ABILITY_MAP),
+        "list": lambda v: v in ("cleric", "druid", "wizard"),
+        "picks": count(3), "tools": count(3), "instruments": count(3),
+        "cantrips": lambda v: len(v) <= 2, "spell": lambda v: len(v) <= 1,
+    }
+    return all(check(v) for k, v in options.items() if (check := checks.get(k)))

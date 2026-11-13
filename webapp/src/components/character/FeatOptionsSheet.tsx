@@ -87,8 +87,10 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const typeCount = has('damage_types') ? 2 : 1
   const typeOptions = has('damage_types') ? ENERGY_TYPES : ADEPT_TYPES
   const skillOptions = SKILL_CHOICES[key] ?? SKILL_KEYS
-  const proficient = (s: string) => !!(char.skills as Record<string, unknown> | undefined)?.[s]
-  const expertiseOptions = has('skill') ? SKILL_KEYS.filter((s) => proficient(s) || s === skill) : SKILL_KEYS
+  const skillLevel = (s: string) => (char.skills as Record<string, unknown> | undefined)?.[s]
+  const proficient = (s: string) => !!skillLevel(s)
+  const expert = (s: string) => skillLevel(s) === 'expert' // già con Maestria: il server rifiuta la scelta
+  const expertiseOptions = (has('skill') ? SKILL_KEYS.filter((s) => proficient(s) || s === skill) : SKILL_KEYS).filter((s) => !expert(s))
 
   const ready = has('picks') ? picks.length === 3
     : textKey ? texts.every((x) => x.trim()) && new Set(texts.map((x) => x.trim().toLowerCase())).size === 3
@@ -191,7 +193,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
           <>
             {hint(t(has('expertise') ? 'character.feats.skill_new_hint' : 'character.feats.skill_hint'))}
             <div className="flex flex-wrap gap-2">
-              {skillOptions.filter((s) => !has('expertise') || !proficient(s)).map((s) => (
+              {skillOptions.filter((s) => !expert(s) && (!has('expertise') || !proficient(s))).map((s) => (
                 <Pressable key={s} onClick={() => setSkill(skill === s ? '' : s)} aria-pressed={skill === s} className={chip(skill === s)}>
                   {t(`character.skills.${s}`)}
                 </Pressable>

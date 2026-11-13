@@ -607,9 +607,8 @@ class RollOptionSpec:
             raise ValueError("on_zero_damage vale solo per il danno subito")
         if self.outside_action and self.phase != "before":
             raise ValueError("outside_action vale solo prima del tiro: apre un attacco")
-        if self.automatic and (self.phase not in ("before", "damage_in") or self.cost or self.requires_input or self.slot or self.needs):
-            # damage_in: riduzioni fisse che il manuale applica sempre (Maestro di armature pesanti 2024)
-            raise ValueError("automatic vale solo prima del tiro o sul danno subito, e senza costo, input, slot né dipendenze")
+        if self.automatic and (self.phase != "before" or self.cost or self.requires_input or self.slot or self.needs):
+            raise ValueError("automatic vale solo prima del tiro e senza costo, input, slot né dipendenze")
 
 
 @dataclass(frozen=True)

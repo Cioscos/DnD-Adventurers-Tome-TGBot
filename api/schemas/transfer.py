@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_serializer
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_serializer, model_validator
 
 from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
@@ -206,7 +206,8 @@ class ExportSpellSlot(BaseModel):
 
 
 _OPTION_TEXTS = {"list", "ability", "skill", "expertise", "damage_type"}
-_OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted", "rituals", "weapon_mastery", "damage_types"}
+_OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted", "rituals", "weapon_mastery", "damage_types",
+                 "granted_skills"}
 
 
 class ExportAbility(BaseModel):
@@ -233,9 +234,17 @@ class ExportAbility(BaseModel):
         text = lambda x: isinstance(x, str) and 0 < len(x) <= 50
         ok = all(
             (k in _OPTION_TEXTS and text(x))
-            or (k in _OPTION_LISTS and isinstance(x, list) and len(x) <= 6 and all(map(text, x)))
+            or (k in _OPTION_LISTS and isinstance(x, list) and len(x) <= (18 if k == "granted_skills" else 6) and all(map(text, x)))
             for k, x in v.items())
         return v if ok else None
+
+    @model_validator(mode="after")
+    def _feat_options_meaning(self) -> "ExportAbility":
+        """Oltre alla forma, il significato: numero e valori ammessi dal talento (es. due tipi per Resistenza all'energia)."""
+        from core.rules.catalog.feats_2024 import options_ok  # import locale: lo schema non carica il motore all'avvio
+        if self.options and (self.feature_key or "").startswith("feat.") and not options_ok(self.options):
+            self.options = None
+        return self
 
     @field_validator("action_type", mode="wrap")
     @classmethod

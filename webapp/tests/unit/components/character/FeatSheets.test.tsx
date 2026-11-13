@@ -111,6 +111,13 @@ describe('FeatOptionsSheet — talenti 2024 con scelte (PR 2)', () => {
     await waitFor(() => expect(complete).toHaveBeenCalledWith(7, 4, { options: { skill: 'nature' }, spells: [] }))
   })
 
+  it('Keen Mind hides skills that already have Expertise', () => {
+    const expert = { ...char(), skills: { arcana: 'expert' } } as unknown as CharacterFull
+    renderWithProviders(<FeatOptionsSheet char={expert} ability={row('Mente acuta', 'keen_mind')} open onClose={() => {}} />)
+    expect(screen.queryByText('character.skills.arcana')).toBeNull()
+    expect(screen.getByText('character.skills.history')).toBeInTheDocument()
+  })
+
   it('Elemental Adept sends the damage type', async () => {
     complete.mockResolvedValue({ id: 7 })
     renderWithProviders(<FeatOptionsSheet char={char()} ability={row('Adepto elementale', 'elemental_adept')} open onClose={() => {}} />)

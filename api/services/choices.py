@@ -461,7 +461,6 @@ _SKILL_CHOICES: dict[str, tuple[str, ...] | None] = {
     "feat.2024_observant": ("insight", "investigation", "perception"),
     "feat.2024_skill_expert": None,
 }
-_ADEPT_TYPES = ("acid", "cold", "fire", "lightning", "thunder")
 _TOUCHED_SCHOOLS = {"feat.2024_fey_touched": ("divination", "enchantment"),
                     "feat.2024_shadow_touched": ("illusion", "necromancy")}
 
@@ -508,6 +507,8 @@ def _choose_skill(char: Character, key: str, options: dict, needs: tuple[str, ..
         current[expertise] = "expert"
         char.skills = current
         return {"skill": skill, "expertise": expertise}
+    if current.get(skill) == "expert":  # già con Maestria: la scelta andrebbe sprecata
+        raise _bad("feat_options_invalid")
     current[skill] = "expert" if current.get(skill) else True
     char.skills = current
     return {"skill": skill}
@@ -517,7 +518,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     """Le scelte di un talento (``FEAT_NEEDS``), una volta sola: abilità, strumenti, tipo di danno, padronanza e
     incantesimi (sempre preparati, senza duplicati, validati sul catalogo SRD)."""
     from core.rules.catalog.feats import FEAT_NEEDS, feat_status  # import locale come in active_features
-    from core.rules.catalog.feats_2024 import ENERGY_TYPES
+    from core.rules.catalog.feats_2024 import ADEPT_TYPES, ENERGY_TYPES
     from core.rules.weapons import WEAPONS
     key = ability.feature_key or ""
     needs = FEAT_NEEDS.get(key, ())
@@ -545,12 +546,14 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
             _add_tools(char, saved[name])
     if "skill" in needs:
         saved.update(_choose_skill(char, key, options, needs))
-    elif "expertise" in needs:  # Dono dell'Abilità: competenza in tutte (dal motore) e Maestria in una
+    elif "expertise" in needs:  # Dono dell'Abilità: competenza in tutte e Maestria in una
         expertise = options.get("expertise")
-        if expertise not in SKILL_ABILITY_MAP:
+        current = dict(char.skills or {})
+        if expertise not in SKILL_ABILITY_MAP or current.get(expertise) == "expert":
             raise _bad("feat_options_invalid")
-        char.skills = {**(char.skills or {}), expertise: "expert"}
-        saved["expertise"] = expertise
+        granted_skills = [s for s in SKILL_ABILITY_MAP if not current.get(s)]
+        char.skills = {**current, **{s: True for s in granted_skills}, expertise: "expert"}
+        saved.update({"expertise": expertise, "granted_skills": granted_skills})
     if "damage_types" in needs:  # Dono della Resistenza all'energia: due tipi diversi
         types = options.get("damage_types")
         if not isinstance(types, list) or len(set(types)) != 2 or len(types) != 2 or any(t not in ENERGY_TYPES for t in types):
@@ -558,7 +561,7 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         saved["damage_types"] = list(types)
     if "damage_type" in needs:  # Adepto elementale: un tipo per istanza
         chosen = options.get("damage_type")
-        if chosen not in _ADEPT_TYPES:
+        if chosen not in ADEPT_TYPES:
             raise _bad("feat_options_invalid")
         if any((a.options or {}).get("damage_type") == chosen for a in others):
             raise _bad("feat_type_taken")
@@ -617,6 +620,12 @@ async def remove_feat(session: AsyncSession, char: Character, ability: Ability) 
         for spell in char.spells:
             if (spell.srd_index or spell.name) in mine:
                 spell.always_prepared = False
+        opts = ability.options or {}
+        if opts.get("granted_skills") is not None:  # Dono dell'Abilità: via le competenze che ha dato e la sua Maestria
+            skills = {k: v for k, v in (char.skills or {}).items() if k not in opts["granted_skills"]}
+            if opts.get("expertise") in skills:
+                skills[opts["expertise"]] = True
+            char.skills = skills
         await session.execute(delete(Ability).where(Ability.id == ability.id))  # una sola istanza (talenti ripetibili)
         # Regole `feat:*` di personaggi non ancora migrati al motore (vedi ``catalog_migration``)
         await session.execute(delete(HomebrewRule).where(

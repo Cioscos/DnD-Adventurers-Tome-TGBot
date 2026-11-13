@@ -3,7 +3,7 @@ import type { CharacterFull } from '@/types'
 
 const MANIFEST_SET: ReadonlySet<string> = new Set(manifest as string[])
 
-const CANONICAL_CLASSES: ReadonlySet<string> = new Set([
+export const CANONICAL_CLASSES: ReadonlySet<string> = new Set([
   'barbarian', 'bard', 'cleric', 'druid', 'fighter', 'monk',
   'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard',
 ])

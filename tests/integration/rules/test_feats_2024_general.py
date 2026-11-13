@@ -46,8 +46,9 @@ async def test_war_caster_concentration(client):
     assert r.json()["mode_applied"] == "advantage"
 
 
-async def _damage(client, cid, value, damage_type):
-    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": value, "damage_type": damage_type})
+async def _damage(client, cid, value, damage_type, options=()):
+    r = await client.patch(f"/characters/{cid}/hp",
+                           json={"op": "damage", "value": value, "damage_type": damage_type, "options": list(options)})
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -59,7 +60,7 @@ async def test_heavy_armor_master_reduces_physical_damage_in_heavy_armor(client)
     assert (await _damage(client, cid, 10, "slashing"))["current_hit_points"] == hp - 10  # senza armatura pesante
     await _armor(client, cid, "heavy")
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": hp})
-    assert (await _damage(client, cid, 10, "slashing"))["current_hit_points"] == hp - 8  # competenza 2
+    assert (await _damage(client, cid, 10, "slashing", ["feat.2024_heavy_armor_master"]))["current_hit_points"] == hp - 8  # competenza 2
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": hp})
     assert (await _damage(client, cid, 10, "fire"))["current_hit_points"] == hp - 10
 
@@ -107,7 +108,7 @@ async def test_chef_treats_and_cook_utensils(client):
     assert any("cuoco" in t.lower() or "cook" in t.lower() for t in c["after"]["general_proficiencies"]["tools"])
 
 
-async def test_heavily_armored_grant_follows_the_feat(client):
+async def test_lightly_armored_grant_follows_the_feat(client):
     c = await _with(client, "lightly_armored", "strength", "wizard")
     armor = c["after"]["general_proficiencies"]["armor"]
     assert any("legger" in a.lower() for a in armor)
