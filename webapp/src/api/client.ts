@@ -595,6 +595,8 @@ export const api = {
         skills?: Record<string, boolean>
         starting_equipment?: number[]
         rules_edition?: '2014' | '2024'
+        /** Talento d'Origine 2024 scelto nella creazione guidata. */
+        origin_feat?: string
       },
     ) =>
       request<CharacterFull>('/characters', {
@@ -1161,6 +1163,15 @@ export const api = {
       request<CharacterFull>(`/characters/${charId}/feats/${abilityId}`, { method: 'DELETE' }),
     removeFeatByRule: (charId: number, ruleId: number) =>
       request<CharacterFull>(`/characters/${charId}/feats/by-rule/${ruleId}`, { method: 'DELETE' }),
+  },
+
+  feats: {
+    /** «Aggiungi talento»: fuori dalle scelte di livello, con il suo +1 alla caratteristica. */
+    take: (charId: number, body: { feat_key: string; ability: string | null }) =>
+      request<CharacterFull>(`/characters/${charId}/feats`, { method: 'POST', body: JSON.stringify(body) }),
+    /** «Completa talento»: le scelte proprie del talento, una volta sola. */
+    complete: (charId: number, abilityId: number, body: { options: Record<string, string | string[]>; spells: Partial<Spell>[] }) =>
+      request<CharacterFull>(`/characters/${charId}/feats/${abilityId}/options`, { method: 'PUT', body: JSON.stringify(body) }),
   },
 
   // ---------------------------------------------------------------------------

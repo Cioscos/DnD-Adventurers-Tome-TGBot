@@ -31,6 +31,7 @@ import { resetHubReturn } from '@/lib/hubReturn'
 import { useToast } from '@/hooks/useToast'
 import { stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
+import OriginFeatStep from '@/pages/creation/OriginFeatStep'
 import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import EquipmentStep from '@/pages/creation/EquipmentStep'
@@ -76,7 +77,7 @@ type IdentityPayload = {
   personality?: { traits: string }
 }
 
-type Step = 'name' | 'class' | 'species' | 'abilities' | 'equipment' | 'identity'
+type Step = 'name' | 'class' | 'species' | 'feat' | 'abilities' | 'equipment' | 'identity'
 
 // `detail` e' una stringa (413) oppure la lista di errori pydantic (422): mostriamo i primi msg con il campo.
 function importErrorText(detail: unknown): string {
@@ -129,6 +130,8 @@ export default function CharacterSelect() {
   // Equipaggiamento di partenza: una alternativa per gruppo; null = saltato.
   // Edizione delle regole del nuovo personaggio: guida competenze, equipaggiamento e rules_edition.
   const [edition, setEdition] = useState<'2014' | '2024'>('2014')
+  // Talento d'Origine (solo 2024): passo dopo la specie, si può saltare.
+  const [originFeat, setOriginFeat] = useState<string | null>(null)
   const [equipPicks, setEquipPicks] = useEquipPicks(`${edition}:${selectedClass?.class_name ?? ''}`)
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = uiLang(i18n.language)
@@ -217,6 +220,7 @@ export default function CharacterSelect() {
     setBackgroundSkills([])
     setPickBackground(false)
     setEdition('2014')
+    setOriginFeat(null)
   }
 
   const handleNameNext = () => {
@@ -246,6 +250,7 @@ export default function CharacterSelect() {
       ...creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills }),
       rules_edition: edition,
       ...(equipPicks && hasEquipmentStep ? { starting_equipment: equipPicks } : {}),
+      ...(edition === '2024' && originFeat ? { origin_feat: originFeat } : {}),
     }
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
   }
@@ -476,6 +481,8 @@ export default function CharacterSelect() {
             ? t('character.create.step_class')
             : step === 'species'
             ? t('character.create.step_species')
+            : step === 'feat'
+            ? t('character.feats.origin_step')
             : step === 'abilities'
             ? t('character.create.step_abilities')
             : step === 'equipment'
@@ -711,6 +718,20 @@ export default function CharacterSelect() {
                 secondaryLabel={t('common.back')}
                 onSecondary={() => setStep('class')}
                 primaryLabel={`${t('common.next')} →`}
+                onPrimary={() => setStep(edition === '2024' ? 'feat' : 'abilities')}
+                primaryHaptic="medium"
+              />
+            </m.div>
+          )}
+
+          {step === 'feat' && (
+            <m.div key="step-feat" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
+              <OriginFeatStep value={originFeat} onChange={setOriginFeat} />
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.back')}
+                onSecondary={() => setStep('species')}
+                primaryLabel={`${t('common.next')} →`}
                 onPrimary={() => setStep('abilities')}
                 primaryHaptic="medium"
               />
@@ -729,7 +750,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('species')}
+                onSecondary={() => setStep(edition === '2024' ? 'feat' : 'species')}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={() => { setScoresSkipped(false); setStep(afterAbilities) }}
                 primaryDisabled={!scoresValid(scoreMode, scores)}
