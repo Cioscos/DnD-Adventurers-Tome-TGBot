@@ -55,6 +55,17 @@ def _ally_aura_bonus(ctx: RuleContext, _inputs: dict) -> int:
 
 # Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
 _CONDITION_OPTIONS = (
+    # Copertura (identica 2014/2024): solo il TS su Destrezza; la CA del bersaglio non passa dall'app.
+    RollOptionSpec(
+        key="cover:half", phase="before", rolls=("save",), group="cover", bonus=lambda _ctx, _i: 2,
+        label={"it": "Mezza copertura: +2", "en": "Half cover: +2"},
+        available=lambda ctx: ctx.ability == "dexterity",
+    ),
+    RollOptionSpec(
+        key="cover:three_quarters", phase="before", rolls=("save",), group="cover", bonus=lambda _ctx, _i: 5,
+        label={"it": "Tre quarti di copertura: +5", "en": "Three-quarters cover: +5"},
+        available=lambda ctx: ctx.ability == "dexterity",
+    ),
     RollOptionSpec(
         key="inspiration:advantage", phase="before", rolls=("attack", "skill", "save", "initiative", "death_save"),
         mode="advantage", on_confirm=_spend_inspiration,

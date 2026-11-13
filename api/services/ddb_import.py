@@ -22,6 +22,7 @@ from api.schemas.transfer import (
     CharacterExport, ExportAbility, ExportAbilityScore, ExportCharacter, ExportClass,
     ExportCompanion, ExportCurrency, ExportItem, ExportSpell, ExportSpellSlot,
 )
+from core.data.tools import tool_key
 from core.data.damage_types import canonical_damage_type
 from core.data.labels import CONDITION_LABELS_IT
 from core.game.item_bonuses import item_bonus_total
@@ -445,6 +446,7 @@ def _proficiencies(c: _Ctx) -> dict:
     skills: dict[str, Any] = {}
     saves: dict[str, bool] = {}
     general = {"armor": [], "weapons": [], "tools": [], "other": []}
+    tools: dict[str, Any] = {}
     langs: list[str] = []
     dmg = {"resistances": [], "immunities": [], "vulnerabilities": []}
     for m in _modifiers(c.data):
@@ -461,11 +463,13 @@ def _proficiencies(c: _Ctx) -> dict:
                     skills[slug] = "expert" if t == "expertise" else True
             elif sub.endswith("-saving-throws") and sub[:-14] in ABILITIES:
                 saves[sub[:-14]] = True
+            elif tool := tool_key(label):  # strumento del catalogo: competenza o Maestria nella colonna
+                if t == "expertise" or tools.get(tool) != "expert":
+                    tools[tool] = "expert" if t == "expertise" else True
             elif t == "proficiency":
                 cat = ("armor" if sub.endswith("-armor") or sub == "shields"
                        else "weapons" if sub.endswith("-weapons")
-                       else "tools" if any(k in sub for k in ("tools", "kit", "supplies", "instrument"))
-                       else "other")
+                       else "other")  # strumenti fuori dal catalogo: testo in «Altro»
                 label = _app_weapon_label(label) if cat in ("weapons", "other") else label
                 if label not in general[cat]:
                     general[cat].append(label)
@@ -497,7 +501,7 @@ def _proficiencies(c: _Ctx) -> dict:
                 c.approx("proficiencies", slug, "ddb.reason.half_proficiency")
     c.ok("proficiencies")
     # l'elenco di DDB è completo: l'app non deve aggiungervi le competenze di classe come a un PG vecchio
-    return {"skills": skills, "saving_throws": saves, "general_proficiencies": general,
+    return {"skills": skills, "saving_throws": saves, "general_proficiencies": general, "tool_proficiencies": tools,
             "languages": langs[:20], "damage_modifiers": {k: v for k, v in dmg.items() if v}}
 
 

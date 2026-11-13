@@ -297,7 +297,13 @@ class CharacterFull(BaseModel):
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list] = None
     general_proficiencies: Optional[dict[str, list[str]]] = None
+    tool_proficiencies: dict[str, bool | str] = Field(default_factory=dict)
     damage_modifiers: Optional[dict[str, Any]] = None
+
+    @field_validator("tool_proficiencies", mode="before")
+    @classmethod
+    def _null_tools(cls, v: Any) -> Any:
+        return v or {}  # schede nate prima della colonna: NULL
 
     @field_validator("general_proficiencies", mode="before")
     @classmethod
@@ -439,6 +445,7 @@ class CharacterUpdate(BaseModel):
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list[str]] = None
     general_proficiencies: Optional[list[str] | dict[str, list[str]]] = None
+    tool_proficiencies: Optional[dict[str, bool | str]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
     rules_edition: Optional[Edition] = None
@@ -460,6 +467,14 @@ class CharacterUpdate(BaseModel):
         if isinstance(v, dict) and set(v) - set(PROFICIENCY_CATEGORIES):
             raise ValueError("unknown proficiency category")
         return None if v is None else normalize_proficiencies(v)
+
+    @field_validator("tool_proficiencies")
+    @classmethod
+    def _known_tools(cls, v: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        from core.data.tools import TOOLS
+        if v is not None and any(k not in TOOLS or val not in (True, "expert") for k, val in v.items()):
+            raise ValueError("unknown tool or level")
+        return v
 
     @field_validator("settings")
     @classmethod

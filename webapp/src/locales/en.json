@@ -248,6 +248,7 @@
       "feat_label": "Feat"
     },
     "roll_notes": {
+      "tool_skill_advantage": "Advantage: proficient in the tool and the skill",
       "title": "Situational note: {{name}}",
       "edit": "Edit note: {{name}}",
       "placeholder": "E.g. advantage vs. charm",
@@ -695,6 +696,24 @@
       "devils_sight": "Devil's Sight",
       "see_invisible": "See invisibility",
       "ethereal_sight": "Ethereal sight"
+    },
+    "tools": {
+      "title": "Tools",
+      "expert": "Expertise",
+      "ability": "Ability",
+      "skill": "Skill used (optional)",
+      "skill_none": "None",
+      "skill_hint": "If you are also proficient in the skill, you roll with advantage.",
+      "roll": "Roll the check",
+      "add": "Add tool",
+      "picker_title": "Choose a tool",
+      "remove": "Remove {{name}}",
+      "category_artisan": "Artisan's tools",
+      "category_gaming": "Gaming sets",
+      "category_instrument": "Musical instruments",
+      "category_kit": "Kits and other tools",
+      "category_thieves": "Thieves' tools",
+      "category_vehicle": "Vehicles"
     },
     "skills": {
       "title": "Skills",

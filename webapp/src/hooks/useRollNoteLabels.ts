@@ -40,6 +40,7 @@ export function useRollNoteLabels(charId?: number): (notes: string[]) => string[
     if (kind === 'armor') return t(`character.roll_notes.armor_${value === 'stealth' ? 'stealth' : 'untrained'}`)
     if (kind === 'weapon') return t('character.roll_notes.weapon_heavy')
     if (kind === 'inspiration') return t('character.roll_notes.inspiration')
+    if (kind === 'tool_skill_advantage') return t('character.roll_notes.tool_skill_advantage')
     if (kind === 'feature') return featureName(value)
     if (kind === 'spell') return t(`character.roll_notes.spell.${value}`, { defaultValue: value })
     if (SHARED_OPTIONS.includes(kind)) return t(`character.roll_notes.option.${kind}_${value}`, { defaultValue: note })

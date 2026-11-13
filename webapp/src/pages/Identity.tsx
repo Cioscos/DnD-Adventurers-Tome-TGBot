@@ -21,6 +21,8 @@ import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayTo
 import languagesSrd from '@/data/languages-srd.json'
 import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
 import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
+import ToolProficiencyEditor from '@/components/character/ToolProficiencyEditor'
+import type { ToolLevel } from '@/lib/tools'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -61,6 +63,7 @@ type Draft = {
   speeds: Record<string, string> // volo/nuoto/scalata/scavo, come i sensi
   personality_traits: string; ideals: string; bonds: string; flaws: string
   languages: string[]; general_proficiencies: Proficiencies
+  tools: Record<string, ToolLevel>
   appearance: Record<(typeof APPEARANCE_KEYS)[number], string>
   damageModifiers: DamageModifiers
 }
@@ -168,7 +171,10 @@ const draftKey = (charId: number) => `identity-draft-${charId}`
 function readStoredDraft(charId: number, unit: UnitSystem): Partial<Draft> | null {
   try {
     const stored = JSON.parse(localStorage.getItem(draftKey(charId)) ?? 'null')
-    return stored?.unit === unit ? stored.draft : null
+    if (stored?.unit !== unit) return null
+    // Gli strumenti si leggono sempre dal server: la Maestria si cambia anche dalla pagina Abilità.
+    const { tools: _tools, ...rest } = stored.draft ?? {}
+    return rest
   } catch {
     return null
   }
@@ -223,6 +229,7 @@ export default function Identity() {
         flaws: personality.flaws ?? '',
         languages: (char.languages as string[]) ?? [],
         general_proficiencies: normalizeProfs(char.general_proficiencies),
+        tools: char.tool_proficiencies ?? {},
         appearance: Object.fromEntries(APPEARANCE_KEYS.map((k) => [k, personality[k] ?? ''])) as Draft['appearance'],
         damageModifiers: {
           resistances: normalizeDmg(raw.resistances),
@@ -266,6 +273,8 @@ export default function Identity() {
         },
         languages: draft.languages,
         general_proficiencies: draft.general_proficiencies,
+        // Solo se cambiati qui: una scheda in cache senza il campo non svuota la colonna.
+        ...(JSON.stringify(draft.tools) !== JSON.stringify(char?.tool_proficiencies ?? {}) ? { tool_proficiencies: draft.tools } : {}),
         damage_modifiers: draft.damageModifiers,
         // settings replaces the whole dict server-side: always merge.
         settings: {
@@ -541,7 +550,11 @@ export default function Identity() {
         splitOnComma
         suggestions={LANGUAGE_SUGGESTIONS}
       />
-      {PROF_KEYS.map((k) => (
+      <ToolProficiencyEditor
+        values={draft.tools ?? {}}
+        onChange={(next) => setDraft((d) => d ? { ...d, tools: next } : d)}
+      />
+      {PROF_KEYS.filter((k) => k !== 'tools' || draft.general_proficiencies.tools.length > 0).map((k) => (
         <ChipInput
           key={k}
           label={t(`character.identity.proficiencies_${k}`)}

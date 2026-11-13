@@ -105,6 +105,7 @@ class ExportCharacter(BaseModel):
     languages: list = Field(default_factory=list)
     # legacy exports carry a plain list, newer ones the {armor,weapons,tools,other} object
     general_proficiencies: list | dict = Field(default_factory=list)
+    tool_proficiencies: dict = Field(default_factory=dict)  # {chiave del catalogo: true | "expert"}; assente negli export vecchi
     damage_modifiers: dict = Field(default_factory=dict)
     pending_choices: list[ExportChoice] = Field(default_factory=list, max_length=40)
 

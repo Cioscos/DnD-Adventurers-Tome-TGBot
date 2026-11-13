@@ -520,6 +520,12 @@ class D20RollSubmission(RollOptionsBody):
     dice: Optional[D20Dice] = None
 
 
+class ToolCheckSubmission(D20RollSubmission):
+    """Prova con strumento: la caratteristica la sceglie il giocatore; ``skill`` (solo 2024) dà vantaggio se competente."""
+    ability: str
+    skill: Optional[str] = None
+
+
 class ConcentrationSaveResult(RollResult):
     """Result of a concentration saving throw.
 

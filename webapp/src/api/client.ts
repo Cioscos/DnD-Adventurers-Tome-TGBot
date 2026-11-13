@@ -813,6 +813,19 @@ export const api = {
             ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
             : undefined,
       }),
+    /** Prova con strumento: caratteristica scelta, abilità usata (solo 2024, vantaggio se competente). */
+    rollToolCheck: (
+      id: number,
+      tool: string,
+      ability: string,
+      skill: string | null,
+      die?: D20Roll,
+      withInspiration: boolean = false,
+    ) =>
+      request<RollResult>(`/characters/${id}/tool_checks/${encodeURIComponent(tool)}/roll`, {
+        method: 'POST',
+        body: JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration, ability, skill }),
+      }),
     /** Prova di caratteristica pura (senza abilità), con i modi e le opzioni al tiro di `rollSkill`. */
     rollAbilityCheck: (
       id: number,

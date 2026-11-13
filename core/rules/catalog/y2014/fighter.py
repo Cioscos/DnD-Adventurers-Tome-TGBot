@@ -165,7 +165,7 @@ def _athlete_applies(ctx: RuleContext) -> bool:
         return False
     if ctx.roll == "initiative":
         return True
-    return ctx.roll in ("skill", "ability") and not (ctx.skill and (ctx.char.skills or {}).get(ctx.skill))
+    return ctx.roll in ("skill", "ability") and not ctx.proficient and not (ctx.skill and (ctx.char.skills or {}).get(ctx.skill))
 
 
 def _survivor_heal(ctx: RuleContext) -> int:

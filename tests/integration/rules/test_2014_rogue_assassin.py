@@ -41,17 +41,16 @@ async def test_a_rogue_of_another_archetype_has_no_assassin_features(client):
 
 async def test_bonus_proficiencies_add_the_two_kits_once(client):
     cid = await _rogue(client, 3, "assassin")
-    tools = (await _full(client, cid))["general_proficiencies"]["tools"]
-    assert "Kit da camuffamento" in tools and "Kit da avvelenatore" in tools
+    tools = (await _full(client, cid))["tool_proficiencies"]
+    assert tools.get("disguise_kit") is True and tools.get("poisoners_kit") is True
     row = (await _full(client, cid))["classes"][0]["id"]
     await client.patch(f"/characters/{cid}/classes/{row}", json={"level": 4})
-    again = (await _full(client, cid))["general_proficiencies"]["tools"]
-    assert again.count("Kit da camuffamento") == 1 and again.count("Kit da avvelenatore") == 1
+    assert (await _full(client, cid))["tool_proficiencies"] == tools
 
 
 async def test_the_kits_are_not_given_to_other_archetypes(client):
-    tools = (await _full(client, await _rogue(client, 3, "thief")))["general_proficiencies"]["tools"]
-    assert "Kit da camuffamento" not in tools and "Kit da avvelenatore" not in tools
+    tools = (await _full(client, await _rogue(client, 3, "thief")))["tool_proficiencies"]
+    assert "disguise_kit" not in tools and "poisoners_kit" not in tools
 
 
 # ---------------------------------------------------------------------------

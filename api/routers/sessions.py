@@ -20,6 +20,8 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, get_current_user
 from api.database import get_db
+from api.schemas.common import normalize_proficiencies
+from core.data.tools import TOOLS, tool_label
 from core.game.containers import is_container, trade_snapshot
 from core.rules.edition import character_edition
 from core.game.item_bonuses import item_bonus_total
@@ -742,6 +744,7 @@ async def get_participant_identity(
     user_id: int,
     caller_user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> IdentityView:
     session = await _load_session_by_code(code, db)
     assert_participant(session, caller_user_id)
@@ -792,7 +795,8 @@ async def get_participant_identity(
         alignment=char.alignment,
         speed=char.speed,
         languages=_join_list(char.languages),
-        general_proficiencies=_join_list(char.general_proficiencies),
+        general_proficiencies=_join_list([*(x for v in normalize_proficiencies(char.general_proficiencies).values() for x in v),
+                                          *(tool_label(k, lang) for k in (char.tool_proficiencies or {}) if k in TOOLS)]),
         background=char.background if show_private else None,
         personality_traits=(personality.get("traits") or None) if show_private else None,
         ideals=(personality.get("ideals") or None) if show_private else None,

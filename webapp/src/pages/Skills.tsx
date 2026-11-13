@@ -28,6 +28,8 @@ import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
 import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
+import ToolCheckSheet from '@/components/character/ToolCheckSheet'
+import { proficientTools, toolByKey, toolLabel } from '@/lib/tools'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -176,7 +178,7 @@ function SkillRow({
 export default function Skills() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
   const rollD20 = useD20Roll()
@@ -186,8 +188,11 @@ export default function Skills() {
     result: RollResult
     skillName: string
     wasRerolled: boolean
+    /** Prova con strumento: titolo e rilancio passano dallo strumento, non dall'abilità. */
+    tool?: { key: string; ability: string; skill: string | null }
   }
   const [rollState, setRollState] = useState<RollState | null>(null)
+  const [toolSheet, setToolSheet] = useState<string | null>(null)
   const [picker, setPicker] = useState<string | null>(null)
   const toast = useToast()
 
@@ -221,6 +226,28 @@ export default function Skills() {
     },
   })
 
+  const toolRollMutation = useMutation({
+    mutationFn: async ({ tool, ability, skill, mode }: { tool: string; ability: string; skill: string | null; mode: RollMode }) => {
+      const choice = await askRollOptions(charId, { roll: 'ability', ability })
+      const result = await api.characters.rollToolCheck(charId, tool, ability, skill, d20Arg(mode, await rollD20(mode), choice))
+      return { result, tool: { key: tool, ability, skill } }
+    },
+    onSuccess: ({ result, tool }) => {
+      setToolSheet(null)
+      setRollState({ result: { ...result, description: undefined }, skillName: '', wasRerolled: false, tool })
+      refreshAfterOptions(qc, charId, result.option_result)
+      haptic.success()
+    },
+  })
+
+  const expertMutation = useMutation({
+    mutationFn: (profs: Record<string, boolean | 'expert'>) => api.characters.update(charId, { tool_proficiencies: profs }),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.light()
+    },
+  })
+
   const rerollMutation = useMutation({
     mutationFn: async (skillName: string) => {
       const useAnimation = animate3d && !reducedMotion
@@ -229,7 +256,10 @@ export default function Skills() {
         const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
         die = detected[0]?.value
       }
-      return api.characters.rollSkill(charId, skillName, die, true)
+      const tool = rollState?.tool
+      return tool
+        ? api.characters.rollToolCheck(charId, tool.key, tool.ability, tool.skill, die, true)
+        : api.characters.rollSkill(charId, skillName, die, true)
     },
     onSuccess: (result) => {
       setRollState((prev) => prev && { ...prev, result: { ...result, description: undefined }, wasRerolled: true })
@@ -272,6 +302,7 @@ export default function Skills() {
     const level = getLevel(skills[key])
     return abilityModifier(ability) + (level === 'expert' ? 2 * pb : level ? pb : 0) + (char.skills_homebrew_modifiers?.[key] ?? 0)
   }
+  const tools = proficientTools(char.tool_proficiencies)
   const passiveOf = (key: string, ability: string) => char.passives?.[key] ?? 10 + localBonus(key, ability)
   const passiveRow = [
     { key: 'perception', ability: 'wisdom' },
@@ -348,19 +379,60 @@ export default function Skills() {
               </div>
             )
           })}
+
+          {tools.length > 0 && (
+            <div>
+              <h2 className={`pb-1 pl-1 ${LEDGER_TITLE}`}>{t('character.tools.title')}</h2>
+              <div className="border-y border-dnd-border divide-y divide-dnd-border/60">
+                {tools.map(({ tool, level }) => (
+                  <Pressable
+                    key={tool.key}
+                    type="button"
+                    onClick={() => setToolSheet(tool.key)}
+                    className="w-full min-h-[48px] px-1 py-2 flex items-center gap-3 text-left"
+                  >
+                    <span className="flex-1 min-w-0 text-sm font-body text-dnd-text">{toolLabel(tool.key, i18n.language)}</span>
+                    {level === 'expert' && (
+                      <span className="shrink-0 text-xs font-body text-dnd-gold-bright">{t('character.tools.expert')}</span>
+                    )}
+                    <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-dnd-text-muted">
+                      +{level === 'expert' ? 2 * pb : pb}
+                    </span>
+                  </Pressable>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
+
+      <ToolCheckSheet
+        tool={toolSheet ? toolByKey(toolSheet) ?? null : null}
+        level={toolSheet ? char.tool_proficiencies?.[toolSheet] ?? false : false}
+        edition={char.rules_edition ?? '2014'}
+        skillKeys={SKILLS.map((s) => s.key)}
+        pending={toolRollMutation.isPending}
+        expertPending={expertMutation.isPending}
+        onRoll={(ability, skill, mode) => toolSheet && toolRollMutation.mutate({ tool: toolSheet, ability, skill, mode })}
+        onToggleExpert={() => {
+          if (!toolSheet) return
+          const profs = { ...(char.tool_proficiencies ?? {}) }
+          profs[toolSheet] = profs[toolSheet] === 'expert' ? true : 'expert'
+          expertMutation.mutate(profs)
+        }}
+        onClose={() => setToolSheet(null)}
+      />
 
       {rollState && (
         <RollResultModal
           result={rollState.result}
-          title={t(`character.skills.${rollState.skillName}`)}
-          note={rollNoteOf(char, `skill.${rollState.skillName}`)}
+          title={rollState.tool ? toolLabel(rollState.tool.key, i18n.language) : t(`character.skills.${rollState.skillName}`)}
+          note={rollState.tool ? undefined : rollNoteOf(char, `skill.${rollState.skillName}`)}
           inspirationAvailable={canRerollInspiration(char)}
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.skillName)}
-          afterRoll={{ charId, query: { roll: 'skill', skill: rollState.skillName } }}
+          afterRoll={{ charId, query: rollState.tool ? { roll: 'ability', ability: rollState.tool.ability } : { roll: 'skill', skill: rollState.skillName } }}
           onClose={() => setRollState(null)}
         />
       )}

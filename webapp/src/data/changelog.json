@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "3.8.0",
+      "date": "2026-11-13",
+      "added": {
+        "it": [
+          "Copertura: al tiro salvezza su Destrezza puoi dichiarare mezza copertura (+2) o tre quarti di copertura (+5) prima di tirare.",
+          "Prove con strumento: nella pagina Abilità la sezione Strumenti elenca quelli in cui sei competente. Scegli la caratteristica e tiri con il bonus di competenza, doppio con la Maestria. Nel 2024, se indichi un'abilità in cui sei competente, tiri con vantaggio.",
+          "In Identità gli strumenti si scelgono da un catalogo (strumenti da artigiano, giochi, strumenti musicali, kit, arnesi da scasso, veicoli) invece di scriverli."
+        ],
+        "en": [
+          "Cover: on a Dexterity saving throw you can declare half cover (+2) or three-quarters cover (+5) before rolling.",
+          "Tool checks: the Tools section of the Skills page lists the tools you are proficient with. Pick the ability and roll with your proficiency bonus, doubled with Expertise. In 2024, if you name a skill you are proficient in, you roll with advantage.",
+          "In Identity, tools are picked from a catalog (artisan's tools, gaming sets, musical instruments, kits, thieves' tools, vehicles) instead of typed."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Le competenze negli strumenti che avevi scritto a mano si convertono da sole negli strumenti del catalogo; quelle non riconosciute (per esempio «Strumenti musicali» generico) passano in «Altre competenze»."
+        ],
+        "en": [
+          "Tool proficiencies you typed by hand turn into catalog tools on their own; the ones not recognised (for example a generic \"Musical instruments\") move to \"Other proficiencies\"."
+        ]
+      }
+    },
+    {
       "version": "3.7.0",
       "date": "2026-11-13",
       "added": {

@@ -105,7 +105,7 @@ async def test_chef_treats_and_cook_utensils(client):
     c = await _with(client, "chef", "constitution")
     row = _feat_rows(c["after"], "2024_chef")[0]
     assert (row["max_uses"], row["restoration_type"]) == (2, "long_rest")
-    assert any("cuoco" in t.lower() or "cook" in t.lower() for t in c["after"]["general_proficiencies"]["tools"])
+    assert c["after"]["tool_proficiencies"].get("cooks_utensils") is True
 
 
 async def test_lightly_armored_grant_follows_the_feat(client):

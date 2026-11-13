@@ -13,11 +13,14 @@ from typing import Any
 from core.data.classes import get_saving_throw_proficiencies
 from core.data.skills import SKILL_ABILITY_MAP
 from core.rules.edition import character_edition, class_key as row_class_key
+from core.data.tools import tool_label
 from core.rules.types import Edition
 
 CATEGORIES = ("armor", "weapons", "tools", "other")
 SEEDED_FLAG = "proficiencies_seeded"
 FEATURE_GRANTS_KEY = "feature_proficiencies_granted"
+# privilegio -> strumenti che ha aggiunto davvero (non già posseduti): solo quelli si tolgono se il privilegio si perde
+FEATURE_TOOLS_KEY = "feature_tools_added"
 
 # id -> (it, en). Le armi specifiche sono al singolare: si confrontano col nome dell'oggetto.
 LABELS: dict[str, tuple[str, str]] = {
@@ -201,9 +204,11 @@ def merge_grant(char: Any, grant: ProficiencyGrant, lang: str = "it", skills: tu
     cats = normalize(char.general_proficiencies)
     changed = _add(cats["armor"], [label(p, lang) for p in grant.armor])
     changed |= _add(cats["weapons"], [label(p, lang) for p in grant.weapons])
-    changed |= _add(cats["tools"], [label(p, lang) for p in grant.tools])
     if changed or not isinstance(char.general_proficiencies, dict):
         char.general_proficiencies = cats  # riassegnato: la colonna JSON non traccia le mutazioni
+    if grant.tools:
+        from core.rules.tools import add_tools  # import locale: tools usa normalize di questo modulo
+        add_tools(char, grant.tools)
     if grant.saves:
         saves = dict(char.saving_throws or {})
         for ability in grant.saves:
@@ -236,7 +241,7 @@ def grant_to_dict(grant: ProficiencyGrant, lang: str = "it") -> dict:
     return {
         "armor": [label(p, lang) for p in grant.armor],
         "weapons": [label(p, lang) for p in grant.weapons],
-        "tools": [label(p, lang) for p in grant.tools],
+        "tools": [tool_label(p, lang) for p in grant.tools],
         "saves": list(grant.saves),
         "skills_from": list(grant.skills_from),
         "skills_count": grant.skills_count,
@@ -382,6 +387,17 @@ def _drop_lost_grants(char: Any, done: list[str], lang: str) -> list[str]:
             base = class_proficiencies(ed, row_class_key(row), i > 0)
             for cat in gone:
                 kept[cat].update(getattr(base, cat))
+    from core.rules.tools import drop_tools
+    added = dict((char.settings or {}).get(FEATURE_TOOLS_KEY) or {})
+    tracked = {k for k in lost if k in added}
+    gone_tools = {t for k in tracked for t in added[k]}
+    if len(tracked) == len(lost):  # tutti tracciati: si tolgono solo gli strumenti che i privilegi persi avevano aggiunto
+        gone["tools"] = gone_tools
+    else:  # privilegi presi prima del tracciamento: tutti gli strumenti della concessione, come prima
+        gone["tools"] |= gone_tools
+    drop_tools(char, gone.pop("tools") - kept["tools"])  # una Maestria resta: la sceglie il giocatore
+    if tracked:
+        char.settings = {**(char.settings or {}), FEATURE_TOOLS_KEY: {k: v for k, v in added.items() if k not in tracked}}
     cats = normalize(char.general_proficiencies)
     changed = False
     for cat, ids in gone.items():
@@ -407,9 +423,14 @@ def apply_feature_grants(char: Any, lang: str = "it") -> None:
         grants = getattr(spec, "proficiency_grants", None)
         if not grants or spec.key in done:
             continue
+        had = set(getattr(char, "tool_proficiencies", None) or {})
         merge_grant(char, ProficiencyGrant(armor=tuple(grants.get("armor", ())),
                                            weapons=tuple(grants.get("weapons", ())),
                                            tools=tuple(grants.get("tools", ()))), lang)
+        if grants.get("tools"):
+            new = sorted(set(char.tool_proficiencies or {}) - had)
+            added = dict((char.settings or {}).get(FEATURE_TOOLS_KEY) or {})
+            char.settings = {**(char.settings or {}), FEATURE_TOOLS_KEY: {**added, spec.key: new}}
         if grants.get("skills"):  # abilità: competenza, mai una maestria che scende (Influenza Seducente)
             skills = dict(char.skills or {})
             for slug in grants["skills"]:

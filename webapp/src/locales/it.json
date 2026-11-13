@@ -248,6 +248,7 @@
       "feat_label": "Talento"
     },
     "roll_notes": {
+      "tool_skill_advantage": "Vantaggio: competente nello strumento e nell'abilità",
       "title": "Nota situazionale: {{name}}",
       "edit": "Modifica nota: {{name}}",
       "placeholder": "Es. vantaggio contro charme",
@@ -695,6 +696,24 @@
       "devils_sight": "Vista del Diavolo",
       "see_invisible": "Vedere invisibilità",
       "ethereal_sight": "Vista eterea"
+    },
+    "tools": {
+      "title": "Strumenti",
+      "expert": "Maestria",
+      "ability": "Caratteristica",
+      "skill": "Abilità usata (facoltativa)",
+      "skill_none": "Nessuna",
+      "skill_hint": "Se sei competente anche nell'abilità, tiri con vantaggio.",
+      "roll": "Tira la prova",
+      "add": "Aggiungi strumento",
+      "picker_title": "Scegli uno strumento",
+      "remove": "Rimuovi {{name}}",
+      "category_artisan": "Strumenti da artigiano",
+      "category_gaming": "Giochi",
+      "category_instrument": "Strumenti musicali",
+      "category_kit": "Kit e altri strumenti",
+      "category_thieves": "Arnesi da scasso",
+      "category_vehicle": "Veicoli"
     },
     "skills": {
       "title": "Abilità",

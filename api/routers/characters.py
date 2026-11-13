@@ -15,6 +15,8 @@ from sqlalchemy.orm import selectinload
 from api.services.history import add_history
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
+from core.data.tools import TOOLS, tool_label
+from core.rules.tools import migrate_tools, tool_bonus
 from core.db.models import (
     Ability,
     AbilityScore,
@@ -41,7 +43,7 @@ from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTE
 from core.rules.level_choices import FREE_KNOWN_KEY, sync_level_choices
 from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
-from core.rules.proficiencies import FEATURE_GRANTS_KEY, SEEDED_FLAG
+from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -53,7 +55,7 @@ from api.schemas.character import (
     SavingThrowsUpdate,
     XPUpdate,
 )
-from api.schemas.common import D20RollSubmission, RollResult
+from api.schemas.common import D20RollSubmission, RollResult, ToolCheckSubmission
 from api.schemas.condition_effects import PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
@@ -96,7 +98,7 @@ SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations", "resolved_choice_lev
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
                          RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
-                         SEEDED_FLAG, FEATURE_GRANTS_KEY, ASSASSIN_KITS_FLAG)
+                         SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, ASSASSIN_KITS_FLAG)
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -331,6 +333,8 @@ async def update_character(
             value = {k: v for k, v in value.items() if k not in SERVER_OWNED_SETTINGS}
             value.update({k: old[k] for k in SERVER_OWNED_SETTINGS if k in old})
         setattr(char, field, value)
+    if "general_proficiencies" in body.model_fields_set:
+        migrate_tools(char)  # strumenti scritti come testo (client vecchi): nella colonna strutturata
     if "rules_edition" in body.model_fields_set:
         sync_subclass_keys(char)  # una sottoclasse assente nell'altra edizione resta solo testo
         await sync_cataloged_features(session, char, lang)
@@ -706,6 +710,76 @@ async def roll_skill(
     )
     remember_roll(char, "skill", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
                   skill=skill_name, ability=ability)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Tool check roll (prova con strumento)
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/tool_checks/{tool}/roll", response_model=RollResult)
+async def roll_tool_check(
+    char_id: int,
+    tool: str,
+    body: ToolCheckSubmission,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+) -> RollResult:
+    """Prova di caratteristica con uno strumento in cui si è competenti: modificatore + competenza (doppia con la
+    Maestria). Nel 2024 un'abilità competente usata insieme dà vantaggio. Opzioni al tiro come la prova pura."""
+    if tool not in TOOLS:
+        raise HTTPException(status_code=404, detail="unknown_tool")
+    ability = body.ability
+    if ability not in ABILITY_NAMES:
+        raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
+    if body.skill is not None and body.skill not in SKILL_ABILITY_MAP:
+        raise HTTPException(status_code=400, detail=f"Unknown skill: {body.skill}")
+    char = await get_owned(char_id, user_id, session, full=True)
+    proficiency = tool_bonus(char, tool)
+    if proficiency is None:
+        raise HTTPException(status_code=409, detail="tool_not_proficient")
+    if body.skill is not None and character_edition(char) != "2024":
+        raise HTTPException(status_code=422, detail="skill_needs_2024")
+
+    if body.with_inspiration:
+        spend_inspiration_reroll(char)
+
+    await attach_spell_auras(session, char)
+    applied = modifiers_for(char, "ability", ability=ability, proficient=True)
+    if body.skill and (char.skills or {}).get(body.skill):  # 2024: competente nello strumento e nell'abilità
+        applied.advantage = True
+        applied.notes.append("tool_skill_advantage")
+    # Il Factotum non si somma: con lo strumento si è già competenti
+    bonus = roll_ability_mod(char, ability) + applied.flat + proficiency
+    opts = use_options(session, char, "ability", body, ability=ability)
+    merge_options(applied, opts)
+    outcome = resolve_body(body, applied)
+    die = outcome.kept
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    raw_total = die + bonus + option_total
+    total = raw_total if applied.min_total is None else max(raw_total, applied.min_total)
+    is_fumble = die == 1
+
+    history_msg = (
+        f"Prova con {tool_label(tool, 'it')} ({ability_label(ability)}): {d20_history_label(outcome)} "
+        f"{'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        + (" (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
+    )
+    if body.with_inspiration:
+        history_msg = f"Reroll ispirazione: {history_msg}"
+    add_history(session, char.id, "skill_roll", history_msg)
+    record_dice(char, d20_records(outcome))
+    await prune_history(session, char)
+
+    result = RollResult(
+        die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
+        auto_fail=applied.auto_fail, bonus=bonus, total=total, is_critical=False, is_fumble=is_fumble,
+        description=tool, option_result=option_result(opts, option_rolls, option_total),
+    )
+    remember_roll(char, "ability", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
+                  ability=ability)
     return result
 
 

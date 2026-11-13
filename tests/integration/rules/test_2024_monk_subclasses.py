@@ -266,7 +266,7 @@ async def test_implements_of_mercy_grants_insight_medicine_and_the_herbalism_kit
     cid = await _sub(client, "mercy", 3)
     sheet = await _full(client, cid)
     assert sheet["skills"]["insight"] and sheet["skills"]["medicine"]
-    assert any("erborista" in t.lower() for t in sheet["general_proficiencies"]["tools"])
+    assert sheet["tool_proficiencies"].get("herbalism_kit") is True
     other = await _full(client, await _sub(client, "shadow", 3))
     assert not other["skills"].get("medicine")
 
