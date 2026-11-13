@@ -116,3 +116,17 @@ async def test_button_after_end_recovers_nothing(client, test_session_factory, m
     r = await client.post(f"/characters/{cid}/items/{aid}/recover-ammo")
     assert r.status_code == 200, r.text
     assert await _qty(client, cid, aid) == 18
+
+
+async def test_recover_gear_in_ammunition_slot(client):
+    """Anche un oggetto generico nello slot munizioni scala all'attacco, quindi si recupera."""
+    from tests.integration.test_attack_ammunition import _add
+    cid = await _char(client)
+    wid = await _bow(client, cid)
+    gid = await _add(client, cid, "Dardi", "gear", quantity=10)
+    r = await client.patch(f"/characters/{cid}/items/{gid}", json={"is_equipped": True, "equipment_slot": "ammunition"})
+    assert r.status_code == 200, r.text
+    await _shoot(client, cid, wid, 4)
+    r = await client.post(f"/characters/{cid}/items/{gid}/recover-ammo")
+    assert r.status_code == 200, r.text
+    assert await _qty(client, cid, gid) == 8

@@ -1103,7 +1103,7 @@ async def recover_item_ammo(
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
     item = await _get_item(session, char_id, item_id)
-    if item.item_type != "ammunition":
+    if item.item_type != "ammunition" and item.equipment_slot != EquipmentSlot.AMMUNITION:  # come l'attacco: tipo o slot munizioni
         raise HTTPException(status_code=422, detail="not_ammunition")
     recover_ammo(session, char, item)
     await session.flush()
