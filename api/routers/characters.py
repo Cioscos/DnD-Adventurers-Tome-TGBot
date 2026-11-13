@@ -136,7 +136,8 @@ async def list_characters(
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
-        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores))
+        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores),
+                 selectinload(Character.abilities))  # i talenti (Robusto) contano nei PF massimi
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )

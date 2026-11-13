@@ -33,7 +33,7 @@ async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool
     Da chiamare dopo ogni scrittura di `hit_points`: quel valore resta il massimo reale e torna
     effettivo quando la penalità finisce. Senza penalità non cambia nulla."""
     # I chiamanti non caricano sempre le relazioni (GM, scadenze, homebrew): servono per i privilegi.
-    unloaded = {"classes", "items"} & inspect(char).unloaded
+    unloaded = {"classes", "items", "abilities"} & inspect(char).unloaded  # abilities: i talenti (Robusto)
     if unloaded:
         await session.refresh(char, attribute_names=list(unloaded))
     if always or modifiers_for(char, "hp_max").hp_half:  # always: il massimo base è cambiato, si taglia al massimo effettivo (Aiuto compreso)

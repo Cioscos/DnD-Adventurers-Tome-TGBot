@@ -40,7 +40,7 @@ async def _lang(session: AsyncSession, user_id: int) -> str:
     return "en" if (code or "").lower().startswith("en") else "it"
 
 
-async def _drop_feat_rules(session: AsyncSession, char: Character) -> None:
+async def drop_feat_rules(session: AsyncSession, char: Character) -> None:
     """I talenti a catalogo agiscono dal motore: le regole homebrew `feat:<chiave>` che l'app creava per loro (anche
     disattivate) e il flag `war_caster` messo dal talento si tolgono, o l'effetto varrebbe due volte. Idempotente."""
     from core.rules.catalog.feats import FEAT_FEATURES  # import locale come in active_features
@@ -77,7 +77,7 @@ async def migrate_catalog(session_factory: async_sessionmaker) -> int:
                     ).where(Character.id == char_id))).scalar_one_or_none()
                 if char is None or not _has_catalog(char):
                     continue
-                await _drop_feat_rules(session, char)
+                await drop_feat_rules(session, char)
                 await sync_cataloged_features(session, char, await _lang(session, char.user_id), retrofit=True)
                 await session.commit()
                 synced += 1
