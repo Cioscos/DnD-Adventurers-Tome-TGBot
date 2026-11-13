@@ -171,7 +171,10 @@ const draftKey = (charId: number) => `identity-draft-${charId}`
 function readStoredDraft(charId: number, unit: UnitSystem): Partial<Draft> | null {
   try {
     const stored = JSON.parse(localStorage.getItem(draftKey(charId)) ?? 'null')
-    return stored?.unit === unit ? stored.draft : null
+    if (stored?.unit !== unit) return null
+    // Gli strumenti si leggono sempre dal server: la Maestria si cambia anche dalla pagina Abilità.
+    const { tools: _tools, ...rest } = stored.draft ?? {}
+    return rest
   } catch {
     return null
   }
@@ -270,7 +273,8 @@ export default function Identity() {
         },
         languages: draft.languages,
         general_proficiencies: draft.general_proficiencies,
-        tool_proficiencies: draft.tools,
+        // Solo se cambiati qui: una scheda in cache senza il campo non svuota la colonna.
+        ...(JSON.stringify(draft.tools) !== JSON.stringify(char?.tool_proficiencies ?? {}) ? { tool_proficiencies: draft.tools } : {}),
         damage_modifiers: draft.damageModifiers,
         // settings replaces the whole dict server-side: always merge.
         settings: {

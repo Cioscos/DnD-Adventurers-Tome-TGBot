@@ -297,3 +297,26 @@ describe('Identity tools from the catalog', () => {
     expect(updateChar.mock.calls.at(-1)![1].tool_proficiencies).toEqual({ thieves_tools: 'expert' })
   })
 })
+
+describe('Identity tools and the stored draft', () => {
+  it('una bozza vecchia non sovrascrive la Maestria impostata altrove', async () => {
+    localStorage.setItem('identity-draft-3', JSON.stringify({ unit: 'imperial', draft: { name: 'Bozza', tools: { lute: true } } }))
+    getChar.mockResolvedValue({ ...char, tool_proficiencies: { lute: 'expert' } })
+    updateChar.mockResolvedValue(char)
+    renderWithProviders(<Identity />)
+    expect(await screen.findByDisplayValue('Bozza')).toBeInTheDocument()
+    await userEvent.click(await saveButton())
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    expect(updateChar.mock.calls.at(-1)![1].tool_proficiencies).toBeUndefined()
+  })
+
+  it('senza modifiche agli strumenti non invia tool_proficiencies (risposta vecchia senza il campo)', async () => {
+    getChar.mockResolvedValue(char)
+    updateChar.mockResolvedValue(char)
+    renderWithProviders(<Identity />)
+    await typeIn(/^(Nome|Name)/, 'Altro')
+    await userEvent.click(await saveButton())
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    expect(updateChar.mock.calls.at(-1)![1].tool_proficiencies).toBeUndefined()
+  })
+})

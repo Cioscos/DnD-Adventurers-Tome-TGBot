@@ -745,7 +745,7 @@ async def roll_tool_check(
         spend_inspiration_reroll(char)
 
     await attach_spell_auras(session, char)
-    applied = modifiers_for(char, "ability", ability=ability)
+    applied = modifiers_for(char, "ability", ability=ability, proficient=True)
     if body.skill and (char.skills or {}).get(body.skill):  # 2024: competente nello strumento e nell'abilità
         applied.advantage = True
         applied.notes.append("tool_skill_advantage")

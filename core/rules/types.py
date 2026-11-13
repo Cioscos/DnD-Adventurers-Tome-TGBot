@@ -778,4 +778,5 @@ class RuleContext:
     confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo
     damage: int | None = None  # solo ``damage_taken``: il danno che il giocatore sta per inserire, se lo sa
     damage_in: int | None = None  # solo ``damage_taken`` al danno vero: serve ai testi (cosa riflettere), mai alla disponibilità
+    proficient: bool = False  # prova già con competenza (strumento): niente mezze competenze («Atleta Straordinario»)
     spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)

@@ -70,3 +70,15 @@ async def test_history_names_the_tool(client):
     await _roll(client, cid, die=10)
     history = (await client.get(f"/characters/{cid}/history")).json()
     assert any(h["description"].startswith("Prova con Arnesi da scasso (Destrezza)") for h in history)
+
+
+async def test_remarkable_athlete_not_added_to_proficient_tool_check(client):
+    """Atleta Straordinario (Campione 7) vale solo sulle prove senza competenza: con lo strumento si è competenti."""
+    r = await client.post("/characters", json={
+        "name": "Campione", "ability_scores": {"dexterity": 14},
+        "initial_class": {"class_name": "fighter", "level": 7, "subclass": "Campione"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    body = (await _roll(client, cid, die=10)).json()
+    assert body["total"] == 10 + 2 + 3  # DES +2, competenza +3, niente +2 di Atleta Straordinario
