@@ -226,6 +226,9 @@ class AbilityRead(BaseModel):
     is_class_feature: bool = False
     feature_key: Optional[str] = None
     action_type: Optional[str] = None
+    # Talenti: scelte salvate sulla riga e stato (attivo, da completare, di un'altra edizione); None se non è un talento a catalogo
+    options: Optional[dict[str, Any]] = None
+    feat_status: Optional[Literal["active", "incomplete", "other_edition"]] = None
     # Il privilegio a catalogo ha un effetto reale al «Usa» (POST /features/{key}/use); popolato da build_character_response
     has_on_use: bool = False
     # Il «Usa» dà lo stato a un altro personaggio della serata (Ispirazione Bardica): il client chiede a chi (R38)

@@ -132,6 +132,29 @@
     }
   },
   "character": {
+    "feats": {
+      "add": "Add feat",
+      "add_title": "Add feat",
+      "add_hint": "A feat that doesn't come from a level choice: your background's Origin feat, a gift from the GM or a feature that grants one. It applies in full, +1 to an ability included.",
+      "add_confirm": "Add",
+      "complete": "To complete",
+      "complete_title": "Complete: {{name}}",
+      "complete_confirm": "Confirm choices",
+      "incomplete_hint": "The feat has no effect until you complete its choices.",
+      "other_edition": "Feat from another edition: it has no effect. Remove it and take the new one.",
+      "picks_hint": "Pick three skills or tools ({{n}} left).",
+      "tool_name": "Tool",
+      "tool_add": "Add",
+      "tools_name": "Artisan's tool {{n}}",
+      "instruments_name": "Musical instrument {{n}}",
+      "mi_list": "Spell list",
+      "mi_ability": "Spellcasting ability",
+      "mi_cantrips": "Two cantrips",
+      "mi_spell": "One 1st-level spell",
+      "origin_step": "Origin feat",
+      "origin_hint": "In 2024 your background grants an Origin feat. Pick it here or add it later from the abilities page.",
+      "origin_skip": "No feat for now"
+    },
     "weapon_bond": {
       "title": "Weapon Bond",
       "hint": "The ritual takes an hour, during a short rest: here you mark it as done. A bonded weapon can't be disarmed and you summon it to your hand as a bonus action, one at a time.",
@@ -2201,6 +2224,7 @@
       }
     },
     "abilities": {
+      "inactive_feat": "inactive",
       "delete_confirm": "Delete the ability \"{{name}}\"? This cannot be undone.",
       "title": "Special Abilities",
       "add": "Add ability",

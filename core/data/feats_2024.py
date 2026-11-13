@@ -1,4 +1,5 @@
-"""Talenti generali 2024 e Doni Epici (D3): solo scelta, prerequisiti e testo, nessun effetto automatico.
+"""Talenti 2024 (d'Origine, generali e Doni Epici): scelta, prerequisiti e testo. Gli effetti stanno nel motore
+(``core/rules/catalog/feats.py``); qui la scheda di selezione.
 
 Titoli da docs/superpowers/rules/2024/feats.md (di lavoro, vedi titoli-da-confermare.md);
 riassunti scritti da noi, massimo 200 caratteri per lingua. Gli effetti restano in lavori-successivi.md.
@@ -22,7 +23,24 @@ def _p24(key, it, en, inc, sit, sen, pre="", caster=False, boon=False, save=Fals
         needs_spellcasting=caster, max_score=30 if boon else 20, save_proficiency_from_increase=save)
 
 
+def _o24(key, it, en, sit, sen, repeatable=False) -> FeatSpec:
+    """Talento d'Origine: nessun livello minimo, nessun +1 alla caratteristica."""
+    return FeatSpec(key=f"2024_{key}", name={"it": it, "en": en}, summary={"it": sit, "en": sen}, edition="2024",
+                    category="origin", min_level=0, repeatable=repeatable)
+
+
 FEATS_2024: list[FeatSpec] = [
+    # Talenti d'Origine (pag. 200-202)
+    _o24("alert", "Allerta", "Alert", "Aggiungi il bonus di competenza all'iniziativa; puoi scambiarla con un alleato consenziente.", "Add your proficiency bonus to initiative; you can swap it with a willing ally."),
+    _o24("crafter", "Artigiano", "Crafter", "Competenza in tre strumenti da artigiano, sconto del 20% e creazione rapida di oggetti a ogni riposo lungo.", "Proficiency with three artisan's tools, a 20% discount and fast crafting at each long rest."),
+    _o24("healer", "Guaritore", "Healer", "Con un kit da guaritore curi un alleato (Dado Vita + competenza); ritiri gli 1 sui dadi di guarigione.", "With a healer's kit you heal an ally (Hit Die + proficiency); you reroll 1s on healing dice."),
+    _o24("lucky", "Fortunato", "Lucky", "Punti fortuna pari alla competenza per riposo lungo: vantaggio a un tuo Test d20 o svantaggio a un attacco contro di te.", "Luck points equal to proficiency per long rest: advantage on your d20 Test or disadvantage on an attack against you."),
+    _o24("magic_initiate", "Iniziato alla magia", "Magic Initiate", "Due trucchetti e un incantesimo di 1º livello da Chierico, Druido o Mago, lanciabile gratis una volta per riposo lungo. Ripetibile.", "Two cantrips and a 1st-level spell from the Cleric, Druid or Wizard list, castable free once per long rest. Repeatable.", repeatable=True),
+    _o24("musician", "Musicista", "Musician", "Competenza con tre strumenti musicali; dopo un riposo dai Ispirazione Eroica ad alleati pari alla competenza.", "Proficiency with three musical instruments; after a rest you give Heroic Inspiration to allies equal to proficiency."),
+    _o24("savage_attacker", "Attaccante selvaggio", "Savage Attacker", "Una volta per turno, colpendo con un'arma, tiri due volte i dadi del danno e tieni il migliore.", "Once per turn when you hit with a weapon, roll its damage dice twice and keep the better."),
+    _o24("skilled", "Abile", "Skilled", "Competenza in tre abilità o strumenti a scelta. Ripetibile.", "Proficiency in any three skills or tools. Repeatable.", repeatable=True),
+    _o24("tavern_brawler", "Attaccabrighe da taverna", "Tavern Brawler", "Colpo senz'armi 1d4 + Forza e ritiri gli 1; competenza con le armi improvvisate; spingi di 5 piedi colpendo.", "Unarmed Strike deals 1d4 + Strength and rerolls 1s; improvised weapon proficiency; push 5 feet on a hit."),
+    _o24("tough", "Robusto", "Tough", "Punti ferita massimi aumentati di 2 per ogni livello.", "Maximum hit points increase by 2 per level."),
     _p24("actor", "Attore", "Actor", "H", "Vantaggio nel fingerti un'altra persona; imiti voci e suoni.", "Advantage when posing as someone else; you can mimic voices and sounds.", "H13"),
     _p24("athlete", "Atletico", "Athlete", "SD", "Scalata pari alla Velocità; ti rialzi e salti con poco movimento.", "Climb speed equals your speed; standing up and jumping cost little movement.", "SD13"),
     _p24("charger", "Assalitore", "Charger", "SD", "Scatto più veloce; dopo 10 piedi in linea retta +1d8 al danno oppure spingi il bersaglio.", "Faster Dash; after moving 10 feet straight, +1d8 damage or push the target.", "SD13"),
@@ -80,5 +98,5 @@ FEATS_2024: list[FeatSpec] = [
     _p24("boon_truesight", "Dono della Vista veritiera", "Boon of Truesight", ALL6, "Vista veritiera fino a 60 piedi.", "Truesight out to 60 feet.", boon=True),
 ]
 
-# Tutti i talenti selezionabili: 2014 (con effetti) e 2024 (solo testo).
+# Tutti i talenti selezionabili delle due edizioni.
 ALL_FEATS: dict[str, FeatSpec] = {**FEATS, **{f.key: f for f in FEATS_2024}}

@@ -812,10 +812,13 @@ def _abilities(c: _Ctx) -> None:
                      for i, cl in enumerate(raw_classes) for f in _l(_d(cl).get("classFeatures"))
                      if isinstance(f, dict)}
 
-    def add(obj: dict, section: str) -> None:
+    def add(obj: dict, section: str, feat: bool = False) -> None:
         key = _LEVEL_PREFIX_RE.sub("", obj["name"].lower())  # "4: Weapon Mastery" = "Weapon Mastery"
         if key in names or key in SKIP_FEATURES or _STRUCTURAL_RE.match(key):
             return
+        if feat and (spec := _catalog_feat(obj["name"], c.edition)) is not None:  # talento a catalogo: agisce dal motore
+            names.add(key)
+            obj = {**obj, "name": spec.name.get(c.lang) or spec.name["it"], "feature_key": f"feat.{spec.key}"}
         m = c.model(ExportAbility, obj, section, obj["name"])
         if m:
             names.add(key)
@@ -835,7 +838,8 @@ def _abilities(c: _Ctx) -> None:
                                  "name": name, "used": used, "max": mx})
             add({"name": name, "description": _text(a.get("description") or a.get("snippet")),
                  "max_uses": mx, "uses": _clamp(mx - used, 0, mx) if mx else None, "is_passive": False,
-                 "restoration_type": RESET.get(_int(lu.get("resetType")), "manual") if mx else "none"}, "abilities")
+                 "restoration_type": RESET.get(_int(lu.get("resetType")), "manual") if mx else "none"}, "abilities",
+                feat=src == "feat")
     for ca in _l(c.data.get("customActions")):  # azioni "Manage Custom": l'app non ha attacchi liberi
         ca = _d(ca)
         name = _str(ca.get("name"))
@@ -853,13 +857,14 @@ def _abilities(c: _Ctx) -> None:
         lvl = _int(_d(cl).get("level"), 1)
         passive += [f for f in _l(_d(cl).get("classFeatures"))
                     if _int(_d(_d(f).get("definition")).get("requiredLevel"), 1) <= lvl]
-    passive += _l(_d(c.data.get("race")).get("racialTraits")) + _l(c.data.get("feats"))
-    for f in passive:
+    passive += _l(_d(c.data.get("race")).get("racialTraits"))
+    feats = _l(c.data.get("feats"))
+    for f in passive + feats:
         d = _d(_d(f).get("definition"))
         name = _str(d.get("name"))
         if name:
             add({"name": name, "description": _text(d.get("description") or d.get("snippet")),
-                 "is_passive": True}, "abilities")
+                 "is_passive": True}, "abilities", feat=any(f is x for x in feats))
     c.out["abilities"] = out[:500]
     c.out["_feature_uses"] = uses_out
 
@@ -1111,6 +1116,14 @@ def convert(ddb: Any, lang: str = "it", edition: Edition | None = None) -> tuple
         currency=c.out.get("currency"), companions=c.out.get("companions", []),
     )
     return export, c.report, c.out.get("_feature_uses", [])
+
+
+def _catalog_feat(name: str, edition: str):
+    """Il talento del catalogo con questo nome inglese di D&D Beyond nell'edizione del personaggio, o None. Le scelte
+    del talento non si leggono da Beyond: un talento con scelte resta «da completare»."""
+    from core.data.feats_2024 import ALL_FEATS  # import locale: il catalogo dei talenti serve solo qui
+    wanted = norm_name(name)
+    return next((f for f in ALL_FEATS.values() if f.edition == edition and norm_name(f.name["en"]) == wanted), None)
 
 
 def norm_name(text: str) -> str:

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.services.character_load import refresh_char_full
+from api.services.catalog_migration import drop_feat_rules
 from api.schemas.character import CharacterFull
 from api.schemas.ddb_import import DdbImportRequest, DdbImportResult
 from api.schemas.transfer import CharacterExport
@@ -116,6 +117,7 @@ async def _import_body(request: Request) -> bytes:
 async def _create_from(session: AsyncSession, user_id: int, data: CharacterExport, lang: str, kind: str) -> CharacterFull:
     char = await import_character(session, user_id, data, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])[kind])
     char = await refresh_char_full(session, char.id, user_id)
+    await drop_feat_rules(session, char)  # un export di prima della 3.4.0 ha ancora le regole `feat:*`: varrebbero due volte
     if "rules_edition" in data.character.model_fields_set:
         await sync_cataloged_features(session, char, lang, retrofit=True)  # i punteggi del file sono già quelli finali (R34)
     else:  # un file vecchio resta com'è, ma i bonus ai punteggi si segnano comunque come applicati

@@ -102,16 +102,18 @@ async def test_resolve_feat_alert_adds_initiative(client):
     assert out["initiative_bonus"] == before + 5
     assert out["pending_choices"] == []
     h = await client.get(f"/characters/{body['id']}/homebrew/rules")
-    assert [x["template_id"] for x in h.json()] == ["feat:alert"]
+    assert h.json() == []  # l'effetto viene dal motore delle regole, non da una regola homebrew
     assert any(a["feature_key"] == "feat.alert" for a in out["abilities"])
 
 
 async def test_resolve_feat_tough_scales_with_level(client):
     body = await _to_level_4(client)
     r = await _resolve(client, body, {"kind": "feat", "feat_key": "tough"})
-    assert r.json()["hp_max_homebrew_modifier"] == 2 * 4
-    r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 6500})
-    assert r.json()["hp_max_homebrew_modifier"] == 2 * 5
+    out = r.json()
+    assert out["computed"]["hp_max_effective"] - out["hit_points"] == 2 * 4
+    await client.patch(f"/characters/{body['id']}/xp", json={"set": 6500})
+    out = (await client.get(f"/characters/{body['id']}")).json()
+    assert out["computed"]["hp_max_effective"] - out["hit_points"] == 2 * 5
 
 
 async def test_resolve_feat_observant_passives(client):
@@ -119,9 +121,7 @@ async def test_resolve_feat_observant_passives(client):
     r = await _resolve(client, body, {"kind": "feat", "feat_key": "observant", "ability": "wisdom"})
     assert r.status_code == 200, r.text
     assert _score(r.json(), "wisdom") == 11
-    rules = (await client.get(f"/characters/{body['id']}/homebrew/rules")).json()
-    targets = {m["target"] for m in rules[0]["dsl"]["passive_modifiers"]}
-    assert targets == {"character.passive.perception", "character.passive.investigation"}
+    assert r.json()["passives"]["perception"] - r.json()["passives"]["insight"] == 5  # stesse basi, +5 dal talento
 
 
 async def test_observant_requires_valid_ability(client):
@@ -147,7 +147,8 @@ async def test_feat_lucky_counter_war_caster_setting(client):
     assert ab["max_uses"] == 3 and ab["restoration_type"] == "long_rest"
     r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 23000})  # level 8
     r = await _resolve(client, r.json(), {"kind": "feat", "feat_key": "war_caster"})
-    assert r.json()["settings"]["war_caster"] is True and r.json()["settings"]["keep"] == 1
+    # il vantaggio alla concentrazione viene dal motore: le impostazioni restano quelle del giocatore
+    assert "war_caster" not in r.json()["settings"] and r.json()["settings"]["keep"] == 1
 
 
 def _feat_ab(body: dict, key: str) -> dict:
@@ -173,9 +174,16 @@ async def test_delete_feat_removes_rule_and_ability(client):
     assert any("Talento rimosso" in e["description"] for e in h.json())
 
 
-async def test_delete_feat_by_rule(client):
+async def test_delete_feat_by_rule(client, test_session_factory):
+    """Personaggio non ancora migrato: la regola `feat:alert` del vecchio codice rimuove anche il talento."""
+    from core.db.models import HomebrewRule
     body = await _to_level_4(client)
     await _take(client, body, "alert")
+    async with test_session_factory() as s:
+        s.add(HomebrewRule(character_id=body["id"], name="Allerta", enabled=False, version=1, template_id="feat:alert",
+                           dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                           created_at="2026-01-01", updated_at="2026-01-01"))
+        await s.commit()
     rid = (await client.get(f"/characters/{body['id']}/homebrew/rules")).json()[0]["id"]
     r = await client.delete(f"/characters/{body['id']}/feats/by-rule/{rid}")
     assert r.status_code == 200 and r.json()["initiative_bonus"] == body["initiative_bonus"]
@@ -184,9 +192,9 @@ async def test_delete_feat_by_rule(client):
 async def test_remove_war_caster_clears_setting(client):
     body = await _to_level_4(client)
     out = await _take(client, body, "war_caster")
-    assert out["settings"]["war_caster"] is True
     r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'war_caster')['id']}")
     assert "war_caster" not in (r.json()["settings"] or {})
+    assert not [a for a in r.json()["abilities"] if a["feature_key"] == "feat.war_caster"]
 
 
 async def test_remove_lucky_deletes_counter(client):

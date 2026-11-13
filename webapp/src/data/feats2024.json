@@ -1,5 +1,206 @@
 [
  {
+  "key": "2024_alert",
+  "name": {
+   "it": "Allerta",
+   "en": "Alert"
+  },
+  "summary": {
+   "it": "Aggiungi il bonus di competenza all'iniziativa; puoi scambiarla con un alleato consenziente.",
+   "en": "Add your proficiency bonus to initiative; you can swap it with a willing ally."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
+ },
+ {
+  "key": "2024_crafter",
+  "name": {
+   "it": "Artigiano",
+   "en": "Crafter"
+  },
+  "summary": {
+   "it": "Competenza in tre strumenti da artigiano, sconto del 20% e creazione rapida di oggetti a ogni riposo lungo.",
+   "en": "Proficiency with three artisan's tools, a 20% discount and fast crafting at each long rest."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": [
+   "tools"
+  ]
+ },
+ {
+  "key": "2024_healer",
+  "name": {
+   "it": "Guaritore",
+   "en": "Healer"
+  },
+  "summary": {
+   "it": "Con un kit da guaritore curi un alleato (Dado Vita + competenza); ritiri gli 1 sui dadi di guarigione.",
+   "en": "With a healer's kit you heal an ally (Hit Die + proficiency); you reroll 1s on healing dice."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
+ },
+ {
+  "key": "2024_lucky",
+  "name": {
+   "it": "Fortunato",
+   "en": "Lucky"
+  },
+  "summary": {
+   "it": "Punti fortuna pari alla competenza per riposo lungo: vantaggio a un tuo Test d20 o svantaggio a un attacco contro di te.",
+   "en": "Luck points equal to proficiency per long rest: advantage on your d20 Test or disadvantage on an attack against you."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
+ },
+ {
+  "key": "2024_magic_initiate",
+  "name": {
+   "it": "Iniziato alla magia",
+   "en": "Magic Initiate"
+  },
+  "summary": {
+   "it": "Due trucchetti e un incantesimo di 1º livello da Chierico, Druido o Mago, lanciabile gratis una volta per riposo lungo. Ripetibile.",
+   "en": "Two cantrips and a 1st-level spell from the Cleric, Druid or Wizard list, castable free once per long rest. Repeatable."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": true,
+  "needs": [
+   "list",
+   "ability",
+   "cantrips",
+   "spell"
+  ]
+ },
+ {
+  "key": "2024_musician",
+  "name": {
+   "it": "Musicista",
+   "en": "Musician"
+  },
+  "summary": {
+   "it": "Competenza con tre strumenti musicali; dopo un riposo dai Ispirazione Eroica ad alleati pari alla competenza.",
+   "en": "Proficiency with three musical instruments; after a rest you give Heroic Inspiration to allies equal to proficiency."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": [
+   "instruments"
+  ]
+ },
+ {
+  "key": "2024_savage_attacker",
+  "name": {
+   "it": "Attaccante selvaggio",
+   "en": "Savage Attacker"
+  },
+  "summary": {
+   "it": "Una volta per turno, colpendo con un'arma, tiri due volte i dadi del danno e tieni il migliore.",
+   "en": "Once per turn when you hit with a weapon, roll its damage dice twice and keep the better."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
+ },
+ {
+  "key": "2024_skilled",
+  "name": {
+   "it": "Abile",
+   "en": "Skilled"
+  },
+  "summary": {
+   "it": "Competenza in tre abilità o strumenti a scelta. Ripetibile.",
+   "en": "Proficiency in any three skills or tools. Repeatable."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": true,
+  "needs": [
+   "picks"
+  ]
+ },
+ {
+  "key": "2024_tavern_brawler",
+  "name": {
+   "it": "Attaccabrighe da taverna",
+   "en": "Tavern Brawler"
+  },
+  "summary": {
+   "it": "Colpo senz'armi 1d4 + Forza e ritiri gli 1; competenza con le armi improvvisate; spingi di 5 piedi colpendo.",
+   "en": "Unarmed Strike deals 1d4 + Strength and rerolls 1s; improvised weapon proficiency; push 5 feet on a hit."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
+ },
+ {
+  "key": "2024_tough",
+  "name": {
+   "it": "Robusto",
+   "en": "Tough"
+  },
+  "summary": {
+   "it": "Punti ferita massimi aumentati di 2 per ogni livello.",
+   "en": "Maximum hit points increase by 2 per level."
+  },
+  "category": "origin",
+  "abilities": null,
+  "min_level": 0,
+  "max_score": 20,
+  "prereq_abilities": null,
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
+ },
+ {
   "key": "2024_actor",
   "name": {
    "it": "Attore",
@@ -21,7 +222,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_athlete",
@@ -47,7 +250,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_charger",
@@ -73,7 +278,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_chef",
@@ -93,7 +300,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_crossbow_expert",
@@ -117,7 +326,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_crusher",
@@ -137,7 +348,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_defensive_duelist",
@@ -161,7 +374,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_dual_wielder",
@@ -187,7 +402,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_durable",
@@ -206,7 +423,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_elemental_adept",
@@ -227,7 +446,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": true
+  "needs_spellcasting": true,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_fey_touched",
@@ -248,7 +469,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_grappler",
@@ -274,7 +497,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_great_weapon_master",
@@ -298,7 +523,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_heavily_armored",
@@ -318,7 +545,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_heavy_armor_master",
@@ -338,7 +567,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_inspiring_leader",
@@ -364,7 +595,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_keen_mind",
@@ -388,7 +621,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_lightly_armored",
@@ -408,7 +643,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_mage_slayer",
@@ -428,7 +665,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_martial_weapon_training",
@@ -448,7 +687,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_medium_armor_master",
@@ -468,7 +709,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_moderately_armored",
@@ -488,7 +731,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_mounted_combatant",
@@ -509,7 +754,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_observant",
@@ -535,7 +782,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_piercer",
@@ -555,7 +804,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_poisoner",
@@ -575,7 +826,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_polearm_master",
@@ -601,7 +854,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_resilient",
@@ -625,7 +880,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_ritual_caster",
@@ -653,7 +910,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_sentinel",
@@ -679,7 +938,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_shadow_touched",
@@ -700,7 +961,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_sharpshooter",
@@ -724,7 +987,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_shield_master",
@@ -743,7 +1008,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_skill_expert",
@@ -767,7 +1034,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_skulker",
@@ -791,7 +1060,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_slasher",
@@ -811,7 +1082,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_speedy",
@@ -837,7 +1110,9 @@
    ],
    "min": 13
   },
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_spell_sniper",
@@ -858,7 +1133,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": true
+  "needs_spellcasting": true,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_telekinetic",
@@ -879,7 +1156,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_telepathic",
@@ -900,7 +1179,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_war_caster",
@@ -921,7 +1202,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": true
+  "needs_spellcasting": true,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_weapon_master",
@@ -941,7 +1224,9 @@
   "min_level": 4,
   "max_score": 20,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_combat_prowess",
@@ -965,7 +1250,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_dimensional_travel",
@@ -989,7 +1276,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_energy_resistance",
@@ -1013,7 +1302,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_fate",
@@ -1037,7 +1328,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_fortitude",
@@ -1061,7 +1354,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_irresistible_offense",
@@ -1081,7 +1376,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_recovery",
@@ -1105,7 +1402,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_skill",
@@ -1129,7 +1428,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_speed",
@@ -1153,7 +1454,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_spell_recall",
@@ -1174,7 +1477,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": true
+  "needs_spellcasting": true,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_night_spirit",
@@ -1198,7 +1503,9 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  },
  {
   "key": "2024_boon_truesight",
@@ -1222,6 +1529,8 @@
   "min_level": 19,
   "max_score": 30,
   "prereq_abilities": null,
-  "needs_spellcasting": false
+  "needs_spellcasting": false,
+  "repeatable": false,
+  "needs": []
  }
 ]

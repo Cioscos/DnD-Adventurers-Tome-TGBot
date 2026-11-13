@@ -29,6 +29,8 @@ import { isUnlimitedFeature } from '@/lib/abilityUses'
 import type { Ability, ActionType } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
+import FeatPickerSheet from '@/components/character/FeatPickerSheet'
+import FeatOptionsSheet from '@/components/character/FeatOptionsSheet'
 
 type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string; action_type: ActionType | '' }
 const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest', action_type: '' }
@@ -86,6 +88,8 @@ export default function Abilities() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [confirmFeatId, setConfirmFeatId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Ability | null>(null)
+  const [featPickerOpen, setFeatPickerOpen] = useState(false)
+  const [featOptions, setFeatOptions] = useState<Ability | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
   const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
   // Editor descrizione-only per le feature di classe (struttura bloccata: si può
@@ -354,7 +358,13 @@ export default function Abilities() {
           </span>
           <div className="flex gap-2 items-center shrink-0 text-xs font-body text-dnd-text-muted">
             {className && <span>{className}</span>}
-            <span>{ab.is_passive ? t('character.abilities.passive') : t('character.abilities.active')}</span>
+            {ab.feat_status === 'incomplete' ? (
+              <span className="text-dnd-gold-bright">{t('character.feats.complete')}</span>
+            ) : ab.feat_status === 'other_edition' ? (
+              <span className="text-dnd-text-faint">{t('character.abilities.inactive_feat')}</span>
+            ) : (
+              <span>{ab.is_passive ? t('character.abilities.passive') : t('character.abilities.active')}</span>
+            )}
             {hasUses && (
               <span className="font-mono font-bold tabular-nums">
                 {current}/{max}
@@ -381,6 +391,18 @@ export default function Abilities() {
                   </p>
                 ) : (
                   <p className="text-xs text-dnd-text-faint/60 mt-2 italic font-body">—</p>
+                )}
+
+                {ab.feat_status === 'incomplete' && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-body text-dnd-text-muted">{t('character.feats.incomplete_hint')}</p>
+                    <Button variant="primary" size="sm" onClick={() => setFeatOptions(ab)}>
+                      {t('character.feats.complete')}
+                    </Button>
+                  </div>
+                )}
+                {ab.feat_status === 'other_edition' && (
+                  <p className="text-xs font-body text-dnd-text-muted">{t('character.feats.other_edition')}</p>
                 )}
 
                 {hasUses && (
@@ -525,6 +547,11 @@ export default function Abilities() {
       >
         {t('character.abilities.add')}
       </Button>
+      {char && (
+        <Button variant="secondary" size="lg" fullWidth onClick={() => setFeatPickerOpen(true)} icon={<Plus size={18} />}>
+          {t('character.feats.add')}
+        </Button>
+      )}
 
       {abilities.length === 0 && (
         <EmptyState
@@ -838,6 +865,12 @@ export default function Abilities() {
           )
         }}
       />
+      {char && (
+        <FeatPickerSheet char={char} open={featPickerOpen} onClose={() => setFeatPickerOpen(false)} />
+      )}
+      {char && featOptions && (
+        <FeatOptionsSheet char={char} ability={featOptions} open onClose={() => setFeatOptions(null)} />
+      )}
       <ConfirmSheet
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}

@@ -20,6 +20,7 @@ class PactCast:
     pact_only: bool
     uses_left: int | None
     also_slot: bool = False  # si lancia anche con uno slot normale (Incantesimi Personali, Mutaforma del Mago)
+    ability_id: int | None = None  # la riga precisa che spende (un talento ripetibile ha una riga per istanza)
 
 
 def _uses(char: Any, feature_key: str, class_id: int) -> int | None:
@@ -32,9 +33,13 @@ def pact_cast(char: Any, spell: Any) -> PactCast | None:
     index = getattr(spell, "srd_index", None)
     name = getattr(spell, "name", None)
     granted = (getattr(char, "settings", None) or {}).get(GRANTED_SPELL_KEYS) or []
-    for spec, row in active_features(char):
+    # due Iniziato alla magia con lo stesso incantesimo: prima la riga che ha ancora l'uso gratuito
+    features = sorted(active_features(char), key=lambda f: f[0].class_key == "feat" and not f[1].ability.uses)
+    for spec, row in features:
         if spec.arcanum_group and ((index or name) in ((row.options or {}).get(spec.arcanum_group) or [])
                                    or (name in ((row.options or {}).get(spec.arcanum_group) or []))):
+            if spec.class_key == "feat":  # Iniziato alla magia: gli usi sono della riga del talento, anche con uno slot
+                return PactCast("arcanum", spec.key, False, row.ability.uses or 0, also_slot=True, ability_id=row.ability.id)
             return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id), also_slot=spec.class_key == "wizard")
         if spec.free_spell and index == spec.free_spell:  # Mutaforma: senza slot, spende l'uso come un Arcanum
             return PactCast("arcanum", spec.key, False, _uses(char, spec.key, row.id), also_slot=True)

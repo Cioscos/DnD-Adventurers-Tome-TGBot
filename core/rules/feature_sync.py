@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
+from core.data.feats import FEATS as FEATS_2014
 from core.game.stats import effective_ability_mod, sync_base_ac
 from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
@@ -89,6 +90,7 @@ async def sync_class_feature_abilities(
     for other in char.classes:
         if other is not cls and features_for(edition, class_key(other)):
             _sync_from_catalog(session, char, other, lang)
+    _sync_feat_rows(char, lang)
     seed_from_sheet(char, retro)
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
@@ -109,6 +111,7 @@ async def sync_cataloged_features(
     for cls in char.classes:
         if features_for(edition, class_key(cls)):
             _sync_from_catalog(session, char, cls, lang)
+    _sync_feat_rows(char, lang)
     seed_from_sheet(char, retro)
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
@@ -320,6 +323,34 @@ def clean_archive(raw: object) -> dict[str, dict]:
         if entry:
             clean[key] = entry
     return clean
+
+
+_OLD_FEAT_NAMES = {"feat.lucky": ("Punti fortuna", "Luck points")}  # la riga contatore di Fortunato prima della 3.4.0
+
+
+def _sync_feat_rows(char: Character, lang: str) -> None:
+    """Righe dei talenti attivi: usi massimi (livello totale), ricarica e testi generati. Gli usi spesi restano; la riga
+    non si archivia né si cancella mai qui, la toglie solo il giocatore."""
+    from core.rules.catalog.feats import owned_feats  # import locale: il registro importa i tipi del catalogo
+    for spec, source in owned_feats(char):
+        ability = source.ability
+        old = FEATS_2014.get(spec.key[len("feat."):]) if spec.edition == "2014" else None  # testi di prima della 3.4.0
+        if ability.name in {*spec.name.values(), *(old.name.values() if old else ()), *_OLD_FEAT_NAMES.get(spec.key, ())}:
+            ability.name = spec.name.get(lang) or spec.name["it"]
+        if (ability.description is None or ability.description in spec.summary.values()
+                or (old and ability.description in old.summary.values())):
+            ability.description = spec.summary.get(lang) or spec.summary["it"]
+        ability.is_passive = spec.passive
+        ability.action_type = spec.action_type
+        if spec.uses is None:
+            continue
+        ctx = RuleContext(char=char, edition=character_edition(char), class_row=source, class_level=source.level)
+        new_max = max_uses(spec, ctx)
+        spent = _spent(ability) if ability.max_uses is not None else 0
+        ability.max_uses = new_max
+        ability.uses = None if new_max is None else new_max - min(spent, new_max)
+        ability.restoration_type = _restoration(spec, source.level)
+        ability.short_rest_recovers = _short_rest_recovers(spec, source.level)
 
 
 def _restoration(spec: FeatureSpec, level: int) -> RestorationType:

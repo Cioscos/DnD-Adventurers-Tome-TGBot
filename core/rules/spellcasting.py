@@ -174,10 +174,24 @@ def _granted_stats(char: Any, spell: Any) -> CasterStats | None:
     return None
 
 
+def _feat_stats(char: Any, spell: Any) -> CasterStats | None:
+    """Incantesimi di un talento (Iniziato alla magia): la caratteristica scelta col talento."""
+    if getattr(spell, "class_id", None) is not None:
+        return None
+    names = {getattr(spell, "srd_index", None), getattr(spell, "name", None)} - {None}
+    for spec, row in active_features(char):
+        opts = row.options if spec.class_key == "feat" else {}
+        if opts.get("ability") and names & {*(opts.get("cantrips") or []), *(opts.get("spell") or [])}:
+            mod = effective_ability_mod(char, opts["ability"])
+            return CasterStats(None, "feat", opts["ability"], 8 + char.proficiency_bonus + mod, char.proficiency_bonus + mod)
+    return None
+
+
 def spell_stats(char: Any, spell: Any) -> CasterStats | None:
-    """CD e attacco della classe dell'incantesimo; non assegnato (personaggi esistenti): la classe migliore."""
+    """CD e attacco della classe dell'incantesimo; non assegnato (personaggi esistenti): la classe migliore. Un incantesimo
+    di un talento senza classe usa la caratteristica del talento."""
     own = next((s for s in caster_stats(char) if s.class_id == spell.class_id), None)
-    return own or _granted_stats(char, spell) or best_caster(char)
+    return own or _feat_stats(char, spell) or _granted_stats(char, spell) or best_caster(char)
 
 
 def concentration_dc(edition: Edition, damage: int) -> int:

@@ -541,6 +541,8 @@ class Ability(Base):
     action_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     # Usi recuperati a ogni riposo breve (NULL = la ricarica segue solo restoration_type).
     short_rest_recovers: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Scelte proprie di un talento (`feat.*`): abilità di Abile, lista di Iniziato alla magia, caratteristica del +1
+    options: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="abilities")
 

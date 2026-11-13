@@ -132,6 +132,29 @@
     }
   },
   "character": {
+    "feats": {
+      "add": "Aggiungi talento",
+      "add_title": "Aggiungi talento",
+      "add_hint": "Un talento che non viene da una scelta di livello: quello d'Origine del background, un dono del GM o un privilegio che te ne concede uno. Vale per intero, +1 alla caratteristica compreso.",
+      "add_confirm": "Aggiungi",
+      "complete": "Da completare",
+      "complete_title": "Completa: {{name}}",
+      "complete_confirm": "Conferma le scelte",
+      "incomplete_hint": "Il talento non agisce finché non completi le sue scelte.",
+      "other_edition": "Talento di un'altra edizione: non agisce. Rimuovilo e prendi quello nuovo.",
+      "picks_hint": "Scegli tre abilità o strumenti (ne mancano {{n}}).",
+      "tool_name": "Strumento",
+      "tool_add": "Aggiungi",
+      "tools_name": "Strumento da artigiano {{n}}",
+      "instruments_name": "Strumento musicale {{n}}",
+      "mi_list": "Lista di incantesimi",
+      "mi_ability": "Caratteristica da incantatore",
+      "mi_cantrips": "Due trucchetti",
+      "mi_spell": "Un incantesimo di 1º livello",
+      "origin_step": "Talento d'Origine",
+      "origin_hint": "Nel 2024 il background dà un talento d'Origine. Sceglilo qui o aggiungilo più tardi dalla pagina delle abilità.",
+      "origin_skip": "Nessun talento per ora"
+    },
     "weapon_bond": {
       "title": "Arma Vincolata",
       "hint": "Il rituale dura un'ora e si fa in un riposo breve: qui segni che è concluso. Un'arma vincolata non ti può essere disarmata e la evochi in mano come azione bonus, una per volta.",
@@ -2200,6 +2223,7 @@
       }
     },
     "abilities": {
+      "inactive_feat": "inattivo",
       "delete_confirm": "Eliminare l'abilità \"{{name}}\"? L'azione è irreversibile.",
       "title": "Abilità Speciali",
       "add": "Aggiungi abilità",

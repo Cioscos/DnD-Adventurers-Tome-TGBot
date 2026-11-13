@@ -163,6 +163,9 @@ export interface Ability {
   dc?: number | null
   /** Usi minimi da spendere insieme (Frusta d'Acqua: 2 ki). */
   min_amount?: number
+  /** Talenti: scelte salvate sulla riga e stato (attivo, da completare, di un'altra edizione). */
+  options?: Record<string, unknown> | null
+  feat_status?: 'active' | 'incomplete' | 'other_edition' | null
 }
 
 /** Stato avviato da un privilegio (Ira...): finisce per round, riposo, svenimento o a mano. */

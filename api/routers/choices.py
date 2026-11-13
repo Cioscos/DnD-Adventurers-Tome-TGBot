@@ -17,8 +17,10 @@ from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
 from api.services.choices import (
+    complete_feat, take_feat,
     class_options_state, mark_resolved, remove_feat, replace_class_option, resolve_asi, resolve_class_option,
     resolve_feat)
+from api.schemas.spell import SpellCreate
 from core.db.models import HomebrewRule
 
 router = APIRouter(prefix="/characters", tags=["choices"])
@@ -85,7 +87,7 @@ async def resolve_choice(
         changed = [body.ability] if body.ability else []
     for ability in changed:  # same side effects as PATCH /ability_scores (CON HP, STR carry, AC)
         await apply_ability_change(session, char, ability, old_con_mod)
-    if changed:
+    if changed or isinstance(body, (FeatResolve, EpicBoonResolve)):  # i talenti agiscono dal motore: usi e testi al sync
         await sync_cataloged_features(session, char, lang)
     if not isinstance(body, ClassOptionResolve):  # le scelte di opzioni le riconcilia il sync, anche il resto che aspetta
         mark_resolved(char, choice)
@@ -109,6 +111,52 @@ async def _remove(char_id: int, user_id: int, session: AsyncSession, ability_id:
     if ab is None:
         raise HTTPException(404, "Feat not found")
     await remove_feat(session, char, ab)
+    char = await refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
+
+
+class FeatTake(BaseModel):
+    feat_key: str = Field(max_length=50)
+    ability: Optional[str] = Field(default=None, max_length=20)
+
+
+class FeatOptions(BaseModel):
+    options: dict[str, Union[str, list[str]]] = Field(default_factory=dict)
+    spells: list[SpellCreate] = Field(default_factory=list, max_length=3)
+
+
+@router.post("/{char_id}/feats", response_model=CharacterFull, status_code=201)
+async def add_feat(
+    char_id: int, body: FeatTake,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
+) -> CharacterFull:
+    """«Aggiungi talento»: fuori dalle scelte di livello (talento d'Origine, dono del GM, privilegi che ne concedono)."""
+    char = await get_owned_full(char_id, user_id, session)
+    old_con_mod = effective_con_mod(char)
+    take_feat(session, char, body.feat_key, body.ability, lang, "manual")
+    if body.ability:
+        await apply_ability_change(session, char, body.ability, old_con_mod)
+    await sync_cataloged_features(session, char, lang)
+    char = await refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
+
+
+@router.put("/{char_id}/feats/{ability_id}/options", response_model=CharacterFull)
+async def set_feat_options(
+    char_id: int, ability_id: int, body: FeatOptions,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    lang: Annotated[str, Depends(get_current_lang)],
+) -> CharacterFull:
+    """«Completa talento»: le scelte proprie del talento, una volta sola."""
+    char = await get_owned_full(char_id, user_id, session)
+    ab = next((a for a in char.abilities if a.id == ability_id and (a.feature_key or "").startswith("feat.")), None)
+    if ab is None:
+        raise HTTPException(404, "Feat not found")
+    complete_feat(session, char, ab, body.options, body.spells)
+    await sync_cataloged_features(session, char, lang)
     char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 
