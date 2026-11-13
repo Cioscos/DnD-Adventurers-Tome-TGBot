@@ -13,7 +13,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import class_table_key
-from core.data.feats import ALL_ABILITIES
+from core.data.feats import ALL_ABILITIES, LIST_ABILITY as _LIST_ABILITY, MI_ABILITIES as _MI_ABILITIES, MI_LISTS as _MI_LISTS
 from core.data.feats_2024 import ALL_FEATS as FEATS
 from api.services.history import add_history
 from core.data.skills import SKILL_ABILITY_MAP
@@ -415,14 +415,6 @@ def take_feat(session: AsyncSession, char: Character, feat_key: str, ability: Op
     else:
         add_history(session, char.id, "level_choice", f"Talento aggiunto: {name}")
     return ability_row
-
-
-_MI_LISTS = ("cleric", "druid", "wizard")
-_MI_ABILITIES = ("intelligence", "wisdom", "charisma")
-# Talenti 2014 con una lista di classe (Iniziato alla Magia, Cecchino Magico, Incantatore Rituale): la caratteristica
-# da incantatore viene dalla classe scelta
-_LIST_ABILITY = {"bard": "charisma", "sorcerer": "charisma", "warlock": "charisma", "cleric": "wisdom", "druid": "wisdom",
-                 "wizard": "intelligence"}
 
 
 _SRD_DIR = Path(__file__).resolve().parents[2] / "webapp" / "src" / "data" / "srd"

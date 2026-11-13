@@ -672,7 +672,7 @@ def _base_damage(
         damage_rolls = [1]
     else:
         damage_rolls, dice_bonus = roll_dice(damage_dice_str)
-        twice = item is not None and any(spec.weapon_damage_twice is True or (spec.weapon_damage_twice == "melee" and attack_mode != "ranged")
+        twice = item is not None and any(spec.weapon_damage_twice is True or (spec.weapon_damage_twice == "melee" and attack_mode not in ("ranged", "thrown"))
                                          for spec, _row in active_features(char))
         if twice and mark_once(char, "weapon_damage_twice"):  # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore
             again = roll_dice(damage_dice_str)[0]
@@ -775,11 +775,13 @@ async def attack_with_weapon(
     offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
-    if offhand and has_feat(char, "feat.dual_wielder"):  # Combattente a Due Armi 2014: armi a una mano anche non leggere
-        if has_property(item, "two_handed") or not any(
-                i.id != item.id and i.item_type == "weapon" and i.is_equipped and not has_property(i, "two_handed")
-                for i in char.items):
-            raise HTTPException(status_code=422, detail="offhand_needs_second_light_weapon")
+    if offhand and has_feat(char, "feat.dual_wielder"):  # Combattente a Due Armi 2014: armi da mischia a una mano, anche non leggere
+        one_handed_melee = lambda i: (not has_property(i, "two_handed")  # noqa: E731
+                                      and (item_meta(i).get("weapon_type") or "melee") == "melee")
+        if not one_handed_melee(item):
+            raise HTTPException(status_code=422, detail="offhand_two_handed")
+        if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and one_handed_melee(i) for i in char.items):
+            raise HTTPException(status_code=422, detail="offhand_needs_second_weapon")
     elif offhand:
         if not has_property(item, "light"):
             raise HTTPException(status_code=422, detail="offhand_not_light")

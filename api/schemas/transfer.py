@@ -242,7 +242,7 @@ class ExportAbility(BaseModel):
     def _feat_options_meaning(self) -> "ExportAbility":
         """Oltre alla forma, il significato: numero e valori ammessi dal talento (es. due tipi per Resistenza all'energia)."""
         from core.rules.catalog.feats_2024 import options_ok  # import locale: lo schema non carica il motore all'avvio
-        if self.options and (self.feature_key or "").startswith("feat.") and not options_ok(self.options):
+        if self.options and (self.feature_key or "").startswith("feat.") and not options_ok(self.options, self.feature_key or ""):
             self.options = None
         return self
 

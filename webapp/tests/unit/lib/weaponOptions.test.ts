@@ -27,3 +27,13 @@ describe('weaponOptions — Combattente a Due Armi 2014 (PR 3)', () => {
     expect(weaponOptions(great, char(['feat.dual_wielder'])).offhand).toBe(false)
   })
 })
+
+describe('weaponOptions — Combattente a Due Armi: solo armi da mischia (PR 3)', () => {
+  it('a ranged one-handed weapon is not a second weapon', () => {
+    const sword = { id: 1, item_type: 'weapon', is_equipped: true, item_metadata: { properties: [] } }
+    const crossbow = { id: 2, item_type: 'weapon', is_equipped: true, item_metadata: { properties: [], weapon_type: 'ranged' } }
+    const char = { classes: [], rules_edition: '2014', ability_scores: [], items: [sword, crossbow],
+      abilities: [{ feature_key: 'feat.dual_wielder' }] } as never
+    expect(weaponOptions(sword, char).offhand).toBe(false)
+  })
+})

@@ -24,8 +24,8 @@ export function weaponOptions(
 ): { versatile: boolean; thrown: boolean; offhand: boolean; ability: boolean } {
   const p = props(item)
   const others = char?.items ?? []
-  const oneHanded = (o: ItemLike) => !props(o).includes('prop_two_handed')
-  // Combattente a Due Armi 2014: armi a una mano anche non leggere (come `api/routers/items.py`)
+  const oneHanded = (o: ItemLike) => !props(o).includes('prop_two_handed') && (o.item_metadata?.weapon_type ?? 'melee') === 'melee'
+  // Combattente a Due Armi 2014: armi da mischia a una mano anche non leggere (come `api/routers/items.py`)
   const dualWielder = (char?.abilities ?? []).some((a) => a.feature_key === 'feat.dual_wielder')
   const second = (ok: (o: ItemLike) => boolean) =>
     others.some((o) => o.id !== item.id && o.item_type === 'weapon' && o.is_equipped && ok(o))

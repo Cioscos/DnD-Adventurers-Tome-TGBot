@@ -71,10 +71,10 @@ class Applied:
     disadvantage_from: list[str] = field(default_factory=list)
 
 
-
 def _medium_armor_master(char) -> bool:
     from core.rules.catalog.feats_2014 import medium_armor_master  # import locale: il catalogo usa i modificatori
     return medium_armor_master(char)
+
 
 def has_state(ctx: RuleContext, key: str) -> bool:
     """Per i ``when`` dei modificatori: lo stato attivo ``key`` è in corso (Ira, Forma Selvatica...)."""

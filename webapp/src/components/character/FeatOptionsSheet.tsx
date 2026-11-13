@@ -282,7 +282,9 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
             {list && !has('rituals') && (has('spell') ? [0, 1] : [0]).map((level) => (
               <div key={level} className="space-y-2">
                 {hint(t(level === 1 ? 'character.feats.mi_spell' : has('spell') ? 'character.feats.mi_cantrips' : 'character.feats.sniper_cantrip'))}
-                {spellChips(ofList(level), level === 0 ? cantripCount : 1)}
+                {ofList(level).length === 0 && !has('spell') && catalog.length > 0
+                  ? hint(t('character.feats.sniper_none'))
+                  : spellChips(ofList(level), level === 0 ? cantripCount : 1)}
               </div>
             ))}
           </>

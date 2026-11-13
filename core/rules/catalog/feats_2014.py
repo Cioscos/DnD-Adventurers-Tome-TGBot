@@ -72,6 +72,14 @@ def _leader_hp(ctx: RuleContext) -> int:
     return ctx.class_level + effective_ability_mod(ctx.char, "charisma")
 
 
+def _proficient_finesse(ctx: RuleContext) -> bool:
+    """Duellante Difensivo 2014: un'arma accurata impugnata in cui si è competenti."""
+    from core.rules.proficiencies import is_weapon_proficient  # import locale: le competenze leggono il catalogo
+    from core.rules.weapons import has_property as _has
+    return any(i.is_equipped and i.item_type == "weapon" and _has(i, "finesse") and is_weapon_proficient(ctx.char, i)
+               for i in ctx.char.items or [])
+
+
 def _advantage(key: str, rolls: tuple[str, ...], it: str, en: str, available=lambda _c: True) -> RollOptionSpec:
     return RollOptionSpec(key=key, phase="before", rolls=rolls, mode="advantage", available=available, label=_both(it, en))
 
@@ -117,7 +125,7 @@ _register(
                        label=_both("Maestro degli Scudi: hai superato il TS di Destrezza contro un effetto a metà danni",
                                    "Shield Master: you passed the Dexterity save against a half-damage effect")))),
     _f14("defensive_duelist", passive=False, action_type="reaction",
-         on_use=OnUse(slot="reaction", available=_finesse_in_hand,
+         on_use=OnUse(slot="reaction", available=_proficient_finesse,
                       state=StateSpec(_DUELIST, rounds=1, ends_on=("new_turn", "manual"))),
          modifiers=(Modifier("ac", _pb, when=lambda c: c.roll == "ac" and state_on(c, _DUELIST)),)),
     _f14("durable"),  # minimo della cura dei Dadi Vita: ``hit_dice/spend`` (api/routers/hp.py)

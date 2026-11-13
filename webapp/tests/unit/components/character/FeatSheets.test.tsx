@@ -257,3 +257,13 @@ describe('FeatOptionsSheet — talenti 2014 con scelte (PR 3)', () => {
     expect(complete.mock.calls[0][2]).toMatchObject({ options: { list: 'wizard' } })
   })
 })
+
+describe('FeatOptionsSheet — Cecchino Magico senza trucchetti d\'attacco (PR 3)', () => {
+  it('says so when the chosen list has no attack cantrip', async () => {
+    const row = { id: 6, name: 'Cecchino Magico', feature_key: 'feat.spell_sniper', feat_status: 'incomplete' } as unknown as Ability
+    const char14 = { ...char(), rules_edition: '2014' } as unknown as CharacterFull
+    renderWithProviders(<FeatOptionsSheet char={char14} ability={row} open onClose={() => {}} />)
+    await userEvent.selectOptions(screen.getByLabelText('character.feats.mi_list'), 'cleric')
+    expect(await screen.findByText('character.feats.sniper_none')).toBeInTheDocument()
+  })
+})

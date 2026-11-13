@@ -158,6 +158,7 @@
       "languages_name": "Language {{n}}",
       "maneuvers_hint": "Pick the maneuvers ({{n}} left)",
       "weapons_hint": "Pick the weapons ({{n}} left)",
+      "sniper_none": "This list has no cantrips with an attack roll: pick another one",
       "sniper_cantrip": "One cantrip with an attack roll",
       "mi_list": "Spell list",
       "mi_ability": "Spellcasting ability",

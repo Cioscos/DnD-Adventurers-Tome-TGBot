@@ -9,6 +9,13 @@ from typing import Optional
 
 ALL_ABILITIES = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
 
+# Liste di classe dei talenti: Iniziato alla magia 2024 (caratteristica a scelta fra le tre) e talenti 2014 con una lista
+# (Iniziato alla Magia, Cecchino Magico, Incantatore Rituale: la caratteristica viene dalla classe scelta)
+MI_LISTS = ("cleric", "druid", "wizard")
+MI_ABILITIES = ("intelligence", "wisdom", "charisma")
+LIST_ABILITY = {"bard": "charisma", "sorcerer": "charisma", "warlock": "charisma", "cleric": "wisdom", "druid": "wisdom",
+                "wizard": "intelligence"}
+
 
 @dataclass(frozen=True)
 class FeatSpec:

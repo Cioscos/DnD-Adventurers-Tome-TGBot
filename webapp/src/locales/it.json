@@ -158,6 +158,7 @@
       "languages_name": "Linguaggio {{n}}",
       "maneuvers_hint": "Scegli le manovre (ne mancano {{n}})",
       "weapons_hint": "Scegli le armi (ne mancano {{n}})",
+      "sniper_none": "Questa lista non ha trucchetti con tiro per colpire: scegline un'altra",
       "sniper_cantrip": "Un trucchetto con tiro per colpire",
       "mi_list": "Lista di incantesimi",
       "mi_ability": "Caratteristica da incantatore",
