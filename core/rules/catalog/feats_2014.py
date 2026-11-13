@@ -11,6 +11,7 @@ from core.rules.catalog._common import heavy_armor, state_on
 from core.rules.catalog.feats import D20_TESTS, _register, feat
 from core.rules.catalog.feats_2024 import _PHYSICAL, _both, _finesse_in_hand, _medium_armor_dex, _pb
 from core.rules.types import Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
+from core.rules.weapons import has_property
 from core.utils.session_view import armor_category
 
 _DUELIST = "feat.defensive_duelist"
@@ -40,7 +41,7 @@ _register(
          roll_options=(_lucky_reroll("feat.lucky", D20_TESTS),)),
     *(_f14(k) for k in (
         "skilled", "elemental_adept", "martial_adept", "spell_sniper", "ritual_caster", "magic_initiate", "linguist",
-        "weapon_master", "great_weapon_master", "sharpshooter",  # scelte e attacco potente: Task 3-4
+        "weapon_master",  # scelte: Task 4
         # solo testo (D1): distanze, attacchi bonus o di opportunità, cure ad altri
         "skulker", "mounted_combatant", "crossbow_expert", "healer", "polearm_master", "keen_mind", "resilient",
         "sentinel")),
@@ -140,3 +141,34 @@ def medium_armor_master(char: Any) -> bool:
 def has_feat(char: Any, key: str) -> bool:
     from core.rules.catalog import active_features
     return any(s.key == key for s, _r in active_features(char))
+
+
+def _weapon_kind(ctx: RuleContext) -> str | None:
+    from core.game.item_bonuses import item_meta
+    item = ctx.item
+    if item is None or getattr(item, "item_type", None) != "weapon":
+        return None
+    return item_meta(item).get("weapon_type", "melee")
+
+
+def _proficient(ctx: RuleContext) -> bool:
+    from core.rules.proficiencies import is_weapon_proficient  # import locale: le competenze leggono il catalogo
+    return is_weapon_proficient(ctx.char, ctx.item)
+
+
+def _power_attack(key: str, it: str, en: str, available) -> RollOptionSpec:
+    """-5 al tiro per colpire, +10 al danno se colpisce: danno piatto (``0d1+10``) che non raddoppia al critico."""
+    return RollOptionSpec(key=key, phase="before", rolls=("attack",), bonus=lambda _c, _i: -5,
+                          extra_dice=lambda _c, _i: "0d1+10", crit_doubles=False,
+                          available=lambda c: available(c) and _proficient(c), label=_both(it, en))
+
+
+_register(
+    _f14("great_weapon_master", roll_options=(_power_attack(
+        "feat.great_weapon_master", "Maestro d'Armi Possenti: -5 al tiro per colpire, +10 al danno",
+        "Great Weapon Master: -5 to hit, +10 damage",
+        lambda c: _weapon_kind(c) == "melee" and has_property(c.item, "heavy")),)),
+    _f14("sharpshooter", roll_options=(_power_attack(
+        "feat.sharpshooter", "Tiratore Scelto: -5 al tiro per colpire, +10 al danno",
+        "Sharpshooter: -5 to hit, +10 damage", lambda c: _weapon_kind(c) == "ranged"),)),
+)
