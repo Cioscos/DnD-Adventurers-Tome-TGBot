@@ -591,6 +591,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   personality?: Record<string, string>
   languages?: string[]
   general_proficiencies?: Partial<Record<'armor' | 'weapons' | 'tools' | 'other', string[]>> | string[]
+  /** Competenze negli strumenti: chiave del catalogo (`lib/tools.ts`) → true o 'expert'. */
+  tool_proficiencies?: Record<string, boolean | 'expert'>
   damage_modifiers?: Record<string, string[]>
   classes: CharacterClass[]
   ability_scores: AbilityScore[]

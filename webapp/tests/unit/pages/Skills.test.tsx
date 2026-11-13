@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Skills from '@/pages/Skills'
 
-const { getChar, updateSkills, rollSkill, toastError, playAndCollect } = vi.hoisted(() => ({
+const { getChar, updateSkills, rollSkill, rollToolCheck, updateChar, toastError, playAndCollect } = vi.hoisted(() => ({
+  rollToolCheck: vi.fn(),
+  updateChar: vi.fn(),
   getChar: vi.fn(),
   updateSkills: vi.fn(),
   rollSkill: vi.fn(),
@@ -23,7 +25,7 @@ vi.mock('@/api/client', () => {
       this.status = status
     }
   }
-  return { api: { characters: { get: getChar, updateSkills, rollSkill } }, ApiError }
+  return { api: { characters: { get: getChar, updateSkills, rollSkill, rollToolCheck, update: updateChar } }, ApiError }
 })
 
 vi.mock('react-router-dom', async (orig) => {
@@ -228,5 +230,54 @@ describe('Skills page', () => {
     await waitFor(() =>
       expect(toastError).toHaveBeenCalledWith('character.inspiration.unavailable_error'),
     )
+  })
+})
+
+describe('Skills tools section', () => {
+  const withTools = (extra: Record<string, unknown>) => ({ ...baseChar, ...extra })
+
+  it('mostra gli strumenti competenti con il segno della Maestria', async () => {
+    getChar.mockResolvedValue(withTools({ tool_proficiencies: { thieves_tools: 'expert', lute: true } }))
+    renderWithProviders(<Skills />)
+    expect(await screen.findByText('Arnesi da scasso')).toBeInTheDocument()
+    expect(screen.getByText('Liuto')).toBeInTheDocument()
+    expect(screen.getByText('character.tools.title')).toBeInTheDocument()
+    expect(screen.getAllByText('character.tools.expert')).toHaveLength(1)
+  })
+
+  it('senza tool_proficiencies non mostra la sezione', async () => {
+    getChar.mockResolvedValue(baseChar)
+    renderWithProviders(<Skills />)
+    await screen.findByText('character.skills.athletics')
+    expect(screen.queryByText('character.tools.title')).toBeNull()
+  })
+
+  it("nel 2024 preseleziona la caratteristica del catalogo e tira con l'abilità scelta", async () => {
+    getChar.mockResolvedValue(withTools({ rules_edition: '2024', tool_proficiencies: { thieves_tools: true } }))
+    rollToolCheck.mockResolvedValue({ ...rollResult, description: 'thieves_tools' })
+    renderWithProviders(<Skills />)
+    await userEvent.click(await screen.findByText('Arnesi da scasso'))
+    expect(screen.getByRole('button', { name: 'character.stats.dexterity' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.selectOptions(screen.getByLabelText('character.tools.skill'), 'sleight_of_hand')
+    fireEvent.pointerUp(screen.getByRole('button', { name: 'character.tools.roll' }))
+    await waitFor(() => expect(rollToolCheck).toHaveBeenCalled())
+    expect(rollToolCheck.mock.calls[0].slice(0, 4)).toEqual([5, 'thieves_tools', 'dexterity', 'sleight_of_hand'])
+  })
+
+  it("nel 2014 non chiede l'abilità e non preseleziona la caratteristica", async () => {
+    getChar.mockResolvedValue(withTools({ rules_edition: '2014', tool_proficiencies: { thieves_tools: true } }))
+    renderWithProviders(<Skills />)
+    await userEvent.click(await screen.findByText('Arnesi da scasso'))
+    expect(screen.queryByLabelText('character.tools.skill')).toBeNull()
+    expect(screen.getByRole('button', { name: 'character.tools.roll' })).toBeDisabled()
+  })
+
+  it('la Maestria si attiva dal foglio', async () => {
+    getChar.mockResolvedValue(withTools({ tool_proficiencies: { lute: true } }))
+    updateChar.mockResolvedValue(withTools({ tool_proficiencies: { lute: 'expert' } }))
+    renderWithProviders(<Skills />)
+    await userEvent.click(await screen.findByText('Liuto'))
+    await userEvent.click(screen.getByRole('switch', { name: 'character.tools.expert' }))
+    await waitFor(() => expect(updateChar).toHaveBeenCalledWith(5, { tool_proficiencies: { lute: 'expert' } }))
   })
 })

@@ -273,3 +273,27 @@ describe('Identity unsaved changes', () => {
     await waitFor(() => expect(localStorage.getItem('identity-draft-3')).toBeNull())
   })
 })
+
+describe('Identity tools from the catalog', () => {
+  it('aggiunge uno strumento dal catalogo e lo invia in tool_proficiencies', async () => {
+    getChar.mockResolvedValue({ ...char, tool_proficiencies: { thieves_tools: true } })
+    updateChar.mockResolvedValue(char)
+    renderWithProviders(<Identity />)
+    expect(await screen.findByText('Arnesi da scasso')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^(Aggiungi strumento|Add tool)$/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Liuto' }))  // il foglio animato ha pointer-events: none in jsdom
+    await userEvent.click(await saveButton())
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    expect(updateChar.mock.calls.at(-1)![1].tool_proficiencies).toEqual({ thieves_tools: true, lute: true })
+  })
+
+  it('toglie uno strumento con la sua croce', async () => {
+    getChar.mockResolvedValue({ ...char, tool_proficiencies: { thieves_tools: 'expert', lute: true } })
+    updateChar.mockResolvedValue(char)
+    renderWithProviders(<Identity />)
+    await userEvent.click(await screen.findByRole('button', { name: /(Rimuovi|Remove) Liuto/ }))
+    await userEvent.click(await saveButton())
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    expect(updateChar.mock.calls.at(-1)![1].tool_proficiencies).toEqual({ thieves_tools: 'expert' })
+  })
+})
