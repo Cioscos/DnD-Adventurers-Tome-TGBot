@@ -1,7 +1,10 @@
 """Scelte di livello (ASI / talento): creazione al level-up e applicazione degli effetti."""
 from __future__ import annotations
 
+import json
 import uuid
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Literal, Optional
 
 from fastapi import HTTPException
@@ -409,6 +412,17 @@ _MI_LISTS = ("cleric", "druid", "wizard")
 _MI_ABILITIES = ("intelligence", "wisdom", "charisma")
 
 
+_SRD_DIR = Path(__file__).resolve().parents[2] / "webapp" / "src" / "data" / "srd"
+
+
+@lru_cache(maxsize=2)
+def _srd_spells(edition: str) -> dict[str, tuple[int, set[str]]]:
+    """Catalogo SRD della webapp: indice -> (livello, liste di classe). Lo stesso file da cui la webapp sceglie."""
+    name = "spells-2024.json" if edition == "2024" else "spells.json"
+    items = json.loads((_SRD_DIR / name).read_text(encoding="utf-8"))["items"]
+    return {e["index"]: (e["level"], set(e.get("classes") or [])) for e in items}
+
+
 def _text_list(value: Any, count: int) -> list[str]:
     items = [str(v).strip()[:50] for v in value] if isinstance(value, list) else []
     if len(items) != count or not all(items) or len({i.lower() for i in items}) != count:
@@ -456,20 +470,27 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
         if any(a is not ability and a.feature_key == ability.feature_key and (a.options or {}).get("list") == chosen
                for a in char.abilities):
             raise _bad("feat_list_taken")
-        if sorted(sp.level for sp in spells) != [0, 0, 1]:
+        catalog = _srd_spells(character_edition(char))
+        indexes = [(sp.srd_index or "").strip() for sp in spells]
+        # livello e lista dal catalogo, non dal client: il lancio gratuito vale solo per un incantesimo della lista scelta
+        if (len(set(indexes)) != 3 or any(i not in catalog or chosen not in catalog[i][1] for i in indexes)
+                or sorted(catalog[i][0] for i in indexes) != [0, 0, 1]
+                or any(sp.level != catalog[i][0] for sp, i in zip(spells, indexes))):
             raise _bad("feat_options_invalid")
         names: dict[int, list[str]] = {0: [], 1: []}
-        for data in spells:
-            index = (data.srd_index or "").strip() or None
-            have = next((sp for sp in char.spells if (index and sp.srd_index == index) or sp.name == data.name), None)
+        granted: list[str] = []
+        for data, index in zip(spells, indexes):
+            have = next((sp for sp in char.spells if sp.srd_index == index or sp.name == data.name), None)
             if have is None:
                 have = Spell(character_id=char.id,
                              **data.model_dump(exclude={"pick_id", "class_id", "always_prepared", "is_prepared"}))
                 session.add(have)
                 char.spells.append(have)
+            if not have.always_prepared:  # quelli già sempre preparati da un'altra fonte restano suoi alla rimozione
+                granted.append(index)
             have.always_prepared = have.is_prepared = True
-            names[data.level].append(index or data.name)
-        saved.update({"list": chosen, "ability": stat, "cantrips": names[0], "spell": names[1]})
+            names[data.level].append(index)
+        saved.update({"list": chosen, "ability": stat, "cantrips": names[0], "spell": names[1], "granted": granted})
     ability.options = {**(ability.options or {}), **saved}
     add_history(session, char.id, "level_choice", f"Talento completato: {ability.name}")
 
@@ -487,8 +508,12 @@ async def remove_feat(session: AsyncSession, char: Character, ability: Ability) 
     if key == "custom":
         await session.execute(delete(Ability).where(Ability.id == ability.id))
     else:
-        for spell in char.spells:  # Iniziato alla magia: gli incantesimi restano, non più sempre preparati
-            if (spell.srd_index or spell.name) in _feat_spells(ability):
+        # Iniziato alla magia: gli incantesimi restano; non più sempre preparati quelli che il talento aveva reso tali
+        # e che nessun altro talento concede ancora
+        others = set().union(*(_feat_spells(a) for a in char.abilities if a is not ability and a.id != ability.id))
+        mine = set((ability.options or {}).get("granted") or []) - others
+        for spell in char.spells:
+            if (spell.srd_index or spell.name) in mine:
                 spell.always_prepared = False
         await session.execute(delete(Ability).where(Ability.id == ability.id))  # una sola istanza (talenti ripetibili)
         # Regole `feat:*` di personaggi non ancora migrati al motore (vedi ``catalog_migration``)

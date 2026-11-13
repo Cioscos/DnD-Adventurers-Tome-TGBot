@@ -33,7 +33,9 @@ def pact_cast(char: Any, spell: Any) -> PactCast | None:
     index = getattr(spell, "srd_index", None)
     name = getattr(spell, "name", None)
     granted = (getattr(char, "settings", None) or {}).get(GRANTED_SPELL_KEYS) or []
-    for spec, row in active_features(char):
+    # due Iniziato alla magia con lo stesso incantesimo: prima la riga che ha ancora l'uso gratuito
+    features = sorted(active_features(char), key=lambda f: f[0].class_key == "feat" and not f[1].ability.uses)
+    for spec, row in features:
         if spec.arcanum_group and ((index or name) in ((row.options or {}).get(spec.arcanum_group) or [])
                                    or (name in ((row.options or {}).get(spec.arcanum_group) or []))):
             if spec.class_key == "feat":  # Iniziato alla magia: gli usi sono della riga del talento, anche con uno slot

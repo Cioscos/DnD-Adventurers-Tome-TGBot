@@ -205,6 +205,10 @@ class ExportSpellSlot(BaseModel):
     is_pact: bool = False
 
 
+_OPTION_TEXTS = {"list", "ability"}
+_OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted"}
+
+
 class ExportAbility(BaseModel):
     name: str = Field(max_length=200)
     description: Optional[str] = None
@@ -219,6 +223,19 @@ class ExportAbility(BaseModel):
     short_rest_recovers: Optional[Int0] = None
     options: Optional[dict] = None  # scelte di un talento
     source_class_key: Optional[str] = None  # "c<indice in classes>"
+
+    @field_validator("options")
+    @classmethod
+    def _feat_options(cls, v: Optional[dict]) -> Optional[dict]:
+        """Scelte di un talento come le salva l'app; altrimenti si scartano e il talento torna «da completare»."""
+        if not v:
+            return None
+        text = lambda x: isinstance(x, str) and 0 < len(x) <= 50
+        ok = all(
+            (k in _OPTION_TEXTS and text(x))
+            or (k in _OPTION_LISTS and isinstance(x, list) and len(x) <= 3 and all(map(text, x)))
+            for k, x in v.items())
+        return v if ok else None
 
     @field_validator("action_type", mode="wrap")
     @classmethod

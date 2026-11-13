@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
+from core.data.feats import FEATS as FEATS_2014
 from core.game.stats import effective_ability_mod, sync_base_ac
 from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
@@ -324,15 +325,20 @@ def clean_archive(raw: object) -> dict[str, dict]:
     return clean
 
 
+_OLD_FEAT_NAMES = {"feat.lucky": ("Punti fortuna", "Luck points")}  # la riga contatore di Fortunato prima della 3.4.0
+
+
 def _sync_feat_rows(char: Character, lang: str) -> None:
     """Righe dei talenti attivi: usi massimi (livello totale), ricarica e testi generati. Gli usi spesi restano; la riga
     non si archivia né si cancella mai qui, la toglie solo il giocatore."""
     from core.rules.catalog.feats import owned_feats  # import locale: il registro importa i tipi del catalogo
     for spec, source in owned_feats(char):
         ability = source.ability
-        if ability.name in spec.name.values():
+        old = FEATS_2014.get(spec.key[len("feat."):]) if spec.edition == "2014" else None  # testi di prima della 3.4.0
+        if ability.name in {*spec.name.values(), *(old.name.values() if old else ()), *_OLD_FEAT_NAMES.get(spec.key, ())}:
             ability.name = spec.name.get(lang) or spec.name["it"]
-        if ability.description is None or ability.description in spec.summary.values():
+        if (ability.description is None or ability.description in spec.summary.values()
+                or (old and ability.description in old.summary.values())):
             ability.description = spec.summary.get(lang) or spec.summary["it"]
         ability.is_passive = spec.passive
         ability.action_type = spec.action_type
