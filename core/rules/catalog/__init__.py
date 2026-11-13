@@ -8,7 +8,7 @@ from core.rules.types import FeatureSpec
 
 # Aumenta ogni task che aggiunge o cambia un catalogo di classe (R33): all'avvio dell'API, se la versione salvata in
 # `app_meta` è diversa, i personaggi esistenti passano una volta dal sync (`api/services/catalog_migration.py`).
-CATALOG_VERSION = 68
+CATALOG_VERSION = 69
 
 _REGISTRY: dict[tuple[str, str], tuple[FeatureSpec, ...]] = {}
 
@@ -30,10 +30,12 @@ def _applies(spec: FeatureSpec, row: Any) -> bool:
 
 
 def active_features(char: Any) -> list[tuple[FeatureSpec, Any]]:
-    """Privilegi attivi di tutte le classi: filtro su livello di classe, `subclass_key` e opzioni scelte."""
+    """Privilegi attivi di tutte le classi (filtro su livello di classe, `subclass_key` e opzioni scelte) e dei talenti
+    posseduti (``core.rules.catalog.feats``: la riga è un ``FeatSource``)."""
+    from core.rules.catalog.feats import owned_feats  # import locale: il registro dei talenti importa i tipi
     edition = character_edition(char)
     return [(spec, row) for row in char.classes
-            for spec in features_for(edition, class_key(row)) if _applies(spec, row)]
+            for spec in features_for(edition, class_key(row)) if _applies(spec, row)] + owned_feats(char)
 
 
 def _register() -> None:
