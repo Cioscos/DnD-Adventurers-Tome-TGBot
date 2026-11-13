@@ -48,6 +48,7 @@ LABELS: dict[str, tuple[str, str]] = {
     "thieves_tools": ("Arnesi da scasso", "Thieves' tools"),
     "herbalism_kit": ("Borsa da erborista", "Herbalism kit"),
     "disguise_kit": ("Kit da camuffamento", "Disguise kit"),
+    "improvised": ("Armi improvvisate", "Improvised weapons"),
     "poisoners_kit": ("Kit da avvelenatore", "Poisoner's kit"),
     "cooks_utensils": ("Utensili da cuoco", "Cook's utensils"),
     "thieves_cant": ("Gergo Ladresco", "Thieves' Cant"),

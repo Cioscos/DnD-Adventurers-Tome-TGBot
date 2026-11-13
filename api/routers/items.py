@@ -64,6 +64,7 @@ from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptio
 from core.game.attacks import martial_arts_die
 from core.rules.catalog import active_features
 from core.rules.catalog._common import unarmored_unshielded
+from core.rules.catalog.feats_2014 import has_feat
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
 from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
@@ -671,7 +672,8 @@ def _base_damage(
         damage_rolls = [1]
     else:
         damage_rolls, dice_bonus = roll_dice(damage_dice_str)
-        twice = item is not None and any(spec.weapon_damage_twice for spec, _row in active_features(char))
+        twice = item is not None and any(spec.weapon_damage_twice is True or (spec.weapon_damage_twice == "melee" and attack_mode != "ranged")
+                                         for spec, _row in active_features(char))
         if twice and mark_once(char, "weapon_damage_twice"):  # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore
             again = roll_dice(damage_dice_str)[0]
             if sum(again) > sum(damage_rolls):
@@ -773,7 +775,12 @@ async def attack_with_weapon(
     offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
-    if offhand:
+    if offhand and has_feat(char, "feat.dual_wielder"):  # Combattente a Due Armi 2014: armi a una mano anche non leggere
+        if has_property(item, "two_handed") or not any(
+                i.id != item.id and i.item_type == "weapon" and i.is_equipped and not has_property(i, "two_handed")
+                for i in char.items):
+            raise HTTPException(status_code=422, detail="offhand_needs_second_light_weapon")
+    elif offhand:
         if not has_property(item, "light"):
             raise HTTPException(status_code=422, detail="offhand_not_light")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and has_property(i, "light")
