@@ -127,3 +127,37 @@ _register(
          action_type=None, passive=False, uses=Uses(table={1: 3}), restoration="long_rest",
          roll_options=(_lucky_reroll("feat.lucky", D20_TESTS),)),
 )
+
+
+# ---------------------------------------------------------------------------
+# Talenti d'Origine 2024 (Manuale del Giocatore 2024, pagg. 200-202)
+# ---------------------------------------------------------------------------
+
+def _f24(key: str, **kw: Any) -> FeatureSpec:
+    """Voce 2024 con nome e riassunto della scheda di selezione (``core/data/feats_2024.py``)."""
+    from core.data.feats_2024 import ALL_FEATS  # import locale: i dati dei talenti non dipendono dal motore
+    data = ALL_FEATS[f"2024_{key}"]
+    return feat(f"2024_{key}", "2024", data.name["it"], data.name["en"], data.summary["it"], data.summary["en"], **kw)
+
+
+def _unarmed(ctx: Any) -> bool:
+    return ctx.item is None and ctx.attack_mode != "ranged"
+
+
+_register(
+    _f24("alert", modifiers=(Modifier("initiative", lambda ctx: ctx.char.proficiency_bonus),)),
+    _f24("tough", modifiers=(Modifier("hp_max", lambda ctx: 2 * ctx.class_level),)),
+    _f24("lucky", passive=False, uses=Uses(proficiency=True, minimum=0), restoration="long_rest",
+         roll_options=(RollOptionSpec(
+             key="feat.2024_lucky", phase="before", rolls=D20_TESTS, mode="advantage", cost=Cost(feature_key="feat.2024_lucky"),
+             label={"it": "Fortunato: spendi un punto per avere vantaggio", "en": "Lucky: spend a point to gain advantage"}),)),
+    _f24("savage_attacker", weapon_damage_twice=True),
+    _f24("tavern_brawler", unarmed_die="1d4", modifiers=(Modifier("damage_reroll", 1, when=_unarmed),)),
+    _f24("healer"),  # Medico da campo e i ritiri delle cure: l'app non ha un'azione «cura un altro» (D1, testo)
+    _f24("crafter"),  # strumenti a testo in ``general_proficiencies`` finché non c'è il catalogo degli strumenti
+    _f24("musician"),  # idem; Canto incoraggiante: Ispirazione agli alleati, testo per il GM
+    _f24("skilled"),
+    _f24("magic_initiate"),
+    needs={"feat.2024_crafter": ("tools",), "feat.2024_musician": ("instruments",), "feat.2024_skilled": ("picks",),
+           "feat.2024_magic_initiate": ("list", "ability", "cantrips", "spell")},
+)

@@ -25,7 +25,7 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from api.services.rules_turn import attacks_allowed, get_turn, refuse_if_incapacitated, spend
+from api.services.rules_turn import attacks_allowed, get_turn, mark_once, refuse_if_incapacitated, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
@@ -671,6 +671,11 @@ def _base_damage(
         damage_rolls = [1]
     else:
         damage_rolls, dice_bonus = roll_dice(damage_dice_str)
+        twice = item is not None and any(spec.weapon_damage_twice for spec, _row in active_features(char))
+        if twice and mark_once(char, "weapon_damage_twice"):  # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore
+            again = roll_dice(damage_dice_str)[0]
+            if sum(again) > sum(damage_rolls):
+                damage_rolls = again
         if is_critical:
             damage_rolls = damage_rolls + roll_dice(damage_dice_str)[0]
             # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.

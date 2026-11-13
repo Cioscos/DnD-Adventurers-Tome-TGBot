@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from core.data.feats_2024 import FEATS_2024
+from core.rules.catalog.feats import FEAT_NEEDS
 
 TARGET = Path(__file__).resolve().parent.parent / "webapp" / "src" / "data" / "feats2024.json"
 
@@ -15,7 +16,8 @@ def build() -> list[dict]:
         "abilities": f.ability_increase, "min_level": f.min_level, "max_score": f.max_score,
         "prereq_abilities": {"any_of": list(f.prereq_abilities[0]), "min": f.prereq_abilities[1]}
         if f.prereq_abilities else None,
-        "needs_spellcasting": f.needs_spellcasting,
+        "needs_spellcasting": f.needs_spellcasting, "repeatable": f.repeatable,
+        "needs": list(FEAT_NEEDS.get(f"feat.{f.key}", ())),
     } for f in FEATS_2024]
 
 
