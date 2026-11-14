@@ -160,6 +160,12 @@ def _athlete_bonus(ctx: RuleContext) -> int:
     return max(0, (ctx.char.proficiency_bonus + 1) // 2 - jack_of_all_trades_part(ctx.char))
 
 
+def _strength_mod(ctx: RuleContext) -> int:
+    """Piedi in più al salto in lungo con rincorsa: 30 cm per punto di modificatore di Forza (mai meno di 0)."""
+    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
+    return max(0, effective_ability_mod(ctx.char, "strength"))
+
+
 def _athlete_applies(ctx: RuleContext) -> bool:
     if ctx.ability not in ("strength", "dexterity", "constitution"):
         return False
@@ -574,7 +580,8 @@ FEATURES = (
              "Half proficiency (rounded up) on Strength, Dexterity and Constitution checks you are not proficient in, initiative included; long jump +1 ft per Strength point."),
             subclass="champion", modifiers=(
                 Modifier("skill", _athlete_bonus, when=_athlete_applies, source=f"feature:{CK}.remarkable_athlete"),
-                Modifier("initiative", _athlete_bonus, when=_athlete_applies, source=f"feature:{CK}.remarkable_athlete"),)),
+                Modifier("initiative", _athlete_bonus, when=_athlete_applies, source=f"feature:{CK}.remarkable_athlete"),
+                Modifier("jump_bonus", _strength_mod, when=lambda c: c.roll is None, source=f"feature:{CK}.remarkable_athlete"),)),
     feature("additional_fighting_style", CK, ED, 10, "Stile di Combattimento Aggiuntivo / Additional Fighting Style (Campione 10, pag. 72)",
             ("Stile di Combattimento Aggiuntivo", "Additional Fighting Style"),
             ("Al 10° livello scegli un secondo stile di combattimento, diverso dal primo.",

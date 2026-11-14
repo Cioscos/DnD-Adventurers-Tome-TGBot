@@ -62,18 +62,15 @@ async def test_each_chosen_option_becomes_a_row_and_the_others_do_not(client):
     assert {TWINNED, QUICKENED} <= keys and not keys & {SUBTLE, DISTANT, EXTENDED, HEIGHTENED, EMPOWERED, CAREFUL}
 
 
-async def test_the_new_pick_at_level_10_adds_to_the_old_ones_and_one_can_be_replaced(client):
+async def test_the_new_pick_at_level_10_adds_to_the_old_ones_and_none_can_be_replaced(client):
     cid = await _caster(client, 3, "twinned", "quickened")
     klass = (await _full(client, cid))["classes"][0]
     await client.patch(f"/characters/{cid}/classes/{klass['id']}", json={"level": 10})
     choice = _pending(await _full(client, cid))
     assert choice["count"] == 1 and not {"twinned", "quickened"} & {o["key"] for o in choice["options"]}
     state = (await client.get(f"/characters/{cid}/classes/{klass['id']}/options/metamagic")).json()
-    assert state["replaceable"] is True and {o["key"] for o in state["chosen"]} == {"twinned", "quickened"}
-    r = await client.post(f"/characters/{cid}/classes/{klass['id']}/options/replace",
-                          json={"group": "metamagic", "old_key": "twinned", "new_key": "subtle"})
-    assert r.status_code == 200, r.text
-    assert SUBTLE in await _keys_of(client, cid) and TWINNED not in await _keys_of(client, cid)
+    # PHB 2014 p.109: le opzioni di Metamagia non si sostituiscono (la sostituzione a ogni livello è del 2024)
+    assert state["replaceable"] is False and {o["key"] for o in state["chosen"]} == {"twinned", "quickened"}
 
 
 async def test_an_option_not_chosen_is_never_offered_at_the_cast(client):

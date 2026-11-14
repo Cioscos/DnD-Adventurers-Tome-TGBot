@@ -36,7 +36,7 @@ _TYPE_LABELS = {"acid": ("acido", "acid"), "cold": ("freddo", "cold"), "fire": (
 # Incantesimi che con uno slot più alto prendono una creatura in più (Incantesimo Raddoppiato): srd_index
 TWINNED_SPELLS = frozenset({
     "animal-friendship", "banishment", "bane", "bless", "blindness-deafness", "charm-monster", "charm-person", "command", "enhance-ability", "fly",
-    "hold-monster", "hold-person", "invisibility", "jump", "longstrider",
+    "freedom-of-movement", "gaseous-form", "heroism", "hold-monster", "hold-person", "invisibility", "jump", "longstrider",
 })
 _ROWS = "core/rules/proficiencies.py (class_proficiencies, as_multiclass), api/routers/classes.py create_class_for_character e add_class"
 

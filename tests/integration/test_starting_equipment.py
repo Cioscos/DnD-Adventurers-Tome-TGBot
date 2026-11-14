@@ -19,8 +19,9 @@ DUN = {"dungeoneer-pack": 1}
 XB = {"crossbow-light": 1, "bolts": 20}
 
 EXPECTED: dict[tuple[str, str], list[list[dict]]] = {
-    # Barbaro 1: ascia bipenne o guerra mischia; due asce o semplice; esploratore + 4 giavellotti.
-    ("2014", "barbarian"): [[{"greataxe": 1}, MM], [{"handaxe": 2}, SM], [EXP], [{"javelin": 4}]],
+    # Barbaro 1 (PHB 2014 p.48): ascia bipenne o guerra mischia; due asce o UN'ARMA SEMPLICE QUALSIASI (anche a
+    # distanza); esploratore + 4 giavellotti.
+    ("2014", "barbarian"): [[{"greataxe": 1}, MM], [{"handaxe": 2}, P], [EXP], [{"javelin": 4}]],
     ("2014", "bard"): [[{"rapier": 1}, {"longsword": 1}, P], [{"diplomat-pack": 1}, {"entertainer-pack": 1}],
                        [{"lute": 1}, {"instrument": 1}], [{"leather-armor": 1}], [{"dagger": 1}]],
     ("2014", "cleric"): [[{"mace": 1}, {"warhammer": 1}], [{"scale-mail": 1}, {"leather-armor": 1}, {"chain-mail": 1}],

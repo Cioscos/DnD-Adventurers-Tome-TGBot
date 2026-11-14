@@ -27,7 +27,7 @@ is_pact_weapon = _is_pact_weapon
 # trucchetti da warlock che infliggono danno: srd_index -> (nome it, nome en, ha un tiro per colpire, gittata di almeno 3 m)
 CANTRIPS: dict[str, tuple[str, str, bool, bool]] = {
     "eldritch-blast": ("Deflagrazione Occulta", "Eldritch Blast", True, True), "chill-touch": ("Tocco Gelido", "Chill Touch", True, True),
-    "poison-spray": ("Spruzzo Velenoso", "Poison Spray", False, True), "thunderclap": ("Fragore di Tuono", "Thunderclap", False, False),
+    "poison-spray": ("Spruzzo Velenoso", "Poison Spray", True, True), "thunderclap": ("Fragore di Tuono", "Thunderclap", False, False),
     "toll-the-dead": ("Rintocco dei Morti", "Toll the Dead", False, True), "mind-sliver": ("Scheggia Mentale", "Mind Sliver", False, True),
     "create-bonfire": ("Creare Falò", "Create Bonfire", False, True),
 }
@@ -67,7 +67,8 @@ def _chosen(ctx: RuleContext) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _agonizing(index: str, key: str) -> Modifier:
-    return Modifier("damage", lambda c: _mod(c, "charisma") * _beams(c), when=lambda c: is_cantrip(c.spell, index),
+    return Modifier("damage", lambda c: _mod(c, "charisma") * (_beams(c) if index == "eldritch-blast" else 1),  # un tiro per raggio solo per Deflagrazione Occulta
+                    when=lambda c: is_cantrip(c.spell, index),
                     source=f"feature:{CK}.{key}")
 
 
@@ -201,8 +202,8 @@ def _gaze_state(_ctx: RuleContext, _params: dict) -> StateSpec:
 
 
 GAZE_USE = OnUse(slot="bonus", state=_gaze_state)
-# I PF temporanei sono il massimo del dado (1d4 + 4): niente tiro
-VIGOR_USE = OnUse(slot="action", temp_hp=lambda _c, _rolled: 8)
+# I PF temporanei sono il massimo dei dadi (2d4 + 4): niente tiro
+VIGOR_USE = OnUse(slot="action", temp_hp=lambda _c, _rolled: 12)  # Vita Falsa 2024: 2d4+4, il massimo (p.271)
 CHAIN_USE = OnUse(forgoes_attack=True)  # rinunci a un attacco: il famiglio attacca con la sua reazione
 
 
@@ -302,8 +303,8 @@ _ROWS: list = [
          "Repeatable: the range of the chosen cantrip (at least 10 ft) grows by 30 ft per warlock level, with a different cantrip each pick."),
         [i for i, c in CANTRIPS.items() if c[3]], lambda index, key: {"spell_range_per_level": (tuple(_names(index)), 9), "passive": True}),
     _inv("fiendish_vigor", "Vigore Immondo", "Fiendish Vigor", f"{_P}, livello 2+, pag. 155", 2,
-         ("Azione: lanci vita falsata su di te senza slot, a volontà; ottieni il massimo dei PF temporanei (8) invece di tirare, se più di quelli che hai.",
-          "Action: you cast false life on yourself with no slot, at will; you gain the maximum temporary hit points (8) instead of rolling, if higher than yours."),
+         ("Azione: lanci vita falsata su di te senza slot, a volontà; ottieni il massimo dei PF temporanei (12) invece di tirare, se più di quelli che hai.",
+          "Action: you cast false life on yourself with no slot, at will; you gain the maximum temporary hit points (12) instead of rolling, if higher than yours."),
          action_type="action", on_use=VIGOR_USE),
     _inv("gaze_of_two_minds", "Sguardo delle Due Menti", "Gaze of Two Minds", f"{_P}, livello 5+, pag. 156", 5,
          ("Azione bonus: tocchi una creatura consenziente e percepisci con i suoi sensi fino alla fine del tuo turno successivo; si rinnova con un'azione bonus.",
@@ -387,9 +388,14 @@ def prerequisites_met(ctx: RuleContext, key: str, owned: list[str]) -> bool:
     return not slug or knows_cantrip(ctx.char, next(i for i in CANTRIPS if _slug(i) == slug))
 
 
+# Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). La riga resta per chi
+# l'ha già scelta (nessun personaggio perde nulla); non si offre più alle nuove scelte.
+RETIRED = frozenset({"eldritch_spear__chill_touch"})
+
+
 def available_invocations(ctx: RuleContext) -> list[str]:
     owned = _chosen(ctx)
-    return [key for key in LEVELS if prerequisites_met(ctx, key, owned)]
+    return [key for key in LEVELS if (key not in RETIRED or key in owned) and prerequisites_met(ctx, key, owned)]
 
 
 def picks_ok(ctx: RuleContext, picked: list[str]) -> bool:

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
-from core.game.item_bonuses import item_meta
+from core.game.item_bonuses import item_meta, weapon_magic_bonus
 from core.game.stats import effective_ability_score, roll_ability_mod
 from core.rules.edition import character_edition, class_key
 from core.rules.proficiencies import is_weapon_proficient
@@ -76,7 +76,9 @@ WEAPONS: dict[str, Weapon] = {
 }
 
 # Altri nomi italiani in uso: l'app e il compendio dicono «Falcione», il documento delle regole «Gliaia».
-_ALIASES = (("glaive", "Gliaia"),)
+_ALIASES = (("glaive", "Gliaia"), ("morningstar", "Stella del mattino"))  # il secondo è il nome dell'SRD italiano
+# Indici dell'SRD che non coincidono con la chiave («Ascia» è l'accetta, i nomi inglesi delle balestre sono «Crossbow, light»).
+_SRD_KEYS = {"crossbow_light": "light_crossbow", "crossbow_hand": "hand_crossbow", "crossbow_heavy": "heavy_crossbow"}
 # Il nome più lungo vince: «Lancia da cavaliere» prima di «Lancia».
 _NAMES = sorted(
     ((re.compile(rf"\b{re.escape(name.lower())}\b"), key)
@@ -95,6 +97,9 @@ def weapon_key(item: Any) -> str | None:
     declared = item_meta(item).get("base_weapon")
     if declared in WEAPONS:
         return declared
+    srd = str(item_meta(item).get("srd_index") or "").replace("-", "_")  # preso dal catalogo: l'indice vale più del nome
+    if (srd := _SRD_KEYS.get(srd, srd)) in WEAPONS:
+        return srd
     name = str(getattr(item, "name", "")).lower()
     return next((key for pattern, key in _NAMES if pattern.search(name)), None)
 
@@ -204,7 +209,7 @@ def _cleave_dice(ctx: RuleContext, _inputs: dict) -> str:
     match = _DICE.match(dice)
     if match is None:
         return "0d4"
-    flat = int(match[3] or 0) + int(meta.get("magic_bonus") or 0) + min(_modifier(ctx), 0)
+    flat = int(match[3] or 0) + weapon_magic_bonus(ctx.item) + min(_modifier(ctx), 0)
     return f"{match[1]}d{match[2]}{flat:+d}" if flat else f"{match[1]}d{match[2]}"
 
 

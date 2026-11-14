@@ -38,6 +38,14 @@ def is_attuned(item) -> bool:
     return bool(item_meta(item).get("attuned"))
 
 
+def weapon_magic_bonus(item) -> int:
+    """Il +N di un'arma magica; senza la sintonia richiesta valgono solo i benefici non magici (PHB 2024 p.232)."""
+    meta = item_meta(item)
+    if meta.get("requires_attunement") and not meta.get("attuned"):
+        return 0
+    return int(meta.get("magic_bonus") or 0)
+
+
 def is_active_for_bonuses(item) -> bool:
     # Invariant: container_id never dangles (delete/un-container always re-parent), so non-null == contained.
     if getattr(item, "container_id", None) is not None:

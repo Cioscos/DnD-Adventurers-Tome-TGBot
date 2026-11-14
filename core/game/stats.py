@@ -137,6 +137,8 @@ def effective_ability_score(
     absolutes: list[int] = []
 
     for item in equipped_items:
+        if (meta := _item_meta(item)).get("requires_attunement") and not meta.get("attuned"):
+            continue  # senza sintonia nessun beneficio magico (PHB 2024 p.232)
         mods = _extract_ability_modifiers(item)
         for mod in mods:
             if mod.get("ability") != ability_name:

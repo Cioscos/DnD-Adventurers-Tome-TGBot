@@ -49,6 +49,9 @@ VERSATILE_TRIP = RollOptionSpec(
                 "Versatile Trickster: Trip also a second creature within 5 ft of the spectral hand"),
     target_effect=TRIP.target_effect)
 
+# 2024 p.133: l'uso si perde solo se il furto riesce (nel 2014 ogni tentativo spende l'uso)
+SPELL_THIEF_2024 = replace(SPELL_THIEF_USE, cost_by=lambda _c, params: 1 if params.get("stolen") else 0)
+
 _at = _sub(("Mistificatore Arcano", "Arcane Trickster"), "arcane_trickster")
 ARCANE_TRICKSTER = (
     _at("arcane_trickster_spellcasting", 3, "Incantesimi", "Spellcasting", 132,
@@ -71,7 +74,7 @@ ARCANE_TRICKSTER = (
     _at("spell_thief", 17, "Ladro di Incantesimi", "Spell Thief", 133,
         ("Reazione, una volta per riposo lungo: il lanciatore fa un TS Intelligenza; se fallisce annulli l'effetto e ruba l'incantesimo per 8 ore.",
          "Reaction, once per long rest: the caster makes an Intelligence save; on a failure you cancel the effect and steal the spell for 8 hours."),
-        "reaction", uses=Uses(table={17: 1}), restoration="long_rest", on_use=SPELL_THIEF_USE, dc_ability="intelligence"),
+        "reaction", uses=Uses(table={17: 1}), restoration="long_rest", on_use=SPELL_THIEF_2024, dc_ability="intelligence"),
 )
 
 

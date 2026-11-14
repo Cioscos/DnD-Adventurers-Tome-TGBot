@@ -369,7 +369,8 @@ async def test_fiendish_vigor_gives_the_maximum_temporary_hit_points_without_add
     cid = await _caster24(client, 2, "fiendish_vigor")
     r = await _use(client, cid, "warlock.fiendish_vigor")
     assert r.status_code == 200, r.text
-    assert r.json()["temp_hp"] == 8 and (await _full(client, cid))["temp_hp"] == 8
+    # Vita Falsa 2024 è 2d4+4 (spells.md p.271): il massimo è 12 (Vigore Immondo, warlock.md p.155)
+    assert r.json()["temp_hp"] == 12 and (await _full(client, cid))["temp_hp"] == 12
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_temp", "value": 20})
     await _new_turn(client, cid)
     await _use(client, cid, "warlock.fiendish_vigor")

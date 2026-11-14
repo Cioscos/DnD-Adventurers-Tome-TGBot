@@ -461,7 +461,7 @@ FEATURES = (
     feature("metamagic", CK, ED, 3, "Metamagia / Metamagic (Stregone 3, pag. 109)", ("Metamagia", "Metamagic"),
             ("Due opzioni di Metamagia al 3° livello, una in più al 10° e al 17°. Al lancio se ne usa una sola per incantesimo, salvo Potenziato.",
              "Two Metamagic options at 3rd level, one more at 10th and 17th. One option per spell on the cast, except Empowered."),
-            no_row=True, choices=(ChoiceSpec(group=METAMAGIC_GROUP, levels={3: 2, 10: 3, 17: 4}, replaceable=True,
+            no_row=True, choices=(ChoiceSpec(group=METAMAGIC_GROUP, levels={3: 2, 10: 3, 17: 4},  # PHB 2014 p.109: nessuna sostituzione
                                              options=lambda _c: [k for k, _it, _en in METAMAGIC]),),
             covered_by="ChoiceSpec metamagic di questa riga e le righe delle otto opzioni; test_metamagic_options_known_follow_the_level"),
     *(_option_row(k, it, en, _OPTION_SUMMARIES[k], _OPTION_ROLLS[k]) for k, it, en in METAMAGIC),

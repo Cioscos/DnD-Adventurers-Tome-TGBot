@@ -1,6 +1,40 @@
 {
   "entries": [
     {
+      "version": "3.9.1",
+      "date": "2026-11-14",
+      "fixed": {
+        "it": [
+          "Sintonia: un oggetto che la richiede non dà più il +N dell'arma né i punteggi di caratteristica finché non sei in sintonia. Se un tuo oggetto mostra numeri più bassi, attiva la sintonia.",
+          "Tiri salvezza contro morte: quando diventi stabile i conteggi di successi e fallimenti tornano a zero.",
+          "Nel 2024 tornare in vita toglie un livello di Esaurimento.",
+          "Le armi aggiunte dal catalogo (Ascia, Stella del mattino, balestre) ora sono riconosciute per le maestrie delle armi 2024.",
+          "Ranger 2024: Colpo Intrappolante, Grandine di Spine e Freccia Fulminea si lanciano dopo il colpo a segno, scegliendo lì lo slot.",
+          "Warlock 2024: Vigore Immondo dà 12 punti ferita temporanei; Deflagrazione Agonizzante aggiunge il Carisma una volta sola ai trucchetti con un solo tiro di danno; Deflagrazione Respingente vale anche per Spruzzo Velenoso; Lancia Occulta non è più offerta per Tocco Gelido (chi l'ha già scelta la tiene).",
+          "Stregone: nel 2024 Incantesimo Raddoppiato vale anche per Eroismo, Libertà di movimento e Forma gassosa, e Adattamento Acquatico dà nuoto pari al doppio della Velocità; nel 2014 le opzioni di Metamagia scelte non si possono più sostituire.",
+          "Paladino: nel 2014 Percezione del Divino ha 1 + Carisma usi, senza minimo; nel 2024 il destriero di Trova Destriero vola a 18 m.",
+          "Ladro 2024: Ladro di Incantesimi spende l'uso solo se il furto riesce.",
+          "Guerriero 2014: Atleta Straordinario allunga il salto in lungo con la Forza.",
+          "Esperto di abilità 2024 non accetta più la Maestria su un'abilità che l'ha già.",
+          "Barbaro 2014: nell'equipaggiamento di partenza puoi scegliere qualsiasi arma semplice, anche a distanza."
+        ],
+        "en": [
+          "Attunement: an item that requires it no longer gives the weapon's +N or ability scores until you are attuned. If one of your items shows lower numbers, attune to it.",
+          "Death saving throws: when you become stable the success and failure counts go back to zero.",
+          "In 2024, returning to life removes one Exhaustion level.",
+          "Weapons added from the catalog (Handaxe, Morningstar, crossbows) are now recognised for 2024 weapon masteries.",
+          "2024 Ranger: Ensnaring Strike, Hail of Thorns and Lightning Arrow are cast after the hit lands, picking the slot there.",
+          "2024 Warlock: Fiendish Vigor gives 12 temporary hit points; Agonizing Blast adds Charisma only once to cantrips with a single damage roll; Repelling Blast also works with Poison Spray; Eldritch Spear is no longer offered for Chill Touch (if you already picked it, you keep it).",
+          "Sorcerer: in 2024 Twinned Spell also works with Heroism, Freedom of Movement and Gaseous Form, and Aquatic Adaptation gives a swim speed of twice your Speed; in 2014 chosen Metamagic options can no longer be replaced.",
+          "Paladin: in 2014 Divine Sense has 1 + Charisma uses, with no minimum; in 2024 the Find Steed mount flies at 60 ft.",
+          "2024 Rogue: Spell Thief spends its use only when the theft succeeds.",
+          "2014 Fighter: Remarkable Athlete lengthens the running long jump with Strength.",
+          "2024 Skill Expert no longer accepts Expertise in a skill that already has it.",
+          "2014 Barbarian: the starting equipment lets you pick any simple weapon, ranged ones included."
+        ]
+      }
+    },
+    {
       "version": "3.9.0",
       "date": "2026-11-14",
       "added": {

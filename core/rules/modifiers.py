@@ -30,7 +30,7 @@ _FLAT_TARGET = {
     "reach": "reach", "save": "save", "death_save": "save", "concentration": "save", "spell_healing": "healing",
 }
 _FLAGS = {"advantage", "disadvantage", "auto_fail", "speed_zero", "speed_half", "speed_double", "carry_double", "fly_speed",
-          "climb_speed", "swim_speed",
+          "climb_speed", "swim_speed", "swim_speed_double",
           "maximize_healing", "magic_weapon"}
 _FLAG_FIELD = {"hp_max_half": "hp_half"}
 
@@ -60,6 +60,7 @@ class Applied:
     fly_speed: bool = False
     climb_speed: bool = False  # velocità di scalare pari a quella a terra (Pantera)
     swim_speed: bool = False  # idem per nuotare (Salmone)
+    swim_speed_double: bool = False  # velocità di nuotare pari al doppio di quella a terra (Adattamento Acquatico)
     fly_speed_value: int = 0  # velocità di volo fissa, in piedi (Angelo Vendicatore)
     ac_base: int | None = None  # CA di base minima se non si indossa armatura (Armatura Magica: 13 + Des)
     ac_min: int | None = None  # CA totale minima (Pelle Coriacea)
