@@ -10,6 +10,7 @@ import { profBonus } from '@/lib/dnd'
 import { featByKey } from '@/lib/feats'
 import { uiLang } from '@/lib/lang'
 import { SKILL_KEYS } from '@/lib/species'
+import { TOOLS, TOOL_CATEGORIES, toolLabel, type ToolCategory } from '@/lib/tools'
 import { loadSpellCatalog, localized, spellToForm, type SpellEntry } from '@/lib/srd/catalog'
 import { useUnitSettings } from '@/store/unitSettings'
 import type { Ability, CharacterFull } from '@/types'
@@ -57,7 +58,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const needs = feat?.needs ?? []
   const is2014 = !key.startsWith('2024_')
   const [picks, setPicks] = useState<string[]>([])
-  const [tool, setTool] = useState('')
+  const [tools, setTools] = useState<string[]>([]) // chiavi del catalogo (Artigiano, Musicista)
   const [texts, setTexts] = useState(['', '', ''])
   const [list, setList] = useState('')
   const [stat, setStat] = useState('')
@@ -75,11 +76,11 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
     if (open && needsSpells) void loadSpellCatalog(char.rules_edition === '2024' ? '2024' : '2014').then(setCatalog)
   }, [open, needsSpells, char.rules_edition])
 
-  const addTool = () => {
-    const name = tool.trim()
-    if (name && !picks.includes(`tool:${name}`)) setPicks(toggled(picks, `tool:${name}`, 3))
-    setTool('')
-  }
+  // Strumenti del catalogo: niente testo libero, quelli già sulla scheda non si propongono
+  const ownedTools = (char.tool_proficiencies ?? {}) as Record<string, unknown>
+  const freeTools = (cats: readonly ToolCategory[]) => TOOLS.filter((x) => cats.includes(x.category) && !ownedTools[x.key])
+  const toolKey = needs.find((n) => n === 'tools' || n === 'instruments')
+  const toolCats: ToolCategory[] = toolKey === 'tools' ? ['artisan'] : ['instrument']
   const toggleSpell = (e: SpellEntry, max: number) => {
     const on = chosen.some((c) => c.index === e.index)
     const sameLevel = chosen.filter((c) => c.level === e.level).length
@@ -87,7 +88,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
     else if (sameLevel < max) setChosen([...chosen, e])
   }
 
-  const textKey = needs.find((n) => n === 'tools' || n === 'instruments' || n === 'languages')
+  const textKey = needs.find((n) => n === 'languages')
   const ritualCount = has('list') ? 2 : profBonus(char.total_level ?? 1)
   const manyKey = needs.find((n) => n === 'maneuvers' || n === 'weapons')
   const manyCount = manyKey === 'weapons' ? 4 : 2
@@ -103,6 +104,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const expertiseOptions = (has('skill') ? SKILL_KEYS.filter((s) => proficient(s) || s === skill) : SKILL_KEYS).filter((s) => !expert(s))
 
   const ready = has('picks') ? picks.length === 3
+    : toolKey ? tools.length === 3
     : textKey ? texts.every((x) => x.trim()) && new Set(texts.map((x) => x.trim().toLowerCase())).size === 3
       : manyKey ? many.length === manyCount
       : has('list') && has('rituals') ? !!list && chosen.length === 2
@@ -127,6 +129,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
 
   const payload = (): { options: Record<string, string | string[]>; spells: ReturnType<typeof spellPayload> } => {
     if (has('picks')) return { options: { picks }, spells: [] }
+    if (toolKey) return { options: { [toolKey]: tools }, spells: [] }
     if (textKey) return { options: { [textKey]: texts.map((x) => x.trim()) }, spells: [] }
     if (manyKey) return { options: { [manyKey]: many }, spells: [] }
     if (has('list')) return { options: is2014 ? { list } : { list, ability: stat }, spells: spellPayload() }
@@ -178,18 +181,38 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
                   {t(`character.skills.${s}`)}
                 </Pressable>
               ))}
-              {picks.filter((p) => p.startsWith('tool:')).map((p) => (
-                <Pressable key={p} onClick={() => setPicks(toggled(picks, p, 3))} aria-pressed className={chip(true)}>{p.slice(5)}</Pressable>
-              ))}
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text" value={tool} maxLength={50} onChange={(e) => setTool(e.target.value)}
-                aria-label={t('character.feats.tool_name')} placeholder={t('character.feats.tool_name')} className={FIELD}
-              />
-              <Pressable onClick={addTool} disabled={!tool.trim() || picks.length >= 3} className={`${chip(false)} shrink-0 disabled:opacity-40`}>
-                {t('character.feats.tool_add')}
-              </Pressable>
+            {TOOL_CATEGORIES.map((cat) => {
+              const free = freeTools([cat])
+              if (free.length === 0) return null
+              return (
+                <div key={cat} className="space-y-2">
+                  {hint(t(`character.tools.category_${cat}`))}
+                  <div className="flex flex-wrap gap-2">
+                    {free.map((x) => {
+                      const k = `tool:${x.key}`
+                      return (
+                        <Pressable key={k} onClick={() => setPicks(toggled(picks, k, 3))} aria-pressed={picks.includes(k)} className={chip(picks.includes(k))}>
+                          {toolLabel(x.key, i18n.language)}
+                        </Pressable>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        )}
+
+        {toolKey && (
+          <>
+            {hint(t('character.feats.tools_hint', { n: 3 - tools.length }))}
+            <div className="flex flex-wrap gap-2">
+              {freeTools(toolCats).map((x) => (
+                <Pressable key={x.key} onClick={() => setTools(toggled(tools, x.key, 3))} aria-pressed={tools.includes(x.key)} className={chip(tools.includes(x.key))}>
+                  {toolLabel(x.key, i18n.language)}
+                </Pressable>
+              ))}
             </div>
           </>
         )}
