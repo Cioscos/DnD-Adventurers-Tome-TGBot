@@ -56,7 +56,7 @@ _FOCUS = ("component-pouch", "arcane-focus")
 Groups = tuple[tuple[str, ...], ...]
 
 STARTING_EQUIPMENT: dict[tuple[Edition, str], Groups] = {
-    ("2014", "barbarian"): (("greataxe", _MM), ("handaxe*2", _SM), (_E,), ("javelin*4",)),
+    ("2014", "barbarian"): (("greataxe", _MM), ("handaxe*2", _S), (_E,), ("javelin*4",)),
     ("2014", "bard"): (("rapier", "longsword", _S), ("diplomat-pack", "entertainer-pack"), ("lute", "instrument"),
                        ("leather-armor",), ("dagger",)),
     ("2014", "cleric"): (("mace", "warhammer"), ("scale-mail", "leather-armor", "chain-mail"), (_XB, _S),
