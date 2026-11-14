@@ -16,6 +16,7 @@ from core.rules.edition import character_edition, class_key
 from core.rules.types import RuleContext
 
 RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "epic_boon:19"]}
+TOOL_SEED_FLAG = "tool_choices_seeded"  # settings: strumenti sulla scheda già contati nelle scelte di classe (una volta)
 FREE_KNOWN_KEY = "free_known_spells"  # settings: id degli incantesimi che non contano fra i conosciuti (Segreti Magici Aggiuntivi)
 
 
@@ -73,6 +74,13 @@ def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
     if ch.grants == "save":
         char.saving_throws = {**(char.saving_throws or {}), **{key: True for key in keys}}
         return
+    tools = [k[len("tool:"):] for k in keys if k.startswith("tool:")]
+    if tools:
+        from core.rules.tools import add_tools  # import locale come gli altri moduli delle regole
+        add_tools(char, tools)
+        if ch.grants == "expert":
+            char.tool_proficiencies = {**char.tool_proficiencies, **{k: "expert" for k in tools}}
+        keys = [k for k in keys if not k.startswith("tool:")]
     skills = dict(char.skills or {})
     for key in keys:
         if not (ch.grants == "proficient" and skills.get(key) == "expert"):
@@ -118,18 +126,50 @@ def seed_from_sheet(char: Any, class_ids: set[int] | None = None) -> None:
     """R39, personaggio esistente prima del catalogo o importato: una scelta che si deduce dalla scheda si semina con ciò
     che c'è già (le abilità con maestria riempiono Maestria, fino al limite), così non viene chiesta una seconda volta."""
     claimed: set[str] = set()
+    tools_once = not (char.settings or {}).get(TOOL_SEED_FLAG)
+    taken_tools = _feat_tools(char) | {k for c in char.classes for opts in (c.options or {}).values()
+                                       for k in opts if isinstance(k, str) and k.startswith("tool:")}
     for cls in char.classes:
-        if class_ids is not None and cls.id not in class_ids:
-            continue
+        retro = class_ids is None or cls.id in class_ids
         for ch in active_choice_specs(char, cls):
-            if ch.grants != "expert" or (cls.options or {}).get(ch.group):
+            if (cls.options or {}).get(ch.group):
                 continue
             reached = [lvl for lvl in ch.levels if lvl <= cls.level]
             limit = ch.levels[max(reached)] if reached else 0
-            have = [k for k, v in (char.skills or {}).items() if v == "expert" and k not in claimed][:limit]
+            if ch.grants == "proficient" and ch.owned and (retro or tools_once):
+                # Strumenti già sulla scheda (anche di un personaggio già passato dal catalogo, una volta sola): sono la
+                # scelta, così non se ne aggiungono altri. Esclusi quelli dei talenti e delle altre scelte.
+                ctx = RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)
+                have = [k for k in ch.owned(ctx) if k.startswith("tool:") and k not in taken_tools][:limit]
+                if have:
+                    cls.options = {**(cls.options or {}), ch.group: have}
+                    taken_tools.update(have)
+                continue
+            if ch.grants != "expert" or not retro:
+                continue
+            experts = [k for k, v in (char.skills or {}).items() if v == "expert"]
+            experts += [f"tool:{k}" for k in ch.expert_tools if (getattr(char, "tool_proficiencies", None) or {}).get(k) == "expert"]
+            have = [k for k in experts if k not in claimed][:limit]
             if have:
                 cls.options = {**(cls.options or {}), ch.group: have}
                 claimed.update(have)
+    if tools_once:
+        char.settings = {**(char.settings or {}), TOOL_SEED_FLAG: True}
+
+
+def _feat_tools(char: Any) -> set[str]:
+    """Strumenti presi con un talento (``tool:<chiave>``; i nomi salvati prima del catalogo si convertono)."""
+    from core.data.tools import TOOLS, tool_key
+    from core.rules.catalog.feats import _abilities  # righe non caricate: nessun lazy load asincrono
+    out: set[str] = set()
+    for a in _abilities(char):
+        if not (a.feature_key or "").startswith("feat."):
+            continue
+        opts = a.options or {}
+        names = [*(opts.get("tools") or []), *(opts.get("instruments") or []),
+                 *(p[len("tool:"):] for p in opts.get("picks") or [] if isinstance(p, str) and p.startswith("tool:"))]
+        out |= {f"tool:{k}" for n in names if isinstance(n, str) and (k := n if n in TOOLS else tool_key(n))}
+    return out
 
 
 def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
