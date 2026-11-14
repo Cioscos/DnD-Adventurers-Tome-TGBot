@@ -602,7 +602,8 @@ FEATURES = (
     feature("student_of_war", CK, ED, 3, "Studioso di Guerra / Student of War (Maestro di Battaglia 3, pag. 73)",
             ("Studioso di Guerra", "Student of War"),
             ("Competenza in un tipo di strumenti da artigiano a tua scelta.", "Proficiency with one type of artisan's tools of your choice."),
-            subclass="battle_master", no_row=True, choices=(tool_choice("student_of_war", {3: 1}, ("artisan",)),),
+            subclass="battle_master", no_row=True, # stesso gruppo del 2024, dove «student_of_war» è l'abilità: il cambio di edizione conserva lo strumento
+            choices=(tool_choice("student_of_war_tool", {3: 1}, ("artisan",)),),
             covered_by="test_class_tool_choices.py"),
     feature("know_your_enemy", CK, ED, 7, "Conosci il Tuo Nemico / Know Your Enemy (Maestro di Battaglia 7, pag. 73)",
             ("Conosci il Tuo Nemico", "Know Your Enemy"),

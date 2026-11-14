@@ -127,15 +127,24 @@ def seed_from_sheet(char: Any, class_ids: set[int] | None = None) -> None:
     che c'è già (le abilità con maestria riempiono Maestria, fino al limite), così non viene chiesta una seconda volta."""
     claimed: set[str] = set()
     tools_once = not (char.settings or {}).get(TOOL_SEED_FLAG)
-    taken_tools = _feat_tools(char) | {k for c in char.classes for opts in (c.options or {}).values()
+    taken_tools = _feat_tools(char) | _granted_tools(char) | {k for c in char.classes for opts in (c.options or {}).values()
                                        for k in opts if isinstance(k, str) and k.startswith("tool:")}
     for cls in char.classes:
         retro = class_ids is None or cls.id in class_ids
         for ch in active_choice_specs(char, cls):
-            if (cls.options or {}).get(ch.group):
-                continue
             reached = [lvl for lvl in ch.levels if lvl <= cls.level]
             limit = ch.levels[max(reached)] if reached else 0
+            chosen = list((cls.options or {}).get(ch.group, []))
+            expert_tools = [f"tool:{k}" for k in ch.expert_tools
+                            if (getattr(char, "tool_proficiencies", None) or {}).get(k) == "expert"]
+            if chosen and tools_once and ch.grants == "expert" and len(chosen) < limit:
+                # Maestria già in parte scelta prima del catalogo degli strumenti: gli arnesi con Maestria contano
+                extra = [k for k in expert_tools if k not in chosen][:limit - len(chosen)]
+                if extra:
+                    cls.options = {**(cls.options or {}), ch.group: [*chosen, *extra]}
+                continue
+            if chosen:
+                continue
             if ch.grants == "proficient" and ch.owned and (retro or tools_once):
                 # Strumenti già sulla scheda (anche di un personaggio già passato dal catalogo, una volta sola): sono la
                 # scelta, così non se ne aggiungono altri. Esclusi quelli dei talenti e delle altre scelte.
@@ -148,13 +157,20 @@ def seed_from_sheet(char: Any, class_ids: set[int] | None = None) -> None:
             if ch.grants != "expert" or not retro:
                 continue
             experts = [k for k, v in (char.skills or {}).items() if v == "expert"]
-            experts += [f"tool:{k}" for k in ch.expert_tools if (getattr(char, "tool_proficiencies", None) or {}).get(k) == "expert"]
+            experts += expert_tools
             have = [k for k in experts if k not in claimed][:limit]
             if have:
                 cls.options = {**(cls.options or {}), ch.group: have}
                 claimed.update(have)
     if tools_once:
         char.settings = {**(char.settings or {}), TOOL_SEED_FLAG: True}
+
+
+def _granted_tools(char: Any) -> set[str]:
+    """Strumenti concessi da privilegi e talenti attivi (Cuoco: utensili da cuoco): non sono una scelta di classe."""
+    from core.rules.catalog import active_features
+    return {f"tool:{t}" for spec, _row in active_features(char)
+            for t in (getattr(spec, "proficiency_grants", None) or {}).get("tools", ())}
 
 
 def _feat_tools(char: Any) -> set[str]:

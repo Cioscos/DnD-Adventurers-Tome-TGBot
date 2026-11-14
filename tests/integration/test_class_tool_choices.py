@@ -64,7 +64,7 @@ async def test_battle_master_2014_chooses_an_artisan_tool(client):
     r = await client.post("/characters", json={"name": "BM", "initial_class": {
         "class_name": "fighter", "level": 3, "subclass": "Maestro di Battaglia"}})
     cid = r.json()["id"]
-    assert _keys(_choice(await _full(client, cid), "student_of_war")) == _category("artisan")
+    assert _keys(_choice(await _full(client, cid), "student_of_war_tool")) == _category("artisan")
 
 
 async def test_rogue_2014_expertise_offers_thieves_tools(client):
@@ -131,6 +131,48 @@ async def test_imported_rogue_expert_thieves_tools_counts_as_expertise(client, t
         char.settings = {k: v for k, v in (char.settings or {}).items() if k != "retrofit_done"}  # mai passato dal catalogo
         for cls in char.classes:
             cls.options = {}
+        await s.commit()
+    from api.services.catalog_migration import migrate_catalog
+    assert await migrate_catalog(test_session_factory) >= 1
+    assert _choice(await _full(client, cid), "expertise") is None
+
+
+# ---------------------------------------------------------------------------
+# Revisione finale
+# ---------------------------------------------------------------------------
+
+async def test_battle_master_tool_choice_survives_an_edition_switch(client):
+    r = await client.post("/characters", json={"name": "BM", "initial_class": {
+        "class_name": "fighter", "level": 3, "subclass": "Maestro di Battaglia"}})
+    cid = r.json()["id"]
+    r = await _resolve(client, cid, "student_of_war_tool", ["tool:smiths_tools"])
+    assert r.status_code == 200, r.text
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    full = await _full(client, cid)
+    assert _choice(full, "student_of_war") is not None  # l'abilità 2024 resta da scegliere
+    assert _choice(full, "student_of_war_tool") is None  # lo strumento è già scelto
+
+
+async def test_seed_skips_tools_granted_by_a_feat_feature(client, test_session_factory):
+    from tests.integration.rules.test_feats_take_complete import _take
+    cid = await _new(client, "monk", level=4, edition="2024")
+    r = await _take(client, cid, "2024_chef", "constitution")
+    assert r.status_code == 201, r.text
+    assert (await _full(client, cid))["tool_proficiencies"].get("cooks_utensils") is True
+    await _as_existing(test_session_factory, cid, {"cooks_utensils": True})
+    assert _choice(await _full(client, cid), "monk_tool")["count"] == 1
+
+
+async def test_migrated_rogue_expert_thieves_tools_counts_once_seeded(client, test_session_factory):
+    cid = await _rogue(client, 1)
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).options(selectinload(Character.classes)).where(Character.id == cid))).scalar_one()
+        char.skills = {**(char.skills or {}), "stealth": "expert"}
+        char.tool_proficiencies = {"thieves_tools": "expert"}
+        char.pending_choices = [c for c in char.pending_choices if c["kind"] != "class_option"]
+        char.settings = {k: v for k, v in (char.settings or {}).items() if k != "tool_choices_seeded"}  # già passato dal catalogo
+        for cls in char.classes:
+            cls.options = {"expertise": ["stealth"]}
         await s.commit()
     from api.services.catalog_migration import migrate_catalog
     assert await migrate_catalog(test_session_factory) >= 1
