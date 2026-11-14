@@ -33,7 +33,8 @@ async def test_the_lore_college_brings_its_rows_at_the_right_level(client):
 async def test_lore_bonus_proficiencies_pick_three_skills_and_come_before_expertise(client):
     cid = await _bard24(client, 3, LORE)
     await _skills(client, cid, acrobatics=True)
-    pending = [c for c in (await _full(client, cid))["pending_choices"] if c["kind"] == "class_option"]
+    pending = [c for c in (await _full(client, cid))["pending_choices"]
+               if c["kind"] == "class_option" and c["group"] != "bard_instruments"]
     assert [c["group"] for c in pending][:2] == ["lore_skills", "expertise"]
     choice = _choice(await _full(client, cid), "lore_skills")
     assert choice["count"] == 3 and "acrobatics" not in {o["key"] for o in choice["options"]}

@@ -11,7 +11,7 @@ from dataclasses import replace
 from typing import Any
 
 from core.rules.condition_removal import ConditionRemoval
-from core.rules.catalog._common import INCAPACITATING, feature, skill_label, state_on, style_options
+from core.rules.catalog._common import INCAPACITATING, feature, skill_label, state_on, style_options, tool_choice
 from core.rules.catalog.y2014.fighter import (
     DISARMING, DISTRACTING, ELDRITCH_STRIKE, ELDRITCH_STRIKE_CAST, FEINT_STRIKE, GOADING, MANEUVER_KEYS, MANEUVERING, MENACING,
     ONE_MANEUVER, PARRY, PRECISION, PUSHING, RIPOSTE, SWEEPING, TRIP, _evasive_bonus, _evasive_state,
@@ -293,7 +293,8 @@ BATTLE_MASTER = (
         ("Competenza in un'abilità della lista del guerriero e in un tipo di strumenti da artigiano a tua scelta.",
          "Proficiency in a skill from the fighter list and in one type of artisan's tools of your choice."),
         choices=(ChoiceSpec(group="student_of_war", levels={3: 1}, options=_student_options, label=skill_label, grants="proficient",
-                            owned=_student_owned),)),  # gli strumenti: lavori-successivi (R40)
+                            owned=_student_owned),
+                 tool_choice("student_of_war_tool", {3: 1}, ("artisan",)))),
     _bm("know_your_enemy", 7, "Conosci il Tuo Nemico", "Know Your Enemy", 94,
         ("Azione bonus: di una creatura visibile entro 9 m scopri Immunità, Resistenze e Vulnerabilità. Un uso per riposo lungo, o un dado.",
          "Bonus action: learn the Immunities, Resistances and Vulnerabilities of a creature you see within 30 ft. One use per long rest, or a die."),

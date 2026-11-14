@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.data.damage_types import DAMAGE_TYPES
-from core.rules.catalog._common import feature, state_on
+from core.rules.catalog._common import feature, first_class, state_on, tool_choice
 from core.rules.states import begin_state
 from core.rules.condition_removal import ConditionRemoval
 from core.rules.types import (
@@ -387,8 +387,9 @@ FEATURES = (
     feature("proficiencies", CK, ED, 1, "Competenze / Proficiencies (Monaco 1, pag. 90)", ("Competenze", "Proficiencies"),
             ("Armi semplici e spade corte, TS Forza e Destrezza, 2 abilità fra sei, uno strumento. Nessuna armatura.",
              "Simple weapons and shortswords, Strength and Dexterity saves, 2 skills from six, one tool. No armor."),
-            no_row=True, covered_by="core/rules/proficiencies.py (class_proficiencies) e la scelta ClassSkillChoice; "
-                                    "lo strumento è in lavori-successivi (R40); test_class_proficiencies_first_class_and_multiclass"),
+            no_row=True, choices=(tool_choice("monk_tool", {1: 1}, ("artisan", "instrument"), applies=first_class),),
+            covered_by="core/rules/proficiencies.py (class_proficiencies) e la scelta ClassSkillChoice; "
+                       "test_class_proficiencies_first_class_and_multiclass, test_class_tool_choices.py"),
     feature("equipment", CK, ED, 1, "Equipaggiamento / Equipment (Monaco 1, pag. 90)", ("Equipaggiamento", "Equipment"),
             ("Dotazione iniziale: spada corta o un'arma semplice, dotazione da avventuriero o da esploratore, 10 dardi.",
              "Starting gear: a shortsword or a simple weapon, a dungeoneer's or explorer's pack, 10 darts."),

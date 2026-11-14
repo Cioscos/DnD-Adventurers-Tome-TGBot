@@ -127,7 +127,7 @@ async def test_expertise_offers_the_proficient_skills_and_doubles_the_bonus(clie
     cid = await _rogue(client, 1, dexterity=16)
     await _skills(client, cid, stealth=True, acrobatics=True, perception=True)
     choice = _choice(await _full(client, cid), "expertise")
-    assert {o["key"] for o in choice["options"]} == {"stealth", "acrobatics", "perception"}
+    assert {o["key"] for o in choice["options"]} == {"stealth", "acrobatics", "perception", "tool:thieves_tools"}  # anche gli arnesi della classe
     r = await _resolve(client, cid, "expertise", "stealth", "acrobatics")
     assert r.status_code == 200, r.text
     skills = r.json()["skills"]
@@ -149,7 +149,7 @@ async def test_the_second_expertise_excludes_the_skills_already_expert(client):
     row = (await _full(client, cid))["classes"][0]["id"]
     await client.patch(f"/characters/{cid}/classes/{row}", json={"level": 6})
     choice = _choice(await _full(client, cid), "expertise")
-    assert choice["count"] == 2 and {o["key"] for o in choice["options"]} == {"perception", "insight", "athletics"}
+    assert choice["count"] == 2 and {o["key"] for o in choice["options"]} == {"perception", "insight", "athletics", "tool:thieves_tools"}
 
 
 # ---------------------------------------------------------------------------

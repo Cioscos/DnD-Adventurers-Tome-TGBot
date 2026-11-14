@@ -425,7 +425,8 @@ async def test_a_2014_bard_that_becomes_2024_gets_the_2024_rows_and_keeps_its_sp
 async def test_an_existing_2024_bard_without_the_catalog_receives_no_new_choice_but_the_rules(client):
     cid = await _bard24(client, 3)
     pending = (await _full(client, cid))["pending_choices"]
-    assert [c["group"] for c in pending if c["kind"] == "class_option"] == ["expertise"]
+    # gli strumenti musicali sono una scelta della classe, non del retrofit
+    assert [c["group"] for c in pending if c["kind"] == "class_option"] == ["bard_instruments", "expertise"]
 
 
 async def test_a_2014_valor_bard_that_becomes_2024_gets_martial_training_and_the_2024_battle_magic(client):

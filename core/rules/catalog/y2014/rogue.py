@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from core.rules.catalog._common import feature, save_spell as _save_spell, skill_label, state_on
+from core.rules.catalog._common import feature, save_spell as _save_spell, state_on, tool_choice_label
 from core.rules.catalog.y2014.bard import _expertise_options
 from core.rules.catalog.y2014.fighter import _weapon_in_hand
 from core.rules.states import STOLEN_SPELL, begin_state
@@ -60,7 +60,15 @@ def _knows_mage_hand(ctx: RuleContext) -> bool:
 # Maestria
 # ---------------------------------------------------------------------------
 
-EXPERTISE = ChoiceSpec(group="expertise", levels={1: 2, 6: 4}, options=_expertise_options, label=skill_label, grants="expert")
+def _rogue_expertise_options(ctx: RuleContext) -> list[str]:
+    """Abilità competenti senza Maestria e, se competenti senza Maestria, gli arnesi da scasso."""
+    tools = getattr(ctx.char, "tool_proficiencies", None) or {}
+    return [*_expertise_options(ctx), *(f"tool:{k}" for k in EXPERT_TOOLS if tools.get(k) is True)]
+
+
+EXPERT_TOOLS = ("thieves_tools",)
+EXPERTISE = ChoiceSpec(group="expertise", levels={1: 2, 6: 4}, options=_rogue_expertise_options, label=tool_choice_label,
+                       grants="expert", expert_tools=EXPERT_TOOLS)
 
 
 # ---------------------------------------------------------------------------

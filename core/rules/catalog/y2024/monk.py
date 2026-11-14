@@ -15,7 +15,7 @@ from typing import Any
 
 from core.data.damage_types import DAMAGE_TYPES
 from core.game.attacks import martial_arts_die
-from core.rules.catalog._common import feature, state_on
+from core.rules.catalog._common import feature, first_class, state_on, tool_choice
 from core.rules.catalog.y2014.monk import (
     _LIGHT_CHOICE, DIAMOND_REROLL, EVASION_FAILED, EVASION_SAVE, EVASION_SUCCESS, FLURRY_STATE, FLURRY_STRIKE,
     SLOW_FALL_OPTION, STEP_ADVANTAGE, _bare, _can_act, _dc_say, _flurry_hit, _ki_dc, _ki_row, _lacks_save_proficiency, _mod,
@@ -228,7 +228,8 @@ BASE_ROWS = (
     feature("proficiencies", CK, ED, 1, "Competenze / Proficiencies (Monaco 1, pag. 101)", ("Competenze", "Proficiencies"),
             ("TS Forza e Destrezza, 2 abilità fra sei, armi semplici e da guerra con Leggera, uno strumento. Nessuna armatura; da seconda classe nulla.",
              "Strength and Dexterity saves, 2 skills from six, simple weapons and martial weapons with Light, one tool. No armor; none as a second class."),
-            no_row=True, covered_by=f"{_ROWS}; lo strumento è in lavori-successivi (R40); "
+            no_row=True, choices=(tool_choice("monk_tool", {1: 1}, ("artisan", "instrument"), applies=first_class),),
+            covered_by=f"{_ROWS}; test_class_tool_choices.py; "
                                     "test_proficiencies_come_from_the_2024_class_table_and_a_second_class_gets_none"),
     feature("equipment", CK, ED, 1, "Equipaggiamento / Equipment (Monaco 1, pag. 101)", ("Equipaggiamento", "Equipment"),
             ("Dotazione iniziale a scelta: lancia, 5 pugnali, uno strumento, zaino da esploratore e 11 mo, oppure 50 mo.",

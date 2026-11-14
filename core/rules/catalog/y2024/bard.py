@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.rules.catalog._common import INCAPACITATING, feature, skill_label
+from core.rules.catalog._common import INCAPACITATING, feature, first_class, skill_label, tool_choice
 from core.rules.catalog.y2024.bard_colleges import FEATURES as COLLEGE_FEATURES, note_inspiration_spent
 from core.rules.catalog.y2014.bard import (
     BI, COMBAT_INSPIRATION, _expertise_options, _inspiration_row, _no_options, inspiration_die,
@@ -122,8 +122,10 @@ CLASS_FEATURES = (
             ("Dado Vita d8, TS Destrezza e Carisma, 3 abilità, armi semplici, armature leggere, 3 strumenti musicali.",
              "Hit die d8, Dexterity and Charisma saves, 3 skills, simple weapons, light armor, 3 musical instruments."),
             # PF, TS, armi, armature e abilità: api/routers/classes.py e core/rules/proficiencies.py; gli strumenti
-            # musicali a scelta e l'equipaggiamento A/B no (R32, R40)
-            no_row=True, covered_by="lavori-successivi"),
+            # musicali: 3 da prima classe, 1 in multiclasse. L'equipaggiamento A/B no (R32)
+            no_row=True, choices=(tool_choice("bard_instruments", {1: 3}, ("instrument",), applies=first_class),
+                     tool_choice("bard_instruments", {1: 1}, ("instrument",), applies=lambda c: not first_class(c))),
+            covered_by="test_class_tool_choices.py"),
     feature("bardic_inspiration", CK, ED, 1, "Ispirazione Bardica / Bardic Inspiration (Bardo 1, pag. 59)",
             ("Ispirazione Bardica", "Bardic Inspiration"),
             ("Azione bonus: una creatura entro 18 m riceve un dado (d6, d8, d10, d12) per 1 ora; se fallisce un Test d20 lo tira e lo somma.",
@@ -191,8 +193,8 @@ CLASS_FEATURES = (
             ("Requisito Carisma 13. Da multiclasse: 1 abilità, 1 strumento musicale, armature leggere.",
              "Requires Charisma 13. As a multiclass: 1 skill, 1 musical instrument, light armor."),
             # Armatura leggera, 1 abilità e requisito Carisma 13: core/rules/proficiencies.py (as_multiclass) e
-            # webapp/src/data/multiclassPrereqs.ts (D2). Lo strumento a scelta no (R40).
-            no_row=True, covered_by="lavori-successivi"),
+            # webapp/src/data/multiclassPrereqs.ts (D2). Lo strumento musicale: la scelta dei Tratti Base.
+            no_row=True, covered_by="test_class_tool_choices.py"),
 )
 
 # I privilegi dei Collegi vengono prima: le abilità di Competenze Bonus (Sapienza) servono a Maestria (R39)

@@ -10,7 +10,7 @@ from typing import Any
 
 from core.data.damage_types import LABELS_IT, canonical_damage_type
 from core.game.item_bonuses import item_meta
-from core.rules.catalog._common import feature, save_spell as _save_spell, state_on, style_options
+from core.rules.catalog._common import feature, save_spell as _save_spell, state_on, style_options, tool_choice
 from core.rules.states import begin_state, has_state
 from core.rules.types import (
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseToggle,
@@ -602,7 +602,8 @@ FEATURES = (
     feature("student_of_war", CK, ED, 3, "Studioso di Guerra / Student of War (Maestro di Battaglia 3, pag. 73)",
             ("Studioso di Guerra", "Student of War"),
             ("Competenza in un tipo di strumenti da artigiano a tua scelta.", "Proficiency with one type of artisan's tools of your choice."),
-            subclass="battle_master", no_row=True, covered_by="lavori-successivi"),
+            subclass="battle_master", no_row=True, choices=(tool_choice("student_of_war", {3: 1}, ("artisan",)),),
+            covered_by="test_class_tool_choices.py"),
     feature("know_your_enemy", CK, ED, 7, "Conosci il Tuo Nemico / Know Your Enemy (Maestro di Battaglia 7, pag. 73)",
             ("Conosci il Tuo Nemico", "Know Your Enemy"),
             ("Dopo 1 minuto fuori dal combattimento a osservare una creatura, il GM ti dice se è pari, superiore o inferiore a te in due tratti.",

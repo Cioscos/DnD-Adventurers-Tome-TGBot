@@ -5,7 +5,7 @@ from typing import Any
 
 from core.data.labels import SKILL_LABELS_IT
 from core.rules.states import has_state
-from core.rules.types import FeatureSpec, RuleContext
+from core.rules.types import ChoiceSpec, FeatureSpec, RuleContext
 from core.utils.session_view import armor_category
 
 INCAPACITATING = ("incapacitated", "paralyzed", "petrified", "stunned", "unconscious")
@@ -115,6 +115,13 @@ def owned_tool_keys(ctx: RuleContext, categories: tuple[str, ...]) -> list[str]:
     from core.data.tools import TOOLS
     have = getattr(ctx.char, "tool_proficiencies", None) or {}
     return [f"{TOOL_PREFIX}{k}" for k, t in TOOLS.items() if t.category in categories and have.get(k)]
+
+
+def tool_choice(group: str, levels: dict[int, int], categories: tuple[str, ...], applies=None) -> ChoiceSpec:
+    """Scelta di strumenti del catalogo (``tool:<chiave>``) che diventano competenze nella colonna."""
+    return ChoiceSpec(group=group, levels=levels, options=lambda ctx: tool_option_keys(ctx, categories),
+                      label=tool_choice_label, grants="proficient", owned=lambda ctx: owned_tool_keys(ctx, categories),
+                      applies=applies)
 
 
 def first_class(ctx: RuleContext) -> bool:
