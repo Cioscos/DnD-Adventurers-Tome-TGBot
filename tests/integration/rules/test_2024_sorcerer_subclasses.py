@@ -134,7 +134,8 @@ async def test_revelation_in_flesh_costs_a_point_per_benefit_and_lasts_ten_minut
     state = next(s for s in await _states(client, cid) if s["key"] == "revelation_in_flesh")
     assert state["rounds_left"] == 100 and set(state["data"]["benefits"]) == {"swim", "fly"}
     full = await _full(client, cid)
-    assert full["computed"]["fly_speed"] == full["computed"]["speed"] and full["computed"]["swim_speed"] == full["computed"]["speed"]
+    # Adattamento Acquatico: nuoto pari al DOPPIO della Velocità (p.146); Volo Luminescente: volo pari alla Velocità
+    assert full["computed"]["fly_speed"] == full["computed"]["speed"] and full["computed"]["swim_speed"] == 2 * full["computed"]["speed"]
 
 
 async def test_revelation_in_flesh_without_a_benefit_is_refused_and_costs_nothing(client):

@@ -237,7 +237,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         speed=walk,
         fly_speed=(max(walk if rule_damage.fly_speed else 0, rule_damage.fly_speed_value) or None),
         climb_speed=walk if rule_damage.climb_speed else None,
-        swim_speed=walk if rule_damage.swim_speed else None,
+        swim_speed=walk * 2 if rule_damage.swim_speed_double else walk if rule_damage.swim_speed else None,
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
         resistances=sorted({*(stored.get("resistances") or []), *rule_damage.resistances}),
         immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),

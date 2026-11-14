@@ -218,7 +218,7 @@ SUBCLASS_ROWS: tuple = (
     aberrant("aquatic_adaptation", 14, *BENEFITS["swim"], 146,
              ("Beneficio di Rivelazione nella Carne: velocità di nuoto doppia della Velocità e respiro sott'acqua.",
               "Revelation in Flesh benefit: swim speed double your Speed and breathing underwater."),
-             modifiers=(Modifier("swim_speed", 1, when=_has_benefit("swim"), source=f"feature:{P}aquatic_adaptation"),), passive=True),
+             modifiers=(Modifier("swim_speed_double", 1, when=_has_benefit("swim"), source=f"feature:{P}aquatic_adaptation"),), passive=True),
     aberrant("glistening_flight", 14, *BENEFITS["fly"], 146,
              ("Beneficio di Rivelazione nella Carne: velocità di volo pari alla Velocità, puoi librarti.",
               "Revelation in Flesh benefit: flying speed equal to your Speed, and you can hover."),
