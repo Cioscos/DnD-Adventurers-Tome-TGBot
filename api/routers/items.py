@@ -38,7 +38,7 @@ from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score, roll_ability_mod
 from core.game.containers import container_meta, is_container
-from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
+from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta, weapon_magic_bonus
 from api.routers._helpers import (
     apply_con_hp as _apply_con_hp,
     collect_homebrew_notifications,
@@ -768,7 +768,7 @@ async def attack_with_weapon(
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
     damage_dice_str: str = meta.get("damage_dice", "1d4")
     properties: list[str] = meta.get("properties", [])
-    magic_bonus = int(meta.get("magic_bonus") or 0)
+    magic_bonus = weapon_magic_bonus(item)
 
     has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
     grip = body.grip if body else "one"

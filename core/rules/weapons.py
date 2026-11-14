@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
-from core.game.item_bonuses import item_meta
+from core.game.item_bonuses import item_meta, weapon_magic_bonus
 from core.game.stats import effective_ability_score, roll_ability_mod
 from core.rules.edition import character_edition, class_key
 from core.rules.proficiencies import is_weapon_proficient
@@ -209,7 +209,7 @@ def _cleave_dice(ctx: RuleContext, _inputs: dict) -> str:
     match = _DICE.match(dice)
     if match is None:
         return "0d4"
-    flat = int(match[3] or 0) + int(meta.get("magic_bonus") or 0) + min(_modifier(ctx), 0)
+    flat = int(match[3] or 0) + weapon_magic_bonus(ctx.item) + min(_modifier(ctx), 0)
     return f"{match[1]}d{match[2]}{flat:+d}" if flat else f"{match[1]}d{match[2]}"
 
 
