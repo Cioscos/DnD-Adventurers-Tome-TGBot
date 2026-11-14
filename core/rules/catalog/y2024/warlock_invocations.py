@@ -387,9 +387,14 @@ def prerequisites_met(ctx: RuleContext, key: str, owned: list[str]) -> bool:
     return not slug or knows_cantrip(ctx.char, next(i for i in CANTRIPS if _slug(i) == slug))
 
 
+# Lancia Occulta vale per trucchetti con gittata di almeno 3 m (p.155); Tocco Gelido 2024 è a Contatto (p.249). La riga resta per chi
+# l'ha già scelta (nessun personaggio perde nulla); non si offre più alle nuove scelte.
+RETIRED = frozenset({"eldritch_spear__chill_touch"})
+
+
 def available_invocations(ctx: RuleContext) -> list[str]:
     owned = _chosen(ctx)
-    return [key for key in LEVELS if prerequisites_met(ctx, key, owned)]
+    return [key for key in LEVELS if (key not in RETIRED or key in owned) and prerequisites_met(ctx, key, owned)]
 
 
 def picks_ok(ctx: RuleContext, picked: list[str]) -> bool:
