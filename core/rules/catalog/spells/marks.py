@@ -152,27 +152,35 @@ def _variant(option: RollOptionSpec, *, concentration: bool, rounds: int = MIN1,
 SMITE_GROUP = "paladin.divine_smite_cast"  # lo stesso gruppo della Punizione Divina 2024: una sola punizione per colpo
 
 
-def _cast_on_hit(variant: SpellVariant, base_slot: int) -> SpellVariant:
+def _cast_on_hit(variant: SpellVariant, base_slot: int, kind: str = "melee") -> SpellVariant:
     """2024: la punizione è un'azione bonus «subito dopo aver colpito» (mischia o senz'armi): si offre dopo il colpo a segno, con lo slot
     scelto lì (e i dadi che ne seguono), come la Punizione Divina. Non serve lanciarla prima, e un mancato non spreca lo slot.
-    Se l'hai già lanciata prima (stato sul lanciatore) vale l'opzione dello stato: non si conta due volte."""
-    opt = variant.options[0]
-    state = opt.key.removesuffix(":hit")
+    Se l'hai già lanciata prima (stato sul lanciatore) vale l'opzione dello stato: non si conta due volte.
+    ``kind``: ``melee`` (mischia o senz'armi), ``ranged`` (arma a distanza: Grandine di Spine, Freccia Fulminea), ``any`` (qualunque arma: Colpo Intrappolante).
+    Solo le opzioni dopo il colpo: quella «mancato» (Freccia Fulminea, after_roll) non può chiedere lo slot (RollOptionSpec lo vieta), resta sullo stato lanciato prima."""
+    first = variant.options[0]  # l'opzione dopo il colpo è sempre la prima
+    states = {o.cost.state_key for o in variant.options if o.cost and o.cost.state_key} | {first.key.removesuffix(":hit")}
 
     def at(ctx: RuleContext, inputs: dict) -> RuleContext:
         return replace(ctx, spell_data={**_data(ctx), "slot_level": int(inputs.get("slot_level") or base_slot)})
 
     def available(ctx: RuleContext) -> bool:
-        return (ctx.spell is None and ctx.attack_mode in ("melee", "offhand") and not (ctx.char.turn_state or {}).get("spell_slot_cast")
-                and not any(s.get("key") == state for s in ctx.char.active_states or []))
+        kind_ok = (ctx.attack_mode in ("melee", "offhand") if kind == "melee" else _ranged(ctx) if kind == "ranged" else ctx.item is not None)
+        return (ctx.spell is None and kind_ok and _own_attack(ctx) and not (ctx.char.turn_state or {}).get("spell_slot_cast")
+                and not any(s.get("key") in states for s in ctx.char.active_states or []))
 
-    def cast(_session, ctx: RuleContext, _inputs: dict) -> None:
+    def cast(_session, ctx: RuleContext, inputs: dict) -> None:
+        if ctx.spell_data is not None:  # lo slot scelto qui: il danno del mancato (letto dopo il pagamento) lo usa
+            ctx.spell_data["slot_level"] = int(inputs.get("slot_level") or base_slot)
         ctx.char.turn_state = {**(ctx.char.turn_state or {}), "spell_slot_cast": True, "leveled_cast": True, "bonus_spell_cast": True}
 
-    return replace(variant, on_hit=(replace(
-        opt, requires_input="slot", cost=Cost(spell_slot_min=base_slot), slot="bonus", group=SMITE_GROUP, available=available, on_confirm=cast,
-        extra_dice=(lambda c, i: opt.extra_dice(at(c, i), i)) if opt.extra_dice else None, effect=lambda c, i: opt.effect(at(c, i), i),
-        starts_concentration=variant.rounds if variant.concentration else None),))
+    def convert(opt: RollOptionSpec) -> RollOptionSpec:
+        return replace(
+            opt, requires_input="slot", cost=Cost(spell_slot_min=base_slot), slot="bonus", group=SMITE_GROUP, available=available, on_confirm=cast,
+            extra_dice=(lambda c, i: opt.extra_dice(at(c, i), i)) if opt.extra_dice else None, effect=lambda c, i: opt.effect(at(c, i), i),
+            starts_concentration=variant.rounds if variant.concentration else None)
+
+    return replace(variant, on_hit=tuple(convert(o) for o in variant.options if o.phase == "after_hit"))
 
 
 BLIND_AT = {"anchor": "owner", "edge": "end", "count": MIN1}  # 1 minuto sui turni del bersaglio (senza concentrazione)
@@ -350,8 +358,8 @@ SPELLS: tuple[SpellEffect, ...] = (
     _spell("thunderous_smite", "thunderous-smite", ("Punizione Tonante", "Thunderous Smite"), {"2014": _THUNDER_2014, "2024": _cast_on_hit(_THUNDER_2024, 1)}),
     _spell("staggering_smite", "staggering-smite", ("Punizione Demoralizzante", "Punizione Sconvolgente", "Staggering Smite"), {"2014": _STAGGER_2014, "2024": _cast_on_hit(_STAGGER_2024, 4)}),
     _spell("banishing_smite", "banishing-smite", ("Punizione Esiliante", "Colpo dell'Esilio", "Banishing Smite"), {"2014": _BANISH_2014, "2024": _cast_on_hit(_BANISH_2024, 5)}),
-    _spell("ensnaring_strike", "ensnaring-strike", ("Colpo Intrappolante", "Ensnaring Strike"), both(_ENSNARE)),
-    _spell("hail_of_thorns", "hail-of-thorns", ("Raffica di Spine", "Grandine di Spine", "Hail of Thorns"), {"2014": _HAIL(True), "2024": _HAIL(False)}),
-    _spell("lightning_arrow", "lightning-arrow", ("Freccia Folgorante", "Freccia Fulminea", "Lightning Arrow"), {"2014": _LIGHTNING(True), "2024": _LIGHTNING(False)}),
+    _spell("ensnaring_strike", "ensnaring-strike", ("Colpo Intrappolante", "Ensnaring Strike"), {"2014": _ENSNARE, "2024": _cast_on_hit(_ENSNARE, 1, "any")}),
+    _spell("hail_of_thorns", "hail-of-thorns", ("Raffica di Spine", "Grandine di Spine", "Hail of Thorns"), {"2014": _HAIL(True), "2024": _cast_on_hit(_HAIL(False), 1, "ranged")}),
+    _spell("lightning_arrow", "lightning-arrow", ("Freccia Folgorante", "Freccia Fulminea", "Lightning Arrow"), {"2014": _LIGHTNING(True), "2024": _cast_on_hit(_LIGHTNING(False), 3, "ranged")}),
     _spell("true_strike", "true-strike", ("Colpo Accurato", "True Strike"), {"2014": _TRUE_2014, "2024": _TRUE_2024}),
 )
