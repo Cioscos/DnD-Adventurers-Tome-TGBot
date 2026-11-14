@@ -67,7 +67,8 @@ def _chosen(ctx: RuleContext) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _agonizing(index: str, key: str) -> Modifier:
-    return Modifier("damage", lambda c: _mod(c, "charisma") * _beams(c), when=lambda c: is_cantrip(c.spell, index),
+    return Modifier("damage", lambda c: _mod(c, "charisma") * (_beams(c) if index == "eldritch-blast" else 1),  # un tiro per raggio solo per Deflagrazione Occulta
+                    when=lambda c: is_cantrip(c.spell, index),
                     source=f"feature:{CK}.{key}")
 
 
