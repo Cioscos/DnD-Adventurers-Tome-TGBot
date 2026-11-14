@@ -76,7 +76,9 @@ WEAPONS: dict[str, Weapon] = {
 }
 
 # Altri nomi italiani in uso: l'app e il compendio dicono «Falcione», il documento delle regole «Gliaia».
-_ALIASES = (("glaive", "Gliaia"),)
+_ALIASES = (("glaive", "Gliaia"), ("morningstar", "Stella del mattino"))  # il secondo è il nome dell'SRD italiano
+# Indici dell'SRD che non coincidono con la chiave («Ascia» è l'accetta, i nomi inglesi delle balestre sono «Crossbow, light»).
+_SRD_KEYS = {"crossbow_light": "light_crossbow", "crossbow_hand": "hand_crossbow", "crossbow_heavy": "heavy_crossbow"}
 # Il nome più lungo vince: «Lancia da cavaliere» prima di «Lancia».
 _NAMES = sorted(
     ((re.compile(rf"\b{re.escape(name.lower())}\b"), key)
@@ -95,6 +97,9 @@ def weapon_key(item: Any) -> str | None:
     declared = item_meta(item).get("base_weapon")
     if declared in WEAPONS:
         return declared
+    srd = str(item_meta(item).get("srd_index") or "").replace("-", "_")  # preso dal catalogo: l'indice vale più del nome
+    if (srd := _SRD_KEYS.get(srd, srd)) in WEAPONS:
+        return srd
     name = str(getattr(item, "name", "")).lower()
     return next((key for pattern, key in _NAMES if pattern.search(name)), None)
 
