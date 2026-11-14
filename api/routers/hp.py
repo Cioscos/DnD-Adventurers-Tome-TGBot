@@ -1316,8 +1316,9 @@ async def revive(
         char.is_dead = False
         char.current_hit_points = 1
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-        if exhaustion_level(char) >= 6:  # altrimenti resterebbe al livello che uccide
-            char.conditions = {**(char.conditions or {}), "exhaustion": 5}
+        level = exhaustion_level(char)
+        if level >= 6 or (level > 0 and character_edition(char) == "2024"):  # 6 ucciderebbe ancora; 2024 p.365: un livello in meno
+            char.conditions = {**(char.conditions or {}), "exhaustion": min(level - 1, 5)}
         end_concentration(char)
         await release_concentration_effects(session, char)
         await sync_zero_hp(session, char, True)
