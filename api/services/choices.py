@@ -12,7 +12,8 @@ from fastapi import HTTPException
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.rules.tools import add_tool_names
+from core.data.tools import TOOLS
+from core.rules.tools import add_tools
 from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES, LIST_ABILITY as _LIST_ABILITY, MI_ABILITIES as _MI_ABILITIES, MI_LISTS as _MI_LISTS
 from core.data.feats_2024 import ALL_FEATS as FEATS
@@ -447,10 +448,6 @@ def _text_list(value: Any, count: int) -> list[str]:
     return items
 
 
-def _add_tools(char: Character, names: list[str]) -> None:
-    add_tool_names(char, names)  # nomi del catalogo → colonna strutturata, gli altri in «Altro»
-
-
 # Scelte di abilità dei talenti 2024: quelle ammesse (None = tutte)
 _SKILL_CHOICES: dict[str, tuple[str, ...] | None] = {
     "feat.2024_keen_mind": ("arcana", "history", "investigation", "nature", "religion"),
@@ -527,19 +524,22 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     if "picks" in needs:
         picks = _text_list(options.get("picks"), 3)
         skills = [p for p in picks if not p.startswith("tool:")]
-        tools = [p[len("tool:"):].strip() for p in picks if p.startswith("tool:")]
-        if any(s not in SKILL_ABILITY_MAP for s in skills) or not all(tools):
+        tools = [p[len("tool:"):] for p in picks if p.startswith("tool:")]
+        if any(s not in SKILL_ABILITY_MAP for s in skills) or any(t not in TOOLS for t in tools):
             raise _bad("feat_options_invalid")
         current = dict(char.skills or {})
         for s in skills:
             current[s] = "expert" if current.get(s) == "expert" else True
         char.skills = current
-        _add_tools(char, tools)
+        add_tools(char, tools)
         saved["picks"] = picks
-    for name in ("tools", "instruments"):
+    for name, category in (("tools", "artisan"), ("instruments", "instrument")):
         if name in needs:
-            saved[name] = _text_list(options.get(name), 3)
-            _add_tools(char, saved[name])
+            keys = _text_list(options.get(name), 3)
+            if any(k not in TOOLS or TOOLS[k].category != category for k in keys):
+                raise _bad("feat_options_invalid")
+            saved[name] = keys
+            add_tools(char, keys)
     if "skill" in needs:
         saved.update(_choose_skill(char, key, options, needs))
     elif "expertise" in needs:  # Dono dell'Abilità: competenza in tutte e Maestria in una

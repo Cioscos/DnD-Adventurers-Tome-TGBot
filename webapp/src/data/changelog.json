@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "3.9.0",
+      "date": "2026-11-14",
+      "added": {
+        "it": [
+          "Il Bardo sceglie i suoi strumenti musicali dal catalogo: tre da prima classe, uno in multiclasse.",
+          "Il Monaco sceglie uno strumento da artigiano o musicale, il Maestro di Battaglia uno strumento da artigiano.",
+          "La Maestria del Ladro 2014 può andare anche sugli arnesi da scasso e raddoppia il bonus nelle prove con gli arnesi."
+        ],
+        "en": [
+          "The Bard picks their musical instruments from the catalog: three as a first class, one when multiclassing.",
+          "The Monk picks one artisan's tool or musical instrument, the Battle Master one artisan's tool.",
+          "The 2014 Rogue's Expertise can also go on thieves' tools, doubling the bonus on checks with them."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Artigiano, Musicista e Abile scelgono gli strumenti dal catalogo invece di farli scrivere a mano.",
+          "Se sulla scheda hai già gli strumenti della tua classe, contano come la scelta e non te ne vengono chiesti altri."
+        ],
+        "en": [
+          "Crafter, Musician and Skilled pick tools from the catalog instead of having you type them.",
+          "If your sheet already has your class's tools, they count as the choice and you are not asked for more."
+        ]
+      }
+    },
+    {
       "version": "3.8.0",
       "date": "2026-11-13",
       "added": {

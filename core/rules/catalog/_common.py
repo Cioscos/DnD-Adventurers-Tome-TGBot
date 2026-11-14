@@ -5,7 +5,7 @@ from typing import Any
 
 from core.data.labels import SKILL_LABELS_IT
 from core.rules.states import has_state
-from core.rules.types import FeatureSpec, RuleContext
+from core.rules.types import ChoiceSpec, FeatureSpec, RuleContext
 from core.utils.session_view import armor_category
 
 INCAPACITATING = ("incapacitated", "paralyzed", "petrified", "stunned", "unconscious")
@@ -83,6 +83,52 @@ def skill_label(slug: str) -> dict:
     """Etichetta bilingue di un'abilità per le opzioni di una `ChoiceSpec` (Maestria, competenze a scelta)."""
     english = slug.replace("_", " ").title().replace(" Of ", " of ")
     return {"name": {"it": SKILL_LABELS_IT.get(slug, english), "en": english}, "summary": {"it": "", "en": ""}}
+
+
+TOOL_PREFIX = "tool:"  # le opzioni di classe che sono strumenti: ``tool:<chiave del catalogo>``
+_TOOL_CATEGORY = {
+    "artisan": ("Strumento da artigiano", "Artisan's tools"), "gaming": ("Gioco", "Gaming set"),
+    "instrument": ("Strumento musicale", "Musical instrument"), "kit": ("Kit", "Kit"),
+    "thieves": ("Arnesi da scasso", "Thieves' tools"), "vehicle": ("Veicolo", "Vehicle"),
+}
+
+
+def tool_choice_label(key: str) -> dict:
+    """Etichetta di un'opzione che può essere uno strumento (``tool:<chiave>``: nome e categoria) o un'abilità."""
+    from core.data.tools import TOOLS  # import locale: il modulo resta una foglia
+    if not key.startswith(TOOL_PREFIX):
+        return skill_label(key)
+    tool = TOOLS[key[len(TOOL_PREFIX):]]
+    it, en = _TOOL_CATEGORY[tool.category]
+    return {"name": {"it": tool.it, "en": tool.en}, "summary": {"it": it, "en": en}}
+
+
+def tool_option_keys(ctx: RuleContext, categories: tuple[str, ...]) -> list[str]:
+    """Strumenti delle categorie in cui il personaggio non è ancora competente."""
+    from core.data.tools import TOOLS
+    have = getattr(ctx.char, "tool_proficiencies", None) or {}
+    return [f"{TOOL_PREFIX}{k}" for k, t in TOOLS.items() if t.category in categories and not have.get(k)]
+
+
+def owned_tool_keys(ctx: RuleContext, categories: tuple[str, ...]) -> list[str]:
+    """Strumenti delle categorie già sulla scheda (R39: si dichiarano «già sulla scheda»)."""
+    from core.data.tools import TOOLS
+    have = getattr(ctx.char, "tool_proficiencies", None) or {}
+    return [f"{TOOL_PREFIX}{k}" for k, t in TOOLS.items() if t.category in categories and have.get(k)]
+
+
+def tool_choice(group: str, levels: dict[int, int], categories: tuple[str, ...], applies=None) -> ChoiceSpec:
+    """Scelta di strumenti del catalogo (``tool:<chiave>``) che diventano competenze nella colonna."""
+    return ChoiceSpec(group=group, levels=levels, options=lambda ctx: tool_option_keys(ctx, categories),
+                      label=tool_choice_label, grants="proficient", owned=lambda ctx: owned_tool_keys(ctx, categories),
+                      applies=applies)
+
+
+def first_class(ctx: RuleContext) -> bool:
+    """La classe è quella di partenza: la riga con l'id più basso (una riga non ancora salvata viene dopo le altre)."""
+    rows = list(getattr(ctx.char, "classes", None) or [])
+    first = min(rows, key=lambda c: (c.id is None, c.id or 0), default=None)
+    return first is None or first is ctx.class_row
 
 
 def feature(key: str, class_key: str, edition: str, level: int, title: str, name: tuple[str, str],

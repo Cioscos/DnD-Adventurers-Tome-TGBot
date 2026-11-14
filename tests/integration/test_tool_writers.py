@@ -33,19 +33,6 @@ async def test_expert_tool_survives_lost_grant(client):
     assert after.get("disguise_kit") == "expert" and "poisoners_kit" not in after
 
 
-async def test_crafter_text_choice_goes_to_column(client):
-    r = await client.post("/characters", json={"name": "Artigiana", "rules_edition": "2024"})
-    cid = r.json()["id"]
-    r = await _take(client, cid, "2024_crafter")
-    assert r.status_code == 201, r.text
-    row = _feat_rows(r.json(), "2024_crafter")[0]
-    r = await _complete(client, cid, row["id"], {"tools": ["Strumenti da fabbro", "Pippo", "Strumenti da falegname"]})
-    assert r.status_code == 200, r.text
-    full = await _full(client, cid)
-    assert {"smiths_tools", "carpenters_tools"} <= set(full["tool_proficiencies"])
-    assert "Pippo" in full["general_proficiencies"]["other"] and full["general_proficiencies"]["tools"] == []
-
-
 async def _reimport(client, data: dict) -> dict:
     r = await client.post("/characters/import", json=data)
     assert r.status_code == 201, r.text

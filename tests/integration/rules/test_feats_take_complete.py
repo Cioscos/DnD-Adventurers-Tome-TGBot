@@ -56,7 +56,7 @@ async def test_skilled_complete_grants_skills_and_tools(client):
     body = (await _take(client, cid, "2024_skilled")).json()
     row = _feat_rows(body, "2024_skilled")[0]
     assert row["feat_status"] == "incomplete"
-    r = await _complete(client, cid, row["id"], {"picks": ["stealth", "arcana", "tool:Arnesi da scasso"]})
+    r = await _complete(client, cid, row["id"], {"picks": ["stealth", "arcana", "tool:thieves_tools"]})
     assert r.status_code == 200, r.text
     out = r.json()
     assert out["skills"]["stealth"] and out["skills"]["arcana"]

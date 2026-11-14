@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.data.skills import SKILLS
-from core.rules.catalog._common import feature, skill_label, state_on
+from core.rules.catalog._common import feature, first_class, skill_label, state_on, tool_choice
 from core.rules.types import (
     BARDIC_DIE, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses,
 )
@@ -143,9 +143,11 @@ FEATURES = (
     feature("proficiencies", CK, ED, 1, "Competenze / Proficiencies (Bardo 1, pag. 52)", ("Competenze", "Proficiencies"),
             ("Armature leggere, armi semplici, balestra a mano, spada corta, spada lunga, stocco, TS Destrezza e Carisma, 3 abilità.",
              "Light armor, simple weapons, hand crossbow, shortsword, longsword, rapier, Dexterity and Charisma saves, 3 skills."),
-            # Armi, armature, TS e abilità: core/rules/proficiencies.py (class_proficiencies) e ClassSkillChoice. I 3 strumenti
-            # musicali a scelta no: l'app non ha prove con strumento (R40), restano in lavori-successivi.
-            no_row=True, covered_by="lavori-successivi"),
+            # Armi, armature, TS e abilità: core/rules/proficiencies.py (class_proficiencies) e ClassSkillChoice. Gli strumenti
+            # musicali: 3 da prima classe, 1 in multiclasse (stesso gruppo; la riga «Multiclasse» è solo testo)
+            no_row=True, choices=(tool_choice("bard_instruments", {1: 3}, ("instrument",), applies=first_class),
+                     tool_choice("bard_instruments", {1: 1}, ("instrument",), applies=lambda c: not first_class(c))),
+            covered_by="test_class_tool_choices.py"),
     feature("equipment", CK, ED, 1, "Equipaggiamento / Equipment (Bardo 1, pag. 52)", ("Equipaggiamento", "Equipment"),
             ("Dotazione iniziale: arma a scelta, dotazione da diplomatico o intrattenitore, strumento, armatura di cuoio e pugnale.",
              "Starting gear: a weapon, a diplomat's or entertainer's pack, an instrument, leather armor and a dagger."),
@@ -268,6 +270,6 @@ FEATURES = (
             ("Requisito Carisma 13. Da multiclasse: armature leggere, 1 abilità e 1 strumento; gli slot sommano i livelli interi.",
              "Requires Charisma 13. As a multiclass: light armor, 1 skill and 1 tool; spell slots add up full levels."),
             # Armatura leggera, 1 abilità e requisito Carisma 13: core/rules/proficiencies.py (as_multiclass) e
-            # webapp/src/data/multiclassPrereqs.ts (D2). Lo strumento musicale a scelta no (R40): lavori-successivi.
-            no_row=True, covered_by="lavori-successivi"),
+            # webapp/src/data/multiclassPrereqs.ts (D2). Lo strumento musicale: la scelta di «Competenze».
+            no_row=True, covered_by="test_class_tool_choices.py"),
 )

@@ -72,6 +72,9 @@ class ChoiceSpec:
     batch_ok: "Callable[[RuleContext, list[str]], bool] | None" = None
     # Con ``spell_pick``: l'incantesimo scelto deve essere di questa scuola (slug inglese): i Sapienti del Mago 2024
     spell_school: str | None = None
+    # Con ``grants="expert"``: strumenti (chiavi del catalogo) che la scelta può prendere come ``tool:<chiave>`` (Maestria
+    # del Ladro 2014 sugli arnesi da scasso); la semina dalla scheda li conta fra le Maestrie
+    expert_tools: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.grants not in (None, "proficient", "expert", "language", "save"):

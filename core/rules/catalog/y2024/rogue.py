@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from core.rules.catalog._common import INCAPACITATING, feature, state_on
+from core.rules.catalog._common import INCAPACITATING, feature, skill_label, state_on
+from core.rules.catalog.y2014.bard import _expertise_options
 from core.rules.catalog.y2014.cleric import _languages_owned, language_label
 from core.rules.catalog.y2014.rogue import (
     CUNNING_BASE, EXPERTISE, EVASION_FAILED, EVASION_SAVE, EVASION_SUCCESS, SNEAK_ATTACK, STROKE_OF_LUCK, UNCANNY_DODGE,
@@ -219,7 +220,9 @@ BASE_ROWS = (
             no_row=True, covered_by="lavori-successivi"),
     feature("expertise", CK, ED, 1, "Maestria / Expertise (Ladro 1, pag. 129)", ("Maestria", "Expertise"),
             ("Al 1° e al 6° livello due abilità in cui sei competente hanno il bonus di competenza doppio.",
-             "At 1st and 6th level two skills you are proficient in get double your proficiency bonus."), choices=(EXPERTISE,)),
+             "At 1st and 6th level two skills you are proficient in get double your proficiency bonus."),
+            # Nel 2024 la Maestria del Ladro è solo sulle abilità
+            choices=(replace(EXPERTISE, options=_expertise_options, label=skill_label, expert_tools=()),)),
     feature("sneak_attack", CK, ED, 1, "Attacco Furtivo / Sneak Attack (Ladro 1, pag. 129)", ("Attacco Furtivo", "Sneak Attack"),
             ("Una volta per turno, danni extra con arma Accurata o a distanza: 1d6, +1d6 ogni due livelli, 10d6 al 19°. Serve vantaggio o un alleato accanto.",
              "Once per turn, extra damage with a Finesse or ranged weapon: 1d6, +1d6 every two levels, 10d6 at 19th. Needs advantage or an ally next to the target."),

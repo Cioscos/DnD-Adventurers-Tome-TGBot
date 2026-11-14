@@ -16,7 +16,7 @@ async def _row(client, cid: int, key: str, ability: str | None = None) -> dict:
 async def test_skilled_2014_picks(client):
     ch = await _char14(client, "fighter")
     row = await _row(client, ch["id"], "skilled")
-    r = await _complete(client, ch["id"], row["id"], {"picks": ["arcana", "history", "tool:Arnesi da scasso"]})
+    r = await _complete(client, ch["id"], row["id"], {"picks": ["arcana", "history", "tool:thieves_tools"]})
     assert r.status_code == 200, r.text
     assert r.json()["skills"]["arcana"] and r.json()["skills"]["history"]
 
