@@ -229,6 +229,26 @@ _register(
 )
 
 
+def _tool(name: str) -> str | None:
+    """Chiave del catalogo, o nome riconosciuto (file salvati prima che i talenti scegliessero dal catalogo)."""
+    from core.data.tools import TOOLS, tool_key
+    return name if name in TOOLS else tool_key(name) if isinstance(name, str) else None
+
+
+def _tools_ok(values: list, categories: tuple[str, ...] | None) -> bool:
+    from core.data.tools import TOOLS
+    keys = [_tool(v) for v in values]
+    return (len(keys) == 3 and len(set(keys)) == 3 and all(keys)
+            and (categories is None or all(TOOLS[k].category in categories for k in keys)))
+
+
+def _picks_ok(values: list) -> bool:
+    skills = [p for p in values if not str(p).startswith("tool:")]
+    tools = [str(p)[len("tool:"):] for p in values if str(p).startswith("tool:")]
+    return (len(values) == 3 and set(skills) <= set(SKILL_ABILITY_MAP) and all(_tool(t) for t in tools)
+            and len({*skills, *(_tool(t) for t in tools)}) == 3)
+
+
 def options_ok(options: dict, feature_key: str = "") -> bool:
     """Le scelte salvate di un talento rispettano numero e valori ammessi (import di un file: altrimenti si scartano e il
     talento torna «da completare»). Liste di classe e caratteristica dipendono dal talento (``feature_key``)."""
@@ -248,7 +268,7 @@ def options_ok(options: dict, feature_key: str = "") -> bool:
         "languages": count(3),
         "weapons": lambda v: len(v) == 4 and len(set(v)) == 4 and set(v) <= set(WEAPONS),
         "rituals": lambda v: len(v) <= 6,
-        "picks": count(3), "tools": count(3), "instruments": count(3),
+        "picks": _picks_ok, "tools": lambda v: _tools_ok(v, ("artisan",)), "instruments": lambda v: _tools_ok(v, ("instrument",)),
         "cantrips": lambda v: len(v) <= 2, "spell": lambda v: len(v) <= 1,
     }
     spec = ALL_FEATS.get(feature_key[len("feat."):])

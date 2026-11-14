@@ -120,8 +120,8 @@ _register(
     _f24("savage_attacker", weapon_damage_twice=True),
     _f24("tavern_brawler", unarmed_die="1d4", modifiers=(Modifier("damage_reroll", 1, when=_unarmed),)),
     _f24("healer"),  # Medico da campo e i ritiri delle cure: l'app non ha un'azione «cura un altro» (D1, testo)
-    _f24("crafter"),  # strumenti a testo in ``general_proficiencies`` finché non c'è il catalogo degli strumenti
-    _f24("musician"),  # idem; Canto incoraggiante: Ispirazione agli alleati, testo per il GM
+    _f24("crafter"),  # 3 strumenti da artigiano del catalogo nella colonna (``complete_feat``)
+    _f24("musician"),  # 3 strumenti musicali del catalogo; Canto incoraggiante: Ispirazione agli alleati, testo per il GM
     _f24("skilled"),
     # Lancio gratuito una volta per riposo lungo con il percorso «arcanum» (``core/rules/pact_casts.py``): l'incantesimo
     # di 1º livello sta in ``options["spell"]``; CD e attacco con ``options["ability"]`` (``spell_stats``)
