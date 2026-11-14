@@ -494,7 +494,8 @@ def _choose_skill(char: Character, key: str, options: dict, needs: tuple[str, ..
     current = dict(char.skills or {})
     if "expertise" in needs:  # Esperto di abilità
         expertise = options.get("expertise")
-        if current.get(skill) or expertise not in SKILL_ABILITY_MAP or not (current.get(expertise) or expertise == skill):
+        if (current.get(skill) or expertise not in SKILL_ABILITY_MAP or current.get(expertise) == "expert"
+                or not (current.get(expertise) or expertise == skill)):
             raise _bad("feat_options_invalid")
         current[skill] = True
         current[expertise] = "expert"
