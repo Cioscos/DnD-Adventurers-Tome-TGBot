@@ -131,10 +131,14 @@ async def test_asi_choices_are_pending_at_levels_4_8_12_16_and_19_only(client, l
 # Percezione del Divino
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("charisma,uses", [(16, 4), (10, 1), (8, 1), (20, 6)])
-async def test_divine_sense_uses_are_one_plus_charisma_with_a_minimum_of_one(client, charisma, uses):
+@pytest.mark.parametrize("charisma,uses", [(16, 4), (10, 1), (20, 6)])
+async def test_divine_sense_uses_are_one_plus_charisma(client, charisma, uses):
     row = await _ability(client, await _paladin(client, 1, charisma=charisma), DS)
     assert (row["max_uses"], row["uses"], row["restoration_type"]) == (uses, uses, "long_rest")
+
+
+async def test_divine_sense_has_no_row_with_zero_uses_at_charisma_8(client):  # PHB 2014 p.97: 1 + mod. CAR, nessun minimo
+    assert await _ability(client, await _paladin(client, 1, charisma=8), DS) is None
 
 
 async def test_divine_sense_follows_a_charisma_change(client):

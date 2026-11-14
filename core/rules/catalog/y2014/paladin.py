@@ -383,7 +383,7 @@ FEATURES = (
             ("Percezione del Divino", "Divine Sense"),
             ("Azione: fino alla fine del tuo prossimo turno senti celestiali, immondi e non morti entro 18 m non al coperto. 1 + Carisma usi, riposo lungo.",
              "Action: until the end of your next turn you sense celestials, fiends and undead within 60 ft not behind total cover. 1 + Charisma uses, long rest."),
-            "action", uses=Uses(table={1: 1}, ability="charisma", minimum=1), restoration="long_rest",
+            "action", uses=Uses(table={1: 1}, ability="charisma", minimum=0), restoration="long_rest",
             on_use=OnUse(slot="action", state=StateSpec(
                 "divine_sense", ends_on=("new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"),
                 data={"skip_new_turns": 1, "range_m": 18, "until": "next_turn_end"}))),
