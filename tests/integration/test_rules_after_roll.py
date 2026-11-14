@@ -511,7 +511,7 @@ async def test_death_add_reaches_ten_and_stabilizes_on_third(client, rules_catal
     first = await _death(client, cid, 8)
     assert first["outcome"] == "failure" and first["failures"] == 1
     death = (await _after(client, cid, "add")).json()["death"]
-    assert death["outcome"] == "success" and death["failures"] == 0 and death["successes"] == 3 and death["stable"]
+    assert death["outcome"] == "success" and death["failures"] == 0 and death["successes"] == 0 and death["stable"]  # stabile: conteggi a zero (2014 p.197 / 2024 p.28)
 
 
 async def test_death_add_cannot_change_natural_one(client, rules_catalog):

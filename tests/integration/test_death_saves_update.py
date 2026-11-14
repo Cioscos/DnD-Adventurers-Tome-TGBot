@@ -35,8 +35,8 @@ async def test_success_increments_then_stabilises_at_three(client):
     assert (await _action(client, cid, "success"))["death_saves"]["successes"] == 1
     await _action(client, cid, "success")
     body = await _action(client, cid, "success")
-    assert body["death_saves"]["successes"] == 3
-    assert body["death_saves"]["stable"] is True
+    # 2014 p.197 / 2024 p.28: diventando stabile i conteggi tornano a zero.
+    assert body["death_saves"] == {"successes": 0, "failures": 0, "stable": True}
 
 
 async def test_three_failures_kill(client):
@@ -133,3 +133,17 @@ async def test_revive_is_noop_when_alive(client):
     body = r.json()
     assert body["is_dead"] is False
     assert body["current_hit_points"] == 10  # unchanged — no forced 1 HP
+
+
+async def test_stabilize_resets_counts_and_damage_restarts_from_zero(client):
+    """2014 p.197 / 2024 p.28: stabile = conteggi a zero; un danno a 0 PF fa ripartire i tiri da zero."""
+    cid = await _create_character(client)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 20})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 20})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20})
+    await _action(client, cid, "failure")
+    await _action(client, cid, "failure")
+    body = await _action(client, cid, "stabilize")
+    assert body["death_saves"] == {"successes": 0, "failures": 0, "stable": True}
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 1})
+    assert r.json()["death_saves"] == {"successes": 0, "failures": 1, "stable": False}

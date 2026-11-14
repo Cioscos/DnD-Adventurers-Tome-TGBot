@@ -1067,7 +1067,7 @@ async def update_death_saves(
     if body.action == DeathSaveAction.SUCCESS:
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         if ds["successes"] >= 3:
-            ds["stable"] = True
+            ds = {"successes": 0, "failures": 0, "stable": True}  # 2014 p.197 / 2024 p.28: i conteggi tornano a zero
             add_history(session, char.id, "death_save", "Stabilizzato (3 successi)",
                          meta={"ds": "success", "n": 1})
         else:
@@ -1090,7 +1090,7 @@ async def update_death_saves(
         # RAW: stabilizzare (Medicina CD 10, Risparmiare i Morenti) non cura —
         # la creatura resta a 0 HP, priva di sensi ma stabile. La risalita a
         # HP positivi passa solo da cure/riposo, che azzerano il tracker.
-        ds["stable"] = True
+        ds = {"successes": 0, "failures": 0, "stable": True}  # i conteggi tornano a zero (2014 p.197 / 2024 p.28)
         add_history(session, char.id, "death_save", "Stabilizzato")
 
     elif body.action == DeathSaveAction.RESET:
@@ -1231,7 +1231,7 @@ async def _apply_death_roll(
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         outcome = "success"
         if ds["successes"] >= 3:
-            ds["stable"] = True
+            ds = {"successes": 0, "failures": 0, "stable": True}
             add_history(session, char.id, "death_save",
                          f"Tiro morte d20={die}: Successo! Stabilizzato (3/3)",
                          meta={"ds": "success", "n": 1})

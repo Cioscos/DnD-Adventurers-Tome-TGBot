@@ -66,7 +66,8 @@ async def test_three_successes_become_stable(client):
     await _roll(client, cid, 10)
     await _roll(client, cid, 12)
     res = await _roll(client, cid, 19)  # 19 ⇒ success
-    assert res["successes"] == 3
+    # 2014 p.197 / 2024 p.28: diventando stabile i conteggi tornano a zero.
+    assert res["successes"] == 0 and res["failures"] == 0
     assert res["stable"] is True
 
 
