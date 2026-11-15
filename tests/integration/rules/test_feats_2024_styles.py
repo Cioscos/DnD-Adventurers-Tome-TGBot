@@ -40,3 +40,9 @@ async def test_interception_feat_is_a_reaction(client):
     assert r.status_code == 201, r.text
     row = _feat_rows(r.json(), "2024_fs_interception")[0]
     assert row["action_type"] == "reaction" and row["has_on_use"] and row["name"] == "Intercettazione"
+
+
+async def test_unarmed_fighting_style_feat_inherits(client):
+    ch = await _char(client, "paladin", 4, **STATS)
+    assert (await _take(client, ch["id"], "2024_fs_unarmed")).status_code == 201
+    assert (await _full(client, ch["id"]))["unarmed_damage_dice"] == "1d8"

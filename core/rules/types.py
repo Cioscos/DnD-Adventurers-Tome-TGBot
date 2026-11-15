@@ -329,6 +329,8 @@ class OnUse:
     # Vendetta Ardente su un altro: i suoi PF salgono a metà del *suo* massimo (letto dal server sul bersaglio) e si rialza
     heal_ally_half_max: bool = False
     heal_ally_full: bool = False  # i PF del bersaglio salgono al suo massimo, letto dal server (Panacea)
+    # ``heal`` somma il livello totale di chi usa: su un bersaglio della serata si somma il suo (Guaritore: i Dadi Vita massimi del bersaglio)
+    heal_ally_add_level: bool = False
     # L'uso è possibile anche a 0 PF, da incapacitato (Vendetta Ardente): la UI non lo spegne
     usable_at_zero_hp: bool = False
     ally_needs_zero_hp: bool = False  # il bersaglio dev'essere a 0 PF, altrimenti 409 ``target_not_down`` prima di spendere (Dono dei Protettori)
@@ -686,7 +688,7 @@ class FeatureSpec:
     # caratteristica della CD dei tiri salvezza del privilegio (8 + competenza + modificatore): la riga la mostra (ki del Monaco)
     dc_ability: str | None = None
     magic_unarmed: bool = False  # i colpi senz'armi contano come magici (Colpi Ki Potenziati)
-    unarmed_die: str | None = None  # dado minimo del colpo senz'armi (Attaccabrighe da taverna: 1d4); vale il migliore
+    unarmed_die: str | Callable[[Any], str] | None = None  # dado minimo del colpo senz'armi (Attaccabrighe da taverna: 1d4; stile Combattere senz'armi: funzione del personaggio); vale il migliore
     # una volta per turno i dadi dell'arma si tirano due volte, vale il migliore (Attaccante selvaggio); "melee": solo in mischia (2014)
     weapon_damage_twice: bool | str = False
     ki_spells: tuple = ()  # ``KiSpell`` che il privilegio fa lanciare coi punti invece degli slot

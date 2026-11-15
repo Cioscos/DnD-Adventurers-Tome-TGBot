@@ -412,6 +412,10 @@ def take_feat(session: AsyncSession, char: Character, feat_key: str, ability: Op
         options={"ability": ability} if spec.ability_increase else None)
     session.add(ability_row)
     char.abilities.append(ability_row)  # gli effetti e gli usi li dà il motore al sync che segue
+    if feat_key == "2024_boon_recovery":  # Ultima resistenza pronta subito; poi la rimette il riposo lungo
+        from core.rules.catalog.feats_2024 import last_stand_state  # import locale: il catalogo dei talenti importa questo modulo
+        from core.rules.states import begin_state
+        begin_state(char, last_stand_state(), ability_row.feature_key, name)
     if origin == "level":
         _history(session, char, name)
     else:

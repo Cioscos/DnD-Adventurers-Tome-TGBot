@@ -500,6 +500,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
             result.given = None if on_use.heal_ally_half_max or on_use.heal_ally_full else healed_ally  # metà del massimo altrui: lo dice il messaggio
         else:
             from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
+            if on_use.heal_ally_add_level:
+                healed_ally = max(0, healed_ally - char.total_level + target.total_level)
             if on_use.heal_ally_to:
                 healed_ally = max(0, healed_ally - target.current_hit_points)
             if on_use.heal_ally_full:  # fino al massimo effettivo (base + bonus), lo stesso di apply_heal

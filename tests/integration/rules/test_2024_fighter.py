@@ -191,6 +191,20 @@ async def test_great_weapon_fighting_counts_a_one_or_a_two_as_a_three_and_shows_
     assert (await _attack(client, cid, sword))["damage_rolls"] == [1]  # una mano: niente
 
 
+async def test_unarmed_fighting_style_dice(client):
+    cid = await _fighter24(client, 3)
+    assert (await _full(client, cid))["unarmed_damage_dice"] == "1"
+    await _resolve(client, cid, "fighting_style", ["unarmed"])
+    assert (await _full(client, cid))["unarmed_damage_dice"] == "1d8"  # mani vuote
+    shield = await _item(client, cid, "Scudo", item_type="shield", equip="off_hand")
+    assert (await _full(client, cid))["unarmed_damage_dice"] == "1d6"
+    await client.patch(f"/characters/{cid}/items/{shield}", json={"is_equipped": False, "equipment_slot": None})
+    sword = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[], equip="main_hand")
+    assert (await _full(client, cid))["unarmed_damage_dice"] == "1d6"
+    await client.patch(f"/characters/{cid}/items/{sword}", json={"is_equipped": False, "equipment_slot": None})
+    assert (await _full(client, cid))["unarmed_damage_dice"] == "1d8"
+
+
 async def test_thrown_weapon_fighting_adds_two_to_thrown_damage_only(client):
     cid = await _fighter24(client, 3, strength=10)
     axe = await _item(client, cid, "Accetta", damage_dice="1d6", weapon_type="melee", properties=["thrown"])

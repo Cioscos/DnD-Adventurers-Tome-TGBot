@@ -10,7 +10,7 @@ from typing import Any
 from core.rules.catalog._common import heavy_armor, state_on
 from core.rules.catalog.feats import D20_TESTS, _register, feat
 from core.rules.catalog.feats_2024 import _PHYSICAL, _adept_type, _both, _finesse_in_hand, _medium_armor_dex, _pb
-from core.rules.types import Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
+from core.rules.types import Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, Uses
 from core.rules.weapons import has_property
 from core.utils.session_view import armor_category
 
@@ -31,6 +31,11 @@ def _lucky_reroll(key: str, rolls: tuple[str, ...]) -> RollOptionSpec:
                "en": "Lucky: spend a point and reroll the d20 (you choose which result to keep)"})
 
 
+_HEALER_MODES = {
+    "self": {"it": "Cura PF a te stesso", "en": "Heal yourself"},
+    "other": {"it": "Cura PF a un altro", "en": "Heal another creature"},
+}
+
 _register(
     _f14("alert", modifiers=(Modifier("initiative", 5),)),
     _f14("tough", modifiers=(Modifier("hp_max", lambda ctx: 2 * ctx.class_level),)),
@@ -39,9 +44,15 @@ _register(
     _f14("war_caster", modifiers=(Modifier("advantage", 0, when=lambda ctx: ctx.roll == "concentration"),)),
     _f14("lucky", passive=False, uses=Uses(table={1: 3}), restoration="long_rest",
          roll_options=(_lucky_reroll("feat.lucky", D20_TESTS),)),
+    # Guaritore: la cura di un uso della borsa. Gli usi della borsa, «una volta per bersaglio fra due riposi» e stabilizzare con +1 PF restano al giocatore
+    _f14("healer", passive=False, action_type="action", on_use=OnUse(
+        slot="action", rolls="1d6", heal=lambda ctx, rolled: rolled + 4 + ctx.char.total_level,
+        heal_when=lambda _c, params: params.get("mode") == "self", heal_ally_when=lambda _c, params: params.get("mode") == "other",
+        heal_ally_add_level=True, ally_modes=("other",),
+        choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: list(_HEALER_MODES), lambda k: _HEALER_MODES[k]),))),
     *(_f14(k) for k in (
-        # solo testo (D1): distanze, attacchi bonus o di opportunità, cure ad altri
-        "skulker", "mounted_combatant", "crossbow_expert", "healer", "polearm_master", "keen_mind", "resilient",
+        # solo testo (D1): distanze, attacchi bonus o di opportunità
+        "skulker", "mounted_combatant", "crossbow_expert", "polearm_master", "keen_mind", "resilient",
         "sentinel")),
 )
 
