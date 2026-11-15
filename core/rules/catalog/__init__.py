@@ -31,11 +31,12 @@ def _applies(spec: FeatureSpec, row: Any) -> bool:
 
 def active_features(char: Any) -> list[tuple[FeatureSpec, Any]]:
     """Privilegi attivi di tutte le classi (filtro su livello di classe, `subclass_key` e opzioni scelte) e dei talenti
-    posseduti (``core.rules.catalog.feats``: la riga è un ``FeatSource``)."""
+    posseduti (``core.rules.catalog.feats``: la riga è un ``FeatSource``) e dei tratti di specie 2024 (``SpeciesSource``)."""
     from core.rules.catalog.feats import owned_feats  # import locale: il registro dei talenti importa i tipi
+    from core.rules.catalog.species_2024 import owned_species
     edition = character_edition(char)
     return [(spec, row) for row in char.classes
-            for spec in features_for(edition, class_key(row)) if _applies(spec, row)] + owned_feats(char)
+            for spec in features_for(edition, class_key(row)) if _applies(spec, row)] + owned_feats(char) + owned_species(char)
 
 
 def _register() -> None:

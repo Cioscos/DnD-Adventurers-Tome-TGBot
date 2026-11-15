@@ -135,6 +135,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "unarmored_defense_ability", "VARCHAR(20)", None),
     # Edizione delle regole seguita dal personaggio (2014 | 2024)
     ("characters", "rules_edition", "VARCHAR(4)", "'2014'"),
+    ("characters", "species_key", "VARCHAR(40)", None),
+    ("characters", "species_options", "JSON", None),
     ("characters", "turn_state", "JSON", None),
     ("characters", "active_states", "JSON", None),
     ("characters", "last_long_rest_at", "VARCHAR(50)", None),
