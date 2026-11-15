@@ -128,3 +128,13 @@ async def test_t10_75_the_spell_list_exposes_the_saved_upcast_type_for_the_clien
     assert spell["effect"]["cast_upcast_type"] is None
     assert (await client.post(f"/characters/{cid}/spells/{spell['id']}/use", json={"slot_level": 6, "choices": {"upcast_type": "radiant"}})).status_code == 200
     assert (await _spell(client, cid, "flame-strike"))["effect"]["cast_upcast_type"] == "radiant"
+
+
+@pytest.mark.parametrize("edition,dice", [("2014", "4d6"), ("2024", "5d6")])
+async def test_granted_flame_strike_dice_by_edition(client, edition, dice):
+    body = {"name": "Chierico", "rules_edition": edition,
+            "initial_class": {"class_name": "cleric", "level": 9, "subclass": "Dominio della Luce"}}
+    r = await client.post("/characters", json=body)
+    assert r.status_code == 201, r.text
+    spell = await _spell(client, r.json()["id"], "flame-strike")
+    assert (spell["damage_dice"], spell["extra_damage_dice"]) == (dice, dice)

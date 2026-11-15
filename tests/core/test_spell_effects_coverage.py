@@ -17,7 +17,7 @@ TABLE_A = {  # A01..A59
     "shillelagh": BOTH, "stoneskin": BOTH, "warding-bond": BOTH, "water-breathing": BOTH, "water-walk": BOTH, "darkvision": BOTH,
     "true-seeing": BOTH, "see-invisibility": BOTH, "levitate": BOTH, "fount-of-moonlight": Y24, "heroes-feast": BOTH,
     "power-word-fortify": Y24, "circle-of-power": BOTH, "dispel-evil-and-good": BOTH, "conjure-minor-elementals": Y24,
-    "swift-quiver": BOTH,
+    "swift-quiver": BOTH, "prayer-of-healing": Y24,
 }
 # Punizione Divina 2024 resta il privilegio del Paladino (test_spell_effects_marks): nessuna voce di incantesimo, o la punizione si conterebbe due volte
 TABLE_B = {
@@ -28,7 +28,7 @@ TABLE_B = {
 TABLE_C = {
     "chromatic-orb": BOTH, "dragons-breath": Y24, "elemental-weapon": BOTH, "protection-from-energy": BOTH, "resistance": Y24,
     "fire-shield": BOTH, "glyph-of-warding": BOTH, "destructive-wave": BOTH, "sorcerous-burst": Y24, "conjure-minor-elementals": Y24,
-    "conjure-elemental": Y24, "alter-self": Y24, "flame-strike": Y14, "hunger-of-hadar": Y24, "conjure-barrage": Y14,
+    "conjure-elemental": Y24, "alter-self": Y24, "flame-strike": BOTH, "hunger-of-hadar": BOTH, "conjure-barrage": Y14,
     "conjure-volley": Y14, "hallow": BOTH, "wish": BOTH,
 }
 # D: solo testo con nome e durata (Calmare Emozioni resta alla rimozione delle condizioni, vedi condition_removal)
