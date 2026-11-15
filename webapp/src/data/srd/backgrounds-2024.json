@@ -1,0 +1,369 @@
+{
+ "gold_option": 50,
+ "items": [
+  {
+   "key": "acolyte",
+   "name": {
+    "it": "Accolito",
+    "en": "Acolyte"
+   },
+   "abilities": [
+    "intelligence",
+    "wisdom",
+    "charisma"
+   ],
+   "origin_feat": "2024_magic_initiate",
+   "skills": [
+    "insight",
+    "religion"
+   ],
+   "tool": "calligraphers_supplies",
+   "equipment": "calligraphers_supplies+book-prayers+holy-symbol+parchment*10+robe+gold:8",
+   "feat_list": "cleric"
+  },
+  {
+   "key": "artisan",
+   "name": {
+    "it": "Artigiano",
+    "en": "Artisan"
+   },
+   "abilities": [
+    "strength",
+    "dexterity",
+    "intelligence"
+   ],
+   "origin_feat": "2024_crafter",
+   "skills": [
+    "investigation",
+    "persuasion"
+   ],
+   "tool": [
+    "alchemists_supplies",
+    "brewers_supplies",
+    "calligraphers_supplies",
+    "carpenters_tools",
+    "cartographers_tools",
+    "cobblers_tools",
+    "cooks_utensils",
+    "glassblowers_tools",
+    "jewelers_tools",
+    "leatherworkers_tools",
+    "masons_tools",
+    "painters_supplies",
+    "potters_tools",
+    "smiths_tools",
+    "tinkers_tools",
+    "weavers_tools",
+    "woodcarvers_tools"
+   ],
+   "equipment": "{tool}+pouch*2+travelers-clothes+gold:32",
+   "feat_list": null
+  },
+  {
+   "key": "charlatan",
+   "name": {
+    "it": "Ciarlatano",
+    "en": "Charlatan"
+   },
+   "abilities": [
+    "dexterity",
+    "constitution",
+    "charisma"
+   ],
+   "origin_feat": "2024_skilled",
+   "skills": [
+    "deception",
+    "sleight_of_hand"
+   ],
+   "tool": "forgery_kit",
+   "equipment": "forgery_kit+costume+fine-clothes+gold:15",
+   "feat_list": null
+  },
+  {
+   "key": "criminal",
+   "name": {
+    "it": "Criminale",
+    "en": "Criminal"
+   },
+   "abilities": [
+    "dexterity",
+    "constitution",
+    "intelligence"
+   ],
+   "origin_feat": "2024_alert",
+   "skills": [
+    "sleight_of_hand",
+    "stealth"
+   ],
+   "tool": "thieves_tools",
+   "equipment": "dagger*2+thieves_tools+crowbar+pouch*2+travelers-clothes+gold:16",
+   "feat_list": null
+  },
+  {
+   "key": "entertainer",
+   "name": {
+    "it": "Intrattenitore",
+    "en": "Entertainer"
+   },
+   "abilities": [
+    "strength",
+    "dexterity",
+    "charisma"
+   ],
+   "origin_feat": "2024_musician",
+   "skills": [
+    "acrobatics",
+    "performance"
+   ],
+   "tool": [
+    "bagpipes",
+    "drum",
+    "dulcimer",
+    "flute",
+    "horn",
+    "lute",
+    "lyre",
+    "pan_flute",
+    "shawm",
+    "viol"
+   ],
+   "equipment": "{tool}+costume*2+mirror+perfume+travelers-clothes+gold:11",
+   "feat_list": null
+  },
+  {
+   "key": "farmer",
+   "name": {
+    "it": "Contadino",
+    "en": "Farmer"
+   },
+   "abilities": [
+    "strength",
+    "constitution",
+    "wisdom"
+   ],
+   "origin_feat": "2024_tough",
+   "skills": [
+    "animal_handling",
+    "nature"
+   ],
+   "tool": "carpenters_tools",
+   "equipment": "sickle+carpenters_tools+healers-kit+iron-pot+shovel+travelers-clothes+gold:30",
+   "feat_list": null
+  },
+  {
+   "key": "guard",
+   "name": {
+    "it": "Guardia",
+    "en": "Guard"
+   },
+   "abilities": [
+    "strength",
+    "intelligence",
+    "wisdom"
+   ],
+   "origin_feat": "2024_alert",
+   "skills": [
+    "athletics",
+    "perception"
+   ],
+   "tool": [
+    "dice_set",
+    "dragonchess_set",
+    "playing_card_set",
+    "three_dragon_ante_set"
+   ],
+   "equipment": "spear+crossbow-light+bolts*20+{tool}+hooded-lantern+manacles+quiver+travelers-clothes+gold:12",
+   "feat_list": null
+  },
+  {
+   "key": "guide",
+   "name": {
+    "it": "Guida",
+    "en": "Guide"
+   },
+   "abilities": [
+    "dexterity",
+    "constitution",
+    "wisdom"
+   ],
+   "origin_feat": "2024_magic_initiate",
+   "skills": [
+    "stealth",
+    "survival"
+   ],
+   "tool": "cartographers_tools",
+   "equipment": "shortbow+arrows*20+cartographers_tools+bedroll+quiver+tent+travelers-clothes+gold:3",
+   "feat_list": "druid"
+  },
+  {
+   "key": "hermit",
+   "name": {
+    "it": "Eremita",
+    "en": "Hermit"
+   },
+   "abilities": [
+    "constitution",
+    "wisdom",
+    "charisma"
+   ],
+   "origin_feat": "2024_healer",
+   "skills": [
+    "medicine",
+    "religion"
+   ],
+   "tool": "herbalism_kit",
+   "equipment": "quarterstaff+herbalism_kit+bedroll+book-philosophy+lamp+oil*3+travelers-clothes+gold:16",
+   "feat_list": null
+  },
+  {
+   "key": "merchant",
+   "name": {
+    "it": "Mercante",
+    "en": "Merchant"
+   },
+   "abilities": [
+    "constitution",
+    "intelligence",
+    "charisma"
+   ],
+   "origin_feat": "2024_lucky",
+   "skills": [
+    "animal_handling",
+    "persuasion"
+   ],
+   "tool": "navigators_tools",
+   "equipment": "navigators_tools+pouch*2+travelers-clothes+gold:22",
+   "feat_list": null
+  },
+  {
+   "key": "noble",
+   "name": {
+    "it": "Nobile",
+    "en": "Noble"
+   },
+   "abilities": [
+    "strength",
+    "intelligence",
+    "charisma"
+   ],
+   "origin_feat": "2024_skilled",
+   "skills": [
+    "history",
+    "persuasion"
+   ],
+   "tool": [
+    "dice_set",
+    "dragonchess_set",
+    "playing_card_set",
+    "three_dragon_ante_set"
+   ],
+   "equipment": "{tool}+fine-clothes+perfume+gold:29",
+   "feat_list": null
+  },
+  {
+   "key": "sage",
+   "name": {
+    "it": "Sapiente",
+    "en": "Sage"
+   },
+   "abilities": [
+    "constitution",
+    "intelligence",
+    "wisdom"
+   ],
+   "origin_feat": "2024_magic_initiate",
+   "skills": [
+    "arcana",
+    "history"
+   ],
+   "tool": "calligraphers_supplies",
+   "equipment": "quarterstaff+calligraphers_supplies+book-history+parchment*8+robe+gold:8",
+   "feat_list": "wizard"
+  },
+  {
+   "key": "sailor",
+   "name": {
+    "it": "Marinaio",
+    "en": "Sailor"
+   },
+   "abilities": [
+    "strength",
+    "dexterity",
+    "wisdom"
+   ],
+   "origin_feat": "2024_tavern_brawler",
+   "skills": [
+    "acrobatics",
+    "perception"
+   ],
+   "tool": "navigators_tools",
+   "equipment": "dagger+navigators_tools+rope+travelers-clothes+gold:20",
+   "feat_list": null
+  },
+  {
+   "key": "scribe",
+   "name": {
+    "it": "Scriba",
+    "en": "Scribe"
+   },
+   "abilities": [
+    "dexterity",
+    "intelligence",
+    "wisdom"
+   ],
+   "origin_feat": "2024_skilled",
+   "skills": [
+    "investigation",
+    "perception"
+   ],
+   "tool": "calligraphers_supplies",
+   "equipment": "calligraphers_supplies+fine-clothes+lamp+oil*3+parchment*12+gold:23",
+   "feat_list": null
+  },
+  {
+   "key": "soldier",
+   "name": {
+    "it": "Soldato",
+    "en": "Soldier"
+   },
+   "abilities": [
+    "strength",
+    "dexterity",
+    "constitution"
+   ],
+   "origin_feat": "2024_savage_attacker",
+   "skills": [
+    "athletics",
+    "intimidation"
+   ],
+   "tool": [
+    "dice_set",
+    "dragonchess_set",
+    "playing_card_set",
+    "three_dragon_ante_set"
+   ],
+   "equipment": "spear+shortbow+arrows*20+{tool}+healers-kit+quiver+travelers-clothes+gold:14",
+   "feat_list": null
+  },
+  {
+   "key": "wayfarer",
+   "name": {
+    "it": "Viandante",
+    "en": "Wayfarer"
+   },
+   "abilities": [
+    "dexterity",
+    "wisdom",
+    "charisma"
+   ],
+   "origin_feat": "2024_lucky",
+   "skills": [
+    "insight",
+    "stealth"
+   ],
+   "tool": "thieves_tools",
+   "equipment": "dagger*2+thieves_tools+gaming-set+bedroll+pouch*2+travelers-clothes+gold:16",
+   "feat_list": null
+  }
+ ]
+}
