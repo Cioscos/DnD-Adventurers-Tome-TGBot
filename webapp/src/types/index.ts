@@ -559,6 +559,9 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   speed_encumbrance_penalty_ft?: number
   spell_slots_mode: string
   rules_edition: '2014' | '2024'
+  /** Specie 2024 dal catalogo (es. `2024_dwarf`) e le sue scelte; le chiavi `_...` sono del server. */
+  species_key?: string | null
+  species_options?: Record<string, string | number> | null
   spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number
   active_states?: ActiveState[] | null

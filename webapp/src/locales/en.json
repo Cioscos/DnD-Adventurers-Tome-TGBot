@@ -1368,6 +1368,40 @@
         "unconscious": "An unconscious creature is incapacitated, can't move or speak, and is unaware of its surroundings. The creature drops whatever it's holding and falls prone. It automatically fails Strength and Dexterity saving throws. Attack rolls against it have advantage, and any attack that hits is a critical hit if the attacker is within 5 feet."
       }
     },
+    "species": {
+      "choose": "Choose 2024 species",
+      "change": "Change species",
+      "save_first": "Save your changes before changing species.",
+      "title": "2024 species",
+      "pick": "Choose from the catalog",
+      "preview": "See the changes",
+      "preview_title": "What changes",
+      "no_changes": "Nothing else changes on the sheet.",
+      "confirm_hint": "Nothing changes until you confirm.",
+      "confirm": "Confirm",
+      "complete_feat": "The {{name}} feat has its own choices: complete it on the Abilities page.",
+      "go_abilities": "Go to Abilities",
+      "changes": {
+        "speed_reset": "Speed goes back to the species' speed.",
+        "senses_removed": "Manually entered senses are removed: the species provides them.",
+        "roll_notes_removed": "Roll notes are removed: the species provides them.",
+        "traits_archived_one": "1 trait of the old race will be removed:",
+        "traits_archived_other": "{{count}} traits of the old race will be removed:",
+        "trait_removed": "{{name}}",
+        "hp_check": "If your maximum hit points already counted Dwarven Toughness, remove it by hand: the species now adds it.",
+        "scores_check": "Ability scores do not change: remove any 2014 racial bonuses by hand.",
+        "skill_added": "{{skill}} proficiency added.",
+        "skill_removed": "{{skill}} proficiency removed.",
+        "feat_added": "{{feat}} feat added.",
+        "feat_removed": "{{feat}} feat removed."
+      },
+      "errors": {
+        "species_edition": "Only characters using the 2024 rules can choose a 2024 species.",
+        "species_unknown": "This species is not in the catalog.",
+        "species_options_invalid": "The species choices are not valid: check them and try again.",
+        "generic": "The species could not be changed. Try again."
+      }
+    },
     "identity": {
       "title": "Identity",
       "name": "Name",
@@ -2278,6 +2312,8 @@
       },
       "class_features_section": "Class features",
       "custom_section": "Custom abilities",
+      "species_badge": "Species",
+      "species_feature_locked": "Species trait, managed automatically: you can spend its uses and edit its description.",
       "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
       "edit_description": "Edit description",
       "set_uses_title": "Set uses",

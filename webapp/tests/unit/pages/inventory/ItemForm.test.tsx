@@ -28,3 +28,21 @@ describe('ItemForm contenitore', () => {
     expect(onSubmit.mock.calls[0][0].extra_meta.container).toMatchObject({ capacity_lb: 30, coins: { gold: 12 } })
   })
 })
+
+describe('ItemForm catalogo per edizione', () => {
+  const open = async (edition: string) => {
+    renderWithProviders(<ItemForm edition={edition} onSubmit={vi.fn()} onCancel={vi.fn()} isPending={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'character.inventory.from_equipment' }))
+    await screen.findByText('Ascia da battaglia')
+  }
+
+  it('un 2024 carica equipment-2024 (c’è il Moschetto)', async () => {
+    await open('2024')
+    expect(screen.getByText('Moschetto')).toBeTruthy()
+  })
+
+  it('un 2014 resta sul catalogo equipment', async () => {
+    await open('2014')
+    expect(screen.queryByText('Moschetto')).toBeNull()
+  })
+})

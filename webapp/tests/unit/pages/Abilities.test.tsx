@@ -187,6 +187,17 @@ describe('Abilities page', () => {
     expect(screen.getByTestId('ability-dc')).toHaveTextContent('character.abilities.dc')
   })
 
+  it('un tratto di specie 2024 ha il badge «Specie» e non si può eliminare', async () => {
+    const trait = { ...classFeature, id: 8, name: 'Robustezza nanica', max_uses: null, uses: null,
+      source_class_id: null, feature_key: 'species.2024_dwarf_dwarven_toughness' }
+    getChar.mockResolvedValue(char([trait]))
+    renderWithProviders(<Abilities />)
+    await userEvent.click(await screen.findByText('Robustezza nanica'))
+    expect(screen.getByText('character.abilities.species_badge')).toBeInTheDocument()
+    expect(screen.getByText('character.abilities.species_feature_locked')).toBeInTheDocument()
+    expect(screen.queryByText('common.delete')).toBeNull()
+  })
+
   it('add wizard: applies the detected restoration and posts the AbilityCreate contract', async () => {
     getChar.mockResolvedValue(char([]))
     addSpy.mockResolvedValue({ id: 9 })

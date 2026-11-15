@@ -900,6 +900,20 @@ export const api = {
       request<{ groups: string[][]; wealth: { dice: string; multiplier: number } | null }>(`/rules/starting-equipment?edition=${edition}&class_key=${encodeURIComponent(classKey)}`),
   },
 
+  // Specie 2024 sulla scheda: l'anteprima non scrive nulla.
+  species: {
+    preview: (charId: number, key: string, options: Record<string, string>) =>
+      request<{ changes: string[] }>(`/characters/${charId}/species/preview`, {
+        method: 'POST',
+        body: JSON.stringify({ key, options }),
+      }),
+    apply: (charId: number, key: string, options: Record<string, string>) =>
+      request<CharacterFull>(`/characters/${charId}/species`, {
+        method: 'PUT',
+        body: JSON.stringify({ key, options }),
+      }),
+  },
+
   // ---------------------------------------------------------------------------
   // Classes
   // ---------------------------------------------------------------------------

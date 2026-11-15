@@ -122,6 +122,22 @@ describe('FeatOptionsSheet (Completa talento)', () => {
     expect(body.spells.map((s: { srd_index: string; level: number }) => [s.srd_index, s.level]))
       .toEqual([['light', 0], ['mage-hand', 0], ['sleep', 1]])
   })
+
+  it('Magic Initiate con la lista già fissata dal background: preselezionata e non cambiabile', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    const mi = { ...skilled, name: 'Iniziato alla magia', feature_key: 'feat.2024_magic_initiate', options: { list: 'wizard' } } as unknown as Ability
+    renderWithProviders(<FeatOptionsSheet char={char()} ability={mi} open onClose={() => {}} />)
+    const list = screen.getByLabelText('character.feats.mi_list') as HTMLSelectElement
+    expect(list.value).toBe('wizard')
+    expect(list).toBeDisabled()
+    await userEvent.selectOptions(screen.getByLabelText('character.feats.mi_ability'), 'intelligence')
+    await userEvent.click(await screen.findByText('Luce'))
+    await userEvent.click(screen.getByText('Mano Magica'))
+    await userEvent.click(screen.getByText('Sonno'))
+    await userEvent.click(screen.getByText('character.feats.complete_confirm'))
+    await waitFor(() => expect(complete).toHaveBeenCalled())
+    expect(complete.mock.calls[0][2].options).toEqual({ list: 'wizard', ability: 'intelligence' })
+  })
 })
 
 describe('FeatOptionsSheet — talenti 2024 con scelte (PR 2)', () => {

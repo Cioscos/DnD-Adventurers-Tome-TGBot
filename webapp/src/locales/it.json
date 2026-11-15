@@ -1367,6 +1367,40 @@
         "unconscious": "Un personaggio privo di sensi è incapacitato, non può muoversi né parlare, ignora l'ambiente. Lascia cadere ciò che tiene e cade prono. Fallisce automaticamente i tiri salvezza di Forza e Destrezza. I tiri per colpire contro di lui hanno vantaggio; ogni colpo in mischia entro 1,5 metri è un critico."
       }
     },
+    "species": {
+      "choose": "Scegli specie 2024",
+      "change": "Cambia specie",
+      "save_first": "Salva le modifiche prima di cambiare specie.",
+      "title": "Specie 2024",
+      "pick": "Scegli dal catalogo",
+      "preview": "Vedi i cambiamenti",
+      "preview_title": "Cosa cambia",
+      "no_changes": "Nessun altro cambiamento sulla scheda.",
+      "confirm_hint": "Niente cambia finché non confermi.",
+      "confirm": "Conferma",
+      "complete_feat": "Il talento {{name}} ha scelte proprie: completalo nella pagina Abilità.",
+      "go_abilities": "Vai alle Abilità",
+      "changes": {
+        "speed_reset": "La velocità torna a quella della specie.",
+        "senses_removed": "I sensi inseriti a mano vengono tolti: li dà la specie.",
+        "roll_notes_removed": "Le note sui tiri vengono tolte: le dà la specie.",
+        "traits_archived_one": "1 tratto della vecchia razza verrà rimosso:",
+        "traits_archived_other": "{{count}} tratti della vecchia razza verranno rimossi:",
+        "trait_removed": "{{name}}",
+        "hp_check": "Se i punti ferita massimi contavano già la Robustezza nanica, toglila a mano: ora la aggiunge la specie.",
+        "scores_check": "I punteggi di caratteristica non cambiano: togli a mano gli eventuali bonus razziali 2014.",
+        "skill_added": "Competenza in {{skill}} aggiunta.",
+        "skill_removed": "Competenza in {{skill}} tolta.",
+        "feat_added": "Talento {{feat}} aggiunto.",
+        "feat_removed": "Talento {{feat}} tolto."
+      },
+      "errors": {
+        "species_edition": "Solo i personaggi con le regole 2024 possono scegliere una specie 2024.",
+        "species_unknown": "Questa specie non è nel catalogo.",
+        "species_options_invalid": "Le scelte della specie non sono valide: controllale e riprova.",
+        "generic": "Non è stato possibile cambiare la specie. Riprova."
+      }
+    },
     "identity": {
       "title": "Identità",
       "name": "Nome",
@@ -2277,6 +2311,8 @@
       },
       "class_features_section": "Abilità di classe",
       "custom_section": "Abilità personalizzate",
+      "species_badge": "Specie",
+      "species_feature_locked": "Tratto della specie, gestito automaticamente: puoi consumarne gli usi e modificarne la descrizione.",
       "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
       "edit_description": "Modifica descrizione",
       "set_uses_title": "Imposta usi",

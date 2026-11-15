@@ -167,6 +167,10 @@ export function searchCatalog<E extends BaseEntry>(entries: E[], query: string, 
 export const spellCatalogKind = (edition: '2014' | '2024'): 'spells' | 'spells-2024' =>
   edition === '2024' ? 'spells-2024' : 'spells'
 
+/** Catalogo dell'equipaggiamento dell'edizione del personaggio. */
+export const equipmentCatalogKind = (edition: '2014' | '2024'): 'equipment' | 'equipment-2024' =>
+  edition === '2024' ? 'equipment-2024' : 'equipment'
+
 /** Catalogo dell'edizione; nel 2024 gli incantesimi che mancano (rinominati, solo 2014) vengono dal 2014. */
 export async function loadSpellCatalog(edition: '2014' | '2024'): Promise<SpellEntry[]> {
   const y14 = await loadCatalog('spells')
