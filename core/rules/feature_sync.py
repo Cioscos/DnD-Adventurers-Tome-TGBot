@@ -90,6 +90,7 @@ async def sync_class_feature_abilities(
         if other is not cls and features_for(edition, class_key(other)):
             _sync_from_catalog(session, char, other, lang)
     _sync_feat_rows(char, lang)
+    _sync_species_rows(session, char, lang)
     seed_from_sheet(char, retro)
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
@@ -111,6 +112,7 @@ async def sync_cataloged_features(
         if features_for(edition, class_key(cls)):
             _sync_from_catalog(session, char, cls, lang)
     _sync_feat_rows(char, lang)
+    _sync_species_rows(session, char, lang)
     seed_from_sheet(char, retro)
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
@@ -360,6 +362,76 @@ def _sync_feat_rows(char: Character, lang: str) -> None:
         ability.uses = None if new_max is None else new_max - min(spent, new_max)
         ability.restoration_type = _restoration(spec, source.level)
         ability.short_rest_recovers = _short_rest_recovers(spec, source.level)
+
+
+def _sync_species_rows(session: AsyncSession, char: Character, lang: str) -> None:
+    """Righe dei tratti di specie 2024 (``species.*``, ``source_class_id`` nullo, ``is_class_feature``): come
+    ``_sync_from_catalog``. I tratti non più dovuti (specie cambiata, livello sceso, edizione 2014) si archiviano con gli
+    usi spesi in ``settings["archived_features"]`` e tornano se il tratto ritorna."""
+    from core.rules.catalog.species_2024 import SPECIES_TRAITS, owned_species  # import locale: il registro importa i tipi del catalogo
+    edition = character_edition(char)
+    rows = {a.feature_key: a for a in char.abilities
+            if a.is_class_feature and a.source_class_id is None and (a.feature_key or "").startswith("species.")}
+    old_archive = (char.settings or {}).get(ARCHIVED_FEATURES) or {}
+    archive = dict(old_archive)
+    due: set[str] = set()
+
+    def generated(key: str) -> set[str]:
+        return {t for traits in SPECIES_TRAITS.values() for s in traits if s.key == key for t in s.summary.values()}
+
+    for spec, source in owned_species(char):
+        if spec.no_row:
+            continue
+        ctx = RuleContext(char=char, edition=edition, class_row=source, class_level=source.level)
+        new_max = max_uses(spec, ctx)
+        if new_max == 0:
+            continue
+        due.add(spec.key)
+        ability = rows.get(spec.key)
+        saved = archive.pop(spec.key, {}) if ability is None or ability.max_uses is None else {}
+        if ability is None:
+            ability = Ability(character_id=char.id, source_class_id=None, is_class_feature=True,
+                              feature_key=spec.key, is_active=True)
+            session.add(ability)
+            char.abilities.append(ability)
+            spent = saved.get("spent", 0)
+        elif ability.max_uses is None:
+            spent = saved.get("spent", 0)
+        else:
+            spent = _spent(ability)
+
+        ability.name = spec.name.get(lang) or spec.name["it"]
+        ability.action_type = spec.action_type
+        ability.is_passive = spec.passive
+        ability.restoration_type = RestorationType.NONE if spec.uses is None else _restoration(spec, source.level)
+        ability.short_rest_recovers = _short_rest_recovers(spec, source.level)
+        if "description" in saved:
+            ability.description = saved["description"]
+        elif ability.description is None or ability.description in generated(spec.key):
+            ability.description = spec.summary.get(lang) or spec.summary["it"]
+
+        ability.max_uses = new_max
+        if new_max is None:
+            ability.uses = None
+            if spent:
+                archive[spec.key] = {"spent": spent}
+        else:
+            ability.uses = new_max - min(spent, new_max)
+
+    for key, ability in rows.items():
+        if key in due:
+            continue
+        state = {}
+        if _spent(ability):
+            state["spent"] = _spent(ability)
+        if ability.description is not None and ability.description not in generated(key):
+            state["description"] = ability.description
+        if state:
+            archive[key] = state
+        char.abilities.remove(ability)
+
+    if archive != old_archive:
+        char.settings = {**(char.settings or {}), ARCHIVED_FEATURES: archive}
 
 
 def _restoration(spec: FeatureSpec, level: int) -> RestorationType:
