@@ -45,6 +45,39 @@ GIANTS = (("cloud", "Nuvole", "Cloud"), ("fire", "Fuoco", "Fire"), ("frost", "Ge
 _DARK_60 = ("Scurovisione", "Darkvision"), _b("Vedi al buio entro 18 m (60 piedi).", "You see in the dark within 60 ft.")
 _DARK_120 = ("Scurovisione", "Darkvision"), _b("Vedi al buio entro 36 m (120 piedi).", "You see in the dark within 120 ft.")
 
+_SIZE = SpeciesChoice("size", _b("Taglia", "Size"), ("medium", "small"),
+                      {"medium": _b("Media", "Medium"), "small": _b("Piccola", "Small")})
+_SPELL_ABILITY = SpeciesChoice("spell_ability", _b("Caratteristica da incantatore", "Spellcasting ability"),
+                               ("intelligence", "wisdom", "charisma"),
+                               {"intelligence": _b("Intelligenza", "Intelligence"), "wisdom": _b("Saggezza", "Wisdom"),
+                                "charisma": _b("Carisma", "Charisma")})
+
+
+def _choice(key: str, label: tuple[str, str], options: tuple[tuple[str, str, str], ...]) -> SpeciesChoice:
+    """Scelta da righe ``(chiave, it, en)``."""
+    return SpeciesChoice(key, _b(*label), tuple(k for k, _i, _e in options), {k: _b(i, e) for k, i, e in options})
+
+
+def _skills() -> tuple[tuple[str, str, str], ...]:
+    from core.data.labels import SKILL_LABELS_IT
+    return tuple((k, it, k.replace("_", " ").title()) for k, it in SKILL_LABELS_IT.items())
+
+
+def _origin_feats() -> tuple[tuple[str, str, str], ...]:
+    from core.data.feats_2024 import FEATS_2024
+    return tuple((f.key, f.name["it"], f.name["en"]) for f in FEATS_2024 if f.category == "origin")
+
+
+ELF_LINEAGES = (("drow", "Drow", "Drow"), ("high", "Elfo alto", "High Elf"), ("wood", "Elfo dei boschi", "Wood Elf"))
+GNOME_LINEAGES = (("forest", "Gnomo delle foreste", "Forest Gnome"), ("rock", "Gnomo delle rocce", "Rock Gnome"))
+FIENDISH_LEGACIES = (("abyssal", "Abissale", "Abyssal"), ("chthonic", "Ctonia", "Chthonic"), ("infernal", "Infernale", "Infernal"))
+_LINEAGE_SPELLS = _b("Ai livelli 3 e 5 un incantesimo in più, sempre preparato, lanciabile una volta senza slot per riposo lungo.",
+                     "At levels 3 and 5 one more spell, always prepared, castable once without a slot per long rest.")
+
+
+def _with_spells(it: str, en: str) -> dict[str, str]:
+    return _b(f"{it} {_LINEAGE_SPELLS['it']}", f"{en} {_LINEAGE_SPELLS['en']}")
+
 
 def _t(key: str, spec: tuple, summary: dict[str, str] | None = None) -> tuple[str, dict[str, str], dict[str, str]]:
     names, text = spec if summary is None else (spec, summary)
@@ -121,6 +154,98 @@ SPECIES_2024: dict[str, SpeciesData] = {
          _t("relentless_endurance", ("Resistenza implacabile", "Relentless Endurance"),
             _b("Se scendi a 0 PF senza morire sul colpo, resti a 1 PF. Un uso per riposo lungo.",
                "When you drop to 0 HP without being killed outright, you drop to 1 HP instead. One use per long rest.")))),
+    "2024_aasimar": SpeciesData(
+        "2024_aasimar", _b("Aasimar", "Aasimar"), ("medium", "small"), 30, (_SIZE,),
+        (_t("celestial_resistance", ("Resistenza celeste", "Celestial Resistance"),
+            _b("Resistenza ai danni necrotici e radianti.", "Resistance to necrotic and radiant damage.")),
+         _t("darkvision", *_DARK_60),
+         _t("healing_hands", ("Mani guaritrici", "Healing Hands"),
+            _b("Azione Magia: tocchi una creatura, che recupera PF pari a tanti d4 quanto la competenza. Un uso per riposo lungo.",
+               "Magic action: touch a creature, which regains HP equal to a number of d4s equal to your proficiency. One use per long rest.")),
+         _t("light_bearer", ("Portatore di luce", "Light Bearer"),
+            _b("Conosci il trucchetto Luce, con Carisma come caratteristica da incantatore.",
+               "You know the Light cantrip, with Charisma as your spellcasting ability.")),
+         _t("celestial_revelation", ("Rivelazione celeste", "Celestial Revelation"),
+            _b("Dal livello 3, azione bonus: per 1 minuto Ali celesti (volo), Radiosità interiore o Manto necrotico; una volta per turno "
+               "un colpo infligge danni extra pari alla competenza. Un uso per riposo lungo.",
+               "From level 3, bonus action: for 1 minute Heavenly Wings (flight), Inner Radiance or Necrotic Shroud; once per turn "
+               "a hit deals extra damage equal to your proficiency. One use per long rest.")))),
+    "2024_elf": SpeciesData(
+        "2024_elf", _b("Elfo", "Elf"), ("medium",), 30,
+        (_choice("lineage", ("Stirpe elfica", "Elven lineage"), ELF_LINEAGES), _SPELL_ABILITY,
+         _choice("skill", ("Sensi acuti", "Keen Senses"),
+                 (("insight", "Intuizione", "Insight"), ("perception", "Percezione", "Perception"), ("survival", "Sopravvivenza", "Survival")))),
+        (_t("darkvision", *_DARK_60),
+         _t("lineage_drow", ("Drow", "Drow"), _with_spells(
+             "Scurovisione 36 m (120 piedi) e il trucchetto Luci danzanti; Fuoco fatato al 3, Oscurità al 5.",
+             "Darkvision 120 ft and the Dancing Lights cantrip; Faerie Fire at 3, Darkness at 5.")),
+         _t("lineage_high", ("Elfo alto", "High Elf"), _with_spells(
+             "Il trucchetto Prestidigitazione (lo puoi cambiare con un trucchetto da Mago dopo un riposo lungo); Individuazione del magico al 3, "
+             "Passo velato al 5.",
+             "The Prestidigitation cantrip (you can swap it for a Wizard cantrip after a long rest); Detect Magic at 3, Misty Step at 5.")),
+         _t("lineage_wood", ("Elfo dei boschi", "Wood Elf"), _with_spells(
+             "Velocità 10,5 m (35 piedi) e il trucchetto Druidismo; Passo lungo al 3, Passare senza tracce al 5.",
+             "Speed 35 ft and the Druidcraft cantrip; Longstrider at 3, Pass without Trace at 5.")),
+         _t("fey_ancestry", ("Ascendenza fatata", "Fey Ancestry"),
+            _b("Vantaggio ai TS per evitare o terminare Affascinato.", "Advantage on saves to avoid or end Charmed.")),
+         _t("keen_senses", ("Sensi acuti", "Keen Senses"),
+            _b("Competenza in Intuizione, Percezione o Sopravvivenza.", "Proficiency in Insight, Perception or Survival.")),
+         _t("trance", ("Trance", "Trance"),
+            _b("Non dormi e la magia non ti addormenta; il riposo lungo ti basta in 4 ore di meditazione.",
+               "You don't sleep and magic can't put you to sleep; a long rest takes you 4 hours of meditation.")))),
+    "2024_gnome": SpeciesData(
+        "2024_gnome", _b("Gnomo", "Gnome"), ("small",), 30,
+        (_choice("lineage", ("Stirpe gnomesca", "Gnomish lineage"), GNOME_LINEAGES), _SPELL_ABILITY),
+        (_t("darkvision", *_DARK_60),
+         _t("gnomish_cunning", ("Astuzia gnomesca", "Gnomish Cunning"),
+            _b("Vantaggio ai TS su Intelligenza, Saggezza e Carisma.", "Advantage on Intelligence, Wisdom and Charisma saves.")),
+         _t("lineage_forest", ("Gnomo delle foreste", "Forest Gnome"),
+            _b("Il trucchetto Illusione minore e Parlare con gli animali sempre preparato, senza slot tante volte quanto la competenza "
+               "per riposo lungo.",
+               "The Minor Illusion cantrip and Speak with Animals always prepared, without a slot a number of times equal to your "
+               "proficiency per long rest.")),
+         _t("lineage_rock", ("Gnomo delle rocce", "Rock Gnome"),
+            _b("I trucchetti Riparare e Prestidigitazione; con 10 minuti crei fino a tre piccoli congegni con un effetto di "
+               "Prestidigitazione, che durano 8 ore.",
+               "The Mending and Prestidigitation cantrips; in 10 minutes you build up to three tiny devices with a Prestidigitation "
+               "effect, lasting 8 hours.")))),
+    "2024_halfling": SpeciesData(
+        "2024_halfling", _b("Halfling", "Halfling"), ("small",), 30, (),
+        (_t("brave", ("Coraggioso", "Brave"),
+            _b("Vantaggio ai TS per evitare o terminare Spaventato.", "Advantage on saves to avoid or end Frightened.")),
+         _t("halfling_nimbleness", ("Agilità halfling", "Halfling Nimbleness"),
+            _b("Attraversi lo spazio di una creatura più grande di te, senza fermarti lì.",
+               "You move through the space of a creature larger than you, without stopping there.")),
+         _t("luck", ("Fortuna", "Luck"),
+            _b("Se il d20 di un Test d20 fa 1 puoi ritirarlo, e tieni il nuovo risultato.",
+               "When the d20 of a D20 Test shows a 1 you can reroll it, and you keep the new roll.")),
+         _t("naturally_stealthy", ("Furtività naturale", "Naturally Stealthy"),
+            _b("Puoi nasconderti anche dietro una creatura di almeno una taglia più grande.",
+               "You can hide even behind a creature at least one size larger than you.")))),
+    "2024_human": SpeciesData(
+        "2024_human", _b("Umano", "Human"), ("medium", "small"), 30,
+        (_SIZE, _choice("skill", ("Abile", "Skillful"), _skills()),
+         _choice("origin_feat", ("Versatile", "Versatile"), _origin_feats())),
+        (_t("resourceful", ("Intraprendente", "Resourceful"),
+            _b("Ottieni Ispirazione Eroica alla fine di ogni riposo lungo.", "You gain Heroic Inspiration at the end of every long rest.")),
+         _t("skillful", ("Abile", "Skillful"), _b("Competenza in un'abilità a scelta.", "Proficiency in one skill of your choice.")),
+         _t("versatile", ("Versatile", "Versatile"), _b("Un talento d'Origine a scelta.", "One Origin feat of your choice.")))),
+    "2024_tiefling": SpeciesData(
+        "2024_tiefling", _b("Tiefling", "Tiefling"), ("medium", "small"), 30,
+        (_SIZE, _choice("legacy", ("Eredità infernale", "Fiendish legacy"), FIENDISH_LEGACIES), _SPELL_ABILITY),
+        (_t("darkvision", *_DARK_60),
+         _t("legacy_abyssal", ("Abissale", "Abyssal"), _with_spells(
+             "Resistenza al veleno e il trucchetto Spruzzo velenoso; Raggio di infermità al 3, Bloccare persone al 5.",
+             "Poison resistance and the Poison Spray cantrip; Ray of Sickness at 3, Hold Person at 5.")),
+         _t("legacy_chthonic", ("Ctonia", "Chthonic"), _with_spells(
+             "Resistenza ai danni necrotici e il trucchetto Tocco gelido; Falsa vita al 3, Raggio di indebolimento al 5.",
+             "Necrotic resistance and the Chill Touch cantrip; False Life at 3, Ray of Enfeeblement at 5.")),
+         _t("legacy_infernal", ("Infernale", "Infernal"), _with_spells(
+             "Resistenza al fuoco e il trucchetto Dardo di fuoco; Rimprovero infernale al 3, Oscurità al 5.",
+             "Fire resistance and the Fire Bolt cantrip; Hellish Rebuke at 3, Darkness at 5.")),
+         _t("otherworldly_presence", ("Presenza ultraterrena", "Otherworldly Presence"),
+            _b("Conosci il trucchetto Taumaturgia, con la caratteristica dell'Eredità infernale.",
+               "You know the Thaumaturgy cantrip, with your Fiendish Legacy's ability.")))),
 }
 
 

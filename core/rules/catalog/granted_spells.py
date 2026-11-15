@@ -588,6 +588,26 @@ for _spell, _comp in (
                       "Concentrazione, fino a 1 ora", is_concentration=True), "V, S, M")):
     GRANTED_SPELLS[_spell.key] = _spell
     _COMPONENTS[_spell.key] = _comp
+# Specie 2024 (Elfo, Gnomo, Tiefling): trucchetti e incantesimi di lignaggio, dati 2024 (2024 spells.md)
+for _spell, _comp in (
+        (GrantedSpell("dancing-lights", {"it": "Luci danzanti", "en": "Dancing Lights"}, 0, "1 azione", "36 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+        (GrantedSpell("prestidigitation", {"it": "Prestidigitazione", "en": "Prestidigitation"}, 0, "1 azione", "3 m", "Fino a 1 ora"), "V, S"),
+        (GrantedSpell("druidcraft", {"it": "Druidismo", "en": "Druidcraft"}, 0, "1 azione", "9 m", "Istantanea"), "V, S"),
+        (GrantedSpell("mending", {"it": "Riparare", "en": "Mending"}, 0, "1 minuto", "Contatto", "Istantanea"), "V, S, M"),
+        (GrantedSpell("thaumaturgy", {"it": "Taumaturgia", "en": "Thaumaturgy"}, 0, "1 azione", "9 m", "Fino a 1 minuto"), "V"),
+        (GrantedSpell("poison-spray", {"it": "Spruzzo velenoso", "en": "Poison Spray"}, 0, "1 azione", "9 m", "Istantanea",
+                      attack_save="ATK", damage_dice="1d12", damage_type="poison"), "V, S"),
+        (GrantedSpell("chill-touch", {"it": "Tocco gelido", "en": "Chill Touch"}, 0, "1 azione", "Contatto", "Istantanea",
+                      attack_save="ATK", damage_dice="1d10", damage_type="necrotic"), "V, S"),
+        (GrantedSpell("longstrider", {"it": "Passo lungo", "en": "Longstrider"}, 1, "1 azione", "Contatto", "1 ora"), "V, S, M"),
+        (GrantedSpell("false-life", {"it": "Falsa vita", "en": "False Life"}, 1, "1 azione", "Personale", "Istantanea"), "V, S, M"),
+        (GrantedSpell("hellish-rebuke", {"it": "Rimprovero infernale", "en": "Hellish Rebuke"}, 1, "1 reazione", "18 m", "Istantanea",
+                      attack_save="SAVE", damage_dice="2d10", damage_type="fire", higher_levels_dice="1d10"), "V, S"),
+        (GrantedSpell("ray-of-enfeeblement", {"it": "Raggio di indebolimento", "en": "Ray of Enfeeblement"}, 2, "1 azione", "18 m",
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S")):
+    GRANTED_SPELLS[_spell.key] = _spell
+    _COMPONENTS[_spell.key] = _comp
 # Scuola degli incantesimi concessi che un privilegio del Mago può aggiungere al libro o far lanciare
 _SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "polymorph": "transmutation", "raise-dead": "necromancy",
             "power-word-heal": "enchantment", "power-word-kill": "enchantment",

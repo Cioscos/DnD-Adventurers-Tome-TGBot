@@ -10,10 +10,11 @@ from typing import Any
 
 from core.data.species_2024 import DRAGON_ANCESTRY, SPECIES_2024
 from core.rules.catalog._common import state_on
-from core.rules.catalog.feats import _abilities
+from core.rules.catalog.feats import D20_TESTS, _abilities
+from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from core.rules.catalog.y2014.paladin import _drops_to_zero
 from core.rules.edition import character_edition
-from core.rules.types import Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
+from core.rules.types import Cost, FeatureSpec, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, UseChoice, Uses
 
 
 @dataclass(frozen=True)
@@ -172,9 +173,145 @@ ORC = (
                     "Relentless Endurance: if the damage would drop you to 0 HP without killing you outright, you stay at 1 HP (one use, long rest)")),)),
 )
 
+# --- Incantesimi di lignaggio (Elfo, Gnomo, Tiefling) -----------------------------------------------------------------
+def _lineage(species: str, group: str, option: str, page: int, cantrips: tuple[str, ...], **kw: Any) -> FeatureSpec:
+    """Beneficio di livello 1 del lignaggio: i trucchetti, sempre preparati, con la caratteristica scelta."""
+    return data_trait(species, f"{group}_{option}", 1, page, option_group=group,
+                      option_key=option, granted_spells=cantrips, **kw)
+
+
+def _lineage_spell(species: str, group: str, option: str, level: int, page: int, spell: str) -> FeatureSpec:
+    """Incantesimo di lignaggio del livello 3 o 5: sempre preparato, una volta senza slot per riposo lungo (o con uno slot)."""
+    name = GRANTED_SPELLS[spell].name
+    return trait(species, f"{group}_{option}_{level}", level, f"{name['it']} / {name['en']} (Specie, pag. {page})",
+                 (name["it"], name["en"]),
+                 ("Sempre preparato; una volta senza slot per riposo lungo, o con uno slot.",
+                  "Always prepared; once without a slot per long rest, or with a slot."),
+                 option_group=group, option_key=option, passive=False, granted_spells=(spell,), free_spell=spell,
+                 uses=Uses(table={1: 1}), restoration="long_rest")
+
+
+def _lineage_rows(species: str, group: str, page: int, rows: tuple[tuple[str, tuple[str, ...], str, str], ...],
+            **extra: dict[str, Any]) -> tuple[FeatureSpec, ...]:
+    """``rows``: (opzione, trucchetti, incantesimo del 3, incantesimo del 5); ``extra[opzione]``: altri campi del livello 1."""
+    return tuple(spec for option, cantrips, third, fifth in rows for spec in (
+        _lineage(species, group, option, page, cantrips, **extra.get(option, {})),
+        _lineage_spell(species, group, option, 3, page, third), _lineage_spell(species, group, option, 5, page, fifth)))
+
+
+# --- Aasimar (pag. 186) -----------------------------------------------------------------------------------------------
+_REVELATION = "celestial_revelation"
+_FORMS = {"wings": _both("Ali celesti", "Heavenly Wings"), "radiance": _both("Radiosità interiore", "Inner Radiance"),
+          "shroud": _both("Manto necrotico", "Necrotic Shroud")}
+_HEAL_MODES = {"self": _both("Curi te stesso", "Heal yourself"), "other": _both("Curi un'altra creatura", "Heal another creature")}
+
+
+def _form(ctx: RuleContext) -> str | None:
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == _REVELATION), None)
+    return (state.get("data") or {}).get("form") if state else None
+
+
+def _revelation_message(ctx: RuleContext, params: dict) -> dict[str, str]:
+    pb = ctx.char.proficiency_bonus
+    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
+    dc = 8 + effective_ability_mod(ctx.char, "charisma") + pb
+    return {
+        "wings": _both("Ali celesti: velocità di volo pari alla tua velocità per 1 minuto.",
+                       "Heavenly Wings: fly speed equal to your Speed for 1 minute."),
+        "radiance": _both(f"Radiosità interiore: luce intensa 3 m e fioca per altri 3 m; alla fine di ogni tuo turno ogni creatura entro 3 m subisce {pb} danni radianti (a mano).",
+                          f"Inner Radiance: bright light 10 ft and dim light 10 ft more; at the end of each of your turns every creature within 10 ft takes {pb} radiant damage (by hand)."),
+        "shroud": _both(f"Manto necrotico: le creature non alleate entro 3 m fanno un TS Carisma CD {dc} o sono Spaventate fino alla fine del tuo prossimo turno (lo decide il GM).",
+                        f"Necrotic Shroud: non-ally creatures within 10 ft make a Charisma save DC {dc} or are Frightened until the end of your next turn (the GM decides)."),
+    }[params["form"]]
+
+
+def _revelation_damage(phase: str, rolls: tuple[str, ...]) -> RollOptionSpec:
+    return RollOptionSpec(
+        key=f"species.2024_aasimar_revelation_damage{'' if phase == 'after_hit' else '_spell'}", phase=phase, rolls=rolls,
+        once_per_turn=True, group="species.2024_aasimar_revelation_damage", bonus=lambda c, _i: c.char.proficiency_bonus,
+        available=lambda c: _form(c) is not None,
+        label=_both("Rivelazione celeste: danni extra pari alla competenza (necrotici col Manto, altrimenti radianti), una volta per turno",
+                    "Celestial Revelation: extra damage equal to your proficiency (necrotic with the Shroud, radiant otherwise), once per turn"))
+
+
+AASIMAR = (
+    data_trait("aasimar", "celestial_resistance", 1, 186, modifiers=(Modifier("resistance:necrotic", 0), Modifier("resistance:radiant", 0))),
+    _darkvision("aasimar", 60, 186),
+    data_trait("aasimar", "healing_hands", 1, 186, passive=False, action_type="action", uses=Uses(table={1: 1}), restoration="long_rest",
+               on_use=OnUse(slot="action", rolls=lambda c: f"{c.char.proficiency_bonus}d4", heal=lambda _c, rolled: rolled,
+                            heal_when=lambda _c, p: p.get("mode") == "self", heal_ally_when=lambda _c, p: p.get("mode") == "other",
+                            ally_modes=("other",),
+                            choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: list(_HEAL_MODES), lambda k: _HEAL_MODES[k]),))),
+    data_trait("aasimar", "light_bearer", 1, 186, granted_spells=("light",), dc_ability="charisma"),
+    data_trait("aasimar", _REVELATION, 3, 186, passive=False, action_type="bonus_action", uses=Uses(table={1: 1}), restoration="long_rest",
+               dc_ability="charisma",
+               on_use=OnUse(slot="bonus", message=_revelation_message,
+                            state=lambda _c, p: StateSpec(_REVELATION, rounds=10, ends_on=("manual",), data={"form": p["form"]}),
+                            choices=(UseChoice("form", _both("Forma", "Form"), lambda _c: list(_FORMS), lambda k: _FORMS[k]),)),
+               modifiers=(Modifier("fly_speed", 1, when=lambda c: _form(c) == "wings"),),
+               roll_options=(_revelation_damage("after_hit", ("attack",)), _revelation_damage("before", ("spell_damage",)))),
+)
+
+# --- Elfo (pag. 189-190) ----------------------------------------------------------------------------------------------
+ELF = (
+    _darkvision("elf", 60, 189),
+    *_lineage_rows("elf", "lineage", 190, (
+        ("drow", ("dancing-lights",), "faerie-fire", "darkness"),
+        ("high", ("prestidigitation",), "detect-magic", "misty-step"),
+        ("wood", ("druidcraft",), "longstrider", "pass-without-trace")),
+        drow={"modifiers": (Modifier("sense:darkvision", 120),)}, wood={"modifiers": (Modifier("speed", 5),)}),
+    data_trait("elf", "fey_ancestry", 1, 189, roll_options=(_advantage(
+        "species.2024_elf_fey_ancestry", ("save",), "Ascendenza fatata: il tiro salvezza è contro l'essere affascinato? Vantaggio",
+        "Fey Ancestry: is the saving throw against being charmed? Advantage"),)),
+    # Sensi acuti: nessuna riga, l'abilità scelta (``species_options["skill"]``) la scrive il Task 5
+    data_trait("elf", "trance", 1, 189),
+)
+
+# --- Gnomo (pag. 191) -------------------------------------------------------------------------------------------------
+GNOME = (
+    _darkvision("gnome", 60, 191),
+    data_trait("gnome", "gnomish_cunning", 1, 191, modifiers=(Modifier(
+        "advantage", 0, when=lambda c: c.roll == "save" and c.ability in ("intelligence", "wisdom", "charisma"),
+        source="feature:species.2024_gnome_gnomish_cunning"),)),
+    _lineage("gnome", "lineage", "forest", 191, ("minor-illusion", "speak-with-animals"), passive=False,
+             free_spell="speak-with-animals", **_PB_LONG),
+    _lineage("gnome", "lineage", "rock", 191, ("mending", "prestidigitation")),  # i congegni: testo
+)
+
+# --- Halfling (pag. 193) ----------------------------------------------------------------------------------------------
+HALFLING = (
+    data_trait("halfling", "brave", 1, 193, roll_options=(_advantage(
+        "species.2024_halfling_brave", ("save",), "Coraggioso: il tiro salvezza è contro l'essere spaventato? Vantaggio",
+        "Brave: is the saving throw against being frightened? Advantage"),)),
+    data_trait("halfling", "halfling_nimbleness", 1, 193),
+    # Gratuita e offerta (non automatica): il manuale dice «puoi ritirare». Il d20 tenuto del tiro salvato dev'essere 1
+    data_trait("halfling", "luck", 1, 193, roll_options=(RollOptionSpec(
+        key="species.2024_halfling_luck", phase="after_roll", after="reroll", rolls=D20_TESTS, available=lambda c: c.natural_d20 == 1,
+        label=_both("Fortuna: hai fatto 1 sul d20, ritiralo (vale il nuovo risultato)", "Luck: you rolled a 1 on the d20, reroll it (the new roll stands)")),)),
+    data_trait("halfling", "naturally_stealthy", 1, 193),
+)
+
+# --- Umano (pag. 194) -------------------------------------------------------------------------------------------------
+# Abile e Versatile: nessuna riga, abilità e talento d'Origine scelti (``species_options``) li scrive il Task 5
+HUMAN = (data_trait("human", "resourceful", 1, 194, long_rest_inspiration=True),)
+
+# --- Tiefling (pag. 196-197) ------------------------------------------------------------------------------------------
+TIEFLING = (
+    _darkvision("tiefling", 60, 196),
+    *_lineage_rows("tiefling", "legacy", 197, (
+        ("abyssal", ("poison-spray",), "ray-of-sickness", "hold-person"),
+        ("chthonic", ("chill-touch",), "false-life", "ray-of-enfeeblement"),
+        ("infernal", ("fire-bolt",), "hellish-rebuke", "darkness")),
+        abyssal={"modifiers": (Modifier("resistance:poison", 0),)}, chthonic={"modifiers": (Modifier("resistance:necrotic", 0),)},
+        infernal={"modifiers": (Modifier("resistance:fire", 0),)}),
+    data_trait("tiefling", "otherworldly_presence", 1, 196, granted_spells=("thaumaturgy",)),
+)
+
 # Riempito dai moduli delle singole specie: chiave ``2024_dwarf`` -> tratti
 SPECIES_TRAITS: dict[str, tuple[FeatureSpec, ...]] = {
     "2024_dragonborn": DRAGONBORN, "2024_dwarf": DWARF, "2024_goliath": GOLIATH, "2024_orc": ORC,
+    "2024_aasimar": AASIMAR, "2024_elf": ELF, "2024_gnome": GNOME, "2024_halfling": HALFLING, "2024_human": HUMAN,
+    "2024_tiefling": TIEFLING,
 }
 
 

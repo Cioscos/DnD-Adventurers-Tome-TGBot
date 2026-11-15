@@ -37,7 +37,9 @@ def roll_context(char: Any, roll: str, **kw: Any) -> RuleContext:
     last = turn.get("last_roll") or {}
     if roll != "attack" and last.get("roll") == roll:  # il tiro salvato: ciò che era già stato applicato (aura prima/dopo)
         confirmed = tuple((last.get("applied") or {}).get("keys", []))
-    return RuleContext(char=char, edition=character_edition(char), roll=roll, turn=turn, confirmed=confirmed, **kw)
+    natural = last.get("die") if last.get("roll") == roll else None  # le opzioni dopo il tiro lo leggono (Fortuna)
+    return RuleContext(char=char, edition=character_edition(char), roll=roll, turn=turn, confirmed=confirmed,
+                       natural_d20=natural, **kw)
 
 
 def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "before", **kw: Any) -> AppliedOptions:
