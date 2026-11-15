@@ -1745,6 +1745,7 @@
         "lay_on_hands_other_2024": "Riferisci i PF al GM: la creatura li recupera da lui. Se è un personaggio della serata, scegli il suo nome per curarlo da qui.",
         "lay_on_hands_cure_self_2024": "Le condizioni scelte sono tolte dalla scheda; i punti spesi non curano PF.",
         "lay_on_hands_cure_other_2024": "Le condizioni scelte non si scrivono sulla scheda altrui: dillo al GM o al giocatore, che le toglie da loro. I punti sono già spesi.",
+        "healer_other": "Guaritore: alla cura mostrata somma i Dadi Vita massimi del bersaglio e riferiscila al GM. Se è un personaggio della serata, scegli il suo nome per curarlo da qui.",
         "lay_on_hands_other": "Riferisci i PF al GM: la creatura li recupera da lui. Se è un personaggio della serata, scegli il suo nome per curarlo da qui. Non vale su costrutti e non morti.",
         "lay_on_hands_cure_self": "Il veleno è tolto dalla scheda, se c'era; una malattia la segni a mano. Non vale su costrutti e non morti.",
         "lay_on_hands_cure_other": "Dillo al GM o al giocatore: il veleno o la malattia va tolto da loro. Non vale su costrutti e non morti.",

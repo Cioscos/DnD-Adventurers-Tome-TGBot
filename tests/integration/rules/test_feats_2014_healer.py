@@ -69,5 +69,7 @@ async def test_healer_outside_evening_is_text(client, test_session_factory, monk
     _fixed(monkeypatch, 3)
     r = await _use(client, cid, HEALER, params={"mode": "other"})
     assert r.status_code == 200, r.text
-    assert r.json()["received"] is None and r.json()["given"] == 12 and r.json()["healed"] == 0
+    # 3 + 4: i Dadi Vita del bersaglio li somma il giocatore, non il livello di chi cura
+    assert r.json()["received"] is None and r.json()["given"] == 7 and r.json()["healed"] == 0
+    assert "healer_other" in r.json()["notes"]
     assert await _current(test_session_factory, cid) == 10

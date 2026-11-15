@@ -782,7 +782,7 @@ export default function CharacterSelect() {
                 primaryHaptic="medium"
               />
               <Pressable
-                onClick={() => { setEquipPicks(null); setStep('identity') }}
+                onClick={() => { setEquipPicks(null); setWealthKey(null); setStep('identity') }}
                 className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
               >
                 {t('character.create.equipment_skip')}

@@ -29,6 +29,7 @@ async def load_receiver(session: AsyncSession, char_id: int) -> Character:
     row = await session.execute(select(Character).options(
         selectinload(Character.classes), selectinload(Character.ability_scores), selectinload(Character.spells),
         selectinload(Character.spell_slots), selectinload(Character.items), selectinload(Character.abilities),
+        selectinload(Character.currency),  # ingombro col peso delle monete nel TS di concentrazione
     ).where(Character.id == char_id).execution_options(populate_existing=True))
     return row.scalar_one()
 

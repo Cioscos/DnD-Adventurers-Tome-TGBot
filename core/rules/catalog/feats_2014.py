@@ -49,6 +49,7 @@ _register(
         slot="action", rolls="1d6", heal=lambda ctx, rolled: rolled + 4 + ctx.char.total_level,
         heal_when=lambda _c, params: params.get("mode") == "self", heal_ally_when=lambda _c, params: params.get("mode") == "other",
         heal_ally_add_level=True, ally_modes=("other",),
+        notes=lambda _c, p: ["healer_other"] if p.get("mode") == "other" and p.get("target_character_id") is None else [],
         choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: list(_HEALER_MODES), lambda k: _HEALER_MODES[k]),))),
     *(_f14(k) for k in (
         # solo testo (D1): distanze, attacchi bonus o di opportunità

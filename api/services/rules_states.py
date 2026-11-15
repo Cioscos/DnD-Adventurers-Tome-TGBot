@@ -497,6 +497,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.notes += on_use.notes(ctx, params or {})
     if heals_ally:
         if target is None:  # fuori serata, o un'altra creatura: il giocatore lo riporta al GM (D1)
+            if on_use.heal_ally_add_level:  # i Dadi Vita del bersaglio li somma il giocatore (nota healer_other)
+                healed_ally = max(0, healed_ally - char.total_level)
             result.given = None if on_use.heal_ally_half_max or on_use.heal_ally_full else healed_ally  # metà del massimo altrui: lo dice il messaggio
         else:
             from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
