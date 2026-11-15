@@ -88,8 +88,9 @@ def plan_species(char: Character, key: str, options: dict[str, str]) -> SpeciesP
         plan.changes += [code for code, hit in (
             ("speed_reset", char.speed != data.speed_ft), ("senses_removed", bool(settings.get("senses"))),
             ("roll_notes_removed", bool(settings.get("roll_notes")))) if hit]
-        if plan.old_rows:
+        if plan.old_rows:  # cancellate, non archiviate: il giocatore vede quali
             plan.changes.append(f"traits_archived:{len(plan.old_rows)}")
+            plan.changes += [f"trait_removed:{a.name}" for a in plan.old_rows]
         race = (char.race or "").lower()
         if "nan" in race or "dwarf" in race:
             plan.changes.append("hp_check")

@@ -51,6 +51,7 @@ async def test_preview_lists_changes_without_writing(client, test_session_factor
     r = await _preview(client, cid, "2024_dwarf")
     assert r.status_code == 200, r.text
     assert set(r.json()["changes"]) == {"speed_reset", "senses_removed", "roll_notes_removed", "traits_archived:2",
+                                        "trait_removed:Scurovisione", "trait_removed:robustezza nanica",
                                         "hp_check", "scores_check"}
     after = await _full(client, cid)
     assert after["abilities"] == before["abilities"] and after["speed"] == 25 and after["race"] == "Nano delle colline"
@@ -107,6 +108,7 @@ async def test_change_human_to_elf_removes_skill_and_feat(client, test_session_f
     full = r.json()
     assert not full["skills"].get("athletics") and full["skills"].get("perception") is True
     assert not _row(full, key="feat.2024_alert")
+    assert not [a for a in full["abilities"] if (a["feature_key"] or "").startswith("species.2024_human_")]
     assert full["race"] == "Elfo (Elfo alto)"
     assert full["species_options"]["_granted_skill"] == "perception" and "_feat_ability_id" not in full["species_options"]
 
