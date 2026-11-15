@@ -251,6 +251,8 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         attunement_limit=attunement_limit(char),
         scroll_casting=has_use_magic_device(char),
     )
+    response.computed.bloodied = (  # 2024 p.27: di per sé non fa nulla, è un segnale per chi gioca
+        edition == "2024" and 0 < char.current_hit_points * 2 <= response.computed.hp_max_effective)
     return response
 
 
