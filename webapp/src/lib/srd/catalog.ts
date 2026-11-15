@@ -2,9 +2,11 @@ import { formatLength, type UnitSystem } from '@/store/unitSettings'
 import type { SpellFormData } from '@/pages/spells/SpellForm'
 import type { ItemFormData } from '@/pages/inventory/itemMetadata'
 import type { ItemBonus, Recharge } from '@/lib/itemMagic'
+import type { Background2024Entry, Species2024Entry } from '@/lib/species'
 
 export type CatalogKind =
-  'spells' | 'spells-2024' | 'magic-items' | 'equipment' | 'races' | 'backgrounds' | 'feats' | 'monsters'
+  | 'spells' | 'spells-2024' | 'magic-items' | 'equipment' | 'races' | 'backgrounds' | 'feats' | 'monsters'
+  | 'equipment-2024' | 'species-2024' | 'backgrounds-2024'
 export type Lang = 'it' | 'en'
 export interface LocalizedField { en: string; it?: string }
 
@@ -104,6 +106,9 @@ export interface KindEntries {
   backgrounds: BaseEntry
   feats: BaseEntry
   monsters: MonsterEntry
+  'equipment-2024': EquipmentEntry
+  'species-2024': Species2024Entry
+  'backgrounds-2024': Background2024Entry
 }
 export type CatalogEntry<K extends CatalogKind> = KindEntries[K]
 
@@ -116,6 +121,12 @@ const LOADERS: Record<CatalogKind, () => Promise<{ default: { items: unknown[] }
   backgrounds: () => import('@/data/srd/backgrounds.json'),
   feats: () => import('@/data/srd/feats.json'),
   monsters: () => import('@/data/srd/monsters.json'),
+  'equipment-2024': () => import('@/data/srd/equipment-2024.json'),
+  // I cataloghi 2024 usano `key` al posto di `index` (ricerca e chiavi React leggono `index`).
+  'species-2024': () => import('@/data/srd/species-2024.json')
+    .then((m) => ({ default: { items: m.default.map((e) => ({ ...e, index: e.key })) } })),
+  'backgrounds-2024': () => import('@/data/srd/backgrounds-2024.json')
+    .then((m) => ({ default: { items: m.default.items.map((e) => ({ ...e, index: e.key })) } })),
 }
 
 const cache = new Map<CatalogKind, Promise<unknown[]>>()

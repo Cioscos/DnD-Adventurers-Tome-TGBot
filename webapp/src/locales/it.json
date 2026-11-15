@@ -2505,6 +2505,27 @@
       "equipment_none": "Nessun equipaggiamento di partenza per questa classe.",
       "scores_skip": "Salta: lascia tutti a 10",
       "background_pick": "Scegli background dal catalogo",
+      "step_background": "Background",
+      "bg_hint": "Il background dà un talento d'Origine, due abilità, uno strumento e gli aumenti di caratteristica. Facoltativo: senza, scegli il talento al passo dopo.",
+      "bg_origin_feat": "Talento d'Origine",
+      "bg_skills": "Abilità",
+      "bg_tool": "Strumento",
+      "bg_increases": "Aumenti: +2 e +1, oppure +1 a tutte e tre",
+      "bg_increases_invalid": "Distribuisci +2 e +1, oppure +1 a ciascuna delle tre.",
+      "bg_equipment": "Equipaggiamento",
+      "bg_pack": "Pacchetto",
+      "bg_gold": "50 mo",
+      "bg_clear": "Rimuovi background",
+      "errors": {
+        "species_edition": "La specie 2024 vale solo per i personaggi 2024.",
+        "species_unknown": "Specie non riconosciuta.",
+        "species_options_invalid": "Scelte della specie non valide (il talento di Versatile non può essere quello del background).",
+        "species_conflict": "Scegli una sola specie.",
+        "background_edition": "Il background 2024 vale solo per i personaggi 2024.",
+        "background_unknown": "Background non riconosciuto.",
+        "background_increases_invalid": "Aumenti del background non validi: nessuna caratteristica può superare 20.",
+        "background_tool_invalid": "Strumento del background non valido."
+      },
       "create_cta": "Crea"
     },
     "equipment": {

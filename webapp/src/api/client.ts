@@ -599,6 +599,10 @@ export const api = {
         rules_edition?: '2014' | '2024'
         /** Talento d'Origine 2024 scelto nella creazione guidata. */
         origin_feat?: string
+        /** Solo 2024: specie del catalogo con le sue scelte (lignaggio, taglia, ...). */
+        species_2024?: { key: string; options: Record<string, string> }
+        /** Solo 2024: background del catalogo; il suo talento d'Origine sostituisce `origin_feat`. */
+        background_2024?: { key: string; increases: Record<string, number>; tool?: string; equipment: 'pack' | 'gold' }
       },
     ) =>
       request<CharacterFull>('/characters', {

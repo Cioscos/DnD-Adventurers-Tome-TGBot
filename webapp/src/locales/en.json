@@ -2506,6 +2506,27 @@
       "equipment_none": "No starting equipment for this class.",
       "scores_skip": "Skip: leave all at 10",
       "background_pick": "Pick background from catalogue",
+      "step_background": "Background",
+      "bg_hint": "The background grants an Origin feat, two skills, a tool and the ability increases. Optional: without one, you pick the feat in the next step.",
+      "bg_origin_feat": "Origin feat",
+      "bg_skills": "Skills",
+      "bg_tool": "Tool",
+      "bg_increases": "Increases: +2 and +1, or +1 to all three",
+      "bg_increases_invalid": "Assign +2 and +1, or +1 to each of the three.",
+      "bg_equipment": "Equipment",
+      "bg_pack": "Package",
+      "bg_gold": "50 GP",
+      "bg_clear": "Remove background",
+      "errors": {
+        "species_edition": "2024 species are only for 2024 characters.",
+        "species_unknown": "Unknown species.",
+        "species_options_invalid": "Invalid species choices (Versatile's feat can't be the background's).",
+        "species_conflict": "Pick only one species.",
+        "background_edition": "2024 backgrounds are only for 2024 characters.",
+        "background_unknown": "Unknown background.",
+        "background_increases_invalid": "Invalid background increases: no ability can exceed 20.",
+        "background_tool_invalid": "Invalid background tool."
+      },
       "create_cta": "Create"
     },
     "equipment": {
