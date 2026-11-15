@@ -380,6 +380,10 @@ def at_will(char: Any, spell: Any) -> bool:
 _MATERIAL = re.compile(r"^M(?![A-Za-z])", re.IGNORECASE)
 
 
+# shortcut: riconosce il testo libero dei componenti (it/en), costo in monete e verbo «consum*»; rivederlo se cambia il formato dell'SRD
+_COSTLY_CONSUMED = re.compile(r"(?=.*\d\s*(?:mo|gp|mp|pp|ma|sp|ar|cp)\b)(?=.*consum)", re.IGNORECASE | re.DOTALL)
+
+
 def _form_materials(char: Any, spell: Any) -> str | None:
     """Incantesimi Bestiali: in forma bestiale non si forniscono materiali. L'Arcidruido ignora quelli senza costo, ma l'app
     non sa se il materiale ne ha uno: glielo chiede."""
@@ -418,6 +422,8 @@ def cast_warnings(char: Any, spell: Any, ritual: bool, slotless: bool | None = N
         out.append(materials)
     if casting_blocked_by(char):
         out.append("state_blocks_casting")
+    if _COSTLY_CONSUMED.search(getattr(spell, "components", None) or ""):
+        out.append("material_consumed")
     if not ritual and spell.level > 0 and granted_ritual_only(char, spell):
         out.append("ritual_only")
     if ritual:
