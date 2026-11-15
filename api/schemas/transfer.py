@@ -75,6 +75,8 @@ class ExportCharacter(BaseModel):
 
     name: str = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
+    species_key: Optional[str] = Field(None, max_length=40)  # specie 2024 del motore; chiave sconosciuta = nessun tratto
+    species_options: dict = Field(default_factory=dict)
     gender: Optional[str] = Field(None, max_length=50)
     hit_points: Int0 = 0
     current_hit_points: Int0 = 0

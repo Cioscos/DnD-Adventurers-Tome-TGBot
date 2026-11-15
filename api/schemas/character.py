@@ -160,6 +160,9 @@ class CharacterFull(BaseModel):
     id: int
     name: str
     race: Optional[str] = None
+    # Specie 2024 del motore e sue scelte (``_granted_skill``/``_feat_ability_id``: effetti una tantum, del server)
+    species_key: Optional[str] = None
+    species_options: Optional[dict[str, Any]] = None
     gender: Optional[str] = None
     background: Optional[str] = None
     alignment: Optional[str] = None
@@ -386,6 +389,12 @@ class SpeciesTrait(BaseModel):
 class SpeciesSense(BaseModel):
     type: Literal["darkvision", "blindsight", "truesight", "tremorsense"]
     range_ft: int = Field(ge=0, le=1000)
+
+
+class SpeciesChoiceIn(BaseModel):
+    """Specie 2024 (``core.data.species_2024``) e le sue scelte (lignaggio, abilità, talento d'Origine, ...)."""
+    key: str = Field(max_length=40)
+    options: dict[str, str] = Field(default_factory=dict, max_length=10)
 
 
 class OtherSpeed(BaseModel):
