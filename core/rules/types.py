@@ -682,6 +682,8 @@ class FeatureSpec:
     turn_start_heal: "Callable[[RuleContext], int] | None" = None
     # Ispirazione Eroica a inizio turno, solo in un incontro, se non c'è già (Guerriero Eroico del Campione 2024)
     turn_start_inspiration: bool = False
+    # Ispirazione Eroica alla fine di ogni riposo lungo (Intraprendente dell'Umano 2024)
+    long_rest_inspiration: bool = False
     # punteggio -> bonus, con massimo `ability_cap`: scritto sul punteggio dal sync, tolto se il privilegio sparisce
     ability_bonus: dict[str, int] | None = None
     ability_cap: int = 20
@@ -785,3 +787,4 @@ class RuleContext:
     damage_in: int | None = None  # solo ``damage_taken`` al danno vero: serve ai testi (cosa riflettere), mai alla disponibilità
     proficient: bool = False  # prova già con competenza (strumento): niente mezze competenze («Atleta Straordinario»)
     spell_data: Any = None  # opzione di uno stato ``spell:*``: i ``data`` di quello stato (scelte, livello dello slot)
+    natural_d20: int | None = None  # dopo il tiro: il d20 tenuto del tiro salvato (Fortuna dell'Halfling); None se non noto

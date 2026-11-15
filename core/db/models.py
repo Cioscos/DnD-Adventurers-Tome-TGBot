@@ -88,6 +88,9 @@ class Character(Base):
 
     # Optional lore fields
     race: Mapped[Optional[str]] = mapped_column(String(100))
+    # Specie 2024 del motore (``core.rules.catalog.species_2024``, es. ``2024_dwarf``) e sue scelte (lignaggio, ...)
+    species_key: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    species_options: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     gender: Mapped[Optional[str]] = mapped_column(String(50))
 
     # Hit points

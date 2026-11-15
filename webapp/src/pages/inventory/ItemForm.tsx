@@ -8,7 +8,7 @@ import Pressable from '@/components/ui/Pressable'
 import { useToast } from '@/hooks/useToast'
 import { BookOpen } from 'lucide-react'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
-import { loadSpellCatalog, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
+import { loadSpellCatalog, equipmentCatalogKind, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
@@ -503,7 +503,7 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
       </div>
       {picker === 'equipment' && (
         <CatalogPicker
-          kind="equipment"
+          kind={equipmentCatalogKind(edition === '2024' ? '2024' : '2014')}
           onClose={() => setPicker(null)}
           onPick={(e) => applyCatalog(equipmentToForm(e, lang, system, {
             range: t('character.inventory.range_label'), thrown: t('character.inventory.thrown_range_label'),

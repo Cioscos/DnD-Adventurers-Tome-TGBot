@@ -92,6 +92,63 @@ export function backgroundLanguages(langs: string[] | undefined, lang: Lang): st
   return (langs ?? []).map((l) => (LANGS[l] ? localized(LANGS[l], lang).text : l))
 }
 
+// --- Cataloghi 2024 (species-2024.json / backgrounds-2024.json, specchio di core/data) ---
+
+type Bilingual = { it: string; en: string }
+export interface Species2024Choice {
+  key: string
+  label: Bilingual
+  from_level: number
+  options: { key: string; label: Bilingual }[]
+}
+export interface Species2024Entry extends BaseEntry {
+  key: string
+  size: string[]
+  speed_ft: number
+  choices: Species2024Choice[]
+  traits: { key: string; name: Bilingual; summary: Bilingual }[]
+}
+export interface Background2024Entry extends BaseEntry {
+  key: string
+  abilities: string[]
+  origin_feat: string
+  skills: string[]
+  /** Stringa = strumento fisso; lista = da scegliere. */
+  tool: string | string[]
+  equipment: string
+  feat_list: string | null
+}
+
+/** Scelte che il server richiede alla creazione (core/data/species_2024.py `required_choices`) ancora senza un'opzione valida. */
+export function speciesChoicesMissing(entry: Species2024Entry, options: Record<string, string>): string[] {
+  return entry.choices
+    .filter((c) => c.from_level <= 1 && !c.options.some((o) => o.key === options[c.key]))
+    .map((c) => c.key)
+}
+
+export interface Background2024Choice {
+  entry: Background2024Entry
+  increases: Record<string, number>
+  tool: string | null
+  equipment: 'pack' | 'gold'
+}
+
+/** +2/+1 o +1/+1/+1 fra le tre caratteristiche del background, e lo strumento se è a scelta (come il router). */
+export function increasesValid(increases: Record<string, number>): boolean {
+  const vals = Object.values(increases).filter((v) => v > 0).sort().join(',')
+  return vals === '1,2' || vals === '1,1,1'
+}
+
+export function background24Valid(c: Background2024Choice | null): boolean {
+  if (!c) return true
+  return increasesValid(c.increases) && (!Array.isArray(c.entry.tool) || c.entry.tool.includes(c.tool ?? ''))
+}
+
+export function background24Payload(c: Background2024Choice) {
+  const increases = Object.fromEntries(Object.entries(c.increases).filter(([, v]) => v > 0))
+  return { key: c.entry.key, increases, ...(c.tool ? { tool: c.tool } : {}), equipment: c.equipment }
+}
+
 /** Extra POST /characters fields: scores are always sent (what you see is what you get) unless the step was skipped. */
 export function creationExtras(o: {
   scores: Record<string, number>

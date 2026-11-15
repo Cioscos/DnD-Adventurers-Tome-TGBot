@@ -60,7 +60,9 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   const [picks, setPicks] = useState<string[]>([])
   const [tools, setTools] = useState<string[]>([]) // chiavi del catalogo (Artigiano, Musicista)
   const [texts, setTexts] = useState(['', '', ''])
-  const [list, setList] = useState('')
+  // Lista già fissata (Iniziato alla magia del background 2024): il server rifiuta una lista diversa.
+  const fixedList = (ability.options as { list?: string } | null | undefined)?.list
+  const [list, setList] = useState(fixedList ?? '')
   const [stat, setStat] = useState('')
   const [chosen, setChosen] = useState<SpellEntry[]>([])
   const [catalog, setCatalog] = useState<SpellEntry[]>([])
@@ -290,7 +292,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
 
         {has('list') && (
           <>
-            <select value={list} onChange={(e) => { setList(e.target.value); setChosen([]) }} aria-label={t('character.feats.mi_list')} className={FIELD}>
+            <select value={list} disabled={!!fixedList} onChange={(e) => { setList(e.target.value); setChosen([]) }} aria-label={t('character.feats.mi_list')} className={`${FIELD} disabled:opacity-70`}>
               <option value="">{t('character.feats.mi_list')}</option>
               {(is2014 ? LISTS_2014 : LISTS).map((l) => <option key={l} value={l}>{t(`dnd.classes.${l}`)}</option>)}
             </select>

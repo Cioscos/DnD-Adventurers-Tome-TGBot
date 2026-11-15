@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "3.11.0",
+      "date": "2026-11-15",
+      "added": {
+        "it": [
+          "Specie 2024: tutte e dieci le specie con i loro tratti calcolati dall'app, comprese stirpi, eredità e discendenze (Elfo, Gnomo, Goliath, Tiefling, Dragonide).",
+          "Background 2024 nella creazione del personaggio: aumenti dei punteggi, talento d'origine, abilità, strumento e pacchetto di equipaggiamento oppure 50 monete d'oro.",
+          "Equipaggiamento 2024: Lancia, Tridente e Piccone da guerra con i valori del manuale 2024, Moschetto e Pistola; la Rete non c'è più.",
+          "«Scegli specie 2024» nella pagina Identità dei personaggi 2024 già esistenti, con un'anteprima di cosa cambia prima di confermare.",
+          "L'inventario propone il catalogo dell'edizione del personaggio.",
+          "Attenzione: i bonus razziali 2014 già inseriti nei punteggi vanno tolti a mano. Lancia, Tridente e Piccone già nell'inventario restano coi dati 2014. Le regole homebrew che modellano un tratto di specie vanno spente, altrimenti l'effetto vale due volte."
+        ],
+        "en": [
+          "2024 species: all ten species with their traits computed by the app, including lineages, legacies and ancestries (Elf, Gnome, Goliath, Tiefling, Dragonborn).",
+          "2024 backgrounds in character creation: ability increases, origin feat, skills, tool, and an equipment pack or 50 gp.",
+          "2024 equipment: Lance, Trident and War Pick with the 2024 manual values, Musket and Pistol; the Net is gone.",
+          "\"Choose 2024 species\" on the Identity page of existing 2024 characters, with a preview of what changes before you confirm.",
+          "The inventory offers the catalog for the character's edition.",
+          "Heads up: 2014 racial bonuses already in your ability scores must be removed by hand. Lance, Trident and War Pick already in the inventory keep their 2014 data. Homebrew rules that model a species trait must be turned off, or the effect counts twice."
+        ]
+      }
+    },
+    {
       "version": "3.10.0",
       "date": "2026-11-15",
       "added": {

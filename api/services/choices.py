@@ -620,7 +620,8 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
             saved.update({"cantrips": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
     elif "list" in needs:  # Iniziato alla magia 2024
         chosen, stat = options.get("list"), options.get("ability")
-        if chosen not in _MI_LISTS or stat not in _MI_ABILITIES:
+        fixed = (ability.options or {}).get("list")  # lista fissata dal background 2024
+        if chosen not in _MI_LISTS or stat not in _MI_ABILITIES or (fixed and chosen != fixed):
             raise _bad("feat_options_invalid")
         if any((a.options or {}).get("list") == chosen for a in others):
             raise _bad("feat_list_taken")

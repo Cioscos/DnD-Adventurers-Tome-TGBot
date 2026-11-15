@@ -99,7 +99,7 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     cols = {k: getattr(char, k) for k in ExportCharacter.model_fields if k != "notes"}
     cols["spell_slots_mode"] = _val(char.spell_slots_mode)
     for k in ("settings", "conditions", "skills", "saving_throws", "death_saves",
-              "personality", "damage_modifiers", "tool_proficiencies"):
+              "personality", "damage_modifiers", "tool_proficiencies", "species_options"):
         cols[k] = cols[k] or {}
     for k in ("languages", "pending_choices"):
         cols[k] = cols[k] or []

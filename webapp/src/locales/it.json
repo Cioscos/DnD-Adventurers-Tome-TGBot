@@ -1367,6 +1367,40 @@
         "unconscious": "Un personaggio privo di sensi è incapacitato, non può muoversi né parlare, ignora l'ambiente. Lascia cadere ciò che tiene e cade prono. Fallisce automaticamente i tiri salvezza di Forza e Destrezza. I tiri per colpire contro di lui hanno vantaggio; ogni colpo in mischia entro 1,5 metri è un critico."
       }
     },
+    "species": {
+      "choose": "Scegli specie 2024",
+      "change": "Cambia specie",
+      "save_first": "Salva le modifiche prima di cambiare specie.",
+      "title": "Specie 2024",
+      "pick": "Scegli dal catalogo",
+      "preview": "Vedi i cambiamenti",
+      "preview_title": "Cosa cambia",
+      "no_changes": "Nessun altro cambiamento sulla scheda.",
+      "confirm_hint": "Niente cambia finché non confermi.",
+      "confirm": "Conferma",
+      "complete_feat": "Il talento {{name}} ha scelte proprie: completalo nella pagina Abilità.",
+      "go_abilities": "Vai alle Abilità",
+      "changes": {
+        "speed_reset": "La velocità torna a quella della specie.",
+        "senses_removed": "La scurovisione inserita a mano viene tolta: la dà la specie. Gli altri sensi restano.",
+        "roll_notes_removed": "Le note sui tiri della vecchia razza vengono tolte: le dà la specie. Le tue note restano.",
+        "traits_archived_one": "1 tratto della vecchia razza verrà rimosso:",
+        "traits_archived_other": "{{count}} tratti della vecchia razza verranno rimossi:",
+        "trait_removed": "{{name}}",
+        "hp_check": "Se i punti ferita massimi contavano già la Robustezza nanica, toglila a mano: ora la aggiunge la specie.",
+        "scores_check": "I punteggi di caratteristica non cambiano: togli a mano gli eventuali bonus razziali 2014.",
+        "skill_added": "Competenza in {{skill}} aggiunta.",
+        "skill_removed": "Competenza in {{skill}} tolta.",
+        "feat_added": "Talento {{feat}} aggiunto.",
+        "feat_removed": "Talento {{feat}} tolto."
+      },
+      "errors": {
+        "species_edition": "Solo i personaggi con le regole 2024 possono scegliere una specie 2024.",
+        "species_unknown": "Questa specie non è nel catalogo.",
+        "species_options_invalid": "Le scelte della specie non sono valide: controllale e riprova.",
+        "generic": "Non è stato possibile cambiare la specie. Riprova."
+      }
+    },
     "identity": {
       "title": "Identità",
       "name": "Nome",
@@ -2275,8 +2309,10 @@
         "short_rest": "Breve",
         "manual": "Manuale"
       },
-      "class_features_section": "Abilità di classe",
+      "class_features_section": "Abilità di classe e specie",
       "custom_section": "Abilità personalizzate",
+      "species_badge": "Specie",
+      "species_feature_locked": "Tratto della specie, gestito automaticamente: puoi consumarne gli usi e modificarne la descrizione.",
       "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
       "edit_description": "Modifica descrizione",
       "set_uses_title": "Imposta usi",
@@ -2505,6 +2541,28 @@
       "equipment_none": "Nessun equipaggiamento di partenza per questa classe.",
       "scores_skip": "Salta: lascia tutti a 10",
       "background_pick": "Scegli background dal catalogo",
+      "step_background": "Background",
+      "bg_hint": "Il background dà un talento d'Origine, due abilità, uno strumento e gli aumenti di caratteristica. Facoltativo: senza, scegli il talento al passo dopo.",
+      "bg_origin_feat": "Talento d'Origine",
+      "bg_skills": "Abilità",
+      "bg_tool": "Strumento",
+      "bg_increases": "Aumenti: +2 e +1, oppure +1 a tutte e tre",
+      "bg_increases_invalid": "Distribuisci +2 e +1, oppure +1 a ciascuna delle tre.",
+      "bg_equipment": "Equipaggiamento",
+      "bg_pack": "Pacchetto",
+      "bg_gold": "50 mo",
+      "bg_clear": "Rimuovi background",
+      "errors": {
+        "species_edition": "La specie 2024 vale solo per i personaggi 2024.",
+        "species_unknown": "Specie non riconosciuta.",
+        "species_options_invalid": "Scelte della specie non valide (il talento di Versatile non può essere quello del background).",
+        "species_conflict": "Scegli una sola specie.",
+        "background_edition": "Il background 2024 vale solo per i personaggi 2024.",
+        "background_unknown": "Background non riconosciuto.",
+        "background_increases_invalid": "Aumenti del background non validi: nessuna caratteristica può superare 20.",
+        "background_tool_invalid": "Strumento del background non valido.",
+        "species_skill_taken": "L'abilità scelta per la specie è già data da classe o background: scegline un'altra."
+      },
       "create_cta": "Crea"
     },
     "equipment": {

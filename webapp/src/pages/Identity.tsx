@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Save, Lock, Share2 } from 'lucide-react'
+import { Save, Lock, Share2, Sprout } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
@@ -22,6 +22,7 @@ import languagesSrd from '@/data/languages-srd.json'
 import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
 import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
 import ToolProficiencyEditor from '@/components/character/ToolProficiencyEditor'
+import SpeciesSheet2024 from '@/components/character/SpeciesSheet2024'
 import type { ToolLevel } from '@/lib/tools'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
@@ -203,6 +204,7 @@ export default function Identity() {
   // Gli errori compaiono al primo tentativo di salvare, poi seguono la bozza.
   const [showErrors, setShowErrors] = useState(false)
   const [leaving, setLeaving] = useState<(() => void) | null>(null)
+  const [speciesOpen, setSpeciesOpen] = useState(false)
   const unitSystem = useUnitSettings((s) => s.system)
 
   const { data: char } = useQuery({
@@ -244,7 +246,7 @@ export default function Identity() {
       setRestored(snapshot(start) !== snapshot(initial))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [char])
+  }, [char, draft === null])
 
   useEffect(() => {
     if (draft) writeStoredDraft(charId, unitSystem, snapshot(draft) !== pristine ? draft : null)
@@ -425,6 +427,14 @@ export default function Identity() {
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <Input label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
         <Input label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
+        {char.rules_edition === '2024' && (
+          <div className="col-span-2 md:col-span-3 space-y-1">
+            <Button variant="secondary" fullWidth disabled={dirty} icon={<Sprout size={16} />} onClick={() => setSpeciesOpen(true)}>
+              {t(char.species_key ? 'character.species.change' : 'character.species.choose')}
+            </Button>
+            {dirty && <p className="text-xs font-body italic text-dnd-text-faint">{t('character.species.save_first')}</p>}
+          </div>
+        )}
         <div className="col-span-2 md:col-span-1">
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
         </div>
@@ -626,6 +636,15 @@ export default function Identity() {
         >
           {t('share.card')}
         </Button>
+      )}
+
+      {char.rules_edition === '2024' && (
+        <SpeciesSheet2024
+          char={char}
+          open={speciesOpen}
+          // La specie riscrive razza, velocità e sensi: la bozza (pulita) si rilegge dalla scheda.
+          onClose={() => { setSpeciesOpen(false); setDraft(null) }}
+        />
       )}
 
       <Sheet open={leaving !== null} onClose={() => setLeaving(null)} title={t('character.identity.leave_title')}>

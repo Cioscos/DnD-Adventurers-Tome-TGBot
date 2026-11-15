@@ -48,6 +48,7 @@ from api.routers import (
     share,
     shares,
     silhouette,
+    species,
     spell_slots,
     spells,
     stats,
@@ -191,6 +192,7 @@ app.include_router(classes.router)
 app.include_router(rules.router)
 app.include_router(rules.turn_router)
 app.include_router(choices.router)
+app.include_router(species.router)
 app.include_router(spells.router)
 app.include_router(spell_slots.router)
 app.include_router(items.router)

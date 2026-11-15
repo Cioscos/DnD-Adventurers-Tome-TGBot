@@ -175,12 +175,13 @@ def _granted_stats(char: Any, spell: Any) -> CasterStats | None:
 
 
 def _feat_stats(char: Any, spell: Any) -> CasterStats | None:
-    """Incantesimi di un talento (Iniziato alla magia): la caratteristica scelta col talento."""
+    """Incantesimi di un talento (Iniziato alla magia) o di una specie 2024 (lignaggi): la caratteristica scelta."""
     if getattr(spell, "class_id", None) is not None:
         return None
     names = {getattr(spell, "srd_index", None), getattr(spell, "name", None)} - {None}
     for spec, row in active_features(char):
-        opts = row.options if spec.class_key == "feat" else {}
+        opts = (row.options if spec.class_key == "feat"
+                else {"ability": (row.options or {}).get("spell_ability")} if spec.class_key == "species" else {})
         own = {*(opts.get("cantrips") or []), *(opts.get("spell") or []), *(opts.get("rituals") or []), *spec.granted_spells}
         if opts.get("ability") and names & own:  # anche gli incantesimi fissi del talento (Passo velato, Mano magica)
             mod = effective_ability_mod(char, opts["ability"])

@@ -918,6 +918,8 @@ async def rest(
         add_history(session, char.id, "rest", "Riposo lungo completato",
                      meta={"kind": "long"})
         for spec, row in active_features(char):  # alla fine del riposo lungo certi privilegi avviano un loro stato (Tranquillità)
+            if spec.long_rest_inspiration:  # Intraprendente dell'Umano 2024
+                char.heroic_inspiration = True
             if spec.long_rest_state:
                 started = spec.long_rest_state(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level))
                 if started is not None:

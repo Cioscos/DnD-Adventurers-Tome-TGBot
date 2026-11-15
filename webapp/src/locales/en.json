@@ -1368,6 +1368,40 @@
         "unconscious": "An unconscious creature is incapacitated, can't move or speak, and is unaware of its surroundings. The creature drops whatever it's holding and falls prone. It automatically fails Strength and Dexterity saving throws. Attack rolls against it have advantage, and any attack that hits is a critical hit if the attacker is within 5 feet."
       }
     },
+    "species": {
+      "choose": "Choose 2024 species",
+      "change": "Change species",
+      "save_first": "Save your changes before changing species.",
+      "title": "2024 species",
+      "pick": "Choose from the catalog",
+      "preview": "See the changes",
+      "preview_title": "What changes",
+      "no_changes": "Nothing else changes on the sheet.",
+      "confirm_hint": "Nothing changes until you confirm.",
+      "confirm": "Confirm",
+      "complete_feat": "The {{name}} feat has its own choices: complete it on the Abilities page.",
+      "go_abilities": "Go to Abilities",
+      "changes": {
+        "speed_reset": "Speed goes back to the species' speed.",
+        "senses_removed": "Manually entered darkvision is removed: the species provides it. Other senses stay.",
+        "roll_notes_removed": "The old race's roll notes are removed: the species provides them. Your own notes stay.",
+        "traits_archived_one": "1 trait of the old race will be removed:",
+        "traits_archived_other": "{{count}} traits of the old race will be removed:",
+        "trait_removed": "{{name}}",
+        "hp_check": "If your maximum hit points already counted Dwarven Toughness, remove it by hand: the species now adds it.",
+        "scores_check": "Ability scores do not change: remove any 2014 racial bonuses by hand.",
+        "skill_added": "{{skill}} proficiency added.",
+        "skill_removed": "{{skill}} proficiency removed.",
+        "feat_added": "{{feat}} feat added.",
+        "feat_removed": "{{feat}} feat removed."
+      },
+      "errors": {
+        "species_edition": "Only characters using the 2024 rules can choose a 2024 species.",
+        "species_unknown": "This species is not in the catalog.",
+        "species_options_invalid": "The species choices are not valid: check them and try again.",
+        "generic": "The species could not be changed. Try again."
+      }
+    },
     "identity": {
       "title": "Identity",
       "name": "Name",
@@ -2276,8 +2310,10 @@
         "short_rest": "Short",
         "manual": "Manual"
       },
-      "class_features_section": "Class features",
+      "class_features_section": "Class & species features",
       "custom_section": "Custom abilities",
+      "species_badge": "Species",
+      "species_feature_locked": "Species trait, managed automatically: you can spend its uses and edit its description.",
       "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
       "edit_description": "Edit description",
       "set_uses_title": "Set uses",
@@ -2506,6 +2542,28 @@
       "equipment_none": "No starting equipment for this class.",
       "scores_skip": "Skip: leave all at 10",
       "background_pick": "Pick background from catalogue",
+      "step_background": "Background",
+      "bg_hint": "The background grants an Origin feat, two skills, a tool and the ability increases. Optional: without one, you pick the feat in the next step.",
+      "bg_origin_feat": "Origin feat",
+      "bg_skills": "Skills",
+      "bg_tool": "Tool",
+      "bg_increases": "Increases: +2 and +1, or +1 to all three",
+      "bg_increases_invalid": "Assign +2 and +1, or +1 to each of the three.",
+      "bg_equipment": "Equipment",
+      "bg_pack": "Package",
+      "bg_gold": "50 GP",
+      "bg_clear": "Remove background",
+      "errors": {
+        "species_edition": "2024 species are only for 2024 characters.",
+        "species_unknown": "Unknown species.",
+        "species_options_invalid": "Invalid species choices (Versatile's feat can't be the background's).",
+        "species_conflict": "Pick only one species.",
+        "background_edition": "2024 backgrounds are only for 2024 characters.",
+        "background_unknown": "Unknown background.",
+        "background_increases_invalid": "Invalid background increases: no ability can exceed 20.",
+        "background_tool_invalid": "Invalid background tool.",
+        "species_skill_taken": "The skill chosen for the species is already granted by your class or background: pick another."
+      },
       "create_cta": "Create"
     },
     "equipment": {

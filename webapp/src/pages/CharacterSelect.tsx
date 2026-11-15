@@ -32,14 +32,18 @@ import { useToast } from '@/hooks/useToast'
 import { stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
 import OriginFeatStep from '@/pages/creation/OriginFeatStep'
-import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
+import SpeciesStep, { type SpeciesChoice, type Species24State } from '@/pages/creation/SpeciesStep'
+import BackgroundStep2024 from '@/pages/creation/BackgroundStep2024'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import EquipmentStep from '@/pages/creation/EquipmentStep'
 import { useEquipPicks } from '@/pages/creation/useEquipPicks'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import ClassSkillChoice from '@/components/ClassSkillChoice'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
-import { creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies } from '@/lib/species'
+import {
+  creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies,
+  speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice,
+} from '@/lib/species'
 import { localized } from '@/lib/srd/catalog'
 import { STANDARD_ARRAY, arrayScores, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
 
@@ -77,7 +81,7 @@ type IdentityPayload = {
   personality?: { traits: string }
 }
 
-type Step = 'name' | 'class' | 'species' | 'feat' | 'abilities' | 'equipment' | 'identity'
+type Step = 'name' | 'class' | 'species' | 'background' | 'feat' | 'abilities' | 'equipment' | 'identity'
 
 // `detail` e' una stringa (413) oppure la lista di errori pydantic (422): mostriamo i primi msg con il campo.
 function importErrorText(detail: unknown): string {
@@ -132,6 +136,10 @@ export default function CharacterSelect() {
   const [edition, setEdition] = useState<'2014' | '2024'>('2014')
   // Talento d'Origine (solo 2024): passo dopo la specie, si può saltare.
   const [originFeat, setOriginFeat] = useState<string | null>(null)
+  // Solo 2024: specie e background dai cataloghi 2024 (col background il talento d'Origine è il suo).
+  const [species24, setSpecies24] = useState<Species24State>({ entry: null, options: {} })
+  const [bg24, setBg24] = useState<Background2024Choice | null>(null)
+  const is2024 = edition === '2024'
   const equipKey = `${edition}:${selectedClass?.class_name ?? ''}`
   const [equipPicks, setEquipPicks] = useEquipPicks(equipKey)
   // Ricchezza in monete: legata a edizione+classe come le scelte, cambiando chiave si spegne da sola.
@@ -183,8 +191,10 @@ export default function CharacterSelect() {
       haptic.success()
       navigate(`/char/${char.id}`)
     },
-    onError: () => {
-      toast.error(t('character.create.create_failed'))
+    onError: (e) => {
+      // 422 dei cataloghi 2024 (species_*, background_*): detail è il codice
+      const code = e instanceof ApiError && typeof e.detail === 'string' ? e.detail : ''
+      toast.error(t(`character.create.errors.${code}`, { defaultValue: t('character.create.create_failed') }))
     },
   })
 
@@ -225,6 +235,8 @@ export default function CharacterSelect() {
     setPickBackground(false)
     setEdition('2014')
     setOriginFeat(null)
+    setSpecies24({ entry: null, options: {} })
+    setBg24(null)
   }
 
   const handleNameNext = () => {
@@ -240,10 +252,10 @@ export default function CharacterSelect() {
 
   const buildIdentityPayload = (): IdentityPayload | null => {
     const p: IdentityPayload = {}
-    if (race.trim() && !species.race) p.race = race.trim()
+    if (race.trim() && !(is2024 ? species24.entry : species.race)) p.race = race.trim()
     if (gender.trim()) p.gender = gender.trim()
     if (alignment.trim()) p.alignment = alignment.trim()
-    if (background.trim()) p.background = background.trim()
+    if (background.trim() && !(is2024 && bg24)) p.background = background.trim()
     if (languages.length) p.languages = languages
     if (personalityTraits.trim()) p.personality = { traits: personalityTraits.trim() }
     return Object.keys(p).length ? p : null
@@ -251,10 +263,12 @@ export default function CharacterSelect() {
 
   const handleCreate = (identity: IdentityPayload | null) => {
     const extras = {
-      ...creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills }),
+      ...creationExtras({ scores, skipped: scoresSkipped, species: is2024 ? null : speciesPayload, skills: is2024 && bg24 ? [] : backgroundSkills }),
       rules_edition: edition,
       ...(wealth && hasEquipmentStep ? { starting_wealth: true } : equipPicks && hasEquipmentStep ? { starting_equipment: equipPicks } : {}),
-      ...(edition === '2024' && originFeat ? { origin_feat: originFeat } : {}),
+      ...(is2024 && originFeat && !bg24 ? { origin_feat: originFeat } : {}),
+      ...(is2024 && species24.entry ? { species_2024: { key: species24.entry.key, options: species24.options } } : {}),
+      ...(is2024 && bg24 ? { background_2024: background24Payload(bg24) } : {}),
     }
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
   }
@@ -485,6 +499,8 @@ export default function CharacterSelect() {
             ? t('character.create.step_class')
             : step === 'species'
             ? t('character.create.step_species')
+            : step === 'background'
+            ? t('character.create.step_background')
             : step === 'feat'
             ? t('character.feats.origin_step')
             : step === 'abilities'
@@ -716,13 +732,31 @@ export default function CharacterSelect() {
 
           {step === 'species' && (
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace} />
+              <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace}
+                edition={edition} species24={species24} onSpecies24={setSpecies24}
+                takenSkills={[...(selectedClass?.skills ?? []), ...(bg24 ? bg24.entry.skills : backgroundSkills)]} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
                 onSecondary={() => setStep('class')}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => setStep(edition === '2024' ? 'feat' : 'abilities')}
+                onPrimary={() => setStep(is2024 ? 'background' : 'abilities')}
+                primaryDisabled={is2024 && !!species24.entry && speciesChoicesMissing(species24.entry, species24.options).length > 0}
+                primaryHaptic="medium"
+              />
+            </m.div>
+          )}
+
+          {step === 'background' && (
+            <m.div key="step-background" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
+              <BackgroundStep2024 value={bg24} onChange={setBg24} />
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.back')}
+                onSecondary={() => setStep('species')}
+                primaryLabel={`${t('common.next')} →`}
+                onPrimary={() => setStep(bg24 ? 'abilities' : 'feat')}
+                primaryDisabled={!background24Valid(bg24)}
                 primaryHaptic="medium"
               />
             </m.div>
@@ -734,7 +768,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('species')}
+                onSecondary={() => setStep('background')}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={() => setStep('abilities')}
                 primaryHaptic="medium"
@@ -748,13 +782,13 @@ export default function CharacterSelect() {
                 mode={scoreMode}
                 scores={scores}
                 pool={scorePool}
-                bonuses={speciesPayload?.ability_bonuses ?? {}}
+                bonuses={is2024 ? bg24?.increases ?? {} : speciesPayload?.ability_bonuses ?? {}}
                 onChange={(mode, sc, pool) => { setScoreMode(mode); setScores(sc); setScorePool(pool) }}
               />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep(edition === '2024' ? 'feat' : 'species')}
+                onSecondary={() => setStep(!is2024 ? 'species' : bg24 ? 'background' : 'feat')}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={() => { setScoresSkipped(false); setStep(afterAbilities) }}
                 primaryDisabled={!scoresValid(scoreMode, scores)}
@@ -829,15 +863,20 @@ export default function CharacterSelect() {
                   onChange={setAlignment}
                   placeholder={t('character.identity.placeholder_alignment')}
                 />
-                <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPickBackground(true)}>
-                  {t('character.create.background_pick')}
-                </Button>
-                <Input
-                  label={t('character.identity.background')}
-                  value={background}
-                  onChange={(v) => { setBackground(v); setBackgroundSkills([]) }}
-                  placeholder={t('character.identity.placeholder_background')}
-                />
+                {/* il background 2024 scelto nel suo passo vince: niente doppione 2014 qui */}
+                {!(is2024 && bg24) && (
+                  <>
+                    <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPickBackground(true)}>
+                      {t('character.create.background_pick')}
+                    </Button>
+                    <Input
+                      label={t('character.identity.background')}
+                      value={background}
+                      onChange={(v) => { setBackground(v); setBackgroundSkills([]) }}
+                      placeholder={t('character.identity.placeholder_background')}
+                    />
+                  </>
+                )}
                 <ChipInput
                   label={t('character.identity.languages')}
                   values={languages}
@@ -859,7 +898,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep(afterAbilities)}
+                onSecondary={() => setStep(hasEquipmentStep ? 'equipment' : 'abilities')}
                 primaryLabel={t('character.create.create_cta')}
                 onPrimary={() => handleCreate(buildIdentityPayload())}
                 primaryDisabled={createMutation.isPending}

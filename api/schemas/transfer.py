@@ -10,6 +10,8 @@ from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
 from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
+from core.data.skills import SKILL_ABILITY_MAP
+from core.data.species_2024 import SPECIES_2024
 from core.db.models import EquipmentSlot
 from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
@@ -75,6 +77,8 @@ class ExportCharacter(BaseModel):
 
     name: str = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
+    species_key: Optional[str] = Field(None, max_length=40)  # specie 2024 del motore; chiave sconosciuta = nessun tratto
+    species_options: dict = Field(default_factory=dict, max_length=10)  # come SpeciesChoiceIn; valori non solo str (_feat_ability_id è un id)
     gender: Optional[str] = Field(None, max_length=50)
     hit_points: Int0 = 0
     current_hit_points: Int0 = 0
@@ -115,6 +119,22 @@ class ExportCharacter(BaseModel):
         # una class_option senza gruppo o conteggio non è risolvibile: va scartata
         return [c for c in v if not (isinstance(c, dict) and c.get("kind") == "class_option"
                                      and not (c.get("group") and c.get("count")))] if isinstance(v, list) else v
+
+    @model_validator(mode="after")
+    def _species_catalog(self):
+        """Solo chiavi e valori del catalogo: un valore inventato (es. una lista) romperebbe ogni lettura della scheda.
+        ``_feat_ability_id`` è l'id di una riga dell'altro personaggio: si scarta (la riga si ritrova per chiave)."""
+        data = SPECIES_2024.get(self.species_key or "")
+        if data is None:
+            self.species_key, self.species_options = None, {}
+            return self
+        choices = {c.key: c.options for c in data.choices}
+        raw = self.species_options
+        opts = {k: v for k, v in raw.items() if k in choices and isinstance(v, str) and v in choices[k]}
+        if isinstance(raw.get("_granted_skill"), str) and raw["_granted_skill"] in SKILL_ABILITY_MAP:
+            opts["_granted_skill"] = raw["_granted_skill"]
+        self.species_options = opts
+        return self
     # {titolo: {body, created_at, updated_at, tags, was_voice}}; le note vocali hanno body ""
     notes: dict = Field(default_factory=dict)
 

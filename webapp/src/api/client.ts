@@ -599,6 +599,10 @@ export const api = {
         rules_edition?: '2014' | '2024'
         /** Talento d'Origine 2024 scelto nella creazione guidata. */
         origin_feat?: string
+        /** Solo 2024: specie del catalogo con le sue scelte (lignaggio, taglia, ...). */
+        species_2024?: { key: string; options: Record<string, string> }
+        /** Solo 2024: background del catalogo; il suo talento d'Origine sostituisce `origin_feat`. */
+        background_2024?: { key: string; increases: Record<string, number>; tool?: string; equipment: 'pack' | 'gold' }
       },
     ) =>
       request<CharacterFull>('/characters', {
@@ -894,6 +898,20 @@ export const api = {
       }>(`/rules/proficiencies?edition=${edition}&class_key=${encodeURIComponent(classKey)}&as_multiclass=${asMulticlass}`),
     startingEquipment: (edition: string, classKey: string) =>
       request<{ groups: string[][]; wealth: { dice: string; multiplier: number } | null }>(`/rules/starting-equipment?edition=${edition}&class_key=${encodeURIComponent(classKey)}`),
+  },
+
+  // Specie 2024 sulla scheda: l'anteprima non scrive nulla.
+  species: {
+    preview: (charId: number, key: string, options: Record<string, string>) =>
+      request<{ changes: string[] }>(`/characters/${charId}/species/preview`, {
+        method: 'POST',
+        body: JSON.stringify({ key, options }),
+      }),
+    apply: (charId: number, key: string, options: Record<string, string>) =>
+      request<CharacterFull>(`/characters/${charId}/species`, {
+        method: 'PUT',
+        body: JSON.stringify({ key, options }),
+      }),
   },
 
   // ---------------------------------------------------------------------------

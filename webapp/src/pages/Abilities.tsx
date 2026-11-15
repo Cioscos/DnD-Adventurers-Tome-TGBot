@@ -341,7 +341,10 @@ export default function Abilities() {
     const usedCount = max - current            // pallini "accesi" = usati (come gli slot)
     const isDepleted = hasUses && current === 0
     const usePips = hasUses && max <= PIP_THRESHOLD
-    const className = ab.source_class_id != null ? classNameById.get(ab.source_class_id) : undefined
+    // Tratti di specie 2024: riga di catalogo senza classe, la sincronizzazione la ricrea (niente elimina).
+    const isSpecies = ab.source_class_id == null && (ab.feature_key ?? '').startsWith('species.')
+    const className = ab.source_class_id != null ? classNameById.get(ab.source_class_id)
+      : isSpecies ? t('character.abilities.species_badge') : undefined
 
     return (
       <m.div
@@ -491,10 +494,10 @@ export default function Abilities() {
                 )}
 
                 {/* Le feature di classe hanno struttura bloccata: niente modifica/elimina */}
-                {ab.is_class_feature ? (
+                {ab.is_class_feature || isSpecies ? (
                   <div className="pt-1 border-t border-dnd-gold-dim/15 space-y-2">
                     <p className="text-xs text-dnd-text-faint/70 italic font-body">
-                      {t('character.abilities.class_feature_locked')}
+                      {t(isSpecies ? 'character.abilities.species_feature_locked' : 'character.abilities.class_feature_locked')}
                     </p>
                     <Button variant="secondary" size="sm" onClick={() => openDescEdit(ab)} icon={<Pencil size={12} />}>
                       {t('character.abilities.edit_description')}

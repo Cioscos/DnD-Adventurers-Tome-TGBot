@@ -7,10 +7,12 @@ import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { localized, type Lang } from '@/lib/srd/catalog'
-import type { RaceEntry, SubraceEntry } from '@/lib/species'
+import SpeciesChoices from '@/components/character/SpeciesChoices'
+import type { RaceEntry, Species2024Entry, SubraceEntry } from '@/lib/species'
 import { formatLength, useUnitSettings } from '@/store/unitSettings'
 
 export interface SpeciesChoice { race: RaceEntry | null; sub: SubraceEntry | null }
+export interface Species24State { entry: Species2024Entry | null; options: Record<string, string> }
 
 interface Props {
   choice: SpeciesChoice
@@ -18,18 +20,31 @@ interface Props {
   /** Free-text species (used only when no catalogue race is picked). */
   freeText: string
   onFreeText: (v: string) => void
+  /** 2024: catalogo species-2024 con le sue scelte al posto di razza/sottorazza. */
+  edition?: '2014' | '2024'
+  species24?: Species24State
+  onSpecies24?: (s: Species24State) => void
+  /** Abilità già date da classe e background: non sceglibili come abilità della specie. */
+  takenSkills?: string[]
 }
 
 const ABBR: Record<string, string> = {
   str: 'strength', dex: 'dexterity', con: 'constitution', int: 'intelligence', wis: 'wisdom', cha: 'charisma',
 }
 
-export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: Props) {
+/** Tratti di lignaggio/eredità/stirpe (chiave `<scelta>_..._<opzione>`) di opzioni non scelte: nascosti. */
+function visibleTraits(e: Species2024Entry, options: Record<string, string>) {
+  return e.traits.filter((tr) => !e.choices.some((c) => c.options.some((o) =>
+    o.key !== options[c.key] && tr.key.startsWith(`${c.key}_`) && tr.key.endsWith(`_${o.key}`))))
+}
+
+export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
   const [picking, setPicking] = useState(false)
   const { race, sub } = choice
+  const e24 = edition === '2024' ? species24?.entry ?? null : null
   const bonuses: Record<string, number> = { ...race?.ability_bonuses }
   for (const [k, v] of Object.entries(sub?.ability_bonuses ?? {})) bonuses[k] = (bonuses[k] ?? 0) + v
 
@@ -37,10 +52,30 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: 
     <div className="space-y-3">
       <p className="text-xs text-dnd-text-faint font-body italic text-center">{t('character.create.species_hint')}</p>
       <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicking(true)}>
-        {race ? localized(race.name, lang).text : t('character.create.species_pick')}
+        {e24 ? localized(e24.name, lang).text : race && edition === '2014' ? localized(race.name, lang).text : t('character.create.species_pick')}
       </Button>
 
-      {race && race.subraces.length > 0 && (
+      {e24 && species24 && onSpecies24 && (
+        <>
+          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} />
+          <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 text-sm font-body space-y-1">
+            <p className="tabular-nums">
+              {t('character.create.species_speed')}: {formatLength(e24.speed_ft, unit)}
+            </p>
+            <p className="text-dnd-text-muted">
+              {visibleTraits(e24, species24.options).map((tr) => tr.name[lang]).join(', ')}
+            </p>
+            <Pressable
+              onClick={() => onSpecies24({ entry: null, options: {} })}
+              className="min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
+            >
+              {t('character.create.species_clear')}
+            </Pressable>
+          </div>
+        </>
+      )}
+
+      {edition === '2014' && race && race.subraces.length > 0 && (
         <div className="flex flex-wrap gap-2" role="group" aria-label={t('character.create.subrace')}>
           {[null, ...race.subraces].map((s) => (
             <Pressable
@@ -56,7 +91,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: 
         </div>
       )}
 
-      {race && (
+      {edition === '2014' && race && (
         <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 text-sm font-body space-y-1">
           <p className="tabular-nums">
             {t('character.create.species_speed')}: {formatLength(sub?.speed_ft ?? race.speed_ft, unit)}
@@ -81,7 +116,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: 
         </div>
       )}
 
-      {!race && (
+      {!(edition === '2024' ? e24 : race) && (
         <Input
           label={t('character.create.species_free')}
           value={freeText}
@@ -90,11 +125,18 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: 
         />
       )}
 
-      {picking && (
+      {picking && edition === '2014' && (
         <CatalogPicker
           kind="races"
           onClose={() => setPicking(false)}
           onPick={(e) => { onChoice({ race: e as unknown as RaceEntry, sub: null }); setPicking(false) }}
+        />
+      )}
+      {picking && edition === '2024' && (
+        <CatalogPicker
+          kind="species-2024"
+          onClose={() => setPicking(false)}
+          onPick={(e) => { onSpecies24?.({ entry: e, options: {} }); setPicking(false) }}
         />
       )}
     </div>
