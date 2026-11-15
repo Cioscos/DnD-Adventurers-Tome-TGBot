@@ -58,6 +58,25 @@ describe('ItemDetailsModal', () => {
     expect(screen.getByText('15')).toBeInTheDocument()
   })
 
+  it.each([['light'], ['medium'], ['heavy']])('shows don/doff times for %s armor', (armor_type) => {
+    render(
+      <ItemDetailsModal slot="body" onClose={() => {}}
+        item={mk({ name: 'A', item_type: 'armor', item_metadata: { ac_value: 12, armor_type } })} />,
+    )
+    expect(screen.getByText('character.inventory.don_doff_label')).toBeInTheDocument()
+    expect(screen.getByText(`character.inventory.don_doff.${armor_type}`)).toBeInTheDocument()
+  })
+
+  it('shows don/doff for a shield and no row for armor without armor_type', () => {
+    const { unmount } = render(
+      <ItemDetailsModal slot="off_hand" onClose={() => {}} item={mk({ name: 'S', item_type: 'shield', item_metadata: { ac_bonus: 2 } })} />,
+    )
+    expect(screen.getByText('character.inventory.don_doff.shield')).toBeInTheDocument()
+    unmount()
+    render(<ItemDetailsModal slot="body" onClose={() => {}} item={mk({ name: 'A', item_type: 'armor', item_metadata: { ac_value: 12 } })} />)
+    expect(screen.queryByText('character.inventory.don_doff_label')).toBeNull()
+  })
+
   it('shows a shield AC bonus with a + sign', () => {
     render(
       <ItemDetailsModal slot="off_hand" onClose={() => {}} item={mk({ name: 'Shield', item_type: 'shield', item_metadata: { ac_bonus: 2 } })} />,

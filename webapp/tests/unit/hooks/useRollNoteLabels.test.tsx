@@ -46,6 +46,12 @@ describe('useRollNoteLabels', () => {
     ])
   })
 
+  it('translates the heavy-encumbrance note and the charmed condition', () => {
+    expect(labels(['encumbrance:heavily', 'condition:charmed'])).toEqual([
+      'character.roll_notes.encumbrance_heavily', 'character.conditions.charmed',
+    ])
+  })
+
   it('translates the shared options the server uses as notes (bard die, auras)', () => {
     expect(labels(['bardic_die:add', 'aura:protection_after', 'war_blessing:add', 'trickster:advantage'])).toEqual([
       'character.roll_notes.option.bardic_die_add', 'character.roll_notes.option.aura_protection_after',

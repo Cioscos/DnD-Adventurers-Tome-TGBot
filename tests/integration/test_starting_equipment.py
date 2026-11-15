@@ -190,3 +190,46 @@ async def test_assassin_2024_added_as_a_new_class_gets_kits(client):
     assert r.status_code in (200, 201), r.text
     items = (await client.get(f"/characters/{cid}")).json()["items"]
     assert sorted(i["name"] for i in items if i["item_type"] == "tool") == ["Kit da avvelenatore", "Kit da travestimento"]
+
+
+def test_starting_wealth_table_matches_sheet():
+    """PHB 2014 p.143 (docs/superpowers/rules/2014/equipment.md:8-21)."""
+    from core.rules.starting_equipment import STARTING_WEALTH
+    assert STARTING_WEALTH == {
+        "barbarian": (2, 10), "druid": (2, 10), "sorcerer": (3, 10),
+        "rogue": (4, 10), "wizard": (4, 10), "warlock": (4, 10),
+        "bard": (5, 10), "cleric": (5, 10), "fighter": (5, 10), "paladin": (5, 10), "ranger": (5, 10),
+        "monk": (5, 1),
+    }
+    assert set(STARTING_WEALTH) == set(CLASS_KEYS)
+
+
+async def test_creation_2014_starting_wealth(client, monkeypatch):
+    monkeypatch.setattr("random.randint", lambda a, b: 3)
+    r = await _create(client, "Guerriero", starting_wealth=True, starting_equipment=[0, 0, 0, 0])
+    assert r.status_code == 201, r.text
+    assert r.json()["currency"]["gold"] == 150 and r.json()["items"] == []  # 5d4 = 15, x10
+    r = await _create(client, "Monaco", starting_wealth=True)
+    assert r.status_code == 201, r.text
+    assert r.json()["currency"]["gold"] == 15 and r.json()["items"] == []  # 5d4, senza x10
+
+
+async def test_starting_wealth_rejected_2024_or_custom(client):
+    async def count():
+        return len((await client.get("/characters")).json())
+    before = await count()
+    for cls, ed in (("Guerriero", "2024"), ("Classe inventata", "2014")):
+        r = await _create(client, cls, rules_edition=ed, starting_wealth=True)
+        assert r.status_code == 422 and "starting_wealth_unavailable" in r.text, (cls, ed, r.text)
+    r = await client.post("/characters", json={"name": "x", "starting_wealth": True})  # senza classe
+    assert r.status_code == 422
+    assert await count() == before
+
+
+async def test_starting_equipment_options_wealth(client):
+    r = await client.get("/rules/starting-equipment", params={"edition": "2014", "class_key": "Guerriero"})
+    assert r.json()["wealth"] == {"dice": "5d4", "multiplier": 10} and len(r.json()["groups"]) == 4
+    r = await client.get("/rules/starting-equipment", params={"edition": "2024", "class_key": "Guerriero"})
+    assert r.json()["wealth"] is None and len(r.json()["groups"]) == 1
+    r = await client.get("/rules/starting-equipment", params={"edition": "2014", "class_key": "custom"})
+    assert r.json()["wealth"] is None

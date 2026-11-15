@@ -150,6 +150,12 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                       value={t(`character.inventory.armor_type.${meta.armor_type}`, { defaultValue: String(meta.armor_type) })}
                     />
                   )}
+                  {(meta.armor_type === 'light' || meta.armor_type === 'medium' || meta.armor_type === 'heavy') && (
+                    <MetadataField
+                      label={t('character.inventory.don_doff_label')}
+                      value={t(`character.inventory.don_doff.${meta.armor_type}`)}
+                    />
+                  )}
                   {!!meta.stealth_disadvantage && (
                     <MetadataField
                       label={t('character.inventory.stealth_disadvantage_label', { defaultValue: 'Svantaggio Furtività' })}
@@ -165,11 +171,19 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                 </>
               )}
 
-              {item.item_type === 'shield' && meta.ac_bonus !== undefined && (
-                <MetadataField
-                  label={t('character.inventory.ac_bonus_label', { defaultValue: 'Bonus CA' })}
-                  value={`+${Number(meta.ac_bonus)}`}
-                />
+              {item.item_type === 'shield' && (
+                <>
+                  {meta.ac_bonus !== undefined && (
+                    <MetadataField
+                      label={t('character.inventory.ac_bonus_label', { defaultValue: 'Bonus CA' })}
+                      value={`+${Number(meta.ac_bonus)}`}
+                    />
+                  )}
+                  <MetadataField
+                    label={t('character.inventory.don_doff_label')}
+                    value={t('character.inventory.don_doff.shield')}
+                  />
+                </>
               )}
 
               {(item.item_type === 'consumable' || item.item_type === 'potion' || item.item_type === 'scroll') && Boolean(meta.effect) && (

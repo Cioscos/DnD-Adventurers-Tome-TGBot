@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -55,7 +55,7 @@ from core.data.spell_slots import normalize_class_name
 from core.rules.modifiers import modifiers_for
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
 from core.rules.roll_options import AppliedOptions, refund_spent
-from core.rules.starting_equipment import describe as describe_starting_equipment
+from core.rules.starting_equipment import describe as describe_starting_equipment, starting_wealth
 from core.rules.subclasses import subclasses_for
 from core.rules.types import BARDIC_DIE, Edition
 from api.services.character_load import get_owned_full_with_resources
@@ -86,9 +86,11 @@ async def class_proficiency_grant(
 async def starting_equipment_options(
     edition: Edition, class_key: str,
     _user: Annotated[int, Depends(get_current_user)], lang: Annotated[str, Depends(get_current_lang)],
-) -> dict[str, list[list[str]]]:
-    """Equipaggiamento di partenza della classe: per ogni gruppo, le etichette delle alternative (vuoto per classi custom)."""
-    return {"groups": describe_starting_equipment(edition, normalize_class_name(class_key) or class_key, lang)}
+) -> dict[str, Any]:
+    """Equipaggiamento di partenza della classe: per ogni gruppo, le etichette delle alternative (vuoto per classi custom).
+    `wealth`: la ricchezza in monete al posto dell'equipaggiamento (solo 2014 con classe standard), altrimenti `null`."""
+    key = normalize_class_name(class_key) or class_key
+    return {"groups": describe_starting_equipment(edition, key, lang), "wealth": starting_wealth(edition, key)}
 
 
 # ---------------------------------------------------------------------------

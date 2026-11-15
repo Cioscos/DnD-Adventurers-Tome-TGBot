@@ -216,6 +216,11 @@ export default function HeroScreen({ char }: Props) {
                 {tempHp > 0 && (
                   <span className="font-mono text-sm tabular-nums whitespace-nowrap text-dnd-cobalt-bright">(+{tempHp} temp)</span>
                 )}
+                {char.computed?.bloodied && !ownForm && (
+                  <span className="font-cinzel text-xs uppercase tracking-wide whitespace-nowrap text-dnd-crimson-bright">
+                    {t('character.hp.bloodied')}
+                  </span>
+                )}
               </div>
               <HPGauge
                 current={hpCurrent}

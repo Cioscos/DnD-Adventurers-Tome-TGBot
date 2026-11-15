@@ -9,6 +9,7 @@ Nessun equipaggiamento automatico, nessun effetto: il giocatore equipaggia a man
 from __future__ import annotations
 
 import json
+import random
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -91,6 +92,24 @@ STARTING_EQUIPMENT: dict[tuple[Edition, str], Groups] = {
     ("2024", "warlock"): (("leather-armor+sickle+dagger*2+arcane-focus+occult-book+scholar-pack+gold:15", "gold:100"),),
     ("2024", "wizard"): (("dagger*2+quarterstaff+robe+spellbook+scholar-pack+gold:5", "gold:55"),),
 }
+
+# 2014, p.143: ricchezza di partenza in alternativa all'equipaggiamento. classe -> (dadi d4, moltiplicatore in mo).
+STARTING_WEALTH: dict[str, tuple[int, int]] = {
+    "barbarian": (2, 10), "druid": (2, 10), "sorcerer": (3, 10), "rogue": (4, 10), "wizard": (4, 10), "warlock": (4, 10),
+    "bard": (5, 10), "cleric": (5, 10), "fighter": (5, 10), "paladin": (5, 10), "ranger": (5, 10), "monk": (5, 1),
+}
+
+
+def starting_wealth(edition: str, class_key: str) -> dict[str, Any] | None:
+    """`{"dice": "5d4", "multiplier": 10}` per le classi 2014; `None` nel 2024 e per le classi custom."""
+    entry = STARTING_WEALTH.get(class_key) if edition != "2024" else None
+    return {"dice": f"{entry[0]}d4", "multiplier": entry[1]} if entry else None
+
+
+def roll_starting_wealth(class_key: str) -> int:
+    """Monete d'oro tirate per la classe 2014 (`KeyError` se non ha la tabella)."""
+    n, mult = STARTING_WEALTH[class_key]
+    return sum(random.randint(1, 4) for _ in range(n)) * mult
 
 
 @cache

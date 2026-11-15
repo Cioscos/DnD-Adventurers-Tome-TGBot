@@ -78,6 +78,13 @@ describe('isTwoHanded', () => {
     ).toBe(false)
     expect(isTwoHanded(mkItem({ item_type: 'weapon', item_metadata: null }))).toBe(false)
   })
+
+  it('also recognises the names Beyond and the form use, like the backend', () => {
+    for (const p of ['Two-Handed', 'two handed', 'A due mani']) {
+      expect(isTwoHanded(mkItem({ item_type: 'weapon', item_metadata: { properties: [p] } }))).toBe(true)
+    }
+    expect(isTwoHanded(mkItem({ item_type: 'weapon', item_metadata: { properties: [] } }))).toBe(false)
+  })
 })
 
 describe('handsConflict — two-handed ⇄ off-hand displacement', () => {

@@ -122,3 +122,48 @@ async def test_import_keeps_new_feat_options(client):
     r = await client.post("/characters/import", json=data)
     assert r.status_code == 201, r.text
     assert _feat_rows(r.json(), "2024_elemental_adept")[0]["feat_status"] == "active"
+
+
+async def _ritual_caster_done(client, level: int = 4) -> tuple[int, int]:
+    ch = await _char(client, "wizard", level, **STATS)
+    cid = ch["id"]
+    row = await _row(client, cid, "ritual_caster", "intelligence")
+    r = await _complete(client, cid, row["id"], {}, [_spell("Allarme", 1, "alarm"), _spell("Trova famiglio", 1, "find-familiar")])
+    assert r.status_code == 200, r.text
+    return cid, row["id"]
+
+
+async def _rituals(client, cid: int, row_id: int) -> list[str]:
+    ab = next(a for a in (await _full(client, cid))["abilities"] if a["id"] == row_id)
+    assert ab["feat_status"] == "active"  # mai `incomplete`: il talento non si spegne
+    return ab["options"]["rituals"]
+
+
+async def test_ritual_caster_grows_with_proficiency(client):
+    cid, row_id = await _ritual_caster_done(client)
+    cls = (await _full(client, cid))["classes"][0]["id"]
+    assert (await client.patch(f"/characters/{cid}/classes/{cls}", json={"level": 5})).status_code == 200  # competenza 3
+    two = [_spell("Identificare", 1, "identify"), _spell("Individuazione del magico", 1, "detect-magic")]
+    assert (await _complete(client, cid, row_id, {}, two)).status_code == 422  # ne manca uno solo
+    again = [_spell("Allarme", 1, "alarm")]
+    assert (await _complete(client, cid, row_id, {}, again)).status_code == 422  # già scelto
+    r = await _complete(client, cid, row_id, {}, [_spell("Identificare", 1, "identify")])
+    assert r.status_code == 200, r.text
+    assert await _rituals(client, cid, row_id) == ["alarm", "find-familiar", "identify"]
+    assert (await _spells(client, cid))["Identificare"]["always_prepared"]
+
+
+async def test_ritual_caster_complete_still_409(client):
+    cid, row_id = await _ritual_caster_done(client)  # competenza invariata
+    r = await _complete(client, cid, row_id, {}, [_spell("Identificare", 1, "identify")])
+    assert r.status_code == 409 and "feat_already_complete" in r.text
+
+
+async def test_other_complete_feat_still_409(client):
+    ch = await _char(client, "wizard", 4, **STATS)
+    row = await _row(client, ch["id"], "keen_mind", "intelligence")
+    assert (await _complete(client, ch["id"], row["id"], {"skill": "nature"})).status_code == 200
+    cls = (await _full(client, ch["id"]))["classes"][0]["id"]
+    await client.patch(f"/characters/{ch['id']}/classes/{cls}", json={"level": 5})
+    r = await _complete(client, ch["id"], row["id"], {"skill": "history"})
+    assert r.status_code == 409 and "feat_already_complete" in r.text

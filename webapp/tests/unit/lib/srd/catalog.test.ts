@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  loadCatalog, loadSpellCatalog, localized, searchCatalog, spellCatalogKind, spellToForm, upcastExtraDice, type SpellEntry,
+  equipmentToForm, loadCatalog, loadSpellCatalog, localized, searchCatalog, spellCatalogKind, spellToForm, upcastExtraDice, type SpellEntry,
 } from '@/lib/srd/catalog'
 
 const find = async (index: string) => (await loadCatalog('spells')).find((e) => e.index === index) as SpellEntry
@@ -88,5 +88,14 @@ describe('catalog', () => {
     expect(spellToForm(wave, 'it', 'metric')).toMatchObject({
       damage_dice: '5d6', damage_type: 'thunder', extra_damage_dice: '5d6', extra_damage_type: 'radiant|necrotic',
     })
+  })
+
+  it('equipmentToForm: la Rete non riceve un dado di danno, le altre armi restano uguali', async () => {
+    const eq = await loadCatalog('equipment')
+    const labels = { range: 'Gittata', thrown: 'Lancio' }
+    const net = eq.find((e) => e.index === 'net')!
+    expect(equipmentToForm(net, 'it', 'metric', labels).damage_dice).toBe('')
+    const sword = eq.find((e) => e.index === 'longsword')!
+    expect(equipmentToForm(sword, 'it', 'metric', labels).damage_dice).toBe('1d8')
   })
 })

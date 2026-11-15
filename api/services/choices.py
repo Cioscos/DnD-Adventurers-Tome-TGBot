@@ -518,7 +518,11 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
     needs = FEAT_NEEDS.get(key, ())
     if not needs:
         raise _bad("feat_has_no_options")
-    if feat_status(char, ability) != "incomplete":
+    status = feat_status(char, ability)
+    # Incantatore rituale 2024: un rituale in più a ogni aumento del bonus di competenza; il talento resta attivo.
+    ritual_topup = (status == "active" and key == "feat.2024_ritual_caster"
+                    and len((ability.options or {}).get("rituals") or []) < char.proficiency_bonus)
+    if status != "incomplete" and not ritual_topup:
         raise HTTPException(409, detail={"code": "feat_already_complete"})
     others = [a for a in char.abilities if a is not ability and a.feature_key == key]  # le altre istanze (ripetibili)
     saved: dict[str, Any] = {}
@@ -631,10 +635,12 @@ def complete_feat(session: AsyncSession, char: Character, ability: Ability, opti
             raise _bad("feat_options_invalid")
         saved.update({"spell": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
     if "rituals" in needs and "list" not in needs:  # Incantatore rituale 2024: tanti rituali di 1º livello quanto il bonus di competenza
+        have = list((ability.options or {}).get("rituals") or [])
         indexes = _checked_spells(char, spells, lambda s: s.level == 1 and s.ritual)
-        if len(indexes) != char.proficiency_bonus:
+        if len(indexes) != char.proficiency_bonus - len(have) or set(indexes) & set(have):
             raise _bad("feat_options_invalid")
-        saved.update({"rituals": indexes, "granted": _add_feat_spells(session, char, spells, indexes)})
+        granted = [*((ability.options or {}).get("granted") or []), *_add_feat_spells(session, char, spells, indexes)]
+        saved.update({"rituals": [*have, *indexes], "granted": granted})
     ability.options = {**(ability.options or {}), **saved}
     add_history(session, char.id, "level_choice", f"Talento completato: {ability.name}")
 

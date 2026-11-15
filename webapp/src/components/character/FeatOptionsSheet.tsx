@@ -89,7 +89,9 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
   }
 
   const textKey = needs.find((n) => n === 'languages')
-  const ritualCount = has('list') ? 2 : profBonus(char.total_level ?? 1)
+  // Incantatore rituale già completo: solo i rituali mancanti, senza riproporre quelli già presi.
+  const takenRituals = (ability.options as { rituals?: string[] } | null | undefined)?.rituals ?? []
+  const ritualCount = has('list') ? 2 : profBonus(char.total_level ?? 1) - takenRituals.length
   const manyKey = needs.find((n) => n === 'maneuvers' || n === 'weapons')
   const manyCount = manyKey === 'weapons' ? 4 : 2
   const manyOptions = manyKey === 'maneuvers' ? (feat?.choices ?? []).map((c) => ({ key: c.key, label: c.name[lang] }))
@@ -323,7 +325,7 @@ export default function FeatOptionsSheet({ char, ability, open, onClose }: Props
         {has('rituals') && !has('list') && (
           <>
             {hint(t('character.feats.rituals_hint', { n: ritualCount - chosen.length }))}
-            {spellChips(catalog.filter((e) => e.level === 1 && e.ritual), ritualCount)}
+            {spellChips(catalog.filter((e) => e.level === 1 && e.ritual && !takenRituals.includes(e.index)), ritualCount)}
           </>
         )}
 

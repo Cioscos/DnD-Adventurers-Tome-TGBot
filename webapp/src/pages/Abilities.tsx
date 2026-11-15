@@ -26,6 +26,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
 import { isUnlimitedFeature } from '@/lib/abilityUses'
+import { ritualsMissing } from '@/lib/feats'
 import type { Ability, ActionType } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
@@ -396,6 +397,16 @@ export default function Abilities() {
                 {ab.feat_status === 'incomplete' && (
                   <div className="space-y-2">
                     <p className="text-xs font-body text-dnd-text-muted">{t('character.feats.incomplete_hint')}</p>
+                    <Button variant="primary" size="sm" onClick={() => setFeatOptions(ab)}>
+                      {t('character.feats.complete')}
+                    </Button>
+                  </div>
+                )}
+                {ritualsMissing(ab, char?.total_level ?? 1) > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-body text-dnd-text-muted">
+                      {t('character.feats.rituals_more_hint', { n: ritualsMissing(ab, char?.total_level ?? 1) })}
+                    </p>
                     <Button variant="primary" size="sm" onClick={() => setFeatOptions(ab)}>
                       {t('character.feats.complete')}
                     </Button>

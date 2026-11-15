@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { featsFor } from '@/lib/feats'
+import { featsFor, ritualsMissing } from '@/lib/feats'
 import type { CharacterFull } from '@/types'
 
 const char = (cha = 13, level = 1, edition: '2014' | '2024' = '2024') => ({
@@ -91,5 +91,18 @@ describe('featsFor — talenti 2014 (PR 3)', () => {
 
   it('a 2024 character does not see 2014 feats', () => {
     expect(keys(featsFor(char(13, 4), '2024', 'level', 'it'))).not.toContain('sentinel')
+  })
+})
+
+describe('ritualsMissing', () => {
+  const ab = (rituals: string[], status = 'active', key = 'feat.2024_ritual_caster') =>
+    ({ feature_key: key, feat_status: status, options: { rituals } }) as unknown as import('@/types').Ability
+  it('conta i rituali che mancano alla competenza attuale, solo per Incantatore rituale 2024 attivo', () => {
+    expect(ritualsMissing(ab(['a', 'b']), 4)).toBe(0)
+    expect(ritualsMissing(ab(['a', 'b']), 5)).toBe(1)
+    expect(ritualsMissing(ab(['a', 'b']), 17)).toBe(4)
+    expect(ritualsMissing(ab([], 'incomplete'), 5)).toBe(0) // quello incompleto passa da «Completa»
+    expect(ritualsMissing(ab(['a'], 'active', 'feat.2024_alert'), 5)).toBe(0)
+    expect(ritualsMissing({ feature_key: 'feat.2024_ritual_caster', feat_status: 'active', options: null } as never, 4)).toBe(2)
   })
 })
