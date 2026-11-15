@@ -27,16 +27,18 @@ class BackgroundData:
     skills: tuple[str, str]
     tool: str | tuple[str, ...]  # tupla = scelta
     equipment: str  # formato di STARTING_EQUIPMENT, es. "…+gold:8"
+    feat_list: str | None = None  # Iniziato alla magia: la lista fissata dal background (cleric/druid/wizard)
 
 
-def _bg(key, it, en, abilities, feat, skills, tool, equipment) -> BackgroundData:
-    return BackgroundData(key, {"it": it, "en": en}, abilities, f"2024_{feat}", skills, tool, equipment)
+def _bg(key, it, en, abilities, feat, skills, tool, equipment, feat_list=None) -> BackgroundData:
+    return BackgroundData(key, {"it": it, "en": en}, abilities, f"2024_{feat}", skills, tool, equipment, feat_list)
 
 
 BACKGROUNDS_2024: dict[str, BackgroundData] = {b.key: b for b in (
     # pag. 178
     _bg("acolyte", "Accolito", "Acolyte", (_I, _W, _H), "magic_initiate", ("insight", "religion"),
-        "calligraphers_supplies", "calligraphers_supplies+book-prayers+holy-symbol+parchment*10+robe+gold:8"),
+        "calligraphers_supplies", "calligraphers_supplies+book-prayers+holy-symbol+parchment*10+robe+gold:8",
+        "cleric"),
     _bg("artisan", "Artigiano", "Artisan", (_S, _D, _I), "crafter", ("investigation", "persuasion"),
         _ARTISAN, f"{{tool}}+pouch*2+{_CLOTHES}+gold:32"),
     # pag. 179
@@ -53,7 +55,7 @@ BACKGROUNDS_2024: dict[str, BackgroundData] = {b.key: b for b in (
     _bg("guard", "Guardia", "Guard", (_S, _I, _W), "alert", ("athletics", "perception"),
         _GAMING, f"spear+crossbow-light+bolts*20+{{tool}}+hooded-lantern+manacles+quiver+{_CLOTHES}+gold:12"),
     _bg("guide", "Guida", "Guide", (_D, _C, _W), "magic_initiate", ("stealth", "survival"),
-        "cartographers_tools", f"shortbow+arrows*20+cartographers_tools+bedroll+quiver+tent+{_CLOTHES}+gold:3"),
+        "cartographers_tools", f"shortbow+arrows*20+cartographers_tools+bedroll+quiver+tent+{_CLOTHES}+gold:3", "druid"),
     # pag. 182
     _bg("hermit", "Eremita", "Hermit", (_C, _W, _H), "healer", ("medicine", "religion"),
         "herbalism_kit", f"quarterstaff+herbalism_kit+bedroll+book-philosophy+lamp+oil*3+{_CLOTHES}+gold:16"),
@@ -63,7 +65,7 @@ BACKGROUNDS_2024: dict[str, BackgroundData] = {b.key: b for b in (
     _bg("noble", "Nobile", "Noble", (_S, _I, _H), "skilled", ("history", "persuasion"),
         _GAMING, "{tool}+fine-clothes+perfume+gold:29"),
     _bg("sage", "Sapiente", "Sage", (_C, _I, _W), "magic_initiate", ("arcana", "history"),
-        "calligraphers_supplies", "quarterstaff+calligraphers_supplies+book-history+parchment*8+robe+gold:8"),
+        "calligraphers_supplies", "quarterstaff+calligraphers_supplies+book-history+parchment*8+robe+gold:8", "wizard"),
     # pag. 184
     _bg("sailor", "Marinaio", "Sailor", (_S, _D, _W), "tavern_brawler", ("acrobatics", "perception"),
         "navigators_tools", f"dagger+navigators_tools+rope+{_CLOTHES}+gold:20"),

@@ -346,7 +346,9 @@ async def create_character(
 
     origin_feat = bg.origin_feat if bg else body.origin_feat  # col background vale il suo talento
     if origin_feat:  # nella stessa transazione: un talento non valido annulla tutta la creazione
-        take_feat(session, char, origin_feat, None, lang, "creation")
+        row = take_feat(session, char, origin_feat, None, lang, "creation")
+        if bg and bg.feat_list:  # Iniziato alla magia (Chierico/Druido/Mago): complete_feat accetta solo questa lista
+            row.options = {**(row.options or {}), "list": bg.feat_list}
     if origin_feat or body.species_2024:  # tratti (Robustezza nanica) e talento (Robusto) contano nei PF massimi
         await sync_cataloged_features(session, char, lang)
         if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto)

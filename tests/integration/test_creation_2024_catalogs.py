@@ -109,6 +109,31 @@ async def test_dragonborn_without_ancestry_422_creates_nothing(client):
     assert await _count(client) == before
 
 
+async def test_acolyte_magic_initiate_list_fixed(client):
+    from tests.integration.rules.test_feats_take_complete import _complete, _feat_rows, _spell
+    assert {BACKGROUNDS_2024[k].feat_list for k in ("acolyte", "guide", "sage")} == {"cleric", "druid", "wizard"}
+    assert all(b.feat_list is None for b in BACKGROUNDS_2024.values() if b.origin_feat != "2024_magic_initiate")
+    r = await client.post("/characters", json=_body(
+        species_2024={"key": "2024_human", "options": {"size": "medium", "skill": "arcana",
+                                                         "origin_feat": "2024_magic_initiate"}},
+        background_2024={"key": "acolyte", "increases": {"wisdom": 2, "charisma": 1}}))
+    assert r.status_code == 201, r.text
+    rows = _feat_rows(r.json(), "2024_magic_initiate")
+    fixed = next(a for a in rows if (a["options"] or {}).get("list"))
+    versatile = next(a for a in rows if a is not fixed)
+    assert fixed["options"]["list"] == "cleric" and fixed["feat_status"] == "incomplete"
+    wizard = [_spell("Luce", 0, "light"), _spell("Mano Magica", 0, "mage-hand"), _spell("Charme su Persone", 1, "charm-person")]
+    bad = await _complete(client, r.json()["id"], fixed["id"], {"list": "wizard", "ability": "wisdom"}, wizard)
+    assert (bad.status_code, bad.json()["detail"]) == (422, "feat_options_invalid")
+    # Versatile dell'Umano: la lista del background è già presa
+    taken = await _complete(client, r.json()["id"], versatile["id"], {"list": "cleric", "ability": "wisdom"},
+                            [_spell("Luce", 0, "light"), _spell("Taumaturgia", 0, "thaumaturgy"),
+                             _spell("Benedizione", 1, "bless")])
+    assert (taken.status_code, taken.json()["detail"]) == (422, "feat_list_taken")
+    ok = await _complete(client, r.json()["id"], versatile["id"], {"list": "wizard", "ability": "wisdom"}, wizard)
+    assert ok.status_code == 200, ok.text
+
+
 async def test_human_versatile_feat_same_as_background_422_creates_nothing(client):
     before = await _count(client)
     r = await client.post("/characters", json=_body(
