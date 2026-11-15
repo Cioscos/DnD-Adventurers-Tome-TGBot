@@ -276,7 +276,7 @@ BASE_ROWS = (
              "On Dexterity saves for half damage: no damage on a success, half on a failure. Not while incapacitated."),
             roll_options=(EVASION_2024, EVASION_SUCCESS, EVASION_FAILED), passive=True),
     feature("reliable_talent", CK, ED, 7, "Dote Affidabile / Reliable Talent (Ladro 7, pag. 131)", ("Dote Affidabile", "Reliable Talent"),
-            ("Nelle prove con una competenza, un d20 che dà 9 o meno conta come 10.", "On checks with a proficiency, a d20 roll of 9 or lower counts as 10."),
+            ("Nelle prove con una competenza (abilità o strumento), un d20 che dà 9 o meno conta come 10.", "On checks with a proficiency (skill or tool), a d20 roll of 9 or lower counts as 10."),
             modifiers=(Modifier("min_d20", 10, when=_proficient_skill_check, source=f"feature:{CK}.reliable_talent"),), passive=True),
     feature("improved_cunning_strike", CK, ED, 11, "Colpo Astuto Migliorato / Improved Cunning Strike (Ladro 11, pag. 131)",
             ("Colpo Astuto Migliorato", "Improved Cunning Strike"),
