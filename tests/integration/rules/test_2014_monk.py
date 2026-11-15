@@ -97,12 +97,53 @@ async def test_armor_or_shield_suspend_unarmored_defense_and_removing_them_bring
     assert r.json()["ac_breakdown"]["base"] == 16
 
 
-async def test_unarmored_defense_does_not_stack_with_the_barbarian_one(client):
-    cid = await _monk(client, 3, dexterity=14, wisdom=14, constitution=18)
+async def _first_then(client, first, second, edition="2014", **scores) -> int:
+    r = await client.post("/characters", json={"name": "Multi", "initial_class": {"class_name": first, "level": 1}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    if edition != "2014":
+        assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
+    for ability, value in scores.items():
+        assert (await client.patch(f"/characters/{cid}/ability_scores/{ability}", json={"value": value})).status_code == 200
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": second, "level": 1, "hit_die": 12})
+    assert r.status_code == 201, r.text
+    return cid
+
+
+async def test_unarmored_defense_first_class_wins_2014(client):
+    scores = {"dexterity": 14, "wisdom": 12, "constitution": 16}
+    # PHB 2014 p.164: non si riprende la Difesa Senza Armatura da un'altra classe, vale quella della prima
+    assert (await _full(client, await _first_then(client, "monk", "barbarian", **scores)))["ac_breakdown"]["base"] == 10 + 2 + 1
+    assert (await _full(client, await _first_then(client, "barbarian", "monk", **scores)))["ac_breakdown"]["base"] == 10 + 2 + 3
+
+
+async def test_unarmored_defense_single_class_unchanged(client):
+    cid = await _monk(client, 3, dexterity=14, wisdom=14)
+    assert (await _full(client, cid))["ac_breakdown"]["base"] == 10 + 2 + 2
+    r = await client.post("/characters", json={"name": "Barbaro", "initial_class": {"class_name": "barbarian", "level": 1}})
+    cid = r.json()["id"]
+    for ability, value in {"dexterity": 14, "constitution": 16}.items():
+        await client.patch(f"/characters/{cid}/ability_scores/{ability}", json={"value": value})
+    assert (await _full(client, cid))["ac_breakdown"]["base"] == 10 + 2 + 3
+
+
+async def test_draconic_resilience_still_alternative(client):
+    r = await client.post("/characters", json={"name": "Drago", "initial_class": {
+        "class_name": "sorcerer", "level": 1, "subclass": "Discendenza Draconica"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    await client.patch(f"/characters/{cid}/ability_scores/dexterity", json={"value": 14})
+    await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 10})
+    assert (await _full(client, cid))["ac_breakdown"]["base"] == 13 + 2  # Resilienza Draconica
+    await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 18})
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "barbarian", "level": 1, "hit_die": 12})
     assert r.status_code == 201, r.text
-    # una sola formula, la migliore: 10 + DES 2 + COS 4 (non 10 + 2 + 4 + 2)
-    assert (await _full(client, cid))["ac_breakdown"]["base"] == 10 + 2 + 4
+    assert (await _full(client, cid))["ac_breakdown"]["base"] == 10 + 2 + 4  # la migliore: barbaro
+
+
+async def test_unarmored_defense_2024_best_wins(client):
+    cid = await _first_then(client, "monk", "barbarian", edition="2024", dexterity=14, wisdom=12, constitution=16)
+    assert (await _full(client, cid))["ac_breakdown"]["base"] == 10 + 2 + 3  # una alla volta, la migliore
 
 
 # ---------------------------------------------------------------------------

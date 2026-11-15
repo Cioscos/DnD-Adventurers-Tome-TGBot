@@ -214,11 +214,17 @@ def _armor_value(armor) -> int:
 def _unarmored_options(char) -> list:
     """Formule senza armatura valide adesso: privilegi dell'edizione e interruttore manuale."""
     from core.rules.catalog import active_features  # i moduli del catalogo possono usare questo file
+    from core.rules.edition import character_edition
     from core.rules.types import UnarmoredAc
 
     if _worn(char, "armor") is not None:
         return []
-    options = [spec.unarmored for spec, _row in active_features(char) if spec.unarmored]
+    feats = active_features(char)
+    if character_edition(char) == "2014":  # PHB 2014 p.164: chi ha già Difesa Senza Armatura non la riprende da un'altra classe, vale quella della prima classe
+        # shortcut: «prima» = id di riga più basso; una classe tolta e ripresa prende un id nuovo
+        first = min((r.id for s, r in feats if s.key.endswith(".unarmored_defense")), default=None)
+        feats = [(s, r) for s, r in feats if not s.key.endswith(".unarmored_defense") or r.id == first]
+    options = [spec.unarmored for spec, _row in feats if spec.unarmored]
     if char.unarmored_defense_ability:
         options.append(UnarmoredAc(("dexterity", char.unarmored_defense_ability),
                                    no_shield=char.unarmored_defense_ability == "wisdom"))
