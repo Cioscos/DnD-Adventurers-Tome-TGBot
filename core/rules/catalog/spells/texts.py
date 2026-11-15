@@ -115,7 +115,7 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("destructive_wave", ("destructive-wave",), ("Onda Distruttiva", "Destructive Wave"), _SELF, both(_instant(
         "Onda di tuono in 9 m: 5d6 tuono più 5d6 radiante o necrotico e Prono, TS Costituzione: chi supera dimezza i danni e resta in piedi. Tira i danni a mano.",
         "A thunder wave in 30 ft: 5d6 thunder plus 5d6 radiant or necrotic and Prone, Constitution save: on a success half damage and not Prone. Roll the damage by hand."))),
-    SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Flame Strike"), _SELF, {"2014": replace(_instant(
+    SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Colonna di fiamme", "Flame Strike"), _SELF, {"2014": replace(_instant(
         "Colonna di fuoco divino: 4d6 fuoco più 4d6 radiante, TS Destrezza. Con uno slot più alto, +1d6 per livello del tipo scelto al lancio (fuoco o radiante): li tira il tiro di danno.",
         "A column of divine fire: 4d6 fire plus 4d6 radiant, Dexterity save. At a higher slot, +1d6 per level of the type chosen at the cast (fire or radiant): the damage roll rolls them."),
         choices=(_upcast_type("fire", "radiant"),)),
