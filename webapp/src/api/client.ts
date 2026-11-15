@@ -594,6 +594,8 @@ export const api = {
         species?: object
         skills?: Record<string, boolean>
         starting_equipment?: number[]
+        /** Solo 2014: monete tirate dal server al posto dell'equipaggiamento di classe. */
+        starting_wealth?: boolean
         rules_edition?: '2014' | '2024'
         /** Talento d'Origine 2024 scelto nella creazione guidata. */
         origin_feat?: string
@@ -891,7 +893,7 @@ export const api = {
         languages: string[]
       }>(`/rules/proficiencies?edition=${edition}&class_key=${encodeURIComponent(classKey)}&as_multiclass=${asMulticlass}`),
     startingEquipment: (edition: string, classKey: string) =>
-      request<{ groups: string[][] }>(`/rules/starting-equipment?edition=${edition}&class_key=${encodeURIComponent(classKey)}`),
+      request<{ groups: string[][]; wealth: { dice: string; multiplier: number } | null }>(`/rules/starting-equipment?edition=${edition}&class_key=${encodeURIComponent(classKey)}`),
   },
 
   // ---------------------------------------------------------------------------

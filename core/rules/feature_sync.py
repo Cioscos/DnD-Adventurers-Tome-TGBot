@@ -14,7 +14,7 @@ from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_featur
 from core.game.stats import effective_ability_mod, sync_base_ac
 from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
-from core.rules.catalog.granted_spells import GRANTED_SPELLS
+from core.rules.catalog.granted_spells import GRANTED_SPELLS, granted_spell
 from core.rules.edition import EDITIONS, character_edition, class_key
 from core.rules.level_choices import reconcile_choices, seed_from_sheet
 from core.rules.proficiencies import apply_feature_grants
@@ -223,7 +223,7 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
     for key, owner in granted.items():
         spell = have.get(key)
         if spell is None:
-            data = GRANTED_SPELLS[key]
+            data = granted_spell(key, character_edition(char))
             spell = Spell(character_id=char.id, name=data.name.get(lang) or data.name["it"], level=data.level,
                           casting_time=data.casting_time, range_area=data.range_area, duration=data.duration,
                           is_concentration=_concentrates(data, character_edition(char)), is_ritual=data.is_ritual,

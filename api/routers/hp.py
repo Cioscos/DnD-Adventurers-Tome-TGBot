@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import random
 import uuid
 from datetime import datetime, timedelta
@@ -73,8 +74,9 @@ from api.services.rules_options import (
     use_options,
 )
 from api.routers._helpers import (
-    collect_homebrew_notifications, effective_con_mod, roll_concentration_save, saving_throw_bonus,
+    apply_con_hp, collect_homebrew_notifications, effective_con_mod, roll_concentration_save, saving_throw_bonus,
 )
+from core.game.item_bonuses import item_meta
 from api.schemas.common import ConcentrationSaveResult, OptionResult, ZeroHpSaveResult
 from core.rules.catalog import active_features
 from core.rules.states import (
@@ -1313,6 +1315,13 @@ async def revive(
     """Bring a dead character back with 1 HP. No-op if not dead (idempotent)."""
     char = await get_owned_full_with_resources(char_id, user_id, session)
     if char.is_dead:
+        if character_edition(char) == "2024":  # 2024 p.365: tornando in vita si perde la Sintonia; prima dei PF, un oggetto può alzare la COS
+            old_con_mod = effective_con_mod(char)
+            for row in char.items:
+                md = item_meta(row)
+                if md.get("attuned"):
+                    row.item_metadata = json.dumps({**md, "attuned": False})
+            await apply_con_hp(session, char, old_con_mod)
         char.is_dead = False
         char.current_hit_points = 1
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}

@@ -112,7 +112,7 @@ async def roll_character_initiative(
     char = (await session.execute(
         select(Character)
         .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores),
-                 selectinload(Character.abilities), selectinload(Character.spell_slots))
+                 selectinload(Character.abilities), selectinload(Character.spell_slots), selectinload(Character.currency))  # ingombro: monete
         .where(Character.id == char_id)
         .execution_options(populate_existing=True)
     )).scalar_one()

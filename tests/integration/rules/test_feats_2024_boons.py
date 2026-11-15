@@ -72,3 +72,93 @@ async def test_night_spirit_state_resistances(client):
     assert r.status_code == 200, r.text
     res = set((await _full(client, b["id"]))["computed"]["resistances"])
     assert {"fire", "slashing", "necrotic"} <= res and "psychic" not in res and "radiant" not in res
+
+
+# --- Ultima resistenza, Cure extra, Reindirizzamento, Colpo travolgente -------------------------------------------------
+
+LAST_STAND = "feat.2024_boon_recovery_last_stand"
+
+
+async def _hp_now(client, cid) -> int:
+    return (await _full(client, cid))["current_hit_points"]
+
+
+async def _hurt(client, cid, value, *options):
+    return await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": value, "options": list(options)})
+
+
+async def test_boon_of_recovery_last_stand(client):
+    from tests.integration.rules.test_2014_paladin import _rest
+    b = await _boon(client, "recovery")
+    cid = b["id"]
+    top = (await _full(client, cid))["computed"]["hp_max_effective"]
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": top})
+    assert LAST_STAND in await _roll_keys(client, cid, "damage_taken")  # subito dopo il Dono, senza riposo
+    r = await _hurt(client, cid, top + 5, LAST_STAND)  # sotto la soglia del danno massiccio: resta a 1 PF e cura metà del massimo
+    assert r.status_code == 200, r.text
+    assert await _hp_now(client, cid) == 1 + top // 2
+    assert LAST_STAND not in await _roll_keys(client, cid, "damage_taken")  # una volta per riposo lungo
+    assert (await _hurt(client, cid, 1, LAST_STAND)).status_code == 409
+    await _rest(client, cid, "long")
+    assert LAST_STAND in await _roll_keys(client, cid, "damage_taken")
+
+
+async def test_boon_of_recovery_last_stand_is_not_spent_if_the_damage_does_not_reach_zero(client):
+    b = await _boon(client, "recovery")
+    cid = b["id"]
+    top = (await _full(client, cid))["computed"]["hp_max_effective"]
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": top})
+    assert (await _hurt(client, cid, 3, LAST_STAND)).status_code == 200
+    assert await _hp_now(client, cid) == top - 3
+    assert LAST_STAND in await _roll_keys(client, cid, "damage_taken")
+
+
+async def test_boon_of_fortitude_extra_healing_button(client):
+    b = await _boon(client, "fortitude")
+    cid = b["id"]
+    row = _feat_rows(await _full(client, cid), "2024_boon_fortitude")[0]
+    assert row["has_on_use"] and not row["is_passive"]
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 10})
+    r = await client.post(f"/characters/{cid}/features/feat.2024_boon_fortitude/use", json={})
+    assert r.status_code == 200, r.text
+    con = next(s for s in (await _full(client, cid))["ability_scores"] if s["name"] == "constitution")["modifier"]
+    assert await _hp_now(client, cid) == 10 + con
+    again = await client.post(f"/characters/{cid}/features/feat.2024_boon_fortitude/use", json={})
+    assert again.status_code == 409 and "once_per_turn" in again.text
+
+
+async def test_boon_of_energy_resistance_redirect(client):
+    b = await _boon(client, "energy_resistance")
+    cid = b["id"]
+    row = _feat_rows(b["after"], "2024_boon_energy_resistance")[0]
+    assert (await _complete(client, cid, row["id"], {"damage_types": ["fire", "cold"]})).status_code == 200
+    key = "feat.2024_boon_energy_resistance_redirect"
+    assert key in await _roll_keys(client, cid, "damage_taken", damage_type="fire")
+    assert key not in await _roll_keys(client, cid, "damage_taken", damage_type="acid")
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "damage_taken", "damage_type": "fire"})
+    assert next(o for o in r.json() if o["key"] == key)["slot"] == "reaction"
+    top = (await _full(client, cid))["computed"]["hp_max_effective"]
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": top})
+    hit = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10, "damage_type": "fire", "options": [key]})
+    assert hit.status_code == 200, hit.text
+    con = next(s for s in (await _full(client, cid))["ability_scores"] if s["name"] == "constitution")["modifier"]
+    effect = hit.json()["option_result"]["effects"][0]["it"]
+    assert f"CD {8 + con + 6}" in effect and "2d12" in effect  # competenza +6 al 19°
+
+
+async def test_boon_of_irresistible_offense_on_natural_20(client):
+    from tests.integration.rules.test_2014_fighter_styles import _item
+    from tests.integration.rules.test_2014_rogue import _damage, _hit
+    b = await _boon(client, "irresistible_offense", "strength")
+    cid = b["id"]
+    wid = await _item(client, cid, "Spada", damage_dice="1d8", weapon_type="melee", properties=[], equip="main_hand")
+    key = "feat.2024_boon_irresistible_offense_strike"
+    score = next(s for s in (await _full(client, cid))["ability_scores"] if s["name"] == "strength")["value"]
+    plain = await _hit(client, cid, wid, die=20)
+    with_boon = await _damage(client, cid, plain, key)
+    assert with_boon.status_code == 200, with_boon.text
+    other = await _hit(client, cid, wid, die=20)
+    without = await _damage(client, cid, other)
+    assert with_boon.json()["damage_bonus"] - without.json()["damage_bonus"] == score
+    miss = await _hit(client, cid, wid, die=15)
+    assert (await _damage(client, cid, miss, key)).status_code == 409

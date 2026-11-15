@@ -93,6 +93,24 @@ def carried_weight(items, purse_coins: dict, coin_weight: bool) -> float:
     return total
 
 
+def encumbrance_level(char) -> str:
+    """Variante dell'ingombro (2014 p.176): «none», «encumbered» oltre For x5 lb, «heavily» oltre For x10; «none» a variante spenta."""
+    cfg = char.settings or {}
+    if not cfg.get("encumbrance_variant"):
+        return "none"
+    from core.game.stats import effective_ability_score
+    from core.rules.modifiers import modifiers_for  # import locale: modifiers usa questo livello per lo svantaggio
+
+    coin_weight = bool(cfg.get("coin_weight"))
+    cur = char.currency if coin_weight else None  # le monete servono solo se pesano
+    total = carried_weight(char.items, {c: getattr(cur, c) or 0 for c in COINS} if cur is not None else {}, coin_weight)
+    row = next((a for a in char.ability_scores if a.name == "strength"), None)
+    strength, _ = effective_ability_score("strength", row.value if row else 10, [i for i in char.items if i.is_equipped])
+    if modifiers_for(char, None).carry_double:  # capacità di carico doppia (Orso); roll None: non rientra qui
+        strength *= 2
+    return "heavily" if total > strength * 10 else "encumbered" if total > strength * 5 else "none"
+
+
 @dataclass
 class ContainerStats:
     contents_weight: float

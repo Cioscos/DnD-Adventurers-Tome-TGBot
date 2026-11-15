@@ -201,22 +201,84 @@ def _chosen_energy(kind: str):
     return lambda c: kind in ((getattr(c.class_row, "options", None) or {}).get("damage_types") or [])
 
 
+def _con_mod(ctx: RuleContext) -> int:
+    from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
+    return effective_ability_mod(ctx.char, "constitution")
+
+
+def _half_max(ctx: RuleContext) -> int:
+    from core.rules.modifiers import effective_hp_max  # import locale: modifiers usa il catalogo
+    return effective_hp_max(ctx.char) // 2
+
+
+def _redirect_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
+    mod = _con_mod(ctx)
+    dc = 8 + mod + _pb(ctx)
+    return _both(f"Reindirizzamento: una creatura visibile entro 18 m (non dietro Copertura Totale) fa un TS Destrezza CD {dc} o subisce 2d12 {mod:+d} danni dello stesso tipo. Tira tu e applica il danno: lo decide il GM.",
+                 f"Channel Energy: a creature you can see within 60 ft (not behind Total Cover) makes a Dexterity save DC {dc} or takes 2d12 {mod:+d} damage of the same type. Roll it and apply it: the GM decides.")
+
+
+REDIRECT = RollOptionSpec(
+    key="feat.2024_boon_energy_resistance_redirect", phase="damage_in", rolls=("damage_taken",), slot="reaction",
+    available=lambda c: bool(c.damage_type) and _chosen_energy(c.damage_type)(c),
+    label=_both("Reindirizzamento: reazione, dirigi il danno subito verso un'altra creatura (2d12 + Cos, TS Destrezza)",
+                "Channel Energy: reaction, redirect the damage you took at another creature (2d12 + Con, Dexterity save)"),
+    effect=_redirect_effect)
+
+
+def _natural_20(ctx: RuleContext) -> bool:
+    pending = (ctx.char.turn_state or {}).get("pending_attack") or {}
+    return (pending.get("result") or {}).get("to_hit_die") == 20
+
+
+def _offense_score(ctx: RuleContext, _inputs: dict) -> int:
+    from core.game.stats import effective_ability_score  # import locale: stats usa il catalogo
+    name = (getattr(ctx.class_row, "options", None) or {}).get("ability")
+    row = next((a for a in ctx.char.ability_scores if a.name == name), None)
+    return effective_ability_score(name, row.value, [i for i in ctx.char.items if i.is_equipped])[0] if row else 0
+
+
+OVERWHELMING_STRIKE = RollOptionSpec(
+    key="feat.2024_boon_irresistible_offense_strike", phase="after_hit", rolls=("attack",), available=_natural_20, bonus=_offense_score,
+    label=_both("Colpo travolgente: 20 naturale, danni extra pari al punteggio della caratteristica del Dono",
+                "Overwhelming Strike: natural 20, extra damage equal to the Boon's ability score"))
+
+# Ultima resistenza: lo stato «pronto» nasce con il Dono (``take_feat``) e a ogni Riposo Lungo, e si chiude quando scatta
+LAST_STAND_STATE = "boon_last_stand"
+LAST_STAND = RollOptionSpec(
+    key="feat.2024_boon_recovery_last_stand", phase="damage_in", rolls=("damage_taken",), holds_at_one=True, holds_vs_massive=True,
+    cost=Cost(state_key=LAST_STAND_STATE),
+    # shortcut: metà del massimo senza il bonus homebrew ai PF, che il core non vede; rivederlo se serve
+    holds_heal=lambda c: _half_max(c),
+    label=_both("Ultima resistenza: se il danno ti porta a 0 PF resti a 1 PF e recuperi metà dei PF massimi (una volta per riposo lungo)",
+                "Last Stand: if the damage takes you to 0 HP you stay at 1 HP and regain half your maximum HP (once per long rest)"))
+
+
+def last_stand_state() -> StateSpec:
+    return StateSpec(LAST_STAND_STATE, ends_on=("manual",))
+
+
 _register(
     _f24("boon_combat_prowess", roll_options=(RollOptionSpec(
         key="feat.2024_boon_combat_prowess", phase="after_roll", after="succeed", rolls=("attack",), once_per_turn=True,
         label=_both("Prodigio in combattimento: l'attacco mancato diventa un colpo (poi non prima del tuo prossimo turno)",
                     "Combat Prowess: the missed attack becomes a hit (then not again until your next turn)")),)),
     _f24("boon_dimensional_travel"),
-    _f24("boon_energy_resistance", modifiers=tuple(Modifier(f"resistance:{t}", 0, when=_chosen_energy(t)) for t in ENERGY_TYPES)),
+    _f24("boon_energy_resistance", modifiers=tuple(Modifier(f"resistance:{t}", 0, when=_chosen_energy(t)) for t in ENERGY_TYPES),
+         roll_options=(REDIRECT,)),
     _f24("boon_fate", passive=False, uses=Uses(table={1: 1}), restoration="short_rest", roll_options=(RollOptionSpec(
         key="feat.2024_boon_fate", phase="after_roll", after="add", rolls=D20_TESTS, extra_dice=lambda _c, _i: "2d4",
         cost=Cost(feature_key="feat.2024_boon_fate"),
         label=_both("Dono del Fato: somma 2d4 al Test d20", "Boon of Fate: add 2d4 to the d20 Test")),)),
-    _f24("boon_fortitude", modifiers=(Modifier("hp_max", 40),)),
-    _f24("boon_irresistible_offense"),
-    # La riserva di dieci d10 è l'uso della riga; «Ultima resistenza» (1 PF invece di 0) resta testo (ruling della PR 2)
+    # Cure extra: nessun gancio su ogni cura, il pulsante «Usa» le dà a mano (una volta fino all'inizio del turno seguente)
+    _f24("boon_fortitude", modifiers=(Modifier("hp_max", 40),), passive=False,
+         on_use=OnUse(once_per_turn=True, heal=lambda c, _rolled: max(_con_mod(c), 0))),
+    # «Supera le difese» (ignora le resistenze) resta testo: le resistenze dei nemici non sono modellate
+    _f24("boon_irresistible_offense", roll_options=(OVERWHELMING_STRIKE,)),
+    # La riserva di dieci d10 è l'uso della riga; Ultima resistenza usa lo stato «pronto» (una volta per riposo lungo)
     _f24("boon_recovery", passive=False, action_type="bonus_action", uses=Uses(table={1: 10}), restoration="long_rest",
-         on_use=OnUse(slot="bonus", choose_amount=True, rolls_by_amount=lambda _c, n: f"{n}d10", heal=lambda _c, rolled: rolled)),
+         on_use=OnUse(slot="bonus", choose_amount=True, rolls_by_amount=lambda _c, n: f"{n}d10", heal=lambda _c, rolled: rolled),
+         roll_options=(LAST_STAND,), long_rest_state=lambda _c: last_stand_state()),
     _f24("boon_skill"),  # competenze e Maestria le dà ``complete_feat``, che segna quelle nuove (la rimozione le toglie)
     _f24("boon_speed", modifiers=(Modifier("speed", 30),)),
     _f24("boon_spell_recall"),

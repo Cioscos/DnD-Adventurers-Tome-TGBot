@@ -1,7 +1,8 @@
 import feats2014 from '@/data/feats2014.json'
 import feats2024 from '@/data/feats2024.json'
 import { CANONICAL_CLASSES } from '@/lib/silhouette'
-import type { CharacterFull } from '@/types'
+import { profBonus } from '@/lib/dnd'
+import type { Ability, CharacterFull } from '@/types'
 
 export const ABILITY_KEYS = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
@@ -74,6 +75,13 @@ export const FEATS_2014 = feats2014 as Feat2024[]
 /** La scheda di un talento delle due edizioni, dalla chiave (`alert`, `2024_alert`). */
 export const featByKey = (key: string): Feat2024 | undefined =>
   (key.startsWith('2024_') ? FEATS_2024 : FEATS_2014).find((f) => f.key === key)
+
+/** Incantatore rituale 2024 (già completo): quanti rituali mancano al bonus di competenza di oggi, come `complete_feat`. */
+export function ritualsMissing(ab: Ability, totalLevel: number): number {
+  if (ab.feature_key !== 'feat.2024_ritual_caster' || ab.feat_status !== 'active') return 0
+  const taken = ((ab.options as { rituals?: string[] } | null | undefined)?.rituals ?? []).length
+  return Math.max(0, profBonus(totalLevel) - taken)
+}
 
 /** Vero se il personaggio soddisfa i prerequisiti verificabili (livello, caratteristica, incantesimi).
  *  `manual` («Aggiungi talento») ignora il livello minimo, salvo per i Doni Epici (come il server). */

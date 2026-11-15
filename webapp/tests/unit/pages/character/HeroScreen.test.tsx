@@ -59,6 +59,14 @@ describe('HeroScreen', () => {
     expect(tile.textContent!.indexOf('+4')).toBeLessThan(tile.textContent!.indexOf('18'))
   })
 
+  it('mostra l\'etichetta Sanguinante solo se il backend la dà (2024)', () => {
+    const { unmount } = renderWithProviders(<HeroScreen char={{ ...base, computed: { bloodied: true } } as unknown as CharacterFull} />)
+    expect(screen.getByText('character.hp.bloodied')).toBeInTheDocument()
+    unmount()
+    renderWithProviders(<HeroScreen char={{ ...base, computed: { bloodied: false } } as unknown as CharacterFull} />)
+    expect(screen.queryByText('character.hp.bloodied')).not.toBeInTheDocument()
+  })
+
   it('a 0 PF permette il tiro contro la morte dall\'hub e ne mostra il risultato', async () => {
     rollSpy.mockResolvedValue({ roll: 12 })
     const dying = { ...base, current_hit_points: 0, death_saves: { successes: 1, failures: 0, stable: false } }

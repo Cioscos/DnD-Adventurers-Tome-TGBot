@@ -86,6 +86,13 @@ _VITALITY_TEXT = txt("2d6 PF a una creatura nell'aura: usa «Cura» sulla scheda
                      "2d6 HP to a creature in the aura: use Heal on the recipient's sheet (2014 with a bonus action on each of your turns; "
                      "2024 on casting and at the start of each of your turns).")
 _AURA_VITALITY = SpellVariant(track=True, concentration=True, rounds=10, text=_VITALITY_TEXT)
+# Preghiera di Guarigione 2024: promemoria «già ricevuta» fino al Riposo Lungo; il Riposo Breve lo fa ogni bersaglio dalla propria scheda
+_PRAYER_OF_HEALING = SpellVariant(
+    track=True, until_rest="long",
+    text=txt("Fino a cinque creature ottengono i benefici di un Riposo Breve e recuperano 2d8 PF (la cura la tira «Cura» dell'incantesimo): ogni bersaglio fa il Riposo Breve dalla propria scheda. "
+             "Non vale di nuovo su una creatura finché non termina un Riposo Lungo: il segno resta fino ad allora.",
+             "Up to five creatures gain the benefits of a Short Rest and regain 2d8 HP (the spell's healing roll rolls it): each target takes the Short Rest from their own sheet. "
+             "It cannot affect a creature again until it finishes a Long Rest: the mark stays until then."))
 
 SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("mage_armor", ("mage-armor",), ("Armatura Magica", "Mage Armor"), SpellTarget("ally"), both(_MAGE_ARMOR)),
@@ -101,5 +108,7 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("warding_bond", ("warding-bond",), ("Vincolo di Interdizione", "Legame di Protezione", "Warding Bond"),
                 SpellTarget("ally"), both(_WARDING_BOND)),
     SpellEffect("regenerate", ("regenerate",), ("Rigenerazione", "Regenerate"), SpellTarget("ally"), both(_REGENERATE)),
+    SpellEffect("prayer_of_healing", ("prayer-of-healing",), ("Preghiera di Guarigione", "Prayer of Healing"),
+                SpellTarget("allies", lambda _s: 5), {"2024": _PRAYER_OF_HEALING}),
     SpellEffect("aura_of_vitality", ("aura-of-vitality",), ("Aura di Vitalità", "Aura of Vitality"), SpellTarget("self"), both(_AURA_VITALITY)),
 )

@@ -178,6 +178,19 @@ describe('FeatOptionsSheet — talenti 2024 con scelte (PR 2)', () => {
     expect(complete.mock.calls[0][2].spells.map((s: { srd_index: string }) => s.srd_index)).toEqual(['alarm', 'find-familiar'])
   })
 
+  it('Ritual Caster already complete asks only for the missing rituals and skips the ones taken', async () => {
+    complete.mockResolvedValue({ id: 7 })
+    const done = { id: 4, name: 'Incantatore rituale', feature_key: 'feat.2024_ritual_caster', feat_status: 'active',
+      options: { rituals: ['alarm'] } } as unknown as Ability
+    renderWithProviders(<FeatOptionsSheet char={{ ...char(), total_level: 4 }} ability={done} open onClose={() => {}} />)
+    expect(await screen.findByText('Trova famiglio')).toBeTruthy()
+    expect(screen.queryByText('Allarme')).toBeNull() // già preso
+    await userEvent.click(screen.getByText('Trova famiglio'))  // competenza 2, uno già preso: ne manca uno
+    await userEvent.click(confirm())
+    await waitFor(() => expect(complete).toHaveBeenCalled())
+    expect(complete.mock.calls[0][2].spells.map((s: { srd_index: string }) => s.srd_index)).toEqual(['find-familiar'])
+  })
+
   it('Boon of Energy Resistance needs two types', async () => {
     complete.mockResolvedValue({ id: 7 })
     renderWithProviders(<FeatOptionsSheet char={char()} ability={row('Dono', 'boon_energy_resistance')} open onClose={() => {}} />)

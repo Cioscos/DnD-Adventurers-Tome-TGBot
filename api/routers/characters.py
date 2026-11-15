@@ -76,7 +76,9 @@ from api.services.rules_options import (
 from api.services.effects import cap_current_hp, sync_zero_hp
 from core.data.spell_slots import normalize_class_name
 from core.rules.edition import character_edition
-from core.rules.starting_equipment import ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, starting_groups
+from core.rules.starting_equipment import (
+    ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, roll_starting_wealth, starting_groups, starting_wealth,
+)
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import attach_party_auras, attach_spell_auras
 from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
@@ -236,6 +238,9 @@ async def create_character(
         body.initial_class is None or not starting_groups(body.rules_edition, normalize_class_name(body.initial_class.class_name) or "")
     ):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_starting_equipment")
+    class_key = normalize_class_name(body.initial_class.class_name) or "" if body.initial_class else ""
+    if body.starting_wealth and not starting_wealth(body.rules_edition, class_key):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "starting_wealth_unavailable")
     char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0,
                      rules_edition=body.rules_edition)
     # Populate ability scores + currency via the relationships (not raw
@@ -278,7 +283,9 @@ async def create_character(
         await create_class_for_character(
             char, body.initial_class, session, is_first_class=True, lang=lang,
         )
-        if body.starting_equipment is not None:
+        if body.starting_wealth:  # al posto dell'equipaggiamento: nessun oggetto di partenza
+            char.currency.gold += roll_starting_wealth(class_key)
+        elif body.starting_equipment is not None:
             _add_starting_equipment(char, body, lang)
 
     if body.origin_feat:  # nella stessa transazione: un talento non valido annulla tutta la creazione

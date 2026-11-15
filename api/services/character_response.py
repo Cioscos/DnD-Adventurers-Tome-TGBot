@@ -23,7 +23,7 @@ from api.services.spellcasting import build_spellcasting_info, effect_view, fill
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
-from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats
+from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats, encumbrance_level
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_part
 from core.rules.condition_removal import view as removal_view
@@ -35,7 +35,7 @@ from core.rules.uses import pool_key
 from core.rules.modifiers import (
     ac_delta, effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
-from core.game.stats import effective_ability_mod, effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
+from core.game.stats import effective_ability_mod, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import initiative_bonus, unarmed_attack_profile
 from core.rules.weapons import martial_arts_level
 
@@ -251,6 +251,8 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         attunement_limit=attunement_limit(char),
         scroll_casting=has_use_magic_device(char),
     )
+    response.computed.bloodied = (  # 2024 p.27: di per sé non fa nulla, è un segnale per chi gioca
+        edition == "2024" and 0 < char.current_hit_points * 2 <= response.computed.hp_max_effective)
     return response
 
 
@@ -284,15 +286,6 @@ def _apply_encumbrance(char: Character, response: CharacterFull) -> None:
     response.encumbrance = float(carried_weight(char.items, {}, False))
     total = float(carried_weight(char.items, _purse(char), bool(cfg.get("coin_weight"))))
     response.encumbrance_total = total
-    if not cfg.get("encumbrance_variant"):
-        return
-    row = next((a for a in char.ability_scores if a.name == "strength"), None)
-    strength, _ = effective_ability_score(
-        "strength", row.value if row else 10, [i for i in char.items if i.is_equipped]
-    )
-    if modifiers_for(char, None).carry_double:  # capacità di carico doppia (Orso)
-        strength *= 2
-    if total > strength * 10:
-        response.encumbrance_level, response.speed_encumbrance_penalty_ft = "heavily", 20
-    elif total > strength * 5:
-        response.encumbrance_level, response.speed_encumbrance_penalty_ft = "encumbered", 10
+    level = encumbrance_level(char)
+    if level != "none":
+        response.encumbrance_level, response.speed_encumbrance_penalty_ft = level, 20 if level == "heavily" else 10

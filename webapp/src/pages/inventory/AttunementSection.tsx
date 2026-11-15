@@ -37,6 +37,9 @@ export default function AttunementSection({ charId, items, limit = MAX_ATTUNED }
       if (err instanceof ApiError && err.status === 409 && err.detail === 'attunement_limit') {
         setError(t('character.inventory.magic.attunement_limit', { n: limit }))
         haptic.error()
+      } else if (err instanceof ApiError && err.status === 409 && err.detail === 'attunement_duplicate') {
+        setError(t('character.inventory.magic.attunement_duplicate'))
+        haptic.error()
       } else {
         setError(t(actionFailedKey(err)))
       }

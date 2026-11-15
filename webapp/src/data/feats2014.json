@@ -577,8 +577,8 @@
    "en": "Healer"
   },
   "summary": {
-   "it": "Con la borsa del guaritore stabilizzi a 1 PF o curi 1d6 + 4 + i Dadi Vita del bersaglio.",
-   "en": "With a healer's kit you stabilize at 1 HP or heal 1d6 + 4 + the target's Hit Dice."
+   "it": "Con la borsa del guaritore stabilizzi a 1 PF o curi 1d6 + 4 + i Dadi Vita del bersaglio. L'app calcola la cura; usi della borsa e un uso per creatura fra due riposi li tieni tu.",
+   "en": "With a healer's kit you stabilize at 1 HP or heal 1d6 + 4 + the target's Hit Dice. The app works out the heal; kit uses and one use per creature between rests are yours to track."
   },
   "category": "general",
   "abilities": null,

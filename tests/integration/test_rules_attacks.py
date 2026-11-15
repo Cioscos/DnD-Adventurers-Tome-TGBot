@@ -581,3 +581,41 @@ async def test_plain_unarmed_response_has_no_effect_fields(client):
     cid = await _char(client, edition="2024")
     body = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).json()
     assert "effect" not in body and "save_dc" not in body and "grazed" not in body
+
+
+# --- Ricarica -----------------------------------------------------------------------------------------------------
+
+_LOADING = {"weapon_type": "ranged", "properties": ["prop_loading"]}
+
+
+async def test_loading_weapon_second_attack_needs_confirm(client):
+    cid = await _char(client, level=5)  # Attacco Extra: 2 attacchi per azione
+    wid = await _weapon(client, cid, "Balestra leggera", **_LOADING)
+    assert (await _attack(client, cid, wid)).status_code == 200
+    r = await _attack(client, cid, wid)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "attack_limit"
+    assert (await _attack(client, cid, wid, confirm_extra_attack=True)).status_code == 200
+
+
+async def test_non_loading_weapon_extra_attack_unchanged(client):
+    cid = await _char(client, level=5)
+    wid = await _weapon(client, cid, "Arco lungo", weapon_type="ranged", properties=["prop_ammunition"])
+    assert (await _attack(client, cid, wid)).status_code == 200
+    assert (await _attack(client, cid, wid)).status_code == 200
+
+
+async def test_loading_property_ddb_name(client):
+    cid = await _char(client, level=5)
+    wid = await _weapon(client, cid, "Balestra leggera", weapon_type="ranged", properties=["Loading"])
+    await _attack(client, cid, wid)
+    assert (await _attack(client, cid, wid)).status_code == 409
+
+
+@pytest.mark.parametrize("edition,key", [("2014", "crossbow_expert"), ("2024", "2024_crossbow_expert")])
+async def test_crossbow_expert_ignores_loading(client, test_session_factory, edition, key):
+    from tests.integration.rules.test_feats_origin_2024 import _give
+    cid = await _char(client, edition=edition, level=5)
+    await _give(test_session_factory, client, cid, key)
+    wid = await _weapon(client, cid, "Balestra leggera", **_LOADING)
+    assert (await _attack(client, cid, wid)).status_code == 200
+    assert (await _attack(client, cid, wid)).status_code == 200

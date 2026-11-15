@@ -67,6 +67,16 @@ describe('AttunementSection', () => {
   })
 })
 
+describe('AttunementSection duplicate copy', () => {
+  it('shows the duplicate message on 409 attunement_duplicate', async () => {
+    const { ApiError } = await import('@/api/client')
+    update.mockRejectedValue(new ApiError(409, 'attunement_duplicate'))
+    renderIt([mk(1, true), mk(4, false)])
+    await userEvent.click(screen.getByRole('button', { name: /Anello 4/ }))
+    expect(await screen.findByText('character.inventory.magic.attunement_duplicate')).toBeTruthy()
+  })
+})
+
 describe('AttunementSection other 409s', () => {
   it('does not claim the limit for a different 409', async () => {
     const { ApiError } = await import('@/api/client')

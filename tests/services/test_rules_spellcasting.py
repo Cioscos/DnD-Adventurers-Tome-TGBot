@@ -195,6 +195,19 @@ def test_cast_warnings_slot_per_turn_by_edition():
     assert cast_warnings(c2014, _spell(level=0, casting_time="1 azione bonus"), ritual=False) == ["bonus_spell"]
 
 
+@pytest.mark.parametrize("components,expected", [
+    ("V, S, M (un diamante del valore di almeno 300 mo, che l'incantesimo consuma)", ["material_consumed"]),
+    ("V, S, M (a diamond worth at least 300 gp, which the spell consumes)", ["material_consumed"]),
+    ("V, S, M (polvere di diamante del valore di 25 mo)", []),
+    ("V, S, M (un pizzico di zolfo, che viene consumato)", []),
+    (None, []),
+])
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+def test_cast_warning_material_consumed(components, expected, edition):
+    wizard = _char(_cls("wizard", 5), edition=edition)
+    assert cast_warnings(wizard, _spell(components=components), ritual=False) == expected  # 2014 p.203, 2024 p.236
+
+
 def test_cast_warnings_ritual_preparation():
     unprepared = _spell(is_prepared=False, is_ritual=True)
     assert cast_warnings(_char(_cls("cleric", 5)), unprepared, ritual=True) == ["ritual_unprepared"]

@@ -146,7 +146,8 @@ def unarmed_attack_profile(char: Character, ranged: bool = False) -> tuple[int, 
         str_mod, dex_mod, martial_arts_level(char, ignore_held=ranged), character_edition(char))
     for spec, _row in active_features(char):  # dado minimo di un privilegio o talento (Attaccabrighe da taverna)
         if spec.unarmed_die and not ranged:
-            damage_dice = best_damage_dice(damage_dice, spec.unarmed_die)
+            die = spec.unarmed_die(char) if callable(spec.unarmed_die) else spec.unarmed_die
+            damage_dice = best_damage_dice(damage_dice, die)
     if ranged:
         return dex_mod, damage_dice, "dexterity"
     return ability_mod, damage_dice, "strength" if ability_mod == str_mod else "dexterity"

@@ -53,8 +53,12 @@ def _thrown(ctx: RuleContext) -> bool:
     return ctx.roll == "damage" and _weapon_in_hand(ctx) and ctx.attack_mode == "thrown"
 
 
+def _holds_weapon_or_shield(char: Any) -> bool:
+    return any(i.is_equipped and i.item_type in ("weapon", "shield") for i in char.items or [])
+
+
 def _armed(ctx: RuleContext) -> bool:
-    return any(i.is_equipped and i.item_type in ("weapon", "shield") for i in ctx.char.items or [])
+    return _holds_weapon_or_shield(ctx.char)
 
 
 def _interception_given(ctx: RuleContext, rolled: int) -> int:
@@ -98,7 +102,7 @@ STYLE_ROWS = (
     _style("unarmed", "Combattere senz'armi / Unarmed Fighting", ("Combattere Senz'Armi", "Unarmed Fighting"),
            ("Colpo senz'armi 1d6 + Forza (1d8 senza armi né scudo in mano); a inizio turno 1d4 a una creatura che stai afferrando.",
             "Unarmed Strike 1d6 + Strength (1d8 with no weapons or shield in hand); at the start of your turn 1d4 to a creature you grapple."),
-           passive=True),
+           passive=True, unarmed_die=lambda c: "1d6" if _holds_weapon_or_shield(c) else "1d8"),
 )
 
 

@@ -22,10 +22,12 @@ vi.mock('@/components/ui/Pressable', async () => {
   }
 })
 
-function Harness({ onPicks }: { onPicks: (p: number[]) => void }) {
+function Harness({ onPicks, onWealth = () => {} }: { onPicks: (p: number[]) => void; onWealth?: (w: boolean) => void }) {
   const [picks, setPicks] = useState<number[] | null>(null)
+  const [wealth, setWealth] = useState(false)
   return (
-    <EquipmentStep edition="2014" className="Mago" picks={picks} onPicks={(p) => { setPicks(p); onPicks(p) }} />
+    <EquipmentStep edition="2014" className="Mago" picks={picks} onPicks={(p) => { setPicks(p); onPicks(p) }}
+      wealth={wealth} onWealth={(w) => { setWealth(w); onWealth(w) }} />
   )
 }
 
@@ -55,6 +57,30 @@ describe('EquipmentStep', () => {
     )
     await screen.findByText('character.create.equipment_none')
     expect(seen).not.toHaveBeenCalled()
+  })
+})
+
+describe('EquipmentStep wealth', () => {
+  const wrap = (ui: React.ReactElement) => render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>)
+
+  it('con la ricchezza disponibile mostra l\'interruttore; acceso, nasconde i gruppi', async () => {
+    startingEquipment.mockResolvedValue({ groups: [['Bastone ferrato', 'Pugnale']], wealth: { dice: '4d4', multiplier: 10 } })
+    const seen = vi.fn()
+    wrap(<Harness onPicks={() => {}} onWealth={seen} />)
+    const toggle = await screen.findByRole('button', { name: /character\.create\.equipment_wealth/ })
+    await userEvent.click(toggle)
+    expect(seen).toHaveBeenLastCalledWith(true)
+    expect(screen.queryByText('Pugnale')).toBeNull()
+    await userEvent.click(toggle)
+    expect(seen).toHaveBeenLastCalledWith(false)
+    expect(screen.getByText('Pugnale')).toBeTruthy()
+  })
+
+  it('senza ricchezza (2024) non c\'è l\'interruttore', async () => {
+    startingEquipment.mockResolvedValue({ groups: [['Bastone ferrato', 'Pugnale']], wealth: null })
+    wrap(<Harness onPicks={() => {}} />)
+    await screen.findByText('Pugnale')
+    expect(screen.queryByRole('button', { name: /equipment_wealth/ })).toBeNull()
   })
 })
 

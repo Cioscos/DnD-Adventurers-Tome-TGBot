@@ -115,14 +115,20 @@ SPELLS: tuple[SpellEffect, ...] = (
     SpellEffect("destructive_wave", ("destructive-wave",), ("Onda Distruttiva", "Destructive Wave"), _SELF, both(_instant(
         "Onda di tuono in 9 m: 5d6 tuono più 5d6 radiante o necrotico e Prono, TS Costituzione: chi supera dimezza i danni e resta in piedi. Tira i danni a mano.",
         "A thunder wave in 30 ft: 5d6 thunder plus 5d6 radiant or necrotic and Prone, Constitution save: on a success half damage and not Prone. Roll the damage by hand."))),
-    SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Flame Strike"), _SELF, {"2014": replace(_instant(
+    SpellEffect("flame_strike", ("flame-strike",), ("Colpo Infuocato", "Colonna di fiamme", "Flame Strike"), _SELF, {"2014": replace(_instant(
         "Colonna di fuoco divino: 4d6 fuoco più 4d6 radiante, TS Destrezza. Con uno slot più alto, +1d6 per livello del tipo scelto al lancio (fuoco o radiante): li tira il tiro di danno.",
         "A column of divine fire: 4d6 fire plus 4d6 radiant, Dexterity save. At a higher slot, +1d6 per level of the type chosen at the cast (fire or radiant): the damage roll rolls them."),
-        choices=(_upcast_type("fire", "radiant"),))}),
+        choices=(_upcast_type("fire", "radiant"),)),
+        "2024": _instant(
+        "Cilindro di 3 m di raggio e 12 m di altezza: TS Destrezza, 5d6 fuoco più 5d6 radiante, metà se riesce. Con uno slot più alto, +1d6 di ciascun tipo per livello oltre il 5°. Tira i danni a mano.",
+        "A 10 ft radius, 40 ft high cylinder: Dexterity save, 5d6 fire plus 5d6 radiant, half on a success. At a higher slot, +1d6 of each type per level above 5th. Roll the damage by hand.")}),
     SpellEffect("hunger_of_hadar", ("hunger-of-hadar",), ("Fame di Hadar", "Hunger of Hadar"), _SELF, {"2024": replace(_text(
         "Sfera di oscurità di 6 m che danneggia freddo e acido chi vi sta. Con uno slot più alto il danno cresce di 1d6 del tipo scelto al lancio (freddo o acido): applicalo a mano.",
         "A 20 ft sphere of darkness that deals cold and acid damage to those in it. At a higher slot the damage grows by 1d6 of the type chosen at the cast (cold or acid): apply it by hand.", MIN1, concentration=True),
-        choices=(_upcast_type("cold", "acid"),))}),
+        choices=(_upcast_type("cold", "acid"),)),
+        "2014": _text(
+        "Sfera di oscurità di 6 m, terreno difficile: chi inizia il turno al suo interno subisce 2d6 freddo; chi lo termina al suo interno fa un TS Destrezza o subisce 2d6 acido. Nessuna scalata. Tira i danni a mano.",
+        "A 20 ft sphere of darkness, difficult terrain: a creature that starts its turn inside takes 2d6 cold; one that ends its turn inside makes a Dexterity save or takes 2d6 acid. No higher-slot scaling. Roll the damage by hand.", MIN1, concentration=True)}),
     SpellEffect("conjure_barrage", ("conjure-barrage",), ("Evoca Raffica", "Conjure Barrage"), _SELF, {"2014": _instant(
         "Cono di 18 m: 3d8 danni del tipo dell'arma usata, TS Destrezza per metà. Tira i danni a mano.",
         "A 60 ft cone: 3d8 damage of the used weapon's type, Dexterity save for half. Roll the damage by hand.")}),

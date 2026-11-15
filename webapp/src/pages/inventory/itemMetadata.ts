@@ -229,7 +229,8 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
   switch (form.item_type) {
     case 'weapon':
       meta = {
-        damage_dice: form.damage_dice,
+        // Vuoto (Rete) = nessun dado: la chiave manca e il backend usa il suo valore di ripiego.
+        ...(form.damage_dice.trim() ? { damage_dice: form.damage_dice } : {}),
         damage_type: form.damage_type,
         weapon_type: form.weapon_type,
         properties: form.properties,
@@ -316,7 +317,7 @@ export function buildHomebrewMetadataPatch(
 
 export function isItemFormValid(form: ItemFormData): boolean {
   if (!form.name.trim()) return false
-  if (form.item_type === 'weapon' && !DAMAGE_DICE_RE.test(form.damage_dice.trim())) return false
+  if (form.item_type === 'weapon' && form.damage_dice.trim() && !DAMAGE_DICE_RE.test(form.damage_dice.trim())) return false
   if (form.item_type === 'weapon') {
     const mb = form.magic_bonus.trim()
     if (mb !== '' && !(Number.isInteger(Number(mb)) && Number(mb) >= 0 && Number(mb) <= 10)) return false

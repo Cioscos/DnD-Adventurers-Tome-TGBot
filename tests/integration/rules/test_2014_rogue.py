@@ -333,6 +333,18 @@ async def test_reliable_talent_does_not_help_without_proficiency_or_before_level
     assert (await _skill_roll(client, other, "stealth", die=5))["die"] == 5
 
 
+@pytest.mark.parametrize("edition,level", [("2014", 11), ("2024", 7)])
+async def test_reliable_talent_applies_to_tool_checks(client, edition, level):
+    cid = await _rogue(client, level, dexterity=14)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": edition})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})).status_code == 200
+    r = await client.post(f"/characters/{cid}/tool_checks/thieves_tools/roll", json={"ability": "dexterity", "die": 3})
+    assert r.status_code == 200, r.text
+    assert r.json()["die"] == 10 and f"feature:{RELIABLE}" in r.json()["notes"]
+    r = await client.post(f"/characters/{cid}/tool_checks/thieves_tools/roll", json={"ability": "dexterity", "die": 14})
+    assert r.json()["die"] == 14
+
+
 async def test_reliable_talent_does_not_apply_to_a_pure_ability_check(client):
     cid = await _rogue(client, 11)
     r = await client.post(f"/characters/{cid}/ability_checks/dexterity/roll", json={"die": 4})

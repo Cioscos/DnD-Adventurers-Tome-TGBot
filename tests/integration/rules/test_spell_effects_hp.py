@@ -711,3 +711,18 @@ async def test_89_the_ac_seen_in_the_evening_counts_homebrew_like_the_sheet(clie
     as_user(GM_ID)
     live = await client.get("/sessions/1/live")
     assert next(c for c in live.json()["live_characters"] if c["id"] == hero)["ac"] == before + 2
+
+
+# --- Preghiera di Guarigione (2024) ------------------------------------------------------------------------------------
+
+async def test_prayer_of_healing_2024_marks_up_to_five(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Prayer of Healing", "prayer-of-healing", 2,
+                                       hero_edition="2024", caster_edition="2024")
+    as_user(GM_ID)
+    refused = await client.post(f"/characters/{caster}/spells/{spell}/use", json={"slot_level": 2, "targets": [hero, caster, 9001, 9002, 9003, 9004]})
+    assert refused.status_code == 422 and refused.json()["detail"]["code"] == "invalid_target"  # sei bersagli: oltre il tetto
+    await _cast(client, caster, spell, [hero, caster], level=2)
+    assert len(await _states(client, hero, "spell:prayer_of_healing")) == 1
+    assert len(await _states(client, caster, "spell:prayer_of_healing", user=GM_ID)) == 1
+    await _caster_long_rest(client, caster)
+    assert await _states(client, hero, "spell:prayer_of_healing") == []

@@ -1,6 +1,58 @@
 {
   "entries": [
     {
+      "version": "3.10.0",
+      "date": "2026-11-15",
+      "added": {
+        "it": [
+          "Creazione 2014: al passo dell'equipaggiamento puoi tirare le monete della classe al posto degli oggetti di partenza.",
+          "Sanguinante (2024): sotto metà dei punti ferita la scheda lo segnala accanto ai PF.",
+          "Doni Epici 2024: Ultima resistenza del Dono del Recupero scatta da sola quando scendi a 0 PF; Forza d'animo ha il pulsante per le cure extra; Resistenza all'energia offre la reazione Reindirizzamento; Offensiva irresistibile aggiunge il Colpo travolgente sul 20 naturale.",
+          "Guaritore (2014): la borsa del guaritore cura 1d6 + 4 + il livello del bersaglio, su di te o su un compagno della serata.",
+          "Combattere senz'armi (2024): il colpo senz'armi fa 1d8, 1d6 con un'arma o uno scudo in mano.",
+          "Incantatore rituale (2024): quando sale il bonus di competenza puoi scegliere un rituale in più.",
+          "Azione «Sfuggire a una lotta» (2014) fra le azioni del turno; tempi per indossare e togliere armature e scudo nella scheda dell'oggetto."
+        ],
+        "en": [
+          "2014 creation: at the equipment step you can roll your class's starting gold instead of taking the starting items.",
+          "Bloodied (2024): below half your hit points the sheet shows it next to your HP.",
+          "2024 Epic Boons: Boon of Recovery's Last Stand triggers on its own when you drop to 0 HP; Fortitude has a button for its extra healing; Energy Resistance offers the Channel Energy reaction; Irresistible Offense adds Overwhelming Strike on a natural 20.",
+          "Healer (2014): the healer's kit heals 1d6 + 4 + the target's level, on yourself or on a companion in the evening.",
+          "Unarmed Fighting (2024): your unarmed strike deals 1d8, 1d6 with a weapon or shield in hand.",
+          "Ritual Caster (2024): when your proficiency bonus goes up you can pick one more ritual.",
+          "«Escape a Grapple» action (2014) among the turn actions; don and doff times for armor and shields in the item details."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Variante dell'ingombro: oltre Forza ×10 tiri con svantaggio prove, attacchi e tiri salvezza di Forza, Destrezza e Costituzione.",
+          "Armi con Ricarica: dopo il primo attacco dell'azione l'app chiede conferma; Esperto di Balestre ignora il limite con le balestre.",
+          "Sintonia: non puoi più sintonizzarti con due copie dello stesso oggetto magico. Nel 2024 tornare in vita fa perdere la sintonia con gli oggetti.",
+          "Un'arma a due mani non si equipaggia con la mano secondaria occupata.",
+          "Dote Affidabile vale anche nelle prove con strumenti; Affascinato compare come nota sul tiro per colpire; avviso al lancio quando un incantesimo consuma un materiale con un costo.",
+          "Colpo Infuocato 2024 (5d6 + 5d6), Fame di Hadar 2014 e Preghiera di Guarigione 2024 seguono il loro manuale."
+        ],
+        "en": [
+          "Encumbrance variant: above Strength ×10 you roll Strength, Dexterity and Constitution checks, attacks and saves with disadvantage.",
+          "Loading weapons: after the first attack of the action the app asks for confirmation; Crossbow Expert ignores the limit with crossbows.",
+          "Attunement: you can no longer attune to two copies of the same magic item. In 2024 coming back to life ends attunement to your items.",
+          "A two-handed weapon can't be equipped while your off hand is busy.",
+          "Reliable Talent also works on tool checks; Charmed shows up as a note on the attack roll; a warning when a spell consumes a material with a cost.",
+          "Flame Strike 2024 (5d6 + 5d6), Hunger of Hadar 2014 and Prayer of Healing 2024 follow their own manual."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Difesa Senza Armatura (2014) in multiclasse: vale quella della prima classe presa, come dice il manuale. Un barbaro/monaco può vedere cambiare la CA.",
+          "La proprietà Reach si chiama «Portata»; la Rete aggiunta dal catalogo non riceve più un dado di danno inventato."
+        ],
+        "en": [
+          "Unarmored Defense (2014) in a multiclass: the first class you took wins, as the manual says. A barbarian/monk may see their AC change.",
+          "The Net added from the catalog no longer gets a made-up damage die."
+        ]
+      }
+    },
+    {
       "version": "3.9.1",
       "date": "2026-11-14",
       "fixed": {

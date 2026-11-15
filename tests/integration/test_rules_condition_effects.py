@@ -148,6 +148,17 @@ async def test_weapon_and_unarmed_attack_modes(client):
     assert body["mode_applied"] == "advantage"
 
 
+@pytest.mark.parametrize("edition", ["2014", "2024"])
+async def test_charmed_adds_note_to_attack_roll(client, edition):
+    cid = await _char(client, edition)
+    weapon = await _weapon(client, cid)
+    await _cond(client, cid, charmed=True)
+    body = (await client.post(f"/characters/{cid}/items/{weapon}/attack", json={"die": 10})).json()
+    assert body["notes"] == ["condition:charmed"] and body["mode_applied"] == "normal"  # 2014 p.290 / 2024 p.363: non attacca chi lo ha affascinato
+    body = (await client.post(f"/characters/{cid}/skills/stealth/roll")).json()
+    assert body["notes"] == [] and body["mode_applied"] == "normal"
+
+
 async def test_spell_attack_mode(client):
     cid = await _char(client, cls="wizard")
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Dardo", "level": 0, "attack_save": "ATK"})

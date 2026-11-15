@@ -10,10 +10,13 @@ interface Props {
   /** Una alternativa scelta per gruppo; il passo la inizializza alla prima. */
   picks: number[] | null
   onPicks: (picks: number[]) => void
+  /** Monete al posto dell'equipaggiamento (solo 2014): acceso, i gruppi non contano. */
+  wealth: boolean
+  onWealth: (on: boolean) => void
 }
 
 /** Equipaggiamento di partenza della classe: oggetti inerti, il giocatore li equipaggia a mano dopo. */
-export default function EquipmentStep({ edition, className, picks, onPicks }: Props) {
+export default function EquipmentStep({ edition, className, picks, onPicks, wealth, onWealth }: Props) {
   const { t } = useTranslation()
   const { data, isLoading } = useQuery({
     queryKey: ['rules', 'starting-equipment', edition, className],
@@ -25,13 +28,25 @@ export default function EquipmentStep({ edition, className, picks, onPicks }: Pr
     if (groups.length && picks?.length !== groups.length) onPicks(groups.map(() => 0))
   }, [groups, picks, onPicks])
 
+  const w = data?.wealth
+  const formula = w ? (w.multiplier > 1 ? `${w.dice} × ${w.multiplier}` : w.dice) : ''
+
   if (isLoading) return <p className="text-sm text-dnd-text-muted font-body text-center">{t('common.loading')}</p>
   if (!groups.length) return <p className="text-sm text-dnd-text-muted font-body italic text-center">{t('character.create.equipment_none')}</p>
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-dnd-text-faint font-body italic text-center">{t('character.create.equipment_hint')}</p>
-      {groups.map((alts, gi) =>
+      {w && (
+        <Pressable
+          onClick={() => onWealth(!wealth)}
+          className={`w-full min-h-[44px] px-3 py-2 rounded-xl border text-left text-sm font-body break-words transition-colors
+            ${wealth ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
+        >
+          {t('character.create.equipment_wealth', { formula })}
+        </Pressable>
+      )}
+      {!wealth && groups.map((alts, gi) =>
         alts.length === 1 ? (
           <div key={gi} className="rounded-xl border border-dnd-border/60 px-3 py-2">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t('character.create.equipment_fixed')}</p>

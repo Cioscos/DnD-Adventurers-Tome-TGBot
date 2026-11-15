@@ -101,7 +101,7 @@ async def test_epic_boon_checks_prerequisites_and_is_text_only(client):  # D3
     assert next(s for s in done["ability_scores"] if s["name"] == "strength")["value"] == 19
     assert done["hit_points"] == hp  # nessun effetto: +40 PF restano testo
     feat = next(a for a in done["abilities"] if a["feature_key"] == "feat.2024_boon_fortitude")
-    assert feat["is_passive"] and feat["description"]
+    assert feat["description"]  # riga attiva: le Cure extra hanno il pulsante «Usa»
     assert done.get("homebrew_rules", []) == []
 
 

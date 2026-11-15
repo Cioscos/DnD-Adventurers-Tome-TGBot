@@ -150,7 +150,10 @@ EVASION_FAILED = RollOptionSpec(
 # ---------------------------------------------------------------------------
 
 def _proficient_skill_check(ctx: RuleContext) -> bool:
-    """Una prova con una competenza (anche con la maestria): la mezza competenza e la prova pura non contano."""
+    """Una prova con una competenza (anche con la maestria): la mezza competenza e la prova pura non contano.
+    La prova con strumento è un tiro ``ability`` con ``proficient`` (la route rifiuta chi non è competente)."""
+    if ctx.roll == "ability" and ctx.proficient:
+        return True
     level = (ctx.char.skills or {}).get(ctx.skill)
     return ctx.roll == "skill" and (level is True or level == 1 or level == "expert")
 
@@ -362,8 +365,8 @@ FEATURES = (
              "On Dexterity saves for half damage: no damage on a success, half on a failure."),
             roll_options=(EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED), passive=True),
     feature("reliable_talent", CK, ED, 11, "Dote Affidabile / Reliable Talent (Ladro 11, pag. 78)", ("Dote Affidabile", "Reliable Talent"),
-            ("Nelle prove con un'abilità in cui sei competente, un d20 che dà 9 o meno conta come 10.",
-             "On checks with a skill you are proficient in, a d20 roll of 9 or lower counts as 10."),
+            ("Nelle prove con un'abilità o uno strumento in cui sei competente, un d20 che dà 9 o meno conta come 10.",
+             "On checks with a skill or tool you are proficient in, a d20 roll of 9 or lower counts as 10."),
             modifiers=(Modifier("min_d20", 10, when=_proficient_skill_check, source=f"feature:{CK}.reliable_talent"),), passive=True),
     feature("blindsense", CK, ED, 14, "Percezione Cieca / Blindsense (Ladro 14, pag. 78)", ("Percezione Cieca", "Blindsense"),
             ("Se senti, conosci la posizione di ogni creatura nascosta o invisibile entro 3 m. Compare fra i sensi della scheda.",
