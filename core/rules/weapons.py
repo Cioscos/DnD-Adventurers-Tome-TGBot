@@ -88,6 +88,7 @@ _NAMES = sorted(
 _PROPERTY_WORDS = {
     "light": ("light", "legger"), "heavy": ("heavy", "pesant"), "finesse": ("finesse", "accurat"),
     "two_handed": ("two_handed", "two-handed", "two handed", "due mani"),
+    "loading": ("loading", "ricarica"),
 }
 _DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
 
