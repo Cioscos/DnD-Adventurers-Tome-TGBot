@@ -8,6 +8,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from core.data.damage_types import damage_multiplier
+from core.game.containers import encumbrance_level
 from core.game.item_bonuses import item_meta
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
@@ -22,6 +23,7 @@ INCAPACITATING = frozenset({"incapacitated", "paralyzed", "petrified", "stunned"
 _SAVES = {"save", "death_save", "concentration"}
 _CHECKS = {"skill", "ability", "initiative", "passive"}
 _STR_DEX = {"strength", "dexterity"}
+_STR_DEX_CON = _STR_DEX | {"constitution"}
 
 # Tiro -> target le cui somme gli si applicano.
 _FLAT_TARGET = {
@@ -141,6 +143,8 @@ def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> 
         add("disadvantage", *sorted(on & {"blinded", "poisoned", "prone", "restrained"}))
         if "invisible" in on:
             add("advantage", "invisible")
+        if "charmed" in on:
+            add("note", "charmed")  # non può attaccare chi lo ha affascinato: l'app non sa chi è, resta una nota (2014 p.290, 2024 p.363)
     if roll in _CHECKS and "poisoned" in on:
         add("disadvantage", "poisoned")
     # Spaventato, Afferrato 2024, Accecato e Assordato sulle prove dipendono da ciò che l'app non vede:
@@ -215,6 +219,13 @@ def _armor_modifiers(ctx: RuleContext) -> list[Modifier]:
     return out
 
 
+def _encumbrance_modifiers(ctx: RuleContext) -> list[Modifier]:
+    """Variante dell'ingombro, 2014 p.176: oltre For x10 svantaggio su prove, attacchi e TS con For, Des o Cos."""
+    if not (ctx.roll == "attack" or ctx.roll in _SAVES or ctx.roll in _CHECKS) or ctx.ability not in _STR_DEX_CON:
+        return []
+    return [Modifier("disadvantage", 1, source="encumbrance:heavily")] if encumbrance_level(ctx.char) == "heavily" else []
+
+
 def _heavy_weapon(ctx: RuleContext) -> list[Modifier]:
     """2024: Forza o Destrezza sotto 13. 2014: creatura Piccola; una razza sconosciuta passa dalla conferma al tiro."""
     if ctx.roll != "attack" or ctx.item is None or not has_property(ctx.item, "heavy"):
@@ -243,7 +254,7 @@ def collect_modifiers(ctx: RuleContext) -> Applied:
     pairs: list[tuple[Modifier, RuleContext, str]] = [
         (m, ctx, m.source) for m in compute_condition_effects(ctx.char, ctx.edition, ctx)
     ]
-    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_heavy_weapon(ctx)]]
+    pairs += [(m, ctx, m.source) for m in [*_armor_modifiers(ctx), *_encumbrance_modifiers(ctx), *_heavy_weapon(ctx)]]
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         pairs += [(m, feature_ctx, m.source or f"feature:{spec.key}") for m in spec.modifiers]

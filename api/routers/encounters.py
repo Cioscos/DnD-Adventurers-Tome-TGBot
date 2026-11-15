@@ -633,7 +633,8 @@ async def _pc_for_initiative(db: AsyncSession, comb: Combatant) -> Character | N
         return None
     return (await db.execute(
         select(Character).options(selectinload(Character.classes), selectinload(Character.items),
-                                  selectinload(Character.abilities), selectinload(Character.spell_slots))
+                                  selectinload(Character.abilities), selectinload(Character.spell_slots),
+                                  selectinload(Character.ability_scores), selectinload(Character.currency))  # ingombro: For e monete
         .where(Character.id == comb.character_id)
     )).scalar_one_or_none()
 
