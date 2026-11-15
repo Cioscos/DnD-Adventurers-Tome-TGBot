@@ -143,12 +143,34 @@ def is_container_meta(meta: dict | None) -> bool:
     return isinstance((meta or {}).get("container"), dict)
 
 
-def _check_attunement_limit(char, item, new_meta: dict | None) -> None:
-    """409 when this write newly attunes an item and the character already has 3 (4 with Use Magic Device)."""
+def _check_attunement_limit(char, item, new_meta: dict | None, name: str) -> None:
+    """409 when this write newly attunes an item and the character already has 3 (4 with Use Magic Device),
+    or is already attuned to another copy of the same item (PHB 2024 p.232)."""
     if not (new_meta or {}).get("attuned") or (item is not None and is_attuned(item)):
         return
-    if sum(1 for i in char.items if i is not item and is_attuned(i)) >= attunement_limit(char):
+    others = [i for i in char.items if i is not item and is_attuned(i)]
+    if len(others) >= attunement_limit(char):
         raise HTTPException(status_code=409, detail="attunement_limit")
+    srd = (new_meta or {}).get("srd_index")
+
+    def same(other) -> bool:  # stessa regola di deduplica del catalogo: srd_index se entrambi lo hanno, altrimenti il nome
+        other_srd = item_meta(other).get("srd_index")
+        return srd == other_srd if srd and other_srd else other.name.casefold() == name.casefold()
+    if any(same(i) for i in others):
+        raise HTTPException(status_code=409, detail="attunement_duplicate")
+
+
+def _check_hands(char, item, slot: EquipmentSlot | None) -> None:
+    """422 when equipping ``item`` in ``slot`` would put a two-handed weapon next to an occupied off hand."""
+    others = [i for i in char.items if i.id != item.id and i.is_equipped]
+    if slot == EquipmentSlot.MAIN_HAND and has_property(item, "two_handed"):
+        busy = any(i.equipment_slot == EquipmentSlot.OFF_HAND for i in others)
+    elif slot == EquipmentSlot.OFF_HAND:
+        busy = any(i.equipment_slot == EquipmentSlot.MAIN_HAND and has_property(i, "two_handed") for i in others)
+    else:
+        return
+    if busy:
+        raise HTTPException(status_code=422, detail="hands_conflict")
 
 
 @router.post("/{char_id}/items", response_model=CharacterFull, status_code=201)
@@ -192,7 +214,7 @@ async def add_item(
             await session.refresh(char, attribute_names=["items"])
             return await build_character_response(session, char)
 
-    _check_attunement_limit(char, None, body.item_metadata)
+    _check_attunement_limit(char, None, body.item_metadata, body.name)
     metadata_str = json.dumps(body.item_metadata) if body.item_metadata else None
     item = Item(
         character_id=char_id,
@@ -206,6 +228,8 @@ async def add_item(
         equipment_slot=body.equipment_slot,
         container_id=body.container_id,
     )
+    if item.is_equipped:
+        _check_hands(char, item, item.equipment_slot)
     session.add(item)
     await session.flush()
     # Apply homebrew property defaults from rules installed before this item (#32).
@@ -247,7 +271,7 @@ async def update_item(
         data["item_metadata"] = json.dumps(data["item_metadata"]) if data["item_metadata"] else None
 
     if "item_metadata" in body.model_fields_set:
-        _check_attunement_limit(char, item, body.item_metadata)
+        _check_attunement_limit(char, item, body.item_metadata, body.name or item.name)
 
     # Validate slot/type compatibility using the (post-update) item_type.
     new_type = data.get("item_type", item.item_type)
@@ -257,6 +281,10 @@ async def update_item(
             status_code=422,
             detail=f"equipment_slot {new_slot.value!r} not allowed for item_type {new_type!r}",
         )
+
+    if ("is_equipped" in data or "equipment_slot" in data) and data.get("is_equipped", item.is_equipped) \
+            and not (item.is_equipped and item.equipment_slot == new_slot):  # solo se la richiesta cambia qualcosa
+        _check_hands(char, item, new_slot)
 
     new_meta = (
         json.loads(data["item_metadata"]) if data.get("item_metadata")
