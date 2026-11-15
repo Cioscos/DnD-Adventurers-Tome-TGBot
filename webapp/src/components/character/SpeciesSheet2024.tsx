@@ -100,6 +100,9 @@ export default function SpeciesSheet2024({ char, open, onClose }: Props) {
     apply.reset()
   }
 
+  // Le abilità già competenti, tranne quella data dalla specie attuale (si può tenere o cambiare).
+  const takenSkills = Object.entries(char.skills ?? {})
+    .filter(([k, v]) => v && k !== char.species_options?._granted_skill).map(([k]) => k)
   const missing = entry ? speciesChoicesMissing(entry, options).length > 0 : true
   const error = preview.error ?? apply.error
 
@@ -120,7 +123,7 @@ export default function SpeciesSheet2024({ char, open, onClose }: Props) {
               <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicking(true)}>
                 {entry ? localized(entry.name, lang).text : t('character.species.pick')}
               </Button>
-              {entry && <SpeciesChoices species={entry} value={options} onChange={(o) => edit(entry, o)} />}
+              {entry && <SpeciesChoices species={entry} value={options} onChange={(o) => edit(entry, o)} takenSkills={takenSkills} />}
 
               {changes && (
                 <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 space-y-1.5">

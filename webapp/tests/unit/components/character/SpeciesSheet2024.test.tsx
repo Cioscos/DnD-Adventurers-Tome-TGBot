@@ -77,6 +77,15 @@ describe('SpeciesSheet2024', () => {
     expect(await screen.findByText('Nessun altro cambiamento sulla scheda.')).toBeTruthy()
   })
 
+  it('abilità già competenti non sceglibili, tranne quella data dalla specie attuale', async () => {
+    const elf = { ...char24, species_key: '2024_elf', skills: { perception: true, survival: 'expert' },
+      species_options: { lineage: 'drow', spell_ability: 'wisdom', skill: 'perception', _granted_skill: 'perception' } } as unknown as CharacterFull
+    renderWithProviders(<SpeciesSheet2024 char={elf} open onClose={vi.fn()} />)
+    expect((await screen.findByRole('button', { name: 'Percezione' })).hasAttribute('disabled')).toBe(false)
+    expect(screen.getByRole('button', { name: 'Sopravvivenza' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Intuizione' }).hasAttribute('disabled')).toBe(false)
+  })
+
   it('un 422 mostra il suo testo', async () => {
     const { ApiError } = await import('@/api/client')
     preview.mockRejectedValue(new ApiError(422, 'species_options_invalid'))

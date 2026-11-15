@@ -24,6 +24,8 @@ interface Props {
   edition?: '2014' | '2024'
   species24?: Species24State
   onSpecies24?: (s: Species24State) => void
+  /** Abilità già date da classe e background: non sceglibili come abilità della specie. */
+  takenSkills?: string[]
 }
 
 const ABBR: Record<string, string> = {
@@ -36,7 +38,7 @@ function visibleTraits(e: Species2024Entry, options: Record<string, string>) {
     o.key !== options[c.key] && tr.key.startsWith(`${c.key}_`) && tr.key.endsWith(`_${o.key}`))))
 }
 
-export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24 }: Props) {
+export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, edition = '2014', species24, onSpecies24, takenSkills }: Props) {
   const { t, i18n } = useTranslation()
   const lang: Lang = uiLang(i18n.language)
   const unit = useUnitSettings((s) => s.system)
@@ -55,7 +57,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText, ed
 
       {e24 && species24 && onSpecies24 && (
         <>
-          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} />
+          <SpeciesChoices species={e24} value={species24.options} onChange={(options) => onSpecies24({ entry: e24, options })} takenSkills={takenSkills} />
           <div className="rounded-xl border border-dnd-border bg-dnd-surface p-3 text-sm font-body space-y-1">
             <p className="tabular-nums">
               {t('character.create.species_speed')}: {formatLength(e24.speed_ft, unit)}

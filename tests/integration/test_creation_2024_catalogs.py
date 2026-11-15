@@ -141,3 +141,19 @@ async def test_human_versatile_feat_same_as_background_422_creates_nothing(clien
         background_2024={"key": "criminal", "increases": {"dexterity": 2, "constitution": 1}}))
     assert (r.status_code, r.json()["detail"]) == (422, "species_options_invalid")
     assert await _count(client) == before
+
+
+async def test_species_skill_already_given_422_creates_nothing(client):
+    """Sensi acuti dell'Elfo su Percezione già data dal background, dal wizard o dalla classe: si perderebbe."""
+    before = await _count(client)
+    elf = {"key": "2024_elf", "options": {"lineage": "high", "spell_ability": "intelligence", "skill": "perception"}}
+    guard = {"key": "guard", "increases": {"strength": 2, "wisdom": 1}, "tool": "dice_set"}
+    for extra in ({"background_2024": guard}, {"skills": {"perception": True}},
+                  {"initial_class": {"class_name": "fighter", "level": 1, "skill_choices": ["perception", "athletics"]}}):
+        r = await client.post("/characters", json=_body(species_2024=elf, **extra))
+        assert (r.status_code, r.json()["detail"]) == (422, "species_skill_taken"), (extra, r.text)
+    assert await _count(client) == before
+    ok = await client.post("/characters", json=_body(species_2024=elf, background_2024={
+        "key": "sage", "increases": {"intelligence": 2, "wisdom": 1}}))
+    assert ok.status_code == 201, ok.text
+    assert ok.json()["skills"].get("perception") is True

@@ -87,6 +87,49 @@ describe('creazione 2024: specie', () => {
     expect(extras).not.toHaveProperty('origin_feat')
   })
 
+  it('Percezione già data dal background scelto: non è più sceglibile per la specie', async () => {
+    await toSpecies('2024')
+    await user.click(await screen.findByText('Elfo'))
+    expect(screen.getByRole('button', { name: 'Percezione' })).toHaveProperty('disabled', false)
+    await user.click(within(screen.getByRole('group', { name: 'Stirpe elfica' })).getByRole('button', { name: 'Drow' }))
+    await user.click(within(screen.getByRole('group', { name: 'Caratteristica da incantatore' })).getByRole('button', { name: 'Saggezza' }))
+    await user.click(screen.getByRole('button', { name: 'Intuizione' }))
+    await next()
+    await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
+    await user.click(await screen.findByText('Guardia'))  // Atletica e Percezione
+    await user.click(screen.getByRole('button', { name: 'common.back' }))
+    expect(screen.getByRole('button', { name: 'Percezione' })).toHaveProperty('disabled', true)
+    expect(screen.getByRole('button', { name: 'Intuizione' })).toHaveProperty('disabled', false)
+  })
+
+  it('le abilità di un background 2014 scelto prima non finiscono nel payload col background 2024', async () => {
+    create.mockResolvedValue({ id: 9 })
+    list.mockResolvedValue([])
+    me.mockResolvedValue(null)
+    renderWithProviders(<CharacterSelect />)
+    await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
+    await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
+    await next()
+    await user.click(screen.getByRole('button', { name: 'character.settings.rules_edition.2024' }))
+    await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
+    await next() // classe saltata
+    await next() // specie saltata
+    await next() // niente background 2024
+    await next() // niente talento d'Origine
+    await user.click(screen.getByRole('button', { name: 'character.create.scores_skip' }))
+    await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
+    await user.click(await screen.findByText('Accolito'))  // catalogo 2014: Intuizione, Religione
+    for (let i = 0; i < 3; i++) await user.click(screen.getByRole('button', { name: 'common.back' }))
+    await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
+    await user.click(await screen.findByText('Accolito'))  // ora il catalogo 2024
+    await next()
+    await next() // punteggi
+    await user.click(screen.getByRole('button', { name: 'character.create.create_cta' }))
+    const extras = create.mock.calls[0][3]
+    expect(extras.background_2024.key).toBe('acolyte')
+    expect(extras).not.toHaveProperty('skills')
+  })
+
   it('2014: il passo specie apre il vecchio catalogo races', async () => {
     await toSpecies('2014')
     expect(await screen.findByText('Mezzorco')).toBeTruthy()

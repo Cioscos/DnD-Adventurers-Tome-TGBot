@@ -201,6 +201,12 @@ def _check_catalog_choices(char: Character, body: CharacterCreate, scores: dict[
     if (body.species_2024 and feat in ALL_FEATS and not ALL_FEATS[feat].repeatable
             and body.species_2024.options.get("origin_feat") == feat):  # Versatile dell'Umano = talento d'Origine
         raise bad("species_options_invalid")
+    # L'abilità della specie (Elfo, Umano...) già data da background, wizard o classe andrebbe persa in silenzio.
+    skill = body.species_2024.options.get("skill") if body.species_2024 else None
+    taken = ({k for k, v in (body.skills or {}).items() if v} | set(bg.skills if bg else ())
+             | set((body.initial_class.skill_choices or []) if body.initial_class else ()))
+    if skill and skill in taken:
+        raise bad("species_skill_taken")
     return bg
 
 

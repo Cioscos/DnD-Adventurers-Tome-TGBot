@@ -10,6 +10,9 @@ from tests.integration.rules.test_2014_bard import _full
 from tests.integration.rules.test_species_2024 import _hero
 
 
+_DWARF_NOTE = "Vantaggio ai tiri salvezza contro il veleno e resistenza ai danni da veleno."  # come la scrive il vecchio wizard
+
+
 async def _set(factory, cid, settings=None, **fields) -> None:
     async with factory() as s:
         char = await get_owned_full(cid, TEST_USER_ID, s)
@@ -24,7 +27,7 @@ async def _old_race_hero(client, factory) -> int:
     """Un 2024 creato col vecchio wizard: Nano di collina con velocità, sensi, note e tratti scritti a mano."""
     cid, _ = await _hero(client, 4)
     await _set(factory, cid, race="Nano delle colline", speed=25,
-               settings={"senses": [{"type": "darkvision", "range_ft": 60}], "roll_notes": {"save_constitution": "Vantaggio vs veleno"}})
+               settings={"senses": [{"type": "darkvision", "range_ft": 60}], "roll_notes": {"save.constitution": _DWARF_NOTE}})
     async with factory() as s:
         s.add(Ability(character_id=cid, name="Scurovisione", description="60 piedi", is_passive=True))
         s.add(Ability(character_id=cid, name="robustezza nanica", is_passive=True))
@@ -68,6 +71,25 @@ async def test_apply_cleans_old_race_values(client, test_session_factory):
     assert [a["name"] for a in full["abilities"] if not a["feature_key"]] == ["Il mio tratto"]
     assert [a["feature_key"] for a in full["abilities"] if a["name"] == "Scurovisione"] == ["species.2024_dwarf_darkvision"]
     assert [s for s in full["computed"]["senses"] if s["type"] == "darkvision"] == [{"type": "darkvision", "range_ft": 120}]
+
+
+async def test_apply_keeps_personal_senses_and_notes(client, test_session_factory):
+    """Solo scurovisione e note di razza vanno via: la vista cieca (Combattere alla cieca) e le note personali restano."""
+    cid = await _old_race_hero(client, test_session_factory)
+    blind = {"type": "blindsight", "range_ft": 10}
+    await _set(test_session_factory, cid, settings={
+        "senses": [{"type": "darkvision", "range_ft": 60}, blind],
+        "roll_notes": {"save.constitution": _DWARF_NOTE, "skill.stealth": "Mantello elfico"}})
+    preview = set((await _preview(client, cid, "2024_dwarf")).json()["changes"])
+    assert {"senses_removed", "roll_notes_removed"} <= preview
+    full = (await _put(client, cid, "2024_dwarf")).json()
+    assert full["settings"]["senses"] == [blind]
+    assert full["settings"]["roll_notes"] == {"skill.stealth": "Mantello elfico"}
+
+    other, _ = await _hero(client, 3)  # solo cose personali: l'anteprima non promette di togliere niente
+    await _set(test_session_factory, other, settings={"senses": [blind], "roll_notes": {"skill.stealth": "x"}})
+    preview = set((await _preview(client, other, "2024_dwarf")).json()["changes"])
+    assert not {"senses_removed", "roll_notes_removed"} & preview
 
 
 async def test_apply_rejects_missing_choice_422_and_writes_nothing(client, test_session_factory):
@@ -142,3 +164,24 @@ async def test_export_import_keeps_species_without_duplicate_rows(client, test_s
         rows = (await s.execute(select(Ability).where(Ability.character_id == new["id"],
                                                      Ability.feature_key.like("species.%")))).scalars().all()
     assert len(rows) == len(set(a.feature_key for a in rows))
+
+
+async def test_import_sanitizes_species_options(client, test_session_factory):
+    """Un file modificato a mano: opzioni fuori catalogo scartate (altrimenti 500 a ogni lettura), chiave ignota = nessuna specie."""
+    cid, _ = await _hero(client, 3)
+    assert (await _put(client, cid, "2024_dragonborn", {"ancestry": "red"})).status_code == 200
+    exported = (await client.get(f"/characters/{cid}/export")).json()
+    exported["character"]["species_options"] = {"ancestry": ["x"], "lineage": "drow", "_granted_skill": "volare",
+                                                "_feat_ability_id": 999}
+    r = await client.post("/characters/import", json=exported)
+    assert r.status_code == 201, r.text
+    new = r.json()
+    assert (new["species_key"], new["species_options"]) == ("2024_dragonborn", {})
+    assert (await client.get(f"/characters/{new['id']}")).status_code == 200
+    exported["character"]["species_options"] = {"ancestry": "blue", "_granted_skill": "perception"}
+    assert (await client.post("/characters/import", json=exported)).json()["species_options"] == {
+        "ancestry": "blue", "_granted_skill": "perception"}
+    exported["character"]["species_key"] = "2024_inventata"
+    r = await client.post("/characters/import", json=exported)
+    assert r.status_code == 201, r.text
+    assert (r.json()["species_key"], r.json()["species_options"]) == (None, {})

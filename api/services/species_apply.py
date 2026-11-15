@@ -43,6 +43,23 @@ def _old_trait_names() -> frozenset[str]:
     return frozenset(names)
 
 
+@lru_cache(maxsize=1)
+def _race_note_texts() -> frozenset[str]:
+    """Testi (it/en) delle note sui tiri che il vecchio wizard scrive dalla razza (webapp/src/lib/species.ts, max 120)."""
+    races = json.loads((_SRD_DIR / "races.json").read_text(encoding="utf-8"))["items"]
+    notes = [n for race in races for n in [*race["roll_notes"].values(),
+                                           *(v for sub in race.get("subraces") or [] for v in (sub.get("roll_notes") or {}).values())]]
+    return frozenset(text[:120] for n in notes for text in n.values())
+
+
+def _cleaned_settings(settings: dict) -> dict:
+    """Senza la scurovisione e le note di razza (le dà la specie); sensi e note personali restano."""
+    out = dict(settings)
+    senses = [s for s in out.pop("senses", None) or [] if not (isinstance(s, dict) and s.get("type") == "darkvision")]
+    notes = {k: v for k, v in (out.pop("roll_notes", None) or {}).items() if not (isinstance(v, str) and v in _race_note_texts())}
+    return {**out, **({"senses": senses} if senses else {}), **({"roll_notes": notes} if notes else {})}
+
+
 @dataclass
 class SpeciesPlan:
     changes: list[str] = field(default_factory=list)
@@ -81,13 +98,13 @@ def plan_species(char: Character, key: str, options: dict[str, str]) -> SpeciesP
     skills = char.skills or {}
     if char.species_key is None:
         plan.first = True
-        settings = char.settings or {}
+        settings, cleaned = char.settings or {}, _cleaned_settings(char.settings or {})
         names = _old_trait_names()
         plan.old_rows = [a for a in char.abilities if not a.feature_key and a.source_class_id is None
                          and (a.name or "").strip().lower() in names]
         plan.changes += [code for code, hit in (
-            ("speed_reset", char.speed != data.speed_ft), ("senses_removed", bool(settings.get("senses"))),
-            ("roll_notes_removed", bool(settings.get("roll_notes")))) if hit]
+            ("speed_reset", char.speed != data.speed_ft), ("senses_removed", (settings.get("senses") or []) != cleaned.get("senses", [])),
+            ("roll_notes_removed", (settings.get("roll_notes") or {}) != cleaned.get("roll_notes", {}))) if hit]
         if plan.old_rows:  # cancellate, non archiviate: il giocatore vede quali
             plan.changes.append(f"traits_archived:{len(plan.old_rows)}")
             plan.changes += [f"trait_removed:{a.name}" for a in plan.old_rows]
@@ -134,7 +151,7 @@ async def apply_species(session: AsyncSession, char: Character, key: str, option
         await session.refresh(char, attribute_names=["abilities"])
     if plan.first:
         char.speed = data.speed_ft
-        char.settings = {k: v for k, v in (char.settings or {}).items() if k not in ("senses", "roll_notes")}
+        char.settings = _cleaned_settings(char.settings or {})
         for row in plan.old_rows:
             char.abilities.remove(row)
     skills = dict(char.skills or {})

@@ -1383,8 +1383,8 @@
       "go_abilities": "Go to Abilities",
       "changes": {
         "speed_reset": "Speed goes back to the species' speed.",
-        "senses_removed": "Manually entered senses are removed: the species provides them.",
-        "roll_notes_removed": "Roll notes are removed: the species provides them.",
+        "senses_removed": "Manually entered darkvision is removed: the species provides it. Other senses stay.",
+        "roll_notes_removed": "The old race's roll notes are removed: the species provides them. Your own notes stay.",
         "traits_archived_one": "1 trait of the old race will be removed:",
         "traits_archived_other": "{{count}} traits of the old race will be removed:",
         "trait_removed": "{{name}}",
@@ -2310,7 +2310,7 @@
         "short_rest": "Short",
         "manual": "Manual"
       },
-      "class_features_section": "Class features",
+      "class_features_section": "Class & species features",
       "custom_section": "Custom abilities",
       "species_badge": "Species",
       "species_feature_locked": "Species trait, managed automatically: you can spend its uses and edit its description.",
@@ -2561,7 +2561,8 @@
         "background_edition": "2024 backgrounds are only for 2024 characters.",
         "background_unknown": "Unknown background.",
         "background_increases_invalid": "Invalid background increases: no ability can exceed 20.",
-        "background_tool_invalid": "Invalid background tool."
+        "background_tool_invalid": "Invalid background tool.",
+        "species_skill_taken": "The skill chosen for the species is already granted by your class or background: pick another."
       },
       "create_cta": "Create"
     },

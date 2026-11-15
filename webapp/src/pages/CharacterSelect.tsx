@@ -263,7 +263,7 @@ export default function CharacterSelect() {
 
   const handleCreate = (identity: IdentityPayload | null) => {
     const extras = {
-      ...creationExtras({ scores, skipped: scoresSkipped, species: is2024 ? null : speciesPayload, skills: backgroundSkills }),
+      ...creationExtras({ scores, skipped: scoresSkipped, species: is2024 ? null : speciesPayload, skills: is2024 && bg24 ? [] : backgroundSkills }),
       rules_edition: edition,
       ...(wealth && hasEquipmentStep ? { starting_wealth: true } : equipPicks && hasEquipmentStep ? { starting_equipment: equipPicks } : {}),
       ...(is2024 && originFeat && !bg24 ? { origin_feat: originFeat } : {}),
@@ -733,7 +733,8 @@ export default function CharacterSelect() {
           {step === 'species' && (
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
               <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace}
-                edition={edition} species24={species24} onSpecies24={setSpecies24} />
+                edition={edition} species24={species24} onSpecies24={setSpecies24}
+                takenSkills={[...(selectedClass?.skills ?? []), ...(bg24 ? bg24.entry.skills : backgroundSkills)]} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
@@ -897,7 +898,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep(afterAbilities)}
+                onSecondary={() => setStep(hasEquipmentStep ? 'equipment' : 'abilities')}
                 primaryLabel={t('character.create.create_cta')}
                 onPrimary={() => handleCreate(buildIdentityPayload())}
                 primaryDisabled={createMutation.isPending}

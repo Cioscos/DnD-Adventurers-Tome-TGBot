@@ -7,10 +7,12 @@ interface Props {
   species: Species2024Entry
   value: Record<string, string>
   onChange: (options: Record<string, string>) => void
+  /** Abilità già date da altro (classe, background, scheda): non si possono scegliere per la specie. */
+  takenSkills?: string[]
 }
 
 /** Scelte di una specie 2024 (lignaggio, taglia, abilità...): una riga di chip per scelta. */
-export default function SpeciesChoices({ species, value, onChange }: Props) {
+export default function SpeciesChoices({ species, value, onChange, takenSkills = [] }: Props) {
   const { i18n } = useTranslation()
   const lang = uiLang(i18n.language)
   return (
@@ -23,10 +25,11 @@ export default function SpeciesChoices({ species, value, onChange }: Props) {
               <Pressable
                 key={o.key}
                 aria-pressed={value[c.key] === o.key}
+                disabled={c.key === 'skill' && takenSkills.includes(o.key)}
                 onClick={() => onChange({ ...value, [c.key]: o.key })}
                 className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
                   ${value[c.key] === o.key
-                    ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
+                    ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'} disabled:opacity-40`}
               >
                 {o.label[lang]}
               </Pressable>
