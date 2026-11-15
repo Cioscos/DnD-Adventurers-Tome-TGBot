@@ -397,6 +397,14 @@ class SpeciesChoiceIn(BaseModel):
     options: dict[str, str] = Field(default_factory=dict, max_length=10)
 
 
+class BackgroundChoiceIn(BaseModel):
+    """Background 2024 (``core.data.backgrounds_2024``): aumenti (+2/+1 o +1/+1/+1), strumento scelto, pacchetto A o 50 mo."""
+    key: str = Field(max_length=40)
+    increases: dict[str, int] = Field(default_factory=dict, max_length=6)
+    tool: Optional[str] = Field(default=None, max_length=40)
+    equipment: Literal["pack", "gold"] = "pack"
+
+
 class OtherSpeed(BaseModel):
     """Velocità diverse da quella a piedi (che resta la colonna ``speed``), in settings.speeds."""
     type: Literal["fly", "swim", "climb", "burrow"]
@@ -438,6 +446,9 @@ class CharacterCreate(BaseModel):
     starting_wealth: bool = False
     # Talento d'Origine 2024 scelto nella creazione guidata (chiave di core/data/feats_2024.py, categoria origin)
     origin_feat: Optional[str] = Field(default=None, max_length=50)
+    # Solo 2024: specie e background dai cataloghi (422 *_edition nel router se l'edizione non è 2024)
+    species_2024: Optional[SpeciesChoiceIn] = None
+    background_2024: Optional[BackgroundChoiceIn] = None
 
     @model_validator(mode="after")
     def _origin_feat_is_2024(self) -> "CharacterCreate":

@@ -14,6 +14,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from core.data.tools import TOOLS
 from core.rules.types import Edition
 
 _SRD = Path(__file__).resolve().parents[2] / "webapp" / "src" / "data" / "srd" / "equipment.json"
@@ -47,6 +48,29 @@ GENERIC: dict[str, tuple[str, str, str]] = {
     "spellbook": ("generic", "Libro degli incantesimi", "Spellbook"),
     "occult-book": ("generic", "Libro (sapere occulto)", "Book (occult lore)"),
     "robe": ("generic", "Veste", "Robe"),
+    # Pacchetti dei background 2024 (pag. 178-185)
+    "book-prayers": ("generic", "Libro (preghiere)", "Book (prayers)"),
+    "book-philosophy": ("generic", "Libro (filosofia)", "Book (philosophy)"),
+    "book-history": ("generic", "Libro (storia)", "Book (history)"),
+    "parchment": ("generic", "Pergamena (foglio)", "Parchment (sheet)"),
+    "pouch": ("generic", "Borsa", "Pouch"),
+    "travelers-clothes": ("generic", "Abiti da viaggiatore", "Traveler's clothes"),
+    "fine-clothes": ("generic", "Abiti raffinati", "Fine clothes"),
+    "costume": ("generic", "Costume", "Costume"),
+    "crowbar": ("generic", "Piede di porco", "Crowbar"),
+    "mirror": ("generic", "Specchio", "Mirror"),
+    "perfume": ("generic", "Profumo", "Perfume"),
+    "healers-kit": ("generic", "Kit da guaritore", "Healer's kit"),
+    "iron-pot": ("generic", "Pentola di ferro", "Iron pot"),
+    "shovel": ("generic", "Pala", "Shovel"),
+    "hooded-lantern": ("generic", "Lanterna schermabile", "Hooded lantern"),
+    "manacles": ("generic", "Manette", "Manacles"),
+    "bedroll": ("generic", "Sacco a pelo", "Bedroll"),
+    "tent": ("generic", "Tenda", "Tent"),
+    "lamp": ("generic", "Lampada", "Lamp"),
+    "oil": ("generic", "Olio (fiasca)", "Oil (flask)"),
+    "rope": ("generic", "Corda", "Rope"),
+    "gaming-set": ("tool", "Set da gioco a scelta", "Gaming set of choice"),
 }
 
 _E, _D = "explorer-pack", "dungeoneer-pack"
@@ -126,7 +150,7 @@ def _parse(alt: str) -> tuple[list[tuple[str, int]], int]:
             gold += int(token[5:])
             continue
         key, _, qty = token.partition("*")
-        if key not in GENERIC and key not in _srd():
+        if key not in GENERIC and key not in TOOLS and key not in _srd():
             raise KeyError(key)
         items.append((key, int(qty or 1)))
     return items, gold
@@ -134,8 +158,8 @@ def _parse(alt: str) -> tuple[list[tuple[str, int]], int]:
 
 def _item(key: str, qty: int, lang: str) -> dict[str, Any]:
     """Riga di inventario: dati dell'SRD per armi e armature, oggetto generico per il resto."""
-    if key in GENERIC:
-        kind, it, en = GENERIC[key]
+    if key in GENERIC or key in TOOLS:
+        kind, it, en = GENERIC[key] if key in GENERIC else ("tool", TOOLS[key].it, TOOLS[key].en)
         return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty, "weight": 0.0,
                 "item_metadata": {"ac_bonus": 2} if kind == "shield" else None}
     e = _srd()[key]
@@ -186,10 +210,19 @@ def resolve(edition: str, class_key: str, picks: list[int], lang: str) -> tuple[
     groups = starting_groups(edition, class_key)
     if not groups or len(picks) != len(groups) or any(not 0 <= p < len(g) for p, g in zip(picks, groups)):
         raise ValueError("invalid_starting_equipment")
+    return _rows([group[pick] for pick, group in zip(picks, groups)], lang)
+
+
+def resolve_package(alt: str, lang: str) -> tuple[list[dict[str, Any]], int]:
+    """Una stringa di pacchetto (es. quello di un background 2024) -> righe di inventario e oro."""
+    return _rows([alt], lang)
+
+
+def _rows(alts: list[str], lang: str) -> tuple[list[dict[str, Any]], int]:
     rows: list[dict[str, Any]] = []
     total_gold = 0
-    for pick, group in zip(picks, groups):
-        items, gold = _parse(group[pick])
+    for alt in alts:
+        items, gold = _parse(alt)
         total_gold += gold
         for key, qty in items:
             row = _item(key, qty, lang)

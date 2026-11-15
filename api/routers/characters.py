@@ -77,8 +77,13 @@ from api.services.effects import cap_current_hp, sync_zero_hp
 from core.data.spell_slots import normalize_class_name
 from core.rules.edition import character_edition
 from core.rules.starting_equipment import (
-    ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, roll_starting_wealth, starting_groups, starting_wealth,
+    ASSASSIN_KITS_FLAG, resolve as resolve_starting_equipment, resolve_package as resolve_starting_package,
+    roll_starting_wealth, starting_groups, starting_wealth,
 )
+from core.data.backgrounds_2024 import BACKGROUNDS_2024, GOLD_OPTION, BackgroundData
+from core.data.feats_2024 import ALL_FEATS
+from core.rules.tools import add_tools
+from api.services.species_apply import apply_species, plan_species
 from api.services.rules_turn import get_turn, refuse_if_incapacitated
 from api.services.session_allies import attach_party_auras, attach_spell_auras
 from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
@@ -170,8 +175,37 @@ _SHORT_ABILITY = {a[:3]: a for a in ABILITY_NAMES}
 _ROLL_NOTE_KEY = re.compile(r"^(save\.(%s)|skill\.(%s))$" % ("|".join(ABILITY_NAMES), "|".join(SKILL_ABILITY_MAP)))
 
 
-def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
-    """Scores (+species bonuses), species fields, skills; 422 on invalid input."""
+def _check_catalog_choices(char: Character, body: CharacterCreate, scores: dict[str, int]) -> BackgroundData | None:
+    """Specie e background 2024: tutti i 422 prima di creare qualcosa. Restituisce il background, se scelto."""
+    def bad(msg: str):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, msg)
+
+    if body.species_2024:
+        if body.species:
+            raise bad("species_conflict")
+        plan_species(char, body.species_2024.key, body.species_2024.options)  # species_edition/_unknown/_options_invalid
+    bg = None
+    if choice := body.background_2024:
+        if body.rules_edition != "2024":
+            raise bad("background_edition")
+        bg = BACKGROUNDS_2024.get(choice.key)
+        if bg is None:
+            raise bad("background_unknown")
+        inc = choice.increases
+        if (not set(inc) <= set(bg.abilities) or sorted(inc.values()) not in ([1, 2], [1, 1, 1])
+                or any(scores[a] + v > 20 for a, v in inc.items())):
+            raise bad("background_increases_invalid")
+        if choice.tool not in (bg.tool if isinstance(bg.tool, tuple) else (bg.tool, None)):
+            raise bad("background_tool_invalid")
+    feat = bg.origin_feat if bg else body.origin_feat
+    if (body.species_2024 and feat in ALL_FEATS and not ALL_FEATS[feat].repeatable
+            and body.species_2024.options.get("origin_feat") == feat):  # Versatile dell'Umano = talento d'Origine
+        raise bad("species_options_invalid")
+    return bg
+
+
+def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) -> BackgroundData | None:
+    """Scores (+species bonuses, +background increases), species fields, skills; 422 on invalid input."""
     def bad(msg: str):
         return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, msg)
 
@@ -180,6 +214,10 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
         if k not in scores:
             raise bad(f"Unknown ability: {k}")
         scores[k] = v
+    bg = _check_catalog_choices(char, body, scores)
+    if bg:
+        for k, v in body.background_2024.increases.items():
+            scores[k] += v
     sp = body.species
     if sp:
         for k, v in sp.ability_bonuses.items():
@@ -190,7 +228,7 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
         for k, v in sp.roll_notes.items():
             if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
                 raise bad(f"Invalid roll note: {k}")
-    if body.ability_scores or sp:
+    if body.ability_scores or sp or bg:
         if any(not 3 <= v <= 20 for v in scores.values()):
             raise bad("Ability scores must be between 3 and 20")
         for row in char.ability_scores:
@@ -199,6 +237,10 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
         if any(k not in SKILL_ABILITY_MAP for k in body.skills):
             raise bad("Unknown skill")
         char.skills = {k: bool(v) for k, v in body.skills.items()}
+    if bg:
+        char.skills = {**(char.skills or {}), **{k: True for k in bg.skills}}
+        add_tools(char, [body.background_2024.tool or bg.tool])
+        char.background = bg.name.get(lang) or bg.name["it"]
     if sp:
         char.race = sp.name
         if sp.speed_ft is not None:
@@ -211,6 +253,7 @@ def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
         char.settings = s
         langs = list(char.languages or [])
         char.languages = langs + [l for l in sp.languages if l not in langs]
+    return bg
 
 
 def _add_starting_equipment(char: Character, body: CharacterCreate, lang: str) -> None:
@@ -220,6 +263,10 @@ def _add_starting_equipment(char: Character, body: CharacterCreate, lang: str) -
             body.rules_edition, normalize_class_name(body.initial_class.class_name) or "", body.starting_equipment, lang)
     except ValueError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    _append_starting_rows(char, rows, gold)
+
+
+def _append_starting_rows(char: Character, rows: list[dict], gold: int) -> None:
     for r in rows:
         meta = r.pop("item_metadata")
         char.items.append(Item(**r, item_metadata=json.dumps(meta) if meta else None))
@@ -272,9 +319,18 @@ async def create_character(
     if body.identity is not None:
         for field, value in body.identity.model_dump(exclude_unset=True).items():
             setattr(char, field, value)
-    _apply_creation_extras(char, body)  # after identity so species languages merge
+    bg = _apply_creation_extras(char, body, lang)  # after identity so species languages merge
     session.add(char)
     await session.flush()  # assign id (cascades ability_scores + currency)
+
+    if body.species_2024:  # già validata: qui non può più fallire
+        await apply_species(session, char, body.species_2024.key, body.species_2024.options, lang)
+    if bg:
+        if body.background_2024.equipment == "gold":
+            char.currency.gold += GOLD_OPTION
+        else:
+            _append_starting_rows(char, *resolve_starting_package(
+                bg.equipment.replace("{tool}", body.background_2024.tool or ""), lang))
 
     # Optional atomic initial class. The whole request runs inside one
     # transaction (api.database.get_db middleware) — any exception here
@@ -288,8 +344,10 @@ async def create_character(
         elif body.starting_equipment is not None:
             _add_starting_equipment(char, body, lang)
 
-    if body.origin_feat:  # nella stessa transazione: un talento non valido annulla tutta la creazione
-        take_feat(session, char, body.origin_feat, None, lang, "creation")
+    origin_feat = bg.origin_feat if bg else body.origin_feat  # col background vale il suo talento
+    if origin_feat:  # nella stessa transazione: un talento non valido annulla tutta la creazione
+        take_feat(session, char, origin_feat, None, lang, "creation")
+    if origin_feat or body.species_2024:  # tratti (Robustezza nanica) e talento (Robusto) contano nei PF massimi
         await sync_cataloged_features(session, char, lang)
         if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto)
             char.current_hit_points = effective_hp_max(char)
