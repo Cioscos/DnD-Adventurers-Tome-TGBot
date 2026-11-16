@@ -7,20 +7,22 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class HealingSpec:
     """``dice``: dadi base (``NdM``); ``per_level``: dadi in più per ogni livello di slot oltre quello dell'incantesimo
-    (stessi lati); ``fixed``/``fixed_per_level``: PF fissi (Cura Completa); ``add_mod``: somma il modificatore da incantatore."""
+    (stessi lati); ``fixed``/``fixed_per_level``: PF fissi (Cura Completa); ``add_mod``: somma il modificatore da incantatore;
+    ``targets``: quante creature cura al massimo (chi lancia compreso), ognuna dello stesso totale."""
     dice: str | None
     per_level: str | None = None
     fixed: int = 0
     fixed_per_level: int = 0
     add_mod: bool = True
+    targets: int = 1
 
 
 SPELL_HEALING: dict[str, HealingSpec] = {
     "cure-wounds": HealingSpec("1d8", "1d8"),
     "healing-word": HealingSpec("1d4", "1d4"),
-    "mass-cure-wounds": HealingSpec("3d8", "1d8"),
-    "mass-healing-word": HealingSpec("1d4", "1d4"),
-    "prayer-of-healing": HealingSpec("2d8", "1d8"),
+    "mass-cure-wounds": HealingSpec("3d8", "1d8", targets=6),
+    "mass-healing-word": HealingSpec("1d4", "1d4", targets=6),
+    "prayer-of-healing": HealingSpec("2d8", "1d8", targets=6),
     "heal": HealingSpec(None, fixed=70, fixed_per_level=10, add_mod=False),
     "regenerate": HealingSpec("4d8", fixed=15, add_mod=False),
     # Gli altri che ridanno PF: i privilegi che contano «ogni incantesimo di 1° livello o superiore che ripristina PF»
@@ -37,9 +39,9 @@ SPELL_HEALING: dict[str, HealingSpec] = {
 SPELL_HEALING_2024: dict[str, HealingSpec] = {
     "cure-wounds": HealingSpec("2d8", "2d8"),
     "healing-word": HealingSpec("2d4", "2d4"),
-    "mass-cure-wounds": HealingSpec("5d8", "1d8"),
-    "mass-healing-word": HealingSpec("2d4", "1d4"),
-    "prayer-of-healing": HealingSpec("2d8", "1d8", add_mod=False),  # il 2024 toglie il modificatore da incantatore
+    "mass-cure-wounds": HealingSpec("5d8", "1d8", targets=6),
+    "mass-healing-word": HealingSpec("2d4", "1d4", targets=6),
+    "prayer-of-healing": HealingSpec("2d8", "1d8", add_mod=False, targets=5),  # il 2024 toglie il modificatore da incantatore
 }
 
 

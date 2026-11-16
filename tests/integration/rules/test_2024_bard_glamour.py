@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from tests.integration.rules.test_2014_bard import BI, _ability, _full, _roll_keys, _spells, _states, _use
-from tests.integration.rules.test_2014_fighter_eldritch_knight import _cast, _spell
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _cast, _owned, _spell
 from tests.integration.rules.test_2014_rogue import _full_hp, _hurt
 from tests.integration.rules.test_2024_bard import GLAMOUR, LORE, _bard24, _set_uses, _slot_used, _turn
 
@@ -37,7 +37,7 @@ async def test_beguiling_magic_is_one_use_per_long_rest(client):
 
 async def test_beguiling_magic_is_offered_after_an_enchantment_or_illusion_cast_with_a_slot(client):
     cid = await _bard24(client, 3, GLAMOUR)
-    charm = await _spell(client, cid, "Charme su persone", 1, school="enchantment")
+    charm = await _owned(client, cid, "charm-person")  # concesso dal Collegio del Fascino
     image = await _spell(client, cid, "Immagine minore", 1, school="illusion")
     bolt = await _spell(client, cid, "Dardo di fuoco", 1, school="evocation")
     cantrip = await _spell(client, cid, "Beffa crudele", 0, school="enchantment")
@@ -73,7 +73,7 @@ async def test_beguiling_magic_needs_a_slot_so_not_a_free_cast_or_a_ritual(clien
 
 async def test_beguiling_magic_asks_for_a_wisdom_save_against_the_spell_dc_and_spends_the_use(client):
     cid = await _bard24(client, 3, GLAMOUR, charisma=16)  # CD 8 + 2 + 3
-    charm = await _spell(client, cid, "Charme su persone", 1, school="enchantment")
+    charm = await _owned(client, cid, "charm-person")  # concesso dal Collegio del Fascino
     r = await _cast(client, cid, charm, slot_level=1, options=[FRIGHTENED])
     assert r.status_code == 200, r.text
     block = r.json()["option_result"]

@@ -563,6 +563,7 @@
       "confirm_rest": "Rest",
       "concentration_active": "Concentrating",
       "concentration_lost": "Concentration lost!",
+      "concentration_mode": "Concentration save on the next damage",
       "shared_damage": "{{name}} takes {{amount}} shared damage",
       "shared_damage_save_ok": "{{name}} takes {{amount}} shared damage: concentration save {{total}} vs DC {{dc}}, passed",
       "shared_damage_save_fail": "{{name}} takes {{amount}} shared damage: concentration save {{total}} vs DC {{dc}}, concentration lost",
@@ -953,6 +954,8 @@
         "total": "HP restored",
         "maximized": "Dice at maximum",
         "healed_self": "HP added to you: {{n}}",
+        "healed_ally": "HP added to {{name}}: {{n}}",
+        "targets": "Who you heal",
         "self_healed": "You regain {{n}} HP from a feature"
       },
       "roll_damage": {
@@ -1225,6 +1228,7 @@
         "reroll": "Reroll with Inspiration",
         "summary": "To hit: {{die}} {{bonus}} = {{total}}",
         "extra_dice": "Extra dice",
+        "hit_dice": "Attack roll dice",
         "once_per_turn": "Once per turn",
         "slot_action": "Action",
         "slot_bonus": "Bonus action",
@@ -1790,6 +1794,8 @@
         "cunning_sleight_of_hand": "Fast Hands: a Dexterity (Sleight of Hand) check as a bonus action. Roll it from Skills.",
         "cunning_thieves_tools": "Fast Hands: you use thieves' tools on a lock or trap as a bonus action.",
         "cunning_use_object": "Fast Hands: the Use an Object action as a bonus action.",
+        "steady_aim": "Steady Aim: advantage on your next attack roll this turn (already on in “Before the roll”). Your Speed is 0 until the end of the turn: Cunning Strike's Withdraw is not offered.",
+        "steady_aim_keeps_speed": "Steady Aim: advantage on your next attack roll this turn (already on in “Before the roll”). Roving Aim: your Speed does not change.",
         "mage_hand_control": "You control the mage hand with your bonus action. For unnoticed tasks roll Sleight of Hand (Dexterity) against the Perception (Wisdom) of whoever watches.",
         "fist_of_unbroken_air": "Strength save: on a failure it takes the bludgeoning damage, is pushed up to 20 ft and knocked prone; on a success, half damage and nothing else.",
         "bend_luck_plus": "Bend Luck: add the d4 you rolled to the other creature's roll (attack, check or save).",

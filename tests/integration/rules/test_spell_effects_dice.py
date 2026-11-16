@@ -207,3 +207,25 @@ def test_bless_targets_grow_with_the_slot_and_blade_ward_is_only_text():
     _, ward = spell_effect("2024", "blade-ward")
     assert ward.text and not ward.options and not ward.modifiers({})
     assert spell_effect("2014", "blade-ward")[1].options  # 2014: resistenza con conferma «da arma» (test_spell_effects_defenses)
+
+
+async def test_bless_on_a_weapon_attack_stays_on_the_to_hit_and_the_damage_dice_name_the_sneak_attack(client, test_session_factory):
+    """B11: il d4 di Benedizione va nel tiro per colpire, non fra i dadi di danno; quelli dicono da dove vengono (Furtivo)."""
+    from tests.integration.rules.test_2014_rogue import _damage, _hit, _rapier
+    hero, caster, spell = await _table(client, test_session_factory, "Bless", "bless", 1)
+    await _cast(client, caster, spell, [hero])
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{hero}/classes", json={"class_name": "rogue", "level": 3, "hit_die": 8})
+    assert r.status_code in (200, 201), r.text
+    wid = await _rapier(client, hero)
+    hit = await _hit(client, hero, wid, mode="advantage", dice=[10, 12])
+    r = await _add(client, hero, "spell:bless:add")
+    assert r.status_code == 200, r.text
+    d4 = r.json()["total"] - hit["to_hit_total"]
+    assert 1 <= d4 <= 4
+    r = await _damage(client, hero, hit, "rogue.sneak_attack")
+    assert r.status_code == 200, r.text
+    block = r.json()["option_result"]
+    assert block["hit_rolls"] == [d4] and block["hit_total"] == d4
+    assert len(block["extra_rolls"]) == 2 and block["dice_keys"] == ["rogue.sneak_attack"]  # 2d6 al livello 3
+    assert r.json()["to_hit_total"] == hit["to_hit_total"] + d4

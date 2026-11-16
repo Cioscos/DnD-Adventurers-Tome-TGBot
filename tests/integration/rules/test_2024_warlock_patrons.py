@@ -11,7 +11,7 @@ from core.rules.catalog import features_for
 from core.rules.catalog.granted_spells import GRANTED_SPELLS
 from tests.integration.rules.test_2014_barbarian import _keys, _turn, _weapon
 from tests.integration.rules.test_2014_bard import _ability, _full, _keys_of, _use
-from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _owned, _spell
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest
 from tests.integration.rules.test_2014_warlock import _pact_slots
 from tests.integration.rules.test_2014_warlock_invocations import _cast, _spells_by_index
@@ -242,7 +242,7 @@ async def test_beguiling_defenses_can_be_restored_with_a_pact_slot_and_never_a_n
 
 async def test_bewitching_magic_offers_a_free_misty_step_after_a_charm_or_illusion_spell_with_a_slot(client):
     cid = await _make(client, "archfey", 14)
-    charm = await _spell(client, cid, "Sonno", 1, school="enchantment")
+    charm = await _spell(client, cid, "Charme su persone", 1, school="enchantment")  # Sonno lo concede già il Signore Fatato
     evoc = await _spell(client, cid, "Dardo", 1, school="evocation")
     free = await _spell(client, cid, "Trucchetto", 0, school="enchantment")
     assert BEWITCH in await _keys(client, cid, "cast", spell_id=charm)
@@ -250,9 +250,17 @@ async def test_bewitching_magic_offers_a_free_misty_step_after_a_charm_or_illusi
     assert BEWITCH not in await _keys(client, cid, "cast", spell_id=free)  # il trucchetto non usa slot
 
 
+async def test_bewitching_magic_also_follows_the_granted_sleep(client):
+    """Il Sonno concesso dal Signore Fatato ha la sua scuola (ammaliamento): Magia Stregata scatta anche lanciandolo."""
+    cid = await _make(client, "archfey", 14)
+    sleep = next(s for s in (await _full(client, cid))["spells"] if s.get("srd_index") == "sleep")
+    assert sleep["school"] == "enchantment"
+    assert BEWITCH in await _keys(client, cid, "cast", spell_id=sleep["id"])
+
+
 async def test_bewitching_magic_authorises_one_misty_step_without_a_slot_or_a_bonus_action(client):
     cid = await _make(client, "archfey", 14)
-    charm = await _spell(client, cid, "Sonno", 1, school="enchantment")
+    charm = await _spell(client, cid, "Charme su persone", 1, school="enchantment")  # Sonno lo concede già il Signore Fatato
     misty = await _misty(client, cid)
     uses = (await _ability(client, cid, STEPS))["uses"]
     assert (await _cast(client, cid, charm, slot_level=await _level(client, cid), options=[BEWITCH])).status_code == 200

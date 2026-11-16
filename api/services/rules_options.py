@@ -137,7 +137,10 @@ def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: 
     types = opts.rolled_types if len(opts.rolled_types) == len(rolls) else [None] * len(rolls)
     if any(types) or before.extra_types:  # il tipo di ogni dado, nell'ordine di ``extra_rolls`` (vuoto se nessun dado ne ha uno)
         extra["extra_types"] = [*before.extra_types, *[None] * (len(before.extra_rolls) - len(before.extra_types)), *types]
+    extra.setdefault("hit_rolls", before.hit_rolls)
+    extra.setdefault("hit_total", before.hit_total)
     return OptionResult(
+        dice_keys=[*before.dice_keys, *(opts.dice_keys if rolls else [])],
         keys=[*before.keys, *opts.keys], extra_rolls=[*before.extra_rolls, *rolls],
         extra_total=before.extra_total + total, bonus=before.bonus + opts.bonus,
         separate_rolls=[*before.separate_rolls, *opts.separate_rolls],
@@ -163,6 +166,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         dice=spec.extra_dice(ctx, {}) if fixed and spec.extra_dice else None,
         bonus=spec.bonus(ctx, {}) if fixed and spec.bonus else None,
         mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
+        preselected=True if spec.preselected else None,
         offered_on_damage=spec.offered_on_damage, ranged_unarmed=True if spec.ranged_unarmed else None,
         outside_action=True if spec.outside_action else None,
         defers_damage=True if spec.defers_damage else None,

@@ -77,12 +77,13 @@ def _steady_check(_ctx: RuleContext, params: dict) -> tuple[int, str] | None:
 
 STEADY_AIM_USE = OnUse(
     slot="bonus", check=_steady_check,
+    notes=lambda c, _p: ["steady_aim_keeps_speed" if steady_aim_keeps_speed(c) else "steady_aim"],  # la Velocità 0 si dice subito
     toggles=(UseToggle("moved", _both("Ti sei mosso in questo turno?", "Did you move this turn?")),),
     state=StateSpec(STEADY, ends_on=("new_turn", "turn_end", "manual")))
 
 STEADY_AIM_ADVANTAGE = RollOptionSpec(
     key=f"{CK}.steady_aim_advantage", phase="before", rolls=("attack",), mode="advantage", once_per_turn=True,
-    available=lambda c: state_on(c, STEADY),
+    preselected=True, available=lambda c: state_on(c, STEADY),
     label=_both("Mira Costante: vantaggio al prossimo tiro per colpire di questo turno", "Steady Aim: advantage on the next attack roll this turn"))
 
 
@@ -156,7 +157,8 @@ def _withdraw_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 
 WITHDRAW = _cunning("withdraw", 1, "Ritirata (1d6): dopo l'attacco ti muovi di metà Velocità senza attacchi di opportunità",
-                    "Withdraw (1d6): after the attack you move half your Speed with no opportunity attacks", effect=_withdraw_effect)
+                    "Withdraw (1d6): after the attack you move half your Speed with no opportunity attacks", effect=_withdraw_effect,
+                    available=lambda c: _half_speed(c) > 0)  # con Velocità 0 (Mira Costante) non muove nulla: 1d6 sprecato
 DAZE = _cunning(
     "daze", 2, "Stordimento (2d6): il bersaglio fa un TS Costituzione o ha meno azioni",
     "Daze (2d6): the target makes a Constitution save or loses part of its turn",

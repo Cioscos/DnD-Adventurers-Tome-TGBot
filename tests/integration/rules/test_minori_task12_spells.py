@@ -15,7 +15,7 @@ from core.rules.types import Modifier
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration.rules.test_2014_bard import _ability
 from tests.integration.rules.test_spell_effects_cast import SOF, STATE, _ac, _caster, _cast, _full, _slots_used, _states, _table
-from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _owned, _spell
 from tests.integration.rules.test_spell_effects_defenses import _cast as _cast_at
 from tests.integration.rules.test_spell_effects_defenses import _table as _defense_table
 
@@ -63,7 +63,7 @@ async def test_95_targets_left_out_are_the_same_as_casting_on_yourself(client, t
 async def test_95_recasting_on_another_target_takes_the_effect_from_the_old_one(client, test_session_factory):
     hero, caster, _ = await _defense_table(client, test_session_factory, "Longstrider", "longstrider", 1)
     as_user(GM_ID)  # senza concentrazione il rilancio non toglie lo stato ai vecchi bersagli
-    spell = (await client.post(f"/characters/{caster}/spells", json={"name": "Passo Veloce", "srd_index": "longstrider", "level": 1})).json()["id"]
+    spell = await _owned(client, caster, "longstrider")  # già dato da `_defense_table`
     key = "spell:longstrider"
     await _cast_at(client, caster, spell, [hero], level=1)
     assert len(await _states(client, hero, PLAYER_ID, key)) == 1

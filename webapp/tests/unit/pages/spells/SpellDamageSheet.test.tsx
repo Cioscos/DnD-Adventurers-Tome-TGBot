@@ -86,7 +86,7 @@ describe('SpellDamageSheet', () => {
     rollDamage.mockResolvedValue(result)
     renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={6} slotId={21} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
-    await waitFor(() => expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', spell_id: 2, casting_level: 6 })))
+    await waitFor(() => expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', spell_id: 2, casting_level: 6 }), 'before', { cancellable: true }))
   })
 
 
@@ -98,7 +98,7 @@ describe('SpellDamageSheet', () => {
     expect(screen.getByText(/character.spells.roll_damage.chosen_type/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ damage_type: 'cold' })))
-    expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', damage_type: 'cold' }))
+    expect(askRollOptions).toHaveBeenCalledWith(7, expect.objectContaining({ roll: 'spell_damage', damage_type: 'cold' }), 'before', { cancellable: true })
   })
 
   it('a rejected cast shows and sends no type, and leaves the pick out of the store', async () => {
@@ -218,6 +218,15 @@ describe('SpellDamageSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     expect(await screen.findByText('character.spells.roll_damage.half_damage')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
+  })
+
+  it('a save spell that does nothing on a passed save (Sacred Flame) hides the half-damage cell', async () => {
+    rollDamage.mockResolvedValue({ ...result, save_halves: false })
+    useSpell.mockResolvedValue({ id: 7 })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={leveled} slotLevel={3} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText('character.spells.roll_damage.damage')).toBeInTheDocument()
+    expect(screen.queryByText('character.spells.roll_damage.half_damage')).not.toBeInTheDocument()
   })
 
   it('does not consume the slot again after the attack roll', async () => {

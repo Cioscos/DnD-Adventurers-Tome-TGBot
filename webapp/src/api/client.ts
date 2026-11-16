@@ -110,6 +110,7 @@ export type RollOption = {
   mode: 'advantage' | 'disadvantage' | null
   multiplier: number | null
   once_per_turn: boolean
+  preselected?: boolean  // accesa di default nel prompt prima del tiro (Mira Costante)
   slot: string | null
   needs: string | null
   requires_input: 'slot' | 'recover' | null
@@ -251,6 +252,11 @@ export type OptionResult = {
   keys: string[]
   extra_rolls: number[]
   extra_total: number
+  /** Le opzioni che hanno dato i dadi di `extra_rolls` (Attacco Furtivo, Benedizione su un TS). */
+  dice_keys?: string[]
+  /** Attacco con arma: i dadi sommati al tiro per colpire (Benedizione), fuori da `extra_rolls` che lì sono di danno. */
+  hit_rolls?: number[]
+  hit_total?: number
   bonus: number
   multiplier: number
   spent: string[]
@@ -645,7 +651,7 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; ally_reaction_id?: number } & Partial<RollChoice>,
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; ally_reaction_id?: number; concentration_mode?: RollMode } & Partial<RollChoice>,
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',

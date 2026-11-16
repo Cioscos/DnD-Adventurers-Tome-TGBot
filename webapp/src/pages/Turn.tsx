@@ -48,7 +48,7 @@ const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bon
 const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead', 'target_not_down', 'nothing_to_remove', 'beast_alive']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
 const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'lay_on_hands_other_2024', 'lay_on_hands_cure_self_2024', 'lay_on_hands_cure_other_2024', 'revivification_other', 'gift_of_the_protectors_other', 'primeval_awareness', 'vanish_hide',
-  'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus', 'healer_other']
+  'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'steady_aim', 'steady_aim_keeps_speed', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus', 'healer_other']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
 export default function Turn() {
@@ -242,6 +242,7 @@ export default function Turn() {
   const pactInHand = char.items?.some((i) => i.is_equipped && i.item_metadata?.pact_weapon)
   const attacks = (pactInHand ? turn?.attacks_allowed_pact : undefined) ?? turn?.attacks_allowed ?? char.attacks_per_action ?? 1
   const stdActions = standardActionsFor(char.rules_edition)
+  const hasRoundDurations = (char.condition_effects ?? []).some((e) => e.expiry_count != null) || char.settings?.concentration_rounds_left != null
   // Richieste in serie dallo stesso dispositivo: il server fa read-modify-write sul JSON.
   const busy = useSlot.isPending || newTurn.isPending
 
@@ -525,7 +526,7 @@ export default function Turn() {
           )}
           {turn?.in_encounter ? (
             <p className="self-center text-xs text-dnd-text-muted font-body">{t('character.conditions.duration.in_encounter')}</p>
-          ) : (
+          ) : hasRoundDurations && (  // come Condizioni: senza durate a round non c'è niente da scalare
             <Button size="sm" variant="ghost" icon={<Clock size={14} />} loading={tick.isPending} onClick={() => tick.mutate()}>
               {t('character.turn.end_round')}
             </Button>

@@ -5,7 +5,7 @@ import pytest
 
 from core.rules.catalog.spells import spell_effect
 from tests.integration.rules.test_2014_bard import _roll_keys
-from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _owned, _spell
 from tests.integration.rules.test_2024_sorcerer import OPTIONS, TRANSMUTED, _caster24, _damage, _pending
 from tests.integration.rules.test_spell_effects_cast import _full
 from tests.integration.rules.test_2024_sorcerer_subclasses import P, _affinity, _make
@@ -17,6 +17,9 @@ SIX = ["acid", "cold", "lightning", "fire", "thunder", "poison"]
 
 async def _orb(client, cid, **extra) -> int:
     fields = {**ORB, **extra}
+    spells = (await client.get(f"/characters/{cid}/spells")).json()
+    if not extra and any(s["srd_index"] == ORB["srd_index"] for s in spells):  # gli incantesimi draconici concedono già la Sfera
+        return await _owned(client, cid, ORB["srd_index"])
     return await _spell(client, cid, fields.pop("name"), 1, **fields)
 
 

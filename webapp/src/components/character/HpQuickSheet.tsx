@@ -1,5 +1,5 @@
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
-import type { ConcentrationSaveResult, RollOption } from '@/api/client'
+import type { ConcentrationSaveResult, RollMode, RollOption } from '@/api/client'
 import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -12,6 +12,8 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
 import DamageTypeControls from '@/components/ui/DamageTypeControls'
+import RollModeToggle from '@/components/ui/RollModeToggle'
+import { isConcentrating } from '@/lib/concentration'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import HpQuickChips from '@/components/character/HpQuickChips'
@@ -51,6 +53,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [pendingChip, setPendingChip] = useState<number | null>(null)
   const [lostSave, setLostSave] = useState<ConcentrationSaveResult | null>(null)
+  const [concMode, setConcMode] = useState<RollMode>('normal')  // TS di concentrazione del danno (come in HP.tsx)
   // Reazioni che il danno ha aperto (Ritorsione): la scheda resta aperta per proporle.
   const [reactions, setReactions] = useState<RollOption[]>([])
 
@@ -69,7 +72,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
       const choice = op === 'damage'
         ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in')
         : undefined
-      const base = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const picked = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const base = op === 'damage' && concMode !== 'normal' ? { ...picked, concentration_mode: concMode } : picked
       const updated = await sendWithAllyReaction(allyId, base, (body) => body
         ? api.characters.updateHp(char.id, op, value, false, body)
         : api.characters.updateHp(char.id, op, value),
@@ -155,6 +159,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         setAmount('')
         setDamageType('')
         setDamageModifier(null)
+        setConcMode('normal')
         const offered = op === 'damage' ? updated.reactions ?? [] : []
         setReactions(offered)
         if (!offered.length) onClose()
@@ -210,6 +215,12 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
             setDamageModifier={setDamageModifier}
             proposedModifier={proposedModifier}
           />
+        )}
+        {op === 'damage' && isConcentrating(char) && (
+          <div className="space-y-2">
+            <p className="text-xs font-body text-dnd-text-muted">{t('character.hp.concentration_mode')}</p>
+            <RollModeToggle mode={concMode} onChange={setConcMode} label={t('character.hp.concentration_mode')} />
+          </div>
         )}
         <HpQuickChips
           sign={op === 'damage' ? '−' : '+'}

@@ -40,7 +40,7 @@ from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, modifiers_for
 from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
-    UndoLog, clear_effects_for, undo_last_advance,
+    UndoLog, clear_effects_for, expire_effect, undo_last_advance,
 )
 from api.services.durations import process_edge
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
@@ -48,7 +48,7 @@ from api.services.rules_targets import (
     activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
     pc_char as _pc_char, set_condition as _set_condition,
 )
-from api.services.rules_turn import reset_turn, set_surprised
+from api.services.rules_turn import clear_turn, reset_turn, set_surprised
 from api.services.thiefs_reflexes import add_second_turns
 from api.services.turn_start import apply_turn_start
 from api.services.encounter_view import build_encounter_block
@@ -155,6 +155,18 @@ def _ordered(combatants: list[Combatant]) -> list[Combatant]:
     rows = [c for c in combatants if c.sort_order is not None]
     rows.sort(key=lambda c: (c.sort_order, c.id))
     return rows
+
+
+def _place_by_initiative(enc: Encounter, comb: Combatant) -> None:
+    """Scontro avviato: sposta ``comb`` prima del primo combattente con iniziativa più bassa (o non ancora tirata),
+    senza toccare l'ordine degli altri (anche quello scelto a mano dal GM). Il turno segue l'id: nessuno salta."""
+    if enc.status != "active" or comb.initiative is None:
+        return
+    rows = [c for c in _ordered(enc.combatants) if c.id != comb.id]
+    idx = next((i for i, c in enumerate(rows) if c.initiative is None or c.initiative < comb.initiative), len(rows))
+    rows.insert(idx, comb)
+    for i, c in enumerate(rows):
+        c.sort_order = (i + 1) * 10
 
 
 def _advance_turn(
@@ -365,6 +377,7 @@ async def roll_initiative(
     option_rolls, option_total = ([], 0) if char is None else roll_option_dice(char, opts)
     comb.initiative_die = outcome.kept
     comb.initiative = outcome.kept + comb.initiative_mod + applied.flat + opts.bonus + option_total
+    _place_by_initiative(enc, comb)
     if char is not None and comb.owner_user_id == user_id:  # il GM che tira per un PG non ha i suoi privilegi
         remember_roll(char, "initiative", opts, {
             "die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode,
@@ -572,8 +585,10 @@ async def patch_combatant(
     if body.initiative is not None:
         comb.initiative = body.initiative
         comb.initiative_die = None       # valore manuale: nessuna faccia da mostrare
+        _place_by_initiative(enc, comb)
         for extra in [c for c in enc.combatants if comb.character_id and c.extra_turn_of == comb.character_id]:
             extra.initiative = body.initiative - 10  # il secondo turno segue il PG
+            _place_by_initiative(enc, extra)
     if body.ac is not None:
         comb.ac = body.ac
     if body.max_hp is not None:
@@ -879,6 +894,13 @@ async def end_encounter(
         for item in (char.items if char else []):
             if item.ammo_spent:
                 recover_ammo(db, char, item)
+        if char is not None:
+            clear_turn(char)  # fuori combattimento non restano azioni e attacchi usati
+        # Le durate in round contano solo in combattimento: finito quello, la condizione cade (anche se aveva un TS)
+        for eff in (await db.execute(select(ConditionEffect).where(
+                ConditionEffect.character_id == cid, ConditionEffect.expiry_count.is_not(None),
+                ConditionEffect.pending.is_(False)).order_by(ConditionEffect.id))).scalars().all():
+            await expire_effect(db, eff, "Terminata (fine combattimento): {label}", None)
     await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     touch(session)

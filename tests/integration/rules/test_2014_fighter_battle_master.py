@@ -288,7 +288,7 @@ async def test_precision_attack_adds_the_die_to_the_roll_after_seeing_it(client,
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [_key("precision")]})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["total"] == hit["to_hit_total"] + 6 and body["option_result"]["extra_rolls"] == [6]
+    assert body["total"] == hit["to_hit_total"] + 6 and body["option_result"]["hit_rolls"] == [6]  # B11: dadi al tiro per colpire, non fra quelli di danno
     assert await _dice_left(client, cid) == 4
     again = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [_key("precision")]})
     assert again.status_code == 409  # un solo dado

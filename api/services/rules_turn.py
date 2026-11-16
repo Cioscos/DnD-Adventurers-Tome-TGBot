@@ -133,6 +133,11 @@ def reset_turn(char, keep_surprise: bool = True, advances: bool = True) -> dict:
     return char.turn_state
 
 
+def clear_turn(char) -> None:
+    """Fine dello scontro o riposo: il turno torna intatto, senza gli effetti d'inizio turno di ``reset_turn``."""
+    _save(char, {**_default(), "turn_no": get_turn(char).get("turn_no", 0) + 1})  # turn_no avanza: nessun rimborso vecchio vale
+
+
 def set_start_heal(char, notices: list[dict]) -> None:
     """Avviso della cura d'inizio turno (Sopravvissuto): resta sul turno fino al prossimo ``reset_turn``."""
     st = get_turn(char)

@@ -101,7 +101,8 @@ async def test_destructive_wrath_does_not_touch_other_spells(client):
 async def test_thunderbolt_strike_shows_the_push_for_lightning_only(client):
     cid = await _cleric(client, 6, "tempest")
     bolt = await _spell(client, cid, "Fulmine", "lightning", 1, "3d6")
-    thunder = await _spell(client, cid, "Frantumare", "thunder", 1, "3d6")
+    from tests.integration.rules.test_2014_fighter_eldritch_knight import _owned
+    thunder = await _owned(client, cid, "shatter")  # concesso dal Dominio della Tempesta
     assert "cleric.thunderbolt_strike" in await _roll_keys(client, cid, "spell_damage", spell_id=bolt)
     assert "cleric.thunderbolt_strike" not in await _roll_keys(client, cid, "spell_damage", spell_id=thunder)
     r = await client.post(f"/characters/{cid}/spells/{bolt}/roll_damage", json={

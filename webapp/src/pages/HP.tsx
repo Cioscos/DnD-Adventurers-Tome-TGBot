@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type RollOption } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
+import RollModeToggle from '@/components/ui/RollModeToggle'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import Button from '@/components/ui/Button'
@@ -75,6 +76,8 @@ export default function HP() {
 
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
+  // Vantaggio/svantaggio del TS di concentrazione che il prossimo danno fa tirare (situazionale: torna Normale dopo il danno).
+  const [concMode, setConcMode] = useState<RollMode>('normal')
   // Reazioni che l'ultimo danno ha aperto (Ritorsione): si propongono con l'attacco in un tocco.
   const [reactions, setReactions] = useState<RollOption[]>([])
 
@@ -115,7 +118,8 @@ export default function HP() {
       const choice = op === 'damage'
         ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in')
         : undefined
-      const base = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const picked = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const base = op === 'damage' && concMode !== 'normal' ? { ...picked, concentration_mode: concMode } : picked
       return sendWithAllyReaction(allyId, base, (body) => body
         ? api.characters.updateHp(charId, op, val, wasCritical ?? false, body)
         : api.characters.updateHp(charId, op, val, wasCritical ?? false),
@@ -141,6 +145,7 @@ export default function HP() {
       setKnockOut(false)
       setDamageModifier(null)
       setDamageType('')
+      if (op === 'damage') setConcMode('normal')
       haptic.success()
       maybeShowInstantDeath(updated)
       const zeroSave = zeroHpSaveMessage(updated, t)
@@ -405,6 +410,8 @@ export default function HP() {
               <p className="text-sm font-body italic text-dnd-arcane-bright truncate">{concentrationName}</p>
             )}
           </div>
+          <p className="mt-3 mb-2 text-xs font-body text-dnd-text-muted">{t('character.hp.concentration_mode')}</p>
+          <RollModeToggle mode={concMode} onChange={setConcMode} label={t('character.hp.concentration_mode')} />
         </Surface>
       )}
 

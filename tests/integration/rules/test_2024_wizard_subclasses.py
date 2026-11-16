@@ -480,7 +480,7 @@ async def test_a_ritual_abjuration_makes_no_ward_and_the_recharge_counts_the_slo
 
 async def test_improved_illusions_casts_minor_illusion_as_a_bonus_action(client):
     cid = await _make(client, "illusionist", 3)
-    minor = await _spell(client, cid, "Illusione Minore", 0, school="illusion", srd_index="minor-illusion", is_prepared=True)
+    minor = (await _by_index(client, cid))["minor-illusion"]["id"]  # Illusioni Migliorate la concede già: non si aggiunge due volte
     assert (await _cast(client, cid, minor)).status_code == 200
     turn = await _turn(client, cid)
     assert turn["bonus_spell_cast"] is True
@@ -616,6 +616,6 @@ async def test_49_spell_breaker_use_is_blocked_until_a_counter_or_dispel_cast_an
     assert (await _cast(client, cid, spells["dispel-magic"]["id"], slot_level=3)).status_code == 200
     assert ability(await _full(client, cid))["use_blocked"] is False
     ill = await _make(client, "illusionist", 3)
-    minor = await _spell(client, ill, "Illusione Minore", 0, school="illusion", srd_index="minor-illusion", is_prepared=True)
+    minor = (await _by_index(client, ill))["minor-illusion"]["id"]  # concessa da Illusioni Migliorate
     listed = next(s for s in (await client.get(f"/characters/{ill}/spells")).json() if s["id"] == minor)
     assert "bonus" in listed["effective_casting_time"].lower() and "bonus" not in listed["casting_time"].lower()

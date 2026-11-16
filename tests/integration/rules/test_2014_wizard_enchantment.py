@@ -101,6 +101,7 @@ async def test_alter_memories_needs_an_enchantment_cast_just_before(client):
     assert r.status_code == 409 and r.json()["detail"]["code"] == "feature_unavailable"
     charm = await _enchantment(client, cid)
     assert (await _cast(client, cid, charm, slot_level=1)).status_code == 200
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})  # il lancio ha usato l'azione: il test usa il privilegio in un turno dopo
     assert (await _use(client, cid, MEMORIES)).status_code == 200
 
 
@@ -108,6 +109,7 @@ async def test_alter_memories_needs_an_enchantment_cast_just_before(client):
 async def test_alter_memories_forgets_one_hour_plus_charisma_at_least_one(client, charisma, hours):
     cid = await _wizard(client, 14, "enchantment", intelligence=16, charisma=charisma)
     await _cast(client, cid, await _enchantment(client, cid), slot_level=1)
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})  # il lancio ha usato l'azione: il test usa il privilegio in un turno dopo
     r = await _use(client, cid, MEMORIES)
     assert r.status_code == 200, r.text
     assert f" {hours} " in r.json()["message"]["it"] and f" {hours} " in r.json()["message"]["en"]
@@ -119,6 +121,7 @@ async def test_alter_memories_forgets_one_hour_plus_charisma_at_least_one(client
 async def test_alter_memories_works_once_per_spell(client):
     cid = await _wizard(client, 14, "enchantment")
     await _cast(client, cid, await _enchantment(client, cid), slot_level=1)
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})  # il lancio ha usato l'azione: il test usa il privilegio in un turno dopo
     assert (await _use(client, cid, MEMORIES)).status_code == 200
     await client.post(f"/characters/{cid}/turn/new")
     again = await _use(client, cid, MEMORIES)

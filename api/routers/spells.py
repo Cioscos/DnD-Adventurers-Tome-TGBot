@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.services.history import add_history
+from api.services.game_sessions import utc_now_iso
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from core.db.models import Ability, Character, CharacterClass, Spell, SpellSlot
@@ -40,12 +41,13 @@ from core.data.damage_types import canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
-from api.services.session_allies import deliver_temp_gifts
+from api.services.session_allies import ally_target, deliver_temp_gifts, load_receiver
 from api.services.spell_effects import apply_spell_effects, cast_level, cast_damage_type, cast_upcast_type, chosen_damage_type, validate_spell_targets
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
+from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
@@ -71,7 +73,7 @@ from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
 from core.rules.states import begin_state, free_cast_state, has_state
 from core.rules.types import StateSpec
-from api.services.choices import consume_spell_pick, release_spell_pick, spell_pick_target
+from api.services.choices import consume_spell_pick, ensure_new_spell, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
@@ -152,6 +154,31 @@ def _cast_kind(char: Character, spell: Spell) -> str:
     if kind == "action" and bonus_cast(char, spell):  # Rompi-Incantesimi: Dissolvi Magie come azione bonus
         return "bonus"
     return kind
+
+
+_SLOT_MARKS = ("action_used", "bonus_used", "reaction_used", "action_attacks", "extra_actions")
+
+
+def _slot_marks(char: Character) -> tuple:
+    turn = get_turn(char)
+    return tuple(turn[k] for k in _SLOT_MARKS)
+
+
+def _mark_turn_slot(char: Character, spell: Spell, before: tuple, in_encounter: bool) -> None:
+    """Il lancio con slot o il trucchetto segna azione, azione bonus o reazione del suo tempo di lancio (B4), dopo le opzioni
+    di lancio: se una ha già pagato il suo slot o preso il posto di un attacco (Incantesimo Rapido, trucchetto al posto di un
+    attacco) il turno è cambiato da ``before`` e non si segna altro. Ki, Arcanum, lanci gratuiti e rituali pagano il turno da sé.
+
+    In uno scontro attivo (il turno si azzera da solo a inizio turno) lo slot già usato rifiuta: 409 ``turn_slot_used``, e
+    la richiesta annulla anche lo slot speso. Fuori dallo scontro il segno è morbido: il turno non si azzera da solo."""
+    if _LONG_CASTING.search(spell.casting_time or "") or _slot_marks(char) != before:
+        return
+    try:
+        spend(char, _cast_kind(char, spell))
+    except HTTPException:
+        if in_encounter:
+            raise
+        # fuori scontro: già segnata, nessun costo in più
 
 
 def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
@@ -345,6 +372,8 @@ async def add_spell(
     if body.pick_id:  # Segreti Magici: l'incantesimo è di qualsiasi classe e passa alla classe del bardo
         pick = spell_pick_target(char, body.pick_id, body.level, body.class_id, body.name, body.srd_index, body.is_ritual, body.school)
         body.class_id = pick[0].id
+    else:
+        ensure_new_spell(char, body.name, body.srd_index)
     spell = Spell(character_id=char_id, **body.model_dump(exclude={"pick_id"}))
     spell.in_spellbook = bool(pick and pick[1].spell_pick == "book")  # la scelta del Libro lo scrive gratis; il resto si copia
     if body.is_prepared and body.level >= 1 and not body.always_prepared:
@@ -523,8 +552,11 @@ async def use_spell(
         await session.refresh(char, attribute_names=["companions"])
         make_steed(char, "", fx_level)
     _close_twinned(char)  # un nuovo lancio: il segno di Raddoppiato di uno precedente non vale più
+    marks = _slot_marks(char)
     opts = use_options(session, char, "cast", body, spell=spell, casting_level=_cast_level(spell, body.slot_level, body.as_ritual),
                        slotless=bool(body.free_cast or body.as_ritual), damage_type=cast_damage_type(char, spell, body.choices))
+    if not (body.free_cast or body.ki or body.as_ritual):
+        _mark_turn_slot(char, spell, marks, await active_encounter_row(session, char.id) is not None)
     await deliver_temp_gifts(session, char, opts)  # Passo Rinfrescante su un altro PG della serata
     removal_lines = None
     if removal is not None:  # stessa transazione del lancio: o paga e toglie, o nulla
@@ -590,9 +622,12 @@ async def spell_attack(
                                              no_concentration=bool({NO_CONCENTRATION_KEY, THRALL_CAST} & set(body.cast_options)))
         cast_body = SimpleNamespace(options=body.cast_options, option_inputs=body.cast_option_inputs)
         _close_twinned(char)
+        marks = _slot_marks(char)
         cast_opts = use_options(session, char, "cast", cast_body, spell=spell,
                                 casting_level=_cast_level(spell, body.slot_level, body.ritual), slotless=bool(body.ritual),
                                 damage_type=cast_damage_type(char, spell, body.choices))
+        if not body.ritual:
+            _mark_turn_slot(char, spell, marks, await active_encounter_row(session, char.id) is not None)
         await deliver_temp_gifts(session, char, cast_opts)
         _end_cast(char, cast_opts)
         cast_rolls, cast_total = roll_option_dice(char, cast_opts)
@@ -940,6 +975,7 @@ async def roll_spell_damage(
         "damage_type": main_type,
         "casting_level": casting_level,
         "is_critical": body.is_critical,
+        "timestamp": utc_now_iso(),  # il recap filtra per timestamp nella finestra della serata
     }
     if isinstance(char.rolls_history, list):  # niente commit qui: la richiesta ne fa uno solo, alla fine
         char.rolls_history = [*char.rolls_history, history_entry]
@@ -951,6 +987,7 @@ async def roll_spell_damage(
         rolls=main_rolls + all_extra,
         total=total,
         half_damage=half_damage,
+        save_halves=_save_halves(char, spell),
         damage_type=main_type,
         breakdown=breakdown,
         casting_level=casting_level,
@@ -982,6 +1019,25 @@ async def roll_spell_damage(
     }
     char.turn_state = turn
     return result
+
+
+# Incantesimi di livello con TS e danno in cui il TS superato non dimezza (``docs/superpowers/rules/{2014,2024}/spells.md``):
+# danno solo a TS fallito (prima riga), oppure danno che non dipende dal TS, che vale solo per l'effetto (punizioni e il resto).
+_NO_HALF_ON_SAVE = {
+    "disintegrate", "contagion", "black-tentacles", "hunger-of-hadar", "cordon-of-arrows", "dream", "geas",
+    "contact-other-plane", "faithful-hound", "conjure-animals",
+    "blinding-smite", "banishing-smite", "searing-smite", "staggering-smite", "thunderous-smite", "wrathful-smite",
+    "ensnaring-strike", "feeblemind", "heat-metal", "phantasmal-force", "web", "fount-of-moonlight", "bestow-curse",
+}
+# Uccisore Fantasma: nel 2014 il danno arriva solo a TS fallito; il 2024 dimezza a TS superato.
+_NO_HALF_ON_SAVE_2014 = {"phantasmal-killer"}
+
+
+def _save_halves(char: Character, spell: Spell) -> bool:
+    """Un TS superato dimezza il danno? No per i trucchetti (Fiamma Sacra, Fiotto Acido, ...: il Trucchetto Potente passa da
+    ``save_success_damage``) e per gli incantesimi elencati sopra, secondo l'edizione di chi lancia."""
+    no_half = _NO_HALF_ON_SAVE | (_NO_HALF_ON_SAVE_2014 if character_edition(char) == "2014" else set())
+    return spell.level > 0 and spell.srd_index not in no_half
 
 
 def _potent_cantrip(char: Character, spell: Spell) -> bool:
@@ -1046,6 +1102,12 @@ async def roll_spell_healing(
     level = body.casting_level if body.casting_level is not None else spell.level
     if level < spell.level or level > 9:
         raise HTTPException(status_code=400, detail="invalid casting_level")
+    wanted = body.target_character_ids
+    if len(set(wanted)) != len(wanted) or len(wanted) + body.apply_to_self > healing.targets:
+        raise HTTPException(status_code=422, detail={"code": "invalid_target"})
+    allies = [await ally_target(session, char, tid) for tid in wanted]  # PG seduti alla stessa serata attiva, prima di tirare
+    if any(a.is_dead for a in allies):
+        raise HTTPException(status_code=409, detail={"code": "target_dead"})
     count, sides = healing_dice(healing, spell.level, level)
     main_rolls = [random.randint(1, sides) for _ in range(count)]
 
@@ -1071,6 +1133,10 @@ async def roll_spell_healing(
     healed = 0
     if body.apply_to_self:
         healed = (await apply_heal(session, char, total))["healed"]
+    healed_allies = []
+    for ally in allies:  # riletto da zero: la cura parte dai PF veri (a 0 PF azzera i TS contro la morte)
+        receiver = await load_receiver(session, ally.id)
+        healed_allies.append({"id": receiver.id, "name": receiver.name, "healed": (await apply_heal(session, receiver, total))["healed"]})
     self_healed = 0
     if opts.self_heal:
         self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]
@@ -1078,7 +1144,7 @@ async def roll_spell_healing(
     return RollHealingResult(
         rolls=main_rolls, total=total, breakdown=breakdown, casting_level=level, main_kind=f"d{sides}" if count else None,
         main_rolls=main_rolls, modifier=modifier, bonus=applied.flat + opts.bonus, maximized=maximized, healed=healed,
-        self_healed=self_healed, option_result=option_result(opts, option_rolls, option_total))
+        healed_allies=healed_allies, self_healed=self_healed, option_result=option_result(opts, option_rolls, option_total))
 
 
 @router.post("/{char_id}/last-damage/options",

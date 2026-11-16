@@ -34,7 +34,7 @@ from core.rules.school_hooks import concentration_safe
 from api.services.rules_states import end_states_on_rest, on_damage
 from api.services.song_of_rest import roll_song_of_rest
 from api.services.spell_slots import clear_created_slots
-from api.services.rules_turn import get_turn, set_damaged
+from api.services.rules_turn import clear_turn, get_turn, set_damaged
 from api.services.session_allies import load_receiver, attach_party, attach_party_auras, attach_spell_auras, refund_donor_tokens, spend_donor_tokens
 from api.services import ally_reactions
 from api.services.condition_effects import release_concentration_effects
@@ -422,10 +422,10 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             and char.current_hit_points > 0
             and not concentration_safe(char)
         ):
-            conc_result = await roll_concentration_save(
-                char, conc_damage, session,
-                "advantage" if (char.settings or {}).get("war_caster") else "normal",
-            )
+            mode = body.concentration_mode
+            if (char.settings or {}).get("war_caster"):  # vantaggio e svantaggio si annullano
+                mode = {"normal": "advantage", "disadvantage": "normal"}.get(mode, mode)
+            conc_result = await roll_concentration_save(char, conc_damage, session, mode)
         await release_concentration_effects(session, char)
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
@@ -965,9 +965,7 @@ async def rest(
         spec, key, damage_type = chosen_resistance
         begin_state(char, StateSpec(key, ends_on=("manual",), data={"damage_type": damage_type}), spec.key, spec.name["it"])
     temp_received = await _deliver_rest_temp_hp(session, char, edition, receivers)
-    spell_turn = ("spell_slot_cast", "bonus_spell_cast", "leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic")
-    if any((char.turn_state or {}).get(k) for k in spell_turn):  # il riposo chiude il turno: nulla del lancio precedente vale più
-        char.turn_state = {k: v for k, v in char.turn_state.items() if k not in spell_turn} | {"spell_slot_cast": False, "bonus_spell_cast": False}
+    clear_turn(char)  # il riposo chiude il turno: azioni, attacchi e lanci precedenti non valgono più
     await end_knock_out(session, char)  # 2024: il riposo in corso del tramortito è questo
     await release_concentration_effects(session, char)
 

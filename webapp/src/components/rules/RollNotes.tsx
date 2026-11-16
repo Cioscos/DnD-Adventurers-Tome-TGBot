@@ -13,16 +13,20 @@ export default function RollNotes({ notes = [], autoFail = false, className = ''
   const { t, i18n } = useTranslation()
   const [targetKey, setTargetKey] = useState<string | null>(null)
   const extra = optionResult?.extra_rolls ?? []
+  const hit = optionResult?.hit_rolls ?? []
   const separate = optionResult?.separate_rolls ?? []
   const effects = optionResult?.effects ?? []
   const second = optionResult?.second_total
   const targets = charId != null ? (optionResult?.targets ?? []) : []
-  if (notes.length === 0 && !autoFail && extra.length === 0 && separate.length === 0 && effects.length === 0 && second == null && targets.length === 0) return null
+  if (notes.length === 0 && !autoFail && extra.length === 0 && hit.length === 0 && separate.length === 0 && effects.length === 0 && second == null && targets.length === 0) return null
   const lang = uiLang(i18n.language)
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}
-      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" sources={dieSources(optionResult?.keys ?? [], t)} rolls={extra} types={optionResult!.extra_types} total={optionResult!.extra_total} className={className} />}
+      {hit.length > 0 && <NamedDice charId={charId} nameKeys={(optionResult?.keys ?? []).filter((k) => k.endsWith(':add'))} testId="roll-option-hit-dice" label="hit_dice" rolls={hit} total={optionResult!.hit_total ?? 0} className={className} />}
+      {extra.length > 0 && (optionResult?.dice_keys
+        ? <NamedDice charId={charId} nameKeys={optionResult.dice_keys} testId="roll-option-dice" label="extra_dice" rolls={extra} types={optionResult.extra_types} total={optionResult.extra_total} className={className} />
+        : <ExtraDice testId="roll-option-dice" label="extra_dice" sources={dieSources(optionResult?.keys ?? [], t)} rolls={extra} types={optionResult!.extra_types} total={optionResult!.extra_total} className={className} />)}
       {second != null && (
         <span className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
           {t('character.roll_options.second_attack', { die: optionResult!.second_die, total: second })}
@@ -49,6 +53,22 @@ function dieSources(keys: string[], t: (k: string, o?: Record<string, unknown>) 
     if (kind === 'spell') return t(`character.roll_notes.spell.${name}`, { defaultValue: '' })
     return kind === 'bardic_die' ? t('character.roll_notes.option.bardic_die_add', { defaultValue: '' }) : ''
   }).filter(Boolean)
+}
+
+/** Il nome delle opzioni che hanno dato i dadi: incantesimo, opzione condivisa (Ispirazione Bardica) o privilegio della scheda. */
+function sourceNames(keys: string[], t: (k: string, o?: Record<string, unknown>) => string, labels: (notes: string[]) => string[]): string[] {
+  const names = keys.map((k) => {
+    if (k.startsWith('spell:')) return t(`character.roll_notes.spell.${k.split(':')[1]}`, { defaultValue: '' })
+    return labels([k.includes(':') ? k : `feature:${k}`])[0]
+  })
+  return [...new Set(names.filter((n) => n && !keys.includes(n)))]  // una chiave senza nome non si mostra
+}
+
+/** Dadi con la fonte presa dai nomi dei privilegi: l'hook delle etichette solo quando ci sono dadi da nominare. */
+function NamedDice({ charId, nameKeys, ...rest }: { charId?: number; nameKeys: string[] } & Omit<Parameters<typeof ExtraDice>[0], 'sources'>) {
+  const { t } = useTranslation()
+  const labels = useRollNoteLabels(charId)
+  return <ExtraDice {...rest} sources={sourceNames(nameKeys, t, labels)} />
 }
 
 function ExtraDice({ testId, label, sources = [], rolls, types, total, className }: { testId: string; label: string; sources?: string[]; rolls: number[]; types?: (string | null | undefined)[]; total: number; className: string }) {

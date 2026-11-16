@@ -109,6 +109,19 @@ describe('HpQuickSheet quick values', () => {
     expect(rollOptionsSpy).toHaveBeenCalledWith(42, expect.objectContaining({ roll: 'damage_taken', damage: 4 }))
   })
 
+  it('B14: concentrating, the damage carries the chosen mode of the concentration save', async () => {
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
+    renderWithProviders(<HpQuickSheet char={{ ...char, concentrating_spell_id: 7 } as CharacterFull} open onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'common.roll_mode.disadvantage' }))
+    await userEvent.click(screen.getByRole('button', { name: '−5' }))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(42, 'damage', 5, false, { concentration_mode: 'disadvantage' }))
+  })
+
+  it('without concentration there is no concentration save mode to choose', () => {
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    expect(screen.queryByRole('radio', { name: 'common.roll_mode.advantage' })).toBeNull()
+  })
+
   it('a chip applies at once, with the same undo as a typed value', async () => {
     updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
     const onClose = vi.fn()

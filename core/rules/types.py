@@ -531,6 +531,8 @@ class RollOptionSpec:
     # Si applica da sola a ogni tiro in cui è disponibile, senza scelta né costo, e non si elenca al giocatore (Punizione
     # Divina Migliorata): vale per le fasi che il server percorre da solo, quindi ``before``.
     automatic: bool = False
+    # Già accesa nel prompt «Prima del tiro»: il giocatore la vede e può spegnerla (Mira Costante, già pagata con l'azione bonus)
+    preselected: bool = False
     # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
     # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
     holds_at_one: bool = False

@@ -213,6 +213,7 @@ class AppliedOptions:
     fixed_dice: list[str] = field(default_factory=list)  # nel totale, senza raddoppio
     extra_dice_types: list[str | None] = field(default_factory=list)  # tipo di danno di ogni espressione di ``extra_dice``
     fixed_dice_types: list[str | None] = field(default_factory=list)  # ... e di ``fixed_dice``
+    dice_keys: list[str] = field(default_factory=list)  # le opzioni che hanno messo dadi in ``extra_dice``/``fixed_dice``
     rolled_types: list[str | None] = field(default_factory=list)  # tipo di ogni dado tirato, nell'ordine di ``rolled_dice``
     separate_type: str | None = None  # tipo del danno a parte
     separate_dice: list[list] = field(default_factory=list)  # [espressione, raddoppia], fuori dal totale
@@ -635,9 +636,11 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         elif spec.crit_doubles:
             out.extra_dice.append(expr)
             out.extra_dice_types.append(spec.extra_damage_type)
+            out.dice_keys.append(key)
         else:
             out.fixed_dice.append(expr)
             out.fixed_dice_types.append(spec.extra_damage_type)
+            out.dice_keys.append(key)
     return out
 
 

@@ -9,13 +9,11 @@ import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
-import Pressable from '@/components/ui/Pressable'
+import RollModeToggle from '@/components/ui/RollModeToggle'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
 import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import RollNotes from '@/components/rules/RollNotes'
 import type { PendingSave, PendingSaveRollResult } from '@/types'
-
-const MODES: RollMode[] = ['normal', 'advantage', 'disadvantage']
 
 interface Props {
   charId: number
@@ -119,25 +117,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
 
         {!view ? (
           <>
-            <div role="radiogroup" aria-label={t('common.roll_mode.title')} className="grid grid-cols-3 gap-2">
-              {MODES.map((md) => (
-                <Pressable
-                  key={md}
-                  role="radio"
-                  aria-checked={mode === md}
-                  haptic="light"
-                  onClick={() => setMode(md)}
-                  whileTap={{ scale: 0.95 }}
-                  className={`min-h-[44px] rounded-xl border text-sm font-body ${
-                    mode === md
-                      ? 'border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright font-semibold'
-                      : 'border-dnd-gold-dim/30 bg-dnd-surface text-dnd-text-muted'
-                  }`}
-                >
-                  {t(`common.roll_mode.${md}`)}
-                </Pressable>
-              ))}
-            </div>
+            <RollModeToggle mode={mode} onChange={setMode} />
             <Button
               size="lg"
               fullWidth

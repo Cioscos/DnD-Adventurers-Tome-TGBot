@@ -145,9 +145,9 @@ async def test_manual_tick_rejected_in_encounter(client, test_session_factory, m
 
 async def test_manual_tick_after_encounter_end(client, test_session_factory, monkeypatch):
     _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
-    await _add_effect(test_session_factory, cid, expiry=ExpirySpec("owner", "end", 2))
     as_user(GM_ID)
     assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    await _add_effect(test_session_factory, cid, expiry=ExpirySpec("owner", "end", 2))  # fuori scontro: la fine lo toglierebbe
     as_user(PLAYER_ID)
     r = await client.post(f"/characters/{cid}/rounds/tick")
     assert r.status_code == 200, r.text
@@ -166,3 +166,20 @@ async def test_save_notification_sent(client, test_session_factory, monkeypatch)
     assert len(msgs) == 1
     assert msgs[0]["chat_id"] == PLAYER_ID
     assert msgs[0]["text"] == "🎲 Tiro salvezza: Saggezza CD 14 per liberarti da Avvelenato"
+
+
+async def test_encounter_end_drops_round_durations(client, test_session_factory, monkeypatch):
+    """B12: a fine scontro le condizioni a round cadono (anche col TS), quelle senza durata restano."""
+    _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    await _add_effect(test_session_factory, cid, "frightened", enc_id=enc_id, expiry=ExpirySpec("owner", "end", 3),
+                      save=SaveSpec("wisdom", 13, "end"))
+    await _add_effect(test_session_factory, cid, "poisoned", save=SaveSpec("constitution", 13, "end"))
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        ch.conditions = {**ch.conditions, "blinded": True}
+        await s.commit()
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    conds, effects, _ = await _state(test_session_factory, cid)
+    assert conds["frightened"] is False and conds["poisoned"] is True and conds["blinded"] is True
+    assert "frightened" not in effects and "poisoned" in effects

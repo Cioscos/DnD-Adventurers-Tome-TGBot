@@ -19,6 +19,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
+import RollModeMenu from '@/components/ui/RollModeMenu'
 import RollNoteEditor from '@/components/character/RollNoteEditor'
 import { rollNoteOf } from '@/lib/settings'
 import { profBonus } from '@/lib/dnd'
@@ -45,6 +46,8 @@ export default function SavingThrows() {
   const reducedMotion = useReducedMotion()
   const toast = useToast()
   const [rollState, setRollState] = useState<RollState | null>(null)
+  // Tocco sulla riga: prima Normale / Vantaggio / Svantaggio, poi il tiro (vantaggio e svantaggio su tutti i d20).
+  const [modeMenu, setModeMenu] = useState<{ ability: string; anchor: DOMRect } | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -146,7 +149,7 @@ export default function SavingThrows() {
             <Fragment key={ability}>
               <Reveal.Item>
                 <div
-                  onClick={() => rollMutation.mutate({ ability, mode: 'normal' })}
+                  onClick={(e) => setModeMenu({ ability, anchor: e.currentTarget.getBoundingClientRect() })}
                   className="cursor-pointer py-1 hover:bg-dnd-surface/60 transition-colors"
                 >
                   <div className="flex items-center gap-1.5 min-h-[44px]">
@@ -187,6 +190,7 @@ export default function SavingThrows() {
                       <RollNoteEditor char={char} noteKey={`save.${ability}`} label={t(`character.stats.${ability}`)} />
                     </span>
                     <RollButton
+                      askMode
                       onRoll={(mode) => rollMutation.mutate({ ability, mode })}
                       pending={rollMutation.isPending && rollMutation.variables?.ability === ability}
                       ariaLabel={t('character.skills.roll')}
@@ -208,6 +212,17 @@ export default function SavingThrows() {
           )
         })}
       </Reveal.Stagger>
+
+      {modeMenu && (
+        <RollModeMenu
+          anchor={modeMenu.anchor}
+          onClose={() => setModeMenu(null)}
+          onSelect={(mode) => {
+            setModeMenu(null)
+            rollMutation.mutate({ ability: modeMenu.ability, mode })
+          }}
+        />
+      )}
 
       {rollState && (
         <RollResultModal

@@ -8,7 +8,8 @@ import RollModeMenu from './RollModeMenu'
 
 const HINT_KEY = 'dnd-hint-roll-mode'
 
-/** d20 roll trigger: tap = normal, long press (450 ms) = advantage/disadvantage menu. */
+/** d20 roll trigger: tap = normal, long press (450 ms) = advantage/disadvantage menu.
+ *  `askMode`: anche il tocco apre il menu (tiri salvezza: la modalità si sceglie sempre). */
 export default function RollButton({
   onRoll,
   pending = false,
@@ -16,8 +17,10 @@ export default function RollButton({
   ariaLabel,
   className = '',
   children,
+  askMode = false,
 }: {
   onRoll: (mode: RollMode) => void
+  askMode?: boolean
   pending?: boolean
   disabled?: boolean
   ariaLabel: string
@@ -38,12 +41,14 @@ export default function RollButton({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const openMenu = () => setAnchor(ref.current?.getBoundingClientRect() ?? null)
+  const tap = () => (askMode ? openMenu() : onRoll('normal'))
   const press = useLongPress({
     thresholdMs: 450,
-    onClick: () => onRoll('normal'),
+    onClick: tap,
     onLongPress: () => {
       fireHaptic('medium')
-      setAnchor(ref.current?.getBoundingClientRect() ?? null)
+      openMenu()
     },
   })
 
@@ -60,7 +65,7 @@ export default function RollButton({
         // and must not bubble into a clickable parent row.
         onClick={(e) => {
           e.stopPropagation()
-          if (e.detail === 0) onRoll('normal')
+          if (e.detail === 0) tap()
         }}
         onContextMenu={(e) => e.preventDefault()}
         className={`select-none touch-manipulation disabled:opacity-40 ${className}`}

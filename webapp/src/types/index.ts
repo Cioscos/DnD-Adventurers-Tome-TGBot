@@ -970,6 +970,8 @@ export interface RollDamageRequest extends Partial<RollChoice> {
 export interface RollHealingRequest extends Partial<RollChoice> {
   casting_level?: number
   apply_to_self?: boolean
+  /** PG seduti alla stessa serata attiva che ricevono la cura (il server li verifica). */
+  target_character_ids?: number[]
 }
 
 /** Esito di POST /characters/{id}/spells/{spell_id}/roll_healing (R41). */
@@ -985,6 +987,8 @@ export interface RollHealingResult {
   bonus: number
   maximized: boolean
   healed: number
+  /** PF davvero aggiunti a ogni alleato scelto. */
+  healed_allies?: { id: number; name: string; healed: number }[]
   self_healed: number
 }
 
@@ -1028,6 +1032,8 @@ export interface RollDamageResult {
   rolls: number[]
   total: number
   half_damage: number
+  /** False: chi supera il TS non subisce danni (trucchetti, Disintegrazione). */
+  save_halves?: boolean
   damage_type: string | null
   breakdown: string
   casting_level: number

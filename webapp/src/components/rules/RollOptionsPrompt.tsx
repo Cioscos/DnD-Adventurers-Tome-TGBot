@@ -56,9 +56,9 @@ function CastConfirmPrompt({ code, answer }: { code: string; answer: (go: boolea
 
 function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   const { t } = useTranslation()
-  const { charId, options, afterRoll, phase, context, answer } = request
-  // Sempre tutto spento: una conferma non è mai silenziosa.
-  const [chosen, setChosen] = useState<string[]>([])
+  const { charId, options, afterRoll, phase, context, answer, cancel } = request
+  // Tutto spento, salvo le opzioni già pagate che il server segna (Mira Costante): il prompt le mostra accese, mai in silenzio.
+  const [chosen, setChosen] = useState<string[]>(() => options.filter((o) => o.preselected).map((o) => o.key))
   const [slots, setSlots] = useState<Record<string, number>>({})
   const [allyOf, setAllyOf] = useState<Record<string, number>>({})  // opzione -> PG della serata che riceve i PF temporanei
 
@@ -99,7 +99,7 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   })
 
   return (
-    <Sheet open onClose={() => undefined} dismissible={false} zClassName="z-[70]" title={t(context?.cast ? 'character.roll_options.title_cast' : `character.roll_options.title_${phase}`)}>
+    <Sheet open onClose={context?.cancellable ? cancel : () => undefined} dismissible={!!context?.cancellable} zClassName="z-[70]" title={t(context?.cast ? 'character.roll_options.title_cast' : `character.roll_options.title_${phase}`)}>
       <div className="p-5 space-y-3">
         {context?.summary && (
           <p className="text-sm text-dnd-text font-mono tabular-nums text-center" data-testid="roll-options-summary">

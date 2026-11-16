@@ -1,6 +1,50 @@
 {
   "entries": [
     {
+      "version": "3.12.0",
+      "date": "2026-11-16",
+      "added": {
+        "it": [
+          "Parola guaritrice, Cura ferite e le altre cure da incantesimo si possono lanciare su un alleato seduto nella stessa serata: i PF arrivano sulla sua scheda e, se era a 0 PF, i tiri contro la morte si azzerano.",
+          "Tiri salvezza e tiro salvezza di concentrazione con la scelta Normale / Vantaggio / Svantaggio."
+        ],
+        "en": [
+          "Healing Word, Cure Wounds and the other healing spells can target an ally seated in the same evening: the HP land on their sheet and, if they were at 0 HP, their death saves reset.",
+          "Saving throws and the concentration save offer Normal / Advantage / Disadvantage."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Il log della serata non mostra più agli altri giocatori i PF di un personaggio (dado vita e danni): vedono solo cosa è successo.",
+          "Lanciare un incantesimo segna azione, azione bonus o reazione nella pagina Turno; in combattimento un secondo lancio con la stessa azione è rifiutato. Scudo non compare più due volte.",
+          "Fine scontro e riposo azzerano i contatori del turno; a fine scontro le condizioni a durata in round terminano.",
+          "I mostri aggiunti a scontro avviato prendono il loro posto nell'ordine di iniziativa.",
+          "Mira costante: vantaggio già acceso sul prossimo attacco, Velocità 0 indicata e Ritirata non più proposta.",
+          "Fiamma sacra e gli altri incantesimi che a tiro salvezza riuscito non fanno danni non propongono più «Dimezzato» (lista per edizione).",
+          "Il d4 della Benedizione compare fra i dadi del tiro per colpire, non fra quelli di danno; i dadi extra portano il nome della loro fonte.",
+          "Il modale «Prima del tiro» si chiude con X, Esc o clic fuori.",
+          "Un incantesimo già presente sulla scheda non si può aggiungere una seconda volta.",
+          "La barra XP mostra il livello vero di un personaggio creato a livello alto.",
+          "Il recap della serata mostra di nuovo il tiro più alto.",
+          "Gli incantesimi concessi dai privilegi hanno la loro scuola di magia (quella del 2024 dove cambia): i privilegi che guardano la scuola, come Magia stregata dell'Arcifata con Sonno, ora scattano."
+        ],
+        "en": [
+          "The evening log no longer shows other players a character's HP (hit dice and damage): they only see what happened.",
+          "Casting a spell marks the action, bonus action or reaction on the Turn page; in combat a second cast with the same action is refused. Shield no longer shows up twice.",
+          "Ending an encounter and resting reset the turn counters; round-based conditions end with the encounter.",
+          "Monsters added to a running encounter take their place in the initiative order.",
+          "Steady Aim: advantage already on for the next attack, Speed 0 shown and Withdraw no longer offered.",
+          "Sacred Flame and the other spells that deal no damage on a successful save no longer offer \"Half\" (per-edition list).",
+          "Bless's d4 shows among the attack-roll dice, not the damage dice; extra dice carry the name of their source.",
+          "The \"Before the roll\" dialog closes with X, Esc or a click outside.",
+          "A spell already on the sheet can't be added a second time.",
+          "The XP bar shows the real level of a character created at a high level.",
+          "The evening recap shows the highest roll again.",
+          "Spells granted by features now have their school of magic (the 2024 one where it changed): features that check the school, like the Archfey's Bewitching Magic with Sleep, now trigger."
+        ]
+      }
+    },
+    {
       "version": "3.11.0",
       "date": "2026-11-15",
       "added": {

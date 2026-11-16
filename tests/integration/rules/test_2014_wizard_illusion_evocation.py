@@ -63,6 +63,7 @@ async def test_malleable_illusions_needs_an_illusion_that_lasts_a_minute(client)
     assert (await _use(client, cid, MALLEABLE)).status_code == 409
     await client.post(f"/characters/{cid}/turn/new")
     assert (await _cast(client, cid, await _illusion(client, cid), slot_level=1)).status_code == 200
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})  # il lancio ha usato l'azione: il test usa il privilegio in un turno dopo
     r = await _use(client, cid, MALLEABLE)
     assert r.status_code == 200, r.text
     assert (await _turn(client, cid))["action_used"] is True
@@ -72,6 +73,7 @@ async def test_a_cantrip_illusion_of_one_minute_also_opens_malleable_illusions(c
     cid = await _wizard(client, 6, "illusion")
     minor = await _illusion(client, cid, 0, "1 minuto", "Illusione minore")
     assert (await _cast(client, cid, minor)).status_code == 200
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})  # il lancio ha usato l'azione: il test usa il privilegio in un turno dopo
     assert (await _use(client, cid, MALLEABLE)).status_code == 200
 
 

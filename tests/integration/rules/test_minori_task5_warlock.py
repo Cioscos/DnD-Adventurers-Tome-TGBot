@@ -54,7 +54,7 @@ async def test_warlock_25_m11_a_slot_cast_misty_step_still_warns_with_bewitching
     from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell
     from tests.integration.rules.test_2024_warlock_patrons import BEWITCH, _level
     cid = await _make(client, "archfey", 14)
-    charm = await _spell(client, cid, "Sonno", 1, school="enchantment")
+    charm = await _spell(client, cid, "Charme su persone", 1, school="enchantment")  # Sonno lo concede già il Signore Fatato
     misty = await _misty(client, cid)
     level = await _level(client, cid)
     assert (await _cast(client, cid, charm, slot_level=level, options=[BEWITCH])).status_code == 200

@@ -142,7 +142,7 @@ export default function SpellDamageSheet({
 
       // Il tipo scelto al lancio (Sfera Cromatica...): il server lo riconvalida e i privilegi che lo leggono lo vedono.
       const chosenType = cast ? useEffectPickStore.getState().picked[spell.id]?.choices?.damage_type : undefined
-      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel, ...(chosenType ? { damage_type: chosenType } : {}) })
+      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id, casting_level: effectiveCastingLevel, ...(chosenType ? { damage_type: chosenType } : {}) }, 'before', { cancellable: true })
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined
       let extra_rolls: number[] | undefined
@@ -214,6 +214,8 @@ export default function SpellDamageSheet({
   if (!spell) return null
 
   const isAttack = isAttackSpell(spell) || !spell.attack_save?.trim()
+  // Il server dice se un TS superato dimezza: i trucchetti (Fiamma Sacra) e Disintegrazione non fanno danni
+  const showHalf = !isAttack && result?.save_halves !== false
   const isCantrip = spell.level === 0
   const autoUpcast = parseDice(spell.higher_levels_dice)
   const autoExtra = autoUpcast ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides) : 0
@@ -382,10 +384,10 @@ export default function SpellDamageSheet({
           <div className="grid grid-cols-2 gap-2">
             {/* «Pieno/Metà» ha senso solo per le spell con TS: per gli attacchi
                 la card è una sola, a tutta larghezza, con label «Danno». */}
-            <div className={`bg-dnd-surface border border-dnd-crimson/40 rounded-md p-3 text-center ${isAttack ? 'col-span-2' : ''}`}>
+            <div className={`bg-dnd-surface border border-dnd-crimson/40 rounded-md p-3 text-center ${showHalf ? '' : 'col-span-2'}`}>
               <Swords size={16} className="mx-auto text-dnd-crimson-bright" />
               <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">
-                {isAttack
+                {!showHalf
                   ? t('character.spells.roll_damage.damage')
                   : t('character.spells.roll_damage.full_damage')}
               </p>
@@ -393,7 +395,7 @@ export default function SpellDamageSheet({
                 {result.total}
               </p>
             </div>
-            {!isAttack && (
+            {showHalf && (
               <div className="bg-dnd-surface border border-dnd-cobalt/40 rounded-md p-3 text-center">
                 <Shield size={16} className="mx-auto text-dnd-cobalt-bright" />
                 <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">

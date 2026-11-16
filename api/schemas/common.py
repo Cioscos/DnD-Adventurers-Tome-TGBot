@@ -327,6 +327,11 @@ class OptionResult(BaseModel):
     keys: list[str] = []
     extra_rolls: list[int] = []
     extra_total: int = 0  # dadi + eventuale fisso nell'espressione dei dadi
+    dice_keys: list[str] = []  # le opzioni che hanno dato i dadi di ``extra_rolls`` (Attacco Furtivo, Benedizione su un TS)
+    # Attacco con arma: i dadi sommati al tiro per colpire dopo averlo visto (Benedizione), già nel totale per colpire e
+    # fuori da ``extra_rolls``, che lì sono dadi di danno
+    hit_rolls: list[int] = []
+    hit_total: int = 0
     extra_types: list[str | None] = []  # tipo di danno di ogni valore di ``extra_rolls`` (assente se nessun dado ne ha uno)
     separate_type: str | None = None  # tipo del danno a parte
     separate_rolls: list[int] = []  # danno a parte, fuori dal totale
@@ -370,6 +375,8 @@ class HPUpdate(RollOptionsBody):
     damage_type: str | None = Field(None, max_length=40)
     # Chi porta a 0 PF con un attacco in mischia può tramortire invece di abbattere (2014 stabile a 0, 2024 a 1 PF).
     knock_out: bool = False
+    # Il TS di concentrazione che il danno fa tirare: vantaggio/svantaggio scelti dal giocatore (sommati a Incantatore da Guerra)
+    concentration_mode: Literal["normal", "advantage", "disadvantage"] = "normal"
 
 
 class HPUndoRequest(BaseModel):

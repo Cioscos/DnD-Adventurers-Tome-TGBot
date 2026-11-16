@@ -70,6 +70,19 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   return out
 }
 
+/** Un incantesimo lanciato solo su di sé (Scudo) ha lo stato `spell:` e l'orologio `spell_cast:` sullo stesso personaggio:
+ *  resta una riga sola, quella dello stato, con i round rimasti dell'orologio. Chiuderla chiude anche l'orologio (server). */
+function selfSpellOnce(states: StateRow[], charId: number): StateRow[] {
+  const clocks = new Map(states.filter((s) => s.key.startsWith('spell_cast:')
+    && (s.data?.state_data as { targets?: unknown } | undefined)?.targets === 1).map((s) => [s.key.slice('spell_cast:'.length), s]))
+  const own = new Set(states.filter((s) => s.key.startsWith('spell:') && s.data?.caster_id === charId
+    && clocks.has(s.key.slice('spell:'.length))).map((s) => s.key.slice('spell:'.length)))
+  return states
+    .filter((s) => !(s.key.startsWith('spell_cast:') && own.has(s.key.slice('spell_cast:'.length))))
+    .map((s) => s.key.startsWith('spell:') && own.has(s.key.slice('spell:'.length))
+      ? { ...s, rounds_left: clocks.get(s.key.slice('spell:'.length))?.rounds_left ?? s.rounds_left } : s)
+}
+
 /** Stati attivi dei privilegi (Ira...) con i round rimasti e la chiusura a mano. Niente se non ce n'è nessuno. */
 export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
   const { t, i18n } = useTranslation()
@@ -111,7 +124,7 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
     onError: (err) => notifyMutationError(err),
   })
   // I segni interni di un privilegio (il Canto di Riposo già ricevuto) non sono del giocatore: né si vedono né si chiudono.
-  const states = (char.active_states ?? []).filter((s) => !s.data?.internal)
+  const states = selfSpellOnce((char.active_states ?? []).filter((s) => !s.data?.internal), char.id)
   if (states.length === 0) return null
   return (
     <ul className="mt-3 flex flex-col gap-2">
