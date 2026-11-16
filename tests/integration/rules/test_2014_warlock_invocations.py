@@ -179,6 +179,9 @@ async def test_agonizing_blast_needs_the_invocation(client):
 
 async def test_agonizing_blast_is_found_from_the_italian_name_too(client):
     cid = await _caster(client, 2, "agonizing_blast", blast=True, charisma=18)
+    # Al posto della riga SRD (servita al prerequisito), una scritta a mano senza chiave: stesso nome, quindi non insieme.
+    srd = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "eldritch-blast")
+    assert (await client.delete(f"/characters/{cid}/spells/{srd['id']}")).status_code == 204
     manual = await _spell(client, cid, "Deflagrazione Occulta", 0, attack_save="ATK", damage_dice="1d10", damage_type="force")
     assert (await _blast_damage(client, cid, manual, main_rolls=[3]))["total"] == 3 + 4
 

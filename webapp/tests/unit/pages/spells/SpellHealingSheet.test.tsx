@@ -6,9 +6,9 @@ import SpellHealingSheet from '@/pages/spells/SpellHealingSheet'
 import { ApiError } from '@/api/client'
 import type { Spell, RollHealingResult } from '@/types'
 
-const { rollHealing, useSpell } = vi.hoisted(() => ({ rollHealing: vi.fn(), useSpell: vi.fn() }))
+const { rollHealing, useSpell, sessionAllies } = vi.hoisted(() => ({ rollHealing: vi.fn(), useSpell: vi.fn(), sessionAllies: vi.fn() }))
 
-vi.mock('@/api/client', async (orig) => ({ ...((await orig()) as object), api: { spells: { rollHealing, use: useSpell } } }))
+vi.mock('@/api/client', async (orig) => ({ ...((await orig()) as object), api: { spells: { rollHealing, use: useSpell }, characters: { sessionAllies } } }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
@@ -42,7 +42,7 @@ vi.mock('@/components/ui/Button', async () => {
 const result = { total: 11, breakdown: '1d8=[5] +3 +3 = 11', maximized: false, healed: 0, self_healed: 4, modifier: 3, bonus: 3, rolls: [5], main_rolls: [5], casting_level: 1, main_kind: 'd8' } as RollHealingResult
 const cure = { id: 3, name: 'Cura ferite', level: 1, srd_index: 'cure-wounds', is_healing: true } as Spell
 
-afterEach(() => { rollHealing.mockReset(); useSpell.mockReset() })
+afterEach(() => { rollHealing.mockReset(); useSpell.mockReset(); sessionAllies.mockReset() })
 
 describe('SpellHealingSheet', () => {
   it('renders nothing without a spell', () => {
@@ -59,6 +59,19 @@ describe('SpellHealingSheet', () => {
     await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ casting_level: 2, apply_to_self: false })))
     expect(await screen.findByText('11')).toBeInTheDocument()
     expect(screen.getByText('character.spells.roll_healing.self_healed')).toBeInTheDocument()
+  })
+
+  it('heals an ally seated at the evening: one target, picking him turns the caster off (B8)', async () => {
+    sessionAllies.mockResolvedValue([{ id: 9, name: 'Brann' }, { id: 10, name: 'Morto', dead: true }])
+    useSpell.mockResolvedValue({ id: 7 })
+    rollHealing.mockResolvedValue({ ...result, healed_allies: [{ id: 9, name: 'Brann', healed: 11 }] })
+    renderWithProviders(<SpellHealingSheet charId={7} spell={cure} slotLevel={1} onClose={() => {}} />)
+    await userEvent.click(screen.getAllByRole('switch')[0])  // chi lancia
+    await userEvent.click(await screen.findByRole('switch', { name: 'Brann' }))
+    expect(screen.queryByRole('switch', { name: 'Morto' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ apply_to_self: false, target_character_ids: [9] })))
+    expect(await screen.findByText('character.spells.roll_healing.healed_ally')).toBeInTheDocument()
   })
 
   it('sends apply_to_self when the caster is the target', async () => {

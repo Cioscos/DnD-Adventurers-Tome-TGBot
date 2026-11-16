@@ -131,7 +131,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     mutationFn: async (cast: AttackCast) => {
       const pick = useEffectPickStore.getState().picked[cast.spell.id]
       const prepared = await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
-      const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id })
+      const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id }, 'before', { cancellable: true })
       const roll = d20Arg(cast.mode, await rollD20(cast.mode), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
         slot_id: cast.slot?.id, slot_level: cast.slot?.level ?? null, ritual: cast.ritual, confirm: prepared.confirm,

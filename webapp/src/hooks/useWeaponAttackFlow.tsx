@@ -10,8 +10,8 @@ import { haptic } from '@/auth/telegram'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
-import { applyAfterRoll, askAttackLimit, askRollOptions, canRerollInspiration, hasDeferringOptions } from '@/lib/rollOptions'
-import type { RollOptionsQuery } from '@/api/client'
+import { applyAfterRoll, askAttackLimit, askRollOptions, CastCancelled, canRerollInspiration, hasDeferringOptions } from '@/lib/rollOptions'
+import type { RollChoice, RollOptionsQuery } from '@/api/client'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import type { CharacterFull } from '@/types'
 
@@ -125,7 +125,14 @@ export function useAttackRoll() {
       const offhand = choice?.attack_mode === 'offhand'
       // Prima le opzioni: una con uno slot proprio (Frenesia, Ritorsione) non pesa sul limite dell'azione Attacco.
       const { query: optionsQuery } = flow(charId, itemId, choice)
-      const { own_slot, ranged, ...before } = await askRollOptions(charId, optionsQuery, 'before', preset ? { preset } : undefined)
+      let picked: RollChoice
+      try {
+        picked = await askRollOptions(charId, optionsQuery, 'before', preset ? { preset } : { cancellable: true })
+      } catch (err) {
+        if (err instanceof CastCancelled) return null  // prompt chiuso: nessun attacco
+        throw err
+      }
+      const { own_slot, ranged, ...before } = picked
       const confirm = offhand || own_slot ? {} : await limitConfirmation(charId, itemId)
       if (!confirm) return null
       const { post, secondStep } = flow(charId, itemId, choice, confirm, ranged)

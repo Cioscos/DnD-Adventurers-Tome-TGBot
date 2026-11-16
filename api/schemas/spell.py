@@ -249,9 +249,11 @@ class LastDamageBody(RollOptionsBody):
 
 class RollHealingRequest(RollOptionsBody):
     """Cura di un incantesimo (R41): il server tira i dadi e somma; il client non manda totali né dadi.
-    ``apply_to_self``: chi lancia è anche il bersaglio."""
+    ``apply_to_self``: chi lancia è anche il bersaglio; ``target_character_ids``: PG seduti alla stessa serata attiva che
+    ricevono la stessa cura (quanti, chi lancia compreso, lo dice ``HealingSpec.targets``)."""
     casting_level: int | None = None
     apply_to_self: bool = False
+    target_character_ids: list[int] = Field(default_factory=list, max_length=6)
 
 
 class RollHealingResult(BaseModel):
@@ -265,6 +267,7 @@ class RollHealingResult(BaseModel):
     bonus: int = 0              # fisso dei privilegi (Discepolo della Vita)
     maximized: bool = False
     healed: int = 0             # PF davvero aggiunti a chi lancia (``apply_to_self``)
+    healed_allies: list[dict] = []  # {id, name, healed}: PF davvero aggiunti a ogni alleato scelto
     self_healed: int = 0        # PF che chi lancia recupera per un privilegio (Guaritore Benedetto)
     option_result: OptionResult | None = absent_when_none()
     model_config = {"from_attributes": True}
@@ -281,6 +284,7 @@ class RollDamageResult(BaseModel):
     rolls: list[int]
     total: int
     half_damage: int
+    save_halves: bool = True  # False: chi supera il TS non subisce danni (trucchetti, Disintegrazione)
     damage_type: str | None
     breakdown: str
     casting_level: int

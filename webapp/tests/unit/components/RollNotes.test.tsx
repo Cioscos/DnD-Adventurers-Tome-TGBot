@@ -7,7 +7,7 @@ vi.mock('react-i18next', async (orig) => ({
   ...(await orig() as object),
   useTranslation: () => ({ t: (k: string, o?: { total?: number }) => (o?.total ? `${k}:${o.total}` : k), i18n: { language: 'en' } }),
 }))
-vi.mock('@/hooks/useRollNoteLabels', () => ({ useRollNoteLabels: () => (n: string[]) => n }))
+vi.mock('@/hooks/useRollNoteLabels', () => ({ useRollNoteLabels: () => (n: string[]) => n.map((x) => (x === 'feature:rogue.sneak_attack' ? 'Sneak Attack' : x)) }))
 
 const base: OptionResult = { keys: ['x'], extra_rolls: [], extra_total: 0, bonus: 0, multiplier: 1, spent: [] }
 
@@ -25,6 +25,13 @@ describe('RollNotes', () => {
   it('says which spell the extra d4 comes from (point 84)', () => {
     render(<RollNotes optionResult={{ ...base, keys: ['spell:bless:add'], extra_rolls: [3], extra_total: 3 }} />)
     expect(screen.getByTestId('roll-option-dice')).toHaveTextContent('(character.roll_notes.spell.bless): [3] = 3')
+  })
+
+  it('on a weapon attack keeps the Bless d4 on the to-hit and names the real source of the damage dice (B11)', () => {
+    render(<RollNotes optionResult={{ ...base, keys: ['spell:bless:add', 'rogue.sneak_attack'], hit_rolls: [3], hit_total: 3,
+      dice_keys: ['rogue.sneak_attack'], extra_rolls: [2, 1], extra_total: 3 }} />)
+    expect(screen.getByTestId('roll-option-hit-dice')).toHaveTextContent('character.roll_options.hit_dice (character.roll_notes.spell.bless): [3] = 3')
+    expect(screen.getByTestId('roll-option-dice')).toHaveTextContent('character.roll_options.extra_dice (Sneak Attack): [2, 1] = 3')
   })
 
   it('shows the second attack roll next to its damage', () => {

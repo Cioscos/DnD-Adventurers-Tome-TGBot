@@ -335,6 +335,7 @@ async def test_damage_from_the_form_sheet_that_ends_it_returns_the_concentration
     assert spell.status_code == 201, spell.text
     use = await client.post(f"/characters/{cid}/spells/{spell.json()['id']}/use", json={"slot_level": 1})
     assert use.status_code == 200, use.text
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})  # il lancio ha usato l'azione: il test usa il privilegio in un turno dopo
     form = await _in_form(client, cid, hp=10)
     r = await client.patch(f"/characters/{cid}/companions/{form}/hp", json={"op": "damage", "value": 14})
     assert r.status_code == 200, r.text

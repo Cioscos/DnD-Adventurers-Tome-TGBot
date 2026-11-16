@@ -563,6 +563,7 @@
       "confirm_rest": "Riposa",
       "concentration_active": "In concentrazione",
       "concentration_lost": "Concentrazione persa!",
+      "concentration_mode": "TS di concentrazione al prossimo danno",
       "shared_damage": "{{name}} subisce {{amount}} danni condivisi",
       "shared_damage_save_ok": "{{name}} subisce {{amount}} danni condivisi: TS di concentrazione {{total}} contro CD {{dc}}, riuscito",
       "shared_damage_save_fail": "{{name}} subisce {{amount}} danni condivisi: TS di concentrazione {{total}} contro CD {{dc}}, concentrazione persa",
@@ -953,6 +954,8 @@
         "total": "PF restituiti",
         "maximized": "Dadi al massimo",
         "healed_self": "PF aggiunti a te: {{n}}",
+        "healed_ally": "PF aggiunti a {{name}}: {{n}}",
+        "targets": "Chi curi",
         "self_healed": "Recuperi {{n}} PF per un privilegio"
       },
       "roll_damage": {
@@ -1225,6 +1228,7 @@
         "reroll": "Ritira con Ispirazione",
         "summary": "Colpire: {{die}} {{bonus}} = {{total}}",
         "extra_dice": "Dadi extra",
+        "hit_dice": "Dadi al tiro per colpire",
         "once_per_turn": "Una volta per turno",
         "slot_action": "Azione",
         "slot_bonus": "Azione bonus",
@@ -1791,6 +1795,8 @@
         "cunning_sleight_of_hand": "Mani Veloci: una prova di Destrezza (Rapidità di Mano) come azione bonus. Tirala dalle Abilità.",
         "cunning_thieves_tools": "Mani Veloci: usi gli arnesi da scasso su una serratura o una trappola come azione bonus.",
         "cunning_use_object": "Mani Veloci: l'azione Usare un Oggetto come azione bonus.",
+        "steady_aim": "Mira Costante: vantaggio al prossimo tiro per colpire di questo turno (già acceso nel «Prima del tiro»). La tua Velocità è 0 fino alla fine del turno: la Ritirata del Colpo Astuto non è offerta.",
+        "steady_aim_keeps_speed": "Mira Costante: vantaggio al prossimo tiro per colpire di questo turno (già acceso nel «Prima del tiro»). Mira Errante: la tua Velocità non cambia.",
         "mage_hand_control": "Controlli la mano magica con l'azione bonus. Per i compiti inosservati tira Rapidità di Mano (Destrezza) contro la Percezione (Saggezza) di chi guarda.",
         "fist_of_unbroken_air": "TS Forza: se fallisce, subisce i danni contundenti, è spinto fino a 6 m e cade prono; se supera, metà danni e nessun altro effetto.",
         "bend_luck_plus": "Piegare la Fortuna: somma il d4 tirato al tiro dell'altra creatura (colpire, prova o TS).",

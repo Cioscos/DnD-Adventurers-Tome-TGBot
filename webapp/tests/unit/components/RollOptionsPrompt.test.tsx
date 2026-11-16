@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
-import { askRollOptions } from '@/lib/rollOptions'
+import { askRollOptions, CastCancelled, usePromptStore } from '@/lib/rollOptions'
 import { d20Arg } from '@/hooks/useD20Roll'
 import RollNotes from '@/components/rules/RollNotes'
 import type { RollOption } from '@/api/client'
@@ -13,7 +13,10 @@ vi.mock('sonner', () => ({ toast: { warning: toastWarning } }))
 vi.mock('@/api/client', () => ({ api: { characters: { rollOptions, sessionAllies } } }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
-  return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
+  // Un foglio chiudibile mostra la sua X (Chiudi), come lo Sheet vero.
+  return { default: (p: { open: boolean; children?: unknown; dismissible?: boolean; onClose: () => void }) => (p.open
+    ? React.createElement('div', null, p.dismissible !== false && React.createElement('button', { 'aria-label': 'sheet-close', onClick: p.onClose }), p.children)
+    : null) }
 })
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -70,6 +73,24 @@ describe('askRollOptions', () => {
     expect(toastWarning).not.toHaveBeenCalled()
   })
 
+  it('B9: a cancellable prompt closes and the roll does not start', async () => {
+    rollOptions.mockResolvedValue([option()])
+    renderWithProviders(<RollOptionsHost />)
+    const asked = expect(askRollOptions(1, { roll: 'attack', spell_id: 3 }, 'before', { cancellable: true })).rejects.toBeInstanceOf(CastCancelled)
+    await userEvent.click(await screen.findByLabelText('sheet-close'))
+    await asked
+    await waitFor(() => expect(screen.queryByText('Applica Attacco Furtivo?')).toBeNull())
+  })
+
+  it('a prompt that is not cancellable has no close', async () => {
+    rollOptions.mockResolvedValue([option()])
+    renderWithProviders(<RollOptionsHost />)
+    void askRollOptions(1, { roll: 'skill', skill: 'stealth' })
+    expect(await screen.findByText('Applica Attacco Furtivo?')).toBeInTheDocument()
+    expect(screen.queryByLabelText('sheet-close')).toBeNull()
+    usePromptStore.getState().request?.answer({ options: [], option_inputs: {} })  // non lasciarlo aperto al test dopo
+  })
+
   it('only options of the asked phase open the prompt, but after_hit ones ask to defer the damage', async () => {
     rollOptions.mockResolvedValue([option({ phase: 'after_hit' })])
     renderWithProviders(<RollOptionsHost />)
@@ -112,6 +133,19 @@ describe('askRollOptions', () => {
     const answer = askRollOptions(1, { roll: 'attack', item_id: 3 })
     await userEvent.click(await screen.findByText('character.roll_options.roll'))
     await expect(answer).resolves.toEqual({ options: [], option_inputs: {} })
+  })
+
+  it('an option the server marks as preselected opens on, and can be turned off (Steady Aim)', async () => {
+    rollOptions.mockResolvedValue([option({ key: 'steady', label: 'Mira Costante?', mode: 'advantage', preselected: true }), option()])
+    renderWithProviders(<RollOptionsHost />)
+    const on = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    expect(await screen.findByRole('switch', { name: 'Mira Costante?' })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(on).resolves.toEqual({ options: ['steady'], option_inputs: {} })
+    const off = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Mira Costante?' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(off).resolves.toEqual({ options: [], option_inputs: {} })
   })
 
   it('returns the chosen keys', async () => {

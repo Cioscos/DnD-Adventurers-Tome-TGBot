@@ -256,6 +256,17 @@ describe('ActiveStatesBar, wizard states', () => {
     expect(screen.getAllByText(/character\.turn\.state_cast_by_you/)).toHaveLength(1)
   })
 
+  it('a spell cast only on oneself (Shield) shows one row, with the clock rounds left (B4)', () => {
+    const data = { caster_id: 7, caster_name: 'Io', duration: { rounds: 1, concentration: false, until_rest: false }, targets: 1 }
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:shield', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Scudo', data },
+      { key: 'spell_cast:shield', feature_key: '', rounds_left: 1, ends_on: ['manual'], name: 'Scudo', data: { spell_key: 'shield', state_data: data } },
+    ], [])} />)
+    expect(screen.getAllByText(/^Scudo/)).toHaveLength(1)
+    expect(screen.queryByText(/character\.turn\.state_cast_by_you/)).toBeNull()
+    expect(screen.getByText(/character\.turn\.state_rounds_left/)).toBeInTheDocument()
+  })
+
   it('keeps two spell states of the same spell from two casters apart and drops the closed ones from the cached sheet (62)', async () => {
     const { QueryClient } = await import('@tanstack/react-query')
     const aid = (caster: number, name: string) => ({

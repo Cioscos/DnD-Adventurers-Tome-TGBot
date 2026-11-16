@@ -116,7 +116,10 @@ def _redact_event_description(
     if viewer_user_id == owner_user_id or is_gm:
         return event.description
 
-    # Only hp_change is redacted.
+    # La riga del dado vita riporta i PF prima/dopo: come la Cura.
+    if event.event_type == "hit_dice":
+        return f"{character_name} ha speso un dado vita"
+    # Gli altri tipi non riportano PF; hp_change non mostra mai i PF agli altri giocatori.
     if event.event_type != "hp_change":
         return event.description
 
@@ -127,15 +130,16 @@ def _redact_event_description(
         return f"{character_name} si è curato"
     if op in ("SET_CURRENT", "SET_MAX", "SET_TEMP"):
         return f"{character_name} ha modificato i PF"
-    if op == "DAMAGE":
-        return event.description
+    if op == "DAMAGE":  # il danno resta visibile, i PF (vecchi -> nuovi) no
+        amount = meta.get("amount")
+        return f"{character_name} ha subito {amount} danni" if isinstance(amount, int) else f"{character_name} ha subito danni"
 
     # Legacy fallback (meta missing): best-effort sniff on description.
     desc_lower = event.description.lower()
     if "cura" in desc_lower or "heal" in desc_lower:
         return f"{character_name} si è curato"
     if "danni" in desc_lower or "danno" in desc_lower or "damage" in desc_lower:
-        return event.description
+        return f"{character_name} ha subito danni"
     return f"{character_name} ha modificato i PF"
 
 

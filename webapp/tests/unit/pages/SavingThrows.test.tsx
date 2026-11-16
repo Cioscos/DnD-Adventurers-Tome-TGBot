@@ -167,8 +167,20 @@ describe('SavingThrows page', () => {
     renderWithProviders(<SavingThrows />)
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.strength'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.normal' }))
     await waitFor(() => expect(rollSavingThrow).toHaveBeenCalledWith(5, 'strength', undefined))
     expect(await screen.findByTestId('roll-total')).toHaveTextContent('12')
+  })
+
+  it('B14: the row asks Normal / Advantage / Disadvantage before rolling', async () => {
+    getChar.mockResolvedValue(baseChar)
+    rollSavingThrow.mockResolvedValue(rollResult)
+    renderWithProviders(<SavingThrows />)
+    await screen.findByTestId('pb')
+    await userEvent.click(screen.getByText('character.stats.constitution'))
+    expect(rollSavingThrow).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.advantage' }))
+    await waitFor(() => expect(rollSavingThrow).toHaveBeenCalledWith(5, 'constitution', { dice: undefined, mode: 'advantage' }))
   })
 
   it('inspiration reroll re-rolls with the with_inspiration flag', async () => {
@@ -177,6 +189,7 @@ describe('SavingThrows page', () => {
     renderWithProviders(<SavingThrows />)
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.strength'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.normal' }))
     await userEvent.click(await screen.findByText('reroll'))
     await waitFor(() =>
       expect(rollSavingThrow).toHaveBeenLastCalledWith(5, 'strength', undefined, true),
@@ -192,6 +205,7 @@ describe('SavingThrows page', () => {
     renderWithProviders(<SavingThrows />)
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.strength'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.normal' }))
     await userEvent.click(await screen.findByText('reroll'))
     await waitFor(() =>
       expect(toastError).toHaveBeenCalledWith('character.inspiration.unavailable_error'),

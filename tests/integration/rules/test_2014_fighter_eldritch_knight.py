@@ -24,6 +24,12 @@ async def _knight(client, level=7, **scores) -> int:
     return await _fighter(client, level, "eldritch_knight", **scores)
 
 
+async def _owned(client, cid, key: str) -> int:
+    """Un incantesimo che un privilegio concede già (chiave SRD o nome): non si aggiunge una seconda volta (409)."""
+    spells = (await client.get(f"/characters/{cid}/spells")).json()
+    return next(s["id"] for s in spells if s["srd_index"] == key or s["name"].lower() == key.lower())
+
+
 async def _spell(client, cid, name, level=0, **extra) -> int:
     r = await client.post(f"/characters/{cid}/spells", json={"name": name, "level": level, "casting_time": "1 azione", **extra})
     assert r.status_code == 201, r.text

@@ -645,6 +645,7 @@ export default function QuickActions({ char }: Props) {
                 return (
                   <div key={a.key} className={cellClass}>
                     <RollButton
+                      askMode={a.type === 'save'}
                       onRoll={(mode) => run(a, mode)}
                       pending={isActionPending(a)}
                       disabled={incapacitated && a.type !== 'save'}

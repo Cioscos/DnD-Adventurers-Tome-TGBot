@@ -24,6 +24,8 @@ export type PromptContext = {
   cast?: boolean
   /** Opzioni già scelte (reazione in un tocco): nessun prompt, il server le ricontrolla comunque. */
   preset?: string[]
+  /** Il prompt si chiude (Chiudi, Esc, clic fuori) e il tiro non parte: `askRollOptions` rifiuta con `CastCancelled`. */
+  cancellable?: boolean
 }
 
 export type PromptRequest = {
@@ -35,6 +37,7 @@ export type PromptRequest = {
   phase: PromptPhase
   context?: PromptContext
   answer: (answer: RollChoice) => void
+  cancel: () => void
 }
 
 export const usePromptStore = create<{ request: PromptRequest | null }>(() => ({ request: null }))
@@ -56,7 +59,7 @@ export const useCastConfirmStore = create<{ request: { code: string; answer: (go
   () => ({ request: null }),
 )
 
-/** Il giocatore ha rifiutato una conferma: nessun lancio e nessun errore da mostrare. */
+/** Il giocatore ha rifiutato una conferma o chiuso un prompt `cancellable`: nessun tiro e nessun errore da mostrare. */
 export class CastCancelled extends Error {}
 
 function askCastConfirm(code: string): Promise<boolean> {
@@ -84,7 +87,7 @@ export async function prepareCast(charId: number, spellId: number, ritual: boole
   // Il tipo di danno scelto al lancio (Sfera Cromatica...): l'Affinità Elementale al lancio si offre su quello, non sul tipo di base.
   const chosenType = useEffectPickStore.getState().picked[spellId]?.choices?.damage_type
   const choice = await askRollOptions(
-    charId, { roll: 'cast', spell_id: spellId, ...(chosenType ? { damage_type: chosenType } : {}), ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true },
+    charId, { roll: 'cast', spell_id: spellId, ...(chosenType ? { damage_type: chosenType } : {}), ...(castingLevel && !ritual ? { casting_level: castingLevel } : {}), ...(ritual || freeCast ? { slotless: true } : {}) }, 'before', { cast: true, cancellable: true },
   )
   return { confirm, options: choice.options, option_inputs: choice.option_inputs }
 }
@@ -184,10 +187,14 @@ export async function askRollOptions(
     return { ...base, options: chosen, ...(defersBy(chosen) ? { defer_damage: true } : {}), ...withSlot(chosen), ...withRanged(chosen) }
   }
   if (options.length === 0 && afterRoll.length === 0 && !context?.keepOpen) return base
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     usePromptStore.setState({
       request: {
         charId, options, afterRoll, phase, context,
+        cancel: () => {
+          usePromptStore.setState({ request: null })
+          reject(new CastCancelled())
+        },
         answer: (answer) => {
           usePromptStore.setState({ request: null })
           resolve({ ...answer, ...(defer || defersBy(answer.options) ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options) })

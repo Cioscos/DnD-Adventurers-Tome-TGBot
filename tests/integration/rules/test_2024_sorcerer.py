@@ -494,6 +494,8 @@ async def test_quickened_spell_is_refused_after_a_spell_of_level_1_or_more_this_
     cantrip = await _spell(client, cid, "Luce", 0)
     spell = await _spell(client, cid, "Charme", 1)
     assert (await _cast(client, cid, cantrip)).status_code == 200
+    assert (await _turn(client, cid))["action_used"] is True  # il trucchetto usa l'azione
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "action", "used": False})
     assert QUICKENED in await _roll_keys(client, cid, "cast", spell_id=spell)
     assert (await _cast(client, cid, spell, QUICKENED, slot_level=1)).status_code == 200
     turn = await _turn(client, cid)

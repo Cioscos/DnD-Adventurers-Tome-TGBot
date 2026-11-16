@@ -8,6 +8,9 @@ from tests.integration.rules.test_2014_cleric import _cleric
 
 
 async def _heal_spell(client, cid, index="cure-wounds", level=1, name="Cura ferite") -> int:
+    have = [s["id"] for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == index]
+    if have:  # il Dominio della Vita concede già Cura ferite
+        return have[0]
     r = await client.post(f"/characters/{cid}/spells", json={
         "name": name, "level": level, "srd_index": index, "is_prepared": True,
         "class_id": (await _full(client, cid))["classes"][0]["id"]})

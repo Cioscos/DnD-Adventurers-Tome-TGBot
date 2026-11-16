@@ -157,3 +157,33 @@ async def test_reorder_in_setup_is_409(client, test_session_factory):
         f"/sessions/{sid}/encounter/reorder", json={"combatant_ids": ids},
     )
     assert r.status_code == 409, r.text
+
+
+# ---------------------------------------------------------------------------
+# Rinforzi a scontro avviato: l'iniziativa li mette al loro posto (B6)
+# ---------------------------------------------------------------------------
+
+async def test_reinforcements_take_their_initiative_slot(client, test_session_factory, monkeypatch):
+    sid, enc = await _started_full(client, test_session_factory, monkeypatch)  # Eroe 17, Goblin 1 12, Goblin 2 6
+    active_id, round_no = enc["active_combatant_id"], enc["round"]
+    r = await client.post(f"/sessions/{sid}/encounter/combatants",
+                          json={"name": "Orco", "count": 3, "initiative_mod": 0})
+    orcs = [c for c in r.json()["combatants"] if c["name"].startswith("Orco")]
+    for orc, ini in zip(orcs, (11, 9, 6)):
+        r = await client.patch(f"/sessions/{sid}/encounter/combatants/{orc['id']}", json={"initiative": ini})
+        assert r.status_code == 200, r.text
+    out = r.json()
+    assert [c["name"] for c in out["combatants"]] == ["Eroe", "Goblin 1", "Orco 1", "Orco 2", "Goblin 2", "Orco 3"]
+    assert out["active_combatant_id"] == active_id and out["round"] == round_no
+    # anche rileggendo (reload, altri utenti)
+    r = await client.get(f"/sessions/{sid}/live")
+    assert [c["name"] for c in r.json()["encounter"]["combatants"]][2] == "Orco 1"
+
+
+async def test_reinforcement_rolled_initiative_takes_its_slot(client, test_session_factory, monkeypatch):
+    sid, enc = await _started_full(client, test_session_factory, monkeypatch)
+    r = await client.post(f"/sessions/{sid}/encounter/combatants", json={"name": "Orco", "initiative_mod": 0})
+    orc = _monster(r.json(), "Orco")
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{orc['id']}/initiative", json={"die": 15})
+    assert r.status_code == 200, r.text
+    assert [c["name"] for c in r.json()["combatants"]] == ["Eroe", "Orco", "Goblin 1", "Goblin 2"]

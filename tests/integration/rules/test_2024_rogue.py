@@ -211,6 +211,36 @@ async def test_steady_aim_gives_advantage_to_the_next_attack_and_zeroes_the_spee
     assert (await _full(client, cid))["computed"]["speed"] == base
 
 
+async def test_steady_aim_advantage_is_preselected_says_the_speed_and_withdraw_is_not_offered_at_speed_0(client):
+    """B5/R2 (playtest 2026-11-16): il vantaggio è già acceso nel prompt, l'uso dice la Velocità 0 e la Ritirata (1d6 per
+    muoversi di metà Velocità) non si offre finché la Velocità è 0."""
+    cid = await _rogue24(client, 5)
+    wid = await _rapier(client, cid)
+    assert WITHDRAW in await _offered(client, cid, wid)
+    r = await _use(client, cid, STEADY, params={"moved": False})
+    assert r.status_code == 200, r.text
+    assert "steady_aim" in r.json()["notes"]
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": wid})).json()
+    assert next(o for o in listed if o["key"] == STEADY_ADV)["preselected"] is True
+    assert all("preselected" not in o for o in listed if o["key"] != STEADY_ADV)
+    assert WITHDRAW not in await _offered(client, cid, wid)
+
+
+async def test_steady_aim_ends_when_the_turn_ends_in_an_encounter(client, test_session_factory, monkeypatch):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+    from tests.integration.rules.test_2014_barbarian_round1 import _in_encounter
+    sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 3, "hit_die": 8})
+    assert r.status_code == 201, r.text
+    assert (await _use(client, cid, STEADY, params={"moved": False})).status_code == 200
+    assert any(s["key"] == "steady_aim" for s in (await _full(client, cid))["active_states"] or [])
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200
+    as_user(PLAYER_ID)
+    assert not any(s["key"] == "steady_aim" for s in (await _full(client, cid))["active_states"] or [])
+
+
 # ---------------------------------------------------------------------------
 # Colpo Astuto
 # ---------------------------------------------------------------------------
@@ -318,6 +348,22 @@ async def test_withdraw_tells_the_half_speed_move_without_opportunity_attacks(cl
     r = await _strike(client, cid, await _rapier(client, cid), SNEAK, WITHDRAW)
     effect = r.json()["option_result"]["effects"][0]
     assert "4,5 m" in effect["it"] and "15 ft" in effect["en"]  # velocità 30 ft: metà = 15 ft
+
+
+@pytest.mark.parametrize("options", [(SNEAK,), (SNEAK, WITHDRAW)])
+async def test_bow_spends_an_arrow_also_with_withdraw(client, options):
+    """B13 (playtest 2026-11-16): la Ritirata non salta la munizione (il 18 visto era il recupero a fine scontro)."""
+    cid = await _rogue24(client, 5)
+    bow = await _item(client, cid, "Arco corto", damage_dice="1d6", weapon_type="ranged", properties=["ammunition"],
+                      equip="main_hand")
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Frecce", "item_type": "ammunition", "quantity": 18})
+    assert r.status_code == 201, r.text
+    arrows = max(i["id"] for i in r.json()["items"])
+    hit = await _hit(client, cid, bow, mode="advantage", dice=[10, 12])
+    r = await _damage(client, cid, hit, *options)
+    assert r.status_code == 200, r.text
+    assert r.json()["ammo"]["remaining"] == 17
+    assert next(i for i in (await _full(client, cid))["items"] if i["id"] == arrows)["quantity"] == 17
 
 
 # ---------------------------------------------------------------------------

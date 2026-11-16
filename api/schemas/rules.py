@@ -51,6 +51,7 @@ class RollOptionRead(BaseModel):
     mode: str | None = None
     multiplier: float | None = None
     once_per_turn: bool = False
+    preselected: bool | None = absent_when_none()  # accesa di default nel prompt prima del tiro
     slot: str | None = None
     needs: str | None = None
     group: str | None = None

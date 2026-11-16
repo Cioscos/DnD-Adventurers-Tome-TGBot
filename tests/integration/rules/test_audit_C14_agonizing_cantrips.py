@@ -2,11 +2,12 @@
 Solo Deflagrazione Occulta tira un danno per raggio; un altro trucchetto (Tocco Gelido) ha un solo tiro: il bonus si somma una volta."""
 from __future__ import annotations
 
-from tests.integration.rules.test_2024_warlock import _caster24, _cantrip, _damage
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _owned
+from tests.integration.rules.test_2024_warlock import _caster24, _damage
 
 
 async def test_agonizing_blast_on_another_cantrip_adds_charisma_once_p155(client):
     cid = await _caster24(client, 5, "agonizing_blast__chill_touch", cantrips=["chill-touch"], charisma=18)
-    chill = await _cantrip(client, cid, "chill-touch")
+    chill = await _owned(client, cid, "chill-touch")  # già scelto come trucchetto da `_caster24`
     # 5° livello: 2 dadi del trucchetto in un solo tiro di danno; CAR 18 = +4 una volta
     assert (await _damage(client, cid, chill, main_rolls=[4, 4]))["total"] == 8 + 4

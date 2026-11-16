@@ -386,4 +386,4 @@ async def test_h3b_rests_clear_the_spell_slot_turn_flag(client, test_session_fac
         assert not turn.get("spell_slot_cast") and not turn.get("bonus_spell_cast"), kind
         for key in ("leveled_cast", "cast_prior_slot", "empowered_used", "spell_attack_dice", "cast_metamagic"):
             assert key not in turn or not turn[key], (kind, key)
-        assert turn["attacks_made"] == 3, kind
+        assert turn["attacks_made"] == 0, kind  # B7: il riposo azzera anche gli attacchi

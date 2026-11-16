@@ -149,3 +149,42 @@ async def test_spell_without_damage_dice_is_400(client):
         json={"casting_level": 1},
     )
     assert r.status_code == 400, r.text
+
+
+async def test_damage_roll_saved_with_timestamp_for_recap(client):
+    """B15: il recap tiene solo le voci di rolls_history con timestamp nella finestra della serata."""
+    cid = await _create_character(client)
+    sid = await _add_spell(client, cid, level=1, damage_dice="2d6")
+    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_damage",
+                          json={"casting_level": 1, "main_rolls": [3, 4]})
+    assert r.status_code == 200, r.text
+    entry = (await client.get(f"/characters/{cid}")).json()["rolls_history"][-1]
+    assert entry["total"] == 7 and isinstance(entry.get("timestamp"), str)
+
+
+async def test_save_cantrip_and_disintegrate_do_not_halve_on_a_passed_save(client):
+    """Fiamma Sacra (trucchetto), Disintegrazione e le punizioni: chi supera il TS non dimezza; Palla di Fuoco dimezza."""
+    cid = await _create_character(client)
+    cases = [("Sacred Flame", 0, "1d8", "sacred-flame", False), ("Disintegrate", 6, "10d6", "disintegrate", False),
+             ("Wrathful Smite", 1, "1d6", "wrathful-smite", False), ("Phantasmal Killer", 4, "4d10", "phantasmal-killer", False),
+             ("Fireball", 3, "8d6", "fireball", True)]
+    for name, level, dice, srd, halves in cases:
+        r = await client.post(f"/characters/{cid}/spells", json={
+            "name": name, "level": level, "damage_dice": dice, "damage_type": "fire", "attack_save": "DEX", "srd_index": srd})
+        assert r.status_code == 201, r.text
+        r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/roll_damage", json={"casting_level": level})
+        assert r.status_code == 200, r.text
+        assert r.json()["save_halves"] is halves, name
+
+
+async def test_2024_phantasmal_killer_and_contagion_follow_the_2024_rules(client):
+    """2024: Uccisore Fantasma dimezza a TS superato, Contagio fa danni solo a TS fallito."""
+    cid = await _create_character(client)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    for name, srd, halves in (("Phantasmal Killer", "phantasmal-killer", True), ("Contagion", "contagion", False)):
+        r = await client.post(f"/characters/{cid}/spells", json={
+            "name": name, "level": 4, "damage_dice": "4d10", "damage_type": "psychic", "attack_save": "WIS", "srd_index": srd})
+        assert r.status_code == 201, r.text
+        r = await client.post(f"/characters/{cid}/spells/{r.json()['id']}/roll_damage", json={"casting_level": 5})
+        assert r.status_code == 200, r.text
+        assert r.json()["save_halves"] is halves, name

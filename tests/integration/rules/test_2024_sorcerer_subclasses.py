@@ -10,7 +10,7 @@ from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed
 from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_paladin import _new_turn, _rest, _turn
 from tests.integration.rules.test_2014_sorcerer import SP, _points, _set_points
-from tests.integration.rules.test_2014_fighter_eldritch_knight import _spell, _sword
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _owned, _spell, _sword
 
 NAMES = {"aberrant": "Stregoneria Aberrante", "clockwork": "Stregoneria Meccanica", "draconic": "Stregoneria Draconica",
          "wild_magic": "Magia Selvaggia"}
@@ -245,7 +245,7 @@ async def test_dragon_companion_casts_summon_dragon_once_without_a_slot(client):
 
 async def test_dragon_companion_option_casts_summon_dragon_without_concentration_and_keeps_the_other(client):
     cid = await _make(client, "draconic", 18)
-    other = await _spell(client, cid, "Volare", 3, is_concentration=True)
+    other = await _owned(client, cid, "fly")  # incantesimo draconico già concesso
     r = await _cast(client, cid, other, slot_level=3)
     assert r.status_code == 200, r.text
     assert (await _full(client, cid))["concentrating_spell_id"] == other

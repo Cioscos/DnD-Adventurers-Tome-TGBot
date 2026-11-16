@@ -249,10 +249,16 @@ def spell_pick_target(char: Character, pick_id: str, level: int, class_id: int |
         raise HTTPException(422, detail={"code": "spell_pick_ritual"})
     if ch.spell_school and normalize_school(school) != ch.spell_school:  # Sapienti del Mago 2024: solo la propria scuola
         raise HTTPException(422, detail={"code": "spell_pick_school"})
+    ensure_new_spell(char, name, srd_index)
+    return cls, ch
+
+
+def ensure_new_spell(char: Character, name: str, srd_index: str | None) -> None:
+    """Un incantesimo già sulla scheda (stessa chiave SRD o stesso nome a meno di maiuscole) non si aggiunge di nuovo:
+    lo concede già un privilegio (Dominio) o è stato aggiunto prima."""
     lowered = name.strip().lower()
     if any((srd_index and s.srd_index == srd_index) or s.name.strip().lower() == lowered for s in char.spells):
         raise HTTPException(409, detail={"code": "spell_already_known"})
-    return cls, ch
 
 
 def consume_spell_pick(session: AsyncSession, char: Character, cls: CharacterClass, ch, spell) -> None:

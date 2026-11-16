@@ -619,6 +619,61 @@ _SCHOOLS = {"contact-other-plane": "divination", "animate-dead": "necromancy", "
             "detect-thoughts": "divination", "dissonant-whispers": "enchantment", "phantasmal-force": "illusion",
             "tashas-hideous-laughter": "enchantment", "clairvoyance": "divination", "hunger-of-hadar": "conjuration",
             "confusion": "enchantment", "summon-aberration": "conjuration", "modify-memory": "enchantment", "charm-person": "enchantment", "mirror-image": "illusion", "command": "enchantment"}  # Magia Ammaliante del Bardo 2024
+# Tutti gli altri concessi (dati SRD 2014; quelli senza SRD dal manuale): i privilegi che guardano la scuola valgono
+# anche per gli incantesimi concessi (Magia Stregata dell'Arcifata con Sonno)
+_SCHOOLS |= {k: v for k, v in {
+    "acid-arrow": "evocation", "acid-splash": "conjuration", "aid": "abjuration", "alarm": "abjuration",
+    "alter-self": "transmutation", "animal-friendship": "enchantment", "arcane-eye": "divination",
+    "arms-of-hadar": "conjuration", "astral-projection": "necromancy", "augury": "divination",
+    "aura-of-life": "abjuration", "bane": "enchantment", "banishment": "abjuration", "barkskin": "transmutation",
+    "beacon-of-hope": "abjuration", "beast-sense": "divination", "bestow-curse": "necromancy", "bless": "enchantment",
+    "blight": "necromancy", "blink": "transmutation", "blur": "illusion", "burning-hands": "evocation",
+    "call-lightning": "conjuration", "calm-emotions": "enchantment", "charm-monster": "enchantment",
+    "chill-touch": "necromancy", "chromatic-orb": "evocation", "cloudkill": "conjuration", "commune": "divination",
+    "commune-with-nature": "divination", "compulsion": "enchantment", "cone-of-cold": "evocation",
+    "conjure-animals": "conjuration", "conjure-elemental": "conjuration", "control-water": "transmutation",
+    "create-food-and-water": "conjuration", "crusaders-mantle": "evocation", "cure-wounds": "evocation",
+    "dancing-lights": "evocation", "darkness": "evocation", "darkvision": "transmutation", "daylight": "evocation",
+    "death-ward": "abjuration", "destructive-wave": "evocation", "detect-magic": "divination",
+    "dimension-door": "conjuration", "disguise-self": "illusion", "divination": "divination",
+    "divine-favor": "evocation", "dominate-beast": "enchantment", "dominate-person": "enchantment",
+    "dragons-breath": "transmutation", "dream": "illusion", "druidcraft": "transmutation",
+    "elementalism": "transmutation", "enhance-ability": "transmutation", "ensnaring-strike": "evocation",
+    "evards-black-tentacles": "conjuration", "faerie-fire": "evocation", "false-life": "necromancy",
+    "find-familiar": "conjuration", "fire-bolt": "evocation", "fire-shield": "evocation", "fireball": "evocation",
+    "flame-strike": "evocation", "flaming-sphere": "conjuration", "fly": "transmutation", "fog-cloud": "conjuration",
+    "fount-of-moonlight": "evocation", "freedom-of-movement": "abjuration", "gaseous-form": "transmutation",
+    "geas": "enchantment", "grasping-vine": "conjuration", "greater-invisibility": "illusion",
+    "greater-restoration": "abjuration", "guardian-of-faith": "conjuration", "guidance": "divination",
+    "guiding-bolt": "evocation", "gust-of-wind": "evocation", "hallucinatory-terrain": "illusion",
+    "haste": "transmutation", "hellish-rebuke": "evocation", "heroism": "enchantment", "hex": "enchantment",
+    "hold-monster": "enchantment", "hold-person": "enchantment", "hunters-mark": "divination",
+    "hypnotic-pattern": "illusion", "ice-storm": "evocation", "identify": "divination", "insect-plague": "conjuration",
+    "invisibility": "illusion", "jump": "transmutation", "legend-lore": "divination",
+    "lesser-restoration": "abjuration", "levitate": "transmutation", "light": "evocation",
+    "lightning-bolt": "evocation", "locate-creature": "divination", "longstrider": "transmutation",
+    "mage-armor": "abjuration", "mage-hand": "conjuration", "magic-weapon": "transmutation",
+    "mass-cure-wounds": "conjuration", "mass-healing-word": "evocation", "meld-into-stone": "transmutation",
+    "mending": "transmutation", "mind-sliver": "enchantment", "minor-illusion": "illusion",
+    "misty-step": "conjuration", "moonbeam": "evocation", "nondetection": "abjuration",
+    "pass-without-trace": "abjuration", "passwall": "transmutation", "plant-growth": "transmutation",
+    "poison-spray": "conjuration", "prestidigitation": "transmutation", "protection-from-energy": "abjuration",
+    "protection-from-evil-and-good": "abjuration", "rarys-telepathic-bond": "divination",
+    "ray-of-enfeeblement": "necromancy", "ray-of-frost": "evocation", "ray-of-sickness": "necromancy",
+    "revivify": "conjuration", "sacred-flame": "evocation", "sanctuary": "abjuration", "scorching-ray": "evocation",
+    "scrying": "divination", "sending": "evocation", "shatter": "evocation", "shield-of-faith": "abjuration",
+    "shocking-grasp": "evocation", "silence": "illusion", "silent-image": "illusion", "sleep": "enchantment",
+    "sleet-storm": "conjuration", "slow": "transmutation", "speak-with-animals": "divination",
+    "speak-with-dead": "necromancy", "spider-climb": "transmutation", "spike-growth": "transmutation",
+    "spirit-guardians": "conjuration", "spiritual-weapon": "evocation", "starry-wisp": "evocation",
+    "steel-wind-strike": "conjuration", "stinking-cloud": "conjuration", "stone-shape": "transmutation",
+    "stoneskin": "abjuration", "suggestion": "enchantment", "summon-celestial": "conjuration",
+    "summon-construct": "conjuration", "summon-dragon": "conjuration", "thaumaturgy": "transmutation",
+    "thunderwave": "evocation", "tree-stride": "conjuration", "wall-of-fire": "evocation",
+    "wall-of-force": "evocation", "wall-of-stone": "evocation", "water-breathing": "transmutation",
+    "water-walk": "transmutation", "web": "conjuration", "wind-wall": "evocation",
+    "yolandes-regal-presence": "enchantment", "zone-of-truth": "enchantment",
+}.items() if k not in _SCHOOLS}
 GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_SCHOOLS.get(key)) for key, spell in GRANTED_SPELLS.items()}
 
 # Dati che nel 2024 differiscono da quelli sopra (che sono del 2014): Colonna di fiamme 5d6 + 5d6 (2024 spells.md p.275).
@@ -627,6 +682,15 @@ GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_S
 GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     "flame-strike": replace(GRANTED_SPELLS["flame-strike"], damage_dice="5d6", extra_damage_dice="5d6"),
 }
+# Scuole cambiate nel 2024 (spells-2024: Cura Ferite abiurazione, Rianimare necromanzia...)
+_SCHOOLS_2024 = {
+    "acid-splash": "evocation", "cure-wounds": "abjuration", "dancing-lights": "illusion",
+    "divine-favor": "transmutation", "ensnaring-strike": "conjuration", "mass-cure-wounds": "abjuration",
+    "mass-healing-word": "abjuration", "poison-spray": "necromancy", "revivify": "necromancy", "sending": "divination",
+    "stoneskin": "transmutation",
+}
+for _key, _school in _SCHOOLS_2024.items():
+    GRANTED_SPELLS_2024[_key] = replace(GRANTED_SPELLS_2024.get(_key) or GRANTED_SPELLS[_key], school=_school)
 
 
 def granted_spell(key: str, edition: str) -> GrantedSpell:

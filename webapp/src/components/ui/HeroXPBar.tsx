@@ -2,7 +2,7 @@ import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { ChevronsUp } from 'lucide-react'
 import { GiPolarStar as Star } from 'react-icons/gi'
-import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
+import { XP_THRESHOLDS, displayedTotalLevel } from '@/lib/xpThresholds'
 import { formatInt } from '@/lib/format'
 
 interface HeroXPBarProps {
@@ -29,7 +29,7 @@ export default function HeroXPBar({
 }: HeroXPBarProps) {
   const { t, i18n } = useTranslation()
 
-  const xpLevel = levelFromXp(currentXP)
+  const xpLevel = displayedTotalLevel(totalClassLevel, false, currentXP)
   // Finding #4: with no classes (total_level 0) the character has no level — show
   // LIV 0 and suppress the LEVEL UP prompt, consistent with "Nessuna classe". The
   // XP-derived level is a pending value with no class to assign it to.

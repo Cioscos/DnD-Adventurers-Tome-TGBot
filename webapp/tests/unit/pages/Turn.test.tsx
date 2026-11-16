@@ -759,11 +759,18 @@ describe('Turn page', () => {
     expect(await screen.findByText('character.turn.unarmed_desc:1d6')).toBeInTheDocument()
   })
 
-  it('shows "Fine round" outside an encounter', async () => {
-    getChar.mockResolvedValue(char)
+  it('shows "Fine round" outside an encounter when a round duration is running', async () => {
+    getChar.mockResolvedValue({ ...char, condition_effects: [{ slug: 'poisoned', expiry_count: 2 }] })
     renderWithProviders(<Turn />)
     expect(await screen.findByText('character.turn.end_round')).toBeInTheDocument()
     expect(screen.queryByText('character.conditions.duration.in_encounter')).not.toBeInTheDocument()
+  })
+
+  it('hides "Fine round" outside an encounter with nothing to count down (B7)', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.new_turn')).toBeInTheDocument()
+    expect(screen.queryByText('character.turn.end_round')).not.toBeInTheDocument()
   })
 
   it('hides "Fine round" in an encounter and shows the note', async () => {

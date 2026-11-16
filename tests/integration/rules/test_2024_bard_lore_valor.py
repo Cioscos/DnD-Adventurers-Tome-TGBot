@@ -242,6 +242,7 @@ async def test_battle_magic_needs_a_spell_cast_with_the_action_in_this_turn(clie
     bonus = (await _add_spell(client, cid, "Parola", 0, casting_time="1 azione bonus", class_id=bard_class)).json()
     await client.post(f"/characters/{cid}/spells/{bonus['id']}/use", json={})
     assert BATTLE_MAGIC not in await _roll_keys(client, cid, "attack", item_id=sword)
+    await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": False})  # l'azione bonus della Parola: libera per la Magia da Battaglia
     action = (await _add_spell(client, cid, "Dardo", 0, casting_time="1 azione", class_id=bard_class)).json()
     await client.post(f"/characters/{cid}/spells/{action['id']}/use", json={})
     assert BATTLE_MAGIC in await _roll_keys(client, cid, "attack", item_id=sword)

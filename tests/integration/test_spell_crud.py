@@ -105,3 +105,16 @@ async def test_delete_unknown_spell_is_404(client):
     cid = await _create_character(client)
     r = await client.delete(f"/characters/{cid}/spells/999999")
     assert r.status_code == 404, r.text
+
+
+async def test_create_refuses_a_spell_already_known(client):
+    """B3 (playtest 2026-11-16): stesso incantesimo due volte (chiave SRD o nome a meno di maiuscole) -> 409."""
+    cid = await _create_character(client)
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Cura ferite", "level": 1, "srd_index": "cure-wounds"})
+    assert r.status_code == 201, r.text
+    for body in ({"name": "Cure Wounds", "level": 1, "srd_index": "cure-wounds"}, {"name": "cura Ferite ", "level": 1}):
+        r = await client.post(f"/characters/{cid}/spells", json=body)
+        assert r.status_code == 409, r.text
+        assert r.json()["detail"]["code"] == "spell_already_known"
+    spells = (await client.get(f"/characters/{cid}/spells")).json()
+    assert len(spells) == 1

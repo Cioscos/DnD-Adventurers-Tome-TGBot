@@ -68,3 +68,39 @@ async def test_turn_state_effects_sig_changes_with_hp_and_ability_uses(client, t
         (await s.execute(select(Ability).where(Ability.character_id == char_id))).scalar_one().uses = 2
         await s.commit()
     assert (await sig()).json()["effects_sig"] != second
+
+
+_USED = {"action_used": True, "bonus_used": True, "reaction_used": True, "attacks_made": 1, "action_attacks": 1}
+
+
+async def _mark_used(test_session_factory, char_id):
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        ch = await s.get(Character, char_id)
+        ch.turn_state = {**(ch.turn_state or {}), **_USED}
+        await s.commit()
+
+
+async def test_encounter_end_clears_turn_counters(client, test_session_factory):
+    """B7: finito lo scontro, Attacchi/Azione/Azione bonus/Reazione tornano liberi."""
+    sid, enc = await setup_full_encounter(client, test_session_factory)
+    char_id = next(c for c in enc["combatants"] if c["kind"] == "pc")["character_id"]
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/start", json={})).status_code == 200
+    await _mark_used(test_session_factory, char_id)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    as_user(PLAYER_ID)
+    turn = (await client.get(f"/characters/{char_id}/turn-state")).json()["turn"]
+    assert {k: turn[k] for k in _USED} == {k: (0 if isinstance(v, int) and v is not True else False) for k, v in _USED.items()}
+
+
+async def test_rest_clears_turn_counters(client, test_session_factory):
+    _, char_id = await seed_session(test_session_factory)
+    await _mark_used(test_session_factory, char_id)
+    as_user(PLAYER_ID)
+    for rest in ("short", "long"):
+        r = await client.post(f"/characters/{char_id}/rest", json={"rest_type": rest})
+        assert r.status_code == 200, r.text
+        turn = (await client.get(f"/characters/{char_id}/turn-state")).json()["turn"]
+        assert not any(turn[k] for k in _USED), (rest, turn)
+        await _mark_used(test_session_factory, char_id)

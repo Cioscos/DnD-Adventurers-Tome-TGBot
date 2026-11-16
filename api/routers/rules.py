@@ -269,7 +269,11 @@ async def last_roll_options(
                    if is_attack else die == 20 and last["roll"] not in ("skill", "ability", "initiative"))
     notes = [*last["notes"], *(n for n in applied.notes if n not in last["notes"])]
     previous = OptionResult(**last["option_result"]) if last.get("option_result") else None
-    block = option_result(opts, rolls, extra, previous=previous)
+    if weapon_attack:  # i dadi sommati al tiro per colpire (Benedizione) non sono dadi di danno dell'attacco
+        block = option_result(opts, [], 0, previous=previous, hit_rolls=[*(previous.hit_rolls if previous else []), *rolls],
+                              hit_total=(previous.hit_total if previous else 0) + extra)
+    else:
+        block = option_result(opts, rolls, extra, previous=previous)
     refundable = {**last["refundable"], **opts.refundable}
     if opts.keys:
         add_history(db, char.id, "concentration_save" if conc else _HISTORY_EVENT[last["roll"]],
