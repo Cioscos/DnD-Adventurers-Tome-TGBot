@@ -73,6 +73,11 @@ _PREPARED_2024: dict[str, tuple[int, ...]] = {
 }
 
 
+def cantrip_steps(class_key: str | None) -> dict[int, int]:
+    """Trucchetti della tabella della classe: livello minimo -> totale (vuoto se la classe non ne ha)."""
+    return dict(_CANTRIPS.get(class_key, {}))
+
+
 def _at_level(table: tuple[int, ...], level: int) -> int:
     return table[max(1, min(level, 20)) - 1]
 

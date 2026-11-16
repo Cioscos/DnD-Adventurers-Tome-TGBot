@@ -11,13 +11,15 @@ from datetime import datetime
 from typing import Any
 
 from core.data.classes import ASI_LEVELS, ASI_LEVELS_DEFAULT, class_table_key
+from core.data.spell_slots import caster_kind
 from core.rules.catalog import features_for
 from core.rules.edition import character_edition, class_key
-from core.rules.types import RuleContext
+from core.rules.types import ChoiceSpec, RuleContext
 
 RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "epic_boon:19"]}
 TOOL_SEED_FLAG = "tool_choices_seeded"  # settings: strumenti sulla scheda già contati nelle scelte di classe (una volta)
 FREE_KNOWN_KEY = "free_known_spells"  # settings: id degli incantesimi che non contano fra i conosciuti (Segreti Magici Aggiuntivi)
+CLASS_CANTRIPS = "class_cantrips"  # trucchetti della tabella della classe, scelti dalla pagina degli incantesimi (B2)
 
 
 def _now() -> str:
@@ -42,13 +44,56 @@ def mark_resolved(char: Any, choice: dict) -> None:
 
 
 def active_choice_specs(char: Any, cls: Any) -> list:
-    """`ChoiceSpec` delle feature della classe valide per edizione e sottoclasse."""
+    """`ChoiceSpec` delle feature della classe valide per edizione e sottoclasse, più i trucchetti della classe."""
     ctx = RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)
-    return [ch for spec in features_for(character_edition(char), class_key(cls))
-            if (spec.subclass is None or spec.subclass == cls.subclass_key)
-            # la scelta di un'opzione (Patto del Tomo) vale solo a chi ha scelto quell'opzione
-            and (spec.option_group is None or spec.option_key in (cls.options or {}).get(spec.option_group, []))
-            for ch in spec.choices if ch.applies is None or ch.applies(ctx)]
+    specs = [ch for spec in features_for(character_edition(char), class_key(cls))
+             if (spec.subclass is None or spec.subclass == cls.subclass_key)
+             # la scelta di un'opzione (Patto del Tomo) vale solo a chi ha scelto quell'opzione
+             and (spec.option_group is None or spec.option_key in (cls.options or {}).get(spec.option_group, []))
+             for ch in spec.choices if ch.applies is None or ch.applies(ctx)]
+    cantrips = class_cantrip_spec(char, cls)
+    return [*specs, cantrips] if cantrips else specs
+
+
+def class_cantrip_spec(char: Any, cls: Any) -> ChoiceSpec | None:
+    """Trucchetti della tabella (anche dei terzi incantatori, dall'elenco del mago); ``None`` se la classe non ne ha."""
+    from core.rules.spellcasting import cantrip_steps  # import locale: spellcasting carica il catalogo
+    key = class_key(cls)
+    steps = cantrip_steps(key) if caster_kind(cls, character_edition(char)) else {}
+    if not steps:
+        return None
+    return ChoiceSpec(group=CLASS_CANTRIPS, levels=steps, options=lambda _c: [], spell_pick="known", spell_level=0,
+                      spell_list="wizard" if key in ("fighter", "rogue") else key)
+
+
+def _spells_loaded(char: Any) -> bool:
+    """Un ORM con gli incantesimi non caricati non deve scatenare un lazy load asincrono."""
+    orm = getattr(char, "_sa_instance_state", None)
+    return not (orm is not None and "spells" in orm.unloaded) and getattr(char, "spells", None) is not None
+
+
+def seed_class_cantrips(char: Any) -> None:
+    """I trucchetti già sulla scheda riempiono la scelta dei trucchetti di classe: si chiede solo quello che manca.
+    Contano come il riepilogo per classe (``_class_limits``): non sempre preparati, non fuori dai conosciuti, della
+    classe o senza classe se c'è un solo incantatore; mai un trucchetto già preso da un'altra scelta."""
+    edition = character_edition(char)
+    casters = [c for c in char.classes if class_key(c) and caster_kind(c, edition)]
+    free = set((char.settings or {}).get(FREE_KNOWN_KEY) or [])
+    taken = {k for c in char.classes for opts in (c.options or {}).values() for k in opts if isinstance(k, str)}
+    for cls in casters:
+        ch = class_cantrip_spec(char, cls)
+        reached = [lvl for lvl in ch.levels if lvl <= cls.level] if ch else []
+        chosen = list((cls.options or {}).get(CLASS_CANTRIPS, []))
+        room = (ch.levels[max(reached)] if reached else 0) - len(chosen)
+        if room <= 0:
+            continue
+        mine = [k for s in sorted(char.spells, key=lambda x: x.id or 0)
+                if s.level == 0 and not s.always_prepared and s.id not in free
+                and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))
+                and (k := s.srd_index or s.name) not in taken][:room]
+        if mine:
+            cls.options = {**(cls.options or {}), CLASS_CANTRIPS: [*chosen, *mine]}
+            taken.update(mine)
 
 
 def apply_grants(char: Any, ch: Any, keys: list[str]) -> None:
@@ -196,6 +241,9 @@ def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
     edition = character_edition(char)
     pending = list(char.pending_choices or [])
     resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
+    loaded = _spells_loaded(char)
+    if loaded:
+        seed_class_cantrips(char)
     # Il 19° livello è un Dono Epico nel 2024 e un ASI nel 2014: un cambio di edizione scambia la scelta in sospeso
     out = [c for c in pending if c.get("kind") not in ("class_option", "epic_boon")
            and not (edition == "2024" and c.get("kind", "asi") == "asi" and c.get("level") == 19)]
@@ -218,6 +266,9 @@ def reconcile_choices(char: Any, retrofit: "bool | set[int]" = False) -> None:
         for ch, reached, total in _group_totals(active_choice_specs(char, cls), cls.level):
             needed = total - len((cls.options or {}).get(ch.group, []))
             existing = [c for c in mine if c.get("kind") == "class_option" and c.get("group") == ch.group]
+            if ch.group == CLASS_CANTRIPS and not loaded:  # senza incantesimi non si sa cosa manca: resta com'era
+                out.extend(existing)
+                continue
             if needed <= 0:
                 continue
             retro = retrofit is True or (isinstance(retrofit, set) and cls.id in retrofit)

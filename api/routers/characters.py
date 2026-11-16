@@ -319,6 +319,7 @@ async def create_character(
     # MissingGreenlet (rompe POST /characters con initial_class).
     char.classes = []
     char.items = []  # Stesso motivo: gli usi a catalogo leggono la caratteristica effettiva.
+    char.spells = []  # Stesso motivo: la scelta dei trucchetti di classe conta quelli già sulla scheda.
     # Apply optional identity in the SAME transaction (atomic create). Same
     # field→column mapping as update_character; set before flush so it lands
     # in the initial INSERT.

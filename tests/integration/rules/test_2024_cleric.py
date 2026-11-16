@@ -399,7 +399,7 @@ async def test_a_2014_cleric_that_becomes_2024_gets_the_2024_rows_and_keeps_its_
     keys24 = await _keys_of(client, cid)
     assert "cleric.destroy_undead" not in keys24 and {POOL, SPARK, TURN, "cleric.sear_undead", "cleric.divine_order"} <= keys24
     assert (await _ability(client, cid, POOL))["max_uses"] == 3 and (await _ability(client, cid, POOL))["uses"] == 2
-    assert [c["group"] for c in (await _full(client, cid))["pending_choices"] if c["kind"] == "class_option"] == ["divine_order", "blessed_strikes"]
+    assert [c["group"] for c in (await _full(client, cid))["pending_choices"] if c["kind"] == "class_option"] == ["divine_order", "blessed_strikes", "class_cantrips"]
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})).status_code == 200
     keys_back = await _keys_of(client, cid)
     assert "cleric.destroy_undead" in keys_back and SPARK not in keys_back

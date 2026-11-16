@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "3.12.1",
+      "date": "2026-11-16",
+      "fixed": {
+        "it": [
+          "Gli incantatori ricevono la scelta dei trucchetti fra le scelte di livello: la tabella della classe dice quanti, quelli già sulla scheda contano e si chiede solo quello che manca (anche salendo al 4° e al 10° livello)."
+        ],
+        "en": [
+          "Spellcasters now get a cantrip choice among their level choices: the class table sets how many, the ones already on the sheet count, and only the missing ones are asked for (also at levels 4 and 10)."
+        ]
+      }
+    },
+    {
       "version": "3.12.0",
       "date": "2026-11-16",
       "added": {
