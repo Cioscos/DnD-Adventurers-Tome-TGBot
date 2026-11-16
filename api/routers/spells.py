@@ -385,6 +385,10 @@ async def add_spell(
     await session.flush()
     if pick:
         consume_spell_pick(session, char, *pick, spell)
+    elif spell.level == 0:  # un trucchetto aggiunto a mano riempie la scelta dei trucchetti di classe
+        if spell not in char.spells:
+            char.spells.append(spell)
+        reconcile_choices(char)
     return spell
 
 
@@ -441,6 +445,8 @@ async def remove_spell(
         await session.flush()
         await release_concentration_effects(session, char)
     if release_spell_pick(char, spell):
+        if spell in char.spells:  # altrimenti la scelta dei trucchetti di classe lo riconterebbe
+            char.spells.remove(spell)
         reconcile_choices(char)  # la scelta torna in coda: un errore di battitura si recupera
     await session.delete(spell)
 

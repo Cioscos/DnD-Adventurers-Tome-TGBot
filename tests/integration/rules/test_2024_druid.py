@@ -520,7 +520,7 @@ async def test_a_2014_druid_that_becomes_2024_gets_the_2024_rows_and_keeps_its_s
     row = await _ability(client, cid, WILD)
     assert (row["max_uses"], row["uses"], row["action_type"]) == (3, 2, "bonus_action")
     assert {COMPANION, RESURGENCE} <= await _keys_of(client, cid)
-    assert [c["group"] for c in (await _full(client, cid))["pending_choices"] if c["kind"] == "class_option"] == ["primal_order"]
+    assert [c["group"] for c in (await _full(client, cid))["pending_choices"] if c["kind"] == "class_option"] == ["primal_order", "class_cantrips"]
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})).status_code == 200
     assert COMPANION not in await _keys_of(client, cid)
     row = await _ability(client, cid, WILD)
