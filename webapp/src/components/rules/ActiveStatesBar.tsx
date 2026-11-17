@@ -26,8 +26,11 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
     const dur = (clock ? (d.state_data as { duration?: unknown } | undefined)?.duration : d.duration) as
       { rounds?: number | null; concentration?: boolean; until_rest?: boolean } | undefined
     if (dur?.until_rest) out.push(t('character.turn.state_until_rest'))
-    else if (dur?.concentration) out.push(t('character.turn.state_while_concentrating'))
-    else if (dur?.rounds) out.push(formatRounds(t, dur.rounds))
+    else if (dur?.concentration) {
+      out.push(t('character.turn.state_while_concentrating'))
+      if (dur.rounds && !clock) out.push(formatRounds(t, dur.rounds))  // U23: anche il bersaglio legge la durata massima
+    } else if (dur?.rounds) out.push(formatRounds(t, dur.rounds))
+    for (const h of s.hints ?? []) out.push(lang === 'en' ? h.en : h.it)  // cosa dà (Benedizione: +1d4)
   }
   if (typeof d.dc === 'number') {
     out.push(t('character.turn.state_dc', { dc: d.dc, save: typeof d.save === 'string' ? t(`common.abilities.${d.save}`) : '' }))
@@ -174,7 +177,8 @@ export default function ActiveStatesBar({ char }: { char: CharacterFull }) {
               </Button>
             )}
             {/* L'interdizione e la Saturazione Magica le chiude solo il riposo lungo: il server rifiuta, qui non si offre */}
-            {s.data?.locked !== true && (
+            {/* L'effetto di un incantesimo altrui lo chiude chi lo ha lanciato (U23), non il bersaglio */}
+            {s.data?.locked !== true && !(s.key.startsWith('spell:') && typeof s.data?.caster_id === 'number' && s.data.caster_id !== char.id) && (
               <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
                 loading={end.isPending && end.variables === s.key} onClick={() => end.mutate(s.key)}>
                 {t('character.turn.end_state')}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ITEM_TYPES, TYPE_ICON, hasSingleQuantity, itemToFormData, emptyForm, buildItemMetadata, isItemFormValid, catalogPrefill } from '@/pages/inventory/itemMetadata'
+import { ITEM_TYPES, TYPE_ICON, hasSingleQuantity, itemToFormData, emptyForm, buildItemMetadata, isItemFormValid, catalogPrefill, weaponChoiceFilter } from '@/pages/inventory/itemMetadata'
 import type { Item } from '@/types'
 
 describe('itemMetadata — ammunition', () => {
@@ -144,5 +144,16 @@ describe('itemMetadata — armatura senza tipo (minori 27)', () => {
     const form = itemToFormData({ name: 'Maglia', item_type: 'armor', quantity: 1, weight: 0, item_metadata: { ac_value: 16 } })
     expect(form.armor_type).toBe('heavy')
     expect(itemToFormData({ name: 'C', item_type: 'armor', quantity: 1, weight: 0, item_metadata: { armor_type: 'light', ac_value: 11 } }).armor_type).toBe('light')
+  })
+})
+
+describe('weaponChoiceFilter (U8)', () => {
+  const longsword = { weapon_category: 'martial', weapon_range: 'melee' }
+  const longbow = { weapon_category: 'martial', weapon_range: 'ranged' }
+  const club = { weapon_category: 'simple', weapon_range: 'melee' }
+  it('keeps only the weapons of the placeholder category and range', () => {
+    expect([longsword, longbow, club].filter(weaponChoiceFilter('martial-weapon'))).toEqual([longsword, longbow])
+    expect([longsword, longbow, club].filter(weaponChoiceFilter('martial-melee'))).toEqual([longsword])
+    expect([longsword, longbow, club, {}].filter(weaponChoiceFilter('simple-weapon'))).toEqual([club])
   })
 })

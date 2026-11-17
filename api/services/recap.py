@@ -202,8 +202,14 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         .order_by(Encounter.id)
     )).scalars().all()
     monsters: list[str] = []
+    defeated = damage_dealt = 0
     for e in encs:
         for c in sorted(e.combatants, key=lambda c: c.id):
+            if c.kind == "monster":
+                defeated += 1 if c.is_dead else 0
+                # Danno ai mostri dai PF segnati dal master (solo modalità con PF); non si sa chi l'ha inflitto.
+                if c.max_hp is not None and c.current_hp is not None:
+                    damage_dealt += max(0, c.max_hp - max(0, c.current_hp))
             # shortcut: "Goblin 2" -> "Goblin" also strips a number that is part of a real name
             name = re.sub(r" \d+$", "", c.name) if c.kind == "monster" else None
             if name and name not in monsters:
@@ -248,7 +254,8 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         "started_at": gs.created_at, "ended_at": ended_at,
         "duration_seconds": _duration(gs.created_at, gs.last_activity_at),
         "characters": characters,
-        "combat": {"encounters": len(encs), "rounds": sum(e.round or 0 for e in encs), "monsters": monsters},
+        "combat": {"encounters": len(encs), "rounds": sum(e.round or 0 for e in encs), "monsters": monsters,
+                   "defeated": defeated, "damage_dealt": damage_dealt},
         "items": {"gm_grants": gm_grants, "trades": trades, "stash": stash},
         "lore": lore,
         "places": places,

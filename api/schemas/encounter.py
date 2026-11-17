@@ -64,14 +64,16 @@ class GmConditionApply(BaseModel):
     expiry: Optional[ExpiryIn] = None
     save: Optional[SaveIn] = None
     source_combatant_id: Optional[int] = None
+    source_note: Optional[str] = Field(default=None, max_length=120)  # fonte libera ("Ragnatela"), U35
     ends_with_concentration: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> "GmConditionApply":
         if self.slug == "exhaustion" and self.value is None:
             raise ValueError("exhaustion requires value")
+        self.source_note = (self.source_note or "").strip() or None
         if self.value is not None and (self.expiry or self.save or self.source_combatant_id
-                                       or self.ends_with_concentration):
+                                       or self.source_note or self.ends_with_concentration):
             raise ValueError("value excludes expiry/save/source")
         return self
 
@@ -110,6 +112,8 @@ class PublicState(BaseModel):
     name: str
     rounds_left: Optional[int] = None
     others: list[PublicStateOther] = []
+    source_name: Optional[str] = None   # incantesimi: chi l'ha lanciato
+    concentration: bool = False         # incantesimi: finisce con la concentrazione di chi l'ha lanciato
 
 
 class CombatantLive(BaseModel):

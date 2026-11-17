@@ -126,3 +126,20 @@ async def test_import_container_with_quantity_not_one_keeps_meta_and_coins(clien
     assert by["Zaino"]["quantity"] == 1
     assert by["Zaino"]["item_metadata"]["container"]["coins"]["gold"] == 7
     assert by["Corda"]["container_id"] == by["Zaino"]["id"]
+
+
+async def test_gm_grant_stacks_identical_non_generic_items(client, test_session_factory, monkeypatch):
+    """Decisione 2 (UX playtest 16/11): i doni del master si uniscono come gli scambi, anche fuori dai generici."""
+    from tests.integration._telegram_stub import install_fake_telegram
+    install_fake_telegram(monkeypatch)
+    sid, cid = await seed_session(test_session_factory)
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Frecce", "item_type": "ammunition", "quantity": 20})
+    assert r.status_code == 201, r.text
+    as_user(GM_ID)
+    grant = lambda item: client.post(f"/sessions/{sid}/gm/grant_item", json={"recipient_user_ids": [PLAYER_ID], "item": item})
+    assert (await grant({"name": "Frecce", "quantity": 10, "item_type": "ammunition"})).status_code == 201
+    assert (await grant({"name": "Frecce", "quantity": 5, "item_type": "ammunition", "description": "d'argento"})).status_code == 201
+    as_user(PLAYER_ID)
+    items = (await client.get(f"/characters/{cid}/items")).json()
+    assert sorted(i["quantity"] for i in items if i["name"] == "Frecce") == [5, 30]

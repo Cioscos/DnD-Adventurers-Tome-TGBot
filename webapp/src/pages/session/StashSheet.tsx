@@ -73,7 +73,7 @@ function ItemPanel({ item, confirm, pending, onSubmit, onClose }: {
 }) {
   const { t } = useTranslation()
   const stepper = item.quantity > 1 && !containerMeta(item)
-  const [qty, setQty] = useState(item.quantity)
+  const [qty, setQty] = useState(1) // come «Dai a…»: si parte da uno
   const stepBtn = 'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-dnd-border'
   return (
     <Sheet open onClose={onClose} title={item.name} zClassName="z-[60]">

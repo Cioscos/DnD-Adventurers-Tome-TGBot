@@ -7,12 +7,15 @@ import { GiDeathSkull as Skull, GiHeartPlus as Heart } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
+import ChipSelect from '@/components/ui/ChipSelect'
+import { applyDamageModifier, type DamageMultiplier } from '@/lib/damageModifier'
 import IconButton from '@/components/ui/IconButton'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import AddConditionSheet from '@/pages/session/AddConditionSheet'
 import { api } from '@/api/client'
-import { haptic, telegramConfirm } from '@/auth/telegram'
+import { haptic } from '@/auth/telegram'
 import { formatCondition } from '@/lib/conditions'
-import { formatExpiry, formatSave } from '@/lib/conditionEffects'
+import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 import type { CharacterLiveSnapshot, CombatantLive, CombatantPatch, EncounterLive } from '@/types'
 
 interface Props {
@@ -38,6 +41,8 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
   >(null)
   const [reorderDir, setReorderDir] = useState<-1 | 1 | null>(null)
   const [showAddCondition, setShowAddCondition] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [dmgMode, setDmgMode] = useState<DamageMultiplier>('none')
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
   const onError = () => {
@@ -86,11 +91,14 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
   }
 
   const applyHp = (sign: -1 | 1) => {
-    const amt = Number(amount)
-    if (!amt || amt <= 0 || c.current_hp === null) return
+    const raw = Number(amount)
+    if (!raw || raw <= 0 || c.current_hp === null) return
+    // U28: resistenza/vulnerabilità/immunità del mostro al tipo di danno, scelte dal GM per questo colpo
+    const amt = sign === 1 ? raw : applyDamageModifier(raw, dmgMode)
     setActiveAction(sign === -1 ? 'damage' : 'heal')
     patchMutation.mutate({ current_hp: Math.max(0, c.current_hp + sign * amt) })
     setAmount('')
+    setDmgMode('none')
   }
 
   // PG: la fonte è la scheda (live_characters); mostri: il combattente.
@@ -103,7 +111,8 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
     const v = Number(initiative)
     if (Number.isNaN(v) || initiative.trim() === '') return
     setActiveAction('initiative')
-    patchMutation.mutate({ initiative: v })
+    // Applicata l'iniziativa il dettaglio si chiude: il GM passa subito al mostro dopo.
+    patchMutation.mutate({ initiative: v }, { onSuccess: onClose })
     setInitiative('')
   }
 
@@ -114,7 +123,18 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
           <section className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">
               {t('session.combat.hp_controls')}: <span className="font-mono tabular-nums">{c.current_hp}/{c.max_hp}</span>
+              {c.ac != null && (
+                <span className="font-mono tabular-nums"> · {t('character.ac.short')} {c.ac}</span>
+              )}
             </p>
+            <ChipSelect
+              columns={4}
+              value={dmgMode}
+              onChange={(v) => setDmgMode(v as DamageMultiplier)}
+              options={(['none', 'half', 'double', 'immune'] as const).map((m) => ({
+                value: m, label: t(`character.hp.modifier_${m}`),
+              }))}
+            />
             <div className="flex gap-2 items-stretch">
               <div className="w-24 shrink-0">
                 <Input
@@ -165,7 +185,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
               ? [
                   formatExpiry(eff, t, c.name),
                   formatSave(eff, t, c.name),
-                  eff.source_name && t('session.combat.source_label', { name: eff.source_name }),
+                  formatSource(eff) && t('session.combat.source_label', { name: formatSource(eff) }),
                 ].filter(Boolean)
               : []
             const removing = removeConditionMutation.isPending && removeConditionMutation.variables === slug
@@ -284,12 +304,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
             {c.is_dead ? t('session.combat.revive') : t('session.combat.mark_dead')}
           </Pressable>
           <Pressable
-            onClick={() =>
-              telegramConfirm(
-                t('session.combat.remove_confirm', { name: c.name }),
-                (ok) => ok && removeMutation.mutate(),
-              )
-            }
+            onClick={() => setConfirmRemove(true)}
             pending={removeMutation.isPending}
             className="flex-1 min-h-[44px] px-3 py-2.5 rounded-md border border-dnd-crimson-bright/60
                        text-dnd-crimson-bright text-sm inline-flex items-center
@@ -299,6 +314,16 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, liv
           </Pressable>
         </section>
       </div>
+      <ConfirmSheet
+        open={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        onConfirm={() => { setConfirmRemove(false); removeMutation.mutate() }}
+        title={t('session.combat.remove')}
+        body={t('session.combat.remove_confirm', { name: c.name })}
+        confirmLabel={t('session.combat.remove')}
+        loading={removeMutation.isPending}
+        zClassName="z-[60]"
+      />
       {showAddCondition && (
         <AddConditionSheet
           sessionId={sessionId}

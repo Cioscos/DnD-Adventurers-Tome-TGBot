@@ -233,15 +233,26 @@ describe('ActiveStatesBar, wizard states', () => {
     expect(screen.queryByText('character.turn.end_state')).toBeNull()
   })
 
-  it('shows a spell effect with its name, caster and duration, and the target can end it by hand', async () => {
+  it('shows a spell effect with its name, caster, duration and what it gives; only the caster ends it (U23)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'spell:bless', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Benedizione',
+        hints: [{ it: 'Benedizione: somma 1d4 al tiro', en: 'Bless: add 1d4 to the roll' }],
+        data: { caster_id: 3, caster_name: 'Chierico', duration: { rounds: 10, concentration: true, until_rest: false } } },
+    ], [])} />)
+    expect(screen.getByText(/^Benedizione$/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_from/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_while_concentrating/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_rounds_total/)).toBeInTheDocument()
+    expect(screen.getByText(/somma 1d4 al tiro/)).toBeInTheDocument()
+    expect(screen.queryByText('character.turn.end_state')).not.toBeInTheDocument()
+  })
+
+  it('the caster can end the effect of their own spell on themselves', async () => {
     endActiveState.mockResolvedValue([])
     renderWithProviders(<ActiveStatesBar char={char([
       { key: 'spell:shield_of_faith', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Scudo della Fede',
-        data: { caster_id: 3, caster_name: 'Chierico', duration: { rounds: 100, concentration: true, until_rest: false } } },
+        data: { caster_id: 7, caster_name: 'Io', duration: { rounds: 100, concentration: true, until_rest: false } } },
     ], [])} />)
-    expect(screen.getByText(/Scudo della Fede/)).toBeInTheDocument()
-    expect(screen.getByText(/character\.turn\.state_from/)).toBeInTheDocument()
-    expect(screen.getByText(/character\.turn\.state_while_concentrating/)).toBeInTheDocument()
     await userEvent.click(screen.getByText('character.turn.end_state'))
     await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'spell:shield_of_faith'))
   })
@@ -272,13 +283,13 @@ describe('ActiveStatesBar, wizard states', () => {
     const aid = (caster: number, name: string) => ({
       key: 'spell:aid', feature_key: 'spell:aid', rounds_left: null, ends_on: ['manual'], name: 'Aid', data: { spell_key: 'aid', caster_id: caster, caster_name: name },
     })
-    const sheet = char([aid(1, 'Alfa'), aid(2, 'Beta')], [])
+    const sheet = char([aid(7, 'Io'), aid(2, 'Beta')], [])  // U23: solo il proprio si chiude a mano
     const client = new QueryClient()
     client.setQueryData(['character', 7], sheet)
     const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
     endActiveState.mockResolvedValueOnce([])
     renderWithProviders(<ActiveStatesBar char={sheet} />, { client })
-    expect(screen.getAllByText('character.turn.end_state')).toHaveLength(2)
+    expect(screen.getAllByText('character.turn.end_state')).toHaveLength(1)
     expect(warn.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
     await userEvent.click(screen.getAllByText('character.turn.end_state')[0])
     await waitFor(() => expect((client.getQueryData(['character', 7]) as CharacterFull).active_states).toEqual([]))

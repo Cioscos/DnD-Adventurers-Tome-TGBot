@@ -22,6 +22,8 @@ from core.rules.condition_removal import spell_removal, view as removal_view
 from core.rules.catalog.spells import spell_effect
 from core.rules.edition import character_edition, class_key
 from core.rules.level_choices import FREE_KNOWN_KEY
+from core.rules.modifiers import modifiers_for
+from core.rules.spell_healing import healing_dice, healing_fixed, healing_spec
 from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
 from core.rules.states import SPELL_CAST_TYPE
@@ -47,6 +49,22 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
 
+def healing_preview(char: Character, spell: SpellRead, stats) -> dict[int, str] | None:
+    """La formula della cura per ogni slot, con gli stessi addendi di ``roll_spell_healing`` (Discepolo della Vita compreso)."""
+    if not spell.is_healing or (spec := healing_spec(spell.srd_index, character_edition(char))) is None:
+        return None
+    mod = effective_ability_mod(char, stats.ability) if spec.add_mod and stats else 0
+    out: dict[int, str] = {}
+    for lvl in range(max(spell.level, 1), 10):
+        count, sides = healing_dice(spec, spell.level, lvl)
+        applied = modifiers_for(char, "spell_healing", spell=spell, casting_level=lvl)
+        bonus = healing_fixed(spec, spell.level, lvl) + mod + applied.flat
+        if count and applied.maximize_healing:  # Guarigione Suprema: i dadi valgono il massimo
+            count, bonus = 0, bonus + count * sides
+        out[lvl] = f"{count}d{sides}{bonus:+d}" if count and bonus else f"{count}d{sides}" if count else str(max(0, bonus))
+    return out
+
+
 def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
     for spell in spells:
         stats = spell_stats(char, spell)
@@ -69,6 +87,7 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
         if (rm := spell_removal(character_edition(char), spell.srd_index, spell.name)) is not None:
             spell.removal = removal_view(rm)
         spell.effect = effect_view(char, spell.srd_index, spell.name, spell.level)
+        spell.healing_preview = healing_preview(char, spell, stats)
         ki = ki_cast_info(char, spell)
         if ki is not None:
             spell.ki_cast = {"cost": ki.cost, "max_extra": ki.max_extra, "ki_left": ki.ki_left, "feature_key": ki.feature_key,

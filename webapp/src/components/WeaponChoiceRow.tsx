@@ -23,10 +23,11 @@ export default function WeaponChoiceRow({
       onClick={() => onChange({ ...choice, attack_mode: value })}>{t(label)}</Pressable>
   )
   const current = choice.ability ?? bestAbility(char)
+  // min-w-fit: un gruppo troppo largo va a capo invece di sovrapporsi al vicino (Pugnale a 412 px)
   return (
     <div className="flex flex-wrap gap-2 mt-2">
       {versatile && (
-        <div className="flex flex-1 gap-1 min-w-[10rem]">
+        <div className="flex flex-1 gap-1 min-w-fit">
           <Pressable className={seg(choice.grip === 'one')} aria-pressed={choice.grip === 'one'}
             onClick={() => onChange({ ...choice, grip: 'one' })}>{t('character.attack.grip_one')}</Pressable>
           <Pressable className={seg(choice.grip === 'two')} aria-pressed={choice.grip === 'two'}
@@ -34,14 +35,14 @@ export default function WeaponChoiceRow({
         </div>
       )}
       {(thrown || offhand) && (
-        <div className="flex flex-1 gap-1 min-w-[10rem]">
+        <div className="flex flex-1 gap-1 min-w-fit">
           {mode('melee', 'character.attack.mode_melee')}
           {thrown && mode('thrown', 'character.attack.mode_thrown')}
           {offhand && mode('offhand', 'character.attack.offhand')}
         </div>
       )}
       {ability && (
-        <div className="flex flex-1 gap-1 min-w-[10rem]">
+        <div className="flex flex-1 gap-1 min-w-fit">
           {(['strength', 'dexterity'] as const).map((a) => (
             <Pressable key={a} className={seg(current === a)} aria-pressed={current === a}
               onClick={() => onChange({ ...choice, ability: a })}>{t(`character.attack.ability_${a}`)}</Pressable>

@@ -15,6 +15,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import EmptyState from '@/components/ui/EmptyState'
 import Button from '@/components/ui/Button'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Skeleton from '@/components/ui/Skeleton'
 import Pressable from '@/components/ui/Pressable'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -24,7 +25,7 @@ import ConditionBadge from '@/components/ui/ConditionBadge'
 import PublicStates from '@/components/session/PublicStates'
 import { api, ApiError } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
-import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
+import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import { useSessionLive } from '@/hooks/useSessionLive'
 import { useYourTurnToast } from '@/hooks/useYourTurnToast'
@@ -121,7 +122,10 @@ function ParticipantRow({
             )}
           </div>
           {snapshot?.heroic_inspiration && (
-            <Sparkles size={14} aria-hidden className="text-dnd-amber shrink-0" />
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-dnd-amber/60 bg-dnd-amber/10 px-2 py-0.5 text-xs font-body text-dnd-amber whitespace-nowrap">
+              <Sparkles size={12} aria-hidden />
+              {t('character.inspiration.title')}
+            </span>
           )}
         </div>
 
@@ -157,7 +161,7 @@ function ParticipantRow({
                   </div>
                   <div className="flex items-center gap-1.5 justify-end">
                     <Shield size={12} className="text-dnd-gold-bright" />
-                    <span>{snapshot.ac}</span>
+                    <span>{t('character.ac.short')} {snapshot.ac}</span>
                   </div>
                 </div>
                 <div className="mt-1.5">
@@ -200,6 +204,7 @@ export default function SessionRoom() {
   const [whisperTarget, setWhisperTarget] = useState<SessionParticipant | null>(null)
   const [showGrantItem, setShowGrantItem] = useState(false)
   const [showStash, setShowStash] = useState(false)
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [currentReward, setCurrentReward] = useState<Reward | null>(null)
 
   useEffect(() => {
@@ -313,14 +318,8 @@ export default function SessionRoom() {
     )
   }
 
-  const confirmLeave = () => {
-    const msg = amGm ? t('session.confirm_close') : t('session.confirm_leave')
-    telegramConfirm(msg, (ok) => {
-      if (!ok) return
-      if (amGm) closeMutation.mutate()
-      else leaveMutation.mutate()
-    })
-  }
+  // Modale dell'app, non il confirm nativo: quello blocca la pagina (e l'automazione) finché non si risponde.
+  const confirmLeave = () => setConfirmLeaveOpen(true)
 
   const inCampaign = live.campaign_id != null
   const sessionName =
@@ -472,6 +471,7 @@ export default function SessionRoom() {
         myUserId={myUserId}
         onClose={() => setIdentityTarget(null)}
         onStartWhisper={(target) => setWhisperTarget(target)}
+        gmSessionId={amGm ? live.id : undefined}
       />
 
       {showGrantItem && amGm && (
@@ -493,6 +493,20 @@ export default function SessionRoom() {
           onClose={() => setShowStash(false)}
         />
       )}
+
+      <ConfirmSheet
+        open={confirmLeaveOpen}
+        onClose={() => setConfirmLeaveOpen(false)}
+        onConfirm={() => {
+          setConfirmLeaveOpen(false)
+          if (amGm) closeMutation.mutate()
+          else leaveMutation.mutate()
+        }}
+        title={amGm ? t('session.close') : t('session.leave')}
+        body={amGm ? t('session.confirm_close') : t('session.confirm_leave')}
+        confirmLabel={amGm ? t('session.close') : t('session.leave')}
+        loading={amGm ? closeMutation.isPending : leaveMutation.isPending}
+      />
 
       {currentReward && (
         <RewardPopup

@@ -44,7 +44,7 @@ const RECAP = {
     death_saves: { successes: 2, failures: 1 }, spells_cast: 3, slots_used: { '1': 2, '3': 1 },
     rests: { short: 1, long: 0 }, conditions: ['poisoned', 'custom:Sanguinamento'],
   }],
-  combat: { encounters: 2, rounds: 9, monsters: ['Goblin', 'Orco'] },
+  combat: { encounters: 2, rounds: 9, monsters: ['Goblin', 'Orco'], defeated: 4, damage_dealt: 57 },
   items: {
     gm_grants: [{ to: 'Thorin', item: 'Spada lunga', quantity: 1 }],
     trades: [{ from: 'Thorin', to: 'Grom', summary: 'Pozione ×2' }],
@@ -85,6 +85,8 @@ describe('CampaignRecap', () => {
     expect(screen.getByText('Sanguinamento')).toBeInTheDocument()
     expect(screen.getByText('campaign.recap.ds_s:{"count":2} · campaign.recap.ds_f:{"count":1}')).toBeInTheDocument()
     expect(screen.getByText(/Goblin, Orco/)).toBeInTheDocument()
+    expect(screen.getByText('campaign.recap.defeated')).toBeInTheDocument()  // KO e danni ai mostri (U53)
+    expect(screen.getByText('57')).toBeInTheDocument()
     expect(screen.getByText(/Spada lunga/)).toBeInTheDocument()
     expect(screen.getByText(/Pozione ×2/)).toBeInTheDocument()
     expect(screen.getByText('Il tempio sommerso')).toBeInTheDocument()

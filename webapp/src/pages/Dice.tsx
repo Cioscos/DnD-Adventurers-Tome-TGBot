@@ -146,7 +146,7 @@ export default function Dice() {
     setInitiativeRolling(true)
     try {
       const choice = await askRollOptions(charId, { roll: 'initiative' })
-      const result = await api.dice.initiative(charId, d20Arg(mode, await rollD20(mode), choice), t('character.dice.initiative'))
+      const result = await api.dice.initiative(charId, d20Arg(mode, await rollD20(mode, choice), choice), t('character.dice.initiative'))
       setInitiativeResult(result)
       refreshAfterOptions(qc, charId, result.option_result)
       qc.invalidateQueries({ queryKey: ['dice-history', charId] })

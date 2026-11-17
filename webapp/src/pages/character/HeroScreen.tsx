@@ -74,7 +74,7 @@ export default function HeroScreen({ char }: Props) {
   const deathRollMutation = useMutation({
     mutationFn: async (mode: RollMode) => {
       const choice = await askRollOptions(char.id, { roll: 'death_save' })
-      return api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode), choice))
+      return api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode, choice), choice))
     },
     onSuccess: (result) => {
       setDeathRollResult(result)
@@ -109,6 +109,8 @@ export default function HeroScreen({ char }: Props) {
   const isFirstHp = useIsFirstValue(hpCurrent)
 
   const passiveAbilities = char.abilities?.filter((a) => a.is_passive) ?? []
+  // U2: il privilegio che porta una scelta ancora in sospeso (Ordine Divino) si segna «da scegliere»
+  const toChoose = new Set((char.pending_choices ?? []).map((c) => c.feature_key).filter(Boolean))
   const activeConditions = char.conditions
     ? Object.entries(char.conditions).filter(([, v]) => v)
     : []
@@ -318,7 +320,7 @@ export default function HeroScreen({ char }: Props) {
               <StatPill
                 key={a.id}
                 icon={<GiLightningTrio size={10} />}
-                value={a.name}
+                value={a.feature_key && toChoose.has(a.feature_key) ? `${a.name} · ${t('character.level_choice.to_choose')}` : a.name}
                 tone="gold"
                 size="sm"
                 expandHitArea

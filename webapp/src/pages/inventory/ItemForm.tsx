@@ -28,6 +28,7 @@ import {
   catalogPrefill,
   isItemFormValid,
   itemToFormData,
+  weaponChoiceFilter,
   type ItemFormData,
 } from './itemMetadata'
 import { ContainerFields } from './ContainerForm'
@@ -56,6 +57,7 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
   const [form, setForm] = useState<ItemFormData>(emptyForm)
   const [step, setStep] = useState<WizardStep>('type')
   const isEditing = !!initialData
+  const weaponChoice = initialData?.item_metadata?.choice as string | undefined
 
   useEffect(() => {
     if (initialData) {
@@ -117,6 +119,11 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
       <div className="p-5 space-y-3">
         {step === 'type' && (
         <>
+        {isEditing && weaponChoice && (
+          <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicker('equipment')}>
+            {t('character.inventory.choose_weapon')}
+          </Button>
+        )}
         {!isEditing && (
           <div className="grid grid-cols-1 gap-2">
             <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicker('equipment')}>
@@ -505,6 +512,7 @@ export default function ItemForm({ initialData, edition, onSubmit, onCancel, isP
         <CatalogPicker
           kind={equipmentCatalogKind(edition === '2024' ? '2024' : '2014')}
           onClose={() => setPicker(null)}
+          filters={weaponChoice ? weaponChoiceFilter(weaponChoice) : undefined}
           onPick={(e) => applyCatalog(equipmentToForm(e, lang, system, {
             range: t('character.inventory.range_label'), thrown: t('character.inventory.thrown_range_label'),
           }))}

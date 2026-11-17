@@ -126,6 +126,13 @@ describe('Multiclass page', () => {
     expect(screen.queryByText('levelup-banner')).toBeNull()
   })
 
+  it('lists armor and weapon proficiencies (U7)', async () => {
+    getChar.mockResolvedValue(char({ general_proficiencies: { armor: ['Armature leggere', 'Scudi'], weapons: [] } }))
+    renderWithProviders(<Multiclass />)
+    expect(await screen.findByTestId('proficiencies-armor')).toHaveTextContent('Armature leggere, Scudi')
+    expect(screen.getByTestId('proficiencies-weapons')).toHaveTextContent('—')
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Multiclass />)

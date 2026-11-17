@@ -68,7 +68,7 @@ from core.rules.catalog._common import unarmored_unshielded
 from core.rules.catalog.feats_2014 import has_feat
 from core.rules.edition import character_edition
 from core.rules.proficiencies import is_weapon_proficient
-from core.rules.roll_options import AppliedOptions, doubled_dice, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
+from core.rules.roll_options import AppliedOptions, doubled_dice, option_names, roll_options_for, scale_damage, throws_unarmed, uses_own_slot
 from core.rules.spell_effects import enchanted_weapon
 from core.rules.weapons import NICK_OPTION, best_damage_dice, has_property, martial_arts_level
 from api.services.character_load import get_owned_full
@@ -769,7 +769,7 @@ async def deferred_attack_damage(
         char.turn_state = {**turn, "last_roll": {**turn["last_roll"], "refundable": {}}}
     if opts.keys:
         add_history(session, char.id, "attack_roll",
-                     f"Danno {result.weapon_name} con {', '.join(opts.keys)}: {result.damage_total}")
+                     f"Danno {result.weapon_name} con {option_names(char, opts.keys)}: {result.damage_total}")
     return result
 
 

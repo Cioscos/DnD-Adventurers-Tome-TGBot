@@ -953,6 +953,8 @@ class ConditionEffect(Base):
         Integer, ForeignKey("spells.id", ondelete="SET NULL"), nullable=True
     )
     applied_by_gm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Fonte scritta dal GM ("Ragnatela"), oltre o al posto della creatura (U35)
+    source_note: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     encounter_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("encounters.id", ondelete="SET NULL"), nullable=True
     )

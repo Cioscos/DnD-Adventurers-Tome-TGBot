@@ -149,6 +149,18 @@ export default function Multiclass() {
 
       {classes.map((cls) => <ClassOptionGroups key={cls.id} char={char} cls={cls} />)}
 
+      {/* U7: competenze in armi e armature in vista (si modificano in Identità) */}
+      {classes.length > 0 && (['armor', 'weapons'] as const).map((k) => {
+        const profs = char.general_proficiencies
+        const list = Array.isArray(profs) ? [] : profs?.[k] ?? []
+        return (
+          <div key={k} data-testid={`proficiencies-${k}`} className="border-b border-dnd-border/60 py-2 pl-1">
+            <p className={LEDGER_LABEL}>{t(`character.identity.proficiencies_${k}`)}</p>
+            <p className="text-sm font-body text-dnd-text">{list.length > 0 ? list.join(', ') : '—'}</p>
+          </div>
+        )
+      })}
+
       {classes.length > 0 && (
         <Button
           variant="primary"

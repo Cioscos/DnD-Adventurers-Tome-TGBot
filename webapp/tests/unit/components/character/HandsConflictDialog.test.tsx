@@ -37,6 +37,13 @@ describe('HandsConflictDialog', () => {
     expect(screen.getByText('Greatsword / Shield')).toBeInTheDocument()
   })
 
+  it('U13: names the main-hand occupant too, once', () => {
+    const dagger = { id: 3, name: 'Pugnale' } as Item
+    const bow = { id: 4, name: 'Arco corto' } as Item
+    render(<HandsConflictDialog newItem={bow} removedItem={dagger} alsoRemoved={sword} onConfirm={() => {}} onCancel={() => {}} />)
+    expect(screen.getByText('Arco corto / Greatsword character.equipment.hands_conflict.and Pugnale')).toBeInTheDocument()
+  })
+
   it('cancel and confirm trigger their callbacks (confirm is the rightmost button)', async () => {
     const onConfirm = vi.fn()
     const onCancel = vi.fn()

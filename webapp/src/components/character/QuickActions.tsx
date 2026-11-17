@@ -27,7 +27,7 @@ import { isAttackSpell } from '@/lib/spellType'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { canRerollInspiration } from '@/lib/rollOptions'
-import type { WeaponChoice } from '@/lib/weaponOptions'
+import { weaponPreviewText, type WeaponChoice } from '@/lib/weaponOptions'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -38,6 +38,7 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import {
   effectiveQuickActions,
   hasCustomQuickActions,
+  hpIsFull,
   resolveQuickActions,
   isAmmunitionItem,
   quickActionFullRows,
@@ -166,7 +167,7 @@ export default function QuickActions({ char }: Props) {
   const saveMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
       const choice = await askRollOptions(char.id, { roll: 'save', ability })
-      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode), choice))
+      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode, choice), choice))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
@@ -656,6 +657,9 @@ export default function QuickActions({ char }: Props) {
                       <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm font-body">
                         {actionLabel(a)}
                       </span>
+                      {a.type === 'weapon' && weaponPreviewText(a.item) && (
+                        <span className="shrink-0 font-mono tabular-nums text-xs text-dnd-text-muted">{weaponPreviewText(a.item)}</span>
+                      )}
                     </RollButton>
                     {/* Versatile/thrown weapons: choice row right under the row. */}
                     {a.type === 'weapon' && (
@@ -875,11 +879,14 @@ export default function QuickActions({ char }: Props) {
         onClose={() => setConfirmHitDie(null)}
         title={t('character.quick_actions.spend_hit_die_title')}
         body={confirmHitDie
-          ? t('character.quick_actions.spend_hit_die_body', {
-              cls: classLabel(t, confirmHitDie.cls.class_name),
-              die: confirmHitDie.cls.hit_die ?? 8,
-              remaining: confirmHitDie.remaining,
-            })
+          ? <>
+              <p>{t('character.quick_actions.spend_hit_die_body', {
+                cls: classLabel(t, confirmHitDie.cls.class_name),
+                die: confirmHitDie.cls.hit_die ?? 8,
+                remaining: confirmHitDie.remaining,
+              })}</p>
+              {hpIsFull(char) && <p className="mt-2 text-sm text-dnd-amber font-body">{t('character.hp.hit_dice_hp_full')}</p>}
+            </>
           : undefined}
         confirmLabel={t('character.quick_actions.spend_hit_die_title')}
         confirmVariant="primary"

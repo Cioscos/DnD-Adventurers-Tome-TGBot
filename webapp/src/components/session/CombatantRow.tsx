@@ -9,6 +9,7 @@ import ConditionBadge from '@/components/ui/ConditionBadge'
 import Pressable from '@/components/ui/Pressable'
 import PublicStates from '@/components/session/PublicStates'
 import { formatCondition } from '@/lib/conditions'
+import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 import type {
   CharacterLiveSnapshot,
   CombatantLive,
@@ -76,6 +77,10 @@ export default function CombatantRow({
     ? (c.pending_saves ?? []).filter((p) => p.status === 'pending')
     : []
 
+  // Effetti ricchi (durata, TS, fonte) delle condizioni: PG dalla scheda, mostri dal combattente.
+  const effects = (isPc ? snapshot?.condition_effects : c.condition_effects) ?? []
+  const effectOf = (key: string) => effects.find((e) => e.slug === key)
+
   // Etichetta del TS in sospeso: il primo effetto con un TS ripetuto.
   const pcSave = snapshot?.condition_effects?.find((e) => e.save_ability && e.save_dc != null)
 
@@ -97,6 +102,19 @@ export default function CombatantRow({
     : showExactMonster
       ? `${c.current_hp}/${c.max_hp}`
       : null
+  // Riga compatta del GM: CA accanto ai PF (U28) e PF colorati quando calano (U34).
+  const acValue = showExactPc ? snapshot?.ac : showExactMonster ? c.ac : null
+  const hpPct = showExactPc && snapshot
+    ? pct(snapshot.current_hit_points, snapshot.hit_points)
+    : showExactMonster ? pct(c.current_hp, c.max_hp) : null
+  const hpTone = hpPct === null || hpPct > 50
+    ? 'text-dnd-text'
+    : hpPct > 25 ? 'text-dnd-amber' : 'text-dnd-crimson-bright'
+
+  // PG a 0 PF: il GM (e il proprietario) vede i tiri contro la morte, gli altri solo «Morente».
+  const deathSaves = snapshot?.death_saves as { successes?: number; failures?: number; stable?: boolean } | null | undefined
+  const pcDying = isPc && !c.is_dead && (showExactPc ? snapshot?.current_hit_points === 0 : pcBucket === 'dying')
+  const chip = 'shrink-0 rounded-full border px-2 py-0.5 text-xs font-body whitespace-nowrap tabular-nums'
 
   const clickable = amGm && !!onTap
   const wrapperProps = clickable
@@ -166,6 +184,32 @@ export default function CombatantRow({
             )}
           </div>
 
+          {(pcDying || snapshot?.is_concentrating || (isPc && snapshot?.heroic_inspiration)) && (
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {pcDying && (
+                <span data-testid="dying-chip" className={`${chip} border-dnd-crimson-bright/60 bg-dnd-crimson/10 text-dnd-crimson-bright`}>
+                  {deathSaves?.stable
+                    ? t('session.combat.stable')
+                    : deathSaves
+                      ? t('session.combat.dying_saves', { s: deathSaves.successes ?? 0, f: deathSaves.failures ?? 0 })
+                      : t('session.hp_bucket.dying')}
+                </span>
+              )}
+              {snapshot?.is_concentrating && (
+                <span className={`${chip} border-dnd-arcane-bright/60 bg-dnd-arcane/10 text-dnd-arcane-bright`}>
+                  {snapshot.concentration_spell
+                    ? t('session.combat.concentrating_on', { name: snapshot.concentration_spell })
+                    : t('session.combat.concentrating')}
+                </span>
+              )}
+              {isPc && snapshot?.heroic_inspiration && (
+                <span className={`${chip} border-dnd-amber/60 bg-dnd-amber/10 text-dnd-amber`}>
+                  {t('character.inspiration.title')}
+                </span>
+              )}
+            </div>
+          )}
+
           {!collapsed && showExactPc && snapshot && (
             <>
               <div className="mt-1 flex items-center gap-3 text-xs font-mono tabular-nums">
@@ -175,7 +219,7 @@ export default function CombatantRow({
                 </span>
                 <span className="flex items-center gap-1">
                   <Shield size={11} className="text-dnd-gold-bright" />
-                  {snapshot.ac}
+                  {t('character.ac.short')} {snapshot.ac}
                 </span>
               </div>
               <HpBar pct={pct(snapshot.current_hit_points, snapshot.hit_points)} bucket={null} />
@@ -193,7 +237,7 @@ export default function CombatantRow({
                 {c.ac !== null && (
                   <span className="flex items-center gap-1">
                     <Shield size={11} className="text-dnd-gold-bright" />
-                    {c.ac}
+                    {t('character.ac.short')} {c.ac}
                   </span>
                 )}
               </div>
@@ -204,9 +248,23 @@ export default function CombatantRow({
 
           {conds.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-              {conds.map(([key, val]) => (
-                <ConditionBadge key={key} conditionKey={key} value={val} />
-              ))}
+              {conds.map(([key, val]) => {
+                const e = effectOf(key)
+                return (
+                  <ConditionBadge
+                    key={key}
+                    conditionKey={key}
+                    value={val}
+                    showLabel
+                    detail={e?.expiry_count ? t('character.conditions.effect.rounds', { count: e.expiry_count }) : undefined}
+                    notes={e ? [
+                      formatExpiry(e, t, c.name),
+                      formatSave(e, t, c.name) ?? '',
+                      formatSource(e) ? t('session.combat.source_label', { name: formatSource(e) }) : '',
+                    ].filter(Boolean) : []}
+                  />
+                )
+              })}
             </div>
           )}
 
@@ -245,11 +303,13 @@ export default function CombatantRow({
           ))}
         </div>
         {collapsed && !c.is_dead && (hpSummary || bucket) && (
-          <span
-            className={`shrink-0 text-xs font-mono tabular-nums
-              ${hpSummary ? 'text-dnd-text' : BUCKET_TEXT[bucket!]}`}
-          >
-            {hpSummary ?? t(`session.hp_bucket.${bucket}`)}
+          <span className="shrink-0 flex flex-col items-end text-xs font-mono tabular-nums">
+            <span className={hpSummary ? hpTone : BUCKET_TEXT[bucket!]}>
+              {hpSummary ?? t(`session.hp_bucket.${bucket}`)}
+            </span>
+            {acValue != null && (
+              <span className="text-dnd-text-muted">{t('character.ac.short')} {acValue}</span>
+            )}
           </span>
         )}
       </div>

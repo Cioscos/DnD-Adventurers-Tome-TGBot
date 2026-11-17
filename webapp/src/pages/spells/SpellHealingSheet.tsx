@@ -33,11 +33,12 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
   const [result, setResult] = useState<RollHealingResult | null>(null)
   const [castNotes, setCastNotes] = useState<OptionResult | undefined>(undefined)
   const [consumed, setConsumed] = useState(false)
-  const [onSelf, setOnSelf] = useState(false)
+  // U22: di default la cura va a chi lancia, così non si perde; scegliere un alleato (bersaglio unico) la sposta
+  const [onSelf, setOnSelf] = useState(true)
   const [allyIds, setAllyIds] = useState<number[]>([])
   const spellId = spell?.id
   useEffect(() => {
-    if (spellId != null) { setResult(null); setCastNotes(undefined); setConsumed(false); setOnSelf(false); setAllyIds([]) }
+    if (spellId != null) { setResult(null); setCastNotes(undefined); setConsumed(false); setOnSelf(true); setAllyIds([]) }
   }, [spellId])
   const { data: everyone = [] } = useQuery({ queryKey: ['session-allies', charId], queryFn: () => api.characters.sessionAllies(charId), enabled: spellId != null })
   const allies = everyone.filter((a) => !a.dead)  // il server rifiuta un bersaglio morto
@@ -86,6 +87,11 @@ export default function SpellHealingSheet({ charId, spell, slotLevel, slotId, as
           <div className="text-center">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t('character.spells.roll_healing.casting_level')}</p>
             <p className="mt-1 font-display text-xl font-bold">{t('character.slots.level', { level })}</p>
+            {spell.healing_preview?.[level] && (
+              <p className="mt-1 font-mono text-sm tabular-nums text-dnd-text-muted" data-testid="healing-formula">
+                {t('character.spells.roll_healing.formula', { formula: spell.healing_preview[level] })}
+              </p>
+            )}
           </div>
           {allies.length > 0 && <h3 className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{t('character.spells.roll_healing.targets')}</h3>}
           <SwitchToggle label={t('character.spells.roll_healing.on_self')} checked={onSelf} onChange={pickSelf} />

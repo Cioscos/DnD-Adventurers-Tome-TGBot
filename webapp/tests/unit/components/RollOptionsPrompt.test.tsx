@@ -82,6 +82,16 @@ describe('askRollOptions', () => {
     await waitFor(() => expect(screen.queryByText('Applica Attacco Furtivo?')).toBeNull())
   })
 
+  it('U24: the incoming damage prompt says the damage and has an explicit Cancel', async () => {
+    rollOptions.mockResolvedValue([option({ key: 'rogue.uncanny_dodge', phase: 'damage_in', label: 'Schivata prodigiosa?' })])
+    renderWithProviders(<RollOptionsHost />)
+    const asked = expect(askRollOptions(1, { roll: 'damage_taken', damage: 12 }, 'damage_in', { cancellable: true, summary: 'Danni in arrivo: 12' }))
+      .rejects.toBeInstanceOf(CastCancelled)
+    expect(await screen.findByText('Danni in arrivo: 12')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
+    await asked
+  })
+
   it('a prompt that is not cancellable has no close', async () => {
     rollOptions.mockResolvedValue([option()])
     renderWithProviders(<RollOptionsHost />)
@@ -141,7 +151,7 @@ describe('askRollOptions', () => {
     const on = askRollOptions(1, { roll: 'attack', item_id: 3 })
     expect(await screen.findByRole('switch', { name: 'Mira Costante?' })).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(screen.getByText('character.roll_options.roll'))
-    await expect(on).resolves.toEqual({ options: ['steady'], option_inputs: {} })
+    await expect(on).resolves.toEqual({ options: ['steady'], option_inputs: {}, modes: ['advantage'] })
     const off = askRollOptions(1, { roll: 'attack', item_id: 3 })
     await userEvent.click(await screen.findByRole('switch', { name: 'Mira Costante?' }))
     await userEvent.click(screen.getByText('character.roll_options.roll'))
@@ -192,6 +202,22 @@ describe('askRollOptions', () => {
     await userEvent.click(screen.getByRole('switch', { name: 'Punizione?' }))
     await userEvent.click(screen.getByText('character.roll_options.damage'))
     await expect(answer).resolves.toEqual({ options: [], option_inputs: {} })
+  })
+
+  it('U11/U14: a Cunning Strike lowers the Sneak Attack dice shown; an unavailable option is off with its reason', async () => {
+    rollOptions.mockResolvedValue([
+      option({ key: 'sneak', label: 'Furtivo', phase: 'after_hit', dice: '3d6' }),
+      option({ key: 'trip', label: 'Sgambetto', phase: 'after_hit', needs: 'sneak', dice_cost: 1, group: 'cs' }),
+      option({ key: 'poison', label: 'Veleno', phase: 'after_hit', needs: 'sneak', dice_cost: 1, group: 'cs', unavailable: 'Serve un Kit' }),
+    ])
+    renderWithProviders(<RollOptionsHost />)
+    void askRollOptions(1, { roll: 'attack', item_id: 3 }, 'after_hit', {})
+    await userEvent.click(await screen.findByRole('switch', { name: 'Furtivo' }))
+    expect(screen.getByText('Serve un Kit')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Veleno' })).toBeDisabled()
+    expect(screen.getByText(/3d6/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('switch', { name: 'Sgambetto' }))
+    await waitFor(() => expect(screen.getByText(/2d6/)).toBeInTheDocument())
   })
 
   it('only one option of a group stays on', async () => {

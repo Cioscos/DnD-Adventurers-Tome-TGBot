@@ -84,6 +84,18 @@ def option_catalog(char: Character, choice: dict) -> list[dict]:
     return _entries(char, cls, ch.group, [*fresh, *owned], frozenset(owned))
 
 
+def choice_source(char: Character, choice: dict) -> dict:
+    """Privilegio che porta una scelta `class_option`: titolo del modale (U4) e privilegio «da scegliere» sulla scheda (U2).
+    Vuoto per i trucchetti di classe, che non nascono da un privilegio."""
+    cls = _class_by_key(char, choice.get("class_key"))
+    if cls is None:
+        return {}
+    spec = next((s for s in features_for(character_edition(char), class_key(cls))
+                 if (s.subclass is None or s.subclass == cls.subclass_key)
+                 and any(ch.group == choice.get("group") for ch in s.choices)), None)
+    return {"feature_key": spec.key, "title": spec.name} if spec else {}
+
+
 def pick_count(char: Character, choice: dict) -> int | None:
     """Quante opzioni si prendono adesso: con ``grants`` (abilità) meno di ``count`` se la scheda non ne ha abbastanza (R39,
     il resto aspetta). ``None`` per gli incantesimi, che si scelgono dalla loro pagina."""

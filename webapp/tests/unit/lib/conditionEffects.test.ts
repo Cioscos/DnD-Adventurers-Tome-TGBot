@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import i18next from 'i18next'
 import itLoc from '@/locales/it.json'
 import enLoc from '@/locales/en.json'
-import { formatExpiry, formatSave } from '@/lib/conditionEffects'
+import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 import type { ConditionEffect } from '@/types'
 
 const eff = (o: Partial<ConditionEffect>): ConditionEffect => ({
@@ -64,5 +64,14 @@ describe('vista GM (ownerName)', () => {
       .toBe("fino all'inizio del prossimo turno di Orco")
     expect(formatSave(eff({ save_ability: 'constitution', save_dc: 15, save_edge: 'end' }), t, 'Goblin'))
       .toBe('TS COS CD 15 alla fine del turno di Goblin')
+  })
+})
+
+describe('formatSource (U35)', () => {
+  it('testo del GM, creatura, entrambi o nessuno', () => {
+    expect(formatSource(eff({ source_note: 'Ragnatela' }))).toBe('Ragnatela')
+    expect(formatSource(eff({ source_name: 'Corvo' }))).toBe('Corvo')
+    expect(formatSource(eff({ source_note: 'Ragnatela', source_name: 'Corvo' }))).toBe('Ragnatela (Corvo)')
+    expect(formatSource(eff({}))).toBeNull()
   })
 })

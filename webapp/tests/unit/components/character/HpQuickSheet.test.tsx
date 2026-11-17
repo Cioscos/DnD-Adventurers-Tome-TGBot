@@ -142,6 +142,17 @@ describe('HpQuickSheet quick values', () => {
   })
 })
 
+describe('HpQuickSheet heal toast', () => {
+  it('counts the hit points really regained, capped at the maximum (U19)', async () => {
+    updateHpSpy.mockResolvedValue({ ...char, current_hit_points: 20, hp_undo_id: 'abc' })
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    await userEvent.click(screen.getByText('character.hp.quick_heal'))
+    await userEvent.click(screen.getByRole('button', { name: '+20' }))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+    expect(showUndoToastSpy.mock.calls[0][0].message).toBe('character.hp.quick_heal_undo:10')
+  })
+})
+
 describe('HpQuickSheet undo', () => {
   it('undo calls undoHp with the op id', async () => {
     updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })

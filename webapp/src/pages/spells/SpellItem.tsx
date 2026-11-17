@@ -13,6 +13,7 @@ import ExpandChevron from '@/components/ui/ExpandChevron'
 import RollButton from '@/components/ui/RollButton'
 import { isAttackSpell, isHitOnlySpell } from '@/lib/spellType'
 import { scaleCantripDice } from '@/lib/dnd'
+import { localizeDistances } from '@/lib/format'
 import { ledgerEntry } from '@/styles/ledger'
 import type { RollMode } from '@/api/client'
 import type { Spell } from '@/types'
@@ -38,6 +39,8 @@ interface SpellItemProps {
   concentrationPending: boolean
   /** Libro del Mago: apre la copia nel libro (solo per un incantesimo che ne fa parte). */
   onBook?: () => void
+  /** Incantesimo attivo con danni nei turni successivi: tira i danni senza un altro slot. */
+  onRollActiveDamage?: () => void
 }
 
 function SpellItemInner({
@@ -56,8 +59,9 @@ function SpellItemInner({
   preparedPending,
   concentrationPending,
   onBook,
+  onRollActiveDamage,
 }: SpellItemProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const attackSaveLabel = (v?: string | null) => {
     const key = v?.trim().toUpperCase()
     if (!key) return ''
@@ -164,7 +168,7 @@ function SpellItemInner({
                   {(spell.effective_range_area ?? spell.range_area) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Crosshair size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.effective_range_area ?? spell.range_area}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{localizeDistances(spell.effective_range_area ?? spell.range_area ?? '', i18n.language)}</span>
                     </div>
                   )}
                   {(spell.effective_components ?? spell.components) && (
@@ -221,6 +225,17 @@ function SpellItemInner({
 
               {/* Action buttons */}
               <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
+                {onRollActiveDamage && (
+                  <Pressable
+                    onClick={onRollActiveDamage}
+                    className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
+                               bg-dnd-arcane/10 text-dnd-arcane-bright border border-dnd-arcane/30
+                               active:opacity-60"
+                  >
+                    <Sparkles size={12} />
+                    {t('character.spells.roll_active_damage')}
+                  </Pressable>
+                )}
                 {isHitOnlySpell(spell) ? null : isAttackSpell(spell) ? (
                   // Spell attack: long press opens the advantage/disadvantage menu.
                   <RollButton

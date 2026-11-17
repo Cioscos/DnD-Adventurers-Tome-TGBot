@@ -17,4 +17,8 @@ describe('PublicStates', () => {
     expect(warn.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
     warn.mockRestore()
   })
-})
+  it('U33: incantesimo con chi lo mantiene in concentrazione', () => {
+    render(<PublicStates states={[{ key: 'spell:bless', name: 'Benedizione', rounds_left: 9, others: [], source_name: 'Ilse', concentration: true }]} />)
+    expect(screen.getByText('Benedizione')).toBeInTheDocument()
+    expect(screen.getByText('character.conditions.effect.while_concentrating')).toBeInTheDocument()
+  })})

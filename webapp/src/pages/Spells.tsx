@@ -630,6 +630,7 @@ export default function Spells() {
                             isExpanded={expanded === spell.id}
                             onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
                             onUse={(mode) => castFlow.beginCast(spell, mode)}
+                            onRollActiveDamage={castFlow.canRollActiveDamage(spell) ? () => castFlow.rollActiveDamage(spell) : undefined}
                             totalLevel={totalLevelOf(char?.classes)}
                             onConcentrationToggle={() =>
                               concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)

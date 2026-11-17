@@ -42,3 +42,15 @@ export function bestAbility(char: ChoiceChar | undefined): 'strength' | 'dexteri
   const mod = (name: string) => char?.ability_scores?.find((a) => a.name === name)?.modifier ?? 0
   return mod('dexterity') > mod('strength') ? 'dexterity' : 'strength'
 }
+
+/** «+7 · 1d6+4»: bonus per colpire e danno dell'arma con le scelte predefinite (li calcola il server); '' senza anteprima. */
+export function weaponPreviewText(item: {
+  item_metadata?: Record<string, unknown> | null
+  attack_preview?: { to_hit: number; damage: number } | null
+}): string {
+  const p = item.attack_preview
+  if (!p) return ''
+  const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+  const dice = String(item.item_metadata?.damage_dice ?? '')
+  return `${sign(p.to_hit)} · ${p.damage ? `${dice}${sign(p.damage)}` : dice}`
+}

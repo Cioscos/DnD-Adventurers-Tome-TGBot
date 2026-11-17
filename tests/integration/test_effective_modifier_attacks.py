@@ -49,3 +49,13 @@ async def test_unarmed_attack_uses_item_bonus(client):
     r = await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})
     assert r.status_code == 200, r.text
     assert r.json()["to_hit_bonus"] == 6
+
+
+async def test_sheet_weapon_preview_matches_attack(client):
+    # U9: la scheda mostra gli stessi bonus che l'attacco userà, senza tirare
+    cid, wid = await _setup(client)
+    sheet = (await client.get(f"/characters/{cid}")).json()
+    spada = next(i for i in sheet["items"] if i["id"] == wid)
+    assert spada["attack_preview"] == {"to_hit": 6, "damage": 4}
+    guanti = next(i for i in sheet["items"] if i["name"] == "Guanti")
+    assert "attack_preview" not in guanti

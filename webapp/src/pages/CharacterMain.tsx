@@ -11,6 +11,7 @@ import { haptic } from '@/auth/telegram'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import PendingSavesBanner from '@/components/PendingSavesBanner'
+import CombatNotices from '@/components/CombatNotices'
 import InSessionBanner from '@/components/ui/InSessionBanner'
 import CampaignSessionBanner from '@/components/ui/CampaignSessionBanner'
 import OfflineNotice from '@/components/ui/OfflineNotice'
@@ -216,6 +217,7 @@ export default function CharacterMain() {
       <InSessionBanner charId={charId} />
       <div className="empty:hidden shrink-0 mx-3 mt-2 space-y-2"><CampaignSessionBanner /></div>
       <PendingSavesBanner charId={charId} />
+      <CombatNotices charId={charId} />
 
       <OfflineNotice query={charQuery} className="shrink-0 mx-3 mt-2" />
 

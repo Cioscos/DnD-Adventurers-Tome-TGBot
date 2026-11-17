@@ -51,7 +51,9 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
   const [dc, setDc] = useState('')
   const [saveEdge, setSaveEdge] = useState<'start' | 'end'>('end')
   const [sourceId, setSourceId] = useState('none')
-  const [conc, setConc] = useState(false)
+  const [sourceNote, setSourceNote] = useState('')
+  // Una condizione da incantesimo (Ragnatela) di solito finisce con la concentrazione di chi lo mantiene (U36).
+  const [conc, setConc] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [confirmLethal, setConfirmLethal] = useState(false)
 
@@ -88,6 +90,7 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
     else if (duration !== 'none') body.expiry = { anchor, edge: duration, count: 1 }
     if (ability !== 'none') body.save = { ability, dc: dcN, edge: saveEdge }
     if (source) body.source_combatant_id = source.id
+    if (sourceNote.trim()) body.source_note = sourceNote.trim()
     body.ends_with_concentration = showConc && conc
     return body
   }
@@ -146,6 +149,12 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
               value={sourceId}
               onChange={(v) => { setSourceId(v); setError(null) }}
               zClassName="z-[70]"
+            />
+            <Input
+              label={t(`${K}.source_note`)}
+              value={sourceNote}
+              onChange={(v) => setSourceNote(v.slice(0, 120))}
+              placeholder={t(`${K}.source_note_placeholder`)}
             />
             {showConc && (
               <SwitchToggle checked={conc} onChange={setConc} label={t(`${K}.concentration`)} />

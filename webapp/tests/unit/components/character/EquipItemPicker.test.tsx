@@ -41,6 +41,7 @@ vi.mock('@/store/unitSettings', () => ({
 vi.mock('@/lib/equipmentSlots', () => ({
   ITEM_TYPE_TO_SLOTS: { weapon: ['main_hand', 'off_hand'], shield: ['off_hand'], armor: ['body'] },
   handsConflict: handsConflictSpy,
+  equippedInSlot: () => null,
 }))
 vi.mock('@/components/character/HandsConflictDialog', async () => {
   const React = await import('react')

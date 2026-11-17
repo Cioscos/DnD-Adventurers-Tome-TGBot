@@ -67,7 +67,7 @@ describe('ConcentrationSaveDialog', () => {
     expect(screen.getByText(/critical_banner/)).toBeInTheDocument()
   })
 
-  it('fumble that breaks concentration → crimson, pulsing, FUMBLE banner, fail verdict, lost-concentration note', () => {
+  it('natural 1 that breaks concentration → crimson, no FUMBLE banner (U25: only attacks), fail verdict, lost-concentration note', () => {
     render(
       <ConcentrationSaveDialog
         result={result({ success: false, is_fumble: true, lost_concentration: true, total: 4 })}
@@ -76,8 +76,8 @@ describe('ConcentrationSaveDialog', () => {
     )
     const dialog = screen.getByTestId('result-dialog')
     expect(dialog).toHaveAttribute('data-accent', 'crimson')
-    expect(dialog).toHaveAttribute('data-pulse', 'true')
-    expect(screen.getByText(/fumble_banner/)).toBeInTheDocument()
+    expect(dialog).toHaveAttribute('data-pulse', 'false')
+    expect(screen.queryByText(/fumble_banner/)).not.toBeInTheDocument()
     expect(screen.getByText('character.spells.conc_save_fail')).toBeInTheDocument()
     expect(screen.getByText('character.spells.conc_lost')).toBeInTheDocument()
   })

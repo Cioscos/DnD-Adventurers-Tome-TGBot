@@ -57,6 +57,7 @@ class RollOptionRead(BaseModel):
     group: str | None = None
     group_max: int | None = None  # quante opzioni del gruppo si scelgono insieme (default 1)
     dice_cost: int = 0
+    unavailable: str | None = absent_when_none()  # non si può scegliere ora: il motivo, da mostrare con l'opzione spenta
     defers_damage: bool | None = absent_when_none()  # scelta prima del tiro che apre opzioni dopo il colpo: il danno aspetta
     requires_input: str | None = None
     gives_to_ally: bool = False  # PF temporanei per un PG della serata: il client chiede a chi (Task 46)

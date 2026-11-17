@@ -66,7 +66,7 @@ export default function SavingThrows() {
   const rollMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
       const choice = await askRollOptions(charId, { roll: 'save', ability })
-      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode), choice))
+      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode, choice), choice))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {

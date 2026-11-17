@@ -63,6 +63,8 @@ class SpellRead(BaseModel):
     removal: Optional[dict] = None
     # Effetto dell'incantesimo nel catalogo (edizione di chi lancia): `{target_kind, max_targets_by_slot, choices}`; `None` se non c'è
     effect: Optional[dict] = None
+    # Formula della cura per livello di slot (`{"2": "4d8+7"}`), da mostrare prima del tiro (U22); `None` se non cura
+    healing_preview: Optional[dict[int, str]] = None
 
     model_config = {"from_attributes": True}
 

@@ -62,6 +62,7 @@ vi.mock('@/components/ui/CampaignSessionBanner', async () => {
   return { default: () => React.createElement('div', { 'data-testid': 'campaign-banner' }) }
 })
 vi.mock('@/components/PendingSavesBanner', () => ({ default: () => null }))
+vi.mock('@/components/CombatNotices', () => ({ default: () => null }))
 vi.mock('@/components/character/CharacterSwiper', async () => {
   const React = await import('react')
   return { default: () => React.createElement('div', { 'data-testid': 'swiper' }) }

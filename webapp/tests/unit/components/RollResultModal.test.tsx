@@ -69,10 +69,15 @@ describe('RollResultModal', () => {
     expect(screen.getByText('character.dice.critical_banner')).toBeInTheDocument()
   })
 
-  it('a fumble is crimson and shows the FUMBLE banner', () => {
-    render(<RollResultModal result={result({ is_fumble: true })} title="T" onClose={() => {}} />)
+  it('a fumble on an attack roll is crimson and shows the FUMBLE banner', () => {
+    render(<RollResultModal result={result({ is_fumble: true })} title="T" attack onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'crimson')
     expect(screen.getByText('character.dice.fumble_banner')).toBeInTheDocument()
+  })
+
+  it('a natural 1 on a check or save shows no FUMBLE banner (U25)', () => {
+    render(<RollResultModal result={result({ is_fumble: true })} title="T" onClose={() => {}} />)
+    expect(screen.queryByText('character.dice.fumble_banner')).not.toBeInTheDocument()
   })
 
   it('offers the inspiration reroll only when available and not already rerolled', async () => {

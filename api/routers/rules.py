@@ -54,7 +54,7 @@ from core.data.skills import SKILL_ABILITY_MAP
 from core.data.spell_slots import normalize_class_name
 from core.rules.modifiers import modifiers_for
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
-from core.rules.roll_options import AppliedOptions, refund_spent
+from core.rules.roll_options import AppliedOptions, option_names, refund_spent
 from core.rules.starting_equipment import describe as describe_starting_equipment, starting_wealth
 from core.rules.subclasses import subclasses_for
 from core.rules.types import BARDIC_DIE, Edition
@@ -277,7 +277,7 @@ async def last_roll_options(
     refundable = {**last["refundable"], **opts.refundable}
     if opts.keys:
         add_history(db, char.id, "concentration_save" if conc else _HISTORY_EVENT[last["roll"]],
-                     f"Dopo il tiro ({', '.join(opts.keys)}): d20={die} {bonus:+d} = {total}")
+                     f"Dopo il tiro ({option_names(char, opts.keys)}): d20={die} {bonus:+d} = {total}")
 
     closed: dict = {}
     failed: bool | None = None  # noto al server: il rimborso non va chiesto
@@ -572,6 +572,8 @@ async def end_active_state(
         return_to_normal(char, form)
         return char.active_states
     closed = [s for s in char.active_states or [] if s.get("key") == key]
+    if key.startswith(SPELL_STATE_PREFIX) and any((s.get("data") or {}).get("caster_id") not in (None, char.id) for s in closed):
+        raise HTTPException(409, detail={"code": "ended_by_caster"})  # lo chiude chi l'ha lanciato, o il master
     remove_state(char, key, by_player=True)
     if key.startswith(SPELL_STATE_PREFIX):
         await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi

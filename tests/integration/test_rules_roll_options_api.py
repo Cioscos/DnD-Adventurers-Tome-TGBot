@@ -435,6 +435,27 @@ async def test_spell_attack_with_frightened_confirmed(client, rules_catalog):
     assert r.json()["mode_applied"] == "disadvantage" and r.json()["notes"] == ["condition:frightened"]
 
 
+async def test_frightened_is_preselected_and_its_two_dice_are_used(client):
+    """U37: lo svantaggio da Spaventato è già acceso nel prompt; il client anima i due d20 e il server li usa (U16)."""
+    cid = await _char(client)
+    await _cond(client, cid, frightened=True)
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "skill", "skill": "athletics"})).json()
+    assert next(o for o in listed if o["key"] == "condition:frightened")["preselected"] is True
+    r = await client.post(f"/characters/{cid}/skills/athletics/roll",
+                          json={"mode": "normal", "dice": [15, 4], "options": ["condition:frightened"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["dice"] == [15, 4] and r.json()["die"] == 4
+
+
+async def test_extra_animated_die_is_dropped(client):
+    """U16: il client ha animato due d20 per un'opzione che sul server non conta (annullata da un automatismo): vale il
+    primo, niente 422."""
+    cid = await _char(client)
+    r = await client.post(f"/characters/{cid}/skills/athletics/roll", json={"mode": "normal", "dice": [6, 18]})
+    assert r.status_code == 200, r.text
+    assert r.json()["dice"] == [6] and r.json()["die"] == 6
+
+
 # --- Danno subito ---------------------------------------------------------------------------------------------------
 
 async def test_damage_in_comes_before_resistance(client, rules_catalog):

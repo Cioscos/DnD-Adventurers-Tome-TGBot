@@ -71,7 +71,7 @@ export default function MyCombatantCard({ combatant: c, snapshot: s, isMyTurn, t
             {s?.ac != null && (
               <span className="flex items-center gap-1">
                 <Shield size={13} className="text-dnd-gold-bright" />
-                {s.ac}
+                {t('character.ac.short')} {s.ac}
               </span>
             )}
           </div>

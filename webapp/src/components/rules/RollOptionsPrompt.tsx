@@ -118,7 +118,8 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
             key={option.key}
             option={option}
             on={chosen.includes(option.key)}
-            blocked={!!option.needs && !chosen.includes(option.needs)}
+            blocked={!!option.unavailable || (!!option.needs && !chosen.includes(option.needs))}
+            diceCut={options.filter((o) => o.needs === option.key && chosen.includes(o.key)).reduce((n, o) => n + o.dice_cost, 0)}
             slot={slots[option.key]}
             charId={charId}
             ally={allyOf[option.key]}
@@ -133,6 +134,10 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
           </Button>
         )}
         <div className="flex gap-2">
+          {/* U24: i danni in arrivo si possono ancora annullare (nessun PF tolto, nessuna reazione spesa) */}
+          {phase === 'damage_in' && context?.cancellable && (
+            <Button variant="secondary" fullWidth onClick={cancel}>{t('common.cancel')}</Button>
+          )}
           {phase === 'after_hit' && (
             <Button variant="secondary" fullWidth onClick={() => close('miss')}>
               {t('character.roll_options.miss')}
@@ -149,10 +154,12 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   )
 }
 
-function OptionRow({ option, on, blocked, slot, charId, ally, onAlly, onToggle, onSlot }: {
+function OptionRow({ option, on, blocked, diceCut = 0, slot, charId, ally, onAlly, onToggle, onSlot }: {
   option: RollOption
   on: boolean
   blocked: boolean
+  /** Dadi tolti dalle opzioni scelte che dipendono da questa (Colpo Astuto sull'Attacco Furtivo). */
+  diceCut?: number
   slot?: number
   charId: number
   ally?: number
@@ -161,7 +168,7 @@ function OptionRow({ option, on, blocked, slot, charId, ally, onAlly, onToggle, 
   onSlot: (level: number) => void
 }) {
   const { t } = useTranslation()
-  const hints = optionHints(option, t)
+  const hints = optionHints(option, t, diceCut)
   const { data: allies = [] } = useQuery({
     queryKey: ['session-allies', charId], queryFn: () => api.characters.sessionAllies(charId), enabled: on && !!option.gives_to_ally,
   })

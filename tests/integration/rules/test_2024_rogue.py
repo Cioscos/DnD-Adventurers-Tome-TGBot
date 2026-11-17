@@ -224,6 +224,7 @@ async def test_steady_aim_advantage_is_preselected_says_the_speed_and_withdraw_i
     assert next(o for o in listed if o["key"] == STEADY_ADV)["preselected"] is True
     assert all("preselected" not in o for o in listed if o["key"] != STEADY_ADV)
     assert WITHDRAW not in await _offered(client, cid, wid)
+    assert "Velocità 0" in next(o["unavailable"] for o in listed if o["key"] == WITHDRAW)  # U40: spenta, con il motivo
 
 
 async def test_steady_aim_ends_when_the_turn_ends_in_an_encounter(client, test_session_factory, monkeypatch):
@@ -251,7 +252,7 @@ async def _kit(client, cid) -> None:
 
 async def _offered(client, cid, wid) -> set[str]:
     listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": wid})).json()
-    return {o["key"] for o in listed if o["phase"] == "after_hit"}
+    return {o["key"] for o in listed if o["phase"] == "after_hit" and not o.get("unavailable")}
 
 
 @pytest.mark.parametrize("level,extra", [(5, set()), (14, {DAZE, KNOCK_OUT, OBSCURE})])
@@ -274,14 +275,28 @@ async def test_an_option_costs_dice_taken_from_the_sneak_attack(client):
     assert len(r.json()["option_result"]["extra_rolls"]) == 2
 
 
+async def test_cunning_strike_offer_shows_the_dc_and_the_sheet_the_sneak_dice(client):
+    # U38/U11: CD 8 + competenza + Destrezza già nell'offerta; i dadi del Furtivo al livello attuale sulla scheda
+    cid = await _rogue24(client, 5, dexterity=18)
+    wid = await _rapier(client, cid)
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": wid})).json()
+    assert next(o["label"] for o in listed if o["key"] == TRIP).endswith("(CD 15)")
+    assert "CD" not in next(o["label"] for o in listed if o["key"] == SNEAK)
+    assert (await _ability(client, cid, SNEAK))["roll_dice"] == "3d6"
+
+
 async def test_poison_needs_the_poisoners_kit_in_the_inventory(client):
     cid = await _rogue24(client, 5)
     wid = await _rapier(client, cid)
     assert POISON not in await _offered(client, cid, wid)
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": wid})).json()
+    assert "Kit da Avvelenatore" in next(o["unavailable"] for o in listed if o["key"] == POISON)  # U14: si dice perché
     refused = await _strike(client, cid, wid, SNEAK, POISON)
     assert refused.status_code == 409 and refused.json()["detail"]["code"] == "option_unavailable"
     await _kit(client, cid)
     assert POISON in await _offered(client, cid, wid)
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": wid})).json()
+    assert not any(o.get("unavailable") for o in listed)
     assert (await _strike(client, cid, wid, SNEAK, POISON)).status_code == 200
 
 

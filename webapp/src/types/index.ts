@@ -100,6 +100,9 @@ export interface PendingChoice {
   resolvable?: boolean
   /** Personaggio salvato prima del catalogo o importato: ammette ciò che ha già sulla scheda (R39). */
   retrofit?: boolean
+  /** Solo class_option: privilegio da cui nasce la scelta (assente per i trucchetti di classe). */
+  feature_key?: string
+  title?: { it: string; en: string }
   /** Solo incantesimi a scelta (Segreti Magici): si scelgono dalla pagina degli incantesimi; `free`: non contano fra i conosciuti.
    *  `list`: la classe del cui elenco si pesca (trucchetto del druido), `null` per qualsiasi classe.
    *  `owned`: con `retrofit`, gli incantesimi già conosciuti che si possono dichiarare «già sulla scheda». */
@@ -144,6 +147,8 @@ export interface Ability {
   rest_damage_choices?: string[]
   /** Cosa farà il «Usa» (Astuzia Magica: quanti slot di Patto tornano), calcolato dal server. */
   use_preview?: { it: string; en: string } | null
+  /** Dadi in più che il privilegio dà al tiro, al livello attuale (Attacco Furtivo 3d6). */
+  roll_dice?: string | null
   /** Pool: il giocatore sceglie quanti usi spendere, al massimo `max_amount` (null: gli usi rimasti). */
   choose_amount?: boolean
   max_amount?: number | null
@@ -177,6 +182,8 @@ export interface ActiveState {
   rounds_left: number | null
   ends_on: string[]
   data: Record<string, unknown>
+  /** Stati `spell:*`: cosa dà l'incantesimo a chi lo riceve (Benedizione: «somma 1d4 al tiro»), dal server. */
+  hints?: { it: string; en: string }[]
 }
 
 export interface ZeroHpSaveResult {
@@ -270,6 +277,8 @@ export interface Spell {
   srd_index?: string | null
   /** Incantesimo di cura: «Lancia» apre il tiro di cura (lo decide il server). */
   is_healing?: boolean
+  /** Formula della cura per livello di slot, con modificatore e privilegi (`{ 2: "4d8+7" }`). */
+  healing_preview?: Record<number, string> | null
   higher_levels_dice?: string | null
   /** Seconda parte del danno, di un altro tipo (Colpo infuocato: fuoco e radioso). */
   extra_damage_dice?: string | null
@@ -331,6 +340,8 @@ export interface Item {
   mastery?: string
   /** Portata in più nel proprio turno, da un privilegio (Radici Percuotenti). */
   reach_bonus_ft?: number | null
+  /** Armi: bonus per colpire e al danno con le scelte predefinite, calcolati dal server sulla scheda. */
+  attack_preview?: { to_hit: number; damage: number } | null
   /** Effetto di catalogo di ogni incantesimo concesso (stesso ordine di `granted_spells`); `null` se non ne ha. */
   granted_effects?: (SpellEffectInfo | null)[] | null
 }
@@ -488,6 +499,8 @@ export interface ConditionEffect {
   save_dc?: number | null
   save_edge?: 'start' | 'end' | null
   source_name?: string | null
+  /** Fonte scritta dal GM ("Ragnatela"). */
+  source_note?: string | null
   ends_with_concentration: boolean
   applied_by_gm: boolean
 }
@@ -786,7 +799,7 @@ export interface SessionRecap {
   ended_at: string
   duration_seconds: number
   characters: SessionRecapCharacter[]
-  combat: { encounters: number; rounds: number; monsters: string[] }
+  combat: { encounters: number; rounds: number; monsters: string[]; defeated?: number; damage_dealt?: number }  // defeated/damage_dealt: assenti nei recap vecchi
   items: {
     gm_grants: { to: string | null; item: string; quantity: number }[]
     trades: { from: string; to: string; summary: string }[]
@@ -849,6 +862,8 @@ export interface CharacterLiveSnapshot {
   condition_effects?: ConditionEffect[]
   has_pending_save?: boolean
   is_concentrating?: boolean
+  /** Nome dell'incantesimo mantenuto in concentrazione. */
+  concentration_spell?: string | null
   /** Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti. */
   active_states?: PublicState[]
 }
@@ -885,6 +900,9 @@ export interface PublicState {
   name: string
   rounds_left: number | null
   others: { key: string; name: string; text: string }[]
+  /** Incantesimi: chi l'ha lanciato e se finisce con la sua concentrazione. */
+  source_name?: string | null
+  concentration?: boolean
 }
 
 export interface GmConditionApply {
@@ -893,6 +911,7 @@ export interface GmConditionApply {
   expiry?: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number }
   save?: { ability: string; dc: number; edge: 'start' | 'end' }
   source_combatant_id?: number
+  source_note?: string
   ends_with_concentration?: boolean
 }
 

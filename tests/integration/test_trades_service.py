@@ -225,3 +225,56 @@ async def test_partial_split_of_container_stack_is_rejected(test_session_factory
         assert e.value.status_code == 422 and e.value.detail == "invalid_quantity"
         snap, _ = await give_item(s, A, B, ids["Zaino"], 2)
         assert snap["quantity"] == 2
+
+
+_POTION = dict(name="Pozione", item_type="consumable", weight=0.5,
+               item_metadata=json.dumps({"effects": [{"kind": "heal", "amount": "2d4+2"}]}))
+
+
+async def test_give_identical_non_generic_merges(test_session_factory):
+    # U45: due pozioni identiche diventano una pila sola, intera o divisa
+    a, b, ids = await _setup(test_session_factory, [{**_POTION, "quantity": 3}], [{**_POTION, "quantity": 2}])
+    async with test_session_factory() as s:
+        A, B = await _load(s, a), await _load(s, b)
+        await give_item(s, A, B, ids["Pozione"], 1)
+        await s.commit()
+        rows = (await s.execute(select(Item).where(Item.character_id == b))).scalars().all()
+        assert [r.quantity for r in rows] == [3]
+
+
+@pytest.mark.parametrize("other", [
+    {**_POTION, "item_metadata": json.dumps({"effects": [{"kind": "heal", "amount": "4d4+4"}]})},
+    {**_POTION, "is_equipped": True},
+    {**_POTION, "item_type": "generic"},
+])
+async def test_give_different_or_equipped_does_not_merge(test_session_factory, other):
+    a, b, ids = await _setup(test_session_factory, [_POTION], [other])
+    async with test_session_factory() as s:
+        A, B = await _load(s, a), await _load(s, b)
+        await give_item(s, A, B, ids["Pozione"], None)
+        await s.commit()
+        rows = (await s.execute(select(Item).where(Item.character_id == b))).scalars().all()
+        assert len(rows) == 2
+
+
+async def test_depositor_tagged_in_stash_and_dropped_on_take(test_session_factory):
+    # U46: il deposito ricorda chi ha messo l'oggetto; chi lo prende non si porta dietro l'annotazione
+    a, b, ids = await _setup(test_session_factory, [{**_POTION, "quantity": 2}], [{**_POTION, "quantity": 1}])
+    async with test_session_factory() as s:
+        A, B = await _load(s, a), await _load(s, b)
+        await give_item(s, A, B, ids["Pozione"], 1, deposited_by="Ilse")
+        await s.commit()
+        stash_row = (await s.execute(select(Item).where(Item.character_id == b))).scalar_one()
+        assert stash_row.quantity == 2 and item_meta(stash_row)["deposited_by"] == ["Ilse"]
+        await give_item(s, A, B, ids["Pozione"], None, deposited_by="Sel")
+        await s.commit()
+        assert item_meta(stash_row)["deposited_by"] == ["Ilse", "Sel"]
+        row_id = stash_row.id
+    async with test_session_factory() as s:  # nuova sessione: come una nuova richiesta
+        # presa intera da un PG senza pozioni: la riga cambia proprietario e perde l'annotazione
+        B, A = await _load(s, b), await _load(s, a)
+        await give_item(s, B, A, row_id, None)
+        await s.commit()
+        row = await s.get(Item, row_id)
+        assert row.character_id == a and "deposited_by" not in item_meta(row)
+        assert item_meta(row)["effects"]

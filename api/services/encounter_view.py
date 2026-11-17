@@ -15,6 +15,7 @@ from api.schemas.encounter import CombatantLive, EncounterLive, PublicState, Pub
 from api.services.condition_effects import effect_reads, pending_read
 from api.services.rules_states import GENERIC_STATE_NAME
 from core.rules.catalog import active_features
+from core.rules.spell_effects import SPELL_STATE_PREFIX
 from core.rules.modifiers import is_incapacitated
 from core.rules.states import is_conscious
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
@@ -27,6 +28,13 @@ def public_states(char: Character, lang: str = "it") -> list[PublicState]:
     specs = {spec.key: spec for spec, _row in active_features(char)}
     out: list[PublicState] = []
     for state in char.active_states or []:
+        if str(state.get("key", "")).startswith(SPELL_STATE_PREFIX):
+            # U33: incantesimo su questo PG (Benedizione, Scudo, Ragnatela…): nome, durata e chi l'ha lanciato
+            data = state.get("data") or {}
+            out.append(PublicState(key=state["key"], name=state.get("name") or GENERIC_STATE_NAME,
+                                   rounds_left=state.get("rounds_left"), source_name=data.get("caster_name"),
+                                   concentration=bool((data.get("duration") or {}).get("concentration"))))
+            continue
         others = [
             PublicStateOther(key=key, name=spec.name.get(lang) or spec.name["it"],
                              text=spec.summary.get(lang) or spec.summary["it"])

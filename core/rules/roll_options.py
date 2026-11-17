@@ -141,7 +141,7 @@ _CONDITION_OPTIONS = (
     RollOptionSpec(
         key="condition:frightened", phase="before", rolls=("attack", "skill", "initiative"), mode="disadvantage",
         label={"it": "Spaventato: vedi la fonte della paura?", "en": "Frightened: can you see the source of your fear?"},
-        available=_on("frightened"),
+        available=_on("frightened"), preselected=True,  # in scontro la fonte di solito è in vista: si spegne se non lo è
     ),
     RollOptionSpec(
         key="condition:grappled", phase="before", rolls=("attack",), mode="disadvantage",
@@ -378,6 +378,12 @@ def _specs_by_key(char: Any) -> dict[str, RollOptionSpec]:
     for feature, _row in active_features(char):
         specs.update({o.key: o for o in feature.roll_options})
     return specs
+
+
+def option_names(char: Any, keys: list[str]) -> str:
+    """Nomi leggibili delle opzioni per lo storico: la parte dell'etichetta prima dei due punti (``Attacco Furtivo``)."""
+    specs = _specs_by_key(char)
+    return ", ".join(specs[k].label["it"].split(":")[0] if k in specs else k for k in keys)
 
 
 def uses_own_slot(char: Any, keys: list[str]) -> bool:

@@ -13,6 +13,7 @@ import RollModeToggle from '@/components/ui/RollModeToggle'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
 import AfterRollOptions from '@/components/rules/AfterRollOptions'
 import RollNotes from '@/components/rules/RollNotes'
+import { D20Breakdown } from '@/components/RollResultModal'
 import type { PendingSave, PendingSaveRollResult } from '@/types'
 
 interface Props {
@@ -61,7 +62,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
     mutationFn: async ({ save, reroll }: { save: PendingSave; reroll: boolean }) => {
       const m = reroll ? 'normal' : mode
       const choice = reroll ? undefined : await askRollOptions(charId, { roll: 'save', ability: save.ability })
-      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m), choice), reroll)
+      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m, choice), choice), reroll)
       return { save, res }
     },
     onSuccess: (r) => {
@@ -132,6 +133,8 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
             <p className="text-center font-display text-3xl font-black tabular-nums text-dnd-gold-bright">
               {t('pendingSaves.total_vs_dc', { total: view.res.roll.total, dc: active.dc })}
             </p>
+            {/* Un TS fallito riaperto può non avere più il dado: allora resta il solo totale. */}
+            {view.res.roll.die != null && <D20Breakdown roll={view.res.roll} className="text-center" />}
             <p
               className={`text-center font-display font-bold ${
                 view.res.passed ? 'text-dnd-emerald-bright' : 'text-dnd-crimson-bright'

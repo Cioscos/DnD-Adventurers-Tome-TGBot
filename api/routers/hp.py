@@ -64,7 +64,7 @@ from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
 from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.roll_options import refund_spent, run_zero_damage_hooks, scale_damage
+from core.rules.roll_options import option_names, refund_spent, run_zero_damage_hooks, scale_damage
 from api.services.rules_options import (
     merge_options,
     option_result,
@@ -331,7 +331,13 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             if body.raw_value is not None and mod in ("half", "double", "half_double"):
                 word = {"half": "dimezzati", "double": "raddoppiati", "half_double": "dimezzati e raddoppiati"}[mod]
                 note = f" ({body.raw_value} {word})"
-            desc = f"Danni: -{lost} HP{note} ({old} → {char.current_hit_points})"
+            desc = f"Danni{' da ' + LABELS_IT[slug] if slug else ''}: -{lost} HP{note} ({old} → {char.current_hit_points})"
+        # Le riduzioni scelte (Schivata Prodigiosa, Parata...) e il colpo di partenza: senza PF, li vede anche il tavolo.
+        used = option_names(char, [k for k in opts.keys if k != DEATH_WARD_HOLD]) if opts is not None else ""
+        if used and option_block is not None and option_block.damage_before is not None:
+            used += f" (colpo {option_block.damage_before})"
+        if used:
+            desc += f" — {used}"
         if form_overflow:
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if warded:
@@ -347,7 +353,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         if not form_absorbed:
             add_history(session, char.id, "hp_change", desc,
                          meta={"op": "DAMAGE", "amount": lost,  # come la riga di storico e il riepilogo di serata: PF persi, non il colpo
-                               "to_zero": old > 0 and char.current_hit_points == 0})
+                               "to_zero": old > 0 and char.current_hit_points == 0,
+                               **({"damage_type": LABELS_IT[slug]} if slug else {}), **({"note": used} if used else {})})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
         if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
@@ -768,7 +775,17 @@ async def rest_preview(
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
     char = await get_owned_full_with_resources(char_id, user_id, session)
     bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    return compute_rest_effects(char, rest_type, bonus)
+    preview = compute_rest_effects(char, rest_type, bonus)
+    preview.too_soon = rest_type == "long" and _long_rest_too_soon(char)  # il primo modale avvisa già, prima della conferma
+    return preview
+
+
+def _long_rest_too_soon(char) -> bool:
+    """Meno di 24 h (2014) / 16 h (2024) dall'ultimo riposo lungo."""
+    if not char.last_long_rest_at:
+        return False
+    gap = timedelta(hours=16 if character_edition(char) == "2024" else 24)
+    return _utcnow() - datetime.fromisoformat(char.last_long_rest_at) < gap
 
 
 def _rest_ally_temp_hp(char, edition) -> tuple[int, int]:
@@ -844,10 +861,8 @@ async def rest(
                          meta={"kind": rest_type, "interrupted": True})
             return await build_character_response(session, char)
         rest_type = "short"  # 2024: il lungo interrotto dopo almeno un'ora vale un riposo breve
-    if rest_type == "long" and not body.confirm_early and char.last_long_rest_at:
-        gap = timedelta(hours=16 if edition == "2024" else 24)
-        if _utcnow() - datetime.fromisoformat(char.last_long_rest_at) < gap:
-            raise HTTPException(status_code=409, detail="long_rest_too_soon")
+    if rest_type == "long" and not body.confirm_early and _long_rest_too_soon(char):
+        raise HTTPException(status_code=409, detail="long_rest_too_soon")
     notifications: list[dict] = []
     if body.reopen_tome:  # Patto del Tomo: dopo ogni controllo che può rifiutare il riposo
         from api.services.choices import reopen_tome  # import locale: choices importa i modelli del riposo
@@ -1030,7 +1045,7 @@ async def spend_hit_dice(
 
     old_hp = char.current_hit_points
     # apply_heal: tetto con bonus homebrew e azzeramento dei tiri contro morte risalendo da 0 PF.
-    healed = await apply_heal(session, char, total_healed)
+    healed = await apply_heal(session, char, total_healed, log=False)  # la riga «Dado vita» basta: niente «Cura» doppia
     actual_healed = healed["healed"]
 
     cls.hit_dice_used = (cls.hit_dice_used or 0) + body.count

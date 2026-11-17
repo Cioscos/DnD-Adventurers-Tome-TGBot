@@ -41,6 +41,7 @@ vi.mock('@/hooks/useSwipeNavigation', () => ({
 vi.mock('@/components/skeletons/pageSkeletons', () => ({ pageSkeleton: () => () => null }))
 vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
+vi.mock('@/components/CombatNotices', () => ({ default: () => null }))
 vi.mock('framer-motion', async () => {
   const React = await import('react')
   const MOTION = new Set(['initial', 'animate', 'exit', 'transition', 'variants', 'whileTap', 'whileHover', 'drag', 'layout'])

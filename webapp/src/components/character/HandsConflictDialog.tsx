@@ -7,13 +7,17 @@ import type { Item } from '@/types'
 interface Props {
   newItem: Item
   removedItem: Item
+  /** Chi occupa già lo slot scelto: esce anche lui, va detto insieme all'altro (U13). */
+  alsoRemoved?: Item | null
   pending?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
-export default function HandsConflictDialog({ newItem, removedItem, pending, onConfirm, onCancel }: Props) {
+export default function HandsConflictDialog({ newItem, removedItem, alsoRemoved, pending, onConfirm, onCancel }: Props) {
   const { t } = useTranslation()
+  const names = [alsoRemoved, removedItem].filter((i): i is Item => !!i && i.id !== newItem.id).map((i) => i.name)
+  const removed = [...new Set(names)].join(` ${t('character.equipment.hands_conflict.and')} `)
   return (
     <Sheet open onClose={onCancel} centered title={t('character.equipment.hands_conflict.title')}>
       <div className="p-5 space-y-4">
@@ -23,7 +27,7 @@ export default function HandsConflictDialog({ newItem, removedItem, pending, onC
           </span>
         </div>
         <p className="text-sm text-center text-dnd-text font-body">
-          {t('character.equipment.hands_conflict.body', { newItem: newItem.name, removedItem: removedItem.name })}
+          {t('character.equipment.hands_conflict.body', { newItem: newItem.name, removedItem: removed })}
         </p>
         <div className="flex gap-2">
           <Button variant="primary" fullWidth onClick={onCancel}>

@@ -27,7 +27,7 @@ import { notifyMutationError } from '@/lib/mutationError'
 import DurationInput from '@/components/character/DurationInput'
 import { useTickRound } from '@/hooks/useTickRound'
 import { useTurnState } from '@/hooks/useTurnState'
-import { formatExpiry, formatSave } from '@/lib/conditionEffects'
+import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -276,7 +276,7 @@ export default function Conditions() {
   const effectRows = (char.condition_effects ?? [])
     .filter((e) => conditions[e.slug])
     .map((e) => ({ e, expiry: formatExpiry(e, t), save: formatSave(e, t) }))
-    .filter((r) => r.expiry || r.save || r.e.applied_by_gm)
+    .filter((r) => r.expiry || r.save || r.e.applied_by_gm || formatSource(r.e))
 
   const activeCount =
     CONDITION_KEYS.filter((k) => conditions[k]).length +
@@ -474,10 +474,14 @@ export default function Conditions() {
                 <span className="font-semibold text-dnd-text">
                   {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : conditionLabel(e.slug, t)}
                 </span>
-                {e.applied_by_gm && (
+                {/* U35: con una fonte scelta si mostra quella, «dal GM» solo quando non c'è altro */}
+                {e.applied_by_gm && !formatSource(e) && (
                   <span className="ml-2 text-xs uppercase tracking-wider text-dnd-amber">
                     {t('character.conditions.effect.by_gm')}
                   </span>
+                )}
+                {formatSource(e) && (
+                  <p className="text-xs text-dnd-text-muted">{t('session.combat.source_label', { name: formatSource(e) })}</p>
                 )}
                 {expiry && <p className="text-xs text-dnd-text-muted">{expiry}</p>}
                 {save && <p className="text-xs text-dnd-text-muted tabular-nums">{save}</p>}

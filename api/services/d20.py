@@ -28,6 +28,17 @@ def spend_inspiration_reroll(char) -> None:
     spend_inspiration(char)
 
 
+def set_inspiration(char, value: bool) -> None:
+    """Concede o toglie l'Ispirazione (giocatore o GM). 2024: riceverne una con una già in mano la rende «in più»."""
+    settings = dict(char.settings or {})
+    if value and char.heroic_inspiration and character_edition(char) == "2024":
+        settings["inspiration_extra"] = True  # se ne ha una sola: questa è da cedere a chi ne è privo, o persa
+    else:
+        settings.pop("inspiration_extra", None)
+    char.settings = settings
+    char.heroic_inspiration = value
+
+
 def spend_inspiration(char) -> None:
     """Spesa l'Ispirazione, cade anche quella «in più» da cedere: non ce n'è più nessuna."""
     char.heroic_inspiration = False
@@ -56,7 +67,8 @@ def resolve_applied(
     mode: RollMode = player_mode if reroll else final_mode(player_mode, applied)
     if applied.replace_die is not None:
         mode, dice = "normal", [applied.replace_die]
-    elif mode != player_mode:
+    # Un dado in più si scarta: il client anima i d20 delle opzioni scelte, ma un automatismo può annullarli (avvelenato).
+    elif mode != player_mode or (dice is not None and len(dice) > (1 if mode == "normal" else 2)):
         given = dice if dice is not None else [die] if die is not None else None
         if given is not None:
             need = 1 if mode == "normal" else 2

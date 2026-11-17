@@ -38,29 +38,63 @@ async def remove_item(db, owner, item_id: int, quantity: int | None) -> dict:
     return snapshot
 
 
-async def give_item(db, sender, recipient, item_id: int, quantity: int | None):
+def _stack_key(item) -> dict:
+    # sintonia e depositanti sono stato di chi lo tiene, non dell'oggetto
+    return {k: v for k, v in item_meta(item).items() if k not in ("attuned", "deposited_by")}
+
+
+def stacks_with(o, item) -> bool:
+    """`o`, radice del destinatario, può accogliere `item` nella stessa pila.
+
+    Generici: basta il nome (come prima). Gli altri solo se identici e `o` non è equipaggiato né sintonizzato.
+    """
+    if (o.container_id is not None or is_container(o) or is_container(item)
+            or o.name != item.name or o.item_type != item.item_type):
+        return False
+    if item.item_type == "generic":
+        return True
+    return (not o.is_equipped and not item_meta(o).get("attuned")
+            and (o.description, o.weight) == (item.description, item.weight)
+            and _stack_key(o) == _stack_key(item))
+
+
+def _set_depositors(row, names: list[str]) -> None:
+    md = {k: v for k, v in item_meta(row).items() if k != "deposited_by"}
+    if names:
+        md["deposited_by"] = names
+    row.item_metadata = json.dumps(md) if md else None
+
+
+def _add_depositor(row, by: str) -> None:
+    _set_depositors(row, list(dict.fromkeys([*item_meta(row).get("deposited_by", []), by])))
+
+
+async def give_item(db, sender, recipient, item_id: int, quantity: int | None, *, deposited_by: str | None = None):
     """Hand an item (with its whole subtree if a container) to `recipient`, at their root.
 
+    `deposited_by`: nome del PG che mette nel deposito, annotato sulla riga di arrivo; senza, la riga
+    di arrivo perde l'annotazione (chi prende dal deposito non se la porta dietro).
     Returns (snapshot, rows taken off the sender's paper-doll with their previous slot).
     """
     item, quantity, snapshot = _pick(sender, item_id, quantity)
 
-    same = next((
-        o for o in recipient.items
-        if o.container_id is None and o.item_type == "generic" == item.item_type
-        and not is_container(o) and not is_container(item) and o.name == item.name
-    ), None)
+    same = next((o for o in recipient.items if stacks_with(o, item)), None)
 
     if quantity is not None:  # split: the staying row keeps its equip state
         item.quantity -= quantity
         if same is not None:
             same.quantity += quantity
+            if deposited_by:
+                _add_depositor(same, deposited_by)
         else:
-            db.add(Item(
+            new = Item(
                 character_id=recipient.id, name=item.name, description=item.description,
                 weight=item.weight, quantity=quantity, item_type=item.item_type,
                 item_metadata=json.dumps({**item_meta(item), "attuned": False}) if item_meta(item).get("attuned") else item.item_metadata,
-            ))
+            )
+            if deposited_by or "deposited_by" in item_meta(new):
+                _set_depositors(new, [deposited_by] if deposited_by else [])
+            db.add(new)
         await db.flush()
         return snapshot, []
 
@@ -78,11 +112,15 @@ async def give_item(db, sender, recipient, item_id: int, quantity: int | None):
 
     if same is not None:
         same.quantity += item.quantity
+        if deposited_by:
+            _add_depositor(same, deposited_by)
         await db.delete(item)
     else:
         for row in tree:
             row.character_id = recipient.id
         item.container_id = None
+        if deposited_by or "deposited_by" in item_meta(item):
+            _set_depositors(item, [deposited_by] if deposited_by else [])
     await db.flush()
     return snapshot, removed
 

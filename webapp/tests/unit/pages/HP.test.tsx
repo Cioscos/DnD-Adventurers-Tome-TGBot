@@ -432,15 +432,17 @@ describe('HP page', () => {
   it('short rest spends hit dice and rests; long rest goes through the confirm sheet', async () => {
     getChar.mockResolvedValue(aliveChar)
     restSpy.mockResolvedValue(aliveChar)
-    spendHitDiceSpy.mockResolvedValue({})
+    spendHitDiceSpy.mockResolvedValue({ rolls: [3, 5], con_bonus: 0, healed: 8, new_current_hp: 20 })
     renderWithProviders(<HP />)
     await screen.findByTestId('hp-op-form')
 
-    // short rest button → opens HitDiceModal
+    expect(screen.getByTestId('hit-dice-left')).toHaveTextContent('d8 5/5')  // fuori dai modali (U50)
+    // short rest button → opens HitDiceModal; i dadi tirati si spendono solo con «Riposa» (U48)
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.short_rest' }))
     await userEvent.click(await screen.findByTestId('hd-spend'))
-    await waitFor(() => expect(spendHitDiceSpy).toHaveBeenCalledWith(7, 1, 2, undefined))
+    expect(spendHitDiceSpy).not.toHaveBeenCalled()
     await userEvent.click(screen.getByTestId('hd-rest'))
+    await waitFor(() => expect(spendHitDiceSpy).toHaveBeenCalledWith(7, 1, 2, [expect.any(Number), expect.any(Number)]))
     await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ interrupted: false, ate_and_drank: true })))
 
     // long rest button → opens ConfirmSheet → confirm

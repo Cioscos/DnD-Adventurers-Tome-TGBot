@@ -135,6 +135,21 @@ async def test_disciple_of_life_covers_every_spell_of_first_level_or_more_that_r
     assert (await _roll(client, war, await _heal_spell(client, war, index, level, index))).json()["total"] == base
 
 
+async def test_the_healing_formula_is_shown_before_the_roll_u22(client):
+    """U22: la scheda dice la formula di ogni slot con gli stessi addendi del tiro (modificatore e Discepolo della Vita)."""
+    life = await _cleric(client, 1, "life", wisdom=14)  # Saggezza +2, Discepolo 2 + livello
+    await _heal_spell(client, life)
+    spell = next(s for s in (await _full(client, life))["spells"] if s["srd_index"] == "cure-wounds")
+    assert spell["healing_preview"]["1"] == "1d8+5" and spell["healing_preview"]["2"] == "2d8+6"
+    top = await _cleric(client, 17, "life", wisdom=10)  # Guarigione Suprema: i dadi al massimo
+    await _heal_spell(client, top)
+    spell = next(s for s in (await _full(client, top))["spells"] if s["srd_index"] == "cure-wounds")
+    assert spell["healing_preview"]["2"] == str(16 + 4)
+    plain = await _cleric(client, 5, wisdom=10)
+    other = (await client.post(f"/characters/{plain}/spells", json={"name": "Dardo", "level": 1, "srd_index": "magic-missile"})).json()
+    assert other.get("healing_preview") is None
+
+
 async def test_spell_read_says_which_spells_heal_42(client):
     """Punto 42: il client non tiene un elenco proprio delle cure, legge `is_healing`."""
     cid = await _cleric(client, 5, wisdom=16)

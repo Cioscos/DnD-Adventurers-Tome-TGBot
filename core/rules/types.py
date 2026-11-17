@@ -511,6 +511,8 @@ class RollOptionSpec:
     effect: "Callable[[RuleContext, dict], dict[str, str]] | None" = None
     second_attack: bool = False
     target_effect: "Callable[[RuleContext, dict], TargetEffect] | None" = None
+    # Perché manca, quando un'opzione dello stesso gruppo è offerta e questa no (Veleno senza Kit da Avvelenatore)
+    unavailable_hint: dict[str, str] | None = None
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
     self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (``spell_healing``, o l'iniziativa: lo applica il router del tiro)

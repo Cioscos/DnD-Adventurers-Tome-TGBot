@@ -29,7 +29,7 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
       const choice = combatant.character_id == null
         ? undefined
         : await askRollOptions(combatant.character_id, { roll: 'initiative' })
-      return api.sessions.encounter.rollInitiative(sessionId, combatant.id, d20Arg(mode, await rollD20(mode), choice))
+      return api.sessions.encounter.rollInitiative(sessionId, combatant.id, d20Arg(mode, await rollD20(mode, choice), choice))
     },
     onSuccess: (live) => {
       haptic.success()

@@ -64,10 +64,10 @@ def cap_hp_to_max(char: Character, closed: list[dict], bonus: int | None = None)
     char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 
 
-async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dict:
+async def apply_heal(session: AsyncSession, char: Character, amount: int, log: bool = True) -> dict:
     """Heal `char` by `amount` HP, clamped to effective max (base + passive
     homebrew bonus). Resets death saves if HP rises from 0. Logs history and
-    dispatches the `hp_healed` homebrew event.
+    dispatches the `hp_healed` homebrew event. ``log=False``: il chiamante scrive già una riga sua (dado vita).
 
     Returns {"old", "new", "healed", "firing"}; the caller collects
     notifications from "firing" via collect_homebrew_notifications.
@@ -79,7 +79,7 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     # max(old, ...): una cura non abbassa mai i PF.
     char.current_hit_points = max(old, min(effective_max, char.current_hit_points + amount))
     healed = char.current_hit_points - old
-    if amount > 0:  # una cura da 0 non è un evento da ricordare
+    if amount > 0 and log:  # una cura da 0 non è un evento da ricordare
         add_history(session, char.id, "hp_change",
                      f"Cura: +{healed} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL", "amount": healed})

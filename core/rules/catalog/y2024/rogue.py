@@ -125,6 +125,7 @@ POISON = _cunning(
     "poison", 1, "Veleno (1d6): il bersaglio fa un TS Costituzione o è Avvelenato",
     "Poison (1d6): the target makes a Constitution save or is Poisoned",
     available=_has_poisoners_kit,
+    unavailable_hint=_both("Serve un Kit da Avvelenatore nell'inventario", "Needs a Poisoner's Kit in the inventory"),
     effect=_save_text(("Veleno", "Poison"), ("Costituzione", "Constitution"),
                       ("Se fallisce è Avvelenato per 1 minuto e ripete il TS alla fine di ogni suo turno.",
                        "On a failure it is Poisoned for 1 minute and repeats the save at the end of each of its turns.")),
@@ -158,7 +159,9 @@ def _withdraw_effect(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
 
 WITHDRAW = _cunning("withdraw", 1, "Ritirata (1d6): dopo l'attacco ti muovi di metà Velocità senza attacchi di opportunità",
                     "Withdraw (1d6): after the attack you move half your Speed with no opportunity attacks", effect=_withdraw_effect,
-                    available=lambda c: _half_speed(c) > 0)  # con Velocità 0 (Mira Costante) non muove nulla: 1d6 sprecato
+                    available=lambda c: _half_speed(c) > 0,  # con Velocità 0 (Mira Costante) non muove nulla: 1d6 sprecato
+                    unavailable_hint=_both("Con Velocità 0 (es. Mira Costante) la Ritirata non ti fa muovere",
+                                           "With Speed 0 (e.g. Steady Aim) Withdraw does not move you"))
 DAZE = _cunning(
     "daze", 2, "Stordimento (2d6): il bersaglio fa un TS Costituzione o ha meno azioni",
     "Daze (2d6): the target makes a Constitution save or loses part of its turn",

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CombatPanel from '@/pages/session/CombatPanel'
 import type { CombatantLive, EncounterLive, GameSessionLive } from '@/types'
@@ -23,7 +23,6 @@ vi.mock('react-router-dom', async (orig) => {
 vi.mock('sonner', () => ({ toast: { success: toastSpy, error: vi.fn() } }))
 vi.mock('@/auth/telegram', () => ({
   haptic: new Proxy({}, { get: () => hapticSpy }),
-  telegramConfirm: (_m: string, cb: (ok: boolean) => void) => cb(true),
 }))
 vi.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error {
@@ -224,6 +223,18 @@ describe('CombatPanel', () => {
       expect(list).not.toContainElement(dock)
     })
 
+    it('U30/U31: con tutti i mostri a terra il GM vede «Termina combattimento» e un riepilogo nel modale', () => {
+      renderPanel(active(1, [{ ...goblin, is_dead: true }, me, ally]), { amGm: true, myUserId: GM_ID })
+      fireEvent.click(within(screen.getByTestId('combat-dock')).getByText('session.combat.end_cta'))
+      expect(screen.getByText('session.combat.end_confirm')).toBeInTheDocument()
+      expect(screen.getByTestId('end-summary')).toHaveTextContent('session.combat.end_summary')
+    })
+
+    it('U30: finché un mostro è vivo la fine non viene proposta nel dock', () => {
+      renderPanel(active(2), { amGm: true, myUserId: GM_ID })
+      expect(screen.queryByText('session.combat.end_cta')).not.toBeInTheDocument()
+    })
+
     it('i morti sono elencati dopo i vivi', () => {
       const deadGob = { ...goblin, is_dead: true }
       renderPanel(active(1, [deadGob, me, ally]))
@@ -295,6 +306,18 @@ describe('CombatPanel', () => {
       expect(await screen.findByTestId('save-roll-sheet')).toHaveTextContent('1')
       expect(nextTurnSpy).toHaveBeenCalledWith(42)
       expect(turnStateSpy).toHaveBeenCalledWith(7)
+    })
+
+    it('U32: con attacchi o azione ancora da usare chiede conferma prima di passare il turno', async () => {
+      turnStateSpy.mockResolvedValue({
+        turn: { action_used: false, action_attacks: 1, extra_actions: 0 }, attacks_allowed: 2, pending_saves: [],
+      })
+      renderPanel(myTurn())
+      fireEvent.click(screen.getByText('session.combat.end_my_turn'))
+      expect(await screen.findByText('session.combat.leftover_title')).toBeInTheDocument()
+      expect(nextTurnSpy).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByText('session.combat.leftover_cta'))
+      await waitFor(() => expect(nextTurnSpy).toHaveBeenCalledWith(42))
     })
 
     it('senza TS nati il turno passa e nessuna scheda si apre', async () => {

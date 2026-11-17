@@ -75,6 +75,7 @@ GENERIC: dict[str, tuple[str, str, str]] = {
 
 _E, _D = "explorer-pack", "dungeoneer-pack"
 _S, _SM, _M, _MM = "simple-weapon", "simple-melee", "martial-weapon", "martial-melee"
+_WEAPON_CHOICES = (_S, _SM, _M, _MM)
 _XB = "crossbow-light+bolts*20"
 _FOCUS = ("component-pouch", "arcane-focus")
 
@@ -160,8 +161,9 @@ def _item(key: str, qty: int, lang: str) -> dict[str, Any]:
     """Riga di inventario: dati dell'SRD per armi e armature, oggetto generico per il resto."""
     if key in GENERIC or key in TOOLS:
         kind, it, en = GENERIC[key] if key in GENERIC else ("tool", TOOLS[key].it, TOOLS[key].en)
-        return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty, "weight": 0.0,
-                "item_metadata": {"ac_bonus": 2} if kind == "shield" else None}
+        # U8: l'arma «a scelta» porta la categoria: l'inventario la fa sostituire con un'arma del catalogo
+        meta = {"ac_bonus": 2} if kind == "shield" else {"choice": key} if key in _WEAPON_CHOICES else None
+        return {"name": it if lang == "it" else en, "item_type": kind, "quantity": qty, "weight": 0.0, "item_metadata": meta}
     e = _srd()[key]
     meta: dict[str, Any] = {"srd_index": key}
     if e.get("armor_type") == "shield":

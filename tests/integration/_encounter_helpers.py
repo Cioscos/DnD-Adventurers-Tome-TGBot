@@ -78,3 +78,10 @@ async def setup_full_encounter(client, test_session_factory) -> tuple[int, dict]
         f"/sessions/{sid}/encounter/combatants/{g2['id']}/initiative", json={"die": 4},
     )
     return sid, r.json()
+
+
+async def gm_end_spell(client, char_id: int, key: str):
+    """Il master chiude l'effetto di un incantesimo su un PG (il bersaglio non può: lo chiude chi l'ha lanciato)."""
+    as_user(GM_ID)
+    sid = (await client.get("/sessions/me")).json()["id"]
+    return await client.delete(f"/sessions/{sid}/characters/{char_id}/active-states/{key}")

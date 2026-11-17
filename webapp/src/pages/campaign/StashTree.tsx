@@ -28,11 +28,15 @@ function Node({ item, items, renderAction }: { item: Item; items: Item[]; render
   const [open, setOpen] = useState(false)
   const children = items.filter((i) => i.container_id === item.id).sort((a, b) => a.id - b.id)
   const box = containerMeta(item) !== null
+  // annotato dal server quando un PG mette nel deposito
+  const by = item.item_metadata?.deposited_by
+  const depositors = Array.isArray(by) ? by.filter((n): n is string => typeof n === 'string') : []
   const label = (
     <span className="min-w-0 flex-1 text-left break-words">
       <span className="font-cinzel text-sm text-dnd-text">{item.name}</span>
-      {item.quantity > 1 && <span className="font-mono tabular-nums text-dnd-text-muted"> ×{item.quantity}</span>}
+      {!box && <span className="font-mono tabular-nums text-dnd-text-muted"> ×{item.quantity}</span>}
       {box && <span className="text-xs text-dnd-text-muted"> · {t('campaign.stash_items', { count: descendantCount(items, item.id) })}</span>}
+      {depositors.length > 0 && <span className="block text-xs text-dnd-text-muted">{t('campaign.stash_deposited_by', { names: depositors.join(', ') })}</span>}
     </span>
   )
   return (

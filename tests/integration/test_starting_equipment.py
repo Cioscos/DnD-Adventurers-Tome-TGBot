@@ -160,6 +160,15 @@ def test_few_weapons_split_one_row_each_but_stacks_stay():
     assert [r["quantity"] for r in rows if r["name"] == "Giavellotto"] == [4]
 
 
+
+def test_weapon_of_choice_is_tagged_for_the_inventory():
+    """U8: l'arma «a scelta» si riconosce dall'inventario, che la fa sostituire con un'arma del catalogo."""
+    rows, _ = resolve("2014", "paladin", [1, 1, 0, 0], "it")  # due armi da guerra, arma semplice da mischia
+    tags = {r["name"]: (r["item_metadata"] or {}).get("choice") for r in rows}
+    assert tags["Arma da guerra a scelta"] == "martial-weapon"
+    assert tags["Arma semplice da mischia a scelta"] == "simple-melee"
+    assert tags["Simbolo sacro"] is None
+
 async def _assassin(client, edition):
     r = await _create(client, "rogue", rules_edition=edition)
     body = r.json()

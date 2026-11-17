@@ -46,6 +46,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("condition_effects", "pending", "BOOLEAN NOT NULL", "0"),
     ("condition_effects", "immunity_key", "VARCHAR(100)", None),
     ("condition_effects", "also_slugs", "VARCHAR(200)", None),
+    ("condition_effects", "source_note", "VARCHAR(120)", None),
     # Spell extended properties
     ("spells", "casting_time", "VARCHAR(100)", None),
     ("spells", "range_area", "VARCHAR(100)", None),

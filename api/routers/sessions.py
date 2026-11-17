@@ -46,6 +46,7 @@ from api.schemas.session import (
     StashPutRequest,
     StashTakeRequest,
     InspirationGiveRequest,
+    InspirationGrantRequest,
     TradeRequest,
     TurnState,
 )
@@ -59,7 +60,11 @@ from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
 from api.services.recap import close_game_session, dice_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
-from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
+from api.services.d20 import set_inspiration
+from api.services.rules_states import remove_state
+from api.services.spell_effects import end_by_target
+from core.rules.spell_effects import SPELL_STATE_PREFIX
+from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item, stacks_with
 from api.services.condition_effects import character_effect_payload
 from api.services.rules_turn import attacks_allowed, get_turn
 from api.services.encounter_view import build_encounter_block, public_states
@@ -77,6 +82,7 @@ from core.db.models import (
     SessionParticipant,
     SessionRole,
     SessionStatus,
+    Spell,
 )
 from core.utils.session_code import generate_session_code
 from core.utils.session_view import hp_bucket, armor_category
@@ -116,9 +122,10 @@ def _redact_event_description(
     if viewer_user_id == owner_user_id or is_gm:
         return event.description
 
-    # La riga del dado vita riporta i PF prima/dopo: come la Cura.
-    if event.event_type == "hit_dice":
-        return f"{character_name} ha speso un dado vita"
+    # Il client antepone già il nome del PG alla riga: qui niente nome, o si legge «Sel · Sel si è curato».
+    # La riga del dado vita speso riporta i PF prima/dopo: come la Cura. «Dadi vita recuperati» non ha PF e resta.
+    if event.event_type == "hit_dice" and ("healed" in (event.meta or {}) or "→" in event.description):
+        return "ha speso un dado vita"
     # Gli altri tipi non riportano PF; hp_change non mostra mai i PF agli altri giocatori.
     if event.event_type != "hp_change":
         return event.description
@@ -127,20 +134,24 @@ def _redact_event_description(
     op = str(meta.get("op") or "").upper()
 
     if op == "HEAL":
-        return f"{character_name} si è curato"
+        return "si è curato"
     if op in ("SET_CURRENT", "SET_MAX", "SET_TEMP"):
-        return f"{character_name} ha modificato i PF"
-    if op == "DAMAGE":  # il danno resta visibile, i PF (vecchi -> nuovi) no
+        return "ha modificato i PF"
+    if op == "DAMAGE":  # il danno (con tipo e riduzioni) resta visibile, i PF (vecchi -> nuovi) no
         amount = meta.get("amount")
-        return f"{character_name} ha subito {amount} danni" if isinstance(amount, int) else f"{character_name} ha subito danni"
+        if not isinstance(amount, int):
+            return "ha subito danni"
+        detail = f" da {meta['damage_type']}" if meta.get("damage_type") else ""
+        note = f" — {meta['note']}" if meta.get("note") else ""
+        return f"ha subito {amount} danni{detail}{note}"
 
     # Legacy fallback (meta missing): best-effort sniff on description.
     desc_lower = event.description.lower()
     if "cura" in desc_lower or "heal" in desc_lower:
-        return f"{character_name} si è curato"
+        return "si è curato"
     if "danni" in desc_lower or "danno" in desc_lower or "damage" in desc_lower:
-        return f"{character_name} ha subito danni"
-    return f"{character_name} ha modificato i PF"
+        return "ha subito danni"
+    return "ha modificato i PF"
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +232,7 @@ async def _load_live_characters(
         effects, pendings = await character_effect_payload(db, char.id)
         items_ac = item_bonus_total(char.items, "ac")  # la CA che il tavolo vede è quella della scheda: oggetti e homebrew compresi
         homebrew_ac = await get_passive_modifiers(db, char, "character.ac")
+        conc_spell = await db.get(Spell, char.concentrating_spell_id) if char.concentrating_spell_id else None
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -241,6 +253,7 @@ async def _load_live_characters(
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
             is_concentrating=char.concentrating_spell_id is not None,
+            concentration_spell=conc_spell.name if conc_spell else None,
             active_states=public_states(char, lang),
         )
     return out
@@ -508,6 +521,7 @@ async def get_session_live(
                 condition_effects=raw["condition_effects"],
                 has_pending_save=raw["has_pending_save"],
                 is_concentrating=raw["is_concentrating"],
+                concentration_spell=raw["concentration_spell"],
                 death_saves=raw["death_saves"],
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -530,6 +544,7 @@ async def get_session_live(
                 condition_effects=raw["condition_effects"],
                 has_pending_save=raw["has_pending_save"],
                 is_concentrating=raw["is_concentrating"],
+                concentration_spell=raw["concentration_spell"],
                 death_saves=None,
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -811,24 +826,18 @@ async def get_participant_identity(
 
 
 async def _create_or_merge_item(db: AsyncSession, char: Character, new, *, is_equipped: bool) -> Item:
-    """Put an ItemCreate in `char`'s inventory: stack onto a same-name generic root, else create."""
-    is_box = isinstance((new.item_metadata or {}).get("container"), dict)
-    if new.item_type == "generic" and not is_box:
-        existing = next(
-            (it for it in char.items
-             if it.item_type == "generic" and it.name == new.name
-             and it.container_id is None and not is_container(it)),
-            None,
-        )
-        if existing is not None:
-            existing.quantity += new.quantity
-            return existing
+    """Put an ItemCreate in `char`'s inventory: stack onto an identical root (same rule as trades), else create."""
     row = Item(
         character_id=char.id, name=new.name, description=new.description,
         weight=new.weight, quantity=new.quantity, item_type=new.item_type,
         item_metadata=json.dumps(new.item_metadata) if new.item_metadata else None,
         is_equipped=is_equipped,
     )
+    if not is_equipped:
+        existing = next((it for it in char.items if stacks_with(it, row)), None)
+        if existing is not None:
+            existing.quantity += new.quantity
+            return existing
     db.add(row)
     await db.flush()
     return row
@@ -1101,6 +1110,70 @@ async def give_inspiration(
     return await build_character_response(db, sender)
 
 
+@router.post("/{session_id}/inspiration/grant", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+async def grant_inspiration(
+    session_id: int,
+    body: InspirationGrantRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+):
+    """GM: concede o toglie l'Ispirazione Eroica a un PG seduto nella propria serata."""
+    session_obj = await load_session(session_id, db)
+    if session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+    if session_obj.gm_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+    seat = next((p for p in session_obj.participants
+                 if p.role == SessionRole.PLAYER and p.character_id == body.character_id), None)
+    if seat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character_not_in_session")
+    char = await _load_char_full(db, body.character_id)
+    if bool(char.heroic_inspiration) == body.heroic_inspiration:
+        return None  # già così: niente riga doppia nel log
+    set_inspiration(char, body.heroic_inspiration)
+    text = ("Il master ha concesso l'Ispirazione Eroica a " if body.heroic_inspiration
+            else "Il master ha tolto l'Ispirazione Eroica a ") + char.name
+    db.add(CharacterHistory(character_id=char.id, timestamp=utc_now_iso(), event_type="other", description=text))
+    db.add(SessionMessage(
+        session_id=session_obj.id, user_id=session_obj.gm_user_id, role=SessionRole.GAME_MASTER,
+        body=text, sent_at=utc_now_iso(), sender_display_name="__GM__",
+    ))
+    touch(session_obj)
+    await db.flush()
+    if body.heroic_inspiration and telegram_notify.notifications_enabled(char, "gm_events"):
+        await telegram_notify.send_telegram_message(seat.user_id, "✨ Il master ti ha concesso l'Ispirazione Eroica")
+    return None
+
+
+@router.delete("/{session_id}/characters/{character_id}/active-states/{key}", status_code=status.HTTP_204_NO_CONTENT,
+               response_model=None)
+async def gm_end_spell_state(
+    session_id: int,
+    character_id: int,
+    key: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+):
+    """GM: chiude l'effetto di un incantesimo su un PG seduto (il lanciatore non c'è più o se n'è dimenticato)."""
+    session_obj = await load_session(session_id, db)
+    if session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+    if session_obj.gm_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+    if not any(p.role == SessionRole.PLAYER and p.character_id == character_id for p in session_obj.participants):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character_not_in_session")
+    if not key.startswith(SPELL_STATE_PREFIX):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="spell_states_only")
+    char = await _load_char_full(db, character_id)
+    closed = [s for s in char.active_states or [] if s.get("key") == key]
+    if not closed:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="state_not_found")
+    remove_state(char, key)
+    await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi
+    touch(session_obj)
+    return None
+
+
 _STASH = {"character_id": None, "name": "stash"}
 _GM = {"character_id": None, "name": "gm"}
 
@@ -1171,7 +1244,7 @@ async def _player_stash_move(session_id, user_id, db, char_id, item_id, quantity
     removed: list = []
     moved: dict[str, int] = {}
     if item_id is not None:
-        snap, taken = await give_item(db, src, dst, item_id, quantity)
+        snap, taken = await give_item(db, src, dst, item_id, quantity, deposited_by=pg.name if putting else None)
         if putting:  # only the PG has a paper-doll; read before the flush
             removed = [(i.id, i.item_type, i.name, slot) for i, slot in taken]
         snapshots = [snap]
@@ -1409,6 +1482,19 @@ async def get_session_feed(
             event_type=e.event_type,
             description=redacted,
             op=meta_op,
+        ))
+
+    # Gli ingressi dei PG non sono nello storico: la riga nasce dal partecipante (id negativo, la chiave del client resta unica).
+    for p in session.participants:
+        if p.character_id is None or p.character_id not in char_meta:
+            continue
+        if (since and p.joined_at <= since) or (before and p.joined_at >= before) or p.joined_at < session_start:
+            continue
+        owner_id, char_name = char_meta[p.character_id]
+        items.append(SessionFeedItem(
+            type="event", timestamp=p.joined_at, event_id=-p.id, character_id=p.character_id,
+            character_name=char_name, owner_user_id=owner_id, event_type="session_join",
+            description="è entrato nella serata",
         ))
 
     def _sort_key(it: SessionFeedItem):

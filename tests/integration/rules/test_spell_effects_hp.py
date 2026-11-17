@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from core.rules.catalog.spells import spell_effect
-from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, gm_end_spell
 from tests.integration.rules.test_spell_effects_cast import _full
 from tests.integration.rules.test_spell_effects_defenses import _cast, _hit, _sheet, _table
 from tests.integration.test_magic_items import _item
@@ -35,8 +35,11 @@ async def _new_turn(client, cid, user=PLAYER_ID) -> None:
 async def _end_spell(client, target, caster, key, how) -> None:
     """Chiude l'incantesimo ``key`` sul bersaglio: a mano (dal bersaglio) o con la fine della concentrazione (del lanciatore)."""
     if how == "manual":
-        as_user(PLAYER_ID if target != caster else GM_ID)
-        assert (await client.delete(f"/characters/{target}/active-states/spell:{key}")).status_code == 200
+        if target != caster:  # l'incantesimo su un altro lo chiude il master (o il lanciatore)
+            assert (await gm_end_spell(client, target, f"spell:{key}")).status_code == 204
+        else:
+            as_user(GM_ID)
+            assert (await client.delete(f"/characters/{target}/active-states/spell:{key}")).status_code == 200
     else:
         as_user(GM_ID)
         assert (await client.patch(f"/characters/{caster}/concentration", json={"spell_id": None})).status_code == 200

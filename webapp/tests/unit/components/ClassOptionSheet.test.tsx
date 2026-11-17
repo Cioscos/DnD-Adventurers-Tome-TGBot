@@ -67,18 +67,25 @@ describe('ClassOptionSheet', () => {
       count: 2, resolvable: true, options: [], spell_pick: { free: false, max_level: 5 } }
     const withChoices = (...choices: unknown[]) => ({ id: 7, ability_scores: [], pending_choices: choices }) as unknown as CharacterFull
 
-    it('opens the first choice that can be resolved, not the one waiting for more skills', async () => {
+    it('lists every pending choice with what it is for, and opens the one tapped (U3/U4)', async () => {
       navigate.mockClear()
       renderWithProviders(<PendingChoicesBadge char={withChoices(waiting, ready)} />)
       await userEvent.click(screen.getByText('character.level_choice.badge'))
+      expect(navigate).not.toHaveBeenCalled()
+      expect(screen.getByText('character.level_choice.groups.expertise · dnd.classes.bard 10')).toBeInTheDocument()
+      expect(screen.getByText('character.level_choice.waiting_short')).toBeInTheDocument()  // solo quella che aspetta
+      await userEvent.click(screen.getByText('character.level_choice.groups.magical_secrets · dnd.classes.bard 10'))
       expect(navigate).toHaveBeenCalledWith('/char/7/spells?pick=sec')
     })
 
-    it('explains what is missing when nothing can be resolved', async () => {
+    it('explains what is missing when nothing can be resolved and links to the Skills page (U5)', async () => {
+      navigate.mockClear()
       renderWithProviders(<PendingChoicesBadge char={withChoices(waiting)} />)
       await userEvent.click(screen.getByText('character.level_choice.badge'))
       expect(screen.getByText('character.level_choice.waiting_for_skills')).toBeInTheDocument()
       expect(screen.queryByText('character.level_choice.confirm')).not.toBeInTheDocument()
+      await userEvent.click(screen.getByText('character.level_choice.go_to_skills'))
+      expect(navigate).toHaveBeenCalledWith('/char/7/skills')
     })
 
     it('asks for as many skills as the sheet can offer when fewer than the count', async () => {

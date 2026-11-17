@@ -136,7 +136,7 @@ export function useAttackRoll() {
       const confirm = offhand || own_slot ? {} : await limitConfirmation(charId, itemId)
       if (!confirm) return null
       const { post, secondStep } = flow(charId, itemId, choice, confirm, ranged)
-      const dice = await rollD20(mode)
+      const dice = await rollD20(mode, before)
       let first: WeaponAttackResult
       try {
         first = await post(false, d20Arg(mode, dice, before))

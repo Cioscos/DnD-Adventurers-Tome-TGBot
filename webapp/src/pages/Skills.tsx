@@ -30,6 +30,8 @@ import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
 import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
 import ToolCheckSheet from '@/components/character/ToolCheckSheet'
 import { proficientTools, toolByKey, toolLabel } from '@/lib/tools'
+import { useClassProficiencies } from '@/hooks/useClassProficiencies'
+import { classLabel } from '@/lib/classLabel'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -200,6 +202,9 @@ export default function Skills() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+  // U6: le abilità che la classe iniziale fa scegliere (solo indicazione: background, specie e talenti ne danno altre)
+  const firstClass = char?.classes?.[0]?.class_name ?? null
+  const classProf = useClassProficiencies(char?.rules_edition ?? '2014', firstClass, false).data
 
   const mutation = useMutation({
     mutationFn: (skills: Record<string, unknown>) =>
@@ -213,7 +218,7 @@ export default function Skills() {
   const rollMutation = useMutation({
     mutationFn: async ({ skillName, mode }: { skillName: string; mode: RollMode }) => {
       const choice = await askRollOptions(charId, { roll: 'skill', skill: skillName })
-      const result = await api.characters.rollSkill(charId, skillName, d20Arg(mode, await rollD20(mode), choice))
+      const result = await api.characters.rollSkill(charId, skillName, d20Arg(mode, await rollD20(mode, choice), choice))
       return { result, skillName }
     },
     onSuccess: ({ result, skillName }) => {
@@ -229,7 +234,7 @@ export default function Skills() {
   const toolRollMutation = useMutation({
     mutationFn: async ({ tool, ability, skill, mode }: { tool: string; ability: string; skill: string | null; mode: RollMode }) => {
       const choice = await askRollOptions(charId, { roll: 'ability', ability })
-      const result = await api.characters.rollToolCheck(charId, tool, ability, skill, d20Arg(mode, await rollD20(mode), choice))
+      const result = await api.characters.rollToolCheck(charId, tool, ability, skill, d20Arg(mode, await rollD20(mode, choice), choice))
       return { result, tool: { key: tool, ability, skill } }
     },
     onSuccess: ({ result, tool }) => {
@@ -332,6 +337,15 @@ export default function Skills() {
 
       <ScrollArea>
         <div className="space-y-5">
+          {firstClass && classProf && classProf.skills_count > 0 && (
+            <p data-testid="class-skill-hint" className="px-1 text-xs font-body text-dnd-text-muted">
+              {t('character.skills.class_hint', {
+                count: classProf.skills_count,
+                cls: classLabel(t, firstClass),
+                list: classProf.skills_from.map((k) => t(`character.skills.${k}`, { defaultValue: k })).join(', '),
+              })}
+            </p>
+          )}
           {ABILITY_GROUPS.map((ability) => {
             const groupSkills = SKILLS.filter((s) => s.ability === ability)
             if (groupSkills.length === 0) return null

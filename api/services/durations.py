@@ -31,13 +31,15 @@ def end_concentration(char: Character) -> None:
     end_states(char, "concentration_end")
     s = dict(char.settings or {})
     if any([s.pop("concentration_rounds_left", None) is not None,
-            s.pop("concentration_item_spell", None) is not None]):
+            s.pop("concentration_item_spell", None) is not None,
+            s.pop("concentration_level", None) is not None]):
         char.settings = s
 
 
 def start_concentration(char: Character, spell_id: int | None, rounds: int | None,
-                        item_spell: dict | None = None) -> None:
-    """Begin concentrating, properly ending any previous one first."""
+                        item_spell: dict | None = None, level: int | None = None) -> None:
+    """Begin concentrating, properly ending any previous one first. ``level``: livello del lancio, per ritirare i danni
+    dei turni successivi senza un altro slot (Guardiani spirituali, Raggio di luna)."""
     end_concentration(char)
     char.concentrating_spell_id = spell_id
     s = dict(char.settings or {})
@@ -45,6 +47,8 @@ def start_concentration(char: Character, spell_id: int | None, rounds: int | Non
         s["concentration_item_spell"] = item_spell
     if rounds is not None:
         s["concentration_rounds_left"] = rounds
+    if level is not None:
+        s["concentration_level"] = level
     char.settings = s
 
 

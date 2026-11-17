@@ -133,6 +133,8 @@ class ItemRead(BaseModel):
     # Effetto di catalogo di ogni incantesimo concesso (stessa forma di SpellRead.effect, indice = granted_spells); solo sulla scheda
     granted_effects: list[dict | None] | None = absent_when_none()
     reach_bonus_ft: int | None = absent_when_none()  # portata in più data da un privilegio nel proprio turno (Radici Percuotenti)
+    # Bonus per colpire e al danno dell'arma senza scelte né opzioni del momento (impugnatura, altra mano): lo calcola il server
+    attack_preview: dict[str, int] | None = absent_when_none()
 
     model_config = {"from_attributes": True}
 

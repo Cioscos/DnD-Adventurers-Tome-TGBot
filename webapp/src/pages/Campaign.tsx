@@ -50,6 +50,7 @@ export default function Campaign() {
     queryKey: key,
     queryFn: () => api.campaigns.get(campId),
     enabled: Number.isFinite(campId),
+    staleTime: 0,  // chiusa una serata (da qui o dalla stanza) la riga col recap deve comparire tornando qui, senza ricaricare
   })
   // Per il giocatore: sono già dentro la sessione aperta o devo entrarci?
   const { data: myLive } = useQuery({

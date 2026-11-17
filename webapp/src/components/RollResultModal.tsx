@@ -24,6 +24,34 @@ export type RollResult = {
   description?: string
 }
 
+/** «d20 (12) +3»; con vantaggio/svantaggio entrambi i d20, lo scartato barrato. */
+export function D20Breakdown({ roll, className = '' }: { roll: Pick<RollResult, 'die' | 'dice' | 'mode' | 'bonus'>; className?: string }) {
+  const { t } = useTranslation()
+  const { die, bonus } = roll
+  const pair = roll.dice && roll.dice.length === 2 ? roll.dice : null
+  // The kept die is the first matching face; the other one is the discarded one (dimmed).
+  const keptIdx = pair ? pair.indexOf(die) : -1
+  const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`
+  return (
+    <p className={`text-xs text-dnd-text-muted font-mono tabular-nums ${className}`}>
+      {pair ? (
+        <>
+          {roll.mode === 'disadvantage' ? t('common.roll_mode.disadvantage') : t('common.roll_mode.advantage')}{' '}
+          d20 (
+          {pair.map((v, i) => (
+            <span key={i} className={i === keptIdx ? 'font-bold text-dnd-text' : 'opacity-40 line-through'}>
+              {i > 0 && ', '}{v}
+            </span>
+          ))}
+          ) {bonusStr}
+        </>
+      ) : (
+        <>d20 ({die}) {bonusStr}</>
+      )}
+    </p>
+  )
+}
+
 type Props = {
   result: RollResult
   title: string
@@ -36,6 +64,8 @@ type Props = {
   onInspirationReroll?: () => void | Promise<void>
   /** Il tiro è ritoccabile con i privilegi usati dopo averlo visto. */
   afterRoll?: { charId: number; query: RollOptionsQuery }
+  /** Tiro per colpire: solo qui un 1 naturale è un «Fumble!» (su prove e TS non ha effetti di regola). */
+  attack?: boolean
 }
 
 export default function RollResultModal({
@@ -48,13 +78,11 @@ export default function RollResultModal({
   wasRerolled = false,
   onInspirationReroll,
   afterRoll,
+  attack = false,
 }: Props) {
   const { t } = useTranslation()
   const [result, retouch] = useRetouched(rolled)
-  const { die, bonus, total, is_fumble, is_critical } = result
-  const pair = result.dice && result.dice.length === 2 ? result.dice : null
-  // The kept die is the first matching face; the other one is the discarded one (dimmed).
-  const keptIdx = pair ? pair.indexOf(die) : -1
+  const { die, total, is_fumble, is_critical } = result
 
   // Neutral rolls get the default (gold) frame; emerald/crimson are reserved
   // for nat-20/nat-1 so the accent stays semantic (Semantic Triad), not
@@ -70,7 +98,6 @@ export default function RollResultModal({
       ? 'text-dnd-crimson-bright'
       : 'text-dnd-text'
 
-  const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`
   const showInspirationButton =
     inspirationAvailable && !wasRerolled && onInspirationReroll != null
 
@@ -79,7 +106,7 @@ export default function RollResultModal({
       open
       onClose={onClose}
       accent={accent}
-      pulse={is_critical || is_fumble}
+      pulse={is_critical || (is_fumble && attack)}
       size="sm"
       title={title}
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
@@ -120,7 +147,7 @@ export default function RollResultModal({
           <Star size={14} fill="currentColor" /> {t('character.dice.critical_banner')}
         </m.p>
       )}
-      {is_fumble && (
+      {is_fumble && attack && (
         <m.p
           className="text-dnd-crimson-bright font-bold text-sm font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5"
           initial={{ scale: 0.5 }}
@@ -141,22 +168,7 @@ export default function RollResultModal({
         {total}
       </m.div>
 
-      <p key={`breakdown-${die}-${wasRerolled}`} className="text-xs text-dnd-text-muted font-mono">
-        {pair ? (
-          <>
-            {result.mode === 'disadvantage' ? t('common.roll_mode.disadvantage') : t('common.roll_mode.advantage')}{' '}
-            d20 (
-            {pair.map((v, i) => (
-              <span key={i} className={i === keptIdx ? 'font-bold text-dnd-text' : 'opacity-40 line-through'}>
-                {i > 0 && ', '}{v}
-              </span>
-            ))}
-            ) {bonusStr}
-          </>
-        ) : (
-          <>d20 ({die}) {bonusStr}</>
-        )}
-      </p>
+      <D20Breakdown key={`breakdown-${die}-${wasRerolled}`} roll={result} />
 
       <RollNotes notes={result.notes} optionResult={result.option_result} />
       {note && <p className="text-xs text-dnd-text font-body">{note}</p>}

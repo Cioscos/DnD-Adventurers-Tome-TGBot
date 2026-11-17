@@ -38,7 +38,7 @@ describe('CombatantRow', () => {
       />,
     )
     expect(screen.getByText('4/7')).toBeInTheDocument()
-    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.getByText('character.ac.short 15')).toBeInTheDocument()
     expect(screen.getByText('12')).toBeInTheDocument()   // iniziativa
   })
 
@@ -132,4 +132,38 @@ describe('CombatantRow', () => {
       snapshot={pcSnapshot} isActive={false} amGm={true} mode="full" />)
     expect(screen.queryByTestId('public-states')).toBeNull()
   })
-})
+  it('U34 GM: PG a 0 PF mostra Morente con i tiri contro la morte; CA e PF nella riga compatta', () => {
+    const snap = { ...pcSnapshot, current_hit_points: 0, death_saves: { successes: 1, failures: 2 } }
+    render(
+      <CombatantRow
+        combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe' })}
+        snapshot={snap} isActive={false} amGm={true} mode="full" compact
+      />,
+    )
+    expect(screen.getByTestId('dying-chip')).toHaveTextContent('session.combat.dying_saves')
+    expect(screen.getByText('0/20')).toBeInTheDocument()
+    expect(screen.getByText('character.ac.short 16')).toBeInTheDocument()
+  })
+
+  it('U34 giocatore: PG morente solo come «Morente», senza numeri', () => {
+    const snap = { ...pcSnapshot, hit_points: null, current_hit_points: null, death_saves: null, hp_bucket: 'dying' as const }
+    render(
+      <CombatantRow
+        combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe' })}
+        snapshot={snap} isActive={false} amGm={false} mode="full" compact
+      />,
+    )
+    expect(screen.getByTestId('dying-chip')).toHaveTextContent('session.hp_bucket.dying')
+  })
+
+  it('U33: concentrazione con il nome dell\'incantesimo e Ispirazione', () => {
+    const snap = { ...pcSnapshot, is_concentrating: true, concentration_spell: 'Ragnatela', heroic_inspiration: true }
+    render(
+      <CombatantRow
+        combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe' })}
+        snapshot={snap} isActive={false} amGm={true} mode="full" compact
+      />,
+    )
+    expect(screen.getByText('session.combat.concentrating_on')).toBeInTheDocument()
+    expect(screen.getByText('character.inspiration.title')).toBeInTheDocument()
+  })})

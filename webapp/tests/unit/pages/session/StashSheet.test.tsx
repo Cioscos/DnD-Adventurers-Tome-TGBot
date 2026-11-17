@@ -45,6 +45,7 @@ const stash = {
   currency: { id: 1, copper: 0, silver: 0, electrum: 0, gold: 50, platinum: 0 },
 }
 const minus = itLocale.character.inventory.containers.qty_minus
+const plus = itLocale.character.inventory.containers.qty_plus // U46: si parte da 1
 // L'etichetta di Input non è collegata al campo: si risale dal testo.
 const goldInput = () => screen.getByText(/^Oro/).parentElement!.querySelector('input')!
 const last = (name: string) => screen.getAllByRole('button', { name }).at(-1)!
@@ -65,10 +66,10 @@ describe('StashSheet giocatore', () => {
     const { qc, inv } = setup(false)
     await screen.findByText(/Frecce/)
     fireEvent.click(screen.getAllByRole('button', { name: 'Prendi' })[1]) // [0] = cassa
-    expect(screen.getByText('20 / 20')).toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText(minus))
+    expect(screen.getByText('1 / 20')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText(plus))
     fireEvent.click(last('Prendi'))
-    await waitFor(() => expect(m.stashTake).toHaveBeenCalledWith(5, { to_character_id: 14, item_id: 1, quantity: 19 }))
+    await waitFor(() => expect(m.stashTake).toHaveBeenCalledWith(5, { to_character_id: 14, item_id: 1, quantity: 2 }))
     await waitFor(() => expect(qc.getQueryData(['character', 14])).toMatchObject({ id: 14 }))
     expect(inv).toHaveBeenCalledWith({ queryKey: ['session-stash', 5] })
   })
@@ -154,9 +155,9 @@ describe('StashSheet master', () => {
     setup(true, null)
     await screen.findByText(/Frecce/)
     fireEvent.click(screen.getAllByRole('button', { name: 'Togli' })[1])
-    fireEvent.click(screen.getByLabelText(minus))
+    fireEvent.click(screen.getByLabelText(plus))
     fireEvent.click(last('Togli'))
-    await waitFor(() => expect(m.stashGmRemove).toHaveBeenCalledWith(5, { item_id: 1, quantity: 19 }))
+    await waitFor(() => expect(m.stashGmRemove).toHaveBeenCalledWith(5, { item_id: 1, quantity: 2 }))
   })
 
   it('Togli dalla cassa → gm-remove coins', async () => {

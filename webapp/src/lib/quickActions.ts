@@ -47,6 +47,12 @@ export function hitDiceRemaining(cls: CharacterClass): number {
   return Math.max(0, (cls.level ?? 0) - (cls.hit_dice_used ?? 0))
 }
 
+/** PF già al massimo (homebrew compreso): un dado vita speso ora non cura nulla. */
+export function hpIsFull(char: CharacterFull): boolean {
+  const max = char.computed?.hp_max_effective ?? char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  return max > 0 && char.current_hit_points >= max
+}
+
 export function readQuickActions(settings: Record<string, unknown> | undefined): QuickActionEntry[] {
   const raw = settings?.quick_actions
   return Array.isArray(raw) ? (raw as QuickActionEntry[]) : []

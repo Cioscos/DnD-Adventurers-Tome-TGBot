@@ -1,6 +1,6 @@
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import type { ConcentrationSaveResult, RollMode, RollOption } from '@/api/client'
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import { askRollOptions, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -70,7 +70,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     }) => {
       const allyId = op === 'damage' ? await allyWait.wait(value, modifier?.damage_type) : null
       const choice = op === 'damage'
-        ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in')
+        ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: value }, 'damage_in',
+          { cancellable: true, summary: t('character.roll_options.damage_incoming', { n: value }) })
         : undefined
       const picked = choice?.options.length ? { ...modifier, ...choice } : modifier
       const base = op === 'damage' && concMode !== 'normal' ? { ...picked, concentration_mode: concMode } : picked
@@ -90,6 +91,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
       }
       return updated
     },
+    onError: (err) => { if (!(err instanceof CastCancelled)) notifyMutationError(err) },  // «Annulla» nel prompt dei danni
   })
 
   // Annulla tramite lo snapshot del server (mai set_current dal client). 409 = i PF
@@ -148,7 +150,9 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         }
         const undoId = updated.hp_undo_id
         if (undoId) {
-          const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? n })
+          // La cura si ferma al massimo: il toast dice i PF recuperati davvero, non quelli scritti (U19).
+          const healed = Math.max(0, updated.current_hit_points - char.current_hit_points)
+          const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n: op === 'heal' ? healed : updated.option_result?.hp_lost ?? updated.damage_taken ?? n })
           const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
           showUndoToast({
             message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
