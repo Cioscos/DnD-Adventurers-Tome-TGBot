@@ -42,7 +42,8 @@ export function groupForTurn(char: CharacterFull): TurnGroups {
   }
 
   for (const a of char.abilities ?? []) {
-    if (a.is_passive) continue
+    // Una reazione passiva (Schivata prodigiosa) si usa dentro un altro flusso, ma il giocatore la cerca fra le reazioni (U24)
+    if (a.is_passive && a.action_type !== 'reaction') continue
     const type: ActionType | null | undefined = a.action_type
     const bucket = type === 'action' || type === 'bonus_action' || type === 'reaction' ? type : 'other'
     g[bucket].push({ kind: 'ability', id: String(a.id), label: a.name })

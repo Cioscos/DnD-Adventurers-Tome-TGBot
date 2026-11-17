@@ -118,6 +118,25 @@ describe('DiceAnimationProvider', () => {
     await expect(second).resolves.toEqual([{ groupIndex: 0, kind: 'd6', value: 4 }])
   })
 
+  it('clears the settled numbers once the overlay has faded (U16)', async () => {
+    const { result } = renderHook(() => useDiceAnimation(), { wrapper })
+    let promise: Promise<unknown[]> = Promise.resolve([])
+    await act(async () => {
+      promise = result.current.playAndCollect([{ kind: 'd6', count: 2 }])
+    })
+    await waitFor(() => expect(scene.requests).toHaveLength(1))
+    const faces = [
+      { groupIndex: 0, kind: 'd6' as const, value: 4 },
+      { groupIndex: 0, kind: 'd6' as const, value: 2 },
+    ]
+    await act(async () => scene.requests[0].onSettled?.(faces))
+    expect(document.querySelector('[data-testid="dice-values"]')?.textContent).toBe('4 · 2')
+    await act(async () => scene.requests[0].onComplete(faces))
+    await tick(250)
+    await promise
+    expect(document.querySelector('[data-testid="dice-values"]')).toBeNull()
+  })
+
   it('animates at most 12 dice and completes the rest of a big pool', async () => {
     const { result } = renderHook(() => useDiceAnimation(), { wrapper })
     let promise: Promise<Array<{ groupIndex: number; value: number }>> = Promise.resolve([])

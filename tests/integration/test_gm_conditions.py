@@ -316,3 +316,35 @@ async def test_conditions_4_exhaustion_6_from_the_conditions_page_notifies_the_p
     r = await client.patch(f"/characters/{char_id}/conditions", json={"conditions": {"exhaustion": 6}})
     assert r.status_code == 200, r.text
     assert any("morto" in str(c["json"].get("text", "")) for c in captured)
+
+
+async def test_gm_condition_free_text_source(client, test_session_factory, monkeypatch):
+    """U35: il GM scrive la causa ("Ragnatela") oltre alla creatura; arriva al tracker con il nome di chi l'ha causata."""
+    _, sid, char_id, pc_id, g1, _ = await _start(client, test_session_factory, monkeypatch)
+    r = await client.post(_url(sid, g1), json={"slug": "restrained", "source_note": " Ragnatela ", "source_combatant_id": pc_id})
+    assert r.status_code == 200, r.text
+    [eff] = next(c for c in r.json()["combatants"] if c["id"] == g1)["condition_effects"]
+    assert eff["source_note"] == "Ragnatela" and eff["source_name"] == "Eroe"
+    r = await client.post(_url(sid, g1), json={"slug": "exhaustion", "value": 1, "source_note": "x"})
+    assert r.status_code == 422  # la sola mappa non ha fonte
+
+
+async def test_live_shows_concentration_spell_and_spell_states(client, test_session_factory, monkeypatch):
+    """U33: il tracker vede su cosa è concentrato un PG e gli incantesimi che ha addosso, con durata e lanciatore."""
+    _, sid, char_id, _, _, _ = await _start(client, test_session_factory, monkeypatch)
+    async with test_session_factory() as s:
+        spell = Spell(character_id=char_id, name="Ragnatela", level=2)
+        s.add(spell)
+        await s.flush()
+        char = await s.get(Character, char_id)
+        char.concentrating_spell_id = spell.id
+        char.active_states = [{"key": "spell:bless", "feature_key": "spell:bless", "name": "Benedizione", "rounds_left": 9,
+                               "data": {"caster_name": "Ilse", "duration": {"concentration": True}}}]
+        await s.commit()
+    live = (await client.get(f"/sessions/{sid}/live")).json()
+    snap = next(c for c in live["live_characters"] if c["id"] == char_id)
+    assert snap["concentration_spell"] == "Ragnatela"
+    [state] = snap["active_states"]
+    assert (state["name"], state["rounds_left"], state["source_name"], state["concentration"]) == ("Benedizione", 9, "Ilse", True)
+    pc = next(c for c in live["encounter"]["combatants"] if c["kind"] == "pc")
+    assert pc["active_states"][0]["key"] == "spell:bless"

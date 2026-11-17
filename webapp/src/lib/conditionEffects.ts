@@ -24,6 +24,13 @@ export function formatExpiry(effect: ConditionEffect, t: TFunction, ownerName?: 
   return parts.join(' · ')
 }
 
+/** Fonte leggibile: testo del GM e/o creatura ("Ragnatela (Corvo)"), null se nessuna. */
+export function formatSource(effect: ConditionEffect): string | null {
+  const { source_note: note, source_name: name } = effect
+  if (note && name) return `${note} (${name})`
+  return note || name || null
+}
+
 /** TS ripetuto ("TS COS CD 13 alla fine del tuo turno"), null se assente. */
 export function formatSave(effect: ConditionEffect, t: TFunction, ownerName?: string): string | null {
   if (!effect.save_ability || effect.save_dc == null) return null

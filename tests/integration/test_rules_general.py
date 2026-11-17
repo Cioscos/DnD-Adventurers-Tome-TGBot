@@ -386,6 +386,30 @@ async def _two_players(factory, edition="2024", sender_has=True, recipient_has=F
         return sid, cid, friend.id, other
 
 
+async def test_gm_grants_and_removes_inspiration_and_sees_it_live(client, test_session_factory):
+    """U43/U44: il master concede e toglie l'Ispirazione a un PG della serata e la vede nel /live."""
+    sid, cid, friend, other = await _two_players(test_session_factory, sender_has=False)
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/inspiration/grant", json={"character_id": cid, "heroic_inspiration": True})
+    assert r.status_code == 204, r.text
+    live = (await client.get(f"/sessions/{sid}/live")).json()
+    assert next(c for c in live["live_characters"] if c["id"] == cid)["heroic_inspiration"] is True
+    r = await client.post(f"/sessions/{sid}/inspiration/grant", json={"character_id": cid, "heroic_inspiration": False})
+    assert r.status_code == 204
+    as_user(PLAYER_ID)
+    assert (await _full(client, cid))["heroic_inspiration"] is False
+
+
+async def test_only_the_gm_grants_inspiration_to_seated_characters(client, test_session_factory):
+    sid, cid, friend, other = await _two_players(test_session_factory, sender_has=False)
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/inspiration/grant", json={"character_id": cid, "heroic_inspiration": True})
+    assert r.status_code == 403
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/inspiration/grant", json={"character_id": 999999, "heroic_inspiration": True})
+    assert r.status_code == 404
+
+
 async def _receive_extra(client, cid) -> dict:
     """Il percorso che concede: l'Ispirazione arriva a chi ce l'ha già."""
     r = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})

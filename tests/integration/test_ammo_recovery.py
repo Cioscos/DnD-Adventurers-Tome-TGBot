@@ -130,3 +130,13 @@ async def test_recover_gear_in_ammunition_slot(client):
     r = await client.post(f"/characters/{cid}/items/{gid}/recover-ammo")
     assert r.status_code == 200, r.text
     assert await _qty(client, cid, gid) == 8
+
+
+async def test_end_encounter_posts_recovered_ammo_in_feed(client, test_session_factory, monkeypatch):
+    """U30: il recupero a fine scontro si annuncia nel feed della serata, non solo nella cronologia."""
+    from tests.integration._encounter_helpers import GM_ID, as_user
+    await _encounter_with_archer(client, test_session_factory, monkeypatch, 4)
+    as_user(GM_ID)
+    sid = (await client.get("/sessions/me")).json()["id"]
+    bodies = [m["body"] for m in (await client.get(f"/sessions/{sid}/messages")).json()]
+    assert any(b.startswith("🏹") and "+2 Frecce" in b for b in bodies)

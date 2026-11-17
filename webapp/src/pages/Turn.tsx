@@ -26,6 +26,8 @@ import SelectSheet from '@/components/ui/SelectSheet'
 import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 import BeastOrders from '@/components/character/BeastOrders'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
+import EquipItemPicker from '@/components/character/EquipItemPicker'
+import { weaponPreviewText } from '@/lib/weaponOptions'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
 import { useTickRound } from '@/hooks/useTickRound'
@@ -59,6 +61,7 @@ export default function Turn() {
   const toast = useToast()
   const [skillRoll, setSkillRoll] = useState<{ result: RollResult; skill: string } | null>(null)
   const [otherOpen, setOtherOpen] = useState(false)
+  const [weaponPicker, setWeaponPicker] = useState(false)
   const [openStandard, setOpenStandard] = useState<Record<string, boolean>>({})
   // Influenzare 2024: CD scelta dal giocatore (15 di base) e totale dell'ultima prova, per mostrare l'esito.
   const [influenceDc, setInfluenceDc] = useState('15')
@@ -119,7 +122,7 @@ export default function Turn() {
   const skillMutation = useMutation({
     mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean; influence?: boolean }) => {
       const choice = await askRollOptions(charId, { roll: 'skill', skill })
-      return { result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode), choice)), skill }
+      return { result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode, choice), choice)), skill }
     },
     onSuccess: ({ result, skill }, { spendsAttack, influence }) => {
       if (spendsAttack) useSlot.mutate({ slot: 'attack' })
@@ -164,7 +167,12 @@ export default function Turn() {
       setUseChoices((s) => Object.fromEntries(Object.entries(s).filter(([id]) => Number(id) !== ability.id)))
       setUseTexts((s) => Object.fromEntries(Object.entries(s).filter(([id]) => Number(id) !== ability.id)))
       if (res?.targets?.length) setTargetKey(res.targets[0])
+      // All'alleato solo quanto ha recuperato (i suoi PF restano privati); su di sé anche i PF risultanti.
       if (res?.received) toast.info(t('character.turn.use_received', { name: res.received.name, n: res.received.healed }))
+      if (res?.healed && char) {
+        const max = char.computed?.hp_max_effective ?? char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+        toast.info(t('character.turn.use_healed_self', { n: res.healed, hp: Math.min(max, char.current_hit_points + res.healed), max }))
+      }
       // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
       if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: `${res.rolls.join(' + ')} = ${res.rolls.reduce((a, b) => a + b, 0)}` })
       // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
@@ -177,6 +185,8 @@ export default function Turn() {
       if (res?.message) toast.info(res.message[uiLang(i18n.language)])
       for (const line of res?.removal ?? []) toast.info(line[uiLang(i18n.language)])
       for (const note of res?.notes ?? []) if (USE_NOTES.includes(note)) toast.info(t(`character.turn.use_notes.${note}`))
+      // U39: Nascondersi con l'Azione Scaltra tira subito Furtività; l'esito (2024: Invisibile) si conferma da «Nascondersi»
+      if (res?.notes?.includes('cunning_hide')) skillMutation.mutate({ skill: 'stealth', mode: 'normal' })
     },
     // Il server rifiuta ciò che la pagina non aveva ancora visto (slot già speso, usi finiti): si dice, mai il messaggio tecnico.
     onError: (err) => {
@@ -193,6 +203,11 @@ export default function Turn() {
       setRemovalPick(null)
     },
   })
+  /** La modalità scelta è rivolta a un altro: il pulsante dice «Usa su…», il passo dopo è la scelta del bersaglio. */
+  const usesOnAlly = (ab: Ability) => {
+    const mode = useChoices[ab.id]?.mode
+    return !!ab.gives_to_ally || !!(mode && ab.ally_modes?.includes(mode))
+  }
   /** «Usa» di un privilegio: se dà lo stato a un alleato e alla serata siede qualcun altro, prima chiede a chi. */
   const triggerAbility = async (args: { ability: Ability; uses: number; amount?: number }) => {
     if (args.ability.use_panel === 'preserve_life' || args.ability.use_panel === 'weapon_bond' || args.ability.use_panel === 'wild_magic') {
@@ -238,6 +253,10 @@ export default function Turn() {
   const influenceSkills = standardActionsFor(char.rules_edition).find((s) => s.id === 'influence')?.skills ?? []
   const influenceTotal = influenceRolled && lastRoll?.roll === 'skill' && influenceSkills.includes(lastRoll.skill ?? '') ? lastRoll.total : null
   const lang = uiLang(i18n.language)
+  const concSpell = char.concentrating_spell_id ? char.spells.find((s) => s.id === char.concentrating_spell_id) : undefined
+  // Un incantesimo del catalogo ha già la sua riga (l'orologio legato alla concentrazione): niente doppione
+  const concClocked = (char.active_states ?? []).some((s) => s.key.startsWith('spell_cast:') && s.ends_on?.includes('concentration_end'))
+  const concRounds = char.settings?.concentration_rounds_left as number | null | undefined
   // Lama Assetata: con l'arma del patto in mano gli attacchi sono quelli del privilegio
   const pactInHand = char.items?.some((i) => i.is_equipped && i.item_metadata?.pact_weapon)
   const attacks = (pactInHand ? turn?.attacks_allowed_pact : undefined) ?? turn?.attacks_allowed ?? char.attacks_per_action ?? 1
@@ -366,12 +385,23 @@ export default function Turn() {
             <Target size={14} />{t('character.turn.attack')}
           </RollButton>
         )
-        if (item) extra = <WeaponChoiceRow item={item} char={c} choice={choiceOf(choices, itemId)} onChange={(ch) => setChoice(itemId, ch)} />
+        if (item) extra = (
+          <>
+            {weaponPreviewText(item) && <p className="text-xs font-mono tabular-nums text-dnd-text-muted">{weaponPreviewText(item)}</p>}
+            <WeaponChoiceRow item={item} char={c} choice={choiceOf(choices, itemId)} onChange={(ch) => setChoice(itemId, ch)} />
+          </>
+        )
       }
     } else if (e.kind === 'spell') {
       const spell = c.spells.find((s) => String(s.id) === e.id)
       if (spell) {
-        control = (
+        control = castFlow.canRollActiveDamage(spell) ? (
+          // Già attivo (Guardiani spirituali): i danni dei turni dopo si tirano senza un nuovo lancio
+          <Pressable onClick={() => castFlow.rollActiveDamage(spell)}
+            className={`${BTN} bg-dnd-arcane/10 text-dnd-arcane-bright border-dnd-arcane/30`}>
+            <Sparkles size={14} />{t('character.spells.roll_active_damage')}
+          </Pressable>
+        ) : (
           <RollButton onRoll={(mode) => castFlow.beginCast(spell, mode)} pending={castFlow.isSpellPending(spell.id)}
             ariaLabel={`${t('character.turn.cast')} ${label}`}
             className={`${BTN} bg-dnd-arcane/10 text-dnd-arcane-bright border-dnd-arcane/30`}>
@@ -382,6 +412,8 @@ export default function Turn() {
     } else {
       const ab = c.abilities.find((a) => String(a.id) === e.id)
       preview = ab?.use_preview?.[lang]
+      // Reazione passiva (U24): niente «Usa» qui, la propone l'app nel momento in cui serve (es. i danni dalla pagina PF)
+      if (ab?.is_passive) preview = `${ab.description ? `${ab.description} ` : ''}${t('character.turn.reaction_offered')}`
       if (ab && (ab.max_uses ?? 0) > 0) {
         // Un uso che non costa nulla (prolungare l'Ira 2024) resta possibile a 0 usi: lo dice il server.
         const running = !!ab.free_use
@@ -411,7 +443,7 @@ export default function Turn() {
           <Button size="sm" variant="secondary" disabled={(left < (ab.min_amount ?? 1) && !usable) || missingChoice(ab) || poolEmpty}
             loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
             onClick={() => triggerAbility({ ability: ab, uses: Math.max(0, left - 1), amount: pickable ? amount : undefined })}>
-            {(left < (ab.min_amount ?? 1) && !usable) || poolEmpty ? t('character.turn.no_uses') : t('character.turn.use')}
+            {(left < (ab.min_amount ?? 1) && !usable) || poolEmpty ? t('character.turn.no_uses') : t(usesOnAlly(ab) ? 'character.turn.use_on' : 'character.turn.use')}
           </Button>
         )
       } else if (ab && (isUnlimitedFeature(ab) || ab.has_on_use)) {
@@ -435,7 +467,7 @@ export default function Turn() {
             <Button size="sm" variant="secondary" disabled={missingChoice(ab) || short || !!ab.use_blocked}
               loading={abilityUse.isPending && abilityUse.variables?.ability.id === ab.id}
               onClick={() => triggerAbility({ ability: ab, uses: 0, amount: pickable ? amount : undefined })}>
-              {short ? t('character.turn.no_uses') : t('character.turn.use')}
+              {short ? t('character.turn.no_uses') : t(usesOnAlly(ab) ? 'character.turn.use_on' : 'character.turn.use')}
             </Button>
           )
         }
@@ -545,6 +577,18 @@ export default function Turn() {
 
       <ActiveStatesBar char={char} />
 
+      {/* U15: l'incantesimo in concentrazione senza stato proprio (Ragnatela, Guardiani spirituali) resta visibile nel turno */}
+      {concSpell && !concClocked && (
+        <p data-testid="turn-concentration" className="flex flex-wrap items-center gap-x-2 px-3 py-2 rounded-xl border border-dnd-arcane/40 bg-dnd-arcane/10 text-sm font-body text-dnd-text">
+          <Sparkles size={16} aria-hidden className="shrink-0 text-dnd-arcane-bright" />
+          <span>{t('character.spells.concentration')}: {concSpell.name}</span>
+          {concRounds != null && <span className="text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: concRounds })}</span>}
+          {concSpell.save_dc != null && !!concSpell.attack_save?.trim() && concSpell.attack_save.trim().toUpperCase() !== 'ATK' && (
+            <span className="text-dnd-text-muted tabular-nums">{t('character.spells.save_dc', { dc: concSpell.save_dc })}</span>
+          )}
+        </p>
+      )}
+
       {char.computed?.incapacitated && (
         <p role="status" className="px-1 text-sm font-body text-dnd-crimson-bright">
           {t(incapacitatedMessageKey(char))}
@@ -563,13 +607,21 @@ export default function Turn() {
       {/* `fieldset disabled` spegne ogni pulsante delle azioni. */}
       <fieldset disabled={!!char.computed?.incapacitated}
         className={`min-w-0 space-y-3 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
-      {/* Sempre aperta: un attacco può servire anche fuori dall'azione (opportunità, altra mano). */}
-      <section>
-        <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.turn.section_attacks')}</h2>
+      {/* Sempre aperta: un attacco può servire anche fuori dall'azione (opportunità, altra mano).
+          Da incapacitato (anche a 0 PF) non si attacca affatto: la sezione sparisce (U41). */}
+      {!char.computed?.incapacitated && <section>
+        <div className="flex min-h-11 items-center justify-between gap-2 border-b border-dnd-border pl-1">
+          <h2 className={LEDGER_TITLE}>{t('character.turn.section_attacks')}</h2>
+          {/* U12: si cambia arma da qui, senza passare dall'inventario a metà turno */}
+          <Pressable onClick={() => setWeaponPicker(true)}
+            className="min-h-11 px-2 text-xs font-medium text-dnd-gold-bright active:opacity-70">
+            {t('character.turn.change_weapon')}
+          </Pressable>
+        </div>
         <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
           {withoutExit(groups.attacks).map((e) => renderEntry(e, char))}
         </ul>
-      </section>
+      </section>}
 
       {BUCKETS.map((b) => (
         <div key={b}>{section(t(`character.turn.section_${b}`), withoutExit(groups[b]), b)}</div>
@@ -603,6 +655,9 @@ export default function Turn() {
           onClose={() => setSkillRoll(null)} />
       )}
       {weaponFlow.elements}
+      {weaponPicker && (
+        <EquipItemPicker charId={charId} slot="main_hand" items={char.items ?? []} onClose={() => setWeaponPicker(false)} />
+      )}
       {castFlow.elements}
       {panel && char && (panel.use_panel === 'weapon_bond'
         ? <WeaponBondSheet char={char} onClose={() => setPanel(null)} />

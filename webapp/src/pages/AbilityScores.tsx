@@ -68,7 +68,7 @@ export default function AbilityScores() {
   const rollMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
       const choice = await askRollOptions(charId, { roll: 'ability', ability })
-      return { result: await api.characters.rollAbilityCheck(charId, ability, d20Arg(mode, await rollD20(mode), choice)), ability }
+      return { result: await api.characters.rollAbilityCheck(charId, ability, d20Arg(mode, await rollD20(mode, choice), choice)), ability }
     },
     onSuccess: ({ result, ability }) => {
       refreshAfterOptions(qc, charId, result.option_result)

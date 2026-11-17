@@ -59,6 +59,21 @@ describe('HeroScreen', () => {
     expect(tile.textContent!.indexOf('+4')).toBeLessThan(tile.textContent!.indexOf('18'))
   })
 
+  it('segna «da scegliere» il privilegio con una scelta in sospeso (U2)', () => {
+    const char = {
+      ...base,
+      abilities: [
+        { id: 1, name: 'Ordine Divino', is_passive: true, feature_key: 'cleric.divine_order' },
+        { id: 2, name: 'Incanalare Divinità', is_passive: true, feature_key: 'cleric.channel_divinity' },
+      ],
+      pending_choices: [{ id: 'o', kind: 'class_option', class_key: 'Chierico', level: 1, created_at: '', group: 'divine_order',
+        feature_key: 'cleric.divine_order' }],
+    } as unknown as CharacterFull
+    renderWithProviders(<HeroScreen char={char} />)
+    expect(screen.getByText('Ordine Divino · character.level_choice.to_choose')).toBeInTheDocument()
+    expect(screen.getByText('Incanalare Divinità')).toBeInTheDocument()
+  })
+
   it('mostra l\'etichetta Sanguinante solo se il backend la dà (2024)', () => {
     const { unmount } = renderWithProviders(<HeroScreen char={{ ...base, computed: { bloodied: true } } as unknown as CharacterFull} />)
     expect(screen.getByText('character.hp.bloodied')).toBeInTheDocument()

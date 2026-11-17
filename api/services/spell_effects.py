@@ -257,6 +257,18 @@ def spell_state_spec(key: str, data: dict, target: Character | None = None) -> S
     return StateSpec(key, data=dict(data), **{"ends_on": ("manual",), **extra})
 
 
+def with_spell_hints(states: list[dict] | None) -> list[dict] | None:
+    """Gli stati ``spell:*`` con le opzioni che danno al bersaglio (Benedizione: «somma 1d4 al tiro»), da leggere sulla scheda (U23)."""
+    out = []
+    for s in states or []:
+        d = s.get("data") or {}
+        effect = SPELL_EFFECTS.get(d.get("spell_key")) if str(s.get("key", "")).startswith(SPELL_STATE_PREFIX) else None
+        variant = effect and effect.variants.get(d.get("edition") or "2014")
+        hints = [o.label for o in variant.options if o.label] if variant else []
+        out.append({**s, "hints": hints} if hints else s)
+    return out if states is not None else None
+
+
 async def apply_spell_effects(session: AsyncSession, caster: Character, spell, slot_level: int,
                               targets: list[int] | None, choices: dict[str, str] | None, options: Collection[str] = (),
                               no_concentration: bool = False) -> SpellEffectsRead | None:

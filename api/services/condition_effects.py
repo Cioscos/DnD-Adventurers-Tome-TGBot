@@ -291,7 +291,7 @@ async def upsert_effect(
     expiry: ExpirySpec | None = None, save: SaveSpec | None = None,
     source_combatant_id: int | None = None, source_character_id: int | None = None,
     source_spell_id: int | None = None, ends_with_concentration: bool = False,
-    applied_by_gm: bool = False, encounter: Encounter | None = None,
+    applied_by_gm: bool = False, encounter: Encounter | None = None, source_note: str | None = None,
 ) -> ConditionEffect:
     """Replace the effect for (target, slug). Applies the "next turn" correction when
     ``encounter`` is active: an end-edge expiry anchored on the active combatant lasts one
@@ -325,6 +325,7 @@ async def upsert_effect(
         source_spell_id=source_spell_id,
         ends_with_concentration=ends_with_concentration,
         applied_by_gm=applied_by_gm,
+        source_note=source_note,
         encounter_id=encounter.id if encounter is not None else None,
         created_at=datetime.utcnow().isoformat(timespec="seconds"),
     )
@@ -364,6 +365,7 @@ async def effect_reads(db: AsyncSession, effects: list[ConditionEffect]) -> list
         save_edge=e.save_edge,
         source_name=comb_names.get(e.source_combatant_id) or char_names.get(e.source_character_id),
         ends_with_concentration=e.ends_with_concentration, applied_by_gm=e.applied_by_gm,
+        source_note=e.source_note,
     ) for e in effects]
 
 

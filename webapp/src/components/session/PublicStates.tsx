@@ -13,6 +13,11 @@ export default function PublicStates({ states }: { states?: PublicState[] | null
           {s.rounds_left != null && (
             <span className="ml-1.5 tabular-nums text-dnd-text-muted">{t('character.turn.state_rounds_left', { n: s.rounds_left })}</span>
           )}
+          {s.source_name && (
+            <span className="ml-1.5 text-dnd-text-muted">
+              {t(s.concentration ? 'character.conditions.effect.while_concentrating' : 'session.combat.source_label', { name: s.source_name })}
+            </span>
+          )}
           {s.others.map((o) => (
             <p key={o.key} className="break-words text-dnd-text-muted">{o.name}: {o.text}</p>
           ))}

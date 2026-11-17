@@ -137,9 +137,10 @@ export async function hasDeferringOptions(charId: number, query: RollOptionsQuer
 }
 
 /** Costi ed effetti di un'opzione, per le righe e i pulsanti. */
-export function optionHints(option: RollOption, t: TFunction): string[] {
+export function optionHints(option: RollOption, t: TFunction, diceCut = 0): string[] {
+  if (option.unavailable) return [option.unavailable]
   return [
-    option.dice,
+    option.dice && diceCut ? lessDice(option.dice, diceCut) : option.dice,
     option.bonus ? `${option.bonus > 0 ? '+' : ''}${option.bonus}` : null,
     option.mode ? t(`common.roll_mode.${option.mode}`) : null,
     option.auto_fail ? t('character.roll_notes.auto_fail') : null,
@@ -149,6 +150,12 @@ export function optionHints(option: RollOption, t: TFunction): string[] {
     option.cost?.feature_key ? t('character.roll_options.uses', { count: option.cost.amount }) : null,
     option.dice_cost ? t('character.roll_options.dice_cost', { count: option.dice_cost }) : null,
   ].filter((hint): hint is string => !!hint)
+}
+
+/** «3d6» meno `n` dadi (Colpo Astuto sull'Attacco Furtivo); invariato se non è «NdX». */
+export function lessDice(dice: string, n: number): string {
+  const m = /^(\d+)d(\d+)$/.exec(dice.trim())
+  return m ? `${Math.max(0, Number(m[1]) - n)}d${m[2]}` : dice
 }
 
 /** Usa un privilegio sul tiro già visto; un ritiro anima il nuovo d20. */
@@ -182,9 +189,13 @@ export async function askRollOptions(
   // Una scelta con uno slot di turno proprio (azione bonus, reazione) non è un attacco dell'azione Attacco.
   const withSlot = (chosen: string[]): { own_slot?: true } => (listed.some((o) => chosen.includes(o.key) && (o.slot || o.outside_action)) ? { own_slot: true } : {})
   const withRanged = (chosen: string[]): { ranged?: true } => (listed.some((o) => chosen.includes(o.key) && o.ranged_unarmed) ? { ranged: true } : {})
+  const withModes = (chosen: string[]): { modes?: ('advantage' | 'disadvantage')[] } => {
+    const modes = listed.flatMap((o) => (chosen.includes(o.key) && o.mode ? [o.mode] : []))
+    return modes.length ? { modes } : {}
+  }
   if (context?.preset) {
     const chosen = context.preset.filter((k) => options.some((o) => o.key === k))
-    return { ...base, options: chosen, ...(defersBy(chosen) ? { defer_damage: true } : {}), ...withSlot(chosen), ...withRanged(chosen) }
+    return { ...base, options: chosen, ...(defersBy(chosen) ? { defer_damage: true } : {}), ...withSlot(chosen), ...withRanged(chosen), ...withModes(chosen) }
   }
   if (options.length === 0 && afterRoll.length === 0 && !context?.keepOpen) return base
   return new Promise((resolve, reject) => {
@@ -197,7 +208,7 @@ export async function askRollOptions(
         },
         answer: (answer) => {
           usePromptStore.setState({ request: null })
-          resolve({ ...answer, ...(defer || defersBy(answer.options) ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options) })
+          resolve({ ...answer, ...(defer || defersBy(answer.options) ? { defer_damage: true } : {}), ...withSlot(answer.options), ...withRanged(answer.options), ...withModes(answer.options) })
         },
       },
     })

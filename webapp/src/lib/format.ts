@@ -31,3 +31,10 @@ export function formatTime24(date: Date | string, locale: string): string {
     hourCycle: 'h23',
   }).format(d)
 }
+
+/** Distanze in piedi scritte nel testo («120 ft», «60 feet», «30 piedi») in metri per l'italiano: 1,5 m ogni 5 ft, come i manuali italiani. */
+export function localizeDistances(text: string, locale: string): string {
+  if (!locale.startsWith('it')) return text
+  return text.replace(/(\d+)\s*(?:ft\.?|feet|foot|piedi|piede)(?![a-z])/gi, (_, n: string) =>
+    `${String((Number(n) * 3) / 10).replace('.', ',')} m`)
+}

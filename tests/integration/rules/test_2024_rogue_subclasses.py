@@ -183,7 +183,9 @@ async def test_assassins_tools_grant_the_proficiencies_and_the_poison_option_wit
     wid = await _rapier(client, cid)
     assert _k("poison") in await _roll_keys(client, cid, "attack", item_id=wid)
     other = await _sub(client, "thief", 5)
-    assert _k("poison") not in await _roll_keys(client, other, "attack", item_id=await _rapier(client, other))
+    listed = (await client.get(f"/characters/{other}/roll-options",
+                               params={"roll": "attack", "item_id": await _rapier(client, other)})).json()
+    assert next(o for o in listed if o["key"] == _k("poison")).get("unavailable")  # mostrato spento, con il motivo (U14)
 
 
 async def test_steady_aim_keeps_the_speed_for_the_assassin_from_level_9(client):

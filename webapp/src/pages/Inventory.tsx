@@ -19,7 +19,7 @@ import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import Sheet from '@/components/ui/Sheet'
-import { slotsAllowedFor, SLOT_PLACEHOLDER_ICON, handsConflict } from '@/lib/equipmentSlots'
+import { slotsAllowedFor, SLOT_PLACEHOLDER_ICON, handsConflict, equippedInSlot } from '@/lib/equipmentSlots'
 import type { EquipmentSlot } from '@/types'
 import HandsConflictDialog from '@/components/character/HandsConflictDialog'
 import ScrollArea from '@/components/ScrollArea'
@@ -1015,6 +1015,7 @@ export default function Inventory() {
         <HandsConflictDialog
           newItem={equipConflict.item}
           removedItem={equipConflict.removedItem}
+          alsoRemoved={equippedInSlot(char?.items ?? [], equipConflict.slot)}
           pending={toggleEquip.isPending}
           onCancel={() => setEquipConflict(null)}
           onConfirm={() =>

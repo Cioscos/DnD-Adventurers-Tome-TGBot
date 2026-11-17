@@ -27,6 +27,7 @@ from core.rules.roll_options import (
     saved_dice,
     slot_choices,
 )
+from core.rules.catalog import active_features
 from core.rules.types import RuleContext
 
 
@@ -161,8 +162,16 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         spent = spent_levels(ctx.char)
         slots = [RollOptionSlot(level=level, available=spent[level]) for level in spec.recover_levels(ctx) if level in spent]
     fixed = spec.requires_input is None
+    label = spec.label.get(lang) or spec.label["it"]
+    if spec.target_effect and fixed:  # la CD del TS del bersaglio si legge già nell'offerta (Colpo Astuto)
+        try:
+            dc = spec.target_effect(ctx, {}).save_dc
+        except KeyError:  # effetto che dipende da una scelta del giocatore: la CD arriva con l'esito
+            dc = None
+        if dc:
+            label = f"{label} ({'CD' if lang == 'it' else 'DC'} {dc})"
     return RollOptionRead(
-        key=spec.key, phase=spec.phase, label=spec.label.get(lang) or spec.label["it"], source=option.source,
+        key=spec.key, phase=spec.phase, label=label, source=option.source,
         dice=spec.extra_dice(ctx, {}) if fixed and spec.extra_dice else None,
         bonus=spec.bonus(ctx, {}) if fixed and spec.bonus else None,
         mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
@@ -192,6 +201,20 @@ def list_options(char: Any, roll: str, lang: str, **kw: Any) -> list[RollOptionR
         out += [option_read(o, lang).model_copy(update={"needs": turn.spec.key})
                 for o in roll_options_for(replace(ctx, damage_type=turn.spec.damage_type_to))
                 if o.spec.key not in have and o.spec.phase == "before" and not o.spec.damage_type_to and o.spec.key != DEATH_WARD_HOLD]
+    return out + _explained_missing(ctx, offered, lang)
+
+
+def _explained_missing(ctx: RuleContext, offered: list[RollOption], lang: str) -> list[RollOptionRead]:
+    """Le opzioni con ``unavailable_hint`` non disponibili, mostrate spente accanto al loro gruppo offerto (Veleno, U14)."""
+    groups = {o.spec.group for o in offered if o.spec.group}
+    have = {o.spec.key for o in offered}
+    out = []
+    for spec, row in active_features(ctx.char):
+        for o in spec.roll_options:
+            if o.unavailable_hint and o.group in groups and o.key not in have and ctx.roll in o.rolls:
+                have.add(o.key)
+                read = option_read(RollOption(o, replace(ctx, class_row=row, class_level=row.level), f"feature:{spec.key}"), lang)
+                out.append(read.model_copy(update={"unavailable": o.unavailable_hint.get(lang) or o.unavailable_hint["it"]}))
     return out
 
 

@@ -64,7 +64,7 @@ from core.game.item_bonuses import item_bonus_total
 from core.game.actions import HIDE_MIN_TOTAL
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
-from api.services.d20 import d20_history_label, d20_records, resolve_body, spend_inspiration_reroll
+from api.services.d20 import d20_history_label, d20_records, resolve_body, set_inspiration, spend_inspiration_reroll
 from api.services.rules_options import (
     LAST_ROLL_FIELDS,
     merge_options,
@@ -585,13 +585,7 @@ async def update_inspiration(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
-    settings = dict(char.settings or {})
-    if body.heroic_inspiration and char.heroic_inspiration and character_edition(char) == "2024":
-        settings["inspiration_extra"] = True  # se ne ha una sola: questa è da cedere a chi ne è privo, o persa
-    else:
-        settings.pop("inspiration_extra", None)
-    char.settings = settings
-    char.heroic_inspiration = body.heroic_inspiration
+    set_inspiration(char, body.heroic_inspiration)
     # See refresh_char_full() for why expunge + re-SELECT is required here.
     char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)

@@ -238,6 +238,7 @@ class AbilityRead(BaseModel):
     # Quante creature della serata possono ricevere i PF temporanei del «Usa» (con gives_to_ally)
     ally_max: int = 1
     use_preview: Optional[dict[str, str]] = None  # ``OnUse.preview``: cosa farà il «Usa», calcolato dal server
+    roll_dice: Optional[str] = None  # dadi in più che il privilegio dà al tiro, al livello attuale (Attacco Furtivo 3d6)
     # Tipi di danno che il riposo accetta per la resistenza che questo privilegio fa scegliere (Resilienza Immonda); vuoto: nessuna scelta
     rest_damage_choices: list[str] = []
     # Pool (Imposizione delle Mani): il giocatore sceglie quanti usi spendere, al massimo `max_amount` (None: gli usi rimasti)
@@ -421,6 +422,7 @@ class RestPreview(BaseModel):
     item_charges: list[ItemChargePreview] = []
     exhaustion_change: int = 0
     ends_concentration: bool = False
+    too_soon: bool = False  # riposo lungo a meno di 24 h (2014) / 16 h (2024) dal precedente
 
 
 class DeathSaveAction(str, Enum):

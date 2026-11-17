@@ -66,7 +66,7 @@ describe('AddConditionSheet', () => {
     await user.click(screen.getByRole('radio', { name: 'session.combat.cond.dur_end' }))
     await user.click(screen.getByRole('radio', { name: 'session.combat.cond.of_source' }))
     await user.click(screen.getByRole('radio', { name: 'character.ability.constitution_short' }))
-    await user.type(screen.getByRole('textbox'), '15')
+    await user.type(screen.getAllByRole('textbox').at(-1)!, '15')
     await user.click(screen.getByRole('radio', { name: 'session.combat.cond.save_edge_end' }))
     await user.click(screen.getByRole('button', { name: 'session.combat.cond.submit' }))
     await waitFor(() => expect(applySpy).toHaveBeenCalledWith(5, 1, {
@@ -94,7 +94,7 @@ describe('AddConditionSheet', () => {
     const { onClose } = setup(true)
     await pick('session.combat.cond.pick', 'character.conditions.charmed')
     await pick('session.combat.cond.source_none', 'Eroe')
-    await user.click(screen.getByRole('switch'))
+    // U36: con la fonte concentrata l'interruttore parte acceso
     await user.click(screen.getByRole('button', { name: 'session.combat.cond.submit' }))
     expect(await screen.findByText('session.combat.cond.source_not_concentrating')).toBeInTheDocument()
     expect(applySpy.mock.calls[0][2].ends_with_concentration).toBe(true)
@@ -109,4 +109,10 @@ describe('AddConditionSheet', () => {
     await user.click(screen.getByRole('button', { name: 'session.combat.cond.submit' }))
     await waitFor(() => expect(applySpy).toHaveBeenCalledWith(5, 1, { slug: 'exhaustion', value: 2 }))
   })
-})
+  it('U35: la causa scritta a mano viaggia come source_note', async () => {
+    setup()
+    await pick('session.combat.cond.pick', 'character.conditions.restrained')
+    await user.type(screen.getByPlaceholderText('session.combat.cond.source_note_placeholder'), '  Ragnatela ')
+    await user.click(screen.getByRole('button', { name: 'session.combat.cond.submit' }))
+    await waitFor(() => expect(applySpy.mock.calls[0][2].source_note).toBe('Ragnatela'))
+  })})

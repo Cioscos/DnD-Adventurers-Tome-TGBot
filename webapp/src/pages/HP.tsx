@@ -1,4 +1,4 @@
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import { askRollOptions, CastCancelled, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -42,6 +42,7 @@ import { useReactionOffers } from '@/components/character/ReactionOffers'
 import { useAllyReactionWait, allyReductionText } from '@/hooks/useAllyReactionWait'
 import { sendWithAllyReaction } from '@/lib/allyReactionPatch'
 import { hpNumeralTone } from '@/lib/hpTone'
+import { hitDiceRemaining } from '@/lib/quickActions'
 import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
@@ -116,7 +117,8 @@ export default function HP() {
     }) => {
       const allyId = op === 'damage' ? await allyWait.wait(val, modifier?.damage_type) : null
       const choice = op === 'damage'
-        ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in')
+        ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type, damage: val }, 'damage_in',
+          { cancellable: true, summary: t('character.roll_options.damage_incoming', { n: val }) })
         : undefined
       const picked = choice?.options.length ? { ...modifier, ...choice } : modifier
       const base = op === 'damage' && concMode !== 'normal' ? { ...picked, concentration_mode: concMode } : picked
@@ -126,6 +128,7 @@ export default function HP() {
       () => toast.warning(t('allyReaction.lost'), { duration: 5000 }))
     },
     onSuccess: (updated, { op, val }) => {
+      const before = qc.getQueryData<CharacterFull>(['character', charId])?.current_hit_points
       qc.setQueryData(['character', charId], updated)
       setReactions(op === 'damage' ? updated.reactions ?? [] : [])
       if (updated.option_result) {
@@ -163,7 +166,9 @@ export default function HP() {
       // Stesso annullamento per scorciatoie e valore scritto a mano.
       const undoId = updated.hp_undo_id
       if (!undoId) return
-      const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(UNDO_MESSAGE_KEYS[op], { n: updated.option_result?.hp_lost ?? updated.damage_taken ?? val })
+      // La cura si ferma al massimo: il toast dice i PF recuperati davvero, non quelli scritti (U19).
+      const healed = op === 'heal' && before != null ? Math.max(0, updated.current_hit_points - before) : null
+      const base = (op === 'damage' ? damageTakenMessage(updated, t) : null) ?? t(UNDO_MESSAGE_KEYS[op], { n: healed ?? updated.option_result?.hp_lost ?? updated.damage_taken ?? val })
       const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
       showUndoToast({
         message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
@@ -172,7 +177,7 @@ export default function HP() {
       })
     },
     onError: (err) => {
-      notifyMutationError(err)
+      if (!(err instanceof CastCancelled)) notifyMutationError(err)  // «Annulla» nel prompt dei danni: niente errore
       savingRef.current = false
     },
   })
@@ -210,7 +215,7 @@ export default function HP() {
   const deathRollMutation = useMutation({
     mutationFn: async (mode: RollMode) => {
       const choice = await askRollOptions(charId, { roll: 'death_save' })
-      return api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode), choice))
+      return api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode, choice), choice))
     },
     onSuccess: (result) => {
       setDeathRollResult(result)
@@ -481,6 +486,16 @@ export default function HP() {
           {t('character.hp.long_rest')}
         </Button>
       </div>
+      )}
+
+      {/* Dadi vita sempre leggibili, non solo nei modali del riposo */}
+      {!isDead && (char.classes ?? []).length > 0 && (
+        <p data-testid="hit-dice-left" className="flex flex-wrap justify-center gap-x-2 text-sm font-body text-dnd-text-muted">
+          <span>{t('character.rest_preview.hit_dice')}:</span>
+          {char.classes.map((c) => (
+            <span key={c.id} className="font-mono tabular-nums text-dnd-text">d{c.hit_die ?? 8} {hitDiceRemaining(c)}/{c.level}</span>
+          ))}
+        </p>
       )}
 
       {char && <RestDialogs char={char} rest={rest} />}

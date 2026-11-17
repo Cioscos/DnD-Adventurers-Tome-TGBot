@@ -71,12 +71,17 @@ const openShortRest = () => userEvent.click(screen.getByText('character.quick_ac
 afterEach(() => { vi.clearAllMocks() })
 
 describe('RestSheet short rest', () => {
-  it('spends hit dice and shows the result', async () => {
-    spendHitDice.mockResolvedValue({ rolls: [4] })
+  it('rolls hit dice in the modal but spends them only on «Rest» (U48), then shows the result', async () => {
+    spendHitDice.mockResolvedValue({ rolls: [4, 2], con_bonus: 1, healed: 8, new_current_hp: 9 })
+    rest.mockResolvedValue({ ...char, current_hit_points: 9 })
     setup()
     await openShortRest()
     await userEvent.click(screen.getByText('spend'))
-    await waitFor(() => expect(spendHitDice).toHaveBeenCalledWith(7, 1, 2, undefined))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(spendHitDice).not.toHaveBeenCalled()  // Annulla qui non avrebbe speso nulla
+    await userEvent.click(screen.getByText('rest'))
+    await waitFor(() => expect(spendHitDice).toHaveBeenCalledWith(7, 1, 2, [expect.any(Number), expect.any(Number)]))
+    await waitFor(() => expect(rest).toHaveBeenCalled())
     expect(await screen.findByTestId('hit-die-result')).toBeTruthy()
     expect(notifyMutationError).not.toHaveBeenCalled()
   })
@@ -91,7 +96,8 @@ describe('RestSheet short rest', () => {
       interrupted: false, ate_and_drank: true, confirm_early: undefined }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(qc.getQueryData(['character', 7])).toEqual(updated)
-    expect(toastSuccess).toHaveBeenCalledWith('character.quick_actions.rest_done')
+    expect(toastSuccess).toHaveBeenCalledWith('character.quick_actions.rest_done_dice')  // con i dadi vita rimasti (U50)
+    expect(spendHitDice).not.toHaveBeenCalled()
     expect(screen.queryByTestId('hit-dice-modal')).toBeNull()
   })
 
@@ -191,16 +197,19 @@ describe('RestSheet short rest', () => {
     setup()
     await openShortRest()
     await userEvent.click(screen.getByText('spend'))
+    await userEvent.click(screen.getByText('rest'))
     await waitFor(() => expect(notifyMutationError).toHaveBeenCalledTimes(1))
     expect(toastError).not.toHaveBeenCalled()
+    expect(rest).not.toHaveBeenCalled()  // senza i dadi spesi il riposo non parte
   })
 
   it('says the dice are exhausted on a 409, without the generic warning', async () => {
     const { ApiError } = await import('@/api/client')
-    spendHitDice.mockRejectedValue(new ApiError(409, 'none left'))
+    spendHitDice.mockRejectedValue(new ApiError(409, 'hit_dice_exhausted'))
     setup()
     await openShortRest()
     await userEvent.click(screen.getByText('spend'))
+    await userEvent.click(screen.getByText('rest'))
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.quick_actions.hit_die_exhausted'))
     expect(notifyMutationError).not.toHaveBeenCalled()
   })
@@ -222,6 +231,16 @@ describe('RestSheet preview', () => {
     expect(screen.getByText('character.rest_preview.concentration')).toBeTruthy()
     expect(restPreview).toHaveBeenCalledWith(7, 'long')
     expect(rest).not.toHaveBeenCalled()
+  })
+
+  it('a long rest too soon warns in the first modal and «Rest anyway» sends confirm_early (U51)', async () => {
+    restPreview.mockResolvedValue({ ...preview, too_soon: true })
+    rest.mockResolvedValue(char)
+    setup()
+    await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
+    expect(await screen.findByTestId('rest-too-soon')).toBeTruthy()
+    await userEvent.click(screen.getByText('confirm'))
+    await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ confirm_early: true })))
   })
 
   it('asks the short preview when opening the short rest', async () => {

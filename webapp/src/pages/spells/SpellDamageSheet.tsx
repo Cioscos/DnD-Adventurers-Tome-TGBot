@@ -219,6 +219,12 @@ export default function SpellDamageSheet({
   const isCantrip = spell.level === 0
   const autoUpcast = parseDice(spell.higher_levels_dice)
   const autoExtra = autoUpcast ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides) : 0
+  // U15: la CD del TS sta nel foglio del tiro, non solo nella testata della pagina
+  const saveLine = !isAttack && spell.save_dc != null
+    ? `${spell.attack_save?.trim().toUpperCase() === 'SAVE' ? t('character.spells.attack_save.save') : spell.attack_save?.trim()} · ${t('character.spells.save_dc', { dc: spell.save_dc })}`
+    : null
+  // U17: ogni dardo di Dardo incantato vale 1d4+1, da assegnare a bersagli diversi
+  const darts = spell.srd_index === 'magic-missile' && result ? (result.main_rolls ?? []).map((r) => r + 1) : []
 
   const handleRoll = () => {
     mutation.mutate({
@@ -299,6 +305,8 @@ export default function SpellDamageSheet({
             </div>
           )}
 
+          {saveLine && <p data-testid="spell-save-dc" className="text-sm text-center font-body text-dnd-text tabular-nums">{saveLine}</p>}
+
           {pickedType && (
             <p className="text-sm text-center font-body text-dnd-text">
               {t('character.spells.roll_damage.chosen_type', { type: t(`character.inventory.damage_types.dmg_${pickedType}`, { defaultValue: pickedType }) })}
@@ -366,6 +374,12 @@ export default function SpellDamageSheet({
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
               {result.breakdown}
             </p>
+            {saveLine && <p className="text-sm font-body text-dnd-text mb-2 tabular-nums">{saveLine}</p>}
+            {darts.length > 1 && (
+              <p data-testid="magic-missile-darts" className="text-sm font-body text-dnd-text mb-2 tabular-nums">
+                {t('character.spells.roll_damage.darts', { list: darts.join(' · ') })}
+              </p>
+            )}
             {(result.parts?.length ?? 0) > 1 ? (
               <ul className="mb-3 space-y-0.5 text-sm italic text-dnd-text-muted">
                 {result.parts!.map((p) => (

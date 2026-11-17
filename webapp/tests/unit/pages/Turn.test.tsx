@@ -76,7 +76,7 @@ vi.mock('@/components/ui/Sheet', async () => {
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
 })
 vi.mock('@/pages/spells/useCastFlow', () => ({
-  useCastFlow: () => ({ beginCast: vi.fn(), isSpellPending: () => false, elements: null }),
+  useCastFlow: () => ({ beginCast: vi.fn(), isSpellPending: () => false, canRollActiveDamage: () => false, rollActiveDamage: vi.fn(), elements: null }),
 }))
 vi.mock('@/hooks/useWeaponAttackFlow', () => ({
   useWeaponAttackFlow: () => ({
@@ -92,6 +92,10 @@ vi.mock('@/components/ui/RollButton', async () => {
 })
 vi.mock('@/components/RollResultModal', () => ({ default: () => null }))
 vi.mock('@/components/WeaponChoiceRow', () => ({ default: () => null }))
+vi.mock('@/components/character/EquipItemPicker', async () => {
+  const React = await import('react')
+  return { default: (p: { slot: string }) => React.createElement('div', { 'data-testid': 'equip-picker' }, p.slot) }
+})
 vi.mock('@/components/rules/TargetEffectSheet', async () => {
   const React = await import('react')
   return { default: (p: { effectKey: string }) => React.createElement('div', { 'data-testid': 'target-sheet' }, p.effectKey) }
@@ -138,6 +142,13 @@ describe('Turn page', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'false'))
   })
 
+  it('U12: changes weapon from the turn, through the main-hand picker', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('character.turn.change_weapon'))
+    expect(screen.getByTestId('equip-picker')).toHaveTextContent('main_hand')
+  })
+
   it('rereads the attack limit on a new turn, because an extra action (Haste) changes it', async () => {
     getChar.mockResolvedValue(char)
     renderWithProviders(<Turn />)
@@ -182,6 +193,7 @@ describe('Turn page', () => {
     expect(await screen.findByText('character.turn.incapacitated')).toBeInTheDocument()
     expect(screen.getByLabelText('character.turn.mark_used: character.turn.section_action')).toBeDisabled()
     expect(screen.getByText('character.turn.new_turn').closest('button')).toBeEnabled()
+    expect(screen.queryByText('character.turn.section_attacks')).toBeNull()  // U41: niente attacchi da incapacitato
   })
 
   it('turns off the Other section too while incapacitated', async () => {
@@ -330,6 +342,26 @@ describe('Turn page', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'true'))
   })
 
+  it('keeps a concentration spell with no state of its own visible, with rounds and DC (U15)', async () => {
+    getChar.mockResolvedValue({ ...char, concentrating_spell_id: 9, settings: { concentration_rounds_left: 600 },
+      spells: [{ id: 9, name: 'Ragnatela', level: 2, attack_save: 'SAVE', save_dc: 15, casting_time: '1 azione', is_prepared: true }] })
+    renderWithProviders(<Turn />)
+    const row = await screen.findByTestId('turn-concentration')
+    expect(row).toHaveTextContent('Ragnatela')
+    expect(row).toHaveTextContent('character.spells.save_dc')
+  })
+
+  it('lists a passive reaction (Uncanny Dodge) under Reaction, with no Use button and how it is offered (U24)', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 6, name: 'Schivata prodigiosa', is_passive: true, description: 'Dimezzi i danni.', feature_key: 'rogue.uncanny_dodge',
+      max_uses: null, uses: null, action_type: 'reaction',
+    }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('Schivata prodigiosa')).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.reaction_offered/)).toBeInTheDocument()
+    expect(screen.queryByText('character.turn.use')).not.toBeInTheDocument()
+  })
+
   it('shows an unlimited class feature without a use button', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 5, name: 'Ira', is_passive: false, is_active: true, is_class_feature: true,
@@ -400,6 +432,19 @@ describe('Turn page', () => {
     await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_rolled', { description: '5 = 5' }))
   })
 
+  it('U39: hiding with Cunning Action rolls Stealth right away', async () => {
+    getChar.mockResolvedValue({ ...char, abilities: [{
+      id: 10, name: 'Azione Scaltra', is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
+      feature_key: 'rogue.cunning_action', max_uses: null, uses: null, action_type: 'bonus_action', restoration_type: 'none',
+    }] })
+    featureUse.mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: ['cunning_hide'] })
+    rollSkill.mockClear()
+    renderWithProviders(<Turn />)
+    await userEvent.click(within((await screen.findByText('Azione Scaltra')).closest('li') as HTMLElement).getByText('character.turn.use'))
+    await waitFor(() => expect(rollSkill).toHaveBeenCalled())
+    expect(rollSkill.mock.calls[0][1]).toBe('stealth')
+  })
+
   it('says the total of the dice and the full outcome of a ki attack (Water Whip)', async () => {
     getChar.mockResolvedValue({ ...char, abilities: [{
       id: 9, name: "Frusta d'Acqua", is_passive: false, is_active: true, is_class_feature: true, has_on_use: true,
@@ -430,7 +475,7 @@ describe('Turn page', () => {
       has_on_use: true, gives_to_ally: true, feature_key: 'bard.bardic_inspiration', max_uses: 3, uses: 3,
       action_type: 'bonus_action', restoration_type: 'long_rest' }
     const useIt = async () => userEvent.click(within((await screen.findByText(/Ispirazione Bardica/)).closest('li') as HTMLElement)
-      .getByText('character.turn.use'))
+      .getByText('character.turn.use_on'))  // dà a un alleato: il pulsante annuncia la scelta del bersaglio
 
     it('asks who gets the die and sends the chosen ally', async () => {
       getChar.mockResolvedValue({ ...char, abilities: [inspiration] })
@@ -1006,7 +1051,7 @@ describe('Turn page', () => {
       featureUse.mockClear()
       renderWithProviders(<Turn />)
       await pick('Cura PF a un altro')
-      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      await userEvent.click((await screen.findByText('character.turn.use_on')).closest('button') as HTMLButtonElement)
       expect(featureUse).not.toHaveBeenCalled()  // prima si sceglie a chi
       await userEvent.click(await screen.findByText('Brun'))
       await waitFor(() => expect(featureUse).toHaveBeenCalledWith(7, 'paladin.lay_on_hands', 1, { mode: 'other', target_character_id: 31 }))
@@ -1044,10 +1089,20 @@ describe('Turn page', () => {
       featureUse.mockResolvedValueOnce({ rolls: [], healed: 0, state: null, notes: [], received: { name: 'Brun', healed: 6 } })
       renderWithProviders(<Turn />)
       await pick('Cura PF a un altro')
-      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      await userEvent.click((await screen.findByText('character.turn.use_on')).closest('button') as HTMLButtonElement)
       toastInfo.mockClear()
       await userEvent.click(await screen.findByText('Brun'))
       await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_received'))
+    })
+
+    it('healing yourself says the HP you end up with (U52)', async () => {
+      getChar.mockResolvedValue({ ...char, abilities: [lay()] })
+      featureUse.mockResolvedValueOnce({ rolls: [], healed: 5, state: null, notes: [] })
+      renderWithProviders(<Turn />)
+      await pick('Cura PF a te stesso')
+      toastInfo.mockClear()
+      await userEvent.click((await screen.findByText('character.turn.use')).closest('button') as HTMLButtonElement)
+      await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.turn.use_healed_self'))
     })
   })
 

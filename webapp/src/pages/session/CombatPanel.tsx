@@ -17,7 +17,8 @@ import AddMonsterSheet from '@/pages/session/AddMonsterSheet'
 import CombatantSheet from '@/pages/session/CombatantSheet'
 import SaveRollSheet from '@/components/SaveRollSheet'
 import { api, ApiError } from '@/api/client'
-import { haptic, telegramConfirm } from '@/auth/telegram'
+import { haptic } from '@/auth/telegram'
+import { turnLeftovers } from '@/lib/turnLeftovers'
 import { useYourTurnToast } from '@/hooks/useYourTurnToast'
 import type { CombatantLive, GameSessionLive, PendingSave } from '@/types'
 
@@ -38,6 +39,11 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   const [showAddMonster, setShowAddMonster] = useState(false)
   const [sheetTarget, setSheetTarget] = useState<CombatantLive | null>(null)
   const [confirmSkip, setConfirmSkip] = useState(false)
+  // Conferme con il modale dell'app, non con il confirm nativo che blocca la pagina (U31).
+  const [confirmEnd, setConfirmEnd] = useState(false)
+  const [missingNames, setMissingNames] = useState<string | null>(null)
+  // «Termina turno» con attacchi o azione ancora da usare (U32): il PG e il resto da spiegare.
+  const [leftover, setLeftover] = useState<{ charId: number; text: string } | null>(null)
   // TS nati a fine del mio turno: si aprono subito dopo «Termina turno».
   const [savesToRoll, setSavesToRoll] = useState<PendingSave[] | null>(null)
 
@@ -61,11 +67,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
     onError: (err: unknown) => {
       const detail = err instanceof ApiError ? (err.detail as { code?: string; names?: string[] }) : null
       if (detail?.code === 'missing_initiative') {
-        const names = (detail.names ?? []).join(', ')
-        telegramConfirm(
-          t('session.combat.auto_roll_confirm', { names }),
-          (ok) => ok && startMutation.mutate(true),
-        )
+        setMissingNames((detail.names ?? []).join(', '))
         return
       }
       onError()
@@ -133,7 +135,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
 
   const endMutation = useMutation({
     mutationFn: () => api.sessions.encounter.end(sessionId),
-    onSuccess: () => { haptic.warning(); invalidate() },
+    onSuccess: () => { haptic.warning(); setConfirmEnd(false); invalidate() },
     onError,
   })
 
@@ -157,6 +159,27 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   const monstersAllDown =
     enc.combatants.some((c) => c.kind === 'monster') &&
     enc.combatants.filter((c) => c.kind === 'monster').every((c) => c.is_dead)
+
+  const endMyTurn = async (charId: number) => {
+    // Il PG a 0 PF non ha azioni da fare: nessun avviso.
+    if (snapOf(myCombatant!)?.current_hit_points !== 0) {
+      const ts = await qc.fetchQuery({
+        queryKey: ['turn-state', charId],
+        queryFn: () => api.characters.turnState(charId),
+        staleTime: 0,
+      }).catch(() => null)
+      const { attacksLeft, actionUnused } = turnLeftovers(ts)
+      const parts = [
+        attacksLeft > 0 && t('session.combat.leftover_attacks', { count: attacksLeft }),
+        actionUnused && t('session.combat.leftover_action'),
+      ].filter(Boolean)
+      if (parts.length > 0) {
+        setLeftover({ charId, text: parts.join(' · ') })
+        return
+      }
+    }
+    endMyTurnMutation.mutate(charId)
+  }
 
   // «Tocca a te tra N»: posizioni vive dall'attivo al mio PG, in giro.
   const living = enc.combatants.filter((c) => !c.is_dead)
@@ -185,6 +208,12 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   let dock: React.ReactNode = null
   if (amGm && isActivePhase) {
     dock = (
+      <div className="space-y-2">
+      {monstersAllDown && (
+        <Button variant="danger" size="md" fullWidth icon={<Flag size={16} />} onClick={() => setConfirmEnd(true)}>
+          {t('session.combat.end_cta')}
+        </Button>
+      )}
       <div className="flex gap-2">
         <Pressable
           onClick={() => turnMutation.mutate('prev')}
@@ -206,6 +235,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         >
           {t('session.combat.next_turn')}
         </Button>
+      </div>
       </div>
     )
   } else if (amGm) {
@@ -230,7 +260,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         fullWidth
         icon={<ChevronRight size={16} />}
         loading={endMyTurnMutation.isPending}
-        onClick={() => endMyTurnMutation.mutate(charId)}
+        onClick={() => endMyTurn(charId)}
       >
         {t('session.combat.end_my_turn')}
       </Button>
@@ -355,7 +385,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
             menuItem(
               <Flag size={16} />,
               t('session.combat.end'),
-              () => telegramConfirm(t('session.combat.end_confirm'), (ok) => ok && endMutation.mutate()),
+              () => setConfirmEnd(true),
               true,
             )}
         </div>
@@ -384,6 +414,48 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
           onClose={() => setSavesToRoll(null)}
         />
       )}
+      <ConfirmSheet
+        open={confirmEnd}
+        onClose={() => setConfirmEnd(false)}
+        onConfirm={() => endMutation.mutate()}
+        title={t('session.combat.end_confirm')}
+        body={
+          <p data-testid="end-summary" className="tabular-nums">
+            {t('session.combat.end_summary', {
+              round: enc.round,
+              dead: enc.combatants.filter((c) => c.kind === 'monster' && c.is_dead).length,
+              total: enc.combatants.filter((c) => c.kind === 'monster').length,
+            })}
+          </p>
+        }
+        confirmLabel={t('session.combat.end_cta')}
+        loading={endMutation.isPending}
+      />
+      <ConfirmSheet
+        open={missingNames !== null}
+        onClose={() => setMissingNames(null)}
+        onConfirm={() => {
+          setMissingNames(null)
+          startMutation.mutate(true)
+        }}
+        title={t('session.combat.auto_roll_title')}
+        body={t('session.combat.auto_roll_confirm', { names: missingNames ?? '' })}
+        confirmLabel={t('session.combat.auto_roll_cta')}
+        confirmVariant="primary"
+        loading={startMutation.isPending}
+      />
+      <ConfirmSheet
+        open={leftover !== null}
+        onClose={() => setLeftover(null)}
+        onConfirm={() => {
+          if (leftover) endMyTurnMutation.mutate(leftover.charId)
+          setLeftover(null)
+        }}
+        title={t('session.combat.leftover_title')}
+        body={leftover?.text}
+        confirmLabel={t('session.combat.leftover_cta')}
+        confirmVariant="primary"
+      />
       <ConfirmSheet
         open={confirmSkip}
         onClose={() => setConfirmSkip(false)}

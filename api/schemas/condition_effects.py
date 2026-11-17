@@ -19,6 +19,7 @@ class ConditionEffectRead(BaseModel):
     source_name: Optional[str] = None
     ends_with_concentration: bool = False
     applied_by_gm: bool = False
+    source_note: Optional[str] = None  # fonte scritta dal GM ("Ragnatela")
 
 
 class PendingSaveRead(BaseModel):

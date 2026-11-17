@@ -13,6 +13,7 @@ import ServerVersionBanner from '@/components/ui/ServerVersionBanner'
 import OfflineNotice, { type OfflineNoticeQuery } from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
 import PendingSavesBanner from '@/components/PendingSavesBanner'
+import CombatNotices from '@/components/CombatNotices'
 import PageHelp from '@/components/PageHelp'
 import { spring } from '@/styles/motion'
 
@@ -225,6 +226,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
 
       <ServerVersionBanner />
       {isCharRoute && charId > 0 && <PendingSavesBanner charId={charId} />}
+      {isCharRoute && charId > 0 && <CombatNotices charId={charId} />}
 
       <div className="relative isolate flex-1 min-w-0 overflow-hidden">
         {/* Breadcrumb: fascia sovrapposta sotto l'header che scorre via con un transform.

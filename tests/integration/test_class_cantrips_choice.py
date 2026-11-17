@@ -57,3 +57,13 @@ async def test_cantrips_already_on_the_sheet_count_when_leveling(client):
 async def test_classes_without_cantrips_are_not_asked(client):
     assert await _cantrip_choice(client, await _char(client, "paladin", 5)) is None
     assert await _cantrip_choice(client, await _char(client, "fighter", 3)) is None  # non Cavaliere Mistico
+
+
+async def test_a_choice_says_which_feature_it_belongs_to(client):
+    """U2/U4: la scelta porta il privilegio da cui nasce (titolo del modale, privilegio «da scegliere»)."""
+    cid = await _char(client, "cleric", 1)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    pending = (await client.get(f"/characters/{cid}")).json()["pending_choices"]
+    order = next(c for c in pending if c.get("group") == "divine_order")
+    assert order["feature_key"] == "cleric.divine_order" and order["title"]["it"] == "Ordine Divino"
+    assert "title" not in await _cantrip_choice(client, cid)  # i trucchetti non nascono da un privilegio

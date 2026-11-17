@@ -22,7 +22,7 @@ import { itemCharges, itemGrantedSpells, itemRarity, isAttuned, requiresAttuneme
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import { masteryLabel } from '@/data/weaponMastery'
 import type { RollMode } from '@/api/client'
-import type { WeaponChoice } from '@/lib/weaponOptions'
+import { weaponPreviewText, type WeaponChoice } from '@/lib/weaponOptions'
 
 /**
  * A homebrew Property resolved from an active rule, paired with the item types
@@ -455,6 +455,7 @@ function InventoryItemInner({
             {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
             {item.weight > 0 && ` · ${formatWeight(item.weight, system)}`}
             {(!hasSingleQuantity(item.item_type) || item.quantity > 1) && ` · ×${item.quantity}`}
+            {weaponPreviewText(item) && <span className="font-mono tabular-nums text-dnd-text"> · {weaponPreviewText(item)}</span>}
           </p>
         </div>
         <ExpandChevron open={isExpanded} className="ml-1 text-dnd-gold-dim" />
@@ -610,7 +611,8 @@ function InventoryItemInner({
                          active:opacity-60"
             >
               <Pencil size={12} />
-              {t('common.edit')}
+              {/* U8: l'arma «a scelta» dell'equipaggiamento iniziale si sceglie dal catalogo, nel modulo di modifica */}
+              {item.item_metadata?.choice ? t('character.inventory.choose_weapon') : t('common.edit')}
             </Pressable>
             <Pressable
               onClick={onDelete}

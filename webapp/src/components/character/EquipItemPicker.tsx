@@ -8,7 +8,7 @@ import { X, Package } from 'lucide-react'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import Pressable from '@/components/ui/Pressable'
-import { ITEM_TYPE_TO_SLOTS, handsConflict } from '@/lib/equipmentSlots'
+import { ITEM_TYPE_TO_SLOTS, handsConflict, equippedInSlot } from '@/lib/equipmentSlots'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
@@ -234,6 +234,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
         <HandsConflictDialog
           newItem={conflict.newItem}
           removedItem={conflict.removedItem}
+          alsoRemoved={equippedInSlot(items, slot)}
           pending={equip.isPending}
           onCancel={() => setConflict(null)}
           onConfirm={() => equip.mutate({ itemId: conflict.newItem.id, removeId: conflict.removedItem.id })}

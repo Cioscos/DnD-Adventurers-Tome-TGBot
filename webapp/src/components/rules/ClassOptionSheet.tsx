@@ -7,7 +7,8 @@ import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { notifyMutationError } from '@/lib/mutationError'
-import { CLASS_NAME_TO_PROGRESSION_KEY } from '@/lib/classProgression'
+import { useNavigate } from 'react-router-dom'
+import { choiceTitle } from '@/lib/levelChoice'
 import type { CharacterFull, ClassOptionEntry, PendingChoice } from '@/types'
 
 interface Props {
@@ -27,8 +28,7 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
   // Con meno opzioni del dovuto se ne prendono quante ne offre la scheda, il resto aspetta (R39).
   const count = choice.pick_count ?? total
   const options = choice.options ?? []
-  const classEn = Object.entries(CLASS_NAME_TO_PROGRESSION_KEY).find(([, v]) => v === choice.class_key)?.[0]
-  const classLabel = classEn ? t(`dnd.classes.${classEn}`, { defaultValue: choice.class_key }) : choice.class_key
+  const navigate = useNavigate()
 
   const mutation = useMutation({
     mutationFn: () => api.choices.resolve(char.id, choice.id, { kind: 'class_option', options: picked }),
@@ -46,10 +46,19 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={`${t('character.level_choice.class_option_title')} · ${classLabel} ${choice.level}`}>
+    <Sheet open={open} onClose={onClose} title={choiceTitle(t, lang, choice)}>
       <div className="p-5 space-y-3">
         {count === 0 ? (
-          <p className="text-sm font-body text-dnd-text">{t('character.level_choice.waiting_for_skills', { n: total })}</p>
+          <>
+            <p className="text-sm font-body text-dnd-text">{t('character.level_choice.waiting_for_skills', { n: total })}</p>
+            {/* U5: la scelta aspetta competenze che si aggiungono dalla pagina Abilità */}
+            <Pressable
+              onClick={() => { onClose(); navigate(`/char/${char.id}/skills`) }}
+              className="w-full min-h-[44px] rounded-xl border border-dnd-gold text-sm font-body text-dnd-gold-bright"
+            >
+              {t('character.level_choice.go_to_skills')}
+            </Pressable>
+          </>
         ) : (
           <p className="text-xs font-body text-dnd-text-muted">
             {t('character.level_choice.options_left', { n: count - picked.length })}

@@ -1,4 +1,6 @@
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { api } from '@/api/client'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import RestPreviewList from '@/components/character/RestPreviewList'
@@ -12,6 +14,7 @@ import RestAllyTempPicker from '@/components/character/RestAllyTempPicker'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { restNeedsHp } from '@/lib/restRules'
+import { hpIsFull } from '@/lib/quickActions'
 import type { RestState } from '@/hooks/useRest'
 import type { CharacterFull } from '@/types'
 
@@ -22,6 +25,14 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
   const { restMutation, hitDieMutation, startRest } = rest
   const longBlocked = restNeedsHp(char, 'long')
   const shortBlocked = restNeedsHp(char, 'short')
+  // Stessa query dell'anteprima (cache condivisa): «troppo presto» si sa già nel primo modale, non dopo un 409.
+  const { data: longPreview } = useQuery({
+    queryKey: ['rest-preview', char.id, 'long'],
+    queryFn: () => api.characters.restPreview(char.id, 'long'),
+    enabled: rest.confirmLongRest && !longBlocked,
+    gcTime: 0,
+  })
+  const longTooSoon = rest.confirmLongRest && !!longPreview?.too_soon
 
   const interruptedToggle = (hint: string) => (
     <div className="text-left">
@@ -43,6 +54,11 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
         body={
           <div className="space-y-3">
             <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
+            {longTooSoon && (
+              <p data-testid="rest-too-soon" className="text-sm text-dnd-amber font-body">
+                {t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}
+              </p>
+            )}
             {rest.confirmLongRest && (longBlocked
               ? <p className="text-sm text-dnd-crimson-bright font-body">{t('character.quick_actions.rest_needs_hp')}</p>
               : <RestPreviewList charId={char.id} restType="long" />)}
@@ -64,11 +80,11 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
             )}
           </div>
         }
-        confirmLabel={t('character.quick_actions.rest_long')}
+        confirmLabel={t(longTooSoon ? 'character.quick_actions.rest_anyway' : 'character.quick_actions.rest_long')}
         confirmVariant="primary"
         loading={restMutation.isPending}
         confirmDisabled={longBlocked}
-        onConfirm={() => startRest({ restType: 'long' })}
+        onConfirm={() => startRest({ restType: 'long', confirmEarly: longTooSoon || undefined })}
       />
 
       <ConfirmSheet
@@ -76,7 +92,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
         onClose={() => { rest.setTooSoon(false); rest.cancelLongRest() }}
         title={t('character.quick_actions.rest_too_soon_title')}
         body={<p>{t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}</p>}
-        confirmLabel={t('character.quick_actions.rest_long')}
+        confirmLabel={t('character.quick_actions.rest_anyway')}
         confirmVariant="primary"
         loading={restMutation.isPending}
         onConfirm={() => startRest({ restType: 'long', confirmEarly: true })}
@@ -88,6 +104,8 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
           onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
           onConfirmRest={() => startRest({ restType: 'short' })}
           restBlocked={shortBlocked}
+          pendingRolls={rest.pendingDice}
+          hpFull={hpIsFull(char)}
           preview={
             <>
               {shortBlocked
@@ -103,7 +121,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
             </>
           }
-          onClose={() => rest.setShortRestOpen(false)}
+          onClose={rest.closeShort}
           isPending={hitDieMutation.isPending}
           pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}
           restPending={restMutation.isPending}

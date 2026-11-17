@@ -74,8 +74,9 @@ async def test_close_builds_recap_with_stats(client, test_session_factory):
                         created_at="2026-01-01T00:00:00", started_at="2026-01-01T00:00:00")
         s.add(enc)
         await s.flush()
-        s.add(Combatant(encounter_id=enc.id, kind="monster", name="Goblin 1", created_at="x"))
-        s.add(Combatant(encounter_id=enc.id, kind="monster", name="Goblin 2", created_at="x"))
+        s.add(Combatant(encounter_id=enc.id, kind="monster", name="Goblin 1", created_at="x",
+                        max_hp=7, current_hp=0, is_dead=True))
+        s.add(Combatant(encounter_id=enc.id, kind="monster", name="Goblin 2", created_at="x", max_hp=7, current_hp=5))
         s.add(Combatant(encounter_id=enc.id, kind="pc", name="Eroe", character_id=cid, created_at="x"))
         await s.commit()
 
@@ -106,7 +107,7 @@ async def test_close_builds_recap_with_stats(client, test_session_factory):
     assert eroe["death_saves"] == {"successes": 0, "failures": 0}
     assert eroe["spells_cast"] == 0 and eroe["slots_used"] == {"1": 1}
     assert eroe["rests"] == {"short": 0, "long": 0} and eroe["conditions"] == []
-    assert rec["combat"] == {"encounters": 1, "rounds": 3, "monsters": ["Goblin"]}
+    assert rec["combat"] == {"encounters": 1, "rounds": 3, "monsters": ["Goblin"], "defeated": 1, "damage_dealt": 9}
     assert rec["items"]["gm_grants"] == [{"to": "Eroe", "item": "Pozione", "quantity": 2}]
     assert rec["items"]["trades"] == [{"from": "Eroe", "to": "Bardo", "summary": "Pozione"}]
     assert rec["items"]["stash"] == []
@@ -140,7 +141,7 @@ async def test_empty_session_recap_valid_no_highlights(client, test_session_fact
     await _close(client, sid)
     rec = (await _gs(test_session_factory, sid)).recap
     assert rec["characters"] == [] and rec["highlights"] == [] and rec["lore"] == []
-    assert rec["combat"] == {"encounters": 0, "rounds": 0, "monsters": []}
+    assert rec["combat"] == {"encounters": 0, "rounds": 0, "monsters": [], "defeated": 0, "damage_dealt": 0}
     assert rec["items"] == {"gm_grants": [], "trades": [], "stash": []}
     assert recap_svc.format_recap_text(rec, "it") and recap_svc.format_recap_text(rec, "en")
 

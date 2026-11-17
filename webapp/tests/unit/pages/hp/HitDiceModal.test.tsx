@@ -110,4 +110,17 @@ describe('HitDiceModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('counts rolled dice as already taken and lists them until «Rest» (U48)', () => {
+    render(<HitDiceModal classes={classes} pendingRolls={{ 1: [7] }} onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />)
+    expect(screen.getByText(/2\/5/)).toBeInTheDocument()
+    expect(screen.getByTestId('hit-dice-pending')).toHaveTextContent('character.hp.hit_dice_pending')
+  })
+
+  it('warns that a hit die heals nothing at full HP (U49)', () => {
+    const { rerender } = render(<HitDiceModal classes={classes} onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />)
+    expect(screen.queryByTestId('hit-dice-hp-full')).toBeNull()
+    rerender(<HitDiceModal classes={classes} hpFull onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />)
+    expect(screen.getByTestId('hit-dice-hp-full')).toBeInTheDocument()
+  })
 })

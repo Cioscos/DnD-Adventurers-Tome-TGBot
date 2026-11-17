@@ -402,3 +402,10 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     ),
   }
 }
+
+/** U8: l'arma «a scelta» dell'equipaggiamento iniziale ("martial-melee", "simple-weapon"…) ammette solo le armi della sua categoria. */
+export function weaponChoiceFilter(choice: string) {
+  const [category, range] = choice.split('-')
+  return (e: { weapon_category?: string; weapon_range?: string }) =>
+    e.weapon_category === category && (range !== 'melee' || e.weapon_range === 'melee')
+}

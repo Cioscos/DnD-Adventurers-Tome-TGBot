@@ -119,6 +119,13 @@ describe('SaveRollSheet', () => {
     expect(await screen.findByTestId('roll-notes')).toHaveTextContent('character.roll_notes.auto_fail')
   })
 
+  it('shows the d20 and the bonus apart from the total (U26)', async () => {
+    rollSpy.mockResolvedValue(result(false))
+    setup()
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
+    expect(await screen.findByText('d20 (10) +2')).toBeInTheDocument()
+  })
+
   it('passed shows the freedom text', async () => {
     rollSpy.mockResolvedValue(result(true))
     setup()

@@ -19,7 +19,22 @@ async def test_start_with_missing_initiative_is_409_with_names(client, test_sess
     assert r.status_code == 409, r.text
     detail = r.json()["detail"]
     assert detail["code"] == "missing_initiative"
-    assert "Eroe" in detail["names"] and "Goblin" in detail["names"]
+    # U27: l'iniziativa dei mostri la tira il server, si chiede solo per i PG
+    assert detail["names"] == ["Eroe"]
+
+
+async def test_start_rolls_missing_monster_initiative_without_asking(client, test_session_factory, monkeypatch):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await seed_session(test_session_factory)
+    enc = (await client.post(f"/sessions/{sid}/encounter", json={"mode": "light"})).json()
+    await client.post(f"/sessions/{sid}/encounter/combatants", json={"name": "Goblin", "count": 2})
+    pc = next(c for c in enc["combatants"] if c["kind"] == "pc")
+    as_user(PLAYER_ID)
+    await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 14})
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/start", json={})
+    assert r.status_code == 200, r.text
+    assert all(c["initiative"] is not None for c in r.json()["combatants"])
 
 
 async def test_start_auto_roll_missing_fills_and_starts(client, test_session_factory, monkeypatch):
@@ -202,3 +217,25 @@ async def test_start_and_end_post_feed_messages(client, test_session_factory, mo
     bodies = [m["body"] for m in r.json()]
     assert "⚔️ Combattimento iniziato" in bodies
     assert "🕊️ Combattimento terminato" in bodies
+
+
+async def test_active_monster_killed_passes_the_turn(client, test_session_factory, monkeypatch):
+    """U29: il mostro che muore nel proprio turno non tiene il turno."""
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]    # [Eroe, Goblin 1, Goblin 2]
+    await client.post(f"/sessions/{sid}/encounter/next-turn")   # -> Goblin 1
+    r = await client.patch(f"/sessions/{sid}/encounter/combatants/{ids[1]}", json={"current_hp": 0})
+    assert r.status_code == 200, r.text
+    assert r.json()["active_combatant_id"] == ids[2]
+    # un mostro che muore fuori dal suo turno non sposta niente
+    r = await client.patch(f"/sessions/{sid}/encounter/combatants/{ids[0]}", json={"is_dead": True})
+    assert r.json()["active_combatant_id"] == ids[2]
+
+
+async def test_end_posts_summary_in_feed(client, test_session_factory, monkeypatch):
+    """U30: riepilogo (round, nemici sconfitti) nel feed della serata."""
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    await client.patch(f"/sessions/{sid}/encounter/combatants/{enc['combatants'][1]['id']}", json={"is_dead": True})
+    await client.post(f"/sessions/{sid}/encounter/end")
+    bodies = [m["body"] for m in (await client.get(f"/sessions/{sid}/messages")).json()]
+    assert "📜 Round: 1 · Nemici sconfitti: 1/2" in bodies

@@ -56,26 +56,27 @@ describe('GiveSheet', () => {
     expect(screen.queryByLabelText('character.inventory.containers.qty_minus')).toBeNull()
   })
 
-  it('pila x20: stepper 1..20, default 20, quantity omessa se intera', async () => {
+  it('pila x20: stepper 1..20, parte da 1 (U46), quantity inviata se parziale', async () => {
     const f = it_(1, 'Frecce', { quantity: 20 })
     trade.mockResolvedValue({ id: 10, items: [] })
     const { onClose } = setup(f, [f])
-    expect(screen.getByText('20 / 20')).toBeInTheDocument()
+    expect(screen.getByText('1 / 20')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Thorin/ }))
     fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
-    expect(trade).toHaveBeenCalledWith(9, { from_character_id: 10, to_user_id: 2, item_id: 1 })
+    expect(trade).toHaveBeenCalledWith(9, { from_character_id: 10, to_user_id: 2, item_id: 1, quantity: 1 })
   })
 
   it('quantità parziale inviata', async () => {
     const f = it_(1, 'Frecce', { quantity: 20 })
     trade.mockResolvedValue({ id: 10, items: [] })
     setup(f, [f])
-    fireEvent.click(screen.getByLabelText('character.inventory.containers.qty_minus'))
+    fireEvent.click(screen.getByLabelText('character.inventory.containers.qty_plus'))
+    fireEvent.click(screen.getByLabelText('character.inventory.containers.qty_plus'))
     fireEvent.click(screen.getByRole('button', { name: /Thorin/ }))
     fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
     await waitFor(() => expect(trade).toHaveBeenCalled())
-    expect(trade).toHaveBeenCalledWith(9, { from_character_id: 10, to_user_id: 2, item_id: 1, quantity: 19 })
+    expect(trade).toHaveBeenCalledWith(9, { from_character_id: 10, to_user_id: 2, item_id: 1, quantity: 3 })
   })
 
   it('contenitore: riepilogo con oggetti discendenti e monete', () => {
@@ -107,7 +108,7 @@ describe('GiveSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: /campaign.stash/ }))
     fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
-    expect(stashPut).toHaveBeenCalledWith(9, { from_character_id: 10, item_id: 1 })
+    expect(stashPut).toHaveBeenCalledWith(9, { from_character_id: 10, item_id: 1, quantity: 1 })
     expect(trade).not.toHaveBeenCalled()
     expect(qc.getQueryData(['character', 10])).toMatchObject({ id: 10 })
   })

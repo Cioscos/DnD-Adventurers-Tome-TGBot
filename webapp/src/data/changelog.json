@@ -1,6 +1,80 @@
 {
   "entries": [
     {
+      "version": "3.13.0",
+      "date": "2026-11-17",
+      "added": {
+        "it": [
+          "Il master può concedere o togliere l'Ispirazione Eroica dalla card del giocatore.",
+          "Fine combattimento proposta quando tutti i mostri sono a terra, con riepilogo, munizioni recuperate nel log e avviso ai giocatori per tornare alla serata.",
+          "Tracker del master: condizioni con nome e round, concentrazioni, incantesimi attivi sui PG, PF bassi e PG morenti con i tiri contro la morte, CA dei mostri e danni con resistenza/vulnerabilità.",
+          "Causa libera per le condizioni (es. «Ragnatela»).",
+          "Anteprima di colpire e danno delle armi in inventario, Turno e Azioni rapide; pulsante «Cambia arma» nel Turno.",
+          "Recap della serata con avversari abbattuti e danni inflitti.",
+          "Guardiani spirituali, Raggio di luna e gli altri incantesimi attivi che fanno danni nei turni dopo hanno «Tira danni (attivo)»: i danni si ritirano al livello del lancio senza spendere un altro slot."
+        ],
+        "en": [
+          "The GM can grant or remove Heroic Inspiration from the player's card.",
+          "Ending combat is offered once every monster is down, with a summary, recovered ammunition in the log and a notice for players to return to the session.",
+          "GM tracker: conditions with name and rounds, concentration, active spells on PCs, low HP and dying PCs with death saves, monster AC and damage with resistance/vulnerability.",
+          "Free-text cause for conditions (e.g. \"Web\").",
+          "Weapon attack and damage preview in the inventory, Turn and Quick actions; \"Change weapon\" button in the Turn.",
+          "Session recap with enemies defeated and damage dealt.",
+          "Spirit Guardians, Moonbeam and other active spells that deal damage on later turns get \"Roll damage (active)\": damage is rerolled at the cast level without spending another slot."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Conferme dentro l'app al posto delle finestre del browser per terminare lo scontro e chiudere la sessione.",
+          "L'iniziativa dei mostri si tira da sola all'avvio dello scontro e il turno salta un mostro appena morto.",
+          "Avviso prima di «Termina turno» se restano attacchi o l'azione; un PG morente è invitato al tiro contro la morte.",
+          "Scelte di livello: titoli che dicono cosa si sceglie, elenco di tutte le scelte in sospeso, privilegio «da scegliere» sulla scheda, link alle Abilità.",
+          "Etichetta «CA» sulle card della serata; competenze in armi e armature visibili nella pagina Classe.",
+          "Arma «a scelta» dell'equipaggiamento iniziale risolvibile dal catalogo.",
+          "Con vantaggio o svantaggio si vedono entrambi i d20; tiri salvezza con d20 e bonus separati; gittate in metri.",
+          "Formula della cura visibile prima del tiro; CD e tiro salvezza nel tiro danni degli incantesimi; dardi di Dardo incantato elencati uno per uno.",
+          "Benedizione e gli altri incantesimi ricevuti mostrano durata ed effetto, e li chiude solo chi li ha lanciati.",
+          "Reazioni passive nella sezione Reazione del Turno; «Annulla» nel modale prima del danno.",
+          "Dado vita: si spende solo premendo «Riposa», con avviso a PF pieni; dadi vita visibili nella pagina PF.",
+          "Riposo troppo ravvicinato segnalato già nel primo modale, con «Riposa comunque».",
+          "«Dai a…» e il deposito partono da 1; oggetti identici uniti; il deposito mostra chi ha messo l'oggetto.",
+          "Log della serata più leggibile: ingressi in serata, niente righe doppie né chiavi tecniche, tipo di danno e riduzioni.",
+          "Gli incantesimi ricevuti da un altro li chiude solo chi li ha lanciati o il master, dalla scheda del giocatore.",
+          "Anche i doni del master si uniscono agli oggetti identici già nell'inventario."
+        ],
+        "en": [
+          "In-app confirmations replace the browser dialogs to end combat and close the session.",
+          "Monster initiative is rolled automatically when combat starts, and the turn skips a monster that just died.",
+          "Warning before \"End turn\" when attacks or the action are left; a dying PC is prompted for the death save.",
+          "Level choices: titles that say what you choose, a list of every pending choice, the feature shown as \"to choose\" on the sheet, a link to Skills.",
+          "\"AC\" label on session cards; weapon and armor proficiencies shown on the Class page.",
+          "The \"of your choice\" starting weapon can be picked from the catalog.",
+          "Both d20s are shown with advantage or disadvantage; saving throws show d20 and bonus separately; ranges in meters in Italian.",
+          "Healing formula shown before the roll; save DC in the spell damage roll; Magic Missile darts listed one by one.",
+          "Bless and other spells received show duration and effect, and only the caster ends them.",
+          "Passive reactions in the Reaction section of the Turn; \"Cancel\" in the before-damage dialog.",
+          "Hit die: spent only when pressing \"Rest\", with a warning at full HP; hit dice shown on the HP page.",
+          "A rest taken too soon is flagged in the first dialog, with \"Rest anyway\".",
+          "\"Give to…\" and the stash start at 1; identical items stack; the stash shows who deposited each item.",
+          "Clearer session log: arrivals, no duplicate lines or technical keys, damage type and reductions.",
+          "Spells received from someone else can only be ended by their caster or by the GM, from the player's card.",
+          "GM gifts also stack with identical items already in the inventory."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "«FUMBLE!» compare solo sui tiri per colpire.",
+          "Il messaggio della cura indica i PF davvero recuperati.",
+          "Veleno, Ritirata e le altre opzioni non disponibili ora appaiono spente con il motivo."
+        ],
+        "en": [
+          "\"FUMBLE!\" only appears on attack rolls.",
+          "The healing message shows the HP actually regained.",
+          "Poison, Withdraw and other unavailable options now appear disabled with the reason."
+        ]
+      }
+    },
+    {
       "version": "3.12.1",
       "date": "2026-11-16",
       "fixed": {

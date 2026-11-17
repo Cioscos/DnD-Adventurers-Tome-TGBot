@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Skills from '@/pages/Skills'
 
-const { getChar, updateSkills, rollSkill, rollToolCheck, updateChar, toastError, playAndCollect } = vi.hoisted(() => ({
+const { getChar, updateSkills, rollSkill, rollToolCheck, updateChar, toastError, playAndCollect, proficiencies } = vi.hoisted(() => ({
+  proficiencies: vi.fn(),
   rollToolCheck: vi.fn(),
   updateChar: vi.fn(),
   getChar: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock('@/api/client', () => {
       this.status = status
     }
   }
-  return { api: { characters: { get: getChar, updateSkills, rollSkill, rollToolCheck, update: updateChar } }, ApiError }
+  return { api: { characters: { get: getChar, updateSkills, rollSkill, rollToolCheck, update: updateChar }, rules: { proficiencies } }, ApiError }
 })
 
 vi.mock('react-router-dom', async (orig) => {
@@ -36,7 +37,8 @@ vi.mock('react-router-dom', async (orig) => {
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   // The breakdown line exposes its prof term so the JoAT half-proficiency can be asserted.
-  const t = (k: string, o?: { prof?: string }) => (o?.prof !== undefined ? `${k}:${o.prof}` : k)
+  const t = (k: string, o?: { prof?: string; list?: string }) =>
+    o?.prof !== undefined ? `${k}:${o.prof}` : o?.list !== undefined ? `${k}:${o.list}` : k
   return { ...actual, useTranslation: () => ({ t, i18n: { language: 'it' } }) }
 })
 
@@ -142,6 +144,15 @@ afterEach(() => {
 })
 
 describe('Skills page', () => {
+  it('shows how many skills the class lets you choose and from which list (U6)', async () => {
+    proficiencies.mockResolvedValue({ skills_count: 2, skills_from: ['history', 'insight'] })
+    getChar.mockResolvedValue({ ...baseChar, rules_edition: '2024', classes: [{ class_name: 'cleric', level: 5 }] })
+    renderWithProviders(<Skills />)
+    expect(await screen.findByTestId('class-skill-hint')).toHaveTextContent(
+      'character.skills.class_hint:character.skills.history, character.skills.insight')
+    expect(proficiencies).toHaveBeenCalledWith('2024', 'cleric', false)
+  })
+
   it('shows the roll note under the row', async () => {
     getChar.mockResolvedValue({ ...baseChar, settings: { roll_notes: { 'skill.stealth': 'svantaggio in armatura' } } })
     renderWithProviders(<Skills />)

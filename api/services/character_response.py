@@ -13,13 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
-from api.services.choices import is_resolvable, option_catalog, pick_count, spell_pick_info
+from api.services.choices import choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
 from api.services.session_allies import attach_spell_auras
 from api.services.spellcasting import build_spellcasting_info, effect_view, fill_spell_stats
+from api.services.spell_effects import with_spell_hints
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
@@ -36,7 +37,9 @@ from core.rules.modifiers import (
     ac_delta, effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment, surprise_exit_features, surprised_turn,
 )
 from core.game.stats import effective_ability_mod, migrate_character_ac, sync_base_ac, unarmored_formula
-from api.routers._helpers import initiative_bonus, unarmed_attack_profile
+from api.routers._helpers import initiative_bonus, unarmed_attack_profile, weapon_attack_profile
+from core.game.item_bonuses import attack_bonus_total, weapon_magic_bonus
+from core.rules.proficiencies import is_weapon_proficient
 from core.rules.weapons import martial_arts_level
 
 
@@ -79,6 +82,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
 
     snap = await load_snapshot(session, char)  # regole e oggetti letti una volta per i ~27 bonus della risposta
     response = CharacterFull.model_validate(char)
+    response.active_states = with_spell_hints(response.active_states)
     response.condition_effects, response.pending_saves = await character_effect_payload(
         session, char.id)
     formula = unarmored_formula(char)
@@ -120,7 +124,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     _apply_containers(char, response)
     response.pending_choices = [
         {**c, "options": option_catalog(char, c), "pick_count": pick_count(char, c), "resolvable": is_resolvable(char, c),
-         **({"spell_pick": pick} if (pick := spell_pick_info(char, c)) else {})}
+         **choice_source(char, c), **({"spell_pick": pick} if (pick := spell_pick_info(char, c)) else {})}
         if c.get("kind") == "class_option" else c
         for c in (char.pending_choices or [])]
 
@@ -130,7 +134,16 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
     rest_choices = {spec.key: list(spec.rest_damage_choice[1]) for spec, _ in active_features(char) if spec.rest_damage_choice}
     rows = {a.id: a for a in char.abilities}
+    dice_of: dict[str, str] = {}
+    for spec, row in active_features(char):
+        option = next((o for o in spec.roll_options if o.extra_dice and o.requires_input is None and not o.for_ally), None)
+        if option is not None:
+            try:
+                dice_of[spec.key] = option.extra_dice(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level), {})
+            except Exception:  # dadi che dipendono dal tiro (arma, bersaglio): si vedono solo al momento
+                pass
     for ab in response.abilities:
+        ab.roll_dice = dice_of.get(ab.feature_key or "")
         on_use, owner = usable.get(ab.feature_key, (None, None))
         ab.is_pool = ab.feature_key in pools
         if (ab.feature_key or "").startswith("feat.") and ab.id in rows:  # attivo, da completare o di un'altra edizione
@@ -221,6 +234,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         if it.item_type == "weapon" and it.id in owned:
             it.reach_bonus_ft = modifiers_for(char, "reach", item=owned[it.id]).flat or None
             it.martial_arts = martial_arts_level(char, owned[it.id]) > 0
+            it.attack_preview = weapon_attack_preview(char, owned[it.id])
     dex = effective_ability_mod(char, "dexterity")  # mai peggio di 10 + DES, anche con la seconda caratteristica negativa
     response.unarmored_previews = {a: 10 + dex + max(0, effective_ability_mod(char, a)) for a in ("wisdom", "constitution")}
     response.unarmed_damage_dice = unarmed_attack_profile(char)[1]
@@ -289,3 +303,17 @@ def _apply_encumbrance(char: Character, response: CharacterFull) -> None:
     level = encumbrance_level(char)
     if level != "none":
         response.encumbrance_level, response.speed_encumbrance_penalty_ft = level, 20 if level == "heavily" else 10
+
+
+def weapon_attack_preview(char: Character, item) -> dict[str, int]:
+    """Bonus per colpire e al danno come li calcola l'attacco (`api/routers/items.py`), con le scelte predefinite."""
+    mod, ability, mode = weapon_attack_profile(char, item)
+    magic = weapon_magic_bonus(item)
+    pb = char.proficiency_bonus if is_weapon_proficient(char, item) else 0
+    ctx = {"ability": ability, "item": item, "attack_mode": mode}
+    return {
+        "to_hit": (mod + pb + magic + attack_bonus_total(char.items, item, "attack")
+                   + modifiers_for(char, "attack", **ctx).flat),
+        "damage": (mod + magic + attack_bonus_total(char.items, item, "damage")
+                   + modifiers_for(char, "damage", **ctx).flat),
+    }

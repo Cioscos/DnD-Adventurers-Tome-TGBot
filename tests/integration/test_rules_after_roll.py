@@ -98,7 +98,7 @@ async def test_reroll_uses_new_die_mandatorily(client, rules_catalog):
     assert r.status_code == 200, r.text
     assert r.json()["die"] == 3 and r.json()["total"] == first["total"] - 12  # peggiore, ma obbligatorio
     history = (await client.get(f"/characters/{cid}/history")).json()
-    assert any("Dopo il tiro (again)" in h["description"] for h in history)
+    assert any("Dopo il tiro (Applica?)" in h["description"] for h in history)  # il nome dell'opzione, non la chiave
 
 
 async def test_reroll_applies_bonus_and_mode(client, rules_catalog):

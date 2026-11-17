@@ -23,6 +23,10 @@ interface HitDiceModalProps {
   restBlocked?: boolean
   /** Anteprima del riposo mostrata sopra i pulsanti. */
   preview?: ReactNode
+  /** Tiri già fatti per classe: si spendono con «Riposa», qui contano come non più disponibili. */
+  pendingRolls?: Record<number, number[]>
+  /** PF già al massimo: avviso che il dado vita non curerebbe nulla. */
+  hpFull?: boolean
 }
 
 export default function HitDiceModal({
@@ -35,6 +39,8 @@ export default function HitDiceModal({
   restPending,
   restBlocked,
   preview,
+  pendingRolls = {},
+  hpFull,
 }: HitDiceModalProps) {
   const { t } = useTranslation()
   const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
@@ -49,13 +55,18 @@ export default function HitDiceModal({
           </p>
         </div>
 
+        {hpFull && classes.length > 0 && (
+          <p data-testid="hit-dice-hp-full" className="text-sm text-dnd-amber font-body">{t('character.hp.hit_dice_hp_full')}</p>
+        )}
+
         {classes.length === 0 && (
           <p className="text-sm text-dnd-text-muted text-center py-4 font-body italic">{t('common.none')}</p>
         )}
 
         <div className="space-y-3">
           {classes.map((cls) => {
-            const remaining = hitDiceRemaining(cls)
+            const rolled = pendingRolls[cls.id] ?? []
+            const remaining = hitDiceRemaining(cls) - rolled.length
             // Clamp at read-time: dopo una spesa il pool scende mentre lo sheet
             // resta montato — il count salvato non deve mai superare i residui.
             const count = Math.min(remaining, hitDiceCounts[cls.id] ?? 0)
@@ -68,6 +79,11 @@ export default function HitDiceModal({
                     d{cls.hit_die ?? 8} · <span className="tabular-nums">{remaining}/{cls.level}</span>
                     <span className="max-xs:hidden">{' '}{t('character.hp.hit_dice_remaining_label')}</span>
                   </p>
+                  {rolled.length > 0 && (
+                    <p data-testid="hit-dice-pending" className="text-xs text-dnd-emerald-bright font-body">
+                      {t('character.hp.hit_dice_pending', { rolls: rolled.join(', ') })}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Pressable

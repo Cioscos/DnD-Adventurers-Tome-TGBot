@@ -10,7 +10,7 @@ from sqlalchemy import select
 from api.services.spell_effects import apply_spell_effects, item_spell
 from core.db.models import AbilityScore, Character, SessionParticipant, SessionRole
 from core.rules.catalog.spells import spell_effect
-from tests.integration._encounter_helpers import GM_ID, NOW, PLAYER_ID, as_user, seed_session
+from tests.integration._encounter_helpers import GM_ID, NOW, PLAYER_ID, as_user, gm_end_spell, seed_session
 from tests.integration.rules.test_2014_bard_inspiration import _seat
 from tests.integration.rules.test_2014_sorcerer_metamagic import EXTENDED, TWINNED, _caster as _sorcerer_with
 from tests.integration.rules.test_spell_effects_cast import SOF, SOF_ROUNDS, STATE, _ac, _caster, _cast, _full, _states
@@ -213,8 +213,7 @@ async def test_spells_70_feign_death_also_blinds(client, test_session_factory, e
     assert r.status_code == 200, r.text
     sheet = await _sheet(client, hero)
     assert sheet["conditions"].get("incapacitated") and sheet["conditions"].get("blinded")
-    as_user(PLAYER_ID)
-    assert (await client.delete(f"/characters/{hero}/active-states/spell:feign_death")).status_code == 200
+    assert (await gm_end_spell(client, hero, "spell:feign_death")).status_code == 204
     after = (await _sheet(client, hero))["conditions"]
     assert not after.get("incapacitated") and not after.get("blinded")  # finito lo stato, tornano via entrambe
 
@@ -259,8 +258,7 @@ async def test_spells_62_two_aids_keep_the_strongest_maximum_and_cap_hp_when_it_
 
 async def test_spells_62_manual_end_caps_hp_and_closes_the_casters_clocks(client, test_session_factory):
     hero, first, second = await _two_aids(client, test_session_factory)
-    as_user(PLAYER_ID)
-    assert (await client.delete(f"/characters/{hero}/active-states/spell:aid")).status_code == 200
+    assert (await gm_end_spell(client, hero, "spell:aid")).status_code == 204
     sheet = await _sheet(client, hero)
     assert sheet["computed"]["hp_max_effective"] == 200 and sheet["current_hit_points"] <= 200
     for caster, user in ((first, GM_ID), (second, 9001)):
@@ -317,8 +315,7 @@ async def test_d4_aid_recast_on_same_target_replaces_and_clock_closes_with_last_
     assert state["data"]["slot_level"] == 3
     assert (await _sheet(client, hero))["computed"]["hp_max_effective"] == 210  # +10, non +15
     await _defense_cast(client, caster, spell, [caster], level=2)
-    as_user(PLAYER_ID)
-    assert (await client.delete(f"/characters/{hero}/active-states/spell:aid")).status_code == 200
+    assert (await gm_end_spell(client, hero, "spell:aid")).status_code == 204
     assert len(await _states(client, caster, GM_ID, "spell_cast:aid")) == 1  # resta un bersaglio: l'orologio vive
     as_user(GM_ID)
     assert (await client.delete(f"/characters/{caster}/active-states/spell:aid")).status_code == 200
@@ -358,8 +355,7 @@ async def test_h3b_heroism_ended_on_the_last_target_ends_the_casters_concentrati
     hero, caster, spell = await _defense_table(client, test_session_factory, "Heroism", "heroism", 1)
     await _defense_cast(client, caster, spell, [hero], level=1)
     assert (await _full(client, caster))["concentrating_spell_id"] == spell
-    as_user(PLAYER_ID)
-    assert (await client.delete(f"/characters/{hero}/active-states/spell:heroism")).status_code == 200
+    assert (await gm_end_spell(client, hero, "spell:heroism")).status_code == 204
     assert (await _sheet(client, caster, GM_ID))["concentrating_spell_id"] is None
 
 

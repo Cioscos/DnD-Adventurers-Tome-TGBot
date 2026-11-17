@@ -98,7 +98,7 @@ export function isSlotAllowed(itemType: string, slot: EquipmentSlot): boolean {
 // Stesse parole di `_PROPERTY_WORDS["two_handed"]` in core/rules/weapons.py (prop_two_handed, "Two-Handed" di Beyond, "A due mani").
 const TWO_HANDED_WORDS = ['two_handed', 'two-handed', 'two handed', 'due mani']
 
-function equippedInSlot(items: Item[], slot: EquipmentSlot): Item | null {
+export function equippedInSlot(items: Item[], slot: EquipmentSlot): Item | null {
   return items.find((i) => i.is_equipped && i.equipment_slot === slot) ?? null
 }
 

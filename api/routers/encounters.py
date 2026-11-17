@@ -435,10 +435,12 @@ async def start_encounter(
     if not enc.combatants:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="No combatants")
     missing = [c for c in enc.combatants if c.initiative is None]
-    if missing and not body.auto_roll_missing:
+    # L'iniziativa dei mostri la tira il server senza chiedere (U27): si chiede solo per i PG che non l'hanno tirata.
+    missing_pcs = [c for c in missing if c.kind == "pc"]
+    if missing_pcs and not body.auto_roll_missing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "missing_initiative", "names": [c.name for c in missing]},
+            detail={"code": "missing_initiative", "names": [c.name for c in missing_pcs]},
         )
     for c in missing:
         applied = await _pc_initiative_modifiers(db, c)
@@ -500,13 +502,24 @@ async def _turn_endpoint(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "not_your_turn"},
             )
-    from_id, round_before = enc.active_combatant_id, enc.round
+    touch(session)
     if backward:
         await undo_last_advance(db, enc)
-    moved = _advance_turn(enc, list(enc.combatants), backward=backward)
-    touch(session)
+        moved = _advance_turn(enc, list(enc.combatants), backward=True)
+        await db.flush()
+        if moved is not None:
+            await _notify_turn(enc, moved)
+    else:
+        await _advance_forward(db, enc)
+    return await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
+
+
+async def _advance_forward(db: AsyncSession, enc: Encounter) -> Optional[Combatant]:
+    """Passa il turno in avanti: fine turno di chi esce, inizio di chi entra, annullamento e notifiche."""
+    from_id, round_before = enc.active_combatant_id, enc.round
+    moved = _advance_turn(enc, list(enc.combatants))
     await db.flush()
-    if not backward and moved is not None:
+    if moved is not None:
         undo = UndoLog(from_combatant_id=from_id, to_combatant_id=moved.id,
                        round_before=round_before, round_after=enc.round)
         outgoing = next((c for c in enc.combatants if c.id == from_id), None)
@@ -516,9 +529,8 @@ async def _turn_endpoint(
         enc.last_advance_undo = undo.to_json()
         await db.flush()
         await notify_saves(db, undo.created_saves)
-    if moved is not None:
         await _notify_turn(enc, moved)
-    return await build_encounter_block(db, enc, viewer_is_gm=is_gm, lang=lang)
+    return moved
 
 
 @router.post("/{session_id}/encounter/next-turn", response_model=EncounterLive)
@@ -562,6 +574,7 @@ async def patch_combatant(
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
     comb = _primary_row(enc, comb)
+    was_dead = comb.is_dead
 
     if body.conditions is not None and comb.kind == "pc":
         raise HTTPException(
@@ -613,6 +626,9 @@ async def patch_combatant(
 
     touch(session)
     await db.flush()
+    # Chi muore nel proprio turno non lo tiene (U29): il turno passa al prossimo vivo.
+    if enc.status == "active" and comb.is_dead and not was_dead and enc.active_combatant_id == comb.id:
+        await _advance_forward(db, enc)
 
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)
 
@@ -881,8 +897,10 @@ async def end_encounter(
     _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
+    was_active = enc.status == "active"
     enc.status = "ended"
     enc.ended_at = utc_now_iso()
+    recovered: list[str] = []
     for c in enc.combatants:  # la sorpresa è del combattimento: finito quello, non resta sulla scheda
         if c.surprised:
             c.surprised = False
@@ -892,8 +910,8 @@ async def end_encounter(
             select(Character).options(selectinload(Character.items)).where(Character.id == cid)
         )).scalar_one_or_none()
         for item in (char.items if char else []):
-            if item.ammo_spent:
-                recover_ammo(db, char, item)
+            if item.ammo_spent and (n := recover_ammo(db, char, item)):
+                recovered.append(f"{char.name}: +{n} {item.name}")
         if char is not None:
             clear_turn(char)  # fuori combattimento non restano azioni e attacchi usati
         # Le durate in round contano solo in combattimento: finito quello, la condizione cade (anche se aveva un TS)
@@ -903,6 +921,15 @@ async def end_encounter(
             await expire_effect(db, eff, "Terminata (fine combattimento): {label}", None)
     await drop_pending_effects(db, enc.id)
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
+    # Riepilogo e munizioni recuperate nel feed della serata: lo leggono tutti, senza PF (U30).
+    monsters = [c for c in enc.combatants if c.kind == "monster"]
+    summary = [f"Round: {enc.round}"] if was_active else []
+    if monsters:
+        summary.append(f"Nemici sconfitti: {sum(c.is_dead for c in monsters)}/{len(monsters)}")
+    if summary:
+        db.add(_system_feed_message(session, "📜 " + " · ".join(summary)))
+    if recovered:
+        db.add(_system_feed_message(session, "🏹 Munizioni recuperate — " + "; ".join(recovered)))
     touch(session)
     await db.flush()
     return await build_encounter_block(db, enc, viewer_is_gm=True, lang=lang)

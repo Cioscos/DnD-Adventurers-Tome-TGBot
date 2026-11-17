@@ -72,6 +72,14 @@ async def test_bless_offers_a_d4_on_attacks_and_saves_and_adds_it(client, test_s
     assert [s["key"] for s in await _states(client, hero, PLAYER_ID, "spell:bless")] == ["spell:bless"]  # non si consuma
 
 
+async def test_the_target_reads_what_bless_gives_and_how_long_it_lasts_u23(client, test_session_factory):
+    hero, caster, spell = await _table(client, test_session_factory, "Bless", "bless", 1)
+    await _cast(client, caster, spell, [hero])
+    [state] = await _states(client, hero, PLAYER_ID, "spell:bless")
+    assert "1d4" in state["hints"][0]["it"] and "1d4" in state["hints"][0]["en"]
+    assert state["data"]["duration"] == {"rounds": 10, "concentration": True, "until_rest": False}
+
+
 async def test_bless_is_not_offered_on_ability_checks(client, test_session_factory):
     hero, caster, spell = await _table(client, test_session_factory, "Bless", "bless", 1)
     await _cast(client, caster, spell, [hero])
@@ -229,3 +237,21 @@ async def test_bless_on_a_weapon_attack_stays_on_the_to_hit_and_the_damage_dice_
     assert block["hit_rolls"] == [d4] and block["hit_total"] == d4
     assert len(block["extra_rolls"]) == 2 and block["dice_keys"] == ["rogue.sneak_attack"]  # 2d6 al livello 3
     assert r.json()["to_hit_total"] == hit["to_hit_total"] + d4
+
+
+async def test_only_the_caster_or_the_gm_ends_a_spell_on_a_target(client, test_session_factory):
+    """Decisione 4 (UX playtest 16/11): il bersaglio non chiude l'incantesimo altrui; il master sì."""
+    hero, caster, spell = await _table(client, test_session_factory, "Bless", "bless", 1)
+    await _cast(client, caster, spell, [hero])
+    as_user(PLAYER_ID)
+    r = await client.delete(f"/characters/{hero}/active-states/spell:bless")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "ended_by_caster"
+    from sqlalchemy import select
+    from core.db.models import GameSession
+    async with test_session_factory() as s:
+        sid = (await s.execute(select(GameSession.id))).scalar_one()
+    r = await client.delete(f"/sessions/{sid}/characters/{hero}/active-states/spell:bless")
+    assert r.status_code == 403  # un giocatore non passa dalla via del master
+    as_user(GM_ID)
+    assert (await client.delete(f"/sessions/{sid}/characters/{hero}/active-states/spell:bless")).status_code == 204
+    assert await _states(client, hero, PLAYER_ID, "spell:bless") == []

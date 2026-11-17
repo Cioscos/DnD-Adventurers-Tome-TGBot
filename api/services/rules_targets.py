@@ -84,7 +84,7 @@ async def apply_condition_to_combatant(
         source_character_id=src_char.id if src_char else None,
         source_spell_id=spell_id,
         ends_with_concentration=body.ends_with_concentration,
-        applied_by_gm=applied_by_gm, encounter=enc,
+        applied_by_gm=applied_by_gm, encounter=enc, source_note=body.source_note,
     )
 
 

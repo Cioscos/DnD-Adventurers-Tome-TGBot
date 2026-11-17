@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weaponOptions } from '@/lib/weaponOptions'
+import { weaponOptions, weaponPreviewText } from '@/lib/weaponOptions'
 
 describe('weaponOptions', () => {
   it('flags versatile only with a versatile die, thrown from the property', () => {
@@ -35,5 +35,15 @@ describe('weaponOptions — Combattente a Due Armi: solo armi da mischia (PR 3)'
     const char = { classes: [], rules_edition: '2014', ability_scores: [], items: [sword, crossbow],
       abilities: [{ feature_key: 'feat.dual_wielder' }] } as never
     expect(weaponOptions(sword, char).offhand).toBe(false)
+  })
+})
+
+describe('weaponPreviewText', () => {
+  it('mostra bonus per colpire e danno con il segno', () => {
+    expect(weaponPreviewText({ item_metadata: { damage_dice: '1d6' }, attack_preview: { to_hit: 7, damage: 4 } })).toBe('+7 · 1d6+4')
+    expect(weaponPreviewText({ item_metadata: { damage_dice: '1d4' }, attack_preview: { to_hit: -1, damage: 0 } })).toBe('-1 · 1d4')
+  })
+  it('vuoto senza anteprima del server', () => {
+    expect(weaponPreviewText({ item_metadata: { damage_dice: '1d6' } })).toBe('')
   })
 })

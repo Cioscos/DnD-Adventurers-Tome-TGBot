@@ -59,7 +59,7 @@ from core.rules.types import RuleContext
 from api.schemas.companion import CompanionAttackResult
 from api.schemas.item import WeaponAttackResult
 from api.services.last_damage import damage_parts, last_damage_total, pairs, regroup
-from core.rules.roll_options import scale_damage
+from core.rules.roll_options import option_names, scale_damage
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_states import _spend_atomically, remove_state
 from api.services.wild_magic import mark_tides_due
@@ -325,7 +325,8 @@ def _consume_cast(
         end_hide(session, char)
 
     if spell.is_concentration and not no_concentration:
-        start_concentration(char, spell.id, parse_duration_rounds(spell.duration))
+        start_concentration(char, spell.id, parse_duration_rounds(spell.duration),
+                            level=slot.level if slot is not None else spell.level)
     return pact_row
 
 
@@ -1224,7 +1225,7 @@ async def last_damage_options(
         })
         label = f"{spell.name} = {total}"
     add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",
-                 f"Dopo il danno ({', '.join(opts.keys)}): {label}" + (f" = {total}" if kind != "spell" else ""))
+                 f"Dopo il danno ({option_names(char, opts.keys)}): {label}" + (f" = {total}" if kind != "spell" else ""))
     turn = get_turn(char)  # il pagamento ha riscritto il turno
     turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json")}
     char.turn_state = turn

@@ -44,6 +44,11 @@ export default function PassiveAbilityDetailModal({
             {t('character.abilities.detail.no_description')}
           </p>
         )}
+        {ability.roll_dice && (
+          <p className="text-sm text-dnd-gold-bright font-mono tabular-nums">
+            {t('character.abilities.detail.roll_dice', { dice: ability.roll_dice })}
+          </p>
+        )}
         {isFeat && confirming && (
           <p className="text-xs text-dnd-text-muted font-body">
             {t('character.level_choice.remove_warning')}

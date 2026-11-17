@@ -14,15 +14,22 @@ export function d20Arg(mode: RollMode, dice: number[] | undefined, choice?: Roll
   return mode === 'normal' ? dice?.[0] : { dice, mode }
 }
 
-/** Animates 1 (normal) or 2 (adv/dis) d20 and returns the faces; undefined when 3D is off (server rolls). */
-export function useD20Roll(): (mode: RollMode) => Promise<number[] | undefined> {
+/** Quanti d20 tirerà il server: il modo del giocatore più quelli delle opzioni scelte (Ispirazione, Spaventato); i due opposti si annullano. */
+export function d20Count(mode: RollMode, choice?: RollChoice): 1 | 2 {
+  const adv = mode === 'advantage' || !!choice?.modes?.includes('advantage')
+  const dis = mode === 'disadvantage' || !!choice?.modes?.includes('disadvantage')
+  return adv !== dis ? 2 : 1
+}
+
+/** Animates 1 (normal) or 2 (adv/dis, also from the chosen options) d20 and returns the faces; undefined when 3D is off (server rolls). */
+export function useD20Roll(): (mode: RollMode, choice?: RollChoice) => Promise<number[] | undefined> {
   const { playAndCollect } = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
   return useCallback(
-    async (mode) => {
+    async (mode, choice) => {
       if (!animate3d || reducedMotion) return undefined
-      const detected = await playAndCollect([{ kind: 'd20', count: mode === 'normal' ? 1 : 2 }])
+      const detected = await playAndCollect([{ kind: 'd20', count: d20Count(mode, choice) }])
       return detected.map((d) => d.value)
     },
     [animate3d, reducedMotion, playAndCollect],

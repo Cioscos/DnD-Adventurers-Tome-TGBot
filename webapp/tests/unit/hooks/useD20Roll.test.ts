@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useD20Roll, d20Arg } from '@/hooks/useD20Roll'
+import { useD20Roll, d20Arg, d20Count } from '@/hooks/useD20Roll'
 
 const { playAndCollect, settings } = vi.hoisted(() => ({
   playAndCollect: vi.fn(),
@@ -51,5 +51,23 @@ describe('d20Arg', () => {
   it('sends dice and mode otherwise', () => {
     expect(d20Arg('advantage', [3, 8])).toEqual({ dice: [3, 8], mode: 'advantage' })
     expect(d20Arg('disadvantage', undefined)).toEqual({ dice: undefined, mode: 'disadvantage' })
+  })
+})
+
+describe('d20Count (U16: tutti i d20 che contano si vedono)', () => {
+  const choice = (modes: ('advantage' | 'disadvantage')[]) => ({ options: ['x'], option_inputs: {}, modes })
+  it('rolls two dice when a chosen option gives advantage or disadvantage', () => {
+    expect(d20Count('normal', choice(['advantage']))).toBe(2)
+    expect(d20Count('normal', choice(['disadvantage']))).toBe(2)
+  })
+  it('rolls one die when the modes cancel out', () => {
+    expect(d20Count('advantage', choice(['disadvantage']))).toBe(1)
+    expect(d20Count('normal')).toBe(1)
+  })
+  it('animates the option dice', async () => {
+    playAndCollect.mockResolvedValue([])
+    const { result } = renderHook(() => useD20Roll())
+    await result.current('normal', choice(['advantage']))
+    expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd20', count: 2 }])
   })
 })

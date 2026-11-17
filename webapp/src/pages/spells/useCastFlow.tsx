@@ -43,6 +43,9 @@ export interface CastFlow {
   beginCast: (spell: Spell, mode?: RollMode) => void
   /** Pending dei percorsi senza sheet intermedio: trucchetto con concentrazione senza danno, tiro per colpire. */
   isSpellPending: (spellId: number) => boolean
+  /** Incantesimo su cui si è concentrati e che fa danni anche nei turni dopo: i danni si ritirano senza slot. */
+  canRollActiveDamage: (spell: Spell) => boolean
+  rollActiveDamage: (spell: Spell) => void
   /** Sheet/modal del flusso: il chiamante li monta una volta nel proprio JSX. */
   elements: ReactNode
 }
@@ -132,7 +135,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       const pick = useEffectPickStore.getState().picked[cast.spell.id]
       const prepared = await prepareCast(charId, cast.spell.id, cast.ritual, cast.slot?.level)
       const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id }, 'before', { cancellable: true })
-      const roll = d20Arg(cast.mode, await rollD20(cast.mode), choice)
+      const roll = d20Arg(cast.mode, await rollD20(cast.mode, choice), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
         slot_id: cast.slot?.id, slot_level: cast.slot?.level ?? null, ritual: cast.ritual, confirm: prepared.confirm,
         cast_options: prepared.options, cast_option_inputs: prepared.option_inputs, ...pick,
@@ -352,6 +355,18 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     setAttackState(null)
   }
 
+  /** Incantesimo attivo che fa danni anche nei turni dopo (Guardiani spirituali, Raggio di luna): si ritira senza slot. */
+  const canRollActiveDamage = (spell: Spell) =>
+    char?.concentrating_spell_id === spell.id && !!spell.damage_dice && spell.level >= 1 && !isHealingSpell(spell)
+  const rollActiveDamage = (spell: Spell) => {
+    const level = (char?.settings as { concentration_level?: number } | undefined)?.concentration_level
+    setPendingRitual(false)
+    setPendingSlotLevel(level ?? spell.level)
+    setPendingSlotId(undefined)
+    setDamageAfterAttack({ critical: false })  // lo slot l'ha già speso il lancio
+    setRollDamageSpell(spell)
+  }
+
   const closeDamage = () => {
     setRollDamageSpell(null)
     setPendingSlotLevel(null)
@@ -531,5 +546,5 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     </>
   )
 
-  return { beginCast, isSpellPending, elements }
+  return { beginCast, isSpellPending, canRollActiveDamage, rollActiveDamage, elements }
 }

@@ -49,6 +49,7 @@ const char = {
     { id: 20, name: 'Scudo', is_passive: false, action_type: 'reaction' },
     { id: 21, name: 'Passiva', is_passive: true, action_type: 'action' },
     { id: 22, name: 'Libera', is_passive: false, action_type: null },
+    { id: 23, name: 'Schivata prodigiosa', is_passive: true, action_type: 'reaction' },
   ],
   spellcasting: { has_preparing_class: true },
 } as unknown as CharacterFull
@@ -66,6 +67,9 @@ describe('groupForTurn', () => {
   })
   it('reaction ability lands in reaction, with the standard opportunity attack', () => {
     expect(ids(g.reaction)).toEqual(expect.arrayContaining(['ability:20', 'standard:opportunity']))
+  })
+  it('a passive reaction (Uncanny Dodge) is listed among the reactions (U24)', () => {
+    expect(ids(g.reaction)).toContain('ability:23')
   })
   it('unprepared spell is excluded, cantrip kept, long casting time goes to other', () => {
     const all = Object.values(g).flat().map((e) => `${e.kind}:${e.id}`)

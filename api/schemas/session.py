@@ -66,6 +66,7 @@ class CharacterLiveSnapshot(BaseModel):
     condition_effects: list[ConditionEffectRead] = []
     has_pending_save: bool = False
     is_concentrating: bool = False
+    concentration_spell: Optional[str] = None  # nome dell'incantesimo mantenuto (U33)
     # Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti (R36)
     active_states: list[PublicState] = []
 
@@ -191,6 +192,13 @@ class InspirationGiveRequest(BaseModel):
 
     from_character_id: int
     to_user_id: int
+
+
+class InspirationGrantRequest(BaseModel):
+    """GM: concede o toglie l'Ispirazione Eroica a un PG seduto nella serata."""
+
+    character_id: int
+    heroic_inspiration: bool
 
 
 class StashPutRequest(BaseModel):

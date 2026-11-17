@@ -53,7 +53,7 @@ export default function GiveSheet({ charId, sessionId, partners, stash, item, it
   const p = 'character.inventory.give.'
   const [to, setTo] = useState<number | null>(initialTarget(partners, stash))
   const stepper = item.quantity > 1 && !containerMeta(item) // un contenitore si dà intero
-  const [qty, setQty] = useState(item.quantity)
+  const [qty, setQty] = useState(1) // si parte da uno: consegnare tutto dev'essere una scelta
   const give = useTradeMutation(charId, sessionId, onClose)
 
   // Riepilogo del contenitore: discendenti a ogni livello + monete proprie e dei sotto-contenitori.

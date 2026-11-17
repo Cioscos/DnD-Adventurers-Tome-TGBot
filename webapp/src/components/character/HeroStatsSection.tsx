@@ -112,7 +112,7 @@ export default function HeroStatsSection({ char }: Props) {
     mutationFn: async (mode: RollMode) => {
       // Facce dai dadi 3D se attivi; modo finale, bonus e storico li decide il server.
       const choice = await askRollOptions(char.id, { roll: 'initiative' })
-      return api.dice.initiative(char.id, d20Arg(mode, await rollD20(mode), choice), t('character.hero.initiative'))
+      return api.dice.initiative(char.id, d20Arg(mode, await rollD20(mode, choice), choice), t('character.hero.initiative'))
     },
     onSuccess: (result) => {
       refreshAfterOptions(qc, char.id, result.option_result)

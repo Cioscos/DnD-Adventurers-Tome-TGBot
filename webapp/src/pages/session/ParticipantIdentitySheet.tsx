@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { EyeOff, Lock, User, Globe2 } from 'lucide-react'
 import {
   GiFeather as Feather,
+  GiPolarStar as Sparkles,
   GiHeartPlus as Heart,
   GiCheckedShield as Shield,
   GiPerspectiveDiceSixFacesRandom as Dices,
@@ -14,6 +15,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import ConditionBadge from '@/components/ui/ConditionBadge'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
+import { notifyMutationError } from '@/lib/mutationError'
 import type { CharacterLiveSnapshot, ParticipantIdentity, SessionParticipant } from '@/types'
 
 interface Props {
@@ -23,6 +25,8 @@ interface Props {
   myUserId: number
   onClose: () => void
   onStartWhisper?: (target: SessionParticipant) => void
+  /** Solo il GM: concede o toglie l'Ispirazione Eroica al PG (U43). */
+  gmSessionId?: number
 }
 
 function conditionEntries(
@@ -68,8 +72,24 @@ export default function ParticipantIdentitySheet({
   myUserId,
   onClose,
   onStartWhisper,
+  gmSessionId,
 }: Props) {
   const { t } = useTranslation()
+  const qc = useQueryClient()
+  const inspirationMutation = useMutation({
+    mutationFn: (value: boolean) => api.sessions.grantInspiration(gmSessionId!, {
+      character_id: snapshot!.id, heroic_inspiration: value,
+    }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['session-live', gmSessionId] }),
+    onError: notifyMutationError,
+  })
+  // Solo il GM: chiude l'incantesimo di un altro sul PG (il bersaglio non può, il lanciatore potrebbe non esserci più)
+  const endSpellMutation = useMutation({
+    mutationFn: (key: string) => api.sessions.gmEndSpellState(gmSessionId!, snapshot!.id, key),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['session-live', gmSessionId] }),
+    onError: notifyMutationError,
+  })
+  const spellStates = gmSessionId != null ? (snapshot?.active_states ?? []).filter((s) => s.key.startsWith('spell:')) : []
   const unitSystem = useUnitSettings((s) => s.system)
 
   const hasCharacter = !!target?.character_id
@@ -120,6 +140,34 @@ export default function ParticipantIdentitySheet({
               name: target?.display_name ?? `#${target?.user_id ?? ''}`,
             })}
           </Button>
+        )}
+
+        {gmSessionId != null && snapshot && (
+          <Button
+            variant={snapshot.heroic_inspiration ? 'secondary' : 'primary'}
+            size="sm"
+            fullWidth
+            icon={<Sparkles size={14} />}
+            loading={inspirationMutation.isPending}
+            onClick={() => inspirationMutation.mutate(!snapshot.heroic_inspiration)}
+          >
+            {t(snapshot.heroic_inspiration ? 'session.identity.remove_inspiration' : 'session.identity.grant_inspiration')}
+          </Button>
+        )}
+
+        {spellStates.length > 0 && (
+          <ul className="flex flex-col gap-2" data-testid="gm-spell-states">
+            {spellStates.map((s) => (
+              <li key={s.key} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 break-words text-sm font-body text-dnd-text">{s.name}</span>
+                <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
+                  loading={endSpellMutation.isPending && endSpellMutation.variables === s.key}
+                  onClick={() => endSpellMutation.mutate(s.key)}>
+                  {t('character.turn.end_state')}
+                </Button>
+              </li>
+            ))}
+          </ul>
         )}
 
         {snapshot && (

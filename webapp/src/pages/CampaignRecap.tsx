@@ -153,6 +153,8 @@ export default function CampaignRecap() {
           <div className="space-y-1">
             <Stat label={t(`${P}encounters`)} value={combat.encounters} />
             <Stat label={t(`${P}rounds`)} value={combat.rounds} />
+            {combat.defeated != null && <Stat label={t(`${P}defeated`)} value={combat.defeated} />}
+            {!!combat.damage_dealt && <Stat label={t(`${P}damage_dealt`)} value={combat.damage_dealt} />}
           </div>
           {combat.monsters.length > 0 && (
             <p className="mt-2 text-sm font-body break-words">

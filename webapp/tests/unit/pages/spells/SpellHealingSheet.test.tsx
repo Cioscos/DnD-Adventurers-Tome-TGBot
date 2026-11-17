@@ -56,7 +56,7 @@ describe('SpellHealingSheet', () => {
     renderWithProviders(<SpellHealingSheet charId={7} spell={cure} slotLevel={2} slotId={21} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 3, expect.objectContaining({ slot_id: 21, slot_level: 2 })))
-    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ casting_level: 2, apply_to_self: false })))
+    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ casting_level: 2, apply_to_self: true })))
     expect(await screen.findByText('11')).toBeInTheDocument()
     expect(screen.getByText('character.spells.roll_healing.self_healed')).toBeInTheDocument()
   })
@@ -66,21 +66,30 @@ describe('SpellHealingSheet', () => {
     useSpell.mockResolvedValue({ id: 7 })
     rollHealing.mockResolvedValue({ ...result, healed_allies: [{ id: 9, name: 'Brann', healed: 11 }] })
     renderWithProviders(<SpellHealingSheet charId={7} spell={cure} slotLevel={1} onClose={() => {}} />)
-    await userEvent.click(screen.getAllByRole('switch')[0])  // chi lancia
-    await userEvent.click(await screen.findByRole('switch', { name: 'Brann' }))
+    await userEvent.click(await screen.findByRole('switch', { name: 'Brann' }))  // bersaglio unico: chi lancia si spegne da solo
     expect(screen.queryByRole('switch', { name: 'Morto' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ apply_to_self: false, target_character_ids: [9] })))
     expect(await screen.findByText('character.spells.roll_healing.healed_ally')).toBeInTheDocument()
   })
 
-  it('sends apply_to_self when the caster is the target', async () => {
+  it('heals the caster by default and shows the formula of the chosen slot before the roll (U22)', async () => {
     useSpell.mockResolvedValue({ id: 7 })
     rollHealing.mockResolvedValue({ ...result, healed: 11 })
+    renderWithProviders(<SpellHealingSheet charId={7} spell={{ ...cure, healing_preview: { 1: '1d8+5', 2: '2d8+6' } }} slotLevel={2} onClose={() => {}} />)
+    expect(screen.getByRole('switch')).toBeChecked()
+    expect(screen.getByTestId('healing-formula')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ apply_to_self: true })))
+  })
+
+  it('turning the caster off sends no self healing', async () => {
+    useSpell.mockResolvedValue({ id: 7 })
+    rollHealing.mockResolvedValue(result)
     renderWithProviders(<SpellHealingSheet charId={7} spell={cure} slotLevel={1} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('switch'))
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
-    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ apply_to_self: true })))
+    await waitFor(() => expect(rollHealing).toHaveBeenCalledWith(7, 3, expect.objectContaining({ apply_to_self: false })))
   })
 })
 

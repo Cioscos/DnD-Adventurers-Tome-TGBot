@@ -56,7 +56,7 @@ export default function ItemCastSheet({ charId, resolved, effects, onClose }: Pr
   })
 
   if (result) {
-    return <RollResultModal result={result} title={spell.name} onClose={() => setResult(null)} />
+    return <RollResultModal result={result} title={spell.name} attack onClose={() => setResult(null)} />
   }
 
   return (

@@ -125,6 +125,8 @@ export type RollOption = {
   group_max?: number | null
   /** Dadi tolti all'opzione indicata da `needs`. */
   dice_cost: number
+  /** Non si può scegliere ora: il motivo, mostrato con l'opzione spenta (Veleno senza Kit da Avvelenatore). */
+  unavailable?: string
   /** Solo `after_roll`: cosa fa al tiro già visto. */
   after?: 'add' | 'reroll' | 'succeed' | null
   /** Si rimborsa se il giocatore dichiara il tiro fallito. */
@@ -212,6 +214,8 @@ export type RollChoice = {
   own_slot?: boolean
   /** Solo lato client: una delle opzioni scelte è il lancio a distanza senz'armi (le opzioni da mischia non valgono). */
   ranged?: boolean
+  /** Solo lato client: vantaggio/svantaggio delle opzioni scelte, per animare tutti i d20 che conteranno. */
+  modes?: ('advantage' | 'disadvantage')[]
 }
 
 export type TargetEffect = {
@@ -402,6 +406,8 @@ export type RestPreview = {
   item_charges: { name: string; gain: number | null; formula: string | null; full: boolean }[]
   exhaustion_change: number
   ends_concentration: boolean
+  /** Riposo lungo a meno di 24 h (2014) / 16 h (2024) dal precedente: serve «Riposa comunque». */
+  too_soon?: boolean
 }
 
 export type DeathSaveRollResult = {
@@ -1608,6 +1614,10 @@ export const api = {
       }),
     giveInspiration: (sessionId: number, body: { from_character_id: number; to_user_id: number }) =>
       request<CharacterFull>(`/sessions/${sessionId}/inspiration/give`, { method: 'POST', body: JSON.stringify(body) }),
+    grantInspiration: (sessionId: number, body: { character_id: number; heroic_inspiration: boolean }) =>
+      request<void>(`/sessions/${sessionId}/inspiration/grant`, { method: 'POST', body: JSON.stringify(body) }),
+    gmEndSpellState: (sessionId: number, characterId: number, key: string) =>
+      request<void>(`/sessions/${sessionId}/characters/${characterId}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),
     stashPut: (sessionId: number, body: StashMoveRequest & { from_character_id: number }) =>
       request<CharacterFull>(`/sessions/${sessionId}/stash/put`, { method: 'POST', body: JSON.stringify(body) }),
     stashTake: (sessionId: number, body: StashMoveRequest & { to_character_id: number }) =>

@@ -81,6 +81,24 @@ describe('SpellDamageSheet', () => {
     expect(updateConc).not.toHaveBeenCalled()  // il contatore dei round resta quello del lancio
   })
 
+  it('shows the save DC before and after the roll (U15)', async () => {
+    useSpell.mockResolvedValue({ id: 7 })
+    rollDamage.mockResolvedValue(result)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={{ ...leveled, save_dc: 15 }} slotLevel={3} onClose={() => {}} />)
+    expect(screen.getByTestId('spell-save-dc')).toHaveTextContent('DEX')
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByText(/DEX · character\.spells\.save_dc/)).toBeInTheDocument()
+  })
+
+  it('lists each Magic Missile dart (1d4+1) so the player can split them among targets (U17)', async () => {
+    useSpell.mockResolvedValue({ id: 7 })
+    rollDamage.mockResolvedValue({ ...result, main_rolls: [3, 1, 4], total: 11 })
+    const missile = { id: 5, name: 'Dardo incantato', level: 1, srd_index: 'magic-missile', attack_save: null, damage_dice: '3d4+3' } as unknown as Spell
+    renderWithProviders(<SpellDamageSheet charId={7} spell={missile} slotLevel={1} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    expect(await screen.findByTestId('magic-missile-darts')).toBeInTheDocument()
+  })
+
   it('asks for the damage options at the level the spell is cast at, not at its base level (Overchannel is for 1st-5th)', async () => {
     useSpell.mockResolvedValue({ id: 7 })
     rollDamage.mockResolvedValue(result)

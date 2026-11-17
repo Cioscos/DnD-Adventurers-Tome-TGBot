@@ -168,6 +168,8 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       await new Promise((r) => setTimeout(r, OVERLAY_FADE_MS))
       setSceneRequest(null)
       setIsPlaying(false)
+      // I numeri restano nel DOM anche a overlay trasparente: chi legge la pagina li vedrebbe come bloccati a schermo.
+      setSettledValues(null)
       return detected
     },
     [waitForScene],
@@ -234,7 +236,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
                 <DiceScene request={sceneRequest} onMount={handleSceneMount} skipToken={skipToken} />
               </Suspense>
             </DiceErrorBoundary>
-            {settledValues ? (
+            {!isPlaying ? null : settledValues ? (
               <p
                 data-testid="dice-values"
                 className="absolute inset-x-4 bottom-8 text-center text-3xl font-display font-black tabular-nums text-dnd-parchment pointer-events-none"
