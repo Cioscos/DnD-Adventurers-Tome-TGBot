@@ -1,6 +1,6 @@
 import { uiLang } from '@/lib/lang'
 import { notifyCastError } from '@/lib/mutationError'
-import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, prepareCast, refreshAfterOptions, useRemovalStore, useEffectPickStore } from '@/lib/rollOptions'
+import { canRerollInspiration, askRollOptions, castSpell, CastCancelled, confirmTurnRules, prepareCast, refreshAfterOptions, useRemovalStore, useEffectPickStore } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,7 @@ import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { isAttackSpell, rollsDamageOnCast } from '@/lib/spellType'
 import { needsEffectAsk } from '@/lib/spellChoice'
+import { parseCastingTime } from '@/lib/turnGrouping'
 import { m, AnimatePresence } from 'framer-motion'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -219,7 +220,25 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     else next()
   }, [])
 
-  const beginCast = useCallback((spell: Spell, mode: RollMode = 'normal') => {
+  /** T3: lo slot del turno che il lancio userebbe è già speso. Solo in uno scontro attivo, dove il server rifiuta; fuori il
+   *  turno non si azzera da solo e il lancio passa. Un trucchetto con attacchi ancora da fare può prenderne il posto (Magia da
+   *  Guerra): lì decide il server. */
+  const spentTurnSlot = useCallback(async (spell: Spell): Promise<'action' | 'bonus_action' | 'reaction' | null> => {
+    const ts = await qc.fetchQuery({ queryKey: ['turn-state', charId], queryFn: () => api.characters.turnState(charId), staleTime: 3000 })
+      .catch(() => null)
+    if (!ts?.in_encounter) return null
+    const b = ts.turn
+    const kind = parseCastingTime(spell.effective_casting_time ?? spell.casting_time)
+    const free = (char?.active_states ?? []).find((s) => (s.data as { free_cast?: string } | undefined)?.free_cast === spell.srd_index)
+    if (free && (free.data as { free_cast_slot?: string | null }).free_cast_slot === null) return null  // parte di un'altra azione
+    if (kind === 'bonus_action') return b.bonus_used ? kind : null
+    if (kind === 'reaction') return b.reaction_used ? kind : null
+    if (kind !== 'action' || (b.extra_actions ?? 0) > 0) return null
+    const attacksLeft = (ts.attacks_allowed ?? 1) - b.action_attacks
+    return b.action_used || (b.action_attacks > 0 && !(spell.level === 0 && attacksLeft > 0)) ? kind : null
+  }, [qc, charId, char?.active_states])
+
+  const startCast = useCallback((spell: Spell, mode: RollMode) => {
     setCastMode(mode)
     useEffectPickStore.setState({ picked: {} })  // un lancio nuovo non eredita i bersagli dell'ultimo
     if (spell.level === 0) {
@@ -246,6 +265,14 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     // Livellato — prima si sceglie lo slot (da cui dipende il numero di bersagli), poi i bersagli.
     setCastingSpell(spell)
   }, [beginAttack, castMutation, withEffect])
+
+  const beginCast = useCallback((spell: Spell, mode: RollMode = 'normal') => {
+    void (async () => {
+      const spent = await spentTurnSlot(spell)
+      if (spent) { haptic.error(); toast.error(t(`character.spells.turn_spent.${spent}`)); return }
+      if (await confirmTurnRules(charId, spell.id)) startCast(spell, mode)
+    })()
+  }, [spentTurnSlot, charId, startCast, t])
 
   const needsUnpreparedWarn = useCallback((spell: Spell) =>
     !!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.is_prepared,

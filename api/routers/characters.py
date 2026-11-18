@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import delete, select
@@ -56,7 +56,7 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult, ToolCheckSubmission
-from api.schemas.condition_effects import PendingSaveRead, PendingSaveRollResult
+from api.schemas.condition_effects import EscapeResult, PendingSaveRead, PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
 from api.services.rules_targets import activate_pending_effect, drop_pending_effect
@@ -84,7 +84,7 @@ from core.data.backgrounds_2024 import BACKGROUNDS_2024, GOLD_OPTION, Background
 from core.data.feats_2024 import ALL_FEATS
 from core.rules.tools import add_tools
 from api.services.species_apply import apply_species, plan_species
-from api.services.rules_turn import get_turn, refuse_if_incapacitated
+from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from api.services.session_allies import attach_party_auras, attach_spell_auras
 from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule_hp_bonus
 from api.services.dice_stats import record_dice
@@ -759,7 +759,7 @@ async def roll_skill(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     add_history(session, char.id, "skill_roll", history_msg)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
     await prune_history(session, char)
 
     result = RollResult(
@@ -779,6 +779,39 @@ async def roll_skill(
     remember_roll(char, "skill", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
                   skill=skill_name, ability=ability)
     return result
+
+
+ESCAPABLE = ("restrained", "grappled")
+
+
+@router.post("/{char_id}/conditions/{slug}/escape", response_model=EscapeResult)
+async def escape_condition(
+    char_id: int,
+    slug: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    skill: Literal["athletics", "acrobatics"] = "athletics",
+    body: Annotated[D20RollSubmission | None, Body()] = None,
+) -> EscapeResult:
+    """U36: con un'azione il PG Trattenuto (o Afferrato) prova a liberarsi con Atletica o Acrobazia contro la CD
+    dell'effetto; se la raggiunge la condizione cade. In combattimento l'azione si spende prima del tiro."""
+    if slug not in ESCAPABLE:
+        raise HTTPException(status_code=422, detail={"code": "not_escapable"})
+    char = await get_owned(char_id, user_id, session, full=True)
+    eff = next((e for e in await effects_for_character(session, char_id) if e.slug == slug), None)
+    if not (char.conditions or {}).get(slug) or eff is None or eff.save_dc is None:
+        raise HTTPException(status_code=409, detail={"code": "no_escape_dc"})
+    refuse_if_incapacitated(char)
+    if await active_encounter_row(session, char_id) is not None:
+        spend(char, "action")
+    roll = await roll_skill(char_id, skill, user_id, session, body)
+    escaped = roll.total >= eff.save_dc
+    add_history(session, char.id, "condition_change",
+                f"Liberarsi da {condition_label(slug)}: {roll.total} contro CD {eff.save_dc}, "
+                + ("riuscito" if escaped else "fallito"))
+    if escaped:
+        await apply_conditions(session, char, {slug: False})
+    return EscapeResult(roll=roll, dc=eff.save_dc, escaped=escaped)
 
 
 # ---------------------------------------------------------------------------
@@ -838,7 +871,7 @@ async def roll_tool_check(
     if body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     add_history(session, char.id, "skill_roll", history_msg)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
     await prune_history(session, char)
 
     result = RollResult(
@@ -894,7 +927,7 @@ async def roll_ability_check(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     add_history(session, char.id, "skill_roll", history_msg)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
     await prune_history(session, char)
 
     result = RollResult(
@@ -950,7 +983,7 @@ async def roll_saving_throw(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     add_history(session, char.id, "saving_throw", history_msg)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
     await prune_history(session, char)
 
     result = RollResult(
@@ -1071,7 +1104,7 @@ async def roll_pending_save(
     if reroll:
         history_msg = f"Reroll ispirazione: {history_msg}"
     add_history(session, char.id, "saving_throw", history_msg)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
     await prune_history(session, char)
 
     save_read, passed = await close_pending_save(session, char, ps, effect, {

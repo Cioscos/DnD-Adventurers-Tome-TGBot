@@ -220,6 +220,22 @@ async def test_sneak_attack_is_once_per_turn_and_comes_back_next_turn(client):
     assert SNEAK in await _roll_keys(client, cid, "attack", item_id=wid)
 
 
+async def _sneak_preselected(client, cid, wid) -> bool | None:
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": wid})
+    return next(o for o in r.json() if o["key"] == SNEAK).get("preselected")
+
+
+async def test_sneak_attack_is_already_on_after_a_hit_with_advantage(client):
+    """LA1 (playtest 17/11): col vantaggio l'Attacco Furtivo vale di sicuro, quindi è acceso dopo il colpo."""
+    cid = await _rogue(client, 5)
+    wid = await _rapier(client, cid)
+    await _hit(client, cid, wid, mode="advantage", dice=[10, 12])
+    assert await _sneak_preselected(client, cid, wid) is True
+    await _new_turn(client, cid)
+    await _hit(client, cid, wid)  # senza vantaggio dipende dall'alleato accanto: lo accende il giocatore
+    assert await _sneak_preselected(client, cid, wid) is None
+
+
 async def test_sneak_attack_is_not_offered_to_an_unarmed_strike(client):
     cid = await _rogue(client, 5)
     assert SNEAK not in await _roll_keys(client, cid, "attack")

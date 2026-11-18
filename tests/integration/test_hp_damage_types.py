@@ -81,3 +81,35 @@ async def test_unknown_damage_type_unchanged(client):
     await _set_mods(client, cid, resistances=["fire"])
     body = await _hp(client, cid, "damage", 10, damage_type="banana")
     assert body["current_hit_points"] == 10
+
+
+# L9 (playtest 17/11): un colpo con più tipi (morso: 15 perforanti + 5 freddo) è un solo danno.
+
+async def test_damage_with_two_types_resists_each_type(client):
+    cid = await _make_char(client, 40)
+    await _set_mods(client, cid, resistances=["cold"])
+    body = await _hp(client, cid, "damage", 15, damage_type="piercing", extra_damage=[{"amount": 5, "damage_type": "cold"}])
+    assert body["current_hit_points"] == 40 - 15 - 2  # il freddo dimezzato, il perforante pieno
+    assert body["damage_taken"] == 17
+    assert any("5 Freddo" in d and "-17 HP" in d for d in await _descriptions(client, cid))
+
+
+async def test_damage_with_two_types_makes_one_concentration_save(client):
+    cid = await _make_char(client, 100)
+    await _start_concentration(client, cid)
+    body = await _hp(client, cid, "damage", 15, damage_type="piercing", extra_damage=[{"amount": 9, "damage_type": "cold"}])
+    assert body["concentration_save"]["dc"] == 12  # 24 // 2: un solo TS sul danno intero
+
+
+async def test_damage_with_two_types_at_zero_is_one_failure(client):
+    cid = await _make_char(client, 40)
+    await _hp(client, cid, "damage", 40)
+    body = await _hp(client, cid, "damage", 3, damage_type="piercing", extra_damage=[{"amount": 2, "damage_type": "cold"}])
+    assert body["death_saves"]["failures"] == 1
+
+
+async def test_extra_type_immunity_zeroes_only_that_part(client):
+    cid = await _make_char(client, 40)
+    await _set_mods(client, cid, immunities=["cold"])
+    body = await _hp(client, cid, "damage", 15, damage_type="piercing", extra_damage=[{"amount": 5, "damage_type": "cold"}])
+    assert body["current_hit_points"] == 25

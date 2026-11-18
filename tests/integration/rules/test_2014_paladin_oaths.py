@@ -127,6 +127,7 @@ async def test_sacred_weapon_adds_charisma_with_a_minimum_of_one_to_the_chosen_w
     sword = await _sword(client, cid, equip="main_hand")
     dagger = await _item(client, cid, "Pugnale", damage_dice="1d4", weapon_type="melee", properties=["light"], equip="off_hand")
     plain = {w: (await _attack(client, cid, w))["to_hit_bonus"] for w in (sword, dagger)}
+    await client.post(f"/characters/{cid}/turn/new")  # l'attacco ha già speso l'azione (LA4b)
     assert (await _use(client, cid, SW, params={"weapon": str(sword)})).status_code == 200
     after = {w: await _attack(client, cid, w) for w in (sword, dagger)}
     assert after[sword]["to_hit_bonus"] == plain[sword] + 3 and f"feature:{SW}" in after[sword]["notes"]
@@ -137,6 +138,7 @@ async def test_sacred_weapon_bonus_is_at_least_one_and_the_weapon_must_be_wielde
     cid = await _paladin(client, 3, "devotion", charisma=8)
     sword = await _sword(client, cid, equip="main_hand")
     plain = (await _attack(client, cid, sword))["to_hit_bonus"]
+    await client.post(f"/characters/{cid}/turn/new")  # l'attacco ha già speso l'azione (LA4b)
     await _use(client, cid, SW, params={"weapon": str(sword)})
     assert (await _attack(client, cid, sword))["to_hit_bonus"] == plain + 1
     await client.patch(f"/characters/{cid}/items/{sword}", json={"is_equipped": False})
@@ -457,3 +459,12 @@ async def test_the_vengeance_reactions_are_not_proposed_after_taking_damage(clie
     assert r.status_code == 200, r.text
     offered = [o["key"] for o in r.json().get("reactions") or []]
     assert not {"paladin.opportunity_attack", "paladin.soul_of_vengeance"} & set(offered)
+
+
+async def test_channel_divinity_options_say_what_they_do_and_sacred_weapon_its_light(client):
+    """PA5: accanto al «Usa» del Turno le opzioni di Incanalare Divinità hanno il loro testo; Arma Consacrata dice la luce."""
+    cid = await _paladin(client, 3, "devotion")
+    for key in ("paladin.sacred_weapon", "paladin.turn_the_unholy"):
+        row = await _ability(client, cid, key)
+        assert row["use_preview"] and row["use_preview"]["it"] == row["description"]
+    assert "6 m" in (await _ability(client, cid, "paladin.sacred_weapon"))["description"]

@@ -62,6 +62,7 @@ from api.services.recap import close_game_session, dice_baseline, record_departu
 from api.services.homebrew.dispatcher import dispatch
 from api.services.d20 import set_inspiration
 from api.services.rules_states import remove_state
+from api.services.effects import apply_conditions
 from api.services.spell_effects import end_by_target
 from core.rules.spell_effects import SPELL_STATE_PREFIX
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item, stacks_with
@@ -108,6 +109,12 @@ _SESSION_FEED_EVENT_TYPES: set[str] = {
     "condition_change",
     "concentration_save",
     "hit_dice",
+    # L1: incantesimi, danni tirati, fine della concentrazione, usi delle risorse (nessuno riporta i PF)
+    "spell_cast",
+    "spell_attack",
+    "spell_damage",
+    "concentration",
+    "ability_change",
 }
 
 
@@ -134,6 +141,9 @@ def _redact_event_description(
     op = str(meta.get("op") or "").upper()
 
     if op == "HEAL":
+        if meta.get("by"):  # cura data da un altro PG: chi, con che cosa e quanto (i PF prima/dopo restano privati)
+            how = f" con {meta['source']}" if meta.get("source") else ""
+            return f"curato da {meta['by']}{how}: +{meta.get('amount', 0)} PF"
         return "si è curato"
     if op in ("SET_CURRENT", "SET_MAX", "SET_TEMP"):
         return "ha modificato i PF"
@@ -1170,6 +1180,31 @@ async def gm_end_spell_state(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="state_not_found")
     remove_state(char, key)
     await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi
+    touch(session_obj)
+    return None
+
+
+@router.delete("/{session_id}/characters/{character_id}/conditions/{slug}", status_code=status.HTTP_204_NO_CONTENT,
+               response_model=None)
+async def gm_remove_pc_condition(
+    session_id: int,
+    character_id: int,
+    slug: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+):
+    """GM: toglie una condizione a un PG seduto anche fuori combattimento (L5); con l'effetto cadono durata e TS."""
+    session_obj = await load_session(session_id, db)
+    if session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+    if session_obj.gm_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+    if not any(p.role == SessionRole.PLAYER and p.character_id == character_id for p in session_obj.participants):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character_not_in_session")
+    char = await _load_char_full(db, character_id)
+    if not (char.conditions or {}).get(slug):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="condition_not_active")
+    await apply_conditions(db, char, {slug: 0 if slug == "exhaustion" else False})
     touch(session_obj)
     return None
 

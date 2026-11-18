@@ -262,6 +262,7 @@ class TurnBlock(BaseModel):
     pending_attack: Optional[dict] = None
     beast: Optional[dict] = None  # gli ordini alla bestia del Signore delle Bestie in questo turno (attacchi che le restano)
     last_roll: Optional[dict] = None  # la domanda «Riuscito?» resta finché ``refundable`` non è vuoto
+    death_save_rolled: bool = False  # TS contro la morte già tirato in questo turno: il banner che lo chiede sparisce
 
 
 class TurnState(BaseModel):

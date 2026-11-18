@@ -63,7 +63,7 @@ describe('HitDiceModal', () => {
     render(
       <HitDiceModal classes={classes} onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />,
     )
-    expect(screen.getByRole('button', { name: 'Roll' })).toHaveClass('min-w-11')
+    expect(screen.getByRole('button', { name: 'character.hp.hit_dice_roll' })).toHaveClass('min-w-11')
   })
 
   it('keeps the roll button disabled at 0 dice, then spends the chosen count for that class', async () => {
@@ -71,14 +71,14 @@ describe('HitDiceModal', () => {
     render(
       <HitDiceModal classes={classes} onSpend={onSpend} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />,
     )
-    expect(screen.getByRole('button', { name: 'Roll' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'character.hp.hit_dice_roll' })).toBeDisabled()
 
     // stepperButtons()[1] is the "+" button (after the "−" at index 0).
     await userEvent.click(stepperButtons()[1])
     await userEvent.click(stepperButtons()[1])
     expect(screen.getByText('2')).toBeInTheDocument()
 
-    const roll = screen.getByRole('button', { name: 'Roll' })
+    const roll = screen.getByRole('button', { name: 'character.hp.hit_dice_roll' })
     expect(roll).toBeEnabled()
     await userEvent.click(roll)
     expect(onSpend).toHaveBeenCalledWith(1, 2)
@@ -90,7 +90,7 @@ describe('HitDiceModal', () => {
     )
     await userEvent.click(stepperButtons()[0]) // "−" at 0 → clamps to 0
     expect(screen.getByText('0')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Roll' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'character.hp.hit_dice_roll' })).toBeDisabled()
   })
 
   it('confirm-rest and cancel call their respective callbacks', async () => {

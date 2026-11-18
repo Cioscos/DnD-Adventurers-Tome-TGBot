@@ -9,16 +9,19 @@ from core.rules.types import Cost, Modifier, RollOptionSpec
 _D4 = lambda _ctx, _inputs: "1d4"  # noqa: E731
 
 
-def _d4_option(spell: str, label: dict[str, str], rolls: tuple[str, ...], *, once: bool = False, available=None) -> RollOptionSpec:
-    """Il d4 si somma al tiro già fatto. ``once``: lo stato si chiude all'uso (Guida e Resistenza 2014 si spengono al primo d4)."""
+def _d4_option(spell: str, label: dict[str, str], rolls: tuple[str, ...], *, once: bool = False, available=None,
+               auto: bool = False) -> RollOptionSpec:
+    """Il d4 si somma al tiro già fatto. ``once``: lo stato si chiude all'uso (Guida e Resistenza 2014 si spengono al primo d4).
+    ``auto``: il client lo somma da solo appena visto il d20 (``preselected``)."""
     return RollOptionSpec(
         key=f"spell:{spell}:add", phase="after_roll", after="add", rolls=rolls, extra_dice=_D4, label=label,
-        cost=Cost(state_key=f"spell:{spell}") if once else None, available=available or (lambda _ctx: True))
+        cost=Cost(state_key=f"spell:{spell}") if once else None, available=available or (lambda _ctx: True), preselected=auto)
 
 
+# LA3/B11 (playtest 17/11): il d4 di Benedizione non costa nulla e va su ogni attacco e TS: si somma da solo, mai dimenticato
 _BLESS = SpellVariant(
     options=(_d4_option("bless", {"it": "Benedizione: somma 1d4 al tiro", "en": "Bless: add 1d4 to the roll"},
-                        ("attack", "save", "death_save")),),
+                        ("attack", "save", "death_save"), auto=True),),
     concentration=True, rounds=10)  # 1 minuto
 
 _GUIDANCE_LABEL = {"it": "Guida: somma 1d4 alla prova", "en": "Guidance: add 1d4 to the check"}

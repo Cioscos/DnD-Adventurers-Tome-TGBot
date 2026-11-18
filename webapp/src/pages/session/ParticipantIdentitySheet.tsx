@@ -16,6 +16,7 @@ import Button from '@/components/ui/Button'
 import ConditionBadge from '@/components/ui/ConditionBadge'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
 import { notifyMutationError } from '@/lib/mutationError'
+import { lastRollText } from '@/lib/lastRoll'
 import type { CharacterLiveSnapshot, ParticipantIdentity, SessionParticipant } from '@/types'
 
 interface Props {
@@ -86,6 +87,12 @@ export default function ParticipantIdentitySheet({
   // Solo il GM: chiude l'incantesimo di un altro sul PG (il bersaglio non può, il lanciatore potrebbe non esserci più)
   const endSpellMutation = useMutation({
     mutationFn: (key: string) => api.sessions.gmEndSpellState(gmSessionId!, snapshot!.id, key),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['session-live', gmSessionId] }),
+    onError: notifyMutationError,
+  })
+  // L5: il GM toglie una condizione al PG anche fuori combattimento (TS ripetuto che nessuno chiederà più)
+  const removeConditionMutation = useMutation({
+    mutationFn: (slug: string) => api.sessions.gmRemoveCondition(gmSessionId!, snapshot!.id, slug),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['session-live', gmSessionId] }),
     onError: notifyMutationError,
   })
@@ -230,7 +237,16 @@ export default function ParticipantIdentitySheet({
               </p>
               {conds.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
-                  {conds.map(([key, val]) => (
+                  {conds.map(([key, val]) => gmSessionId != null ? (
+                    <div key={key} className="flex w-full items-center justify-between gap-3">
+                      <ConditionBadge conditionKey={key} value={val} />
+                      <Button size="sm" variant="secondary" className="min-h-11 shrink-0"
+                        loading={removeConditionMutation.isPending && removeConditionMutation.variables === key}
+                        onClick={() => removeConditionMutation.mutate(key)}>
+                        {t('session.identity.remove_condition')}
+                      </Button>
+                    </div>
+                  ) : (
                     <ConditionBadge key={key} conditionKey={key} value={val} />
                   ))}
                 </div>
@@ -246,9 +262,8 @@ export default function ParticipantIdentitySheet({
                   <span className="font-cinzel uppercase tracking-wider text-xs text-dnd-gold-dim">
                     {t('session.detail.last_roll_label')}:
                   </span>
-                  <span className="font-mono">
-                    {snapshot.last_roll.notation} → {snapshot.last_roll.total}
-                  </span>
+                  <span className="min-w-0 truncate">{lastRollText(snapshot.last_roll)}</span>
+                  <span className="shrink-0 font-mono">→ {snapshot.last_roll.total}</span>
                 </div>
               )}
             </Surface>

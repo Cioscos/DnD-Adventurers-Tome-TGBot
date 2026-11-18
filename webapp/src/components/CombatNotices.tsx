@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { GiSkullCrossedBones } from 'react-icons/gi'
@@ -39,8 +39,12 @@ export default function CombatNotices({ charId }: { charId: number }) {
   }, [turn, navigate, t])
 
   const ds = char?.death_saves
+  // Un TS contro la morte cambia i tiri sulla scheda: il turno si rilegge subito e il banner sparisce senza aspettare il poll.
+  const qc = useQueryClient()
+  const dsKey = JSON.stringify(ds ?? null)
+  useEffect(() => { qc.invalidateQueries({ queryKey: ['turn-state', charId] }) }, [dsKey, charId, qc])
   const dying = !!char && char.current_hit_points === 0 && !ds?.stable && !char.is_dead
-  if (!turn?.is_my_turn || !dying) return null
+  if (!turn?.is_my_turn || !dying || turn.turn?.death_save_rolled) return null
   return (
     <div data-testid="death-save-invite" className="sticky top-0 z-30 w-full bg-dnd-surface-raised">
     <Pressable

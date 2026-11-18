@@ -47,11 +47,15 @@ vi.mock('framer-motion', async () => {
     for (const k in props) if (!MOTION.has(k)) clean[k] = props[k]
     return React.createElement(tag, clean)
   }
-  return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
+  return {
+    // Un componente per tag, sempre lo stesso: uno nuovo a ogni render rimonterebbe i campi mentre si scrive.
+    m: new Proxy({} as Record<string, unknown>, { get: (cache, tag: string | symbol) => (cache[String(tag)] ??= make(String(tag))) }),
+    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children as never),
+  }
 })
 
 vi.mock('@/auth/telegram', () => ({ haptic: { light: () => {}, success: () => {}, error: () => {} } }))
-vi.mock('@/styles/motion', () => ({ stagger: new Proxy({}, { get: () => 0 }) }))
+vi.mock('@/styles/motion', () => ({ stagger: new Proxy({}, { get: () => 0 }), spring: new Proxy({}, { get: () => ({}) }) }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect }) }))
@@ -89,11 +93,13 @@ vi.mock('@/components/RollResultModal', async () => {
       wasRerolled?: boolean
       onInspirationReroll?: () => void
       onClose: () => void
+      dc?: number
     }) =>
       React.createElement(
         'div',
         { 'data-testid': 'roll-modal' },
         React.createElement('span', { 'data-testid': 'roll-total' }, String(p.result.total)),
+        p.dc != null ? React.createElement('span', { 'data-testid': 'roll-dc' }, String(p.dc)) : null,
         p.inspirationAvailable && !p.wasRerolled && p.onInspirationReroll
           ? React.createElement('button', { onClick: p.onInspirationReroll }, 'reroll')
           : null,
@@ -167,7 +173,7 @@ describe('SavingThrows page', () => {
     renderWithProviders(<SavingThrows />)
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.strength'))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.normal' }))
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
     await waitFor(() => expect(rollSavingThrow).toHaveBeenCalledWith(5, 'strength', undefined))
     expect(await screen.findByTestId('roll-total')).toHaveTextContent('12')
   })
@@ -179,8 +185,22 @@ describe('SavingThrows page', () => {
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.constitution'))
     expect(rollSavingThrow).not.toHaveBeenCalled()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.advantage' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'common.roll_mode.advantage' }))
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
     await waitFor(() => expect(rollSavingThrow).toHaveBeenCalledWith(5, 'constitution', { dice: undefined, mode: 'advantage' }))
+  })
+
+  it('L8: the DC said by the GM goes to the result, which says passed or failed', async () => {
+    getChar.mockResolvedValue(baseChar)
+    rollSavingThrow.mockResolvedValue(rollResult)
+    renderWithProviders(<SavingThrows />)
+    await screen.findByTestId('pb')
+    await userEvent.click(screen.getByText('character.stats.constitution'))
+    await userEvent.type(screen.getByPlaceholderText('character.saves.dc_placeholder'), '15')
+    expect(screen.getByPlaceholderText('character.saves.dc_placeholder')).toHaveValue('15')
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
+    expect(await screen.findByTestId('roll-total')).toHaveTextContent('12')
+    expect(screen.getByTestId('roll-dc')).toHaveTextContent('15')
   })
 
   it('inspiration reroll re-rolls with the with_inspiration flag', async () => {
@@ -189,7 +209,7 @@ describe('SavingThrows page', () => {
     renderWithProviders(<SavingThrows />)
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.strength'))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.normal' }))
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
     await userEvent.click(await screen.findByText('reroll'))
     await waitFor(() =>
       expect(rollSavingThrow).toHaveBeenLastCalledWith(5, 'strength', undefined, true),
@@ -205,7 +225,7 @@ describe('SavingThrows page', () => {
     renderWithProviders(<SavingThrows />)
     await screen.findByTestId('pb')
     await userEvent.click(screen.getByText('character.stats.strength'))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'common.roll_mode.normal' }))
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
     await userEvent.click(await screen.findByText('reroll'))
     await waitFor(() =>
       expect(toastError).toHaveBeenCalledWith('character.inspiration.unavailable_error'),

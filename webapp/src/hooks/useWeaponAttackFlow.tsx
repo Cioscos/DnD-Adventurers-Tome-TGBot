@@ -71,7 +71,11 @@ export function useAttackRoll() {
       let used: string[] = []
       while (result.attack_id) {
         const bonus = `${result.to_hit_bonus >= 0 ? '+' : ''}${result.to_hit_bonus}`
-        const summary = t('character.roll_options.summary', { total: result.to_hit_total, die: result.to_hit_die, bonus })
+        // PA1: con vantaggio/svantaggio si vedono entrambi i d20, non solo quello tenuto.
+        const die = result.dice && result.dice.length > 1 && result.mode && result.mode !== 'normal'
+          ? `${result.to_hit_die} (${result.dice.join(' · ')}, ${t(`common.roll_mode.${result.mode}`)})`
+          : result.to_hit_die
+        const summary = t('character.roll_options.summary', { total: result.to_hit_total, die, bonus })
           + (result.is_critical ? ` · ${t('character.dice.critical_banner')}` : '')
           + (result.is_fumble ? ` · ${t('character.dice.fumble_banner')}` : '')
           + (result.forced_hit ? ` · ${t('character.roll_options.forced_hit')}` : '')
@@ -94,6 +98,8 @@ export function useAttackRoll() {
             refundable = refundable || !!updated.refundable?.length
             used = [...used, after.after_option!.key]
           } catch {
+            // Quella applicata da sola (Benedizione) non riparte all'infinito; una scelta a mano resta da ritentare.
+            if (after.after_option!.preselected) used = [...used, after.after_option!.key]
             toast.warning(t('character.roll_options.after_roll_failed'))
           }
           continue

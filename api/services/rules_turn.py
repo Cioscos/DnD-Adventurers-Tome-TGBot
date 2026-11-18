@@ -32,23 +32,30 @@ def _save(char, state: dict) -> None:
     char.turn_state = state  # nuovo dict: SQLAlchemy non vede le mutazioni in place
 
 
+def action_taken(st: dict) -> bool:
+    """L'azione del turno è spesa: segnata, oppure l'azione Attacco è già iniziata (LA4b)."""
+    return bool(st["action_used"] or st["action_attacks"] > 0)
+
+
 def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     """Segna ``slot`` come usato; 409 ``turn_slot_used`` se lo era già.
 
     ``attack``: ``attacks_made`` conta ogni attacco del turno (l'Ira ne ha bisogno), ``action_attacks`` solo quelli
     dell'azione Attacco; ``own_slot`` (Frenesia, Ritorsione: costano la loro azione bonus o reazione) non la consuma.
 
-    L'azione già usata consuma un'azione extra (Azione Impetuosa) se ce n'è una."""
+    L'azione già usata (anche dagli attacchi dell'azione Attacco) consuma un'azione extra (Azione Impetuosa) se ce n'è una."""
     if slot not in SLOTS:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "bad_slot"})
     st = get_turn(char)
+    action_spent = slot == "action" and action_taken(st)
     if slot == "attack":
         st["attacks_made"] += 1
         if not own_slot:
             st["action_attacks"] += 1
-    elif slot == "action" and st["action_used"] and st["extra_actions"] > 0:
+    elif action_spent and st["extra_actions"] > 0:
         st["extra_actions"] -= 1
-    elif st[_FLAGS[slot]]:
+        st["action_used"] = True
+    elif action_spent or st[_FLAGS[slot]]:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "turn_slot_used"})
     else:
         st[_FLAGS[slot]] = True

@@ -512,7 +512,7 @@ async def test_panacea_on_a_seated_ally_restores_all_hit_points_with_history_on_
     assert r.status_code == 200, r.text
     assert (await _hero_state(test_session_factory, hero))[0] == 40
     assert r.json()["received"] == {"name": r.json()["received"]["name"], "healed": 33}
-    assert any("Cura: +" in h for h in await _history(test_session_factory, hero))
+    assert any(h.startswith("Cura da ") and ": +" in h for h in await _history(test_session_factory, hero))  # M5: con chi ha curato
     assert not any("Cura: +0" in h for h in await _history(test_session_factory, cid))  # chi usa la pietra non cura nulla
 
 

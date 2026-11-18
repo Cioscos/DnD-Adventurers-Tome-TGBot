@@ -53,6 +53,32 @@ describe('CombatantRow', () => {
     expect(screen.getByTestId('hp-bucket-bar')).toBeInTheDocument()
   })
 
+  it('L3: la riga estesa di un altro PG dice la fascia a parole, senza PF', () => {
+    render(
+      <CombatantRow
+        combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe' })}
+        snapshot={{ ...pcSnapshot, hit_points: null, current_hit_points: null, hp_bucket: 'badly_wounded' }}
+        isActive={true} amGm={false} mode="full"
+      />,
+    )
+    expect(screen.getByTestId('hp-bucket-label')).toHaveTextContent('session.hp_bucket.badly_wounded')
+    expect(screen.queryByText('12/20')).not.toBeInTheDocument()
+  })
+
+  it('T2: un mostro morto non mostra il TS in sospeso', () => {
+    const ps = { id: 9, status: 'pending', ability: 'dexterity', dc: 15, slug: 'prone' }
+    const { rerender } = render(
+      <CombatantRow combatant={monster({ current_hp: 3, max_hp: 7, pending_saves: [ps] } as Partial<CombatantLive>)}
+        isActive={false} amGm={true} mode="full" onResolveSave={() => {}} />,
+    )
+    expect(screen.getByText('session.combat.save_passed')).toBeInTheDocument()
+    rerender(
+      <CombatantRow combatant={monster({ current_hp: 0, max_hp: 7, is_dead: true, pending_saves: [ps] } as Partial<CombatantLive>)}
+        isActive={false} amGm={true} mode="full" onResolveSave={() => {}} />,
+    )
+    expect(screen.queryByText('session.combat.save_passed')).not.toBeInTheDocument()
+  })
+
   it('PG: PF dallo snapshot live e condizioni dalla scheda', () => {
     render(
       <CombatantRow

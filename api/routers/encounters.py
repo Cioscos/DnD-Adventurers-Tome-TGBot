@@ -11,7 +11,7 @@ import logging
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -34,15 +34,17 @@ from api.schemas.encounter import (
 )
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
-from api.services.d20 import resolve_body
+from api.services.d20 import d20_records, resolve_body
+from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from core.rules.edition import character_edition
 from core.rules.modifiers import Applied, modifiers_for
 from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
-    UndoLog, clear_effects_for, expire_effect, undo_last_advance,
+    UndoLog, clear_effects_for, expire_effect, release_concentration_effects, undo_last_advance,
 )
-from api.services.durations import process_edge
+from api.services.durations import end_concentration, process_edge
+from api.services.rules_states import MINUTE_ROUNDS, end_minute_states
 from api.services.rules_options import merge_options, option_result, remember_roll, roll_option_dice, use_options
 from api.services.rules_targets import (
     activate_pending_effect, apply_condition_to_combatant, drop_pending_effect, drop_pending_effects,
@@ -378,6 +380,8 @@ async def roll_initiative(
     comb.initiative_die = outcome.kept
     comb.initiative = outcome.kept + comb.initiative_mod + applied.flat + opts.bonus + option_total
     _place_by_initiative(enc, comb)
+    if char is not None:  # il d20 del PG conta nelle sue statistiche e nel riepilogo della serata, anche se lo tira il GM
+        record_dice(char, d20_records(outcome), comb.initiative)
     if char is not None and comb.owner_user_id == user_id:  # il GM che tira per un PG non ha i suoi privilegi
         remember_roll(char, "initiative", opts, {
             "die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode,
@@ -444,8 +448,11 @@ async def start_encounter(
         )
     for c in missing:
         applied = await _pc_initiative_modifiers(db, c)
-        c.initiative_die = resolve_body(None, applied).kept
+        outcome = resolve_body(None, applied)
+        c.initiative_die = outcome.kept
         c.initiative = c.initiative_die + c.initiative_mod + applied.flat
+        if c.character_id is not None and (pc := await db.get(Character, c.character_id)) is not None:
+            record_dice(pc, d20_records(outcome), c.initiative)  # tirata d'ufficio, è comunque il d20 del PG
     await add_second_turns(db, enc, lang, utc_now_iso())
     ordered = sorted(
         enc.combatants, key=lambda c: (-(c.initiative or 0), -c.initiative_mod, c.id),
@@ -901,22 +908,34 @@ async def end_encounter(
     enc.status = "ended"
     enc.ended_at = utc_now_iso()
     recovered: list[str] = []
+    ended: list[str] = []  # stati di un minuto o meno chiusi con lo scontro (L5), per il feed
     for c in enc.combatants:  # la sorpresa è del combattimento: finito quello, non resta sulla scheda
         if c.surprised:
             c.surprised = False
         await _sync_surprise(db, c, released=True)
     for cid in {c.character_id for c in enc.combatants if c.character_id is not None}:  # un PG con più righe conta una volta
         char = (await db.execute(
-            select(Character).options(selectinload(Character.items)).where(Character.id == cid)
+            select(Character).options(selectinload(Character.items), selectinload(Character.abilities))
+            .where(Character.id == cid)
         )).scalar_one_or_none()
         for item in (char.items if char else []):
             if item.ammo_spent and (n := recover_ammo(db, char, item)):
                 recovered.append(f"{char.name}: +{n} {item.name}")
         if char is not None:
             clear_turn(char)  # fuori combattimento non restano azioni e attacchi usati
-        # Le durate in round contano solo in combattimento: finito quello, la condizione cade (anche se aveva un TS)
+            # L5: ciò che dura un minuto o meno finisce con lo scontro (in pratica il minuto passa prima del prossimo)
+            names = end_minute_states(char)
+            conc = (char.settings or {}).get("concentration_rounds_left")
+            if isinstance(conc, int) and conc <= MINUTE_ROUNDS:
+                end_concentration(char)
+                await release_concentration_effects(db, char)
+                names.append("Concentrazione")
+            if names:
+                ended.append(f"{char.name}: {', '.join(names)}")
+        # Le durate in round e i TS ripetuti contano solo in combattimento: finito quello, la condizione cade (L5)
         for eff in (await db.execute(select(ConditionEffect).where(
-                ConditionEffect.character_id == cid, ConditionEffect.expiry_count.is_not(None),
+                ConditionEffect.character_id == cid,
+                or_(ConditionEffect.expiry_count.is_not(None), ConditionEffect.save_ability.is_not(None)),
                 ConditionEffect.pending.is_(False)).order_by(ConditionEffect.id))).scalars().all():
             await expire_effect(db, eff, "Terminata (fine combattimento): {label}", None)
     await drop_pending_effects(db, enc.id)
@@ -926,8 +945,13 @@ async def end_encounter(
     summary = [f"Round: {enc.round}"] if was_active else []
     if monsters:
         summary.append(f"Nemici sconfitti: {sum(c.is_dead for c in monsters)}/{len(monsters)}")
+    if dealt := sum(max(0, c.max_hp - c.current_hp) for c in monsters
+                   if c.max_hp is not None and c.current_hp is not None):  # M2: PF dei mostri, non dei PG
+        summary.append(f"Danni inflitti: {dealt}")
     if summary:
         db.add(_system_feed_message(session, "📜 " + " · ".join(summary)))
+    if ended:
+        db.add(_system_feed_message(session, "⏳ Finiti con lo scontro — " + "; ".join(ended)))
     if recovered:
         db.add(_system_feed_message(session, "🏹 Munizioni recuperate — " + "; ".join(recovered)))
     touch(session)

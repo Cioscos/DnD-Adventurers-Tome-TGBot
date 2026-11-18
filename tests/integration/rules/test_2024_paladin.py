@@ -153,7 +153,7 @@ async def test_lay_on_hands_heals_yourself_with_the_chosen_points_on_the_bonus_a
 
 async def test_the_pool_comes_back_with_a_long_rest(client):
     cid = await _paladin24(client, 5)
-    assert (await _use(client, cid, LOH, amount=10, params={"mode": "self"})).status_code == 200
+    assert (await _use(client, cid, LOH, amount=10, params={"mode": "other"})).status_code == 200  # a PF pieni su di sé non si spende
     await _rest(client, cid, "long")
     assert (await _ability(client, cid, LOH))["uses"] == 25
 
@@ -607,7 +607,7 @@ async def test_multiclass_slots_count_half_the_paladin_levels_rounded_up(client)
 async def test_a_2014_paladin_that_becomes_2024_gets_the_2024_rows_and_keeps_its_spent_points(client):
     r = await client.post("/characters", json={"name": "Vecchio", "initial_class": {"class_name": "paladin", "level": 5, "subclass": None}})
     cid = r.json()["id"]
-    assert (await _use(client, cid, LOH, amount=10, params={"mode": "self"})).status_code == 200
+    assert (await _use(client, cid, LOH, amount=10, params={"mode": "other"})).status_code == 200  # a PF pieni su di sé non si spende
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
     keys = await _keys_of(client, cid)
     assert {PS, STEED, DS, CD, LOH} <= keys and "paladin.divine_health" not in keys and "paladin.cleansing_touch" not in keys

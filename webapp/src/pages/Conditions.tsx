@@ -28,6 +28,7 @@ import DurationInput from '@/components/character/DurationInput'
 import { useTickRound } from '@/hooks/useTickRound'
 import { useTurnState } from '@/hooks/useTurnState'
 import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
+import EscapeSheet from '@/components/EscapeSheet'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -108,8 +109,12 @@ export default function Conditions() {
   const [filterActive, setFilterActive] = useState(false)
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
   const [confirmLethalOpen, setConfirmLethalOpen] = useState(false)
+  // T6: togliere una condizione attiva chiede conferma (porta con sé fonte, CD e durata: un «Annulla» non le riavrebbe)
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   // Interdizione della Natura: affascinato o spaventato che chiede da dove viene (elementale o folletto = immune).
   const [wardAsk, setWardAsk] = useState<'charmed' | 'frightened' | null>(null)
+  // U36: Trattenuto/Afferrato con una CD: ci si libera con una prova (e l'azione), non solo col TS ripetuto.
+  const [escapeFrom, setEscapeFrom] = useState<{ slug: string; dc: number } | null>(null)
   // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
   const [nextDuration, setNextDuration] = useState<number | null>(null)
   const tick = useTickRound(charId)
@@ -216,6 +221,10 @@ export default function Conditions() {
 
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
+    if (current) {
+      setConfirmRemove(key)
+      return
+    }
     if (!current && hasWard) {
       if (key === 'poisoned') {  // il server la rifiuterebbe: lo diciamo prima
         toast.info(t('character.conditions.ward.poisoned'))
@@ -485,6 +494,11 @@ export default function Conditions() {
                 )}
                 {expiry && <p className="text-xs text-dnd-text-muted">{expiry}</p>}
                 {save && <p className="text-xs text-dnd-text-muted tabular-nums">{save}</p>}
+                {(e.slug === 'restrained' || e.slug === 'grappled') && e.save_dc != null && (
+                  <Button variant="secondary" size="sm" className="mt-1.5" onClick={() => setEscapeFrom({ slug: e.slug, dc: e.save_dc! })}>
+                    {t('character.conditions.effect.escape')}
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -629,6 +643,17 @@ export default function Conditions() {
       />
 
       <ConfirmSheet
+        open={confirmRemove !== null}
+        onClose={() => setConfirmRemove(null)}
+        title={t('character.conditions.remove_title', { name: confirmRemove ? t(`character.conditions.${confirmRemove}`) : '' })}
+        body={t('character.conditions.remove_body')}
+        confirmLabel={t('character.conditions.remove_confirm')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="primary"
+        onConfirm={() => { if (confirmRemove) apply(confirmRemove, true); setConfirmRemove(null) }}
+      />
+
+      <ConfirmSheet
         open={confirmLethalOpen}
         onClose={() => setConfirmLethalOpen(false)}
         title={t('character.conditions.exhaustion_condition', { context: char.rules_edition })}
@@ -650,6 +675,9 @@ export default function Conditions() {
         onConfirm={resetAll}
         loading={mutation.isPending}
       />
+      {escapeFrom && (
+        <EscapeSheet charId={charId} slug={escapeFrom.slug} dc={escapeFrom.dc} onClose={() => setEscapeFrom(null)} />
+      )}
     </Layout>
   )
 }

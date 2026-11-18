@@ -75,6 +75,9 @@ function SlotRecoveryPicker({ char, value, onChange, kind }: PickerProps & { kin
           )
         })}
       </ul>
+      {spent.some((s) => (value[s.level] ?? 0) < s.used && s.level > left) && (
+        <p data-testid={`${kind.idPrefix}-cap`} className="text-xs font-body text-dnd-text-muted">{t(`character.quick_actions.${kind.keyPrefix}_cap`)}</p>
+      )}
     </section>
   )
 }

@@ -35,6 +35,8 @@ describe('TargetEffectSheet', () => {
     await userEvent.click(screen.getByText('character.target_effect.open'))
     expect(await screen.findByText('character.target_effect.save:13')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Goblin 1'))
+    expect(applyEffect).not.toHaveBeenCalled()  // LA4a: prima la conferma
+    await userEvent.click(await screen.findByText('character.target_effect.confirm_cta'))
     await waitFor(() => expect(applyEffect).toHaveBeenCalledWith(3, 'mastery_topple', 5))
     await waitFor(() => expect(success).toHaveBeenCalled())
   })

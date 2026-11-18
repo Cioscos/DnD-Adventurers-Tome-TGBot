@@ -44,14 +44,16 @@ interface Props {
   stash?: boolean
   item: Item
   items: Item[]
+  /** «Deposita»: il deposito di gruppo è già scelto. */
+  toStash?: boolean
   onClose: () => void
 }
 
 /** «Dai a…» per un oggetto, una pila o un contenitore (con tutto il contenuto). */
-export default function GiveSheet({ charId, sessionId, partners, stash, item, items, onClose }: Props) {
+export default function GiveSheet({ charId, sessionId, partners, stash, item, items, toStash, onClose }: Props) {
   const { t } = useTranslation()
   const p = 'character.inventory.give.'
-  const [to, setTo] = useState<number | null>(initialTarget(partners, stash))
+  const [to, setTo] = useState<number | null>(toStash && stash ? STASH_TARGET : initialTarget(partners, stash))
   const stepper = item.quantity > 1 && !containerMeta(item) // un contenitore si dà intero
   const [qty, setQty] = useState(1) // si parte da uno: consegnare tutto dev'essere una scelta
   const give = useTradeMutation(charId, sessionId, onClose)

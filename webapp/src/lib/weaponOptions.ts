@@ -43,6 +43,20 @@ export function bestAbility(char: ChoiceChar | undefined): 'strength' | 'dexteri
   return mod('dexterity') > mod('strength') ? 'dexterity' : 'strength'
 }
 
+/** Gittata normale in ft di un'arma a distanza o da lancio, dal catalogo SRD (per indice o nome it/en); null se non c'è. */
+export function weaponRangeFt(
+  item: { name?: string; item_metadata?: Record<string, unknown> | null },
+  entries: { index: string; name: { en: string; it?: string }; weapon_range?: string; range_ft?: number | null; thrown_range_ft?: number | null }[],
+): number | null {
+  const meta = item.item_metadata ?? {}
+  const ranged = meta.weapon_type === 'ranged'
+  if (!ranged && !props(item).includes('prop_thrown')) return null
+  const name = (item.name ?? '').trim().toLowerCase()
+  const entry = entries.find((e) => e.index === meta.srd_index)
+    ?? entries.find((e) => e.name.en.toLowerCase() === name || e.name.it?.toLowerCase() === name)
+  return (ranged ? entry?.range_ft : entry?.thrown_range_ft) ?? null
+}
+
 /** «+7 · 1d6+4»: bonus per colpire e danno dell'arma con le scelte predefinite (li calcola il server); '' senza anteprima. */
 export function weaponPreviewText(item: {
   item_metadata?: Record<string, unknown> | null

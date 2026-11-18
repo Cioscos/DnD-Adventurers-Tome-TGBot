@@ -29,7 +29,7 @@ vi.mock('@/components/ui/Sheet', async () => {
 })
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { bonus?: string }) => (o?.bonus ? `${k}:${o.bonus}` : k), i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { bonus?: string; die?: unknown }) => (o?.bonus ? `${k}:${o.bonus}${typeof o.die === 'string' ? `:${o.die}` : ''}` : k), i18n: { language: 'it' } }) }
 })
 vi.mock('@/hooks/useD20Roll', async (orig) => ({
   ...(await orig() as object), useD20Roll: () => async () => undefined,
@@ -267,6 +267,14 @@ describe('useAttackRoll', () => {
       await userEvent.click(screen.getByText('character.roll_options.miss'))
       await expect(done).resolves.toBeNull()
     })
+  })
+
+  it('PA1: with advantage the second step shows both d20, not only the kept one', async () => {
+    attack.mockResolvedValue({ ...hit, dice: [10, 4], mode: 'advantage' })
+    const done = start()
+    await screen.findByText('character.roll_options.summary:+5:10 (10 · 4, common.roll_mode.advantage)')
+    await userEvent.click(screen.getByText('character.roll_options.miss'))
+    await done
   })
 
   it('shows the to-hit bonus with its sign in the second step', async () => {

@@ -87,6 +87,8 @@ export default function HitDiceModal({
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Pressable
+                    aria-label={t('character.hp.hit_dice_less')}
+                    title={t('character.hp.hit_dice_less')}
                     onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
                     className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
@@ -95,6 +97,8 @@ export default function HitDiceModal({
                   </Pressable>
                   <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{count}</span>
                   <Pressable
+                    aria-label={t('character.hp.hit_dice_more')}
+                    title={t('character.hp.hit_dice_more')}
                     onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.min(remaining, (c[cls.id] ?? 0) + 1) }))}
                     className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
@@ -111,7 +115,7 @@ export default function HitDiceModal({
                     icon={<Dice1 size={14} />}
                     haptic="success"
                   >
-                    <span className="sr-only">Roll</span>
+                    {t('character.hp.hit_dice_roll')}
                   </Button>
                 </div>
               </div>

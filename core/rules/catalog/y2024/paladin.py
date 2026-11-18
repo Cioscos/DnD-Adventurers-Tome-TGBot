@@ -76,7 +76,7 @@ def _loh_notes(_ctx: RuleContext, params: dict) -> list[str]:
 _LOH_REMOVAL = ConditionRemoval(tuple(_CURABLE), count=None, allowed=lambda c: tuple(_curable(c)), modes=("cure",), cost_each=5)
 
 LAY_ON_HANDS_USE = OnUse(
-    slot="bonus", choose_amount=True, heal=lambda _c, _r: 1, heal_when=lambda _c, p: p.get("mode") == "self",
+    slot="bonus", choose_amount=True, cap_to_missing=True, heal=lambda _c, _r: 1, heal_when=lambda _c, p: p.get("mode") == "self",
     heal_ally_when=lambda _c, p: p.get("mode") == "other", ally_modes=("other",), notes=_loh_notes,
     removal=_LOH_REMOVAL,
     choices=(UseChoice("mode", _both("Su chi", "On whom"), lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),))

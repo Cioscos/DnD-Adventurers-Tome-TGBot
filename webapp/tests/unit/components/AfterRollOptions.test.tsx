@@ -64,6 +64,16 @@ describe('AfterRollOptions nel modale di esito', () => {
     expect(lastRollOptions).toHaveBeenCalledWith(1, { options: ['add'], option_inputs: {}, mode: 'normal', dice: undefined })
   })
 
+  it('LA3: il d4 di Benedizione (preselected) si somma da solo, una volta sola', async () => {
+    rollOptions.mockResolvedValue([option({ key: 'spell:bless:add', label: 'Benedizione', dice: '1d4', preselected: true })])
+    lastRollOptions.mockResolvedValue({ ...ROLL, bonus: 2, total: 10 })
+    modal()
+    expect(await screen.findByText('10')).toBeInTheDocument()
+    expect(lastRollOptions).toHaveBeenCalledTimes(1)
+    expect(lastRollOptions).toHaveBeenCalledWith(1, { options: ['spell:bless:add'], option_inputs: {}, mode: 'normal', dice: undefined })
+    await waitFor(() => expect(screen.queryByText('Benedizione')).toBeNull())
+  })
+
   it('un ritiro anima il d20 col modo dell\'opzione e manda le facce', async () => {
     rollOptions.mockResolvedValue([option({ key: 'again', label: 'Ritira?', after: 'reroll', dice: null, mode: 'advantage' })])
     rollD20.mockResolvedValue([3, 18])

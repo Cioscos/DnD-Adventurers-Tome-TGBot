@@ -86,13 +86,19 @@ def _not_at_disadvantage(ctx: RuleContext) -> bool:
     return (pending.get("result") or {}).get("mode") != "disadvantage"
 
 
+def _with_advantage(ctx: RuleContext) -> bool:
+    """Col vantaggio l'Attacco Furtivo vale di sicuro: già acceso dopo il colpo (l'alleato adiacente lo dice il giocatore)."""
+    pending = (ctx.turn or {}).get("pending_attack") or {}
+    return (pending.get("result") or {}).get("mode") == "advantage"
+
+
 def _sneak_dice(ctx: RuleContext, _inputs: dict) -> str:
     return f"{(ctx.class_level + 1) // 2}d6"
 
 
 SNEAK_ATTACK = RollOptionSpec(
     key=f"{CK}.sneak_attack", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_sneak_dice,
-    available=lambda c: _finesse_or_ranged(c) and _not_at_disadvantage(c),
+    available=lambda c: _finesse_or_ranged(c) and _not_at_disadvantage(c), preselected=_with_advantage,
     label={"it": "Attacco Furtivo: hai vantaggio sul tiro, o un nemico del bersaglio (non incapacitato) è entro 1,5 m da esso e non hai svantaggio? Danni extra (una volta per turno)",
            "en": "Sneak Attack: do you have advantage on the roll, or is an enemy of the target (not incapacitated) within 5 ft of it and you have no disadvantage? Extra damage (once per turn)"})
 

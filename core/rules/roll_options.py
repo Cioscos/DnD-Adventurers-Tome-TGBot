@@ -449,6 +449,35 @@ def _recover_level(option: RollOption, inputs: dict) -> int:
     return level
 
 
+_TURN_WORDS = {"action": "azione", "bonus": "azione bonus", "reaction": "reazione", "free_interaction": "interazione",
+               "spell_slot": "incantesimo del turno", "bonus_spell": "incantesimo bonus", "extra_action": "azione extra"}
+
+
+def spent_description(char: Any, label: str, spent: list[str]) -> str:
+    """Riga di Cronologia di un'opzione pagata: i gettoni di ``_spend`` in parole («reazione», «Ki -1»), mai le chiavi."""
+    words = []
+    for token in spent:
+        kind, _, rest = token.partition(":")
+        if kind == "turn":
+            words.append(_TURN_WORDS.get(rest, rest.replace("_", " ")))
+        elif kind == "once" and "una volta per turno" not in label.lower():
+            words.append("una volta per turno")
+        elif kind == "feature":
+            key, _, amount = rest.rpartition(":")
+            row = next((a for a in getattr(char, "abilities", None) or [] if a.feature_key == pool_key(char, key)), None)
+            words.append(f"{getattr(row, "name", None) or key.rpartition('.')[2].replace('_', ' ')} -{amount}")
+        elif kind == "slot":
+            words.append(f"slot di {rest.split(':')[0]}° livello")
+        elif kind == "unslot":
+            words.append(f"slot di {rest}° livello recuperato")
+        elif kind == "state":
+            state = json.loads("{" + rest.split(":{", 1)[1]) if ":{" in rest else {}
+            words.append(f"{state.get('name') or rest.split(':{')[0]} speso")
+        elif kind == "die":
+            words.append(f"dado {rest.rpartition(':')[2]}")
+    return f"{label} ({', '.join(words)})" if words else label
+
+
 def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     """Paga l'opzione e ne applica l'effetto collaterale. Ricontrolla ogni risorsa: due opzioni possono contendersi
     l'ultima. I gettoni restituiti sono quelli che ``refund_spent`` sa rimborsare."""
@@ -505,7 +534,7 @@ def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
     if spent:
         session.add(CharacterHistory(
             character_id=char.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
-            event_type="roll_option", description=f"{spec.label['it']} ({', '.join(t.split(':{')[0] for t in spent)})",
+            event_type="roll_option", description=spent_description(char, spec.label["it"], spent),
         ))
     if spec.on_confirm:
         extra = spec.on_confirm(session, option.ctx, inputs)

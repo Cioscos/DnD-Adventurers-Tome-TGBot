@@ -11,7 +11,8 @@ interface UnitSettingsStore {
 export const useUnitSettings = create<UnitSettingsStore>()(
   persist(
     (set) => ({
-      system: 'imperial',
+      // Predefinito per lingua (manuale italiano in metri); una scelta salvata vince sempre (persist).
+      system: (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code ?? 'it').startsWith('it') ? 'metric' : 'imperial',
       setSystem: (system) => set({ system }),
     }),
     { name: 'dnd-unit-settings' },

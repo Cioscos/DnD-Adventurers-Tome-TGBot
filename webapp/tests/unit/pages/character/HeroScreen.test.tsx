@@ -12,6 +12,7 @@ const { rollSpy, rollOptions, empty } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/client', () => ({ api: { characters: { rollDeathSave: rollSpy, rollOptions } } }))
+vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useNavigate: () => () => {} }))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }

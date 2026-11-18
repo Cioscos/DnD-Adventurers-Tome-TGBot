@@ -51,7 +51,7 @@ function coinText(coins: Record<string, number> | null | undefined): string {
 
 function tradeWhat(trade: TradePayload): string {
   if (trade.items.length === 0) return coinText(trade.coins)
-  return trade.items.map((i) => (i.quantity > 1 ? `${i.name} ×${i.quantity}` : i.name)).join(', ')
+  return trade.items.map((i) => `${i.name} ×${i.quantity}`).join(', ')
 }
 
 const tradeExpandable = (trade: TradePayload): boolean =>
@@ -500,6 +500,9 @@ export default function SessionFeed({
                     {t('session.feed.grant_chip')}
                   </p>
                 )}
+                <p className="mt-0.5 text-right not-italic font-mono text-xs text-dnd-text-faint">
+                  {formatTime24(it.timestamp, i18n.language)}
+                </p>
               </>
             )
 

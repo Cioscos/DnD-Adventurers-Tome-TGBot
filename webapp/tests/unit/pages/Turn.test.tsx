@@ -37,6 +37,7 @@ beforeEach(() => {
   server.block = { ...NEW_BLOCK }
   server.extra = {}
 })
+const { nextTurn, activeDamage } = vi.hoisted(() => ({ nextTurn: vi.fn().mockResolvedValue({}), activeDamage: vi.fn(() => false) }))
 const { attackUnarmedEffect, rollSkill, updateConditions, hide } = vi.hoisted(() => ({
   attackUnarmedEffect: vi.fn(),
   rollSkill: vi.fn().mockResolvedValue({ die: 10, total: 12, notes: [] }),
@@ -48,7 +49,7 @@ vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn(), d20Arg: vi.fn(
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, sessionAllies, tickRound: vi.fn(), rollSkill, updateConditions, hide, rollOptions: vi.fn().mockResolvedValue([]) },
-    sessions: { me: sessionMe },
+    sessions: { me: sessionMe, encounter: { nextTurn } },
     abilities: { update: vi.fn() },
   },
   ApiError: class ApiError extends Error {
@@ -76,7 +77,7 @@ vi.mock('@/components/ui/Sheet', async () => {
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
 })
 vi.mock('@/pages/spells/useCastFlow', () => ({
-  useCastFlow: () => ({ beginCast: vi.fn(), isSpellPending: () => false, canRollActiveDamage: () => false, rollActiveDamage: vi.fn(), elements: null }),
+  useCastFlow: () => ({ beginCast: vi.fn(), isSpellPending: () => false, canRollActiveDamage: activeDamage, rollActiveDamage: vi.fn(), elements: null }),
 }))
 vi.mock('@/hooks/useWeaponAttackFlow', () => ({
   useWeaponAttackFlow: () => ({
@@ -348,7 +349,7 @@ describe('Turn page', () => {
     renderWithProviders(<Turn />)
     const row = await screen.findByTestId('turn-concentration')
     expect(row).toHaveTextContent('Ragnatela')
-    expect(row).toHaveTextContent('character.spells.save_dc')
+    expect(row).toHaveTextContent('character.turn.concentration_spell_dc')  // MA9: la CD del TS dell'incantesimo
   })
 
   it('lists a passive reaction (Uncanny Dodge) under Reaction, with no Use button and how it is offered (U24)', async () => {
@@ -1274,5 +1275,59 @@ describe('Turn page', () => {
       await userEvent.click(screen.getByText('character.turn.new_turn'))
       await waitFor(() => expect(getChar).toHaveBeenCalled())
     })
+  })
+})
+
+describe('Turn page, playtest 17/11', () => {
+  beforeEach(() => { nextTurn.mockClear(); activeDamage.mockReturnValue(false) })
+
+  it('LA4b: an attack of the Attack action shows the action as used', async () => {
+    server.block = { ...NEW_BLOCK, attacks_made: 1, action_attacks: 1 }
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    const toggle = await screen.findByLabelText('character.turn.mark_used: character.turn.section_action')
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'true'))
+  })
+
+  it('T13: an active spell keeps its damage roll with the action spent', async () => {
+    server.block = { ...NEW_BLOCK, action_used: true }
+    activeDamage.mockReturnValue(true)
+    getChar.mockResolvedValue({ ...char, concentrating_spell_id: 9,
+      spells: [{ id: 9, name: 'Guardiani spirituali', level: 3, damage_dice: '3d8', casting_time: '1 azione', is_prepared: true }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.spells.roll_active_damage')).toBeInTheDocument()
+  })
+
+  it('MA8: shows the active conditions and the end-of-turn save', async () => {
+    getChar.mockResolvedValue({ ...char, conditions: { restrained: true, prone: false },
+      condition_effects: [{ slug: 'restrained', save_edge: 'end', save_ability: 'dexterity', save_dc: 15, ends_with_concentration: true, applied_by_gm: false }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByTestId('turn-conditions')).toBeInTheDocument()
+    expect(screen.getByTestId('turn-end-save')).toHaveTextContent('session.combat.end_turn_save_hint')
+  })
+
+  it('MA2: no end turn button outside an encounter', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    await screen.findByText('character.turn.section_action')
+    expect(screen.queryByText('session.combat.end_my_turn')).toBeNull()
+  })
+
+  it('MA2: with the action and the attacks done the turn ends straight away', async () => {
+    server.block = { ...NEW_BLOCK, attacks_made: 2, action_attacks: 2 }
+    server.extra = { in_encounter: true, is_my_turn: true, round: 2, session_id: 3 }
+    getChar.mockResolvedValue({ ...char, current_hit_points: 10 })
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('session.combat.end_my_turn'))
+    await waitFor(() => expect(nextTurn).toHaveBeenCalledWith(3))
+  })
+
+  it('MA2: with the action unused it asks first', async () => {
+    server.extra = { in_encounter: true, is_my_turn: true, round: 2, session_id: 3 }
+    getChar.mockResolvedValue({ ...char, current_hit_points: 10 })
+    renderWithProviders(<Turn />)
+    await userEvent.click(await screen.findByText('session.combat.end_my_turn'))
+    expect(await screen.findByText('session.combat.leftover_action')).toBeInTheDocument()
+    expect(nextTurn).not.toHaveBeenCalled()
   })
 })

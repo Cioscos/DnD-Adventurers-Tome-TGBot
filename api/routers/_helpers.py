@@ -260,8 +260,8 @@ async def roll_concentration_save(
     applied = modifiers_for(char, "concentration", ability="constitution")
     outcome = resolve_applied(mode, dice, None, applied)
     die = outcome.kept
-    record_dice(char, d20_records(outcome))
     total = die + con_mod
+    record_dice(char, d20_records(outcome), total)
     is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
     success = total >= dc and not applied.auto_fail

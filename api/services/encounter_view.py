@@ -22,9 +22,10 @@ from core.db.models import Character, Combatant, ConditionEffect, Encounter, Pen
 from core.utils.session_view import hp_bucket_from_ratio
 
 
-def public_states(char: Character, lang: str = "it") -> list[PublicState]:
+def public_states(char: Character, lang: str = "it", *, gm: bool = False) -> list[PublicState]:
     """Gli stati attivi che portano effetti su altri. Nome e testo vengono dal catalogo, nella lingua di chi guarda:
-    mai da ``Ability.name``/``description``, che il giocatore può modificare e sono privati."""
+    mai da ``Ability.name``/``description``, che il giocatore può modificare e sono privati. Il GM (``gm``) vede anche
+    gli stati dei privilegi che agiscono solo sul PG, come Arma Consacrata (M6)."""
     specs = {spec.key: spec for spec, _row in active_features(char)}
     out: list[PublicState] = []
     for state in char.active_states or []:
@@ -42,11 +43,14 @@ def public_states(char: Character, lang: str = "it") -> list[PublicState]:
             if (spec := specs.get(key)) is not None and not (spec.needs_conscious and not is_conscious(char))
             and not (spec.suspended_when_incapacitated and is_incapacitated(char))
         ]
+        owner = specs.get(state.get("feature_key"))
         if others:
-            owner = specs.get(state.get("feature_key"))
             name = (owner.name.get(lang) or owner.name["it"]) if owner is not None else state.get("name") or GENERIC_STATE_NAME
             out.append(PublicState(key=state["key"], name=name,
                                    rounds_left=state.get("rounds_left"), others=others))
+        elif gm and owner is not None and not (state.get("data") or {}).get("others"):  # un'aura sospesa resta nascosta
+            out.append(PublicState(key=state["key"], name=owner.name.get(lang) or owner.name["it"],
+                                   rounds_left=state.get("rounds_left")))
     return out
 
 
@@ -106,7 +110,7 @@ async def build_encounter_block(
         for ch in (await db.execute(select(Character).options(selectinload(Character.classes))
                                     .where(Character.id.in_(pc_ids)))).scalars():
             if ch.active_states:
-                states[ch.id] = public_states(ch, lang)
+                states[ch.id] = public_states(ch, lang, gm=viewer_is_gm)
     if enc.status == "setup":
         combs.sort(key=lambda c: (c.created_at, c.id))
     else:

@@ -101,7 +101,7 @@ _LOH_REMOVAL = ConditionRemoval(
     footer={"it": "Non vale su costrutti e non morti.", "en": "Not on constructs or undead."})
 
 LAY_ON_HANDS_USE = OnUse(
-    slot="action", choose_amount=True, heal=lambda _c, _r: 1, heal_when=lambda _c, params: params.get("mode") == "self",
+    slot="action", choose_amount=True, cap_to_missing=True, heal=lambda _c, _r: 1, heal_when=lambda _c, params: params.get("mode") == "self",
     heal_ally_when=lambda _c, params: params.get("mode") == "other", ally_modes=("other",),
     notes=_loh_notes, removal=_LOH_REMOVAL,
     choices=(UseChoice("mode", {"it": "Su chi", "en": "On whom"}, lambda _c: list(_LOH_MODES), lambda k: _LOH_MODES[k]),))
@@ -381,8 +381,8 @@ FEATURES = (
             no_row=True, covered_by="lavori-successivi"),
     feature("divine_sense", CK, ED, 1, "Percezione del Divino / Divine Sense (Paladino 1, pag. 97)",
             ("Percezione del Divino", "Divine Sense"),
-            ("Azione: fino alla fine del tuo prossimo turno senti celestiali, immondi e non morti entro 18 m non al coperto. 1 + Carisma usi, riposo lungo.",
-             "Action: until the end of your next turn you sense celestials, fiends and undead within 60 ft not behind total cover. 1 + Charisma uses, long rest."),
+            ("Azione: fino alla fine del tuo prossimo turno conosci posizione e tipo di celestiali, immondi e non morti entro 18 m non al coperto, e i luoghi consacrati o profanati. 1 + Carisma usi, riposo lungo.",
+             "Action: until the end of your next turn you know the location and kind of celestials, fiends and undead within 60 ft not behind total cover, and consecrated or desecrated places. 1 + Charisma uses, long rest."),
             "action", uses=Uses(table={1: 1}, ability="charisma", minimum=0), restoration="long_rest",
             on_use=OnUse(slot="action", state=StateSpec(
                 "divine_sense", ends_on=("new_turn", "turn_end_counted", "rest_short", "rest_long", "manual"),
@@ -466,8 +466,8 @@ FEATURES = (
                   ("Incantesimi del Giuramento di Devozione", "Oath of Devotion Spells")),
     feature("sacred_weapon", CK, ED, 3, "Arma Consacrata / Sacred Weapon (Incanalare Divinità, Giuramento di Devozione, Paladino 3, pag. 99)",
             ("Arma Consacrata", "Sacred Weapon"),
-            ("Azione, un uso di Incanalare Divinità: per 1 minuto aggiungi il Carisma (minimo +1) ai tiri per colpire con un'arma impugnata, che fa luce e conta come magica.",
-             "Action, one Channel Divinity use: for 1 minute add your Charisma (minimum +1) to attack rolls with a wielded weapon, which sheds light and counts as magical."),
+            ("Azione, un uso di Incanalare Divinità: per 1 minuto aggiungi il Carisma (minimo +1) ai tiri per colpire con un'arma impugnata, che conta come magica e fa luce intensa entro 6 m e fioca per altri 6 m.",
+             "Action, one Channel Divinity use: for 1 minute add your Charisma (minimum +1) to attack rolls with a wielded weapon, which counts as magical and sheds bright light in a 20-foot radius and dim light 20 feet beyond."),
             "action", subclass="devotion", modifiers=(Modifier("attack", _sacred_bonus, when=_sacred_applies, source=f"feature:{CK}.sacred_weapon"),
                                                       Modifier("magic_weapon", 1, when=_sacred_applies, source=f"feature:{CK}.sacred_weapon")),
             on_use=OnUse(slot="action", spends=POOL, available=lambda c: bool(_wielded_weapons(c)), state=_sacred_state, choices=(UseChoice(

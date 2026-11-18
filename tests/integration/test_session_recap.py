@@ -404,3 +404,96 @@ async def test_recap_exhaustion_level_spell_heal_and_real_heal_text(client, test
     assert c["conditions"] == ["exhaustion"] and c["condition_levels"] == {"exhaustion": 2}
     assert "Chi è stato curato di più" in recap_svc._T["it"]["top_healer"]
     assert "Esaurimento 2" in recap_svc.format_recap_text((await _gs(f, sid)).recap, "it").replace("\\", "")
+
+
+async def test_recap_skips_undone_hp_operation(client, test_session_factory):
+    """L12: un danno annullato non conta (danni subiti, fallimenti ai TS contro la morte)."""
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    sid = await _start(client, camp["id"])
+    await _join(client, camp["id"], PLAYER_ID, cid)
+
+    act(PLAYER_ID)
+    for op, v in (("set_max", 20), ("set_current", 20), ("damage", 20)):
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": v})).status_code == 200
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 9, "was_critical_hit": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["death_saves"]["failures"] == 2
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["death_saves"]["failures"] == 0
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 3})).status_code == 200
+
+    await _close(client, sid)
+    c = next(c for c in (await _gs(f, sid)).recap["characters"] if c["character_id"] == cid)
+    assert c["damage_taken"] == 23 and c["downed"] == 1
+    assert c["death_saves"] == {"successes": 0, "failures": 1}
+
+
+async def test_recap_highest_is_a_d20_total_and_counts_initiative(client, test_session_factory):
+    """L13: «Massimo» è il totale più alto di un d20 (iniziativa dell'incontro compresa), mai un danno."""
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    sid = await _start(client, camp["id"])
+    await _join(client, camp["id"], PLAYER_ID, cid)
+
+    act(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter", json={"mode": "light"})
+    assert r.status_code == 201, r.text
+    pc = next(c for c in r.json()["combatants"] if c["kind"] == "pc")
+    act(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 20})
+    assert r.status_code == 200, r.text
+    init_total = next(c for c in r.json()["combatants"] if c["id"] == pc["id"])["initiative"]
+    # un danno alto (d8 + 30) non è un tiro di d20
+    r = await client.post(f"/characters/{cid}/dice/result",
+                          json={"rolls": [{"kind": "d8", "value": 8}], "modifier": 30})
+    assert r.status_code == 200, r.text
+
+    await _close(client, sid)
+    c = next(c for c in (await _gs(f, sid)).recap["characters"] if c["character_id"] == cid)
+    assert c["dice"] == {"rolls": 2, "nat20": 1, "nat1": 0, "highest": init_total}
+
+
+async def test_heal_on_ally_names_the_healer_in_history_feed_and_recap(client, test_session_factory):
+    """M5 + L14: la cura su un alleato dice chi ha curato e con che cosa; il riepilogo premia chi ha curato gli altri."""
+    f = test_session_factory
+    act(GM_ID)
+    from tests.integration.test_campaigns_api import _new_campaign
+    camp = await _new_campaign(client)
+    act(PLAYER_ID)
+    r = await client.post("/characters", json={"name": "Chierico", "initial_class": {
+        "class_name": "cleric", "level": 3, "subclass": "Dominio della Vita"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": cid})).status_code == 200
+    cid2 = await _char(f, P2_ID, name="Bardo")
+    act(P2_ID)
+    assert (await client.post("/campaigns/enroll", json={"code": camp["invite_code"], "character_id": cid2})).status_code == 200
+    sid = await _start(client, camp["id"])
+    await _join(client, camp["id"], PLAYER_ID, cid)
+    await _join(client, camp["id"], P2_ID, cid2)
+
+    act(P2_ID)
+    for op, v in (("set_max", 30), ("set_current", 1)):
+        assert (await client.patch(f"/characters/{cid2}/hp", json={"op": op, "value": v})).status_code == 200
+    act(PLAYER_ID)
+    spell = next(s for s in (await client.get(f"/characters/{cid}/spells")).json() if s["srd_index"] == "cure-wounds")
+    r = await client.post(f"/characters/{cid}/spells/{spell['id']}/roll_healing",
+                          json={"casting_level": 1, "target_character_ids": [cid2]})
+    assert r.status_code == 200, r.text
+    healed = r.json()["healed_allies"][0]["healed"]
+
+    act(P2_ID)
+    hist = (await client.get(f"/characters/{cid2}/history")).json()
+    texts = [h["description"] for h in (hist["items"] if isinstance(hist, dict) else hist)]
+    assert any(t.startswith(f"Cura da Chierico ({spell['name']}): +{healed} HP") for t in texts), texts
+    act(PLAYER_ID)
+    code = (await client.get(f"/sessions/{sid}")).json()["code"]
+    feed = (await client.get(f"/sessions/{code}/feed")).json()["items"]
+    assert f"curato da Chierico con {spell['name']}: +{healed} PF" in [i.get("description") for i in feed]
+
+    await _close(client, sid)
+    hl = {h["key"]: h for h in (await _gs(f, sid)).recap["highlights"]}
+    assert hl["healer"]["character_id"] == cid and hl["healer"]["value"] == healed

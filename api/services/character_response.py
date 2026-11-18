@@ -129,6 +129,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         for c in (char.pending_choices or [])]
 
     usable = {spec.key: (spec.on_use, row) for spec, row in active_features(char) if spec.on_use}
+    summaries = {spec.key: spec.summary for spec, _ in active_features(char) if spec.on_use and (spec.on_use.spends or "").endswith(".channel_divinity")}
     edition = character_edition(char)
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
     dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
@@ -159,6 +160,9 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         ab.rest_damage_choices = rest_choices.get(ab.feature_key, [])
         if on_use and on_use.preview and owner is not None:
             ab.use_preview = on_use.preview(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level))
+        # Le opzioni di una riserva (Incanalare Divinità: Arma Consacrata, Scacciare...) dicono cosa fanno accanto al «Usa» (PA5)
+        if ab.use_preview is None and ab.feature_key in summaries:
+            ab.use_preview = dict(summaries[ab.feature_key])
         ab.gives_to_ally = bool(on_use and on_use.ally_state)
         if on_use and on_use.temp_hp_ally and owner is not None:  # PF temporanei a un PG della serata (Task 46)
             ab.ally_max = on_use.ally_count(RuleContext(char=char, edition=edition, class_row=owner, class_level=owner.level)) if on_use.ally_count else 1

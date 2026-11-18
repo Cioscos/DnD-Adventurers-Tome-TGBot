@@ -22,7 +22,7 @@ vi.mock('@/api/client', () => ({
 }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useParams: () => ({ id: '7' }) }
+  return { ...actual, useParams: () => ({ id: '7' }), useNavigate: () => () => {} }
 })
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>

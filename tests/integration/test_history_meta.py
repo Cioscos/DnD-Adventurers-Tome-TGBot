@@ -200,3 +200,17 @@ async def test_hit_dice_meta_healed(client, test_session_factory):
                           json={"class_id": class_id, "count": 1, "rolls": [9]})
     assert r.status_code == 200, r.text
     assert await _rows(test_session_factory, cid, "hit_dice") == [{"healed": r.json()["healed"]}]
+
+
+async def test_drop_to_zero_history_tells_the_hit_and_the_excess(client, test_session_factory):
+    """L10: a 0 PF la Cronologia dice il colpo intero e l'eccesso, non solo i PF persi; la condizione si chiama Prono."""
+    act(GM_ID)
+    cid = await _new(client)
+    await _setup_hp(client, cid, 30)
+    await _hp(client, cid, "set_current", 9)
+    await _hp(client, cid, "damage", 20)
+    async with test_session_factory() as s:
+        texts = [r.description for r in (await s.execute(
+            select(CharacterHistory).where(CharacterHistory.character_id == cid).order_by(CharacterHistory.id))).scalars()]
+    assert any("-9 HP (9 → 0) — danno 20, eccesso 11" in t for t in texts), texts
+    assert not any("A Terra" in t for t in texts) and any("Prono" in t for t in texts), texts

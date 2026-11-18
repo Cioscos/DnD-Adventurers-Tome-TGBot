@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench, Share2, Minus, Plus, Sparkles, FolderInput, HandHeart } from 'lucide-react'
+import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench, Share2, Minus, Plus, Sparkles, FolderInput, HandHeart, Package } from 'lucide-react'
 import {
   GiCrossedSwords as Swords,
   GiArcheryTarget as Target,
@@ -321,6 +321,8 @@ interface InventoryItemProps {
   onMove?: () => void
   /** Presente solo in sessione con compagni: «Dai a…». */
   onGive?: () => void
+  /** «Deposita» nel deposito di gruppo (serata di campagna). */
+  onDeposit?: () => void
   equipPending: boolean
   attackPending: boolean
   usePending: boolean
@@ -390,6 +392,7 @@ function InventoryItemInner({
   onShare,
   onMove,
   onGive,
+  onDeposit,
   equipPending,
   attackPending,
   usePending,
@@ -602,6 +605,17 @@ function InventoryItemInner({
               >
                 <HandHeart size={12} />
                 {t('character.inventory.give.action')}
+              </Pressable>
+            )}
+            {onDeposit && (
+              <Pressable
+                onClick={onDeposit}
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                           bg-dnd-surface text-dnd-gold border border-dnd-gold-dim/40
+                           active:opacity-60"
+              >
+                <Package size={12} />
+                {t('character.inventory.give.deposit')}
               </Pressable>
             )}
             <Pressable

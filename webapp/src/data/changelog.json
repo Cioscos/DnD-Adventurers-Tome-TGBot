@@ -1,6 +1,74 @@
 {
   "entries": [
     {
+      "version": "3.14.0",
+      "date": "2026-11-18",
+      "added": {
+        "it": [
+          "Danno con più tipi in un'unica operazione (es. perforanti + freddo): resistenze per tipo, un solo TS di concentrazione.",
+          "Pulsante «Liberati» per Trattenuto e Afferrato: prova di Atletica o Acrobazia contro la CD.",
+          "«Termina turno» anche nella pagina Turno, con condizioni attive e TS di fine turno; il giocatore vede chi sta agendo.",
+          "Il master può togliere una condizione a un PG anche fuori combattimento e vede gli stati da privilegio (Arma Consacrata, Ira) nel tracker.",
+          "Tiri salvezza chiesti dal master: CD, vantaggio/svantaggio e «Prima del tiro» prima di tirare, con esito riuscito/fallito.",
+          "Recap: «Chi ha curato di più gli altri»; il master arriva al recap appena chiude la serata.",
+          "Log della serata con incantesimi lanciati, danni con il tipo, fine della concentrazione e uso delle risorse."
+        ],
+        "en": [
+          "Damage with several types in one go (e.g. piercing + cold): resistances per type, a single concentration save.",
+          "\"Escape\" button for Restrained and Grappled: Athletics or Acrobatics check against the DC.",
+          "\"End turn\" on the Turn page too, with active conditions and end-of-turn saves; players see who is acting.",
+          "The GM can remove a condition from a PC outside combat and sees feature states (Sacred Weapon, Rage) in the tracker.",
+          "Saving throws asked by the GM: DC, advantage/disadvantage and \"Before the roll\" before rolling, with pass/fail result.",
+          "Recap: \"Who healed others the most\"; the GM lands on the recap right after closing the session.",
+          "Session log with spells cast, damage with its type, end of concentration and resource use."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Azioni rapide: Incanalare Divinità apre la scelta di effetto e bersaglio invece di spendere un uso a vuoto; usi delle abilità con «disponibili», − e + e Annulla.",
+          "Il d4 di Benedizione si somma da solo ad attacchi e TS; Attacco furtivo già acceso quando c'è vantaggio.",
+          "Incantesimi non lanciabili (azione usata, secondo slot nel turno) segnalati prima di scegliere slot e bersagli; «Tira danni (attivo)» sempre visibile nel Turno.",
+          "Tipo di danno e gittata delle armi, entrambi i d20 in «Il colpo va a segno?», formula completa di Scintilla Divina.",
+          "Cronologia e log dicono chi ha curato chi e con cosa; a 0 PF la Cronologia riporta danno ed eccesso; niente chiavi interne.",
+          "Imposizione delle mani non spende più dei PF mancanti, con passi da 5.",
+          "Fine scontro: la proposta è nella barra in basso con i danni inflitti; condizioni con TS ripetuto e stati di un minuto finiscono con lo scontro.",
+          "Conferma prima di togliere una condizione e di «Applica a un combattente»; Annulla dopo il cambio di competenza.",
+          "Unità metriche predefinite in italiano; riposo breve con slot recuperati e anteprima dei PF; ore trascorse nell'avviso di riposo ravvicinato.",
+          "Descrizioni di Arma Consacrata (luce), Percezione del Divino e opzioni di Incanalare Divinità; una sola card per Benedizione su sé stessi; pulsante «Deposita».",
+          "Card della serata con etichetta e notazione dell'ultimo tiro; fascia di salute scritta nella riga del combattente di turno."
+        ],
+        "en": [
+          "Quick actions: Channel Divinity opens the effect and target choice instead of spending a use; ability uses with \"available\", − and + and Undo.",
+          "Bless's d4 is added automatically to attacks and saves; Sneak Attack already on with advantage.",
+          "Spells that can't be cast (action used, second slot this turn) are flagged before picking slot and targets; \"Roll damage (active)\" always visible in the Turn.",
+          "Weapon damage type and range, both d20s in \"Does it hit?\", full Divine Spark formula.",
+          "History and log tell who healed whom and with what; at 0 HP the history shows damage and excess; no internal keys.",
+          "Lay on Hands no longer spends more than the missing HP, with steps of 5.",
+          "End of combat: the offer sits in the bottom bar with damage dealt; conditions with repeated saves and one-minute states end with the encounter.",
+          "Confirmation before removing a condition and before \"Apply to a combatant\"; Undo after changing a proficiency.",
+          "Metric units by default in Italian; short rest with recovered slots and HP preview; hours elapsed in the early-rest warning.",
+          "Descriptions for Sacred Weapon (light), Divine Sense and Channel Divinity options; a single card for Bless on yourself; \"Deposit\" button.",
+          "Session card with label and notation of the last roll; written health band in the acting combatant's row."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Dopo aver attaccato non si può più lanciare un incantesimo con la stessa azione.",
+          "«Termina» sullo stato di un incantesimo a concentrazione chiude anche la concentrazione.",
+          "Il recap non conta più danni, cure e tiri contro la morte annullati.",
+          "Il «d20 più alto» e i 20/1 naturali del recap contano tutti i d20 della serata, iniziativa inclusa.",
+          "Il TS pendente non resta sulla riga di un mostro morto; il banner del TS contro la morte sparisce dopo il tiro."
+        ],
+        "en": [
+          "After attacking you can no longer cast a spell with the same action.",
+          "\"End\" on a concentration spell's state also ends concentration.",
+          "The recap no longer counts undone damage, healing and death saves.",
+          "The recap's \"highest d20\" and natural 20s/1s count every d20 of the session, initiative included.",
+          "A pending save no longer stays on a dead monster's row; the death save banner disappears after the roll."
+        ]
+      }
+    },
+    {
       "version": "3.13.0",
       "date": "2026-11-17",
       "added": {

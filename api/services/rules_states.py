@@ -19,6 +19,7 @@ from core.db.models import Ability, SpellSlot
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect, refund_spent
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX
 from core.rules.states import begin_state, has_state, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
@@ -61,6 +62,20 @@ def end_states(char, *reasons: str, within: int | None = None, keep: set[str] = 
         char.active_states = left  # nuova lista: SQLAlchemy non vede le mutazioni in place
         settle_closed(char, [s for s in states if s not in kept])
     return [s["key"] for s in states if s not in kept]
+
+
+MINUTE_ROUNDS = 10  # un minuto: a fine scontro gli stati che durano fino a qui finiscono (L5)
+
+
+def end_minute_states(char) -> list[str]:
+    """Fine dello scontro: chiude gli stati a round che durano al più un minuto (Arma Consacrata, Benedizione); restano
+    quelli più lunghi, senza togliere loro tempo, e quelli senza durata. Restituisce i nomi degli stati chiusi."""
+    states = get_states(char)
+    closed = [s for s in states if s["rounds_left"] is not None and s["rounds_left"] <= MINUTE_ROUNDS]
+    if closed:
+        char.active_states = [s for s in states if s not in closed]
+        settle_closed(char, closed)
+    return [state_name(char, s) for s in closed if not str(s.get("key", "")).startswith(SPELL_CLOCK_PREFIX)]  # l'orologio del lanciatore non è un nome
 
 
 def end_on_new_turn(char, *, advances: bool = True) -> list[str]:
@@ -281,6 +296,7 @@ async def _spend_slot(session: AsyncSession, char, level: int, pact_only: bool =
 @dataclass
 class UseResult:
     rolls: list[int] = field(default_factory=list)
+    flat: int = 0  # il fisso che l'effetto somma ai dadi (Saggezza della Scintilla Divina): il client scrive la formula intera
     healed: int = 0
     state: dict | None = None
     notes: list[str] = field(default_factory=list)
@@ -301,8 +317,8 @@ def _feature_attack(char, ability: str) -> dict:
     from core.rules.modifiers import modifiers_for
     applied = modifiers_for(char, "attack", ability=ability, attack_mode="ranged")
     outcome = resolve_applied("normal", None, None, applied)
-    record_dice(char, d20_records(outcome))
     bonus = char.proficiency_bonus + effective_ability_mod(char, ability) + applied.flat
+    record_dice(char, d20_records(outcome), outcome.kept + bonus)
     fumble = outcome.kept == 1
     return {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "bonus": bonus, "total": outcome.kept + bonus,
             "is_fumble": fumble, "is_critical": outcome.kept >= applied.crit_min and not fumble, "notes": applied.notes}
@@ -432,8 +448,20 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         # senza riga o con usi a None il contatore è illimitato solo se la formula lo dichiara (max_uses None)
         if ability is None or (ability.max_uses is not None and (ability.uses or 0) < cost):
             raise _err(status.HTTP_409_CONFLICT, "no_uses")
+    capped = False
+    if on_use.cap_to_missing:  # L2: non si spende più di quanto manca a chi riceve la cura; a PF pieni non si spende nulla
+        healed_one = (await load_receiver(session, target.id) if target is not None else None) if heals_ally else (char if on_use.heal_when is None or on_use.heal_when(ctx_choice, params or {}) else None)
+        if healed_one is not None:
+            from api.services.effects import get_passive_modifiers as _hb  # import locale: effects richiama on_conditions
+            from core.rules.modifiers import effective_hp_max as _max
+            missing = max(0, _max(healed_one, await _hb(session, healed_one, "character.hit_points_max")) - healed_one.current_hit_points)
+            if missing == 0:
+                raise _err(status.HTTP_409_CONFLICT, "no_benefit")
+            capped, amount = amount > missing, min(amount, missing)
+            cost = on_use.cost_by(ctx_choice, params or {}) if on_use.cost_by else on_use.cost * amount
     slot = on_use.slot_by(ctx_choice, params or {}) if on_use.slot_by else on_use.slot
-    if slot:
+    # chi rinuncia a un attacco dell'azione Attacco già iniziata (Soffio) non spende di nuovo l'azione
+    if slot and not (on_use.forgoes_attack and slot == "action" and get_turn(char)["action_attacks"] > 0):
         spend(char, slot)  # 409 turn_slot_used prima di toccare gli usi
     if on_use.spends_slot and (on_use.spends_slot_when is None or on_use.spends_slot_when(ctx_choice, params or {})):
         await _spend_slot(session, char, int((params or {})[on_use.spends_slot]), on_use.spends_slot_pact_only)
@@ -467,6 +495,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     for _ in range(1 if on_use.rolls_by_amount else amount):  # l'effetto è per unità: un pool (Imposizione delle Mani) lo ripete N volte
         rolled = ([dice[1]] * dice[0] if maximize else [random.randint(1, dice[1]) for _ in range(dice[0])]) if dice else []
         result.rolls += rolled
+        if on_use.heal and rolled:
+            result.flat += on_use.heal(ctx, sum(rolled)) - sum(rolled)
         if on_use.heal and (on_use.heal_when is None or on_use.heal_when(ctx, params or {})):
             healed += max(0, on_use.heal(ctx, sum(rolled)))
         if on_use.heal and heals_ally:
@@ -495,6 +525,8 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         result.given = None  # consegnato: niente toast «da dare a un alleato»
     if on_use.notes:
         result.notes += on_use.notes(ctx, params or {})
+    if capped:
+        result.notes.append("amount_capped")
     if heals_ally:
         if target is None:  # fuori serata, o un'altra creatura: il giocatore lo riporta al GM (D1)
             if on_use.heal_ally_add_level:  # i Dadi Vita del bersaglio li somma il giocatore (nota healer_other)
@@ -517,7 +549,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
                 if (target.conditions or {}).get("prone"):
                     from api.services.effects import apply_conditions as _conditions  # import locale, come sopra
                     await _conditions(session, target, {"prone": False})
-            got = (await apply_heal(session, target, healed_ally))["healed"]
+            got = (await apply_heal(session, target, healed_ally, by=char, source=spec.name["it"]))["healed"]
             result.received = {"name": target.name, "healed": got}
     if removal_plan is not None and (removal_plan[0] or removal_plan[1]):  # dopo la spesa atomica: lo stesso uso non può togliere due volte
         conds, untracked, targets, explicit = removal_plan

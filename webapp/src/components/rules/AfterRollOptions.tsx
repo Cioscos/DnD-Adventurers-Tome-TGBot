@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useMatch } from 'react-router-dom'
@@ -113,6 +113,16 @@ export default function AfterRollOptions({ charId, query, rollToken, onResult }:
       refresh()
     },
   })
+
+  // LA3: il d4 di Benedizione si somma da solo appena visto il tiro, una volta per tiro (anche se la richiesta fallisce).
+  const auto = options.find((o) => o.preselected && o.after === 'add')
+  const autoDone = useRef<{ token: unknown; key: string } | null>(null)
+  const { mutate: applyOption } = apply
+  useEffect(() => {
+    if (!auto || (autoDone.current?.token === rollToken && autoDone.current?.key === auto.key)) return
+    autoDone.current = { token: rollToken, key: auto.key }
+    applyOption(auto)
+  }, [auto, rollToken, applyOption])
 
   if (current.asking) {
     return <RefundQuestion charId={charId} onDone={() => setState({ ...current, asking: false })} />

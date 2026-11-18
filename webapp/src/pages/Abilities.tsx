@@ -18,7 +18,8 @@ import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
 import SwitchToggle from '@/components/ui/SwitchToggle'
-import { LEDGER_TITLE, gemClass, ledgerEntry } from '@/styles/ledger'
+import { LEDGER_TITLE, ledgerEntry } from '@/styles/ledger'
+import { showUndoToast } from '@/components/ui/UndoToast'
 import ScrollArea from '@/components/ScrollArea'
 import FilterChip from '@/components/ui/FilterChip'
 import FilterRow from '@/components/ui/FilterRow'
@@ -206,6 +207,18 @@ export default function Abilities() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
   })
 
+  // Spendere un uso dalla pagina si può annullare: un tocco sbagliato non lo perde (T14)
+  const spendUse = (ab: Ability, current: number) => {
+    if (current <= 0) return
+    usesMutation.mutate({ abilityId: ab.id, uses: current - 1 }, {
+      onSuccess: () => showUndoToast({
+        message: t('character.quick_actions.ability_used_toast', { name: ab.name, current: current - 1, max: ab.max_uses ?? 0 }),
+        actionLabel: t('character.quick_actions.undo'),
+        onUndo: () => usesMutation.mutate({ abilityId: ab.id, uses: current }),
+      }),
+    })
+  }
+
   const deleteMutation = useMutation({
     mutationFn: (abilityId: number) => api.abilities.remove(charId, abilityId),
     onSuccess: () => {
@@ -338,7 +351,6 @@ export default function Abilities() {
     const hasUses = ab.max_uses != null
     const max = ab.max_uses ?? 0
     const current = ab.uses ?? 0
-    const usedCount = max - current            // pallini "accesi" = usati (come gli slot)
     const isDepleted = hasUses && current === 0
     const usePips = hasUses && max <= PIP_THRESHOLD
     // Tratti di specie 2024: riga di catalogo senza classe, la sincronizzazione la ricrea (niente elimina).
@@ -431,37 +443,13 @@ export default function Abilities() {
                   </div>
                 )}
 
-                {/* Usi ≤ soglia → pallini interattivi (acceso = usato, come gli slot) */}
-                {usePips && (
-                  <div className="flex gap-2 flex-wrap py-1">
-                    {Array.from({ length: max }).map((_, i) => {
-                      const isUsed = i < usedCount
-                      return (
-                        <Pressable
-                          key={i}
-                          onClick={() =>
-                            usesMutation.mutate({
-                              abilityId: ab.id,
-                              uses: isUsed ? current + 1 : current - 1,
-                            })
-                          }
-                          pending={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
-                          spinnerSize={12}
-                          whileTap={{ scale: 0.85 }}
-                          aria-pressed={isUsed}
-                          className={`${gemClass(isUsed)} disabled:opacity-50`}
-                        />
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* Usi > soglia → stepper numerico */}
-                {hasUses && !usePips && (
+                {/* T14: −/+ espliciti (spendere chiede un tocco su «−», con Annulla); i pallini solo mostrano: pieno = disponibile */}
+                {hasUses && (
                   <div className="flex items-center gap-3">
                     <IconButton
                       icon={<Minus size={16} />}
-                      onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
+                      aria-label={t('character.abilities.spend_use')}
+                      onClick={() => spendUse(ab, current)}
                       loading={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
                       disabled={current <= 0}
                       haptic="none"
@@ -474,16 +462,25 @@ export default function Abilities() {
                       whileTap={{ scale: 0.97 }}
                       aria-label={t('character.abilities.set_uses_title')}
                     >
-                      <p className="text-lg font-display font-black text-dnd-gold-bright">
-                        <span className="font-mono">{current}</span>
-                        <span className="text-sm text-dnd-text-muted"> / {max}</span>
-                      </p>
-                      <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-text-faint">
-                        {t('character.abilities.tap_to_edit')}
+                      {usePips ? (
+                        <span data-testid="ability-pips" className="flex flex-wrap justify-center gap-1.5 py-1">
+                          {Array.from({ length: max }).map((_, i) => (
+                            <span key={i} className={`h-4 w-4 rounded-full border-2 ${i < current ? 'border-dnd-gold-bright bg-dnd-gold' : 'border-dnd-gold-dim'}`} />
+                          ))}
+                        </span>
+                      ) : (
+                        <p className="text-lg font-display font-black text-dnd-gold-bright">
+                          <span className="font-mono">{current}</span>
+                          <span className="text-sm text-dnd-text-muted"> / {max}</span>
+                        </p>
+                      )}
+                      <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-text-faint tabular-nums">
+                        {usePips ? t('character.abilities.uses_available', { current, max }) : t('character.abilities.tap_to_edit')}
                       </p>
                     </Pressable>
                     <IconButton
                       icon={<Plus size={16} />}
+                      aria-label={t('character.abilities.restore_use')}
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(max, current + 1) })}
                       loading={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
                       disabled={current >= max}

@@ -230,6 +230,21 @@ describe('CombatPanel', () => {
       expect(screen.getByTestId('end-summary')).toHaveTextContent('session.combat.end_summary')
     })
 
+    it('M2: la proposta di fine scontro sta nel dock e il riepilogo dice i danni inflitti', () => {
+      renderPanel(active(1, [{ ...goblin, is_dead: true, current_hp: 0 }, me, ally]), { amGm: true, myUserId: GM_ID })
+      const dock = screen.getByTestId('combat-dock')
+      expect(dock).toContainElement(screen.getByText('session.combat.all_monsters_down'))
+      fireEvent.click(within(dock).getByText('session.combat.end_cta'))
+      expect(screen.getByTestId('end-damage')).toHaveTextContent('session.combat.end_damage')
+    })
+
+    it("L4: il TS d'inizio turno del mostro che agisce si risolve dalla card", () => {
+      const ps = { id: 9, status: 'pending', ability: 'strength', dc: 15, slug: 'restrained' }
+      renderPanel(active(2, [{ ...goblin, pending_saves: [ps] } as CombatantLive, me, ally]), { amGm: true, myUserId: GM_ID })
+      const card = screen.getByTestId('active-combatant-card')
+      expect(within(card).getByText('session.combat.save_passed')).toBeInTheDocument()
+    })
+
     it('U30: finché un mostro è vivo la fine non viene proposta nel dock', () => {
       renderPanel(active(2), { amGm: true, myUserId: GM_ID })
       expect(screen.queryByText('session.combat.end_cta')).not.toBeInTheDocument()

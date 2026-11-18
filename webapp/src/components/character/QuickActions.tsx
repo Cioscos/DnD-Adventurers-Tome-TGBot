@@ -1,6 +1,7 @@
 import { askRollOptions } from '@/lib/rollOptions'
 import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import { lazy, Suspense, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { classLabel } from '@/lib/classLabel'
@@ -84,6 +85,7 @@ export default function QuickActions({ char }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
+  const navigate = useNavigate()
   const rollDice = useAnimatedRoll()
   const rollD20 = useD20Roll()
   const attack = useAttackRoll()
@@ -316,7 +318,12 @@ export default function QuickActions({ char }: Props) {
       case 'weapon': attackMutation.mutate({ itemId: action.item.id, mode }); break
       case 'save': saveMutation.mutate({ ability: action.ability, mode }); break
       case 'spell': castFlow.beginCast(action.spell, mode); break
-      case 'ability': consumeAbility(action.ability); break
+      // T14: un privilegio con un effetto (o una riserva come Incanalare Divinità, spesa dalle sue opzioni) si usa dal
+      // Turno, dove si scelgono effetto e bersaglio; qui un tocco segnerebbe solo un uso senza effetto.
+      case 'ability':
+        if (action.ability.has_on_use || action.ability.is_pool) navigate(`/char/${char.id}/turn`)
+        else consumeAbility(action.ability)
+        break
       case 'hit_die':
         if (action.remaining > 0) setConfirmHitDie({ cls: action.cls, remaining: action.remaining })
         break

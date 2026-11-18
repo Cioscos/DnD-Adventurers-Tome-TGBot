@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Minus, Plus, Heart, HeartPulse, Check, ShieldPlus } from 'lucide-react'
+import { Minus, Plus, Heart, HeartPulse, Check, ShieldPlus, X } from 'lucide-react'
 import { GiSkullCrossedBones as Skull } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
@@ -8,6 +8,7 @@ import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import DamageTypeControls from '@/components/ui/DamageTypeControls'
+import DamageTypePicker from '@/components/ui/DamageTypePicker'
 import HpQuickChips from '@/components/character/HpQuickChips'
 import { applyDamageModifier, damagePreviewText, type DamageModifier, type DamageMultiplier } from '@/lib/damageModifier'
 
@@ -37,7 +38,14 @@ interface HpOperationFormProps {
   setDamageType?: (type: string) => void
   /** Moltiplicatore proposto dalle resistenze del personaggio per `damageType`. */
   proposedModifier?: DamageMultiplier
+  /** L9: secondo tipo dello stesso colpo (morso: perforanti + freddo); senza `setExtraDamage` non compare. */
+  extraDamage?: ExtraDamage | null
+  setExtraDamage?: (extra: ExtraDamage | null) => void
+  /** Il secondo tipo dopo le resistenze del personaggio, per il pulsante. */
+  extraApplied?: number
 }
+
+export type ExtraDamage = { amount: string; type: string }
 
 // Short labels fit the 5-column segmented control at 390px viewport.
 const ops: { key: HPOp; label_key: string; full_key: string; icon: IconCmp; toneClass: string }[] = [
@@ -68,6 +76,9 @@ export default function HpOperationForm({
   damageType = '',
   setDamageType,
   proposedModifier,
+  extraDamage = null,
+  setExtraDamage,
+  extraApplied = 0,
 }: HpOperationFormProps) {
   const { t } = useTranslation()
   const rawTyped = parseInt(value, 10)
@@ -133,6 +144,43 @@ export default function HpOperationForm({
             setDamageModifier={setDamageModifier}
             proposedModifier={proposedModifier}
           />
+          {setExtraDamage && (extraDamage ? (
+            <div className="space-y-2 rounded-xl border border-dnd-border p-3" data-testid="extra-damage">
+              <div className="flex items-end gap-2">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  label={t('character.hp.extra_damage')}
+                  value={extraDamage.amount}
+                  onChange={(amount) => setExtraDamage({ ...extraDamage, amount })}
+                  placeholder="0"
+                  min={0}
+                  commitOnBlur={false}
+                  className="flex-1 min-w-0"
+                />
+                <Pressable
+                  onClick={() => { setExtraDamage(null); haptic.selection() }}
+                  aria-label={t('character.hp.extra_damage_remove')}
+                  className="flex shrink-0 items-center justify-center min-h-[48px] min-w-[48px] rounded-lg border border-dnd-border text-dnd-text-muted"
+                >
+                  <X size={18} />
+                </Pressable>
+              </div>
+              <DamageTypePicker
+                label=""
+                value={extraDamage.type}
+                onChange={(type) => setExtraDamage({ ...extraDamage, type })}
+                valueFormat="spell"
+                allowEmpty
+                columns={3}
+                excludeOther
+              />
+            </div>
+          ) : (
+            <Button variant="secondary" fullWidth icon={<Plus size={16} />} onClick={() => setExtraDamage({ amount: '', type: '' })}>
+              {t('character.hp.extra_damage_add')}
+            </Button>
+          ))}
           {atZero && (
             <Pressable
               onClick={() => { setCrit(!crit); haptic.selection() }}
@@ -215,7 +263,7 @@ export default function HpOperationForm({
             haptic="medium"
           >
             {rawTyped > 0
-              ? t(`character.hp.apply_${activeOp}`, { count: activeOp === 'damage' ? applyDamageModifier(rawTyped, effective) : rawTyped })
+              ? t(`character.hp.apply_${activeOp}`, { count: activeOp === 'damage' ? applyDamageModifier(rawTyped, effective) + extraApplied : rawTyped })
               : t('common.confirm')}
           </Button>
         </div>

@@ -175,7 +175,7 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         dice=spec.extra_dice(ctx, {}) if fixed and spec.extra_dice else None,
         bonus=spec.bonus(ctx, {}) if fixed and spec.bonus else None,
         mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
-        preselected=True if spec.preselected else None,
+        preselected=True if (spec.preselected(ctx) if callable(spec.preselected) else spec.preselected) else None,
         offered_on_damage=spec.offered_on_damage, ranged_unarmed=True if spec.ranged_unarmed else None,
         outside_action=True if spec.outside_action else None,
         defers_damage=True if spec.defers_damage else None,

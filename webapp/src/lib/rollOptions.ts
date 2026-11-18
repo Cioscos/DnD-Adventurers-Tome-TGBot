@@ -78,10 +78,28 @@ async function castWarnings(charId: number, spellId: number, ritual: boolean): P
   }
 }
 
+/** Regole del turno (secondo slot, incantesimo ad azione bonus) già confermate all'inizio del lancio (T3). */
+const TURN_RULES = ['one_slot_per_turn', 'bonus_spell']
+let turnRulesConfirmed: { spellId: number; codes: string[] } | null = null
+
+/** T3: le regole del turno si chiedono all'apertura del lancio, non dopo slot, bersagli e tiro. `false` se il giocatore rinuncia. */
+export async function confirmTurnRules(charId: number, spellId: number): Promise<boolean> {
+  turnRulesConfirmed = null
+  const codes = (await castWarnings(charId, spellId, false)).filter((c) => TURN_RULES.includes(c))
+  for (const code of codes) {
+    if (!(await askCastConfirm(code))) return false
+  }
+  turnRulesConfirmed = { spellId, codes }
+  return true
+}
+
 /** Prima dei dadi: conferme delle regole violate, poi opzioni del lancio. `CastCancelled` se il giocatore rinuncia. */
 export async function prepareCast(charId: number, spellId: number, ritual: boolean, castingLevel?: number | null, freeCast = false) {
   const confirm = await castWarnings(charId, spellId, ritual)
+  const asked = turnRulesConfirmed?.spellId === spellId ? turnRulesConfirmed.codes : []
+  turnRulesConfirmed = null  // vale per un lancio solo
   for (const code of confirm) {
+    if (asked.includes(code)) continue  // già confermata all'apertura del lancio
     if (!(await askCastConfirm(code))) throw new CastCancelled()
   }
   // Il tipo di danno scelto al lancio (Sfera Cromatica...): l'Affinità Elementale al lancio si offre su quello, non sul tipo di base.
@@ -152,6 +170,13 @@ export function optionHints(option: RollOption, t: TFunction, diceCut = 0): stri
   ].filter((hint): hint is string => !!hint)
 }
 
+/** «6 + 3 = 9»: i dadi di un privilegio col fisso che l'effetto ci somma (Saggezza della Scintilla Divina, PA1). */
+export function rolledText(rolls: number[], flat = 0): string {
+  const dice = rolls.reduce((a, b) => a + b, 0)
+  const tail = flat ? ` ${flat > 0 ? '+' : '−'} ${Math.abs(flat)}` : ''
+  return `${rolls.join(' + ')}${tail} = ${Math.max(0, dice + flat)}`
+}
+
 /** «3d6» meno `n` dadi (Colpo Astuto sull'Attacco Furtivo); invariato se non è «NdX». */
 export function lessDice(dice: string, n: number): string {
   const m = /^(\d+)d(\d+)$/.exec(dice.trim())
@@ -186,6 +211,9 @@ export async function askRollOptions(
     ? listed.filter((o) => o.phase === 'after_roll' && !o.needs && !context?.used?.includes(o.key)
         && !(context?.fumble && o.after === 'add'))
     : []
+  // Il d4 di Benedizione si somma da solo, prima di ogni domanda: il chiamante lo applica e richiede (LA3).
+  const auto = afterRoll.find((o) => o.preselected && o.after === 'add')
+  if (auto) return { options: [], option_inputs: {}, outcome: 'after_roll', after_option: auto }
   // Una scelta con uno slot di turno proprio (azione bonus, reazione) non è un attacco dell'azione Attacco.
   const withSlot = (chosen: string[]): { own_slot?: true } => (listed.some((o) => chosen.includes(o.key) && (o.slot || o.outside_action)) ? { own_slot: true } : {})
   const withRanged = (chosen: string[]): { ranged?: true } => (listed.some((o) => chosen.includes(o.key) && o.ranged_unarmed) ? { ranged: true } : {})

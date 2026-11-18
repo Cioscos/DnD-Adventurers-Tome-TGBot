@@ -129,6 +129,7 @@ async def test_early_long_rest_needs_confirm(client, monkeypatch, edition, hours
     monkeypatch.setattr(hp, "_utcnow", lambda: t0 + timedelta(hours=hours))
     preview = (await client.get(f"/characters/{cid}/rest/preview", params={"rest_type": "long"})).json()
     assert preview["too_soon"] is needs_confirm  # l'avviso arriva già nel primo modale
+    assert preview["hours_since_long_rest"] == (hours if needs_confirm else None)  # con le ore trascorse
     r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})
     if needs_confirm:
         assert r.status_code == 409 and r.json()["detail"] == "long_rest_too_soon"

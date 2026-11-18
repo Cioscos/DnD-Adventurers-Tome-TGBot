@@ -66,6 +66,8 @@ type Props = {
   afterRoll?: { charId: number; query: RollOptionsQuery }
   /** Tiro per colpire: solo qui un 1 naturale è un «Fumble!» (su prove e TS non ha effetti di regola). */
   attack?: boolean
+  /** CD da battere (TS chiesto dal master): sotto il totale, riuscito o fallito. */
+  dc?: number
 }
 
 export default function RollResultModal({
@@ -79,6 +81,7 @@ export default function RollResultModal({
   onInspirationReroll,
   afterRoll,
   attack = false,
+  dc,
 }: Props) {
   const { t } = useTranslation()
   const [result, retouch] = useRetouched(rolled)
@@ -169,6 +172,12 @@ export default function RollResultModal({
       </m.div>
 
       <D20Breakdown key={`breakdown-${die}-${wasRerolled}`} roll={result} />
+
+      {dc != null && (
+        <p data-testid="roll-vs-dc" className={`font-display font-bold tabular-nums ${!autoFail && total >= dc ? 'text-dnd-emerald-bright' : 'text-dnd-crimson-bright'}`}>
+          {t(!autoFail && total >= dc ? 'character.saves.passed_dc' : 'character.saves.failed_dc', { dc })}
+        </p>
+      )}
 
       <RollNotes notes={result.notes} optionResult={result.option_result} />
       {note && <p className="text-xs text-dnd-text font-body">{note}</p>}

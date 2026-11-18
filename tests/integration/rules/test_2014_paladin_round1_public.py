@@ -54,3 +54,17 @@ async def test_the_paladin_sheet_keeps_the_permanent_states_and_no_one_can_leave
     sid, cid = await _paladin_at_the_table(client, test_session_factory, monkeypatch, 10)
     keys = {s["key"] for s in (await _full(client, cid))["active_states"] or []}
     assert {COURAGE, DEVOTION} <= keys
+
+
+async def test_the_gm_sees_the_paladins_own_states_like_sacred_weapon(client, test_session_factory, monkeypatch):
+    """M6: Arma Consacrata non dà effetti ad altri, ma il GM la vede nel tracker (nome dal catalogo, round rimasti); il gruppo no."""
+    sid, cid = await _paladin_at_the_table(client, test_session_factory, monkeypatch, 3)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.active_states = [*(char.active_states or []), {
+            "key": "sacred_weapon", "feature_key": "paladin.sacred_weapon", "rounds_left": 9,
+            "ends_on": ["manual"], "data": {}, "name": "Nome privato del giocatore"}]
+        await s.commit()
+    gm = {s["key"]: s for s in await _combatant_states(client, sid, GM_ID)}
+    assert gm["sacred_weapon"]["rounds_left"] == 9 and gm["sacred_weapon"]["name"] != "Nome privato del giocatore"
+    assert "sacred_weapon" not in {s["key"] for s in await _combatant_states(client, sid, PLAYER_ID)}

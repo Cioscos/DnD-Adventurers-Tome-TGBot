@@ -86,6 +86,16 @@ describe('RestSheet short rest', () => {
     expect(notifyMutationError).not.toHaveBeenCalled()
   })
 
+  it('previews the HP the rolled dice will give, capped at the missing HP', async () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.99)  // d10 senza animazione: 10 e 10
+    setup({ ...char, classes: [{ id: 1, class_name: 'fighter', level: 3, hit_die: 10 }], hit_points: 30, current_hit_points: 20,
+      ability_scores: [{ name: 'constitution', modifier: 2 }] } as unknown as CharacterFull)
+    await openShortRest()
+    await userEvent.click(screen.getByText('spend'))
+    expect(await screen.findByTestId('rest-hp-gain')).toBeTruthy()
+    random.mockRestore()
+  })
+
   it('confirming the rest updates the sheet and closes', async () => {
     const updated = { ...char, current_hit_points: 9 }
     rest.mockResolvedValue(updated)
@@ -234,11 +244,11 @@ describe('RestSheet preview', () => {
   })
 
   it('a long rest too soon warns in the first modal and «Rest anyway» sends confirm_early (U51)', async () => {
-    restPreview.mockResolvedValue({ ...preview, too_soon: true })
+    restPreview.mockResolvedValue({ ...preview, too_soon: true, hours_since_long_rest: 5 })
     rest.mockResolvedValue(char)
     setup()
     await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
-    expect(await screen.findByTestId('rest-too-soon')).toBeTruthy()
+    expect(await screen.findByTestId('rest-too-soon')).toHaveTextContent('character.quick_actions.rest_too_soon_elapsed')
     await userEvent.click(screen.getByText('confirm'))
     await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'long', expect.objectContaining({ confirm_early: true })))
   })
@@ -286,6 +296,7 @@ describe('Natural Recovery (druid, Circle of the Land)', () => {
     expect(screen.getByTestId('nr-count-1')).toHaveTextContent('2')
     expect(screen.getByTestId('nr-left')).toHaveTextContent('1')
     expect(btn('nr-plus-2')).toBeDisabled()  // un livello 2 costa più di quello che resta
+    expect(screen.getByTestId('nr-cap')).toBeTruthy()  // MA6: il motivo dei «+» spenti
     await userEvent.click(btn('nr-minus-1'))
     await userEvent.click(btn('nr-plus-2'))
     expect(btn('nr-plus-2')).toBeDisabled()  // spesi: uno solo
@@ -344,6 +355,8 @@ describe('Arcane Recovery (wizard)', () => {
     await userEvent.click(screen.getByText('rest'))
     await waitFor(() => expect(rest).toHaveBeenCalledWith(7, 'short', expect.objectContaining({ arcane_recovery: { 2: 1 } })))
     expect(rest.mock.calls[0][2].natural_recovery).toBeUndefined()
+    // MA6: l'esito del riposo cita lo slot ripreso
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledWith('character.quick_actions.rest_arcane_done'))
   })
 })
 

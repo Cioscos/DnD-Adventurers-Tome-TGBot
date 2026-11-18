@@ -457,9 +457,22 @@ def _spec_anywhere(edition: str, key_of_class: str, feature_key: str) -> Feature
     return None
 
 
+# Testi di classe sostituiti: le righe che li hanno ancora non sono modifiche dell'utente e prendono quelli nuovi (3.13.x).
+_OLD_CLASS_TEXTS: dict[str, tuple[str, ...]] = {
+    "paladin.divine_sense": (
+        "Azione: fino alla fine del tuo prossimo turno senti celestiali, immondi e non morti entro 18 m non al coperto. 1 + Carisma usi, riposo lungo.",
+        "Action: until the end of your next turn you sense celestials, fiends and undead within 60 ft not behind total cover. 1 + Charisma uses, long rest."),
+    "paladin.sacred_weapon": (
+        "Azione, un uso di Incanalare Divinità: per 1 minuto aggiungi il Carisma (minimo +1) ai tiri per colpire con un'arma impugnata, che fa luce e conta come magica.",
+        "Action, one Channel Divinity use: for 1 minute add your Charisma (minimum +1) to attack rolls with a wielded weapon, which sheds light and counts as magical.",
+        "Con l'azione Attacca, un uso di Incanalare Divinità: per 10 minuti aggiungi il Carisma (minimo +1) ai tiri per colpire con l'arma impugnata, che fa luce.",
+        "With the Attack action, one Channel Divinity use: for 10 minutes add your Charisma (minimum +1) to attack rolls with the wielded weapon, which sheds light."),
+}
+
+
 def _generated_descriptions(key_of_class: str, feature_key: str) -> set[str]:
     """I testi scritti dall'app per questa feature: tutto il resto è una modifica dell'utente."""
-    texts: set[str] = set()
+    texts: set[str] = set(_OLD_CLASS_TEXTS.get(feature_key, ()))
     for ed in EDITIONS:
         for spec in features_for(ed, key_of_class):
             if spec.key == feature_key:

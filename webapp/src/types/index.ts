@@ -199,6 +199,8 @@ export interface ZeroHpSaveResult {
 
 export interface FeatureUseResult {
   rolls: number[]
+  /** Il fisso sommato ai dadi (Saggezza della Scintilla Divina): «6 + 3 = 9». */
+  flat?: number
   healed: number
   state: ActiveState | null
   notes: string[]
@@ -787,6 +789,8 @@ export interface SessionRecapCharacter {
   conditions: string[]
   /** Livello per le condizioni a livelli (Spossatezza); assente nei recap vecchi. */
   condition_levels?: Record<string, number>
+  /** PF curati ad altri PG; assente nei recap vecchi. */
+  healing_given?: number
 }
 
 export interface SessionRecap {
@@ -808,7 +812,7 @@ export interface SessionRecap {
   lore: { id: number; title: string }[]
   /** Assente nei recap vecchi. */
   places?: { map_id: number; marker_id: number | null; title: string }[]
-  highlights: { key: 'unluckiest' | 'luckiest' | 'most_damage' | 'top_healer'; character_id: number; name: string; value: number }[]
+  highlights: { key: 'unluckiest' | 'luckiest' | 'most_damage' | 'top_healer' | 'healer'; character_id: number; name: string; value: number }[]
 }
 
 export interface ScheduleRead {
@@ -1175,6 +1179,8 @@ export interface TurnBlock {
   /** Ordini alla bestia del Signore delle Bestie in questo turno: quanti attacchi le restano. */
   beast?: { id: number; attacks_left?: number; attacked?: boolean; bonus_order?: boolean; commands?: string[] }
   last_roll?: { roll_id: string; roll?: string; skill?: string | null; total: number; refundable?: Record<string, string[]> } | null
+  /** TS contro la morte già tirato in questo turno: il banner che lo chiede si spegne. */
+  death_save_rolled?: boolean
 }
 
 export type TurnSlot = 'action' | 'bonus' | 'reaction' | 'free_interaction' | 'spell_slot' | 'bonus_spell' | 'attack'

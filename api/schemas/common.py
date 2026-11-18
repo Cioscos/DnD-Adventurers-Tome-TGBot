@@ -363,6 +363,12 @@ class HPOp(str, Enum):
     SET_TEMP = "set_temp"
 
 
+class DamagePart(BaseModel):
+    """Un altro tipo di danno dello stesso colpo (morso: 15 perforanti + 5 freddo)."""
+    amount: int = Field(ge=0, le=9999)
+    damage_type: str | None = Field(None, max_length=40)
+
+
 class HPUpdate(RollOptionsBody):
     op: HPOp
     value: int
@@ -374,6 +380,9 @@ class HPUpdate(RollOptionsBody):
     damage_modifier: Literal["half", "double", "half_double", "none", "immune"] | None = None
     raw_value: int | None = Field(None, ge=0)
     damage_type: str | None = Field(None, max_length=40)
+    # Solo DAMAGE: le altre parti del colpo, ognuna con le sue resistenze; il danno resta uno (un TS di concentrazione,
+    # un fallimento a 0 PF). Le riduzioni fisse delle opzioni valgono sulla parte principale, i moltiplicatori su tutte.
+    extra_damage: list[DamagePart] = Field(default_factory=list, max_length=4)
     # Chi porta a 0 PF con un attacco in mischia può tramortire invece di abbattere (2014 stabile a 0, 2024 a 1 PF).
     knock_out: bool = False
     # Il TS di concentrazione che il danno fa tirare: vantaggio/svantaggio scelti dal giocatore (sommati a Incantatore da Guerra)
@@ -423,6 +432,7 @@ class RestPreview(BaseModel):
     exhaustion_change: int = 0
     ends_concentration: bool = False
     too_soon: bool = False  # riposo lungo a meno di 24 h (2014) / 16 h (2024) dal precedente
+    hours_since_long_rest: Optional[int] = None  # ore intere dall'ultimo riposo lungo, solo con ``too_soon``
 
 
 class DeathSaveAction(str, Enum):

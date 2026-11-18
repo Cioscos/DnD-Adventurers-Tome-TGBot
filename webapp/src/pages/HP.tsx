@@ -21,7 +21,7 @@ import StatPill from '@/components/ui/StatPill'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
-import HpOperationForm from '@/pages/hp/HpOperationForm'
+import HpOperationForm, { type ExtraDamage } from '@/pages/hp/HpOperationForm'
 import DeathSaves from '@/pages/hp/DeathSaves'
 import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
 import RestDialogs from '@/components/character/RestDialogs'
@@ -68,6 +68,7 @@ export default function HP() {
   const [knockOut, setKnockOut] = useState(false)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [damageType, setDamageType] = useState('')
+  const [extraDamage, setExtraDamage] = useState<ExtraDamage | null>(null)
   const [instantDeathOpen, setInstantDeathOpen] = useState(false)
   // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
   // button.onClick both fire when the user taps Conferma — `hpMutation.isPending` isn't
@@ -113,7 +114,7 @@ export default function HP() {
   const hpMutation = useMutation({
     mutationFn: async ({ op, val, wasCritical, modifier }: {
       op: HPOp; val: number; wasCritical?: boolean
-      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; knock_out?: boolean }
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; knock_out?: boolean; extra_damage?: { amount: number; damage_type: string | null }[] }
     }) => {
       const allyId = op === 'damage' ? await allyWait.wait(val, modifier?.damage_type) : null
       const choice = op === 'damage'
@@ -148,6 +149,7 @@ export default function HP() {
       setKnockOut(false)
       setDamageModifier(null)
       setDamageType('')
+      setExtraDamage(null)
       if (op === 'damage') setConcMode('normal')
       haptic.success()
       maybeShowInstantDeath(updated)
@@ -238,9 +240,12 @@ export default function HP() {
   // viaggia come annotazione.
   const runHpMutation = (op: HPOp, raw: number, wasCritical: boolean) => {
     // Tramortire vale per il solo danno che porta a 0 PF: il server lo ignora altrimenti.
+    const extraAmount = parseInt(extraDamage?.amount ?? '', 10)
+    const extra = op === 'damage' && extraAmount > 0 ? [{ amount: extraAmount, damage_type: extraDamage?.type || null }] : null
     const type = {
       ...(damageType ? { damage_type: damageType } : {}),
       ...(op === 'damage' && knockOut ? { knock_out: true } : {}),
+      ...(extra ? { extra_damage: extra } : {}),  // L9: un solo danno, ogni parte con le sue resistenze (server)
     }
     if (op === 'damage' && damageModifier) {
       // Override dell'utente: il client applica il moltiplicatore, il server annota (e azzera se immune).
@@ -248,7 +253,7 @@ export default function HP() {
         op, val: applyDamageModifier(raw, damageModifier), wasCritical,
         modifier: { damage_modifier: damageModifier, raw_value: raw, ...type },
       })
-    } else if (op === 'damage' && (damageType || knockOut)) {
+    } else if (op === 'damage' && (damageType || knockOut || extra)) {
       // Nessun override: il server applica le resistenze del personaggio al tipo.
       hpMutation.mutate({ op, val: raw, wasCritical, modifier: type })
     } else {
@@ -260,6 +265,7 @@ export default function HP() {
     setActiveOp(op)
     setDamageModifier(null)
     setDamageType('')
+    setExtraDamage(null)
   }
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
@@ -442,6 +448,9 @@ export default function HP() {
           damageType={damageType}
           setDamageType={setDamageType}
           proposedModifier={damageMultiplier(effectiveDamageMods(char), damageType)}
+          extraDamage={extraDamage}
+          setExtraDamage={setExtraDamage}
+          extraApplied={applyDamageModifier(parseInt(extraDamage?.amount ?? '', 10) || 0, damageMultiplier(effectiveDamageMods(char), extraDamage?.type))}
         />
       )}
 
