@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "3.14.3",
+      "date": "2026-11-19",
+      "improved": {
+        "it": [
+          "Scheda, lista dei personaggi e modifiche ai punti ferita rispondono più in fretta: il server fa meno letture.",
+          "Durante la serata il server lavora meno mentre l'app aspetta le reazioni degli alleati."
+        ],
+        "en": [
+          "The sheet, the character list and hit point changes respond faster: the server does fewer reads.",
+          "During an evening the server does less work while the app waits for ally reactions."
+        ]
+      }
+    },
+    {
       "version": "3.14.2",
       "date": "2026-11-18",
       "improved": {

@@ -80,7 +80,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     if persist:
         await session.flush()
 
-    snap = await load_snapshot(session, char)  # regole e oggetti letti una volta per i ~27 bonus della risposta
+    snap = await load_snapshot(session, char, char.items)  # regole e oggetti letti una volta per i ~27 bonus della risposta
     response = CharacterFull.model_validate(char)
     response.active_states = with_spell_hints(response.active_states)
     response.condition_effects, response.pending_saves = await character_effect_payload(
@@ -119,7 +119,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     )
 
     response.speed_items_modifier = item_bonus_total(char.items, "speed")
-    response.initiative_bonus = await initiative_bonus(session, char)
+    response.initiative_bonus = await initiative_bonus(session, char, snap)
     _apply_encumbrance(char, response)
     _apply_containers(char, response)
     response.pending_choices = [
