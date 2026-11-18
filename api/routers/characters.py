@@ -28,6 +28,7 @@ from core.db.models import (
     Item,
     PendingSave,
     GameSession,
+    HomebrewRule,
     CampaignMember,
     SessionParticipant,
     SessionStatus,
@@ -150,15 +151,21 @@ async def list_characters(
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )
+    chars = result.scalars().all()
+    rules: dict[int, list[HomebrewRule]] = {}  # una lettura per tutte le schede, non una per scheda
+    for rule in (await session.execute(select(HomebrewRule).where(
+            HomebrewRule.character_id.in_([c.id for c in chars]), HomebrewRule.enabled == True))).scalars():  # noqa: E712
+        rules.setdefault(rule.character_id, []).append(rule)
     summaries: list[CharacterSummary] = []
-    for c in result.scalars().all():
+    for c in chars:
         summary = CharacterSummary.model_validate(c)
+        snap = (rules.get(c.id, []), [i for i in c.items if i.container_id is None])
         # Modificatori passivi homebrew, coerenti con la scheda completa.
         summary.hp_max_homebrew_modifier = await get_passive_modifiers(
-            session, c, "character.hit_points_max"
+            session, c, "character.hit_points_max", snap
         )
         summary.ac_homebrew_modifier = await get_passive_modifiers(
-            session, c, "character.ac"
+            session, c, "character.ac", snap
         )
         summary.ac_items_modifier = item_bonus_total(c.items, "ac")
         summary.ac += ac_delta(c, summary.ac, summary.ac_items_modifier + summary.ac_homebrew_modifier)

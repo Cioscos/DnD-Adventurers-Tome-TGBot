@@ -11,13 +11,14 @@ from api.services.homebrew.filters import evaluate_filter
 from core.db.models import Character, CharacterClass, HomebrewRule, Item
 
 
-async def load_snapshot(session: AsyncSession, char: Character) -> tuple[list[HomebrewRule], list[Item]]:
-    """Regole attive e oggetti fuori dai contenitori, letti una volta: chi calcola molti bonus di fila li passa come ``snapshot``."""
+async def load_snapshot(session: AsyncSession, char: Character, items=None) -> tuple[list[HomebrewRule], list[Item]]:
+    """Regole attive e oggetti fuori dai contenitori, letti una volta: chi calcola molti bonus di fila li passa come ``snapshot``.
+    ``items``: gli oggetti già caricati della scheda, per non rileggerli."""
     rules = list((await session.execute(select(HomebrewRule).where(
         HomebrewRule.character_id == char.id, HomebrewRule.enabled == True))).scalars())  # noqa: E712
-    items = [i for i in (await session.execute(select(Item).where(Item.character_id == char.id))).scalars()
-             if i.container_id is None]  # contained items give no bonus
-    return rules, items
+    if items is None:
+        items = (await session.execute(select(Item).where(Item.character_id == char.id))).scalars()
+    return rules, [i for i in items if i.container_id is None]  # contained items give no bonus
 
 
 async def passive_modifier(session: AsyncSession, char: Character, skill: str, snapshot=None) -> int:
@@ -34,13 +35,16 @@ async def get_passive_modifiers(
     times the total class level, so every max-HP consumer stays consistent.
     """
     if target_path == "character.hit_points_max":
-        lv = (await session.execute(
-            select(func.coalesce(func.sum(CharacterClass.level), 0))
-            .where(CharacterClass.character_id == char.id)
-        )).scalar_one()
         snapshot = snapshot or await load_snapshot(session, char)
-        return (_sum_modifiers(snapshot, char, target_path)
-                + int(lv) * _sum_modifiers(snapshot, char, "character.hit_points_max_per_level"))
+        total = _sum_modifiers(snapshot, char, target_path)
+        per_level = _sum_modifiers(snapshot, char, "character.hit_points_max_per_level")
+        if per_level:  # il livello si legge solo se una regola lo usa
+            lv = (await session.execute(
+                select(func.coalesce(func.sum(CharacterClass.level), 0))
+                .where(CharacterClass.character_id == char.id)
+            )).scalar_one()
+            total += int(lv) * per_level
+        return total
     return _sum_modifiers(snapshot or await load_snapshot(session, char), char, target_path)
 
 

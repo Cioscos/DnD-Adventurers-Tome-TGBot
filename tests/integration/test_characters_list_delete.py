@@ -108,7 +108,7 @@ async def test_delete_other_owner_is_403(client, test_session_factory):
 async def test_list_includes_homebrew_modifiers(client, monkeypatch):
     await _make_char(client, "Brew")
 
-    async def fake(session, character, target_path):
+    async def fake(session, character, target_path, snapshot=None):
         return {"character.hit_points_max": 5, "character.ac": 2}.get(target_path, 0)
 
     monkeypatch.setattr("api.routers.characters.get_passive_modifiers", fake)

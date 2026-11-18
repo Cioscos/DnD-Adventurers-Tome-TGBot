@@ -63,8 +63,10 @@ async def reaction_prompts(char_id: int, user_id: Annotated[int, Depends(get_cur
     if svc.sweep_due():  # rimborsa le richieste mai usate, al massimo ogni 30 s: la DELETE globale prende il lock di scrittura
         await svc.expire_unused(db, svc.utc_now())
         await db.commit()
-    donor = await get_owned_full_with_resources(char_id, user_id, db)
     svc.mark_seen(char_id)
+    if not await svc.has_waiting(db, char_id):  # il poll di ogni giocatore ogni 3 s: la scheda completa solo se c'è da rispondere
+        return []
+    donor = await get_owned_full_with_resources(char_id, user_id, db)
     return await svc.prompts_for(db, donor)
 
 

@@ -153,12 +153,12 @@ def unarmed_attack_profile(char: Character, ranged: bool = False) -> tuple[int, 
     return ability_mod, damage_dice, "strength" if ability_mod == str_mod else "dexterity"
 
 
-async def initiative_bonus(session: AsyncSession, char: Character) -> int:
+async def initiative_bonus(session: AsyncSession, char: Character, snapshot=None) -> int:
     """Bonus d'iniziativa come sulla scheda: Destrezza effettiva, oggetti, homebrew e regole."""
     return (
         roll_ability_mod(char, "dexterity")
         + item_bonus_total(char.items, "initiative")
-        + await get_passive_modifiers(session, char, "character.initiative")
+        + await get_passive_modifiers(session, char, "character.initiative", snapshot)
         + modifiers_for(char, "initiative", ability="dexterity").flat
     )
 

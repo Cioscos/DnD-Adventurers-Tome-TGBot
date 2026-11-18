@@ -243,6 +243,13 @@ async def describe(session: AsyncSession, req: Req) -> dict:
     }
 
 
+async def has_waiting(session: AsyncSession, donor_id: int) -> bool:
+    """Vero se una richiesta ancora aperta aspetta la risposta di questo donatore (una query, senza caricare la scheda)."""
+    cutoff = utc_now() - timedelta(seconds=OPEN_SECONDS)
+    rows = (await session.execute(select(Req.answers).where(Req.closed_at.is_(None), Req.created_at > cutoff))).scalars()
+    return any(a["donor_id"] == donor_id and a["status"] == "waiting" for answers in rows for a in answers)
+
+
 async def prompts_for(session: AsyncSession, donor: Character) -> list[dict]:
     """I popup del donatore: richieste ancora aperte in cui deve rispondere."""
     cutoff = utc_now() - timedelta(seconds=OPEN_SECONDS)
