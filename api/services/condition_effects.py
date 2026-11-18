@@ -341,16 +341,6 @@ async def effects_for_character(db: AsyncSession, char_id: int) -> list[Conditio
     ).order_by(ConditionEffect.id))).scalars())
 
 
-async def open_pending_saves(db: AsyncSession, char_id: int) -> list[PendingSave]:
-    """All pending saves plus each effect's failed save, unless a newer save superseded it."""
-    newest = dict((await db.execute(select(PendingSave.effect_id, func.max(PendingSave.id)).where(
-        PendingSave.character_id == char_id).group_by(PendingSave.effect_id))).all())
-    rows = list((await db.execute(select(PendingSave).where(
-        PendingSave.character_id == char_id, PendingSave.dismissed.is_(False),
-        PendingSave.status.in_(("pending", "failed"))).order_by(PendingSave.id))).scalars())
-    return [r for r in rows if r.status == "pending" or newest.get(r.effect_id) == r.id]
-
-
 async def effect_reads(db: AsyncSession, effects: list[ConditionEffect]) -> list[ConditionEffectRead]:
     """Read models with source names resolved (PC and monster targets alike)."""
     comb_ids = {e.source_combatant_id for e in effects if e.source_combatant_id}
@@ -374,13 +364,34 @@ def pending_read(p: PendingSave, slug: str) -> PendingSaveRead:
                            created_at=p.created_at, last_roll=p.last_roll)
 
 
+async def characters_effect_payload(
+    db: AsyncSession, char_ids: list[int],
+) -> dict[int, tuple[list[ConditionEffectRead], list[PendingSaveRead]]]:
+    """Effetti attivi e TS aperti di più schede, con un numero di query che non dipende da quante sono.
+
+    TS aperti: tutti i pending, più il TS fallito di ogni effetto se nessun TS più recente l'ha superato."""
+    rows = list((await db.execute(select(ConditionEffect).where(
+        ConditionEffect.character_id.in_(char_ids)).order_by(ConditionEffect.id))).scalars())
+    active = [e for e in rows if e.pending is False]  # i pending non sono sulla scheda...
+    slugs = {(e.character_id, e.id): e.slug for e in rows}  # ...ma i loro TS vanno mostrati
+    newest = {(cid, eid): top for cid, eid, top in (await db.execute(
+        select(PendingSave.character_id, PendingSave.effect_id, func.max(PendingSave.id))
+        .where(PendingSave.character_id.in_(char_ids))
+        .group_by(PendingSave.character_id, PendingSave.effect_id))).all()}
+    saves = (await db.execute(select(PendingSave).where(
+        PendingSave.character_id.in_(char_ids), PendingSave.dismissed.is_(False),
+        PendingSave.status.in_(("pending", "failed"))).order_by(PendingSave.id))).scalars()
+    out: dict[int, tuple[list[ConditionEffectRead], list[PendingSaveRead]]] = {c: ([], []) for c in char_ids}
+    for eff, read in zip(active, await effect_reads(db, active)):
+        out[eff.character_id][0].append(read)
+    for p in saves:
+        if p.status == "pending" or newest.get((p.character_id, p.effect_id)) == p.id:
+            out[p.character_id][1].append(pending_read(p, slugs.get((p.character_id, p.effect_id), "")))
+    return out
+
+
 async def character_effect_payload(
     db: AsyncSession, char_id: int,
 ) -> tuple[list[ConditionEffectRead], list[PendingSaveRead]]:
     """Read models for CharacterFull (source names resolved)."""
-    effects = await effects_for_character(db, char_id)
-    slugs = dict((await db.execute(select(ConditionEffect.id, ConditionEffect.slug).where(
-        ConditionEffect.character_id == char_id))).all())  # anche i pending: i loro TS vanno mostrati
-    pendings = [pending_read(p, slugs.get(p.effect_id, ""))
-                for p in await open_pending_saves(db, char_id)]
-    return await effect_reads(db, effects), pendings
+    return (await characters_effect_payload(db, [char_id]))[char_id]

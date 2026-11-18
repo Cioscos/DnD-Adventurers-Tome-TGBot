@@ -66,7 +66,7 @@ from api.services.effects import apply_conditions
 from api.services.spell_effects import end_by_target
 from core.rules.spell_effects import SPELL_STATE_PREFIX
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item, stacks_with
-from api.services.condition_effects import character_effect_payload
+from api.services.condition_effects import character_effect_payload, characters_effect_payload
 from api.services.rules_turn import attacks_allowed, get_turn
 from api.services.encounter_view import build_encounter_block, public_states
 from core.db.models import (
@@ -78,6 +78,7 @@ from core.db.models import (
     Combatant,
     Encounter,
     GameSession,
+    HomebrewRule,
     Item,
     SessionMessage,
     SessionParticipant,
@@ -228,8 +229,18 @@ async def _load_live_characters(
         )
         .where(Character.id.in_(char_ids))
     )
+    chars = result.scalars().all()
+    # Letture uniche per tutte le schede: /live è interrogato ogni 2,5 s da ogni giocatore.
+    payloads = await characters_effect_payload(db, char_ids)
+    rules: dict[int, list[HomebrewRule]] = {}
+    for rule in (await db.execute(select(HomebrewRule).where(
+            HomebrewRule.character_id.in_(char_ids), HomebrewRule.enabled == True))).scalars():  # noqa: E712
+        rules.setdefault(rule.character_id, []).append(rule)
+    conc_ids = [c.concentrating_spell_id for c in chars if c.concentrating_spell_id]
+    spell_names = dict((await db.execute(
+        select(Spell.id, Spell.name).where(Spell.id.in_(conc_ids)))).all()) if conc_ids else {}
     out: dict[int, dict] = {}
-    for char in result.scalars().all():
+    for char in chars:
         last_roll = None
         history = char.rolls_history or []
         if history and isinstance(history[-1], dict):
@@ -239,10 +250,11 @@ async def _load_live_characters(
             ts = last_roll.get("timestamp")
             if joined and (not isinstance(ts, str) or ts < joined):
                 last_roll = None
-        effects, pendings = await character_effect_payload(db, char.id)
+        effects, pendings = payloads[char.id]
         items_ac = item_bonus_total(char.items, "ac")  # la CA che il tavolo vede è quella della scheda: oggetti e homebrew compresi
-        homebrew_ac = await get_passive_modifiers(db, char, "character.ac")
-        conc_spell = await db.get(Spell, char.concentrating_spell_id) if char.concentrating_spell_id else None
+        # stesso snapshot di load_snapshot: regole attive e oggetti fuori dai contenitori (già caricati sopra)
+        homebrew_ac = await get_passive_modifiers(db, char, "character.ac", (
+            rules.get(char.id, []), [i for i in char.items if i.container_id is None]))
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -263,7 +275,7 @@ async def _load_live_characters(
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
             is_concentrating=char.concentrating_spell_id is not None,
-            concentration_spell=conc_spell.name if conc_spell else None,
+            concentration_spell=spell_names.get(char.concentrating_spell_id),
             active_states=public_states(char, lang),
         )
     return out
