@@ -9,7 +9,8 @@ import { ApiError } from '@/api/client'
 import i18n from '@/i18n'
 import type { CharacterFull, Spell } from '@/types'
 
-const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError, toastInfo, sessionAllies } = vi.hoisted(() => ({
+const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastError, toastInfo, sessionAllies, turnState } = vi.hoisted(() => ({
+  turnState: vi.fn(),
   toastInfo: vi.fn(),
   sessionAllies: vi.fn(),
   toastError: vi.fn(),
@@ -23,7 +24,7 @@ const { attack, useSpell, updateConc, toastSuccess, rollDice, castCheck, toastEr
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck }, characters: { sessionAllies } } }
+  return { ...actual, api: { spells: { attack, use: useSpell, updateConcentration: updateConc, castCheck }, characters: { sessionAllies, turnState } } }
 })
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: toastInfo, error: toastError, warning: vi.fn() } }))
 vi.mock('react-i18next', async (orig) => {
@@ -370,15 +371,28 @@ describe('useCastFlow damageless casts', () => {
     expect(toastError).not.toHaveBeenCalled()
   })
 
-  it('sends what the player confirmed', async () => {
+  it('asks the turn rule when the cast opens, before the slot, and not again (T3)', async () => {
     castCheck.mockResolvedValue(['one_slot_per_turn'])
     useSpell.mockResolvedValue(char)
     renderFlow(bless)
     await userEvent.click(screen.getByText('begin'))
-    await userEvent.click(screen.getByText('cast-slot-3'))
     await waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('one_slot_per_turn'))
+    expect(screen.queryByText('cast-slot-3')).toBeNull()
     useCastConfirmStore.getState().request!.answer(true)
+    await userEvent.click(await screen.findByText('cast-slot-3'))
     await waitFor(() => expect(useSpell).toHaveBeenCalledWith(7, 4, expect.objectContaining({ confirm: ['one_slot_per_turn'] })))
+    expect(useCastConfirmStore.getState().request).toBeNull()
+  })
+
+  it('a turn rule refused at the opening never opens the slot choice (T3)', async () => {
+    castCheck.mockResolvedValue(['one_slot_per_turn'])
+    renderFlow(bless)
+    await userEvent.click(screen.getByText('begin'))
+    await waitFor(() => expect(useCastConfirmStore.getState().request?.code).toBe('one_slot_per_turn'))
+    useCastConfirmStore.getState().request!.answer(false)
+    await waitFor(() => expect(useCastConfirmStore.getState().request).toBeNull())
+    expect(screen.queryByText('cast-slot-3')).toBeNull()
+    expect(useSpell).not.toHaveBeenCalled()
   })
 })
 
@@ -489,5 +503,28 @@ describe('useCastFlow spell effects', () => {
     await userEvent.click(screen.getByText('character.turn.ally_other'))
     expect(useSpell).not.toHaveBeenCalled()
     expect(screen.getByText('character.turn.ally_confirm(n=1)')).toBeInTheDocument()
+  })
+})
+
+describe('useCastFlow turn slot already spent (T3)', () => {
+  const block = { action_used: false, bonus_used: false, reaction_used: false, attacks_made: 0, action_attacks: 0, extra_actions: 0 }
+  const blessAction = { ...bless, casting_time: '1 azione' } as Spell
+
+  it('in an encounter, after an attack, a spell with the action is refused before the slot choice', async () => {
+    turnState.mockResolvedValue({ in_encounter: true, is_my_turn: true, attacks_allowed: 2, turn: { ...block, action_attacks: 1 } })
+    renderFlow(blessAction)
+    await userEvent.click(screen.getByText('begin'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.spells.turn_spent.action'))
+    expect(screen.queryByText('cast-slot-3')).toBeNull()
+    expect(castCheck).not.toHaveBeenCalled()
+  })
+
+  it('outside an encounter the turn does not reset by itself: the cast goes on', async () => {
+    turnState.mockResolvedValue({ in_encounter: false, is_my_turn: false, attacks_allowed: 2, turn: { ...block, action_used: true } })
+    castCheck.mockResolvedValue([])
+    renderFlow(blessAction)
+    await userEvent.click(screen.getByText('begin'))
+    expect(await screen.findByText('cast-slot-3')).toBeInTheDocument()
+    expect(toastError).not.toHaveBeenCalled()
   })
 })

@@ -18,8 +18,10 @@ import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
-import RollButton from '@/components/ui/RollButton'
-import RollModeMenu from '@/components/ui/RollModeMenu'
+import RollModeToggle from '@/components/ui/RollModeToggle'
+import Sheet from '@/components/ui/Sheet'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
 import RollNoteEditor from '@/components/character/RollNoteEditor'
 import { rollNoteOf } from '@/lib/settings'
 import { profBonus } from '@/lib/dnd'
@@ -33,6 +35,8 @@ type RollState = {
   title: string
   ability: string
   wasRerolled: boolean
+  /** CD detta dal master: l'esito dice riuscito o fallito (L8). */
+  dc?: number
 }
 
 export default function SavingThrows() {
@@ -46,8 +50,8 @@ export default function SavingThrows() {
   const reducedMotion = useReducedMotion()
   const toast = useToast()
   const [rollState, setRollState] = useState<RollState | null>(null)
-  // Tocco sulla riga: prima Normale / Vantaggio / Svantaggio, poi il tiro (vantaggio e svantaggio su tutti i d20).
-  const [modeMenu, setModeMenu] = useState<{ ability: string; anchor: DOMRect } | null>(null)
+  // L8: tocco sulla riga, prima del tiro CD (facoltativa) e Normale / Vantaggio / Svantaggio, poi le opzioni e il d20.
+  const [prep, setPrep] = useState<{ ability: string; mode: RollMode; dc: string } | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -64,12 +68,12 @@ export default function SavingThrows() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
+    mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode; dc?: number }) => {
       const choice = await askRollOptions(charId, { roll: 'save', ability })
       const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode, choice), choice))
       return { result, ability }
     },
-    onSuccess: ({ result, ability }) => {
+    onSuccess: ({ result, ability }, { dc }) => {
       refreshAfterOptions(qc, charId, result.option_result)
       setRollState({
         // description è la chiave raw dell'ability ("intelligence"): il titolo
@@ -78,6 +82,7 @@ export default function SavingThrows() {
         ability,
         title: `${t('character.saves.title')}: ${t(`character.stats.${ability}`)}`,
         wasRerolled: false,
+        dc,
       })
       haptic.success()
     },
@@ -149,7 +154,7 @@ export default function SavingThrows() {
             <Fragment key={ability}>
               <Reveal.Item>
                 <div
-                  onClick={(e) => setModeMenu({ ability, anchor: e.currentTarget.getBoundingClientRect() })}
+                  onClick={() => setPrep({ ability, mode: 'normal', dc: '' })}
                   className="cursor-pointer py-1 hover:bg-dnd-surface/60 transition-colors"
                 >
                   <div className="flex items-center gap-1.5 min-h-[44px]">
@@ -189,15 +194,17 @@ export default function SavingThrows() {
                     <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                       <RollNoteEditor char={char} noteKey={`save.${ability}`} label={t(`character.stats.${ability}`)} />
                     </span>
-                    <RollButton
-                      askMode
-                      onRoll={(mode) => rollMutation.mutate({ ability, mode })}
+                    <Pressable
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPrep({ ability, mode: 'normal', dc: '' })
+                      }}
                       pending={rollMutation.isPending && rollMutation.variables?.ability === ability}
-                      ariaLabel={t('character.skills.roll')}
+                      aria-label={t('character.skills.roll')}
                       className="w-11 h-11 flex items-center justify-center shrink-0"
                     >
                       <DiceIcon sides={20} size={28} className="text-dnd-gold" />
-                    </RollButton>
+                    </Pressable>
                   </div>
                   {rollNoteOf(char, `save.${ability}`) && (
                     <p className="text-xs text-dnd-text-muted font-body italic pl-14 pb-1">{rollNoteOf(char, `save.${ability}`)}</p>
@@ -213,15 +220,34 @@ export default function SavingThrows() {
         })}
       </Reveal.Stagger>
 
-      {modeMenu && (
-        <RollModeMenu
-          anchor={modeMenu.anchor}
-          onClose={() => setModeMenu(null)}
-          onSelect={(mode) => {
-            setModeMenu(null)
-            rollMutation.mutate({ ability: modeMenu.ability, mode })
-          }}
-        />
+      {prep && (
+        <Sheet open onClose={() => setPrep(null)} title={`${t('character.saves.title')}: ${t(`character.stats.${prep.ability}`)}`}>
+          <div className="p-5 space-y-4">
+            <Input
+              type="number"
+              label={t('character.saves.dc_label')}
+              value={prep.dc}
+              onChange={(dc) => setPrep({ ...prep, dc })}
+              placeholder={t('character.saves.dc_placeholder')}
+              min={1}
+              max={40}
+              inputMode="numeric"
+              commitOnBlur={false}
+            />
+            <RollModeToggle mode={prep.mode} onChange={(mode) => setPrep({ ...prep, mode })} />
+            <Button
+              size="lg"
+              fullWidth
+              onClick={() => {
+                const dc = parseInt(prep.dc, 10)
+                setPrep(null)
+                rollMutation.mutate({ ability: prep.ability, mode: prep.mode, dc: dc > 0 ? dc : undefined })
+              }}
+            >
+              {t('pendingSaves.roll')}
+            </Button>
+          </div>
+        </Sheet>
       )}
 
       {rollState && (
@@ -234,6 +260,7 @@ export default function SavingThrows() {
           wasRerolled={rollState.wasRerolled}
           onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
           afterRoll={{ charId, query: { roll: 'save', ability: rollState.ability } }}
+          dc={rollState.dc}
           onClose={() => setRollState(null)}
         />
       )}

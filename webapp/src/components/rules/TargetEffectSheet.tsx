@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { conditionLabel } from '@/lib/conditions'
@@ -5,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type TargetEffect } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 
@@ -16,6 +18,8 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
+  // LA4a: il tocco sul nome chiede conferma, l'effetto non si applica per sbaglio
+  const [picked, setPicked] = useState<{ id: number; name: string } | null>(null)
   const { data } = useQuery({
     queryKey: ['target-effect', charId, effectKey],
     queryFn: () => api.characters.targetEffectPreview(charId, effectKey),
@@ -32,6 +36,7 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
   })
   const fx = data?.result
   return (
+    <>
     <Sheet open onClose={onClose} title={t('character.target_effect.title')} zClassName="z-[60]">
       {fx && (
         <div className="flex flex-col gap-3 px-4 pb-4">
@@ -60,7 +65,7 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
                   <Button
                     key={c.id} variant="secondary" className="justify-start break-words text-left"
                     loading={apply.isPending && apply.variables === c.id} disabled={apply.isPending || !!c.immune}
-                    onClick={() => apply.mutate(c.id)}
+                    onClick={() => setPicked({ id: c.id, name: c.name })}
                   >
                     {c.name}
                     {c.immune && <span className="ml-2 text-xs font-normal text-dnd-text-muted">{t('character.target_effect.immune')}</span>}
@@ -72,6 +77,17 @@ export default function TargetEffectSheet({ charId, effectKey, onClose }: Props)
         </div>
       )}
     </Sheet>
+      <ConfirmSheet
+        open={picked !== null}
+        onClose={() => setPicked(null)}
+        onConfirm={() => { if (picked) apply.mutate(picked.id); setPicked(null) }}
+        title={t('character.target_effect.confirm_title', { name: picked?.name ?? '' })}
+        confirmLabel={t('character.target_effect.confirm_cta')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="primary"
+        zClassName="z-[70]"
+      />
+    </>
   )
 }
 

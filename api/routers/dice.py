@@ -127,7 +127,7 @@ async def roll_character_initiative(
     option_rolls, option_total = roll_option_dice(char, opts)
     total = die + bonus + option_total
     keep = {"advantage": "kh1", "disadvantage": "kl1"}.get(outcome.mode, "")
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
     _log_roll(session, char, f"{len(outcome.dice)}d20{keep}{bonus:+d}", outcome.dice, total, bonus, "init",
               body.label if body else None)
     await session.flush()
@@ -180,7 +180,7 @@ async def post_dice_result(
     if body.with_inspiration:
         spend_inspiration_reroll(char)
 
-    record_dice(char, [(e.kind, e.value) for e in body.rolls])
+    record_dice(char, [(e.kind, e.value) for e in body.rolls], total if all(e.kind == "d20" for e in body.rolls) else None)
     _log_roll(session, char, notation, rolls, total, body.modifier, body.source or "manual", body.label,
               body.with_inspiration)
 

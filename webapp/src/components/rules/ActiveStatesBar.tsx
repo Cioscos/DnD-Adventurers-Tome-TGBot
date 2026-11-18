@@ -46,6 +46,8 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   if (typeof d.cr === 'string') out.push(t('character.turn.state_cr', { cr: d.cr }))
   if (typeof d.attack_bonus === 'number') out.push(t('character.turn.state_attack_bonus', { n: d.attack_bonus }))
   if (typeof d.bonus === 'number') out.push(t('character.turn.state_bonus', { n: d.bonus }))
+  if (s.key === 'divine_sense') out.push(t('character.turn.state_divine_sense'))  // PA5: cosa si percepisce
+  if (s.key === 'sacred_weapon') out.push(t('character.turn.state_sacred_light', { bright: formatMeters(6, system), dim: formatMeters(6, system) }))
   if (typeof d.range_m === 'number') out.push(t('character.turn.state_radius', { d: formatMeters(d.range_m, system) }))
   if (typeof d.radius_m === 'number') out.push(t('character.turn.state_radius', { d: formatMeters(d.radius_m, system) }))
   if (typeof d.radius_km === 'number') out.push(t('character.turn.state_radius', { d: formatKm(d.radius_km, system, lang) }))
@@ -73,17 +75,25 @@ function stateFacts(s: StateRow, t: (k: string, o?: Record<string, unknown>) => 
   return out
 }
 
-/** Un incantesimo lanciato solo su di sé (Scudo) ha lo stato `spell:` e l'orologio `spell_cast:` sullo stesso personaggio:
- *  resta una riga sola, quella dello stato, con i round rimasti dell'orologio. Chiuderla chiude anche l'orologio (server). */
+/** Un incantesimo lanciato anche su di sé ha lo stato `spell:` e l'orologio `spell_cast:` sullo stesso personaggio: resta una riga.
+ *  Solo su di sé (Scudo): quella dello stato, con i round rimasti dell'orologio; chiuderla chiude anche l'orologio (server).
+ *  Su più bersagli (Benedizione): quella dell'orologio, che chiude su tutti, con ciò che l'effetto dà al lanciatore. */
 function selfSpellOnce(states: StateRow[], charId: number): StateRow[] {
-  const clocks = new Map(states.filter((s) => s.key.startsWith('spell_cast:')
-    && (s.data?.state_data as { targets?: unknown } | undefined)?.targets === 1).map((s) => [s.key.slice('spell_cast:'.length), s]))
-  const own = new Set(states.filter((s) => s.key.startsWith('spell:') && s.data?.caster_id === charId
-    && clocks.has(s.key.slice('spell:'.length))).map((s) => s.key.slice('spell:'.length)))
+  const spellKey = (s: StateRow) => s.key.slice(s.key.indexOf(':') + 1)
+  const clocks = new Map(states.filter((s) => s.key.startsWith('spell_cast:')).map((s) => [spellKey(s), s]))
+  const ownRows = new Map(states.filter((s) => s.key.startsWith('spell:') && s.data?.caster_id === charId
+    && clocks.has(spellKey(s))).map((s) => [spellKey(s), s]))
+  const single = (k: string) => (clocks.get(k)?.data?.state_data as { targets?: unknown } | undefined)?.targets === 1
+  // Le righe della coppia: lo stato del lanciatore su di sé e il suo orologio (non gli stati dello stesso incantesimo di altri).
+  const paired = (s: StateRow) => ownRows.get(spellKey(s)) === s || (s.key.startsWith('spell_cast:') && ownRows.has(spellKey(s)))
   return states
-    .filter((s) => !(s.key.startsWith('spell_cast:') && own.has(s.key.slice('spell_cast:'.length))))
-    .map((s) => s.key.startsWith('spell:') && own.has(s.key.slice('spell:'.length))
-      ? { ...s, rounds_left: clocks.get(s.key.slice('spell:'.length))?.rounds_left ?? s.rounds_left } : s)
+    .filter((s) => !paired(s) || (s.key.startsWith('spell:') ? single(spellKey(s)) : !single(spellKey(s))))
+    .map((s) => {
+      if (!paired(s)) return s
+      const k = spellKey(s)
+      if (s.key.startsWith('spell:')) return { ...s, rounds_left: clocks.get(k)?.rounds_left ?? s.rounds_left }
+      return s.hints?.length ? s : { ...s, hints: ownRows.get(k)?.hints }
+    })
 }
 
 /** Stati attivi dei privilegi (Ira...) con i round rimasti e la chiusura a mano. Niente se non ce n'è nessuno. */

@@ -14,9 +14,14 @@ from sqlalchemy.orm.attributes import flag_modified
 from core.db.models import Character
 
 
-def record_dice(char: Character, rolls: Iterable[tuple[str, int]]) -> None:
-    """Accumula i tiri (kind, valore) nelle statistiche del personaggio."""
-    rolls = list(rolls)
+# Totale di una prova con il d20 (d20 + modificatori): conteggio per totale, come le facce, così il riepilogo della serata
+# ne ricava il massimo dalla differenza con l'ingresso. Non è un dado: la pagina delle statistiche lo ignora.
+D20_TOTAL = "d20_total"
+
+
+def record_dice(char: Character, rolls: Iterable[tuple[str, int]], total: int | None = None) -> None:
+    """Accumula i tiri (kind, valore) nelle statistiche del personaggio; ``total``: il totale della prova con il d20."""
+    rolls = list(rolls) + ([(D20_TOTAL, total)] if total is not None else [])
     if not rolls:
         return
     stats: dict = dict(char.dice_stats or {})

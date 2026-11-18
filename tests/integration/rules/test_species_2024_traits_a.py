@@ -62,6 +62,17 @@ async def test_dragonborn_breath_replaces_an_attack_and_flight_gives_fly_speed(c
     assert full["computed"]["fly_speed"] == full["computed"]["speed"] == 30
 
 
+async def test_dragonborn_breath_after_an_attack_takes_the_second_attack_of_the_action(client, test_session_factory):
+    """LA4b: l'azione Attacco già iniziata non rifiuta il Soffio, che prende il posto di un attacco rimasto."""
+    cid = await _species(client, test_session_factory, "2024_dragonborn", {"ancestry": "gold"}, level=5)
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "attack"})).status_code == 200
+    r = await _use(client, cid, DRAGON + "breath_weapon")
+    assert r.status_code == 200, r.text
+    assert (await _turn(client, cid))["action_attacks"] == 2
+    again = await _use(client, cid, DRAGON + "breath_weapon")
+    assert again.status_code == 409 and again.json()["detail"]["code"] == "no_attack_left"
+
+
 async def test_dwarf_toughness_darkvision_poison(client, test_session_factory):
     base = (await _full(client, await _species(client, test_session_factory, None, level=4)))["computed"]["hp_max_effective"]
     cid = await _species(client, test_session_factory, "2024_dwarf", level=4)

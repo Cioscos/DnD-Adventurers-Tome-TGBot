@@ -430,7 +430,8 @@ async def test_live_combatant_exposes_states_with_effects_on_others_and_nothing_
         as_user(viewer)
         live = (await client.get(f"/sessions/{sid}/live")).json()
         mine = next(c for c in live["encounter"]["combatants"] if c["kind"] == "pc")
-        assert [s["key"] for s in mine["active_states"]] == ["prova"], viewer
+        # M6: il GM vede anche lo stato che agisce solo sul PG (nome del catalogo, mai quello della riga); il gruppo no
+        assert [s["key"] for s in mine["active_states"]] == (["prova", "privato"] if viewer == GM_ID else ["prova"]), viewer
         state = mine["active_states"][0]
         assert state["rounds_left"] == 3 and state["others"] == [{"key": KEY, "name": "Prova", "text": "x"}]
         monster = next(c for c in live["encounter"]["combatants"] if c["kind"] == "monster")

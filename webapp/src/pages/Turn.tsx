@@ -1,15 +1,18 @@
 import { uiLang } from '@/lib/lang'
-import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
+import { askRollOptions, refreshAfterOptions, rolledText } from '@/lib/rollOptions'
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
+import { Check, ChevronRight, Clock, RotateCcw, Sparkles, Target } from 'lucide-react'
 import { api, ApiError, type RollMode } from '@/api/client'
 import { isUnlimitedFeature } from '@/lib/abilityUses'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
-import { incapacitatedMessageKey } from '@/lib/conditions'
+import { formatCondition, incapacitatedMessageKey } from '@/lib/conditions'
+import ConditionBadge from '@/components/ui/ConditionBadge'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import { turnLeftovers } from '@/lib/turnLeftovers'
 import Input from '@/components/ui/Input'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
@@ -27,7 +30,7 @@ import GiveInspirationRow from '@/components/character/GiveInspirationRow'
 import BeastOrders from '@/components/character/BeastOrders'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import EquipItemPicker from '@/components/character/EquipItemPicker'
-import { weaponPreviewText } from '@/lib/weaponOptions'
+import WeaponPreviewLine from '@/components/character/WeaponPreviewLine'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
 import { useTickRound } from '@/hooks/useTickRound'
@@ -49,7 +52,7 @@ const SLOT_OF: Record<Bucket, TurnSlot> = { action: 'action', bonus_action: 'bon
 /** Codici con un testo proprio quando un privilegio non si può usare (`POST /features/{key}/use`). */
 const ABILITY_USE_ERRORS = ['turn_slot_used', 'no_uses', 'feature_not_usable', 'amount_too_high', 'feature_unavailable', 'once_per_turn', 'no_attack_left', 'amount_too_low', 'amount_invalid', 'no_slot', 'insufficient_funds', 'invalid_text', 'identity_exists', 'already_moved', 'invalid_choice', 'already_chosen', 'no_benefit', 'already_used_this_rage', 'invalid_target', 'target_dead', 'target_not_down', 'nothing_to_remove', 'beast_alive']
 /** Esiti di un privilegio che il server manda come chiavi (`FeatureUseResult.notes`) e la pagina traduce. */
-const USE_NOTES = ['arcane_charge', 'quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'lay_on_hands_other_2024', 'lay_on_hands_cure_self_2024', 'lay_on_hands_cure_other_2024', 'revivification_other', 'gift_of_the_protectors_other', 'primeval_awareness', 'vanish_hide',
+const USE_NOTES = ['amount_capped', 'arcane_charge','quivering_palm', 'water_whip', 'fist_of_unbroken_air', 'lay_on_hands_other', 'lay_on_hands_cure_self', 'lay_on_hands_cure_other', 'lay_on_hands_other_2024', 'lay_on_hands_cure_self_2024', 'lay_on_hands_cure_other_2024', 'revivification_other', 'gift_of_the_protectors_other', 'primeval_awareness', 'vanish_hide',
   'cunning_dash', 'cunning_disengage', 'cunning_hide', 'cunning_sleight_of_hand', 'cunning_thieves_tools', 'cunning_use_object', 'steady_aim', 'steady_aim_keeps_speed', 'mage_hand_control', 'bend_luck_plus', 'bend_luck_minus', 'healer_other']
 const BTN = 'flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg border active:scale-95 transition-transform'
 
@@ -94,8 +97,10 @@ export default function Turn() {
   const block = turn?.turn
   // Un'azione in più (Azione Impetuosa) riapre la sezione dell'azione anche se quella normale è già spesa.
   const extraActions = block?.extra_actions ?? 0
+  // LA4b: l'azione Attacco già iniziata è l'azione del turno (gli attacchi restano nella loro sezione)
   const used: Record<Bucket, boolean> = {
-    action: !!block?.action_used && extraActions === 0, bonus_action: !!block?.bonus_used, reaction: !!block?.reaction_used,
+    action: (!!block?.action_used || (block?.action_attacks ?? 0) > 0) && extraActions === 0,
+    bonus_action: !!block?.bonus_used, reaction: !!block?.reaction_used,
   }
   const setBlock = (b: TurnBlock) =>
     qc.setQueryData(['turn-state', charId], (old: TurnState | undefined) => old && { ...old, turn: b })
@@ -118,6 +123,20 @@ export default function Turn() {
     onSuccess: (updated) => { qc.setQueryData(['character', charId], updated); qc.invalidateQueries({ queryKey: ['turn-state', charId] }) },
   })
   const otherTurn = useMutation({ mutationFn: () => api.characters.turnOther(charId), onSuccess: setBlock })
+  // MA2: «Termina turno» come nel Combattimento; i TS di fine turno li apre il banner della pagina
+  const [leftover, setLeftover] = useState<string | null>(null)
+  const endTurn = useMutation({
+    mutationFn: (sessionId: number) => api.sessions.encounter.nextTurn(sessionId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })  // porta anche i TS nati a fine turno (banner)
+      qc.invalidateQueries({ queryKey: ['session-live'] })
+    },
+    onError: (err) => {
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+      if (err instanceof ApiError && err.status === 403) toast.info(t('session.combat.turn_already_advanced'))
+      else toast.error(t('session.combat.action_failed'))
+    },
+  })
   const rollD20 = useD20Roll()
   const skillMutation = useMutation({
     mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode; spendsAttack?: boolean; influence?: boolean }) => {
@@ -174,7 +193,7 @@ export default function Turn() {
         toast.info(t('character.turn.use_healed_self', { n: res.healed, hp: Math.min(max, char.current_hit_points + res.healed), max }))
       }
       // Il dado tirato dal privilegio (Parole Taglienti: il valore da sottrarre al tiro dell'altro) si dice subito.
-      if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: `${res.rolls.join(' + ')} = ${res.rolls.reduce((a, b) => a + b, 0)}` })
+      if (res?.rolls?.length) toast.info(t('character.turn.use_rolled'), { description: rolledText(res.rolls, res.flat ?? 0) })
       // Un valore per un altro (PF temporanei di Incoraggiamento, dado del Colpo del Comandante) e gli esiti in chiave.
       if (res?.given != null) toast.info(t('character.turn.use_given', { n: res.given }))
       for (const r of res?.temp_received ?? []) {  // PF temporanei consegnati: il server dice se sono saliti o se l'altro ne aveva già di più
@@ -262,6 +281,20 @@ export default function Turn() {
   const attacks = (pactInHand ? turn?.attacks_allowed_pact : undefined) ?? turn?.attacks_allowed ?? char.attacks_per_action ?? 1
   const stdActions = standardActionsFor(char.rules_edition)
   const hasRoundDurations = (char.condition_effects ?? []).some((e) => e.expiry_count != null) || char.settings?.concentration_rounds_left != null
+  // Il turno di questo PG in uno scontro attivo: si chiude anche da qui (stesso avviso del Combattimento su ciò che resta)
+  const sessionId = turn?.in_encounter && turn.is_my_turn ? turn.session_id : null
+  const endMyTurn = () => {
+    if (sessionId == null) return
+    const { attacksLeft, actionUnused } = char.current_hit_points === 0 ? { attacksLeft: 0, actionUnused: false } : turnLeftovers(turn)
+    const parts = [
+      attacksLeft > 0 && t('session.combat.leftover_attacks', { count: attacksLeft }),
+      actionUnused && t('session.combat.leftover_action'),
+    ].filter(Boolean)
+    if (parts.length > 0) setLeftover(parts.join(' · '))
+    else endTurn.mutate(sessionId)
+  }
+  const activeConditions = Object.entries(char.conditions ?? {}).filter(([, v]) => Boolean(v))
+  const endOfTurnSaves = (char.condition_effects ?? []).filter((e) => e.save_edge === 'end' && e.save_ability && e.save_dc != null)
   // Richieste in serie dallo stesso dispositivo: il server fa read-modify-write sul JSON.
   const busy = useSlot.isPending || newTurn.isPending
 
@@ -387,7 +420,7 @@ export default function Turn() {
         )
         if (item) extra = (
           <>
-            {weaponPreviewText(item) && <p className="text-xs font-mono tabular-nums text-dnd-text-muted">{weaponPreviewText(item)}</p>}
+            <WeaponPreviewLine item={item} />
             <WeaponChoiceRow item={item} char={c} choice={choiceOf(choices, itemId)} onChange={(ch) => setChoice(itemId, ch)} />
           </>
         )
@@ -512,7 +545,10 @@ export default function Turn() {
 
   const section = (title: string, entries: TurnEntry[], bucket: Bucket) => {
     const isUsed = used[bucket]
-    const freeNow = isUsed ? entries.filter((e) => e.kind === 'ability' && char?.abilities.some((a) => String(a.id) === e.id && a.free_use)) : []
+    // T13: i danni di un incantesimo attivo (Guardiani spirituali) si tirano anche a azione spesa, nei turni dei nemici
+    const freeNow = isUsed ? entries.filter((e) => e.kind === 'ability'
+      ? char?.abilities.some((a) => String(a.id) === e.id && a.free_use)
+      : e.kind === 'spell' && char?.spells.some((s) => String(s.id) === e.id && castFlow.canRollActiveDamage(s))) : []
     return (
       <section>
         <div className="flex items-center justify-between gap-2 border-b border-dnd-border pb-1 pl-1">
@@ -569,6 +605,12 @@ export default function Turn() {
         </div>
       </div>
 
+      {sessionId != null && (
+        <Button variant="primary" size="md" fullWidth icon={<ChevronRight size={16} />} loading={endTurn.isPending} onClick={endMyTurn}>
+          {t('session.combat.end_my_turn')}
+        </Button>
+      )}
+
       {(block?.start_heal ?? []).map((n) => (
         <p key={n.feature_key} role="status" data-testid="start-heal" className="px-1 text-sm font-body text-dnd-gold-bright">
           {n.message ? n.message[lang] : t('character.turn.start_heal', { name: n.name[lang], amount: n.amount })}
@@ -577,6 +619,21 @@ export default function Turn() {
 
       <ActiveStatesBar char={char} />
 
+      {/* MA8: condizioni attive e TS di fine turno, come nella card del Combattimento */}
+      {activeConditions.length > 0 && (
+        <div data-testid="turn-conditions" className="flex flex-wrap gap-1.5 px-1">
+          {activeConditions.map(([key, val]) => <ConditionBadge key={key} conditionKey={key} value={val} showLabel />)}
+        </div>
+      )}
+      {endOfTurnSaves.map((e) => (
+        <p key={e.slug} data-testid="turn-end-save" className="rounded-lg border border-dnd-amber/60 bg-dnd-amber/10 px-2.5 py-1 text-xs text-dnd-amber font-body">
+          {t('session.combat.end_turn_save_hint', {
+            save: t('character.conditions.effect.save_any', { ability: t(`character.ability.${e.save_ability}_short`), dc: e.save_dc }),
+            condition: formatCondition(e.slug, true, t),
+          })}
+        </p>
+      ))}
+
       {/* U15: l'incantesimo in concentrazione senza stato proprio (Ragnatela, Guardiani spirituali) resta visibile nel turno */}
       {concSpell && !concClocked && (
         <p data-testid="turn-concentration" className="flex flex-wrap items-center gap-x-2 px-3 py-2 rounded-xl border border-dnd-arcane/40 bg-dnd-arcane/10 text-sm font-body text-dnd-text">
@@ -584,7 +641,7 @@ export default function Turn() {
           <span>{t('character.spells.concentration')}: {concSpell.name}</span>
           {concRounds != null && <span className="text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: concRounds })}</span>}
           {concSpell.save_dc != null && !!concSpell.attack_save?.trim() && concSpell.attack_save.trim().toUpperCase() !== 'ATK' && (
-            <span className="text-dnd-text-muted tabular-nums">{t('character.spells.save_dc', { dc: concSpell.save_dc })}</span>
+            <span className="text-dnd-text-muted tabular-nums">{t('character.turn.concentration_spell_dc', { dc: concSpell.save_dc })}</span>
           )}
         </p>
       )}
@@ -680,6 +737,18 @@ export default function Turn() {
           onPick={(allyId) => abilityUse.mutate({ ability: allyPick.ability, uses: allyPick.uses, amount: allyPick.amount, ...(allyId === null ? {} : { allyId }) })} />
       )}
       {targetKey && <TargetEffectSheet charId={charId} effectKey={targetKey} onClose={() => setTargetKey(null)} />}
+      <ConfirmSheet
+        open={leftover !== null}
+        onClose={() => setLeftover(null)}
+        onConfirm={() => {
+          if (sessionId != null) endTurn.mutate(sessionId)
+          setLeftover(null)
+        }}
+        title={t('session.combat.leftover_title')}
+        body={leftover ?? undefined}
+        confirmLabel={t('session.combat.leftover_cta')}
+        confirmVariant="primary"
+      />
     </Layout>
   )
 }

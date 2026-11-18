@@ -15,6 +15,7 @@ import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
+import { showUndoToast } from '@/components/ui/UndoToast'
 import { useLongPress } from '@/hooks/useLongPress'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
@@ -299,7 +300,15 @@ export default function Skills() {
   const toggle = (key: string) => {
     const current = getLevel(skills[key])
     const next = nextLevel(current)
-    mutation.mutate({ [key]: next })
+    // T6: un tocco sul nome cambia la competenza: si dice cosa è cambiato e si può annullare
+    const levelLabel = next === 'expert' ? t('character.skills.expert') : next ? t('character.skills.proficient') : t('common.none')
+    mutation.mutate({ [key]: next }, {
+      onSuccess: () => showUndoToast({
+        message: t('character.skills.prof_changed', { skill: t(`character.skills.${key}`), level: levelLabel }),
+        actionLabel: t('character.quick_actions.undo'),
+        onUndo: () => mutation.mutate({ [key]: current }),
+      }),
+    })
   }
 
   // Totali dal server (stessa funzione del tiro); il calcolo locale resta solo come ripiego.

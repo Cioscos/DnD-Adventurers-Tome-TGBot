@@ -207,7 +207,9 @@ async def test_plain_rage_is_not_published_and_the_eagle_text_follows_the_armor(
     await _armor(client, cid, "heavy")
     await client.post(f"/characters/{cid}/turn/new")
     await _rage(client, cid)
-    assert await _combatant_states(client, sid, GM_ID) == []  # niente testo né stato: l'ira pesante non dà nulla da mostrare
+    assert await _combatant_states(client, sid, PLAYER_ID) == []  # niente testo: l'ira pesante non dà nulla da mostrare agli altri
+    [gm_state] = await _combatant_states(client, sid, GM_ID)  # il GM vede comunque che è in ira (M6), senza testo
+    assert gm_state["key"] == "rage" and gm_state["others"] == []
 
 
 # ---------------------------------------------------------------------------

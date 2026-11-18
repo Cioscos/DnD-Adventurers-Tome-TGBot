@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Identity from '@/pages/Identity'
+import { useUnitSettings } from '@/store/unitSettings'
 
 const { getChar, updateChar, layoutProps } = vi.hoisted(() => ({
   getChar: vi.fn(),
@@ -300,7 +301,7 @@ describe('Identity tools from the catalog', () => {
 
 describe('Identity tools and the stored draft', () => {
   it('una bozza vecchia non sovrascrive la Maestria impostata altrove', async () => {
-    localStorage.setItem('identity-draft-3', JSON.stringify({ unit: 'imperial', draft: { name: 'Bozza', tools: { lute: true } } }))
+    localStorage.setItem('identity-draft-3', JSON.stringify({ unit: useUnitSettings.getState().system, draft: { name: 'Bozza', tools: { lute: true } } }))
     getChar.mockResolvedValue({ ...char, tool_proficiencies: { lute: 'expert' } })
     updateChar.mockResolvedValue(char)
     renderWithProviders(<Identity />)

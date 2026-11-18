@@ -10,7 +10,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -165,8 +165,8 @@ async def _zero_hp_save(session: AsyncSession, char: Character) -> ZeroHpSaveRes
     bonus = await saving_throw_bonus(session, char, rule.ability)
     applied = modifiers_for(char, "save", ability=rule.ability)
     outcome = resolve_applied("normal", None, None, applied)
-    record_dice(char, d20_records(outcome))
     total = outcome.kept + bonus
+    record_dice(char, d20_records(outcome), total)
     success = total >= dc and not applied.auto_fail
     char.settings = {**(char.settings or {}), ZERO_HP_USES: {**uses, spec.key: done + 1}}
     hp = max(1, rule.hp(RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)))
@@ -207,6 +207,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         form = None  # 2024: la forma non ha PF propri, i danni vanno ai temporanei e ai PF del druido
     before = _hp_state(char, form)
     zero_before = _zero_conditions(char)
+    history_from = await session.scalar(select(func.max(CharacterHistory.id)))  # le righe dell'operazione vengono dopo: l'annullo le segna
     option_block = None
     ally_req = None
     conc_result: ConcentrationSaveResult | None = None
@@ -267,6 +268,23 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             mod = {"none": "half", "double": "half_double"}.get(mod, mod)
             applied = apply_damage_mode(raw, mod)
             option_block.damage_after = applied
+        # L9: le altre parti dello stesso colpo, ognuna con le resistenze del suo tipo, sommate in un solo danno.
+        # shortcut: il blocco delle opzioni (toast «Danno 15 → 7») racconta solo la parte principale.
+        main_applied, extra_desc = applied, []
+        if body.extra_damage:
+            await attach_spell_auras(session, char)
+        for part in body.extra_damage:
+            part_slug = canonical_damage_type(part.damage_type)
+            part_mode = damage_taken_mode(char, part_slug)
+            if opts is not None and opts.resistance and part_mode != "immune":
+                part_mode = {"none": "half", "double": "half_double"}.get(part_mode, part_mode)
+            part_raw = scale_damage(part.amount, opts.multiplier) if opts is not None else part.amount
+            part_applied = apply_damage_mode(part_raw, part_mode)
+            applied += part_applied
+            label = f"{part.amount} {LABELS_IT[part_slug]}" if part_slug else str(part.amount)
+            word = {"half": "resistenza", "double": "vulnerabilità", "half_double": "resistenza e vulnerabilità",
+                    "immune": "immunità"}.get(part_mode)
+            extra_desc.append(f"più {label} → {part_applied} ({word})" if word else f"più {label}")
         # Wild shape: the form soaks the (already resistance-adjusted, using the
         # character's modifiers) damage first; only the overflow reaches the character
         # through the normal path below (temp HP, death rules, one concentration save).
@@ -324,7 +342,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
         if slug is not None and mod in ("half", "double", "half_double", "immune"):
             word = {"half": "resistenza", "double": "vulnerabilità", "half_double": "resistenza e vulnerabilità",
                     "immune": "immunità"}[mod]
-            desc = (f"Danno {raw} {LABELS_IT[slug]} → {pre_form} ({word}): -{lost} HP "
+            desc = (f"Danno {raw} {LABELS_IT[slug]} → {main_applied} ({word}): -{lost} HP "
                     f"({old} → {char.current_hit_points})")
         else:
             note = ""
@@ -332,12 +350,16 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                 word = {"half": "dimezzati", "double": "raddoppiati", "half_double": "dimezzati e raddoppiati"}[mod]
                 note = f" ({body.raw_value} {word})"
             desc = f"Danni{' da ' + LABELS_IT[slug] if slug else ''}: -{lost} HP{note} ({old} → {char.current_hit_points})"
+        if extra_desc:
+            desc += " — " + ", ".join(extra_desc)
         # Le riduzioni scelte (Schivata Prodigiosa, Parata...) e il colpo di partenza: senza PF, li vede anche il tavolo.
         used = option_names(char, [k for k in opts.keys if k != DEATH_WARD_HOLD]) if opts is not None else ""
         if used and option_block is not None and option_block.damage_before is not None:
             used += f" (colpo {option_block.damage_before})"
         if used:
             desc += f" — {used}"
+        if old > 0 and char.current_hit_points == 0 and amount > old:  # a 0 PF: il colpo intero e quanto va oltre lo 0
+            desc += f" — danno {pre_form}, eccesso {amount - old}"
         if form_overflow:
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if warded:
@@ -518,7 +540,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     op_id = uuid.uuid4().hex
     char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
                     "spent": option_block.spent if option_block else [], "ally_reaction_id": ally_req.id if ally_req is not None else None, "zero_before": zero_before,
-                    "turn_no": get_turn(char).get("turn_no", 0), "zero_after": _zero_conditions(char), "shared": shared_log,
+                    "turn_no": get_turn(char).get("turn_no", 0), "zero_after": _zero_conditions(char), "shared": shared_log, "history_from": history_from or 0,
                     "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
     if shared_from:
         if shared_out is not None:
@@ -641,6 +663,12 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
             settings = {k: v for k, v in (char.settings or {}).items() if k != "knocked_out"}
             char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
     char.hp_undo = None
+    if snap.get("history_from") is not None:  # il riepilogo della serata non conta danni, cure e TS contro la morte annullati
+        for row in (await session.execute(select(CharacterHistory).where(
+            CharacterHistory.character_id == char.id, CharacterHistory.id > snap["history_from"],
+            CharacterHistory.event_type.in_(("hp_change", "death_save")),
+        ))).scalars():
+            row.meta = {**(row.meta or {}), "undone": True}
 
     add_history(session, char.id, "hp_change",
                  (note or f"Annullata ultima operazione PF ({old} → {char.current_hit_points})")
@@ -777,6 +805,8 @@ async def rest_preview(
     bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
     preview = compute_rest_effects(char, rest_type, bonus)
     preview.too_soon = rest_type == "long" and _long_rest_too_soon(char)  # il primo modale avvisa già, prima della conferma
+    if preview.too_soon:  # l'avviso dice anche quante ore sono passate
+        preview.hours_since_long_rest = int((_utcnow() - datetime.fromisoformat(char.last_long_rest_at)).total_seconds() // 3600)
     return preview
 
 
@@ -1157,10 +1187,11 @@ async def roll_death_save(
                 current_hp=char.current_hit_points, option_result=option_result(opts, [], 0))
     d20 = resolve_body(body, applied)
     die = d20.kept
-    record_dice(char, d20_records(d20))
     option_rolls, option_total = roll_option_dice(char, opts)
     bonus = applied.flat + opts.bonus
+    record_dice(char, d20_records(d20), die + bonus + option_total)
     outcome, revived = await _apply_death_roll(session, char, ds, die, bonus + option_total, nat20_min=applied.crit_min)
+    char.turn_state = {**get_turn(char), "death_save_rolled": True}  # il banner «tira il TS contro la morte» si spegne fino al prossimo turno
 
     block = option_result(opts, option_rolls, option_total)
     remember_roll(char, "death_save", opts, {

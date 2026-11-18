@@ -168,6 +168,14 @@ async def test_divine_spark_damage_asks_a_constitution_save_with_the_spell_dc(cl
     assert (await _ability(client, cid, POOL))["uses"] == 1 and (await _turn(client, cid))["action_used"] is True
 
 
+async def test_divine_spark_says_the_wisdom_added_to_the_dice(client, monkeypatch):
+    """PA1 (playtest 17/11): «Hai tirato 6 = 6» senza la Saggezza. L'uso dice il fisso sommato ai dadi."""
+    monkeypatch.setattr("api.services.rules_states.random.randint", lambda a, b: 6)
+    cid = await _cleric24(client, 2, wisdom=16)
+    r = await _use(client, cid, SPARK, params={"mode": "damage_radiant"})
+    assert (r.json()["rolls"], r.json()["flat"]) == ([6], 3)
+
+
 async def test_divine_spark_needs_a_listed_mode_and_a_free_action(client):
     cid = await _cleric24(client, 2)
     assert (await _use(client, cid, SPARK, params={"mode": "wish"})).status_code == 422

@@ -85,6 +85,20 @@ async def test_ending_concentration_removes_the_effect_from_the_ally(client, tes
     assert await _states(client, hero, PLAYER_ID) == []
 
 
+async def test_ending_the_casters_clock_also_ends_concentration(client, test_session_factory):
+    """CH2: «Termina» sull'orologio ``spell_cast:*`` di un incantesimo a concentrazione chiude anche la concentrazione."""
+    _, hero, caster, spell = await _table(client, test_session_factory)
+    base = await _ac(client, hero, PLAYER_ID)
+    await _cast(client, caster, spell, [hero])
+    as_user(GM_ID)
+    r = await client.delete(f"/characters/{caster}/active-states/{SPELL_CLOCK_PREFIX}shield_of_faith")
+    assert r.status_code == 200, r.text
+    full = await _full(client, caster)
+    assert full["concentrating_spell_id"] is None
+    assert not any(s["key"].startswith(SPELL_CLOCK_PREFIX) for s in full["active_states"] or [])
+    assert await _ac(client, hero, PLAYER_ID) == base
+
+
 async def test_failed_concentration_save_on_damage_removes_the_effect(client, test_session_factory, monkeypatch):
     _, hero, caster, spell = await _table(client, test_session_factory)
     base = await _ac(client, hero, PLAYER_ID)

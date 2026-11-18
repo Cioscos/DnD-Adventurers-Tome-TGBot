@@ -201,6 +201,15 @@ async def test_lay_on_hands_heals_the_paladin_by_the_amount_spent(client, test_s
     assert (await _ability(client, cid, LOH))["uses"] == 25 - 7 and (await _turn(client, cid))["action_used"] is True
 
 
+async def test_lay_on_hands_on_yourself_spends_at_most_the_missing_points(client, test_session_factory):
+    cid = await _paladin(client, 5)
+    await _hurt(test_session_factory, cid, 10)
+    missing = (await _full(client, cid))["hit_points"] - 10
+    r = await _use(client, cid, LOH, amount=25, params={"mode": "self"})
+    assert r.status_code == 200, r.text
+    assert r.json()["healed"] == missing and (await _ability(client, cid, LOH))["uses"] == 25 - missing
+
+
 async def test_lay_on_hands_on_another_creature_only_spends_the_pool(client, test_session_factory):
     cid = await _paladin(client, 5)
     await _hurt(test_session_factory, cid, 10)

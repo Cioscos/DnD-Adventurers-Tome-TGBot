@@ -148,6 +148,17 @@ describe('Conditions page', () => {
     await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { blinded: true }))
   })
 
+  it('removing an active condition asks first (T6)', async () => {
+    getChar.mockResolvedValue({ id: 5, conditions: { frightened: { source: 'Ogre' } } })
+    listRules.mockResolvedValue([])
+    updateConditions.mockResolvedValue({ id: 5, conditions: { frightened: false } })
+    renderWithProviders(<Conditions />)
+    await userEvent.click(await screen.findByText('character.conditions.frightened'))
+    expect(updateConditions).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByText('character.conditions.remove_confirm'))
+    await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, expect.objectContaining({ frightened: false })))
+  })
+
   it('tells the player when the server drops a condition because of an immunity', async () => {
     getChar.mockResolvedValue({ id: 5, conditions: {} })
     listRules.mockResolvedValue([])

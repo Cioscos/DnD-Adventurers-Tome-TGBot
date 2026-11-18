@@ -31,6 +31,7 @@ from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
 from core.rules.modifiers import modifiers_for
+from core.data.damage_types import canonical_damage_type
 from api.services.dice_stats import record_dice
 from api.services.last_damage import pairs
 from core.db.models import Character, CharacterClass, EquipmentSlot, HomebrewRule, Item
@@ -86,9 +87,10 @@ def _record_attack_dice(
     damage_dice_str: str,
     damage_rolls: list[int],
     is_fumble: bool,
+    to_hit_total: int | None = None,
 ) -> None:
     """Statistiche: d20 di to-hit + dadi danno (esclusi fumble e danno piatto '1')."""
-    record_dice(char, d20_records(outcome) + ([] if is_fumble else _damage_records(damage_dice_str, damage_rolls)))
+    record_dice(char, d20_records(outcome) + ([] if is_fumble else _damage_records(damage_dice_str, damage_rolls)), to_hit_total)
 
 
 def _damage_records(damage_dice_str: str, damage_rolls: list[int]) -> list[tuple[str, int]]:
@@ -677,7 +679,7 @@ def _second_attack(char: Character, opts: AppliedOptions, pending: dict, item: I
     """Il secondo tiro per colpire di un'opzione: un 1 naturale manca, un critico raddoppia i dadi a parte."""
     applied = modifiers_for(char, "attack", ability=pending["ability"], item=item, attack_mode=pending["attack_mode"])
     outcome = resolve_applied("normal", None, None, applied)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), outcome.kept + bonus)
     if outcome.kept == 1:
         opts.separate_dice = []
     elif outcome.kept >= applied.crit_min:
@@ -884,7 +886,7 @@ async def attack_with_weapon(
     add_history(session, char.id, "attack_roll", result_str)
     end_hide(session, char)
     end_on_action(char, "attack")
-    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
+    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble, to_hit_total)
     if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
         if not offhand:
             spend(char, "attack", own_slot=_own_slot_attack(char, body))
@@ -963,7 +965,7 @@ async def attack_with_weapon(
         damage_total=damage_total,
         rerolled=rerolled or None,
         is_magic=True if applied.magic_weapon else None,
-        damage_type=spell_damage_type,
+        damage_type=spell_damage_type or canonical_damage_type(meta.get("damage_type")),  # PA1: il tipo dell'arma nel modale
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
     ), item, ability, resolved_mode, grip, opts, offhand)
@@ -1055,7 +1057,7 @@ async def attack_unarmed(
     add_history(session, char.id, "attack_roll", result_str)
     end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio
     end_on_action(char, "attack")
-    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
+    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble, to_hit_total)
     if not (body and body.with_inspiration):
         spend(char, "attack", own_slot=_own_slot_attack(char, body))  # il rilancio con ispirazione è lo stesso attacco
         _note_martial_attack(char, None, body)

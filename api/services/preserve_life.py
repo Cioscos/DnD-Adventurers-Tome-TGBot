@@ -131,6 +131,6 @@ async def preserve_life(session: AsyncSession, char: Character, allocations: lis
     done: list[Healed] = []
     for cid, amount in allocations:
         target = receivers[cid]
-        result = await apply_heal(session, target, amount)
+        result = await apply_heal(session, target, amount, by=char, source="Preservare Vita")
         done.append(Healed(cid, target.name, result["healed"]))
     return pool, done

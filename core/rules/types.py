@@ -329,6 +329,8 @@ class OnUse:
     # Vendetta Ardente su un altro: i suoi PF salgono a metà del *suo* massimo (letto dal server sul bersaglio) e si rialza
     heal_ally_half_max: bool = False
     heal_ally_full: bool = False  # i PF del bersaglio salgono al suo massimo, letto dal server (Panacea)
+    # ``cap_to_missing``: con ``choose_amount`` e una cura a unità, si spende al più quanto manca a chi la riceve (Imposizione delle Mani)
+    cap_to_missing: bool = False
     # ``heal`` somma il livello totale di chi usa: su un bersaglio della serata si somma il suo (Guaritore: i Dadi Vita massimi del bersaglio)
     heal_ally_add_level: bool = False
     # L'uso è possibile anche a 0 PF, da incapacitato (Vendetta Ardente): la UI non lo spegne
@@ -533,8 +535,10 @@ class RollOptionSpec:
     # Si applica da sola a ogni tiro in cui è disponibile, senza scelta né costo, e non si elenca al giocatore (Punizione
     # Divina Migliorata): vale per le fasi che il server percorre da solo, quindi ``before``.
     automatic: bool = False
-    # Già accesa nel prompt «Prima del tiro»: il giocatore la vede e può spegnerla (Mira Costante, già pagata con l'azione bonus)
-    preselected: bool = False
+    # Già accesa nel prompt «Prima del tiro»: il giocatore la vede e può spegnerla (Mira Costante, già pagata con l'azione bonus).
+    # ``f(ctx) -> bool`` quando dipende dal tiro (Attacco Furtivo con vantaggio). Su ``after_roll`` il client la applica da
+    # sola appena visto il d20 (il d4 di Benedizione: nessuno lo rifiuta, dimenticarlo costa un TS).
+    preselected: "bool | Callable[[RuleContext], bool]" = False
     # Con ``damage_in``: se il danno porta a 0 PF senza uccidere sul colpo, il personaggio resta a 1 PF (Sentinella
     # Imperitura). Il costo si rimborsa se il danno non arriva a 0.
     holds_at_one: bool = False

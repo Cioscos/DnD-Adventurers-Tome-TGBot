@@ -33,6 +33,16 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
     gcTime: 0,
   })
   const longTooSoon = rest.confirmLongRest && !!longPreview?.too_soon
+  const tooSoonHours = is2024 ? 16 : 24
+  const elapsed = longPreview?.hours_since_long_rest
+  const tooSoonText = elapsed != null
+    ? t('character.quick_actions.rest_too_soon_elapsed', { elapsed, hours: tooSoonHours })
+    : t('character.quick_actions.rest_too_soon_body', { hours: tooSoonHours })
+  // Anteprima dei PF dai dadi vita già tirati (dado + COS, minimo 0/1 per edizione; il server tiene conto anche di Tenace e Canto)
+  const hpMax = char.computed?.hp_max_effective ?? char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  const con = char.ability_scores?.find((a) => a.name === 'constitution')?.modifier ?? 0
+  const rolled = Object.values(rest.pendingDice).flat()
+  const hpGain = Math.min(Math.max(0, hpMax - char.current_hit_points), rolled.reduce((n, r) => n + Math.max(is2024 ? 1 : 0, r + con), 0))
 
   const interruptedToggle = (hint: string) => (
     <div className="text-left">
@@ -56,7 +66,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
             <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
             {longTooSoon && (
               <p data-testid="rest-too-soon" className="text-sm text-dnd-amber font-body">
-                {t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}
+                {tooSoonText}
               </p>
             )}
             {rest.confirmLongRest && (longBlocked
@@ -91,7 +101,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
         open={rest.tooSoon}
         onClose={() => { rest.setTooSoon(false); rest.cancelLongRest() }}
         title={t('character.quick_actions.rest_too_soon_title')}
-        body={<p>{t('character.quick_actions.rest_too_soon_body', { hours: is2024 ? 16 : 24 })}</p>}
+        body={<p>{tooSoonText}</p>}
         confirmLabel={t('character.quick_actions.rest_anyway')}
         confirmVariant="primary"
         loading={restMutation.isPending}
@@ -108,6 +118,11 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
           hpFull={hpIsFull(char)}
           preview={
             <>
+              {rolled.length > 0 && !shortBlocked && (
+                <p data-testid="rest-hp-gain" className="text-sm text-dnd-emerald-bright font-body text-left tabular-nums">
+                  {t('character.quick_actions.rest_hp_gain', { n: hpGain, hp: char.current_hit_points + hpGain, max: hpMax })}
+                </p>
+              )}
               {shortBlocked
                 ? <p className="text-sm text-dnd-crimson-bright font-body text-left">{t('character.quick_actions.rest_needs_hp')}</p>
                 : <RestPreviewList charId={char.id} restType="short" />}

@@ -194,3 +194,30 @@ async def test_action_surge_lets_a_second_action_spell_through_in_an_encounter(c
     second = await client.post(f"/characters/{cid}/spells/{bolt}/use", json={"slot_level": 1})
     assert second.status_code == 200, second.text
     assert (await _turn(client, cid))["extra_actions"] == 0
+
+
+async def test_after_an_attack_an_action_spell_is_refused_in_an_encounter_and_the_next_attack_still_goes(
+        client, test_session_factory, monkeypatch):
+    """LA4b: l'azione Attacco già iniziata è l'azione del turno; il lancio con l'azione è un secondo uso e non spende lo slot."""
+    sid, cid = await _encounter_caster(client, test_session_factory, monkeypatch)
+    cure = await _spell_with_time(client, cid, "Cura ferite", 1, "1 azione")
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "attack"})).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells/{cure}/use", json={"slot_level": 1})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "turn_slot_used"
+    assert _slot_at((await client.get(f"/characters/{cid}")).json(), 1)["used"] == 0
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "attack"})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "action"})).status_code == 409
+
+
+async def test_after_attacks_action_surge_still_lets_an_action_spell_through(client, test_session_factory, monkeypatch):
+    sid, cid = await _encounter_caster(client, test_session_factory, monkeypatch)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "fighter", "level": 2, "hit_die": 10})
+    assert r.status_code == 201, r.text
+    if not any(x["level"] == 1 for x in (await client.get(f"/characters/{cid}")).json()["spell_slots"]):
+        await _add_slot(client, cid, level=1, total=4)
+    bolt = await _spell_with_time(client, cid, "Dardo", 1, "1 azione")
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "attack"})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/features/fighter.action_surge/use", json={})).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells/{bolt}/use", json={"slot_level": 1})
+    assert r.status_code == 200, r.text
+    assert (await _turn(client, cid))["extra_actions"] == 0

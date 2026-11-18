@@ -20,6 +20,8 @@ vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { characters: { spendHitDice, update, rest }, items: { charges, recoverAmmo } } }
 })
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
+vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useNavigate: () => navigate }))
 vi.mock('@/lib/mutationError', async (orig) => ({ ...(await orig<typeof import('@/lib/mutationError')>()), notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
@@ -332,5 +334,32 @@ describe('QuickActions ammo recovery', () => {
     renderQC(archer(1))
     expect(screen.getByText('Frecce')).toBeTruthy()
     expect(screen.queryByLabelText('character.quick_actions.recover_ammo')).toBeNull()
+  })
+})
+
+describe('QuickActions on a feature with an effect (T14)', () => {
+  const withAbility = (extra: Record<string, unknown>) => ({
+    id: 7,
+    settings: { quick_actions: [{ type: 'ability', id: 3 }] },
+    classes: [],
+    abilities: [{ id: 3, name: 'Incanalare Divinità', uses: 2, max_uses: 2, is_passive: false, ...extra }],
+  }) as unknown as CharacterFull
+  const show = (c: CharacterFull) => render(
+    <QueryClientProvider client={new QueryClient()}>
+      <QuickActions char={c} />
+    </QueryClientProvider>,
+  )
+
+  it('a pool (Channel Divinity) opens the Turn page to choose the effect and target, without spending a use', async () => {
+    show(withAbility({ is_pool: true }))
+    await userEvent.click(screen.getByText('Incanalare Divinità'))
+    expect(navigate).toHaveBeenCalledWith('/char/7/turn')
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('a plain counter still marks a use', async () => {
+    show(withAbility({}))
+    await userEvent.click(screen.getByText('Incanalare Divinità'))
+    expect(navigate).not.toHaveBeenCalled()
   })
 })

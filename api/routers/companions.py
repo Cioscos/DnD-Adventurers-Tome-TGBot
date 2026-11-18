@@ -420,7 +420,8 @@ async def command_companion(
     else:
         if body.command == "attack" and beast.get("bonus_order"):
             raise HTTPException(status_code=409, detail={"code": "beast_not_attacking"})
-        spend(char, "action")  # 409 turn_slot_used
+        if not (body.command == "attack" and get_turn(char)["action_attacks"] > 0):  # l'Attacco già iniziato è già l'azione
+            spend(char, "action")  # 409 turn_slot_used
         if body.command == "attack":
             forgo_attack(char)  # l'ordine è l'azione Attacco e ne consuma un attacco; 409 no_attack_left senza
         beast = {**beast, "id": comp.id, "attacks_left": _beast_attacks(char, comp) if body.command == "attack" else 0}
@@ -545,7 +546,7 @@ async def companion_attack(
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
         + (f" | Danno: {total}" if m else ""),
     )
-    record_dice(char, d20_records(outcome) + ([(f"d{m.group(2)}", r) for r in rolls] if m and not is_fumble else []))
+    record_dice(char, d20_records(outcome) + ([(f"d{m.group(2)}", r) for r in rolls] if m and not is_fumble else []), outcome.kept + bonus)
     result = CompanionAttackResult(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
         dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,

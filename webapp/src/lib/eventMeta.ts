@@ -29,5 +29,9 @@ export const EVENT_META: Record<string, EventMeta> = {
   concentration_save: { icon: GiPotionBall,     tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-dnd-arcane' },
   hit_dice:           { icon: GiPerspectiveDiceSixFacesRandom, tone: 'text-dnd-emerald-bright bg-dnd-surface-raised border-dnd-emerald' },
   dice_roll:          { icon: GiPerspectiveDiceSixFacesRandom, tone: 'text-dnd-gold-bright bg-dnd-surface-raised border-dnd-gold' },
+  spell_cast:         { icon: GiSparkles,       tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-dnd-arcane' },
+  spell_attack:       { icon: GiSparkles,       tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-dnd-arcane' },
+  spell_damage:       { icon: GiSparkles,       tone: 'text-dnd-crimson-bright bg-dnd-surface-raised border-dnd-crimson' },
+  concentration:      { icon: GiPotionBall,     tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-dnd-arcane' },
   other:              { icon: GiPin,            tone: 'text-dnd-text-muted bg-dnd-surface-raised border-dnd-border' },
 }

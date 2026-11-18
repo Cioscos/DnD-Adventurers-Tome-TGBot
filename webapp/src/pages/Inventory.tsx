@@ -74,6 +74,7 @@ export default function Inventory() {
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
   const [moveTargets, setMoveTargets] = useState<Item[] | null>(null)
   const [giveTarget, setGiveTarget] = useState<Item | null>(null)
+  const [giveToStash, setGiveToStash] = useState(false)  // «Deposita»: il foglio parte col deposito di gruppo scelto
   const trade = useTradePartners(charId)
   const [coinMove, setCoinMove] = useState<{ coin: CoinKey; from: number } | null>(null)
   // Nuovo contenitore: da "+ Contenitore" oppure da "Sposta in…" (poi vi si spostano gli oggetti).
@@ -671,7 +672,7 @@ export default function Inventory() {
           <div className={`grid ${trade ? 'grid-cols-2' : 'grid-cols-3'} gap-2 mt-2`}>
             {([
               [t(pc + 'move_short'), FolderInput, () => setMoveTargets([current]), 'secondary'],
-              ...(trade ? [[t('character.inventory.give.action'), HandHeart, () => setGiveTarget(current), 'secondary'] as const] : []),
+              ...(trade ? [[t('character.inventory.give.action'), HandHeart, () => { setGiveToStash(false); setGiveTarget(current) }, 'secondary'] as const] : []),
               [t('common.edit'), Pencil, () => handleEdit(current), 'secondary'],
               [t('common.delete'), Trash2, () => setDeleteTarget(current.id), 'danger'],
             ] as const).map(([label, Icon, run, variant]) => (
@@ -882,7 +883,8 @@ export default function Inventory() {
                             chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
                             castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                             onMove={() => setMoveTargets([item])}
-                            onGive={trade ? () => setGiveTarget(item) : undefined}
+                            onGive={trade ? () => { setGiveToStash(false); setGiveTarget(item) } : undefined}
+                            onDeposit={trade?.stash ? () => { setGiveToStash(true); setGiveTarget(item) } : undefined}
                           />)}
                         </div>
                       ))}
@@ -914,7 +916,7 @@ export default function Inventory() {
       )}
 
       {giveTarget && trade && (
-        <GiveSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} stash={trade.stash} item={giveTarget} items={items} onClose={() => setGiveTarget(null)} />
+        <GiveSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} stash={trade.stash} toStash={giveToStash} item={giveTarget} items={items} onClose={() => setGiveTarget(null)} />
       )}
 
       {coinMove && (

@@ -21,6 +21,7 @@ from sqlalchemy.orm import selectinload
 from api.services import telegram_notify
 from api.services.telegram_notify import recipient_lang
 from api.services.campaigns import STASH_USER_ID
+from api.services.dice_stats import D20_TOTAL
 from api.services.rules_turn import set_surprised
 from core.data.labels import condition_label
 from core.db.models import (
@@ -72,33 +73,31 @@ def _summary(items: list[dict], coins: dict) -> str:
     return ", ".join(parts)
 
 
-def _dice(start: dict | None, now: dict | None) -> tuple[int, int, int]:
-    """(rolls, nat20, nat1) from the dice_stats diff (clamped: stats may be reset mid-evening).
+def _dice(start: dict | None, now: dict | None) -> tuple[int, int, int, int | None]:
+    """(rolls, nat20, nat1, highest d20 total) from the dice_stats diff (clamped: stats may be reset mid-evening).
 
     start None = joined before the snapshot existed: no baseline, so no dice stats (not a lifetime diff).
     """
     if start is None:
-        return 0, 0, 0
+        return 0, 0, 0, None
     now = now or {}
     diff = {
         kind: {face: max(0, int(n) - int((start.get(kind) or {}).get(face, 0))) for face, n in faces.items()}
         for kind, faces in now.items()
     }
     d20 = diff.get("d20", {})
-    return sum(sum(f.values()) for f in diff.values()), d20.get("20", 0), d20.get("1", 0)
+    totals = [int(t) for t, n in diff.pop(D20_TOTAL, {}).items() if n > 0]  # not a die: out of the roll count
+    return (sum(sum(f.values()) for f in diff.values()), d20.get("20", 0), d20.get("1", 0),
+            max(totals) if totals else None)
 
 
 def _char_stats(char: Character, start_stats: dict | None, rows: list[CharacterHistory],
                 window: tuple[str, str], player_name: str | None) -> dict:
-    lo, hi = window
-    rolls, nat20, nat1 = _dice(start_stats, char.dice_stats)
-    totals = [e.get("total") for e in (char.rolls_history or [])
-              if isinstance(e, dict) and lo <= str(e.get("timestamp") or "") <= hi
-              and isinstance(e.get("total"), int)]
+    rolls, nat20, nat1, highest = _dice(start_stats, char.dice_stats)
     st = {
         "character_id": char.id, "name": char.name, "player_name": player_name,
         "class_summary": char.class_summary, "level": char.total_level,
-        "dice": {"rolls": rolls, "nat20": nat20, "nat1": nat1, "highest": max(totals) if totals else None},
+        "dice": {"rolls": rolls, "nat20": nat20, "nat1": nat1, "highest": highest},
         "damage_taken": 0, "healed": 0, "downed": 0,
         "death_saves": {"successes": 0, "failures": 0},
         "spells_cast": 0, "slots_used": {}, "rests": {"short": 0, "long": 0}, "conditions": [], "condition_levels": {},
@@ -106,6 +105,8 @@ def _char_stats(char: Character, start_stats: dict | None, rows: list[CharacterH
     slots = st["slots_used"]
     for r in rows:
         m, ev = r.meta or {}, r.event_type
+        if m.get("undone"):  # operazione PF annullata (POST /hp/undo)
+            continue
         if ev == "hp_change" and m.get("op") == "DAMAGE":
             st["damage_taken"] += int(m.get("amount") or 0)
             st["downed"] += 1 if m.get("to_zero") else 0
@@ -139,6 +140,7 @@ def _highlights(chars: list[dict]) -> list[dict]:
         ("luckiest", lambda c: c["dice"]["nat20"]),
         ("most_damage", lambda c: c["damage_taken"]),
         ("top_healer", lambda c: c["healed"]),
+        ("healer", lambda c: c.get("healing_given", 0)),
     )
     out = []
     for key, val in picks:
@@ -194,6 +196,14 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         _char_stats(chars[cid], start, rows_by_char.get(cid, []), window, player_names.get(cid))
         for cid, start in pcs if cid in chars
     ]
+    given: dict[int, int] = {}  # cure date ad altri PG: dalle righe di chi le ha ricevute (meta by_id)
+    for rows in rows_by_char.values():
+        for r in rows:
+            m = r.meta or {}
+            if r.event_type == "hp_change" and m.get("op") == "HEAL" and m.get("by_id") and not m.get("undone"):
+                given[m["by_id"]] = given.get(m["by_id"], 0) + int(m.get("amount") or 0)
+    for c in characters:
+        c["healing_given"] = given.get(c["character_id"], 0)
     name_by_user = {c.user_id: c.name for c in chars.values()}
 
     encs = (await db.execute(
@@ -304,7 +314,7 @@ _T = {
     "it": {
         "title": "Riepilogo della serata", "evening": "Serata n. {n}", "player": "giocatore",
         "dice": "🎲 {rolls} tiri · {nat20}× 20 naturale · {nat1}× 1 naturale",
-        "highest": " · massimo {v}",
+        "highest": " · d20 più alto {v}",
         "hp": "❤️ {dmg} danni subiti · {healed} PF curati",
         "downed": " · a 0 PF {n} volte", "ds": "💀 TS morte: {s} successi, {f} fallimenti",
         "spells": "✨ {n} incantesimi", "slots": " · slot {s}",
@@ -318,12 +328,13 @@ _T = {
         "luckiest": "Il più fortunato ai dadi: {name} ({v}× 20 naturale)",
         "most_damage": "Chi ha subito più danni: {name} ({v})",
         "top_healer": "Chi è stato curato di più: {name} ({v} PF)",
+        "healer": "Chi ha curato di più gli altri: {name} ({v} PF)",
         "button": "Apri il riepilogo", "hours": "{h} h {m} min", "minutes": "{m} min",
     },
     "en": {
         "title": "Evening recap", "evening": "Evening #{n}", "player": "player",
         "dice": "🎲 {rolls} rolls · {nat20}× natural 20 · {nat1}× natural 1",
-        "highest": " · highest {v}",
+        "highest": " · highest d20 {v}",
         "hp": "❤️ {dmg} damage taken · {healed} HP healed",
         "downed": " · dropped to 0 HP {n} times", "ds": "💀 Death saves: {s} successes, {f} failures",
         "spells": "✨ {n} spells", "slots": " · slots {s}",
@@ -337,6 +348,7 @@ _T = {
         "luckiest": "Luckiest with dice: {name} ({v}× natural 20)",
         "most_damage": "Took the most damage: {name} ({v})",
         "top_healer": "Most healed: {name} ({v} HP)",
+        "healer": "Healed others the most: {name} ({v} HP)",
         "button": "Open the recap", "hours": "{h} h {m} min", "minutes": "{m} min",
     },
 }

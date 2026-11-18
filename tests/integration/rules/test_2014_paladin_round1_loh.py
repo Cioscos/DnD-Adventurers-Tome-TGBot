@@ -49,13 +49,18 @@ async def test_lay_on_hands_on_a_seated_ally_heals_them_and_spends_the_pool_and_
     assert any(e.event_type == "hp_change" and "+8" in e.description for e in events)
 
 
-async def test_the_heal_on_an_ally_never_goes_above_their_maximum_but_the_points_are_spent(client, test_session_factory):
+async def test_the_heal_on_an_ally_spends_only_the_missing_points_and_says_so(client, test_session_factory):
+    """L2: 10 punti chiesti, al bersaglio ne mancano 2: se ne spendono 2 e la risposta lo dice; a PF pieni non si spende nulla."""
     _, paladin, hero = await _table(client, test_session_factory, level=5)
     await _hero_hp(test_session_factory, hero, 38)
     as_user(GM_ID)
     r = await _give(client, paladin, hero, 10)
     assert r.json()["received"]["healed"] == 2 and (await _hero_state(test_session_factory, hero))[0] == 40
-    assert await _pool(client, paladin) == 15
+    assert "amount_capped" in r.json()["notes"]
+    assert await _pool(client, paladin) == 23
+    r = await _give(client, paladin, hero, 1)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_benefit"
+    assert await _pool(client, paladin) == 23
 
 
 async def test_lay_on_hands_refuses_someone_who_is_not_at_the_table_and_changes_nothing(client, test_session_factory):

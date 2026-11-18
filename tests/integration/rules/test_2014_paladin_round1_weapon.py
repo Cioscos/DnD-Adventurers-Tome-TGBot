@@ -10,6 +10,7 @@ async def _bound(client, charisma=16):
     cid = await _paladin(client, 3, "devotion", charisma=charisma)
     sword = await _sword(client, cid, equip="main_hand")
     plain = (await _attack(client, cid, sword))["to_hit_bonus"]
+    await client.post(f"/characters/{cid}/turn/new")  # l'attacco ha già speso l'azione (LA4b)
     r = await _use(client, cid, SW, params={"weapon": str(sword)})
     assert r.status_code == 200, r.text
     return cid, sword, plain

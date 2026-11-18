@@ -255,3 +255,12 @@ async def test_only_the_caster_or_the_gm_ends_a_spell_on_a_target(client, test_s
     as_user(GM_ID)
     assert (await client.delete(f"/sessions/{sid}/characters/{hero}/active-states/spell:bless")).status_code == 204
     assert await _states(client, hero, PLAYER_ID, "spell:bless") == []
+
+
+async def test_bless_d4_is_marked_to_be_added_on_its_own(client, test_session_factory):
+    """LA3/B11 (playtest 17/11): il d4 di Benedizione si somma da solo dopo il tiro (``preselected``), mai dimenticato."""
+    hero, caster, spell = await _table(client, test_session_factory, "Bless", "bless", 1)
+    await _cast(client, caster, spell, [hero])
+    as_user(PLAYER_ID)
+    r = await client.get(f"/characters/{hero}/roll-options", params={"roll": "save", "ability": "constitution"})
+    assert next(o for o in r.json() if o["key"] == "spell:bless:add")["preselected"] is True

@@ -55,6 +55,8 @@ vi.mock('framer-motion', async () => {
 
 vi.mock('@/auth/telegram', () => ({ haptic: { light: () => {}, medium: () => {}, success: () => {}, error: () => {} } }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, info: vi.fn(), success: vi.fn() }) }))
+const { showUndoToast } = vi.hoisted(() => ({ showUndoToast: vi.fn() }))
+vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect }) }))
 vi.mock('@/store/diceSettings', () => ({
@@ -196,6 +198,10 @@ describe('Skills page', () => {
     // athletics is currently 'expert' → next in the cycle is false.
     await userEvent.click(await screen.findByText('character.skills.athletics'))
     await waitFor(() => expect(updateSkills).toHaveBeenCalledWith(5, { athletics: false }))
+    // T6: si può annullare, tornando al livello di prima
+    await waitFor(() => expect(showUndoToast).toHaveBeenCalled())
+    showUndoToast.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(updateSkills).toHaveBeenLastCalledWith(5, { athletics: 'expert' }))
   })
 
   it('long-press opens the picker and the chosen level is PATCHed', async () => {

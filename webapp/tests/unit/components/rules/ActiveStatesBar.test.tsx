@@ -257,14 +257,26 @@ describe('ActiveStatesBar, wizard states', () => {
     await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'spell:shield_of_faith'))
   })
 
-  it('tells the caster own clock apart from the effect on them, and reads the clock duration', () => {
+  it('a spell cast on oneself and others (Bless) shows one row: the caster clock, with what the effect gives', () => {
     const data = { caster_id: 7, caster_name: 'Io', duration: { rounds: null, concentration: false, until_rest: true } }
     renderWithProviders(<ActiveStatesBar char={char([
-      { key: 'spell:aid', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Aiuto', data },
+      { key: 'spell:aid', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Aiuto', data,
+        hints: [{ it: 'PF massimi +5', en: 'Max HP +5' }] },
+      { key: 'spell:aid', feature_key: '', rounds_left: null, ends_on: ['manual'], name: 'Aiuto', data: { ...data, caster_id: 2, caster_name: 'Beta' } },
       { key: 'spell_cast:aid', feature_key: '', rounds_left: null, ends_on: ['rest_long'], name: 'Aiuto', data: { spell_key: 'aid', state_data: data } },
     ], [])} />)
-    expect(screen.getAllByText(/character\.turn\.state_until_rest/)).toHaveLength(2)
+    expect(screen.getAllByText(/^Aiuto$/)).toHaveLength(2)  // il proprio orologio + l'effetto ricevuto da un altro
     expect(screen.getAllByText(/character\.turn\.state_cast_by_you/)).toHaveLength(1)
+    expect(screen.getByText(/PF massimi \+5/)).toBeInTheDocument()
+  })
+
+  it('says what Divine Sense perceives and the light of Sacred Weapon (PA5)', () => {
+    renderWithProviders(<ActiveStatesBar char={char([
+      { key: 'divine_sense', feature_key: 'paladin.divine_sense', rounds_left: 2, ends_on: ['manual'], name: 'Percezione', data: { range_m: 18 } },
+      { key: 'sacred_weapon', feature_key: 'paladin.sacred_weapon', rounds_left: 10, ends_on: ['manual'], name: 'Arma', data: { attack_bonus: 3 } },
+    ], [])} />)
+    expect(screen.getByText(/character\.turn\.state_divine_sense/)).toBeInTheDocument()
+    expect(screen.getByText(/character\.turn\.state_sacred_light/)).toBeInTheDocument()
   })
 
   it('a spell cast only on oneself (Shield) shows one row, with the clock rounds left (B4)', () => {

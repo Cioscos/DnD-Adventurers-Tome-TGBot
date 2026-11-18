@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
-import { askRollOptions, CastCancelled, usePromptStore } from '@/lib/rollOptions'
+import { askRollOptions, CastCancelled, rolledText, usePromptStore } from '@/lib/rollOptions'
 import { d20Arg } from '@/hooks/useD20Roll'
 import RollNotes from '@/components/rules/RollNotes'
 import type { RollOption } from '@/api/client'
@@ -286,6 +286,31 @@ describe('askRollOptions', () => {
     await expect(answer).resolves.toMatchObject({ outcome: 'miss' })
   })
 
+  it('LA3: after a hit Bless is added on its own, without a prompt; not on a natural 1 nor twice', async () => {
+    const bless = option({ key: 'spell:bless:add', phase: 'after_roll', after: 'add', dice: '1d4', preselected: true })
+    rollOptions.mockResolvedValue([bless, option({ phase: 'after_hit' })])
+    renderWithProviders(<RollOptionsHost />)
+    await expect(askRollOptions(1, { roll: 'attack', item_id: 3 }, 'after_hit', {}))
+      .resolves.toMatchObject({ outcome: 'after_roll', after_option: { key: 'spell:bless:add' } })
+    expect(usePromptStore.getState().request).toBeNull()
+    const again = askRollOptions(1, { roll: 'attack', item_id: 3 }, 'after_hit', { used: ['spell:bless:add'] })
+    await waitFor(() => expect(usePromptStore.getState().request).not.toBeNull())
+    await userEvent.click(screen.getByText('character.roll_options.miss'))
+    await again
+    const fumble = askRollOptions(1, { roll: 'attack', item_id: 3 }, 'after_hit', { fumble: true, keepOpen: true })
+    await waitFor(() => expect(usePromptStore.getState().request).not.toBeNull())
+    await userEvent.click(screen.getByText('character.roll_options.miss'))
+    await expect(fumble).resolves.toMatchObject({ outcome: 'miss' })
+  })
+
+  it('LA1: Sneak Attack the server marks as preselected (advantage) opens on after the hit', async () => {
+    rollOptions.mockResolvedValue([option({ phase: 'after_hit', preselected: true, dice: '3d6' })])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'attack', item_id: 3 }, 'after_hit', {})
+    await userEvent.click(await screen.findByText('character.roll_options.damage'))
+    await expect(answer).resolves.toMatchObject({ options: ['sneak'] })
+  })
+
   it('offers the inspiration reroll only when asked to', async () => {
     rollOptions.mockResolvedValue([option({ phase: 'after_hit' })])
     renderWithProviders(<RollOptionsHost />)
@@ -340,5 +365,13 @@ describe('recover options (Expert Divination)', () => {
     await userEvent.click(await screen.findByRole('switch', { name: 'Dai PF temporanei?' }))
     await userEvent.click(screen.getByText('character.roll_options.cast'))
     await expect(none).resolves.toEqual({ options: ['gift'], option_inputs: {} })
+  })
+})
+
+describe('rolledText', () => {
+  it('PA1: writes the flat added to the dice (Divine Spark + Wisdom), not only the dice', () => {
+    expect(rolledText([6], 3)).toBe('6 + 3 = 9')
+    expect(rolledText([4, 2])).toBe('4 + 2 = 6')
+    expect(rolledText([1], -2)).toBe('1 − 2 = 0')
   })
 })

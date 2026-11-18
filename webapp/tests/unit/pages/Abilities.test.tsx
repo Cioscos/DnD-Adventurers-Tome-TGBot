@@ -51,6 +51,8 @@ vi.mock('framer-motion', async () => {
 vi.mock('@/auth/telegram', () => ({
   haptic: { light: () => {}, medium: () => {}, success: () => {}, error: () => {} },
 }))
+const { showUndoToast } = vi.hoisted(() => ({ showUndoToast: vi.fn() }))
+vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast }))
 vi.mock('@/styles/motion', () => ({ spring: { press: {} } }))
 
 const passthrough = vi.hoisted(() => async () => {
@@ -224,30 +226,29 @@ describe('Abilities page', () => {
     )
   })
 
-  it('pips: lit pip (already-used) restores a use', async () => {
-    getChar.mockResolvedValue(char([lucky]))   // max 3, uses 1 → 2 lit (used) + 1 unlit
+  it('pips only show what is available (full = available) and say it; «+» regains a use (T14)', async () => {
+    getChar.mockResolvedValue(char([lucky]))   // max 3, uses 1 → 1 pieno, 2 vuoti
     updateSpy.mockResolvedValue({ id: 2 })
     renderWithProviders(<Abilities />)
 
     await userEvent.click(await screen.findByRole('button', { name: /Lucky/ }))   // expand
-    // lit pips = aria-pressed true (already-used), unlit = false (still available)
-    const lit = screen.getAllByRole('button', { pressed: true })
-    expect(lit).toHaveLength(2)
-    expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(1)
-
-    await userEvent.click(lit[0])             // restore → uses current+1 = 2
+    expect(screen.getByTestId('ability-pips').querySelectorAll('.bg-dnd-gold')).toHaveLength(1)
+    expect(screen.getByText('character.abilities.uses_available')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'character.abilities.restore_use' }))
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(3, 2, { uses: 2 }))
   })
 
-  it('pips: unlit pip (still available) spends a use', async () => {
+  it('«−» spends a use and offers to undo it (T14)', async () => {
     getChar.mockResolvedValue(char([lucky]))
     updateSpy.mockResolvedValue({ id: 2 })
     renderWithProviders(<Abilities />)
 
     await userEvent.click(await screen.findByRole('button', { name: /Lucky/ }))   // expand
-    const unlit = screen.getAllByRole('button', { pressed: false })
-    await userEvent.click(unlit[0])           // spend → uses current-1 = 0
+    await userEvent.click(screen.getByRole('button', { name: 'character.abilities.spend_use' }))
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(3, 2, { uses: 0 }))
+    await waitFor(() => expect(showUndoToast).toHaveBeenCalled())
+    showUndoToast.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(3, 2, { uses: 1 }))
   })
 
   it('removes a feat counter through the feat endpoint after confirming', async () => {

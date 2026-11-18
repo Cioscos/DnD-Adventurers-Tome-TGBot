@@ -37,6 +37,7 @@ import CombatEntryCard from '@/components/session/CombatEntryCard'
 import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
 import RewardPopup from '@/components/session/RewardPopup'
 import { notifyMutationError } from '@/lib/mutationError'
+import { lastRollText } from '@/lib/lastRoll'
 
 function conditionEntries(
   conditions: Record<string, unknown> | null | undefined,
@@ -182,9 +183,10 @@ function ParticipantRow({
             )}
             <PublicStates states={snapshot.active_states} />
             {snapshot.last_roll && (
-              <div className="mt-1 text-xs text-dnd-text-muted flex items-center gap-1">
-                <Dices size={11} />
-                <span>{snapshot.last_roll.notation} → {snapshot.last_roll.total}</span>
+              <div className="mt-1 text-xs text-dnd-text-muted flex items-center gap-1 min-w-0">
+                <Dices size={11} className="shrink-0" />
+                <span className="min-w-0 truncate">{lastRollText(snapshot.last_roll)}</span>
+                <span className="shrink-0 font-mono">→ {snapshot.last_roll.total}</span>
               </div>
             )}
           </>
@@ -246,7 +248,8 @@ export default function SessionRoom() {
       qc.setQueryData(['session-me'], null)
       qc.invalidateQueries({ queryKey: ['session-me'] })
       haptic.warning()
-      navigate('/session')
+      // Chiusa la serata, il master va dritto al riepilogo (le serate senza campagna non ne hanno uno).
+      navigate(live?.campaign_id != null ? `/campaign/${live.campaign_id}/recap/${sessionId}` : '/session')
     },
     onError: (err) => {
       console.error('close session failed', err)
@@ -310,6 +313,11 @@ export default function SessionRoom() {
           <p className="text-center font-display font-bold text-dnd-crimson-bright py-6">
             {t('session.closed_notice')}
           </p>
+          {live.campaign_id != null && (
+            <Button variant="primary" fullWidth className="mb-2" onClick={() => navigate(`/campaign/${live.campaign_id}/recap/${sessionId}`)}>
+              {t('session.open_recap')}
+            </Button>
+          )}
           <Button variant="secondary" fullWidth onClick={() => navigate('/session')}>
             {t('common.back')}
           </Button>

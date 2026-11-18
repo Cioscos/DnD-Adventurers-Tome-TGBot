@@ -110,7 +110,7 @@ export type RollOption = {
   mode: 'advantage' | 'disadvantage' | null
   multiplier: number | null
   once_per_turn: boolean
-  preselected?: boolean  // accesa di default nel prompt prima del tiro (Mira Costante)
+  preselected?: boolean  // accesa di default nel prompt (Mira Costante, Attacco Furtivo col vantaggio); su `after_roll` si applica da sola (Benedizione)
   slot: string | null
   needs: string | null
   requires_input: 'slot' | 'recover' | null
@@ -408,6 +408,8 @@ export type RestPreview = {
   ends_concentration: boolean
   /** Riposo lungo a meno di 24 h (2014) / 16 h (2024) dal precedente: serve «Riposa comunque». */
   too_soon?: boolean
+  /** Ore intere dall'ultimo riposo lungo, solo con `too_soon`. */
+  hours_since_long_rest?: number | null
 }
 
 export type DeathSaveRollResult = {
@@ -657,7 +659,9 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; ally_reaction_id?: number; concentration_mode?: RollMode } & Partial<RollChoice>,
+      modifier?: { damage_modifier?: 'half' | 'double' | 'half_double' | 'none' | 'immune'; raw_value?: number; damage_type?: string; ally_reaction_id?: number; concentration_mode?: RollMode
+        /** Le altre parti dello stesso colpo, ognuna col suo tipo (L9). */
+        extra_damage?: { amount: number; damage_type: string | null }[] } & Partial<RollChoice>,
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
@@ -737,6 +741,11 @@ export const api = {
       }),
     tickRound: (id: number) =>
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
+    escapeCondition: (id: number, slug: string, skill: 'athletics' | 'acrobatics', die?: D20Roll) =>
+      request<{ roll: RollResult; dc: number; escaped: boolean }>(`/characters/${id}/conditions/${slug}/escape?skill=${skill}`, {
+        method: 'POST',
+        body: die != null ? JSON.stringify(d20Fields(die)) : undefined,
+      }),
     turnState: (id: number, itemId?: number | null) =>
       request<TurnState>(`/characters/${id}/turn-state${itemId ? `?item_id=${itemId}` : ''}`),
     turnUse: (id: number, slot: TurnSlot, used: boolean = true) =>
@@ -1618,6 +1627,8 @@ export const api = {
       request<void>(`/sessions/${sessionId}/inspiration/grant`, { method: 'POST', body: JSON.stringify(body) }),
     gmEndSpellState: (sessionId: number, characterId: number, key: string) =>
       request<void>(`/sessions/${sessionId}/characters/${characterId}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+    gmRemoveCondition: (sessionId: number, characterId: number, slug: string) =>
+      request<void>(`/sessions/${sessionId}/characters/${characterId}/conditions/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
     stashPut: (sessionId: number, body: StashMoveRequest & { from_character_id: number }) =>
       request<CharacterFull>(`/sessions/${sessionId}/stash/put`, { method: 'POST', body: JSON.stringify(body) }),
     stashTake: (sessionId: number, body: StashMoveRequest & { to_character_id: number }) =>

@@ -46,7 +46,7 @@ CONDITION_LABELS_IT: dict[str, str] = {
     "paralyzed":     "Paralizzato",
     "petrified":     "Pietrificato",
     "poisoned":      "Avvelenato",
-    "prone":         "A Terra",
+    "prone":         "Prono",
     "restrained":    "Trattenuto",
     "stunned":       "Stordito",
     "unconscious":   "Privo di Sensi",

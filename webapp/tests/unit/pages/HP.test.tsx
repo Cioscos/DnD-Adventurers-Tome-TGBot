@@ -142,6 +142,7 @@ vi.mock('@/pages/hp/HpOperationForm', async () => {
       activeOp: string
       damageModifier: 'half' | 'double' | null
       setDamageModifier: (m: 'half' | 'double' | null) => void
+      setExtraDamage?: (e: { amount: string; type: string } | null) => void
     }) =>
       React.createElement('div', { 'data-testid': 'hp-op-form' },
         React.createElement('input', { 'data-testid': 'hp-value', value: p.value, onChange: (e: { target: { value: string } }) => p.setValue(e.target.value) }),
@@ -153,6 +154,7 @@ vi.mock('@/pages/hp/HpOperationForm', async () => {
         React.createElement('button', { 'data-testid': 'hp-tab-damage', onClick: () => p.setActiveOp('damage') }, 'tabdmg'),
         React.createElement('button', { 'data-testid': 'hp-mod-half', onClick: () => p.setDamageModifier('half') }, 'half'),
         React.createElement('span', { 'data-testid': 'hp-mod-state' }, String(p.damageModifier)),
+        React.createElement('button', { 'data-testid': 'hp-extra-cold', onClick: () => p.setExtraDamage?.({ amount: '5', type: 'cold' }) }, 'extra'),
       ),
   }
 })
@@ -290,6 +292,18 @@ describe('HP page', () => {
     await userEvent.type(screen.getByTestId('hp-value'), '5')
     await userEvent.click(screen.getByTestId('hp-apply'))
     await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 5, false))
+  })
+
+  it('L9: a second damage type of the same hit goes in the same PATCH, as extra_damage', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+    await userEvent.click(screen.getByTestId('hp-extra-cold'))
+    await userEvent.type(screen.getByTestId('hp-value'), '15')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledTimes(1))
+    expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 15, false, expect.objectContaining({ extra_damage: [{ amount: 5, damage_type: 'cold' }] }))
   })
 
   it('typed value also shows one undo toast that undoes with the op id', async () => {

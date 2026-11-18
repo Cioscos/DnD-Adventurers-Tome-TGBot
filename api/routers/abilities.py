@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from api.routers._helpers import collect_homebrew_notifications
+from api.services.history import add_history
 from api.services.homebrew.dispatcher import dispatch
 from core.db.models import Ability, Character, CharacterClass
 from api.schemas.character import CharacterFull
@@ -82,6 +83,10 @@ async def update_ability(
         ability.uses = floor if ability.max_uses is None else min(floor, ability.max_uses)
         if ability.is_class_feature and ability.max_uses is None:  # illimitata: nessun contatore
             ability.uses = None
+    if "uses" in edited and old_uses is not None and ability.uses is not None and ability.uses != old_uses:
+        word = "usato" if ability.uses < old_uses else "ripristinato"
+        add_history(session, char_id, "ability_change", f"{ability.name}: {word} ({ability.uses}/{ability.max_uses})"
+                    if ability.max_uses is not None else f"{ability.name}: {word}")
     await session.flush()
 
     notifications: list[dict] = []

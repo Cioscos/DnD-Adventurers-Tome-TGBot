@@ -64,10 +64,12 @@ def cap_hp_to_max(char: Character, closed: list[dict], bonus: int | None = None)
     char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
 
 
-async def apply_heal(session: AsyncSession, char: Character, amount: int, log: bool = True) -> dict:
+async def apply_heal(session: AsyncSession, char: Character, amount: int, log: bool = True,
+                     by: Character | None = None, source: str | None = None) -> dict:
     """Heal `char` by `amount` HP, clamped to effective max (base + passive
     homebrew bonus). Resets death saves if HP rises from 0. Logs history and
     dispatches the `hp_healed` homebrew event. ``log=False``: il chiamante scrive già una riga sua (dado vita).
+    ``by``/``source``: chi cura un altro e con che cosa (incantesimo, privilegio), per lo storico, il log e il riepilogo.
 
     Returns {"old", "new", "healed", "firing"}; the caller collects
     notifications from "firing" via collect_homebrew_notifications.
@@ -80,9 +82,13 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int, log: b
     char.current_hit_points = max(old, min(effective_max, char.current_hit_points + amount))
     healed = char.current_hit_points - old
     if amount > 0 and log:  # una cura da 0 non è un evento da ricordare
+        meta = {"op": "HEAL", "amount": healed}
+        who = ""
+        if by is not None and by.id != char.id:
+            meta |= {"by_id": by.id, "by": by.name, **({"source": source} if source else {})}
+            who = f" da {by.name}" + (f" ({source})" if source else "")
         add_history(session, char.id, "hp_change",
-                     f"Cura: +{healed} HP ({old} → {char.current_hit_points})",
-                     meta={"op": "HEAL", "amount": healed})
+                     f"Cura{who}: +{healed} HP ({old} → {char.current_hit_points})", meta=meta)
     firing = await dispatch(session, char, "hp_healed", {
         "amount": amount,
         "current_hp_before": old,

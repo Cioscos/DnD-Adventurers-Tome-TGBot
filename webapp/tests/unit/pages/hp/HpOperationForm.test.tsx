@@ -102,6 +102,25 @@ function Harness({
 const MINUS = '−'
 
 describe('HpOperationForm', () => {
+  it('L9: adds a second damage type of the same hit and counts it in the apply button', async () => {
+    function WithExtra() {
+      const [extra, setExtra] = useState<{ amount: string; type: string } | null>(null)
+      return (
+        <HpOperationForm activeOp="damage" setActiveOp={() => {}} value="15" setValue={() => {}} onApply={() => {}} isPending={false}
+          hpMutate={() => {}} atZero={false} crit={false} setCrit={() => {}} damageModifier={null} setDamageModifier={() => {}}
+          extraDamage={extra} setExtraDamage={setExtra} extraApplied={extra?.amount ? 2 : 0} />
+      )
+    }
+    render(<WithExtra />)
+    expect(screen.queryByTestId('extra-damage')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.hp.extra_damage_add'))
+    expect(screen.getByTestId('extra-damage')).toBeInTheDocument()
+    await userEvent.type(screen.getAllByTestId('hp-input')[0], '5')
+    expect(screen.getByText('character.hp.apply_damage')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.extra_damage_remove' }))
+    expect(screen.queryByTestId('extra-damage')).not.toBeInTheDocument()
+  })
+
   it('renders all five HP operations (damage/heal/current/max/temp)', () => {
     render(<Harness />)
     for (const key of [

@@ -29,11 +29,12 @@ from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
-from core.rules.spell_effects import SPELL_STATE_PREFIX
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import is_target_immune
 from api.services.turn_start import apply_turn_start
 from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
-from api.services.durations import is_concentrating
+from api.services.durations import end_concentration, is_concentrating
+from api.services.condition_effects import release_concentration_effects
 from core.db.models import Character, Combatant, Encounter, GameSession
 from api.schemas.rules import (
     LastRollBody,
@@ -360,6 +361,7 @@ class FeatureUse(BaseModel):
 
 class FeatureUseResult(BaseModel):
     rolls: list[int] = []
+    flat: int = 0  # il fisso sommato ai dadi (Saggezza della Scintilla Divina)
     healed: int = 0
     state: dict | None = None
     notes: list[str] = []
@@ -382,7 +384,7 @@ async def feature_use(
     char = await get_owned_full_with_resources(char_id, user_id, db)
     res = await use_feature(db, char, feature_key, body.amount, body.params)
     await db.commit()
-    return FeatureUseResult(rolls=res.rolls, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets,
+    return FeatureUseResult(rolls=res.rolls, flat=res.flat, healed=res.healed, state=res.state, notes=res.notes, targets=res.targets,
                             given=res.given, received=res.received, temp_hp=res.temp_hp, temp_received=res.temp_received, message=res.message, attack=res.attack, removal=res.removal)
 
 
@@ -577,6 +579,9 @@ async def end_active_state(
     remove_state(char, key, by_player=True)
     if key.startswith(SPELL_STATE_PREFIX):
         await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi
+    if key.startswith(SPELL_CLOCK_PREFIX) and any("concentration_end" in (s.get("ends_on") or ()) for s in closed):
+        end_concentration(char)  # CH2: l'incantesimo finito era quello su cui si concentrava, come «Interrompi concentrazione»
+        await release_concentration_effects(db, char)
     return char.active_states
 
 

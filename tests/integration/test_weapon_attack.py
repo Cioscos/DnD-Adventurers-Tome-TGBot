@@ -157,3 +157,15 @@ async def test_unknown_item_is_404(client):
     cid = await _create_character(client)
     r = await client.post(f"/characters/{cid}/items/999999/attack")
     assert r.status_code == 404, r.text
+
+
+async def test_result_carries_the_weapon_damage_type(client, monkeypatch):
+    """PA1 (playtest 17/11): il modale dei danni dice il tipo dell'arma (form del client: ``dmg_<tipo>``)."""
+    cid = await _create_character(client)
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Arco", "item_type": "weapon", "item_metadata": {
+        "damage_dice": "1d8", "damage_type": "dmg_piercing", "weapon_type": "ranged", "properties": []}})
+    assert r.status_code == 201, r.text
+    wid = next(i["id"] for i in (await client.get(f"/characters/{cid}/items")).json() if i["name"] == "Arco")
+    _patch_sequence(monkeypatch, [10, 6])
+    body = (await client.post(f"/characters/{cid}/items/{wid}/attack")).json()
+    assert body["damage_type"] == "piercing"

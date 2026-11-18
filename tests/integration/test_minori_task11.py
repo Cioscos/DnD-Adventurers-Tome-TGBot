@@ -76,7 +76,7 @@ async def _second_hero_n(factory) -> None:
         await s.commit()
 
 
-LIMIT_52 = 40  # SELECT+scritture; prima della correzione le sole SELECT erano 116
+LIMIT_52 = 41  # SELECT+scritture; prima della correzione le sole SELECT erano 116 (+1: il segno dell'annullo, L12)
 
 
 async def test_minori_81_death_ward_spend_and_refund_have_no_query_in_between(client, test_session_factory, monkeypatch):

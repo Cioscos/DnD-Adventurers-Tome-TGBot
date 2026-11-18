@@ -32,11 +32,11 @@ const box = (id: number, name: string, parent: number | null, coins = {}) =>
 
 beforeEach(() => { trade.mockReset(); stashPut.mockReset(); toastInfo.mockReset() })
 
-function setup(item: Item, items: Item[], opts: { stash?: boolean; partners?: SessionParticipant[] } = {}) {
+function setup(item: Item, items: Item[], opts: { stash?: boolean; partners?: SessionParticipant[]; toStash?: boolean } = {}) {
   const onClose = vi.fn()
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   renderWithProviders(
-    <GiveSheet charId={10} sessionId={9} partners={opts.partners ?? partners} stash={opts.stash} item={item} items={items} onClose={onClose} />,
+    <GiveSheet charId={10} sessionId={9} partners={opts.partners ?? partners} stash={opts.stash} toStash={opts.toStash} item={item} items={items} onClose={onClose} />,
     { client: qc },
   )
   return { onClose, qc }
@@ -111,6 +111,15 @@ describe('GiveSheet', () => {
     expect(stashPut).toHaveBeenCalledWith(9, { from_character_id: 10, item_id: 1, quantity: 1 })
     expect(trade).not.toHaveBeenCalled()
     expect(qc.getQueryData(['character', 10])).toMatchObject({ id: 10 })
+  })
+
+  it('«Deposita»: il deposito di gruppo è già scelto, anche con dei compagni', async () => {
+    const f = it_(1, 'Corda')
+    stashPut.mockResolvedValue({ id: 10, items: [] })
+    setup(f, [f], { stash: true, toStash: true })
+    expect(screen.getByRole('button', { name: /campaign.stash/ })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
+    await waitFor(() => expect(stashPut).toHaveBeenCalled())
   })
 
   it('senza stash il deposito non compare', () => {

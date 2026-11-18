@@ -169,7 +169,8 @@ async def test_save_notification_sent(client, test_session_factory, monkeypatch)
 
 
 async def test_encounter_end_drops_round_durations(client, test_session_factory, monkeypatch):
-    """B12: a fine scontro le condizioni a round cadono (anche col TS), quelle senza durata restano."""
+    """B12 + L5: a fine scontro cadono le condizioni a round e quelle col TS ripetuto (fuori scontro nessuno lo chiede più);
+    quelle senza durata né TS restano."""
     _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
     await _add_effect(test_session_factory, cid, "frightened", enc_id=enc_id, expiry=ExpirySpec("owner", "end", 3),
                       save=SaveSpec("wisdom", 13, "end"))
@@ -181,5 +182,98 @@ async def test_encounter_end_drops_round_durations(client, test_session_factory,
     as_user(GM_ID)
     assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
     conds, effects, _ = await _state(test_session_factory, cid)
-    assert conds["frightened"] is False and conds["poisoned"] is True and conds["blinded"] is True
-    assert "frightened" not in effects and "poisoned" in effects
+    assert conds["frightened"] is False and conds["poisoned"] is False and conds["blinded"] is True
+    assert effects == {}
+
+
+async def test_encounter_end_closes_states_of_a_minute_or_less(client, test_session_factory, monkeypatch):
+    """L5: gli stati a round di un minuto o meno (Arma Consacrata, Benedizione) e la concentrazione che sta per finire
+    chiudono con lo scontro; quelli più lunghi (Scudo della Fede, 10 minuti) e quelli senza durata restano."""
+    _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+
+    def st(key, rounds):
+        return {"key": key, "feature_key": key, "rounds_left": rounds, "ends_on": ["manual"], "data": {}, "name": key}
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        ch.active_states = [st("sacred_weapon", 9), st("long", 90), st("forever", None)]
+        ch.settings = {**(ch.settings or {}), "concentration_rounds_left": 8}
+        await s.commit()
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        assert [x["key"] for x in ch.active_states] == ["long", "forever"]
+        assert ch.active_states[0]["rounds_left"] == 90
+        assert "concentration_rounds_left" not in (ch.settings or {})
+
+
+async def test_gm_removes_a_condition_outside_combat(client, test_session_factory, monkeypatch):
+    """L5: fuori combattimento il GM toglie una condizione a un PG seduto; un giocatore no."""
+    _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    await _add_effect(test_session_factory, cid, "frightened")
+    as_user(PLAYER_ID)
+    assert (await client.delete(f"/sessions/{sid}/characters/{cid}/conditions/frightened")).status_code == 403
+    as_user(GM_ID)
+    r = await client.delete(f"/sessions/{sid}/characters/{cid}/conditions/frightened")
+    assert r.status_code == 204, r.text
+    conds, effects, _ = await _state(test_session_factory, cid)
+    assert conds["frightened"] is False and effects == {}
+
+
+async def test_escape_restrained_with_an_athletics_check(client, test_session_factory, monkeypatch):
+    """U36: liberarsi da Trattenuto è un'azione con una prova contro la CD dell'effetto; riuscita, la condizione cade."""
+    _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    await _add_effect(test_session_factory, cid, "restrained", save=SaveSpec("strength", 15, "end"))
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/conditions/restrained/escape?skill=athletics", json={"die": 2})
+    assert r.status_code == 200, r.text
+    assert r.json()["escaped"] is False and r.json()["dc"] == 15
+    assert (await _state(test_session_factory, cid))[0]["restrained"] is True
+    turn = (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]
+    assert turn["action_used"] is True
+    r = await client.post(f"/characters/{cid}/conditions/restrained/escape?skill=athletics", json={"die": 20})
+    assert r.status_code == 409, r.text  # l'azione è già usata
+    assert r.json()["detail"]["code"] == "turn_slot_used"
+    await _advance(client, sid, 3)  # di nuovo il turno del PG
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/conditions/restrained/escape?skill=acrobatics", json={"die": 20})
+    assert r.status_code == 200, r.text
+    assert r.json()["escaped"] is True
+    conds, effects, _ = await _state(test_session_factory, cid)
+    assert conds["restrained"] is False and "restrained" not in effects
+
+
+async def test_escape_needs_a_dc(client, test_session_factory, monkeypatch):
+    _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    await _add_effect(test_session_factory, cid, "restrained")
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/conditions/restrained/escape?skill=athletics", json={"die": 20})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "no_escape_dc"
+
+
+async def test_death_save_marks_the_turn(client, test_session_factory, monkeypatch):
+    """Il banner «tira il TS contro la morte» sparisce dopo il tiro: il turno ricorda che è stato fatto."""
+    _, sid, enc_id, cid, *_ = await _start(client, test_session_factory, monkeypatch)
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        ch.hit_points, ch.current_hit_points = 10, 0
+        await s.commit()
+    as_user(PLAYER_ID)
+    assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"].get("death_save_rolled") in (None, False)
+    assert (await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 12})).status_code == 200
+    assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]["death_save_rolled"] is True
+
+
+async def test_encounter_end_summary_has_damage_dealt(client, test_session_factory, monkeypatch):
+    """M2: il riepilogo di fine scontro dice i danni inflitti ai nemici, non solo quanti ne sono caduti."""
+    _, sid, enc_id, cid, pc_id, g1_id, g2_id = await _start(client, test_session_factory, monkeypatch)
+    as_user(GM_ID)
+    assert (await client.patch(f"/sessions/{sid}/encounter/combatants/{g1_id}", json={"current_hp": 0})).status_code == 200
+    assert (await client.patch(f"/sessions/{sid}/encounter/combatants/{g2_id}", json={"current_hp": 4})).status_code == 200
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    async with test_session_factory() as s:
+        from core.db.models import SessionMessage
+        bodies = [m.body for m in (await s.execute(select(SessionMessage))).scalars()]
+    assert any("Nemici sconfitti: 1/2" in b and "Danni inflitti: 10" in b for b in bodies), bodies

@@ -80,7 +80,11 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         ...(resistance ? { fiendish_resilience: resistance } : {}),
         ...(tempAllies.length > 0 ? { temp_hp_allies: tempAllies } : {}),
       })
-      return { updated, spent }
+      // Gli slot ripresi (Recupero Arcano/Naturale) si dicono nell'esito: la scelta si azzera subito dopo (MA6)
+      const recovered = restType === 'short'
+        ? (['arcane', 'natural'] as const).map((k) => [k, k === 'arcane' ? arcane : recovery] as const).filter(([, v]) => Object.keys(v).length > 0)
+        : []
+      return { updated, spent, recovered }
     },
     onSettled: () => { restInFlight.current = false },
     onError: (err) => {
@@ -102,7 +106,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
         notifyMutationError(err)
       }
     },
-    onSuccess: ({ updated, spent }) => {
+    onSuccess: ({ updated, spent, recovered }) => {
       setTooSoon(false)
       setPendingDice({})
       setInterrupted(false)
@@ -123,6 +127,12 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
       // L'esito dice sempre i dadi vita rimasti: fuori dai modali non si leggono altrove che nella pagina PF.
       const dice = (updated.classes ?? []).map((c) => `d${c.hit_die ?? 8} ${hitDiceRemaining(c)}/${c.level}`).join(', ')
       toast.success(dice ? t('character.quick_actions.rest_done_dice', { dice }) : t('character.quick_actions.rest_done'))
+      for (const [kind, slots] of recovered) {
+        toast.info(t('character.quick_actions.rest_arcane_done', {
+          name: t(`character.quick_actions.${kind}_recovery`),
+          slots: Object.entries(slots).map(([level, count]) => t('character.quick_actions.rest_slot_level', { count, level })).join(', '),
+        }))
+      }
       for (const r of updated.temp_received ?? []) {  // il server dice se i PF temporanei sono saliti o se l'altro ne aveva di più
         toast.info(t(r.applied ? 'character.turn.use_temp_received' : 'character.quick_actions.rest_temp_kept', { name: r.name, n: r.given, have: r.temp_hp }))
       }

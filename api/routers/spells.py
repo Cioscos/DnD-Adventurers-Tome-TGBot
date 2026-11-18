@@ -37,7 +37,7 @@ from api.schemas.spell import (
     SpellUseRequest,
 )
 from api.services.durations import end_concentration, start_concentration
-from core.data.damage_types import canonical_damage_type
+from core.data.damage_types import LABELS_IT, canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
 from api.services.condition_removal import apply_removal, plan, resolve_targets
@@ -668,7 +668,7 @@ async def spell_attack(
     add_history(session, char_id, "spell_attack", text)
     end_hide(session, char)
     end_on_action(char, "attack")
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), total)
 
     firing = await dispatch(
         session, char, "attack_rolled",
@@ -755,7 +755,7 @@ def _twinned_attack(char: Character, spell: Spell, mode: RollMode, applied: Any,
     if keep and twin.get("attack"):
         return twin["attack"]
     outcome = resolve_applied(mode, None, None, applied)
-    record_dice(char, d20_records(outcome))
+    record_dice(char, d20_records(outcome), outcome.kept + bonus)
     critical = outcome.kept >= applied.crit_min
     result = {"die": outcome.kept, "dice": outcome.dice, "mode": outcome.mode, "total": outcome.kept + bonus,
               "is_critical": critical, "is_fumble": outcome.kept == 1}
@@ -774,6 +774,9 @@ async def update_concentration(
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
     if body.spell_id is None:
+        if char.concentrating_spell_id is not None:  # il log della serata e la Cronologia dicono che è stata interrotta
+            name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id), None)
+            add_history(session, char.id, "concentration", "Concentrazione interrotta" + (f": {name}" if name else ""))
         end_concentration(char)
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:
         # Senza `rounds` sullo stesso incantesimo non cambia nulla: il lancio ha già avviato il contatore.
@@ -977,6 +980,10 @@ async def roll_spell_damage(
     history_entry = {
         "type": "spell_damage",
         "spell_name": spell.name,
+        "label": spell.name,  # l'ultimo tiro sulla card della serata: cosa e con quali dadi
+        "notation": "+".join(f"{len(r)}d{s}" for s, r in ((sides, main_rolls), (second_sides, second_rolls),
+                                                          (extra_sides, extra_rolls)) if r)
+                    + (f"{base_bonus + extra_bonus:+d}" if base_bonus + extra_bonus else ""),
         "rolls": main_rolls + second_rolls + extra_rolls,
         "total": total,
         "damage_type": main_type,
@@ -986,6 +993,9 @@ async def roll_spell_damage(
     }
     if isinstance(char.rolls_history, list):  # niente commit qui: la richiesta ne fa uno solo, alla fine
         char.rolls_history = [*char.rolls_history, history_entry]
+    dmg_slug = canonical_damage_type(main_type)
+    add_history(session, char.id, "spell_damage",  # una riga nel log della serata: chi ha fatto quanti danni e di che tipo
+                f"{spell.name}: {total} danni" + (f" da {LABELS_IT[dmg_slug]}" if dmg_slug in LABELS_IT else ""))
 
     all_extra = second_rolls + extra_rolls
     extra_kind = f"d{second_sides}" if second_rolls else (f"d{extra_sides}" if extra_rolls else None)
@@ -1143,7 +1153,7 @@ async def roll_spell_healing(
     healed_allies = []
     for ally in allies:  # riletto da zero: la cura parte dai PF veri (a 0 PF azzera i TS contro la morte)
         receiver = await load_receiver(session, ally.id)
-        healed_allies.append({"id": receiver.id, "name": receiver.name, "healed": (await apply_heal(session, receiver, total))["healed"]})
+        healed_allies.append({"id": receiver.id, "name": receiver.name, "healed": (await apply_heal(session, receiver, total, by=char, source=spell.name))["healed"]})
     self_healed = 0
     if opts.self_heal:
         self_healed = (await apply_heal(session, char, opts.self_heal))["healed"]

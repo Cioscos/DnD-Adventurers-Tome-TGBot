@@ -37,6 +37,7 @@ import { api, type DeathSaveRollResult } from '@/api/client'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
+import { isHealingSpell } from '@/lib/spellHealing'
 import { readHeroLayout, type HeroSectionKey } from '@/lib/heroLayout'
 import { hpNumeralTone } from '@/lib/hpTone'
 import type { Ability, CharacterFull } from '@/types'
@@ -294,9 +295,12 @@ export default function HeroScreen({ char }: Props) {
 
         {isConcentrating(char) && (() => {
           const spellName = concentrationLabel(char)
+          // T13: un incantesimo attivo che fa danni (Guardiani spirituali) porta al Turno, dove si ritirano i danni
+          const active = char.spells?.find((s) => s.id === char.concentrating_spell_id)
+          const rollsAgain = !!active?.damage_dice && active.level >= 1 && !isHealingSpell(active)
           return (
             <Pressable
-              onClick={() => navigate(`/char/${char.id}/spells`)}
+              onClick={() => navigate(`/char/${char.id}/${rollsAgain ? 'turn' : 'spells'}`)}
               className="mt-3 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl
                          bg-gradient-arcane-mist border border-dnd-arcane/50 text-dnd-arcane-bright"
               whileTap={{ scale: 0.98 }}

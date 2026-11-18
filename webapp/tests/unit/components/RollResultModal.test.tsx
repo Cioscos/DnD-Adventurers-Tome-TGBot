@@ -49,6 +49,15 @@ describe('RollResultModal', () => {
     expect(screen.getByText('vantaggio vs charme')).toBeInTheDocument()
   })
 
+  it('L8: with a DC says passed or failed; an automatic failure never passes', () => {
+    const { rerender } = render(<RollResultModal result={result({ total: 15 })} title="T" dc={15} onClose={() => {}} />)
+    expect(screen.getByTestId('roll-vs-dc')).toHaveTextContent('character.saves.passed_dc')
+    rerender(<RollResultModal result={result({ total: 14 })} title="T" dc={15} onClose={() => {}} />)
+    expect(screen.getByTestId('roll-vs-dc')).toHaveTextContent('character.saves.failed_dc')
+    rerender(<RollResultModal result={result({ total: 20, auto_fail: true })} title="T" dc={15} onClose={() => {}} />)
+    expect(screen.getByTestId('roll-vs-dc')).toHaveTextContent('character.saves.failed_dc')
+  })
+
   it('shows a neutral roll with the d20 (die) + bonus = total breakdown', () => {
     render(<RollResultModal result={result()} title="Tiro" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'default')

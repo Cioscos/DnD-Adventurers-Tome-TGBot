@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weaponOptions, weaponPreviewText } from '@/lib/weaponOptions'
+import { weaponOptions, weaponPreviewText, weaponRangeFt } from '@/lib/weaponOptions'
 
 describe('weaponOptions', () => {
   it('flags versatile only with a versatile die, thrown from the property', () => {
@@ -45,5 +45,21 @@ describe('weaponPreviewText', () => {
   })
   it('vuoto senza anteprima del server', () => {
     expect(weaponPreviewText({ item_metadata: { damage_dice: '1d6' } })).toBe('')
+  })
+})
+
+describe('weaponRangeFt (PA1)', () => {
+  const CATALOG = [
+    { index: 'longbow', name: { en: 'Longbow', it: 'Arco lungo' }, weapon_range: 'ranged', range_ft: 150, thrown_range_ft: null },
+    { index: 'dagger', name: { en: 'Dagger', it: 'Pugnale' }, weapon_range: 'melee', range_ft: 5, thrown_range_ft: 20 },
+  ]
+  it('reads the normal range of a ranged weapon by catalog index or by name', () => {
+    expect(weaponRangeFt({ item_metadata: { weapon_type: 'ranged', srd_index: 'longbow' } }, CATALOG)).toBe(150)
+    expect(weaponRangeFt({ name: 'Arco lungo', item_metadata: { weapon_type: 'ranged' } }, CATALOG)).toBe(150)
+  })
+  it('a thrown weapon gives its thrown range; a melee one or an unknown one none', () => {
+    expect(weaponRangeFt({ name: 'Dagger', item_metadata: { weapon_type: 'melee', properties: ['prop_thrown'] } }, CATALOG)).toBe(20)
+    expect(weaponRangeFt({ name: 'Dagger', item_metadata: { weapon_type: 'melee' } }, CATALOG)).toBeNull()
+    expect(weaponRangeFt({ name: 'Arco di Corvo', item_metadata: { weapon_type: 'ranged' } }, CATALOG)).toBeNull()
   })
 })

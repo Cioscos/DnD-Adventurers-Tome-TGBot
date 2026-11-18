@@ -73,7 +73,8 @@ export default function CombatantRow({
   const conds = Object.entries(
     (isPc ? snapshot?.conditions : c.conditions) ?? {},
   ).filter(([, v]) => Boolean(v))
-  const monsterSaves = !isPc && onResolveSave
+  // T2: un mostro morto non tira più TS, la richiesta pendente non va mostrata
+  const monsterSaves = !isPc && onResolveSave && !c.is_dead
     ? (c.pending_saves ?? []).filter((p) => p.status === 'pending')
     : []
 
@@ -225,7 +226,6 @@ export default function CombatantRow({
               <HpBar pct={pct(snapshot.current_hit_points, snapshot.hit_points)} bucket={null} />
             </>
           )}
-          {!collapsed && pcBucket && <HpBar pct={null} bucket={pcBucket} />}
 
           {!collapsed && showExactMonster && (
             <>
@@ -244,7 +244,17 @@ export default function CombatantRow({
               <HpBar pct={pct(c.current_hp, c.max_hp)} bucket={null} />
             </>
           )}
-          {!collapsed && monsterBucket && <HpBar pct={null} bucket={monsterBucket} />}
+          {/* L3: fascia di salute in parole anche nella riga estesa (solo fascia: i PF degli altri PG restano privati) */}
+          {!collapsed && bucket && (
+            <>
+              {!c.is_dead && (
+                <p data-testid="hp-bucket-label" className={`mt-1 text-xs font-mono ${BUCKET_TEXT[bucket]}`}>
+                  {t(`session.hp_bucket.${bucket}`)}
+                </p>
+              )}
+              <HpBar pct={null} bucket={bucket} />
+            </>
+          )}
 
           {conds.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>

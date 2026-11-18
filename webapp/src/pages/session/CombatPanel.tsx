@@ -160,6 +160,10 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
     enc.combatants.some((c) => c.kind === 'monster') &&
     enc.combatants.filter((c) => c.kind === 'monster').every((c) => c.is_dead)
 
+  // M2: danni inflitti ai nemici (PF dei mostri, che solo il GM vede esatti)
+  const damageDealt = enc.combatants.reduce((sum, c) =>
+    c.kind === 'monster' && c.max_hp != null && c.current_hp != null ? sum + Math.max(0, c.max_hp - c.current_hp) : sum, 0)
+
   const endMyTurn = async (charId: number) => {
     // Il PG a 0 PF non ha azioni da fare: nessun avviso.
     if (snapOf(myCombatant!)?.current_hit_points !== 0) {
@@ -210,9 +214,15 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
     dock = (
       <div className="space-y-2">
       {monstersAllDown && (
-        <Button variant="danger" size="md" fullWidth icon={<Flag size={16} />} onClick={() => setConfirmEnd(true)}>
-          {t('session.combat.end_cta')}
-        </Button>
+        <>
+          {/* M2: la proposta sta nella barra fissa, sopra il pulsante, non in fondo alla lista */}
+          <p className="text-center text-sm text-dnd-gold-bright font-display font-bold">
+            {t('session.combat.all_monsters_down')}
+          </p>
+          <Button variant="danger" size="md" fullWidth icon={<Flag size={16} />} onClick={() => setConfirmEnd(true)}>
+            {t('session.combat.end_cta')}
+          </Button>
+        </>
       )}
       <div className="flex gap-2">
         <Pressable
@@ -304,6 +314,12 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
               myUserId={myUserId}
             />
           )}
+          {/* MA2: il giocatore legge chi sta agendo, non solo il segno sul nastro */}
+          {!amGm && isActivePhase && activeCombatant && !isMyTurn && (
+            <p data-testid="acting-name" className="text-sm font-body text-dnd-text-muted">
+              {t('session.combat.acting')}: <span className="text-dnd-text">{activeCombatant.name}</span>
+            </p>
+          )}
           {!amGm && myCombatant && enc.status === 'setup' && (
             <InitiativeCta sessionId={sessionId} combatant={myCombatant} />
           )}
@@ -332,6 +348,9 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
                 isActive
                 amGm
                 mode={enc.mode}
+                // L4: il TS d'inizio turno del mostro che agisce si risolve qui, senza cercarlo nella lista
+                onResolveSave={(saveId, passed) => resolveSaveMutation.mutate({ saveId, passed })}
+                resolvingSaveId={resolveSaveMutation.isPending ? resolveSaveMutation.variables?.saveId : null}
               />
             </div>
           )}
@@ -359,11 +378,6 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
               resolvingSaveId={resolveSaveMutation.isPending ? resolveSaveMutation.variables?.saveId : null}
             />
           ))}
-          {amGm && monstersAllDown && isActivePhase && (
-            <p className="text-center text-xs text-dnd-text-muted font-body italic">
-              {t('session.combat.all_monsters_down')}
-            </p>
-          )}
         </div>
 
         {dock && (
@@ -420,13 +434,18 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         onConfirm={() => endMutation.mutate()}
         title={t('session.combat.end_confirm')}
         body={
-          <p data-testid="end-summary" className="tabular-nums">
-            {t('session.combat.end_summary', {
-              round: enc.round,
-              dead: enc.combatants.filter((c) => c.kind === 'monster' && c.is_dead).length,
-              total: enc.combatants.filter((c) => c.kind === 'monster').length,
-            })}
-          </p>
+          <>
+            <p data-testid="end-summary" className="tabular-nums">
+              {t('session.combat.end_summary', {
+                round: enc.round,
+                dead: enc.combatants.filter((c) => c.kind === 'monster' && c.is_dead).length,
+                total: enc.combatants.filter((c) => c.kind === 'monster').length,
+              })}
+            </p>
+            {damageDealt > 0 && (
+              <p data-testid="end-damage" className="tabular-nums">{t('session.combat.end_damage', { n: damageDealt })}</p>
+            )}
+          </>
         }
         confirmLabel={t('session.combat.end_cta')}
         loading={endMutation.isPending}

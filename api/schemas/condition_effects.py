@@ -32,6 +32,13 @@ class PendingSaveRead(BaseModel):
     last_roll: Optional[dict] = None
 
 
+class EscapeResult(BaseModel):
+    """Liberarsi da Trattenuto/Afferrato (U36): la prova, la CD dell'effetto e se è riuscita."""
+    roll: RollResult
+    dc: int
+    escaped: bool
+
+
 class PendingSaveRollResult(BaseModel):
     save: PendingSaveRead
     roll: RollResult

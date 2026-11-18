@@ -13,6 +13,7 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     data: queryKey[0] === 'character' ? state.char : { status: 'active' },
   }),
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }))
 vi.mock('@/hooks/useTurnState', () => ({ useTurnState: () => ({ data: state.turn }) }))
 vi.mock('@/store/characterStore', () => ({
@@ -47,6 +48,12 @@ describe('CombatNotices', () => {
     state.char = dyingChar
     state.turn = { is_my_turn: false, in_encounter: true, session_id: 5 }
     rerender(<CombatNotices charId={7} />)
+    expect(screen.queryByTestId('death-save-invite')).toBeNull()
+  })
+
+  it('il banner sparisce dopo il TS contro la morte del turno', () => {
+    state.turn = { is_my_turn: true, in_encounter: true, session_id: 5, turn: { death_save_rolled: true } }
+    render(<CombatNotices charId={7} />)
     expect(screen.queryByTestId('death-save-invite')).toBeNull()
   })
 
