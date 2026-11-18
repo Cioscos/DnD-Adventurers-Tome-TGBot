@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "3.14.2",
+      "date": "2026-11-18",
+      "improved": {
+        "it": [
+          "La stanza della serata si aggiorna più in fretta: il server legge i dati di tutti i personaggi in una volta sola."
+        ],
+        "en": [
+          "The session room refreshes faster: the server now reads every character's data in one go."
+        ]
+      }
+    },
+    {
       "version": "3.14.1",
       "date": "2026-11-18",
       "improved": {
