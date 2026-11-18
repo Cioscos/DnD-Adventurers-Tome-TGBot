@@ -28,7 +28,7 @@ from core.game.containers import COINS, carried_weight, coin_locations, containe
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_part
 from core.rules.condition_removal import view as removal_view
-from core.rules.catalog import active_features
+from core.rules.catalog import active_features, cached_features
 from core.rules.catalog.feats import feat_status
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext
@@ -54,10 +54,11 @@ async def build_character_response(
     ``persist=False`` (i GET): i valori ricalcolati (CA, migrazione della CA) vanno nella risposta ma non nel database;
     li salvano le scritture che li cambiano."""
     if persist:
-        return await _build(session, char, persist=True)
+        with cached_features():
+            return await _build(session, char, persist=True)
     saved = {a: getattr(char, a) for a in _READ_ONLY_ATTRS}
     try:
-        with session.no_autoflush:  # senza flush il ricalcolo non diventa un UPDATE
+        with session.no_autoflush, cached_features():  # senza flush il ricalcolo non diventa un UPDATE
             return await _build(session, char, persist=False)
     finally:
         for attr, value in saved.items():

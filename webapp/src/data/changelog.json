@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "3.14.4",
+      "date": "2026-11-19",
+      "improved": {
+        "it": [
+          "La scheda si apre e si aggiorna più in fretta: il server non ricalcola più cento volte gli stessi privilegi."
+        ],
+        "en": [
+          "The sheet opens and updates faster: the server no longer recomputes the same features a hundred times."
+        ]
+      }
+    },
+    {
       "version": "3.14.3",
       "date": "2026-11-19",
       "improved": {

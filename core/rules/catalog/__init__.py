@@ -1,7 +1,9 @@
 """Registro dei privilegi di classe per edizione; i Task 19-42 lo riempiono."""
 from __future__ import annotations
 
-from typing import Any
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Iterator
 
 from core.rules.edition import character_edition, class_key
 from core.rules.types import FeatureSpec
@@ -29,9 +31,32 @@ def _applies(spec: FeatureSpec, row: Any) -> bool:
     return True
 
 
+_CACHE: ContextVar[dict[int, list] | None] = ContextVar("active_features_cache", default=None)
+
+
+@contextmanager
+def cached_features() -> Iterator[None]:
+    """Nel blocco ``active_features`` si calcola una volta per personaggio (la scheda lo chiede più di cento volte).
+    Solo dove classi, talenti e specie non cambiano: chi li modifica resta fuori dal blocco."""
+    token = _CACHE.set({})
+    try:
+        yield
+    finally:
+        _CACHE.reset(token)
+
+
 def active_features(char: Any) -> list[tuple[FeatureSpec, Any]]:
     """Privilegi attivi di tutte le classi (filtro su livello di classe, `subclass_key` e opzioni scelte) e dei talenti
     posseduti (``core.rules.catalog.feats``: la riga è un ``FeatSource``) e dei tratti di specie 2024 (``SpeciesSource``)."""
+    cache = _CACHE.get()
+    if cache is None:
+        return _active_features(char)
+    if id(char) not in cache:
+        cache[id(char)] = _active_features(char)
+    return list(cache[id(char)])  # copia: chi la riceve può modificarla
+
+
+def _active_features(char: Any) -> list[tuple[FeatureSpec, Any]]:
     from core.rules.catalog.feats import owned_feats  # import locale: il registro dei talenti importa i tipi
     from core.rules.catalog.species_2024 import owned_species
     edition = character_edition(char)
