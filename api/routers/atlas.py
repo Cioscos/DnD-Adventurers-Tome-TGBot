@@ -84,7 +84,7 @@ async def _save(campaign_id: int, file: UploadFile) -> str:
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in _IMAGE_EXTS:
         raise HTTPException(status_code=400, detail=f"File format not allowed. Allowed: {', '.join(sorted(_IMAGE_EXTS))}")
-    content = await file.read()
+    content = await file.read(_MAX_IMAGE + 1)  # mai più del limite in memoria
     if len(content) > _MAX_IMAGE:
         raise HTTPException(status_code=400, detail=f"File too large (max {_MAX_IMAGE // (1024 * 1024)} MB)")
     folder = svc.ATLAS_DIR / str(campaign_id)

@@ -64,14 +64,14 @@ class NoteRead(BaseModel):
 
 
 class NoteCreate(BaseModel):
-    title: str
-    body: str
+    title: str = Field(max_length=200)
+    body: str = Field(max_length=50_000)
     tags: list[str] = Field(default_factory=list)
     campaign_id: int | None = None
 
 
 class NoteUpdate(BaseModel):
-    body: str
+    body: str = Field(max_length=50_000)
     tags: list[str] | None = None
     campaign_id: int | None = None
     clear_campaign: bool = False
@@ -231,7 +231,8 @@ async def delete_note(
     # Clean up voice file if applicable
     if body_str.startswith("[VOICE:") and body_str.endswith("]"):
         file_path = Path(body_str[7:-1])
-        if file_path.exists():
+        # Il corpo è testo libero: si cancella solo dentro la cartella delle vocali di questo personaggio.
+        if file_path.resolve().is_relative_to((_VOICE_DIR / str(char_id)).resolve()) and file_path.is_file():
             file_path.unlink()
     del notes[title]
     char.notes = notes
@@ -269,7 +270,7 @@ async def upload_voice_note(
         )
 
     # Read file content with size check
-    content = await file.read()
+    content = await file.read(_MAX_VOICE_SIZE + 1)  # mai più del limite in memoria
     if len(content) > _MAX_VOICE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
 

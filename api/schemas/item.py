@@ -29,7 +29,7 @@ _ALLOWED_CONDITIONS = {
     "prone", "restrained", "stunned", "unconscious",
 }
 _ALLOWED_SUBTYPES = {"potion", "scroll", "food", "other"}
-_HEAL_AMOUNT_RE = re.compile(r"^(\d+d\d+([+-]\d+)?|\d+)$", re.IGNORECASE)
+_HEAL_AMOUNT_RE = re.compile(r"^(\d{1,3}d[1-9]\d{0,3}([+-]\d+)?|\d+)$", re.IGNORECASE)
 
 
 def _validate_ability_modifiers(mods: Any) -> list[dict]:
@@ -99,7 +99,7 @@ def _validate_effects(effects: Any) -> list[dict]:
     return result
 
 
-_VERSATILE_RE = re.compile(r"^\d+d\d+([+-]\d+)?$", re.IGNORECASE)
+_VERSATILE_RE = re.compile(r"^\d{1,3}d[1-9]\d{0,3}([+-]\d+)?$", re.IGNORECASE)
 
 
 def _validate_weapon_meta(v: dict) -> None:

@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import json
 import random
-import re
 from dataclasses import dataclass
 
+from api.services.dice_notation import DICE_RE as _DICE
 from core.game.item_bonuses import item_meta
 
-_DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 # A long rest also restores short-rest charges (same rule as abilities/resources).
 _RECHARGES = {"long": ("long_rest", "dawn", "short_rest"), "short": ("short_rest",)}
 

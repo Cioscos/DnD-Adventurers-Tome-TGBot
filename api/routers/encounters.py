@@ -223,10 +223,10 @@ async def _notify_encounter_opened(
         rec_char = chars_by_id.get(p.character_id) if p.character_id else None
         if not telegram_notify.notifications_enabled(rec_char, "encounter"):
             continue
-        await telegram_notify.send_telegram_message(
+        telegram_notify.send_detached(telegram_notify.send_telegram_message(
             p.user_id, "⚔️ Incontro iniziato — tira l'iniziativa!",
             button=("Apri la sessione", url),
-        )
+        ))
 
 
 def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
@@ -244,12 +244,12 @@ async def _notify_turn(enc: Encounter, combatant: Combatant) -> None:
     """Fire-and-forget 'your turn' ping to the PC owner's private chat."""
     if combatant.kind != "pc" or not combatant.owner_user_id:
         return
-    await telegram_notify.send_telegram_message(
+    telegram_notify.send_detached(telegram_notify.send_telegram_message(
         combatant.owner_user_id,
         f"⚔️ Tocca a te! Round {enc.round} — {combatant.name}",
         button=("Apri la sessione",
                 telegram_notify.miniapp_url(f"/session/{enc.session_id}")),
-    )
+    ))
 
 
 # ---------------------------------------------------------------------------
@@ -715,10 +715,10 @@ async def _notify_gm_condition(
     char = await db.get(Character, comb.character_id) if comb.character_id else None
     if not telegram_notify.notifications_enabled(char, "gm_events"):
         return
-    await telegram_notify.send_telegram_message(
+    telegram_notify.send_detached(telegram_notify.send_telegram_message(
         comb.owner_user_id, text,
         button=("Apri la sessione", telegram_notify.miniapp_url(f"/session/{session_id}")),
-    )
+    ))
 
 
 @router.post(

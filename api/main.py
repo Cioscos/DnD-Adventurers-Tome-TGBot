@@ -67,6 +67,8 @@ async def lifespan(_app: FastAPI):
     # Create all tables on startup so the API works on a fresh local DB
     # without needing to run the bot first. Also run migrations to add
     # columns that were added after table creation.
+    if os.environ.get("DEV_USER_ID") and "1" in (os.environ.get("ANNOUNCE_RELEASES"), os.environ.get("SEND_CAMPAIGN_MESSAGES")):
+        raise RuntimeError("DEV_USER_ID spegne l'autenticazione: va tolto dal .env di produzione")
     from core.db.models import Base
     from core.db.engine import _migrate_schema
     async with engine.begin() as conn:

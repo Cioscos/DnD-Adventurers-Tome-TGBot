@@ -1,16 +1,15 @@
 """Companions (familiars, companions, mounts, summons, wild shape forms)."""
 from __future__ import annotations
 
-import re
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.rules.companions import COMPANION_FEATURES, MAX_HIT_DICE, MAX_MULTIATTACK
+from api.services.dice_notation import DICE_RE  # noqa: F401 — riesportata: companions.py la importa da qui
 from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
-DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 MAX_COMPANIONS = 30
 
 

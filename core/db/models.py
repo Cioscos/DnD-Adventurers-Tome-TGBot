@@ -350,7 +350,7 @@ class Spell(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     character_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=0)
@@ -443,7 +443,7 @@ class Item(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     character_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
@@ -523,7 +523,7 @@ class Ability(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     character_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
@@ -572,7 +572,7 @@ class Map(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     character_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True
     )
     zone_name: Mapped[str] = mapped_column(String(200), nullable=False)
     file_id: Mapped[str] = mapped_column(String(500), nullable=False, default="")
@@ -789,7 +789,7 @@ class SessionParticipant(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     role: Mapped[str] = mapped_column(Enum(SessionRole), nullable=False)
     character_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True
+        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True
     )
     display_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -894,7 +894,7 @@ class Combatant(Base):
     )
     kind: Mapped[str] = mapped_column(String(10), nullable=False)  # pc | monster
     character_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True
+        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True
     )
     owner_user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)

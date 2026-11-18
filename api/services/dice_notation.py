@@ -4,7 +4,8 @@ from __future__ import annotations
 import random
 import re
 
-DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+# Tetti (999 dadi, 9999 facce, facce >= 1): la stringa arriva dall'utente e i dadi si tirano uno a uno nel processo dell'API.
+DICE_RE = re.compile(r"^(\d{1,3})d([1-9]\d{0,3})([+-]\d+)?$", re.IGNORECASE)
 
 
 def roll_dice(notation: str) -> tuple[list[int], int]:

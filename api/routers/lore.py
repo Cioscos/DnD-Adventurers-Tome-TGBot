@@ -81,7 +81,7 @@ async def _save(campaign_id: int, file: UploadFile, exts: set[str], max_size: in
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in exts:
         raise HTTPException(status_code=400, detail=f"File format not allowed. Allowed: {', '.join(sorted(exts))}")
-    content = await file.read()
+    content = await file.read(max_size + 1)  # mai più del limite in memoria
     if len(content) > max_size:
         raise HTTPException(status_code=400, detail=f"File too large (max {max_size // (1024 * 1024)} MB)")
     folder = svc.LORE_DIR / str(campaign_id)

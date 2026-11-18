@@ -932,12 +932,12 @@ async def gm_grant_item(
         ))
 
         if telegram_notify.notifications_enabled(char, "gm_events"):
-            await telegram_notify.send_telegram_message(
+            telegram_notify.send_detached(telegram_notify.send_telegram_message(
                 rid,
                 f"🎁 Il GM ti ha consegnato: {body.item.name} (×{body.item.quantity})",
                 button=("Apri l'inventario",
                         telegram_notify.miniapp_url(f"/char/{char.id}/inventory")),
-            )
+            ))
 
     touch(session_obj)
     await db.flush()
@@ -1061,12 +1061,12 @@ async def trade(
     await db.flush()
 
     if telegram_notify.notifications_enabled(recipient, "gm_events"):
-        await telegram_notify.send_telegram_message(
+        telegram_notify.send_detached(telegram_notify.send_telegram_message(
             body.to_user_id,
             f"🤝 {sender.name} ti ha dato: {what}",
             button=("Apri l'inventario",
                     telegram_notify.miniapp_url(f"/char/{recipient.id}/inventory")),
-        )
+        ))
 
     return await _move_response(db, sender, removed, notifications)
 
@@ -1115,8 +1115,8 @@ async def give_inspiration(
     touch(session_obj)
     await db.flush()
     if telegram_notify.notifications_enabled(recipient, "gm_events"):
-        await telegram_notify.send_telegram_message(
-            body.to_user_id, f"✨ {sender.name} ti ha ceduto l'Ispirazione Eroica")
+        telegram_notify.send_detached(telegram_notify.send_telegram_message(
+            body.to_user_id, f"✨ {sender.name} ti ha ceduto l'Ispirazione Eroica"))
     return await build_character_response(db, sender)
 
 
@@ -1151,7 +1151,7 @@ async def grant_inspiration(
     touch(session_obj)
     await db.flush()
     if body.heroic_inspiration and telegram_notify.notifications_enabled(char, "gm_events"):
-        await telegram_notify.send_telegram_message(seat.user_id, "✨ Il master ti ha concesso l'Ispirazione Eroica")
+        telegram_notify.send_detached(telegram_notify.send_telegram_message(seat.user_id, "✨ Il master ti ha concesso l'Ispirazione Eroica"))
     return None
 
 

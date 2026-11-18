@@ -166,7 +166,7 @@ async def upload_map(
         )
 
     # Read file content (with size check)
-    content = await file.read()
+    content = await file.read(_MAX_FILE_SIZE + 1)  # mai più del limite in memoria
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
 
