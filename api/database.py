@@ -30,9 +30,12 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 @event.listens_for(engine.sync_engine, "connect")
 def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
-    """Enable FK enforcement for every SQLite connection."""
+    """FK enforcement, WAL and a write wait for every SQLite connection."""
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA journal_mode=WAL")  # chi legge (il poll di /live) non blocca chi scrive
+    cursor.execute("PRAGMA synchronous=NORMAL")  # sicuro con WAL, un fsync in meno per commit sulla SD
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 

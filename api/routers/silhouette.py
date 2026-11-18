@@ -52,7 +52,7 @@ async def upload_silhouette(
     if suffix not in _ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {', '.join(sorted(_ALLOWED_EXTENSIONS))}")
 
-    content = await file.read()
+    content = await file.read(_MAX_FILE_SIZE + 1)  # mai più del limite in memoria
     if len(content) > _MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
 

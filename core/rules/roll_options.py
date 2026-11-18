@@ -17,7 +17,7 @@ from core.rules.uses import pool_key
 from core.rules.types import BARDIC_DIE, TRICKSTER_BLESSING, TURN_FLAGS, WAR_GODS_BLESSING, Cost, RollOptionSpec, RuleContext
 from core.rules.weapons import has_property, small_race
 
-_DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
+_DICE = re.compile(r"^(\d{1,3})d([1-9]\d{0,3})([+-]\d+)?$")  # stessi tetti di api/services/dice_notation.py
 
 
 def _on(condition: str):

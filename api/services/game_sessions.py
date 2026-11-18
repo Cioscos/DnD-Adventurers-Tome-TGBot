@@ -50,7 +50,10 @@ async def find_active_session_for_user(user_id: int, db: AsyncSession) -> Option
 
 
 def touch(session: GameSession) -> None:
-    session.last_activity_at = utc_now_iso()
+    """Segna attività, al più una volta al minuto: /live la chiama a ogni poll e la chiusura per inattività conta le ore."""
+    now = utc_now_iso()
+    if (session.last_activity_at or "")[:16] != now[:16]:  # stesso minuto: nessuna scrittura
+        session.last_activity_at = now
 
 
 async def active_session_id(db: AsyncSession, campaign_id: int) -> Optional[int]:

@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
-import re
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 from core.rules.spell_healing import SPELL_HEALING
+from api.services.dice_notation import DICE_RE as _EXTRA_DICE_RE
 from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
-
-_EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
 # Bonus opzionale: il dardo extra di Dardo incantato è 1d4+1 per livello.
-_UPCAST_PATTERN = r"^\d+d\d+([+-]\d+)?$"
+_UPCAST_PATTERN = r"^\d{1,3}d[1-9]\d{0,3}([+-]\d+)?$"
 
 
 class SpellRead(BaseModel):

@@ -90,7 +90,7 @@ _PROPERTY_WORDS = {
     "two_handed": ("two_handed", "two-handed", "two handed", "due mani"),
     "loading": ("loading", "ricarica"),
 }
-_DICE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
+_DICE = re.compile(r"^(\d{1,3})d([1-9]\d{0,3})([+-]\d+)?$")  # stessi tetti di api/services/dice_notation.py
 
 
 def weapon_key(item: Any) -> str | None:

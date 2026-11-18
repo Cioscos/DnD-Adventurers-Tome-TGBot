@@ -293,6 +293,10 @@ def _migrate_schema(connection) -> None:
 
     _backfill_subclass_keys(connection)
 
+    # Indici su character_id per tabelle nate senza (create_all non li aggiunge a tabelle esistenti); nomi come quelli di SQLAlchemy.
+    for table in ("items", "spells", "abilities", "maps", "session_participants", "combatants"):
+        connection.execute(text(f"CREATE INDEX IF NOT EXISTS ix_{table}_character_id ON {table}(character_id)"))
+
     # Ad-hoc index for whisper filter queries
     try:
         connection.execute(text(

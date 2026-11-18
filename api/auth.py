@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from urllib.parse import parse_qsl, unquote
+from urllib.parse import parse_qsl
 
 from fastapi import Depends, Header, HTTPException, status
 
@@ -60,7 +60,8 @@ def verify_init_data_full(init_data: str, bot_token: str = _BOT_TOKEN) -> Telegr
         )
 
     # Parse the URL-encoded string into key/value pairs.
-    pairs = dict(parse_qsl(unquote(init_data), keep_blank_values=True))
+    # Una sola decodifica (parse_qsl): con una seconda, un nome con «&», «+» o «%» rompe le coppie e la firma non torna.
+    pairs = dict(parse_qsl(init_data, keep_blank_values=True))
     logger.debug("initData parsed keys: %s", list(pairs.keys()))
 
     received_hash = pairs.pop("hash", None)
@@ -85,8 +86,8 @@ def verify_init_data_full(init_data: str, bot_token: str = _BOT_TOKEN) -> Telegr
 
     if not hmac.compare_digest(expected_hash, received_hash):
         logger.warning(
-            "initData signature mismatch. expected=%s received=%s keys=%s",
-            expected_hash, received_hash, list(pairs.keys()),
+            "initData signature mismatch. received=%s keys=%s",  # mai la firma attesa: chi legge i log potrebbe riusarla
+            received_hash, list(pairs.keys()),
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

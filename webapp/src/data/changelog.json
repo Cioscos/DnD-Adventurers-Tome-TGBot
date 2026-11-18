@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "3.14.1",
+      "date": "2026-11-18",
+      "improved": {
+        "it": [
+          "Serate più reattive: meno scritture sul database durante l'aggiornamento continuo e caricamento della scheda più rapido.",
+          "Le notifiche Telegram di scambi, doni del master e turni non rallentano più l'azione che le genera."
+        ],
+        "en": [
+          "Snappier sessions: fewer database writes during live refresh and faster sheet loading.",
+          "Telegram notifications for trades, GM grants and turns no longer slow down the action that triggers them."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Chi ha «&», «+» o «%» nel nome Telegram ora riesce ad aprire l'app.",
+          "Due giocatori che prendono insieme lo stesso oggetto dal deposito non lo duplicano più.",
+          "Controlli più severi su note, dadi e file caricati: limiti di dimensione e percorsi verificati."
+        ],
+        "en": [
+          "Users with \"&\", \"+\" or \"%\" in their Telegram name can now open the app.",
+          "Two players taking the same item from the stash at once no longer duplicate it.",
+          "Stricter checks on notes, dice and uploaded files: size limits and verified paths."
+        ]
+      }
+    },
+    {
       "version": "3.14.0",
       "date": "2026-11-18",
       "added": {
