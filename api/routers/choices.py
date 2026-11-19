@@ -22,8 +22,16 @@ from api.services.choices import (
     resolve_feat)
 from api.schemas.spell import SpellCreate
 from core.db.models import HomebrewRule
+from core.rules.modifiers import effective_hp_max
 
 router = APIRouter(prefix="/characters", tags=["choices"])
+
+
+def _keep_full_hp(char, old_max: int, old_current: int) -> None:
+    """Chi era a PF pieni segue il nuovo massimo (Robusto), come alla creazione e al cambio di sottoclasse."""
+    new_max = effective_hp_max(char)
+    if old_max > 0 and old_current >= old_max and new_max > old_max:
+        char.current_hit_points = max(char.current_hit_points, new_max)
 
 
 class AsiResolve(BaseModel):
@@ -71,6 +79,7 @@ async def resolve_choice(
     if body.kind not in _ALLOWED.get(choice.get("kind", "asi"), ()):
         raise HTTPException(422, "choice_kind_mismatch")
     old_con_mod = effective_con_mod(char)
+    old_max, old_current = effective_hp_max(char), char.current_hit_points or 0
     if isinstance(body, AsiResolve):
         resolve_asi(session, char, body.increases)
         changed = list(body.increases)
@@ -89,6 +98,7 @@ async def resolve_choice(
         await apply_ability_change(session, char, ability, old_con_mod)
     if changed or isinstance(body, (FeatResolve, EpicBoonResolve)):  # i talenti agiscono dal motore: usi e testi al sync
         await sync_cataloged_features(session, char, lang)
+    _keep_full_hp(char, old_max, old_current)
     if not isinstance(body, ClassOptionResolve):  # le scelte di opzioni le riconcilia il sync, anche il resto che aspetta
         mark_resolved(char, choice)
         char.pending_choices = [c for c in choices if c["id"] != choice_id]
@@ -137,10 +147,12 @@ async def add_feat(
     """«Aggiungi talento»: fuori dalle scelte di livello (talento d'Origine, dono del GM, privilegi che ne concedono)."""
     char = await get_owned_full(char_id, user_id, session)
     old_con_mod = effective_con_mod(char)
+    old_max, old_current = effective_hp_max(char), char.current_hit_points or 0
     take_feat(session, char, body.feat_key, body.ability, lang, "manual")
     if body.ability:
         await apply_ability_change(session, char, body.ability, old_con_mod)
     await sync_cataloged_features(session, char, lang)
+    _keep_full_hp(char, old_max, old_current)
     char = await refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
 

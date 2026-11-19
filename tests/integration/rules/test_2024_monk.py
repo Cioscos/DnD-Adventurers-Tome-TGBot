@@ -614,6 +614,17 @@ async def test_body_and_mind_adds_four_to_dexterity_and_wisdom_with_cap_25(clien
     assert (got["dexterity"], got["wisdom"]) == (18, 22)
 
 
+async def test_body_and_mind_wisdom_counts_for_wholeness_of_body_uses_at_once(client):
+    """Gli usi di Integrità del Corpo (= Saggezza) si ricalcolano nello stesso passaggio al 20, non al sync successivo."""
+    cid = await _monk24(client, 19, wisdom=15)
+    cls = (await _full(client, cid))["classes"][0]["id"]
+    assert (await client.patch(f"/characters/{cid}/classes/{cls}", json={"subclass": "Guerriero della Mano Aperta"})).status_code == 200
+    r = await client.patch(f"/characters/{cid}/classes/{cls}", json={"level": 20})
+    assert r.status_code == 200, r.text
+    row = next(a for a in r.json()["abilities"] if a["feature_key"] == "monk.wholeness_of_body")
+    assert row["max_uses"] == 4  # Saggezza 15 + 4 = 19 → +4
+
+
 # ---------------------------------------------------------------------------
 # Multiclasse e legacy
 # ---------------------------------------------------------------------------
