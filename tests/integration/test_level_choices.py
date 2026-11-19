@@ -116,6 +116,22 @@ async def test_resolve_feat_tough_scales_with_level(client):
     assert out["computed"]["hp_max_effective"] - out["hit_points"] == 2 * 5
 
 
+async def test_resolve_feat_tough_at_full_hp_fills_the_new_maximum(client):
+    body = await _to_level_4(client)
+    assert body["current_hit_points"] == body["hit_points"]
+    out = (await _resolve(client, body, {"kind": "feat", "feat_key": "tough"})).json()
+    assert out["current_hit_points"] == out["computed"]["hp_max_effective"] == out["hit_points"] + 8
+
+
+async def test_resolve_feat_tough_when_hurt_keeps_current_hp(client):
+    body = await _to_level_4(client)
+    r = await client.patch(f"/characters/{body['id']}/hp", json={"op": "damage", "value": 5})
+    assert r.status_code == 200, r.text
+    hurt = r.json()["current_hit_points"]
+    out = (await _resolve(client, body, {"kind": "feat", "feat_key": "tough"})).json()
+    assert out["current_hit_points"] == hurt
+
+
 async def test_resolve_feat_observant_passives(client):
     body = await _to_level_4(client)
     r = await _resolve(client, body, {"kind": "feat", "feat_key": "observant", "ability": "wisdom"})

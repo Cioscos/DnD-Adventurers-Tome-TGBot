@@ -94,7 +94,7 @@ async def sync_class_feature_abilities(
     seed_from_sheet(char, retro)
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
-    _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
+    _resync_if_scores_moved(session, char, _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro), lang)
     _fill_hp_bonus(char, retro)
     _mark_retrofitted(char)
     _sync_permanent_states(char)
@@ -116,7 +116,7 @@ async def sync_cataloged_features(
     seed_from_sheet(char, retro)
     reconcile_choices(char, retro)
     apply_feature_grants(char, lang)
-    _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro)
+    _resync_if_scores_moved(session, char, _sync_ability_bonuses(char, retrofit=retrofit, retro_ids=retro), lang)
     _fill_hp_bonus(char, retro)
     _mark_retrofitted(char)
     _sync_permanent_states(char)
@@ -150,7 +150,16 @@ def _sync_permanent_states(char: Character) -> None:
             begin_state(char, spec.permanent_state, spec.key, spec.name["it"])
 
 
-def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids: set[int] | None = None) -> None:
+def _resync_if_scores_moved(session: AsyncSession, char: Character, moved: bool, lang: str) -> None:
+    """Gli usi a catalogo (Integrità del Corpo 2024: usi = Saggezza) vanno ricalcolati coi punteggi nuovi di Corpo e Mente."""
+    if moved:
+        edition = character_edition(char)
+        for cls in char.classes:
+            if features_for(edition, class_key(cls)):
+                _sync_from_catalog(session, char, cls, lang)
+
+
+def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids: set[int] | None = None) -> bool:
     """Punteggi dei privilegi con ``ability_bonus`` (Campione Primordiale): scritti sul punteggio una volta sola, con il
     massimo del privilegio, e tolti se il privilegio non è più attivo. I punti davvero aggiunti stanno in
     ``settings``, così un punteggio già al massimo non perde nulla quando il privilegio sparisce.
@@ -162,14 +171,15 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
     retro_ids = _retro_ids(char, retrofit) if retro_ids is None else retro_ids
     applied = clean_ability_bonus((char.settings or {}).get(ABILITY_BONUS_KEY))
     if not wanted and not applied:
-        return
+        return False
     scores = {a.name: a for a in char.ability_scores}
     old_con = effective_ability_mod(char, "constitution")
-    changed = False
+    changed = moved = False
     for key in [k for k in applied if k not in wanted and applied[k]]:  # `{}`: nessun punto dato, il segno resta (R34)
         for ability, points in applied.pop(key).items():
             if ability in scores:
                 scores[ability].value -= points
+                moved = True
         changed = True
     for key, spec in wanted.items():
         if key in applied:
@@ -186,9 +196,10 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
             row.value += points
             if points:
                 applied[key][ability] = points
+                moved = True
         changed = True
     if not changed:
-        return
+        return False
     char.settings = {**(char.settings or {}), ABILITY_BONUS_KEY: applied}
     char.recalculate_carry_capacity()
     sync_base_ac(char)
@@ -196,6 +207,7 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
     if delta and (char.settings or {}).get("hp_auto_calc", True):
         char.hit_points = max(0, char.hit_points + delta * char.total_level)
         char.current_hit_points = max(0, char.current_hit_points + delta * char.total_level)  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
+    return moved
 
 
 def _concentrates(data: object, edition: str) -> bool:
