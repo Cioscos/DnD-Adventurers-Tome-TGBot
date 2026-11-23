@@ -371,7 +371,7 @@ class DamagePart(BaseModel):
 
 class HPUpdate(RollOptionsBody):
     op: HPOp
-    value: int
+    value: int = Field(ge=0)
     ally_reaction_id: int | None = None  # richiesta di reazione chiusa del ricevente: le riduzioni dei donatori entrano nel danno
     was_critical_hit: bool = False
     # Override esplicito: `value` è già il danno applicato dal client (annotazione),
