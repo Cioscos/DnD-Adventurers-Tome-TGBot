@@ -41,3 +41,15 @@ async def test_mappa_senza_zona_rifiutata(client, tmp_path, monkeypatch, zona):
     r = await client.post(f"/characters/{cid}/maps/upload", data={"zone_name": zona}, files={"file": ("a.png", b"x")})
     assert r.status_code == 422
     assert list(tmp_path.rglob("*.png")) == []
+
+
+@pytest.mark.caccia(id="CB-027", fonte="invariante: eliminare una nota non tocca altro che la nota", zona="flusso:note-mappe",
+                    voce="limiti", copre=["POST /characters/{char_id}/notes", "POST /characters/{char_id}/notes/voice"])
+@pytest.mark.parametrize("titolo", ["..", ".", "a/../.."])
+async def test_titolo_che_cambierebbe_l_indirizzo_rifiutato(client, tmp_path, monkeypatch, titolo):
+    monkeypatch.setattr(notes, "_VOICE_DIR", tmp_path)
+    cid = await _pg(client)
+    assert (await client.post(f"/characters/{cid}/notes", json={"title": titolo, "body": "x"})).status_code == 422
+    r = await client.post(f"/characters/{cid}/notes/voice", data={"title": titolo}, files={"file": ("a.webm", b"x")})
+    assert r.status_code == 422
+    assert (await client.post(f"/characters/{cid}/notes", json={"title": "Fine...", "body": "x"})).status_code == 201

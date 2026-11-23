@@ -19,7 +19,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -63,8 +63,18 @@ class NoteRead(BaseModel):
     campaign_name: str | None = None
 
 
+def _reachable_title(title: str) -> str:
+    """Il titolo sta nell'indirizzo: vuoto non si raggiunge, «..» il browser lo risolve (DELETE …/notes/.. eliminava il personaggio)."""
+    if not title.strip() or any(part.strip() in (".", "..") for part in title.split("/")):
+        raise ValueError("invalid title")
+    return title
+
+
+NoteTitle = Annotated[str, AfterValidator(_reachable_title)]
+
+
 class NoteCreate(BaseModel):
-    title: str = Field(max_length=200, pattern=r"\S")  # senza titolo la nota non si raggiunge più
+    title: NoteTitle = Field(max_length=200)
     body: str = Field(max_length=50_000)
     tags: list[str] = Field(default_factory=list)
     campaign_id: int | None = None
@@ -248,7 +258,7 @@ async def upload_voice_note(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    title: str = Form(..., pattern=r"\S"),
+    title: Annotated[str, Form(), AfterValidator(_reachable_title)],
     file: UploadFile = File(...),
     campaign_id: int | None = Form(None),
 ) -> list[NoteRead]:
