@@ -81,21 +81,34 @@ Usa l'elenco così com'è e riferisci quante zone restano. Annota `git rev-parse
 
 ## 4. Caccia
 
-Un subagente per zona (`general-purpose`, modello `sonnet`), in parallelo, con il prompt di `references/caccia.md`.
-Per ogni zona prepara:
-- la riga di `zone.json` e i file che corrispondono ai suoi glob;
-- un blocco di 20 id consecutivi, a partire da `prossimo-id` (gli id non usati restano vuoti);
+**4a. Affermazioni.** Un subagente per zona (`general-purpose`, modello `sonnet`) con `references/affermazioni.md`: scompone le
+fonti in affermazioni con casi e valori limite, **senza leggere il codice**, in `tests/caccia/affermazioni/<zona>.json` (zona
+con `-` al posto di `:` e `/`). Se il file c'è già, lo completa. È ciò che rende il giro ripetibile: senza, ogni cacciatore
+sceglie i valori a istinto e il caso che rivela il bug resta fuori.
+
+**4b. Caccia.** Con `references/caccia.md`, un subagente per ogni gruppo di al massimo 25 casi da provare
+(`uv run python -m tests.caccia.inventario casi <zona>`): una zona grande ha più cacciatori, con i casi divisi per affermazione.
+Per ogni cacciatore prepara:
+- la riga di `zone.json`, i file che corrispondono ai suoi glob e l'elenco dei suoi casi;
+- un blocco di 100 id consecutivi, a partire da `prossimo-id` (gli id non usati restano vuoti);
 - i file di test che può scrivere: `tests/caccia/test_cb_<zona>.py`, `webapp/tests/unit/caccia/<zona>.test.tsx`,
-  `webapp/tests/e2e-playwright/caccia/<zona>.spec.ts`, con la zona senza `:` e `/`. Sono solo suoi, così i paralleli non collidono;
+  `webapp/tests/e2e-playwright/caccia/<zona>.spec.ts`, con la zona senza `:` e `/` e un suffisso `_2`, `_3`
+  per i cacciatori oltre il primo. Sono solo suoi, così i paralleli non collidono;
 - i problemi già noti e ancora aperti nella zona, da `docs/superpowers/rules-audit/`, `docs/superpowers/playtest/` e dal
   catalogo. Quelli risultati corretti che ricompaiono sono regressioni.
 
 I cacciatori scrivono i controlli Playwright ma non li eseguono: le porte sono fisse. Li lanci tu, uno alla volta:
-`npx playwright test -c playwright.caccia.config.ts <file>`.
+`npx playwright test -c playwright.caccia.config.ts <file>`. Un rosso prima dell'asserzione (selettore che non trova
+nulla, timeout) è un difetto del controllo: rimandalo al suo autore con `SendMessage`.
+
+Non accettare la consegna se `uv run python -m tests.caccia.inventario verifica --contiene <file>` segnala errori o se `casi <zona>`
+elenca ancora casi suoi: rimandala indietro.
 
 ## 5. Conferma
 
-Per ogni rosso, un subagente nuovo con `references/conferma.md`: riceve solo fonte, passi e risultato osservato. Non passargli
+Per ogni rosso **e per ogni domanda**, un subagente nuovo con `references/conferma.md` (segnalazioni della stessa zona insieme,
+al massimo 6): riceve solo fonte, passi e risultato osservato. Una domanda che la fonte o un invariante decide diventa bug
+o scartata; arriva all'utente solo se resta davvero ambigua. Non passargli
 il test né il ragionamento del cacciatore. Unisci i duplicati che hanno la stessa causa. `domanda` → `AskUserQuestion`, con
 edizione, pagina, comportamento attuale e opzioni; la risposta va in `decisioni.md`.
 
@@ -109,6 +122,7 @@ Per ogni zona, a conferma finita:
    `uv run python -m tests.caccia.inventario segna <zona> <commit> --voci contratto=fatta normale=fatta … regola=non_applicabile`
 4. commit di soli controlli e stato: `test(caccia): <zona>`.
 
+Un caso non provabile va in `esenti` dell'affermazione, con il motivo. `segna` rifiuta anche i casi senza controllo.
 Lo stato si salva solo qui: una zona interrotta, o il cui agente è fallito, resta in coda. `segna` rifiuta una voce `fatta`
 senza controllo: non aggirarlo scrivendo test vuoti, dichiara la voce `non_applicabile` con il motivo nel report.
 

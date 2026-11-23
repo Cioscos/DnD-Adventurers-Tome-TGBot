@@ -4,6 +4,7 @@
 
 Qualcuno sostiene che la D&D Mini App (`{repo}`) abbia questo difetto. Il tuo compito è provare a smentirlo.
 
+- Tipo: `{tipo}` (bug o domanda; per una domanda l'atteso non è dichiarato: cercalo tu nelle fonti e fra gli invarianti)
 - Fonte dell'atteso: `{fonte}`
 - Passi: `{passi}`
 - Atteso dichiarato: `{atteso}`. Osservato: `{osservato}`
@@ -19,5 +20,6 @@ Qualcuno sostiene che la D&D Mini App (`{repo}`) abbia questo difetto. Il tuo co
 Non modificare nulla nel repository, non usare la porta 8000 né `data/dnd_bot.db`.
 
 Rispondi con: `confermato | scartato | domanda`, cosa hai eseguito, atteso e osservato da te, e il punto della fonte (edizione,
-carta, pagina). `domanda` solo se la fonte è ambigua, con le letture possibili. Se non riesci a riprodurlo, è `scartato`.
+carta, pagina). Vale come fonte anche un invariante che un giocatore o un master darebbe per scontato nell'app in uso (un
+ordine che segue il numero mostrato, un annullamento che annulla). `domanda` solo se la fonte è ambigua, con le letture possibili. Se non riesci a riprodurlo, è `scartato`.
 Aggiungi, se lo vedi, il punto del codice da cui nasce: serve a unire i duplicati.

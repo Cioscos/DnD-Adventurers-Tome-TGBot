@@ -1,19 +1,20 @@
 """Inventario della caccia ai bug: catalogo dei controlli, zone, copertura. Nessun modello coinvolto.
 
-Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna
+Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna|casi
 """
 from __future__ import annotations
 
 import argparse
 import ast
 import json
+import posixpath
 import re
 import subprocess
 import sys
 import unicodedata
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from fnmatch import fnmatchcase
 from functools import cache
@@ -28,6 +29,7 @@ _META_TS = re.compile(r"^\s*//\s*caccia:\s*(.*)$")
 _TEST_TS = re.compile(r"^\s*(?:test|it|describe)((?:\.\w+)*)\s*\(")
 _CARTELLE_TS = ("webapp/tests/unit/caccia", "webapp/tests/e2e-playwright/caccia")
 _SORGENTI = ("api", "core", "webapp/src")
+_MOLTE_ZONE = 8  # shortcut: un file importato da più zone (client.ts, models.py) non le rimette tutte in coda; resta la regressione
 _CON_ZONA = ("api/services/", "core/rules/", "webapp/src/pages/")
 
 Endpoint = tuple[str, str, str]
@@ -42,6 +44,7 @@ class Controllo:
     copre: list[str]
     file: str
     aperto: bool
+    prova: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -149,6 +152,35 @@ def leggi_stato(radice: Path) -> dict:
     return json.loads((radice / "tests/caccia/stato.json").read_text(encoding="utf-8"))
 
 
+def _affermazioni(radice: Path, zona: str) -> dict[str, dict]:
+    f = radice / "tests/caccia/affermazioni" / (re.sub(r"[:/]", "-", zona) + ".json")
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
+def casi_da_provare(radice: Path, zona: str, controlli: list[Controllo] | None = None) -> dict[str, str]:
+    """Casi delle affermazioni della zona senza un controllo che li provi né un'esenzione motivata."""
+    if controlli is None:
+        controlli = leggi_controlli(radice)
+    provati = {p for c in controlli if c.zona == zona for p in c.prova}
+    return {a + c: testo for a, v in _affermazioni(radice, zona).items() for c, testo in v["casi"].items()
+            if a + c not in provati and c not in v.get("esenti", {})}
+
+
+def _errori_affermazioni(radice: Path, zona: str, controlli: list[Controllo]) -> list[str]:
+    try:
+        tutte = _affermazioni(radice, zona)
+    except ValueError as e:
+        return [f"affermazione illeggibile: {zona} {e}"]
+    errori, casi = [], set()
+    for a, v in tutte.items():
+        testi = [v.get("testo"), v.get("fonte")]
+        if v.get("voce") not in VOCI or not v.get("casi") or not all(isinstance(t, str) and t.strip() for t in testi):
+            errori.append(f"affermazione incompleta: {zona} {a}")
+        errori += [f"esenzione senza motivo: {zona} {a}{c}" for c, motivo in v.get("esenti", {}).items() if not motivo.strip()]
+        casi |= {a + c for c in v.get("casi", {})}
+    return errori + [f"prova ignota: {c.id} {p}" for c in controlli if c.zona == zona for p in c.prova if p not in casi]
+
+
 def prossimo_id(controlli: list[Controllo], ritirati: list[str]) -> str:
     usati = [int(i[3:]) for i in [c.id for c in controlli] + ritirati if _ID.match(i)]
     return f"CB-{max(usati, default=0) + 1:03d}"
@@ -230,6 +262,8 @@ def verifica(radice: Path, endpoint: list[Endpoint]) -> list[str]:
         errori += [f"copre ignoto: {dove} {x}" for x in c.copre
                    if x not in noti and not (schede is None and x.startswith("carta:"))]
 
+    for z in zone:
+        errori += _errori_affermazioni(radice, z.id, controlli)
     for m, p, modulo in endpoint:
         if not any(modulo in z.router for z in zone):
             errori.append(f"endpoint senza zona: {m} {p} ({modulo})")
@@ -274,6 +308,44 @@ def file_cambiati(radice: Path, commit: str) -> list[str] | None:
     return p.stdout.splitlines() if p.returncode == 0 else None
 
 
+def _moduli_py(testo: str) -> set[str]:
+    fuori = set()
+    for n in ast.walk(ast.parse(testo)):
+        if isinstance(n, ast.ImportFrom) and n.module and not n.level:
+            fuori |= {n.module, *(f"{n.module}.{a.name}" for a in n.names)}
+        elif isinstance(n, ast.Import):
+            fuori |= {a.name for a in n.names}
+    return {m.replace(".", "/") + ".py" for m in fuori}
+
+
+def _moduli_ts(nome: str, testo: str) -> set[str]:
+    fuori = set()
+    for m in re.findall(r"""(?:from|import)\s*\(?\s*['"]([^'"]+)['"]""", testo):
+        if m.startswith("@/"):
+            base = "webapp/src/" + m[2:]
+        elif m.startswith("."):
+            base = posixpath.normpath(posixpath.join(posixpath.dirname(nome), m))
+        else:
+            continue
+        fuori |= {base + e for e in ("", ".ts", ".tsx", "/index.ts", "/index.tsx")}
+    return fuori
+
+
+def importati(radice: Path, zone: list[Zona]) -> dict[str, set[str]]:
+    """Per zona, i file importati direttamente dai suoi: una modifica a un hook o a uno schema rimette la zona in coda."""
+    sorgenti = set(_sorgenti(radice))
+
+    @cache
+    def diretti(nome: str) -> frozenset[str]:
+        if not nome.endswith((".py", ".ts", ".tsx")):
+            return frozenset()
+        testo = (radice / nome).read_text(encoding="utf-8")
+        return frozenset((_moduli_py(testo) if nome.endswith(".py") else _moduli_ts(nome, testo)) & sorgenti)
+    per_zona = {z.id: {d for s in sorgenti if any(fnmatchcase(s, g) for g in z.glob) for d in diretti(s)} for z in zone}
+    quante = Counter(f for files in per_zona.values() for f in files)
+    return {i: {f for f in files if quante[f] <= _MOLTE_ZONE} for i, files in per_zona.items()}
+
+
 def filtra(zone: list[Zona], includi: list[str], escludi: list[str], edizione: str | None) -> list[Zona]:
     for g in [*includi, *escludi]:
         if not any(fnmatchcase(z.id, g) for z in zone):
@@ -284,28 +356,31 @@ def filtra(zone: list[Zona], includi: list[str], escludi: list[str], edizione: s
             and (edizione is None or z.tipo == "flusso" or z.id.startswith(f"regola:{edizione}/"))]
 
 
-def _motivo(z: Zona, controlli: list[Controllo], stato: dict, cambiati: Callable[[str], list[str] | None]) -> str:
+def _motivo(z: Zona, controlli: list[Controllo], stato: dict, cambiati: Callable[[str], list[str] | None],
+            scoperti: dict[str, dict], dipendenze: dict[str, set[str]]) -> str:
     visto = stato["zone"].get(z.id)
     if not visto:
         return "scoperta"
     diff = cambiati(visto["commit"])
-    if diff is None or any(fnmatchcase(f, g) for f in diff for g in z.glob):
+    vicini = dipendenze.get(z.id, set())
+    if diff is None or any(f in vicini or any(fnmatchcase(f, g) for g in z.glob) for f in diff):
         return "modificata"
     con_controllo = {c.voce for c in controlli if c.zona == z.id}
     coperta = all(visto["voci"].get(v) == "non_applicabile" or (visto["voci"].get(v) == "fatta" and v in con_controllo)
                   for v in VOCI)
-    return "vecchia" if coperta else "scoperta"
+    return "vecchia" if coperta and not scoperti.get(z.id) else "scoperta"
 
 
 def scegli(zone: list[Zona], controlli: list[Controllo], stato: dict,
-           cambiati: Callable[[str], list[str] | None], massimo: int = 8) -> list[tuple[Zona, str]]:
+           cambiati: Callable[[str], list[str] | None], massimo: int = 8,
+           scoperti: dict[str, dict] | None = None, dipendenze: dict[str, set[str]] | None = None) -> list[tuple[Zona, str]]:
     gruppi = ("modificata", "scoperta", "vecchia")
 
     def chiave(coppia: tuple[Zona, str]):
         z, motivo = coppia
         data = stato["zone"][z.id]["data"] if motivo == "vecchia" else ""
         return gruppi.index(motivo), data, z.tipo, z.id
-    return sorted(((z, _motivo(z, controlli, stato, cambiati)) for z in zone), key=chiave)[:massimo]
+    return sorted(((z, _motivo(z, controlli, stato, cambiati, scoperti or {}, dipendenze or {})) for z in zone), key=chiave)[:massimo]
 
 
 def segna(radice: Path, zona: str, commit: str, voci: dict[str, str]) -> None:
@@ -313,7 +388,16 @@ def segna(radice: Path, zona: str, commit: str, voci: dict[str, str]) -> None:
         raise ValueError(f"zona ignota: {zona}")
     if set(voci) != set(VOCI) or not set(voci.values()) <= {"fatta", "non_applicabile"}:
         raise ValueError(f"servono tutte le voci, fatta o non_applicabile: {', '.join(VOCI)}")
-    con_controllo = {c.voce for c in leggi_controlli(radice) if c.zona == zona}
+    affermazioni, controlli = _affermazioni(radice, zona), leggi_controlli(radice)
+    if not affermazioni:
+        raise ValueError(f"mancano le affermazioni di {zona}")
+    negate = {v["voce"] for v in affermazioni.values() if set(v["casi"]) - set(v.get("esenti", {}))
+              and voci[v["voce"]] == "non_applicabile"}
+    if negate:
+        raise ValueError(f"voci con affermazioni dichiarate non applicabili: {', '.join(sorted(negate))}")
+    if da_provare := casi_da_provare(radice, zona, controlli):
+        raise ValueError("casi senza controllo: " + ", ".join(da_provare))
+    con_controllo = {c.voce for c in controlli if c.zona == zona}
     senza = [v for v, esito in voci.items() if esito == "fatta" and v not in con_controllo]
     if senza:
         raise ValueError(f"voci fatte senza un controllo: {', '.join(senza)}")
@@ -328,13 +412,15 @@ def main(argv: list[str] | None = None) -> int:
         getattr(flusso, "reconfigure")(encoding="utf-8")  # la console Windows non è UTF-8
     p = argparse.ArgumentParser(prog="tests.caccia.inventario")
     sub = p.add_subparsers(dest="comando", required=True)
-    for nome in ("elenco", "verifica", "prossimo-id"):
+    for nome in ("elenco", "prossimo-id"):
         sub.add_parser(nome)
+    sub.add_parser("verifica").add_argument("--contiene", default="", help="solo gli errori che nominano questo testo")
     s = sub.add_parser("scegli")
     s.add_argument("--max", type=int, default=8)
     s.add_argument("--includi", nargs="*", default=[])
     s.add_argument("--escludi", nargs="*", default=[])
     s.add_argument("--edizione", choices=("2014", "2024"))
+    sub.add_parser("casi").add_argument("zona")
     s = sub.add_parser("segna")
     s.add_argument("zona")
     s.add_argument("commit")
@@ -345,16 +431,20 @@ def main(argv: list[str] | None = None) -> int:
     elif a.comando == "prossimo-id":
         print(prossimo_id(leggi_controlli(RADICE), leggi_stato(RADICE)["ritirati"]))
     elif a.comando == "verifica":
-        errori = verifica(RADICE, endpoint_app())
+        errori = [e for e in verifica(RADICE, endpoint_app()) if a.contiene in e]
         print("\n".join(errori) or "Nessun errore")
         return 1 if errori else 0
     elif a.comando == "scegli":
         zone = filtra(leggi_zone(RADICE), a.includi, a.escludi, a.edizione)
-        tutte = scegli(zone, leggi_controlli(RADICE), leggi_stato(RADICE),
-                       cache(lambda commit: file_cambiati(RADICE, commit)), len(zone))
+        controlli = leggi_controlli(RADICE)
+        tutte = scegli(zone, controlli, leggi_stato(RADICE), cache(lambda commit: file_cambiati(RADICE, commit)), len(zone),
+                       {z.id: casi_da_provare(RADICE, z.id, controlli) for z in zone}, importati(RADICE, leggi_zone(RADICE)))
         for z, motivo in tutte[:a.max]:
             print(f"{z.id}\t{motivo}")
         print("Restano:", dict(Counter(m for _, m in tutte[a.max:])) or "nessuna")
+    elif a.comando == "casi":
+        for caso, testo in casi_da_provare(RADICE, a.zona).items():
+            print(f"{caso}\t{testo}")
     elif a.comando == "segna":
         segna(RADICE, a.zona, a.commit, dict(v.split("=", 1) for v in a.voci))
     return 0

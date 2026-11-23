@@ -9,6 +9,7 @@ import pytest
 from tests.caccia.inventario import VOCI, Controllo, Zona, file_cambiati, filtra, scegli, segna
 
 NIENTE = {v: "non_applicabile" for v in VOCI}
+LIMITI = {**NIENTE, "limiti": "fatta"}
 
 
 def zona(id_: str) -> Zona:
@@ -72,9 +73,12 @@ def radice(tmp_path):
     d = tmp_path / "tests/caccia"
     d.mkdir(parents=True)
     (d / "zone.json").write_text(json.dumps([vars(zona("flusso:a"))]), encoding="utf-8")
+    (d / "affermazioni").mkdir()
+    (d / "affermazioni/flusso-a.json").write_text(json.dumps(
+        {"A01": {"voce": "limiti", "testo": "x", "fonte": "x", "casi": {"a": "x"}}}), encoding="utf-8")
     (d / "stato.json").write_text('{"ritirati": ["CB-009"], "zone": {}}', encoding="utf-8")
     (d / "test_cb_a.py").write_text(
-        "import pytest\n@pytest.mark.caccia(id='CB-001', fonte='x', zona='flusso:a', voce='limiti', copre=[])\n"
+        "import pytest\n@pytest.mark.caccia(id='CB-001', fonte='x', zona='flusso:a', voce='limiti', copre=[], prova=['A01a'])\n"
         "def test_a(): ...\n", encoding="utf-8")
     return tmp_path
 
@@ -89,9 +93,9 @@ def test_segna_salva_zona_e_ritirati(radice):
 
 
 @pytest.mark.parametrize("id_,voci", [
-    ("flusso:a", {k: v for k, v in NIENTE.items() if k != "regola"}),
-    ("flusso:a", {**NIENTE, "normale": "fatta"}),
-    ("flusso:a", {**NIENTE, "limiti": "boh"}),
+    ("flusso:a", {k: v for k, v in LIMITI.items() if k != "regola"}),
+    ("flusso:a", {**LIMITI, "normale": "fatta"}),
+    ("flusso:a", {**LIMITI, "limiti": "boh"}),
     ("flusso:z", NIENTE),
 ], ids=["voce mancante", "fatta senza controllo", "esito ignoto", "zona ignota"])
 def test_segna_rifiuta(radice, id_, voci):
