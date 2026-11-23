@@ -36,6 +36,8 @@
       "invalid_target": "Il bersaglio non è valido.",
       "self_only_spell": "Questo incantesimo vale solo per chi lo lancia: non si può dare ad altri.",
       "feature_unavailable": "Ora non puoi usarlo.",
+      "death_save_not_needed": "Il tiro contro la morte non serve: hai punti ferita o sei stabile.",
+      "character_dead": "Il personaggio è morto.",
       "rest_needs_hp": "A 0 PF non puoi riposare: serve prima almeno un punto ferita.",
       "long_rest_too_soon": "L'ultimo riposo lungo è troppo recente.",
       "state_locked": "Questo stato non si può chiudere a mano.",

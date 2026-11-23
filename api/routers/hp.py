@@ -1178,6 +1178,8 @@ async def roll_death_save(
             revived=False, current_hp=char.current_hit_points,
         )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
+    if char.current_hit_points > 0 or ds.get("stable"):  # si tira solo a 0 PF e non stabili (2014 p.197 / 2024 p.28)
+        raise HTTPException(status_code=409, detail={"code": "death_save_not_needed"})
     before = {"death_saves": dict(ds), "hp": char.current_hit_points}
 
     applied = modifiers_for(char, "death_save")
