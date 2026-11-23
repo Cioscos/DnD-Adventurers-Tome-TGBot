@@ -1044,6 +1044,11 @@ async def spend_hit_dice(
         raise HTTPException(status_code=404, detail="Class not found")
     if body.count < 1:
         raise HTTPException(status_code=400, detail="count must be >= 1")
+    if char.is_dead:
+        raise HTTPException(status_code=409, detail={"code": "character_dead"})
+    # I dadi vita si spendono riposando: nel 2024 a 0 PF non si riposa (come /rest).
+    if character_edition(char) == "2024" and char.current_hit_points <= 0 and char.hit_points > 0:
+        raise HTTPException(status_code=409, detail="rest_needs_hp")
 
     # Pool residuo per classe (spec 2026-07-17): level - hit_dice_used.
     remaining = max(0, cls.level - (cls.hit_dice_used or 0))
