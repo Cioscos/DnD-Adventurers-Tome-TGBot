@@ -319,6 +319,11 @@ async def delete_campaign(
     await db.execute(
         update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
     )
+    # SQLite riusa gli id: un collegamento rimasto nelle note punterebbe alla prossima campagna, di altri.
+    for pc in (await db.execute(select(Character).where(Character.notes.is_not(None)))).scalars():
+        if any(isinstance(v, dict) and v.get("campaign_id") == camp.id for v in (pc.notes or {}).values()):
+            pc.notes = {t: {**v, "campaign_id": None} if isinstance(v, dict) and v.get("campaign_id") == camp.id else v
+                        for t, v in pc.notes.items()}
     stash = await db.get(Character, camp.stash_character_id)
     await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
     await db.execute(delete(CampaignSchedule).where(CampaignSchedule.campaign_id == camp.id))
