@@ -798,12 +798,13 @@ async def rest_preview(
     rest_type: str,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    ate_and_drank: bool = True,
 ) -> RestPreview:
     if rest_type not in ("long", "short"):
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
     char = await get_owned_full_with_resources(char_id, user_id, session)
     bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    preview = compute_rest_effects(char, rest_type, bonus)
+    preview = compute_rest_effects(char, rest_type, bonus, ate_and_drank)
     preview.too_soon = rest_type == "long" and _long_rest_too_soon(char)  # il primo modale avvisa già, prima della conferma
     if preview.too_soon:  # l'avviso dice anche quante ore sono passate
         preview.hours_since_long_rest = int((_utcnow() - datetime.fromisoformat(char.last_long_rest_at)).total_seconds() // 3600)

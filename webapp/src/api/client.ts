@@ -685,8 +685,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ rest_type: restType, ...opts }),
       }),
-    restPreview: (id: number, restType: 'long' | 'short') =>
-      request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}`),
+    restPreview: (id: number, restType: 'long' | 'short', ateAndDrank = true) =>
+      request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}&ate_and_drank=${ateAndDrank}`),
     updateDeathSaves: (id: number, action: string) =>
       request<CharacterFull>(`/characters/${id}/death_saves`, {
         method: 'PATCH',

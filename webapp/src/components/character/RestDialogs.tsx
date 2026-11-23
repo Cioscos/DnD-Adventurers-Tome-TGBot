@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -27,8 +27,9 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
   const shortBlocked = restNeedsHp(char, 'short')
   // Stessa query dell'anteprima (cache condivisa): «troppo presto» si sa già nel primo modale, non dopo un 409.
   const { data: longPreview } = useQuery({
-    queryKey: ['rest-preview', char.id, 'long'],
-    queryFn: () => api.characters.restPreview(char.id, 'long'),
+    queryKey: ['rest-preview', char.id, 'long', rest.ateAndDrank],
+    queryFn: () => api.characters.restPreview(char.id, 'long', rest.ateAndDrank),
+    placeholderData: keepPreviousData,
     enabled: rest.confirmLongRest && !longBlocked,
     gcTime: 0,
   })
@@ -71,7 +72,7 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
             )}
             {rest.confirmLongRest && (longBlocked
               ? <p className="text-sm text-dnd-crimson-bright font-body">{t('character.quick_actions.rest_needs_hp')}</p>
-              : <RestPreviewList charId={char.id} restType="long" />)}
+              : <RestPreviewList charId={char.id} restType="long" ateAndDrank={rest.ateAndDrank} />)}
             <TomeReopenToggle char={char} value={rest.reopenTome} onChange={rest.setReopenTome} />
             <RestResistancePicker char={char} value={rest.resistance} onChange={rest.setResistance} />
             <RestAllyTempPicker char={char} value={rest.tempAllies} onChange={rest.setTempAllies} />
