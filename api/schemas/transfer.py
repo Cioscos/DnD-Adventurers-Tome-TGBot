@@ -12,7 +12,7 @@ from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.species_2024 import SPECIES_2024
-from core.db.models import EquipmentSlot
+from core.db.models import ABILITY_NAMES, EquipmentSlot
 from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
 
@@ -166,6 +166,13 @@ class ExportClass(BaseModel):
 class ExportAbilityScore(BaseModel):
     name: str = Field(max_length=50)
     value: Annotated[int, _rng(1, 30)] = 10
+
+    @field_validator("name")
+    @classmethod
+    def _known(cls, v: str, info: ValidationInfo) -> str:
+        if v not in ABILITY_NAMES and not (info.context or {}).get("lenient"):  # una in più renderebbe illeggibile la scheda
+            raise ValueError("unknown ability")
+        return v
 
 
 class ExportItem(BaseModel):
