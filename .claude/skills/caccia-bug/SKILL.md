@@ -27,7 +27,7 @@ zone e fonti, ma un giro senza bug non vuol dire zona senza bug. Non dichiarare 
 
 - `caccia` (predefinito): passi 0-7, poi 8-9 se l'utente sceglie dei bug. Opzioni: zone da includere o escludere, edizione,
   `zone=N` (predefinito 8).
-- `regressione`: solo il passo 2 e un resoconto. Non crea branch e non scrive nulla nel repository.
+- `regressione`: solo il passo 2 e un resoconto. Non crea branch e non scrive nulla nel repository: i rossi si riferiscono e basta.
 - `risolvi CB-…`: passi 8-9 sui controlli indicati.
 
 ## Vincoli
@@ -88,9 +88,9 @@ Un subagente per zona (`general-purpose`, modello `sonnet`), in parallelo, con i
 Per ogni zona prepara:
 - la riga di `zone.json` e i file che corrispondono ai suoi glob;
 - `uv run python -m tests.caccia.inventario fonti <zona>`: pagine e carte senza alcun controllo, da cui partire;
-- un blocco di 100 id consecutivi, a partire da `prossimo-id` (gli id non usati restano vuoti);
+- un blocco di 100 id consecutivi solo suo, a partire da `prossimo-id`, senza sovrapposizioni fra zone (gli id non usati restano vuoti);
 - i file di test che può scrivere: `tests/caccia/test_cb_<zona>.py`, `webapp/tests/unit/caccia/<zona>.test.tsx`,
-  `webapp/tests/e2e-playwright/caccia/<zona>.spec.ts`, con la zona senza `:` e `/`. Sono solo suoi, così i paralleli non collidono;
+  `webapp/tests/e2e-playwright/caccia/<zona>.spec.ts`, con `-` al posto di `:` e `/` (in Python `_`) e senza accenti. Sono solo suoi, così i paralleli non collidono;
 - i problemi già noti e ancora aperti nella zona, da `docs/superpowers/rules-audit/`, `docs/superpowers/playtest/` e dal
   catalogo. Quelli risultati corretti che ricompaiono sono regressioni.
 
@@ -104,7 +104,8 @@ timeout) è un difetto del controllo: rimandalo al suo autore con `SendMessage`.
 Per ogni rosso **e per ogni domanda**, un subagente nuovo con `references/conferma.md` (segnalazioni della stessa zona insieme,
 al massimo 6): riceve solo fonte, passi e risultato osservato. Una domanda che la fonte o un invariante decide diventa bug
 o scartata; arriva all'utente solo se resta davvero ambigua. Non passargli
-il test né il ragionamento del cacciatore. Unisci i duplicati che hanno la stessa causa. `domanda` → `AskUserQuestion`, con
+il test né il ragionamento del cacciatore. La cartella temporanea del prompt la crei tu, una per subagente, sotto quella di sistema. Unisci i duplicati che hanno la stessa
+causa: resta un controllo per comportamento distinto. `domanda` → `AskUserQuestion`, con
 edizione, pagina, comportamento attuale e opzioni; la risposta va in `decisioni.md`.
 
 ## 6. Consolidamento
@@ -112,7 +113,8 @@ edizione, pagina, comportamento attuale e opzioni; la risposta va in `decisioni.
 Per ogni zona, a conferma finita:
 1. bug confermati: `@pytest.mark.xfail(strict=True, reason="CB-012 …")`, `test.fails` (Vitest) o `test.fail` (Playwright);
    scartati: via il controllo, o corretto se l'atteso era sbagliato. Restano i verdi che proteggono un comportamento;
-2. esegui i controlli della zona e `verifica`: verdi o xfail;
+2. se una voce è `non_fatta`, salta il punto 3: la zona resta in coda e si committano solo i controlli;
+   esegui comunque i controlli della zona e `verifica`: verdi o xfail;
 3. segna la zona, con una voce per ciascuna delle dieci:
    `uv run python -m tests.caccia.inventario segna <zona> <commit> --voci contratto=fatta normale=fatta … regola=non_applicabile`
 4. commit di soli controlli e stato: `test(caccia): <zona>`.
@@ -133,6 +135,9 @@ Segui `references/risoluzione.md`, una causa alla volta.
 
 ## 9. Chiusura
 
-Una volta sola: `uv run pytest -n auto -q` e `npm run test:caccia`. Se è cambiato `webapp/`: `npm run lint`, `npx vitest run`,
-`npm run check:layout` se è cambiata la UI, `npm run build:prod` se è cambiato `webapp/src/`. Poi changelog e versione secondo
-`CLAUDE.md`, riepilogo, e chiedi se fare push e PR con la label di release. I bug non scelti restano xfail.
+1. Una volta sola: `uv run pytest -n auto -q` e `npm run test:caccia`. Se è cambiato `webapp/`: `npm run lint` e `npx vitest run`.
+2. Se è cambiata la UI, `check:layout` sullo stack usa e getta: `node tests/e2e-playwright/caccia/avvia-api.mjs`,
+   `VITE_API_BASE_URL=http://127.0.0.1:8020 npx vite --port 4173 --strictPort --host localhost`, dati di prova via API, poi
+   `BASE=http://localhost:4173 CHAR=<id> npm run check:layout -- <route>`. Alla fine chiudi i due processi.
+3. Changelog e versione secondo `CLAUDE.md`, **poi** `npm run build:prod` (il changelog entra nella build).
+4. Riepilogo, e chiedi se fare push e PR con la label di release. I bug non scelti restano xfail.

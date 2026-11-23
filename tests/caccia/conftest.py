@@ -7,9 +7,21 @@ import pytest
 
 from api.auth import get_current_user
 from api.main import app
+from api.routers import maps, notes, silhouette
+from api.services import content_shares
 from tests.integration.conftest import (  # noqa: F401
     _isolate_campaign_files, _schema_db, client, rules_catalog, test_session_factory,
 )
+
+
+@pytest.fixture(autouse=True)
+def _file_isolati(tmp_path, monkeypatch):
+    """I file caricati dai controlli non finiscono mai nella cartella data/ dello sviluppatore."""
+    monkeypatch.setattr(maps, "_MAPS_DIR", tmp_path / "maps")
+    monkeypatch.setattr(silhouette, "_SIL_DIR", tmp_path / "silhouettes")
+    monkeypatch.setattr(notes, "_VOICE_DIR", tmp_path / "voice")
+    monkeypatch.setattr(content_shares, "VOICE_NOTES_DIR", tmp_path / "voice")
+    monkeypatch.setattr(content_shares, "SHARED_VOICE_DIR", tmp_path / "shared_voice")
 
 
 @pytest.fixture(autouse=True)

@@ -11,7 +11,7 @@ Qualcuno sostiene che la D&D Mini App (`{repo}`) abbia questo difetto. Il tuo co
 
 1. Rileggi tu la fonte (`tests/caccia/decisioni.md`, `docs/superpowers/rules/<edizione>/…`, `CLAUDE.md`): l'atteso segue davvero
    da lì, per quell'edizione, e nessuna eccezione o decisione dell'utente lo cambia?
-2. Ripeti i passi con uno script tuo, usa e getta, in `{cartella_temporanea}`: API vera tramite ASGI e database temporaneo,
+2. Ripeti i passi con uno script tuo, usa e getta, in `{cartella_temporanea}`: API vera tramite ASGI e database temporaneo, cartelle dei file (`maps._MAPS_DIR`, `notes._VOICE_DIR`, `silhouette._SIL_DIR`) temporanee,
    come in `tests/integration/conftest.py`; per la UI, Vitest o la lettura del componente con la richiesta reale. Non
    aprire i file `tests/caccia/test_cb_*` né `webapp/tests/**/caccia/`.
 3. Guarda il codice solo per capire se il risultato dipende da una preparazione irrealistica (dato che l'app non permette,
