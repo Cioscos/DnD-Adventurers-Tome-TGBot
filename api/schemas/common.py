@@ -371,7 +371,7 @@ class DamagePart(BaseModel):
 
 class HPUpdate(RollOptionsBody):
     op: HPOp
-    value: int = Field(ge=0)
+    value: int
     ally_reaction_id: int | None = None  # richiesta di reazione chiusa del ricevente: le riduzioni dei donatori entrano nel danno
     was_critical_hit: bool = False
     # Override esplicito: `value` è già il danno applicato dal client (annotazione),
@@ -387,6 +387,13 @@ class HPUpdate(RollOptionsBody):
     knock_out: bool = False
     # Il TS di concentrazione che il danno fa tirare: vantaggio/svantaggio scelti dal giocatore (sommati a Incantatore da Guerra)
     concentration_mode: Literal["normal", "advantage", "disadvantage"] = "normal"
+
+    @model_validator(mode="after")
+    def _no_negative_change(self):
+        # Un danno negativo creerebbe PF temporanei; i valori da impostare (set_*) restano portati nei limiti dal server.
+        if self.value < 0 and self.op in (HPOp.DAMAGE, HPOp.HEAL):
+            raise ValueError("value must be >= 0")
+        return self
 
 
 class HPUndoRequest(BaseModel):

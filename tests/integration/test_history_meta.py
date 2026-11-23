@@ -91,6 +91,7 @@ async def test_heal_meta_amount_clamped(client, test_session_factory):
 async def test_death_save_roll_meta_nat1_two_failures(client, test_session_factory):
     cid = await _new(client)
     for die in (1, 20, 12, 5):
+        await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})  # si tira solo a 0 PF (CB-016)
         r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": die})
         assert r.status_code == 200, r.text
     metas = [m for m in await _rows(test_session_factory, cid, "death_save") if m and "ds" in m]

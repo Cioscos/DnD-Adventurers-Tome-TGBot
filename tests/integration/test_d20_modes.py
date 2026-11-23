@@ -102,6 +102,7 @@ async def test_spell_attack_advantage(client):
 
 async def test_death_save_advantage(client):
     cid = await _char(client)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})  # si tira solo a 0 PF (CB-016)
     r = await client.post(
         f"/characters/{cid}/death_saves/roll", json={"mode": "advantage", "dice": [1, 12]},
     )
@@ -194,6 +195,8 @@ async def test_war_caster_concentration_advantage(client, monkeypatch):
 @pytest.mark.parametrize("kind", ["skill", "save", "attack", "unarmed", "spell", "death", "init"])
 async def test_legacy_die_field_still_accepted(client, test_session_factory, kind):
     cid = await _char(client)
+    if kind == "death":
+        await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})  # si tira solo a 0 PF (CB-016)
     if kind == "init":
         sid, _ = await seed_session(test_session_factory)
         r = await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})

@@ -341,10 +341,12 @@ async def test_heroic_rally_heals_five_plus_constitution_when_bloodied_and_never
 
 async def test_defy_death_gives_advantage_and_treats_18_to_20_as_a_20(client):
     cid = await _sub(client, "champion", 18)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})  # si tira solo a 0 PF (CB-016)
     r = await client.post(f"/characters/{cid}/death_saves/roll", json={"dice": [2, 18]})
     assert r.status_code == 200, r.text
     assert r.json()["mode_applied"] == "advantage" and r.json()["revived"] is True and r.json()["current_hp"] == 1
     low = await _sub(client, "champion", 17)
+    await client.patch(f"/characters/{low}/hp", json={"op": "set_current", "value": 0})
     r = await client.post(f"/characters/{low}/death_saves/roll", json={"die": 18})
     assert r.json()["mode_applied"] == "normal" and r.json()["revived"] is False
 

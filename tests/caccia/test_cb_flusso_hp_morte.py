@@ -15,6 +15,7 @@ async def test_danno_negativo_rifiutato(client):
     cid = await _pg(client)
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_temp", "value": 3})
     assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": -9})).status_code == 422
+    assert (await client.patch(f"/characters/{cid}/hp", json={"op": "heal", "value": -4})).status_code == 422
     assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 3
 
 
