@@ -6,10 +6,11 @@ import subprocess
 
 import pytest
 
-from tests.caccia.inventario import VOCI, Controllo, Zona, file_cambiati, filtra, scegli, segna
+from tests.caccia.inventario import (
+    VOCI, Controllo, Zona, file_cambiati, filtra, fonti_scoperte, importati, scegli, segna,
+)
 
 NIENTE = {v: "non_applicabile" for v in VOCI}
-LIMITI = {**NIENTE, "limiti": "fatta"}
 
 
 def zona(id_: str) -> Zona:
@@ -73,12 +74,9 @@ def radice(tmp_path):
     d = tmp_path / "tests/caccia"
     d.mkdir(parents=True)
     (d / "zone.json").write_text(json.dumps([vars(zona("flusso:a"))]), encoding="utf-8")
-    (d / "affermazioni").mkdir()
-    (d / "affermazioni/flusso-a.json").write_text(json.dumps(
-        {"A01": {"voce": "limiti", "testo": "x", "fonte": "x", "rischio": 1, "copre": [], "casi": {"a": "x"}}}), encoding="utf-8")
     (d / "stato.json").write_text('{"ritirati": ["CB-009"], "zone": {}}', encoding="utf-8")
     (d / "test_cb_a.py").write_text(
-        "import pytest\n@pytest.mark.caccia(id='CB-001', fonte='x', zona='flusso:a', voce='limiti', copre=[], prova=['A01a'])\n"
+        "import pytest\n@pytest.mark.caccia(id='CB-001', fonte='x', zona='flusso:a', voce='limiti', copre=[])\n"
         "def test_a(): ...\n", encoding="utf-8")
     return tmp_path
 
@@ -93,9 +91,9 @@ def test_segna_salva_zona_e_ritirati(radice):
 
 
 @pytest.mark.parametrize("id_,voci", [
-    ("flusso:a", {k: v for k, v in LIMITI.items() if k != "regola"}),
-    ("flusso:a", {**LIMITI, "normale": "fatta"}),
-    ("flusso:a", {**LIMITI, "limiti": "boh"}),
+    ("flusso:a", {k: v for k, v in NIENTE.items() if k != "regola"}),
+    ("flusso:a", {**NIENTE, "normale": "fatta"}),
+    ("flusso:a", {**NIENTE, "limiti": "boh"}),
     ("flusso:z", NIENTE),
 ], ids=["voce mancante", "fatta senza controllo", "esito ignoto", "zona ignota"])
 def test_segna_rifiuta(radice, id_, voci):
@@ -132,3 +130,45 @@ def test_file_cambiati_su_repo_vero(tmp_path):
     git("commit", "-m", "2")
     assert sorted(file_cambiati(tmp_path, primo) or []) == ["a.py", "b.py", "è.py"]
     assert file_cambiati(tmp_path, "f" * 40) is None
+
+
+def scrivi(radice, nome, testo=""):
+    f = radice / nome
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(testo, encoding="utf-8")
+
+
+def test_fonti_scoperte(radice):
+    scrivi(radice, "docs/superpowers/rules/2014/feats.md", "## Abile / Skilled (pag. 165)\n## Allerta / Alert (pag. 165)\n")
+    z = Zona("flusso:a", "flusso", [], [], ["/a", "/b"], [{"file": "2014/feats.md", "titoli": "^ABILE"}])
+    assert fonti_scoperte(radice, z) == ["route:/a", "route:/b", "carta:2014/feats.md#Abile / Skilled (pag. 165)"]
+    scrivi(radice, "tests/caccia/test_cb_a.py", "import pytest\n@pytest.mark.caccia(id='CB-001', fonte='x', zona='flusso:a', "
+           "voce='limiti', copre=['route:/a', 'carta:2014/feats.md#Abile / Skilled (pag. 165)'])\ndef test_a(): ...\n")
+    assert fonti_scoperte(radice, z) == ["route:/b"]
+
+
+def test_importati_diretti_di_una_zona(radice):
+    scrivi(radice, "webapp/src/pages/A.tsx", "import { x } from '@/hooks/useX'\nimport y from './y'\nimport React from 'react'\n")
+    scrivi(radice, "webapp/src/hooks/useX.ts", "import '@/lib/lontano'\n")
+    scrivi(radice, "webapp/src/pages/y.tsx")
+    scrivi(radice, "webapp/src/lib/lontano.ts")
+    scrivi(radice, "api/services/a.py", "from api.schemas.b import C\nfrom api.services import d\nimport json\n")
+    scrivi(radice, "api/schemas/b.py")
+    scrivi(radice, "api/services/d.py")
+    z = Zona("flusso:a", "flusso", ["api/services/a.py", "webapp/src/pages/A.tsx"], [], [], [])
+    assert importati(radice, [z])["flusso:a"] == {
+        "webapp/src/hooks/useX.ts", "webapp/src/pages/y.tsx", "api/schemas/b.py", "api/services/d.py"}
+
+
+def test_importato_da_molte_zone_non_le_segna_tutte(radice):
+    scrivi(radice, "webapp/src/pages/A.tsx", "import { x } from '@/hooks/useX'\n")
+    scrivi(radice, "webapp/src/hooks/useX.ts")
+    zone = [Zona(f"flusso:{i}", "flusso", ["webapp/src/pages/A.tsx"], [], [], []) for i in range(9)]
+    assert all(v == set() for v in importati(radice, zone).values())
+
+
+def test_file_importato_cambiato_rende_modificata():
+    z = Zona("flusso:a", "flusso", [], [], [], [])
+    stato = {"zone": {"flusso:a": voce()}, "ritirati": []}
+    scelte = scegli([z], [], stato, lambda _: ["webapp/src/hooks/useX.ts"], 8, {"flusso:a": {"webapp/src/hooks/useX.ts"}})
+    assert scelte[0][1] == "modificata"

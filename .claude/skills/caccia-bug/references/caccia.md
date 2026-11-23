@@ -7,7 +7,7 @@ Riempi i segnaposto e invia il testo sotto la riga.
 Cerchi bug in una zona della D&D Mini App, nella cartella `{repo}`. Non correggi: scrivi controlli eseguibili.
 
 - Zona: `{zona}`. File: `{file}`. Carte del manuale: `{carte}`.
-- Casi da provare, dalle affermazioni in `{affermazioni}`: `{casi}`.
+- Pagine e carte ancora senza controlli, da cui partire: `{fonti}`.
 - Id che puoi usare: `{id}`. File di test che puoi scrivere, e nessun altro: `{file_test}`.
 - Già noti, da non segnalare di nuovo: `{noti}`.
 
@@ -17,10 +17,10 @@ ripetuta non spende due volte). Non ricavarlo dal codice che stai provando: un t
 quando il codice è sbagliato. Il codice ti serve per sapere come chiamare l'app e dove rischia. Fonte ambigua → niente
 controllo, riportala come domanda con i passi. Regola non implementata affatto → `mancante`, niente controllo.
 
-**Metodo.** Prima i casi: ognuno ha almeno un controllo che lo nomina in `prova`, con quel valore esatto e con **tutto** ciò che
-il caso afferma nell'asserzione (non solo lo status: rileggi i campi che cambiano). Un caso non provabile si riporta con il
-motivo, non si salta. Se un caso ti pare sbagliato rispetto alla fonte, riportalo: non adattarlo a ciò che fa il codice.
-Poi, con gli id rimasti, cerca oltre i casi lungo le dieci voci. Non chiuderti in un elenco di verdi: parti dalle
+**Metodo.** Di ogni formula prova anche minimo, massimo, il valore che cambia segno e quelli attorno a una soglia; di ogni
+cambiamento di stato rileggi tutto ciò che deve cambiare, non solo lo status. Un comportamento che ti sorprende è un rosso se una
+fonte o un invariante lo contraddice, anche se l'app potrebbe averlo fatto apposta: a decidere è la conferma. `DOMANDE` è per
+ciò che nessuna fonte tratta. Per ciascuna delle dieci voci scrivi l'atteso con la fonte, poi il controllo, poi eseguilo. Parti dalle
 combinazioni (due effetti insieme, due classi, due utenti, prima e dopo un riposo): lì i test esistenti coprono meno.
 
 | Voce | Che cosa provare |
@@ -43,11 +43,11 @@ pagine); fixture in `webapp/tests/e2e-playwright/caccia/fixtures.ts`: scrivilo, 
 
 ```python
 @pytest.mark.caccia(id="CB-012", fonte="2024 · Monaco · pag. 101", zona="{zona}", voce="limiti",
-                    prova=["A03b"], copre=["POST /characters/{char_id}/rest", "carta:2024/classes/monk.md#Titolo esatto della carta"])
+                    copre=["POST /characters/{char_id}/rest", "carta:2024/classes/monk.md#Titolo esatto della carta"])
 async def test_…(client): ...
 ```
 ```ts
-// caccia: {"id": "CB-013", "fonte": "…", "zona": "{zona}", "voce": "normale", "prova": [], "copre": ["route:/char/:id/hp"]}
+// caccia: {"id": "CB-013", "fonte": "…", "zona": "{zona}", "voce": "normale", "copre": ["route:/char/:id/hp"]}
 test('…', …)
 ```
 
@@ -55,7 +55,7 @@ Un comportamento per controllo. Nei metadati solo letterali scritti per esteso (
 `skip`, `only` o `xfail`. Nessun testo copiato dai manuali. Esegui `uv run pytest <tuo file> -q` e
 `npx vitest run <tuo file>` da `webapp/`, e alla fine
 `uv run python -m tests.caccia.inventario verifica --contiene <tuo file>`: deve dire «Nessun errore». Per Playwright usa solo
-ruoli e testi che hai letto nel componente o in `locales/it.json`. Un rosso vale solo se fallisce l'asserzione sull'atteso: un errore di preparazione
+ruoli e testi letti nel componente o in `locales/it.json`. Un rosso vale solo se fallisce l'asserzione sull'atteso: un errore di preparazione
 è un difetto del tuo test. Prima di riportarlo, ripeti i passi da capo.
 
 Non modificare codice dell'app, non fare commit, non usare la porta 8000 né `data/dnd_bot.db`. La ricerca di altri test,
@@ -64,7 +64,6 @@ commit o report per indovinare i bug non serve: prova l'app.
 **Ritorno, in questo formato:**
 
 ```
-CASI: A01a=CB-… | A02b=non provabile(motivo)
 VOCI: contratto=fatta(CB-…) … | voce=non_applicabile(motivo)
 ROSSI: id | fonte (edizione, carta, pagina) | passi numerati riproducibili | atteso | osservato | gravità 🔴/🟠/🟡
 VERDI: id e comportamento, una riga ciascuno
@@ -72,9 +71,6 @@ PLAYWRIGHT DA ESEGUIRE: file
 DOMANDE: comportamento osservato | passi | perché ti pare strano | fonte più vicina
 MANCANTE: …
 ```
-
-Un comportamento che ti sorprende è un rosso se una fonte o un invariante lo contraddice, anche se l'app potrebbe averlo
-fatto apposta: a decidere è la conferma. `DOMANDE` è per ciò che nessuna fonte tratta, sempre con i passi.
 
 Gravità: 🔴 dati persi o esposti, crash, risultato sbagliato in un caso comune; 🟠 risultato sbagliato in un caso raro; 🟡
 minore. Se una voce è applicabile ma non l'hai provata, scrivi `non_fatta`: la zona resterà in coda.

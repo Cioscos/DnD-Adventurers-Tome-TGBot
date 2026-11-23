@@ -1,6 +1,6 @@
 """Inventario della caccia ai bug: catalogo dei controlli, zone, copertura. Nessun modello coinvolto.
 
-Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna|casi|coda|fonti
+Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna|fonti
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import sys
 import unicodedata
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from fnmatch import fnmatchcase
 from functools import cache
@@ -44,7 +44,6 @@ class Controllo:
     copre: list[str]
     file: str
     aperto: bool
-    prova: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -152,68 +151,6 @@ def leggi_stato(radice: Path) -> dict:
     return json.loads((radice / "tests/caccia/stato.json").read_text(encoding="utf-8"))
 
 
-class AffermazioneDoppia(ValueError):
-    pass
-
-
-def _affermazioni(radice: Path, zona: str) -> dict[str, dict]:
-    """Le affermazioni di una zona, dal file `<zona>.json` e dalle sue parti `<zona>--<parte>.json`."""
-    cartella, nome = radice / "tests/caccia/affermazioni", re.sub(r"[:/]", "-", zona)
-    tutte: dict[str, dict] = {}
-    for f in [cartella / f"{nome}.json", *sorted(cartella.glob(f"{nome}--*.json"))]:
-        if f.exists():
-            nuove = json.loads(f.read_text(encoding="utf-8"))
-            if doppie := set(tutte) & set(nuove):
-                raise AffermazioneDoppia(f"{zona} {', '.join(sorted(doppie))}")
-            tutte |= nuove
-    return tutte
-
-
-def casi_da_provare(radice: Path, zona: str, controlli: list[Controllo] | None = None) -> dict[str, str]:
-    """Casi delle affermazioni della zona senza un controllo che li provi né un'esenzione motivata."""
-    if controlli is None:
-        controlli = leggi_controlli(radice)
-    provati = {p for c in controlli if c.zona == zona for p in c.prova}
-    return {a + c: testo for a, v in _affermazioni(radice, zona).items() for c, testo in v["casi"].items()
-            if a + c not in provati and c not in v.get("esenti", {})}
-
-
-def coda(radice: Path, zone: list[str], budget: int) -> list[tuple[str, str, str]]:
-    """(zona, caso, testo) da provare: prima il rischio più alto, poi l'ordine delle zone. Ciò che eccede resta in coda."""
-    controlli = leggi_controlli(radice)
-    righe = []
-    for n, zona in enumerate(zone):
-        rischi = {a + c: v["rischio"] for a, v in _affermazioni(radice, zona).items() for c in v["casi"]}
-        righe += [(rischi[c], n, c, zona, t) for c, t in casi_da_provare(radice, zona, controlli).items()]
-    return [(zona, c, t) for _, _, c, zona, t in sorted(righe)[:budget]]
-
-
-def fonti_scoperte(radice: Path, z: Zona) -> list[str]:
-    """Pagine e carte della zona che nessuna affermazione tratta ancora."""
-    trattate = {x for v in _affermazioni(radice, z.id).values() for x in v.get("copre", [])}
-    fonti = [f"route:{r}" for r in z.route]
-    fonti += [f"carta:{f}#{t}" for f, titoli in (carte(radice) or {}).items() for t in titoli if _ha_carta(z, f, t)]
-    return [x for x in fonti if x not in trattate]
-
-
-def _errori_affermazioni(radice: Path, zona: str, controlli: list[Controllo], noti: set[str], manuali: bool) -> list[str]:
-    try:
-        tutte = _affermazioni(radice, zona)
-    except AffermazioneDoppia as e:
-        return [f"affermazione doppia: {e}"]
-    except ValueError as e:
-        return [f"affermazione illeggibile: {zona} {e}"]
-    errori, casi = [], set()
-    for a, v in tutte.items():
-        testi = [v.get("testo"), v.get("fonte")]
-        errori += [f"copre ignoto: {zona} {a} {x}" for x in v.get("copre", []) if x not in noti and (manuali or not x.startswith("carta:"))]
-        if v.get("voce") not in VOCI or v.get("rischio") not in (1, 2, 3) or not v.get("casi") or not all(isinstance(t, str) and t.strip() for t in testi):
-            errori.append(f"affermazione incompleta: {zona} {a}")
-        errori += [f"esenzione senza motivo: {zona} {a}{c}" for c, motivo in v.get("esenti", {}).items() if not motivo.strip()]
-        casi |= {a + c for c in v.get("casi", {})}
-    return errori + [f"prova ignota: {c.id} {p}" for c in controlli if c.zona == zona for p in c.prova if p not in casi]
-
-
 def prossimo_id(controlli: list[Controllo], ritirati: list[str]) -> str:
     usati = [int(i[3:]) for i in [c.id for c in controlli] + ritirati if _ID.match(i)]
     return f"CB-{max(usati, default=0) + 1:03d}"
@@ -295,8 +232,6 @@ def verifica(radice: Path, endpoint: list[Endpoint]) -> list[str]:
         errori += [f"copre ignoto: {dove} {x}" for x in c.copre
                    if x not in noti and not (schede is None and x.startswith("carta:"))]
 
-    for z in zone:
-        errori += _errori_affermazioni(radice, z.id, controlli, noti, schede is not None)
     for m, p, modulo in endpoint:
         if not any(modulo in z.router for z in zone):
             errori.append(f"endpoint senza zona: {m} {p} ({modulo})")
@@ -330,6 +265,14 @@ def elenco(radice: Path, endpoint: list[Endpoint]) -> None:
     for z in leggi_zone(radice):
         fatte = {c.voce for c in controlli if c.zona == z.id}
         print(f"  {z.id}: {len(fatte)}/{len(VOCI)} voci con un controllo")
+
+
+def fonti_scoperte(radice: Path, z: Zona) -> list[str]:
+    """Pagine e carte della zona che nessun controllo copre ancora: il cacciatore parte da queste."""
+    coperte = {x for c in leggi_controlli(radice) for x in c.copre}
+    fonti = [f"route:{r}" for r in z.route]
+    fonti += [f"carta:{f}#{t}" for f, titoli in (carte(radice) or {}).items() for t in titoli if _ha_carta(z, f, t)]
+    return [x for x in fonti if x not in coperte]
 
 
 # --- scelta delle zone e memoria fra i giri ------------------------------------------------------------------------
@@ -390,7 +333,7 @@ def filtra(zone: list[Zona], includi: list[str], escludi: list[str], edizione: s
 
 
 def _motivo(z: Zona, controlli: list[Controllo], stato: dict, cambiati: Callable[[str], list[str] | None],
-            scoperti: dict[str, dict], dipendenze: dict[str, set[str]]) -> str:
+            dipendenze: dict[str, set[str]]) -> str:
     visto = stato["zone"].get(z.id)
     if not visto:
         return "scoperta"
@@ -401,19 +344,19 @@ def _motivo(z: Zona, controlli: list[Controllo], stato: dict, cambiati: Callable
     con_controllo = {c.voce for c in controlli if c.zona == z.id}
     coperta = all(visto["voci"].get(v) == "non_applicabile" or (visto["voci"].get(v) == "fatta" and v in con_controllo)
                   for v in VOCI)
-    return "vecchia" if coperta and not scoperti.get(z.id) else "scoperta"
+    return "vecchia" if coperta else "scoperta"
 
 
 def scegli(zone: list[Zona], controlli: list[Controllo], stato: dict,
            cambiati: Callable[[str], list[str] | None], massimo: int = 8,
-           scoperti: dict[str, dict] | None = None, dipendenze: dict[str, set[str]] | None = None) -> list[tuple[Zona, str]]:
+           dipendenze: dict[str, set[str]] | None = None) -> list[tuple[Zona, str]]:
     gruppi = ("modificata", "scoperta", "vecchia")
 
     def chiave(coppia: tuple[Zona, str]):
         z, motivo = coppia
         data = stato["zone"][z.id]["data"] if motivo == "vecchia" else ""
         return gruppi.index(motivo), data, z.tipo, z.id
-    return sorted(((z, _motivo(z, controlli, stato, cambiati, scoperti or {}, dipendenze or {})) for z in zone), key=chiave)[:massimo]
+    return sorted(((z, _motivo(z, controlli, stato, cambiati, dipendenze or {})) for z in zone), key=chiave)[:massimo]
 
 
 def segna(radice: Path, zona: str, commit: str, voci: dict[str, str]) -> None:
@@ -421,18 +364,7 @@ def segna(radice: Path, zona: str, commit: str, voci: dict[str, str]) -> None:
         raise ValueError(f"zona ignota: {zona}")
     if set(voci) != set(VOCI) or not set(voci.values()) <= {"fatta", "non_applicabile"}:
         raise ValueError(f"servono tutte le voci, fatta o non_applicabile: {', '.join(VOCI)}")
-    affermazioni, controlli = _affermazioni(radice, zona), leggi_controlli(radice)
-    if not affermazioni:
-        raise ValueError(f"mancano le affermazioni di {zona}")
-    if scoperte := fonti_scoperte(radice, next(z for z in leggi_zone(radice) if z.id == zona)):
-        raise ValueError("pagine o carte senza affermazioni: " + ", ".join(scoperte))
-    negate = {v["voce"] for v in affermazioni.values() if set(v["casi"]) - set(v.get("esenti", {}))
-              and voci[v["voce"]] == "non_applicabile"}
-    if negate:
-        raise ValueError(f"voci con affermazioni dichiarate non applicabili: {', '.join(sorted(negate))}")
-    if da_provare := casi_da_provare(radice, zona, controlli):
-        raise ValueError("casi senza controllo: " + ", ".join(da_provare))
-    con_controllo = {c.voce for c in controlli if c.zona == zona}
+    con_controllo = {c.voce for c in leggi_controlli(radice) if c.zona == zona}
     senza = [v for v, esito in voci.items() if esito == "fatta" and v not in con_controllo]
     if senza:
         raise ValueError(f"voci fatte senza un controllo: {', '.join(senza)}")
@@ -450,16 +382,12 @@ def main(argv: list[str] | None = None) -> int:
     for nome in ("elenco", "prossimo-id"):
         sub.add_parser(nome)
     sub.add_parser("verifica").add_argument("--contiene", default="", help="solo gli errori che nominano questo testo")
+    sub.add_parser("fonti").add_argument("zona")
     s = sub.add_parser("scegli")
     s.add_argument("--max", type=int, default=8)
     s.add_argument("--includi", nargs="*", default=[])
     s.add_argument("--escludi", nargs="*", default=[])
     s.add_argument("--edizione", choices=("2014", "2024"))
-    sub.add_parser("casi").add_argument("zona")
-    sub.add_parser("fonti").add_argument("zona")
-    s = sub.add_parser("coda")
-    s.add_argument("--budget", type=int, default=200)
-    s.add_argument("zone", nargs="+")
     s = sub.add_parser("segna")
     s.add_argument("zona")
     s.add_argument("commit")
@@ -475,22 +403,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1 if errori else 0
     elif a.comando == "scegli":
         zone = filtra(leggi_zone(RADICE), a.includi, a.escludi, a.edizione)
-        controlli = leggi_controlli(RADICE)
-        tutte = scegli(zone, controlli, leggi_stato(RADICE), cache(lambda commit: file_cambiati(RADICE, commit)), len(zone),
-                       {z.id: casi_da_provare(RADICE, z.id, controlli) for z in zone}, importati(RADICE, leggi_zone(RADICE)))
+        tutte = scegli(zone, leggi_controlli(RADICE), leggi_stato(RADICE),
+                       cache(lambda commit: file_cambiati(RADICE, commit)), len(zone), importati(RADICE, leggi_zone(RADICE)))
         for z, motivo in tutte[:a.max]:
-            print(f"{z.id}\t{motivo}\t{len(fonti_scoperte(RADICE, z))} fonti da scomporre\t{len(casi_da_provare(RADICE, z.id, controlli))} casi in coda")
+            print(f"{z.id}\t{motivo}")
         print("Restano:", dict(Counter(m for _, m in tutte[a.max:])) or "nessuna")
     elif a.comando == "fonti":
         print("\n".join(fonti_scoperte(RADICE, next(z for z in leggi_zone(RADICE) if z.id == a.zona))))
-    elif a.comando == "coda":
-        tutti = coda(RADICE, a.zone, 10**9)
-        for zona, caso, testo in tutti[:a.budget]:
-            print(f"{zona}\t{caso}\t{testo}")
-        print(f"Restano in coda: {max(len(tutti) - a.budget, 0)}")
-    elif a.comando == "casi":
-        for caso, testo in casi_da_provare(RADICE, a.zona).items():
-            print(f"{caso}\t{testo}")
     elif a.comando == "segna":
         segna(RADICE, a.zona, a.commit, dict(v.split("=", 1) for v in a.voci))
     return 0

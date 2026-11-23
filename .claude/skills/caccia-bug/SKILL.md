@@ -20,10 +20,13 @@ Le vecchie skill davano esiti diversi a ogni giro perché reinventavano il piano
 è fatto di test nel repository, e uno script senza modello decide copertura e zone. Se ti accorgi che stai improvvisando
 un piano, torna allo script.
 
+**È una caccia a campione.** Nell'unica caccia cieca di prova ha trovato 2 bug piantati su 5: i giri successivi possono trovarne altri perché cambiano
+zone e fonti, ma un giro senza bug non vuol dire zona senza bug. Non dichiarare mai l'app «coperta» o «corretta».
+
 ## Modi
 
 - `caccia` (predefinito): passi 0-7, poi 8-9 se l'utente sceglie dei bug. Opzioni: zone da includere o escludere, edizione,
-  `zone=N` (predefinito 8), `casi=N` (predefinito 200).
+  `zone=N` (predefinito 8).
 - `regressione`: solo il passo 2 e un resoconto. Non crea branch e non scrive nulla nel repository.
 - `risolvi CB-…`: passi 8-9 sui controlli indicati.
 
@@ -81,30 +84,20 @@ Usa l'elenco così com'è e riferisci quante zone restano. Annota `git rev-parse
 
 ## 4. Caccia
 
-**4a. Affermazioni.** Per le zone scelte che hanno ancora fonti da scomporre (`inventario fonti <zona>`), subagenti `sonnet` con
-`references/affermazioni.md`. Scrivono tutti i casi, senza tetto; le zone `regola:` carta per carta senza leggere il codice, le
-zone `flusso:` dalle schermate. Le affermazioni sono versionate: si scompone una volta, poi si aggiorna solo ciò che cambia. Per
-una zona `modificata` falle rileggere a uno scompositore: aggiunge casi, non cambia gli id.
-
-**4b. Coda.** `uv run python -m tests.caccia.inventario coda --budget 200 <zona> <zona> …` dà i casi del giro, per rischio. Quelli
-oltre il budget restano in coda per il giro dopo: non si scartano e la zona non si chiude.
-
-**4c. Caccia.** Con `references/caccia.md`, un subagente per ogni gruppo di al massimo 25 casi della stessa zona.
-Per ogni cacciatore prepara:
-- la riga di `zone.json`, i file che corrispondono ai suoi glob e l'elenco dei suoi casi;
+Un subagente per zona (`general-purpose`, modello `sonnet`), in parallelo, con il prompt di `references/caccia.md`.
+Per ogni zona prepara:
+- la riga di `zone.json` e i file che corrispondono ai suoi glob;
+- `uv run python -m tests.caccia.inventario fonti <zona>`: pagine e carte senza alcun controllo, da cui partire;
 - un blocco di 100 id consecutivi, a partire da `prossimo-id` (gli id non usati restano vuoti);
 - i file di test che può scrivere: `tests/caccia/test_cb_<zona>.py`, `webapp/tests/unit/caccia/<zona>.test.tsx`,
-  `webapp/tests/e2e-playwright/caccia/<zona>.spec.ts`, con la zona senza `:` e `/` e un suffisso `_2`, `_3`
-  per i cacciatori oltre il primo. Sono solo suoi, così i paralleli non collidono;
+  `webapp/tests/e2e-playwright/caccia/<zona>.spec.ts`, con la zona senza `:` e `/`. Sono solo suoi, così i paralleli non collidono;
 - i problemi già noti e ancora aperti nella zona, da `docs/superpowers/rules-audit/`, `docs/superpowers/playtest/` e dal
   catalogo. Quelli risultati corretti che ricompaiono sono regressioni.
 
 I cacciatori scrivono i controlli Playwright ma non li eseguono: le porte sono fisse. Li lanci tu, uno alla volta:
-`npx playwright test -c playwright.caccia.config.ts <file>`. Un rosso prima dell'asserzione (selettore che non trova
-nulla, timeout) è un difetto del controllo: rimandalo al suo autore con `SendMessage`.
-
-Non accettare la consegna se `uv run python -m tests.caccia.inventario verifica --contiene <file>` segnala errori o se `casi <zona>`
-elenca ancora casi assegnati a lui: rimandala indietro.
+`npx playwright test -c playwright.caccia.config.ts <file>`. Un rosso prima dell'asserzione (selettore che non trova nulla,
+timeout) è un difetto del controllo: rimandalo al suo autore con `SendMessage`. Non accettare una consegna se
+`uv run python -m tests.caccia.inventario verifica --contiene <file>` segnala errori.
 
 ## 5. Conferma
 
@@ -120,12 +113,10 @@ Per ogni zona, a conferma finita:
 1. bug confermati: `@pytest.mark.xfail(strict=True, reason="CB-012 …")`, `test.fails` (Vitest) o `test.fail` (Playwright);
    scartati: via il controllo, o corretto se l'atteso era sbagliato. Restano i verdi che proteggono un comportamento;
 2. esegui i controlli della zona e `verifica`: verdi o xfail;
-3. solo se la coda della zona è vuota e non ha fonti da scomporre, segna la zona, con una voce per ciascuna delle dieci:
+3. segna la zona, con una voce per ciascuna delle dieci:
    `uv run python -m tests.caccia.inventario segna <zona> <commit> --voci contratto=fatta normale=fatta … regola=non_applicabile`
-4. commit di soli controlli, affermazioni e stato, anche se la zona non è chiusa: `test(caccia): <zona>`.
+4. commit di soli controlli e stato: `test(caccia): <zona>`.
 
-Un caso non provabile va in `esenti` dell'affermazione, con il motivo. `segna` rifiuta i casi senza controllo e le
-pagine o carte senza affermazioni.
 Lo stato si salva solo qui: una zona interrotta, o il cui agente è fallito, resta in coda. `segna` rifiuta una voce `fatta`
 senza controllo: non aggirarlo scrivendo test vuoti, dichiara la voce `non_applicabile` con il motivo nel report.
 
