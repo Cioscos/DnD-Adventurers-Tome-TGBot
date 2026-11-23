@@ -6,7 +6,7 @@ import json
 import pytest
 
 from tests.caccia.inventario import (
-    VOCI, Controllo, Zona, casi_da_provare, importati, scegli, segna, verifica,
+    VOCI, Controllo, Zona, casi_da_provare, coda, fonti_scoperte, importati, scegli, segna, verifica,
 )
 
 ENDPOINT = [("POST", "/characters/{char_id}/rest", "hp")]
@@ -15,7 +15,7 @@ LIMITI = {**NIENTE, "limiti": "fatta"}
 
 
 def affermazione(**kw) -> dict:
-    return {"A01": {"voce": "limiti", "testo": "Usi pari a 1 + CAR", "fonte": "2014 · Paladino · pag. 97",
+    return {"A01": {"voce": "limiti", "testo": "Usi pari a 1 + CAR", "fonte": "2014 · Paladino · pag. 97", "rischio": 1, "copre": ["route:/a"],
                     "casi": {"a": "CAR 16: 4", "b": "CAR 8: 0"}, **kw}}
 
 
@@ -81,7 +81,10 @@ def test_voce_con_affermazioni_non_e_non_applicabile(radice):
 DIFETTI = {
     "prova ignota": lambda r: scrivi_controllo(r, ["A01a", "A01b", "A09z"]),
     "affermazione illeggibile": lambda r: (scrivi_controllo(r, []), scrivi_affermazioni(r, "{no")),
+    "affermazione doppia": lambda r: scrivi(r, "tests/caccia/affermazioni/flusso-a--schermate.json", json.dumps(affermazione())),
     "affermazione incompleta": lambda r: scrivi_affermazioni(r, affermazione(fonte=" ")),
+    "affermazione incompleta ": lambda r: scrivi_affermazioni(r, affermazione(rischio=4)),
+    "copre ignoto": lambda r: scrivi_affermazioni(r, affermazione(copre=["route:/boh"])),
     "esenzione senza motivo": lambda r: scrivi_affermazioni(r, affermazione(esenti={"b": " "})),
 }
 
@@ -90,7 +93,35 @@ DIFETTI = {
 def test_verifica_segnala(radice, difetto):
     DIFETTI[difetto](radice)
     errori = verifica(radice, ENDPOINT)
-    assert len(errori) == 1 and errori[0].startswith(difetto + ": "), errori
+    assert len(errori) == 1 and errori[0].startswith(difetto.strip() + ": "), errori
+
+
+def test_parti_della_stessa_zona_si_sommano(radice):
+    scrivi(radice, "tests/caccia/affermazioni/flusso-a--schermate.json", json.dumps({"S01": affermazione()["A01"]}))
+    assert set(casi_da_provare(radice, "flusso:a")) == {"S01a", "S01b"}
+
+
+def test_route_o_carta_senza_affermazioni_blocca_la_zona(radice):
+    scrivi(radice, "docs/superpowers/rules/2014/feats.md", "## Abile / Skilled (pag. 165)\n## Allerta / Alert (pag. 165)\n")
+    z = Zona("flusso:a", "flusso", ["api/services/a.py"], ["hp"], ["/a"], [{"file": "2014/feats.md", "titoli": "^ABILE"}])
+    scrivi(radice, "tests/caccia/zone.json", json.dumps([vars(z)]))
+    assert fonti_scoperte(radice, z) == ["carta:2014/feats.md#Abile / Skilled (pag. 165)"]
+    with pytest.raises(ValueError, match="Abile"):
+        segna(radice, "flusso:a", "abc", LIMITI)
+    scrivi_affermazioni(radice, affermazione(copre=["route:/a", "carta:2014/feats.md#Abile / Skilled (pag. 165)"]))
+    assert fonti_scoperte(radice, z) == []
+
+
+def test_coda_per_rischio_e_budget(radice):
+    scrivi_controllo(radice, [])
+    scrivi(radice, "tests/caccia/affermazioni/flusso-a--b.json", json.dumps(
+        {"B01": affermazione(rischio=3)["A01"], "B02": affermazione(rischio=2)["A01"]}))
+    scrivi(radice, "tests/caccia/affermazioni/flusso-b.json", json.dumps({"A01": affermazione(rischio=1)["A01"]}))
+    tutti = coda(radice, ["flusso:b", "flusso:a"], 100)
+    assert [(z, c) for z, c, _ in tutti] == [
+        ("flusso:b", "A01a"), ("flusso:b", "A01b"), ("flusso:a", "A01a"), ("flusso:a", "A01b"),
+        ("flusso:a", "B02a"), ("flusso:a", "B02b"), ("flusso:a", "B01a"), ("flusso:a", "B01b")]
+    assert coda(radice, ["flusso:b", "flusso:a"], 3) == tutti[:3]
 
 
 def test_caso_nuovo_rende_scoperta(radice):

@@ -1,6 +1,6 @@
 """Inventario della caccia ai bug: catalogo dei controlli, zone, copertura. Nessun modello coinvolto.
 
-Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna|casi
+Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna|casi|coda|fonti
 """
 from __future__ import annotations
 
@@ -152,9 +152,21 @@ def leggi_stato(radice: Path) -> dict:
     return json.loads((radice / "tests/caccia/stato.json").read_text(encoding="utf-8"))
 
 
+class AffermazioneDoppia(ValueError):
+    pass
+
+
 def _affermazioni(radice: Path, zona: str) -> dict[str, dict]:
-    f = radice / "tests/caccia/affermazioni" / (re.sub(r"[:/]", "-", zona) + ".json")
-    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+    """Le affermazioni di una zona, dal file `<zona>.json` e dalle sue parti `<zona>--<parte>.json`."""
+    cartella, nome = radice / "tests/caccia/affermazioni", re.sub(r"[:/]", "-", zona)
+    tutte: dict[str, dict] = {}
+    for f in [cartella / f"{nome}.json", *sorted(cartella.glob(f"{nome}--*.json"))]:
+        if f.exists():
+            nuove = json.loads(f.read_text(encoding="utf-8"))
+            if doppie := set(tutte) & set(nuove):
+                raise AffermazioneDoppia(f"{zona} {', '.join(sorted(doppie))}")
+            tutte |= nuove
+    return tutte
 
 
 def casi_da_provare(radice: Path, zona: str, controlli: list[Controllo] | None = None) -> dict[str, str]:
@@ -166,15 +178,36 @@ def casi_da_provare(radice: Path, zona: str, controlli: list[Controllo] | None =
             if a + c not in provati and c not in v.get("esenti", {})}
 
 
-def _errori_affermazioni(radice: Path, zona: str, controlli: list[Controllo]) -> list[str]:
+def coda(radice: Path, zone: list[str], budget: int) -> list[tuple[str, str, str]]:
+    """(zona, caso, testo) da provare: prima il rischio più alto, poi l'ordine delle zone. Ciò che eccede resta in coda."""
+    controlli = leggi_controlli(radice)
+    righe = []
+    for n, zona in enumerate(zone):
+        rischi = {a + c: v["rischio"] for a, v in _affermazioni(radice, zona).items() for c in v["casi"]}
+        righe += [(rischi[c], n, c, zona, t) for c, t in casi_da_provare(radice, zona, controlli).items()]
+    return [(zona, c, t) for _, _, c, zona, t in sorted(righe)[:budget]]
+
+
+def fonti_scoperte(radice: Path, z: Zona) -> list[str]:
+    """Pagine e carte della zona che nessuna affermazione tratta ancora."""
+    trattate = {x for v in _affermazioni(radice, z.id).values() for x in v.get("copre", [])}
+    fonti = [f"route:{r}" for r in z.route]
+    fonti += [f"carta:{f}#{t}" for f, titoli in (carte(radice) or {}).items() for t in titoli if _ha_carta(z, f, t)]
+    return [x for x in fonti if x not in trattate]
+
+
+def _errori_affermazioni(radice: Path, zona: str, controlli: list[Controllo], noti: set[str], manuali: bool) -> list[str]:
     try:
         tutte = _affermazioni(radice, zona)
+    except AffermazioneDoppia as e:
+        return [f"affermazione doppia: {e}"]
     except ValueError as e:
         return [f"affermazione illeggibile: {zona} {e}"]
     errori, casi = [], set()
     for a, v in tutte.items():
         testi = [v.get("testo"), v.get("fonte")]
-        if v.get("voce") not in VOCI or not v.get("casi") or not all(isinstance(t, str) and t.strip() for t in testi):
+        errori += [f"copre ignoto: {zona} {a} {x}" for x in v.get("copre", []) if x not in noti and (manuali or not x.startswith("carta:"))]
+        if v.get("voce") not in VOCI or v.get("rischio") not in (1, 2, 3) or not v.get("casi") or not all(isinstance(t, str) and t.strip() for t in testi):
             errori.append(f"affermazione incompleta: {zona} {a}")
         errori += [f"esenzione senza motivo: {zona} {a}{c}" for c, motivo in v.get("esenti", {}).items() if not motivo.strip()]
         casi |= {a + c for c in v.get("casi", {})}
@@ -263,7 +296,7 @@ def verifica(radice: Path, endpoint: list[Endpoint]) -> list[str]:
                    if x not in noti and not (schede is None and x.startswith("carta:"))]
 
     for z in zone:
-        errori += _errori_affermazioni(radice, z.id, controlli)
+        errori += _errori_affermazioni(radice, z.id, controlli, noti, schede is not None)
     for m, p, modulo in endpoint:
         if not any(modulo in z.router for z in zone):
             errori.append(f"endpoint senza zona: {m} {p} ({modulo})")
@@ -391,6 +424,8 @@ def segna(radice: Path, zona: str, commit: str, voci: dict[str, str]) -> None:
     affermazioni, controlli = _affermazioni(radice, zona), leggi_controlli(radice)
     if not affermazioni:
         raise ValueError(f"mancano le affermazioni di {zona}")
+    if scoperte := fonti_scoperte(radice, next(z for z in leggi_zone(radice) if z.id == zona)):
+        raise ValueError("pagine o carte senza affermazioni: " + ", ".join(scoperte))
     negate = {v["voce"] for v in affermazioni.values() if set(v["casi"]) - set(v.get("esenti", {}))
               and voci[v["voce"]] == "non_applicabile"}
     if negate:
@@ -421,6 +456,10 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--escludi", nargs="*", default=[])
     s.add_argument("--edizione", choices=("2014", "2024"))
     sub.add_parser("casi").add_argument("zona")
+    sub.add_parser("fonti").add_argument("zona")
+    s = sub.add_parser("coda")
+    s.add_argument("--budget", type=int, default=200)
+    s.add_argument("zone", nargs="+")
     s = sub.add_parser("segna")
     s.add_argument("zona")
     s.add_argument("commit")
@@ -440,8 +479,15 @@ def main(argv: list[str] | None = None) -> int:
         tutte = scegli(zone, controlli, leggi_stato(RADICE), cache(lambda commit: file_cambiati(RADICE, commit)), len(zone),
                        {z.id: casi_da_provare(RADICE, z.id, controlli) for z in zone}, importati(RADICE, leggi_zone(RADICE)))
         for z, motivo in tutte[:a.max]:
-            print(f"{z.id}\t{motivo}")
+            print(f"{z.id}\t{motivo}\t{len(fonti_scoperte(RADICE, z))} fonti da scomporre\t{len(casi_da_provare(RADICE, z.id, controlli))} casi in coda")
         print("Restano:", dict(Counter(m for _, m in tutte[a.max:])) or "nessuna")
+    elif a.comando == "fonti":
+        print("\n".join(fonti_scoperte(RADICE, next(z for z in leggi_zone(RADICE) if z.id == a.zona))))
+    elif a.comando == "coda":
+        tutti = coda(RADICE, a.zone, 10**9)
+        for zona, caso, testo in tutti[:a.budget]:
+            print(f"{zona}\t{caso}\t{testo}")
+        print(f"Restano in coda: {max(len(tutti) - a.budget, 0)}")
     elif a.comando == "casi":
         for caso, testo in casi_da_provare(RADICE, a.zona).items():
             print(f"{caso}\t{testo}")

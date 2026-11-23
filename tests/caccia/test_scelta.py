@@ -75,7 +75,7 @@ def radice(tmp_path):
     (d / "zone.json").write_text(json.dumps([vars(zona("flusso:a"))]), encoding="utf-8")
     (d / "affermazioni").mkdir()
     (d / "affermazioni/flusso-a.json").write_text(json.dumps(
-        {"A01": {"voce": "limiti", "testo": "x", "fonte": "x", "casi": {"a": "x"}}}), encoding="utf-8")
+        {"A01": {"voce": "limiti", "testo": "x", "fonte": "x", "rischio": 1, "copre": [], "casi": {"a": "x"}}}), encoding="utf-8")
     (d / "stato.json").write_text('{"ritirati": ["CB-009"], "zone": {}}', encoding="utf-8")
     (d / "test_cb_a.py").write_text(
         "import pytest\n@pytest.mark.caccia(id='CB-001', fonte='x', zona='flusso:a', voce='limiti', copre=[], prova=['A01a'])\n"
