@@ -175,6 +175,7 @@ class ExportItem(BaseModel):
     description: Optional[str] = None
     weight: Annotated[float, _rng(0, 1_000_000)] = 0.0
     quantity: Int0 = 1
+    ammo_spent: Int0 = 0  # munizioni ancora da recuperare
     item_type: str = Field("generic", max_length=20)
     item_metadata: dict[str, Any] = Field(default_factory=dict)
     is_equipped: bool = False
