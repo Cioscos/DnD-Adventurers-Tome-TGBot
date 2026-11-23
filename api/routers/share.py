@@ -116,7 +116,7 @@ async def share_item(
     return _prepared_or_502(prep_id)
 
 
-@router.post("/characters/{char_id}/share/notes/{title}")
+@router.post("/characters/{char_id}/share/notes/{title:path}")
 async def share_note(
     char_id: int,
     title: str,

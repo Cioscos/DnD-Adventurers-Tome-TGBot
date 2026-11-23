@@ -186,7 +186,7 @@ async def add_note(
     return await _notes_list(char, session)
 
 
-@router.patch("/{char_id}/notes/{title}", response_model=list[NoteRead])
+@router.patch("/{char_id}/notes/{title:path}", response_model=list[NoteRead])
 async def update_note(
     char_id: int,
     title: str,
@@ -216,7 +216,7 @@ async def update_note(
     return await _notes_list(char, session)
 
 
-@router.delete("/{char_id}/notes/{title}", response_model=list[NoteRead])
+@router.delete("/{char_id}/notes/{title:path}", response_model=list[NoteRead])
 async def delete_note(
     char_id: int,
     title: str,
