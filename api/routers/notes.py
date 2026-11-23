@@ -64,7 +64,7 @@ class NoteRead(BaseModel):
 
 
 class NoteCreate(BaseModel):
-    title: str = Field(max_length=200)
+    title: str = Field(max_length=200, pattern=r"\S")  # senza titolo la nota non si raggiunge più
     body: str = Field(max_length=50_000)
     tags: list[str] = Field(default_factory=list)
     campaign_id: int | None = None
@@ -248,7 +248,7 @@ async def upload_voice_note(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    title: str = Form(...),
+    title: str = Form(..., pattern=r"\S"),
     file: UploadFile = File(...),
     campaign_id: int | None = Form(None),
 ) -> list[NoteRead]:
