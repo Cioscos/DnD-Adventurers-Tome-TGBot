@@ -6,6 +6,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
+from core.data.skills import SKILL_ABILITY_MAP
+from core.db.models import ABILITY_NAMES
 from api.schemas.common import (
     PROFICIENCY_CATEGORIES,
     normalize_proficiencies,
@@ -511,12 +513,12 @@ class CharacterUpdate(BaseModel):
 
 class SkillsUpdate(BaseModel):
     """Map of skill_slug → proficiency level (null/false = none, true = proficient, "expert" = expertise)."""
-    skills: dict[str, Any]
+    skills: dict[Literal[tuple(SKILL_ABILITY_MAP)], bool | Literal["proficient", "expert"] | None]  # type: ignore[valid-type]
 
 
 class SavingThrowsUpdate(BaseModel):
     """Map of ability_slug → bool (proficient or not)."""
-    saving_throws: dict[str, bool]
+    saving_throws: dict[Literal[tuple(ABILITY_NAMES)], bool]  # type: ignore[valid-type]
 
 
 class ConditionsUpdate(BaseModel):
