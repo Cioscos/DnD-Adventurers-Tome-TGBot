@@ -24,7 +24,7 @@ affermazione i casi, con valore ed esito atteso espliciti:
 - azione nell'app: doppio tocco o richiesta ripetuta, annullamento, permessi di un altro utente, rilettura, dato inviato non
   valido, effetto su ciò che si mostra altrove (ordini, totali, elenchi), dato libero usato per altro (percorsi, nomi).
 
-Priorità alle combinazioni e a ciò che un giocatore incontra. Tetto: 60 casi; se non bastano, tieni i più rischiosi e riporta
+Priorità alle combinazioni e a ciò che un giocatore incontra. Tetto: 50 casi; se non bastano, tieni i più rischiosi e riporta
 le frasi rimaste fuori.
 
 ```json
