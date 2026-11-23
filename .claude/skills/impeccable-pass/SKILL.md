@@ -30,7 +30,7 @@ per generarla; in assenza totale procede comunque in modalità code-first.
    - `ls -dt .claude/skills/fe-playwright-audit/reports/*/` → la cartella più recente che
      contiene `report.md` (findings), ed eventuali `component-coverage.md` (dove si osserva
      ogni componente) e `screens/` (screenshot full-page già scattati).
-   - Analogo per `.claude/skills/fullstack-functional-audit/reports/*/` se esiste (oracoli
+   - Analogo per i report di `caccia-bug` in `docs/superpowers/caccia/*/` se esistono (oracoli
      funzionali: utile per non scambiare un comportamento corretto per un difetto UX).
    - Per il batch corrente leggi SOLO le sezioni e gli screenshot pertinenti.
    - Se non esiste alcun report, o quello più recente è più vecchio dell'ultimo tag di
@@ -122,4 +122,4 @@ sopra, chiudi con `polish` come passata finale.
 - A fine giro esegui `audit` (impeccable) e annota lo score nel ledger accanto alla
   baseline precedente; se manca una baseline, quella di questo giro lo diventa.
 - Se trovi un bug funzionale (non di design), NON fixarlo qui: annotalo nel ledger in
-  "Fuori scope" e segnalalo all'utente (per i sospetti usa `/fullstack-functional-audit`).
+  "Fuori scope" e segnalalo all'utente (per i sospetti usa `/caccia-bug`).
