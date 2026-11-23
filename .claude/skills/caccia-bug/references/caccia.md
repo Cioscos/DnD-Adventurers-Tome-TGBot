@@ -27,7 +27,7 @@ combinazioni (due effetti insieme, due classi, due utenti, prima e dopo un ripos
 | ripetizione | doppio invio, stessa richiesta due volte, due richieste insieme: nessun effetto o spesa doppia |
 | annullamento | annullare, eliminare, rimuovere, disequipaggiare: tutto torna com'era, niente effetti orfani |
 | persistenza | rileggere dopo la modifica; stato ancora giusto dopo riposo, fine combattimento, export e import |
-| permessi | un altro utente, un giocatore al posto del master, dati altrui nelle risposte (i PF esatti di un altro PG non si vedono) |
+| permessi | un altro utente, un giocatore al posto del master, dati altrui nelle risposte |
 | edizioni | stesso caso 2014 e 2024: ciascuna segue la propria carta |
 | interazione | un cambiamento qui si riflette nelle altre zone, e viceversa |
 | regola | una carta alla volta, numeri e condizioni |
