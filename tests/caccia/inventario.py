@@ -1,6 +1,6 @@
 """Inventario della caccia ai bug: catalogo dei controlli, zone, copertura. Nessun modello coinvolto.
 
-Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id
+Uso (da Windows, dalla radice): uv run python -m tests.caccia.inventario elenco|verifica|prossimo-id|scegli|segna
 """
 from __future__ import annotations
 
@@ -8,11 +8,15 @@ import argparse
 import ast
 import json
 import re
+import subprocess
 import sys
 import unicodedata
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from fnmatch import fnmatchcase
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -261,6 +265,64 @@ def elenco(radice: Path, endpoint: list[Endpoint]) -> None:
         print(f"  {z.id}: {len(fatte)}/{len(VOCI)} voci con un controllo")
 
 
+# --- scelta delle zone e memoria fra i giri ------------------------------------------------------------------------
+
+def file_cambiati(radice: Path, commit: str) -> list[str] | None:
+    """File toccati da `commit` a HEAD; None se il commit non esiste più (rebase o branch cancellato)."""
+    p = subprocess.run(["git", "-c", "core.quotepath=off", "diff", "--name-only", "--no-renames", commit, "HEAD", "--"],
+                       cwd=radice, capture_output=True, text=True, encoding="utf-8")
+    return p.stdout.splitlines() if p.returncode == 0 else None
+
+
+def filtra(zone: list[Zona], includi: list[str], escludi: list[str], edizione: str | None) -> list[Zona]:
+    for g in [*includi, *escludi]:
+        if not any(fnmatchcase(z.id, g) for z in zone):
+            raise ValueError(f"nessuna zona corrisponde a {g}")
+    return [z for z in zone
+            if (not includi or any(fnmatchcase(z.id, g) for g in includi))
+            and not any(fnmatchcase(z.id, g) for g in escludi)
+            and (edizione is None or z.tipo == "flusso" or z.id.startswith(f"regola:{edizione}/"))]
+
+
+def _motivo(z: Zona, controlli: list[Controllo], stato: dict, cambiati: Callable[[str], list[str] | None]) -> str:
+    visto = stato["zone"].get(z.id)
+    if not visto:
+        return "scoperta"
+    diff = cambiati(visto["commit"])
+    if diff is None or any(fnmatchcase(f, g) for f in diff for g in z.glob):
+        return "modificata"
+    con_controllo = {c.voce for c in controlli if c.zona == z.id}
+    coperta = all(visto["voci"].get(v) == "non_applicabile" or (visto["voci"].get(v) == "fatta" and v in con_controllo)
+                  for v in VOCI)
+    return "vecchia" if coperta else "scoperta"
+
+
+def scegli(zone: list[Zona], controlli: list[Controllo], stato: dict,
+           cambiati: Callable[[str], list[str] | None], massimo: int = 8) -> list[tuple[Zona, str]]:
+    gruppi = ("modificata", "scoperta", "vecchia")
+
+    def chiave(coppia: tuple[Zona, str]):
+        z, motivo = coppia
+        data = stato["zone"][z.id]["data"] if motivo == "vecchia" else ""
+        return gruppi.index(motivo), data, z.tipo, z.id
+    return sorted(((z, _motivo(z, controlli, stato, cambiati)) for z in zone), key=chiave)[:massimo]
+
+
+def segna(radice: Path, zona: str, commit: str, voci: dict[str, str]) -> None:
+    if zona not in {z.id for z in leggi_zone(radice)}:
+        raise ValueError(f"zona ignota: {zona}")
+    if set(voci) != set(VOCI) or not set(voci.values()) <= {"fatta", "non_applicabile"}:
+        raise ValueError(f"servono tutte le voci, fatta o non_applicabile: {', '.join(VOCI)}")
+    con_controllo = {c.voce for c in leggi_controlli(radice) if c.zona == zona}
+    senza = [v for v, esito in voci.items() if esito == "fatta" and v not in con_controllo]
+    if senza:
+        raise ValueError(f"voci fatte senza un controllo: {', '.join(senza)}")
+    stato = leggi_stato(radice)
+    stato["zone"][zona] = {"commit": commit, "data": date.today().isoformat(), "voci": voci}
+    (radice / "tests/caccia/stato.json").write_text(
+        json.dumps(stato, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+
+
 def main(argv: list[str] | None = None) -> int:
     for flusso in (sys.stdout, sys.stderr):
         getattr(flusso, "reconfigure")(encoding="utf-8")  # la console Windows non è UTF-8
@@ -268,6 +330,15 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="comando", required=True)
     for nome in ("elenco", "verifica", "prossimo-id"):
         sub.add_parser(nome)
+    s = sub.add_parser("scegli")
+    s.add_argument("--max", type=int, default=8)
+    s.add_argument("--includi", nargs="*", default=[])
+    s.add_argument("--escludi", nargs="*", default=[])
+    s.add_argument("--edizione", choices=("2014", "2024"))
+    s = sub.add_parser("segna")
+    s.add_argument("zona")
+    s.add_argument("commit")
+    s.add_argument("--voci", nargs="+", required=True, metavar="VOCE=ESITO")
     a = p.parse_args(argv)
     if a.comando == "elenco":
         elenco(RADICE, endpoint_app())
@@ -277,6 +348,15 @@ def main(argv: list[str] | None = None) -> int:
         errori = verifica(RADICE, endpoint_app())
         print("\n".join(errori) or "Nessun errore")
         return 1 if errori else 0
+    elif a.comando == "scegli":
+        zone = filtra(leggi_zone(RADICE), a.includi, a.escludi, a.edizione)
+        tutte = scegli(zone, leggi_controlli(RADICE), leggi_stato(RADICE),
+                       cache(lambda commit: file_cambiati(RADICE, commit)), len(zone))
+        for z, motivo in tutte[:a.max]:
+            print(f"{z.id}\t{motivo}")
+        print("Restano:", dict(Counter(m for _, m in tutte[a.max:])) or "nessuna")
+    elif a.comando == "segna":
+        segna(RADICE, a.zona, a.commit, dict(v.split("=", 1) for v in a.voci))
     return 0
 
 
