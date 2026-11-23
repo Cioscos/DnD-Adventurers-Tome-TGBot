@@ -59,9 +59,23 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     return spent
   }
 
+  // Chiudere, annullare o finire un riposo azzera ogni scelta: la volta dopo non resta «interrotto» a metà.
+  const resetChoices = () => {
+    setPendingDice({})
+    setInterrupted(false)
+    setAteAndDrank(true)
+    setRecovery({})
+    setArcane({})
+    setRestoration(0)
+    setMemorize(null)
+    setReopenTome(false)  // l'interruttore del Libro non resta acceso per il riposo dopo
+    setResistance('')
+    setTempAllies([])
+  }
+
   const closeShort = () => {
     setShortRestOpen(false)
-    setPendingDice({})
+    resetChoices()
   }
 
   const restInFlight = useRef(false)  // guardia sincrona: un doppio tocco prima del rerender non invia due POST
@@ -108,16 +122,7 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     },
     onSuccess: ({ updated, spent, recovered }) => {
       setTooSoon(false)
-      setPendingDice({})
-      setInterrupted(false)
-      setAteAndDrank(true)
-      setRecovery({})
-      setArcane({})
-      setRestoration(0)
-      setMemorize(null)
-      setReopenTome(false)
-      setResistance('')
-      setTempAllies([])
+      resetChoices()
       qc.setQueryData(['character', charId], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setConfirmLongRest(false)
@@ -146,12 +151,9 @@ export function useRest(charId: number, char: CharacterFull | undefined, onDone?
     restMutation.mutate(vars)
   }
 
-  // Annullare la conferma del riposo lungo azzera anche le domande: la volta dopo non resta «interrotto» a metà.
   const cancelLongRest = () => {
     setConfirmLongRest(false)
-    setInterrupted(false)
-    setAteAndDrank(true)
-    setReopenTome(false)  // l'interruttore del Libro non resta acceso per il riposo dopo
+    resetChoices()
   }
 
   return {
