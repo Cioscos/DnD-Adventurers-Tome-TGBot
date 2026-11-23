@@ -631,11 +631,11 @@ async def leave_session(
 
     # GM leaving closes the whole session
     if user_id == session.gm_user_id:
-        await close_game_session(db, session)
+        await close_game_session(db, session)  # l'ultima attività resta quella della serata, come in /close
     else:
         record_departure(session, participant)
         await db.delete(participant)
-    touch(session)
+        touch(session)
     return None
 
 
