@@ -26,6 +26,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
+from api.schemas.common import reachable_segment
 from core.db.models import Campaign, CampaignMember, Character, CharacterClass
 
 router = APIRouter(prefix="/characters", tags=["notes"])
@@ -63,14 +64,7 @@ class NoteRead(BaseModel):
     campaign_name: str | None = None
 
 
-def _reachable_title(title: str) -> str:
-    """Il titolo sta nell'indirizzo: vuoto non si raggiunge, «..» il browser lo risolve (DELETE …/notes/.. eliminava il personaggio)."""
-    if not title.strip() or any(part.strip() in (".", "..") for part in title.split("/")):
-        raise ValueError("invalid title")
-    return title
-
-
-NoteTitle = Annotated[str, AfterValidator(_reachable_title)]
+NoteTitle = Annotated[str, AfterValidator(reachable_segment)]
 
 
 class NoteCreate(BaseModel):
@@ -258,7 +252,7 @@ async def upload_voice_note(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    title: Annotated[str, Form(), AfterValidator(_reachable_title)],
+    title: Annotated[str, Form(), AfterValidator(reachable_segment)],
     file: UploadFile = File(...),
     campaign_id: int | None = Form(None),
 ) -> list[NoteRead]:

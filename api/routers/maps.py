@@ -10,7 +10,7 @@ from typing import Annotated
 import httpx
 from fastapi import APIRouter, Body, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
 from api.schemas.character import CharacterFull
-from api.schemas.common import MapRead
+from api.schemas.common import MapRead, reachable_segment
 from api.services.character_response import build_character_response
 from core.db.models import Character, CharacterClass, Map
 from api.services.character_load import get_owned_full
@@ -150,7 +150,7 @@ async def upload_map(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    zone_name: str = Form(..., pattern=r"\S"),
+    zone_name: Annotated[str, Form(), AfterValidator(reachable_segment)],
     file: UploadFile = File(...),
 ) -> Map:
     """Upload a map image from the webapp and associate it with a zone."""
@@ -244,7 +244,7 @@ async def reorder_maps(
     return await build_character_response(session, char)
 
 
-@router.delete("/{char_id}/maps/zone/{zone_name}", status_code=204)
+@router.delete("/{char_id}/maps/zone/{zone_name:path}", status_code=204)
 async def delete_map_zone(
     char_id: int,
     zone_name: str,

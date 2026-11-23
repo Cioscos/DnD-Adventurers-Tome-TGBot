@@ -53,3 +53,18 @@ async def test_titolo_che_cambierebbe_l_indirizzo_rifiutato(client, tmp_path, mo
     r = await client.post(f"/characters/{cid}/notes/voice", data={"title": titolo}, files={"file": ("a.webm", b"x")})
     assert r.status_code == 422
     assert (await client.post(f"/characters/{cid}/notes", json={"title": "Fine...", "body": "x"})).status_code == 201
+
+
+@pytest.mark.caccia(id="CB-029", fonte="invariante: una zona di mappe creata si può eliminare", zona="flusso:note-mappe",
+                    voce="normale", copre=["POST /characters/{char_id}/maps/upload"])
+@pytest.mark.parametrize("zona, url, creata", [("Torre 1/2", "Torre%201%2F2", True), ("a/b/c", "a%2Fb%2Fc", True), ("..", "", False), (".", "", False)])
+async def test_zona_con_barra_si_elimina(client, tmp_path, monkeypatch, zona, url, creata):
+    monkeypatch.setattr(maps, "_MAPS_DIR", tmp_path / "maps")
+    cid = await _pg(client)
+    for nome in (zona, "Altra"):
+        r = await client.post(f"/characters/{cid}/maps/upload", data={"zone_name": nome}, files={"file": ("a.png", b"x")})
+        assert r.status_code == (201 if creata or nome == "Altra" else 422)
+    if creata:
+        assert (await client.delete(f"/characters/{cid}/maps/zone/{url}")).status_code == 204
+    pg = (await client.get(f"/characters/{cid}")).json()
+    assert [m["zone_name"] for m in pg["maps"]] == ["Altra"]

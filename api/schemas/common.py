@@ -363,6 +363,14 @@ class HPOp(str, Enum):
     SET_TEMP = "set_temp"
 
 
+def reachable_segment(name: str) -> str:
+    """Un nome che sta nell'indirizzo (titolo di nota, zona): vuoto non si raggiunge, «..» il browser lo risolve
+    (DELETE …/notes/.. eliminava il personaggio)."""
+    if not name.strip() or any(part.strip() in (".", "..") for part in name.split("/")):
+        raise ValueError("invalid name")
+    return name
+
+
 class DamagePart(BaseModel):
     """Un altro tipo di danno dello stesso colpo (morso: 15 perforanti + 5 freddo)."""
     amount: int = Field(ge=0, le=9999)
