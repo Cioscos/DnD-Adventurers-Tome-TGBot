@@ -126,7 +126,6 @@ async def test_azioni_bonus_e_reazioni_del_ladro_rifiutate_da_stordito(client, c
                     zona="regola:2014/rogue", voce="regola",
                     copre=["carta:2014/classes/rogue.md#Ladro di Incantesimi / Spell Thief (Mistificatore Arcano 17, pag. 80)",
                            "POST /characters/{char_id}/items", "PATCH /characters/{char_id}/items/{item_id}", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1964: difforme dal manuale, confermato")
 async def test_ladro_di_incantesimi_mostra_la_cd_degli_incantesimi(client):
     cid = await _ladro(client, 17, "arcane_trickster", intelligence=16)
     r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory",

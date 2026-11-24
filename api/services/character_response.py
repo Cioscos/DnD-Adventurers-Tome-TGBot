@@ -133,7 +133,8 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     summaries = {spec.key: spec.summary for spec, _ in active_features(char) if spec.on_use and (spec.on_use.spends or "").endswith(".channel_divinity")}
     edition = character_edition(char)
     pools = {spec.key for spec, _ in active_features(char) if spec.uses is not None and not spec.on_use}
-    dc_of = {spec.key: spec.dc_ability for spec, _ in active_features(char) if spec.dc_ability}
+    dc_of = {spec.key: (spec.dc_ability, row) for spec, row in active_features(char) if spec.dc_ability}
+    caster_ability_of = {c.class_id: c.ability for c in response.spellcasting.casters}
     rest_choices = {spec.key: list(spec.rest_damage_choice[1]) for spec, _ in active_features(char) if spec.rest_damage_choice}
     rows = {a.id: a for a in char.abilities}
     dice_of: dict[str, str] = {}
@@ -151,7 +152,11 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         if (ab.feature_key or "").startswith("feat.") and ab.id in rows:  # attivo, da completare o di un'altra edizione
             ab.feat_status = feat_status(char, rows[ab.id])
         if ab.feature_key in dc_of:
-            ab.dc = 8 + char.proficiency_bonus + effective_ability_mod(char, dc_of[ab.feature_key])
+            ability, owner = dc_of[ab.feature_key]
+            # CD della classe che lancia con la stessa caratteristica = CD degli incantesimi, oggetti compresi (Ladro di Incantesimi 2014 pag. 80)
+            spell_dc = owner in char.classes and caster_ability_of.get(owner.id) == ability
+            ab.dc = (8 + char.proficiency_bonus + effective_ability_mod(char, ability)
+                     + (item_bonus_total(char.items, "spell_dc") if spell_dc else 0))
         ab.has_on_use = on_use is not None
         if on_use and on_use.available and owner is not None:
             try:
