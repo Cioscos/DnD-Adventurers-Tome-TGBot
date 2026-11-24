@@ -43,7 +43,7 @@ def _inspiration_state(ctx: RuleContext, params: dict) -> StateSpec:
     data = {"die": inspiration_die(ctx.class_level), "others": [BI, COMBAT_INSPIRATION] if valor else [BI]}
     if params.get("target_character_id") is None:
         return StateSpec("bardic_inspiration", rounds=600, data=data)
-    return StateSpec(BARDIC_DIE, rounds=600, data={**data, "combat": valor})
+    return StateSpec(BARDIC_DIE, rounds=600, data={**data, "combat": valor, "edition": "2024"})  # l'Offesa 2024 vale anche sugli incantesimi
 
 
 def _inspiration_spent(ctx: RuleContext, _params: dict) -> None:

@@ -95,6 +95,16 @@ _CONDITION_OPTIONS = (
         label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
         available=lambda ctx: bool((((_bardic_state(ctx) or {}).get("data")) or {}).get("combat")),
     ),
+    # Il dado del Valore 2024 vale dopo qualsiasi tiro per colpire a segno, anche di un incantesimo (pag. 67; il 2014, pag. 55,
+    # solo sui danni dell'arma): il danno dell'incantesimo si conferma prima di tirarlo, a colpo già messo a segno.
+    RollOptionSpec(
+        key="bardic_die:damage", phase="before", rolls=("spell_damage",), crit_doubles=False,
+        extra_dice=_bardic_dice, cost=Cost(state_key=BARDIC_DIE),
+        label={"it": "Ispirazione in Combattimento: somma il dado al danno", "en": "Combat Inspiration: add the die to the damage"},
+        available=lambda ctx: ((((_bardic_state(ctx) or {}).get("data")) or {}).get("edition") == "2024"
+                               and bool(_bardic_state(ctx)["data"].get("combat")) and ctx.spell is not None
+                               and (ctx.spell.attack_save or "").strip().upper() == "ATK"),
+    ),
     # Aure dei compagni di serata (Paladino 2014): il giocatore conferma di essere nella gittata (D1)
     RollOptionSpec(
         key="aura:protection", phase="before", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
@@ -346,7 +356,10 @@ def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None)
 
 def _candidates(ctx: RuleContext) -> list[RollOption]:
     """Le opzioni dei privilegi attivi (e quelle generali) valide per ``ctx.roll`` e disponibili adesso, non ancora pagate."""
-    found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS}
+    # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
+    kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
+    # solo quelle di questo tiro: una chiave può avere una variante per tiro (``bardic_die:damage`` su arma e incantesimo)
+    found: dict[str, RollOption] = {s.key: RollOption(s, ctx, s.key) for s in _CONDITION_OPTIONS if any(k in s.rolls for k in kinds)}
     for spec, row in active_features(ctx.char):
         feature_ctx = replace(ctx, class_row=row, class_level=row.level)
         for option in spec.roll_options:
@@ -363,8 +376,6 @@ def _candidates(ctx: RuleContext) -> list[RollOption]:
         key = f"ally:{donor.id}:{spec.key}"
         label = {lang: text.format(donor=donor.name) for lang, text in spec.label.items()}
         found[key] = RollOption(replace(spec, key=key, for_ally=False, label=label), ctx, f"feature:{spec.key}", donor)
-    # Una prova di caratteristica pura è una prova: le opzioni «skill» valgono anche per lei
-    kinds = (ctx.roll, "skill") if ctx.roll == "ability" else (ctx.roll,)
     return [o for o in found.values()
             if any(k in o.spec.rolls for k in kinds) and o.spec.available(o.ctx) and _affordable(o.donor or ctx.char, o.spec, o.ctx)]
 
