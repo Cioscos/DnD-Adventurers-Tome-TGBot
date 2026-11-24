@@ -246,15 +246,15 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
 
     rule_damage = modifiers_for(char, None)
     stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}
-    walk = effective_speed(char, (
-        char.speed + response.speed_homebrew_modifier + response.speed_items_modifier
-        - response.speed_encumbrance_penalty_ft
-    ))
+    adjust = response.speed_homebrew_modifier + response.speed_items_modifier - response.speed_encumbrance_penalty_ft
+    walk = effective_speed(char, char.speed + adjust)
+    # Il volo fisso (Volare) cambia come la Velocità: Afferrato, Trattenuto, Indebolimento (2014 pag. 290-292), Passo Lungo (2024 pag. 374)
+    fly = effective_speed(char, rule_damage.fly_speed_value + adjust) if rule_damage.fly_speed_value else 0
     if rule_damage.carry_double:
         response.carry_capacity *= 2
     response.computed = ComputedStats(
         speed=walk,
-        fly_speed=(max(walk if rule_damage.fly_speed else 0, rule_damage.fly_speed_value) or None),
+        fly_speed=(max(walk if rule_damage.fly_speed else 0, fly) or None),
         climb_speed=walk if rule_damage.climb_speed else None,
         swim_speed=walk * 2 if rule_damage.swim_speed_double else walk if rule_damage.swim_speed else None,
         hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),

@@ -178,7 +178,6 @@ async def test_uno_stato_che_incapacita_interrompe_la_concentrazione(client, cla
                            "carta:2014/general.md#Movimento e Posizione / Movement and Position (pag. 190)",
                            "POST /characters/{char_id}/spells/{spell_id}/use", "PATCH /characters/{char_id}/conditions"])
 @pytest.mark.parametrize("condizioni,volo", [({"grappled": True}, 0), ({"restrained": True}, 0), ({"exhaustion": 2}, 30), ({"exhaustion": 5}, 0)])
-@pytest.mark.xfail(strict=True, reason="CB-2816: difforme dal manuale, confermato")
 async def test_la_velocita_di_volo_segue_le_condizioni_che_toccano_la_velocita(client, condizioni, volo):
     cid = await _pg(client, "wizard", 5)
     sid = await _incantesimo(client, cid, "Volare", 3, "fly", concentrazione=True, preparato=False)

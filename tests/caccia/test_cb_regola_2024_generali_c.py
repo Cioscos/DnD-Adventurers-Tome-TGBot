@@ -53,7 +53,6 @@ async def _turno(client, cid) -> dict:
                            "POST /characters/{char_id}/spells/{spell_id}/use", "PATCH /characters/{char_id}/conditions",
                            "POST /characters/{char_id}/items/{item_id}/cast"])
 @pytest.mark.parametrize("effetto,terra,volo", [("afferrato", 0, 0), ("esaurimento", 20, 50), ("passo_lungo", 40, 70)])
-@pytest.mark.xfail(strict=True, reason="CB-2961: difforme dal manuale, confermato")
 async def test_la_velocita_di_volo_fissa_cambia_come_la_velocita(client, effetto, terra, volo):
     cid = await _pg(client, "sorcerer", 5)
     classe = (await _scheda(client, cid))["classes"][0]["id"]
