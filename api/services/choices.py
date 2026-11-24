@@ -6,6 +6,7 @@ import uuid
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal, Optional
 
 from fastapi import HTTPException
@@ -193,6 +194,7 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     if (not ids or len(ids) > count or len(set(ids)) != len(ids) or not set(ids) <= set(owned)
             or any((owned[i].srd_index or owned[i].name) in taken for i in ids)
             or any(owned[i].level > _pick_cap(char, cls, ch) for i in ids)  # un trucchetto resta un trucchetto
+            or (ch.spell_pick == "book" and not _book_room(char, cls, ch, [owned[i].level for i in ids]))
             or (ch.spell_exact and any(owned[i].level != ch.spell_level for i in ids))  # un Arcanum è del suo grado
             or (ch.spell_school and any(normalize_school(owned[i].school) != ch.spell_school for i in ids))  # un Sapiente, la sua scuola
             or (ch.spell_pick == "known" and any(i in free for i in ids))):
@@ -207,11 +209,26 @@ def _resolve_known_spells(session: AsyncSession, char: Character, cls: Character
     _history(session, char, f"{ch.group}: {', '.join(owned[i].name for i in ids)}")
 
 
-def max_pick_level(char: Character, cls: CharacterClass) -> int:
+def max_pick_level(char: Character, cls: CharacterClass, level: int | None = None) -> int:
     """Livello più alto che la classe ``cls`` lancia secondo la sua tabella degli slot: in multiclasse la scheda dice
-    «per classe», non la tabella sommata."""
-    regular = slots_for(character_edition(char), [cls]).regular
-    return max((level for level, total in regular.items() if total > 0), default=0)
+    «per classe», non la tabella sommata. ``level``: quello che lanciava a quel livello di classe."""
+    row = cls if level is None else SimpleNamespace(class_name=cls.class_name, level=level, subclass_key=cls.subclass_key,
+                                                    spellcasting_ability=cls.spellcasting_ability)
+    regular = slots_for(character_edition(char), [row]).regular
+    return max((lv for lv, total in regular.items() if total > 0), default=0)
+
+
+def _book_room(char: Character, cls: CharacterClass, ch, levels: list[int]) -> bool:
+    """Libro del mago e Sapienti: ogni posto della scelta ha il tetto degli slot del livello da mago in cui arriva (2014
+    pag. 114, 2024 pag. 165 e 173), non quello di oggi. ``True`` se gli incantesimi già scelti più ``levels`` ci stanno."""
+    caps, prev = [], 0
+    for lv in sorted(lv for lv in ch.levels if lv <= cls.level):
+        caps += [max_pick_level(char, cls, lv)] * (ch.levels[lv] - prev)
+        prev = ch.levels[lv]
+    known = {(s.srd_index or s.name): s.level for s in char.spells}
+    taken = [known.get(k, 0) for k in (cls.options or {}).get(ch.group, [])] + list(levels)
+    # per ogni livello X, gli incantesimi di livello X o più non superano i posti con tetto X o più
+    return all(sum(t >= x for t in taken) <= sum(c >= x for c in caps) for x in range(1, max(levels, default=0) + 1))
 
 
 def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
@@ -220,6 +237,8 @@ def _pick_cap(char: Character, cls: CharacterClass, ch) -> int:
     if ch.spell_exact:
         return ch.spell_level
     top = max_pick_level(char, cls)
+    if ch.spell_pick == "book":
+        top = next((lv for lv in range(top, 0, -1) if _book_room(char, cls, ch, [lv])), 0)
     return top if ch.spell_level is None else min(top, ch.spell_level)
 
 
