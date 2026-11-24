@@ -496,6 +496,8 @@ async def companion_attack(
     action = actions[body.action_index]
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
+    if comp.kind == "wild_shape" and not comp.is_active:  # una forma salvata è una scheda, non una creatura
+        raise HTTPException(status_code=409, detail={"code": "form_not_active"})
     if comp.kind != "wild_shape" and comp.current_hp <= 0 < _effective_max_hp(char, comp):  # a terra: non attacca
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
     if comp.feature_key in BEAST_KEYS:
@@ -515,7 +517,7 @@ async def companion_attack(
 
     # In Forma Selvatica attacca il personaggio: le sue condizioni restano; un compagno è un altro combattente.
     applied = Applied()
-    in_form = comp.kind == "wild_shape" and comp.is_active
+    in_form = comp.kind == "wild_shape"
     if in_form:
         refuse_if_incapacitated(char)
         applied = modifiers_for(char, "attack", ability="strength")

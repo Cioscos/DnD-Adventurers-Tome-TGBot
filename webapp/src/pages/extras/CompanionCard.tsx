@@ -247,14 +247,16 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
                   {a.damage_dice ? ` · ${a.damage_dice}${comp.damage_bonus_extra ? `${comp.damage_bonus_extra > 0 ? '+' : ''}${comp.damage_bonus_extra}` : ''}` : ''}
                 </span>
               </span>
-              <RollButton
-                onRoll={(mode) => attack.mutate({ idx, mode })}
-                pending={attack.isPending}
-                ariaLabel={`${t('character.turn.attack')} ${a.name}`}
-                className="flex items-center gap-1 text-sm font-medium px-4 min-h-11 rounded-lg border bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30"
-              >
-                <Swords size={14} />{t('character.turn.attack')}
-              </RollButton>
+              {(comp.kind !== 'wild_shape' || comp.is_active) && (
+                <RollButton
+                  onRoll={(mode) => attack.mutate({ idx, mode })}
+                  pending={attack.isPending}
+                  ariaLabel={`${t('character.turn.attack')} ${a.name}`}
+                  className="flex items-center gap-1 text-sm font-medium px-4 min-h-11 rounded-lg border bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30"
+                >
+                  <Swords size={14} />{t('character.turn.attack')}
+                </RollButton>
+              )}
               {isBeast && (
                 <RollButton
                   onRoll={(mode) => attack.mutate({ idx, mode, reaction: true })}

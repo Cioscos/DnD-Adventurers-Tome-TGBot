@@ -232,9 +232,9 @@ async def test_active_wild_shape_attack_keeps_the_character_conditions(client):
     assert r.status_code in (200, 201), r.text
     comp = r.json()["id"]
     await _cond(client, cid, poisoned=True)
-    # non attiva: è un altro combattente, le condizioni del personaggio non contano
-    body = (await client.post(f"/characters/{cid}/companions/{comp}/attack", json={"action_index": 0})).json()
-    assert body["mode"] == "normal" and body["notes"] == []
+    # non attiva: è una scheda, non attacca (2014 pag. 66, 2024 pag. 80-81)
+    r = await client.post(f"/characters/{cid}/companions/{comp}/attack", json={"action_index": 0})
+    assert r.status_code == 409
     r = await client.post(f"/characters/{cid}/companions/{comp}/activate")
     assert r.status_code == 200, r.text
     body = (await client.post(f"/characters/{cid}/companions/{comp}/attack", json={"action_index": 0})).json()

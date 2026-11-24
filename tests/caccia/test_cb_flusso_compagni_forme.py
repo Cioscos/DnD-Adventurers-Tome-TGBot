@@ -743,7 +743,6 @@ async def test_i_pf_temporanei_della_forma_non_si_sommano_a_quelli_che_ha_gia(cl
     assert (await _full(client, cid))["temp_hp"] == atteso
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1089: una forma salvata ma non assunta attacca")
 @pytest.mark.caccia(id="CB-1089", fonte="2014 · Druido · Forma Selvatica · pag. 66; 2024 · Druido · Forma Selvatica · pag. 80-81 (la forma vale solo mentre la si è assunta)",
                     zona="flusso:compagni-forme", voce="regola", copre=["POST /characters/{char_id}/companions/{comp_id}/attack", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)"])
 async def test_una_forma_non_assunta_non_attacca(client):
