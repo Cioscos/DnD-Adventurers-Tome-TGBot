@@ -37,6 +37,12 @@ def _cap(n: int) -> AfterValidator:
     return AfterValidator(check)
 
 
+def _named(v: str, info: ValidationInfo) -> str:
+    if not v.strip() and not (info.context or {}).get("lenient"):
+        raise ValueError("blank name")
+    return v.strip()
+
+
 Int0 = Annotated[int, _rng(0, 1_000_000)]
 Restoration = Literal["long_rest", "short_rest", "none", "manual"]
 
@@ -75,7 +81,7 @@ class ExportCharacter(BaseModel):
         except ValueError:
             return None
 
-    name: str = Field(min_length=1, max_length=100)
+    name: Annotated[str, AfterValidator(_named)] = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
     species_key: Optional[str] = Field(None, max_length=40)  # specie 2024 del motore; chiave sconosciuta = nessun tratto
     species_options: dict = Field(default_factory=dict, max_length=10)  # come SpeciesChoiceIn; valori non solo str (_feat_ability_id è un id)
@@ -315,7 +321,7 @@ class ExportHomebrewResource(BaseModel):
 
 class ExportCompanion(BaseModel):
     kind: Literal["familiar", "companion", "mount", "summon", "wild_shape"]
-    name: str = Field(min_length=1, max_length=100)
+    name: Annotated[str, AfterValidator(_named)] = Field(min_length=1, max_length=100)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     statblock: dict = Field(default_factory=dict)
     max_hp: Int0 = 0

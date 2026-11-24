@@ -563,7 +563,6 @@ async def test_terminare_la_forma_con_patch_costa_l_azione_bonus(client):
     assert (await _full(client, cid))["active_form"] is not None
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1076: l'import accetta un compagno con nome di soli spazi")
 @pytest.mark.caccia(id="CB-1076", fonte="invariante: un nome di soli spazi è un nome vuoto (CB-341, CB-342): anche un file importato non lo introduce",
                     zona="flusso:compagni-forme", voce="persistenza", copre=["POST /characters/import", "GET /characters/{char_id}/export"])
 async def test_l_import_rifiuta_un_compagno_senza_nome(client):
@@ -766,12 +765,11 @@ async def test_un_compagno_senza_pf_segnati_non_va_a_terra(client):
     assert r.status_code == 200 and r.json()["down"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1092: l'import accetta un personaggio con nome di soli spazi")
 @pytest.mark.caccia(id="CB-1092", fonte="invariante: un nome di soli spazi è un nome vuoto (stessa famiglia di CB-1076): anche il personaggio importato",
                     zona="flusso:compagni-forme", voce="persistenza", copre=["POST /characters/import", "GET /characters/{char_id}/export"])
 async def test_l_import_rifiuta_un_personaggio_senza_nome(client):
     cid = await _druid(client, 4)
     file = (await client.get(f"/characters/{cid}/export")).json()
-    file["name"] = "   "
+    file["character"]["name"] = "   "
     r = await client.post("/characters/import", json=file)
     assert r.status_code == 422
