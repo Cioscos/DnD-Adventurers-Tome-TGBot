@@ -183,6 +183,8 @@ export type RollOptionsQuery = {
   damage_type?: string
   /** Solo `damage_taken`: il danno che sta per essere inserito, per le opzioni che valgono solo se porta a 0 PF. */
   damage?: number
+  /** Solo `ability`: prova con uno strumento in cui si è competenti (Conoscenza Potenziata da Psi). */
+  proficient?: boolean
 }
 
 /** Corpo di POST /spells/{id}/use: `slot_id` sceglie il pool, `confirm` le regole accettate dal giocatore. */

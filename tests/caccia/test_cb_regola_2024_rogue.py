@@ -81,11 +81,11 @@ async def test_riflessi_del_furfante_colto_di_sorpresa_per_edizione(client, test
                     zona="regola:2024/rogue", voce="regola",
                     copre=["carta:2024/classes/rogue.md#Conoscenza Potenziata da Psi / Psi-Bolstered Knack (Coltello dell'Anima 3, pag. 135)",
                            "POST /characters/{char_id}/tool_checks/{tool}/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-2562: difforme dal manuale, confermato")
 async def test_conoscenza_potenziata_da_psi_vale_per_la_prova_con_strumento(client, dadi):
     cid = await _ladro(client, 3, "soulknife", dexterity=14)  # arnesi da scasso dalla classe
     prova = await client.post(f"/characters/{cid}/tool_checks/thieves_tools/roll", json={"ability": "dexterity", "die": 3})
     assert prova.status_code == 200, prova.text
+    assert KNACK in await _opzioni(client, cid, "ability", ability="dexterity", proficient="true")  # l'elenco dopo la prova con strumento
     dadi(4)
     r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": [KNACK]})
     assert r.status_code == 200, r.text[:200]

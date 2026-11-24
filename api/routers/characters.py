@@ -936,7 +936,7 @@ async def roll_tool_check(
         description=tool, option_result=option_result(opts, option_rolls, option_total),
     )
     remember_roll(char, "ability", opts, {**result.model_dump(mode="json", include=LAST_ROLL_FIELDS), "total": raw_total},
-                  ability=ability)
+                  ability=ability, proficient=True)  # dopo il tiro valgono i privilegi delle prove con competenza
     return result
 
 

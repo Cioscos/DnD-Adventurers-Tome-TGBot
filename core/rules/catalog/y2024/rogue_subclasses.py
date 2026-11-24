@@ -171,7 +171,8 @@ PSYCHIC_BLADE_BONUS = RollOptionSpec(
     label=_both("Lama Psichica, azione bonus: secondo attacco con una nuova lama (1d4 psichico), mano libera",
                 "Psychic Blade, bonus action: a second attack with a new blade (1d4 psychic), free hand"))
 KNACK = RollOptionSpec(
-    key=f"{CK}.psi_bolstered_knack", phase="after_roll", after="add", rolls=("skill",), cost=Cost(feature_key=PSI), pay_if_success=True,
+    key=f"{CK}.psi_bolstered_knack", phase="after_roll", after="add", rolls=("skill", "ability"),  # anche lo strumento (pag. 135)
+    cost=Cost(feature_key=PSI), pay_if_success=True,
     extra_dice=lambda c, _i: _psi_die(c), available=_proficient_skill_check,
     label=_both("Conoscenza Potenziata da Psi: prova fallita con una competenza? Spendi un Dado Energia e sommalo (il dado torna se fallisce comunque)",
                 "Psi-Bolstered Knack: failed a proficient check? Spend an Energy Die and add it (the die comes back if it still fails)"))
@@ -217,8 +218,8 @@ SOULKNIFE = (
          "Psionic Energy Dice: 4d6 (3), 6d8 (5), 8d8 (9), 8d10 (11), 10d10 (13), 12d12 (17). Short rest: one die, long rest: all."),
         uses=Uses(table={3: 4, 5: 6, 9: 8, 11: 8, 13: 10, 17: 12}), restoration="long_rest", short_rest_recovers=1),
     _sk("psi_bolstered_knack", 3, "Conoscenza Potenziata da Psi", "Psi-Bolstered Knack", 135,
-        ("Dopo una prova fallita con un'abilità in cui sei competente, spendi un Dado Energia e lo sommi; il dado si spende solo se riesce.",
-         "After a failed check with a skill you are proficient in, spend an Energy Die and add it; it is spent only if the check succeeds."),
+        ("Dopo una prova fallita con un'abilità o uno strumento in cui sei competente, spendi un Dado Energia e lo sommi; il dado si spende solo se riesce.",
+         "After a failed check with a skill or tool you are proficient in, spend an Energy Die and add it; it is spent only if the check succeeds."),
         roll_options=(KNACK,), passive=True),
     _sk("psychic_whispers", 3, "Sussurri Psichici", "Psychic Whispers", 135,
         ("Azione Magia: creature fino alla competenza parlano con te in telepatia per tante ore quante il dado. La prima volta per riposo lungo è gratis.",
