@@ -103,7 +103,6 @@ def _totale_salvezza_scheda(pg: dict, abilita: str) -> int:
             + pg["computed"]["save_flat"].get(abilita, 0))
 
 
-@pytest.mark.xfail(strict=True, reason="CB-240 totale TS in scheda ignora la Forma Selvatica")
 @pytest.mark.caccia(id="CB-240", fonte="2014 · Druido · Forma Selvatica · pag. 66 / 2024 · Druido · Regole della Forma Selvatica · pag. 81",
                     zona="flusso:caratteristiche-tiri", voce="interazione",
                     copre=["POST /characters/{char_id}/saving_throws/{ability}/roll", "route:/char/:id/saves"])
