@@ -168,6 +168,7 @@ export default function CharacterSelect() {
   })
   const hasActiveSession = activeSession?.status === 'active'
 
+  const submitting = useRef(false)  // doppio tocco su «Crea»: isPending arriva solo al render successivo
   const createMutation = useMutation({
     mutationFn: async ({ name, cls, identity, extras }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null; extras: ReturnType<typeof creationExtras> }) => {
       return api.characters.create(
@@ -262,6 +263,8 @@ export default function CharacterSelect() {
   }
 
   const handleCreate = (identity: IdentityPayload | null) => {
+    if (submitting.current) return
+    submitting.current = true
     const extras = {
       ...creationExtras({ scores, skipped: scoresSkipped, species: is2024 ? null : speciesPayload, skills: is2024 && bg24 ? [] : backgroundSkills }),
       rules_edition: edition,
@@ -270,7 +273,8 @@ export default function CharacterSelect() {
       ...(is2024 && species24.entry ? { species_2024: { key: species24.entry.key, options: species24.options } } : {}),
       ...(is2024 && bg24 ? { background_2024: background24Payload(bg24) } : {}),
     }
-    createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
+    createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras },
+      { onSettled: () => { submitting.current = false } })
   }
 
   // Helpers selezione classe (evidenziazione).

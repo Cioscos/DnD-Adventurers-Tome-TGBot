@@ -1,7 +1,7 @@
 import { expect, test, UTENTE } from './fixtures'
 
 // caccia: {"id": "CB-655", "fonte": "invariante: una richiesta ripetuta non crea due volte (doppio tocco su Crea)", "zona": "flusso:creazione", "voce": "ripetizione", "copre": ["route:/"]}
-test.fail('il doppio tocco su Crea crea un solo personaggio', async ({ comeUtente, apiRequest }) => {
+test('il doppio tocco su Crea crea un solo personaggio', async ({ comeUtente, apiRequest }) => {
   const nome = `Doppio tocco ${Date.now()}`
   const page = await comeUtente(UTENTE)
   // la risposta arriva in ritardo: il secondo tocco cade mentre la prima richiesta è ancora in corso
