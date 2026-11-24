@@ -198,8 +198,10 @@ def test_2024_known_roll_fields():
 def test_phb_summaries_keep_their_dice():
     import re
     stems = r"(?:danni|acid|contundent|fredd|fuoc|forza|fulmin|necrotic|perforant|velen|psichic|radios|radiant|taglient|tuon)"
+    # Dadi ai colpi, non al lancio (CB-3815, CB-4031): 2024 spells.md, Mantello del Crociato p.259, Fonte di luce lunare p.277
+    on_hit = {"2024:crusaders-mantle", "2024:fount-of-moonlight"}
     lost = [f"{ed}:{i['index']}" for ed, items in CATALOGS.items() for i in items
-            if i["source"] == "phb" and re.search(r"\d+d\d+\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?" + stems, i["desc"]["it"], re.I)
+            if i["source"] == "phb" and f"{ed}:{i['index']}" not in on_hit and re.search(r"\d+d\d+\s+(?:danni\s+)?(?:extra\s+)?(?:da\s+|di\s+)?" + stems, i["desc"]["it"], re.I)
             and not i["damage_dice"]]
     assert not lost, lost
 
