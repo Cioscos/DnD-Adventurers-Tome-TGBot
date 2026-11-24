@@ -150,6 +150,17 @@ async def test_acolyte_of_nature_asks_for_a_skill_and_a_druid_cantrip(client):
     assert groups["nature_cantrip"]["count"] == 1
 
 
+async def test_acolyte_of_nature_with_all_three_skills_offers_another_one(client):
+    # 2014 pag. 125: la stessa competenza da due fonti si sostituisce con un'altra dello stesso tipo
+    r = await client.post("/characters", json={
+        "name": "Druidico", "rules_edition": "2014", "skills": {"animal_handling": True, "nature": True, "survival": True},
+        "initial_class": {"class_name": "cleric", "level": 1, "subclass": "Dominio della Natura"}})
+    assert r.status_code == 201, r.text
+    groups = {c.get("group"): c for c in r.json()["pending_choices"]}
+    offered = {o["key"] for o in groups["nature_skill"]["options"]}
+    assert "athletics" in offered and not offered & {"animal_handling", "nature", "survival"}
+
+
 # ---------------------------------------------------------------------------
 # Dominio della Luce
 # ---------------------------------------------------------------------------

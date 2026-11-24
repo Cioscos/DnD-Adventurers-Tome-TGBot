@@ -80,6 +80,19 @@ def _no_options(_ctx: RuleContext) -> list[str]:
     return []
 
 
+_NATURE_SKILLS = ("animal_handling", "nature", "survival")
+
+
+def _nature_skill_owned(ctx: RuleContext) -> list[str]:
+    return [s for s in _NATURE_SKILLS if (ctx.char.skills or {}).get(s)]
+
+
+def _nature_skill_options(ctx: RuleContext) -> list[str]:
+    """Le tre senza quelle già competenti; se le ha tutte, un'altra abilità a scelta (competenza da due fonti, pag. 125)."""
+    skills = ctx.char.skills or {}
+    return [s for s in _NATURE_SKILLS if not skills.get(s)] or [s for s, _a in SKILLS if not skills.get(s)]
+
+
 # ---------------------------------------------------------------------------
 # Incanalare Divinità: ogni effetto è un privilegio che spende gli usi della riserva comune
 # ---------------------------------------------------------------------------
@@ -581,9 +594,8 @@ FEATURES = (
             ("Un trucchetto da druido a scelta e competenza in Addestrare Animali, Natura o Sopravvivenza.",
              "One druid cantrip of your choice and proficiency in Animal Handling, Nature or Survival."),
             subclass="nature",
-            choices=(ChoiceSpec(group="nature_skill", levels={1: 1},
-                                options=lambda _c: ["animal_handling", "nature", "survival"],
-                                label=skill_label, grants="proficient"),
+            choices=(ChoiceSpec(group="nature_skill", levels={1: 1}, options=_nature_skill_options, label=skill_label,
+                                grants="proficient", owned=_nature_skill_owned, import_options=lambda _c: list(_NATURE_SKILLS)),
                      ChoiceSpec(group="nature_cantrip", levels={1: 1}, options=_no_options, spell_pick="extra", spell_level=0, spell_list="druid"))),
     feature("nature_bonus_proficiency", CK, ED, 1, "Competenza Bonus / Bonus Proficiency (Natura 1, pag. 62)",
             ("Competenza Bonus (Natura)", "Bonus Proficiency (Nature)"),
