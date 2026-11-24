@@ -75,7 +75,6 @@ async def _spada(client, cid) -> int:
 @pytest.mark.caccia(id="CB-1611", fonte="2014 · Bardo · Segreti Magici · pag. 54", zona="regola:2014/bard", voce="regola",
                     copre=["carta:2014/classes/bard.md#Segreti Magici / Magical Secrets (Bardo 10, pag. 54)",
                            "POST /characters/{char_id}/spells", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1611: difforme dal manuale, confermato")
 async def test_un_trucchetto_di_segreti_magici_conta_fra_gli_incantesimi_conosciuti(client):
     cid = await _bardo(client, 10)
     scelta = next(c for c in (await _scheda(client, cid))["pending_choices"] if c.get("group") == "magical_secrets")

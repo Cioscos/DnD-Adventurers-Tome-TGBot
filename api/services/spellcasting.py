@@ -21,7 +21,7 @@ from core.game.stats import effective_ability_mod
 from core.rules.condition_removal import spell_removal, view as removal_view
 from core.rules.catalog.spells import spell_effect
 from core.rules.edition import character_edition, class_key
-from core.rules.level_choices import FREE_KNOWN_KEY
+from core.rules.level_choices import CLASS_CANTRIPS, FREE_KNOWN_KEY, active_choice_specs
 from core.rules.modifiers import modifiers_for
 from core.rules.spell_healing import healing_dice, healing_fixed, healing_spec
 from core.rules.pact_casts import pact_cast
@@ -112,6 +112,10 @@ def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
         mine = [s for s in char.spells if not s.always_prepared and s.id not in free
                 and (s.class_id == cls.id or (s.class_id is None and len(casters) == 1))]
         leveled = [s for s in mine if s.level >= 1]
+        # Segreti Magici 2014: un trucchetto scelto conta fra gli incantesimi conosciuti, non fra i trucchetti
+        picked = {k for ch in active_choice_specs(char, cls) if ch.spell_pick == "known" and ch.group != CLASS_CANTRIPS
+                  for k in (cls.options or {}).get(ch.group, [])}
+        known = [s for s in mine if s.level >= 1 or (s.srd_index or s.name) in picked]
         cap = prepared_limit(edition, key, cls.level, char)
         school = school_limit(edition, cls)
         # senza scuola salvata non si sa: non conta come fuori scuola
@@ -120,8 +124,8 @@ def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:
             school_names=list(school.names) if school else None, school_free_limit=school.free if school else None,
             school_outside_count=outside,
             class_id=cls.id, class_name=cls.class_name,
-            cantrips_count=len(mine) - len(leveled), cantrips_limit=limits.cantrips or None,
-            known_count=len(leveled), known_limit=limits.spells,
+            cantrips_count=len(mine) - len(known), cantrips_limit=limits.cantrips or None,
+            known_count=len(known), known_limit=limits.spells,
             prepared_count=sum(1 for s in leveled if s.is_prepared),
             prepared_limit=cap if cap and not manual_cap else None,
         ))

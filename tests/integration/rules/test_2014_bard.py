@@ -434,7 +434,8 @@ async def test_magical_secrets_pick_any_spell_up_to_the_castable_level(client):
     full = await _full(client, cid)
     assert _choice(full, "magical_secrets") is None
     limits = full["spellcasting"]["limits"][0]
-    assert (limits["known_count"], limits["cantrips_count"]) == (1, 1)  # contano nei conosciuti
+    # 2014 Segreti Magici pag. 54: anche il trucchetto scelto rientra negli Incantesimi Conosciuti, non nella colonna Trucchetti (CB-1611)
+    assert (limits["known_count"], limits["cantrips_count"]) == (2, 0)
 
 
 async def test_magical_secrets_pick_refuses_a_wrong_choice_and_a_second_use(client):
