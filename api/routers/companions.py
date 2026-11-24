@@ -33,7 +33,7 @@ from api.services.wild_shape import (
 from api.services.history import add_history
 from core.db.models import Ability, Character, Companion, SpellSlot
 from core.rules.companions import (
-    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition, stat_int, summon_temp_hp, thrall_stats,
+    BEAST_BONUS_ORDERS, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition, stat_int, summon_temp_hp, thrall_stats,
 )
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
@@ -480,10 +480,11 @@ async def spend_beast_hit_dice(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HitDiceResult:
-    """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0."""
+    """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0
+    (2014); la bestia primordiale 2024 ha Dadi Vita pari al livello (p.123) e ne cura almeno 1 per dado (Riposo Breve p.373)."""
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
-    if comp.feature_key != BEAST_COMPANION:
+    if comp.feature_key not in BEAST_KEYS:
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
@@ -501,7 +502,8 @@ async def spend_beast_hit_dice(
     rolls = [random.randint(1, sides) for _ in range(body.count)]
     record_dice(char, [(f"d{sides}", r) for r in rolls])
     before = comp.current_hp
-    comp.current_hp = min(top, before + sum(max(0, r + mod) for r in rolls))
+    low = 1 if character_edition(char) == "2024" else 0
+    comp.current_hp = min(top, before + sum(max(low, r + mod) for r in rolls))
     comp.statblock = {**sb, "hit_dice_spent": spent + body.count}  # nuovo dict: SQLAlchemy non vede le mutazioni in place
     add_history(session, char_id, "companion_hp", f"{comp.name}: {body.count} Dadi Vita, +{comp.current_hp - before} PF")
     return HitDiceResult(companion=_read(char, comp), rolls=rolls, healed=comp.current_hp - before,

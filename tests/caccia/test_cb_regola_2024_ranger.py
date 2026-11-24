@@ -123,7 +123,6 @@ async def test_la_bestia_primordiale_ferita_guarisce_col_riposo_lungo(client):
                     zona="regola:2024/ranger", voce="regola",
                     copre=["carta:2024/classes/ranger.md#Bestia della Terra / Beast of the Land (Signore delle Bestie 3, pag. 123)",
                            "carta:2024/general.md#Short Rest (Riposo Breve) (pag. 373)", "POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
-@pytest.mark.xfail(strict=True, reason="CB-2516: difforme dal manuale, confermato")
 async def test_la_bestia_primordiale_spende_i_suoi_dadi_vita(client, dadi):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)
