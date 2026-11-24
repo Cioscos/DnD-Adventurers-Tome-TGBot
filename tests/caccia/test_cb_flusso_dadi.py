@@ -329,7 +329,6 @@ async def test_storico_statistiche_e_cronologia_restano_dopo_riposo_e_modifica(c
     assert all(e in dopo[2] for e in prima[2])  # il riposo può aggiungere voci, non toglierne
 
 
-@pytest.mark.xfail(strict=True, reason="CB-758 un d100 dalla pagina Dadi registra due facce nelle statistiche del d10")
 @pytest.mark.caccia(id="CB-758", fonte="decisione D-004", zona="flusso:dadi", voce="interazione",
                     copre=["POST /characters/{char_id}/dice/result", "GET /characters/{char_id}/dice/stats", "route:/char/:id/dice/stats"])
 async def test_d100_non_conta_nelle_statistiche_del_d10(client):

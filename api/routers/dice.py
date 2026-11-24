@@ -74,6 +74,20 @@ def _shown_rolls(notation: str | None, rolls: list[int]) -> list[int]:
     return [] if "d100" in (notation or "") else rolls
 
 
+def _stat_rolls(notation: str | None, entries: list) -> list:
+    """I tiri che contano nelle statistiche per faccia: i due d10 di ogni d100 no (D-004). La pagina Dadi manda i dadi
+    nell'ordine dei gruppi della notazione («1d100 + 2d10»), due d10 per ogni d100."""
+    if "d100" not in (notation or ""):
+        return entries
+    out, i = [], 0
+    for count, faces in re.findall(r"(\d*)d(\d+)", notation):
+        n = int(count or 1) * (2 if faces == "100" else 1)
+        if faces != "100":
+            out += entries[i:i + n]
+        i += n
+    return out + entries[i:]
+
+
 def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list[int], total: int, modifier: int,
               source: str, label: str | None, with_inspiration: bool = False) -> None:
     """Storico dei dadi e feed generale, così il tiro compare anche in /history."""
@@ -193,7 +207,7 @@ async def post_dice_result(
 
     # d20_total è il totale di UNA prova: un solo d20, o i due di vantaggio/svantaggio. 3d20 sommati non lo sono.
     is_check = all(e.kind == "d20" for e in body.rolls) and (len(rolls) == 1 or body.mode != "normal")
-    record_dice(char, [(e.kind, e.value) for e in body.rolls], total if is_check else None)
+    record_dice(char, [(e.kind, e.value) for e in _stat_rolls(body.notation, body.rolls)], total if is_check else None)
     _log_roll(session, char, notation, rolls, total, body.modifier, body.source or "manual", body.label,
               body.with_inspiration)
 
