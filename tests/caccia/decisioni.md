@@ -21,3 +21,22 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-015 | Compagno con PF massimi 0: a terra o PF non segnati? | PF non segnati: può agire, e la scheda e il campo down non lo danno a terra | 2026-11-24 |
 | D-016 | Limite delle durate delle condizioni inviate dal giocatore? | Massimo 9999 round, oltre 422 | 2026-11-24 |
 | D-017 | Una condizione già attiva con CD e fonte, ritoccata dal giocatore con una durata, perde CD e fonte? | No: stessa protezione degli effetti del master | 2026-11-24 |
+| D-018 | Ispirazione Bardica 2014: un secondo dado a chi ne ha già uno? | Sostituisce il primo (si spendono uso e azione bonus), come oggi: resta uno solo alla volta | 2026-11-24 |
+| D-019 | Nascondersi in Piena Vista 2014: un'azione bonus chiude il mimetismo? | No: lo chiudono movimento, azione e reazione | 2026-11-24 |
+| D-020 | Cambiare i preparati (e i trucchetti 2024) fuori da un riposo lungo? | Avviso da confermare fuori dalla finestra del riposo lungo; liberi alla creazione e alla salita di livello | 2026-11-24 |
+| D-021 | Ira 2024: chiuderla a mano costa l'azione bonus? | No: nel 2024 «Termina» è gratis (l'azione bonus resta nel 2014) | 2026-11-24 |
+| D-022 | Ispirazione in Combattimento (Valore) sul colpo critico | Per edizione: nel 2024 il dado raddoppia sul critico, nel 2014 no | 2026-11-24 |
+| D-023 | Incanalare Divinità 2024 con Chierico e Paladino | Una riserva sola con il massimo fra le classi, come oggi | 2026-11-24 |
+| D-024 | Autoguarigione del Monaco 2024: solo a fine turno? | Resta com'è: una volta per turno, quando la usa il giocatore | 2026-11-24 |
+| D-025 | Bestia primordiale 2024: i bonus degli oggetti ai tiri d'incantesimo valgono per il suo attacco? | No | 2026-11-24 |
+| D-026 | Suppliche dei trucchetti 2024 e Patto del Tomo | Valgono solo per i trucchetti conosciuti con Magia del Patto; uno preso solo col Tomo non è offerto | 2026-11-24 |
+| D-027 | Minimo 1 PF per livello nel 2014 | Resta | 2026-11-24 |
+| D-028 | Assegnare PE abbassa il livello di classe? | Mai: si scende solo con una correzione esplicita; la scheda mostra il livello più alto fra classe e PE | 2026-11-24 |
+| D-029 | Vista Cieca e Accecato (2024) | Ai privilegi 2024 con Vista Cieca una conferma al tiro toglie lo svantaggio di Accecato | 2026-11-24 |
+| D-030 | Colpo senz'armi nel 2014 e privilegi sugli attacchi con arma | Contano: Favore Divino, Manto del Crociato 2014, Punizione Divina e Colpo Divino valgono anche col colpo senz'armi | 2026-11-24 |
+| D-031 | Guardiani Spirituali 2014: radiosi o necrotici? | Scelta al lancio, ricordata per i tiri dei turni dopo | 2026-11-24 |
+| D-032 | Invisibilità su sé stessi finita per un attacco o un lancio | Si chiudono anche orologio e concentrazione quando l'ultimo bersaglio perde lo stato | 2026-11-24 |
+| D-033 | Strumento del background 2024 salvato come scelta di classe nei PG già creati | Correzione solo per le nuove creazioni; i dati salvati restano | 2026-11-24 |
+| D-034 | Abilità doppie nel 2024 dopo la creazione (Abile, seconda classe) | Rifiuto 422, come alla creazione e come nel 2014 | 2026-11-24 |
+| D-035 | Versatile dell'Umano 2024 uguale al talento non ripetibile del background | Non sceglibile nel passo della specie; cambiando background la scelta in conflitto si toglie | 2026-11-24 |
+| D-036 | Righe di incantesimi concessi già create con dati sbagliati | Si riempiono solo i campi vuoti delle righe create dal sistema | 2026-11-24 |
