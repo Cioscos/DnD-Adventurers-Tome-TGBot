@@ -108,7 +108,6 @@ async def test_tempesta_di_radiosita_con_slot_alto_aggiunge_un_d10_di_ciascun_ti
 @pytest.mark.caccia(id="CB-3863", fonte="2024 · Incantesimi · Soffio del Drago · pag. 266", zona="regola:2024/incantesimi-S-Z", voce="regola",
                     copre=["carta:2024/spells.md#Soffio del drago", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3863: difforme dal manuale, confermato")
 async def test_soffio_del_drago_tira_3d6_del_tipo_scelto_piu_1d6_per_slot(client):
     cid = await _pg(client, "sorcerer", 5)
     sid = await _impara(client, cid, "dragons-breath")

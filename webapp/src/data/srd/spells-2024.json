@@ -5766,9 +5766,9 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "dex",
-   "damage_dice": null,
+   "damage_dice": "3d6",
    "damage_type": null,
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d6",
    "classes": [
     "sorcerer",
     "wizard"
