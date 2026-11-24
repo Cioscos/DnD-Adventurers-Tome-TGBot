@@ -429,6 +429,12 @@ class SpeciesApply(BaseModel):
 
 class CharacterCreate(BaseModel):
     name: str = Field(pattern=r"\S")
+
+    @field_validator("name")
+    @classmethod
+    def _name_stripped(cls, v: str) -> str:
+        return v.strip()
+
     # Base scores WITHOUT species bonuses; each 3-20 after bonuses (checked in the router).
     ability_scores: Optional[dict[str, int]] = None
     species: Optional[SpeciesApply] = None

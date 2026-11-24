@@ -283,7 +283,6 @@ async def test_due_cambi_specie_insieme(client):
     assert not pg["skills"].get("arcana")
 
 
-@pytest.mark.xfail(strict=True, reason="CB-657 il nome alla creazione non è ripulito dagli spazi ai bordi")
 @pytest.mark.caccia(id="CB-657", fonte="invariante: il nome è salvato ripulito dagli spazi ai bordi, alla creazione come alla modifica", zona="flusso:creazione",
                     voce="limiti", copre=["POST /characters", "PATCH /characters/{char_id}"])
 async def test_nome_ripulito_alla_creazione_come_alla_modifica(client):
