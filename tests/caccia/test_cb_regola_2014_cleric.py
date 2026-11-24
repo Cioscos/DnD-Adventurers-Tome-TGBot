@@ -56,7 +56,6 @@ async def _arma(client, cid) -> int:
                     voce="interazione",
                     copre=["carta:2014/classes/cleric.md#Avatar della Battaglia / Avatar of Battle (Guerra 17, pag. 61)",
                            "PATCH /characters/{char_id}/hp"])
-@pytest.mark.xfail(strict=True, reason="CB-1661: difforme dal manuale, confermato")
 async def test_avatar_della_battaglia_non_si_somma_a_una_resistenza_gia_presente(client):
     cid = await _chierico(client, 17, "war")
     r = await client.patch(f"/characters/{cid}", json={"damage_modifiers": {"resistances": ["slashing"]}})
@@ -73,7 +72,6 @@ async def test_avatar_della_battaglia_non_si_somma_a_una_resistenza_gia_presente
                     voce="interazione",
                     copre=["carta:2014/classes/cleric.md#Mitigare Elementi / Dampen Elements (Natura 6, pag. 62)",
                            "PATCH /characters/{char_id}/hp"])
-@pytest.mark.xfail(strict=True, reason="CB-1662: difforme dal manuale, confermato")
 async def test_mitigare_elementi_non_si_somma_a_una_resistenza_gia_presente(client):
     cid = await _chierico(client, 6, "nature")
     r = await client.patch(f"/characters/{cid}", json={"damage_modifiers": {"resistances": ["fire"]}})

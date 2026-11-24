@@ -283,13 +283,13 @@ BLESSED_HEALER = RollOptionSpec(
     available=lambda c: (c.casting_level or 0) >= 1)
 
 AVATAR_OF_BATTLE = RollOptionSpec(
-    key=f"{CK}.avatar_of_battle", phase="damage_in", rolls=("damage_taken",), multiplier=0.5,
+    key=f"{CK}.avatar_of_battle", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,
     label={"it": "Avatar della Battaglia: il colpo è di un'arma non magica?",
            "en": "Avatar of Battle: is the hit from a nonmagical weapon?"},
     available=lambda c: c.damage_type in _PHYSICAL)
 
 DAMPEN_ELEMENTS = RollOptionSpec(
-    key=f"{CK}.dampen_elements", phase="damage_in", rolls=("damage_taken",), multiplier=0.5, slot="reaction",
+    key=f"{CK}.dampen_elements", phase="damage_in", rolls=("damage_taken",), grants_resistance=True, slot="reaction",
     label={"it": "Mitigare Elementi: reazione, resistenza a questo danno", "en": "Dampen Elements: reaction, resistance to this damage"},
     available=lambda c: c.damage_type in _ELEMENTS)
 
