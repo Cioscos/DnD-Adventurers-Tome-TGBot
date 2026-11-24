@@ -398,7 +398,8 @@ class Modifier:
 
     ``target``: ``attack``, ``damage``, ``ac``, ``speed``, ``initiative``, ``save``, ``skill``, ``passive``,
     ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
-    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``jump_bonus`` (piedi in più al
+    ``sense:<tipo>`` (senso con portata in piedi, vale il maggiore: ``sense:blindsight``); ``sense_plus:<tipo>`` (piedi che si
+    sommano alla portata migliore già posseduta, anche scritta nella scheda: Gufo, Vista Ombrale); ``jump_bonus`` (piedi in più al
     salto in lungo con rincorsa, si sommano); ``min_d20``, ``crit_min`` (soglie); ``min_total`` (totale minimo di una prova); ``crit_dice`` (dadi dell'arma in più
     al critico); ``resistance:<tipo>``, ``immunity:<tipo>``, ``vulnerability:<tipo>`` (``all`` = ogni tipo);
     ``damage_reroll`` (i dadi dell'arma che mostrano al più questo valore si ritirano una volta: Combattere con Armi
