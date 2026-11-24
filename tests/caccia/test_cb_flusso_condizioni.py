@@ -775,7 +775,6 @@ async def test_calmare_emozioni_su_copia_o_importata_finita_la_concentrazione_la
     assert (await _scheda(client, nuova["id"]))["conditions"].get("charmed") is True
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1305 durata 10**30 dà errore del server")
 @pytest.mark.caccia(id="CB-1305", fonte="decisione D-016 (tests/caccia/decisioni.md): durate dal giocatore al massimo 9999 round, oltre 422", zona="flusso:condizioni",
                     voce="limiti", copre=["PATCH /characters/{char_id}/conditions"])
 async def test_durata_enorme_e_rifiutata_con_422_non_con_un_errore_del_server(client):
@@ -787,7 +786,6 @@ async def test_durata_enorme_e_rifiutata_con_422_non_con_un_errore_del_server(cl
     assert r.status_code == 422, r.text
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1306 10000 round accettati")
 @pytest.mark.caccia(id="CB-1306", fonte="decisione D-016 (tests/caccia/decisioni.md): massimo 9999 round", zona="flusso:condizioni", voce="limiti",
                     copre=["PATCH /characters/{char_id}/conditions"])
 async def test_durata_9999_ammessa_10000_rifiutata(client):

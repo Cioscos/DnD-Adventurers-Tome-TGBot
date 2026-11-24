@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
@@ -531,7 +531,7 @@ class ConditionsUpdate(BaseModel):
     """Map of condition_slug → bool or int (exhaustion level)."""
     conditions: dict[str, Any]  # i valori si validano nella rotta, solo su ciò che cambia
     # slug -> rounds left; None removes the duration
-    durations: Optional[dict[str, Optional[int]]] = None
+    durations: Optional[dict[str, Optional[Annotated[int, Field(le=9999)]]]] = None  # D-016, come il campo della pagina
 
 
 class InspirationUpdate(BaseModel):
