@@ -91,7 +91,7 @@ ASSASSINATE_DAMAGE = RollOptionSpec(
     label=_both("Assassinare: primo round, l'Attacco Furtivo ha colpito? Danni extra pari al livello da ladro, dello stesso tipo dell'arma",
                 "Assassinate: first round, did Sneak Attack hit? Extra damage equal to your rogue level, of the weapon's type"))
 ENVENOM = RollOptionSpec(
-    key=f"{CK}.envenom_weapons", phase="after_hit", rolls=("attack",), needs=POISON.key, extra_dice=lambda _c, _i: "2d6",
+    key=f"{CK}.envenom_weapons", phase="after_hit", rolls=("attack",), needs=POISON.key, extra_damage_type="poison", extra_dice=lambda _c, _i: "2d6",
     crit_doubles=False,  # il danno viene dal TS fallito, non dai dadi dell'attacco: il critico non lo raddoppia
     label=_both("Armi Velenose: il TS contro Veleno è fallito? 2d6 danni da veleno in più (ignorano la Resistenza al veleno)",
                 "Envenom Weapons: did the Poison save fail? 2d6 extra poison damage (ignores Poison resistance)"))

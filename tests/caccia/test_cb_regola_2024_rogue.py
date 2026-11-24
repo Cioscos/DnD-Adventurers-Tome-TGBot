@@ -133,7 +133,6 @@ async def test_schivata_prodigiosa_non_si_usa_da_accecato(client):
                     zona="regola:2024/rogue", voce="regola",
                     copre=["carta:2024/classes/rogue.md#Armi Velenose / Envenom Weapons (Assassino 13, pag. 134)",
                            "POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/attack/{attack_id}/damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2565: difforme dal manuale, confermato")
 async def test_armi_velenose_i_2d6_sono_danni_da_veleno(client):
     cid = await _ladro(client, 13, "assassin", dexterity=16)
     r = await _colpo_e_danno(client, cid, await _stocco(client, cid), SNEAK, POISON, ENVENOM)
