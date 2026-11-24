@@ -493,6 +493,8 @@ async def companion_attack(
     action = actions[body.action_index]
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
+    if comp.kind != "wild_shape" and comp.current_hp <= 0 < _effective_max_hp(char, comp):  # a terra: non attacca
+        raise HTTPException(status_code=409, detail={"code": "companion_down"})
     if comp.feature_key in BEAST_KEYS:
         _take_beast_attack(char, comp, body.reaction)
     converted = None

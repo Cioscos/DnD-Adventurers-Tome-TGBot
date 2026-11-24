@@ -442,7 +442,6 @@ async def test_il_danno_alla_forma_2024_va_ai_pf_del_druido(client):
     assert r.status_code in (409, 422) or (dopo["temp_hp"], dopo["current_hit_points"]) == (prima["temp_hp"] - 4, prima["current_hit_points"] - 3)
 
 
-@pytest.mark.xfail(strict=True, reason="CB-372 un compagno a 0 PF attacca ancora")
 @pytest.mark.caccia(id="CB-372", fonte="invariante: un compagno a 0 PF non attacca (la bestia del ranger risponde 409 companion_down)", zona="flusso:compagni-forme",
                     voce="limiti", copre=["POST /characters/{char_id}/companions/{comp_id}/attack"])
 async def test_un_compagno_a_zero_pf_non_attacca(client):
