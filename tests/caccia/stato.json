@@ -32,6 +32,22 @@
         "regola": "non_applicabile",
         "ripetizione": "fatta"
       }
+    },
+    "flusso:caratteristiche-tiri": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
     }
   }
 }
