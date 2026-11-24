@@ -73,3 +73,28 @@ async def test_con_score_feeds_class_hp(client):
         "initial_class": {"class_name": "Guerriero", "level": 1, "hit_die": 10}})
     assert r.status_code == 201
     assert r.json()["hit_points"] == 12  # 10 + CON mod 2
+
+
+async def test_create_applies_race_proficiencies_and_resistances(client):
+    # 2014, Razze: armi dell'Elfo Alto (pag. 21), strumenti da inventore dello Gnomo delle Rocce (pag. 37),
+    # resistenza al veleno del Nano (pag. 28)
+    r = await client.post("/characters", json={
+        "name": "Elrond", "initial_class": {"class_name": "wizard", "level": 1},
+        "species": {"name": "Elfo alto", "weapons": ["longsword", "longbow"], "tools": ["tinkers_tools"],
+                    "resistances": ["poison"]}})
+    assert r.status_code == 201, r.text
+    b = r.json()
+    assert {"Spada lunga", "Arco lungo", "Pugnale"} <= set(b["general_proficiencies"]["weapons"])  # razza + mago
+    assert b["tool_proficiencies"] == {"tinkers_tools": True}
+    assert b["computed"]["resistances"] == ["poison"]
+    r = await client.post(f"/characters/{b['id']}/items", json={"name": "Spada lunga", "item_type": "weapon", "item_metadata": {
+        "damage_dice": "1d8", "weapon_type": "melee", "properties": ["versatile"], "weapon_category": "martial"}})
+    assert r.status_code == 201, r.text
+    spada = next(i for i in (await client.get(f"/characters/{b['id']}")).json()["items"] if i["name"] == "Spada lunga")
+    assert spada["attack_preview"]["to_hit"] == 2  # FOR 10 + competenza 2
+
+
+async def test_create_rejects_unknown_race_proficiency(client):
+    for campo, valore in (("weapons", ["lightsaber"]), ("tools", ["bogus"]), ("resistances", ["sonic"])):
+        r = await client.post("/characters", json={"name": "X", "species": {"name": "Elfo", campo: valore}})
+        assert r.status_code == 422, (campo, r.text)

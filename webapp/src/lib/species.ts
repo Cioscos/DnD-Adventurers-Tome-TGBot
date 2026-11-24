@@ -1,7 +1,9 @@
 import { localized, type BaseEntry, type Lang, type LocalizedField } from '@/lib/srd/catalog'
 
 export interface RaceTrait { index: string; name: LocalizedField; desc: LocalizedField }
-export interface SubraceEntry {
+/** Competenze e resistenze fisse della razza (chiavi di abilità, core.rules.weapons, core.data.tools, tipi di danno). */
+interface RaceGrants { skills?: string[]; weapons?: string[]; tools?: string[]; resistances?: string[] }
+export interface SubraceEntry extends RaceGrants {
   index: string
   name: LocalizedField
   ability_bonuses?: Record<string, number>
@@ -11,7 +13,7 @@ export interface SubraceEntry {
   languages?: string[]
   roll_notes?: Record<string, LocalizedField>
 }
-export interface RaceEntry extends BaseEntry {
+export interface RaceEntry extends BaseEntry, RaceGrants {
   speed_ft: number
   ability_bonuses: Record<string, number>
   senses: { type: string; range_ft: number }[]
@@ -29,6 +31,11 @@ export interface SpeciesPayload {
   ability_bonuses: Record<string, number>
   roll_notes: Record<string, string>
   traits: { name: string; description: string }[]
+  weapons: string[]
+  tools: string[]
+  resistances: string[]
+  /** Non va nel campo species: creationExtras le unisce alle abilità d'origine (il server rifiuta i doppioni con la classe). */
+  skills: string[]
 }
 
 // Curated catalogue note id -> roll-note keys (what the character sheet reads).
@@ -63,6 +70,7 @@ export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: La
     }
   }
   const langs = [...new Set([...race.languages, ...(sub?.languages ?? [])])]
+  const grants = (k: keyof RaceGrants) => [...new Set([...(race[k] ?? []), ...(sub?.[k] ?? [])])]
   return {
     name: localized(sub?.name ?? race.name, lang).text,
     speed_ft: sub?.speed_ft ?? race.speed_ft,
@@ -74,6 +82,10 @@ export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: La
       name: localized(tr.name, lang).text,
       description: localized(tr.desc, lang).text,
     })),
+    weapons: grants('weapons'),
+    tools: grants('tools'),
+    resistances: grants('resistances'),
+    skills: grants('skills'),
   }
 }
 
@@ -158,9 +170,11 @@ export function creationExtras(o: {
   species: SpeciesPayload | null
   skills: string[]
 }) {
+  const { skills: raceSkills, ...species } = o.species ?? { skills: [] }
+  const skills = [...new Set([...o.skills, ...raceSkills])]
   return {
     ...(o.skipped ? {} : { ability_scores: o.scores }),
-    ...(o.species ? { species: o.species } : {}),
-    ...(o.skills.length ? { skills: Object.fromEntries(o.skills.map((k) => [k, true])) } : {}),
+    ...(o.species ? { species } : {}),
+    ...(skills.length ? { skills: Object.fromEntries(skills.map((k) => [k, true])) } : {}),
   }
 }

@@ -426,6 +426,10 @@ class SpeciesApply(BaseModel):
     ability_bonuses: dict[str, int] = Field(default_factory=dict)
     roll_notes: dict[str, str] = Field(default_factory=dict)
     traits: list[SpeciesTrait] = Field(default_factory=list, max_length=30)
+    # Competenze e resistenze fisse della razza 2014: chiavi di core.rules.weapons, core.data.tools, core.data.damage_types
+    weapons: list[str] = Field(default_factory=list, max_length=10)
+    tools: list[str] = Field(default_factory=list, max_length=5)
+    resistances: list[str] = Field(default_factory=list, max_length=13)
 
 
 class CharacterCreate(BaseModel):

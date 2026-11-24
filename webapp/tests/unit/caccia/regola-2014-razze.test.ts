@@ -68,7 +68,7 @@ async function creaConRazza(nome: string, sottorazza: string | null): Promise<un
 
 describe('caccia: regola 2014 razze', () => {
   // caccia: {"id": "CB-3067", "fonte": "2014 · Razze · Elfo, Sensi Acuti (pag. 20) e Mezzorco, Minaccioso (pag. 41): competenza in un'abilità fissa", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Elfo / Elf - tratti base (pag. 20)", "carta:2014/races.md#Mezzorco / Half-Orc (pag. 41)", "route:/"]}
-  it.fails.each([
+  it.each([
     ['Elfo', null, 'perception'],
     ['Mezzorco', null, 'intimidation'],
   ])('%s (%s): la creazione dà la competenza razziale in %s', async (nome, sotto, abilita) => {
@@ -76,7 +76,7 @@ describe('caccia: regola 2014 razze', () => {
   })
 
   // caccia: {"id": "CB-3068", "fonte": "2014 · Razze · Nano, Resilienza Nanica (pag. 28) e Tiefling, Resistenza Infernale (pag. 43): resistenza a un tipo di danno", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Nano / Dwarf - tratti base (pag. 28)", "carta:2014/races.md#Tiefling / Tiefling (pag. 43)", "route:/"]}
-  it.fails.each([
+  it.each([
     ['Nano', null, 'poison'],
     ['Tiefling', null, 'fire'],
   ])('%s (%s): la creazione dà la resistenza razziale ai danni da %s', async (nome, sotto, danno) => {
@@ -84,7 +84,7 @@ describe('caccia: regola 2014 razze', () => {
   })
 
   // caccia: {"id": "CB-3069", "fonte": "2014 · Razze · Elfo Alto, Addestramento nelle Armi Elfiche (pag. 21); Nano, Addestramento da Combattimento Nanico (pag. 28); Gnomo delle Rocce, Inventore (pag. 37)", "zona": "regola:2014/razze", "voce": "regola", "copre": ["carta:2014/races.md#Elfo Alto / High Elf (pag. 21)", "carta:2014/races.md#Nano / Dwarf - tratti base (pag. 28)", "carta:2014/races.md#Gnomo delle Rocce / Rock Gnome (pag. 37)", "route:/"]}
-  it.fails.each([
+  it.each([
     ['Elfo', 'Elfo alto', [['longsword', 'spada lunga'], ['shortsword', 'spada corta'], ['shortbow', 'arco corto'], ['longbow', 'arco lungo']]],
     ['Nano', null, [['battleaxe', 'ascia da battaglia'], ['handaxe', 'accetta'], ['light_hammer', 'light hammer', 'martello leggero'],
       ['warhammer', 'martello da guerra']]],

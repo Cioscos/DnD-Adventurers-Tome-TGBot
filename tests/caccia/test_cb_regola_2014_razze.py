@@ -41,6 +41,7 @@ def _specie(indice: str, sotto: str | None = None, lingua: str = "it") -> dict:
         "ability_bonuses": bonus,
         "roll_notes": note,
         "traits": [{"name": t["name"][lingua], "description": t["desc"][lingua]} for t in [*razza["traits"], *(sub.get("traits") or [])]],
+        **{k: list(dict.fromkeys([*(razza.get(k) or []), *(sub.get(k) or [])])) for k in ("weapons", "tools", "resistances")},
     }
 
 
