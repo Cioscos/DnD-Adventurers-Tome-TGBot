@@ -33,7 +33,8 @@ def spend_inspiration_attack(char, *, item_id: int | None = None, spell_id: int 
     senz'armi). Senza quel tiro sarebbe un attacco gratuito. Nel 2014 il rilancio è rifiutato comunque."""
     last = (char.turn_state or {}).get("last_roll") or {}
     if character_edition(char) == "2024" and (
-            last.get("roll") != "attack" or (last.get("item_id"), last.get("spell_id")) != (item_id, spell_id)):
+            last.get("roll") != "attack" or (last.get("item_id"), last.get("spell_id")) != (item_id, spell_id)
+            or bool(last.get("unarmed")) != (item_id is None and spell_id is None)):  # nemmeno l'attacco di una bestia ha id
         raise HTTPException(status_code=409, detail={"code": "no_roll_to_reroll"})
     spend_inspiration_reroll(char)
 

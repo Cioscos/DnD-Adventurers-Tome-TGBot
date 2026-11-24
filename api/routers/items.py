@@ -590,7 +590,7 @@ def _settle_attack(
         "die": result.to_hit_die, "dice": result.dice, "mode": result.mode, "bonus": result.to_hit_bonus,
         "total": result.to_hit_total, "notes": result.notes, "auto_fail": False, "description": "",
         "option_result": result.option_result.model_dump(mode="json") if result.option_result else None,
-    }, item_id=item_id, ability=ability)
+    }, item_id=item_id, ability=ability, unarmed=item is None)
     result.refundable = True if get_turn(char)["last_roll"]["refundable"] else None  # assente quando non serve
     return result
 

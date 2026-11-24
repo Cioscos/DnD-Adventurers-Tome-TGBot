@@ -557,7 +557,9 @@ async def test_notazione_dei_dadi_non_valida_rifiutata_o_con_danno(client, dadi,
 @pytest.mark.caccia(id="CB-761", fonte="2024 · Ispirazione Eroica · pag. 368 (si ritira un dado appena tirato)", zona="flusso:attacco-danno", voce="regola",
                     copre=["POST /characters/{char_id}/attack/unarmed", "POST /characters/{char_id}/spells/{spell_id}/attack"])
 @pytest.mark.parametrize("tipo", ["senz_armi", "incantesimo"])
-async def test_ritiro_con_ispirazione_senza_tiro_rifiutato_anche_senza_arma(client, tipo):
+async def test_ritiro_con_ispirazione_senza_tiro_rifiutato_anche_senza_arma(client, test_session_factory, tipo):
+    from core.db.models import Character
+
     cid = (await client.post("/characters", json={"name": "P"})).json()["id"]
     await client.post(f"/characters/{cid}/classes", json={"class_name": "wizard", "level": 3, "hit_die": 6})
     await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
@@ -565,6 +567,12 @@ async def test_ritiro_con_ispirazione_senza_tiro_rifiutato_anche_senza_arma(clie
     url = {"senz_armi": f"/characters/{cid}/attack/unarmed", "incantesimo": f"/characters/{cid}/spells/{sid}/attack"}
     await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     altro = url["incantesimo" if tipo == "senz_armi" else "senz_armi"]
+    if tipo == "senz_armi":  # l'attacco di una bestia non ha né arma né incantesimo: non vale come colpo senz'armi
+        async with test_session_factory() as s:
+            char = await s.get(Character, cid)
+            char.turn_state = {**(char.turn_state or {}), "last_roll": {"roll": "attack", "item_id": None, "spell_id": None}}
+            await s.commit()
+        assert (await client.post(url[tipo], json={"die": 12, "with_inspiration": True})).status_code == 409
     extra = {"confirm_extra_attack": True} if tipo == "senz_armi" else {}
     for prima in (None, altro):  # nessun tiro, oppure un tiro diverso
         if prima:
