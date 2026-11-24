@@ -373,8 +373,8 @@ async def create_character(
             row.options = {**(row.options or {}), "list": bg.feat_list}
     if origin_feat or body.species_2024:  # tratti (Robustezza nanica) e talento (Robusto) contano nei PF massimi
         await sync_cataloged_features(session, char, lang)
-        if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto)
-            char.current_hit_points = effective_hp_max(char)
+    if char.current_hit_points >= char.hit_points:  # nasce a PF pieni anche col massimo alzato (Robusto, razza 2014)
+        char.current_hit_points = effective_hp_max(char)
 
     # Re-fetch with selectinload so all relations are eagerly loaded for
     # response serialization. See refresh_char_full for the full rationale.
