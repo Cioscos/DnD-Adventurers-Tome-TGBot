@@ -133,7 +133,6 @@ async def test_attaccabrighe_da_taverna_da_competenza_nelle_armi_improvvisate(cl
 
 @pytest.mark.caccia(id="CB-3466", fonte="2024 · Talenti · Avvelenatore · pag. 206", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Avvelenatore / Poisoner (pag. 206) - Generale (livello 4+)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3466: difforme dal manuale, confermato")
 async def test_avvelenatore_da_competenza_nel_kit_da_avvelenatore(client):
     ch = await _pg(client, "fighter", 4)
     body = await _preso(client, ch["id"], "2024_poisoner", "dexterity")

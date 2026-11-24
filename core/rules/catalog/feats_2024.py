@@ -152,7 +152,7 @@ _register(
              key="feat.2024_piercer", phase="after_damage", rolls=("weapon_damage",), once_per_turn=True,
              reroll_dice=lambda _c, _i: 1, available=lambda c: _weapon_type(c) == "piercing",
              label=_both("Perforatore: ritira un dado di danno perforante", "Piercer: reroll one piercing damage die")),)),
-    _f24("poisoner"),
+    _f24("poisoner", proficiency_grants={"tools": ("poisoners_kit",)}),  # Prepara veleno (pag. 206)
     _f24("polearm_master"),
     _f24("resilient"),  # +1 e competenza nel TS li applica ``take_feat``
     _f24("sentinel"),
