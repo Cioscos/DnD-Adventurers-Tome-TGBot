@@ -342,7 +342,6 @@ async def test_capacita_di_carico_segue_la_forza_data_da_un_oggetto(client):
     assert (await _leggi(client, cid))["carry_capacity"] == 285
 
 
-@pytest.mark.xfail(strict=True, reason="CB-257 un booleano JSON è accettato come numero")
 @pytest.mark.caccia(id="CB-257", fonte="invariante: un booleano JSON non è un numero", zona="flusso:caratteristiche-tiri",
                     voce="limiti", copre=["PATCH /characters/{char_id}/ability_scores/{ability_name}", "POST /characters/{char_id}/skills/{skill_name}/roll"])
 async def test_booleano_non_e_un_numero(client):

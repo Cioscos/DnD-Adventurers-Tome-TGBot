@@ -98,7 +98,7 @@ class AbilityScoreRead(BaseModel):
 
 
 class AbilityScoreUpdate(BaseModel):
-    value: int  # 1–30
+    value: int = Field(strict=True)  # 1–30; strict: true non è 1
 
 
 # ---------------------------------------------------------------------------
@@ -458,7 +458,7 @@ class DeathSaveAction(str, Enum):
 
 
 RollMode = Literal["normal", "advantage", "disadvantage"]
-D20Dice = Annotated[list[Annotated[int, Field(ge=1, le=20)]], Field(max_length=2)]
+D20Dice = Annotated[list[Annotated[int, Field(ge=1, le=20, strict=True)]], Field(max_length=2)]
 
 
 class DeathSaveUpdate(BaseModel):
