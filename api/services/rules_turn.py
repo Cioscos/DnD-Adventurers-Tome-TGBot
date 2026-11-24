@@ -90,9 +90,14 @@ def grant_action(char) -> dict:
     return st
 
 
+# turn_state: gli usi «una volta per il proprio turno» (``OnUse.own_turn``): il turno di un altro non li riapre, ``reset_turn`` sì
+OWN_TURN_ONCE = "own_turn_once"
+
+
 def once_used(char, key: str) -> bool:
     """L'effetto «una volta per turno» ``key`` è già stato usato in questo turno."""
-    return key in get_turn(char)["once_per_turn"]
+    st = get_turn(char)
+    return key in st["once_per_turn"] or key in st.get(OWN_TURN_ONCE, ())
 
 
 def forgo_attack(char) -> dict:
@@ -107,12 +112,13 @@ def forgo_attack(char) -> dict:
     return st
 
 
-def mark_once(char, key: str) -> bool:
-    """Registra un effetto «una volta per turno»; False se era già stato usato."""
+def mark_once(char, key: str, own_turn: bool = False) -> bool:
+    """Registra un effetto «una volta per turno» (``own_turn``: per il proprio turno); False se era già stato usato."""
     st = get_turn(char)
-    if key in st["once_per_turn"]:
+    if once_used(char, key):
         return False
-    st["once_per_turn"] = [*st["once_per_turn"], key]
+    field = OWN_TURN_ONCE if own_turn else "once_per_turn"
+    st[field] = [*st.get(field, []), key]
     _save(char, st)
     return True
 

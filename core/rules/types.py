@@ -294,6 +294,9 @@ class OnUse:
     maximize_cost: str | None = None
     choices: "tuple[UseChoice, ...]" = ()
     once_per_turn: bool = False
+    # con ``once_per_turn``: una volta per il proprio turno, il turno di un altro non riapre l'uso (Forza Vivificante: «all'inizio
+    # di ogni tuo turno»); lo riapre solo ``reset_turn``
+    own_turn: bool = False
     forgoes_attack: bool = False
     notes: "Callable[[RuleContext, dict], list[str]] | None" = None
     # Testo ``{it, en}`` calcolato dal server e mostrato sulla riga prima dell'uso (Astuzia Magica: quanti slot tornano); ``None``: niente

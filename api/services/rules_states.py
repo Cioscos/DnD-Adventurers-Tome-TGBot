@@ -466,7 +466,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
     if on_use.spends_slot and (on_use.spends_slot_when is None or on_use.spends_slot_when(ctx_choice, params or {})):
         await _spend_slot(session, char, int((params or {})[on_use.spends_slot]), on_use.spends_slot_pact_only)
     if on_use.once_per_turn:
-        mark_once(char, feature_key)
+        mark_once(char, feature_key, own_turn=on_use.own_turn)
     if on_use.forgoes_attack:
         forgo_attack(char)
     if ability is not None and ability.max_uses is not None and ability.uses is not None:
