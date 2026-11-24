@@ -217,6 +217,9 @@ def _check_catalog_choices(char: Character, body: CharacterCreate, scores: dict[
              | set((body.initial_class.skill_choices or []) if body.initial_class else ()))
     if skill and skill in taken:
         raise bad("species_skill_taken")
+    # D-006: lo stesso per un'abilità di classe già data dal background.
+    if bg and body.initial_class and set(bg.skills) & set(body.initial_class.skill_choices or ()):
+        raise bad("class_skill_taken")
     return bg
 
 

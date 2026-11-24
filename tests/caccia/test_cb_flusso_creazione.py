@@ -42,7 +42,7 @@ async def test_creazione_2024_umano_soldato_paladino(client):
         "name": "Z", "rules_edition": "2024",
         "species_2024": {"key": "2024_human", "options": {"size": "medium", "skill": "arcana", "origin_feat": "2024_lucky"}},
         "background_2024": {"key": "soldier", "increases": {"strength": 2, "dexterity": 1}, "tool": "dice_set"},
-        "initial_class": {"class_name": "paladin", "skill_choices": ["athletics", "persuasion"]}, "starting_equipment": [0],
+        "initial_class": {"class_name": "paladin", "skill_choices": ["insight", "persuasion"]}, "starting_equipment": [0],
         "ability_scores": {"strength": 15, "dexterity": 10, "constitution": 14, "intelligence": 8, "wisdom": 10, "charisma": 13},
     }
     r = await client.post("/characters", json=corpo)
@@ -135,7 +135,7 @@ async def test_creazione_sopravvive_a_export_import_e_cambio_specie(client):
     corpo = {"name": "Z", "rules_edition": "2024",
              "species_2024": {"key": "2024_human", "options": {"size": "medium", "skill": "arcana", "origin_feat": "2024_lucky"}},
              "background_2024": {"key": "soldier", "increases": {"strength": 2, "dexterity": 1}, "tool": "dice_set"},
-             "initial_class": {"class_name": "paladin", "skill_choices": ["athletics", "persuasion"]}, "starting_equipment": [0]}
+             "initial_class": {"class_name": "paladin", "skill_choices": ["insight", "persuasion"]}, "starting_equipment": [0]}
     pg = (await client.post("/characters", json=corpo)).json()
 
     def riassunto(c):
@@ -312,7 +312,6 @@ async def test_cambio_specie_toglie_gli_incantesimi_della_vecchia(client):
     assert sum("spell" in c for c in cambi) >= 3, cambi
 
 
-@pytest.mark.xfail(strict=True, reason="CB-659 l'abilità del background scelta anche fra quelle di classe è accettata (201) e una scelta va persa")
 @pytest.mark.caccia(id="CB-659", fonte="decisione D-006 (2024 · Competenze nelle abilità · pag. 13-14)", zona="flusso:creazione", voce="limiti",
                     copre=["POST /characters"])
 async def test_abilita_di_classe_gia_data_dal_background(client):
