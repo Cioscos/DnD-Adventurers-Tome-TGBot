@@ -112,6 +112,18 @@ def total_base_hp(
     return total
 
 
+def stored_rolls(char) -> dict[int, dict[int, int]]:
+    """PF tirati al level-up (``settings.hp_rolls``: id di classe -> livello di classe -> tiro grezzo), letti con tolleranza."""
+    raw = (char.settings or {}).get("hp_rolls")
+    out: dict[int, dict[int, int]] = {}
+    for c, lv_map in (raw.items() if isinstance(raw, dict) else ()):  # tolerant: imported files are untrusted
+        try:
+            out[int(c)] = {int(lv): int(r) for lv, r in lv_map.items()}
+        except (TypeError, ValueError, AttributeError):
+            continue
+    return out
+
+
 def con_hp_delta(classes: "Iterable[_ClassLike]", old_con_mod: int, new_con_mod: int,
                  rolls: "Mapping[int, Mapping[int, int]] | None" = None) -> int:
     """Di quanto cambiano i PF massimi se il modificatore di Costituzione passa da ``old`` a ``new``: come se il nuovo
