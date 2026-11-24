@@ -257,10 +257,17 @@ async def last_roll_options(
     merge_options(applied, opts)
     die, dice, mode, bonus, total = last["die"], last["dice"], last["mode"], last["bonus"], last["total"]
     if opts.reroll:
-        outcome = resolve_applied(body.mode, body.dice, None, applied)
+        if opts.mode is None:  # lo stesso tiro, nello stesso modo: con vantaggio o svantaggio si ritira un d20 solo
+            # (2014 pag. 173, 2024 pag. 12-13), il più basso: è la scelta che conviene sempre (ed è l'1 di Fortuna)
+            new = body.dice[0] if body.dice else random.randint(1, 20)
+            outcome = resolve_applied(mode, [new, *sorted(dice)[1:]], None, applied, reroll=True)
+            rolled = [("d20", new)]
+        else:  # un ritiro con un modo suo è un tiro nuovo (Controfascino 2024: con vantaggio)
+            outcome = resolve_applied(body.mode, body.dice, None, applied)
+            rolled = d20_records(outcome)
         total += outcome.kept - die
         die, dice, mode = outcome.kept, outcome.dice, outcome.mode
-        record_dice(char, d20_records(outcome))
+        record_dice(char, rolled)
     rolls, extra = roll_option_dice(char, opts)
     bonus += opts.bonus
     total += opts.bonus + extra
