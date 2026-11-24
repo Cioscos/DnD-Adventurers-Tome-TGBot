@@ -1574,6 +1574,8 @@
           "beast_attacked": "The beast already attacked this turn: the bonus action order does not apply.",
           "beast_not_attacking": "You already gave a bonus action order: the beast does not attack this turn.",
           "companion_down": "The beast is at 0 HP.",
+          "beast_reaction_used": "The beast already used its reaction this round.",
+          "beast_acted": "The beast already used its action this turn.",
           "incapacitated": "Incapacitated: you cannot give orders, the beast acts on its own.",
           "feature_unavailable": "That order is not available."
         },

@@ -175,7 +175,6 @@ async def test_un_ranger_incapacitato_non_usa_azioni_azioni_bonus_ne_reazioni(cl
                     copre=["carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)",
                            "POST /characters/{char_id}/companions/{comp_id}/attack"])
 @pytest.mark.parametrize("way", ["reaction", "autonomous"])
-@pytest.mark.xfail(strict=True, reason="CB-2519: difforme dal manuale, confermato")
 async def test_la_bestia_primordiale_senza_ordini_non_attacca_senza_limite(client, way):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)

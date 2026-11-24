@@ -383,13 +383,25 @@ def _save_beast_state(char: Character, beast: dict) -> None:
 
 def _take_beast_attack(char: Character, comp: Companion, reaction: bool) -> None:
     """La bestia del ranger attacca solo se il ranger glielo ha ordinato in questo turno (un attacco per ordine, due con Furia
-    Bestiale); la sua reazione non ha bisogno di ordini, e con il ranger incapacitato agisce da sola."""
+    Bestiale); la sua reazione non ha bisogno di ordini, e con il ranger incapacitato agisce da sola. Una reazione per round e,
+    da sola, la sua azione: un attacco o il Multiattacco della scheda (2014 p.106, 2024 p.122). Lo stato «beast» si azzera
+    al turno del ranger, che è anche quello della bestia."""
     if comp.current_hp <= 0:
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
-    if reaction or is_incapacitated(char):
-        return
     beast = _beast_state(char)
+    if beast.get("id") != comp.id:
+        beast = {}
+    if reaction:
+        if beast.get("reaction_used"):
+            raise HTTPException(status_code=409, detail={"code": "beast_reaction_used"})
+        _save_beast_state(char, {**beast, "id": comp.id, "reaction_used": True})
+        return
+    if is_incapacitated(char) and not beast.get("acted_alone"):  # la sua azione, una sola nel turno
+        own = max(1, stat_int(comp.statblock, "multiattack", high=MAX_MULTIATTACK))
+        beast = {**beast, "id": comp.id, "acted_alone": True, "attacks_left": max(own, int(beast.get("attacks_left") or 0))}
     if beast.get("id") != comp.id or int(beast.get("attacks_left") or 0) < 1:
+        if beast.get("acted_alone"):
+            raise HTTPException(status_code=409, detail={"code": "beast_acted"})
         raise HTTPException(status_code=409, detail={"code": "no_order"})
     _save_beast_state(char, {**beast, "attacks_left": beast["attacks_left"] - 1, "attacked": True})
 

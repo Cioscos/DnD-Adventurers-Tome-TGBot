@@ -1573,6 +1573,8 @@
           "beast_attacked": "La bestia ha già attaccato in questo turno: l'ordine in azione bonus non vale.",
           "beast_not_attacking": "Hai già ordinato qualcosa in azione bonus: in questo turno la bestia non attacca.",
           "companion_down": "La bestia è a 0 PF.",
+          "beast_reaction_used": "La bestia ha già usato la sua reazione in questo round.",
+          "beast_acted": "La bestia ha già usato la sua azione in questo turno.",
           "incapacitated": "Incapacitato: non puoi dare ordini, la bestia agisce da sola.",
           "feature_unavailable": "Questo ordine non è disponibile."
         },

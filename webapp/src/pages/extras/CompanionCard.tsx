@@ -104,8 +104,8 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
         toast.error(t('character.extras.beast.no_order'))
       } else if (code === 'turn_slot_used') {
         toast.error(t('character.attack.bonus_used'))
-      } else if (code === 'companion_down') {
-        toast.error(t('character.extras.beast.errors.companion_down'))
+      } else if (code === 'companion_down' || code === 'beast_reaction_used' || code === 'beast_acted') {
+        toast.error(t(`character.extras.beast.errors.${code}`))
       } else {
         notifyMutationError(err)
       }
