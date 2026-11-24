@@ -98,7 +98,6 @@ async def test_i_dadi_del_colpo_divino_2024_hanno_il_tipo_scelto(client, opzione
     (None, "cleric.turn_undead", {}),
     ("light", "cleric.radiance_of_the_dawn", {}),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-2264: difforme dal manuale, confermato")
 async def test_la_cd_di_incanalare_divinita_2024_e_quella_degli_incantesimi_del_chierico(client, dominio, chiave, parametri):
     cid = await (_dom(client, 3, dominio, wisdom=16) if dominio else _cleric24(client, 3, wisdom=16))  # 8 + 2 + 3 = 13
     await _amuleto_cd(client, cid)

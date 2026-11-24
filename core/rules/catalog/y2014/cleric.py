@@ -38,8 +38,12 @@ def destroy_threshold(level: int) -> str | None:
 
 
 def spell_dc(ctx: RuleContext) -> int:
+    """CD degli incantesimi della classe, oggetti compresi, come sulla scheda: Incanalare Divinità la usa (anche i circoli
+    del druido 2024)."""
     from core.game.stats import effective_ability_mod  # import locale: stats usa il catalogo
-    return 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
+    from core.rules.spellcasting import caster_stats  # import locale: spellcasting usa il catalogo
+    mine = next((s.save_dc for s in caster_stats(ctx.char) if ctx.class_row is not None and s.class_id == ctx.class_row.id), None)
+    return mine if mine is not None else 8 + ctx.char.proficiency_bonus + effective_ability_mod(ctx.char, "wisdom")
 
 
 def _wisdom_mod(ctx: RuleContext) -> int:

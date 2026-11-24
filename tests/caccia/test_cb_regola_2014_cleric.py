@@ -134,7 +134,6 @@ async def test_i_dadi_del_colpo_divino_hanno_il_tipo_del_dominio(client, dominio
                     copre=["carta:2014/classes/cleric.md#Incanalare Divinità / Channel Divinity (Chierico 2, pag. 59)",
                            "carta:2014/classes/cleric.md#Incanalare Divinità: Scacciare Non Morti / Channel Divinity: Turn Undead (Chierico 2, pag. 59)",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-1665: difforme dal manuale, confermato")
 async def test_la_cd_di_incanalare_divinita_e_quella_degli_incantesimi_del_chierico(client):
     cid = await _chierico(client, 2, wisdom=16)  # 8 + 2 + 3 = 13
     r = await client.post(f"/characters/{cid}/items", json={"name": "Amuleto", "item_type": "accessory",
