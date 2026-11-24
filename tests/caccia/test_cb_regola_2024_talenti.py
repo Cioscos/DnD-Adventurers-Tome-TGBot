@@ -114,7 +114,6 @@ async def test_il_dono_del_richiamo_non_si_prende_con_la_sola_magia_del_patto(cl
 @pytest.mark.caccia(id="CB-3464", fonte="2024 · Talenti · Armatura media · pag. 205", zona="regola:2024/talenti", voce="edizioni",
                     copre=["carta:2024/feats.md#Armatura media / Moderately Armored (pag. 205) - Generale (livello 4+, Addestramento con armature leggere)",
                            "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3464: difforme dal manuale, confermato")
 async def test_armatura_media_2024_non_addestra_agli_scudi(client):
     ch = await _pg(client, "rogue", 4)
     assert not any("scud" in a.lower() or "shield" in a.lower() for a in ch["general_proficiencies"]["armor"])

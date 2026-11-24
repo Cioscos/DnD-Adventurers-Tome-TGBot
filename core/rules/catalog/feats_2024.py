@@ -144,7 +144,7 @@ _register(
         label=_both("Mente protetta: il TS fallito diventa un successo", "Guarded Mind: the failed save becomes a success")),)),
     _f24("martial_weapon_training", proficiency_grants={"weapons": ("martial",)}),
     _f24("medium_armor_master", modifiers=(Modifier("ac", 1, when=_medium_armor_dex),)),
-    _f24("moderately_armored", proficiency_grants={"armor": ("medium", "shields")}),
+    _f24("moderately_armored", proficiency_grants={"armor": ("medium",)}),  # 2024: gli scudi li dà Armatura leggera
     _f24("mounted_combatant"),
     _f24("piercer",
          modifiers=(Modifier("crit_dice", 1, when=lambda c: _weapon_damage(c) and _weapon_type(c) == "piercing"),),
