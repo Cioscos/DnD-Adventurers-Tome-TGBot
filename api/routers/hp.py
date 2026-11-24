@@ -895,7 +895,8 @@ async def rest(
     rest_type = body.rest_type
     receivers = await _rest_temp_receivers(session, char, edition, body.temp_hp_allies)  # prima di ogni scrittura del riposo
     chosen_resistance = _rest_resistance(char, body.fiendish_resilience)
-    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and rest_type != "short":
+    short_like = rest_type == "short" or (body.interrupted and edition == "2024")  # 2024: il lungo interrotto vale un breve (pag. 370-371)
+    if (body.natural_recovery or body.arcane_recovery or body.sorcerous_restoration or body.memorize_spell) and not short_like:
         raise HTTPException(status_code=422, detail={"code": "natural_recovery_short_only"})
     if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.

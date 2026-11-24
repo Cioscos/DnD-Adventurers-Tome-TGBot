@@ -59,3 +59,18 @@ async def test_la_cd_di_concentrazione_usa_il_colpo_intero_quando_la_forma_selva
     assert r.json()["current_hit_points"] == 20  # la forma prende 10, l'eccesso di 20 passa al druido
     # un solo colpo subito dalla stessa creatura: CD metà di 30, non dell'eccesso
     assert r.json()["concentration_save"]["dc"] == 15
+
+
+@pytest.mark.caccia(id="CB-4313", fonte="2024 · Mago · Recupero Arcano · pag. 166; Glossario · Riposo Lungo, interrotto dopo almeno un'ora: benefici di un Riposo Breve · pag. 370-371",
+                    zona="regola:2024/wizard", voce="interazione",
+                    copre=["carta:2024/classes/wizard.md#Recupero Arcano / Arcane Recovery (Mago 1, pag. 166)",
+                           "POST /characters/{char_id}/rest"])
+async def test_recupero_arcano_vale_nel_riposo_lungo_2024_interrotto(client):
+    cid = await _pg(client, "wizard", 5, "2024")
+    slot = next(s for s in (await client.get(f"/characters/{cid}")).json()["spell_slots"] if s["level"] == 1)
+    r = await client.patch(f"/characters/{cid}/spell_slots/{slot['id']}", json={"used": 2})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "interrupted": True, "arcane_recovery": {"1": 2}})
+    # il lungo interrotto dopo almeno un'ora vale un riposo breve: il Recupero Arcano si fa
+    assert r.status_code == 200, r.text
+    assert next(s for s in r.json()["spell_slots"] if s["level"] == 1)["used"] == 0
