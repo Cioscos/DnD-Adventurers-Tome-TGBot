@@ -69,7 +69,6 @@ async def test_un_bardo_incapacitato_non_usa_azioni_bonus_ne_reazioni(client, co
 @pytest.mark.caccia(id="CB-2214", fonte="2024 · Bardo · Collegio del Valore · Magia da Battaglia · pag. 67", zona="regola:2024/bard",
                     voce="regola", copre=["carta:2024/classes/bard.md#Magia da Battaglia / Battle Magic (Collegio del Valore 14, pag. 67)",
                                           "POST /characters/{char_id}/spells/{spell_id}/use", "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2214: difforme dal manuale, confermato")
 async def test_magia_da_battaglia_non_segue_un_incantesimo_da_un_minuto(client):
     cid = await _bard24(client, 14, VALOR)
     sword = await _sword(client, cid)

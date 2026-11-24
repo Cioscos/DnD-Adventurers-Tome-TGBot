@@ -181,7 +181,7 @@ def _mark_turn_slot(char: Character, spell: Spell, before: tuple, in_encounter: 
         # fuori scontro: già segnata, nessun costo in più
 
 
-def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
+def _mark_cast(char: Character, spell: Spell, spent_slot: bool, ritual: bool) -> None:
     """Turno salvato per le regole sugli incantesimi nello stesso turno; le reazioni possono cadere fuori dal proprio."""
     kind = _cast_kind(char, spell)
     if spell.srd_index:  # Abiurazione Migliorata: la prova dopo controincantesimo o dissolvi magie, anche se lanciato in reazione
@@ -197,7 +197,9 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool) -> None:
     turn["leveled_cast"] = bool(turn.get("leveled_cast")) or spell.level >= 1
     turn["spell_slot_cast"] = turn["spell_slot_cast"] or spent_slot
     turn["bonus_spell_cast"] = turn["bonus_spell_cast"] or kind == "bonus"
-    if kind == "action":  # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale)
+    # Magia da Battaglia: quale classe ha lanciato con l'azione (l'ultimo lancio vale). Un rituale o un tempo di 1 minuto o più
+    # non è un lancio con l'azione (2014 pag. 55 e 201-202; 2024 pag. 67 e 236: «Tempi lunghi, Rituali compresi»)
+    if kind == "action" and not ritual and not _LONG_CASTING.search(spell.casting_time or ""):
         casters = caster_stats(char)
         turn["action_spell_class"] = spell.class_id or (casters[0].class_id if len(casters) == 1 else None)
         turn["action_spell_level"] = spell.level  # Magia da Guerra: 0 è un trucchetto
@@ -312,7 +314,7 @@ def _consume_cast(
                      meta={"slot_level": slot.level, **({"is_pact": True} if slot.is_pact else {})})
     else:
         add_history(session, char.id, "spell_cast", f"Lanciato {spell.name}")
-    _mark_cast(char, spell, slot is not None)
+    _mark_cast(char, spell, slot is not None, ritual)
     if slot is not None and spell.srd_index:  # Rompi-Incantesimi: lo slot dell'ultimo lancio del turno, da rendere a lancio concluso
         turn = get_turn(char)
         turn["last_slot_cast"] = {"spell": spell.srd_index, "level": slot.level, "pact": bool(slot.is_pact)}
