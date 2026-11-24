@@ -85,6 +85,17 @@ async def _get_companion(session: AsyncSession, char: Character, comp_id: int) -
     return comp
 
 
+async def _refuse_second_beast(session: AsyncSession, char: Character, comp: Companion) -> None:
+    """Una bestia a 0 PF non si rialza a mano se un'altra è viva: una sola alla volta, come alla creazione."""
+    if comp.feature_key not in BEAST_KEYS or comp.current_hp > 0:
+        return
+    alive = await session.scalar(select(Companion.id).where(
+        Companion.character_id == char.id, Companion.feature_key == comp.feature_key,
+        Companion.id != comp.id, Companion.current_hp > 0).limit(1))
+    if alive is not None:
+        raise HTTPException(status_code=422, detail="companion_exists")
+
+
 @router.get("/{char_id}/companions", response_model=list[CompanionRead])
 async def list_companions(
     char_id: int,
@@ -166,6 +177,8 @@ async def update_companion(
         rows = (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
         if sum(c.kind == "wild_shape" and not other_edition(char, c) for c in rows) >= limits.known_forms:
             raise HTTPException(status_code=422, detail="known_forms_limit")  # come alla creazione
+    if changes.get("current_hp"):
+        await _refuse_second_beast(session, char, comp)
     for k, v in changes.items():
         setattr(comp, k, v)
     if comp.is_active and comp.kind != "wild_shape":
@@ -347,6 +360,8 @@ async def companion_hp(
         comp.temp_hp -= absorbed
         comp.current_hp = max(0, comp.current_hp - (value - absorbed))
     elif body.op == "heal":
+        if body.value > 0:
+            await _refuse_second_beast(session, char, comp)
         comp.current_hp = min(_effective_max_hp(char, comp), comp.current_hp + body.value)
     else:
         comp.temp_hp = body.value

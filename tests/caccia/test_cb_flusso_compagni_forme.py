@@ -784,3 +784,20 @@ async def test_la_copia_di_un_nome_gia_salvato_non_lo_svuota(client, test_sessio
     r = await client.post(f"/characters/{cid}/duplicate")
     assert r.status_code in (200, 201), r.text
     assert r.json()["name"] != ""
+
+
+@pytest.mark.caccia(id="CB-1510", fonte="2024 · Ranger · Signore delle Bestie · Compagno Primordiale · pag. 122 (una sola bestia alla volta)",
+                    zona="flusso:compagni-forme", voce="limiti", copre=["PATCH /characters/{char_id}/companions/{comp_id}/hp", "PATCH /characters/{char_id}/companions/{comp_id}"])
+@pytest.mark.parametrize("via", ["cura", "modifica"])
+async def test_una_bestia_morta_non_torna_accanto_a_una_viva(client, via):
+    cid = await _sub(client, 5, "beast_master")
+    await _bestia24(client, cid, "land")
+    vecchia = (await _lista(client, cid))[0]["id"]
+    await client.patch(f"/characters/{cid}/companions/{vecchia}/hp", json={"op": "damage", "value": 999})
+    assert (await _primordiale(client, cid)).status_code == 201
+    if via == "cura":
+        r = await client.patch(f"/characters/{cid}/companions/{vecchia}/hp", json={"op": "heal", "value": 5})
+    else:
+        r = await client.patch(f"/characters/{cid}/companions/{vecchia}", json={"current_hp": 5})
+    assert r.status_code == 422 and r.json()["detail"] == "companion_exists", r.text
+    assert sum(c["feature_key"] == PRIMORDIALE and c["current_hp"] > 0 for c in await _lista(client, cid)) == 1
