@@ -108,7 +108,6 @@ async def test_l_opzione_del_cacciatore_non_si_cambia_due_volte_senza_riposo(cli
                     zona="regola:2024/ranger", voce="regola",
                     copre=["carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)",
                            "carta:2024/general.md#Long Rest (Riposo Lungo) (pag. 370-371)", "POST /characters/{char_id}/rest"])
-@pytest.mark.xfail(strict=True, reason="CB-2515: difforme dal manuale, confermato")
 async def test_la_bestia_primordiale_ferita_guarisce_col_riposo_lungo(client):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)

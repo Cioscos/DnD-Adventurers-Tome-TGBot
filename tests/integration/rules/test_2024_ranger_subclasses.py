@@ -117,6 +117,17 @@ async def test_a_new_summon_replaces_the_beast_and_a_long_rest_returns_the_use(c
     assert len(beasts) == 1 and beasts[0]["statblock"]["primal_type"] == "sky"
 
 
+async def test_a_long_rest_returns_all_the_spent_hit_dice_of_the_beast(client):
+    # 2024 Glossario, Riposo Lungo pag. 370: tutti i Dadi Vita spesi (il 2014 ne ridà metà)
+    cid = await _sub(client, 5, "beast_master")
+    comp = await _beast(client, cid)
+    assert (await client.patch(f"/characters/{cid}/companions/{comp['id']}/hp", json={"op": "damage", "value": 20})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/companions/{comp['id']}/hit-dice", json={"count": 4})).status_code == 200
+    await _rest(client, cid, "long")
+    back = next(c for c in await _companions(client, cid) if c["feature_key"] == PC)
+    assert back["current_hp"] == 30 and back["statblock"]["hit_dice_spent"] == 0
+
+
 async def test_a_dead_beast_is_restored_with_a_slot_and_the_magic_action(client):
     cid = await _sub(client, 5, "beast_master")
     comp = await _beast(client, cid)
