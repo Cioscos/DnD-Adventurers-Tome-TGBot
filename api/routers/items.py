@@ -724,6 +724,8 @@ def _base_damage(
     ``attack_mode``, ``grip``, ``offhand``: i privilegi che valgono solo in certe condizioni (Ira e Critico Brutale in
     mischia, Duellare con una mano, Combattere con Due Armi con l'altra) li leggono dal contesto. ``rerolled`` riceve
     ``[vecchio, nuovo]`` per ogni dado che un privilegio ha fatto ritirare (Combattere con Armi Possenti)."""
+    if not damage_dice_str:  # arma senza danni (Rete): né dadi né caratteristica
+        return [0], 0
     dice_bonus = 0
     applied = modifiers_for(char, "damage", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand)
     if damage_dice_str == "1":
@@ -823,11 +825,12 @@ async def attack_with_weapon(
     refuse_if_incapacitated(char)
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    damage_dice_str: str = meta.get("damage_dice") or "1d4"  # anche vuota o nulla
     properties: list[str] = meta.get("properties", [])
     magic_bonus = weapon_magic_bonus(item)
 
     has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
+    # Senza notazione (anche vuota o nulla) 1d4, salvo un'arma Speciale: la Rete non ha danni (2014 pag. 148-149).
+    damage_dice_str: str = meta.get("damage_dice") or ("" if has_prop("special") else "1d4")
     attack_mode = body.attack_mode if body else "melee"
     # L'impugnatura a due mani di Versatile vale in mischia (2014 pag. 147): lanciata o con l'altra mano è a una mano.
     grip = body.grip if body and attack_mode == "melee" else "one"

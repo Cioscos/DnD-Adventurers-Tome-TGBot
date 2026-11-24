@@ -58,7 +58,6 @@ async def test_lancia_lanciata_a_due_mani_non_usa_il_dado_versatile(client, dadi
                     copre=["carta:2014/equipment.md#Armi / Weapons (pag. 149)",
                            "carta:2014/equipment.md#Armi Speciali / Special Weapons (pag. 148)",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3162: difforme dal manuale, confermato")
 async def test_la_rete_del_catalogo_non_infligge_danni(client, dadi):
     cid = await _pg(client, dexterity=16)
     # i metadati che il catalogo SRD dà alla Rete: nessun dado di danno

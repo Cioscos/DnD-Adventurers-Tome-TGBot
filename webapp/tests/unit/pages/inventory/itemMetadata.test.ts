@@ -48,6 +48,11 @@ describe('weapon magic fields', () => {
     })
     expect(f).toMatchObject({ magic_bonus: '1', versatile_dice: '1d10', weapon_category: 'simple' })
   })
+  it('a weapon without damage dice (Net) reopens without dice and saves without them (CB-3162)', () => {
+    const f = itemToFormData({ name: 'Rete', item_type: 'weapon', quantity: 1, weight: 3, item_metadata: { properties: ['prop_special', 'prop_thrown'] } })
+    expect(f.damage_dice).toBe('')
+    expect(buildItemMetadata(f)).not.toHaveProperty('damage_dice')
+  })
 })
 
 describe('magic item fields', () => {
