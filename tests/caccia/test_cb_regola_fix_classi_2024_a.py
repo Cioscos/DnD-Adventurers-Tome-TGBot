@@ -1,12 +1,16 @@
 """Controlli scritti dal correttore del gruppo classi-2024-a per i dubbi risolti come difetti."""
 import pytest
 
-from tests.integration.rules.test_2014_barbarian import _ability
+from tests.integration.rules.test_2014_barbarian import _ability, _keys, _weapon
 from tests.integration.rules.test_2024_barbarian import _barbarian, _new_turn, _rage
 from tests.integration.rules.test_2024_barbarian_paths import _use
+from tests.integration.rules.test_2024_barbarian_strike import _damage, _deferred
 
 RAGE = "barbarian.rage"
+RECKLESS = "barbarian.reckless_attack"
+FRENZY = "barbarian.frenzy"
 TREE = "Cammino dell'Albero del Mondo"
+BERSERKER = "Cammino del Berserker"
 
 
 @pytest.mark.caccia(id="CB-4471", fonte="2024 · Barbaro, Cammino dell'Albero del Mondo · Viaggio lungo l'Albero · pag. 56",
@@ -22,3 +26,20 @@ async def test_viaggio_lungo_l_albero_a_150_piedi_gia_all_ingresso_in_ira(client
     await _new_turn(client, cid)
     r = await _use(client, cid, "travel_along_the_tree", params={"far": True})
     assert r.status_code == 409, "la versione a 150 piedi, una volta per Ira, è già stata usata entrando in Ira"
+
+
+@pytest.mark.caccia(id="CB-4472", fonte="2024 · Barbaro, Cammino del Berserker · Frenesia · pag. 54; Barbaro · Attacco Irruento · pag. 52",
+                    zona="regola:2024/barbarian", voce="interazione",
+                    copre=["carta:2024/classes/barbarian.md#Frenesia / Frenzy (Cammino del Berserker 3, pag. 54)",
+                           "carta:2024/classes/barbarian.md#Attacco Irruento / Reckless Attack (Barbaro 2, pag. 52)",
+                           "POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/attack/{attack_id}/damage"])
+async def test_frenesia_solo_se_l_attacco_irruento_e_dichiarato_in_ira(client):
+    cid = await _barbarian(client, 5, BERSERKER, strength=16)
+    ascia = await _weapon(client, cid)
+    await _new_turn(client, cid)
+    await _deferred(client, cid, ascia, options=[RECKLESS], dice=[1, 1])  # Irruento senza Ira: mancato
+    assert (await _rage(client, cid)).status_code == 200
+    colpo = await _deferred(client, cid, ascia, dice=[15, 15])  # Attacco Extra, ora in Ira
+    assert FRENZY not in await _keys(client, cid, "attack", item_id=ascia)
+    r = await _damage(client, cid, colpo, [FRENZY])
+    assert r.status_code == 409, "l'Attacco Irruento è stato usato prima che l'Ira fosse attiva: niente Frenesia"

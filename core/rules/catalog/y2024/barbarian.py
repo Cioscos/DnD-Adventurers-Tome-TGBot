@@ -79,6 +79,12 @@ def _reckless_declared(ctx: RuleContext) -> bool:
     return once_used(ctx.char, RECKLESS)
 
 
+def _reckless_in_rage(ctx: RuleContext) -> bool:
+    """Attacco Irruento usato in questo turno con l'Ira già attiva (Frenesia 2024: «se usi l'Attacco Irruento mentre sei in Ira»)."""
+    state = next((s for s in ctx.char.active_states or [] if s.get("key") == "reckless"), None)
+    return _reckless_declared(ctx) and bool(((state or {}).get("data") or {}).get("raging"))
+
+
 def _ability_row(ctx: RuleContext, key: str) -> Any:
     return next((a for a in ctx.char.abilities if a.feature_key == key and a.source_class_id == getattr(ctx.class_row, "id", None)), None)
 
@@ -237,8 +243,10 @@ RAGE_USE = OnUse(
 # ---------------------------------------------------------------------------
 
 def _reckless_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
-    """Fino all'inizio del TUO turno seguente: lo stato finisce al «nuovo turno» di chi lo porta, non a quello di un altro."""
-    begin_state(ctx.char, StateSpec("reckless", rounds=1, ends_on=("new_turn",), data={"others": [RECKLESS]}), RECKLESS, "Attacco Irruento")
+    """Fino all'inizio del TUO turno seguente: lo stato finisce al «nuovo turno» di chi lo porta, non a quello di un altro.
+    ``raging``: l'Ira era attiva quando lo si è usato (Frenesia lo chiede)."""
+    begin_state(ctx.char, StateSpec("reckless", rounds=1, ends_on=("new_turn",), data={"others": [RECKLESS], "raging": raging(ctx)}),
+                RECKLESS, "Attacco Irruento")
 
 
 RECKLESS_ATTACK = RollOptionSpec(
@@ -318,7 +326,7 @@ def _frenzy_dice(ctx: RuleContext, _inputs: dict) -> str:
 FRENZY = RollOptionSpec(
     key=f"{CK}.frenzy", phase="after_hit", rolls=("attack",), once_per_turn=True, extra_dice=_frenzy_dice,
     label=_both("Frenesia: danni extra al primo bersaglio colpito del turno", "Frenzy: extra damage to the first target hit this turn"),
-    available=lambda c: raging(c) and _strength_attack(c) and _reckless_declared(c),
+    available=lambda c: raging(c) and _strength_attack(c) and _reckless_in_rage(c),
 )
 
 
