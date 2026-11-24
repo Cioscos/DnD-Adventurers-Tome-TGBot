@@ -45,6 +45,12 @@ def _named(v: str, info: ValidationInfo) -> str:
     return v.strip()
 
 
+def _named_or_mark(v: str, info: ValidationInfo) -> str:
+    """Le versioni fino alla 3.14.7 salvavano incantesimi e capacità senza nome: il file resta importabile, con un segno al posto del vuoto."""
+    return v if (info.context or {}).get("lenient") else v.strip() or "?"
+
+
+MarkedName = Annotated[str, AfterValidator(_named_or_mark)]
 Named = Annotated[str, AfterValidator(_named)]
 Int0 = Annotated[int, _rng(0, 1_000_000)]
 Restoration = Literal["long_rest", "short_rest", "none", "manual"]
@@ -218,7 +224,7 @@ class ExportItem(BaseModel):
 
 class ExportSpell(BaseModel):
     export_key: str = Field(max_length=20)
-    name: Named = Field(max_length=200)
+    name: MarkedName = Field(max_length=200)
     level: Annotated[int, _rng(0, 9)] = 0
     description: Optional[str] = None
     casting_time: Optional[str] = None
@@ -257,7 +263,7 @@ _OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted"
 
 
 class ExportAbility(BaseModel):
-    name: Named = Field(max_length=200)
+    name: MarkedName = Field(max_length=200)
     description: Optional[str] = None
     max_uses: Optional[Int0] = None
     uses: Optional[Int0] = None
@@ -360,6 +366,12 @@ class ExportConditionEffect(BaseModel):
     save_dc: Optional[Annotated[int, _rng(1, 100)]] = None
     save_edge: Optional[Literal["start", "end"]] = None
     source_note: Optional[str] = Field(None, max_length=120)
+
+    @field_validator("expiry_count")
+    @classmethod
+    def _max_rounds(cls, v: Optional[int], info: ValidationInfo) -> Optional[int]:
+        """D-016: al massimo 9999 round; un file più vecchio si accorcia, non si rifiuta."""
+        return v if v is None or (info.context or {}).get("lenient") else min(v, 9999)
 
 
 class CharacterExport(BaseModel):

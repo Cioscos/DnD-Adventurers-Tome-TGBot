@@ -7,12 +7,12 @@ rising from 0, condition history logging) without duplicating logic.
 from __future__ import annotations
 
 
-from sqlalchemy import event, inspect, update
+from sqlalchemy import event, inspect, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_object_session
 from sqlalchemy.util import await_only
 from sqlalchemy.orm import Session, attributes
 
-from core.db.models import Character, Companion
+from core.db.models import Character, Combatant, Companion, ConditionEffect, Encounter, PendingSave, Spell
 from core.data.labels import condition_label
 from api.services.history import add_history
 from api.services.beast_companion import drop_primal_beast
@@ -24,7 +24,7 @@ from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool = False) -> None:
@@ -231,6 +231,37 @@ async def apply_conditions(session: AsyncSession, char: Character,
     return {"changed": changed}
 
 
+def _still_concentrating(session: Session, effect: dict) -> bool:
+    source = session.get(Character, effect.get("source_character_id") or 0)
+    return source is not None and source.concentrating_spell_id is not None and source.concentrating_spell_id == effect.get("source_spell_id")
+
+
+def _restore_effect(session: Session, effect: dict) -> None:
+    """Rimette durata, TS e fonte della condizione sospesa. shortcut: il tempo passato sospesa non scala la durata, da rivedere se serve."""
+    data = dict(effect)
+    for column, model in (("source_character_id", Character), ("source_combatant_id", Combatant),
+                          ("source_spell_id", Spell), ("encounter_id", Encounter)):
+        if data.get(column) is not None and session.get(model, data[column]) is None:  # cancellata nel frattempo
+            data[column] = None
+    session.add(ConditionEffect(**data))
+
+
+def _drop_orphan_effects(session: Session, char: Character) -> None:
+    """Una condizione spenta senza passare da ``apply_conditions`` perde durata, TS e fonte: la riga esiste solo finché è attiva."""
+    hist = attributes.get_history(char, "conditions")
+    old = hist.deleted[0] if hist.deleted else None
+    off = [c for c, v in (old or {}).items() if v and not (char.conditions or {}).get(c)]
+    if not off:
+        return
+    for row in session.scalars(select(ConditionEffect).where(
+            ConditionEffect.character_id == char.id, ConditionEffect.slug.in_(off), ConditionEffect.pending.is_(False))).all():
+        # con un TS ripetuto in sospeso la riga resta: il tiro risponde «condizione finita» e lo archivia
+        if session.scalar(select(PendingSave.id).where(PendingSave.effect_id == row.id, PendingSave.status == "pending").limit(1)) is None:
+            for save in session.scalars(select(PendingSave).where(PendingSave.effect_id == row.id)).all():
+                session.delete(save)
+            session.delete(row)
+
+
 def _restore_suspended(session: Session, char: Character) -> None:
     """La concentrazione di chi ha sospeso delle condizioni è finita: tornano sul ricevente, se nessuno le ha cambiate nel frattempo."""
     pending = (char.settings or {}).get(COND_RELEASE)
@@ -243,6 +274,12 @@ def _restore_suspended(session: Session, char: Character) -> None:
             continue
         marks = dict((receiver.settings or {}).get(SUSPENDED_ON) or {})
         back = [c for c in entry["conditions"] if marks.get(c) == char.id and c not in immune_conditions(receiver)]
+        saved = dict((receiver.settings or {}).get(SUSPENDED_EFFECTS) or {})
+        effects = {c: saved.pop(c) for c in entry["conditions"] if c in saved}
+        if effects:
+            receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_EFFECTS}, **({SUSPENDED_EFFECTS: saved} if saved else {})}
+        # legata a una concentrazione finita durante la sospensione: non torna
+        back = [c for c in back if not (c in effects and effects[c].get("ends_with_concentration") and not _still_concentrating(session, effects[c]))]
         for c in entry["conditions"]:
             if marks.get(c) == char.id:
                 marks.pop(c)
@@ -251,6 +288,8 @@ def _restore_suspended(session: Session, char: Character) -> None:
         if back:
             receiver.conditions = {**(receiver.conditions or {}), **{c: True for c in back}}
             for c in back:
+                if c in effects:
+                    _restore_effect(session, effects[c])
                 add_history(session, receiver.id, "condition_change", f"Condizione tornata: {condition_label(c)} (la concentrazione di {char.name} è finita)",
                              meta={"slug": c, "active": True, "restored": True})
 
@@ -325,6 +364,7 @@ def _release_given_temp_hp(session: Session, _ctx, _instances) -> None:
     shortcut: un valore uguale o minore preso dopo da un'altra fonte svanisce insieme a questo; da rivedere se serve la provenienza."""
     for char in [o for o in session.dirty if isinstance(o, Character)]:
         _close_ended_wild_shape(session, char)
+        _drop_orphan_effects(session, char)
         _restore_suspended(session, char)
         _drop_given_spells(session, char)
         _end_spent_spells(session, char)

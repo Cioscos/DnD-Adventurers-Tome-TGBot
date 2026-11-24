@@ -45,7 +45,7 @@ from api.services.choices import take_feat
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, REPLACED_AT_REST, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, TOOL_SEED_FLAG, sync_level_choices
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
 from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG
 from api.routers import maps, notes, silhouette
@@ -95,7 +95,7 @@ from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, upsert_effect
+from api.services.condition_effects import ExpirySpec, clear_effects_for, effects_for_character, pending_read, upsert_effect
 from api.services.durations import tick_rounds
 from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
@@ -108,7 +108,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 SERVER_OWNED_SETTINGS = (TOOL_SEED_FLAG, "hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_level", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
-                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_EFFECTS, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
                          SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, ASSASSIN_KITS_FLAG)
 
@@ -558,6 +558,8 @@ async def update_conditions(
         elif not isinstance(val, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
             raise HTTPException(status_code=422, detail="condition_must_be_bool")
     was_on = {slug for slug, val in current.items() if val}
+    # una condizione che si accende ora non riprende un effetto rimasto da prima
+    await clear_effects_for(session, ("character", char_id), [c for c, v in changes.items() if v and c not in was_on and c != "exhaustion"])
     result = await apply_conditions(session, char, changes)
     # apply_conditions already dropped the effects of conditions turned off
     # condizione già accesa con un effetto del master o con CD o fonte (incantesimi, privilegi di altri): la durata del

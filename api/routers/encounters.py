@@ -30,6 +30,7 @@ from api.schemas.encounter import (
     InitiativeRollRequest,
     PendingSaveResolve,
     ReorderRequest,
+    check_condition_value,
 )
 from api.services import telegram_notify
 from api.services.d20 import d20_records, resolve_body
@@ -584,6 +585,12 @@ async def patch_combatant(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": "pc_conditions_on_sheet"},
         )
+    for slug, value in (body.conditions or {}).items():  # ciò che cambia: un valore vecchio rimandato non blocca
+        if value != (comb.conditions or {}).get(slug):
+            try:
+                check_condition_value(slug, value)
+            except ValueError as err:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(err)) from err
     touches_hp = (
         body.current_hp is not None or body.max_hp is not None or body.ac is not None
     )

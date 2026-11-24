@@ -56,9 +56,12 @@ async def test_import_rifiuta_classi_oggetti_incantesimi_e_capacita_senza_nome(c
     cid, dati = await _file_di_prova(client)
     assert (await client.post("/characters/import", json=dati)).status_code == 201
     dati[parte][-1][campo] = "   "
-    assert (await client.post("/characters/import", json=dati)).status_code == 422
-    if parte in ("spells", "abilities"):
+    r = await client.post("/characters/import", json=dati)
+    if parte in ("spells", "abilities"):  # l'app fino alla 3.14.7 li salvava senza nome: il file resta importabile, il vuoto no
+        assert r.status_code == 201 and all(x["name"].strip() for x in r.json()[parte])
         assert (await client.post(f"/characters/{cid}/{parte}", json={"name": "   "})).status_code == 422
+    else:
+        assert r.status_code == 422
 
 
 @pytest.mark.caccia(id="CB-1506", fonte="invariante (come CB-1374): la caratteristica da incantatore è una delle sei", zona="flusso:import-export-condivisione",

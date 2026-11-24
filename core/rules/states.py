@@ -256,6 +256,8 @@ SPELL_SPENT = "spell_spent"
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
 # ``SUSPENDED_ON``: {condizione: id di chi la sospende}, cancellato se la condizione cambia per altra via (allora non torna).
 SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON = "suspended_conditions", "conditions_release", "conditions_suspended_on"
+# {condizione: riga di durata, TS e fonte tolta con la sospensione}: torna con la condizione
+SUSPENDED_EFFECTS = "conditions_suspended_effects"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
 
 

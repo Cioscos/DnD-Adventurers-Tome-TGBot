@@ -26,7 +26,7 @@ from core.rules.feature_sync import (
 )
 from core.rules.level_choices import FREE_KNOWN_KEY
 from api.services.spell_slots import CREATED_SLOTS, clean_created_slots
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_KEY, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES
 from core.rules.subclasses import sync_subclass_keys
 from api.services.item_charges import attunement_limit
 from core.game.item_bonuses import is_attuned
@@ -154,7 +154,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
         ],
         "companions": [c.__dict__ for c in sorted(char.companions, key=lambda c: c.id)],
         "condition_effects": [e.__dict__ for e in await effects_for_character(session, char.id)
-                              if e.expiry_count is not None or e.save_dc is not None],
+                              if e.expiry_count is not None or e.save_dc is not None]
+        + list(((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).values()),  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
     })
 
 
@@ -268,6 +269,10 @@ async def import_character(
     await session.flush()  # assegna gli id nuovi
 
     _link_containers(data.items, items)
+    # gli stati attivi non viaggiano: ciò che un incantesimo sospendeva (Calmare Emozioni) sulla copia è di nuovo acceso
+    if isinstance(suspended := (char.settings or {}).get(SUSPENDED_ON), dict):
+        char.conditions = {**(char.conditions or {}), **{c: True for c in suspended
+                                                          if c != "exhaustion" and (char.conditions or {}).get(c) is False}}
     for e in data.condition_effects:  # solo per le condizioni davvero attive sulla scheda importata
         if (char.conditions or {}).get(e.slug):
             await upsert_effect(
@@ -300,14 +305,9 @@ async def import_character(
         if key in (char.settings or {}):
             char.settings = {**char.settings, key: clean(char.settings[key])}
 
-    # gli stati attivi non viaggiano: ciò che un incantesimo sospendeva (Calmare Emozioni) sulla copia è di nuovo acceso
-    if isinstance(suspended := (char.settings or {}).get(SUSPENDED_ON), dict):
-        char.conditions = {**(char.conditions or {}), **{c: True for c in suspended
-                                                          if c != "exhaustion" and (char.conditions or {}).get(c) is False}}
-
     # un file importato passa dal retrofit per le sue classi (R34, R39): il segno del file non vale
     # gli id dei personaggi di un altro database non valgono qui
-    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, REPLACED_AT_REST, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON)}
+    char.settings = {k: v for k, v in (char.settings or {}).items() if k not in (RETROFIT_DONE, REPLACED_AT_REST, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_EFFECTS, SUSPENDED_ON)}
 
     for sp, row in zip(data.spells, spells):
         row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None

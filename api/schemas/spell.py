@@ -213,7 +213,7 @@ class SpellSlotUpdate(BaseModel):
 
 class ConcentrationUpdate(BaseModel):
     spell_id: Optional[int] = None  # null to drop concentration
-    rounds: Optional[int] = Field(default=None, ge=0)
+    rounds: Optional[int] = Field(default=None, ge=0, le=9999)  # D-016
 
 
 class RollDamageRequest(RollOptionsBody):

@@ -833,3 +833,81 @@ async def test_un_file_con_esaurimento_sospeso_non_diventa_acceso(client):
     r = await client.post("/characters/import", json=dati)
     assert r.status_code == 201, r.text
     assert (await _scheda(client, r.json()["id"]))["conditions"].get("exhaustion") is not True
+
+
+@pytest.mark.caccia(id="CB-1513", fonte="invariante (come CB-1296 e CB-1297): anche su un mostro una condizione è accesa o spenta", zona="flusso:condizioni", voce="contratto",
+                    copre=["PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}"])
+@pytest.mark.parametrize("condizioni", [{"blinded": 5}, {"exhaustion": 99}, {"exhaustion": "x"}, {"exhaustion": True}])
+async def test_il_master_non_scrive_valori_non_validi_su_un_mostro(client, test_session_factory, condizioni):
+    sid, _cid, _pc, mostro = await _gm_su_pg(client, test_session_factory)
+    url = f"/sessions/{sid}/encounter/combatants/{mostro}"
+    assert (await client.patch(url, json={"conditions": condizioni})).status_code == 422
+    assert (await client.patch(url, json={"conditions": {"blinded": True, "exhaustion": 2}})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1514", fonte="invariante: un effetto di condizione esiste solo finché la condizione è attiva", zona="flusso:condizioni", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/conditions"])
+async def test_spenta_da_un_altra_via_la_condizione_non_lascia_l_effetto(client, test_session_factory):
+    from core.db.models import Character
+    cid = await _pg(client)
+    await _cond(client, cid, {"poisoned": True})
+    async with test_session_factory() as s:
+        await upsert_effect(s, ("character", cid), "poisoned", save=SaveSpec("constitution", 15, "end"), source_note="Ragno")
+        await s.commit()
+    async with test_session_factory() as s:  # come Protezione dai Veleni, che scrive la mappa
+        char = await s.get(Character, cid)
+        char.conditions = {**char.conditions, "poisoned": False}
+        await s.commit()
+    assert (await _scheda(client, cid))["condition_effects"] == []
+
+
+@pytest.mark.caccia(id="CB-1515", fonte="2014 · Calmare Emozioni · pag. 218; 2024 · pag. 249 (la condizione è sospesa, poi torna)", zona="flusso:condizioni", voce="persistenza",
+                    copre=["PATCH /characters/{char_id}/concentration", "POST /characters/{char_id}/duplicate"])
+@pytest.mark.parametrize("ed", _ED)
+@pytest.mark.parametrize("copia", [False, True])
+async def test_calmare_emozioni_la_condizione_torna_con_cd_durata_e_fonte(client, test_session_factory, ed, copia):
+    cid = await _pg(client, ed, "cleric")
+    classe = (await _scheda(client, cid))["classes"][0]["id"]
+    sid = (await client.post(f"/characters/{cid}/spells", json={
+        "name": "calm-emotions", "level": 2, "srd_index": "calm-emotions", "is_prepared": True, "is_concentration": True, "class_id": classe})).json()["id"]
+    await _cond(client, cid, {"charmed": True})
+    async with test_session_factory() as s:
+        await upsert_effect(s, ("character", cid), "charmed", save=SaveSpec("wisdom", 14, "end"), source_note="Driade")
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": 2, "removal": {"targets": ["self"]}})
+    assert r.status_code == 200, r.text
+    assert (await _scheda(client, cid))["condition_effects"] == []
+    chi = cid
+    if copia:
+        chi = (await client.post(f"/characters/{cid}/duplicate")).json()["id"]
+    else:
+        await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    j = await _scheda(client, chi)
+    assert j["conditions"]["charmed"] is True
+    [e] = j["condition_effects"]
+    assert (e["save_dc"], e["source_note"]) == (14, "Driade")
+
+
+@pytest.mark.caccia(id="CB-1516", fonte="decisione D-016 (tests/caccia/decisioni.md): massimo 9999 round", zona="flusso:condizioni", voce="limiti",
+                    copre=["PATCH /characters/{char_id}/concentration", "POST /characters/import"])
+async def test_anche_concentrazione_e_file_si_fermano_a_9999_round(client):
+    cid = await _pg(client)
+    sid = (await client.post(f"/characters/{cid}/spells", json={"name": "Scudo", "level": 1, "is_concentration": True})).json()["id"]
+    for n, atteso in ((9999, 200), (10000, 422)):
+        assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": sid, "rounds": n})).status_code == atteso
+    await _cond(client, cid, {"blinded": True}, durations={"blinded": 3})
+    dati = (await client.get(f"/characters/{cid}/export")).json()
+    dati["condition_effects"][0]["expiry_count"] = 50000
+    nuovo = (await client.post("/characters/import", json=dati)).json()
+    assert nuovo["condition_effects"][0]["expiry_count"] == 9999
+
+
+@pytest.mark.caccia(id="CB-1522", fonte="decisione D-017 (tests/caccia/decisioni.md): protetta la condizione già attiva", zona="flusso:condizioni", voce="interazione",
+                    copre=["PATCH /characters/{char_id}/conditions"])
+async def test_riaccesa_senza_durata_non_riprende_l_effetto_rimasto(client, test_session_factory):
+    cid = await _pg(client)
+    async with test_session_factory() as s:
+        await upsert_effect(s, ("character", cid), "poisoned", save=SaveSpec("constitution", 15, "end"), source_note="Ragno")
+        await s.commit()
+    await _cond(client, cid, {"poisoned": True})
+    assert (await _scheda(client, cid))["condition_effects"] == []

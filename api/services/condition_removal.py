@@ -5,11 +5,12 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.services.condition_effects import effect_snapshot, effects_for_character
 from api.services.session_allies import ally_target, load_receiver
 from core.data.labels import condition_label
 from core.db.models import Character
 from core.rules.condition_removal import ConditionRemoval, outcome_lines, resolve_picks
-from core.rules.states import SUSPENDED_KEY, SUSPENDED_ON, begin_state
+from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state
 from core.rules.types import StateSpec
 
 
@@ -59,13 +60,19 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
         have = target.conditions or {}
         present = [c for c in conds if have.get(c)]
         changes = {c: (int(have[c]) - 1 if c == "exhaustion" else False) for c in present}
+        effects = {}
+        if removal.suppress:  # la riga cade con la condizione: si mette da parte per quando torna
+            effects = {e.slug: {k: v for k, v in effect_snapshot(e).items() if k != "id"}
+                       for e in await effects_for_character(session, target.id) if e.slug in present and not e.pending}
         if changes:
             await apply_conditions(session, target, changes)
         mine = target.id == caster.id
         if removal.suppress and present:
             held.append({"id": target.id, "conditions": present})
             target.settings = {**(target.settings or {}), SUSPENDED_ON: {**((target.settings or {}).get(SUSPENDED_ON) or {}),
-                                                                       **{c: caster.id for c in present}}}
+                                                                       **{c: caster.id for c in present}},
+                               SUSPENDED_EFFECTS: {**{k: v for k, v in ((target.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
+                                                      if k not in present}, **effects}}
         if not mine:
             for c in present:
                 add_history(session, target.id, "condition_change", f"Condizione {condition_label(c)} tolta da {caster.name}",
