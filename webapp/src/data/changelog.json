@@ -37,7 +37,9 @@
           "Gli orari nel feed della serata sono quelli locali.",
           "Un personaggio eliminato a serata aperta resta nel riepilogo.",
           "La pulizia della cronologia tiene sempre gli eventi più recenti.",
-          "Un doppio tocco su un pulsante di salvataggio non invia più due richieste."
+          "Un doppio tocco su un pulsante di salvataggio non invia più due richieste.",
+          "Creazione 2014: il background si sceglie prima della classe, così nessuna competenza va persa perché doppia.",
+          "Salvare le preferenze non perde più il livello del lancio dell'incantesimo in concentrazione."
         ],
         "en": [
           "Notes: a title with “/” no longer prevents editing, deleting or sharing the note; a “..” title is refused, because deleting it erased the character.",
@@ -72,7 +74,9 @@
           "Times in the session feed are local times.",
           "A character deleted during an open session stays in the recap.",
           "History cleanup always keeps the most recent events.",
-          "A double tap on a save button no longer sends two requests."
+          "A double tap on a save button no longer sends two requests.",
+          "2014 creation: the background is picked before the class, so no proficiency is lost as a duplicate.",
+          "Saving preferences no longer loses the casting level of the concentration spell."
         ]
       }
     },
