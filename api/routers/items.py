@@ -1009,6 +1009,7 @@ def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int
     use_options(session, char, "attack", None)  # è un tiro nuovo: il precedente non si ritocca più
     _set_pending_attack(char, None)
     spend(char, "attack")
+    _note_action_weapon(char, None, None)
     add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
     return WeaponAttackResult(
         weapon_name="Attacco a mano libera", to_hit_die=0, to_hit_bonus=0, to_hit_total=0, is_critical=False,
@@ -1087,6 +1088,7 @@ async def attack_unarmed(
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble, to_hit_total)
     if not (body and body.with_inspiration):
         spend(char, "attack", own_slot=_own_slot_attack(char, body))  # il rilancio con ispirazione è lo stesso attacco
+        _note_action_weapon(char, None, body)
         _note_martial_attack(char, None, body)
 
     firing_results = await dispatch(
