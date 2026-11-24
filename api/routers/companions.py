@@ -75,11 +75,11 @@ def _effective_max_hp(char: Character, comp: Companion) -> int:
     return stats.max_hp if stats is not None and stats.max_hp is not None else comp.max_hp
 
 
-async def _get_companion(session: AsyncSession, char_id: int, comp_id: int) -> Companion:
+async def _get_companion(session: AsyncSession, char: Character, comp_id: int) -> Companion:
     comp = (await session.execute(
-        select(Companion).where(Companion.id == comp_id, Companion.character_id == char_id)
+        select(Companion).where(Companion.id == comp_id, Companion.character_id == char.id)
     )).scalar_one_or_none()
-    if comp is None:
+    if comp is None or other_edition(char, comp):  # quello dell'altra edizione è nascosto: come se non ci fosse
         raise HTTPException(status_code=404, detail="Companion not found")
     return comp
 
@@ -147,7 +147,7 @@ async def update_companion(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     was_active = comp.is_active
     changes = body.model_dump(exclude_unset=True)
     for required in ("kind", "name", "statblock", "max_hp", "armor_class", "temp_hp", "is_active", "current_hp"):
@@ -182,7 +182,7 @@ async def activate_wild_shape(
     body: Annotated[CompanionActivate | None, Body()] = None,
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     if comp.is_active:
@@ -235,7 +235,7 @@ async def deactivate_wild_shape(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.is_active:
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             return _read(char, comp)
@@ -255,7 +255,7 @@ async def wild_heal(
     """Forma Selvatica da Combattimento (Druido 2014, Circolo della Luna): in forma, azione bonus e uno slot per curare la
     forma di 1d8 per livello dello slot. Il server tira; lo slot si prende con un UPDATE condizionato."""
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
     if active is None or active.id != comp.id:  # lo stato attivo è la verità, non il flag della riga
         raise HTTPException(status_code=409, detail={"code": "form_not_active"})
@@ -293,7 +293,7 @@ async def delete_companion(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.is_active:
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             end_form(char, comp)
@@ -314,7 +314,7 @@ async def companion_hp(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
     if body.op == "damage" and active is not None and active.id == comp.id and form_own_hp(char):
         # il danno alla forma attiva ha un solo percorso, quello di PATCH /hp: PF temporanei, chiusura a 0 PF, eccesso al personaggio
@@ -401,7 +401,7 @@ async def command_companion(
     """Ordine alla bestia del ranger. Con l'azione: Attacco, Aiuto, Disimpegno, Scatto o Schivata. Con l'azione bonus
     (Addestramento Straordinario, 7°) tutti tranne l'Attacco, e solo in un turno in cui la bestia non attacca."""
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.feature_key not in BEAST_KEYS:
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
@@ -443,7 +443,7 @@ async def spend_beast_hit_dice(
 ) -> HitDiceResult:
     """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0."""
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.feature_key != BEAST_COMPANION:
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
@@ -478,7 +478,7 @@ async def companion_attack(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionAttackResult:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     actions = (comp.statblock or {}).get("actions") or []
     if body.action_index >= len(actions):
         raise HTTPException(status_code=422, detail="unknown_action")

@@ -68,7 +68,6 @@ async def test_l_ordine_dato_a_una_bestia_eliminata_non_passa_alla_nuova(client)
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_order"
 
 
-@pytest.mark.xfail(strict=True, reason="CB-340 la bestia di altra edizione nascosta accetta ordini")
 @pytest.mark.caccia(id="CB-340", fonte="invariante: un compagno nascosto perché dell'altra edizione non riceve ordini e non costa azioni",
                     zona="flusso:compagni-forme", voce="edizioni",
                     copre=["POST /characters/{char_id}/companions/{comp_id}/command", "PATCH /characters/{char_id}"])
