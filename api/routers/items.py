@@ -29,7 +29,7 @@ from api.services.rules_options import (
 from api.services.rules_turn import attacks_allowed, get_turn, loading_applies, mark_once, refuse_if_incapacitated, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
-from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
+from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.modifiers import modifiers_for
 from core.data.damage_types import canonical_damage_type
 from api.services.dice_stats import record_dice
@@ -841,11 +841,7 @@ async def attack_with_weapon(
         raise HTTPException(status_code=422, detail="weapon_not_thrown")
 
     if body and body.with_inspiration:
-        last = get_turn(char).get("last_roll") or {}
-        # 2024: si ritira un d20 già tirato, senza non c'è nulla da ritirare (nel 2014 il rilancio è rifiutato più sotto)
-        if character_edition(char) == "2024" and (last.get("roll") != "attack" or last.get("item_id") != item.id):
-            raise HTTPException(status_code=409, detail={"code": "no_roll_to_reroll"})
-        spend_inspiration_reroll(char)
+        spend_inspiration_attack(char, item_id=item.id)
 
     # Determine ability modifier (effective: equipped-item bonuses included)
     ability_mod, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, body.ability if body else None)
@@ -1028,7 +1024,7 @@ async def attack_unarmed(
         return _unarmed_effect(session, char, body.effect, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
 
     if body and body.with_inspiration:
-        spend_inspiration_reroll(char)
+        spend_inspiration_attack(char)
 
     applied = modifiers_for(char, "attack", ability=ability, attack_mode=mode)
     opts = use_options(session, char, "attack", body, ability=ability, attack_mode=mode, grip="one")

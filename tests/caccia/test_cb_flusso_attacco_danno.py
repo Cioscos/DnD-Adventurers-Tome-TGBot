@@ -552,3 +552,25 @@ async def test_notazione_dei_dadi_non_valida_rifiutata_o_con_danno(client, dadi,
     w = max(i["id"] for i in r.json()["items"])
     dadi(*([3] * 12))
     assert (await _att(client, cid, w)).json()["damage_total"] > 0
+
+
+@pytest.mark.caccia(id="CB-761", fonte="2024 · Ispirazione Eroica · pag. 368 (si ritira un dado appena tirato)", zona="flusso:attacco-danno", voce="regola",
+                    copre=["POST /characters/{char_id}/attack/unarmed", "POST /characters/{char_id}/spells/{spell_id}/attack"])
+@pytest.mark.parametrize("tipo", ["senz_armi", "incantesimo"])
+async def test_ritiro_con_ispirazione_senza_tiro_rifiutato_anche_senza_arma(client, tipo):
+    cid = (await client.post("/characters", json={"name": "P"})).json()["id"]
+    await client.post(f"/characters/{cid}/classes", json={"class_name": "wizard", "level": 3, "hit_die": 6})
+    await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
+    sid = (await client.post(f"/characters/{cid}/spells", json={"name": "Dardo X", "level": 0, "attack_save": "ATK"})).json()["id"]
+    url = {"senz_armi": f"/characters/{cid}/attack/unarmed", "incantesimo": f"/characters/{cid}/spells/{sid}/attack"}
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    altro = url["incantesimo" if tipo == "senz_armi" else "senz_armi"]
+    extra = {"confirm_extra_attack": True} if tipo == "senz_armi" else {}
+    for prima in (None, altro):  # nessun tiro, oppure un tiro diverso
+        if prima:
+            assert (await client.post(prima, json={"die": 5})).status_code == 200
+        r = await client.post(url[tipo], json={"die": 12, "with_inspiration": True})
+        assert (r.status_code, r.json()["detail"]) == (409, {"code": "no_roll_to_reroll"})
+    assert (await client.get(f"/characters/{cid}")).json()["heroic_inspiration"] is True
+    assert (await client.post(url[tipo], json={"die": 5, **extra})).status_code == 200
+    assert (await client.post(url[tipo], json={"die": 12, "with_inspiration": True})).status_code == 200

@@ -106,7 +106,8 @@ async def test_unarmed_consumes_inspiration(client, monkeypatch):
     await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     ri = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     assert ri.status_code == 200, ri.text
-    _patch_sequence(monkeypatch, [10])
+    _patch_sequence(monkeypatch, [4, 10])
+    assert (await client.post(f"/characters/{cid}/attack/unarmed")).status_code == 200  # 2024 p. 368: si ritira un tiro già fatto
     r = await client.post(f"/characters/{cid}/attack/unarmed", json={"with_inspiration": True})
     assert r.status_code == 200, r.text
     g = await client.get(f"/characters/{cid}")

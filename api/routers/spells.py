@@ -49,7 +49,7 @@ from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
-from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
+from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
@@ -617,7 +617,7 @@ async def spell_attack(
 
     cast_block = spell_fx = None
     if body.with_inspiration:
-        spend_inspiration_reroll(char)
+        spend_inspiration_attack(char, spell_id=spell.id)
     else:
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
         await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.cast_options)  # prima di spendere
