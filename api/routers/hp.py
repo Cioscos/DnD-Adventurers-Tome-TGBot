@@ -1067,6 +1067,9 @@ async def spend_hit_dice(
     # I dadi vita si spendono riposando: nel 2024 a 0 PF non si riposa (come /rest).
     if character_edition(char) == "2024" and char.current_hit_points <= 0 and char.hit_points > 0:
         raise HTTPException(status_code=409, detail="rest_needs_hp")
+    # Forma con PF propri (2014): il druido ha i PF e i Dadi Vita della bestia, i suoi restano com'erano (Forma Selvatica pag. 66)
+    if form_own_hp(char) and await get_active_form(session, char.id) is not None:
+        raise HTTPException(status_code=409, detail={"code": "form_hit_dice"})
 
     # Pool residuo per classe (spec 2026-07-17): level - hit_dice_used.
     remaining = max(0, cls.level - (cls.hit_dice_used or 0))

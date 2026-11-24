@@ -23,7 +23,6 @@ async def _caster(client, cid) -> dict:
 @pytest.mark.caccia(id="CB-1711", fonte="2014 · Druido · Forma Selvatica (PF e Dadi Vita della bestia) · pag. 66", zona="regola:2014/druid",
                     voce="regola", copre=["carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)",
                                           "POST /characters/{char_id}/hit_dice/spend"])
-@pytest.mark.xfail(strict=True, reason="CB-1711: difforme dal manuale, confermato")
 async def test_in_forma_selvatica_i_dadi_vita_del_druido_non_curano_la_forma_normale(client):
     cid = await _druid(client, 4, "land")  # 23 PF, 4 Dadi Vita d8
     assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 10})).status_code == 200
