@@ -734,18 +734,24 @@ def _base_damage(
     if damage_dice_str == "1":
         damage_rolls = [1]
     else:
-        damage_rolls, dice_bonus = roll_dice(damage_dice_str)
+        def weapon_dice() -> tuple[list[int], int]:
+            rolls, bonus = roll_dice(damage_dice_str)
+            if is_critical:
+                rolls = rolls + roll_dice(damage_dice_str)[0]
+                # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
+                if applied.crit_dice and (die := DICE_RE.match(damage_dice_str.strip())):
+                    rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
+            return rolls, bonus
+
+        damage_rolls, dice_bonus = weapon_dice()
         twice = item is not None and any(spec.weapon_damage_twice is True or (spec.weapon_damage_twice == "melee" and attack_mode not in ("ranged", "thrown"))
                                          for spec, _row in active_features(char))
-        if twice and mark_once(char, "weapon_damage_twice"):  # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore
-            again = roll_dice(damage_dice_str)[0]
+        # Attaccante selvaggio: due tiri dei dadi dell'arma, vale il migliore; al critico sono tutti i dadi dell'arma
+        # del tiro, anche quelli in più (2014 pag. 165 con i Colpi Critici di pag. 196)
+        if twice and mark_once(char, "weapon_damage_twice"):
+            again = weapon_dice()[0]
             if sum(again) > sum(damage_rolls):
                 damage_rolls = again
-        if is_critical:
-            damage_rolls = damage_rolls + roll_dice(damage_dice_str)[0]
-            # Dadi dell'arma in più al critico (Critico Brutale): dello stesso tipo, uno per ogni dado indicato.
-            if applied.crit_dice and (die := DICE_RE.match(damage_dice_str.strip())):
-                damage_rolls += [random.randint(1, int(die.group(2))) for _ in range(applied.crit_dice)]
         if applied.damage_reroll and (die := DICE_RE.match(damage_dice_str.strip())):
             for i, value in enumerate(damage_rolls):  # una volta sola: il nuovo risultato vale anche se è ancora basso
                 if value <= applied.damage_reroll:
