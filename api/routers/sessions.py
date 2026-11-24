@@ -437,7 +437,7 @@ async def create_session(
     return await session_read(db, session)
 
 
-@router.post("/join", response_model=GameSessionRead)
+@router.post("/join", response_model=GameSessionRead, dependencies=[Depends(user_write_lock)])
 async def join_session(
     body: SessionJoinRequest,
     user_id: Annotated[int, Depends(get_current_user)],

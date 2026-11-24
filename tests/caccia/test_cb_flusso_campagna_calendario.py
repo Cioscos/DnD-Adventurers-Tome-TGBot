@@ -330,7 +330,6 @@ async def test_doppio_inizio_serata_ne_apre_una_sola(client, test_session_factor
     assert len(aperte) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="CB-149 ingressi in parallelo in serata: 500 invece di 409")
 @pytest.mark.caccia(id="CB-149", fonte="invariante: una richiesta ripetuta non spende due volte (un PG siede una volta sola al tavolo)",
                     zona="flusso:campagna-calendario", voce="ripetizione", copre=["POST /campaigns/{campaign_id}/session/join"])
 async def test_doppio_ingresso_in_serata_siede_una_volta(client, test_session_factory):

@@ -490,7 +490,7 @@ async def remove_member(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/{campaign_id}/session/join", response_model=GameSessionRead)
+@router.post("/{campaign_id}/session/join", response_model=GameSessionRead, dependencies=[Depends(user_write_lock)])
 async def join_campaign_session(
     campaign_id: int,
     body: CampaignSessionJoin,
