@@ -116,7 +116,6 @@ async def test_conoscenze_secolari_sostituisce_il_factotum_invece_di_sommarsi(cl
     ("tempest", "cleric.divine_strike_tempest", "thunder"),
     ("nature", "cleric.divine_strike_nature_cold", "cold"),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-1664: difforme dal manuale, confermato")
 async def test_i_dadi_del_colpo_divino_hanno_il_tipo_del_dominio(client, dominio, opzione, tipo):
     cid = await _chierico(client, 8, dominio, strength=14)
     wid = await _arma(client, cid)

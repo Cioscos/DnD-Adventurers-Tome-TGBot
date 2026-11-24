@@ -220,11 +220,14 @@ def _weapon_hit(ctx: RuleContext) -> bool:
     return ctx.item is not None and ctx.spell is None
 
 
-def _divine_strike(domain: str, type_it: str, type_en: str, *, group: str | None = None, suffix: str = "") -> RollOptionSpec:
-    """Una volta per turno, dopo un colpo con un'arma: 1d8 (2d8 dal 14°) di danni; il tipo lo dice l'etichetta."""
+def _divine_strike(domain: str, type_it: str, type_en: str, damage_type: str | None = None, *, group: str | None = None,
+                   suffix: str = "") -> RollOptionSpec:
+    """Una volta per turno, dopo un colpo con un'arma: 1d8 (2d8 dal 14°) di danni in più. Il tipo è ``damage_type`` o, nelle
+    varianti a scelta, quello del suffisso (``_cold``; ``_radiant`` nei Colpi Benedetti 2024); la Guerra non ne ha: vale
+    quello dell'arma."""
     return RollOptionSpec(
         key=f"{CK}.divine_strike_{domain}{suffix}", phase="after_hit", rolls=("attack",), once_per_turn=True, group=group,
-        extra_dice=_strike_dice, available=_weapon_hit,
+        extra_dice=_strike_dice, available=_weapon_hit, extra_damage_type=damage_type or suffix.removeprefix("_") or None,
         label={"it": f"Colpo Divino: danni {type_it} in più", "en": f"Divine Strike: extra {type_en} damage"})
 
 
@@ -503,7 +506,7 @@ FEATURES = (
     feature("divine_strike_trickery", CK, ED, 8, "Colpo Divino / Divine Strike (Inganno 8, pag. 61)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni da veleno in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra poison damage."),
-            subclass="trickery", roll_options=(_divine_strike("trickery", "da veleno", "poison"),)),
+            subclass="trickery", roll_options=(_divine_strike("trickery", "da veleno", "poison", "poison"),)),
 
     feature("cloak_of_shadows", CK, ED, 6,
             "Incanalare Divinità: Manto di Ombre / Channel Divinity: Cloak of Shadows (Inganno 6, pag. 61)",
@@ -646,7 +649,7 @@ FEATURES = (
     feature("divine_strike_tempest", CK, ED, 8, "Colpo Divino / Divine Strike (Tempesta 8, pag. 63)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni da tuono in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra thunder damage."),
-            subclass="tempest", roll_options=(_divine_strike("tempest", "da tuono", "thunder"),)),
+            subclass="tempest", roll_options=(_divine_strike("tempest", "da tuono", "thunder", "thunder"),)),
 
     feature("stormborn", CK, ED, 17, "Nato dalla Tempesta / Stormborn (Tempesta 17, pag. 63)",
             ("Nato dalla Tempesta", "Stormborn"),
@@ -690,5 +693,5 @@ FEATURES = (
     feature("divine_strike_life", CK, ED, 8, "Colpo Divino / Divine Strike (Vita 8, pag. 63)", ("Colpo Divino", "Divine Strike"),
             ("Una volta per turno, con un colpo d'arma: 1d8 (2d8 dal 14°) di danni radiosi in più.",
              "Once per turn, on a weapon hit: 1d8 (2d8 from 14th) extra radiant damage."),
-            subclass="life", roll_options=(_divine_strike("life", "radiosi", "radiant"),)),
+            subclass="life", roll_options=(_divine_strike("life", "radiosi", "radiant", "radiant"),)),
 )

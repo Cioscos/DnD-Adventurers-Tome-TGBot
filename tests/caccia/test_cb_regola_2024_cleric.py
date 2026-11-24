@@ -76,7 +76,6 @@ async def test_un_incantesimo_a_concentrazione_lanciato_con_intervento_divino_ri
                            "POST /characters/{char_id}/attack/{attack_id}/damage"])
 @pytest.mark.parametrize("opzione, tipo", [("cleric.divine_strike_blessed_necrotic", "necrotic"),
                                            ("cleric.divine_strike_blessed_radiant", "radiant")])
-@pytest.mark.xfail(strict=True, reason="CB-2263: difforme dal manuale, confermato")
 async def test_i_dadi_del_colpo_divino_2024_hanno_il_tipo_scelto(client, opzione, tipo):
     cid = await _cleric24(client, 7, strength=14)
     assert (await _resolve(client, cid, "blessed_strikes", ["divine_strike"])).status_code == 200
