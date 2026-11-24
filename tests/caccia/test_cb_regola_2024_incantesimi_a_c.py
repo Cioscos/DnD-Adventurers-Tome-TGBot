@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 
+from core.db.models import ConditionEffect
 from core.rules.catalog.spells import spell_effect
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
 from tests.integration.rules.test_2014_bard_inspiration import _seat
@@ -66,7 +68,6 @@ async def _stati(client, cid, chiave) -> list[dict]:
 @pytest.mark.caccia(id="CB-3661", fonte="2024 · Incantesimi · Colpo Accecante · pag. 247", zona="regola:2024/incantesimi-A-C", voce="regola",
                     copre=["carta:2024/spells.md#Colpo Accecante", "POST /characters/{char_id}/attack/{attack_id}/damage",
                            "GET /characters/{char_id}/target-effects/{effect_key}", "POST /characters/{char_id}/target-effects"])
-@pytest.mark.xfail(strict=True, reason="CB-3661: difforme dal manuale, confermato")
 async def test_colpo_accecante_acceca_subito_senza_un_primo_tiro_salvezza(client, test_session_factory, monkeypatch):
     _sid, cid = await _in_encounter(client, test_session_factory, monkeypatch)
     assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
@@ -83,6 +84,9 @@ async def test_colpo_accecante_acceca_subito_senza_un_primo_tiro_salvezza(client
     assert r.status_code == 200, r.text
     # 2024: il bersaglio colpito è Accecato; il TS di Costituzione arriva solo alla fine di ogni suo turno
     assert r.json()["applied"] is True and r.json()["pending_save_id"] is None
+    async with test_session_factory() as s:  # il TS a fine turno resta, per terminarla
+        eff = (await s.execute(select(ConditionEffect).where(ConditionEffect.combatant_id == goblin, ConditionEffect.slug == "blinded"))).scalar_one()
+    assert (eff.pending, eff.save_ability, eff.save_edge) == (False, "constitution", "end")
 
 
 @pytest.mark.caccia(id="CB-3662", fonte="2024 · Incantesimi · Colonna di fiamme · pag. 275", zona="regola:2024/incantesimi-A-C", voce="limiti",

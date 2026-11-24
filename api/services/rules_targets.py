@@ -14,7 +14,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas.encounter import GmConditionApply, InternalConditionApply
+from api.schemas.encounter import GmConditionApply, InternalConditionApply, SaveIn
 from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, item_concentration, upsert_effect
 from api.services.effects import apply_conditions
 from api.services.history import add_history
@@ -229,6 +229,9 @@ async def apply_target_effect(
         for each in (slug, *effect.get("also", ())):
             await apply_condition_to_combatant(db, enc, target, InternalConditionApply(
                 slug=each, expiry=expiry, source_combatant_id=anchor_id,
+                # applicata subito ma con il TS ripetuto per terminarla (Colpo Accecante 2024)
+                save=SaveIn(ability=effect["save_ability"], dc=effect["save_dc"], edge=effect["repeat_save"])
+                if effect.get("repeat_save") and effect.get("save_ability") else None,
                 ends_with_concentration=bool(effect.get("ends_with_concentration"))), applied_by_gm=False)
         add_history(db, char.id, "condition_change",
                      f"{condition_label(slug)} su {target.name}" + (" (prolungato)" if extending else ""))

@@ -128,9 +128,11 @@ def _discharge(key: str) -> Callable:
     return run
 
 
-def _target(condition: str | None, ability: str, *, repeat: str | None = None, ends_at: dict | None = None, concentration: bool = False):
+def _target(condition: str | None, ability: str, *, repeat: str | None = None, ends_at: dict | None = None, concentration: bool = False,
+            first_save: bool = True):
+    """``first_save=False``: la condizione arriva subito e il TS serve solo a terminarla (``repeat``), come Colpo Accecante 2024."""
     return lambda ctx, _i: TargetEffect(condition=condition, save_ability=ability, save_dc=_dc(ctx), repeat_save=repeat, ends_at=ends_at,
-                                        ends_with_concentration=concentration)
+                                        ends_with_concentration=concentration, on_failure_only=first_save)
 
 
 def _smite(key: str, it_name: str, en_name: str, kind: str | None, label: dict[str, str], *, dice=None, lingers: bool = False, ranged: bool = False, anywhere: bool = False,
@@ -193,11 +195,12 @@ _BLINDING_2014 = _variant(_smite(
                "Blinding Smite: extra 3d8 radiant; Constitution save DC {dc} or blinded while it lasts, repeating the save at the end of each of its turns (if it passes, only its effect ends: the spell stays until you end it)."),
     target=_target("blinded", "constitution", repeat="end", concentration=True)), concentration=True)
 _BLINDING_2024 = _variant(_smite(
-    "blinding_smite", "Colpo Accecante", "Blinding Smite", "radiant", txt("Punizione: +3d8 radiosi (+1d8 per slot oltre il 3°), il bersaglio è accecato (TS Costituzione)", "Smite: extra 3d8 radiant (+1d8 per slot above 3rd), the target is blinded (Constitution save)"),
+    "blinding_smite", "Colpo Accecante", "Blinding Smite", "radiant", txt("Punizione: +3d8 radiosi (+1d8 per slot oltre il 3°), il bersaglio è accecato (TS Costituzione per terminare)", "Smite: extra 3d8 radiant (+1d8 per slot above 3rd), the target is blinded (Constitution save to end it)"),
     dice=_dice(3, 8, 3), lingers=True,
-    effect=txt("Colpo Accecante: radiosi in più; TS Costituzione CD {dc} o accecato, ripetendo il TS a fine di ogni suo turno (se lo supera l'effetto cade solo su di lui: l'incantesimo resta finché non lo chiudi tu).",
-               "Blinding Smite: extra radiant; Constitution save DC {dc} or blinded, repeating the save at the end of each of its turns (if it passes, only its effect ends: the spell stays until you end it)."),
-    target=_target("blinded", "constitution", repeat="end", ends_at=BLIND_AT)), concentration=False)
+    effect=txt("Colpo Accecante: radiosi in più; il bersaglio è accecato e fa un TS Costituzione CD {dc} a fine di ogni suo turno per terminare (se lo supera l'effetto cade solo su di lui: l'incantesimo resta finché non lo chiudi tu).",
+               "Blinding Smite: extra radiant; the target is blinded and makes a Constitution save DC {dc} at the end of each of its turns to end it (if it passes, only its effect ends: the spell stays until you end it)."),
+    # 2024 p.247: accecato subito, niente TS iniziale (il 2014 p.265 sì)
+    target=_target("blinded", "constitution", repeat="end", ends_at=BLIND_AT, first_save=False)), concentration=False)
 
 # Punizione Marchiante (2014)
 _BRANDING = _variant(_smite(
