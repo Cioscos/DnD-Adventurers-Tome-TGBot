@@ -109,7 +109,6 @@ async def test_la_bestia_compagna_rispetta_taglia_grado_di_sfida_e_tipo(client, 
                            "POST /characters/{char_id}/features/{feature_key}/use"])
 @pytest.mark.parametrize("feature,params", [("ranger.primeval_awareness", {"slot_level": "1"}),  # un'azione
                                             ("ranger.stand_against_the_tide", None)])  # una reazione
-@pytest.mark.xfail(strict=True, reason="CB-1914: difforme dal manuale, confermato")
 async def test_agire_o_reagire_toglie_il_mimetismo(client, feature, params):
     cid = await _superior(client, "stand_against_the_tide")  # Cacciatore 15: ha anche Nascondersi in Piena Vista
     assert (await _use(client, cid, CAMO_FEATURE)).status_code == 200

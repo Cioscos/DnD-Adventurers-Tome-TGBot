@@ -60,6 +60,9 @@ def spend(char, slot: str, *, own_slot: bool = False) -> dict:
     else:
         st[_FLAGS[slot]] = True
     _save(char, st)
+    if slot in ("action", "reaction"):  # gli stati che finiscono agendo o reagendo (Nascondersi in Piena Vista 2014)
+        from api.services.rules_states import end_states  # import locale: rules_states importa questo modulo
+        end_states(char, slot)
     return st
 
 

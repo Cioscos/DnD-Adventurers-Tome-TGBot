@@ -419,7 +419,7 @@ FEATURES = (
             ("Dopo 1 minuto con materiali naturali ti mimetizzi: +10 a Furtività restando fermo contro una superficie solida. Muoverti, agire o reagire lo toglie.",
              "After 1 minute with natural materials you camouflage: +10 to Stealth while still against a solid surface. Moving, acting or reacting ends it."),
             roll_options=(HIDE_STEALTH,),
-            on_use=OnUse(state=StateSpec("camouflaged", ends_on=("manual", "attack", "cast", "rest_short", "rest_long"),
+            on_use=OnUse(state=StateSpec("camouflaged", ends_on=("manual", "attack", "cast", "action", "reaction", "rest_short", "rest_long"),
                                          data={"stealth_bonus": 10}))),
     feature("vanish", CK, ED, 14, "Svanire / Vanish (Ranger 14, pag. 105)", ("Svanire", "Vanish"),
             ("Puoi usare Nascondersi come azione bonus. Non si seguono le tue tracce con mezzi non magici, se non vuoi.",
