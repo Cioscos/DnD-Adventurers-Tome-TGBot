@@ -513,7 +513,6 @@ async def test_il_colpo_extra_del_monaco_solo_dopo_un_attacco_da_monaco(client, 
     assert r.status_code == 200 and (await _turno(client, cid))["bonus_used"] is True
 
 
-@pytest.mark.xfail(strict=True, reason="CB-072 un'arma con magic_bonus >= 1 non dà is_magic nella risposta")
 @pytest.mark.caccia(id="CB-072", fonte="invariante: l'etichetta «colpo magico» del modale vale per un'arma magica", zona="flusso:attacco-danno",
                     voce="contratto", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_arma_con_bonus_magico_e_un_colpo_magico(client, dadi):

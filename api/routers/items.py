@@ -973,7 +973,7 @@ async def attack_with_weapon(
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
         rerolled=rerolled or None,
-        is_magic=True if applied.magic_weapon else None,
+        is_magic=True if applied.magic_weapon or magic_bonus > 0 else None,
         damage_type=spell_damage_type or canonical_damage_type(meta.get("damage_type")),  # PA1: il tipo dell'arma nel modale
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
