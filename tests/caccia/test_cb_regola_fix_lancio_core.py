@@ -1,6 +1,9 @@
 """Controlli scritti dalla correzione del gruppo lancio-core per i dubbi risolti come difetti (Q-…)."""
 import pytest
 
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
+from tests.integration.rules.test_2014_bard_inspiration import _seat
+
 
 async def _pg(client, classe, livello, **punteggi) -> tuple[int, int]:
     """``(personaggio, classe)`` 2014."""
@@ -41,3 +44,30 @@ async def test_vincolo_di_interdizione_non_si_lancia_su_chi_lo_lancia(client, su
     scheda = (await client.get(f"/characters/{cid}")).json()
     assert not any(s["key"] == "spell:warding_bond" for s in scheda["active_states"] or [])
     assert next(s for s in scheda["spell_slots"] if s["level"] == 2)["used"] == 0  # rifiutato prima di spendere lo slot
+
+
+@pytest.mark.caccia(id="CB-3993", fonte="2014 · Incantesimi · Guarigione di Massa · pag. 240", zona="regola:2014/incantesimi-G-L", voce="regola",
+                    copre=["carta:2014/spells.md#Guarigione di Massa", "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
+@pytest.mark.xfail(strict=True, reason="CB-3993: difforme dal manuale, confermato")
+async def test_guarigione_di_massa_divide_i_700_pf_fra_piu_creature(client, test_session_factory):
+    _, eroe = await seed_session(test_session_factory)
+    as_user(PLAYER_ID)
+    for op, valore in (("set_max", 200), ("set_current", 100)):
+        assert (await client.patch(f"/characters/{eroe}/hp", json={"op": op, "value": valore})).status_code == 200
+    as_user(GM_ID)
+    cid, classe = await _pg(client, "cleric", 17)
+    for op, valore in (("set_max", 60), ("set_current", 10)):
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": valore})).status_code == 200
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Guarigione di Massa", "srd_index": "mass-heal", "level": 9,
+                                                            "class_id": classe, "is_prepared": True})
+    assert r.status_code == 201, r.text
+    sid = r.json()["id"]
+    await _seat(test_session_factory, cid, GM_ID)
+    assert (await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": 9})).status_code == 200
+    # Q-2014-incantesimi-g-l-1: fino a 700 PF divisi a piacere fra quante creature si vuole; 100 + 50 mancanti stanno nei 700
+    r = await client.post(f"/characters/{cid}/spells/{sid}/roll_healing", json={"casting_level": 9, "apply_to_self": True,
+                                                                               "target_character_ids": [eroe]})
+    assert r.status_code == 200, r.text
+    assert (await client.get(f"/characters/{cid}")).json()["current_hit_points"] == 60
+    as_user(PLAYER_ID)
+    assert (await client.get(f"/characters/{eroe}")).json()["current_hit_points"] == 200
