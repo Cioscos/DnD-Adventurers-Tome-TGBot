@@ -335,6 +335,8 @@ async def reopen_tome(session: AsyncSession, char: Character) -> None:
     from core.rules.catalog import active_features  # import locale
     if not any(spec.key == "warlock.pact_of_the_tome" for spec, _row in active_features(char)):
         raise HTTPException(422, detail={"code": "no_pact_of_the_tome"})
+    if character_edition(char) != "2024":  # 2014 pag. 116: i trucchetti si scelgono quando si riceve il Libro, non al riposo
+        raise HTTPException(422, detail={"code": "tome_reopen_2024_only"})
     free = set((char.settings or {}).get(FREE_KNOWN_KEY) or [])
     for cls in char.classes:
         options = dict(cls.options or {})

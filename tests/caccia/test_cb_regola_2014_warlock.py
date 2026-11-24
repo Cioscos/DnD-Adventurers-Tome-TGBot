@@ -145,7 +145,6 @@ async def test_un_nuovo_servitore_libera_il_precedente(client, test_session_fact
 @pytest.mark.caccia(id="CB-2068", fonte="2014 · Warlock · Patto del Tomo · pag. 116", zona="regola:2014/warlock", voce="edizioni",
                     copre=["carta:2014/classes/warlock.md#Patto del Tomo / Pact of the Tome (Warlock 3, pag. 116)",
                            "POST /characters/{char_id}/rest"])
-@pytest.mark.xfail(strict=True, reason="CB-2068: difforme dal manuale, confermato")
 async def test_i_trucchetti_del_libro_2014_non_si_rifanno_a_ogni_riposo(client):
     cid = await _warlock(client, 3)
     assert (await _resolve(client, cid, "pact_boon", ["tome"])).status_code == 200
