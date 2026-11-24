@@ -25,3 +25,36 @@ test('il doppio tocco su Crea crea un solo personaggio', async ({ comeUtente, ap
   expect(trovati).toHaveLength(1)
   for (const c of trovati) await apiRequest.delete(`/characters/${c.id}`)
 })
+
+
+// caccia: {"id": "CB-1392", "fonte": "invariante: un wizard chiuso senza creare non lascia scelte al successivo (monete al posto dell'equipaggiamento)", "zona": "flusso:creazione", "voce": "annullamento", "copre": ["route:/"]}
+test.fail('chiudere il wizard con le monete accese e riaprirlo con la stessa classe le spegne', async ({ comeUtente }) => {
+  const page = await comeUtente(UTENTE)
+  await page.goto(`/?dev_user=${UTENTE}`)
+  const monete = page.getByRole('button', { name: /Monete al posto dell'equipaggiamento/ })
+  await page.getByRole('button', { name: 'Nuovo personaggio' }).click()
+  await page.getByPlaceholder('Il nome del tuo eroe').fill('Annullato')
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click() // background facoltativo
+  await page.getByText('Guerriero', { exact: true }).click()
+  await page.getByRole('button', { name: 'Atletica' }).click()
+  await page.getByRole('button', { name: 'Percezione' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click() // classe -> specie
+  await page.getByRole('button', { name: 'Avanti →' }).click() // specie -> punteggi
+  await page.getByText('Salta: lascia tutti a 10').click()
+  await monete.click()
+  for (let n = 0; n < 5; n++) await page.getByRole('button', { name: 'Indietro' }).click() // fino al nome
+  await page.getByRole('button', { name: 'Annulla' }).click()
+  await page.getByRole('button', { name: 'Nuovo personaggio' }).click()
+  await page.getByPlaceholder('Il nome del tuo eroe').fill('Riaperto')
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByText('Guerriero', { exact: true }).click()
+  await page.getByRole('button', { name: 'Atletica' }).click()
+  await page.getByRole('button', { name: 'Percezione' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByText('Salta: lascia tutti a 10').click()
+  await expect(monete).toBeVisible()
+  await expect(monete).not.toHaveClass(/dnd-gold/)
+})

@@ -336,3 +336,303 @@ async def test_abilita_di_classe_gia_fra_quelle_del_background_scritto(client, e
     r = await client.post("/characters", json=corpo(["medicine", "history"]))
     assert r.status_code == 201
     assert sorted(k for k, v in r.json()["skills"].items() if v) == ["history", "insight", "medicine", "religion"]
+
+
+# ---------------------------------------------------------------------------
+# Giro 3: classe, abilità, PF, specie, background, permessi
+# ---------------------------------------------------------------------------
+
+@pytest.mark.caccia(id="CB-1373", fonte="invariante: una classe ha un nome, come il personaggio (CB-657): niente righe di classe vuote", zona="flusso:creazione",
+                    voce="limiti", copre=["POST /characters"])
+@pytest.mark.parametrize("nome", [
+    pytest.param("", marks=pytest.mark.xfail(strict=True, reason="CB-1373 classe con nome vuoto accettata")),
+    pytest.param("   ", marks=pytest.mark.xfail(strict=True, reason="CB-1373 classe con nome di soli spazi accettata")),
+])
+async def test_classe_senza_nome_rifiutata(client, nome):
+    r = await client.post("/characters", json={"name": "N", "initial_class": {"class_name": nome, "hit_die": 8}})
+    assert r.status_code == 422, f"class_name {nome!r}: {r.status_code} {r.text[:100]}"
+    assert await _lista(client) == []
+
+
+@pytest.mark.caccia(id="CB-1374", fonte="invariante: la caratteristica da incantatore è una delle sei caratteristiche", zona="flusso:creazione",
+                    voce="limiti", copre=["POST /characters"])
+@pytest.mark.xfail(strict=True, reason="CB-1374 spellcasting_ability sconosciuta salvata senza errore")
+async def test_caratteristica_da_incantatore_sconosciuta_rifiutata(client):
+    r = await client.post("/characters", json={"name": "I", "initial_class": {"class_name": "wizard", "spellcasting_ability": "foo"}})
+    assert r.status_code == 422, f"{r.status_code} {r.text[:100]}"
+    assert await _lista(client) == []
+
+
+_TUTTE = ["acrobatics", "animal_handling", "arcana", "athletics", "deception", "history", "insight", "intimidation", "investigation", "medicine",
+          "nature", "perception", "performance", "persuasion", "religion", "sleight_of_hand", "stealth", "survival"]
+_ABILITA_CLASSE = [
+    ("2014", "barbarian", 2, "animal_handling athletics intimidation nature perception survival"),
+    ("2014", "bard", 3, " ".join(_TUTTE)),
+    ("2014", "cleric", 2, "history insight medicine persuasion religion"),
+    ("2014", "druid", 2, "animal_handling arcana insight medicine nature perception religion survival"),
+    ("2014", "fighter", 2, "acrobatics animal_handling athletics history insight intimidation perception survival"),
+    ("2014", "monk", 2, "acrobatics athletics history insight religion stealth"),
+    ("2014", "paladin", 2, "athletics insight intimidation medicine persuasion religion"),
+    ("2014", "ranger", 3, "animal_handling athletics insight investigation nature perception stealth survival"),
+    ("2014", "rogue", 4, "acrobatics athletics deception insight intimidation investigation perception performance persuasion sleight_of_hand stealth"),
+    ("2014", "warlock", 2, "arcana deception history intimidation investigation nature religion"),
+    ("2014", "wizard", 2, "arcana history insight investigation medicine religion"),
+    ("2024", "barbarian", 2, "animal_handling athletics intimidation nature perception survival"),
+    ("2024", "bard", 3, " ".join(_TUTTE)),
+    ("2024", "cleric", 2, "history insight medicine persuasion religion"),
+    ("2024", "druid", 2, "animal_handling arcana insight medicine nature perception religion survival"),
+    ("2024", "fighter", 2, "acrobatics animal_handling athletics history insight intimidation perception persuasion survival"),
+    ("2024", "monk", 2, "acrobatics athletics history insight religion stealth"),
+    ("2024", "paladin", 2, "athletics insight intimidation medicine persuasion religion"),
+    ("2024", "ranger", 3, "animal_handling athletics insight investigation nature perception stealth survival"),
+    ("2024", "rogue", 4, "acrobatics athletics deception insight intimidation investigation perception persuasion sleight_of_hand stealth"),
+    ("2024", "sorcerer", 2, "arcana deception insight intimidation persuasion religion"),
+    ("2024", "warlock", 2, "arcana deception history intimidation investigation nature religion"),
+    ("2024", "wizard", 2, "arcana history insight investigation medicine nature religion"),
+]
+
+
+@pytest.mark.caccia(id="CB-1375", fonte="2014 e 2024 · Classi · Competenze al 1° livello (abilità a scelta per classe): lista e numero, es. Guerriero 2024 con Persuasione, Mago 2024 con Natura, Ladro 2024 senza Intrattenere",
+                    zona="flusso:creazione", voce="regola", copre=["GET /rules/proficiencies", "POST /characters"])
+@pytest.mark.parametrize("ed, classe, n, lista", _ABILITA_CLASSE)
+async def test_abilita_di_classe_per_edizione(client, ed, classe, n, lista):
+    attese = lista.split()
+    prof = (await client.get(f"/rules/proficiencies?edition={ed}&class_key={classe}&as_multiclass=false")).json()
+    assert prof["skills_count"] == n
+    assert sorted(prof["skills_from"] or _TUTTE) == sorted(attese)  # il contratto che legge il frontend
+    base = {"name": "A", "rules_edition": ed}
+    ok = await client.post("/characters", json={**base, "initial_class": {"class_name": classe, "skill_choices": sorted(attese)[:n]}})
+    assert ok.status_code == 201, ok.text[:100]
+    troppe = await client.post("/characters", json={**base, "initial_class": {"class_name": classe, "skill_choices": sorted(attese)[:n + 1]}})
+    assert troppe.status_code == 422
+    fuori = [s for s in _TUTTE if s not in attese]
+    if fuori:
+        r = await client.post("/characters", json={**base, "initial_class": {"class_name": classe, "skill_choices": [fuori[0]]}})
+        assert r.status_code == 422, f"{fuori[0]} non è della lista di {classe} {ed}"
+
+
+_DADO = {"barbarian": 12, "bard": 8, "cleric": 8, "druid": 8, "fighter": 10, "monk": 8, "paladin": 10, "ranger": 10,
+         "rogue": 8, "sorcerer": 6, "warlock": 8, "wizard": 6}
+
+
+@pytest.mark.caccia(id="CB-1376", fonte="2014 e 2024 · Classi · Punti Ferita: dado vita pieno + COS al 1° livello, poi media (dado/2 + 1) + COS; livello 19 con COS 14",
+                    zona="flusso:creazione", voce="limiti", copre=["POST /characters", "GET /characters"])
+@pytest.mark.parametrize("ed", ["2014", "2024"])
+async def test_pf_massimi_al_livello_19_per_classe(client, ed):
+    for classe, d in _DADO.items():
+        pg = (await client.post("/characters", json={"name": "H", "rules_edition": ed, "ability_scores": {"constitution": 14},
+                                                      "initial_class": {"class_name": classe, "level": 19}})).json()
+        atteso = d + 2 + 18 * (d // 2 + 1 + 2)
+        assert (pg["hit_points"], pg["current_hit_points"]) == (atteso, atteso), (ed, classe)
+    righe = {r["id"]: r for r in await _lista(client)}
+    assert all(r["hit_points"] == r["current_hit_points"] for r in righe.values())
+
+
+@pytest.mark.caccia(id="CB-1377", fonte="2024 · Specie · Elfo (lignaggio alto, pag. 190) e Tiefling (eredità infernale, pag. 197): incantesimi extra ai livelli 3 e 5",
+                    zona="flusso:creazione", voce="limiti", copre=["POST /characters"])
+async def test_incantesimi_di_lignaggio_alle_soglie_di_livello(client):
+    elfo = {"key": "2024_elf", "options": {"lineage": "high", "spell_ability": "intelligence", "skill": "insight"}}
+    tiefling = {"key": "2024_tiefling", "options": {"size": "medium", "legacy": "infernal", "spell_ability": "charisma"}}
+    atteso = {
+        (elfo["key"], 1): {"Prestidigitazione"}, (elfo["key"], 2): {"Prestidigitazione"},
+        (elfo["key"], 3): {"Prestidigitazione", "Individuazione del magico"},
+        (elfo["key"], 4): {"Prestidigitazione", "Individuazione del magico"},
+        (elfo["key"], 5): {"Prestidigitazione", "Individuazione del magico", "Passo velato"},
+        (tiefling["key"], 2): {"Dardo di fuoco", "Taumaturgia"},
+        (tiefling["key"], 3): {"Dardo di fuoco", "Taumaturgia", "Rimprovero infernale"},
+        (tiefling["key"], 4): {"Dardo di fuoco", "Taumaturgia", "Rimprovero infernale"},
+        (tiefling["key"], 5): {"Dardo di fuoco", "Taumaturgia", "Rimprovero infernale", "Oscurità"},
+    }
+    for (chiave, livello), nomi in atteso.items():
+        specie = elfo if chiave == "2024_elf" else tiefling
+        pg = (await client.post("/characters", json={"name": "L", "rules_edition": "2024", "species_2024": specie,
+                                                      "initial_class": {"class_name": "fighter", "level": livello}})).json()
+        assert {s["name"] for s in pg["spells"]} == nomi, (chiave, livello)
+
+
+@pytest.mark.caccia(id="CB-1378", fonte="2024 · Specie · Goliath (pag. 192) e Elfo dei boschi (pag. 190): velocità 35 piedi; Nano e Drow scurovisione 120 piedi (pag. 188, 190)",
+                    zona="flusso:creazione", voce="persistenza", copre=["POST /characters", "GET /characters/{char_id}/export", "POST /characters/import"])
+async def test_velocita_e_sensi_di_specie_sopravvivono_a_import_e_copia(client):
+    casi = [
+        ({"key": "2024_goliath", "options": {"giant": "fire"}}, 35, None),
+        ({"key": "2024_elf", "options": {"lineage": "wood", "spell_ability": "wisdom", "skill": "insight"}}, 35, 60),
+        ({"key": "2024_elf", "options": {"lineage": "drow", "spell_ability": "wisdom", "skill": "insight"}}, 30, 120),
+        ({"key": "2024_dwarf", "options": {}}, 30, 120),
+    ]
+    for specie, velocita, buio in casi:
+        pg = (await client.post("/characters", json={"name": "V", "rules_edition": "2024", "species_2024": specie, "initial_class": {"class_name": "fighter"}})).json()
+        export = (await client.get(f"/characters/{pg['id']}/export")).json()
+        copie = [pg, (await client.get(f"/characters/{pg['id']}")).json(), (await client.post("/characters/import", json=export)).json(),
+                 (await client.post(f"/characters/{pg['id']}/duplicate")).json()]
+        for c in copie:
+            visti = {s["type"]: s["range_ft"] for s in c["computed"]["senses"]}
+            assert (c["computed"]["speed"], visti.get("darkvision")) == (velocita, buio), (specie, c["name"])
+
+
+@pytest.mark.caccia(id="CB-1379", fonte="invariante: i PF correnti non superano mai il massimo (2014 · Punti ferita pag. 196, 2024 · Punti ferita), anche dopo un cambio di specie o la rimozione di Robusto che abbassa il massimo",
+                    zona="flusso:creazione", voce="annullamento", copre=["PUT /characters/{char_id}/species", "DELETE /characters/{char_id}/abilities/{ability_id}", "GET /characters/{char_id}"])
+@pytest.mark.xfail(strict=True, reason="CB-1379 i PF correnti restano sopra il massimo quando il massimo cala")
+@pytest.mark.parametrize("modo", ["nano", "halfling", "umano_altro_talento", "rimuovi_robusto"])
+async def test_massimo_che_cala_non_lascia_pf_correnti_oltre(client, modo):
+    umano = {"key": "2024_human", "options": {"size": "medium", "skill": "arcana", "origin_feat": "2024_tough"}}
+    corpo = {"name": "R", "rules_edition": "2024", "species_2024": umano,
+             "initial_class": {"class_name": "fighter", "level": 3, "skill_choices": ["athletics", "history"]}}
+    pg = (await client.post("/characters", json=corpo)).json()  # d10 + 6 + 6 = 22, Robusto +6: 28 a PF pieni
+    cid = pg["id"]
+    if modo == "rimuovi_robusto":
+        riga = next(a for a in pg["abilities"] if a["name"] == "Robusto")
+        assert (await client.delete(f"/characters/{cid}/abilities/{riga['id']}")).status_code == 204
+        massimo = 22
+    else:
+        nuova = {"nano": ("2024_dwarf", {}), "halfling": ("2024_halfling", {}),
+                 "umano_altro_talento": ("2024_human", {"size": "medium", "skill": "arcana", "origin_feat": "2024_alert"})}[modo]
+        r = await client.put(f"/characters/{cid}/species", json={"key": nuova[0], "options": nuova[1]})
+        assert r.status_code == 200, r.text[:100]
+        massimo = {"nano": 25, "halfling": 22, "umano_altro_talento": 22}[modo]
+    letta = (await client.get(f"/characters/{cid}")).json()
+    assert letta["computed"]["hp_max_effective"] == massimo
+    assert letta["current_hit_points"] <= massimo, f"PF correnti {letta['current_hit_points']} oltre il massimo {massimo}"
+
+
+@pytest.mark.caccia(id="CB-1383", fonte="2024 · Specie · Nano (Robustezza nanica, pag. 188) e Talenti · Robusto: PF massimi +1 / +2 per livello; cambiare specie e tornare indietro riporta lo stesso massimo e gli stessi tratti",
+                    zona="flusso:creazione", voce="annullamento", copre=["PUT /characters/{char_id}/species", "GET /characters"])
+async def test_cambio_specie_e_ritorno_riportano_massimo_e_tratti(client):
+    umano = {"key": "2024_human", "options": {"size": "medium", "skill": "arcana", "origin_feat": "2024_tough"}}
+    corpo = {"name": "R", "rules_edition": "2024", "species_2024": umano,
+             "initial_class": {"class_name": "fighter", "level": 3, "skill_choices": ["athletics", "history"]}}
+    cid = (await client.post("/characters", json=corpo)).json()["id"]
+
+    async def stato():
+        scheda = (await client.get(f"/characters/{cid}")).json()
+        riga = next(r for r in await _lista(client) if r["id"] == cid)
+        assert riga["hp_max_effective"] == scheda["computed"]["hp_max_effective"], "la lista e la scheda devono concordare"
+        return scheda["computed"]["hp_max_effective"], sorted(a["name"] for a in scheda["abilities"]), scheda["skills"].get("arcana")
+    inizio = await stato()
+    assert inizio[0] == 28 and inizio[2] is True
+    await client.put(f"/characters/{cid}/species", json={"key": "2024_dwarf", "options": {}})
+    assert (await stato())[0] == 25 and not (await stato())[2]
+    await client.put(f"/characters/{cid}/species", json=umano)
+    assert await stato() == inizio
+
+
+@pytest.mark.caccia(id="CB-1380", fonte="invariante: due creazioni identiche insieme danno due schede separate, ciascuna con un solo set di oggetti, monete e talenti", zona="flusso:creazione",
+                    voce="ripetizione", copre=["POST /characters"])
+async def test_due_creazioni_insieme_non_mescolano_oggetti_e_monete(client):
+    corpo = {"name": "D", "rules_edition": "2024", "species_2024": {"key": "2024_dwarf", "options": {}},
+             "background_2024": {"key": "soldier", "increases": {"strength": 2, "dexterity": 1}, "tool": "dice_set"},
+             "initial_class": {"class_name": "paladin", "skill_choices": ["insight", "persuasion"]}, "starting_equipment": [0]}
+    r = await asyncio.gather(*[client.post("/characters", json=corpo) for _ in range(3)], return_exceptions=True)
+    assert all(not isinstance(x, Exception) and x.status_code == 201 for x in r), [getattr(x, "status_code", repr(x)) for x in r]
+    schede = [x.json() for x in r]
+    assert len({s["id"] for s in schede}) == 3
+    for s in await _lista(client):
+        assert s["name"] == "D"
+    for s in schede:
+        s = (await client.get(f"/characters/{s['id']}")).json()
+        assert s["currency"]["gold"] == 14 + 9
+        assert len(s["items"]) == len({i["id"] for i in s["items"]})
+        assert [a["name"] for a in s["abilities"]].count("Robustezza nanica") == 1
+    assert len({tuple(sorted((i["name"], i["quantity"]) for i in s["items"])) for s in schede}) == 1
+
+
+@pytest.mark.caccia(id="CB-1381", fonte="CLAUDE.md · API: ogni endpoint verifica il proprietario (export, duplica, import con un altro utente)", zona="flusso:creazione",
+                    voce="permessi", copre=["GET /characters/{char_id}/export", "POST /characters/{char_id}/duplicate", "POST /characters/import"])
+async def test_export_e_duplica_di_un_altro_utente(client, come_utente):
+    pg = (await client.post("/characters", json={"name": "P", "rules_edition": "2024", "initial_class": {"class_name": "fighter"}})).json()
+    export = (await client.get(f"/characters/{pg['id']}/export")).json()
+    come_utente(9999)
+    assert (await client.get(f"/characters/{pg['id']}/export")).status_code in (403, 404)
+    assert (await client.post(f"/characters/{pg['id']}/duplicate")).status_code in (403, 404)
+    assert await _lista(client) == []
+    mio = (await client.post("/characters/import", json=export)).json()  # il file di un altro, importato da me, è mio
+    assert [r["id"] for r in await _lista(client)] == [mio["id"]]
+    come_utente(1234)
+    assert [r["id"] for r in await _lista(client)] == [pg["id"]]
+
+
+@pytest.mark.caccia(id="CB-1382", fonte="2014 · Paladino e Ranger · Incantesimi dal 2° livello; 2024 · Paladino e Ranger · Incantatore dal 1° livello", zona="flusso:creazione",
+                    voce="edizioni", copre=["POST /characters"])
+@pytest.mark.parametrize("classe", ["paladin", "ranger"])
+async def test_slot_dei_mezzi_incantatori_alla_creazione(client, classe):
+    def slot(pg):
+        return [s["total"] for s in pg["spell_slots"]]
+    for ed, livello, atteso in (("2014", 1, []), ("2014", 2, [2]), ("2024", 1, [2]), ("2024", 2, [2])):
+        pg = (await client.post("/characters", json={"name": "S", "rules_edition": ed, "initial_class": {"class_name": classe, "level": livello}})).json()
+        assert slot(pg) == atteso, (ed, classe, livello)
+
+
+_TOOL = {"artisan": "alchemists_supplies", "instrument": "bagpipes", "gaming": "dice_set"}
+_BACKGROUND = {  # chiave: (talento, abilità, strumento fisso o categoria, caratteristiche)
+    "acolyte": ("Iniziato alla magia", ["insight", "religion"], "calligraphers_supplies", ["intelligence", "wisdom", "charisma"]),
+    "artisan": ("Artigiano", ["investigation", "persuasion"], "artisan", ["strength", "dexterity", "intelligence"]),
+    "charlatan": ("Abile", ["deception", "sleight_of_hand"], "forgery_kit", ["dexterity", "constitution", "charisma"]),
+    "criminal": ("Allerta", ["sleight_of_hand", "stealth"], "thieves_tools", ["dexterity", "constitution", "intelligence"]),
+    "entertainer": ("Musicista", ["acrobatics", "performance"], "instrument", ["strength", "dexterity", "charisma"]),
+    "farmer": ("Robusto", ["animal_handling", "nature"], "carpenters_tools", ["strength", "constitution", "wisdom"]),
+    "guard": ("Allerta", ["athletics", "perception"], "gaming", ["strength", "intelligence", "wisdom"]),
+    "guide": ("Iniziato alla magia", ["stealth", "survival"], "cartographers_tools", ["dexterity", "constitution", "wisdom"]),
+    "hermit": ("Guaritore", ["medicine", "religion"], "herbalism_kit", ["constitution", "wisdom", "charisma"]),
+    "merchant": ("Fortunato", ["animal_handling", "persuasion"], "navigators_tools", ["constitution", "intelligence", "charisma"]),
+    "noble": ("Abile", ["history", "persuasion"], "gaming", ["strength", "intelligence", "charisma"]),
+    "sage": ("Iniziato alla magia", ["arcana", "history"], "calligraphers_supplies", ["constitution", "intelligence", "wisdom"]),
+    "sailor": ("Attaccabrighe da taverna", ["acrobatics", "perception"], "navigators_tools", ["strength", "dexterity", "wisdom"]),
+    "scribe": ("Abile", ["investigation", "perception"], "calligraphers_supplies", ["dexterity", "intelligence", "wisdom"]),
+    "soldier": ("Attaccante selvaggio", ["athletics", "intimidation"], "gaming", ["strength", "dexterity", "constitution"]),
+    "wayfarer": ("Fortunato", ["insight", "stealth"], "thieves_tools", ["dexterity", "wisdom", "charisma"]),
+}
+
+
+@pytest.mark.caccia(id="CB-1384", fonte="2024 · Background · pag. 177-185: caratteristiche, talento d'Origine, due abilità e strumento di ciascuno dei sedici background",
+                    zona="flusso:creazione", voce="regola", copre=["POST /characters"])
+@pytest.mark.parametrize("chiave", list(_BACKGROUND))
+async def test_background_2024_come_nel_manuale(client, chiave):
+    talento, abilita, strumento, caratteristiche = _BACKGROUND[chiave]
+    scelto = _TOOL.get(strumento, strumento)
+    base = {"name": "B", "rules_edition": "2024"}
+    corpo = {"key": chiave, "increases": {c: 1 for c in caratteristiche}, **({"tool": scelto} if strumento in _TOOL else {})}
+    pg = (await client.post("/characters", json={**base, "background_2024": corpo})).json()
+    assert [a["name"] for a in pg["abilities"]] == [talento]
+    assert sorted(k for k, v in pg["skills"].items() if v) == sorted(abilita)
+    assert pg["tool_proficiencies"] == {scelto: True}
+    assert sorted(a["name"] for a in pg["ability_scores"] if a["value"] == 11) == sorted(caratteristiche)
+    estranea = next(a for a in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma") if a not in caratteristiche)
+    r = await client.post("/characters", json={**base, "background_2024": {**corpo, "increases": {estranea: 2, caratteristiche[0]: 1}}})
+    assert r.status_code == 422, f"{estranea} non è fra le caratteristiche di {chiave}"
+
+
+def _somma(pg):
+    totale = {}
+    for i in pg["items"]:
+        chiave = (i["item_metadata"] or {}).get("srd_index") or i["name"]
+        totale[chiave] = totale.get(chiave, 0) + i["quantity"]
+    return totale
+
+
+@pytest.mark.caccia(id="CB-1385", fonte="2014 · Classi · Equipaggiamento (Barbaro pag. 48, Guerriero pag. 71, Ladro pag. 78, Monaco pag. 90): quantità e pezzi di ogni scelta",
+                    zona="flusso:creazione", voce="regola", copre=["POST /characters"])
+@pytest.mark.parametrize("classe, scelte, atteso", [
+    ("barbarian", [0, 0, 0, 0], {"greataxe": 1, "handaxe": 2, "Dotazione da esploratore": 1, "javelin": 4}),
+    ("barbarian", [1, 1, 0, 0], {"Arma da guerra da mischia a scelta": 1, "Arma semplice a scelta": 1, "Dotazione da esploratore": 1, "javelin": 4}),
+    ("fighter", [1, 1, 1, 1], {"leather-armor": 1, "longbow": 1, "Frecce": 20, "Arma da guerra a scelta": 2, "handaxe": 2, "Dotazione da esploratore": 1}),
+    ("fighter", [0, 0, 0, 0], {"chain-mail": 1, "Arma da guerra a scelta": 1, "shield": 1, "crossbow-light": 1, "Quadrelli": 20, "Dotazione da avventuriero": 1}),
+    ("rogue", [1, 1, 2, 0], {"shortsword": 2, "Dotazione da esploratore": 1, "leather-armor": 1, "dagger": 2, "Arnesi da scasso": 1}),
+    ("monk", [0, 0, 0], {"shortsword": 1, "Dotazione da avventuriero": 1, "dart": 10}),
+])
+async def test_equipaggiamento_2014_quantita_come_nel_manuale(client, classe, scelte, atteso):
+    pg = (await client.post("/characters", json={"name": "Q", "initial_class": {"class_name": classe}, "starting_equipment": scelte})).json()
+    assert _somma(pg) == atteso
+    assert pg["currency"]["gold"] == 0
+
+
+@pytest.mark.caccia(id="CB-1386", fonte="2014 · Guerriero, Ladro, Monaco · Equipaggiamento: «non si ottiene entrando nella classe come multiclasse (pag. 164)»; 2024 · Multiclasse",
+                    zona="flusso:creazione", voce="interazione", copre=["POST /characters", "POST /characters/{char_id}/classes"])
+@pytest.mark.parametrize("ed", ["2014", "2024"])
+async def test_seconda_classe_non_da_equipaggiamento_di_partenza(client, ed):
+    scelte = [0, 0, 0, 0] if ed == "2014" else [0]
+    pg = (await client.post("/characters", json={"name": "M", "rules_edition": ed, "ability_scores": {"strength": 14, "dexterity": 14},
+                                                  "initial_class": {"class_name": "fighter"}, "starting_equipment": scelte})).json()
+    prima = (_somma(pg), pg["currency"]["gold"])
+    r = await client.post(f"/characters/{pg['id']}/classes", json={"class_name": "rogue", "level": 1, "skill_choices": ["stealth"]})
+    assert r.status_code == 201, r.text[:150]
+    dopo = (await client.get(f"/characters/{pg['id']}")).json()
+    assert (_somma(dopo), dopo["currency"]["gold"]) == prima
