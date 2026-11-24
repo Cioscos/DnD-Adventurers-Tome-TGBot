@@ -76,6 +76,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
     onError: (err) => {
       const code = apiErrorCode(err)
       if (code === 'turn_slot_used') toast.error(t('character.extras.chain_master.reaction_used'))
+      else if (err instanceof ApiError && err.detail === 'companion_exists') toast.error(t('character.extras.beast.form_errors.companion_exists'))
       else notifyMutationError(err)
     },
   })
