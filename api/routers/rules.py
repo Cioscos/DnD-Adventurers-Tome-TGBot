@@ -580,6 +580,10 @@ async def end_active_state(
     if key.startswith(SPELL_STATE_PREFIX):
         await end_by_target(db, char, closed)  # PF al nuovo massimo, orologi dei lanciatori chiusi
     if key.startswith(SPELL_CLOCK_PREFIX) and any("concentration_end" in (s.get("ends_on") or ()) for s in closed):
+        if is_concentrating(char):
+            name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id),
+                        ((char.settings or {}).get("concentration_item_spell") or {}).get("name"))
+            add_history(db, char.id, "concentration", "Concentrazione interrotta" + (f": {name}" if name else ""))
         end_concentration(char)  # CH2: l'incantesimo finito era quello su cui si concentrava, come «Interrompi concentrazione»
         await release_concentration_effects(db, char)
     return char.active_states

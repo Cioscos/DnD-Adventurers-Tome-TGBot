@@ -997,3 +997,16 @@ async def test_la_serata_mostra_la_concentrazione_da_oggetto(client, test_sessio
     vivi = (await client.get(f"/sessions/{sid}/live")).json()["live_characters"]
     [foto] = [c for c in vivi if c["id"] == cid]
     assert (foto["is_concentrating"], foto["concentration_spell"], foto["concentration_from_item"]) == (True, "Raggio Fantasma", True)
+
+
+@pytest.mark.caccia(id="CB-1517", fonte="invariante (come CB-1179): interrompere la concentrazione si scrive in Cronologia", zona="flusso:concentrazione", voce="annullamento",
+                    copre=["DELETE /characters/{char_id}/active-states/{key}"])
+async def test_termina_sull_orologio_si_scrive_in_cronologia(client):
+    from core.rules.spell_effects import SPELL_CLOCK_PREFIX
+    from tests.integration._encounter_helpers import PLAYER_ID as P
+    cid, sid = await _benedizione(client, P)
+    await _benedici(client, P, cid, sid, [cid])
+    r = await client.delete(f"/characters/{cid}/active-states/{SPELL_CLOCK_PREFIX}bless")
+    assert r.status_code == 200, r.text
+    voci = (await client.get(f"/characters/{cid}/history")).json()
+    assert any(v["event_type"] == "concentration" and "interrotta" in v["description"] for v in voci)
