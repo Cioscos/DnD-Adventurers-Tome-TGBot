@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import SavingThrows from '@/pages/SavingThrows'
+import { d20Count } from '@/hooks/useD20Roll'
 
 const { getChar, updateSavingThrows } = vi.hoisted(() => ({ getChar: vi.fn(), updateSavingThrows: vi.fn() }))
 
@@ -69,5 +70,19 @@ describe('caccia: tiri salvezza', () => {
     // il server unisce quanto riceve: se la seconda richiesta riporta Forza com'era, la prima modifica va persa
     expect(secondo.strength).not.toBe(false)
     expect(secondo.constitution).toBe(true)
+  })
+})
+
+describe('caccia: quanti d20 animare', () => {
+  // caccia: {"id": "CB-992", "fonte": "2014 · Vantaggio e svantaggio · pag. 173 (più fonti dello stesso tipo contano una volta, i due opposti si annullano)", "zona": "flusso:caratteristiche-tiri", "voce": "interazione", "copre": ["route:/char/:id/skills", "route:/char/:id/stats"]}
+  it('il numero di dadi segue la somma di modo scelto e opzioni del tiro', () => {
+    const scelta = (...modes: Array<'advantage' | 'disadvantage'>) => ({ options: [], modes }) as never
+    expect(d20Count('normal')).toBe(1)
+    expect(d20Count('advantage')).toBe(2)
+    expect(d20Count('advantage', scelta('advantage'))).toBe(2) // due vantaggi contano una volta: sempre due dadi
+    expect(d20Count('advantage', scelta('advantage', 'advantage'))).toBe(2)
+    expect(d20Count('advantage', scelta('disadvantage'))).toBe(1) // si annullano
+    expect(d20Count('disadvantage', scelta('advantage', 'disadvantage'))).toBe(1)
+    expect(d20Count('normal', scelta('disadvantage', 'disadvantage'))).toBe(2)
   })
 })

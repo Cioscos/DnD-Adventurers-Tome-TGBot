@@ -370,3 +370,347 @@ async def test_percorso_comune_punteggio_competenza_e_tiri(client):
     assert (pg["skills"]["athletics"], pg["saving_throws"]["dexterity"]) == (True, True)
     mods = {s["name"]: s["modifier"] for s in pg["ability_scores"]}
     assert (mods["strength"], mods["dexterity"]) == (3, 2)
+
+
+# ---------------------------------------------------------------------------
+# Secondo giro (CB-973 e seguenti): Furore, Atleta Straordinario, strumenti, passiva, combinazioni
+# ---------------------------------------------------------------------------
+async def _classe(client, edizione, classe, livello, sottoclasse=None, punteggi=None, dado_vita=10) -> int:
+    corpo = {"name": "P", "rules_edition": edizione,
+             "initial_class": {"class_name": classe, "level": livello, "hit_die": dado_vita, "subclass": sottoclasse}}
+    if punteggi:
+        corpo["ability_scores"] = punteggi
+    r = await client.post("/characters", json=corpo)
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+async def _ira(client, cid) -> None:
+    r = await client.post(f"/characters/{cid}/features/barbarian.rage/use", json={})
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-973", fonte="2014 · Barbaro · Ira · pag. 48 / 2024 · Barbaro · Ira · pag. 52", zona="flusso:caratteristiche-tiri",
+                    voce="regola", copre=["POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/ability_checks/{ability}/roll",
+                                           "POST /characters/{char_id}/saving_throws/{ability}/roll", "POST /characters/{char_id}/skills/{skill_name}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_ira_da_vantaggio_solo_a_prove_e_ts_di_forza(client, edizione):
+    cid = await _classe(client, edizione, "barbarian", 1, punteggi={"strength": 16, "dexterity": 14})
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "normal"
+    await _ira(client, cid)
+    modi = {
+        "prova Forza": (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"],
+        "Atletica": (await _tira(client, cid, "skills/athletics/roll", die=10))["mode"],
+        "TS Forza": (await _tira(client, cid, "saving_throws/strength/roll", die=10))["mode"],
+        "prova Destrezza": (await _tira(client, cid, "ability_checks/dexterity/roll", die=10))["mode"],
+        "Acrobazia": (await _tira(client, cid, "skills/acrobatics/roll", die=10))["mode"],
+        "TS Destrezza": (await _tira(client, cid, "saving_throws/dexterity/roll", die=10))["mode"],
+    }
+    assert modi == {"prova Forza": "advantage", "Atletica": "advantage", "TS Forza": "advantage",
+                    "prova Destrezza": "normal", "Acrobazia": "normal", "TS Destrezza": "normal"}
+    await client.delete(f"/characters/{cid}/active-states/rage")
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "normal"
+
+
+@pytest.mark.caccia(id="CB-974", fonte="2014 · Vantaggio e svantaggio · pag. 173 (si annullano, comunque siano più fonti) / 2024 · stesso", zona="flusso:caratteristiche-tiri",
+                    voce="interazione", copre=["POST /characters/{char_id}/ability_checks/{ability}/roll", "POST /characters/{char_id}/saving_throws/{ability}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_due_vantaggi_e_uno_svantaggio_si_annullano(client, edizione):
+    cid = await _classe(client, edizione, "barbarian", 1, punteggi={"strength": 16})
+    await _ira(client, cid)  # vantaggio dal Furore
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})  # svantaggio alle prove
+    r = await _tira(client, cid, "ability_checks/strength/roll", mode="advantage", dice=[4, 15])  # secondo vantaggio, dal giocatore
+    assert r["mode"] == "normal" and len(r["dice"]) == 1
+    r = await _tira(client, cid, "ability_checks/strength/roll", die=9)  # Furore contro Avvelenato
+    assert r["mode"] == "normal"
+    r = await _tira(client, cid, "saving_throws/strength/roll", die=9)  # Avvelenato non tocca i TS
+    assert r["mode"] == "advantage"
+    r = await _tira(client, cid, "ability_checks/strength/roll", mode="disadvantage", dice=[4, 15])  # due svantaggi, un vantaggio
+    assert r["mode"] == "normal"
+
+
+@pytest.mark.caccia(id="CB-975", fonte="2014 · Guerriero · Campione · Atleta Straordinario · pag. 72", zona="flusso:caratteristiche-tiri",
+                    voce="regola", copre=["POST /characters/{char_id}/skills/{skill_name}/roll", "POST /characters/{char_id}/ability_checks/{ability}/roll",
+                                           "POST /characters/{char_id}/tool_checks/{tool}/roll"])
+@pytest.mark.parametrize("livello, extra", [(7, 2), (6, 0)])
+async def test_atleta_straordinario_2014_mezza_competenza_per_eccesso(client, livello, extra):
+    cid = await _classe(client, "2014", "fighter", livello, "champion")  # competenza +3 dal 5 (mezza per eccesso = 2)
+    await client.patch(f"/characters/{cid}/skills", json={"skills": {"stealth": True}})
+    assert (await _tira(client, cid, "skills/athletics/roll", die=10))["bonus"] == extra
+    assert (await _tira(client, cid, "skills/acrobatics/roll", die=10))["bonus"] == extra
+    assert (await _tira(client, cid, "ability_checks/constitution/roll", die=10))["bonus"] == extra
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["bonus"] == extra
+    assert (await _tira(client, cid, "skills/stealth/roll", die=10))["bonus"] == 3  # già competente: niente in più
+    assert (await _tira(client, cid, "ability_checks/intelligence/roll", die=10))["bonus"] == 0
+    assert (await _tira(client, cid, "skills/history/roll", die=10))["bonus"] == 0
+    assert (await _tira(client, cid, "saving_throws/dexterity/roll", die=10))["bonus"] == 0
+    assert (await _leggi(client, cid))["skill_bonuses"]["athletics"] == extra  # la scheda mostra ciò che si tira
+
+
+@pytest.mark.caccia(id="CB-976", fonte="2024 · Guerriero · Campione · Atleta Straordinario · pag. 111", zona="flusso:caratteristiche-tiri",
+                    voce="edizioni", copre=["POST /characters/{char_id}/skills/{skill_name}/roll", "POST /characters/{char_id}/ability_checks/{ability}/roll"])
+@pytest.mark.parametrize("livello, atteso", [(3, "advantage"), (2, "normal")])
+async def test_atleta_straordinario_2024_vantaggio_ad_atletica(client, livello, atteso):
+    cid = await _classe(client, "2024", "fighter", livello, "champion")
+    assert (await _tira(client, cid, "skills/athletics/roll", die=10))["mode"] == atteso
+    assert (await _tira(client, cid, "skills/acrobatics/roll", die=10))["mode"] == "normal"
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "normal"
+    assert (await _tira(client, cid, "skills/athletics/roll", die=10))["bonus"] == 0  # nel 2024 niente mezza competenza
+
+
+@pytest.mark.caccia(id="CB-977", fonte="2014 · Ladro · Dote Affidabile · pag. 78 / 2024 · Ladro · Dote Affidabile · pag. 131", zona="flusso:caratteristiche-tiri",
+                    voce="regola", copre=["POST /characters/{char_id}/tool_checks/{tool}/roll"])
+@pytest.mark.parametrize("edizione, livello", [("2014", 11), ("2014", 10), ("2024", 7), ("2024", 6)])
+async def test_dote_affidabile_vale_per_gli_strumenti(client, edizione, livello):
+    cid = await _classe(client, edizione, "rogue", livello, dado_vita=8)
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    attivo = (edizione, livello) in (("2014", 11), ("2024", 7))
+    r = await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", die=3)
+    assert r["die"] == (10 if attivo else 3)
+    r = await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", die=14)
+    assert r["die"] == 14
+
+
+@pytest.mark.caccia(id="CB-978", fonte="2014 · Barbaro · Ira · pag. 48 / Avvelenato · pag. 290", zona="flusso:caratteristiche-tiri",
+                    voce="interazione", copre=["POST /characters/{char_id}/tool_checks/{tool}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_prova_con_strumento_riceve_vantaggi_e_svantaggi_automatici(client, edizione):
+    cid = await _classe(client, edizione, "barbarian", 1, punteggi={"strength": 16, "dexterity": 14})
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"smiths_tools": True}})
+    assert (await _tira(client, cid, "tool_checks/smiths_tools/roll", ability="strength", die=10))["mode"] == "normal"
+    await _ira(client, cid)
+    assert (await _tira(client, cid, "tool_checks/smiths_tools/roll", ability="strength", die=10))["mode"] == "advantage"
+    assert (await _tira(client, cid, "tool_checks/smiths_tools/roll", ability="dexterity", die=10))["mode"] == "normal"
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})
+    assert (await _tira(client, cid, "tool_checks/smiths_tools/roll", ability="strength", die=10))["mode"] == "normal"
+    assert (await _tira(client, cid, "tool_checks/smiths_tools/roll", ability="dexterity", die=10))["mode"] == "disadvantage"
+
+
+@pytest.mark.caccia(id="CB-979", fonte="2024 · Strumenti · pag. 220 (abilità competente insieme allo strumento: vantaggio) / Avvelenato", zona="flusso:caratteristiche-tiri",
+                    voce="interazione", copre=["POST /characters/{char_id}/tool_checks/{tool}/roll"])
+async def test_strumento_con_abilita_e_avvelenato_si_annullano(client):
+    cid = await _scheda(client, "2024", punteggi={"dexterity": 14})
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    await client.patch(f"/characters/{cid}/skills", json={"skills": {"sleight_of_hand": True}})
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})
+    r = await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", skill="sleight_of_hand", die=10)
+    assert r["mode"] == "normal"
+    r = await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", skill="sleight_of_hand", mode="advantage", dice=[2, 9])
+    assert r["mode"] == "normal"
+
+
+@pytest.mark.caccia(id="CB-980", fonte="invariante: una richiesta ripetuta non spende due volte l'Ispirazione", zona="flusso:caratteristiche-tiri",
+                    voce="ripetizione", copre=["POST /characters/{char_id}/tool_checks/{tool}/roll"])
+async def test_ritiro_con_ispirazione_su_prova_con_strumento_una_sola_volta(client):
+    import asyncio
+    cid = await _scheda(client, "2024")
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    corpo = {"ability": "dexterity", "with_inspiration": True, "die": 7}
+    risposte = await asyncio.gather(*[client.post(f"/characters/{cid}/tool_checks/thieves_tools/roll", json=corpo) for _ in range(3)])
+    assert sorted(r.status_code for r in risposte) == [200, 409, 409]
+    assert (await _leggi(client, cid))["heroic_inspiration"] is False
+
+
+@pytest.mark.caccia(id="CB-981", fonte="2014 · Barbaro · Potenza Indomabile · pag. 49 / 2024 · Barbaro · Potenza Indomabile (prove e TS di Forza)", zona="flusso:caratteristiche-tiri",
+                    voce="edizioni", copre=["POST /characters/{char_id}/ability_checks/{ability}/roll", "POST /characters/{char_id}/saving_throws/{ability}/roll",
+                                           "POST /characters/{char_id}/tool_checks/{tool}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_potenza_indomabile_totale_minimo_pari_alla_forza(client, edizione):
+    cid = await _classe(client, edizione, "barbarian", 18, punteggi={"strength": 20, "dexterity": 10})
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"smiths_tools": True}})
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=1))["total"] == 20
+    assert (await _tira(client, cid, "skills/athletics/roll", die=1))["total"] == 20
+    assert (await _tira(client, cid, "tool_checks/smiths_tools/roll", ability="strength", die=1))["total"] == 20
+    assert (await _tira(client, cid, "ability_checks/dexterity/roll", die=1))["total"] == 1
+    assert (await _tira(client, cid, "saving_throws/strength/roll", die=1))["total"] == (1 + 5 + 6 if edizione == "2014" else 20)
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=19))["total"] == 24
+
+
+@pytest.mark.caccia(id="CB-982", fonte="2014 · Prove Passive · pag. 175 (10 + modificatori; vantaggio +5, svantaggio -5) / 2024 · Passive Checks", zona="flusso:caratteristiche-tiri",
+                    voce="regola", copre=["GET /characters/{char_id}", "route:/char/:id/skills"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_percezione_passiva_con_competenza_maestria_e_factotum(client, edizione):
+    cid = await _classe(client, edizione, "bard", 5, punteggi={"wisdom": 14}, dado_vita=8)  # competenza +3, Saggezza +2
+    assert (await _leggi(client, cid))["passives"]["perception"] == 10 + 2 + 1  # Factotum: metà competenza per difetto
+    await client.patch(f"/characters/{cid}/skills", json={"skills": {"perception": True}})
+    assert (await _leggi(client, cid))["passives"]["perception"] == 15
+    await client.patch(f"/characters/{cid}/skills", json={"skills": {"perception": "expert"}})
+    assert (await _leggi(client, cid))["passives"]["perception"] == 18
+    await client.patch(f"/characters/{cid}/ability_scores/wisdom", json={"value": 1})
+    assert (await _leggi(client, cid))["passives"]["perception"] == 10 - 5 + 6
+    await client.patch(f"/characters/{cid}/ability_scores/wisdom", json={"value": 30})
+    assert (await _leggi(client, cid))["passives"]["perception"] == 10 + 10 + 6
+
+
+@pytest.mark.caccia(id="CB-983", fonte="2014 · Prove Passive · pag. 175 / Avvelenato · pag. 290 (svantaggio alle prove di caratteristica)", zona="flusso:caratteristiche-tiri",
+                    voce="interazione", copre=["GET /characters/{char_id}", "PATCH /characters/{char_id}/conditions"])
+async def test_passiva_scende_di_5_con_svantaggio_da_avvelenato_e_torna_dopo(client):
+    cid = await _scheda(client, "2014", punteggi={"wisdom": 14})
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": True}})
+    pg = await _leggi(client, cid)
+    assert (pg["passives"]["perception"], pg["passives"]["insight"]) == (7, 7)
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": False}})
+    assert (await _leggi(client, cid))["passives"]["perception"] == 12
+
+
+@pytest.mark.caccia(id="CB-984", fonte="2014 · Oggetti magici · Guanti della Forza da Ogre (se la Forza è già 19 o più non succede nulla)", zona="flusso:caratteristiche-tiri",
+                    voce="limiti", copre=["POST /characters/{char_id}/items", "route:/char/:id/stats"])
+async def test_oggetto_assoluto_non_abbassa_un_punteggio_piu_alto_e_vince_il_maggiore(client):
+    cid = await _scheda(client, "2014")
+    await client.patch(f"/characters/{cid}/ability_scores/strength", json={"value": 22})
+    def guanti(v): return {"ability_modifiers": [{"ability": "strength", "kind": "absolute", "value": v}]}
+    await client.post(f"/characters/{cid}/items", json={"name": "G19", "item_metadata": guanti(19), "is_equipped": True})
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["bonus"] == 6
+    assert (await _leggi(client, cid))["carry_capacity"] == 22 * 15
+    await client.post(f"/characters/{cid}/items", json={"name": "G25", "item_metadata": guanti(25), "is_equipped": True})
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["bonus"] == 7
+
+
+@pytest.mark.caccia(id="CB-986", fonte="2014 · Riposo lungo · pag. 186 / Ira · pag. 48 (dura 1 minuto)", zona="flusso:caratteristiche-tiri",
+                    voce="persistenza", copre=["POST /characters/{char_id}/rest", "POST /characters/{char_id}/ability_checks/{ability}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_dopo_un_riposo_lungo_il_vantaggio_del_furore_non_c_e_piu(client, edizione):
+    cid = await _classe(client, edizione, "barbarian", 3, punteggi={"strength": 16})
+    await _ira(client, cid)
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "advantage"
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})
+    assert r.status_code == 200, r.text
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "normal"
+
+
+@pytest.mark.caccia(id="CB-987", fonte="invariante: togliere una competenza la toglie davvero", zona="flusso:caratteristiche-tiri",
+                    voce="annullamento", copre=["PATCH /characters/{char_id}", "POST /characters/{char_id}/tool_checks/{tool}/roll"])
+async def test_togliere_la_competenza_nello_strumento_rifiuta_la_prova_e_abbassa_la_maestria(client):
+    cid = await _scheda(client, "2014", punteggi={"dexterity": 14})
+    url = f"/characters/{cid}/tool_checks/thieves_tools/roll"
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": "expert"}})
+    assert (await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", die=10))["bonus"] == 6
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    assert (await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", die=10))["bonus"] == 4
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {}})
+    assert (await client.post(url, json={"ability": "dexterity", "die": 10})).status_code == 409
+    assert (await _leggi(client, cid))["tool_proficiencies"].get("thieves_tools") in (None, False)
+
+
+@pytest.mark.caccia(id="CB-988", fonte="2014 · Indebolimento · pag. 291 / 2024 · Exhaustion · pag. 366", zona="flusso:caratteristiche-tiri",
+                    voce="edizioni", copre=["POST /characters/{char_id}/tool_checks/{tool}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_spossatezza_sulla_prova_con_strumento_per_edizione(client, edizione):
+    cid = await _scheda(client, edizione, punteggi={"dexterity": 14})
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"exhaustion": 2}})
+    r = await _tira(client, cid, "tool_checks/thieves_tools/roll", ability="dexterity", die=10)
+    assert (r["mode"], r["bonus"]) == (("disadvantage", 4) if edizione == "2014" else ("normal", 0))
+
+
+@pytest.mark.caccia(id="CB-989", fonte="2014 · Barbaro · Ira · pag. 48 (benefici solo senza armatura pesante) / Armature · pag. 144", zona="flusso:caratteristiche-tiri",
+                    voce="interazione", copre=["POST /characters/{char_id}/items", "PATCH /characters/{char_id}/items/{item_id}", "POST /characters/{char_id}/ability_checks/{ability}/roll"])
+async def test_armatura_pesante_toglie_e_rimette_il_vantaggio_del_furore(client):
+    cid = await _classe(client, "2014", "barbarian", 1, punteggi={"strength": 16})
+    await _ira(client, cid)
+    r = await client.post(f"/characters/{cid}/items", json={"name": "Piastre", "item_type": "armor", "is_equipped": True,
+                                                              "equipment_slot": "body", "item_metadata": {"armor_type": "heavy", "ac_value": 18}})
+    assert r.status_code in (200, 201), r.text
+    iid = next(i["id"] for i in (await _leggi(client, cid))["items"] if i["name"] == "Piastre")
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "disadvantage"  # senza competenza: svantaggio a Forza e Destrezza
+    await client.patch(f"/characters/{cid}/items/{iid}", json={"is_equipped": False})
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "advantage"
+    await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"exhaustion": 1}})  # 2014: svantaggio alle prove
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["mode"] == "normal"
+    assert (await _tira(client, cid, "saving_throws/strength/roll", die=10))["mode"] == "advantage"
+
+
+@pytest.mark.caccia(id="CB-990", fonte="CLAUDE.md · contratto: AbilityScores.tsx legge base_value (valore base) e value (effettivo con gli oggetti)", zona="flusso:caratteristiche-tiri",
+                    voce="contratto", copre=["PATCH /characters/{char_id}/ability_scores/{ability_name}", "GET /characters/{char_id}", "route:/char/:id/stats"])
+async def test_valore_base_ed_effettivo_della_caratteristica_con_un_oggetto(client):
+    cid = await _scheda(client, "2014", punteggi={"strength": 12})
+    meta = {"ability_modifiers": [{"ability": "strength", "kind": "relative", "value": 2}]}
+    await client.post(f"/characters/{cid}/items", json={"name": "Cintura", "item_metadata": meta, "is_equipped": True})
+    risposta = await client.patch(f"/characters/{cid}/ability_scores/strength", json={"value": 13})
+    for pg in (risposta.json(), await _leggi(client, cid)):
+        forza = next(s for s in pg["ability_scores"] if s["name"] == "strength")
+        assert (forza["base_value"], forza["value"], forza["modifier"]) == (13, 15, 2)
+        assert pg["carry_capacity"] == 15 * 15
+    destrezza = next(s for s in (await _leggi(client, cid))["ability_scores"] if s["name"] == "dexterity")
+    assert (destrezza["base_value"], destrezza["value"]) == (10, 10)
+
+
+@pytest.mark.xfail(strict=True, reason="CB-991 il punteggio effettivo scende sotto 1 (-2, modificatore -6) e la capacità di carico diventa negativa (-30)")
+@pytest.mark.caccia(id="CB-991", fonte="decisione D-013: il punteggio effettivo non scende sotto 1, il modificatore non sotto -5; invariante: la capacità di carico non è negativa",
+                    zona="flusso:caratteristiche-tiri", voce="limiti", copre=["POST /characters/{char_id}/items", "GET /characters/{char_id}", "POST /characters/{char_id}/ability_checks/{ability}/roll"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_forza_ridotta_da_un_oggetto_resta_a_1(client, edizione):
+    cid = await _scheda(client, edizione, punteggi={"strength": 8})
+    meta = {"ability_modifiers": [{"ability": "strength", "kind": "relative", "value": -10}]}
+    await client.post(f"/characters/{cid}/items", json={"name": "Maledetto", "item_metadata": meta, "is_equipped": True})
+    pg = await _leggi(client, cid)
+    forza = next(s for s in pg["ability_scores"] if s["name"] == "strength")
+    assert (forza["value"], forza["modifier"]) == (1, -5)
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["bonus"] == -5
+    assert pg["carry_capacity"] >= 0
+
+
+@pytest.mark.xfail(strict=True, reason="CB-1001 la Costituzione effettiva scende sotto 1 (-2, modificatore -6) invece di fermarsi a 1")
+@pytest.mark.caccia(id="CB-1001", fonte="decisione D-013: il punteggio effettivo non scende sotto 1, il modificatore non sotto -5",
+                    zona="flusso:caratteristiche-tiri", voce="limiti", copre=["POST /characters/{char_id}/items", "GET /characters/{char_id}"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_costituzione_ridotta_da_un_oggetto_resta_a_1_e_i_pf_la_seguono(client, edizione):
+    cid = await _scheda(client, edizione, "wizard", 4, {"constitution": 8}, dado_vita=6)
+    meta = {"ability_modifiers": [{"ability": "constitution", "kind": "relative", "value": -10}]}
+    await client.post(f"/characters/{cid}/items", json={"name": "Maledetto", "item_metadata": meta, "is_equipped": True})
+    pg = await _leggi(client, cid)
+    con = next(s for s in pg["ability_scores"] if s["name"] == "constitution")
+    assert (con["value"], con["modifier"]) == (1, -5)
+    assert (await _tira(client, cid, "ability_checks/constitution/roll", die=10))["bonus"] == -5
+    assert pg["hit_points"] >= 4
+
+
+@pytest.mark.caccia(id="CB-994", fonte="CLAUDE.md · Auth: ogni endpoint filtra per l'utente autenticato; invariante: nessun dato altrui nelle risposte", zona="flusso:caratteristiche-tiri",
+                    voce="permessi", copre=["POST /characters/{char_id}/tool_checks/{tool}/roll", "PATCH /characters/{char_id}", "PATCH /characters/{char_id}/inspiration",
+                                             "GET /characters/{char_id}", "POST /characters/{char_id}/dice/initiative"])
+async def test_un_altro_utente_non_tocca_strumenti_ispirazione_e_dettagli(client, come_utente):
+    cid = await _scheda(client, "2024", punteggi={"dexterity": 14})
+    await client.patch(f"/characters/{cid}", json={"tool_proficiencies": {"thieves_tools": True}})
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    prima = await _leggi(client, cid)
+    come_utente(9002)
+    chiamate = [("get", "", None),
+                ("post", "tool_checks/thieves_tools/roll", {"ability": "dexterity", "with_inspiration": True, "die": 5}),
+                ("post", "skills/athletics/roll", {"with_inspiration": True, "die": 5}),
+                ("post", "dice/initiative", {"die": 5}),
+                ("patch", "", {"tool_proficiencies": {"thieves_tools": "expert", "smiths_tools": True}}),
+                ("patch", "inspiration", {"heroic_inspiration": False})]
+    for metodo, percorso, corpo in chiamate:
+        url = f"/characters/{cid}/{percorso}".rstrip("/")
+        r = await (getattr(client, metodo)(url) if corpo is None else getattr(client, metodo)(url, json=corpo))
+        assert r.status_code in (403, 404), (metodo, percorso, r.status_code)
+        assert "thieves_tools" not in r.text, (metodo, percorso)
+    come_utente(1234)
+    dopo = await _leggi(client, cid)
+    assert (dopo["tool_proficiencies"], dopo["heroic_inspiration"], dopo["rolls_history"]) == \
+           (prima["tool_proficiencies"], True, prima["rolls_history"])
+
+
+@pytest.mark.caccia(id="CB-995", fonte="2014 · Guerriero · Campione · Atleta Straordinario · pag. 72 (l'iniziativa è una prova di Destrezza)", zona="flusso:caratteristiche-tiri",
+                    voce="regola", copre=["POST /characters/{char_id}/dice/initiative"])
+@pytest.mark.parametrize("livello, extra", [(7, 2), (6, 0)])
+async def test_atleta_straordinario_2014_vale_per_l_iniziativa(client, livello, extra):
+    cid = await _classe(client, "2014", "fighter", livello, "champion")
+    r = await _tira(client, cid, "dice/initiative", die=10)
+    assert r["total"] == 10 + extra
+
+
+@pytest.mark.caccia(id="CB-996", fonte="2014 · Bardo · Factotum · pag. 54 / Guerriero · Campione · Atleta Straordinario · pag. 72 (vale il maggiore dei due, non si sommano)", zona="flusso:caratteristiche-tiri",
+                    voce="interazione", copre=["POST /characters/{char_id}/classes", "POST /characters/{char_id}/skills/{skill_name}/roll",
+                                               "POST /characters/{char_id}/ability_checks/{ability}/roll"])
+async def test_factotum_e_atleta_straordinario_non_si_sommano(client):
+    cid = await _classe(client, "2014", "fighter", 7, "champion")  # competenza +3 dopo l'aggiunta di 2 livelli di Bardo: 9 livelli, +4
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "bard", "level": 2, "hit_die": 8})
+    assert r.status_code == 201, r.text
+    pg = await _leggi(client, cid)
+    pb = pg["proficiency_bonus"]
+    atteso = max(pb // 2, (pb + 1) // 2)
+    assert (await _tira(client, cid, "ability_checks/strength/roll", die=10))["bonus"] == atteso
+    assert (await _tira(client, cid, "skills/athletics/roll", die=10))["bonus"] == atteso
+    assert (await _tira(client, cid, "ability_checks/intelligence/roll", die=10))["bonus"] == pb // 2  # solo Factotum
