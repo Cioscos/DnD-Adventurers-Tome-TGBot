@@ -244,7 +244,8 @@ def _apply_creation_extras(char: Character, body: CharacterCreate, lang: str) ->
             full = _SHORT_ABILITY.get(k, k)
             if full not in scores:
                 raise bad(f"Unknown ability bonus: {k}")
-            scores[full] += v
+            if body.rules_edition != "2024":  # 2024: le specie non danno aumenti, solo il background (pag. 177; pag. 38)
+                scores[full] += v
         for k, v in sp.roll_notes.items():
             if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
                 raise bad(f"Invalid roll note: {k}")
