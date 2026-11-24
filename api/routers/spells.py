@@ -781,7 +781,9 @@ async def update_concentration(
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:
         # Senza `rounds` sullo stesso incantesimo non cambia nulla: il lancio ha già avviato il contatore.
         spell = next((s for s in char.spells if s.id == body.spell_id), None)
-        rounds = body.rounds if body.rounds is not None else parse_duration_rounds(spell.duration) if spell else None
+        if spell is None:
+            raise HTTPException(status_code=404, detail="spell_not_found")
+        rounds = body.rounds if body.rounds is not None else parse_duration_rounds(spell.duration)
         start_concentration(char, body.spell_id, rounds)
     await release_concentration_effects(session, char)
     return await build_character_response(session, char)

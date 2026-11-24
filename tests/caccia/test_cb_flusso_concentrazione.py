@@ -105,7 +105,6 @@ async def test_ts_riuscito_alla_soglia_mantiene(client, dadi):
 
 @pytest.mark.caccia(id="CB-442", fonte="invariante: l'incantesimo di un altro personaggio non è una concentrazione valida", zona="flusso:concentrazione",
                     voce="permessi", copre=["PATCH /characters/{char_id}/concentration"])
-@pytest.mark.xfail(strict=True, reason="CB-442 PATCH concentration accetta lo spell_id di un altro personaggio")
 async def test_concentrazione_manuale_su_incantesimo_di_un_altro_personaggio(client):
     a = await _pg(client)
     b = await _pg(client)
@@ -117,7 +116,6 @@ async def test_concentrazione_manuale_su_incantesimo_di_un_altro_personaggio(cli
 
 @pytest.mark.caccia(id="CB-462", fonte="invariante: un incantesimo inesistente non è una concentrazione valida", zona="flusso:concentrazione",
                     voce="limiti", copre=["PATCH /characters/{char_id}/concentration"])
-@pytest.mark.xfail(strict=True, reason="CB-462 PATCH concentration accetta uno spell_id inesistente")
 async def test_concentrazione_manuale_su_incantesimo_inesistente(client):
     a = await _pg(client)
     r = await client.patch(f"/characters/{a}/concentration", json={"spell_id": 987654})
