@@ -72,7 +72,6 @@ async def test_incantesimo_potenziato_2024_una_volta_sola_sullo_stesso_danno(cli
                     voce="regola",
                     copre=["carta:2024/classes/sorcerer.md#Affinità Elementale / Elemental Affinity (Stregoneria Draconica 6, pag. 148)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2613: difforme dal manuale, confermato")
 async def test_affinita_elementale_2024_somma_il_carisma_a_un_solo_tiro_di_danno_per_lancio(client):
     cid = await _make(client, "draconic", 6, charisma=18)
     await _affinity(client, cid, "fire")

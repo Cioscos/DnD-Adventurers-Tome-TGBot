@@ -23,6 +23,7 @@ ED, CK = "2024", "sorcerer"
 P = f"{CK}."
 D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative", "concentration")  # D20 Test: prove, tiri per colpire, TS
 NO_CONCENTRATION_KEY = f"{P}dragon_companion_no_concentration"  # lo legge il router degli incantesimi
+AFFINITY_USED = "affinity_used"  # turn_state: l'incantesimo il cui tiro di danno ha già avuto il Carisma (un tiro per lancio)
 
 
 def _both(it: str, en: str) -> dict[str, str]:
@@ -160,9 +161,16 @@ def _affinity_label(key: str) -> dict:
                                                                               f"Resistance to {en} damage and + Charisma on its spells.")}
 
 
+def _mark_affinity(_session: Any, ctx: RuleContext, _inputs: dict) -> list[str]:
+    """Il Carisma vale per un solo tiro dei danni per incantesimo (pag. 148): un lancio nuovo riapre (``_end_cast``)."""
+    ctx.char.turn_state = {**(ctx.char.turn_state or {}), AFFINITY_USED: ctx.spell.id}
+    return [f"turnkey:{AFFINITY_USED}"]  # un rimborso riapre il bonus
+
+
 AFFINITY_BONUS = RollOptionSpec(
-    key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c),
-    available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c),
+    key=f"{P}elemental_affinity", phase="before", rolls=("spell_damage",), bonus=lambda c, _i: _cha(c), on_confirm=_mark_affinity,
+    available=lambda c: c.spell is not None and _affinity_type(c) is not None and spell_damage_type(c) == _affinity_type(c)
+    and (c.char.turn_state or {}).get(AFFINITY_USED) != c.spell.id,
     label=_both("Affinità Elementale: aggiungi il Carisma a un tiro dei danni del tipo scelto", "Elemental Affinity: add your Charisma modifier to one damage roll of your chosen type"))
 RESTORE_OWN_ROLL = RollOptionSpec(
     key=f"{P}restore_balance_own_roll", phase="before", rolls=D20_TESTS, cancels=("*",), slot="reaction", cost=Cost(feature_key=f"{P}restore_balance"),

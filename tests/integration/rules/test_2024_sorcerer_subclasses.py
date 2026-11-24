@@ -222,6 +222,19 @@ async def test_elemental_affinity_is_a_chosen_type_with_resistance_and_a_charism
     assert r.json()["current_hit_points"] == start - 5
 
 
+async def test_elemental_affinity_once_per_cast_reopens_with_a_new_cast(client):
+    # 2024 pag. 148: il Carisma su un solo tiro dei danni per incantesimo; il lancio successivo lo riapre
+    cid = await _make(client, "draconic", 6, charisma=18)
+    await _affinity(client, cid, "fire")
+    fire = await _spell(client, cid, "Dardo", 0, attack_save="ATK", damage_dice="1d10", damage_type="fire")
+    for _ in range(2):
+        assert (await _cast(client, cid, fire)).status_code == 200
+        assert P + "elemental_affinity" in await _roll_keys(client, cid, "spell_damage", spell_id=fire)
+        r = await client.post(f"/characters/{cid}/spells/{fire}/roll_damage", json={"main_rolls": [5, 5], "options": [P + "elemental_affinity"]})
+        assert r.status_code == 200 and r.json()["total"] == 10 + 4, r.text  # trucchetto al 6°: 2d10
+        assert P + "elemental_affinity" not in await _roll_keys(client, cid, "spell_damage", spell_id=fire)
+
+
 async def test_dragon_wings_fly_for_an_hour_and_restore_for_three_points(client):
     cid = await _make(client, "draconic", 14)
     assert (await _use(client, cid, P + "dragon_wings")).status_code == 200
