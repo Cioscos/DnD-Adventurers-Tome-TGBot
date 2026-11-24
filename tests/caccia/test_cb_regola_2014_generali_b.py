@@ -98,7 +98,6 @@ async def _pianta_in_vaso(client, cid) -> None:
                            "carta:2014/general.md#Lanciare un Incantesimo / Casting a Spell (pag. 202)",
                            "PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("condizione,tempo", [("stunned", "1 azione"), ("paralyzed", "1 azione bonus"), ("incapacitated", "1 reazione")])
-@pytest.mark.xfail(strict=True, reason="CB-2811: difforme dal manuale, confermato")
 async def test_chi_non_puo_agire_non_lancia_e_non_spende_lo_slot(client, condizione, tempo):
     cid = await _pg(client, "cleric", 3)
     sid = await _incantesimo(client, cid, "Preghiera breve", 1, tempo=tempo)

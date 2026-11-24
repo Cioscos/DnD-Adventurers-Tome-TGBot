@@ -558,6 +558,7 @@ async def use_spell(
     spell = result.scalar_one_or_none()
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
+    refuse_if_incapacitated(char)  # ogni lancio costa un'azione, un'azione bonus o una reazione (2014 pag. 189-190, 291; 2024 pag. 369)
     if spell.srd_index == "divine-smite" and character_edition(char) == "2024":  # si sceglie dopo un colpo, mai da elenco
         raise HTTPException(status_code=409, detail={"code": "smite_on_hit"})
 
