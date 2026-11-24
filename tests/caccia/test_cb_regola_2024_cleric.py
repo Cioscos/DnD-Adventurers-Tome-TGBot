@@ -57,7 +57,6 @@ async def test_lo_scudo_della_fede_senza_concentrazione_finisce_con_la_benedizio
 @pytest.mark.caccia(id="CB-2262", fonte="2024 · Chierico · Intervento Divino · pag. 71", zona="regola:2024/cleric", voce="regola",
                     copre=["carta:2024/classes/cleric.md#Intervento Divino / Divine Intervention (Chierico 10, pag. 71)",
                            "POST /characters/{char_id}/features/{feature_key}/use", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2262: difforme dal manuale, confermato")
 async def test_un_incantesimo_a_concentrazione_lanciato_con_intervento_divino_richiede_concentrazione(client):
     cid = await _cleric24(client, 10, wisdom=16)
     r = await _use(client, cid, "cleric.divine_intervention", params={"spell": "Benedizione", "spell_level": "1"})
