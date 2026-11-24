@@ -55,7 +55,6 @@ async def test_contratto_condizioni_e_durate(client):
 @pytest.mark.caccia(id="CB-538", fonte="2014 · Indebolimento · pag. 291 (sei livelli); 2024 · Esaurimento · pag. 366", zona="flusso:condizioni",
                     voce="limiti", copre=["PATCH /characters/{char_id}/conditions", "carta:2014/general.md#Indebolimento / Exhaustion (riquadro, pag. 291)", "carta:2024/general.md#Exhaustion [Condition] (Esaurimento) (pag. 366)"])
 @pytest.mark.parametrize("livello", [7, -1, 2.5, "3", 99])
-@pytest.mark.xfail(strict=True, reason="CB-538 livello di Indebolimento fuori da 0-6 accettato e salvato")
 async def test_indebolimento_fuori_da_zero_sei_rifiutato(client, livello):
     cid = await _pg(client)
     await _cond(client, cid, {"exhaustion": 2})
@@ -67,7 +66,6 @@ async def test_indebolimento_fuori_da_zero_sei_rifiutato(client, livello):
 @pytest.mark.caccia(id="CB-539", fonte="invariante: una condizione è accesa o spenta, non vale 5 o una stringa", zona="flusso:condizioni",
                     voce="limiti", copre=["PATCH /characters/{char_id}/conditions"])
 @pytest.mark.parametrize("valore", [5, "x"])
-@pytest.mark.xfail(strict=True, reason="CB-539 valore non booleano di una condizione accettato e salvato")
 async def test_condizione_con_valore_non_booleano_rifiutata(client, valore):
     cid = await _pg(client)
     r = await _cond(client, cid, {"blinded": valore})
