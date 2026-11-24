@@ -7223,6 +7223,8 @@
    "damage_dice": "4d6",
    "damage_type": "fire",
    "higher_levels_dice": "1d6",
+   "extra_damage_dice": "4d6",
+   "extra_damage_type": "radiant",
    "classes": [
     "cleric"
    ],
