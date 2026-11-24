@@ -430,7 +430,6 @@ async def test_attivare_con_patch_rispetta_gs_usi_e_azione(client):
     assert r.status_code in (409, 422) or (usi < 2 and (azione["action_used"] or azione["bonus_used"]))
 
 
-@pytest.mark.xfail(strict=True, reason="CB-371 il danno al compagno della forma 2024 non tocca temporanei e PF del druido")
 @pytest.mark.caccia(id="CB-371", fonte="2024 · Druido · Regole della Forma Selvatica · pag. 81", zona="flusso:compagni-forme", voce="edizioni",
                     copre=["PATCH /characters/{char_id}/companions/{comp_id}/hp", "carta:2024/classes/druid.md#Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)"])
 async def test_il_danno_alla_forma_2024_va_ai_pf_del_druido(client):

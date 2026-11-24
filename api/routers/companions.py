@@ -324,7 +324,7 @@ async def companion_hp(
     char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char, comp_id)
     active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
-    if body.op == "damage" and active is not None and active.id == comp.id and form_own_hp(char):
+    if body.op == "damage" and active is not None and active.id == comp.id:  # 2024 compreso: lì i PF sono quelli del druido
         # il danno alla forma attiva ha un solo percorso, quello di PATCH /hp: PF temporanei, chiusura a 0 PF, eccesso al personaggio
         full = await update_hp(char_id, HPUpdate(op=HPOp.DAMAGE, value=body.value), user_id, session, lang)
         out = _read(char, comp)
