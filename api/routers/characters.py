@@ -505,7 +505,7 @@ async def update_skills(
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
     current = dict(char.skills or {})
-    current.update(body.skills)
+    current.update({k: True if v == "proficient" else v for k, v in body.skills.items()})  # una sola forma salvata
     char.skills = current
     # See refresh_char_full() for why expunge + re-SELECT is required here.
     char = await refresh_char_full(session, char_id, user_id)

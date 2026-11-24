@@ -64,7 +64,6 @@ async def _tira(client, cid, percorso, **corpo) -> dict:
     return r.json()
 
 
-@pytest.mark.xfail(strict=True, reason="CB-237 proficient accettato ma senza competenza")
 @pytest.mark.caccia(id="CB-237", fonte="schema SkillsUpdate: null/false nessuna, true competente, expert Maestria", zona="flusso:caratteristiche-tiri",
                     voce="contratto", copre=["PATCH /characters/{char_id}/skills", "POST /characters/{char_id}/skills/{skill_name}/roll"])
 async def test_valore_proficient_accettato_da_la_competenza(client):
