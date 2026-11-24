@@ -71,7 +71,6 @@ async def _due_concentrazioni(client, slot):
 @pytest.mark.caccia(id="CB-3761", fonte="2024 · Incantesimi · Immagine Maggiore · pag. 295", zona="regola:2024/incantesimi-G-L", voce="limiti",
                     copre=["carta:2024/spells.md#Immagine Maggiore", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("slot", [4, 9])
-@pytest.mark.xfail(strict=True, reason="CB-3761: difforme dal manuale, confermato")
 async def test_immagine_maggiore_2024_dal_quarto_livello_non_toglie_la_concentrazione_in_corso(client, slot):
     esito, silenziosa, _ = await _due_concentrazioni(client, slot)
     # dal 4° dura finché non è dissolta, senza concentrazione: quella su Immagine Silenziosa resta

@@ -91,7 +91,6 @@ async def test_guardiani_spirituali_del_dominio_della_guerra_tirano_i_loro_dadi(
 @pytest.mark.caccia(id="CB-3313", fonte="2014 · Incantesimi · Immagine Maggiore · pag. 242", zona="regola:2014/incantesimi-G-L", voce="interazione",
                     copre=["carta:2014/spells.md#Immagine Maggiore", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("slot", [6, 9])
-@pytest.mark.xfail(strict=True, reason="CB-3313: difforme dal manuale, confermato")
 async def test_immagine_maggiore_dal_sesto_livello_non_toglie_la_concentrazione_in_corso(client, slot):
     esito, silenziosa, _ = await _due_concentrazioni(client, slot)
     # dal 6° dura finché non è dissolta, senza concentrazione: quella su Immagine Silenziosa resta

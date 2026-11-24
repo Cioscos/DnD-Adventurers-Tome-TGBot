@@ -96,7 +96,6 @@ def test_componenti_del_catalogo_2024(indice, componenti):
     ("hex", 2, {"ability": "wisdom"}, 2400), ("hex", 3, {"ability": "wisdom"}, 4800),
     ("hunters-mark", 3, None, 4800), ("hunters-mark", 5, None, 14400), ("bestow-curse", 4, None, 100),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3813: difforme dal manuale, confermato")
 async def test_la_concentrazione_dura_quanto_lo_slot_scelto(client, indice, slot, scelte, round_attesi):
     cid = await _pg(client)
     sid = await _dal_catalogo(client, cid, indice, slot=slot)
@@ -112,7 +111,6 @@ async def test_la_concentrazione_dura_quanto_lo_slot_scelto(client, indice, slot
                     zona="regola:2024/incantesimi-M-R", voce="limiti",
                     copre=["carta:2024/spells.md#Maledizione", "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("slot", [5, 7, 9])
-@pytest.mark.xfail(strict=True, reason="CB-3814: difforme dal manuale, confermato")
 async def test_maledizione_con_slot_alto_non_richiede_concentrazione(client, slot):
     cid = await _pg(client)
     sid = await _dal_catalogo(client, cid, "bestow-curse", slot=slot)

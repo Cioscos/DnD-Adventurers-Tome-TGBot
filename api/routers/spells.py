@@ -208,6 +208,25 @@ def _mark_cast(char: Character, spell: Spell, spent_slot: bool, ritual: bool) ->
 
 WAR_MAGIC_KEYS = {"fighter.war_magic", "fighter.improved_war_magic"}
 
+# Concentrazione che cambia con lo slot e che la riga non dice: (edizione -> slot da cui non serve più, slot -> round).
+# Immagine Maggiore 2014 pag. 242, 2024 pag. 295; Scagliare Maledizione 2014 pag. 273, 2024 pag. 245 (10 minuti con lo slot del 4°)
+_SLOT_CONCENTRATION = {"major-image": ({"2014": 6, "2024": 4}, {}), "bestow-curse": ({"2014": 5, "2024": 5}, {4: 100})}
+
+
+def _slot_concentration(char: Character, spell: Spell, level: int) -> tuple[bool, int | None]:
+    """Se il lancio a questo livello chiede concentrazione e per quanti round: quelli dello slot (la tabella sopra, Sortilegio
+    e Marchio del Cacciatore dal catalogo degli effetti), altrimenti la durata scritta sulla riga."""
+    edition = character_edition(char)
+    until, rounds = _SLOT_CONCENTRATION.get(spell.srd_index or "", ({}, {}))
+    if level >= until.get(edition, 10):
+        return False, None
+    if level in rounds:
+        return True, rounds[level]
+    found = spell_effect(edition, spell.srd_index, spell.name)
+    if found and found[1].concentration and found[1].rounds_by_slot:
+        return True, found[1].rounds_by_slot(level)
+    return True, parse_duration_rounds(spell.duration)
+
 
 def _ki_payment(char: Character, spell: Spell, ritual: bool, free_cast: bool, extra: int) -> tuple[Any, int]:
     """Lancio coi punti ki: la riserva e quanto costa. Ogni rifiuto viene prima di spendere qualcosa."""
@@ -326,9 +345,10 @@ def _consume_cast(
     if casts_verbally(spell) and not silent:  # Incantesimo Celato: nessuna componente verbale, il nascondiglio resta
         end_hide(session, char)
 
-    if spell.is_concentration and not no_concentration:
-        start_concentration(char, spell.id, parse_duration_rounds(spell.duration),
-                            level=slot.level if slot is not None else spell.level)
+    level = slot.level if slot is not None else spell.level
+    needs_concentration, rounds = _slot_concentration(char, spell, level) if spell.is_concentration else (False, None)
+    if needs_concentration and not no_concentration:
+        start_concentration(char, spell.id, rounds, level=level)
     return pact_row
 
 
