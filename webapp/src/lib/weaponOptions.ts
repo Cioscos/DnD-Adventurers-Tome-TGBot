@@ -27,6 +27,8 @@ export function weaponOptions(
   const oneHanded = (o: ItemLike) => !props(o).includes('prop_two_handed') && (o.item_metadata?.weapon_type ?? 'melee') === 'melee'
   // Combattente a Due Armi 2014: armi da mischia a una mano anche non leggere (come `api/routers/items.py`)
   const dualWielder = (char?.abilities ?? []).some((a) => a.feature_key === 'feat.dual_wielder')
+  // 2024: basta un'arma da mischia senza Due Mani, dopo un attacco con una leggera
+  const dual24 = char?.rules_edition === '2024' && (char.abilities ?? []).some((a) => a.feature_key === 'feat.2024_dual_wielder')
   const second = (ok: (o: ItemLike) => boolean) =>
     others.some((o) => o.id !== item.id && o.item_type === 'weapon' && o.is_equipped && ok(o))
   return {
@@ -34,7 +36,7 @@ export function weaponOptions(
     thrown: p.includes('prop_thrown'),
     // 2014: l'altra mano è un'arma da mischia leggera (p.195); nel 2024 basta Leggera (come `api/routers/items.py`)
     offhand: dualWielder ? oneHanded(item) && second(oneHanded)
-      : isLight(item) && second(isLight) && (char?.rules_edition === '2024' || (item.item_metadata?.weapon_type ?? 'melee') === 'melee'),
+      : (isLight(item) || (dual24 && oneHanded(item))) && second(isLight) && (char?.rules_edition === '2024' || (item.item_metadata?.weapon_type ?? 'melee') === 'melee'),
     ability: !!char && (isFinesse(item) || !!item.martial_arts),  // Arti Marziali: il server dice se vale per quest'arma
   }
 }

@@ -7,7 +7,7 @@ from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
 from core.rules.modifiers import is_incapacitated
 from core.rules.spell_effects import spell_instances
-from core.rules.types import TURN_FLAGS as _FLAGS
+from core.rules.types import FORGONE, TURN_FLAGS as _FLAGS
 
 SLOTS = (*_FLAGS, "attack")
 
@@ -70,8 +70,12 @@ def release(char, slot: str) -> dict:
     st = get_turn(char)
     if slot == "attack":
         st["attacks_made"] = max(0, st["attacks_made"] - 1)
-        st["action_attacks"] = min(st["action_attacks"], st["attacks_made"])
-        st["action_weapons"] = (st.get("action_weapons") or [])[:st["action_attacks"]]
+        weapons = list(st.get("action_weapons") or [])
+        forgone = sum(w[0] == FORGONE for w in weapons)  # gli attacchi ceduti non sono fra quelli fatti e restano
+        st["action_attacks"] = min(st["action_attacks"], st["attacks_made"] + forgone)
+        while len(weapons) > st["action_attacks"]:  # si annulla l'ultimo attacco fatto
+            weapons.pop(max((i for i, w in enumerate(weapons) if w[0] != FORGONE), default=-1))
+        st["action_weapons"] = weapons
     else:
         st[_FLAGS[slot]] = False
     _save(char, st)
@@ -98,7 +102,7 @@ def forgo_attack(char) -> dict:
     if st["action_attacks"] >= attacks_allowed(char):
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "no_attack_left"})
     st["action_attacks"] += 1
-    st["action_weapons"] = [*(st.get("action_weapons") or []), [0, False]]  # ceduto: non è un attacco con un'arma leggera
+    st["action_weapons"] = [*(st.get("action_weapons") or []), [FORGONE, False]]  # ceduto: non è un attacco con un'arma leggera
     _save(char, st)
     return st
 

@@ -1298,3 +1298,35 @@ def test_un_incantesimo_al_posto_di_un_attacco_non_vale_come_attacco_segnato_a_m
         char = SimpleNamespace(turn_state={})
         fn(None, SimpleNamespace(char=char), {})
         assert len(char.turn_state["action_weapons"]) == char.turn_state["action_attacks"]
+
+
+@pytest.mark.caccia(id="CB-1518", fonte="2024 · Combattente con due armi · pag. 203", zona="flusso:attacco-danno", voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_2024_combattente_a_due_armi_attacca_con_un_arma_non_leggera(client, test_session_factory, dadi):
+    from core.db.models import Ability
+    cid = await _pg(client, "fighter", 4, "2024", dexterity=16, strength=16)
+    a = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    lunga = await _arma(client, cid, "Spada lunga", "1d8", [])
+    terza = await _arma(client, cid, "Spadone", "2d6", ["two_handed"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, lunga, "off_hand")
+    dadi(3)
+    _j(await _att(client, cid, a))
+    assert (await _att(client, cid, lunga, attack_mode="offhand")).status_code == 422  # senza il talento
+    async with test_session_factory() as s:
+        s.add(Ability(character_id=cid, name="Combattente con due armi", feature_key="feat.2024_dual_wielder"))
+        await s.commit()
+    assert (await _att(client, cid, terza, attack_mode="offhand")).status_code == 422
+    dadi(5)
+    r = await _att(client, cid, lunga, attack_mode="offhand")
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-1524", fonte="invariante: annullare un attacco toglie l'ultimo fatto, non quello ceduto", zona="flusso:attacco-danno", voce="annullamento",
+                    copre=["POST /characters/{char_id}/turn/use"])
+def test_annullare_un_attacco_tiene_quello_ceduto_e_l_arma_leggera():
+    from types import SimpleNamespace
+    from api.services.rules_turn import release
+    from core.rules.types import FORGONE
+    char = SimpleNamespace(turn_state={"attacks_made": 2, "action_attacks": 3, "action_weapons": [[FORGONE, False], [7, True], [7, True]]})
+    st = release(char, "attack")
+    assert (st["attacks_made"], st["action_attacks"], st["action_weapons"]) == (1, 2, [[FORGONE, False], [7, True]])

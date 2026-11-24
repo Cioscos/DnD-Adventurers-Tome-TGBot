@@ -21,6 +21,7 @@ from core.rules.catalog.y2024.bard_colleges import _LONG_CASTING, _action_cantri
 from core.rules.catalog.y2024.fighter import CK, ED, STYLES
 from core.rules.states import has_state
 from core.rules.types import (
+    FORGONE,
     ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, Uses, UseToggle,
 )
 
@@ -401,7 +402,7 @@ def _two_attack_spell(ctx: RuleContext) -> bool:
 def _spell_for_two_attacks(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     turn = dict(ctx.char.turn_state or {})
     turn["action_attacks"] = turn.get("action_attacks", 0) + 2
-    turn["action_weapons"] = [*(turn.get("action_weapons") or []), [0, False], [0, False]]  # non sono attacchi con un'arma leggera
+    turn["action_weapons"] = [*(turn.get("action_weapons") or []), [FORGONE, False], [FORGONE, False]]  # non sono attacchi con un'arma leggera
     ctx.char.turn_state = turn
 
 

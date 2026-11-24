@@ -839,7 +839,8 @@ async def attack_with_weapon(
     elif offhand:
         if character_edition(char) == "2014" and (meta.get("weapon_type") or "melee") != "melee":
             raise HTTPException(status_code=422, detail="offhand_not_melee")  # 2014 p.195: arma da mischia leggera
-        if not has_property(item, "light"):
+        # 2024 pag. 203: con Combattente a Due Armi basta un'arma da mischia senza Due Mani (l'attacco dell'azione resta con una leggera)
+        if not has_property(item, "light") and not (has_feat(char, "feat.2024_dual_wielder") and one_handed_melee(item)):
             raise HTTPException(status_code=422, detail="offhand_not_light")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and has_property(i, "light")
                    for i in char.items):

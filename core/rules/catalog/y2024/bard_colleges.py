@@ -11,7 +11,7 @@ from core.rules.catalog._common import INCAPACITATING, feature, skill_label, sta
 from core.rules.catalog.y2014.bard import ALL_SKILLS, BI, _no_options, inspiration_die
 from core.rules.schools import normalize_school
 from core.rules.states import begin_state
-from core.rules.types import ChoiceSpec, Cost, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice, UseToggle
+from core.rules.types import FORGONE, ChoiceSpec, Cost, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice, UseToggle
 
 ED, CK = "2024", "bard"
 _LONG_CASTING = re.compile(r"minut|minute|\bor[ae]\b|hour", re.IGNORECASE)  # un lancio di minuti o ore non è un'azione
@@ -389,7 +389,7 @@ def _action_cantrip(ctx: RuleContext) -> bool:
 def _cantrip_for_an_attack(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     turn = dict(ctx.char.turn_state or {})
     turn["action_attacks"] = turn.get("action_attacks", 0) + 1
-    turn["action_weapons"] = [*(turn.get("action_weapons") or []), [0, False]]  # non sono attacchi con un'arma leggera
+    turn["action_weapons"] = [*(turn.get("action_weapons") or []), [FORGONE, False]]  # non sono attacchi con un'arma leggera
     ctx.char.turn_state = turn
 
 
