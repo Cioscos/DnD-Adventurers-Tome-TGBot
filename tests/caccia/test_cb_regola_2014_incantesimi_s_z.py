@@ -141,7 +141,6 @@ async def test_incantesimo_preso_dal_catalogo_infligge_anche_la_seconda_parte_de
 @pytest.mark.caccia(id="CB-3417", fonte="2014 · Incantesimi · Scudo di Fuoco · pag. 275", zona="regola:2014/incantesimi-S-Z", voce="regola",
                     copre=["carta:2014/spells.md#Scudo di Fuoco", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3417: difforme dal manuale, confermato")
 async def test_scudo_di_fuoco_gelido_infligge_danni_da_freddo(client):
     cid = await _pg(client)
     await _slot(client, cid, 4)

@@ -67,6 +67,7 @@ from api.services.wild_magic import mark_tides_due
 from api.services.rules_turn import get_turn, refuse_if_incapacitated, spend
 from core.rules.catalog import active_features
 from core.rules.catalog.spells import spell_effect
+from core.rules.spell_effects import SPELL_CLOCK_PREFIX
 from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
@@ -832,6 +833,17 @@ _UPCAST = {
 }
 # Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 275, 302, 319-320)
 _ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024")}
+# Tipo del danno deciso da una scelta del lancio che non è «damage_type»: Scudo di Fuoco caldo fuoco, freddo freddo (2014 pag. 275; 2024 pag. 274)
+_TYPE_BY_CHOICE = {"fire_shield": ("shield", {"warm": "fire", "cold": "cold"})}
+
+
+def _cast_choice_type(char: Character, spell: Spell) -> str | None:
+    """Il tipo di danno che decide la scelta dell'incantesimo in corso (nell'orologio su chi lancia), o ``None``."""
+    found = spell_effect(character_edition(char), spell.srd_index, spell.name)
+    if not found or (rule := _TYPE_BY_CHOICE.get(found[0].key)) is None:
+        return None
+    clock = next((s for s in char.active_states or [] if s.get("key") == f"{SPELL_CLOCK_PREFIX}{found[0].key}"), None)
+    return rule[1].get((((clock or {}).get("data") or {}).get("state_data") or {}).get("choices", {}).get(rule[0]))
 
 
 @router.post(
@@ -963,7 +975,7 @@ async def roll_spell_damage(
         all_extra = [random.randint(1, group_sides) for _, count, group_sides in groups for _ in range(count)]
     second_rolls, extra_rolls = all_extra[:second_count], all_extra[second_count:]
 
-    base_type = chosen_damage_type(char, spell, body.damage_type) or spell.damage_type  # il tipo scelto al lancio
+    base_type = chosen_damage_type(char, spell, body.damage_type) or _cast_choice_type(char, spell) or spell.damage_type  # il tipo scelto al lancio
     opts = use_options(session, char, "spell_damage", body, spell=spell, casting_level=casting_level, damage_type=canonical_damage_type(base_type))
     main_type = opts.damage_type or base_type  # Incantesimo Trasmutato
     await deliver_temp_gifts(session, char, opts)  # Incantesimi Potenti Migliorati

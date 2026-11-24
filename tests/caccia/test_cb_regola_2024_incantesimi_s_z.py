@@ -179,7 +179,6 @@ async def test_tempesta_di_vendetta_2024_il_ts_superato_non_dimezza_il_tuono(cli
 @pytest.mark.caccia(id="CB-3869", fonte="2024 · Incantesimi · Scudo di Fuoco · pag. 274", zona="regola:2024/incantesimi-S-Z", voce="regola",
                     copre=["carta:2024/spells.md#Scudo di fuoco", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3869: difforme dal manuale, confermato")
 async def test_scudo_di_fuoco_2024_freddo_infligge_danni_da_freddo(client):
     cid = await _pg(client, "sorcerer", 7)
     sid = await _impara(client, cid, "fire-shield")
