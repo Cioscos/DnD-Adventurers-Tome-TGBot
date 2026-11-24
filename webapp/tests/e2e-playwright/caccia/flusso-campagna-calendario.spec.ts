@@ -1,7 +1,7 @@
 import { expect, test, UTENTE } from './fixtures'
 
 // caccia: {"id": "CB-158", "fonte": "invariante: un doppio tocco su Inizia serata apre una sola sessione", "zona": "flusso:campagna-calendario", "voce": "ripetizione", "copre": ["route:/campaign/:id"]}
-test.fail('il doppio tocco su Inizia serata apre una sola serata', async ({ comeUtente, apiRequest }) => {
+test('il doppio tocco su Inizia serata apre una sola serata', async ({ comeUtente, apiRequest }) => {
   const c = await apiRequest.post('/campaigns', { data: { name: 'Campagna doppio tocco' } })
   expect(c.ok()).toBeTruthy()
   const { id } = await c.json()

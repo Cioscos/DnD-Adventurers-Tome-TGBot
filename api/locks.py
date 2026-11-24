@@ -8,7 +8,9 @@ from collections import defaultdict
 from collections.abc import AsyncGenerator, Iterable
 from contextlib import AsyncExitStack, asynccontextmanager
 
-from fastapi import Request
+from fastapi import Depends, Request
+
+from api.auth import get_current_user
 
 _READ_ONLY_POSTS = ("/dice/post-to-chat", "/export/send")  # leggono soltanto e aspettano Telegram per darne l'esito
 _LOCKS: defaultdict[tuple[int, str], asyncio.Lock] = defaultdict(asyncio.Lock)  # (event loop, "char:<id>" | "session:<id>")
@@ -21,6 +23,13 @@ async def character_write_lock(request: Request) -> AsyncGenerator[None, None]:
         yield
         return
     async with _LOCKS[id(asyncio.get_running_loop()), key]:
+        yield
+
+
+async def user_write_lock(user_id: int = Depends(get_current_user)) -> AsyncGenerator[None, None]:
+    """Come ``character_write_lock`` ma per utente, per le rotte senza ``char_id`` (apri serata, entra, iscriviti): la
+    richiesta gemella di un doppio tocco aspetta il commit della prima e riceve il 409 previsto, non un doppione."""
+    async with _LOCKS[id(asyncio.get_running_loop()), f"user:{user_id}"]:
         yield
 
 

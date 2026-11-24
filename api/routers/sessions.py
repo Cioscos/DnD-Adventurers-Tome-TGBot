@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, get_current_user
 from api.database import get_db
+from api.locks import user_write_lock
 from api.schemas.common import normalize_proficiencies
 from core.data.tools import TOOLS, tool_label
 from core.game.containers import is_container, trade_snapshot
@@ -372,7 +373,8 @@ def _compute_gm_display_name(tg_user: TelegramUser, custom_title: Optional[str])
     return f"#{tg_user.id}"
 
 
-@router.post("", response_model=GameSessionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=GameSessionRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(user_write_lock)])
 async def create_session(
     body: SessionCreateRequest,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],

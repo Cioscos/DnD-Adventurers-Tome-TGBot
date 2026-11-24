@@ -318,7 +318,6 @@ async def _esito(coro):
         return 500
 
 
-@pytest.mark.xfail(strict=True, reason="CB-148 avvii in parallelo aprono più serate per la stessa campagna")
 @pytest.mark.caccia(id="CB-148", fonte="invariante: una richiesta ripetuta non spende due volte (una sola serata aperta per campagna)",
                     zona="flusso:campagna-calendario", voce="ripetizione", copre=["POST /sessions"])
 async def test_doppio_inizio_serata_ne_apre_una_sola(client, test_session_factory):
