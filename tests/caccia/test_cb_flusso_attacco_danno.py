@@ -990,7 +990,6 @@ async def test_2024_ira_vale_anche_per_il_colpo_senz_armi(client):
     assert (j["damage_bonus"], j["damage_total"]) == (5, 6)
 
 
-@pytest.mark.xfail(strict=True, reason="CB-800 l'attacco con l'altra mano accetta la stessa arma dell'attacco dell'azione")
 @pytest.mark.caccia(id="CB-800", fonte="2014 · Combattere con Due Armi · pag. 195: seconda arma leggera impugnata nell'altra mano; 2024 · Armi · Leggera · pag. 213: un'altra arma Leggera", zona="flusso:attacco-danno",
                     voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 @pytest.mark.parametrize("edizione", ["2014", "2024"])
@@ -1127,7 +1126,6 @@ async def test_pila_nello_slot_munizioni_finita_si_passa_alle_frecce_sciolte(cli
     assert (await _pila(client, cid, sciolte))["quantity"] == 9
 
 
-@pytest.mark.xfail(strict=True, reason="CB-814 l'attacco con l'altra mano accetta un primo attacco con arma non leggera")
 @pytest.mark.caccia(id="CB-814", fonte="2014 · Combattere con Due Armi · pag. 195: con un'arma da mischia leggera in una mano, attacco con una seconda arma leggera; 2024 · Armi · Leggera · pag. 213", zona="flusso:attacco-danno",
                     voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 @pytest.mark.parametrize("edizione", ["2014", "2024"])

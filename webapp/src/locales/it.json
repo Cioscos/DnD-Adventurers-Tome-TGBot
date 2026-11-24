@@ -807,6 +807,7 @@
       "incapacitated": "Sei incapacitato: non puoi attaccare.",
       "bonus_used": "Azione bonus già usata in questo turno.",
       "offhand_needs_attack": "Prima attacca con l'azione Attacco: l'altra mano viene dopo.",
+      "offhand_needs_light_attack": "L'altra mano viene dopo un attacco con un'altra arma adatta (di norma leggera).",
       "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
       "grip_one": "Una mano",
       "grip_two": "Due mani",

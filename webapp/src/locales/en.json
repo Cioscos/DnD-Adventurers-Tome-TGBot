@@ -807,6 +807,7 @@
       "incapacitated": "You are incapacitated: you can't attack.",
       "bonus_used": "Bonus action already used this turn.",
       "offhand_needs_attack": "Attack with the Attack action first: the off hand comes after.",
+      "offhand_needs_light_attack": "The off hand comes after an attack with a different suitable weapon (usually Light).",
       "ammo_missing": "Ammunition empty or not equipped: track it yourself",
       "grip_one": "One hand",
       "grip_two": "Two hands",

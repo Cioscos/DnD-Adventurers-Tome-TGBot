@@ -541,6 +541,13 @@ def _own_slot_attack(char: Character, body: AttackSubmission | None) -> bool:
     return bool(body and uses_own_slot(char, body.options or []))
 
 
+def _note_action_weapon(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
+    """Armi degli attacchi dell'azione Attacco, in ordine (0: senz'armi): l'altra mano ne chiede una leggera diversa."""
+    if not _own_slot_attack(char, body):
+        turn = get_turn(char)
+        char.turn_state = {**turn, "action_weapons": [*(turn.get("action_weapons") or []), item.id if item else 0]}
+
+
 def _note_martial_attack(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
     """Arti Marziali: l'azione Attacco è stata fatta con un colpo senz'armi o un'arma da monaco, senza armatura né scudo.
     Solo così il colpo senz'armi extra con l'azione bonus è ammesso (``turn_state["martial_attack"]``)."""
@@ -810,9 +817,12 @@ async def attack_with_weapon(
     offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
+    opens_offhand = lambda i: has_property(i, "light") and (  # noqa: E731  # l'arma dell'attacco che apre l'altra mano
+        character_edition(char) == "2024" or (item_meta(i).get("weapon_type") or "melee") == "melee")
     if offhand and has_feat(char, "feat.dual_wielder"):  # Combattente a Due Armi 2014: armi da mischia a una mano, anche non leggere
         one_handed_melee = lambda i: (not has_property(i, "two_handed")  # noqa: E731
                                       and (item_meta(i).get("weapon_type") or "melee") == "melee")
+        opens_offhand = one_handed_melee
         if not one_handed_melee(item):
             raise HTTPException(status_code=422, detail="offhand_two_handed")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and one_handed_melee(i) for i in char.items):
@@ -828,8 +838,15 @@ async def attack_with_weapon(
     else:
         _check_attack_limit(char, body, item)
     # L'attacco con l'altra mano segue un attacco dell'azione Attacco (2014 p.195, 2024 p.213): da solo non esiste.
-    if offhand and get_turn(char)["action_attacks"] < 1:
-        raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
+    if offhand:
+        turn = get_turn(char)
+        if turn["action_attacks"] < 1:
+            raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
+        used = turn.get("action_weapons") or []
+        # Un attacco dell'azione segnato a mano non dice con quale arma è stato fatto: quello vale.
+        if len(used) >= turn["action_attacks"] and not any(
+                i.id in used and i.id != item.id and opens_offhand(i) for i in char.items):
+            raise HTTPException(status_code=409, detail={"code": "offhand_needs_light_attack"})
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
             i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
@@ -902,6 +919,7 @@ async def attack_with_weapon(
             if loading_applies(char, item):  # contati per arma: il tetto della Ricarica è suo
                 shots = get_turn(char).get("loading_shots") or {}
                 char.turn_state = {**get_turn(char), "loading_shots": {**shots, str(item.id): shots.get(str(item.id), 0) + 1}}
+            _note_action_weapon(char, item, body)
             _note_martial_attack(char, item, body)
         elif NICK_OPTION not in opts.keys:
             spend(char, "bonus")

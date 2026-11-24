@@ -71,6 +71,7 @@ def release(char, slot: str) -> dict:
     if slot == "attack":
         st["attacks_made"] = max(0, st["attacks_made"] - 1)
         st["action_attacks"] = min(st["action_attacks"], st["attacks_made"])
+        st["action_weapons"] = (st.get("action_weapons") or [])[:st["action_attacks"]]
     else:
         st[_FLAGS[slot]] = False
     _save(char, st)
