@@ -479,3 +479,39 @@ async def test_percorso_comune_della_forma_selvatica_2014(client):
     assert (scheda["is_active"], scheda["current_hp"]) == (False, 7)
     pg = await _full(client, cid)
     assert pg["current_hit_points"] == pf_druido and pg["active_form"] is None and await _usi(client, cid) == 1
+
+
+@pytest.mark.caccia(id="CB-762", fonte="2024 · Druido · Regole della Forma Selvatica · pag. 81 (i PF restano quelli del druido)", zona="flusso:compagni-forme",
+                    voce="edizioni", copre=["PATCH /characters/{char_id}/companions/{comp_id}/hp"])
+async def test_cura_e_pf_temporanei_alla_forma_2024_vanno_al_druido(client):
+    cid = await _druid24(client, 4)
+    forma = await _form(client, cid, _beast(0.25))
+    await _activate(client, cid, forma)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 10})
+    prima = await _full(client, cid)
+    assert (await client.patch(f"/characters/{cid}/companions/{forma}/hp", json={"op": "heal", "value": 3})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/companions/{forma}/hp", json={"op": "set_temp", "value": 9})).status_code == 200
+    dopo = await _full(client, cid)
+    assert (dopo["current_hit_points"], dopo["temp_hp"]) == (prima["current_hit_points"] + 3, 9)
+
+
+@pytest.mark.caccia(id="CB-763", fonte="invariante: l'ordine dato a una bestia sparisce con lei", zona="flusso:compagni-forme", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/hp"])
+async def test_la_bestia_che_svanisce_con_il_ranger_porta_via_l_ordine(client, test_session_factory):
+    from api.services.beast_companion import drop_primal_beast
+    from core.db.models import Character, Companion
+    from core.rules.companions import PRIMAL_COMPANION
+
+    cid = await _druid24(client, 4)
+    async with test_session_factory() as s:
+        comp = Companion(character_id=cid, kind="companion", name="B", feature_key=PRIMAL_COMPANION, max_hp=5, current_hp=5,
+                         statblock={}, created_at="2026-01-01T00:00:00")
+        s.add(comp)
+        await s.flush()
+        char = await s.get(Character, cid)
+        char.turn_state = {**(char.turn_state or {}), "beast": {"id": comp.id, "attacks_left": 1}}
+        await drop_primal_beast(s, char)
+        assert not (char.turn_state or {}).get("beast")
+        char.turn_state = {**char.turn_state, "beast": {"id": comp.id + 100, "attacks_left": 1}}  # un'altra bestia tiene il suo
+        await drop_primal_beast(s, char)
+        assert char.turn_state["beast"]["id"] == comp.id + 100
