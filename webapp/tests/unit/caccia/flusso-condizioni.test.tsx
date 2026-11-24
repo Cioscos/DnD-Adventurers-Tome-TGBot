@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TFunction } from 'i18next'
 import { formatCondition, refusedConditions } from '@/lib/conditions'
-import { formatExpiry, formatSource } from '@/lib/conditionEffects'
+import { formatExpiry, formatSave, formatSource } from '@/lib/conditionEffects'
+import itLocale from '@/locales/it.json'
+import enLocale from '@/locales/en.json'
 import type { ConditionEffect } from '@/types'
 
 afterEach(() => { vi.clearAllMocks() })
@@ -38,5 +40,59 @@ describe('caccia: pagina delle condizioni', () => {
     expect(formatCondition('exhaustion', 3, t, '2024')).toContain('"level":3')
     expect(formatCondition('exhaustion', 0, t, '2024')).toBe('character.conditions.exhaustion')
     expect(formatCondition('blinded', true, t)).toBe('character.conditions.blinded')
+  })
+})
+
+const CONDIZIONI = ['blinded', 'charmed', 'deafened', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified',
+  'poisoned', 'prone', 'restrained', 'stunned', 'unconscious']
+const tChiave = ((k: string) => k) as unknown as TFunction
+const trova = (loc: unknown, chiave: string): unknown => chiave.split('.').reduce<unknown>((o, p) => (o as Record<string, unknown> | undefined)?.[p], loc)
+
+describe('caccia: testi della pagina delle condizioni', () => {
+  // caccia: {"id": "CB-1299", "fonte": "invariante: ogni testo che la pagina può chiedere esiste in italiano e in inglese", "zona": "flusso:condizioni", "voce": "contratto", "copre": ["route:/char/:id/conditions"]}
+  it('ogni scadenza e ogni TS ripetuto producono una chiave presente in entrambe le lingue', () => {
+    const chiavi = new Set<string>()
+    for (const anchor of ['owner', 'source'] as const) for (const edge of ['start', 'end'] as const) for (const n of [1, 2, 5]) {
+      for (const nome of [undefined, 'Corvo']) chiavi.add(formatExpiry(effetto({ expiry_anchor: anchor, expiry_edge: edge, expiry_count: n }), tChiave, nome))
+    }
+    chiavi.add(formatExpiry(effetto({ expiry_count: 3 }), tChiave))
+    chiavi.add(formatExpiry(effetto({ ends_with_concentration: true, source_name: 'Corvo' }), tChiave))
+    for (const edge of ['start', 'end', null] as const) for (const nome of [undefined, 'Corvo']) {
+      chiavi.add(formatSave(effetto({ save_ability: 'wisdom', save_dc: 13, save_edge: edge }), tChiave, nome) ?? '')
+    }
+    for (const lingua of [itLocale, enLocale]) for (const k of chiavi) {
+      for (const parte of k.split(' · ')) expect(typeof (trova(lingua, parte) ?? trova(lingua, `${parte}_other`)), parte).toBe('string')  // i plurali stanno in _one/_other
+    }
+  })
+
+  // caccia: {"id": "CB-1300", "fonte": "2014 · Indebolimento · pag. 291 (sei livelli); 2024 · Esaurimento · pag. 366", "zona": "flusso:condizioni", "voce": "edizioni", "copre": ["route:/char/:id/conditions"]}
+  it('le descrizioni dei sei livelli di spossatezza e delle 14 condizioni esistono per ogni edizione e lingua', () => {
+    for (const lingua of [itLocale, enLocale]) {
+      const c = lingua.character.conditions as Record<string, unknown>
+      const desc = c.desc as Record<string, unknown>
+      for (const chiave of ['exhaustion_levels', 'exhaustion_levels_2024']) {
+        expect(desc[chiave]).toHaveLength(6)
+      }
+      for (const chiave of ['exhaustion', 'exhaustion_2024']) expect(typeof desc[chiave]).toBe('string')
+      for (const k of CONDIZIONI) {
+        expect(typeof c[k], k).toBe('string')
+        expect(typeof desc[k], k).toBe('string')
+      }
+      for (const chiave of ['exhaustion', 'exhaustion_2024', 'exhaustion_condition', 'exhaustion_condition_2024']) expect(typeof c[chiave]).toBe('string')
+    }
+  })
+
+  // caccia: {"id": "CB-1301", "fonte": "invariante: «Azzera tutto» non deve mostrare avvisi di immunità per condizioni spente", "zona": "flusso:condizioni", "voce": "normale", "copre": ["route:/char/:id/conditions"]}
+  it('azzerare tutto rimanda solo valori spenti e non segnala nulla come rifiutato', () => {
+    const richiesta: Record<string, unknown> = { exhaustion: 0 }
+    for (const k of CONDIZIONI) richiesta[k] = false
+    expect(refusedConditions(richiesta, { exhaustion: 0 }, { blinded: true, exhaustion: 2 })).toEqual([])
+  })
+
+  // caccia: {"id": "CB-1302", "fonte": "invariante: nella vista del master il turno del portatore è nominato per nome", "zona": "flusso:condizioni", "voce": "limiti", "copre": ["route:/char/:id/conditions"]}
+  it('con il nome del portatore la scadenza sul suo turno cita il nome e non dice «tuo»', () => {
+    const testo = formatExpiry(effetto({ expiry_anchor: 'owner', expiry_edge: 'end', expiry_count: 2 }), t, 'Ilyra')
+    expect(testo).toContain('Ilyra')
+    expect(testo).not.toContain('_owner')
   })
 })
