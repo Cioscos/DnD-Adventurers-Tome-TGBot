@@ -177,7 +177,8 @@ def test_2024_roll_fields_come_from_the_2024_text():
             continue
         text = i["desc"]["en"] + " " + ((i.get("higher_level") or {}).get("en") or "")
         flat = re.sub(r"\s+", "", text)
-        if i["damage_dice"] and i["damage_dice"] not in flat:
+        # Dardo Incantato: il testo dà il dado di un dardo, la voce i tre dardi (CB-3711: 2024 spells.md p.295)
+        if i["damage_dice"] and i["damage_dice"] not in flat and i["index"] != "magic-missile":
             wrong.append(f"{i['index']}: dadi {i['damage_dice']}")
         if i["higher_levels_dice"] and i["higher_levels_dice"] not in flat:
             wrong.append(f"{i['index']}: slot superiori {i['higher_levels_dice']}")
@@ -192,7 +193,7 @@ def test_2024_known_roll_fields():
     assert by["arcane-sword"]["damage_dice"] == "4d12"
     assert by["wall-of-ice"]["higher_levels_dice"] == "2d6"
     assert by["spiritual-weapon"]["higher_levels_dice"] == "1d8"
-    assert by["magic-missile"]["damage_dice"] == "1d4+1"
+    assert by["magic-missile"]["damage_dice"] == "3d4+3"  # tre dardi da 1d4+1 (CB-3711: 2024 spells.md, Dardo Incantato p.295)
 
 
 def test_phb_summaries_keep_their_dice():

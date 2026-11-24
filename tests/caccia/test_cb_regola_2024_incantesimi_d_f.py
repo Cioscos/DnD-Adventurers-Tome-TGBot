@@ -72,7 +72,6 @@ async def _danno(client, cid: int, sid: int, **corpo) -> dict:
 @pytest.mark.caccia(id="CB-3711", fonte="2024 · Incantesimi · Dardo Incantato · pag. 295", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Dardo Incantato", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dardi", [(1, 3), (3, 5)])
-@pytest.mark.xfail(strict=True, reason="CB-3711: difforme dal manuale, confermato")
 async def test_dardo_incantato_2024_dal_catalogo_lancia_tre_dardi_piu_uno_per_slot(client, slot, dardi):
     cid = await _pg(client, "sorcerer", 5)
     sid = await _impara(client, cid, "magic-missile")
