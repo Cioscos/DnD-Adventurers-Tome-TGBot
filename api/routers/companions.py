@@ -179,7 +179,7 @@ async def update_companion(
         await deactivate_other_forms(session, char_id, comp.id)
         start_form(char, comp)
     elif was_active and not comp.is_active:
-        end_form(char, comp)
+        return_to_normal(char, comp)  # come «Termina»: azione bonus, 409 se è già spesa
     return _read(char, comp)
 
 

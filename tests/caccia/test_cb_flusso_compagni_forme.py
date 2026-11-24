@@ -550,7 +550,6 @@ async def test_la_bestia_primordiale_e_una_sola_alla_volta(client):
     assert sum(c["feature_key"] == PRIMORDIALE for c in await _lista(client, cid)) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1075: PATCH is_active false non costa l'azione bonus")
 @pytest.mark.caccia(id="CB-1075", fonte="2014 · Druido · Forma Selvatica · pag. 66 (si torna normali prima del tempo con un'azione bonus)",
                     zona="flusso:compagni-forme", voce="annullamento",
                     copre=["PATCH /characters/{char_id}/companions/{comp_id}", "POST /characters/{char_id}/turn/use", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)"])
