@@ -331,7 +331,7 @@ async def companion_hp(
         # nel 2024 i PF sono quelli del druido, quindi anche cura e PF temporanei
         full = await update_hp(char_id, HPUpdate(op=HPOp(body.op), value=body.value), user_id, session, lang)
         out = _read(char, comp)
-        out.down = comp.current_hp == 0
+        out.down = comp.current_hp == 0 < out.max_hp
         out.concentration_save = full.concentration_save  # il TS di PATCH /hp, se l'eccesso l'ha fatto tirare
         return out
     value = body.value
@@ -353,7 +353,7 @@ async def companion_hp(
     out = _read(char, comp)
     add_history(session, char_id, "companion_hp",
              f"{comp.name}: {body.op} {value if body.op == 'damage' else body.value} → PF {out.current_hp}/{out.max_hp}, temp {comp.temp_hp}")
-    out.down = comp.current_hp == 0
+    out.down = comp.current_hp == 0 < out.max_hp  # 0/0: PF non segnati (D-015)
     return out
 
 

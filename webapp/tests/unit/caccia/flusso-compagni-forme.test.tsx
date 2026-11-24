@@ -103,7 +103,7 @@ it('l\'avviso non scatta per un elementale solo con la Luna 2014 dal 10°', () =
 })
 
 // caccia: {"id": "CB-1090", "fonte": "tests/caccia/decisioni.md D-015 (compagno con PF massimi 0: PF non segnati, la scheda non lo dà a terra)", "zona": "flusso:compagni-forme", "voce": "limiti", "copre": ["route:/char/:id/extras"]}
-it.fails('un compagno con PF massimi 0 non mostra «a terra»', () => {
+it('un compagno con PF massimi 0 non mostra «a terra»', () => {
   renderWithProviders(<CompanionCard charId={7} comp={scheda({ max_hp: 0, current_hp: 0 })} wildShapeUses={null} />)
   expect(screen.queryByText('character.extras.down')).toBeNull()
 })

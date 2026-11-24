@@ -753,7 +753,6 @@ async def test_una_forma_non_assunta_non_attacca(client):
     assert r.status_code == 409
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1091: il danno su un compagno 0/0 risponde down true")
 @pytest.mark.caccia(id="CB-1091", fonte="tests/caccia/decisioni.md D-015 (compagno con PF massimi 0: PF non segnati, mai a terra)",
                     zona="flusso:compagni-forme", voce="limiti", copre=["PATCH /characters/{char_id}/companions/{comp_id}/hp"])
 async def test_un_compagno_senza_pf_segnati_non_va_a_terra(client):

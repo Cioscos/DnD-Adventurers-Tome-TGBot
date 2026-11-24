@@ -193,7 +193,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
           {comp.temp_hp > 0 && <span className="text-dnd-cobalt-bright">+{comp.temp_hp} temp</span>}
         </div>
         <HPGauge current={comp.current_hp} max={comp.max_hp} temp={comp.temp_hp} size="md" segmented />
-        {comp.current_hp === 0 && (
+        {comp.current_hp === 0 && comp.max_hp > 0 && (
           <p className="mt-1 text-xs text-dnd-crimson-bright font-body">{t('character.extras.down')}</p>
         )}
       </div>
