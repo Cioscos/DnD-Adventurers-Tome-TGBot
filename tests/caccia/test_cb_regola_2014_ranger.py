@@ -125,7 +125,6 @@ async def test_agire_o_reagire_toglie_il_mimetismo(client, feature, params):
                     copre=["carta:2014/classes/ranger.md#Schivata Prodigiosa / Uncanny Dodge (Cacciatore 15, pag. 106)",
                            "GET /characters/{char_id}/roll-options", "PATCH /characters/{char_id}/hp"])
 @pytest.mark.parametrize("condition", ["incapacitated", "stunned"])
-@pytest.mark.xfail(strict=True, reason="CB-1915: difforme dal manuale, confermato")
 async def test_schivata_prodigiosa_non_si_usa_da_incapacitato(client, condition):
     cid = await _superior(client, "uncanny_dodge")
     await _full_hp(client, cid)

@@ -328,8 +328,11 @@ def _affordable(char: Any, spec: RollOptionSpec, ctx: RuleContext | None = None)
         return False
     if spec.once_per_turn and _once_key(spec) in _turn(char).get("once_per_turn", []):
         return False
-    if spec.slot and not _slot_free(char, spec.slot):
-        return False
+    if spec.slot:
+        from core.rules.modifiers import is_incapacitated  # import locale: modifiers usa il catalogo
+        # Incapacitato: niente azioni, azioni bonus né reazioni (2014 pag. 291, 2024 pag. 369)
+        if is_incapacitated(char) or not _slot_free(char, spec.slot):
+            return False
     cost = spec.cost
     if cost and cost.feature_key and _ability_row(char, cost.feature_key, cost_amount(cost, ctx) if ctx else cost.amount) is None:
         return False
