@@ -413,7 +413,7 @@ FEATURES = (
              "Right after the Attack action, bonus action and 1 ki: two unarmed strikes, each with its own attack roll."),
             "bonus_action", roll_options=(FLURRY_STRIKE,),
             on_use=OnUse(slot="bonus", spends=KI, available=_attack_action_done,
-                         state=StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "manual"), data={"charges": 2}))),
+                         state=StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"charges": 2}))),
     feature("patient_defense", CK, ED, 2, "Difesa Paziente / Patient Defense (Monaco 2, pag. 91)",
             ("Difesa Paziente", "Patient Defense"),
             ("Azione bonus e 1 ki: Schivata. Chi ti attacca ha svantaggio al tiro per colpire fino al tuo prossimo turno.",
@@ -553,7 +553,7 @@ FEATURES = (
              "Bonus action, from dim light or darkness: teleport up to 60 ft to an unoccupied space also in dim light; advantage on your first melee attack."),
             "bonus_action", subclass="shadow", roll_options=(STEP_ADVANTAGE,),
             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,),
-                         state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+                         state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
     feature("cloak_of_shadows", CK, ED, 11, "Manto di Ombre / Cloak of Shadows (Monaco 11, pag. 93)",
             ("Manto di Ombre", "Cloak of Shadows"),
             ("Con un'azione, in luce fioca o oscurità, diventi invisibile finché non attacchi, non lanci un incantesimo o non entri in luce intensa.",
@@ -602,7 +602,7 @@ FEATURES = (
              "With the Attack action, 1 ki: unarmed reach +10 ft for the turn and fire damage. On a hit, another ki adds 1d10 fire."),
             subclass="four_elements", option_group=GROUP, option_key="fangs_of_the_fire_snake", roll_options=(FANGS_EXTRA,),
             on_use=OnUse(spends=KI, state=StateSpec(
-                FANGS_STATE, rounds=1, ends_on=("new_turn", "manual"), data={"unarmed_damage_type": "fire", "reach_bonus_ft": 10}))),
+                FANGS_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"unarmed_damage_type": "fire", "reach_bonus_ft": 10}))),
 
     feature("multiclassing", CK, ED, 1, "Multiclasse: Monaco / Multiclassing: Monk (Capitolo 6, pag. 163)",
             ("Multiclasse: Monaco", "Multiclassing: Monk"),

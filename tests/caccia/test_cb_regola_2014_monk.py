@@ -78,7 +78,6 @@ async def test_tranquillita_resta_dopo_un_incantesimo_che_non_tocca_nemici(clien
                            "carta:2014/classes/monk.md#Raffica di Colpi / Flurry of Blows (Monaco 2, pag. 91)",
                            "POST /sessions/{session_id}/encounter/next-turn"])
 @pytest.mark.parametrize("caso", ["passo_dell_ombra", "zanne", "raffica"])
-@pytest.mark.xfail(strict=True, reason="CB-1814: difforme dal manuale, confermato")
 async def test_gli_effetti_di_questo_turno_finiscono_con_il_turno_del_monaco(client, test_session_factory, monkeypatch, caso):
     # Vantaggio «prima della fine del turno», portata e fuoco «per il resto del turno», i due colpi dell'azione bonus:
     # nel turno del goblin non valgono più (un attacco di opportunità non li usa)
