@@ -95,7 +95,9 @@ from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, release_concentration_effects, upsert_effect
+from api.services.condition_effects import (
+    ExpirySpec, effects_for_character, expire_effect, pending_read, release_concentration_effects, upsert_effect,
+)
 from api.services.durations import end_concentration, tick_rounds
 from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
@@ -1089,9 +1091,8 @@ async def close_pending_save(
             await activate_pending_effect(session, effect)
             add_history(session, char.id, "condition_change", f"Condizione subita: {condition_label(effect.slug)}")
         return save_read, passed
-    if passed:
-        add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
-        await apply_conditions(session, char, {effect.slug: False})
+    if passed:  # finisce questa istanza: un'altra della stessa condizione, da un'altra fonte, la tiene accesa
+        await expire_effect(session, effect, "Liberato da: {label}", None)
     await session.flush()
     return save_read, passed
 

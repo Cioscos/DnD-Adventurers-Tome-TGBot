@@ -478,8 +478,8 @@ export default function Conditions() {
             {t('character.conditions.effect.active_title')}
           </h3>
           <ul className="space-y-2">
-            {effectRows.map(({ e, expiry, save }) => (
-              <li key={e.slug} className="text-sm font-body">
+            {effectRows.map(({ e, expiry, save }, i) => (
+              <li key={`${e.slug}-${i}`} className="text-sm font-body">
                 <span className="font-semibold text-dnd-text">
                   {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : conditionLabel(e.slug, t)}
                 </span>

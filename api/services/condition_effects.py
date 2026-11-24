@@ -234,7 +234,7 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
                             new_ids: dict[int, int]) -> None:
     """Recreate effects an advance switched off, skipping targets changed meanwhile."""
     from api.services.effects import _still_concentrating  # circular import
-    for x in entries:
+    for x in reversed(entries):  # l'ultima istanza scaduta riaccende la condizione, poi tornano quelle finite prima
         kind, tid = x["target"]
         slug = x["slug"]
         owner = await db.get(Character if kind == "character" else Combatant, tid)
@@ -245,13 +245,17 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
             enc = await db.get(Encounter, snap["encounter_id"])
             if enc is None or enc.status == "ended":  # L5: finito lo scontro, durate e TS cadono
                 continue
-        if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
+        kept = x.get("kept")  # finita solo questa istanza: torna se la condizione è ancora accesa e la fonte non l'ha rimessa
+        if owner is None or bool((owner.conditions or {}).get(slug)) != bool(kept) or (await db.execute(
                 select(ConditionEffect.id).where(_target_filter((kind, tid)), ConditionEffect.slug == slug,
-                                                 ConditionEffect.pending.is_(False)))).first():
+                                                 ConditionEffect.pending.is_(False), *(same_source(
+                                                     snap["source_combatant_id"], snap["source_character_id"],
+                                                     snap["source_note"]) if kept else ())))).first():
             continue
         if snap["ends_with_concentration"] and not await db.run_sync(_still_concentrating, snap):
             continue  # la concentrazione che la teneva è finita nel frattempo
-        owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
+        if not kept:
+            owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
         if x.get("returned_from") is not None:
             owner.settings = {**(owner.settings or {}), RETURNED_FROM: {**((owner.settings or {}).get(RETURNED_FROM) or {}), slug: x["returned_from"]}}
         eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
@@ -282,6 +286,19 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
     snapshot, returned = effect_snapshot(eff), None
     saves = [effect_snapshot(ps) for ps in (await db.execute(select(PendingSave).where(
         PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
+    here = ("character", eff.character_id) if eff.character_id is not None else ("combatant", eff.combatant_id)
+    if (await db.execute(select(ConditionEffect.id).where(
+            _target_filter(here), ConditionEffect.slug == eff.slug, ConditionEffect.pending.is_(False),
+            ConditionEffect.id != eff.id).limit(1))).first():
+        # un'altra istanza la tiene accesa: finisce solo questa, con i suoi TS (2014 pag. 290; 2024 pag. 29)
+        for ps in (await db.execute(select(PendingSave).where(PendingSave.effect_id == eff.id))).scalars():
+            await db.delete(ps)
+        await db.delete(eff)
+        await db.flush()
+        if undo_list is not None:
+            undo_list.append({"target": list(here), "slug": eff.slug, "kept": True,
+                              "effect_snapshot": snapshot, "pending_saves": saves})
+        return label
     if eff.character_id is not None:
         target = ("character", eff.character_id)
         char = await db.get(Character, eff.character_id)
@@ -350,13 +367,22 @@ async def _target_combatant_id(db: AsyncSession, target: Target, encounter: Enco
     ))).scalar_one_or_none()
 
 
-async def clear_effects_for(db: AsyncSession, target: Target, slugs: Iterable[str]) -> None:
+def same_source(source_combatant_id: int | None, source_character_id: int | None, source_note: str | None) -> list:
+    """Filtro degli effetti della stessa fonte. Le istanze di una condizione da fonti diverse hanno ciascuna la propria durata
+    (2014 pag. 290; 2024 pag. 29); la stessa fonte (o il GM senza fonte) che la riapplica la corregge."""
+    return [col.is_(None) if v is None else col == v for col, v in (
+        (ConditionEffect.source_combatant_id, source_combatant_id),
+        (ConditionEffect.source_character_id, source_character_id), (ConditionEffect.source_note, source_note))]
+
+
+async def clear_effects_for(db: AsyncSession, target: Target, slugs: Iterable[str], *where) -> None:
+    """Elimina gli effetti di ``slugs`` sul bersaglio (``where``: solo quelli che lo soddisfano) e i loro TS."""
     slugs = list(slugs)
     if not slugs:
         return
     # Un effetto ``pending`` (TS in attesa di un privilegio) non è una condizione attiva: non si tocca.
     rows = (await db.execute(select(ConditionEffect).where(
-        _target_filter(target), ConditionEffect.slug.in_(slugs), ConditionEffect.pending.is_(False)))).scalars().all()
+        _target_filter(target), ConditionEffect.slug.in_(slugs), ConditionEffect.pending.is_(False), *where))).scalars().all()
     for row in rows:
         # Explicit delete of pendings: SQLite FK cascade is not guaranteed to be enabled.
         for ps in (await db.execute(select(PendingSave).where(
@@ -373,10 +399,10 @@ async def upsert_effect(
     source_spell_id: int | None = None, source_item_spell: str | None = None, ends_with_concentration: bool = False,
     applied_by_gm: bool = False, encounter: Encounter | None = None, source_note: str | None = None,
 ) -> ConditionEffect:
-    """Replace the effect for (target, slug). Applies the "next turn" correction when
-    ``encounter`` is active: an end-edge expiry anchored on the active combatant lasts one
+    """Replace the effect for (target, slug) from the same source; another source's stays, with its own duration. Applies
+    the "next turn" correction when ``encounter`` is active: an end-edge expiry anchored on the active combatant lasts one
     turn more, and an end-edge save on the active target skips its first edge."""
-    await clear_effects_for(db, target, [slug])
+    await clear_effects_for(db, target, [slug], *same_source(source_combatant_id, source_character_id, source_note))
     count = expiry.count if expiry else None
     skip_once = False
     if encounter is not None and encounter.status == "active" and encounter.active_combatant_id:
