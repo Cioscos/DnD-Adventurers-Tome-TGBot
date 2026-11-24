@@ -582,3 +582,649 @@ async def test_ritiro_con_ispirazione_senza_tiro_rifiutato_anche_senza_arma(clie
     assert (await client.get(f"/characters/{cid}")).json()["heroic_inspiration"] is True
     assert (await client.post(url[tipo], json={"die": 5, **extra})).status_code == 200
     assert (await client.post(url[tipo], json={"die": 12, "with_inspiration": True})).status_code == 200
+
+
+
+# --- Giro 2: attacco senz'armi, stili di combattimento, maestrie 2024, munizioni ----------------------------------
+
+def _j(r):
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _scegli(client, cid, gruppo, scelte):
+    from tests.integration.rules.test_2014_bard import _resolve
+
+    r = await _resolve(client, cid, gruppo, scelte)
+    assert r.status_code == 200, r.text
+
+
+async def _slot(client, cid, iid, slot):
+    r = await client.patch(f"/characters/{cid}/items/{iid}", json={"is_equipped": True, "equipment_slot": slot})
+    assert r.status_code == 200, r.text
+
+
+async def _pg24(client, livello=3, stile=None, maestrie=(), **punteggi):
+    cid = await _pg(client, "fighter", livello, "2024", **punteggi)
+    if stile:
+        await _scegli(client, cid, "fighting_style", [stile])
+    if maestrie:
+        await _scegli(client, cid, "weapon_mastery", list(maestrie))
+    return cid
+
+
+async def _chiavi(client, cid, **query):
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", **query})
+    assert r.status_code == 200, r.text
+    return [o["key"] for o in r.json()]
+
+
+async def _senz_armi(client, cid, die=10, **body):
+    return await client.post(f"/characters/{cid}/attack/unarmed", json={"die": die, **body})
+
+
+@pytest.mark.caccia(id="CB-773", fonte="2014 · Colpo senz'armi · pag. 195: 1 + Forza, i danni non scendono sotto zero", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_colpo_senz_armi_con_forza_molto_bassa_non_cura_ne_va_sotto_zero(client, edizione):
+    cid = await _pg(client, "wizard", 1, edizione, strength=1)
+    j = _j(await _senz_armi(client, cid))
+    assert j["damage_bonus"] == -5 and j["damage_total"] == 0
+
+
+@pytest.mark.caccia(id="CB-774", fonte="2024 · Colpo senz'armi · pag. 362: 1 + modificatore di Forza di danni contundenti", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+async def test_2024_colpo_senz_armi_del_non_monaco_e_uno_piu_forza(client):
+    cid = await _pg(client, "fighter", 1, "2024", strength=16, dexterity=10)
+    j = _j(await _senz_armi(client, cid))
+    assert (j["damage_bonus"], j["damage_total"], j["to_hit_bonus"]) == (3, 4, 5)
+
+
+@pytest.mark.caccia(id="CB-775", fonte="2014 · Colpo senz'armi · pag. 195: il non monaco usa Forza anche con Destrezza più alta", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+async def test_colpo_senz_armi_del_non_monaco_usa_sempre_la_forza(client):
+    cid = await _pg(client, "fighter", 1, strength=8, dexterity=18)
+    j = _j(await _senz_armi(client, cid))
+    assert (j["to_hit_bonus"], j["damage_bonus"], j["damage_total"]) == (1, -1, 0)
+
+
+@pytest.mark.caccia(id="CB-776", fonte="2024 · Stili di Combattimento · Tiro con l'Arco · pag. 209: +2 con armi a distanza, non con un'arma da mischia lanciata", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_tiro_con_l_arco_non_vale_per_l_arma_da_mischia_lanciata(client, dadi):
+    cid = await _pg24(client, 3, "archery", strength=16, dexterity=16)
+    arco = await _arma(client, cid, "Arco corto", "1d6", ["ammunition", "two-handed"], tipo="ranged")
+    await _oggetto(client, cid, "Frecce", "ammunition", quantity=5)
+    ascia = await _arma(client, cid, "Accetta", "1d6", ["thrown", "light"], tipo="melee")
+    dadi(3)
+    assert _j(await _att(client, cid, arco))["to_hit_bonus"] == 7
+    dadi(3)
+    r = await _att(client, cid, ascia, attack_mode="thrown", confirm_extra_attack=True)
+    assert r.json()["to_hit_bonus"] == 5
+
+
+@pytest.mark.caccia(id="CB-777", fonte="2024 · Stili di Combattimento · Duello · pag. 209: arma da mischia in una mano e nessun'altra arma; lo scudo va bene", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_duello_si_perde_con_una_seconda_arma_ma_non_con_lo_scudo(client, dadi):
+    cid = await _pg24(client, 3, "dueling", strength=16)
+    spada = await _arma(client, cid, "Spada", "1d8", [])
+    await _slot(client, cid, spada, "main_hand")
+    dadi(3)
+    assert _j(await _att(client, cid, spada))["damage_bonus"] == 5
+    pugnale = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    await _slot(client, cid, pugnale, "off_hand")
+    dadi(3)
+    assert _j(await _att(client, cid, spada, confirm_extra_attack=True))["damage_bonus"] == 3
+    await client.patch(f"/characters/{cid}/items/{pugnale}", json={"is_equipped": False, "equipment_slot": None})
+    scudo = await _oggetto(client, cid, "Scudo", "shield")
+    await _slot(client, cid, scudo, "off_hand")
+    dadi(3)
+    assert _j(await _att(client, cid, spada, confirm_extra_attack=True))["damage_bonus"] == 5
+
+
+@pytest.mark.caccia(id="CB-778", fonte="2024 · Stili di Combattimento · Combattere con Armi a Due Mani · pag. 209: un dado di danno 1 o 2 conta 3", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_armi_a_due_mani_su_un_critico_alza_anche_i_dadi_del_critico(client, dadi):
+    cid = await _pg24(client, 3, "great_weapon", strength=16)
+    w = await _arma(client, cid, "Spadone", "2d6", ["heavy", "two-handed"])
+    await _slot(client, cid, w, "main_hand")
+    dadi(1, 1, 2, 6)
+    j = _j(await _att(client, cid, w, die=20))
+    assert j["damage_rolls"] == [3, 3, 3, 6] and j["damage_total"] == 18
+
+
+@pytest.mark.caccia(id="CB-779", fonte="2024 · Stili di Combattimento · Combattere con Due Armi · pag. 209: si aggiunge il modificatore al danno dell'attacco extra", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_stile_due_armi_aggiunge_il_modificatore_all_attacco_dell_altra_mano(client, dadi):
+    cid = await _pg24(client, 3, "two_weapon", strength=16)
+    a = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    b = await _arma(client, cid, "Pugnale secondo", "1d4", ["finesse", "light"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, b, "off_hand")
+    dadi(2)
+    assert (await _att(client, cid, a)).status_code == 200
+    dadi(2)
+    j = _j(await _att(client, cid, b, attack_mode="offhand"))
+    assert (j["damage_bonus"], j["damage_total"]) == (3, 5)
+
+
+@pytest.mark.caccia(id="CB-780", fonte="2024 · Maestria · Colpo di striscio · pag. 214: danni pari al modificatore, cresce solo aumentando il modificatore", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/last-roll/options", "route:/char/:id/inventory"])
+async def test_colpo_di_striscio_non_somma_il_bonus_magico_dell_arma(client):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=16)
+    w = await _arma(client, cid, "Spadone +2", "2d6", ["heavy", "two-handed"], magic_bonus=2)
+    await _slot(client, cid, w, "main_hand")
+    a = _j(await _att(client, cid, w, die=5, defer_damage=True))
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["mastery_graze"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["attack"]["damage_total"] == 3 and a["attack_id"]
+
+
+@pytest.mark.caccia(id="CB-781", fonte="2024 · Maestria · Colpo di striscio · pag. 214: danni pari al modificatore usato; con modificatore negativo nessun danno", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["GET /characters/{char_id}/roll-options", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("forza,offerto", [(8, False), (10, False), (12, True)])
+async def test_colpo_di_striscio_solo_con_modificatore_positivo(client, forza, offerto):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=forza)
+    w = await _arma(client, cid, "Spadone", "2d6", ["heavy", "two-handed"])
+    await _slot(client, cid, w, "main_hand")
+    _j(await _att(client, cid, w, die=5, defer_damage=True))
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["mastery_graze"]})
+    assert (r.status_code == 200) is offerto, r.text
+    if offerto:
+        assert r.json()["attack"]["damage_total"] == 1
+
+
+@pytest.mark.caccia(id="CB-782", fonte="2024 · Maestria · Vessazione · pag. 214: vantaggio al prossimo attacco, finché non finisce il tuo prossimo turno", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/attack/{attack_id}/damage", "GET /characters/{char_id}/roll-options", "route:/char/:id/inventory"])
+async def test_vessazione_vale_per_un_attacco_e_scade_dopo_il_turno_seguente(client):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=16)
+    w = await _arma(client, cid, "Accetta", "1d6", ["light", "thrown"])
+    await _slot(client, cid, w, "main_hand")
+
+    async def arma_vex():
+        a = _j(await _att(client, cid, w, die=10, defer_damage=True, confirm_extra_attack=True))
+        r = await client.post(f"/characters/{cid}/attack/{a['attack_id']}/damage", json={"options": ["mastery_vex"]})
+        assert r.status_code == 200, r.text
+
+    await arma_vex()
+    assert "mastery_vex_advantage" in await _chiavi(client, cid, item_id=w)
+    j = _j(await _att(client, cid, w, die=10, confirm_extra_attack=True, options=["mastery_vex_advantage"]))
+    assert j["mode"] == "advantage"
+    assert "mastery_vex_advantage" not in await _chiavi(client, cid, item_id=w)
+    await arma_vex()
+    await client.post(f"/characters/{cid}/turn/new")
+    assert "mastery_vex_advantage" in await _chiavi(client, cid, item_id=w)
+    await client.post(f"/characters/{cid}/turn/new")
+    assert "mastery_vex_advantage" not in await _chiavi(client, cid, item_id=w)
+
+
+@pytest.mark.caccia(id="CB-783", fonte="2024 · Maestria · Graffio · pag. 214: l'attacco extra della proprietà Leggera senza azione bonus, una volta per turno", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_graffio_non_spende_l_azione_bonus_e_una_volta_per_turno(client):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=16, dexterity=16)
+    a = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    b = await _arma(client, cid, "Pugnale secondo", "1d4", ["finesse", "light"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, b, "off_hand")
+    _j(await _att(client, cid, a))
+    _j(await _att(client, cid, b, attack_mode="offhand", options=["mastery_nick"]))
+    assert (await _turno(client, cid))["bonus_used"] is False
+    r = await _att(client, cid, b, attack_mode="offhand", options=["mastery_nick"])
+    assert r.status_code >= 400, r.text
+
+
+@pytest.mark.caccia(id="CB-784", fonte="2024 · Maestria · Rovesciamento · pag. 214: CD 8 + modificatore usato per l'attacco + competenza", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/attack/{attack_id}/damage", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("livello,forza,destrezza,cd", [(1, 16, 10, 13), (5, 10, 18, 15), (9, 20, 10, 17)])
+async def test_rovesciamento_usa_il_modificatore_dell_attacco(client, livello, forza, destrezza, cd):
+    cid = await _pg24(client, livello, None, ("quarterstaff", "dagger", "handaxe", "mace")[:3 if livello == 1 else 4], strength=forza, dexterity=destrezza)
+    w = await _arma(client, cid, "Bastone ferrato", "1d6", ["finesse"] if destrezza > forza else [])
+    await _slot(client, cid, w, "main_hand")
+    a = _j(await _att(client, cid, w, die=10, defer_damage=True))
+    r = await client.post(f"/characters/{cid}/attack/{a['attack_id']}/damage", json={"options": ["mastery_topple"]})
+    assert r.status_code == 200, r.text
+    assert f"CD {cd}" in r.json()["option_result"]["effects"][0]["it"]
+
+
+@pytest.mark.caccia(id="CB-785", fonte="2024 · Maestria · Doppio fendente · pag. 214: danno dell'arma senza modificatore, una volta per turno", zona="flusso:attacco-danno",
+                    voce="ripetizione", copre=["POST /characters/{char_id}/attack/{attack_id}/damage", "route:/char/:id/inventory"])
+async def test_doppio_fendente_senza_modificatore_e_una_volta_per_turno(client, dadi):
+    cid = await _pg24(client, 1, None, ("greataxe", "dagger", "handaxe"), strength=16)
+    w = await _arma(client, cid, "Ascia bipenne", "1d12", ["heavy", "two-handed"])
+    await _slot(client, cid, w, "main_hand")
+    dadi(*([12] * 8))
+    a = _j(await _att(client, cid, w, die=10, defer_damage=True))
+    r = await client.post(f"/characters/{cid}/attack/{a['attack_id']}/damage", json={"options": ["mastery_cleave"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["option_result"]["separate_total"] == 12
+    a = _j(await _att(client, cid, w, die=10, defer_damage=True, confirm_extra_attack=True))
+    r = await client.post(f"/characters/{cid}/attack/{a['attack_id']}/damage", json={"options": ["mastery_cleave"]})
+    assert r.status_code >= 400, r.text
+
+
+@pytest.mark.caccia(id="CB-786", fonte="2024 · Maestria · pag. 214: la maestria è solo del 2024; tornando al 2014 le proprietà non valgono", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["GET /characters/{char_id}/roll-options", "PATCH /characters/{char_id}", "route:/char/:id/inventory"])
+async def test_le_maestrie_scelte_non_valgono_tornando_al_2014(client):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=16)
+    w = await _arma(client, cid, "Spadone", "2d6", ["heavy", "two-handed"])
+    await _slot(client, cid, w, "main_hand")
+    assert "mastery_graze" in await _chiavi(client, cid, item_id=w)
+    r = await client.patch(f"/characters/{cid}", json={"rules_edition": "2014"})
+    assert r.status_code == 200, r.text
+    assert not [k for k in await _chiavi(client, cid, item_id=w) if k.startswith("mastery_")]
+    j = (await client.get(f"/characters/{cid}")).json()["items"]
+    assert not next(i for i in j if i["id"] == w).get("mastery")
+
+
+@pytest.mark.caccia(id="CB-787", fonte="2024 · Barbaro · Padronanza delle Armi · pag. 52: solo armi da mischia", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/choices/{choice_id}/resolve", "route:/char/:id/inventory"])
+async def test_il_barbaro_non_sceglie_una_maestria_per_un_arma_a_distanza(client):
+    from tests.integration.rules.test_2014_bard import _resolve
+
+    cid = await _pg(client, "barbarian", 1, "2024")
+    r = await _resolve(client, cid, "weapon_mastery", ["greataxe", "longbow"])
+    assert r.status_code == 422, r.text
+
+
+@pytest.mark.caccia(id="CB-788", fonte="2024 · Ladro · Padronanza delle Armi · pag. 129: solo armi con Accurata o Leggera", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/choices/{choice_id}/resolve", "route:/char/:id/inventory"])
+async def test_il_ladro_sceglie_solo_armi_accurate_o_leggere(client):
+    from tests.integration.rules.test_2014_bard import _resolve
+
+    cid = await _pg(client, "rogue", 1, "2024")
+    r = await _resolve(client, cid, "weapon_mastery", ["greatsword", "dagger"])
+    assert r.status_code == 422, r.text
+    r = await _resolve(client, cid, "weapon_mastery", ["rapier", "dagger"])
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-789", fonte="invariante: due richieste insieme non recuperano due volte le stesse munizioni", zona="flusso:attacco-danno",
+                    voce="ripetizione", copre=["POST /characters/{char_id}/items/{item_id}/recover-ammo", "route:/char/:id/inventory"])
+async def test_due_recuperi_insieme_restituiscono_le_munizioni_una_volta(client, dadi):
+    cid = await _pg(client, dexterity=16)
+    arco = await _arma(client, cid, "Arco corto", "1d6", ["ammunition", "two-handed"], tipo="ranged", equip=True)
+    fr = await _oggetto(client, cid, "Frecce", "ammunition", quantity=10)
+    for _ in range(8):
+        dadi(2)
+        _j(await _att(client, cid, arco, confirm_extra_attack=True))
+    await asyncio.gather(client.post(f"/characters/{cid}/items/{fr}/recover-ammo"),
+                         client.post(f"/characters/{cid}/items/{fr}/recover-ammo"))
+    pila = await _pila(client, cid, fr)
+    assert (pila["quantity"], pila["ammo_spent"]) == (6, 0)
+
+
+@pytest.mark.caccia(id="CB-790", fonte="2014 · Equipaggiamento · Munizioni · pag. 146: le munizioni si usano per attacchi a distanza con l'arma che le richiede", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_un_arma_lanciata_senza_munizioni_non_ne_consuma(client, dadi):
+    cid = await _pg(client, strength=16)
+    ascia = await _arma(client, cid, "Accetta", "1d6", ["thrown", "light"])
+    fr = await _oggetto(client, cid, "Frecce", "ammunition", quantity=5)
+    dadi(3)
+    j = _j(await _att(client, cid, ascia, attack_mode="thrown"))
+    assert j["ammo"] is None and j["ammo_missing"] is False
+    assert (await _pila(client, cid, fr))["quantity"] == 5
+
+
+@pytest.mark.caccia(id="CB-791", fonte="2014 · Equipaggiamento · Munizioni · pag. 146: a fine battaglia metà delle munizioni spese; fine dello scontro in sessione", zona="flusso:attacco-danno",
+                    voce="persistenza", copre=["POST /sessions/{session_id}/encounter/end", "POST /characters/{char_id}/items/{item_id}/recover-ammo", "route:/char/:id/inventory"])
+async def test_la_fine_dello_scontro_recupera_meta_delle_munizioni_una_volta(client, test_session_factory, dadi):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
+
+    as_user(GM_ID)
+    sid, cid = await seed_session(test_session_factory, player_dex=14)
+    await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})
+    await client.post(f"/sessions/{sid}/encounter/combatants", json={"name": "G", "count": 1, "initiative_mod": 0, "max_hp": 7, "ac": 10})
+    as_user(PLAYER_ID)
+    arco = await _arma(client, cid, "Arco corto", "1d6", ["ammunition", "two-handed"], tipo="ranged", equip=True)
+    fr = await _oggetto(client, cid, "Frecce", "ammunition", quantity=10)
+    for _ in range(5):
+        dadi(2)
+        _j(await _att(client, cid, arco, confirm_extra_attack=True))
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/end")
+    assert r.status_code == 200, r.text
+    as_user(PLAYER_ID)
+    pila = await _pila(client, cid, fr)
+    assert (pila["quantity"], pila["ammo_spent"]) == (7, 0)
+    r = await client.post(f"/characters/{cid}/items/{fr}/recover-ammo")
+    assert next(i for i in r.json()["items"] if i["id"] == fr)["quantity"] == 7
+
+
+async def _condizioni(client, cid, **cond):
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": cond})
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-792", fonte="2014 · Tiri per colpire · pag. 194: Forza per la mischia e le armi lanciate, Destrezza per le armi a distanza", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("nome,tipo,proprieta,modo,forza,destrezza,atteso", [
+    ("Mazza", "melee", [], "melee", 10, 18, 2), ("Accetta", "melee", ["thrown", "light"], "thrown", 10, 18, 2),
+    ("Arco", "ranged", ["ammunition", "two-handed"], "melee", 18, 10, 2), ("Balestra a mano", "ranged", ["ammunition", "light", "loading"], "melee", 18, 8, 1)])
+async def test_caratteristica_del_tiro_per_colpire_secondo_il_tipo_di_arma(client, dadi, nome, tipo, proprieta, modo, forza, destrezza, atteso):
+    cid = await _pg(client, strength=forza, dexterity=destrezza)
+    w = await _arma(client, cid, nome, "1d6", proprieta, tipo=tipo)
+    await _oggetto(client, cid, "Munizioni", "ammunition", quantity=3)
+    dadi(3)
+    assert _j(await _att(client, cid, w, attack_mode=modo))["to_hit_bonus"] == atteso
+
+
+@pytest.mark.caccia(id="CB-793", fonte="2014 · Multiclasse · Attacco Extra · pag. 164: i privilegi non si sommano fra classi", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["POST /characters/{char_id}/classes", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("livello_guerriero,attacchi", [(5, 2), (11, 3)])
+async def test_attacco_extra_non_si_somma_fra_guerriero_e_barbaro(client, dadi, livello_guerriero, attacchi):
+    cid = await _pg(client, "fighter", livello_guerriero, strength=16)
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "barbarian", "level": 5, "hit_die": 12})
+    assert r.status_code in (200, 201), r.text
+    w = await _arma(client, cid, "Spada", "1d8")
+    esiti = []
+    for _ in range(attacchi + 1):
+        dadi(3)
+        esiti.append((await _att(client, cid, w)).status_code)
+    assert esiti == [200] * attacchi + [409]
+
+
+@pytest.mark.caccia(id="CB-794", fonte="2014 · Vantaggio e svantaggio · pag. 173: più fonti dello stesso tipo non si sommano, vantaggio e svantaggio si annullano", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("condizioni,modo", [({"poisoned": True}, "disadvantage"), ({"poisoned": True, "prone": True}, "disadvantage"),
+                                              ({"poisoned": True, "invisible": True}, "normal"), ({"invisible": True}, "advantage")])
+async def test_condizioni_sul_tiro_per_colpire_si_combinano_come_da_regola(client, dadi, condizioni, modo):
+    cid = await _pg(client, strength=16)
+    w = await _arma(client, cid, "Spada", "1d8")
+    await _condizioni(client, cid, **condizioni)
+    dadi(3)
+    assert _j(await _att(client, cid, w, dice=[10, 15]))["mode"] == modo
+
+
+@pytest.mark.caccia(id="CB-795", fonte="2014 · Condizioni · Spossatezza · pag. 291: svantaggio ai tiri per colpire dal 3° livello", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("livello,modo", [(2, "normal"), (3, "disadvantage")])
+async def test_2014_spossatezza_dal_terzo_livello_svantaggio_ai_tiri_per_colpire(client, dadi, livello, modo):
+    cid = await _pg(client, strength=16)
+    w = await _arma(client, cid, "Spada", "1d8")
+    await _condizioni(client, cid, exhaustion=livello)
+    dadi(3)
+    assert _j(await _att(client, cid, w, dice=[10, 15]))["mode"] == modo
+
+
+@pytest.mark.caccia(id="CB-796", fonte="2024 · Condizioni · Spossatezza · pag. 367: -2 per livello ai Test del d20, nessuno svantaggio", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_2024_spossatezza_toglie_due_per_livello_al_tiro_per_colpire(client, dadi):
+    cid = await _pg(client, "fighter", 1, "2024", strength=16)
+    w = await _arma(client, cid, "Spada", "1d8")
+    await _condizioni(client, cid, exhaustion=3)
+    dadi(3)
+    j = _j(await _att(client, cid, w, dice=[10, 15]))
+    assert (j["mode"], j["to_hit_bonus"], j["to_hit_total"]) == ("normal", -1, 9)
+
+
+@pytest.mark.caccia(id="CB-797", fonte="2024 · Stili di Combattimento · Combattere Senz'Armi · pag. 209: d8 senz'armi, i dadi si raddoppiano al critico", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+async def test_stile_senz_armi_al_critico_raddoppia_il_dado(client, dadi):
+    cid = await _pg24(client, 3, "unarmed", strength=16)
+    dadi(2, 3)
+    j = _j(await _senz_armi(client, cid, die=20))
+    assert (j["is_critical"], j["damage_rolls"], j["damage_total"]) == (True, [2, 3], 8)
+
+
+async def _ira(client, cid):
+    r = await client.post(f"/characters/{cid}/features/barbarian.rage/use", json={})
+    assert r.status_code == 200, r.text
+
+
+@pytest.mark.caccia(id="CB-798", fonte="2014 · Barbaro · Ira · pag. 46: solo attacchi in mischia con Forza; 2024 · Barbaro · Ira · pag. 51: ogni attacco con Forza, anche lanciato", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/features/{feature_key}/use", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("edizione,bonus_lanciata", [("2014", 3), ("2024", 5)])
+async def test_ira_sull_arma_lanciata_per_edizione(client, edizione, bonus_lanciata):
+    cid = await _pg(client, "barbarian", 1, edizione, strength=16)
+    ascia = await _arma(client, cid, "Accetta", "1d6", ["thrown", "light"])
+    await _ira(client, cid)
+    assert _j(await _att(client, cid, ascia))["damage_bonus"] == 5
+    assert _j(await _att(client, cid, ascia, attack_mode="thrown", confirm_extra_attack=True))["damage_bonus"] == bonus_lanciata
+
+
+@pytest.mark.caccia(id="CB-799", fonte="2024 · Barbaro · Ira · pag. 51: il bonus vale con un'arma o con un Colpo senz'Armi", zona="flusso:attacco-danno",
+                    voce="regola", copre=["POST /characters/{char_id}/attack/unarmed", "POST /characters/{char_id}/features/{feature_key}/use", "route:/char/:id/inventory"])
+async def test_2024_ira_vale_anche_per_il_colpo_senz_armi(client):
+    cid = await _pg(client, "barbarian", 1, "2024", strength=16)
+    await _ira(client, cid)
+    j = _j(await _senz_armi(client, cid))
+    assert (j["damage_bonus"], j["damage_total"]) == (5, 6)
+
+
+@pytest.mark.xfail(strict=True, reason="CB-800 l'attacco con l'altra mano accetta la stessa arma dell'attacco dell'azione")
+@pytest.mark.caccia(id="CB-800", fonte="2014 · Combattere con Due Armi · pag. 195: seconda arma leggera impugnata nell'altra mano; 2024 · Armi · Leggera · pag. 213: un'altra arma Leggera", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_l_attacco_con_l_altra_mano_non_si_fa_con_la_stessa_arma_dell_azione(client, dadi, edizione):
+    cid = await _pg(client, "fighter", 1, edizione, dexterity=16)
+    a = await _arma(client, cid, "Spada corta", "1d6", ["finesse", "light"])
+    b = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, b, "off_hand")
+    dadi(3)
+    _j(await _att(client, cid, a))
+    dadi(3)
+    r = await _att(client, cid, a, attack_mode="offhand")
+    assert r.status_code >= 400, r.text
+    assert (await _turno(client, cid))["bonus_used"] is False
+
+
+@pytest.mark.caccia(id="CB-801", fonte="2024 · Monaco · Arti Marziali · pag. 100: Destrezza anche per la CD di Afferrare e Spingere, solo senza armatura né scudo", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("classe,scudo,cd", [("monk", False, 13), ("monk", True, 10), ("fighter", False, 10)])
+async def test_2024_cd_di_afferrare_e_spingere_senz_armi(client, classe, scudo, cd):
+    cid = await _pg(client, classe, 1, "2024", strength=10, dexterity=16)
+    if scudo:
+        await _slot(client, cid, await _oggetto(client, cid, "Scudo", "shield"), "off_hand")
+    for effetto in ("grapple", "shove"):
+        j = _j(await _senz_armi(client, cid, effect=effetto, confirm_extra_attack=True))
+        assert j["save_dc"] == cd and j["effect"] == effetto
+
+
+@pytest.mark.caccia(id="CB-802", fonte="2024 · Colpo senz'armi · pag. 377: Afferrare e Spingere sostituiscono un attacco; solo in 2024", zona="flusso:attacco-danno",
+                    voce="ripetizione", copre=["POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+async def test_afferrare_spende_un_attacco_e_nel_2014_e_rifiutato(client, dadi):
+    cid = await _pg(client, "fighter", 1, "2024", strength=16)
+    _j(await _senz_armi(client, cid, effect="grapple"))
+    assert (await _turno(client, cid))["action_attacks"] == 1
+    assert (await _senz_armi(client, cid, effect="shove")).status_code == 409
+    vecchio = await _pg(client, "fighter", 1, "2014", strength=16)
+    assert (await _senz_armi(client, vecchio, effect="grapple")).status_code >= 400
+    assert (await _turno(client, vecchio))["action_attacks"] == 0
+
+
+@pytest.mark.caccia(id="CB-803", fonte="2014 · Armi · Accurata · pag. 147: la scelta fra Forza e Destrezza vale solo per le armi con Accurata", zona="flusso:attacco-danno",
+                    voce="contratto", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("nome,tipo,proprieta,scelta,atteso", [
+    ("Mazza", "melee", [], "dexterity", 2), ("Arco", "ranged", ["ammunition", "two-handed"], "strength", 2),
+    ("Stocco", "melee", ["finesse"], "dexterity", 6)])
+async def test_la_caratteristica_scelta_dal_client_vale_solo_per_le_armi_accurate(client, dadi, nome, tipo, proprieta, scelta, atteso):
+    cid = await _pg(client, strength=10 if tipo == "melee" else 18, dexterity=18 if tipo == "melee" else 10)
+    w = await _arma(client, cid, nome, "1d6", proprieta, tipo=tipo)
+    await _oggetto(client, cid, "Frecce", "ammunition", quantity=3)
+    dadi(3)
+    assert _j(await _att(client, cid, w, ability=scelta))["to_hit_bonus"] == atteso
+
+
+@pytest.mark.caccia(id="CB-804", fonte="2014 · Cavaliere Mistico · Arma Vincolata: evocarla in una mano libera; un'arma a due mani le vuole entrambe", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/items/{item_id}/summon", "route:/char/:id/inventory"])
+async def test_evocare_un_arma_a_due_mani_con_lo_scudo_in_mano_e_rifiutato_senza_spendere(client):
+    cid = await _pg(client, "fighter", 3, sottoclasse="Cavaliere Mistico")
+    spadone = await _arma(client, cid, "Spadone", "2d6", ["heavy", "two-handed"])
+    assert (await client.post(f"/characters/{cid}/items/{spadone}/bond", json={})).status_code == 200
+    await _slot(client, cid, await _oggetto(client, cid, "Scudo", "shield"), "off_hand")
+    r = await client.post(f"/characters/{cid}/items/{spadone}/summon")
+    assert (r.status_code, r.json()["detail"]["code"]) == (409, "no_free_hand")
+    assert (await _turno(client, cid))["bonus_used"] is False
+
+
+@pytest.mark.caccia(id="CB-805", fonte="invariante: un'arma accettata infligge danno anche impugnata a due mani, o la notazione è rifiutata", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/items", "PATCH /characters/{char_id}/items/{item_id}", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("come", ["crea", "modifica"])
+async def test_dado_versatile_non_valido_rifiutato_o_con_danno(client, dadi, come):
+    cid = await _pg(client, strength=10)
+    meta = {"damage_dice": "1d8", "versatile_dice": "d10", "weapon_type": "melee", "properties": ["versatile"]}
+    if come == "crea":
+        r = await client.post(f"/characters/{cid}/items", json={"name": "X", "item_type": "weapon", "item_metadata": meta})
+        if r.status_code == 422:
+            return
+        w = max(i["id"] for i in r.json()["items"])
+    else:
+        w = await _arma(client, cid, "X", "1d8", ["versatile"])
+        r = await client.patch(f"/characters/{cid}/items/{w}", json={"item_metadata": meta})
+        if r.status_code == 422:
+            return
+    dadi(*([4] * 4))
+    assert _j(await _att(client, cid, w, grip="two"))["damage_total"] > 0
+
+
+@pytest.mark.caccia(id="CB-807", fonte="2014 · Condizioni · pag. 290-292: incapacitato, paralizzato, stordito, privo di sensi e pietrificato non compiono azioni", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("condizione", ["incapacitated", "paralyzed", "stunned", "unconscious", "petrified"])
+async def test_un_incapace_non_attacca_e_non_spende_munizioni(client, dadi, condizione):
+    cid = await _pg(client, dexterity=16)
+    arco = await _arma(client, cid, "Arco corto", "1d6", ["ammunition", "two-handed"], tipo="ranged")
+    fr = await _oggetto(client, cid, "Frecce", "ammunition", quantity=5)
+    await _condizioni(client, cid, **{condizione: True})
+    dadi(3)
+    assert (await _att(client, cid, arco)).status_code == 409
+    assert (await _senz_armi(client, cid)).status_code == 409
+    assert (await _pila(client, cid, fr))["quantity"] == 5
+    assert (await _turno(client, cid))["action_attacks"] == 0
+
+
+@pytest.mark.caccia(id="CB-812", fonte="2024 · Armi · Leggera · pag. 213: l'attacco extra con un'altra arma Leggera, anche a distanza", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_2024_attacco_dell_altra_mano_con_una_balestra_a_mano_spende_una_munizione(client, dadi):
+    cid = await _pg(client, "fighter", 1, "2024", dexterity=16)
+    a = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    h = await _arma(client, cid, "Balestra a mano", "1d6", ["ammunition", "light", "loading"], tipo="ranged")
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, h, "off_hand")
+    q = await _oggetto(client, cid, "Quadrelli", "ammunition", quantity=5)
+    dadi(3)
+    _j(await _att(client, cid, a))
+    dadi(3)
+    j = _j(await _att(client, cid, h, attack_mode="offhand"))
+    assert j["ammo"]["remaining"] == 4 and (await _pila(client, cid, q))["quantity"] == 4
+    assert (await _turno(client, cid))["bonus_used"] is True
+
+
+@pytest.mark.xfail(strict=True, reason="CB-813 la pila vuota nello slot munizioni blocca le altre pile")
+@pytest.mark.caccia(id="CB-813", fonte="invariante: una pila di munizioni finita non blocca le altre pile dello stesso tipo (come la faretra vuota di CB-040)", zona="flusso:attacco-danno",
+                    voce="limiti", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_pila_nello_slot_munizioni_finita_si_passa_alle_frecce_sciolte(client, dadi):
+    cid = await _pg(client, dexterity=16)
+    arco = await _arma(client, cid, "Arco corto", "1d6", ["ammunition", "two-handed"], tipo="ranged", equip=True)
+    nello_slot = await _oggetto(client, cid, "Frecce", "ammunition", quantity=1)
+    await _slot(client, cid, nello_slot, "ammunition")
+    sciolte = await _oggetto(client, cid, "Frecce", "ammunition", quantity=10)
+    dadi(3)
+    assert _j(await _att(client, cid, arco))["ammo_missing"] is False
+    await client.post(f"/characters/{cid}/turn/new")
+    dadi(3)
+    j = _j(await _att(client, cid, arco))
+    assert j["ammo_missing"] is False
+    assert (await _pila(client, cid, sciolte))["quantity"] == 9
+
+
+@pytest.mark.xfail(strict=True, reason="CB-814 l'attacco con l'altra mano accetta un primo attacco con arma non leggera")
+@pytest.mark.caccia(id="CB-814", fonte="2014 · Combattere con Due Armi · pag. 195: con un'arma da mischia leggera in una mano, attacco con una seconda arma leggera; 2024 · Armi · Leggera · pag. 213", zona="flusso:attacco-danno",
+                    voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_primo_attacco_con_arma_non_leggera_non_apre_l_attacco_dell_altra_mano(client, dadi, edizione):
+    cid = await _pg(client, "fighter", 1, edizione, strength=16, dexterity=16)
+    lunga = await _arma(client, cid, "Spada lunga", "1d8", [])
+    a = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    b = await _arma(client, cid, "Pugnale secondo", "1d4", ["finesse", "light"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, b, "off_hand")
+    dadi(3)
+    _j(await _att(client, cid, lunga))  # l'attacco dell'azione è con un'arma non leggera
+    dadi(3)
+    r = await _att(client, cid, b, attack_mode="offhand")
+    assert r.status_code >= 400, r.text
+    assert (await _turno(client, cid))["bonus_used"] is False
+
+
+@pytest.mark.caccia(id="CB-815", fonte="invariante: sostituendo lo stile di combattimento il bonus del vecchio stile sparisce dall'attacco", zona="flusso:attacco-danno",
+                    voce="annullamento", copre=["POST /characters/{char_id}/classes/{class_id}/options/replace", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_cambiando_stile_il_duello_non_resta_sull_attacco(client, dadi):
+    cid = await _pg24(client, 3, "dueling", strength=16)
+    w = await _arma(client, cid, "Spada", "1d8", [])
+    await _slot(client, cid, w, "main_hand")
+    dadi(3)
+    assert _j(await _att(client, cid, w))["damage_bonus"] == 5
+    klass = (await client.get(f"/characters/{cid}")).json()["classes"][0]["id"]
+    r = await client.post(f"/characters/{cid}/classes/{klass}/options/replace", json={"group": "fighting_style", "old_key": "dueling", "new_key": "defense"})
+    assert r.status_code == 200, r.text
+    dadi(3)
+    assert _j(await _att(client, cid, w, confirm_extra_attack=True))["damage_bonus"] == 3
+
+
+@pytest.mark.caccia(id="CB-816", fonte="2024 · Maestria · pag. 214: cambiata l'arma scelta, la proprietà dell'arma tolta non vale più", zona="flusso:attacco-danno",
+                    voce="annullamento", copre=["POST /characters/{char_id}/classes/{class_id}/options/replace", "GET /characters/{char_id}/roll-options", "route:/char/:id/inventory"])
+async def test_cambiando_la_maestria_la_proprieta_dell_arma_tolta_sparisce(client):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=16)
+    w = await _arma(client, cid, "Spadone", "2d6", ["heavy", "two-handed"])
+    await _slot(client, cid, w, "main_hand")
+    assert "mastery_graze" in await _chiavi(client, cid, item_id=w)
+    klass = (await client.get(f"/characters/{cid}")).json()["classes"][0]["id"]
+    r = await client.post(f"/characters/{cid}/classes/{klass}/options/replace", json={"group": "weapon_mastery", "old_key": "greatsword", "new_key": "rapier"})
+    assert r.status_code == 200, r.text
+    assert "mastery_graze" not in await _chiavi(client, cid, item_id=w)
+
+
+@pytest.mark.caccia(id="CB-817", fonte="invariante: tolta la condizione o disequipaggiata l'arma, l'attacco torna com'era", zona="flusso:attacco-danno",
+                    voce="annullamento", copre=["PATCH /characters/{char_id}/conditions", "PATCH /characters/{char_id}/items/{item_id}", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_tolta_la_condizione_e_disequipaggiato_lo_scudo_l_attacco_torna_normale(client, dadi):
+    cid = await _pg24(client, 3, "dueling", strength=16)
+    w = await _arma(client, cid, "Spada", "1d8", [])
+    await _slot(client, cid, w, "main_hand")
+    p = await _arma(client, cid, "Pugnale", "1d4", ["light"])
+    await _slot(client, cid, p, "off_hand")
+    await _condizioni(client, cid, poisoned=True)
+    dadi(3)
+    j = _j(await _att(client, cid, w, dice=[10, 15]))
+    assert (j["mode"], j["damage_bonus"]) == ("disadvantage", 3)
+    await _condizioni(client, cid, poisoned=False)
+    await client.patch(f"/characters/{cid}/items/{p}", json={"is_equipped": False, "equipment_slot": None})
+    dadi(3)
+    j = _j(await _att(client, cid, w, dice=[10, 15], confirm_extra_attack=True))
+    assert (j["mode"], j["damage_bonus"]) == ("normal", 5)
+
+
+@pytest.mark.caccia(id="CB-818", fonte="invariante: i dati e gli attacchi di un altro giocatore non si usano né si leggono", zona="flusso:attacco-danno",
+                    voce="permessi", copre=["GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/last-roll/options", "POST /characters/{char_id}/choices/{choice_id}/resolve", "POST /characters/{char_id}/classes/{class_id}/options/replace"])
+async def test_un_altro_giocatore_non_tocca_maestrie_opzioni_e_ultimo_tiro(client, come_utente, dadi):
+    cid = await _pg24(client, 1, None, ("greatsword", "dagger", "handaxe"), strength=16)
+    w = await _arma(client, cid, "Spadone", "2d6", ["heavy", "two-handed"])
+    klass = (await client.get(f"/characters/{cid}")).json()["classes"][0]["id"]
+    _j(await _att(client, cid, w, die=5, defer_damage=True))
+    prima = (await client.get(f"/characters/{cid}")).json()["classes"][0]["options"]
+    come_utente(9002)
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": w})
+    assert r.status_code in (403, 404), r.text
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["mastery_graze"]})
+    assert r.status_code in (403, 404), r.text
+    r = await client.post(f"/characters/{cid}/classes/{klass}/options/replace", json={"group": "weapon_mastery", "old_key": "greatsword", "new_key": "rapier"})
+    assert r.status_code in (403, 404), r.text
+    r = await client.post(f"/characters/{cid}/items/{w}/recover-ammo")
+    assert r.status_code in (403, 404), r.text
+    come_utente(1234)
+    assert (await client.get(f"/characters/{cid}")).json()["classes"][0]["options"] == prima
+
+
+@pytest.mark.caccia(id="CB-819", fonte="invariante: il master di una sessione non attacca con il PG di un giocatore", zona="flusso:attacco-danno",
+                    voce="permessi", copre=["POST /characters/{char_id}/items/{item_id}/attack", "POST /characters/{char_id}/attack/unarmed", "route:/char/:id/inventory"])
+async def test_il_master_non_attacca_con_il_personaggio_di_un_giocatore(client, test_session_factory):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
+
+    as_user(GM_ID)
+    sid, cid = await seed_session(test_session_factory)
+    as_user(PLAYER_ID)
+    w = await _arma(client, cid, "Spada", "1d8")
+    as_user(GM_ID)
+    assert (await _att(client, cid, w)).status_code in (403, 404)
+    assert (await _senz_armi(client, cid)).status_code in (403, 404)
+    as_user(PLAYER_ID)
+    assert (await _turno(client, cid))["action_attacks"] == 0
