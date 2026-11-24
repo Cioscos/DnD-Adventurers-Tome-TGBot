@@ -985,3 +985,15 @@ async def test_danno_assorbito_dai_pf_temporanei_chiede_comunque_il_ts_con_il_da
     r = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 14})).json()
     assert r["current_hit_points"] == 28 and r["temp_hp"] == 6
     assert r["concentration_save"]["dc"] == 10
+
+
+@pytest.mark.caccia(id="CB-1508", fonte="invariante (come CB-1203): la concentrazione da oggetto si vede come le altre", zona="flusso:concentrazione", voce="interazione",
+                    copre=["GET /sessions/{session_id}/live"])
+async def test_la_serata_mostra_la_concentrazione_da_oggetto(client, test_session_factory, dadi):
+    sid, _eroe = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid, _iid, _c = await _pg_con_bacchetta(client, dadi)
+    await _seat(test_session_factory, cid, GM_ID)
+    vivi = (await client.get(f"/sessions/{sid}/live")).json()["live_characters"]
+    [foto] = [c for c in vivi if c["id"] == cid]
+    assert (foto["is_concentrating"], foto["concentration_spell"], foto["concentration_from_item"]) == (True, "Raggio Fantasma", True)

@@ -61,6 +61,7 @@ from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
 from api.services.recap import close_game_session, dice_baseline, history_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
+from api.services.durations import is_concentrating
 from api.services.d20 import set_inspiration
 from api.services.rules_states import remove_state
 from api.services.effects import apply_conditions
@@ -256,6 +257,7 @@ async def _load_live_characters(
         # stesso snapshot di load_snapshot: regole attive e oggetti fuori dai contenitori (già caricati sopra)
         homebrew_ac = await get_passive_modifiers(db, char, "character.ac", (
             rules.get(char.id, []), [i for i in char.items if i.container_id is None]))
+        item_spell = (char.settings or {}).get("concentration_item_spell") or {}
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -275,8 +277,9 @@ async def _load_live_characters(
             armor_category=armor_category(char),
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
-            is_concentrating=char.concentrating_spell_id is not None,
-            concentration_spell=spell_names.get(char.concentrating_spell_id),
+            is_concentrating=is_concentrating(char),
+            concentration_spell=spell_names.get(char.concentrating_spell_id) or item_spell.get("name"),
+            concentration_from_item=bool(item_spell),
             active_states=public_states(char, lang),
         )
     return out
@@ -547,6 +550,7 @@ async def get_session_live(
                 has_pending_save=raw["has_pending_save"],
                 is_concentrating=raw["is_concentrating"],
                 concentration_spell=raw["concentration_spell"],
+                concentration_from_item=raw["concentration_from_item"],
                 death_saves=raw["death_saves"],
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -570,6 +574,7 @@ async def get_session_live(
                 has_pending_save=raw["has_pending_save"],
                 is_concentrating=raw["is_concentrating"],
                 concentration_spell=raw["concentration_spell"],
+                concentration_from_item=raw["concentration_from_item"],
                 death_saves=None,
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],

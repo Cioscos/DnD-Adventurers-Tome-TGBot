@@ -868,6 +868,8 @@ export interface CharacterLiveSnapshot {
   is_concentrating?: boolean
   /** Nome dell'incantesimo mantenuto in concentrazione. */
   concentration_spell?: string | null
+  /** Incantesimo di un oggetto: una condizione non vi si può legare. */
+  concentration_from_item?: boolean
   /** Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti. */
   active_states?: PublicState[]
 }

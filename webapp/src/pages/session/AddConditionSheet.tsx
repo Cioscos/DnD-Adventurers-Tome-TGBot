@@ -58,7 +58,8 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
   const [confirmLethal, setConfirmLethal] = useState(false)
 
   const source = encounter.combatants.find((c) => String(c.id) === sourceId)
-  const showConc = Boolean(snapOf(source)?.is_concentrating)
+  const sourceSnap = snapOf(source)
+  const showConc = Boolean(sourceSnap?.is_concentrating && !sourceSnap.concentration_from_item)
   const isExhaustion = slug === 'exhaustion'
   const anchor = of === 'source' && source ? 'source' : 'owner'
 
