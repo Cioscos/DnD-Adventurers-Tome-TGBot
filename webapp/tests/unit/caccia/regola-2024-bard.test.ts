@@ -30,7 +30,7 @@ const bardo2024 = {
 
 describe('caccia: regola 2024 bardo', () => {
   // caccia: {"id": "CB-2215", "fonte": "2024 · Bardo · Tabella di classe, Maestria e Factotum · pag. 59-61", "zona": "regola:2024/bard", "voce": "edizioni", "copre": ["carta:2024/classes/bard.md#Maestria / Expertise (Bardo 2, pag. 60)", "carta:2024/classes/bard.md#Factotum / Jack of All Trades (Bardo 2, pag. 60)", "route:/char/:id/xp"]}
-  it.fails("la salita di livello di un bardo 2024 non annuncia il Canto di Riposo del 2014", () => {
+  it("la salita di livello di un bardo 2024 non annuncia il Canto di Riposo del 2014", () => {
     renderWithProviders(createElement(LevelUpModal, { char: bardo2024, xpLevel: 2, onClose: vi.fn() }))
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.queryByText(/Song of Rest/)).toBeNull()

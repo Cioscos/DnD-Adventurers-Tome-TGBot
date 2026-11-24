@@ -43,7 +43,7 @@ const magoChierico = {
 
 describe('caccia: regola 2024 mago', () => {
   // caccia: {"id": "CB-2716", "fonte": "2024 · Mago · tabella di classe pag. 165; Sottoclasse del Mago · pag. 167", "zona": "regola:2024/wizard", "voce": "edizioni", "copre": ["carta:2024/classes/wizard.md#Sottoclasse del Mago / Wizard Subclass (Mago 3, pag. 167)", "carta:2024/classes/wizard.md#Studioso / Scholar (Mago 2, pag. 166)", "route:/char/:id/xp"]}
-  it.fails('la salita di livello di un mago 2024 non annuncia la Tradizione Arcana del 2014 al 2° livello', () => {
+  it('la salita di livello di un mago 2024 non annuncia la Tradizione Arcana del 2014 al 2° livello', () => {
     renderWithProviders(createElement(LevelUpModal, { char: mago2024, xpLevel: 2, onClose: vi.fn() }))
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.queryByText(/Tradizione Arcana|Arcane Tradition/)).toBeNull()

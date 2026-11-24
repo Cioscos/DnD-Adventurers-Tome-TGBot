@@ -30,7 +30,7 @@ const monaco2024 = {
 
 describe('caccia: regola 2024 monaco', () => {
   // caccia: {"id": "CB-2417", "fonte": "2024 · Monaco · Tabella di classe e Deviare Attacchi · pag. 101-102", "zona": "regola:2024/monk", "voce": "edizioni", "copre": ["carta:2024/classes/monk.md#Deviare Attacchi / Deflect Attacks (Monaco 3, pag. 102)", "carta:2024/classes/monk.md#Sottoclasse del Monaco / Monk Subclass (Monaco 3, pag. 103)", "route:/char/:id/xp"]}
-  it.fails("la salita di livello di un monaco 2024 non annuncia Deviare Proiettili del 2014", () => {
+  it("la salita di livello di un monaco 2024 non annuncia Deviare Proiettili del 2014", () => {
     renderWithProviders(createElement(LevelUpModal, { char: monaco2024, xpLevel: 3, onClose: vi.fn() }))
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.queryByText(/Deflect Missiles/)).toBeNull()

@@ -30,7 +30,7 @@ const ranger2024 = {
 
 describe('caccia: regola 2024 ranger', () => {
   // caccia: {"id": "CB-2520", "fonte": "2024 · Ranger · Tabella di classe e Sottoclasse del Ranger · pag. 119-120", "zona": "regola:2024/ranger", "voce": "edizioni", "copre": ["carta:2024/classes/ranger.md#Sottoclasse del Ranger / Ranger Subclass (Ranger 3, pag. 120)", "route:/char/:id/xp"]}
-  it.fails('la salita di livello di un ranger 2024 non annuncia la Consapevolezza Primordiale del 2014', () => {
+  it('la salita di livello di un ranger 2024 non annuncia la Consapevolezza Primordiale del 2014', () => {
     renderWithProviders(createElement(LevelUpModal, { char: ranger2024, xpLevel: 3, onClose: vi.fn() }))
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.queryByText(/Primeval Awareness/)).toBeNull()

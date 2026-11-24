@@ -83,7 +83,7 @@ describe('caccia: regola 2024 warlock', () => {
   })
 
   // caccia: {"id": "CB-2676", "fonte": "2024 · Warlock · Tabella di classe, Suppliche Occulte e Sottoclasse · pag. 153-154", "zona": "regola:2024/warlock", "voce": "edizioni", "copre": ["carta:2024/classes/warlock.md#Sottoclasse del Warlock / Warlock Subclass (Warlock 3, pag. 154)", "carta:2024/classes/warlock.md#Suppliche Occulte / Eldritch Invocations (Warlock 1, pag. 153)", "route:/char/:id/xp"]}
-  it.fails('la salita di livello di un warlock 2024 non annuncia il Dono del Patto del 2014', () => {
+  it('la salita di livello di un warlock 2024 non annuncia il Dono del Patto del 2014', () => {
     renderWithProviders(createElement(LevelUpModal, { char: warlock2024, xpLevel: 2, onClose: vi.fn() }))
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.queryByText(/Pact Boon/)).toBeNull()

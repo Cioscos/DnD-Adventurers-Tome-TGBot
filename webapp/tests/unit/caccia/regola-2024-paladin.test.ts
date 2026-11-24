@@ -31,7 +31,7 @@ const paladino2024 = {
 
 describe('caccia: regola 2024 paladino', () => {
   // caccia: {"id": "CB-2463", "fonte": "2024 · Paladino · Tabella di classe, slot di 1° livello già al 1° · pag. 109", "zona": "regola:2024/paladin", "voce": "edizioni", "copre": ["carta:2024/classes/paladin.md#Incantesimi / Spellcasting (Paladino 1, pag. 109)", "route:/char/:id/xp"]}
-  it.fails('la salita al 2° livello di un paladino 2024 non annuncia nuovi slot di 1° livello, che ha già dal 1°', () => {
+  it('la salita al 2° livello di un paladino 2024 non annuncia nuovi slot di 1° livello, che ha già dal 1°', () => {
     renderWithProviders(createElement(LevelUpModal, { char: paladino2024, xpLevel: 2, onClose: vi.fn() }))
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.queryByText('character.multiclass.level_up.new_spell_slot:1')).toBeNull()
