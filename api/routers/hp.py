@@ -206,6 +206,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     if form is not None and not form_own_hp(char):
         form = None  # 2024: la forma non ha PF propri, i danni vanno ai temporanei e ai PF del druido
     before = _hp_state(char, form)
+    max_before = effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
     zero_before = _zero_conditions(char)
     history_from = await session.scalar(select(func.max(CharacterHistory.id)))  # le righe dell'operazione vengono dopo: l'annullo le segna
     option_block = None
@@ -538,7 +539,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
 
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
-    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
+    char.hp_undo = {"op_id": op_id, "hp_max": max_before, "before": before, "after": _hp_state(char, form),
                     "spent": option_block.spent if option_block else [], "ally_reaction_id": ally_req.id if ally_req is not None else None, "zero_before": zero_before,
                     "turn_no": get_turn(char).get("turn_no", 0), "zero_after": _zero_conditions(char), "shared": shared_log, "history_from": history_from or 0,
                     "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
@@ -597,7 +598,6 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
     old = char.current_hit_points
     char.current_hit_points = before["current_hit_points"]
     char.hit_points = before["hit_points"]
-    await cap_current_hp(session, char)  # la spossatezza può essere cambiata dopo l'operazione
     char.temp_hp = before["temp_hp"]
     char.death_saves = dict(before["death_saves"])
     char.is_dead = before["is_dead"]
@@ -662,6 +662,9 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
         if "knocked_out" in changed:
             settings = {k: v for k, v in (char.settings or {}).items() if k != "knocked_out"}
             char.settings = {**settings, "knocked_out": True} if zero["knocked_out"] else settings
+    # Con stati e spossatezza già tornati: i PF sopra il massimo di allora restano, quelli sopra un massimo calato nel frattempo no.
+    now_max = effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
+    await cap_current_hp(session, char, always=now_max < snap.get("hp_max", now_max))
     char.hp_undo = None
     if snap.get("history_from") is not None:  # il riepilogo della serata non conta danni, cure e TS contro la morte annullati
         for row in (await session.execute(select(CharacterHistory).where(
