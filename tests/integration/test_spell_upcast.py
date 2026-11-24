@@ -38,11 +38,12 @@ async def test_upcast_at_base_level_unchanged(client):
     assert (await _roll(client, cid, sid, 3, [1] * 8)).status_code == 200
 
 
-async def test_sleep_pool_not_upcast(client):
-    cid, sid = await _spell(client, name="Sonno", level=1, damage_dice="5d8", damage_type=None,
-                            higher_levels_dice="2d8", srd_index="sleep")
-    r = await _roll(client, cid, sid, 3, [1] * 5)
-    assert r.status_code == 200 and r.json()["scaled_dice"] == "5d8"
+async def test_sleep_pool_upcast(client):
+    # 2014 pag. 279: la riserva di PF di Sonno cresce di 2d8 per slot oltre il 1°, anche sulle righe salvate senza dadi di scalata
+    for extra in ({"higher_levels_dice": "2d8"}, {}):
+        cid, sid = await _spell(client, name="Sonno", level=1, damage_dice="5d8", damage_type=None, srd_index="sleep", **extra)
+        r = await _roll(client, cid, sid, 3, [1] * 9)
+        assert r.status_code == 200 and r.json()["scaled_dice"] == "9d8"
 
 
 async def test_caster_modifier_added_only_where_the_card_says(client, monkeypatch):

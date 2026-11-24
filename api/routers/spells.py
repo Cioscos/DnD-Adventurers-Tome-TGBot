@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 import re
 import uuid
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Annotated, Any
 
@@ -812,6 +813,23 @@ async def concentration_save(
 # Spell damage roll
 # ---------------------------------------------------------------------------
 
+@dataclass(frozen=True)
+class _Upcast:
+    """Scalata che «+NdM per livello» non dice; il client la rispecchia (UPCAST_RULES in webapp/src/lib/srd/catalog.ts)."""
+    dice: str | None = None  # dadi per passo, anche quando la riga non li ha
+    step: int = 1  # livelli di slot per passo
+    max_extra: int | None = None  # dadi in più al massimo
+    both: bool = False  # i dadi in più valgono per ciascuna parte del danno
+
+
+# Per incantesimo ed edizione di chi lancia (docs/superpowers/rules/{2014,2024}/spells.md)
+_UPCAST = {
+    ("spiritual-weapon", "2014"): _Upcast(dice="1d8", step=2),  # +1d8 ogni due slot oltre il 2° (pag. 215)
+    ("flame-blade", "2014"): _Upcast(dice="1d6", step=2),  # +1d6 al 4°, 6° e 8° (pag. 247)
+    ("hail-of-thorns", "2014"): _Upcast(max_extra=5),  # massimo 6d10 (pag. 266)
+    ("sleep", "2014"): _Upcast(dice="2d8"),  # la riserva di PF cresce di 2d8 per slot (pag. 279)
+    ("flame-strike", "2024"): _Upcast(both=True),  # +1d6 fuoco e +1d6 radiosi per livello (pag. 275)
+}
 # Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 275, 302, 319-320)
 _ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024")}
 
@@ -853,25 +871,33 @@ async def roll_spell_damage(
         base_count *= cantrip_dice_multiplier(char.total_level)
     sides = int(m.group(2))
     base_bonus = int(m.group(3)) if m.group(3) else 0
-    moved_dice = 0
-    # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo
-    # incantesimi di livello >= 1, stessi lati). "sleep" no: i suoi dadi sono un pool di PF.
-    if spell.level > 0 and spell.higher_levels_dice and spell.srd_index != "sleep":
-        um = DICE_RE.match(spell.higher_levels_dice.strip())
+    second_gained = 0
+    edition = character_edition(char)
+    rule = _UPCAST.get((spell.srd_index or "", edition), _Upcast())
+    per_level = rule.dice or spell.higher_levels_dice
+    # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo incantesimi di livello >= 1, stessi lati).
+    if spell.level > 0 and per_level:
+        um = DICE_RE.match(per_level.strip())
         if um and int(um.group(2)) == sides:
-            gained = int(um.group(1)) * (casting_level - spell.level)
+            steps = (casting_level - spell.level) // rule.step
+            gained = int(um.group(1)) * steps
+            if rule.max_extra is not None:
+                gained = min(gained, rule.max_extra)
             base_count += gained
-            # I dadi in più sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) passano a lei
             second_die = DICE_RE.match((spell.extra_damage_dice or "").strip())
-            if second_die and int(second_die.group(2)) == sides and (up := cast_upcast_type(char, spell)) and up == spell.extra_damage_type:
-                base_count -= gained
-                moved_dice = gained
+            if second_die and int(second_die.group(2)) == sides:
+                if rule.both:  # un dado in più di ciascun tipo
+                    second_gained = gained
+                # I dadi in più sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) passano a lei
+                elif (up := cast_upcast_type(char, spell)) and up == spell.extra_damage_type:
+                    base_count -= gained
+                    second_gained = gained
             # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
-            base_bonus += int(um.group(3) or 0) * (casting_level - spell.level)
+            base_bonus += int(um.group(3) or 0) * steps
 
     # Privilegi che aggiungono un fisso ai danni di un incantesimo (Incantesimi Potenti)
     base_bonus += modifiers_for(char, "damage", spell=spell).flat
-    if (spell.srd_index, character_edition(char)) in _ADDS_SPELL_MOD and (caster := spell_stats(char, spell)):
+    if (spell.srd_index, edition) in _ADDS_SPELL_MOD and (caster := spell_stats(char, spell)):
         base_bonus += effective_ability_mod(char, caster.ability)
     _mark_empowered(char, spell)
 
@@ -900,7 +926,7 @@ async def roll_spell_damage(
         if not sm:
             raise HTTPException(status_code=422, detail={"code": "bad_damage_dice"})
         second_sides = int(sm.group(2))
-        second_count = (int(sm.group(1)) + moved_dice) * (2 if body.is_critical else 1)
+        second_count = (int(sm.group(1)) + second_gained) * (2 if body.is_critical else 1)
         types = [t for t in (spell.extra_damage_type or "").split("|") if t]
         if body.extra_damage_type is not None and body.extra_damage_type not in types:
             raise HTTPException(status_code=422, detail={"code": "invalid_damage_type"})

@@ -62,7 +62,6 @@ async def _opzioni(client, cid, tiro) -> list[str]:
 @pytest.mark.caccia(id="CB-3211", fonte="2014 · Incantesimi · Arma Spirituale · pag. 215", zona="regola:2014/incantesimi-A-C", voce="limiti",
                     copre=["carta:2014/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(4, 2), (6, 3), (8, 4), (9, 4)])
-@pytest.mark.xfail(strict=True, reason="CB-3211: difforme dal manuale, confermato")
 async def test_arma_spirituale_aggiunge_un_d8_ogni_due_livelli_di_slot_oltre_il_secondo(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 3, "Dominio della Vita", wisdom=16)  # Arma Spirituale sempre preparata dal dominio
     arma = await _incantesimo(client, cid, "spiritual-weapon")

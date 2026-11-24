@@ -22,7 +22,7 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DiceKind } from '@/dice/types'
-import { upcastExtraDice } from '@/lib/srd/catalog'
+import { upcastBoth, upcastExtraDice } from '@/lib/srd/catalog'
 import { cantripMultiplier, totalLevelOf } from '@/lib/dnd'
 
 const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
@@ -154,9 +154,11 @@ export default function SpellDamageSheet({
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
           const cached = qc.getQueryData<CharacterFull>(['character', charId])
           // I dadi dello slot più alto sono del tipo salvato dal server al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) vanno a lei, come sul server.
-          const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          const gained = upcastExtraDice(spell, effectiveCastingLevel, main.sides, cached?.rules_edition)
           const upcastType = cached?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type  // lo dice il server: lo store del client può averla persa
-          const moved = upcastType && upcastType === spell.extra_damage_type && second?.sides === main.sides ? gained : 0
+          const both = upcastBoth(spell.srd_index, cached?.rules_edition)  // Colonna di fiamme 2024: un dado in più di ciascun tipo
+          const toSecond = second?.sides === main.sides && (both || (upcastType && upcastType === spell.extra_damage_type)) ? gained : 0
+          const moved = both ? 0 : toSecond
           const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
@@ -168,7 +170,7 @@ export default function SpellDamageSheet({
           for (const part of [second, manual]) {
             if (!part) continue
             if (!isAllowedDiceKind(`d${part.sides}`)) { extraOk = false; continue }
-            const count = (body.is_critical ? part.count * 2 : part.count) + (part === second ? (body.is_critical ? moved * 2 : moved) : 0)
+            const count = (body.is_critical ? part.count * 2 : part.count) + (part === second ? (body.is_critical ? toSecond * 2 : toSecond) : 0)
             extraCount += count
             groups.push({ kind: `d${part.sides}` as DiceKind, count: count })
           }
@@ -218,7 +220,9 @@ export default function SpellDamageSheet({
   const showHalf = !isAttack && result?.save_halves !== false
   const isCantrip = spell.level === 0
   const autoUpcast = parseDice(spell.higher_levels_dice)
-  const autoExtra = autoUpcast ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides) : 0
+  const autoExtra = autoUpcast
+    ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides, qc.getQueryData<CharacterFull>(['character', charId])?.rules_edition)
+    : 0
   // U15: la CD del TS sta nel foglio del tiro, non solo nella testata della pagina
   const saveLine = !isAttack && spell.save_dc != null
     ? `${spell.attack_save?.trim().toUpperCase() === 'SAVE' ? t('character.spells.attack_save.save') : spell.attack_save?.trim()} · ${t('character.spells.save_dc', { dc: spell.save_dc })}`

@@ -114,7 +114,7 @@ async def test_tempesta_di_vendetta_il_ts_superato_non_dimezza_il_tuono_iniziale
 
 @pytest.mark.caccia(id="CB-3415", fonte="2014 · Incantesimi · Sonno · pag. 279", zona="regola:2014/incantesimi-S-Z", voce="limiti",
                     copre=["carta:2014/spells.md#Sonno", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.parametrize("slot, dadi_attesi", [(1, 5), pytest.param(2, 7, marks=pytest.mark.xfail(strict=True, reason="CB-3415: difforme dal manuale, confermato")), pytest.param(3, 9, marks=pytest.mark.xfail(strict=True, reason="CB-3415: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("slot, dadi_attesi", [(1, 5), (2, 7), (3, 9)])
 async def test_sonno_somma_due_d8_alla_riserva_per_ogni_slot_oltre_il_primo(client, slot, dadi_attesi):
     cid = await _pg(client, "bard", 5)
     sid = await _impara(client, cid, "sleep")  # 5d8, +2d8 per slot dalla riga del catalogo

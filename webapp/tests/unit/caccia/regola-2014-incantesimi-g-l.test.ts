@@ -31,7 +31,7 @@ describe('caccia: regola 2014 incantesimi G-L', () => {
   })
 
   // caccia: {"id": "CB-3318", "fonte": "2014 · Incantesimi · Lama Infuocata · pag. 247", "zona": "regola:2014/incantesimi-G-L", "voce": "limiti", "copre": ["carta:2014/spells.md#Lama Infuocata"]}
-  it.fails.each([
+  it.each([
     [3, 0], [4, 1], [5, 1], [6, 2], [8, 3], [9, 3],
   ])('Lama Infuocata 2014 allo slot %i annuncia %i d6 in più (uno ogni due livelli)', async (slot, inPiu) => {
     const f = await riga('flame-blade')

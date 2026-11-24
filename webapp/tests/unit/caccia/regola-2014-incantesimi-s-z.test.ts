@@ -14,7 +14,7 @@ describe('caccia: regola 2014 incantesimi S-Z', () => {
   })
 
   // caccia: {"id": "CB-3426", "fonte": "2014 · Incantesimi · Sonno · pag. 279", "zona": "regola:2014/incantesimi-S-Z", "voce": "limiti", "copre": ["carta:2014/spells.md#Sonno"]}
-  it.fails('Sonno preso dal catalogo somma 2d8 alla riserva per ogni slot oltre il primo', async () => {
+  it('Sonno preso dal catalogo somma 2d8 alla riserva per ogni slot oltre il primo', async () => {
     const form = spellToForm(await voce('sleep'), 'it', 'metric')
     expect([form.damage_dice, form.higher_levels_dice]).toEqual(['5d8', '2d8'])
     expect(upcastExtraDice({ level: 1, srd_index: 'sleep', higher_levels_dice: '2d8' }, 3, 8)).toBe(4)
