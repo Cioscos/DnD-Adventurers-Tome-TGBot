@@ -1,6 +1,40 @@
 {
   "entries": [
     {
+      "version": "3.14.8",
+      "date": "2026-11-24",
+      "fixed": {
+        "it": [
+          "Combattere con due armi: l'altra mano segue un attacco con un'altra arma leggera, e un attacco ceduto o un incantesimo al suo posto non la aprono. Combattente con due armi 2024 può usare un'arma da mischia non leggera.",
+          "Munizioni: finita la pila nello slot si passa solo ad altre con lo stesso nome.",
+          "Compagni e forme: una forma non assunta non attacca, terminarla modificandola costa l'azione bonus, la bestia primordiale è una sola e nasce solo dal privilegio, un compagno senza PF segnati non risulta a terra. Avviso per la Forma Selvatica di un druido di 1° livello.",
+          "PF: quelli correnti non superano il massimo quando se ne va ciò che lo alzava (talento, regola homebrew) o annullando un danno; ridistribuire i livelli non ne toglie. Un punteggio di caratteristica effettivo non scende sotto 1.",
+          "Condizioni: CD, durata e fonte non si perdono scegliendo una durata né con Calmare Emozioni, la cui durata continua a scorrere; una condizione riaccesa non riprende quelle vecchie. Il master può scrivere solo valori validi, anche sui mostri. Durate fino a 9999 round.",
+          "Concentrazione: la morte per spossatezza la chiude; quella da oggetto si vede in Turno e nella serata, e interromperla si scrive in Cronologia.",
+          "Creazione: i punteggi con i bonus non superano 20, un wizard annullato non lascia le monete accese, una classe ha un nome e una caratteristica da incantatore valida.",
+          "Campagna: due serate programmate non stanno nello stesso istante, il rientro propone il personaggio appena lasciato e il riepilogo dà ogni oggetto a chi lo ha ricevuto.",
+          "Dadi: l'elenco dei dadi torna con il totale e «Manda al bot» fallito lo dice.",
+          "Cronologia: il limite scelto vale per ogni azione e non tocca la serata in corso.",
+          "Homebrew: una regola illeggibile non blocca più la scheda.",
+          "Import: nomi vuoti e caratteristiche inventate non entrano più; copia e import conservano le condizioni sospese."
+        ],
+        "en": [
+          "Two-weapon fighting: the off hand needs an attack with another light weapon, and a forgone attack or a spell in its place does not open it. Dual Wielder 2024 can use a non-light melee weapon.",
+          "Ammunition: when the slotted stack runs out, only stacks with the same name are used.",
+          "Companions and forms: a form you have not assumed cannot attack, ending it by editing costs the bonus action, there is only one primal beast and it only comes from the feature, a companion with no HP set is not down. Warning for a level 1 druid's Wild Shape.",
+          "HP: current HP no longer exceed the maximum when what raised it goes away (feat, homebrew rule) or when undoing damage; redistributing levels does not remove any. An effective ability score never drops below 1.",
+          "Conditions: DC, duration and source are not lost when choosing a duration or with Calm Emotions, whose duration keeps running; a condition turned on again does not take the old ones back. The GM can only write valid values, on monsters too. Durations up to 9999 rounds.",
+          "Concentration: death by exhaustion ends it; concentration from an item shows in Turn and in the session, and ending it is written in History.",
+          "Creation: scores with bonuses do not exceed 20, a cancelled wizard does not leave the starting gold on, a class has a name and a valid spellcasting ability.",
+          "Campaign: two scheduled sessions cannot share the same instant, rejoining suggests the character you just left, and the recap credits each item to the character who received it.",
+          "Dice: the listed dice match the total, and a failed “Send to bot” says so.",
+          "History: the chosen limit applies to every action and does not touch the ongoing session.",
+          "Homebrew: an unreadable rule no longer blocks the sheet.",
+          "Import: empty names and made-up abilities no longer get in; copies and imports keep suspended conditions."
+        ]
+      }
+    },
+    {
       "version": "3.14.7",
       "date": "2026-11-24",
       "fixed": {
