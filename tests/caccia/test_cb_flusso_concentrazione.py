@@ -586,7 +586,6 @@ async def test_la_concentrazione_da_oggetto_scade_al_decimo_round(client, dadi):
     assert [k for k in (r["settings"] or {}) if k.startswith("concentration")] == []
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1179 la concentrazione da incantesimo di oggetto interrotta a mano non scrive la Cronologia")
 @pytest.mark.caccia(id="CB-1179", fonte="comportamento dichiarato nel codice: interrompere la concentrazione si scrive nella Cronologia", zona="flusso:concentrazione",
                     voce="annullamento", copre=["PATCH /characters/{char_id}/concentration", "GET /characters/{char_id}/history"])
 async def test_interrompere_la_concentrazione_da_oggetto_si_scrive_nella_cronologia(client, dadi):

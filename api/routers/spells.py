@@ -36,7 +36,7 @@ from api.schemas.spell import (
     SpellUpdate,
     SpellUseRequest,
 )
-from api.services.durations import end_concentration, start_concentration
+from api.services.durations import end_concentration, is_concentrating, start_concentration
 from core.data.damage_types import LABELS_IT, canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
@@ -774,8 +774,9 @@ async def update_concentration(
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
     if body.spell_id is None:
-        if char.concentrating_spell_id is not None:  # il log della serata e la Cronologia dicono che è stata interrotta
-            name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id), None)
+        if is_concentrating(char):  # il log della serata e la Cronologia dicono che è stata interrotta
+            name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id),
+                        ((char.settings or {}).get("concentration_item_spell") or {}).get("name"))
             add_history(session, char.id, "concentration", "Concentrazione interrotta" + (f": {name}" if name else ""))
         end_concentration(char)
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:
