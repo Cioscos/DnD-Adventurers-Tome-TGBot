@@ -12,7 +12,7 @@ from core.data.feats import LIST_ABILITY, MI_ABILITIES, MI_LISTS
 from core.data.skills import SKILL_ABILITY_MAP
 from core.game.item_bonuses import item_meta
 from core.rules.catalog._common import heavy_armor, state_on
-from core.rules.catalog.feats import D20_TESTS, _f24, _register
+from core.rules.catalog.feats import D20_TESTS, _abilities, _f24, _register
 from core.rules.catalog.y2014.fighter import _off_hand_modifier, _weapon_in_hand
 from core.rules.catalog.y2024.fighter import STYLE_ROWS
 from core.rules.types import Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, Uses
@@ -258,6 +258,26 @@ def last_stand_state() -> StateSpec:
     return StateSpec(LAST_STAND_STATE, ends_on=("manual",))
 
 
+_FATE = "feat.2024_boon_fate"
+
+
+def _fate_row(char: Any) -> Any:
+    return next((a for a in _abilities(char) if a.feature_key == _FATE), None)
+
+
+def _fate_back(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
+    row = _fate_row(ctx.char)
+    if row is not None and row.max_uses is not None:
+        row.uses = row.max_uses
+
+
+# Dono del Fato: l'uso torna anche quando tiri l'Iniziativa (pag. 210), come Ispirazione Superiore del bardo
+FATE_RECHARGE = RollOptionSpec(
+    key=f"{_FATE}_recharge", phase="before", rolls=("initiative",), automatic=True, on_confirm=_fate_back,
+    available=lambda c: (row := _fate_row(c.char)) is not None and row.max_uses is not None and (row.uses or 0) < row.max_uses,
+    label=_both("Dono del Fato: tirando l'Iniziativa recuperi l'uso", "Boon of Fate: rolling Initiative gives the use back"))
+
+
 _register(
     _f24("boon_combat_prowess", roll_options=(RollOptionSpec(
         key="feat.2024_boon_combat_prowess", phase="after_roll", after="succeed", rolls=("attack",), once_per_turn=True,
@@ -268,8 +288,8 @@ _register(
          roll_options=(REDIRECT,)),
     _f24("boon_fate", passive=False, uses=Uses(table={1: 1}), restoration="short_rest", roll_options=(RollOptionSpec(
         key="feat.2024_boon_fate", phase="after_roll", after="add", rolls=D20_TESTS, extra_dice=lambda _c, _i: "2d4",
-        cost=Cost(feature_key="feat.2024_boon_fate"),
-        label=_both("Dono del Fato: somma 2d4 al Test d20", "Boon of Fate: add 2d4 to the d20 Test")),)),
+        cost=Cost(feature_key=_FATE),
+        label=_both("Dono del Fato: somma 2d4 al Test d20", "Boon of Fate: add 2d4 to the d20 Test")), FATE_RECHARGE)),
     # Cure extra: nessun gancio su ogni cura, il pulsante «Usa» le dà a mano (una volta fino all'inizio del turno seguente)
     _f24("boon_fortitude", modifiers=(Modifier("hp_max", 40),), passive=False,
          on_use=OnUse(once_per_turn=True, heal=lambda c, _rolled: max(_con_mod(c), 0))),

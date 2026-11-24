@@ -166,7 +166,6 @@ async def test_maestro_d_armi_sceglie_solo_un_arma_in_cui_si_e_competenti(client
 
 @pytest.mark.caccia(id="CB-3469", fonte="2024 · Talenti · Dono del Fato · pag. 210", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Dono del Fato / Boon of Fate (pag. 210) - Dono epico", "POST /characters/{char_id}/dice/initiative"])
-@pytest.mark.xfail(strict=True, reason="CB-3469: difforme dal manuale, confermato")
 async def test_il_dono_del_fato_torna_quando_tiri_l_iniziativa(client, test_session_factory):
     ch = await _pg(client, "fighter", 19)
     riga = _righe(await _preso(client, ch["id"], "2024_boon_fate", "charisma"), "2024_boon_fate")[0]
