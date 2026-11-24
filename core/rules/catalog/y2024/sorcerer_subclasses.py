@@ -21,7 +21,7 @@ from core.rules.types import (
 
 ED, CK = "2024", "sorcerer"
 P = f"{CK}."
-D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative")  # D20 Test: prove, tiri per colpire, TS
+D20_TESTS = ("attack", "skill", "ability", "save", "death_save", "initiative", "concentration")  # D20 Test: prove, tiri per colpire, TS
 NO_CONCENTRATION_KEY = f"{P}dragon_companion_no_concentration"  # lo legge il router degli incantesimi
 
 
