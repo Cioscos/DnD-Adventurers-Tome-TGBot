@@ -171,7 +171,6 @@ async def test_evoca_elementale_del_circolo_del_mare_2024_concentrazione_fino_a_
                     copre=["carta:2024/spells.md#Forza Fantasmatica",
                            "carta:2024/classes/warlock.md#Incantesimi del Grande Antico / Great Old One Spells (Patrono Grande Antico 3, pag. 163)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3719: difforme dal manuale, confermato")
 async def test_forza_fantasmatica_del_grande_antico_2024_fa_2d8_anche_con_slot_superiore(client):
     cid = await _make(client, "great_old_one", 5)
     riga = await _concesso(client, cid, "phantasmal-force")

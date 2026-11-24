@@ -216,7 +216,8 @@ GRANTED_SPELLS: dict[str, GrantedSpell] = {
     'haste': GrantedSpell(
         'haste', {"it": 'Velocità', "en": 'Haste'}, 3, '1 azione', '9 m', 'Concentrazione, fino a 1 minuto', is_concentration=True),
     'dream': GrantedSpell(
-        'dream', {"it": 'Sogno', "en": 'Dream'}, 5, '1 minuto', 'Speciale', '8 ore'),
+        'dream', {"it": 'Sogno', "en": 'Dream'}, 5, '1 minuto', 'Speciale', '8 ore', attack_save='SAVE', damage_dice='3d6',
+        damage_type='psychic'),  # TS Saggezza o 3d6 psichici al risveglio (2014 p.279, 2024 p.266)
     'meld-into-stone': GrantedSpell(
         'meld-into-stone', {"it": 'Fondersi nella pietra', "en": 'Meld Into Stone'}, 3, '1 azione', 'Contatto', '8 ore', is_ritual=True),
     'lightning-bolt': GrantedSpell(
@@ -534,7 +535,7 @@ for _spell, _comp in (
         (GrantedSpell("calm-emotions", {"it": "Calmare le emozioni", "en": "Calm Emotions"}, 2, "1 azione", "18 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S"),
         (GrantedSpell("detect-thoughts", {"it": "Individuazione dei pensieri", "en": "Detect Thoughts"}, 2, "1 azione", "Personale",
-                      "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
+                      "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE"), "V, S, M"),  # sondare a fondo: TS Saggezza (2024 p.262)
         (GrantedSpell("hunger-of-hadar", {"it": "Fame di Hadar", "en": "Hunger of Hadar"}, 3, "1 azione", "45 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True), "V, S, M"),
         (GrantedSpell("sending", {"it": "Messaggio a distanza", "en": "Sending"}, 3, "1 azione", "Illimitata", "1 round"), "V, S, M"),
@@ -569,7 +570,7 @@ _COMPONENTS["contact-other-plane"] = "V"
 for _spell, _comp in (
         (GrantedSpell("phantasmal-force", {"it": "Forza fantasmagorica", "en": "Phantasmal Force"}, 2, "1 azione", "18 m",
                       "Concentrazione, fino a 1 minuto", is_concentration=True, attack_save="SAVE", damage_dice="2d8",
-                      damage_type="psychic", higher_levels_dice="1d8"), "V, S, M"),
+                      damage_type="psychic"), "V, S, M"),  # 2d8 a ogni slot: la carta non scala (2024 p.304)
         (GrantedSpell("sacred-flame", {"it": "Fiamma sacra", "en": "Sacred Flame"}, 0, "1 azione", "18 m", "Istantanea",
                       attack_save="SAVE", damage_dice="1d8", damage_type="radiant"), "V, S"),
         (GrantedSpell("summon-celestial", {"it": "Evocare celestiale", "en": "Summon Celestial"}, 5, "1 azione", "27 m",

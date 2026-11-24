@@ -142,7 +142,6 @@ async def test_inviare_concesso_a_un_personaggio_2024_e_istantaneo(client):
                     copre=["carta:2024/spells.md#Individuazione dei Pensieri",
                            "carta:2024/classes/sorcerer.md#Incantesimi Psionici / Psionic Spells (Stregoneria Aberrante 3, pag. 145)",
                            "POST /characters"])
-@pytest.mark.xfail(strict=True, reason="CB-3766: difforme dal manuale, confermato")
 async def test_individuazione_dei_pensieri_concessa_dichiara_il_tiro_salvezza(client):
     cid = await _pg(client, "sorcerer", 3, "Stregoneria Aberrante")
     riga = await _riga(client, cid, "detect-thoughts")
