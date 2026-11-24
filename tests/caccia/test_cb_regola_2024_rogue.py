@@ -71,7 +71,7 @@ async def _colpo_e_danno(client, cid, wid, *opzioni):
                     copre=["carta:2024/classes/rogue.md#Riflessi del Furfante / Thief's Reflexes (Furfante 17, pag. 137)",
                            "carta:2014/classes/rogue.md#Riflessi da Furfante / Thief's Reflexes (Furfante 17, pag. 79)",
                            "PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}", "POST /sessions/{session_id}/encounter/start"])
-@pytest.mark.parametrize("edizione, secondo_turno", [("2014", False), pytest.param("2024", True, marks=pytest.mark.xfail(strict=True, reason="CB-2561: difforme dal manuale, confermato"))])
+@pytest.mark.parametrize("edizione, secondo_turno", [("2014", False), ("2024", True)])
 async def test_riflessi_del_furfante_colto_di_sorpresa_per_edizione(client, test_session_factory, edizione, secondo_turno):
     _sid, _cid, live = await _reflexes_encounter(client, test_session_factory, surprised=True, edition=edizione)
     assert any("Riflessi" in c["name"] for c in live["combatants"]) is secondo_turno
