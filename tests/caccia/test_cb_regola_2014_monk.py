@@ -57,7 +57,6 @@ async def test_difesa_paziente_da_vantaggio_ai_ts_su_destrezza(client, dadi):
 @pytest.mark.caccia(id="CB-1813", fonte="2014 · Monaco · Tranquillità · pag. 93", zona="regola:2014/monk", voce="interazione",
                     copre=["carta:2014/classes/monk.md#Tranquillità / Tranquility (Monaco 11, pag. 93)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-1813: difforme dal manuale, confermato")
 async def test_tranquillita_resta_dopo_un_incantesimo_che_non_tocca_nemici(client):
     # Santuario 2014 (pag. 272) finisce se il protetto attacca o lancia un incantesimo su un nemico: Luce non tocca nessuno
     cid = await _monk(client, 11, "open_hand")

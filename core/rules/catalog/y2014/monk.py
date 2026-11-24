@@ -284,7 +284,10 @@ PALM_START = RollOptionSpec(
 
 
 def _tranquility_state(ctx: RuleContext) -> StateSpec:
-    return StateSpec("tranquility", ends_on=("attack", "cast", "rest_long"), data={"dc": _ki_dc(ctx), "save": "wisdom", "others": [f"{CK}.tranquility"]})
+    """Santuario (pag. 272) finisce se attacchi o lanci un incantesimo su un nemico: un lancio senza danni né TS lo lascia
+    (``needs_effect``)."""
+    return StateSpec("tranquility", ends_on=("attack", "cast", "rest_long"),
+                     data={"dc": _ki_dc(ctx), "save": "wisdom", "others": [f"{CK}.tranquility"], "needs_effect": True})
 
 
 # ---------------------------------------------------------------------------
