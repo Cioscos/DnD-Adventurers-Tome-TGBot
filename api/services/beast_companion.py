@@ -30,4 +30,9 @@ async def drop_primal_beast(session: AsyncSession, char: Character) -> None:
     """Il ranger muore: la bestia primordiale 2024 svanisce con lui."""
     if other_edition(char, Companion(feature_key=PRIMAL_COMPANION)):  # in 2014 quella salvata è nascosta: non è sua
         return
-    await session.execute(delete(Companion).where(Companion.character_id == char.id, Companion.feature_key == PRIMAL_COMPANION))
+    mine = (Companion.character_id == char.id, Companion.feature_key == PRIMAL_COMPANION)
+    gone = (await session.execute(select(Companion.id).where(*mine))).scalars().all()
+    turn = char.turn_state or {}
+    if (turn.get("beast") or {}).get("id") in gone:  # come l'eliminazione a mano: SQLite riusa l'id
+        char.turn_state = {k: v for k, v in turn.items() if k != "beast"}
+    await session.execute(delete(Companion).where(*mine))

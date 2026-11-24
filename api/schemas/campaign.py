@@ -1,7 +1,7 @@
 """Pydantic schemas for the campaigns API."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
 from pydantic import AfterValidator, BaseModel, StringConstraints
@@ -107,7 +107,12 @@ def _utc_naive(value: str) -> str:
         raise ValueError("invalid_starts_at") from exc
     if dt.tzinfo is None:
         raise ValueError("starts_at_needs_offset")
-    return dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+    try:
+        utc = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        utc + timedelta(hours=12)  # la finestra di collegamento alla serata (±12 h) non deve sforare l'anno 9999
+    except OverflowError as exc:
+        raise ValueError("invalid_starts_at") from exc
+    return utc.isoformat(timespec="seconds")
 
 
 StartsAt = Annotated[str, AfterValidator(_utc_naive)]

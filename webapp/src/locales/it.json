@@ -806,6 +806,7 @@
       "limit_cancel": "Annulla",
       "incapacitated": "Sei incapacitato: non puoi attaccare.",
       "bonus_used": "Azione bonus già usata in questo turno.",
+      "offhand_needs_attack": "Prima attacca con l'azione Attacco: l'altra mano viene dopo.",
       "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
       "grip_one": "Una mano",
       "grip_two": "Due mani",
@@ -1443,7 +1444,8 @@
         "skill_added": "Competenza in {{skill}} aggiunta.",
         "skill_removed": "Competenza in {{skill}} tolta.",
         "feat_added": "Talento {{feat}} aggiunto.",
-        "feat_removed": "Talento {{feat}} tolto."
+        "feat_removed": "Talento {{feat}} tolto.",
+        "spell_removed": "Incantesimo {{name}} tolto."
       },
       "errors": {
         "species_edition": "Solo i personaggi con le regole 2024 possono scegliere una specie 2024.",
@@ -2631,6 +2633,7 @@
         "background_unknown": "Background non riconosciuto.",
         "background_increases_invalid": "Aumenti del background non validi: nessuna caratteristica può superare 20.",
         "background_tool_invalid": "Strumento del background non valido.",
+        "class_skill_taken": "Un'abilità scelta per la classe è già data dal background: scegline un'altra.",
         "species_skill_taken": "L'abilità scelta per la specie è già data da classe o background: scegline un'altra."
       },
       "create_cta": "Crea"

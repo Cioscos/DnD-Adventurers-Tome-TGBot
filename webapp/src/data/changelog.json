@@ -1,6 +1,66 @@
 {
   "entries": [
     {
+      "version": "3.14.7",
+      "date": "2026-11-24",
+      "fixed": {
+        "it": [
+          "Serata: un doppio tocco su «Inizia la sessione» non apre più due serate; iscriversi o entrare due volte dà il messaggio giusto invece di un errore.",
+          "Riepilogo della serata: resta chi è stato tolto dalla campagna durante la serata, conta solo ciò che accade da quando il personaggio si siede e non punta più a una campagna eliminata.",
+          "Calendario: una serata già giocata non si sposta più di data.",
+          "Cronologia, Dadi e note: gli orari sono nell'ora locale, e gli eventi dello stesso secondo restano nell'ordine giusto.",
+          "Dadi: il testo dei tiri con dado scartato, svantaggio o d100 torna con il totale; il d100 non conta più nelle statistiche del d10; più d20 sommati non finiscono nel «massimo» del riepilogo.",
+          "Condizioni: Calmare Emozioni non perde la condizione sospesa quando ne tocchi un'altra; nel 2024 chi diventa Privo di sensi è anche Prono; export, import e duplica conservano le durate.",
+          "Concentrazione: non si avvia su un incantesimo che non è del personaggio, e a durata scaduta non lascia residui.",
+          "Costituzione: cambiandola, anche con un oggetto, i PF massimi seguono il nuovo modificatore come se ci fosse sempre stato.",
+          "Tiri salvezza: in Forma Selvatica la scheda mostra il bonus con cui tiri davvero; due tocchi ravvicinati sulle competenze restano entrambi.",
+          "Capacità di carico: segue la Forza data dagli oggetti indossati.",
+          "Attacco con l'altra mano: solo dopo un attacco dell'azione Attacco e, nel 2014, solo con un'arma da mischia. L'arma a Ricarica non blocca più gli altri attacchi dell'azione, una faretra rapida vuota non impedisce di usare le frecce sciolte e un'arma +1 risulta un colpo magico.",
+          "Ispirazione Eroica (2024): il rilancio di un attacco vale solo su un attacco già tirato.",
+          "Forma Selvatica: la CA 13 + Saggezza del Circolo della Luna vale solo in forma, nel 2024 il danno alla forma arriva al druido, e una forma si assume solo con «Attiva».",
+          "Compagni: uno a 0 PF non attacca, l'ordine dato a una bestia eliminata non passa alla nuova e il bonus negativo ai danni si legge bene.",
+          "Creazione: un doppio tocco su «Crea» crea un solo personaggio; nel 2024 un'abilità già data dal background non si sceglie anche per la classe; al cambio di specie gli incantesimi dati dalla vecchia specie vengono rimossi, e il riepilogo lo dice.",
+          "Il server rifiuta altri valori non validi: livello di classe, dado vita, spossatezza fuori da 0-6, durate e danni negativi, notazioni di danno, nomi di soli spazi.",
+          "Creazione 2024: l'edizione si sceglie con il nome, poi background e specie vengono prima della classe, così le abilità che danno non si possono scegliere due volte.",
+          "2024: il rilancio con l'Ispirazione del colpo senz'armi e dell'attacco con incantesimo vale solo su un tiro già fatto.",
+          "Annullare una perdita di concentrazione rimette anche il livello del lancio.",
+          "Gli orari nel feed della serata sono quelli locali.",
+          "Un personaggio eliminato a serata aperta resta nel riepilogo.",
+          "La pulizia della cronologia tiene sempre gli eventi più recenti.",
+          "Un doppio tocco su un pulsante di salvataggio non invia più due richieste.",
+          "Creazione 2014: il background si sceglie prima della classe, così nessuna competenza va persa perché doppia.",
+          "Salvare le preferenze non perde più il livello del lancio dell'incantesimo in concentrazione."
+        ],
+        "en": [
+          "Session night: a double tap on “Start session” no longer opens two nights; enrolling or joining twice gives the right message instead of an error.",
+          "Night recap: a character removed from the campaign during the night stays in it, only what happens after the character sits down is counted, and it no longer points to a deleted campaign.",
+          "Calendar: a night that was already played can no longer be moved to another date.",
+          "History, Dice and notes: times are shown in local time, and events in the same second keep the right order.",
+          "Dice: the text of rolls with a dropped die, disadvantage or a d100 adds up to the total; a d100 no longer counts in the d10 statistics; several d20 summed together no longer end up as the recap “highest”.",
+          "Conditions: Calm Emotions keeps the suspended condition when you toggle another one; in 2024 becoming Unconscious also makes you Prone; export, import and duplicate keep durations.",
+          "Concentration: it cannot start on a spell that is not the character's, and it leaves nothing behind when its duration runs out.",
+          "Constitution: when it changes, also through an item, maximum HP follow the new modifier as if it had always been there.",
+          "Saving throws: in Wild Shape the sheet shows the bonus you actually roll with; two quick taps on proficiencies are both kept.",
+          "Carrying capacity: it follows the Strength granted by worn items.",
+          "Off-hand attack: only after an attack of the Attack action and, in 2014, only with a melee weapon. A Loading weapon no longer blocks the other attacks of the action, an empty quick-access quiver no longer prevents using loose arrows, and a +1 weapon counts as a magical strike.",
+          "Heroic Inspiration (2024): rerolling an attack only works on an attack that was already rolled.",
+          "Wild Shape: the Circle of the Moon AC of 13 + Wisdom only applies while in the form, in 2024 damage to the form reaches the druid, and a form is only assumed with “Activate”.",
+          "Companions: one at 0 HP does not attack, the order given to a deleted beast does not pass to the new one, and a negative damage bonus reads correctly.",
+          "Creation: a double tap on “Create” creates a single character; in 2024 a skill already granted by the background cannot also be picked for the class; when the species changes, the spells granted by the old species are removed, and the summary says so.",
+          "The server refuses more invalid values: class level, hit die, exhaustion outside 0-6, negative durations and damage, damage notations, names made only of spaces.",
+          "2024 creation: the edition is picked with the name, then background and species come before the class, so the skills they grant cannot be picked twice.",
+          "2024: rerolling an unarmed strike or spell attack with Inspiration only works on a roll already made.",
+          "Undoing a lost concentration also restores the casting level.",
+          "Times in the session feed are local times.",
+          "A character deleted during an open session stays in the recap.",
+          "History cleanup always keeps the most recent events.",
+          "A double tap on a save button no longer sends two requests.",
+          "2014 creation: the background is picked before the class, so no proficiency is lost as a duplicate.",
+          "Saving preferences no longer loses the casting level of the concentration spell."
+        ]
+      }
+    },
+    {
       "version": "3.14.6",
       "date": "2026-11-24",
       "fixed": {

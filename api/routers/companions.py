@@ -27,7 +27,7 @@ from core.rules.roll_options import refund_spent
 from api.services.rules_states import end_on_action
 from api.services.rules_turn import forgo_attack, get_turn, refuse_if_incapacitated, spend
 from api.services.wild_shape import (
-    deactivate_other_forms, end_form, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
+    deactivate_other_forms, end_form, form_armor_class, form_limits, form_own_hp, get_active_form, return_to_normal, start_form,
 )
 from api.services.history import add_history
 from core.db.models import Ability, Character, Companion, SpellSlot
@@ -59,6 +59,7 @@ def form_limits_moon(char: Character) -> bool:
 def _read(char: Character, comp: Companion) -> CompanionRead:
     """La riga com'è scritta, con PF, CA e bonus del compagno di privilegio calcolati dal livello e dalla competenza."""
     out = CompanionRead.model_validate(comp)
+    out.armor_class = form_armor_class(char, comp)
     stats = companion_stats(char, comp)
     if stats is not None:
         out.max_hp = stats.max_hp if stats.max_hp is not None else comp.max_hp
@@ -75,11 +76,11 @@ def _effective_max_hp(char: Character, comp: Companion) -> int:
     return stats.max_hp if stats is not None and stats.max_hp is not None else comp.max_hp
 
 
-async def _get_companion(session: AsyncSession, char_id: int, comp_id: int) -> Companion:
+async def _get_companion(session: AsyncSession, char: Character, comp_id: int) -> Companion:
     comp = (await session.execute(
-        select(Companion).where(Companion.id == comp_id, Companion.character_id == char_id)
+        select(Companion).where(Companion.id == comp_id, Companion.character_id == char.id)
     )).scalar_one_or_none()
-    if comp is None:
+    if comp is None or other_edition(char, comp):  # quello dell'altra edizione è nascosto: come se non ci fosse
         raise HTTPException(status_code=404, detail="Companion not found")
     return comp
 
@@ -117,6 +118,8 @@ async def create_companion(
         if any(c.feature_key == BEAST_COMPANION and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
     limits = form_limits(char)
+    if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
+        raise HTTPException(status_code=409, detail={"code": "use_activate"})
     if body.kind == "wild_shape" and limits is not None and limits.known_forms is not None:
         if sum(c.kind == "wild_shape" for c in rows) >= limits.known_forms:  # 2024: forme conosciute, se ne sostituisce una
             raise HTTPException(status_code=422, detail="known_forms_limit")
@@ -147,7 +150,7 @@ async def update_companion(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     was_active = comp.is_active
     changes = body.model_dump(exclude_unset=True)
     for required in ("kind", "name", "statblock", "max_hp", "armor_class", "temp_hp", "is_active", "current_hp"):
@@ -158,6 +161,11 @@ async def update_companion(
         changes["statblock"] = {k: v for k, v in changes["statblock"].items() if k != "hit_dice_spent"}
         if kept is not None:
             changes["statblock"]["hit_dice_spent"] = kept
+    limits = form_limits(char)
+    if changes.get("kind") == "wild_shape" and comp.kind != "wild_shape" and limits is not None and limits.known_forms is not None:
+        rows = (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
+        if sum(c.kind == "wild_shape" and not other_edition(char, c) for c in rows) >= limits.known_forms:
+            raise HTTPException(status_code=422, detail="known_forms_limit")  # come alla creazione
     for k, v in changes.items():
         setattr(comp, k, v)
     if comp.is_active and comp.kind != "wild_shape":
@@ -166,6 +174,8 @@ async def update_companion(
     if comp.is_active and comp.current_hp == 0 and form_own_hp(char):  # a 0 PF la forma finisce, anche se corretta a mano
         end_form(char, comp)
     elif comp.is_active and not was_active:
+        if limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione (e la conferma per superarli)
+            raise HTTPException(status_code=409, detail={"code": "use_activate"})
         await deactivate_other_forms(session, char_id, comp.id)
         start_form(char, comp)
     elif was_active and not comp.is_active:
@@ -182,7 +192,7 @@ async def activate_wild_shape(
     body: Annotated[CompanionActivate | None, Body()] = None,
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     if comp.is_active:
@@ -235,7 +245,7 @@ async def deactivate_wild_shape(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.is_active:
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             return _read(char, comp)
@@ -255,7 +265,7 @@ async def wild_heal(
     """Forma Selvatica da Combattimento (Druido 2014, Circolo della Luna): in forma, azione bonus e uno slot per curare la
     forma di 1d8 per livello dello slot. Il server tira; lo slot si prende con un UPDATE condizionato."""
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
     if active is None or active.id != comp.id:  # lo stato attivo è la verità, non il flag della riga
         raise HTTPException(status_code=409, detail={"code": "form_not_active"})
@@ -293,12 +303,14 @@ async def delete_companion(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> None:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.is_active:
         if await get_active_form(session, char_id) is None:  # lo stato era già finito: nessun costo
             end_form(char, comp)
         else:
             return_to_normal(char, comp)  # azione bonus; già spesa = 409 e la forma resta, non si elimina
+    if _beast_state(char).get("id") == comp.id:  # l'ordine era per lei: SQLite riusa l'id, non deve passare alla prossima
+        _save_beast_state(char, {})
     await session.delete(comp)
 
 
@@ -312,11 +324,12 @@ async def companion_hp(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CompanionRead:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     active = await get_active_form(session, char_id) if comp.kind == "wild_shape" else None
-    if body.op == "damage" and active is not None and active.id == comp.id and form_own_hp(char):
-        # il danno alla forma attiva ha un solo percorso, quello di PATCH /hp: PF temporanei, chiusura a 0 PF, eccesso al personaggio
-        full = await update_hp(char_id, HPUpdate(op=HPOp.DAMAGE, value=body.value), user_id, session, lang)
+    if active is not None and active.id == comp.id and (body.op == "damage" or not form_own_hp(char)):
+        # il danno alla forma attiva ha un solo percorso, quello di PATCH /hp: PF temporanei, chiusura a 0 PF, eccesso al personaggio;
+        # nel 2024 i PF sono quelli del druido, quindi anche cura e PF temporanei
+        full = await update_hp(char_id, HPUpdate(op=HPOp(body.op), value=body.value), user_id, session, lang)
         out = _read(char, comp)
         out.down = comp.current_hp == 0
         out.concentration_save = full.concentration_save  # il TS di PATCH /hp, se l'eccesso l'ha fatto tirare
@@ -399,7 +412,7 @@ async def command_companion(
     """Ordine alla bestia del ranger. Con l'azione: Attacco, Aiuto, Disimpegno, Scatto o Schivata. Con l'azione bonus
     (Addestramento Straordinario, 7°) tutti tranne l'Attacco, e solo in un turno in cui la bestia non attacca."""
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.feature_key not in BEAST_KEYS:
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
@@ -441,7 +454,7 @@ async def spend_beast_hit_dice(
 ) -> HitDiceResult:
     """La bestia del ranger spende Dadi Vita (quelli del suo profilo) in un riposo breve: dado + Costituzione, mai sotto 0."""
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     if comp.feature_key != BEAST_COMPANION:
         raise HTTPException(status_code=409, detail={"code": "feature_unavailable"})
     if comp.current_hp <= 0:
@@ -476,13 +489,15 @@ async def companion_attack(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CompanionAttackResult:
     char = await _get_char(session, char_id, user_id)
-    comp = await _get_companion(session, char_id, comp_id)
+    comp = await _get_companion(session, char, comp_id)
     actions = (comp.statblock or {}).get("actions") or []
     if body.action_index >= len(actions):
         raise HTTPException(status_code=422, detail="unknown_action")
     action = actions[body.action_index]
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
+    if comp.kind != "wild_shape" and comp.current_hp <= 0 < _effective_max_hp(char, comp):  # a terra: non attacca
+        raise HTTPException(status_code=409, detail={"code": "companion_down"})
     if comp.feature_key in BEAST_KEYS:
         _take_beast_attack(char, comp, body.reaction)
     converted = None

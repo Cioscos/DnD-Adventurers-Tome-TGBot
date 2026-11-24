@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -49,7 +49,7 @@ from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
-from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_reroll
+from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
@@ -88,7 +88,7 @@ from api.services.dice_notation import DICE_RE, roll_dice
 
 
 class ConcentrationSaveRequest(BaseModel):
-    damage: int
+    damage: int = Field(ge=0)
     mode: RollMode = "normal"
     dice: D20Dice | None = None
 
@@ -617,7 +617,7 @@ async def spell_attack(
 
     cast_block = spell_fx = None
     if body.with_inspiration:
-        spend_inspiration_reroll(char)
+        spend_inspiration_attack(char, spell_id=spell.id)
     else:
         fx_level = cast_level(char, spell, body.slot_id, body.slot_level)
         await validate_spell_targets(session, char, spell, fx_level, body.targets, body.choices, body.cast_options)  # prima di spendere
@@ -781,7 +781,9 @@ async def update_concentration(
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:
         # Senza `rounds` sullo stesso incantesimo non cambia nulla: il lancio ha già avviato il contatore.
         spell = next((s for s in char.spells if s.id == body.spell_id), None)
-        rounds = body.rounds if body.rounds is not None else parse_duration_rounds(spell.duration) if spell else None
+        if spell is None:
+            raise HTTPException(status_code=404, detail="spell_not_found")
+        rounds = body.rounds if body.rounds is not None else parse_duration_rounds(spell.duration)
         start_concentration(char, body.spell_id, rounds)
     await release_concentration_effects(session, char)
     return await build_character_response(session, char)

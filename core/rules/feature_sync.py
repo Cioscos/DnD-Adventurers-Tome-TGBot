@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_feature_specs
-from core.game.stats import effective_ability_mod, sync_base_ac
+from core.game.stats import con_hp_delta, effective_ability_mod, stored_rolls, sync_base_ac
 from core.db.models import Ability, Character, CharacterClass, RestorationType, Spell
 from core.rules.catalog import active_features, features_for
 from core.rules.catalog.granted_spells import GRANTED_SPELLS, granted_spell
@@ -203,10 +203,10 @@ def _sync_ability_bonuses(char: Character, *, retrofit: bool = False, retro_ids:
     char.settings = {**(char.settings or {}), ABILITY_BONUS_KEY: applied}
     char.recalculate_carry_capacity()
     sync_base_ac(char)
-    delta = effective_ability_mod(char, "constitution") - old_con
+    delta = con_hp_delta(char.classes, old_con, effective_ability_mod(char, "constitution"), stored_rolls(char))
     if delta and (char.settings or {}).get("hp_auto_calc", True):
-        char.hit_points = max(0, char.hit_points + delta * char.total_level)
-        char.current_hit_points = max(0, char.current_hit_points + delta * char.total_level)  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
+        char.hit_points = max(0, char.hit_points + delta)
+        char.current_hit_points = max(0, char.current_hit_points + delta)  # il tetto lo mette cap_current_hp (Aiuto supera il massimo base)
     return moved
 
 

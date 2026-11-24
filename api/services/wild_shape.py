@@ -78,6 +78,16 @@ def end_form(char: Character, form: Companion) -> None:
         remove_state(char, STATE_KEY)
 
 
+def form_armor_class(char: Character, form: Companion) -> int:
+    """CA della forma. 2024, Circolo della Luna (pag. 86): finché si è in quella forma vale 13 + Saggezza, se è più alta.
+    Calcolata a lettura e mai scritta sulla riga, così lasciando la forma torna quella della bestia."""
+    limits = form_limits(char)
+    in_form = any(s["key"] == STATE_KEY and (s.get("data") or {}).get("companion_id") == form.id for s in get_states(char))
+    if in_form and limits is not None and not limits.own_hp and limits.ac_wisdom:
+        return max(form.armor_class, 13 + effective_ability_mod(char, "wisdom"))
+    return form.armor_class
+
+
 def return_to_normal(char: Character, form: Companion) -> None:
     """Ritorno volontario alla forma normale: costa l'azione bonus, in entrambe le edizioni (409 ``turn_slot_used`` se è già
     spesa, la forma resta). Unico punto per «Termina» da Extra e da Turno; le fini automatiche (0 PF, durata, riposo) usano
@@ -106,8 +116,6 @@ def start_form(char: Character, form: Companion, grant: bool = True) -> None:
     start_state(char, StateSpec(key=STATE_KEY, rounds=rounds, ends_on=tuple(ends), data=data), "druid.wild_shape")
     if grant and limits is not None and not limits.own_hp:
         char.temp_hp = max(char.temp_hp or 0, limits.temp_hp)  # i PF temporanei non si sommano: vale il maggiore
-        if limits.ac_wisdom:
-            form.armor_class = max(form.armor_class, 13 + effective_ability_mod(char, "wisdom"))
 
 
 async def long_rest_familiar(session: AsyncSession, char: Character) -> None:

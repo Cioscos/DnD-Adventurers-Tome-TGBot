@@ -34,10 +34,11 @@ async def test_charger_adds_five_on_melee_hit(client):
 async def test_dual_wielder_ac_and_non_light_offhand(client):
     c = await _with(client, "dual_wielder")
     cid = c["id"]
-    await _weapon(client, cid, "Spada lunga", damage_dice="1d8")
+    main = await _weapon(client, cid, "Spada lunga", damage_dice="1d8")
     one = (await _full(client, cid))["ac"]
     off = await _weapon(client, cid, "Ascia da battaglia", equip="off_hand", damage_dice="1d8")
     assert (await _full(client, cid))["ac"] == one + 1
+    assert (await client.post(f"/characters/{cid}/items/{main}/attack", json={"die": 10})).status_code == 200  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     r = await client.post(f"/characters/{cid}/items/{off}/attack", json={"die": 10, "attack_mode": "offhand"})
     assert r.status_code == 200, r.text
 

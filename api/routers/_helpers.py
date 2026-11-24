@@ -21,7 +21,8 @@ from core.db.models import Character, CharacterHistory
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import save_roll_part
-from core.game.stats import effective_ability_mod, roll_ability_mod
+from core.game.stats import con_hp_delta, effective_ability_mod, roll_ability_mod
+from api.services.hp_rolls import stored_rolls
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.spell_effects import enchanted_weapon
@@ -63,7 +64,7 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
             keep_subq = (
                 select(CharacterHistory.id)
                 .where(CharacterHistory.character_id == char.id)
-                .order_by(CharacterHistory.timestamp.desc())
+                .order_by(CharacterHistory.timestamp.desc(), CharacterHistory.id.desc())
                 .limit(keep)
                 .subquery()
             )
@@ -99,9 +100,11 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
 
 
 async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
-    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade)."""
+    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade); la capacità di carico
+    segue la Forza allo stesso modo."""
+    char.recalculate_carry_capacity()
     if (char.settings or {}).get("hp_auto_calc", True):
-        delta = (effective_con_mod(char) - old_con_mod) * char.total_level
+        delta = con_hp_delta(char.classes, old_con_mod, effective_con_mod(char), stored_rolls(char))
         if delta != 0:
             was_at_zero = char.current_hit_points == 0
             char.hit_points = max(0, char.hit_points + delta)
@@ -204,7 +207,7 @@ async def _lose_concentration(session: AsyncSession, char: Character) -> dict:
     """Fa cadere la concentrazione e restituisce ciò che serve per ripristinarla dopo un ritiro riuscito."""
     settings = char.settings or {}
     snapshot = {"spell_id": char.concentrating_spell_id, "item_spell": settings.get("concentration_item_spell"),
-                "rounds": settings.get("concentration_rounds_left"), "active_states": list(char.active_states or []),
+                "rounds": settings.get("concentration_rounds_left"), "level": settings.get("concentration_level"), "active_states": list(char.active_states or []),
                 "released": []}
     end_concentration(char)
     await release_concentration_effects(session, char, snapshot["released"])
@@ -227,6 +230,8 @@ async def retouch_concentration(
             settings["concentration_item_spell"] = snap["item_spell"]
         if snap["rounds"] is not None:
             settings["concentration_rounds_left"] = snap["rounds"]
+        if snap.get("level") is not None:
+            settings["concentration_level"] = snap["level"]
         char.settings = settings
         char.active_states = list(snap["active_states"])
         await restore_released(session, snap["released"])

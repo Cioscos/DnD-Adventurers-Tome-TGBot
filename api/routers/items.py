@@ -26,10 +26,10 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from api.services.rules_turn import attacks_allowed, get_turn, mark_once, refuse_if_incapacitated, spend
+from api.services.rules_turn import attacks_allowed, get_turn, loading_applies, mark_once, refuse_if_incapacitated, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
-from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
+from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_attack
 from core.rules.modifiers import modifiers_for
 from core.data.damage_types import canonical_damage_type
 from api.services.dice_stats import record_dice
@@ -556,7 +556,11 @@ def _check_attack_limit(char: Character, body: AttackSubmission | None, item: It
     Non vale per un attacco con un'opzione che ha uno slot proprio (Frenesia, Ritorsione): non è un attacco dell'azione."""
     if body and (body.with_inspiration or body.confirm_extra_attack or _own_slot_attack(char, body)):
         return
-    made, allowed = get_turn(char)["action_attacks"], attacks_allowed(char, item)
+    turn = get_turn(char)
+    made, allowed = turn["action_attacks"], attacks_allowed(char, item, per_weapon=False)
+    if made < allowed and item is not None and loading_applies(char, item):
+        # Ricarica (2014 p.147): un solo colpo per azione con quell'arma; gli altri attacchi dell'azione restano
+        made, allowed = (turn.get("loading_shots") or {}).get(str(item.id), 0), attacks_allowed(char, item)
     if made >= allowed:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "attack_limit", "made": made, "allowed": allowed})
 
@@ -586,7 +590,7 @@ def _settle_attack(
         "die": result.to_hit_die, "dice": result.dice, "mode": result.mode, "bonus": result.to_hit_bonus,
         "total": result.to_hit_total, "notes": result.notes, "auto_fail": False, "description": "",
         "option_result": result.option_result.model_dump(mode="json") if result.option_result else None,
-    }, item_id=item_id, ability=ability)
+    }, item_id=item_id, ability=ability, unarmed=item is None)
     result.refundable = True if get_turn(char)["last_roll"]["refundable"] else None  # assente quando non serve
     return result
 
@@ -796,7 +800,7 @@ async def attack_with_weapon(
     refuse_if_incapacitated(char)
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    damage_dice_str: str = meta.get("damage_dice", "1d4")
+    damage_dice_str: str = meta.get("damage_dice") or "1d4"  # anche vuota o nulla
     properties: list[str] = meta.get("properties", [])
     magic_bonus = weapon_magic_bonus(item)
 
@@ -814,6 +818,8 @@ async def attack_with_weapon(
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and one_handed_melee(i) for i in char.items):
             raise HTTPException(status_code=422, detail="offhand_needs_second_weapon")
     elif offhand:
+        if character_edition(char) == "2014" and (meta.get("weapon_type") or "melee") != "melee":
+            raise HTTPException(status_code=422, detail="offhand_not_melee")  # 2014 p.195: arma da mischia leggera
         if not has_property(item, "light"):
             raise HTTPException(status_code=422, detail="offhand_not_light")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and has_property(i, "light")
@@ -821,6 +827,9 @@ async def attack_with_weapon(
             raise HTTPException(status_code=422, detail="offhand_needs_second_light_weapon")
     else:
         _check_attack_limit(char, body, item)
+    # L'attacco con l'altra mano segue un attacco dell'azione Attacco (2014 p.195, 2024 p.213): da solo non esiste.
+    if offhand and get_turn(char)["action_attacks"] < 1:
+        raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
             i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
@@ -832,7 +841,7 @@ async def attack_with_weapon(
         raise HTTPException(status_code=422, detail="weapon_not_thrown")
 
     if body and body.with_inspiration:
-        spend_inspiration_reroll(char)
+        spend_inspiration_attack(char, item_id=item.id)
 
     # Determine ability modifier (effective: equipped-item bonuses included)
     ability_mod, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode, body.ability if body else None)
@@ -890,6 +899,9 @@ async def attack_with_weapon(
     if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
         if not offhand:
             spend(char, "attack", own_slot=_own_slot_attack(char, body))
+            if loading_applies(char, item):  # contati per arma: il tetto della Ricarica è suo
+                shots = get_turn(char).get("loading_shots") or {}
+                char.turn_state = {**get_turn(char), "loading_shots": {**shots, str(item.id): shots.get(str(item.id), 0) + 1}}
             _note_martial_attack(char, item, body)
         elif NICK_OPTION not in opts.keys:
             spend(char, "bonus")
@@ -911,11 +923,8 @@ async def attack_with_weapon(
                 [i for i in ammo if i.container_id in quick_ids],
                 [i for i in ammo if i.container_id is None],
             ):
-                # One stack, or several stacks of the same ammo: use the first (lowest id).
+                # One live stack, or several of the same ammo: use the first (lowest id). Empty stacks don't count.
                 live = sorted((i for i in pool if i.quantity > 0), key=lambda i: i.id)
-                if len(pool) == 1:
-                    source = pool[0]
-                    break
                 if live and len({i.name.lower() for i in live}) == 1:
                     source = live[0]
                     break
@@ -964,7 +973,7 @@ async def attack_with_weapon(
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
         rerolled=rerolled or None,
-        is_magic=True if applied.magic_weapon else None,
+        is_magic=True if applied.magic_weapon or magic_bonus > 0 else None,
         damage_type=spell_damage_type or canonical_damage_type(meta.get("damage_type")),  # PA1: il tipo dell'arma nel modale
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
@@ -1015,7 +1024,7 @@ async def attack_unarmed(
         return _unarmed_effect(session, char, body.effect, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
 
     if body and body.with_inspiration:
-        spend_inspiration_reroll(char)
+        spend_inspiration_attack(char)
 
     applied = modifiers_for(char, "attack", ability=ability, attack_mode=mode)
     opts = use_options(session, char, "attack", body, ability=ability, attack_mode=mode, grip="one")

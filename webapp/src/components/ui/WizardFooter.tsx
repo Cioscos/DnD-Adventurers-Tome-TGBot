@@ -26,7 +26,7 @@ export default function WizardFooter({
   primaryLabel,
   onPrimary,
   primaryDisabled = false,
-  primaryLoading = false,
+  primaryLoading,
   primaryHaptic = 'medium',
   secondaryDisabled = false,
   className = '',

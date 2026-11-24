@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.services.history import add_history
+from api.services.recap import record_deletion
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.data.tools import TOOLS, tool_label
@@ -105,7 +106,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = (TOOL_SEED_FLAG, "hp_rolls", "condition_durations", "resolved_choice_levels",
-                         "concentration_rounds_left", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
+                         "concentration_rounds_left", "concentration_level", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
                          RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
@@ -213,10 +214,13 @@ def _check_catalog_choices(char: Character, body: CharacterCreate, scores: dict[
         raise bad("species_options_invalid")
     # L'abilità della specie (Elfo, Umano...) già data da background, wizard o classe andrebbe persa in silenzio.
     skill = body.species_2024.options.get("skill") if body.species_2024 else None
-    taken = ({k for k, v in (body.skills or {}).items() if v} | set(bg.skills if bg else ())
-             | set((body.initial_class.skill_choices or []) if body.initial_class else ()))
-    if skill and skill in taken:
+    origin = {k for k, v in (body.skills or {}).items() if v} | set(bg.skills if bg else ())
+    class_skills = set((body.initial_class.skill_choices or []) if body.initial_class else ())
+    if skill and skill in origin | class_skills:
         raise bad("species_skill_taken")
+    # D-006 e D-012: lo stesso per un'abilità di classe già data dal background, in entrambe le edizioni.
+    if origin & class_skills:
+        raise bad("class_skill_taken")
     return bg
 
 
@@ -469,6 +473,7 @@ async def delete_character(
         )
     )
     participant = (await session.execute(participant_q)).scalar_one_or_none()
+    await record_deletion(session, char)
     if participant is not None:
         game_session = await session.get(GameSession, participant.session_id)
         await session.delete(participant)
@@ -502,7 +507,7 @@ async def update_skills(
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
     current = dict(char.skills or {})
-    current.update(body.skills)
+    current.update({k: True if v == "proficient" else v for k, v in body.skills.items()})  # una sola forma salvata
     char.skills = current
     # See refresh_char_full() for why expunge + re-SELECT is required here.
     char = await refresh_char_full(session, char_id, user_id)
@@ -541,7 +546,18 @@ async def update_conditions(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
-    result = await apply_conditions(session, char, body.conditions)
+    # La pagina rimanda tutta la mappa a ogni tocco: lì conta solo ciò che cambia, e non deve per esempio far cadere la
+    # sospensione di Calmare Emozioni. Una chiave sola è una richiesta esplicita e vale com'è.
+    current, changes = char.conditions or {}, body.conditions
+    if len(changes) > 1:
+        changes = {k: v for k, v in changes.items() if v != current.get(k, 0 if k == "exhaustion" else False)}
+    for slug, val in changes.items():  # si valida ciò che cambia: un valore vecchio rimandato dalla pagina non la blocca
+        if slug == "exhaustion":
+            if isinstance(val, bool) or not isinstance(val, int) or not 0 <= val <= 6:
+                raise HTTPException(status_code=422, detail="exhaustion_out_of_range")
+        elif not isinstance(val, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
+            raise HTTPException(status_code=422, detail="condition_must_be_bool")
+    result = await apply_conditions(session, char, changes)
     # apply_conditions already dropped the effects of conditions turned off
     gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
     for slug, rounds in (body.durations or {}).items():

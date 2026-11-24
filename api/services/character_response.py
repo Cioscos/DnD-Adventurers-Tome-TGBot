@@ -15,7 +15,7 @@ from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
 from api.services.choices import choice_source, is_resolvable, option_catalog, pick_count, spell_pick_info
 from api.services.condition_effects import character_effect_payload
-from api.services.wild_shape import form_own_hp, get_active_form
+from api.services.wild_shape import form_armor_class, form_own_hp, get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, load_snapshot, passive_modifier
 from api.services.item_charges import attunement_limit, has_use_magic_device
 from api.services.session_allies import attach_spell_auras
@@ -26,7 +26,7 @@ from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
 from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats, encumbrance_level
 from core.game.item_bonuses import item_bonus_total
-from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_roll_part
+from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, save_roll_part, skill_roll_part
 from core.rules.condition_removal import view as removal_view
 from core.rules.catalog import active_features, cached_features
 from core.rules.catalog.feats import feat_status
@@ -98,7 +98,7 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
     if form is not None:
         response.active_form = ActiveForm(
             companion_id=form.id, name=form.name, current_hp=form.current_hp,
-            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class,
+            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form_armor_class(char, form),
             own_hp=form_own_hp(char))
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac", snap)
@@ -264,7 +264,10 @@ async def _build(session: AsyncSession, char: Character, *, persist: bool) -> Ch
         incapacitated=is_incapacitated(char),
         surprised=surprised_turn(char),
         surprise_exit_features=surprise_exit_features(char),
-        save_flat={a: modifiers_for(char, "save", ability=a).flat for a in ABILITY_NAMES},
+        # Più lo scarto della Forma Selvatica (punteggi e competenze della bestia): la scheda somma modificatore,
+        # competenza e questo valore, e deve mostrare il bonus con cui il TS viene tirato.
+        save_flat={a: modifiers_for(char, "save", ability=a).flat + save_roll_part(char, a) - effective_ability_mod(char, a)
+                      - (char.proficiency_bonus if (char.saving_throws or {}).get(a) else 0) for a in ABILITY_NAMES},
         senses=[{"type": k, "range_ft": v} for k, v in sorted(rule_damage.senses.items())],
         long_jump_bonus_ft=rule_damage.jump_bonus_ft,
         attunement_limit=attunement_limit(char),

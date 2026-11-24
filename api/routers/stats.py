@@ -17,8 +17,7 @@ from core.db.models import ABILITY_NAMES, AbilityScore, Character
 from core.game.stats import sync_base_ac
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
-from api.routers._helpers import effective_con_mod
-from api.services.effects import cap_current_hp, sync_zero_hp
+from api.routers._helpers import apply_con_hp, effective_con_mod
 from api.services.character_response import build_character_response
 from pydantic import BaseModel
 from typing import Optional
@@ -53,15 +52,8 @@ async def apply_ability_change(session: AsyncSession, char: Character, ability: 
     if ability == "strength":
         char.recalculate_carry_capacity()
     sync_base_ac(char)
-    # CON change hook: retroactively adjust max HP and current HP
-    if ability == "constitution" and (char.settings or {}).get("hp_auto_calc", True):
-        delta = effective_con_mod(char) - old_con_mod
-        if delta != 0:
-            was_at_zero = char.current_hit_points == 0
-            char.hit_points = max(0, char.hit_points + delta * char.total_level)
-            char.current_hit_points = max(0, char.current_hit_points + delta * char.total_level)  # il tetto lo mette cap_current_hp
-            await cap_current_hp(session, char)
-            await sync_zero_hp(session, char, was_at_zero)
+    if ability == "constitution":  # PF massimi e correnti seguono il nuovo modificatore
+        await apply_con_hp(session, char, old_con_mod)
 
 
 @router.patch("/{char_id}/ability_scores/{ability_name}", response_model=CharacterFull)

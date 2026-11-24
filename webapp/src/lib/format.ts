@@ -7,6 +7,8 @@
  * che formatta HH:MM a mano).
  */
 
+import { fromServer } from './calendarDates'
+
 const LOCALE_TAGS: Record<string, string> = {
   it: 'it-IT',
   en: 'en-US',
@@ -22,9 +24,9 @@ export function formatInt(value: number, locale: string): string {
   return new Intl.NumberFormat(localeTag(locale)).format(value)
 }
 
-/** Orario HH:MM in formato 24h indipendentemente dal locale. */
+/** Orario HH:MM in formato 24h indipendentemente dal locale. Le stringhe sono orari del server (UTC). */
 export function formatTime24(date: Date | string, locale: string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+  const d = typeof date === 'string' ? fromServer(date) : date
   return new Intl.DateTimeFormat(localeTag(locale), {
     hour: '2-digit',
     minute: '2-digit',

@@ -429,6 +429,12 @@ class SpeciesApply(BaseModel):
 
 class CharacterCreate(BaseModel):
     name: str = Field(pattern=r"\S")
+
+    @field_validator("name")
+    @classmethod
+    def _name_stripped(cls, v: str) -> str:
+        return v.strip()
+
     # Base scores WITHOUT species bonuses; each 3-20 after bonuses (checked in the router).
     ability_scores: Optional[dict[str, int]] = None
     species: Optional[SpeciesApply] = None
@@ -523,7 +529,7 @@ class SavingThrowsUpdate(BaseModel):
 
 class ConditionsUpdate(BaseModel):
     """Map of condition_slug → bool or int (exhaustion level)."""
-    conditions: dict[str, Any]
+    conditions: dict[str, Any]  # i valori si validano nella rotta, solo su ciò che cambia
     # slug -> rounds left; None removes the duration
     durations: Optional[dict[str, Optional[int]]] = None
 

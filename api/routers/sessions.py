@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_lang, get_current_telegram_user, get_current_user
 from api.database import get_db
+from api.locks import user_write_lock
 from api.schemas.common import normalize_proficiencies
 from core.data.tools import TOOLS, tool_label
 from core.game.containers import is_container, trade_snapshot
@@ -58,7 +59,7 @@ from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
-from api.services.recap import close_game_session, dice_baseline, record_departure
+from api.services.recap import close_game_session, dice_baseline, history_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
 from api.services.d20 import set_inspiration
 from api.services.rules_states import remove_state
@@ -372,7 +373,8 @@ def _compute_gm_display_name(tg_user: TelegramUser, custom_title: Optional[str])
     return f"#{tg_user.id}"
 
 
-@router.post("", response_model=GameSessionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=GameSessionRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(user_write_lock)])
 async def create_session(
     body: SessionCreateRequest,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
@@ -435,7 +437,7 @@ async def create_session(
     return await session_read(db, session)
 
 
-@router.post("/join", response_model=GameSessionRead)
+@router.post("/join", response_model=GameSessionRead, dependencies=[Depends(user_write_lock)])
 async def join_session(
     body: SessionJoinRequest,
     user_id: Annotated[int, Depends(get_current_user)],
@@ -487,6 +489,7 @@ async def join_session(
         display_name=char.name,
         joined_at=utc_now_iso(),
         dice_stats_start=dice_baseline(session, char),
+        history_start_id=await history_baseline(db, session, char),
     ))
     touch(session)
     await db.flush()

@@ -129,7 +129,8 @@ async def test_attack_consumes_inspiration(client, monkeypatch):
     wid = await _add_weapon(client, cid)
     ri = await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
     assert ri.status_code == 200, ri.text
-    _patch_sequence(monkeypatch, [10, 4])
+    _patch_sequence(monkeypatch, [10, 4, 12, 5])
+    assert (await client.post(f"/characters/{cid}/items/{wid}/attack")).status_code == 200  # 2024 p.368: si ritira un d20 già tirato
     r = await client.post(f"/characters/{cid}/items/{wid}/attack", json={"with_inspiration": True})
     assert r.status_code == 200, r.text
     g = await client.get(f"/characters/{cid}")

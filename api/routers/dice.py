@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from typing import Annotated
 
@@ -64,6 +65,29 @@ _RANGES_PER_KIND = {
 }
 
 
+def _shown_rolls(notation: str | None, rolls: list[int]) -> list[int]:
+    """I dadi da elencare accanto al totale: con ``khN`` solo quelli tenuti; nessuno per il d100, dove i due d10 sono
+    decine e unità e la loro somma non è il totale."""
+    kept = re.search(r"k([hl])(\d+)", notation or "")  # kh: i più alti; kl: i più bassi (svantaggio)
+    if kept:
+        return sorted(rolls, reverse=kept.group(1) == "h")[:int(kept.group(2))]
+    return [] if "d100" in (notation or "") else rolls
+
+
+def _stat_rolls(notation: str | None, entries: list) -> list:
+    """I tiri che contano nelle statistiche per faccia: i due d10 di ogni d100 no (D-004). La pagina Dadi manda i dadi
+    nell'ordine dei gruppi della notazione («1d100 + 2d10»), due d10 per ogni d100."""
+    if "d100" not in (notation or ""):
+        return entries
+    out, i = [], 0
+    for count, faces in re.findall(r"(\d*)d(\d+)", notation):
+        n = int(count or 1) * (2 if faces == "100" else 1)
+        if faces != "100":
+            out += entries[i:i + n]
+        i += n
+    return out + entries[i:]
+
+
 def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list[int], total: int, modifier: int,
               source: str, label: str | None, with_inspiration: bool = False) -> None:
     """Storico dei dadi e feed generale, così il tiro compare anche in /history."""
@@ -79,8 +103,9 @@ def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list
     char.rolls_history = history[-_MAX_HISTORY:]
     flag_modified(char, "rolls_history")
 
-    if len(rolls) > 1:
-        rolls_str = "+".join(str(r) for r in rolls)
+    shown = _shown_rolls(notation, rolls)
+    if len(shown) > 1:
+        rolls_str = "+".join(str(r) for r in shown)
         description = f"🎲 {notation}: [{rolls_str}] = {total}"
     else:
         description = f"🎲 {notation}: {total}"
@@ -180,7 +205,9 @@ async def post_dice_result(
     if body.with_inspiration:
         spend_inspiration_reroll(char)
 
-    record_dice(char, [(e.kind, e.value) for e in body.rolls], total if all(e.kind == "d20" for e in body.rolls) else None)
+    # d20_total è il totale di UNA prova: un solo d20, o i due di vantaggio/svantaggio. 3d20 sommati non lo sono.
+    is_check = all(e.kind == "d20" for e in body.rolls) and (len(rolls) == 1 or body.mode != "normal")
+    record_dice(char, [(e.kind, e.value) for e in _stat_rolls(body.notation, body.rolls)], total if is_check else None)
     _log_roll(session, char, notation, rolls, total, body.modifier, body.source or "manual", body.label,
               body.with_inspiration)
 
@@ -190,7 +217,7 @@ async def post_dice_result(
         char_id, notation, total, len(char.rolls_history or []),
     )
 
-    return DiceRollResult(notation=notation, rolls=rolls, total=total)
+    return DiceRollResult(notation=notation, rolls=rolls, total=total, modifier=body.modifier)
 
 
 @router.get("/{char_id}/dice/history", response_model=list[DiceRollResult])
@@ -239,7 +266,7 @@ async def post_dice_to_chat(
     if not telegram_notify.bot_token_configured():
         raise HTTPException(status_code=503, detail="BOT_TOKEN not configured")
 
-    rolls = body.rolls
+    rolls = _shown_rolls(body.notation, body.rolls)
     if len(rolls) > 1:
         rolls_str = " + ".join(str(r) for r in rolls)
         text = f"🎲 {body.notation}: {rolls_str} = *{body.total}*"

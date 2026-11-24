@@ -72,6 +72,7 @@ async def test_weapon_reroll_spends_inspiration_and_keeps_the_client_die(client)
     await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})
     item_id = await _add_weapon(client, cid)
     await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    assert (await client.post(f"/characters/{cid}/items/{item_id}/attack", json={"die": 5})).status_code == 200  # 2024 p.368: si ritira un d20 già tirato
     r = await client.post(
         f"/characters/{cid}/items/{item_id}/attack",
         json={"die": 9, "with_inspiration": True},

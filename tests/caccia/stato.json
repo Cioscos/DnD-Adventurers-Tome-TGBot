@@ -1,4 +1,133 @@
 {
   "ritirati": [],
-  "zone": {}
+  "zone": {
+    "flusso:attacco-danno": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:campagna-calendario": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "non_applicabile",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "non_applicabile",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:caratteristiche-tiri": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:compagni-forme": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:concentrazione": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:condizioni": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:creazione": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    },
+    "flusso:dadi": {
+      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "data": "2026-11-24",
+      "voci": {
+        "annullamento": "fatta",
+        "contratto": "fatta",
+        "edizioni": "fatta",
+        "interazione": "fatta",
+        "limiti": "fatta",
+        "normale": "fatta",
+        "permessi": "fatta",
+        "persistenza": "fatta",
+        "regola": "fatta",
+        "ripetizione": "fatta"
+      }
+    }
+  }
 }

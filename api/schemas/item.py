@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_va
 from api.schemas.common import OptionResult, RollMode, absent_when_none
 from api.schemas.container import ContainerStatsRead, validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
+from api.services.dice_notation import DICE_RE
 from core.db.models import EquipmentSlot
 from core.rules.weapons import weapon_mastery
 from api.services.equipment import slot_allowed_for_type
@@ -110,6 +111,9 @@ def _validate_weapon_meta(v: dict) -> None:
     vd = v.get("versatile_dice")
     if vd not in (None, "") and not (isinstance(vd, str) and _VERSATILE_RE.match(vd.strip())):
         raise ValueError("versatile_dice must be dice notation like '1d10'")
+    dd = v.get("damage_dice")  # «1»: il danno fisso del catalogo (Cerbottana), l'unico che il motore tira senza dadi
+    if dd not in (None, "") and not (isinstance(dd, str) and (DICE_RE.match(dd.strip()) or dd.strip() == "1")):
+        raise ValueError("damage_dice must be dice notation like '1d8' or '2d6+2'")
     wc = v.get("weapon_category")
     if wc not in (None, "simple", "martial"):
         raise ValueError("weapon_category must be 'simple' or 'martial'")

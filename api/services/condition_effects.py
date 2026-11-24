@@ -126,6 +126,8 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             s["concentration_rounds_left"] = prev
             if c["prev_item_spell"] is not None:
                 s["concentration_item_spell"] = c["prev_item_spell"]
+            if c.get("prev_level") is not None:
+                s["concentration_level"] = c["prev_level"]
             char.settings = s
             await _restore_released(db, c.get("released_effects", []), created, new_ids)
     for cid, snap in log.char_states.items():

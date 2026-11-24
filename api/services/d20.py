@@ -28,6 +28,17 @@ def spend_inspiration_reroll(char) -> None:
     spend_inspiration(char)
 
 
+def spend_inspiration_attack(char, *, item_id: int | None = None, spell_id: int | None = None) -> None:
+    """Rilancio di un attacco: 2024, si ritira il d20 dell'attacco appena tirato (stessa arma o stesso incantesimo; senza id, il colpo
+    senz'armi). Senza quel tiro sarebbe un attacco gratuito. Nel 2014 il rilancio è rifiutato comunque."""
+    last = (char.turn_state or {}).get("last_roll") or {}
+    if character_edition(char) == "2024" and (
+            last.get("roll") != "attack" or (last.get("item_id"), last.get("spell_id")) != (item_id, spell_id)
+            or bool(last.get("unarmed")) != (item_id is None and spell_id is None)):  # nemmeno l'attacco di una bestia ha id
+        raise HTTPException(status_code=409, detail={"code": "no_roll_to_reroll"})
+    spend_inspiration_reroll(char)
+
+
 def set_inspiration(char, value: bool) -> None:
     """Concede o toglie l'Ispirazione (giocatore o GM). 2024: riceverne una con una già in mano la rende «in più»."""
     settings = dict(char.settings or {})

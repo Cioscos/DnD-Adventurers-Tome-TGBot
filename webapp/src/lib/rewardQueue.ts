@@ -1,3 +1,5 @@
+import { fromServer } from './calendarDates'
+
 const KEY = 'reward-queue'
 
 export interface Reward {
@@ -58,7 +60,7 @@ export function pruneOlderThan(maxAgeMs: number): void {
   const q = readQueue()
   const now = Date.now()
   const fresh = q.filter((r) => {
-    const t = Date.parse(r.granted_at)
+    const t = fromServer(r.granted_at).getTime()
     return Number.isFinite(t) && now - t < maxAgeMs
   })
   if (fresh.length !== q.length) writeQueue(fresh)

@@ -806,6 +806,7 @@
       "limit_cancel": "Cancel",
       "incapacitated": "You are incapacitated: you can't attack.",
       "bonus_used": "Bonus action already used this turn.",
+      "offhand_needs_attack": "Attack with the Attack action first: the off hand comes after.",
       "ammo_missing": "Ammunition empty or not equipped: track it yourself",
       "grip_one": "One hand",
       "grip_two": "Two hands",
@@ -1444,7 +1445,8 @@
         "skill_added": "{{skill}} proficiency added.",
         "skill_removed": "{{skill}} proficiency removed.",
         "feat_added": "{{feat}} feat added.",
-        "feat_removed": "{{feat}} feat removed."
+        "feat_removed": "{{feat}} feat removed.",
+        "spell_removed": "{{name}} spell removed."
       },
       "errors": {
         "species_edition": "Only characters using the 2024 rules can choose a 2024 species.",
@@ -2632,6 +2634,7 @@
         "background_unknown": "Unknown background.",
         "background_increases_invalid": "Invalid background increases: no ability can exceed 20.",
         "background_tool_invalid": "Invalid background tool.",
+        "class_skill_taken": "A skill chosen for the class is already granted by your background: pick another.",
         "species_skill_taken": "The skill chosen for the species is already granted by your class or background: pick another."
       },
       "create_cta": "Create"

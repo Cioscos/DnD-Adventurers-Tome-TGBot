@@ -9,12 +9,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_telegram_user, get_current_user
-from api.locks import character_locks
+from api.locks import character_locks, user_write_lock
 from api.database import get_db
 from api.schemas.campaign import (
     CampaignCreate,
@@ -40,7 +40,7 @@ from api.services.game_sessions import active_session_id, find_active_session_fo
 from api.schemas.session import GameSessionRead
 from api.services import campaigns as svc
 from api.services.campaigns import create_campaign, generate_campaign_code
-from api.services.recap import dice_baseline
+from api.services.recap import dice_baseline, history_baseline, record_departure
 from core.db.models import (
     Campaign,
     CampaignLore,
@@ -222,7 +222,7 @@ async def list_campaigns(
 
 
 # Static routes before /{campaign_id}.
-@router.post("/enroll", response_model=CampaignDetail)
+@router.post("/enroll", response_model=CampaignDetail, dependencies=[Depends(user_write_lock)])
 async def enroll(
     body: CampaignEnroll,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
@@ -326,9 +326,10 @@ async def delete_campaign(
             if _linked(notes, camp.id)}
     async with character_locks(ids):  # una nota salvata nello stesso momento non va persa né resta collegata
         # game_sessions.campaign_id has no FK: detach closed sessions in code.
-        await db.execute(
-            update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
-        )
+        for gs in (await db.execute(select(GameSession).where(GameSession.campaign_id == camp.id))).scalars():
+            gs.campaign_id = None
+            if gs.recap:  # anche nel riepilogo salvato: l'id riusato porterebbe alla campagna di altri
+                gs.recap = {**gs.recap, "campaign_id": None}
         # SQLite riusa gli id: un collegamento rimasto nelle note punterebbe alla prossima campagna, di altri.
         for pc in (await db.execute(select(Character).where(Character.notes.is_not(None))
                                     .execution_options(populate_existing=True))).scalars():
@@ -410,6 +411,8 @@ async def update_schedule(
     await _get_campaign(db, campaign_id, user_id, gm_only=True)
     row = await _get_schedule(db, campaign_id, sid)
     if body.starts_at is not None and body.starts_at != row.starts_at:
+        if row.session_id is not None:
+            raise _err(409, "schedule_done")
         if body.starts_at <= _naive_now():
             raise _err(422, "starts_at_in_past")
         row.starts_at = body.starts_at
@@ -482,15 +485,17 @@ async def remove_member(
     live = select(GameSession.id).where(
         GameSession.campaign_id == campaign_id, GameSession.status == SessionStatus.ACTIVE
     )
-    await db.execute(delete(SessionParticipant).where(
+    for p in (await db.execute(select(SessionParticipant).where(
         SessionParticipant.character_id == character_id,
         SessionParticipant.session_id.in_(live),
-    ))
+    ))).scalars().all():
+        record_departure(await db.get(GameSession, p.session_id), p)  # resta nel riepilogo, come chi esce con /leave
+        await db.delete(p)
     await db.delete(member)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/{campaign_id}/session/join", response_model=GameSessionRead)
+@router.post("/{campaign_id}/session/join", response_model=GameSessionRead, dependencies=[Depends(user_write_lock)])
 async def join_campaign_session(
     campaign_id: int,
     body: CampaignSessionJoin,
@@ -516,7 +521,7 @@ async def join_campaign_session(
     db.add(SessionParticipant(
         session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
         character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
-        dice_stats_start=dice_baseline(session, char),
+        dice_stats_start=dice_baseline(session, char), history_start_id=await history_baseline(db, session, char),
     ))
     touch(session)
     await db.flush()

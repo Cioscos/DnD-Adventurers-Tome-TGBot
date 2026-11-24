@@ -32,7 +32,9 @@ export function weaponOptions(
   return {
     versatile: p.includes('prop_versatile') && !!item.item_metadata?.versatile_dice,
     thrown: p.includes('prop_thrown'),
-    offhand: dualWielder ? oneHanded(item) && second(oneHanded) : isLight(item) && second(isLight),
+    // 2014: l'altra mano è un'arma da mischia leggera (p.195); nel 2024 basta Leggera (come `api/routers/items.py`)
+    offhand: dualWielder ? oneHanded(item) && second(oneHanded)
+      : isLight(item) && second(isLight) && (char?.rules_edition === '2024' || (item.item_metadata?.weapon_type ?? 'melee') === 'melee'),
     ability: !!char && (isFinesse(item) || !!item.martial_arts),  // Arti Marziali: il server dice se vale per quest'arma
   }
 }

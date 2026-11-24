@@ -98,7 +98,7 @@ class AbilityScoreRead(BaseModel):
 
 
 class AbilityScoreUpdate(BaseModel):
-    value: int  # 1–30
+    value: int = Field(strict=True)  # 1–30; strict: true non è 1
 
 
 # ---------------------------------------------------------------------------
@@ -130,10 +130,10 @@ def _blank_to_none(v: Optional[str]) -> Optional[str]:
 
 class CharacterClassCreate(BaseModel):
     class_name: str
-    level: int = 1
+    level: int = Field(default=1, ge=1, le=20)
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
-    hit_die: Optional[int] = None
+    hit_die: Optional[int] = Field(default=None, ge=1, le=100)
     # Abilità scelte fra quelle della classe (vedi GET /rules/proficiencies); validate nel router.
     skill_choices: Optional[list[str]] = None
 
@@ -141,10 +141,10 @@ class CharacterClassCreate(BaseModel):
 
 
 class CharacterClassUpdate(BaseModel):
-    level: Optional[int] = None
+    level: Optional[int] = Field(default=None, ge=1, le=20)
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
-    hit_die: Optional[int] = None
+    hit_die: Optional[int] = Field(default=None, ge=1, le=100)
     hit_dice_used: Optional[int] = None
     hp_rolls: Optional[list[int]] = None  # one die roll per gained level (not a column)
 
@@ -458,7 +458,7 @@ class DeathSaveAction(str, Enum):
 
 
 RollMode = Literal["normal", "advantage", "disadvantage"]
-D20Dice = Annotated[list[Annotated[int, Field(ge=1, le=20)]], Field(max_length=2)]
+D20Dice = Annotated[list[Annotated[int, Field(ge=1, le=20, strict=True)]], Field(max_length=2)]
 
 
 class DeathSaveUpdate(BaseModel):

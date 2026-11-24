@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getMyRole, formatUptime } from '@/lib/sessionHelpers'
+import { getMyRole } from '@/lib/sessionHelpers'
 import type { ActiveSessionShape } from '@/lib/sessionHelpers'
 
 /**
@@ -44,30 +44,3 @@ describe('getMyRole', () => {
   })
 })
 
-describe('formatUptime', () => {
-  const base = new Date('2026-06-09T12:00:00.000Z')
-
-  it('formats sub-hour uptimes as "Xm"', () => {
-    const start = new Date(base.getTime() - 30 * 60_000)
-    expect(formatUptime(start, base)).toBe('30m')
-  })
-
-  it('formats multi-hour uptimes as "Xh Ym"', () => {
-    const start = new Date(base.getTime() - (90 * 60_000)) // 1h30m
-    expect(formatUptime(start, base)).toBe('1h 30m')
-  })
-
-  it('accepts an ISO string for created_at (BE serializes created_at as ISO)', () => {
-    const startIso = new Date(base.getTime() - 2 * 60 * 60_000).toISOString() // 2h
-    expect(formatUptime(startIso, base)).toBe('2h 0m')
-  })
-
-  it('clamps negative elapsed (future start) to "0m"', () => {
-    const start = new Date(base.getTime() + 5 * 60_000)
-    expect(formatUptime(start, base)).toBe('0m')
-  })
-
-  it('treats exactly-now as "0m"', () => {
-    expect(formatUptime(base, base)).toBe('0m')
-  })
-})

@@ -146,6 +146,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Custom paper-doll silhouette (E4)
     ("characters", "silhouette_path", "VARCHAR(500)", None),
     ("session_participants", "dice_stats_start", "JSON", None),
+    ("session_participants", "history_start_id", "INTEGER", None),
     ("game_sessions", "recap", "JSON", None),
     # Giocatori usciti prima della chiusura: restano nel riepilogo (api/services/recap.py)
     ("game_sessions", "departed", "JSON", None),

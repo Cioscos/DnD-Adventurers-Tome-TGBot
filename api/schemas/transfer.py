@@ -334,6 +334,17 @@ class ExportCompanion(BaseModel):
         return v
 
 
+class ExportConditionEffect(BaseModel):
+    """Durata e TS ripetuto di una condizione attiva. La fonte (creatura, incantesimo) non viaggia con il file."""
+    slug: str = Field(max_length=100)
+    expiry_edge: Optional[Literal["start", "end"]] = None
+    expiry_count: Optional[Annotated[int, _rng(1, 100_000)]] = None
+    save_ability: Optional[str] = Field(None, max_length=20)
+    save_dc: Optional[Annotated[int, _rng(1, 100)]] = None
+    save_edge: Optional[Literal["start", "end"]] = None
+    source_note: Optional[str] = Field(None, max_length=120)
+
+
 class CharacterExport(BaseModel):
     format_version: Literal[1] = 1
     app_version: Optional[str] = None
@@ -350,3 +361,4 @@ class CharacterExport(BaseModel):
     homebrew_rules: Annotated[list[ExportHomebrewRule], _cap(50)] = Field(default_factory=list)
     homebrew_resources: Annotated[list[ExportHomebrewResource], _cap(500)] = Field(default_factory=list)
     companions: Annotated[list[ExportCompanion], _cap(30)] = Field(default_factory=list)
+    condition_effects: Annotated[list[ExportConditionEffect], _cap(50)] = Field(default_factory=list)

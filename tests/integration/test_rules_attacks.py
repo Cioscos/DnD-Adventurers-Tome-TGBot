@@ -170,7 +170,8 @@ async def _two_light(client, cid, first="Pugnale", second="Spada corta", **meta)
 
 async def test_offhand_no_modifier_uses_bonus_action(client):
     cid = await _char(client, strength=16)
-    _, off = await _two_light(client, cid)
+    main, off = await _two_light(client, cid)
+    assert (await _attack(client, cid, main)).status_code == 200  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     r = await _attack(client, cid, off, attack_mode="offhand")
     assert r.status_code == 200, r.text
     body = r.json()
@@ -178,14 +179,15 @@ async def test_offhand_no_modifier_uses_bonus_action(client):
     assert body["to_hit_bonus"] == 3 + 2
     turn = await _turn(client, cid)
     assert turn["bonus_used"] is True
-    assert turn["attacks_made"] == 0  # non consuma un attacco dell'azione
+    assert turn["action_attacks"] == 1  # solo quello dell'azione: l'altra mano non ne consuma
     r = await _attack(client, cid, off, attack_mode="offhand")
     assert (r.status_code, r.json()["detail"]["code"]) == (409, "turn_slot_used")
 
 
 async def test_offhand_keeps_negative_modifier(client):
     cid = await _char(client, strength=8)
-    _, off = await _two_light(client, cid)
+    main, off = await _two_light(client, cid)
+    assert (await _attack(client, cid, main)).status_code == 200  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     assert (await _attack(client, cid, off, attack_mode="offhand")).json()["damage_bonus"] == -1
 
 
@@ -367,15 +369,16 @@ async def test_cleave_rolls_second_attack_without_modifier_once_per_turn(client,
 
 async def test_nick_extra_attack_once_per_turn(client, test_session_factory, rules_catalog):
     cid = await _master_char(client, test_session_factory, rules_catalog, "dagger")
-    _, off = await _two_light(client, cid, first="Spada corta", second="Pugnale")
+    main, off = await _two_light(client, cid, first="Spada corta", second="Pugnale")
     assert "mastery_nick" in await _keys(client, cid, off, attack_mode="offhand")
     assert "mastery_nick" not in await _keys(client, cid, off)  # solo sull'attacco extra
+    assert (await _attack(client, cid, main)).status_code == 200  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     r = await _attack(client, cid, off, attack_mode="offhand", options=["mastery_nick"])
     assert r.status_code == 200, r.text
     assert r.json()["damage_bonus"] == 0
     turn = await _turn(client, cid)
     assert turn["bonus_used"] is False
-    assert turn["attacks_made"] == 0
+    assert turn["action_attacks"] == 1  # solo quello dell'azione
     r = await _attack(client, cid, off, attack_mode="offhand", options=["mastery_nick"])
     assert (r.status_code, r.json()["detail"]["code"]) == (409, "option_unavailable")
     r = await _attack(client, cid, off, attack_mode="offhand")  # senza Nick costa l'azione bonus

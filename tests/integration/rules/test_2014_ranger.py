@@ -351,11 +351,12 @@ async def test_two_weapon_fighting_adds_the_modifier_to_the_offhand_damage_only(
                        equip="main_hand")
     off = await _item(client, cid, "Pugnale", damage_dice="1d4", weapon_type="melee", properties=["finesse", "light"],
                       equip="off_hand")
+    await _attack(client, cid, main)  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     plain = (await _attack(client, cid, off, attack_mode="offhand"))["damage_bonus"]
     assert (await _resolve(client, cid, "fighting_style", "two_weapon")).status_code == 200
     await _new_turn(client, cid)  # l'attacco con la seconda arma costa l'azione bonus
-    assert (await _attack(client, cid, off, attack_mode="offhand"))["damage_bonus"] == plain + 3
     assert (await _attack(client, cid, main))["damage_bonus"] == 3  # il primo attacco ha già il modificatore
+    assert (await _attack(client, cid, off, attack_mode="offhand"))["damage_bonus"] == plain + 3
 
 
 # ---------------------------------------------------------------------------

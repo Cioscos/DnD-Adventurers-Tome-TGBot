@@ -1,9 +1,9 @@
 """Companions (familiars, companions, mounts, summons, wild shape forms)."""
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from core.rules.companions import COMPANION_FEATURES, MAX_HIT_DICE, MAX_MULTIATTACK
 from api.services.dice_notation import DICE_RE  # noqa: F401 — riesportata: companions.py la importa da qui
@@ -11,6 +11,7 @@ from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, R
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
 MAX_COMPANIONS = 30
+CompanionName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
 def validate_statblock(sb: Any) -> dict:
@@ -47,7 +48,7 @@ def validate_statblock(sb: Any) -> dict:
 
 class CompanionCreate(BaseModel):
     kind: CompanionKind
-    name: str = Field(min_length=1, max_length=100)
+    name: CompanionName
     srd_index: Optional[str] = Field(default=None, max_length=80)
     statblock: dict = Field(default_factory=dict)
     max_hp: int = Field(default=0, ge=0, le=100_000)
@@ -76,7 +77,7 @@ class CompanionCreate(BaseModel):
 
 class CompanionUpdate(BaseModel):
     kind: Optional[CompanionKind] = None
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    name: Optional[CompanionName] = None
     srd_index: Optional[str] = Field(default=None, max_length=80)
     statblock: Optional[dict] = None
     max_hp: Optional[int] = Field(default=None, ge=0, le=100_000)

@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import and_, func, or_, select
@@ -55,6 +56,15 @@ def dice_baseline(gs: GameSession, char: Character) -> dict:
     return copy.deepcopy(char.dice_stats or {})
 
 
+async def history_baseline(db: AsyncSession, gs: GameSession, char: Character) -> int:
+    """history_start_id di un PG che si siede: l'ultima voce di cronologia già scritta (il riepilogo conta da lì in poi).
+    Chi rientra tiene quella della prima volta, come per i dadi."""
+    prev = next((d for d in gs.departed or [] if d.get("character_id") == char.id), None)
+    if prev is not None and prev.get("history_start_id") is not None:
+        return prev["history_start_id"]
+    return await db.scalar(select(func.max(CharacterHistory.id))) or 0
+
+
 def record_departure(gs: GameSession, p: SessionParticipant) -> None:
     """Keep a leaving player in the recap: first baseline wins (rejoin reuses it, see dice_baseline)."""
     if p.character_id is None:
@@ -62,7 +72,55 @@ def record_departure(gs: GameSession, p: SessionParticipant) -> None:
     rest = [d for d in gs.departed or [] if d.get("character_id") != p.character_id]
     prev = next((d for d in gs.departed or [] if d.get("character_id") == p.character_id), None)
     start = p.dice_stats_start if prev is None or prev.get("dice_stats_start") is None else prev["dice_stats_start"]
-    gs.departed = rest + [{"user_id": p.user_id, "character_id": p.character_id, "dice_stats_start": start}]
+    since = p.history_start_id if prev is None or prev.get("history_start_id") is None else prev["history_start_id"]
+    gs.departed = rest + [{"user_id": p.user_id, "character_id": p.character_id, "dice_stats_start": start,
+                           "history_start_id": since}]
+
+
+async def record_deletion(db: AsyncSession, char: Character) -> None:
+    """Un PG eliminato a serata aperta resta nel riepilogo: scheda e cronologia spariscono con lui, quindi la sua voce si scrive ora.
+    Senza ``character_id`` in cima: SQLite riusa l'id, un PG nuovo non deve ereditarla."""
+    seats = {p.session_id: p for p in (await db.execute(select(SessionParticipant).join(GameSession).where(
+        SessionParticipant.character_id == char.id, GameSession.status == SessionStatus.ACTIVE))).scalars()}
+    evenings = (await db.execute(select(GameSession).where(
+        GameSession.status == SessionStatus.ACTIVE,
+        or_(GameSession.id.in_(list(seats)), GameSession.departed.is_not(None))))).scalars().all()
+    for gs in evenings:
+        if gs.id in seats:
+            record_departure(gs, seats[gs.id])
+        mine = next((d for d in gs.departed or [] if d.get("character_id") == char.id), None)
+        if mine is None:
+            continue
+        # carica le classi sulla scheda già in sessione: servono a class_summary
+        await db.execute(select(Character).options(selectinload(Character.classes)).where(Character.id == char.id))
+        player = await db.scalar(select(CampaignMember.player_name).where(
+            CampaignMember.character_id == char.id, CampaignMember.campaign_id == gs.campaign_id))
+        rows = (await db.execute(select(CharacterHistory).where(
+            CharacterHistory.character_id == char.id, CharacterHistory.timestamp >= gs.created_at,
+        ).order_by(CharacterHistory.id))).scalars().all()
+        since = mine.get("history_start_id")
+        own = [r for r in rows if since is None or r.id > since]
+        cured = (await db.execute(select(CharacterHistory).where(
+            CharacterHistory.event_type == "hp_change", CharacterHistory.character_id != char.id,
+            CharacterHistory.timestamp >= gs.created_at, CharacterHistory.id > (since or 0),
+        ))).scalars().all()
+        stats = _char_stats(char, mine.get("dice_stats_start"), own, (gs.created_at, _now()), player)
+        stats.update(character_id=-char.id, healing_given=_given(cured).get(char.id, 0))  # id negativo: quello vero può tornare in uso
+        gs.departed = [d for d in gs.departed if d is not mine] + [{
+            "user_id": mine["user_id"], "stats": stats,
+            "healed_by": {str(k): v for k, v in _given(rows).items()},
+        }]
+
+
+def _given(rows: Sequence[CharacterHistory], since: dict[int, int | None] | None = None) -> dict[int, int]:
+    """Cure date ad altri PG: dalle righe di chi le ha ricevute (meta by_id). ``since``: per ogni PG, l'ultima riga prima che si sedesse."""
+    given: dict[int, int] = {}
+    for r in rows:
+        m = r.meta or {}
+        if r.event_type == "hp_change" and m.get("op") == "HEAL" and m.get("by_id") and not m.get("undone") \
+                and r.id > ((since or {}).get(m["by_id"]) or 0):
+            given[m["by_id"]] = given.get(m["by_id"], 0) + int(m.get("amount") or 0)
+    return given
 
 
 def _summary(items: list[dict], coins: dict) -> str:
@@ -168,12 +226,12 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         select(SessionParticipant).where(SessionParticipant.session_id == gs.id)
         .order_by(SessionParticipant.id)
     )).scalars().all()
-    # (character_id, dice_stats_start): players still at the table, then those who left early.
-    pcs = [(p.character_id, p.dice_stats_start) for p in parts if p.character_id is not None]
-    present = {cid for cid, _ in pcs}
-    pcs += [(d["character_id"], d.get("dice_stats_start")) for d in gs.departed or []
+    # (character_id, dice_stats_start, history_start_id): players still at the table, then those who left early.
+    pcs = [(p.character_id, p.dice_stats_start, p.history_start_id) for p in parts if p.character_id is not None]
+    present = {cid for cid, _, _ in pcs}
+    pcs += [(d["character_id"], d.get("dice_stats_start"), d.get("history_start_id")) for d in gs.departed or []
             if d.get("character_id") is not None and d["character_id"] not in present]
-    ids = [cid for cid, _ in pcs]
+    ids = [cid for cid, _, _ in pcs]
     chars = {c.id: c for c in (await db.execute(
         select(Character).options(selectinload(Character.classes)).where(Character.id.in_(ids))
     )).scalars()} if ids else {}
@@ -193,18 +251,20 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         )).scalars():
             rows_by_char.setdefault(r.character_id, []).append(r)
     characters = [
-        _char_stats(chars[cid], start, rows_by_char.get(cid, []), window, player_names.get(cid))
-        for cid, start in pcs if cid in chars
+        # solo ciò che è successo da quando si è seduto (senza segno, serate aperte prima della colonna: tutta la finestra)
+        _char_stats(chars[cid], start, [r for r in rows_by_char.get(cid, []) if since is None or r.id > since],
+                    window, player_names.get(cid))
+        for cid, start, since in pcs if cid in chars
     ]
-    given: dict[int, int] = {}  # cure date ad altri PG: dalle righe di chi le ha ricevute (meta by_id)
-    for rows in rows_by_char.values():
-        for r in rows:
-            m = r.meta or {}
-            if r.event_type == "hp_change" and m.get("op") == "HEAL" and m.get("by_id") and not m.get("undone"):
-                given[m["by_id"]] = given.get(m["by_id"], 0) + int(m.get("amount") or 0)
+    deleted = [d for d in gs.departed or [] if d.get("stats")]  # PG eliminati a serata aperta (record_deletion)
+    given = _given([r for rows in rows_by_char.values() for r in rows], {cid: since for cid, _, since in pcs})
+    for d in deleted:
+        for by, n in d["healed_by"].items():
+            given[int(by)] = given.get(int(by), 0) + n
     for c in characters:
         c["healing_given"] = given.get(c["character_id"], 0)
-    name_by_user = {c.user_id: c.name for c in chars.values()}
+    characters += [d["stats"] for d in deleted]  # con le cure già contate
+    name_by_user = {**{d["user_id"]: d["stats"]["name"] for d in deleted}, **{c.user_id: c.name for c in chars.values()}}
 
     encs = (await db.execute(
         select(Encounter).options(selectinload(Encounter.combatants))

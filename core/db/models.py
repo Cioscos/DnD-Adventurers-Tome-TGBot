@@ -278,10 +278,10 @@ class Character(Base):
     def recalculate_carry_capacity(self) -> None:
         if self.carry_capacity_override:
             return
-        strength_score = next(
-            (s.value for s in self.ability_scores if s.name == "strength"), 10
-        )
-        self.carry_capacity = strength_score * 15
+        from core.game.stats import effective_ability_score  # import locale: stats conosce i modelli
+        base = next((s.value for s in self.ability_scores if s.name == "strength"), 10)
+        # La Forza che conta è quella della scheda, oggetti indossati compresi (Guanti del potere dell'ogre).
+        self.carry_capacity = effective_ability_score("strength", base, [i for i in self.items if i.is_equipped])[0] * 15
 
 
 # ---------------------------------------------------------------------------
@@ -795,6 +795,8 @@ class SessionParticipant(Base):
     joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
     # Copia di Character.dice_stats all'ingresso: il riepilogo fa la differenza alla chiusura.
     dice_stats_start: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Ultima voce di cronologia precedente all'ingresso: il riepilogo della serata conta da lì in poi (NULL: dall'inizio)
+    history_start_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     session: Mapped["GameSession"] = relationship(back_populates="participants")
     character: Mapped[Optional["Character"]] = relationship()
