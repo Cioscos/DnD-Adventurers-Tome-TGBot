@@ -71,7 +71,7 @@ FORCE_STRIKE = RollOptionSpec(
 
 def _flurry_state(ctx: RuleContext, _params: dict) -> StateSpec:
     """Due colpi senz'armi, tre dal 10° (Concentrazione Accresciuta)."""
-    return StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "manual"), data={"charges": 3 if ctx.class_level >= 10 else 2})
+    return StateSpec(FLURRY_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual"), data={"charges": 3 if ctx.class_level >= 10 else 2})
 
 
 def _patient_state(focus: bool):
@@ -91,7 +91,7 @@ def _step_state(focus: bool):
         data: dict[str, Any] = {"mode": "disengage_dash", "jump_doubled": True} if focus else {"mode": "dash"}
         if focus and ctx.class_level >= 10:
             data["others"] = [STEP_FOCUS]  # la creatura portata con sé (D1): il testo lo dice al GM
-        return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "manual"), data=data)
+        return StateSpec("step_of_the_wind", rounds=1, ends_on=("new_turn", "turn_end", "manual"), data=data)
     return state
 
 
@@ -526,7 +526,7 @@ MERCY_ROWS = (
 # ---------------------------------------------------------------------------
 
 def _begin_shadow_strike(ctx: RuleContext, _params: dict) -> None:
-    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "manual")), SHADOW_STRIKE.key,
+    begin_state(ctx.char, StateSpec(SHADOW_STRIKE_STATE, rounds=1, ends_on=("new_turn", "turn_end", "manual")), SHADOW_STRIKE.key,
                 "Colpo dopo il Passo dell'Ombra")  # feature_key senza riga: il nome non si fonde con quello dello stato del Passo
 
 
@@ -552,13 +552,13 @@ SHADOW_ROWS = (
              ("Azione bonus, da luce fioca o oscurità: ti teletrasporti fino a 18 m in uno spazio libero anch'esso in luce fioca; vantaggio al prossimo attacco in mischia.",
               "Bonus action, from dim light or darkness: teleport up to 60 ft to a free space also in dim light; advantage on your next melee attack."),
              "bonus_action", roll_options=(STEP_ADVANTAGE,),
-             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,), state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+             on_use=OnUse(slot="bonus", choices=(_LIGHT_CHOICE,), state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
     _sub_row("shadow", "improved_shadow_step", 11, "Passo dell'Ombra Migliorato", "Improved Shadow Step", 105,
              ("Con 1 punto il Passo dell'Ombra ignora la luce di partenza e arrivo, e subito dopo il teletrasporto fai un colpo senz'armi.",
               "With 1 point Shadow Step ignores the light at start and arrival, and right after the teleport you make an unarmed strike."),
              "bonus_action", roll_options=(SHADOW_STRIKE,),
              on_use=OnUse(slot="bonus", spends=KI, effect=_begin_shadow_strike,
-                          state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "manual")))),
+                          state=StateSpec("shadow_step", rounds=1, ends_on=("new_turn", "turn_end", "manual")))),
     _sub_row("shadow", "cloak_of_shadows", 17, "Manto di Ombre", "Cloak of Shadows", 105,
              ("Azione Magia e 3 punti, da luce fioca o oscurità: per 1 minuto invisibile e in parte incorporeo. Finisce se incapacitato.",
               "Magic action and 3 points, from dim light or darkness: for 1 minute invisible and partly incorporeal. Ends if incapacitated."),

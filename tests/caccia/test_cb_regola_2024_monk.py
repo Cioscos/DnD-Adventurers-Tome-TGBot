@@ -53,7 +53,6 @@ async def test_difesa_paziente_a_punto_da_vantaggio_ai_ts_su_destrezza(client, d
                            "carta:2024/classes/monk.md#Epitome Elementale / Elemental Epitome (Guerriero degli Elementi 17, pag. 106)",
                            "POST /sessions/{session_id}/encounter/next-turn", "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("caso", ["raffica", "passo_dell_ombra", "colpo_del_passo_migliorato", "passo_distruttivo"])
-@pytest.mark.xfail(strict=True, reason="CB-2412: difforme dal manuale, confermato")
 async def test_gli_effetti_del_turno_finiscono_col_turno_del_monaco(client, test_session_factory, monkeypatch, caso):
     # I colpi dell'azione bonus, il vantaggio «prima della fine del turno», il colpo «subito dopo il teletrasporto» e i +6 m
     # «fino a fine turno»: nel turno del goblin non valgono più
