@@ -797,7 +797,6 @@ async def test_durata_9999_ammessa_10000_rifiutata(client):
     assert r.status_code == 422, r.text
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1307 la durata cancella CD e fonte")
 @pytest.mark.caccia(id="CB-1307", fonte="decisione D-017 (tests/caccia/decisioni.md): una durata non cancella CD e fonte di un effetto non del master", zona="flusso:condizioni",
                     voce="interazione", copre=["PATCH /characters/{char_id}/conditions"])
 async def test_durata_su_condizione_attiva_non_cancella_cd_e_fonte(client, test_session_factory):

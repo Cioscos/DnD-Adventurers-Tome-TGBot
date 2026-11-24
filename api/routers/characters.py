@@ -559,9 +559,12 @@ async def update_conditions(
             raise HTTPException(status_code=422, detail="condition_must_be_bool")
     result = await apply_conditions(session, char, changes)
     # apply_conditions already dropped the effects of conditions turned off
-    gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
+    # effetti del master o con CD o fonte (incantesimi, privilegi di altri): la durata del giocatore non li sostituisce (D-017)
+    kept = {e.slug for e in await effects_for_character(session, char_id)
+            if e.applied_by_gm or e.save_dc is not None or e.source_note or e.source_character_id
+            or e.source_combatant_id or e.source_spell_id}
     for slug, rounds in (body.durations or {}).items():
-        if slug != "exhaustion" and rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in gm_slugs:
+        if slug != "exhaustion" and rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in kept:
             await upsert_effect(session, ("character", char_id), slug,
                                 expiry=ExpirySpec("owner", "start", rounds))
     if result["changed"]:
