@@ -97,7 +97,6 @@ async def test_previsione_lanciata_di_nuovo_finisce_sul_primo_bersaglio(client, 
 @pytest.mark.caccia(id="CB-3363", fonte="2014 · Incantesimi · Rigenerazione (4d8 + 15 PF una volta, poi 1 PF a turno) · pag. 270", zona="regola:2014/incantesimi-M-R",
                     voce="interazione", copre=["carta:2014/spells.md#Rigenerazione", "POST /characters/{char_id}/spells/{spell_id}/use",
                                                "POST /characters/{char_id}/spells/{spell_id}/roll_healing"])
-@pytest.mark.xfail(strict=True, reason="CB-3363: difforme dal manuale, confermato")
 async def test_rigenerazione_lanciata_dal_client_cura_una_volta_sola(client, test_session_factory, dadi):
     eroe, mago, sid = await _serata(client, test_session_factory, "Rigenerazione", "regenerate", 7)
     as_user(PLAYER_ID)

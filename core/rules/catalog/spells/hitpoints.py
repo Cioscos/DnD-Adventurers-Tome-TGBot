@@ -77,10 +77,11 @@ _WARDING_BOND = SpellVariant(
              "The GM checks the distance (60 ft). The damage is shared only from damage written on the sheet (not from other paths, like homebrew actions)."))
 
 # --- Rigenerazione e cure nel tempo -----------------------------------------------------------------------------------
+# I 4d8+15 iniziali li tira e applica la «Cura» dell'incantesimo (tabella delle cure, con Discepolo della Vita): qui darli di nuovo li raddoppierebbe
 _REGENERATE = SpellVariant(
-    heal=lambda d: roll(4, 8, 15), turn_heal=lambda d, c: 1, rounds=HOUR,
-    text=txt("4d8+15 PF subito e 1 PF a inizio di ogni tuo turno (automatici). Gli arti recisi ricrescono in 2 minuti: lo applica il GM.",
-             "4d8+15 HP now and 1 HP at the start of each of your turns (automatic). Severed limbs regrow in 2 minutes: the GM applies it."))
+    turn_heal=lambda d, c: 1, rounds=HOUR,
+    text=txt("4d8+15 PF subito (li tira «Cura» dell'incantesimo) e 1 PF a inizio di ogni tuo turno (automatico). Gli arti recisi ricrescono in 2 minuti: lo applica il GM.",
+             "4d8+15 HP now (the spell's healing roll rolls them) and 1 HP at the start of each of your turns (automatic). Severed limbs regrow in 2 minutes: the GM applies it."))
 _VITALITY_TEXT = txt("2d6 PF a una creatura nell'aura: usa «Cura» sulla scheda del beneficiario (2014 con un'azione bonus a ogni tuo turno; "
                      "2024 alla creazione e a inizio di ogni tuo turno).",
                      "2d6 HP to a creature in the aura: use Heal on the recipient's sheet (2014 with a bonus action on each of your turns; "
