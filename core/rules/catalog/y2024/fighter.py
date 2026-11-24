@@ -131,7 +131,7 @@ TACTICAL_MIND = RollOptionSpec(
                 "Tactical Mind: spend a Second Wind use and add 1d10 (the use comes back if the check still fails)"))
 
 INDOMITABLE_REROLL = RollOptionSpec(
-    key=IND, phase="after_roll", after="reroll", rolls=("save",), cost=Cost(feature_key=IND), bonus=lambda c, _i: c.class_level,
+    key=IND, phase="after_roll", after="reroll", rolls=("save", "death_save"), cost=Cost(feature_key=IND), bonus=lambda c, _i: c.class_level,
     label=_both("Indomito: ripeti il tiro salvezza fallito con bonus pari al livello da guerriero (vale il nuovo risultato)",
                 "Indomitable: reroll the failed saving throw with a bonus equal to your fighter level (the new result stands)"))
 

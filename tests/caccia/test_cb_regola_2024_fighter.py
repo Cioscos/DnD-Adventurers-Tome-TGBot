@@ -95,7 +95,6 @@ def _dado_massimo(monkeypatch) -> None:
 
 @pytest.mark.caccia(id="CB-2361", fonte="2024 · Guerriero · Indomito · pag. 92; Tiri Salvezza contro la Morte · pag. 28", zona="regola:2024/fighter", voce="regola",
                     copre=["carta:2024/classes/fighter.md#Indomito / Indomitable (Guerriero 9, pag. 92)", "POST /characters/{char_id}/death_saves/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-2361: difforme dal manuale, confermato")
 async def test_indomito_2024_ripete_un_tiro_salvezza_contro_la_morte_fallito(client, test_session_factory):
     cid = await _guerriero(client, 9)
     await _pf(test_session_factory, cid, 0)
