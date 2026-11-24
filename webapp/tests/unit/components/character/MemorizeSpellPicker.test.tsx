@@ -11,6 +11,8 @@ vi.mock('react-i18next', async (orig) => {
 
 const wizard = (feature = true) => ({
   id: 3,
+  // 2024, Mago pag. 167 e Multiclasse pag. 44: contano solo gli incantesimi del Mago, fino agli slot della sua tabella (3° livello: slot di 2°)
+  classes: [{ id: 1, class_name: 'wizard', level: 3 }],
   abilities: feature ? [{ id: 1, feature_key: 'wizard.memorize_spell' }] : [],
   spell_slots: [{ level: 1, total: 4, used: 0, is_pact: false }, { level: 2, total: 3, used: 0, is_pact: false }],
   spells: [

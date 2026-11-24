@@ -50,7 +50,7 @@ describe('caccia: regola 2024 mago', () => {
   })
 
   // caccia: {"id": "CB-2717", "fonte": "2024 · Mago · Memorizzare Incantesimo · pag. 167", "zona": "regola:2024/wizard", "voce": "interazione", "copre": ["carta:2024/classes/wizard.md#Memorizzare Incantesimo / Memorize Spell (Mago 5, pag. 167)", "carta:2024/classes/wizard.md#Multiclasse: Mago / Multiclassing: Wizard (Mago, pag. 44)", "route:/char/:id"]}
-  it.fails('Memorizzare Incantesimo non propone di togliere un incantesimo preparato da chierico', () => {
+  it('Memorizzare Incantesimo non propone di togliere un incantesimo preparato da chierico', () => {
     renderWithProviders(createElement(MemorizeSpellPicker, { char: magoChierico, onChange: vi.fn() }))
     const uscita = screen.getByTestId('memorize-out')
     const nomi = Array.from(uscita.querySelectorAll('option')).map((o) => o.textContent)
