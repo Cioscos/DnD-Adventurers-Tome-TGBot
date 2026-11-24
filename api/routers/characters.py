@@ -544,11 +544,18 @@ async def update_conditions(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
-    # La pagina rimanda tutta la mappa a ogni tocco: ciò che non cambia non è stato toccato, e non deve per esempio far
-    # cadere la sospensione di Calmare Emozioni. Una richiesta che non cambia nulla resta com'è: è una conferma esplicita.
-    current = char.conditions or {}
-    touched = {k: v for k, v in body.conditions.items() if v != current.get(k, 0 if k == "exhaustion" else False)}
-    result = await apply_conditions(session, char, touched or body.conditions)
+    # La pagina rimanda tutta la mappa a ogni tocco: lì conta solo ciò che cambia, e non deve per esempio far cadere la
+    # sospensione di Calmare Emozioni. Una chiave sola è una richiesta esplicita e vale com'è.
+    current, changes = char.conditions or {}, body.conditions
+    if len(changes) > 1:
+        changes = {k: v for k, v in changes.items() if v != current.get(k, 0 if k == "exhaustion" else False)}
+    for slug, val in changes.items():  # si valida ciò che cambia: un valore vecchio rimandato dalla pagina non la blocca
+        if slug == "exhaustion":
+            if isinstance(val, bool) or not isinstance(val, int) or not 0 <= val <= 6:
+                raise HTTPException(status_code=422, detail="exhaustion_out_of_range")
+        elif not isinstance(val, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
+            raise HTTPException(status_code=422, detail="condition_must_be_bool")
+    result = await apply_conditions(session, char, changes)
     # apply_conditions already dropped the effects of conditions turned off
     gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
     for slug, rounds in (body.durations or {}).items():

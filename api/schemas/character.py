@@ -529,20 +529,7 @@ class SavingThrowsUpdate(BaseModel):
 
 class ConditionsUpdate(BaseModel):
     """Map of condition_slug → bool or int (exhaustion level)."""
-    conditions: dict[str, Any]
-
-    @field_validator("conditions")
-    @classmethod
-    def _valid_values(cls, v: dict[str, Any]) -> dict[str, Any]:
-        """Spossatezza: livello intero 0-6; le altre accese o spente. Le ``custom:`` (regole homebrew) portano un oggetto."""
-        for slug, val in v.items():
-            if slug == "exhaustion":
-                if isinstance(val, bool) or not isinstance(val, int) or not 0 <= val <= 6:
-                    raise ValueError("exhaustion_out_of_range")
-            elif not isinstance(val, bool) and not (slug.startswith("custom:") and isinstance(val, dict)):
-                raise ValueError("condition_must_be_bool")
-        return v
-
+    conditions: dict[str, Any]  # i valori si validano nella rotta, solo su ciò che cambia
     # slug -> rounds left; None removes the duration
     durations: Optional[dict[str, Optional[int]]] = None
 
