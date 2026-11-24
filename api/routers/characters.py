@@ -699,6 +699,8 @@ async def update_xp(
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
+        if body.set is None:  # guadagnare PE non toglie livelli (2024 pag. 366-367); sul 'set' decide Q-2024-generali-b-1
+            new_level = max(new_level, old_level)
         if new_level != old_level or body.hp_rolls:
             cls.level = new_level
             lost_rolls = stored_rolls(char).get(cls.id, {})  # read before record_rolls drops them

@@ -36,7 +36,6 @@ async def _condizioni(client, cid, **condizioni) -> dict:
 @pytest.mark.caccia(id="CB-2911", fonte="2024 · Glossario · Punti Esperienza · pag. 366-367", zona="regola:2024/generali", voce="regola",
                     copre=["carta:2024/general.md#Experience Points (Punti Esperienza) (pag. 366-367)",
                            "PATCH /characters/{char_id}", "PATCH /characters/{char_id}/classes/distribute", "PATCH /characters/{char_id}/xp"])
-@pytest.mark.xfail(strict=True, reason="CB-2911: difforme dal manuale, confermato")
 async def test_assegnare_punti_esperienza_non_toglie_livelli_gia_presi(client):
     r = await client.post("/characters", json={"name": "Prova", "rules_edition": "2024",
                                                "initial_class": {"class_name": "fighter", "level": 1}})
