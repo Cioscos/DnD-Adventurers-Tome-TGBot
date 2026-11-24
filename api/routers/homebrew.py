@@ -304,6 +304,7 @@ async def install_template(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     template = get_template(template_id)
     if template is None:
         raise HTTPException(404, "Template not found")
@@ -323,6 +324,7 @@ async def install_template(
     await session.flush()
     await _materialize_property_defaults(session, char, rule)
     await _materialize_resources(session, char, rule)
+    await _cap_if_lowered(session, char, hp_before)
     return rule
 
 
@@ -378,6 +380,7 @@ async def create_rule(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     now = _now()
     rule = HomebrewRule(
         character_id=char.id,
@@ -397,6 +400,7 @@ async def create_rule(
     # redundant outer guard that duplicated the internal check).
     await _materialize_property_defaults(session, char, rule)
     await _materialize_resources(session, char, rule)
+    await _cap_if_lowered(session, char, hp_before)
     return rule
 
 
