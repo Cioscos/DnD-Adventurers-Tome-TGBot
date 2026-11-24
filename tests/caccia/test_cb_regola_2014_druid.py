@@ -103,7 +103,6 @@ async def test_la_forma_selvatica_della_luna_e_una_azione_bonus_sulla_scheda(cli
 @pytest.mark.caccia(id="CB-1716", fonte="2014 · Druido · Circolo della Terra · Trucchetto Bonus · pag. 68", zona="regola:2014/druid",
                     voce="interazione", copre=["carta:2014/classes/druid.md#Trucchetto Bonus / Bonus Cantrip (Circolo della Terra 2, pag. 68)",
                                                "PATCH /characters/{char_id}/classes/{class_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1716: difforme dal manuale, confermato")
 async def test_passando_alla_luna_il_trucchetto_bonus_della_terra_non_resta_fuori_dal_limite(client):
     cid = await _druid(client, 2, "land")
     scelta = next(c for c in (await _full(client, cid))["pending_choices"] if c.get("group") == "bonus_cantrip")
