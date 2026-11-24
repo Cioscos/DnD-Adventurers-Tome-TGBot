@@ -53,7 +53,6 @@ async def _pila(client, cid, iid):
 
 # --- Rossi -------------------------------------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason="CB-037 attacco dell'altra mano accettato senza azione Attacco")
 @pytest.mark.caccia(id="CB-037", fonte="2014 · Combattere con Due Armi · pag. 195: serve l'azione di Attacco", zona="flusso:attacco-danno",
                     voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_attacco_dell_altra_mano_solo_dopo_l_azione_attacco(client, dadi):

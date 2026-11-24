@@ -806,6 +806,7 @@
       "limit_cancel": "Cancel",
       "incapacitated": "You are incapacitated: you can't attack.",
       "bonus_used": "Bonus action already used this turn.",
+      "offhand_needs_attack": "Attack with the Attack action first: the off hand comes after.",
       "ammo_missing": "Ammunition empty or not equipped: track it yourself",
       "grip_one": "One hand",
       "grip_two": "Two hands",

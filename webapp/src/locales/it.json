@@ -806,6 +806,7 @@
       "limit_cancel": "Annulla",
       "incapacitated": "Sei incapacitato: non puoi attaccare.",
       "bonus_used": "Azione bonus già usata in questo turno.",
+      "offhand_needs_attack": "Prima attacca con l'azione Attacco: l'altra mano viene dopo.",
       "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
       "grip_one": "Una mano",
       "grip_two": "Due mani",

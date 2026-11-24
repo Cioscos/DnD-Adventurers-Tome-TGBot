@@ -821,6 +821,9 @@ async def attack_with_weapon(
             raise HTTPException(status_code=422, detail="offhand_needs_second_light_weapon")
     else:
         _check_attack_limit(char, body, item)
+    # L'attacco con l'altra mano segue un attacco dell'azione Attacco (2014 p.195, 2024 p.213): da solo non esiste.
+    if offhand and get_turn(char)["action_attacks"] < 1:
+        raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
             i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id

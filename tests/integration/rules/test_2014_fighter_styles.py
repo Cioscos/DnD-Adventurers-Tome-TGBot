@@ -276,17 +276,19 @@ async def _pair(client, cid) -> tuple[int, int]:
 async def test_two_weapon_fighting_adds_the_modifier_to_the_second_attack(client):
     cid = await _fighter(client, 3, strength=16)
     main, off = await _pair(client, cid)
+    await _attack(client, cid, main)  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     plain = (await _attack(client, cid, off, attack_mode="offhand")).json()["damage_bonus"]
     await _choose(client, cid, "two_weapon")
     await client.post(f"/characters/{cid}/turn/new")  # l'attacco con l'altra mano costa l'azione bonus
-    styled = (await _attack(client, cid, off, attack_mode="offhand")).json()["damage_bonus"]
     first = (await _attack(client, cid, main)).json()["damage_bonus"]
+    styled = (await _attack(client, cid, off, attack_mode="offhand")).json()["damage_bonus"]
     assert plain == 0 and styled == first == 3
 
 
 async def test_two_weapon_fighting_keeps_a_negative_modifier(client):
     cid = await _styled(client, "two_weapon", strength=8)
     main, off = await _pair(client, cid)
+    await _attack(client, cid, main)  # 2014 p.195 / 2024 p.213: l'altra mano segue un attacco dell'azione Attacco
     assert (await _attack(client, cid, off, attack_mode="offhand")).json()["damage_bonus"] == -1
 
 

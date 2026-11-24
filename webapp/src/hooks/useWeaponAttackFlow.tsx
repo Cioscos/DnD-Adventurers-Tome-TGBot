@@ -52,6 +52,7 @@ export function useAttackRoll() {
     if (code === 'incapacitated') toast.error(t('character.attack.incapacitated'))
     else if (code === 'attack_limit') toast.error(t('character.attack.limit_title'))
     else if (code === 'turn_slot_used') toast.error(t('character.attack.bonus_used'))
+    else if (code === 'offhand_needs_attack') toast.error(t('character.attack.offhand_needs_attack'))
     else return false
     return true
   }
