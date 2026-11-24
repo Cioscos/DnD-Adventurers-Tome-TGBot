@@ -861,7 +861,6 @@ async def test_il_master_che_stordisce_un_pg_gli_fa_cadere_la_concentrazione(cli
     assert await _stati(client, eroe, PLAYER_ID) == []
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1190 la morte per spossatezza 6 non chiude la concentrazione")
 @pytest.mark.caccia(id="CB-1190", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="regola",
                     copre=["PATCH /characters/{char_id}/conditions"])
 @pytest.mark.parametrize("edizione", ["2014", "2024"])

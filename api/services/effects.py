@@ -189,7 +189,8 @@ async def apply_conditions(session: AsyncSession, char: Character,
     from api.services.durations import end_concentration, is_concentrating  # import locale: durations importa effects
     on_conditions(char, changes)
     # Solo le appena attivate: la webapp rimanda tutta la mappa a ogni modifica.
-    if is_concentrating(char) and any(changes.get(c) and not old_conditions.get(c) for c in INCAPACITATING):
+    dies = "exhaustion" in changes and exhaustion_level(char) >= 6 and not char.is_dead
+    if is_concentrating(char) and (dies or any(changes.get(c) and not old_conditions.get(c) for c in INCAPACITATING)):
         end_concentration(char)
         await release_concentration_effects(session, char)
 
@@ -220,7 +221,7 @@ async def apply_conditions(session: AsyncSession, char: Character,
     await clear_effects_for(session, ("character", char.id),
                             [c for c, v in changes.items() if not v])
     if "exhaustion" in changes:
-        if exhaustion_level(char) >= 6 and not char.is_dead:
+        if dies:
             char.is_dead = True
             await drop_primal_beast(session, char)
             add_history(session, char.id, "death_save", "Morto — spossatezza al 6° livello")
