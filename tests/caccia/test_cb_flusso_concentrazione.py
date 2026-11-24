@@ -482,3 +482,12 @@ async def test_il_ritiro_riuscito_rimette_il_livello_del_lancio(client, test_ses
         tiro = {"die": 15, "bonus": 0, "total": 15, "mode": "normal", "dice": [15], "notes": [], "auto_fail": False}
         await retouch_concentration(s, char, {"dc": 10, "lost": True, "snapshot": snapshot}, tiro)
         assert char.settings.get("concentration_level") == 3
+
+
+@pytest.mark.caccia(id="CB-770", fonte="invariante: le impostazioni scritte dal server non si cambiano né si perdono salvando le preferenze", zona="flusso:concentrazione",
+                    voce="persistenza", copre=["PATCH /characters/{char_id}"])
+async def test_salvare_le_impostazioni_non_tocca_il_livello_del_lancio(client):
+    cid = await _concentrato_al_terzo(client)
+    for settings in ({"quick_actions": []}, {"concentration_level": 9}):  # lettura vecchia, valore inventato
+        assert (await client.patch(f"/characters/{cid}", json={"settings": settings})).status_code == 200
+        assert (await _stato(client, cid))["settings"]["concentration_level"] == 3

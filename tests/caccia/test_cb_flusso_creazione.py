@@ -322,3 +322,17 @@ async def test_abilita_di_classe_gia_data_dal_background(client):
     r = await client.post("/characters", json={**base, "initial_class": {"class_name": "fighter", "skill_choices": ["athletics", "persuasion"]}})
     assert r.status_code == 422, r.status_code
     assert len(await _lista(client)) == 1
+
+
+@pytest.mark.caccia(id="CB-771", fonte="2014 · Background · competenza da due fonti: se ne sceglie un'altra; decisione D-012", zona="flusso:creazione", voce="regola",
+                    copre=["POST /characters"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_abilita_di_classe_gia_fra_quelle_del_background_scritto(client, edizione):
+    def corpo(scelte):
+        return {"name": "Doppia", "rules_edition": edizione, "skills": {"insight": True, "religion": True, "history": False},
+                "initial_class": {"class_name": "cleric", "level": 1, "hit_die": 8, "skill_choices": scelte}}
+    r = await client.post("/characters", json=corpo(["insight", "history"]))
+    assert (r.status_code, r.json()["detail"]) == (422, "class_skill_taken")
+    r = await client.post("/characters", json=corpo(["medicine", "history"]))
+    assert r.status_code == 201
+    assert sorted(k for k, v in r.json()["skills"].items() if v) == ["history", "insight", "medicine", "religion"]

@@ -5,8 +5,9 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterSelect from '@/pages/CharacterSelect'
 import { background24Payload, creationExtras, increasesValid, type Background2024Choice } from '@/lib/species'
 
+const { create } = vi.hoisted(() => ({ create: vi.fn() }))
 vi.mock('@/api/client', () => ({
-  api: { characters: { list: vi.fn().mockResolvedValue([]), create: vi.fn() }, sessions: { me: vi.fn().mockResolvedValue(null) } },
+  api: { characters: { list: vi.fn().mockResolvedValue([]), create }, sessions: { me: vi.fn().mockResolvedValue(null) } },
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('react-router-dom', async (orig) => ({ ...((await orig()) as Record<string, unknown>), useNavigate: () => vi.fn() }))
@@ -19,6 +20,8 @@ vi.mock('@/hooks/useClassProficiencies', () => ({
     isLoading: false, data: cls ? { skills_count: 2, skills_from: ['history', 'insight', 'medicine', 'religion'] } : undefined,
   }),
 }))
+vi.mock('@/pages/creation/AbilityScoresStep', async (orig) => ({ ...((await orig()) as Record<string, unknown>), default: () => null }))
+vi.mock('@/pages/creation/EquipmentStep', async (orig) => ({ ...((await orig()) as Record<string, unknown>), default: () => null }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children as never) : null) }
@@ -80,5 +83,36 @@ describe('caccia: creazione', () => {
     expect(avanti()).toBeDisabled() // la scelta caduta va rifatta
     await clic('character.skills.medicine')
     expect(avanti()).toBeEnabled()
+  })
+
+  // caccia: {"id": "CB-772", "fonte": "2014 · Background · competenza da due fonti: se ne sceglie un'altra; decisione D-012", "zona": "flusso:creazione", "voce": "interazione", "copre": ["route:/"]}
+  it('2014: il background viene prima della classe, le sue abilità non si scelgono e «Salta» lo conserva', async () => {
+    create.mockResolvedValue({ id: 9 })
+    const user = userEvent.setup()
+    const clic = (name: string | RegExp) => user.click(screen.getByRole('button', { name }))
+    const avanti = () => screen.getByRole('button', { name: 'common.next →' })
+    renderWithProviders(<CharacterSelect />)
+    await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
+    await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
+    await user.click(avanti())
+    await user.click(avanti())
+    await clic(/dnd.classes.cleric/)
+    await clic('character.skills.insight')
+    await clic('character.skills.history')
+    await clic('common.back') // il background scelto dopo fa cadere l'abilità doppia
+    await clic(/character.create.background_pick/)
+    await user.click(await screen.findByText('Accolito'))
+    await user.click(avanti())
+    expect(screen.getByRole('button', { name: 'character.skills.insight' })).toBeDisabled()
+    expect(avanti()).toBeDisabled()
+    await clic('character.skills.medicine')
+    await user.click(avanti())
+    await user.click(avanti())
+    await clic('character.create.scores_skip')
+    await clic('character.create.equipment_skip')
+    await clic('character.create.identity_skip')
+    expect(create.mock.calls[0][1].skill_choices).toEqual(['history', 'medicine'])
+    expect(create.mock.calls[0][2]).toEqual({ background: 'Accolito' })
+    expect(create.mock.calls[0][3].skills).toEqual({ insight: true, religion: true })
   })
 })

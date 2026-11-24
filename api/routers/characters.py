@@ -106,7 +106,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 
 # settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
 SERVER_OWNED_SETTINGS = (TOOL_SEED_FLAG, "hp_rolls", "condition_durations", "resolved_choice_levels",
-                         "concentration_rounds_left", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
+                         "concentration_rounds_left", "concentration_level", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
                          RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
@@ -214,12 +214,12 @@ def _check_catalog_choices(char: Character, body: CharacterCreate, scores: dict[
         raise bad("species_options_invalid")
     # L'abilità della specie (Elfo, Umano...) già data da background, wizard o classe andrebbe persa in silenzio.
     skill = body.species_2024.options.get("skill") if body.species_2024 else None
-    taken = ({k for k, v in (body.skills or {}).items() if v} | set(bg.skills if bg else ())
-             | set((body.initial_class.skill_choices or []) if body.initial_class else ()))
-    if skill and skill in taken:
+    origin = {k for k, v in (body.skills or {}).items() if v} | set(bg.skills if bg else ())
+    class_skills = set((body.initial_class.skill_choices or []) if body.initial_class else ())
+    if skill and skill in origin | class_skills:
         raise bad("species_skill_taken")
-    # D-006: lo stesso per un'abilità di classe già data dal background.
-    if bg and body.initial_class and set(bg.skills) & set(body.initial_class.skill_choices or ()):
+    # D-006 e D-012: lo stesso per un'abilità di classe già data dal background, in entrambe le edizioni.
+    if origin & class_skills:
         raise bad("class_skill_taken")
     return bg
 

@@ -13,6 +13,7 @@ test('il doppio tocco su Crea crea un solo personaggio', async ({ comeUtente, ap
   await page.getByRole('button', { name: 'Nuovo personaggio' }).click()
   await page.getByPlaceholder('Il nome del tuo eroe').fill(nome)
   await page.getByRole('button', { name: 'Avanti →' }).click()
+  await page.getByRole('button', { name: 'Avanti →' }).click() // background facoltativo
   await page.getByText('Senza classe').click()
   await page.getByRole('button', { name: 'Avanti →' }).click() // classe -> specie
   await page.getByRole('button', { name: 'Avanti →' }).click() // specie -> punteggi

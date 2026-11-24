@@ -266,7 +266,7 @@ export default function CharacterSelect() {
     if (submitting.current) return
     submitting.current = true
     const extras = {
-      ...creationExtras({ scores, skipped: scoresSkipped, species: is2024 ? null : speciesPayload, skills: is2024 && bg24 ? [] : backgroundSkills }),
+      ...creationExtras({ scores, skipped: scoresSkipped, species: is2024 ? null : speciesPayload, skills: is2024 ? [] : backgroundSkills }),
       rules_edition: edition,
       ...(wealth && hasEquipmentStep ? { starting_wealth: true } : equipPicks && hasEquipmentStep ? { starting_equipment: equipPicks } : {}),
       ...(is2024 && originFeat && !bg24 ? { origin_feat: originFeat } : {}),
@@ -286,10 +286,10 @@ export default function CharacterSelect() {
     !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
 
   const hasEquipmentStep = !!selectedClass && !isCustomSelected
-  // 2024: background e specie prima della classe, così le abilità che danno non si possono scegliere due volte.
+  // Il background (nel 2024 anche la specie) viene prima della classe: le abilità che dà non si possono scegliere due volte.
   const steps: Step[] = [
     'name',
-    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['class', 'species'] as Step[])),
+    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['background', 'class', 'species'] as Step[])),
     'abilities',
     ...(hasEquipmentStep ? (['equipment'] as Step[]) : []),
     'identity',
@@ -297,7 +297,7 @@ export default function CharacterSelect() {
   const goNext = () => setStep(steps[steps.indexOf(step) + 1])
   const goBack = () => setStep(steps[steps.indexOf(step) - 1])
   const takenByOrigin = (bg: Background2024Choice | null, sp: Species24State) =>
-    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : []
+    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : backgroundSkills
   // Tornando indietro a cambiare origine cadono le scelte che ora sarebbero doppie: il loro passo le richiede.
   const dropTakenClassSkills = (taken: string[]) =>
     setSelectedClass((c) => (c?.skills ? { ...c, skills: c.skills.filter((s) => !taken.includes(s)) } : c))
@@ -566,6 +566,9 @@ export default function CharacterSelect() {
                       onClick={() => {
                         if (ed === edition) return
                         setEdition(ed)
+                        // il background 2014 e le sue abilità non passano all'altra edizione
+                        setBackground('')
+                        setBackgroundSkills([])
                         // le abilità di classe offerte cambiano con l'edizione
                         if (selectedClass && !isCustomSelected) setSelectedClass({ ...selectedClass, skills: [] })
                       }}
@@ -762,7 +765,7 @@ export default function CharacterSelect() {
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
               <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace}
                 edition={edition} species24={species24} onSpecies24={changeSpecies24}
-                takenSkills={bg24 ? bg24.entry.skills : backgroundSkills} />
+                takenSkills={bg24?.entry.skills} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
@@ -777,14 +780,34 @@ export default function CharacterSelect() {
 
           {step === 'background' && (
             <m.div key="step-background" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <BackgroundStep2024 value={bg24} onChange={changeBackground24} />
+              {is2024 ? (
+                <BackgroundStep2024 value={bg24} onChange={changeBackground24} />
+              ) : (
+                <div className="space-y-3">
+                  <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPickBackground(true)}>
+                    {t('character.create.background_pick')}
+                  </Button>
+                  <Input
+                    label={t('character.identity.background')}
+                    value={background}
+                    onChange={(v) => { setBackground(v); setBackgroundSkills([]) }}
+                    placeholder={t('character.identity.placeholder_background')}
+                  />
+                  {backgroundSkills.length > 0 && (
+                    <p className="text-sm font-body text-dnd-text">
+                      <span className="text-dnd-text-muted">{t('character.create.bg_skills')}: </span>
+                      {backgroundSkills.map((s) => t(`character.skills.${s}`)).join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
                 onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={goNext}
-                primaryDisabled={!background24Valid(bg24)}
+                primaryDisabled={is2024 && !background24Valid(bg24)}
                 primaryHaptic="medium"
               />
             </m.div>
@@ -861,7 +884,7 @@ export default function CharacterSelect() {
             >
               <div className="flex justify-end mb-1">
                 <Pressable
-                  onClick={() => handleCreate(null)}
+                  onClick={() => handleCreate(!is2024 && background.trim() ? { background: background.trim() } : null)}
                   pending={createMutation.isPending}
                   className="min-h-[44px] text-xs text-dnd-gold-dim hover:text-dnd-gold-bright font-body underline underline-offset-2 disabled:opacity-40"
                 >
@@ -891,19 +914,14 @@ export default function CharacterSelect() {
                   onChange={setAlignment}
                   placeholder={t('character.identity.placeholder_alignment')}
                 />
-                {/* il background 2024 scelto nel suo passo vince: niente doppione 2014 qui */}
-                {!(is2024 && bg24) && (
-                  <>
-                    <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPickBackground(true)}>
-                      {t('character.create.background_pick')}
-                    </Button>
-                    <Input
-                      label={t('character.identity.background')}
-                      value={background}
-                      onChange={(v) => { setBackground(v); setBackgroundSkills([]) }}
-                      placeholder={t('character.identity.placeholder_background')}
-                    />
-                  </>
+                {/* nel 2014 il background ha il suo passo; nel 2024 qui resta il testo libero, se non è stato scelto dal catalogo */}
+                {is2024 && !bg24 && (
+                  <Input
+                    label={t('character.identity.background')}
+                    value={background}
+                    onChange={setBackground}
+                    placeholder={t('character.identity.placeholder_background')}
+                  />
                 )}
                 <ChipInput
                   label={t('character.identity.languages')}
@@ -943,7 +961,9 @@ export default function CharacterSelect() {
           onClose={() => setPickBackground(false)}
           onPick={(e) => {
             setBackground(localized(e.name, lang).text)
-            setBackgroundSkills(mapBackgroundSkills(e.skill_proficiencies as string[] | undefined))
+            const skills = mapBackgroundSkills(e.skill_proficiencies as string[] | undefined)
+            setBackgroundSkills(skills)
+            dropTakenClassSkills(skills)
             setLanguages((prev) => [...new Set([...prev, ...backgroundLanguages(e.languages as string[] | undefined, lang)])])
             setPickBackground(false)
           }}

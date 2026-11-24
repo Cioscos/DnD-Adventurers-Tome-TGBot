@@ -15,3 +15,4 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-009 | Un'arma già salvata con dadi di danno non validi si può modificare senza correggerli? | No: il rifiuto (422) resta, il campo va corretto | 2026-11-24 |
 | D-010 | Le forme 2024 la cui CA era stata sovrascritta (CB-337) vanno ripristinate? | No: si correggono a mano dalla scheda della forma | 2026-11-24 |
 | D-011 | I campi numerici delle richieste devono rifiutare `true`? | No, oltre a quelli già stretti (CB-257): la UI non lo manda e l'effetto resta sul proprio personaggio | 2026-11-24 |
+| D-012 | Creazione: un background con abilità scelto dopo la classe faceva perdere in silenzio le competenze doppie | Anche nel 2014 il background viene prima della classe; nel 2024 l'identità ha solo il testo libero; il server rifiuta i doppioni in entrambe le edizioni | 2026-11-24 |
