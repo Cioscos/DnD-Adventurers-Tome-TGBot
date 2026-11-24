@@ -111,7 +111,6 @@ async def test_guida_presa_dal_catalogo_2024_ha_la_componente_verbale_e_fa_finir
                     copre=["carta:2024/spells.md#Glifo di interdizione", "POST /characters/{char_id}/spells",
                            "POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(3, "5d8"), (5, "7d8")])
-@pytest.mark.xfail(strict=True, reason="CB-3764: difforme dal manuale, confermato")
 async def test_le_rune_esplosive_del_glifo_2024_tirano_5d8_del_tipo_scelto_piu_1d8_per_slot(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 9)
     sid = await _impara(client, cid, "glyph-of-warding")
