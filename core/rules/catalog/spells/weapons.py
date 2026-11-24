@@ -72,7 +72,7 @@ _MAGIC_WEAPON_TEXT = txt("L'arma scelta è magica: +1 al tiro per colpire e ai d
 _MAGIC_WEAPON_2014 = SpellVariant(modifiers=_magic_weapon(lambda s: 3 if s >= 6 else 2 if s >= 4 else 1), weapon_choice=True,
                                   concentration=True, rounds=HOUR, text=_MAGIC_WEAPON_TEXT)
 _MAGIC_WEAPON_2024 = SpellVariant(  # niente concentrazione; +2 già dal 3°; termina se rilanci (un nuovo lancio toglie lo stato)
-    modifiers=_magic_weapon(lambda s: 3 if s >= 6 else 2 if s >= 3 else 1), weapon_choice=True, rounds=HOUR,
+    modifiers=_magic_weapon(lambda s: 3 if s >= 6 else 2 if s >= 3 else 1), weapon_choice=True, rounds=HOUR, ends_on_recast=True,
     text=txt("L'arma scelta è magica: +1 al tiro per colpire e ai danni (+2 con slot 3°-5°, +3 dal 6°) solo con quella.",
              "The chosen weapon is magical: +1 to attack and damage rolls (+2 with a 3rd-5th level slot, +3 from 6th) with it only."))
 

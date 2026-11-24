@@ -148,7 +148,6 @@ async def test_contattare_altri_piani_2024_non_mostra_la_cd_di_chi_lancia_al_pos
 
 @pytest.mark.caccia(id="CB-3667", fonte="2024 · Incantesimi · Arma Magica · pag. 295", zona="regola:2024/incantesimi-A-C", voce="interazione",
                     copre=["carta:2024/spells.md#Arma Magica", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3667: difforme dal manuale, confermato")
 async def test_rilanciare_arma_magica_2024_toglie_l_effetto_dall_arma_di_prima(client, test_session_factory):
     _sid, eroe = await seed_session(test_session_factory)
     as_user(PLAYER_ID)

@@ -80,7 +80,6 @@ async def test_raffica_di_spine_non_supera_sei_d10_con_slot_alti(client, livello
 
 @pytest.mark.caccia(id="CB-3362", fonte="2014 · Incantesimi · Previsione (termina se lanciato di nuovo) · pag. 264", zona="regola:2014/incantesimi-M-R",
                     voce="regola", copre=["carta:2014/spells.md#Previsione", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3362: difforme dal manuale, confermato")
 async def test_previsione_lanciata_di_nuovo_finisce_sul_primo_bersaglio(client, test_session_factory):
     eroe, mago, sid = await _serata(client, test_session_factory, "Previsione", "foresight", 9)
     r = await client.post(f"/characters/{mago}/spells/{sid}/use", json={"slot_level": 9, "targets": [eroe]})

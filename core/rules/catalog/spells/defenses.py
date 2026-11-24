@@ -133,11 +133,11 @@ _BLUR = SpellVariant(
              "Every creature has disadvantage on attack rolls against you (not those who don't rely on sight): the GM applies it to the attackers."))
 
 _FORESIGHT_2014 = SpellVariant(
-    modifiers=lambda d: (adv(lambda c: c.roll in D20),), rounds=DAY // 3,
+    modifiers=lambda d: (adv(lambda c: c.roll in D20),), rounds=DAY // 3, ends_on_recast=True,
     text=txt("Non puoi essere sorpreso; gli attaccanti hanno svantaggio contro di te: lo applica il GM.",
              "You can't be surprised; attackers have disadvantage against you: the GM applies it."))
 _FORESIGHT_2024 = SpellVariant(
-    modifiers=lambda d: (adv(lambda c: c.roll in D20),), rounds=DAY // 3,
+    modifiers=lambda d: (adv(lambda c: c.roll in D20),), rounds=DAY // 3, ends_on_recast=True,
     text=txt("Gli altri hanno svantaggio ai tiri per colpire contro di te: lo applica il GM.",
              "Others have disadvantage on attack rolls against you: the GM applies it."))
 

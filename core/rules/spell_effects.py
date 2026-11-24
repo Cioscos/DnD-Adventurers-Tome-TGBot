@@ -44,6 +44,7 @@ class SpellVariant:
     rounds_by_slot: Callable[[int], int] | None = None  # durata in round secondo lo slot (Sortilegio, Marchio del Cacciatore)
     until_rest: Literal["long"] | None = None  # l'incantesimo dura fino a questo riposo (Aiuto: il lungo)
     concentration: bool = False
+    ends_on_recast: bool = False  # un nuovo lancio di chi lo ha lanciato toglie lo stato ai bersagli di prima (Previsione, Arma Magica 2024)
     choices: tuple[SpellChoice, ...] = ()
     on_apply: Callable[[Any, dict], None] | None = None
     text: dict[str, str] | None = None

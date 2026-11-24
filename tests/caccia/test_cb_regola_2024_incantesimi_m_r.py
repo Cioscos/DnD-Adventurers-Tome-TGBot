@@ -141,7 +141,6 @@ async def test_incantesimi_senza_danno_al_lancio_non_aprono_il_tiro_di_danno(cli
 @pytest.mark.caccia(id="CB-3816", fonte="2024 · Incantesimi · Preveggenza (termina se lanci di nuovo l'incantesimo) · pag. 276",
                     zona="regola:2024/incantesimi-M-R", voce="edizioni",
                     copre=["carta:2024/spells.md#Preveggenza", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3816: difforme dal manuale, confermato")
 async def test_preveggenza_2024_lanciata_di_nuovo_finisce_sul_primo_bersaglio(client, test_session_factory):
     _, eroe = await seed_session(test_session_factory)
     as_user(GM_ID)
