@@ -38,7 +38,9 @@ def _cap(n: int) -> AfterValidator:
 
 
 def _named(v: str, info: ValidationInfo) -> str:
-    if not v.strip() and not (info.context or {}).get("lenient"):
+    if (info.context or {}).get("lenient"):  # l'export non cambia ciò che è salvato
+        return v
+    if not v.strip():
         raise ValueError("blank name")
     return v.strip()
 

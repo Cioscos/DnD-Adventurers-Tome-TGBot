@@ -771,3 +771,16 @@ async def test_l_import_rifiuta_un_personaggio_senza_nome(client):
     file["character"]["name"] = "   "
     r = await client.post("/characters/import", json=file)
     assert r.status_code == 422
+
+
+@pytest.mark.caccia(id="CB-1502", fonte="invariante: l'export non cambia i dati già salvati", zona="flusso:compagni-forme",
+                    voce="persistenza", copre=["POST /characters/{char_id}/duplicate"])
+async def test_la_copia_di_un_nome_gia_salvato_non_lo_svuota(client, test_session_factory):
+    from core.db.models import Character
+    cid = (await client.post("/characters", json={"name": "X"})).json()["id"]
+    async with test_session_factory() as s:
+        (await s.get(Character, cid)).name = "   "
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/duplicate")
+    assert r.status_code in (200, 201), r.text
+    assert r.json()["name"] != ""
