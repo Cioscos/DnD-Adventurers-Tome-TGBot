@@ -59,7 +59,6 @@ async def test_cd_concentrazione_2024_massimo_30(client, dadi, danno, cd):
 
 @pytest.mark.caccia(id="CB-439", fonte="invariante: un danno negativo non esiste", zona="flusso:concentrazione", voce="limiti",
                     copre=["POST /characters/{char_id}/concentration/save"])
-@pytest.mark.xfail(strict=True, reason="CB-439 un danno negativo e accettato dal TS di concentrazione")
 async def test_tiro_concentrazione_danno_negativo_rifiutato(client, dadi):
     cid = await _pg(client)
     dadi(10)

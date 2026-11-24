@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -88,7 +88,7 @@ from api.services.dice_notation import DICE_RE, roll_dice
 
 
 class ConcentrationSaveRequest(BaseModel):
-    damage: int
+    damage: int = Field(ge=0)
     mode: RollMode = "normal"
     dice: D20Dice | None = None
 
