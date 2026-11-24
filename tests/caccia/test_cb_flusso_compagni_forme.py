@@ -82,7 +82,6 @@ async def test_la_bestia_2014_nascosta_in_2024_non_riceve_ordini(client):
     assert r.status_code in (404, 409) and turno["action_used"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="CB-341 nome di soli spazi accettato in creazione")
 @pytest.mark.caccia(id="CB-341", fonte="invariante: un nome di soli spazi è un nome vuoto (la UI disabilita Aggiungi con il nome vuoto)",
                     zona="flusso:compagni-forme", voce="limiti", copre=["POST /characters/{char_id}/companions"])
 @pytest.mark.parametrize("nome", [" ", "   ", "\t"])
@@ -92,7 +91,6 @@ async def test_un_compagno_senza_nome_non_si_crea(client, nome):
     assert r.status_code == 422
 
 
-@pytest.mark.xfail(strict=True, reason="CB-342 nome di soli spazi accettato in rinomina")
 @pytest.mark.caccia(id="CB-342", fonte="invariante: un nome di soli spazi è un nome vuoto", zona="flusso:compagni-forme", voce="limiti",
                     copre=["PATCH /characters/{char_id}/companions/{comp_id}"])
 async def test_un_compagno_non_si_rinomina_con_soli_spazi(client):
