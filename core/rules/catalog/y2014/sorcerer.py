@@ -112,7 +112,7 @@ CONVERT_USE = OnUse(
 
 _RANGE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(km|m|metri|metro|ft|feet|foot|piedi|mi|miglia|miles?)\b", re.IGNORECASE)
 _TOUCH = ("contatto", "tocco", "touch")
-_SELF = ("personale", "self")
+_SELF = ("personale", "incantatore", "self")  # «Incantatore» è la gittata personale del manuale italiano (pag. 202)
 
 
 def _range_of(spell: Any) -> tuple[float, str] | str | None:

@@ -119,7 +119,6 @@ async def test_incantesimo_potenziato_si_usa_una_volta_sola_sullo_stesso_danno(c
                            "carta:2014/general.md#Gittata / Range (pag. 202-203)",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("option", ["sorcerer.metamagic_twinned", "sorcerer.metamagic_distant"])
-@pytest.mark.xfail(strict=True, reason="CB-2016: difforme dal manuale, confermato")
 async def test_la_gittata_incantatore_del_manuale_esclude_raddoppiato_e_distante_come_personale(client, option):
     # Il manuale italiano chiama «Incantatore» la gittata personale: un cono che parte da chi lancia non ha una gittata da raddoppiare
     cid = await _caster(client, 10, "twinned", "distant")
