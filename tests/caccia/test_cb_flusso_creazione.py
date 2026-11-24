@@ -345,8 +345,8 @@ async def test_abilita_di_classe_gia_fra_quelle_del_background_scritto(client, e
 @pytest.mark.caccia(id="CB-1373", fonte="invariante: una classe ha un nome, come il personaggio (CB-657): niente righe di classe vuote", zona="flusso:creazione",
                     voce="limiti", copre=["POST /characters"])
 @pytest.mark.parametrize("nome", [
-    pytest.param("", marks=pytest.mark.xfail(strict=True, reason="CB-1373 classe con nome vuoto accettata")),
-    pytest.param("   ", marks=pytest.mark.xfail(strict=True, reason="CB-1373 classe con nome di soli spazi accettata")),
+    "",
+    "   ",
 ])
 async def test_classe_senza_nome_rifiutata(client, nome):
     r = await client.post("/characters", json={"name": "N", "initial_class": {"class_name": nome, "hit_die": 8}})
@@ -356,7 +356,6 @@ async def test_classe_senza_nome_rifiutata(client, nome):
 
 @pytest.mark.caccia(id="CB-1374", fonte="invariante: la caratteristica da incantatore è una delle sei caratteristiche", zona="flusso:creazione",
                     voce="limiti", copre=["POST /characters"])
-@pytest.mark.xfail(strict=True, reason="CB-1374 spellcasting_ability sconosciuta salvata senza errore")
 async def test_caratteristica_da_incantatore_sconosciuta_rifiutata(client):
     r = await client.post("/characters", json={"name": "I", "initial_class": {"class_name": "wizard", "spellcasting_ability": "foo"}})
     assert r.status_code == 422, f"{r.status_code} {r.text[:100]}"
