@@ -87,6 +87,10 @@ def resolve_picks(removal: ConditionRemoval, chosen: list[str] | None, allowed: 
 def _name(key: str, table: dict[str, Text]) -> Text:
     if key in table:
         return table[key]
+    if key.startswith("spell:"):  # un incantesimo su di sé (Tocco Purificatore): il suo nome
+        from core.rules.catalog.spells import SPELL_EFFECTS  # import locale: il registro importa i tipi del catalogo
+        if effect := SPELL_EFFECTS.get(key.removeprefix("spell:")):
+            return {"it": effect.names[0], "en": effect.names[1]}
     from core.data.labels import condition_label  # import locale: condizione personalizzata o di un effetto
     return {"it": condition_label(key), "en": key.removeprefix("custom:").replace("_", " ").title()}
 
