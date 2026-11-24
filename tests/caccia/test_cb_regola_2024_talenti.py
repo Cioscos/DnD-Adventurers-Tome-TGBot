@@ -211,7 +211,6 @@ async def test_fondersi_con_le_ombre_rende_invisibile(client):
 
 @pytest.mark.caccia(id="CB-3472", fonte="2024 · Talenti · Regole comuni (+1 fino a 20) · pag. 199; Attore · pag. 202", zona="regola:2024/talenti", voce="limiti",
                     copre=["carta:2024/feats.md#Attore / Actor (pag. 202) - Generale (livello 4+, Carisma 13+)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3472: difforme dal manuale, confermato")
 async def test_un_talento_con_piu_uno_si_prende_anche_con_la_caratteristica_a_20(client):
     ch = await _pg(client, "fighter", 4, charisma=20)
     r = await _prendi(client, ch["id"], "2024_actor", "charisma")

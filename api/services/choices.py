@@ -468,7 +468,9 @@ def take_feat(session: AsyncSession, char: Character, feat_key: str, ability: Op
             raise _bad(f"ability must be one of {spec.ability_increase}")
         if spec.edition == "2024" and spec.save_proficiency_from_increase and (char.saving_throws or {}).get(ability):
             raise _bad("save_already_proficient")
-        _bump(char, ability, 1, spec.max_score)
+        row = _score_row(char, ability)
+        if row.value < spec.max_score:  # «fino a un massimo di 20»: al tetto si perde il +1, non il talento (2014 pag. 165, 2024 pag. 199)
+            row.value += 1
         if spec.save_proficiency_from_increase:
             saves = dict(char.saving_throws or {})
             saves[ability] = True

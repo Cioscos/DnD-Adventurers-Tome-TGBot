@@ -129,7 +129,6 @@ async def test_un_paladino_di_primo_livello_non_lancia_incantesimi(client):
                     copre=["carta:2014/feats.md#Regole generali (pag. 165)",
                            "carta:2014/feats.md#Maestro delle Armature Pesanti / Heavy Armor Master (pag. 169-170)",
                            "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3017: difforme dal manuale, confermato")
 async def test_un_talento_con_piu_uno_si_prende_anche_con_la_caratteristica_a_20(client):
     ch = await _char14(client, "fighter", strength=20)
     r = await _take(client, ch["id"], "heavy_armor_master", "strength")
