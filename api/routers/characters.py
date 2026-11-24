@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -26,6 +27,7 @@ from core.db.models import (
     ConditionEffect,
     Currency,
     Item,
+    Map,
     PendingSave,
     GameSession,
     HomebrewRule,
@@ -45,6 +47,7 @@ from core.rules.level_choices import FREE_KNOWN_KEY, TOOL_SEED_FLAG, sync_level_
 from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
 from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG
+from api.routers import maps, notes, silhouette
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -433,6 +436,19 @@ async def update_character(
 # Delete
 # ---------------------------------------------------------------------------
 
+async def _character_files(session: AsyncSession, char: Character) -> list[Path]:
+    """I file su disco della scheda. Solo quelli nominati dal database e dentro le sue cartelle: gli id si riusano
+    e il corpo di una nota è testo libero."""
+    found = [(maps._MAPS_DIR, p) for p in (await session.execute(
+        select(Map.local_file_path).where(Map.character_id == char.id))).scalars()]
+    for value in (char.notes or {}).values():
+        body = str(value.get("body", "")) if isinstance(value, dict) else str(value or "")
+        if body.startswith("[VOICE:") and body.endswith("]"):
+            found.append((notes._VOICE_DIR, body[7:-1]))
+    found.append((silhouette._SIL_DIR, char.silhouette_path))
+    return [Path(p) for root, p in found if p and Path(p).resolve().is_relative_to((root / str(char.id)).resolve())]
+
+
 @router.delete("/{char_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_character(
     char_id: int,
@@ -461,8 +477,16 @@ async def delete_character(
 
     await session.execute(delete(CampaignMember).where(CampaignMember.character_id == char.id))
     release_given_spells(char, [{"key": clock} for clock in (char.settings or {}).get(SPELL_GIVEN) or {}])  # i bersagli perdono gli effetti
+    files = await _character_files(session, char)
     await session.flush()
     await session.delete(char)
+    await session.commit()
+    for path in files:  # solo dopo che il database ha accettato l'eliminazione
+        try:
+            path.unlink(missing_ok=True)
+            path.parent.rmdir()
+        except OSError:  # la cartella ha altro, o il file è in uso: la scheda si elimina lo stesso
+            pass
 
 
 # ---------------------------------------------------------------------------

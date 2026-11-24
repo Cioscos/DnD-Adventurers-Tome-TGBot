@@ -104,6 +104,18 @@ export default function Maps() {
 
   const existingZones = Object.keys(zones)
 
+  const openFileLink = overlayMap && (
+    <a
+      href={api.maps.fileUrl(charId, overlayMap.id)}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center min-h-[44px] px-4 py-2 rounded-xl bg-dnd-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {t('character.maps.open_file')}
+    </a>
+  )
+
   return (
     <Layout title={t('character.maps.title')} backTo={`/char/${charId}`} group="tools" page="maps">
       <Button
@@ -201,28 +213,24 @@ export default function Maps() {
                       alt={overlayMap.zone_name}
                     />
                   </Suspense>
-                ) : overlayMap.file_type === 'pdf' &&
+                ) : overlayMap.local_file_path?.toLowerCase().endsWith('.pdf') &&
                   (overlayMap.size_bytes ?? 0) > 0 &&
                   (overlayMap.size_bytes ?? 0) < 5 * 1024 * 1024 ? (
-                  <iframe
-                    src={api.maps.fileUrl(charId, overlayMap.id)}
-                    title={overlayMap.zone_name}
-                    className="w-full h-full rounded-xl bg-dnd-parchment"
-                    onClick={(e) => e.stopPropagation()}
-                  />
+                  // Il link resta: il browser di Telegram su Android non mostra i PDF in un iframe.
+                  <div className="w-full h-full flex flex-col items-center gap-3">
+                    <iframe
+                      src={api.maps.fileUrl(charId, overlayMap.id)}
+                      title={overlayMap.zone_name}
+                      className="w-full flex-1 min-h-0 rounded-xl bg-dnd-parchment"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    {openFileLink}
+                  </div>
                 ) : (
                   <div className="text-center text-dnd-parchment space-y-4">
                     <FileText size={80} className="mx-auto text-dnd-gold-bright" />
                     <p className="text-sm opacity-70 font-body">{overlayMap.zone_name}</p>
-                    <a
-                      href={api.maps.fileUrl(charId, overlayMap.id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-block px-4 py-2 rounded-xl bg-dnd-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {t('character.maps.open_file')}
-                    </a>
+                    {openFileLink}
                   </div>
                 )}
               </div>

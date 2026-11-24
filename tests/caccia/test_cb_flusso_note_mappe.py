@@ -1,0 +1,102 @@
+"""Controlli della zona flusso:note-mappe."""
+import pytest
+
+from api.routers import maps, notes
+from core.db import engine as db_engine
+from core.db.models import AbilityScore, Character, Map
+
+
+async def _pg(client) -> int:
+    return (await client.post("/characters", json={"name": "P"})).json()["id"]
+
+
+@pytest.mark.caccia(id="CB-004", fonte="invariante: una nota creata si può modificare ed eliminare", zona="flusso:note-mappe",
+                    voce="normale", copre=[])
+@pytest.mark.parametrize("titolo, url", [("Atto 1/2", "Atto%201%2F2"), ("a/b/c", "a%2Fb%2Fc"), ("voice/x", "voice%2Fx")])
+async def test_nota_con_barra_nel_titolo(client, titolo, url):
+    cid = await _pg(client)
+    assert (await client.post(f"/characters/{cid}/notes", json={"title": titolo, "body": "x"})).status_code == 201
+    r = await client.patch(f"/characters/{cid}/notes/{url}", json={"body": "nuovo"})
+    assert r.status_code == 200 and r.json()[0]["body"] == "nuovo"
+    r = await client.delete(f"/characters/{cid}/notes/{url}")
+    assert r.status_code == 200 and r.json() == []
+
+
+@pytest.mark.caccia(id="CB-018", fonte="invariante: una nota senza titolo non è raggiungibile", zona="flusso:note-mappe",
+                    voce="limiti", copre=["POST /characters/{char_id}/notes", "POST /characters/{char_id}/notes/voice"])
+@pytest.mark.parametrize("titolo", ["", "   "])
+async def test_nota_senza_titolo_rifiutata(client, tmp_path, monkeypatch, titolo):
+    monkeypatch.setattr(notes, "_VOICE_DIR", tmp_path)
+    cid = await _pg(client)
+    assert (await client.post(f"/characters/{cid}/notes", json={"title": titolo, "body": "x"})).status_code == 422
+    r = await client.post(f"/characters/{cid}/notes/voice", data={"title": titolo}, files={"file": ("a.webm", b"x")})
+    assert r.status_code == 422
+    assert (await client.get(f"/characters/{cid}/notes")).json() == []
+
+
+@pytest.mark.caccia(id="CB-019", fonte="invariante: una mappa ha una zona con un nome", zona="flusso:note-mappe",
+                    voce="limiti", copre=["POST /characters/{char_id}/maps/upload"])
+@pytest.mark.parametrize("zona", ["", "   "])
+async def test_mappa_senza_zona_rifiutata(client, tmp_path, monkeypatch, zona):
+    monkeypatch.setattr(maps, "_MAPS_DIR", tmp_path)
+    cid = await _pg(client)
+    r = await client.post(f"/characters/{cid}/maps/upload", data={"zone_name": zona}, files={"file": ("a.png", b"x")})
+    assert r.status_code == 422
+    assert list(tmp_path.rglob("*.png")) == []
+
+
+@pytest.mark.caccia(id="CB-027", fonte="invariante: eliminare una nota non tocca altro che la nota", zona="flusso:note-mappe",
+                    voce="limiti", copre=["POST /characters/{char_id}/notes", "POST /characters/{char_id}/notes/voice"])
+@pytest.mark.parametrize("titolo", ["..", ".", "a/../.."])
+async def test_titolo_che_cambierebbe_l_indirizzo_rifiutato(client, tmp_path, monkeypatch, titolo):
+    monkeypatch.setattr(notes, "_VOICE_DIR", tmp_path)
+    cid = await _pg(client)
+    assert (await client.post(f"/characters/{cid}/notes", json={"title": titolo, "body": "x"})).status_code == 422
+    r = await client.post(f"/characters/{cid}/notes/voice", data={"title": titolo}, files={"file": ("a.webm", b"x")})
+    assert r.status_code == 422
+    assert (await client.post(f"/characters/{cid}/notes", json={"title": "Fine...", "body": "x"})).status_code == 201
+
+
+@pytest.mark.caccia(id="CB-029", fonte="invariante: una zona di mappe creata si può eliminare", zona="flusso:note-mappe",
+                    voce="normale", copre=["POST /characters/{char_id}/maps/upload"])
+@pytest.mark.parametrize("zona, url, creata", [("Torre 1/2", "Torre%201%2F2", True), ("a/b/c", "a%2Fb%2Fc", True), ("..", "", False), (".", "", False)])
+async def test_zona_con_barra_si_elimina(client, tmp_path, monkeypatch, zona, url, creata):
+    monkeypatch.setattr(maps, "_MAPS_DIR", tmp_path / "maps")
+    cid = await _pg(client)
+    for nome in (zona, "Altra"):
+        r = await client.post(f"/characters/{cid}/maps/upload", data={"zone_name": nome}, files={"file": ("a.png", b"x")})
+        assert r.status_code == (201 if creata or nome == "Altra" else 422)
+    if creata:
+        assert (await client.delete(f"/characters/{cid}/maps/zone/{url}")).status_code == 204
+    pg = (await client.get(f"/characters/{cid}")).json()
+    assert [m["zone_name"] for m in pg["maps"]] == ["Altra"]
+
+
+@pytest.mark.caccia(id="CB-032", fonte="invariante: ciò che è salvato si può aprire, modificare ed eliminare", zona="flusso:note-mappe",
+                    voce="persistenza", copre=[])
+async def test_all_avvio_si_riparano_i_dati_irraggiungibili(client, test_session_factory):
+    cid = await _pg(client)
+    nota = {"body": "x", "tags": ["t"]}
+    async with test_session_factory() as s:
+        (await s.get(Character, cid)).notes = {"..": nota, "a/..": nota, "Buona": nota, "Atto 1/2": "testo"}
+        s.add_all([AbilityScore(character_id=cid, name="luck", value=12)]
+                  + [Map(character_id=cid, zone_name=z, file_id="", file_type="photo") for z in ("..", " ", "Cripta 1/2")])
+        await s.commit()
+        for _ in range(2):  # idempotente
+            await (await s.connection()).run_sync(db_engine._repair_unreachable)
+            await s.commit()
+    pg = await client.get(f"/characters/{cid}")
+    assert pg.status_code == 200 and len(pg.json()["ability_scores"]) == 6
+    assert sorted(m["zone_name"] for m in pg.json()["maps"]) == ["Cripta 1/2", "Mappe", "Mappe"]
+    note = (await client.get(f"/characters/{cid}/notes")).json()
+    assert [(n["title"], n["body"], n["tags"]) for n in note] == [
+        ("Nota", "x", ["t"]), ("a-..", "x", ["t"]), ("Buona", "x", ["t"]), ("Atto 1/2", "testo", [])]
+
+
+@pytest.mark.caccia(id="CB-033", fonte="invariante: il nome di una zona entra nella sua colonna (200)", zona="flusso:note-mappe",
+                    voce="limiti", copre=["POST /characters/{char_id}/maps/upload"])
+async def test_zona_troppo_lunga_rifiutata(client):
+    cid = await _pg(client)
+    for n, atteso in ((200, 201), (201, 422)):
+        r = await client.post(f"/characters/{cid}/maps/upload", data={"zone_name": "z" * n}, files={"file": ("a.png", b"x")})
+        assert r.status_code == atteso

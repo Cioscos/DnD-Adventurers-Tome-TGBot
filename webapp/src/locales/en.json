@@ -36,6 +36,8 @@
       "invalid_target": "The target is not valid.",
       "self_only_spell": "This spell only affects its caster: it cannot be given to others.",
       "feature_unavailable": "You cannot use it now.",
+      "death_save_not_needed": "No death save needed: you have hit points or are stable.",
+      "character_dead": "The character is dead.",
       "rest_needs_hp": "You cannot rest at 0 HP: you need at least one hit point first.",
       "long_rest_too_soon": "Your last long rest is too recent.",
       "state_locked": "This state cannot be ended by hand.",

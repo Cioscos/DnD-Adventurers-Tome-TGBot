@@ -45,14 +45,14 @@ async def test_update_keeps_campaign_when_omitted(client, test_session_factory):
     assert r.json()[0]["campaign_id"] == camp["id"]
 
 
-async def test_deleted_campaign_note_has_null_name(client, test_session_factory):
+async def test_deleted_campaign_note_is_unlinked(client, test_session_factory):
     camp, cid = await _enrolled(client, test_session_factory)
     await _note(client, cid, campaign_id=camp["id"])
     act(GM_ID)
     assert (await client.delete(f"/campaigns/{camp['id']}")).status_code in (200, 204)
     act(PLAYER_ID)
     n = (await client.get(f"/characters/{cid}/notes")).json()[0]
-    assert n["campaign_id"] == camp["id"] and n["campaign_name"] is None
+    assert n["campaign_id"] is None and n["campaign_name"] is None  # CB-007: l'id può essere riusato
 
 
 async def test_legacy_string_note_reads_campaign_none(client, test_session_factory):

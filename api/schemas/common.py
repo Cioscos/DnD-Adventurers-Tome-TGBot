@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from core.utils.reachable_names import is_reachable
 from core.db.models import RestorationType
 from core.game.actions import ActionType
 
@@ -363,6 +364,12 @@ class HPOp(str, Enum):
     SET_TEMP = "set_temp"
 
 
+def reachable_segment(name: str) -> str:
+    if not is_reachable(name):
+        raise ValueError("invalid name")
+    return name
+
+
 class DamagePart(BaseModel):
     """Un altro tipo di danno dello stesso colpo (morso: 15 perforanti + 5 freddo)."""
     amount: int = Field(ge=0, le=9999)
@@ -387,6 +394,13 @@ class HPUpdate(RollOptionsBody):
     knock_out: bool = False
     # Il TS di concentrazione che il danno fa tirare: vantaggio/svantaggio scelti dal giocatore (sommati a Incantatore da Guerra)
     concentration_mode: Literal["normal", "advantage", "disadvantage"] = "normal"
+
+    @model_validator(mode="after")
+    def _no_negative_change(self):
+        # Un danno negativo creerebbe PF temporanei; i valori da impostare (set_*) restano portati nei limiti dal server.
+        if self.value < 0 and self.op in (HPOp.DAMAGE, HPOp.HEAL):
+            raise ValueError("value must be >= 0")
+        return self
 
 
 class HPUndoRequest(BaseModel):

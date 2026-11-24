@@ -126,7 +126,7 @@ describe('QuickActions hit die', () => {
 
   it('says the dice are exhausted on a 409, without the generic warning', async () => {
     const { ApiError } = await import('@/api/client')
-    spendHitDice.mockRejectedValue(new ApiError(409, 'none left'))
+    spendHitDice.mockRejectedValue(new ApiError(409, 'hit_dice_exhausted'))
     await spendOneHitDie()
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.quick_actions.hit_die_exhausted'))
     expect(notifyMutationError).not.toHaveBeenCalled()

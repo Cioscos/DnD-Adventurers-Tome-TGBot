@@ -578,6 +578,12 @@ function attackBody(
   })
 }
 
+/** Il titolo di una nota nell'indirizzo. «..» il browser lo risolve (DELETE …/notes/.. eliminerebbe il personaggio): non parte. */
+function noteSegment(title: string): string {
+  if (title.split('/').some((p) => p === '.' || p === '..')) throw new Error('invalid note title')
+  return encodeURIComponent(title)
+}
+
 export const api = {
   health: () => request<{ status: string; version: string | null }>('/health'),
 
@@ -685,8 +691,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ rest_type: restType, ...opts }),
       }),
-    restPreview: (id: number, restType: 'long' | 'short') =>
-      request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}`),
+    restPreview: (id: number, restType: 'long' | 'short', ateAndDrank = true) =>
+      request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}&ate_and_drank=${ateAndDrank}`),
     updateDeathSaves: (id: number, action: string) =>
       request<CharacterFull>(`/characters/${id}/death_saves`, {
         method: 'PATCH',
@@ -1301,7 +1307,7 @@ export const api = {
       }),
     // campaignId: undefined = invariata, null = rimuovi, number = assegna.
     update: (charId: number, title: string, body: string, tags?: string[], campaignId?: number | null) =>
-      request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
+      request<Note[]>(`/characters/${charId}/notes/${noteSegment(title)}`, {
         method: 'PATCH',
         body: JSON.stringify({
           body,
@@ -1310,7 +1316,7 @@ export const api = {
         }),
       }),
     remove: (charId: number, title: string) =>
-      request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
+      request<Note[]>(`/characters/${charId}/notes/${noteSegment(title)}`, {
         method: 'DELETE',
       }),
     uploadVoice: (charId: number, title: string, audioBlob: Blob, campaignId?: number | null) => {
@@ -1423,7 +1429,7 @@ export const api = {
         `/characters/${charId}/share/items/${itemId}`, { method: 'POST' }),
     note: (charId: number, title: string) =>
       request<{ prepared_message_id: string }>(
-        `/characters/${charId}/share/notes/${encodeURIComponent(title)}`, { method: 'POST' }),
+        `/characters/${charId}/share/notes/${noteSegment(title)}`, { method: 'POST' }),
     invite: (sessionId: number) =>
       request<{ prepared_message_id: string }>(
         `/sessions/${sessionId}/share/invite`, { method: 'POST' }),

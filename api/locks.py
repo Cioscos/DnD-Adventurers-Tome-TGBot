@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterable
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import Request
 
@@ -20,6 +21,16 @@ async def character_write_lock(request: Request) -> AsyncGenerator[None, None]:
         yield
         return
     async with _LOCKS[id(asyncio.get_running_loop()), key]:
+        yield
+
+
+@asynccontextmanager
+async def character_locks(char_ids: Iterable[int]) -> AsyncGenerator[None, None]:
+    """I lock di più personaggi, per chi ne cambia le schede da una rotta senza ``char_id``. Da prendere prima di ogni scrittura
+    sul database e in ordine di id: chi tiene un lock di personaggio aspetta il database, mai il contrario."""
+    async with AsyncExitStack() as stack:
+        for char_id in sorted(set(char_ids)):
+            await stack.enter_async_context(_LOCKS[id(asyncio.get_running_loop()), f"char:{char_id}"])
         yield
 
 

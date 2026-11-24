@@ -19,13 +19,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
+from api.schemas.common import reachable_segment
 from core.db.models import Campaign, CampaignMember, Character, CharacterClass
 
 router = APIRouter(prefix="/characters", tags=["notes"])
@@ -63,8 +64,11 @@ class NoteRead(BaseModel):
     campaign_name: str | None = None
 
 
+NoteTitle = Annotated[str, AfterValidator(reachable_segment)]
+
+
 class NoteCreate(BaseModel):
-    title: str = Field(max_length=200)
+    title: NoteTitle = Field(max_length=200)
     body: str = Field(max_length=50_000)
     tags: list[str] = Field(default_factory=list)
     campaign_id: int | None = None
@@ -186,7 +190,7 @@ async def add_note(
     return await _notes_list(char, session)
 
 
-@router.patch("/{char_id}/notes/{title}", response_model=list[NoteRead])
+@router.patch("/{char_id}/notes/{title:path}", response_model=list[NoteRead])
 async def update_note(
     char_id: int,
     title: str,
@@ -216,7 +220,7 @@ async def update_note(
     return await _notes_list(char, session)
 
 
-@router.delete("/{char_id}/notes/{title}", response_model=list[NoteRead])
+@router.delete("/{char_id}/notes/{title:path}", response_model=list[NoteRead])
 async def delete_note(
     char_id: int,
     title: str,
@@ -248,7 +252,7 @@ async def upload_voice_note(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    title: str = Form(...),
+    title: Annotated[str, Form(), AfterValidator(reachable_segment)],
     file: UploadFile = File(...),
     campaign_id: int | None = Form(None),
 ) -> list[NoteRead]:

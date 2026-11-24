@@ -1,6 +1,36 @@
 {
   "entries": [
     {
+      "version": "3.14.6",
+      "date": "2026-11-24",
+      "fixed": {
+        "it": [
+          "Note: un titolo con «/» non impedisce più di modificare, eliminare o condividere la nota; un titolo «..» è rifiutato, perché eliminarlo cancellava il personaggio.",
+          "Dadi vita: da morto non si spendono più e, nel 2024, nemmeno a 0 PF.",
+          "Tiri contro la morte: si tirano solo a 0 PF e se non sei stabile.",
+          "Iniziativa: vale la Destrezza del momento del tiro, anche se è cambiata dopo l'apertura dell'incontro.",
+          "Riposo: chiudere o annullare la finestra azzera le scelte, e l'anteprima del riposo lungo 2014 segue «ha mangiato e bevuto».",
+          "Mappe: il PDF caricato ha di nuovo l'anteprima, con il link per aprirlo, e una zona con «/» nel nome si elimina.",
+          "Campagna eliminata: le note dei personaggi non restano collegate a un'altra campagna.",
+          "Personaggio eliminato: si eliminano anche mappe, note vocali e sagoma.",
+          "Export, import e duplica conservano le munizioni da recuperare.",
+          "Il server rifiuta caratteristiche, abilità, danni negativi e nomi vuoti o non validi che rovinavano la scheda; i dati già rovinati si riparano da soli."
+        ],
+        "en": [
+          "Notes: a title with “/” no longer prevents editing, deleting or sharing the note; a “..” title is refused, because deleting it erased the character.",
+          "Hit dice can no longer be spent while dead or, in 2024, at 0 HP.",
+          "Death saves can only be rolled at 0 HP and while not stable.",
+          "Initiative uses your Dexterity when you roll, even if it changed after the encounter was opened.",
+          "Rest: closing or cancelling the dialog clears your choices, and the 2014 long rest preview follows “ate and drank”.",
+          "Maps: an uploaded PDF has its preview again, with a link to open it, and a zone with “/” in its name can be deleted.",
+          "Deleted campaign: character notes are no longer linked to another campaign.",
+          "Deleted character: its maps, voice notes and silhouette are deleted too.",
+          "Export, import and duplicate keep the ammunition left to recover.",
+          "The server refuses unknown abilities and skills, negative damage and empty or invalid names that damaged the sheet; data already damaged is repaired automatically."
+        ]
+      }
+    },
+    {
       "version": "3.14.5",
       "date": "2026-11-19",
       "fixed": {

@@ -1,18 +1,20 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 
 interface Props {
   charId: number
   restType: 'long' | 'short'
+  ateAndDrank?: boolean
 }
 
 /** Anteprima di cosa recupera il riposo (GET /rest/preview). Muta solo da lettura. */
-export default function RestPreviewList({ charId, restType }: Props) {
+export default function RestPreviewList({ charId, restType, ateAndDrank = true }: Props) {
   const { t } = useTranslation()
   const { data } = useQuery({
-    queryKey: ['rest-preview', charId, restType],
-    queryFn: () => api.characters.restPreview(charId, restType),
+    queryKey: ['rest-preview', charId, restType, ateAndDrank],
+    queryFn: () => api.characters.restPreview(charId, restType, ateAndDrank),
+    placeholderData: keepPreviousData,
     gcTime: 0,
   })
   if (!data) return null

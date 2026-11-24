@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_lang, get_current_user
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
-from core.db.models import AbilityScore, Character
+from core.db.models import ABILITY_NAMES, AbilityScore, Character
 from core.game.stats import sync_base_ac
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
@@ -75,6 +75,8 @@ async def update_ability_score(
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
 
+    if ability_name.lower() not in ABILITY_NAMES:  # una riga in più renderebbe illeggibile la scheda
+        raise HTTPException(status_code=422, detail="Unknown ability")
     if not 1 <= body.value <= 30:
         raise HTTPException(status_code=400, detail="Ability score must be between 1 and 30")
 

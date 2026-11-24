@@ -13,13 +13,24 @@ from sqlalchemy.orm import selectinload
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.encounter import CombatantLive, EncounterLive, PublicState, PublicStateOther
 from api.services.condition_effects import effect_reads, pending_read
+from api.services.homebrew.passive import get_passive_modifiers
 from api.services.rules_states import GENERIC_STATE_NAME
 from core.rules.catalog import active_features
 from core.rules.spell_effects import SPELL_STATE_PREFIX
 from core.rules.modifiers import is_incapacitated
 from core.rules.states import is_conscious
+from core.game.item_bonuses import item_bonus_total
+from core.game.stats import effective_ability_score
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from core.utils.session_view import hp_bucket_from_ratio
+
+
+async def pc_initiative_mod(db: AsyncSession, char: Character) -> int:
+    """Il modificatore d'iniziativa della scheda in questo momento (DES effettiva, oggetti, homebrew)."""
+    base = next((a.value for a in (char.ability_scores or []) if a.name == "dexterity"), 10)
+    effective, _ = effective_ability_score("dexterity", base, [i for i in (char.items or []) if i.is_equipped])
+    return (effective - 10) // 2 + item_bonus_total(char.items or [], "initiative") + await get_passive_modifiers(
+        db, char, "character.initiative")
 
 
 def public_states(char: Character, lang: str = "it", *, gm: bool = False) -> list[PublicState]:
@@ -57,7 +68,7 @@ def public_states(char: Character, lang: str = "it", *, gm: bool = False) -> lis
 def combatant_payload(
     c: Combatant, *, mode: str, viewer_is_gm: bool,
     effects: list[ConditionEffectRead] = (), pending: list[PendingSaveRead] = (),
-    states: list[PublicState] = (),
+    states: list[PublicState] = (), initiative_mod: int | None = None,
 ) -> CombatantLive:
     show_hp = c.kind == "monster" and mode == "full"
     bucket = None
@@ -71,7 +82,7 @@ def combatant_payload(
         name=c.name,
         initiative=c.initiative,
         initiative_die=c.initiative_die,
-        initiative_mod=c.initiative_mod,
+        initiative_mod=c.initiative_mod if initiative_mod is None else initiative_mod,
         sort_order=c.sort_order,
         is_dead=c.is_dead,
         surprised=c.surprised,
@@ -111,6 +122,12 @@ async def build_encounter_block(
                                     .where(Character.id.in_(pc_ids)))).scalars():
             if ch.active_states:
                 states[ch.id] = public_states(ch, lang, gm=viewer_is_gm)
+    # Chi non ha ancora tirato vede il modificatore che il tiro userà, non quello di quando l'incontro è stato aperto.
+    mods: dict[int, int] = {}
+    if waiting := [c.character_id for c in combs if c.kind == "pc" and c.character_id and c.initiative is None]:
+        for ch in (await db.execute(select(Character).options(
+                selectinload(Character.ability_scores), selectinload(Character.items)).where(Character.id.in_(waiting)))).scalars():
+            mods[ch.id] = await pc_initiative_mod(db, ch)
     if enc.status == "setup":
         combs.sort(key=lambda c: (c.created_at, c.id))
     else:
@@ -127,7 +144,8 @@ async def build_encounter_block(
         combatants=[
             combatant_payload(c, mode=enc.mode, viewer_is_gm=viewer_is_gm,
                               effects=effects.get(c.id, []), pending=pending.get(c.id, []),
-                              states=states.get(c.character_id, []) if c.kind == "pc" else [])
+                              states=states.get(c.character_id, []) if c.kind == "pc" else [],
+                              initiative_mod=mods.get(c.character_id) if c.initiative is None else None)
             for c in combs
         ],
     )

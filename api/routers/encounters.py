@@ -15,7 +15,6 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.game.item_bonuses import item_bonus_total
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.services.ammo import recover_ammo
@@ -33,7 +32,6 @@ from api.schemas.encounter import (
     ReorderRequest,
 )
 from api.services import telegram_notify
-from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
@@ -53,7 +51,7 @@ from api.services.rules_targets import (
 from api.services.rules_turn import clear_turn, reset_turn, set_surprised
 from api.services.thiefs_reflexes import add_second_turns
 from api.services.turn_start import apply_turn_start
-from api.services.encounter_view import build_encounter_block
+from api.services.encounter_view import build_encounter_block, pc_initiative_mod
 from core.db.models import (
     Character,
     Combatant,
@@ -66,7 +64,6 @@ from core.db.models import (
     SessionStatus,
 )
 from core.data.labels import ability_label, condition_label
-from core.game.stats import effective_ability_score
 from api.services.telegram_notify import notify_saves
 
 logger = logging.getLogger(__name__)
@@ -107,14 +104,6 @@ async def _require_open_encounter(session_id: int, db: AsyncSession) -> Encounte
     return enc
 
 
-def _dex_modifier(char: Character) -> int:
-    """Same effective-DEX resolution the sheet shows (CharacterFull)."""
-    base = next((a.value for a in (char.ability_scores or []) if a.name == "dexterity"), 10)
-    equipped = [i for i in (char.items or []) if i.is_equipped]
-    effective, _ = effective_ability_score("dexterity", base, equipped)
-    return (effective - 10) // 2 + item_bonus_total(char.items or [], "initiative")
-
-
 async def _add_missing_pc_combatants(
     session: GameSession, enc: Encounter, db: AsyncSession
 ) -> list[Combatant]:
@@ -145,7 +134,7 @@ async def _add_missing_pc_combatants(
             character_id=char.id,
             owner_user_id=p.user_id,
             name=char.name,
-            initiative_mod=_dex_modifier(char) + await get_passive_modifiers(db, char, "character.initiative"),
+            initiative_mod=await pc_initiative_mod(db, char),
             created_at=utc_now_iso(),
         )
         db.add(comb)
@@ -370,6 +359,8 @@ async def roll_initiative(
     if body.options and comb.owner_user_id != user_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not your combatant")
     applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    if char is not None:  # la DES può essere cambiata dopo l'apertura dell'incontro
+        comb.initiative_mod = await pc_initiative_mod(db, char)
     _surprise_disadvantage(comb, char, applied)
     opts = AppliedOptions() if char is None else use_options(db, char, "initiative", body, ability="dexterity")
     merge_options(applied, opts)
@@ -583,6 +574,11 @@ async def patch_combatant(
     comb = _primary_row(enc, comb)
     was_dead = comb.is_dead
 
+    if body.initiative_mod is not None and comb.kind == "pc":  # viene dalla scheda al momento del tiro; il master corregge `initiative`
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "pc_initiative_mod_on_sheet"},
+        )
     if body.conditions is not None and comb.kind == "pc":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -702,6 +698,8 @@ def _surprise_disadvantage(comb: Combatant, char: Character | None, applied: App
 async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
     char = await _pc_for_initiative(db, comb)
     applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    if char is not None:  # la DES può essere cambiata dopo l'apertura dell'incontro
+        comb.initiative_mod = await pc_initiative_mod(db, char)
     _surprise_disadvantage(comb, char, applied)
     return applied
 

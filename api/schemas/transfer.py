@@ -12,7 +12,7 @@ from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.species_2024 import SPECIES_2024
-from core.db.models import EquipmentSlot
+from core.db.models import ABILITY_NAMES, EquipmentSlot
 from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
 
@@ -167,6 +167,13 @@ class ExportAbilityScore(BaseModel):
     name: str = Field(max_length=50)
     value: Annotated[int, _rng(1, 30)] = 10
 
+    @field_validator("name")
+    @classmethod
+    def _known(cls, v: str, info: ValidationInfo) -> str:
+        if v not in ABILITY_NAMES and not (info.context or {}).get("lenient"):  # una in più renderebbe illeggibile la scheda
+            raise ValueError("unknown ability")
+        return v
+
 
 class ExportItem(BaseModel):
     ref: Optional[int] = None  # chiave locale al file, mai un id DB
@@ -175,6 +182,7 @@ class ExportItem(BaseModel):
     description: Optional[str] = None
     weight: Annotated[float, _rng(0, 1_000_000)] = 0.0
     quantity: Int0 = 1
+    ammo_spent: Int0 = 0  # munizioni ancora da recuperare
     item_type: str = Field("generic", max_length=20)
     item_metadata: dict[str, Any] = Field(default_factory=dict)
     is_equipped: bool = False

@@ -1,7 +1,7 @@
 {
   "name": "dnd-bot-webapp",
   "private": true,
-  "version": "3.14.5",
+  "version": "3.14.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:homebrew:audit": "playwright test --config=playwright.homebrew.config.ts --reporter=./tests/e2e-playwright/homebrew/audit-reporter.ts",
+    "test:caccia": "vitest run tests/unit/caccia && playwright test --config=playwright.caccia.config.ts",
     "check:layout": "node scripts/layout-check.mjs"
   },
   "dependencies": {

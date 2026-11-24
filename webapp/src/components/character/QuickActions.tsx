@@ -51,6 +51,7 @@ import {
 } from '@/lib/quickActions'
 import { LEDGER_INDEX_ROW, LEDGER_TITLE } from '@/styles/ledger'
 import { incapacitatedMessageKey } from '@/lib/conditions'
+import { restNeedsHp } from '@/lib/restRules'
 import type { HitDiceSpendResult } from '@/api/client'
 import type { CharacterFull, Ability, CharacterClass, Item } from '@/types'
 
@@ -303,7 +304,9 @@ export default function QuickActions({ char }: Props) {
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
-        toast.error(t('character.quick_actions.hit_die_exhausted'))
+        if (err.detail === 'rest_needs_hp') toast.error(t('character.quick_actions.rest_needs_hp'))
+        else if (err.detail === 'hit_dice_exhausted') toast.error(t('character.quick_actions.hit_die_exhausted'))
+        else notifyMutationError(err)
         qc.invalidateQueries({ queryKey: ['character', char.id] })
         setConfirmHitDie(null)
       } else {
@@ -312,6 +315,7 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
+  const hitDiceBlocked = !!char.is_dead || restNeedsHp(char, 'short')
   const run = (action: ResolvedQuickAction, mode: RollMode = 'normal') => {
     haptic.light()
     switch (action.type) {
@@ -644,7 +648,7 @@ export default function QuickActions({ char }: Props) {
               const RestIcon = a.type === 'rest' && a.rest === 'short' ? GiCampfire : Icon
               const depleted =
                 (a.type === 'ability' && (a.ability.uses ?? 0) <= 0) ||
-                (a.type === 'hit_die' && a.remaining <= 0)
+                (a.type === 'hit_die' && (a.remaining <= 0 || hitDiceBlocked))
               // Esaurita si legge dal tono, non da un'opacità che farebbe calare il contrasto.
               const rowClass = `${LEDGER_INDEX_ROW} ${depleted ? 'text-dnd-text-faint' : 'text-dnd-text'} disabled:opacity-60`
               const iconClass = `shrink-0 ${depleted ? '' : 'text-dnd-gold'}`
@@ -687,7 +691,7 @@ export default function QuickActions({ char }: Props) {
                   <Pressable
                     type="button"
                     pending={isActionPending(a)}
-                    disabled={incapacitated && (a.type === 'ability' || a.type === 'spell')}
+                    disabled={(incapacitated && (a.type === 'ability' || a.type === 'spell')) || (a.type === 'hit_die' && hitDiceBlocked)}
                     onClick={() => run(a)}
                     whileTap={{ scale: 0.96 }}
                     className={rowClass}

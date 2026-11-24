@@ -239,7 +239,7 @@ describe('RestSheet preview', () => {
     expect(screen.getByText('Furia')).toBeTruthy()
     expect(screen.getByText('+1d6+1')).toBeTruthy()
     expect(screen.getByText('character.rest_preview.concentration')).toBeTruthy()
-    expect(restPreview).toHaveBeenCalledWith(7, 'long')
+    expect(restPreview).toHaveBeenCalledWith(7, 'long', true)
     expect(rest).not.toHaveBeenCalled()
   })
 
@@ -257,7 +257,7 @@ describe('RestSheet preview', () => {
     restPreview.mockResolvedValue({ ...preview, hp_gain: 0, slots: {}, hit_dice_regain: {} })
     setup()
     await openShortRest()
-    await waitFor(() => expect(restPreview).toHaveBeenCalledWith(7, 'short'))
+    await waitFor(() => expect(restPreview).toHaveBeenCalledWith(7, 'short', true))
   })
 })
 

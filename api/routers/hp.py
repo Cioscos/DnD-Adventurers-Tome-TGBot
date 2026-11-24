@@ -798,12 +798,13 @@ async def rest_preview(
     rest_type: str,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    ate_and_drank: bool = True,
 ) -> RestPreview:
     if rest_type not in ("long", "short"):
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
     char = await get_owned_full_with_resources(char_id, user_id, session)
     bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    preview = compute_rest_effects(char, rest_type, bonus)
+    preview = compute_rest_effects(char, rest_type, bonus, ate_and_drank)
     preview.too_soon = rest_type == "long" and _long_rest_too_soon(char)  # il primo modale avvisa già, prima della conferma
     if preview.too_soon:  # l'avviso dice anche quante ore sono passate
         preview.hours_since_long_rest = int((_utcnow() - datetime.fromisoformat(char.last_long_rest_at)).total_seconds() // 3600)
@@ -1044,6 +1045,11 @@ async def spend_hit_dice(
         raise HTTPException(status_code=404, detail="Class not found")
     if body.count < 1:
         raise HTTPException(status_code=400, detail="count must be >= 1")
+    if char.is_dead:
+        raise HTTPException(status_code=409, detail={"code": "character_dead"})
+    # I dadi vita si spendono riposando: nel 2024 a 0 PF non si riposa (come /rest).
+    if character_edition(char) == "2024" and char.current_hit_points <= 0 and char.hit_points > 0:
+        raise HTTPException(status_code=409, detail="rest_needs_hp")
 
     # Pool residuo per classe (spec 2026-07-17): level - hit_dice_used.
     remaining = max(0, cls.level - (cls.hit_dice_used or 0))
@@ -1172,6 +1178,8 @@ async def roll_death_save(
             revived=False, current_hp=char.current_hit_points,
         )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
+    if char.current_hit_points > 0 or ds.get("stable"):  # si tira solo a 0 PF e non stabili (2014 p.197 / 2024 p.28)
+        raise HTTPException(status_code=409, detail={"code": "death_save_not_needed"})
     before = {"death_saves": dict(ds), "hp": char.current_hit_points}
 
     applied = modifiers_for(char, "death_save")
