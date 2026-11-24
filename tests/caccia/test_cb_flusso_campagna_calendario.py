@@ -97,7 +97,6 @@ async def _post_or_500(client, url, **kw):
         return 500
 
 
-@pytest.mark.xfail(strict=True, reason="CB-137 la data oltre l'anno 9999 dà 500 invece di 422")
 @pytest.mark.caccia(id="CB-137", fonte="invariante: un dato non valido è rifiutato con 422, non con un errore del server",
                     zona="flusso:campagna-calendario", voce="limiti", copre=["POST /campaigns/{campaign_id}/schedule"])
 async def test_serata_oltre_l_anno_9999_e_rifiutata(client):
