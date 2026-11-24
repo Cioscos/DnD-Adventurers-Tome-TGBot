@@ -127,7 +127,6 @@ async def test_maledizione_con_slot_alto_non_richiede_concentrazione(client, slo
                            "carta:2024/spells.md#Mantello del Crociato", "carta:2024/spells.md#Maledizione",
                            "carta:2024/spells.md#Porta Dimensionale", "carta:2024/spells.md#Ragnatela", "GET /characters/{char_id}/spells"])
 @pytest.mark.parametrize("indice", ["hex", "hunters-mark", "crusaders-mantle", "bestow-curse", "dimension-door", "web"])
-@pytest.mark.xfail(strict=True, reason="CB-3815: difforme dal manuale, confermato")
 async def test_incantesimi_senza_danno_al_lancio_non_aprono_il_tiro_di_danno(client, indice):
     cid = await _pg(client)
     await _dal_catalogo(client, cid, indice)
