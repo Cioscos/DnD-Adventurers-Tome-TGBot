@@ -45,6 +45,9 @@ class ChoiceSpec:
     replaceable: bool = False
     # Con ``replaceable``: una sostituzione per riposo lungo (Maestria negli Incantesimi 2024: «al termine di un riposo lungo»)
     replace_per_long_rest: int = 0  # quanti cambi per riposo lungo (True = 1)
+    # Con ``replaceable``: un cambio per livello di classe, dopo quello della prima scelta; «each» a ogni livello (Stile di
+    # Combattimento 2024), «new_picks» solo ai livelli che danno nuove opzioni del gruppo (manovre 2024)
+    replace_per_level: Literal["each", "new_picks"] | None = None
     label: Callable[[str], dict] | None = None
     grants: Literal["proficient", "expert", "language", "save"] | None = None
     spell_pick: Literal["known", "extra", "book"] | None = None

@@ -134,7 +134,6 @@ async def test_i_poteri_psionici_con_un_arma_non_valgono_per_il_colpo_senz_armi(
 
 @pytest.mark.caccia(id="CB-2364", fonte="2024 · Guerriero · Superiorità in Combattimento · pag. 93", zona="regola:2024/fighter", voce="limiti",
                     copre=["carta:2024/classes/fighter.md#Superiorità in Combattimento / Combat Superiority (Maestro di Battaglia 3, pag. 93)", "POST /characters/{char_id}/classes/{class_id}/options/replace"])
-@pytest.mark.xfail(strict=True, reason="CB-2364: difforme dal manuale, confermato")
 async def test_al_5_livello_non_si_sostituiscono_due_manovre_di_fila(client):
     cid = await _guerriero(client, 5, "battle_master")  # nessuna manovra nuova al 4° e al 5°
     await _manovre(client, cid, "trip", "rally", "parry")

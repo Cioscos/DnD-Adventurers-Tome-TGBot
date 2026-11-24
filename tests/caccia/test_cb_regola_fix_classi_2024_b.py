@@ -49,3 +49,50 @@ async def test_impulso_domato_solo_dopo_un_lancio_con_slot(client):
     r = await _surge(client, cid, tamed=True, percentile=[53])
     assert r.status_code == 200, r.text[:200]
     assert r.json()["applied"]["extra_action"] is True and (await _ability(client, cid, TAMED))["uses"] == 0
+
+
+@pytest.mark.caccia(id="CB-4513", fonte="2024 · Guerriero · Stile di Combattimento · pag. 91 (a ogni livello da guerriero si può sostituire il talento scelto)",
+                    zona="regola:2024/fighter", voce="limiti",
+                    copre=["carta:2024/classes/fighter.md#Stile di Combattimento / Fighting Style (Guerriero 1, pag. 91)",
+                           "POST /characters/{char_id}/classes/{class_id}/options/replace", "PATCH /characters/{char_id}/classes/{class_id}"])
+async def test_stile_di_combattimento_2024_una_sostituzione_per_livello_guadagnato(client):
+    r = await client.post("/characters", json={"name": "Guerriero", "rules_edition": "2024",
+                                               "initial_class": {"class_name": "fighter", "level": 1}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    scelta = next(c for c in scheda["pending_choices"] if c.get("group") == "fighting_style")
+    r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve", json={"kind": "class_option", "options": ["defense"]})
+    assert r.status_code == 200, r.text
+    classe = scheda["classes"][0]["id"]
+    url = f"/characters/{cid}/classes/{classe}/options/replace"
+    assert (await client.post(url, json={"group": "fighting_style", "old_key": "defense", "new_key": "archery"})).status_code == 409
+    assert (await client.patch(f"/characters/{cid}/classes/{classe}", json={"level": 2})).status_code == 200
+    assert (await client.post(url, json={"group": "fighting_style", "old_key": "defense", "new_key": "archery"})).status_code == 200
+    r = await client.post(url, json={"group": "fighting_style", "old_key": "archery", "new_key": "dueling"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "replace_on_level_up", r.text[:200]
+    assert (await client.patch(f"/characters/{cid}/classes/{classe}", json={"level": 3})).status_code == 200
+    assert (await client.post(url, json={"group": "fighting_style", "old_key": "archery", "new_key": "dueling"})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4514", fonte="2024 · Guerriero · Maestro di Battaglia, Superiorità in Combattimento · pag. 93 (a ogni nuova scelta di manovre se ne sostituisce una)",
+                    zona="regola:2024/fighter", voce="limiti",
+                    copre=["carta:2024/classes/fighter.md#Superiorità in Combattimento / Combat Superiority (Maestro di Battaglia 3, pag. 93)",
+                           "POST /characters/{char_id}/classes/{class_id}/options/replace", "PATCH /characters/{char_id}/classes/{class_id}"])
+async def test_manovre_2024_una_sostituzione_quando_se_ne_imparano_di_nuove(client):
+    r = await client.post("/characters", json={"name": "Guerriero", "rules_edition": "2024", "initial_class": {
+        "class_name": "fighter", "level": 6, "subclass": "Maestro di Battaglia"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    scheda = (await client.get(f"/characters/{cid}")).json()
+    scelta = next(c for c in scheda["pending_choices"] if c.get("group") == "maneuvers")
+    r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve",
+                          json={"kind": "class_option", "options": ["trip", "rally", "parry"]})
+    assert r.status_code == 200, r.text
+    classe = scheda["classes"][0]["id"]
+    url = f"/characters/{cid}/classes/{classe}/options/replace"
+    assert (await client.post(url, json={"group": "maneuvers", "old_key": "trip", "new_key": "goading"})).status_code == 409  # al 6° nessuna nuova
+    assert (await client.patch(f"/characters/{cid}/classes/{classe}", json={"level": 7})).status_code == 200
+    assert (await client.post(url, json={"group": "maneuvers", "old_key": "trip", "new_key": "goading"})).status_code == 200
+    r = await client.post(url, json={"group": "maneuvers", "old_key": "rally", "new_key": "menacing"})
+    assert r.status_code == 409, r.text[:200]

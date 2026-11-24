@@ -7,7 +7,7 @@ import { ApiError } from '@/api/client'
 const SERVER_ERRORS = [
   'option_unavailable', 'turn_slot_used', 'no_uses', 'no_slot', 'target_not_down', 'nothing_to_remove', 'target_dead', 'invalid_target', 'self_only_spell',
   'feature_unavailable', 'rest_needs_hp', 'long_rest_too_soon', 'state_locked',
-  'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest',
+  'no_stealth_roll', 'hide_failed', 'incapacitated', 'once_per_turn', 'replace_after_long_rest', 'replace_on_level_up',
   'death_save_not_needed', 'character_dead', 'option_prerequisite', 'option_is_prerequisite', 'class_already_present',
 ]
 

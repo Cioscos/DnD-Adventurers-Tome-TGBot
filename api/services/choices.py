@@ -142,6 +142,13 @@ def replace_class_option(session: AsyncSession, char: Character, cls: CharacterC
         if used >= int(ch.replace_per_long_rest):
             raise HTTPException(409, detail={"code": "replace_after_long_rest"})
         char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, str(cls.id): {"at": char.last_long_rest_at or "", "n": used + 1}}}
+    if ch.replace_per_level:  # un cambio per livello guadagnato; il livello dell'ultimo sta accanto ai cambi per riposo
+        swaps = (char.settings or {}).get(REPLACED_AT_REST) or {}
+        slot = f"{cls.id}:{group}"
+        opened = cls.level > min(ch.levels) and (ch.replace_per_level == "each" or cls.level in ch.levels)
+        if not opened or swaps.get(slot) == cls.level:
+            raise HTTPException(409, detail={"code": "replace_on_level_up"})
+        char.settings = {**(char.settings or {}), REPLACED_AT_REST: {**swaps, slot: cls.level}}
     chosen[chosen.index(old_key)] = new_key
     cls.options = {**(cls.options or {}), group: chosen}
     if ch.always_prepared:  # Maestria negli Incantesimi: il nuovo è sempre preparato, il vecchio torna un incantesimo qualsiasi
