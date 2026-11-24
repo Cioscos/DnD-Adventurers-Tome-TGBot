@@ -814,6 +814,8 @@ async def attack_with_weapon(
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and one_handed_melee(i) for i in char.items):
             raise HTTPException(status_code=422, detail="offhand_needs_second_weapon")
     elif offhand:
+        if character_edition(char) == "2014" and (meta.get("weapon_type") or "melee") != "melee":
+            raise HTTPException(status_code=422, detail="offhand_not_melee")  # 2014 p.195: arma da mischia leggera
         if not has_property(item, "light"):
             raise HTTPException(status_code=422, detail="offhand_not_light")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and has_property(i, "light")

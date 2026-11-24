@@ -65,7 +65,6 @@ async def test_attacco_dell_altra_mano_solo_dopo_l_azione_attacco(client, dadi):
     assert (await _turno(client, cid))["bonus_used"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="CB-038 2014 attacco dell'altra mano accettato con arma a distanza")
 @pytest.mark.caccia(id="CB-038", fonte="2014 · Combattere con Due Armi · pag. 195: arma da mischia leggera", zona="flusso:attacco-danno",
                     voce="edizioni", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_2014_attacco_dell_altra_mano_non_con_un_arma_a_distanza(client, dadi):
