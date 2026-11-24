@@ -40,7 +40,7 @@ from api.services.game_sessions import active_session_id, find_active_session_fo
 from api.schemas.session import GameSessionRead
 from api.services import campaigns as svc
 from api.services.campaigns import create_campaign, generate_campaign_code
-from api.services.recap import dice_baseline
+from api.services.recap import dice_baseline, record_departure
 from core.db.models import (
     Campaign,
     CampaignLore,
@@ -482,10 +482,12 @@ async def remove_member(
     live = select(GameSession.id).where(
         GameSession.campaign_id == campaign_id, GameSession.status == SessionStatus.ACTIVE
     )
-    await db.execute(delete(SessionParticipant).where(
+    for p in (await db.execute(select(SessionParticipant).where(
         SessionParticipant.character_id == character_id,
         SessionParticipant.session_id.in_(live),
-    ))
+    ))).scalars().all():
+        record_departure(await db.get(GameSession, p.session_id), p)  # resta nel riepilogo, come chi esce con /leave
+        await db.delete(p)
     await db.delete(member)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

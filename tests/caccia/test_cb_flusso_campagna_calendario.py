@@ -424,7 +424,6 @@ async def _hp(client, cid, *ops):
         assert (await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": v})).status_code == 200
 
 
-@pytest.mark.xfail(strict=True, reason="CB-159 un PG tolto dalla campagna durante la serata sparisce dal riepilogo")
 @pytest.mark.caccia(id="CB-159", fonte="invariante: il riepilogo racconta chi ha giocato la serata", zona="flusso:campagna-calendario",
                     voce="annullamento", copre=["DELETE /campaigns/{campaign_id}/members/{character_id}", "GET /sessions/{session_id}/recap"])
 async def test_pg_tolto_resta_nel_riepilogo(client, test_session_factory):
