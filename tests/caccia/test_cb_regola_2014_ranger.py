@@ -64,7 +64,6 @@ async def _undo_hp(client, cid):
     ({"class_name": "paladin", "level": 5}, {1: 4, 2: 2}),
     ({"class_name": "fighter", "level": 7, "subclass": "Cavaliere Mistico"}, {1: 4, 2: 2}),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-1911: difforme dal manuale, confermato")
 async def test_un_livello_da_ranger_non_cambia_gli_slot_dell_unico_incantatore(client, initial, slots):
     r = await client.post("/characters", json={"name": "Multiclasse", "initial_class": initial})
     assert r.status_code == 201, r.text

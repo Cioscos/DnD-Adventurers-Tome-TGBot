@@ -204,7 +204,8 @@ def caster_kind(cls: "CharacterClass", edition: str = "2014") -> str | None:
     if key in FULL_CASTERS:
         return "full"
     if key in HALF_CASTERS:
-        return "half"
+        # 2014: Incantesimi solo dal 2° livello (Paladino 2 pag. 97, Ranger 2 pag. 104); prima la classe non incanta
+        return "half" if edition == "2024" or cls.level >= 2 else None
     if key in THIRD_CASTER_BASE:
         subclass = getattr(cls, "subclass_key", None)
         if subclass in THIRD_SUBCLASSES:

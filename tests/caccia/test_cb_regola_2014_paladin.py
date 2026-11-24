@@ -67,7 +67,6 @@ async def _colpo(client, cid, arma) -> dict:
     (1, "fighter", 7, 10, "Cavaliere Mistico"),  # idem: tabella del Cavaliere Mistico 7
     (5, "ranger", 1, 10, None),  # il ranger di 1° livello non ha Incantesimi: vale la tabella del paladino 5
 ])
-@pytest.mark.xfail(strict=True, reason="CB-1861: difforme dal manuale, confermato")
 async def test_slot_con_una_sola_classe_incantatrice_seguono_la_sua_tabella(
         client, livello_paladino, altra, livello_altra, dado, sottoclasse):
     cid = await _paladino(client, livello_paladino)
@@ -78,7 +77,6 @@ async def test_slot_con_una_sola_classe_incantatrice_seguono_la_sua_tabella(
 @pytest.mark.caccia(id="CB-1862", fonte="2014 · Paladino · Incantesimi dal 2° livello (CD e attacco degli incantesimi) · pag. 97",
                     zona="regola:2014/paladin", voce="limiti",
                     copre=["carta:2014/classes/paladin.md#Incantesimi / Spellcasting (Paladino 2, pag. 97)", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1862: difforme dal manuale, confermato")
 async def test_paladino_di_primo_livello_non_ha_cd_degli_incantesimi(client):
     primo = (await _scheda(client, await _paladino(client, 1)))["spellcasting"]["casters"]
     secondo = (await _scheda(client, await _paladino(client, 2)))["spellcasting"]["casters"]

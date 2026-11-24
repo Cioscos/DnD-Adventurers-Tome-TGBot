@@ -72,7 +72,8 @@ async def test_slots_follow_the_half_caster_table(client, level, slots):
 
 async def test_a_level_1_ranger_has_no_slots_and_no_spells(client):
     full = await _full(client, await _ranger(client, 1))
-    assert full["spell_slots"] == [] and full["spellcasting"]["limits"][0]["known_limit"] == 0
+    # 2014, Incantesimi (Ranger 2, pag. 104): al 1° livello il ranger non ha il privilegio, quindi non è un incantatore
+    assert full["spell_slots"] == [] and full["spellcasting"]["limits"] == [] and full["spellcasting"]["casters"] == []
 
 
 @pytest.mark.parametrize("level,known", [(1, 0), (2, 2), (3, 3), (4, 3), (5, 4), (6, 4), (7, 5), (9, 6), (11, 7), (13, 8),
