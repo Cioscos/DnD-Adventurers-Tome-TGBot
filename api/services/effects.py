@@ -182,6 +182,9 @@ async def apply_conditions(session: AsyncSession, char: Character,
     if marks := (char.settings or {}).get(SUSPENDED_ON):  # cambiata per altra via: la sospensione non vale più
         left = {c: by for c, by in marks.items() if c not in changes}
         char.settings = {**{k: v for k, v in char.settings.items() if k != SUSPENDED_ON}, **({SUSPENDED_ON: left} if left else {})}
+    if saved := (char.settings or {}).get(SUSPENDED_EFFECTS):
+        left = {c: e for c, e in saved.items() if c not in changes}
+        char.settings = {**{k: v for k, v in char.settings.items() if k != SUSPENDED_EFFECTS}, **({SUSPENDED_EFFECTS: left} if left else {})}
     for flag, slug in (("knocked_out", "unconscious"), ("hiding", "invisible")):
         if changes.get(slug, True) is False and (char.settings or {}).get(flag):
             char.settings = {k: v for k, v in char.settings.items() if k != flag}  # tolta a mano: finito
@@ -237,7 +240,7 @@ def _still_concentrating(session: Session, effect: dict) -> bool:
 
 
 def _restore_effect(session: Session, effect: dict) -> None:
-    """Rimette durata, TS e fonte della condizione sospesa. shortcut: il tempo passato sospesa non scala la durata, da rivedere se serve."""
+    """Rimette durata, TS e fonte della condizione sospesa (la durata rimasta: ``durations.tick_suspended``)."""
     data = dict(effect)
     for column, model in (("source_character_id", Character), ("source_combatant_id", Combatant),
                           ("source_spell_id", Spell), ("encounter_id", Encounter)):
@@ -273,16 +276,16 @@ def _restore_suspended(session: Session, char: Character) -> None:
         if receiver is None:
             continue
         marks = dict((receiver.settings or {}).get(SUSPENDED_ON) or {})
-        back = [c for c in entry["conditions"] if marks.get(c) == char.id and c not in immune_conditions(receiver)]
+        mine = [c for c in entry["conditions"] if marks.get(c) == char.id]  # un altro può averla sospesa dopo
+        back = [c for c in mine if c not in immune_conditions(receiver)]
         saved = dict((receiver.settings or {}).get(SUSPENDED_EFFECTS) or {})
-        effects = {c: saved.pop(c) for c in entry["conditions"] if c in saved}
+        effects = {c: saved.pop(c) for c in mine if c in saved}
         if effects:
             receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_EFFECTS}, **({SUSPENDED_EFFECTS: saved} if saved else {})}
         # legata a una concentrazione finita durante la sospensione: non torna
         back = [c for c in back if not (c in effects and effects[c].get("ends_with_concentration") and not _still_concentrating(session, effects[c]))]
-        for c in entry["conditions"]:
-            if marks.get(c) == char.id:
-                marks.pop(c)
+        for c in mine:
+            marks.pop(c)
         if receiver.settings and SUSPENDED_ON in receiver.settings:
             receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_ON}, **({SUSPENDED_ON: marks} if marks else {})}
         if back:

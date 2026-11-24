@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import get_current_user
 from api.database import get_db
 from core.db.models import Character, CharacterHistory
+from api.services.history import evening_start
 from api.schemas.common import HistoryEntryRead, HistoryRetentionPreview
 
 router = APIRouter(prefix="/characters", tags=["history"])
@@ -65,14 +66,17 @@ async def history_retention_preview(
         )
     ).scalar() or 0
 
-    would_purge_events = max(0, total - events)
+    start = await session.run_sync(evening_start, char_id)  # le righe della serata aperta non si tolgono
+    tonight = (await session.scalar(select(func.count(CharacterHistory.id)).where(
+        CharacterHistory.character_id == char_id, CharacterHistory.timestamp >= start))) if start else 0
+    would_purge_events = max(0, total - tonight - max(0, events - tonight))
 
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat(timespec="seconds")
     would_purge_days = (
         await session.execute(
             select(func.count(CharacterHistory.id)).where(
                 CharacterHistory.character_id == char_id,
-                CharacterHistory.timestamp < cutoff,
+                CharacterHistory.timestamp < min(cutoff, start or cutoff),
             )
         )
     ).scalar() or 0

@@ -943,3 +943,38 @@ async def test_la_pulizia_della_cronologia_non_toglie_dati_al_riepilogo(client, 
     await client.post(f"/sessions/{sid}/close")
     [riga] = [c for c in (await client.get(f"/sessions/{sid}/recap")).json()["characters"] if c["character_id"] == a]
     assert riga["damage_taken"] == 18
+
+
+@pytest.mark.caccia(id="CB-1529", fonte="invariante (come CB-880): l'oggetto resta al PG che lo ha ricevuto anche se viene eliminato e l'id torna in uso", zona="flusso:campagna-calendario", voce="interazione",
+                    copre=["GET /sessions/{session_id}/recap", "DELETE /characters/{char_id}"])
+async def test_regalo_a_un_pg_eliminato_non_passa_a_chi_ne_riusa_l_id(client, test_session_factory):
+    from sqlalchemy import select
+    from core.db.models import SessionMessage
+    camp, a = await _enrolled(client, test_session_factory)
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, a)])
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/gm/grant_item", json={"recipient_user_ids": [PLAYER_ID], "item": {"name": "Pozione", "quantity": 1}})
+    act(PLAYER_ID)
+    await client.post(f"/sessions/{sid}/leave")
+    assert (await client.delete(f"/characters/{a}")).status_code < 300
+    async with test_session_factory() as s:
+        assert (await s.execute(select(SessionMessage.recipient_character_id).where(SessionMessage.item_name == "Pozione"))).scalar_one() == -a
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/close")
+    rec = (await client.get(f"/sessions/{sid}/recap")).json()
+    assert [(g["item"], g["to"]) for g in rec["items"]["gm_grants"]] == [("Pozione", "Eroe")]
+
+
+@pytest.mark.caccia(id="CB-1530", fonte="invariante: l'anteprima della pulizia dice ciò che verrà tolto davvero", zona="flusso:campagna-calendario", voce="limiti",
+                    copre=["GET /characters/{char_id}/history/retention-preview"])
+async def test_l_anteprima_della_pulizia_non_conta_la_serata_aperta(client, test_session_factory):
+    camp, a = await _enrolled(client, test_session_factory)
+    act(PLAYER_ID)
+    await client.patch(f"/characters/{a}/hp", json={"op": "set_max", "value": 50})
+    await client.patch(f"/characters/{a}/hp", json={"op": "set_current", "value": 50})
+    await _apri_serata(client, camp["id"], [(PLAYER_ID, a)])
+    act(PLAYER_ID)
+    for _ in range(6):
+        await client.patch(f"/characters/{a}/hp", json={"op": "damage", "value": 3})
+    j = (await client.get(f"/characters/{a}/history/retention-preview?events=3")).json()
+    assert j["would_purge_events"] <= j["total"] - 6

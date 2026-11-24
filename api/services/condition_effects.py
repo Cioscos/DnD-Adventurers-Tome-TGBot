@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
 from core.rules.edition import character_edition
-from core.rules.states import restore_exhaustion
+from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_ON, restore_exhaustion
 from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
@@ -141,6 +141,10 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             if now_wild:  # una nuova forma è partita dopo l'avanzamento: resta la sua, non quella dello snapshot
                 pc.active_states = [x for x in pc.active_states if x.get("key") != "wild_shape"] + cur_wild
             set_damaged(pc, snap["damaged"])
+            if held := {c: x for c, x in (snap.get("suspended") or {}).items() if not (pc.conditions or {}).get(c)}:
+                st = pc.settings or {}
+                pc.settings = {**st, SUSPENDED_EFFECTS: {**(st.get(SUSPENDED_EFFECTS) or {}), **{c: x["effect"] for c, x in held.items()}},
+                               SUSPENDED_ON: {**(st.get(SUSPENDED_ON) or {}), **{c: x["by"] for c, x in held.items()}}}
             form = await db.get(Companion, snap["wild_closed"]) if snap.get("wild_closed") else None  # la riga che ha chiuso proprio l'avanzamento
             if form is not None and form.character_id == pc.id and form.kind == "wild_shape" and not form.is_active and not now_wild:
                 from api.services.wild_shape import deactivate_other_forms  # import locale: il servizio importa gli stati

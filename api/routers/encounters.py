@@ -937,6 +937,8 @@ async def end_encounter(
                 names.append("Concentrazione")
             if names:
                 ended.append(f"{char.name}: {', '.join(names)}")
+    await db.flush()  # le concentrazioni sono finite per tutti: le condizioni che sospendevano sono tornate e cadono con le altre
+    for cid in {c.character_id for c in enc.combatants if c.character_id is not None}:
         # Le durate in round e i TS ripetuti contano solo in combattimento: finito quello, la condizione cade (L5)
         for eff in (await db.execute(select(ConditionEffect).where(
                 ConditionEffect.character_id == cid,

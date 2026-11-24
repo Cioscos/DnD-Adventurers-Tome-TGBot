@@ -93,11 +93,11 @@ def _sum_modifiers(snapshot: tuple[list[HomebrewRule], list[Item]], char: Charac
                 }
                 try:
                     applies = evaluate_filter(Filter.model_validate(mod["when"]), ctx)
-                except (PathResolutionError, KeyError, ValueError) as exc:  # percorso inesistente o condizione illeggibile: la regola non si applica, la scheda resta leggibile
+                except (PathResolutionError, KeyError, TypeError, ValueError) as exc:  # percorso inesistente o condizione illeggibile: la regola non si applica, la scheda resta leggibile
                     logger.warning("homebrew rule %s skipped: %s", rule.id, exc)
                     continue
                 if applies:
-                    val = mod["value"]
+                    val = mod.get("value")
                     if isinstance(val, int):
                         total += val
                     # dice notation in MVP is treated as static 0 (deferred)

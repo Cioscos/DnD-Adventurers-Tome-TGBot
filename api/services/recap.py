@@ -15,7 +15,7 @@ import re
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -106,6 +106,9 @@ async def record_deletion(db: AsyncSession, char: Character) -> None:
         ))).scalars().all()
         stats = _char_stats(char, mine.get("dice_stats_start"), own, (gs.created_at, _now()), player)
         stats.update(character_id=-char.id, healing_given=_given(cured).get(char.id, 0))  # id negativo: quello vero può tornare in uso
+        await db.execute(update(SessionMessage).where(
+            SessionMessage.session_id == gs.id, SessionMessage.recipient_character_id == char.id,
+        ).values(recipient_character_id=-char.id))
         gs.departed = [d for d in gs.departed if d is not mine] + [{
             "user_id": mine["user_id"], "stats": stats,
             "healed_by": {str(k): v for k, v in _given(rows).items()},

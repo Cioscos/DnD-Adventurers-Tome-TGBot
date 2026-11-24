@@ -23,7 +23,7 @@ def add_history(session, char_id: int, event_type: str, description: str, meta: 
     ))
 
 
-def _evening_start(session: Session, char_id: int) -> str | None:
+def evening_start(session: Session, char_id: int) -> str | None:
     """Inizio della serata aperta in cui il PG è o è stato seduto: il riepilogo legge quelle righe alla chiusura."""
     seated = set(session.scalars(select(SessionParticipant.session_id).where(SessionParticipant.character_id == char_id)))
     starts = [gs.created_at for gs in session.execute(select(GameSession.id, GameSession.created_at, GameSession.departed).where(
@@ -39,7 +39,7 @@ def prune(session: Session, char_id: int, settings: dict | None) -> int:
     if mode not in ("events", "days"):
         return 0
     try:
-        start = _evening_start(session, char_id)
+        start = evening_start(session, char_id)
         mine = and_(CharacterHistory.character_id == char_id, *([CharacterHistory.timestamp < start] if start else []))
         if mode == "events":
             tonight = session.scalar(select(func.count(CharacterHistory.id)).where(

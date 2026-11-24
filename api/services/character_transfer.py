@@ -155,7 +155,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
         "companions": [c.__dict__ for c in sorted(char.companions, key=lambda c: c.id)],
         "condition_effects": [e.__dict__ for e in await effects_for_character(session, char.id)
                               if e.expiry_count is not None or e.save_dc is not None]
-        + list(((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).values()),  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
+        + list(e for c, e in ((char.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
+               if c in ((char.settings or {}).get(SUSPENDED_ON) or {})),  # sospese (Calmare Emozioni): sulla copia sono di nuovo attive
     })
 
 

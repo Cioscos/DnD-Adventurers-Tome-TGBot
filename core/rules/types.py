@@ -409,8 +409,8 @@ class Modifier:
     source: str = ""
 
 
-# slot di turno -> chiave booleana in ``Character.turn_state``
 FORGONE = -1  # ``action_weapons``: attacco dell'azione ceduto (bestia, trucchetto, incantesimo), senza arma
+# slot di turno -> chiave booleana in ``Character.turn_state``
 TURN_FLAGS = {
     "action": "action_used",
     "bonus": "bonus_used",

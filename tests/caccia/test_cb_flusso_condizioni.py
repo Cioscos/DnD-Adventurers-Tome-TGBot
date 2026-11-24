@@ -911,3 +911,83 @@ async def test_riaccesa_senza_durata_non_riprende_l_effetto_rimasto(client, test
         await s.commit()
     await _cond(client, cid, {"poisoned": True})
     assert (await _scheda(client, cid))["condition_effects"] == []
+
+
+async def _affascinato_sospeso(client, factory, ed="2014", durata=None):
+    cid = await _pg(client, ed, "cleric")
+    classe = (await _scheda(client, cid))["classes"][0]["id"]
+    sid = (await client.post(f"/characters/{cid}/spells", json={
+        "name": "calm-emotions", "level": 2, "srd_index": "calm-emotions", "is_prepared": True, "is_concentration": True, "class_id": classe})).json()["id"]
+    await _cond(client, cid, {"charmed": True})
+    from api.services.condition_effects import ExpirySpec
+    async with factory() as s:
+        await upsert_effect(s, ("character", cid), "charmed", save=SaveSpec("wisdom", 14, "end"), source_note="Driade",
+                            expiry=ExpirySpec("owner", "start", durata) if durata else None)
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": 2, "removal": {"targets": ["self"]}})
+    assert r.status_code == 200, r.text
+    return cid
+
+
+@pytest.mark.caccia(id="CB-1525", fonte="invariante: la copia ha gli stessi effetti della scheda", zona="flusso:condizioni", voce="persistenza", copre=["POST /characters/{char_id}/duplicate"])
+async def test_riaccesa_dopo_calmare_emozioni_la_copia_non_prende_l_effetto_vecchio(client, test_session_factory):
+    cid = await _affascinato_sospeso(client, test_session_factory)
+    await _cond(client, cid, {"charmed": True})
+    assert (await _scheda(client, cid))["condition_effects"] == []
+    copia = (await client.post(f"/characters/{cid}/duplicate")).json()["id"]
+    assert (await _scheda(client, copia))["condition_effects"] == []
+
+
+@pytest.mark.caccia(id="CB-1526", fonte="2014 · Calmare Emozioni · pag. 218: la condizione torna solo se la sua durata non è scaduta", zona="flusso:condizioni", voce="interazione",
+                    copre=["POST /characters/{char_id}/rounds/tick", "PATCH /characters/{char_id}/concentration"])
+@pytest.mark.parametrize("ed", _ED)
+@pytest.mark.parametrize("round_passati,torna", [(1, True), (3, False)])
+async def test_la_durata_scorre_anche_sospesa(client, test_session_factory, ed, round_passati, torna):
+    cid = await _affascinato_sospeso(client, test_session_factory, ed, durata=2)
+    for _ in range(round_passati):
+        assert (await client.post(f"/characters/{cid}/rounds/tick")).status_code == 200
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    j = await _scheda(client, cid)
+    assert j["conditions"].get("charmed", False) is torna
+    assert [e["expiry_count"] for e in j["condition_effects"]] == ([1] if torna else [])
+
+
+@pytest.mark.caccia(id="CB-1527", fonte="invariante: ciò che un altro lanciatore ha sospeso resta suo", zona="flusso:condizioni", voce="interazione", copre=["PATCH /characters/{char_id}/concentration"])
+async def test_la_fine_di_un_lanciatore_non_tocca_la_sospensione_di_un_altro(client, test_session_factory):
+    from core.db.models import Character
+    from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_ON
+    cid = await _affascinato_sospeso(client, test_session_factory)
+    async with test_session_factory() as s:  # nel frattempo un altro lanciatore l'ha sospesa di nuovo
+        char = await s.get(Character, cid)
+        prima = dict(char.settings[SUSPENDED_EFFECTS])
+        char.settings = {**char.settings, SUSPENDED_ON: {"charmed": 9999}}
+        await s.commit()
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        assert char.conditions["charmed"] is False and char.settings[SUSPENDED_EFFECTS] == prima
+
+
+@pytest.mark.caccia(id="CB-1528", fonte="invariante (L5): finito lo scontro le condizioni con durata o TS cadono", zona="flusso:condizioni", voce="interazione", copre=["POST /sessions/{session_id}/encounter/end"])
+async def test_a_fine_scontro_la_condizione_sospesa_non_resta(client, test_session_factory):
+    from core.db.models import Character, Combatant, Encounter
+    from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state
+    from core.rules.types import StateSpec
+    from sqlalchemy import select
+    sid, cid, _pc, _m = await _gm_su_pg(client, test_session_factory)
+    async with test_session_factory() as s:
+        lanciatore = Character(user_id=777, name="Chierico", settings={"concentration_rounds_left": 5, "concentration_item_spell": {"name": "X"},
+                               SUSPENDED_KEY: [{"id": cid, "conditions": ["charmed"]}]})
+        s.add(lanciatore)
+        await s.flush()
+        begin_state(lanciatore, StateSpec(SUSPENDED_KEY, ends_on=("concentration_end", "manual")), "removal")
+        enc = (await s.execute(select(Encounter.id))).scalars().first()
+        s.add(Combatant(encounter_id=enc, kind="pc", character_id=lanciatore.id, name="Chierico", created_at="2026-11-24T10:00:00"))
+        eroe = await s.get(Character, cid)
+        eroe.conditions = {"charmed": False}
+        eroe.settings = {**(eroe.settings or {}), SUSPENDED_ON: {"charmed": lanciatore.id}, SUSPENDED_EFFECTS: {"charmed": {
+            "character_id": cid, "slug": "charmed", "save_ability": "wisdom", "save_dc": 14, "save_edge": "end", "created_at": "2026-11-24T10:00:00"}}}
+        await s.commit()
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
+    j = await _come_giocatore(client, cid)
+    assert not j["conditions"].get("charmed") and j["condition_effects"] == []

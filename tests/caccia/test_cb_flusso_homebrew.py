@@ -68,3 +68,11 @@ async def test_una_regola_illeggibile_si_disattiva_e_si_elimina(client, test_ses
     url = f"/characters/{cid}/homebrew/rules/{rid}"
     assert (await client.post(f"{url}/enable", json={"enabled": False})).status_code == 200
     assert (await client.delete(url)).status_code == 204
+
+
+@pytest.mark.caccia(id="CB-1531", fonte="invariante (come CB-1512)", zona="flusso:homebrew", voce="contratto", copre=["GET /characters/{char_id}"])
+async def test_una_condizione_homebrew_con_un_valore_non_confrontabile_non_blocca_la_scheda(client):
+    cid = (await client.post("/characters", json={"name": "H", "initial_class": {"class_name": "fighter", "level": 3}})).json()["id"]
+    regola = _build_passive_rule("x", {"type": "character"}, "character.hit_points_max", 10, {"path": "$character", "op": "has_property", "value": ["a"]})
+    assert (await client.post(f"/characters/{cid}/homebrew/rules", json=regola)).status_code in (201, 422)
+    assert (await client.get(f"/characters/{cid}")).status_code == 200
