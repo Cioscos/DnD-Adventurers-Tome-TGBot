@@ -518,6 +518,8 @@ class RollOptionSpec:
     unavailable_hint: dict[str, str] | None = None
     reroll_dice: "Callable[[RuleContext, dict], int] | None" = None
     keep_rolled: bool = False
+    # Con ``after="reroll"``: il d20 nuovo si aggiunge a quelli già tirati e si usa il migliore, invece di sostituirli (Fortunato 2014)
+    extra_d20: bool = False
     self_heal: "Callable[[RuleContext, dict], int] | None" = None  # PF che chi lancia recupera (``spell_healing``, o l'iniziativa: lo applica il router del tiro)
     cancels: tuple[str, ...] = ()  # fonti di vantaggio o svantaggio (`condition:<slug>`) tolte dal tiro
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo (solo ``before`` su ``spell_damage``)

@@ -73,6 +73,19 @@ async def test_lucky_three_points_reroll(client):
     assert "feat.lucky" in await _roll_keys(client, body["id"], "skill", skill="athletics")
 
 
+async def test_lucky_extra_d20_uses_the_best_of_all_dice(client):
+    """PHB 2014 pag. 167: un d20 in più e si sceglie quale usare, anche fra i due dello svantaggio."""
+    body = await _l4(client)
+    cid = body["id"]
+    await _take(client, body, "lucky")
+    tiro = await client.post(f"/characters/{cid}/saving_throws/wisdom/roll", json={"mode": "disadvantage", "dice": [15, 4]})
+    assert tiro.status_code == 200 and tiro.json()["die"] == 4, tiro.text
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["feat.lucky"], "dice": [9]})
+    assert r.status_code == 200, r.text
+    assert (r.json()["die"], r.json()["total"]) == (15, tiro.json()["total"] + 11)
+    assert sorted(r.json()["dice"]) == [4, 9, 15]
+
+
 async def test_migration_drops_feat_rules_once(client, test_session_factory):
     body = await _l4(client)
     cid = body["id"]

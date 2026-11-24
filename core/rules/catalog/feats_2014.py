@@ -26,9 +26,9 @@ def _f14(key: str, **kw: Any) -> FeatureSpec:
 
 def _lucky_reroll(key: str, rolls: tuple[str, ...]) -> RollOptionSpec:
     return RollOptionSpec(
-        key=key, phase="after_roll", after="reroll", rolls=rolls, cost=Cost(feature_key=key),
-        label={"it": "Fortunato: spendi un punto e ritira il d20 (scegli tu quale risultato tenere)",
-               "en": "Lucky: spend a point and reroll the d20 (you choose which result to keep)"})
+        key=key, phase="after_roll", after="reroll", extra_d20=True, rolls=rolls, cost=Cost(feature_key=key),
+        label={"it": "Fortunato: spendi un punto e tira un d20 in più, usi il migliore",
+               "en": "Lucky: spend a point and roll an extra d20, you use the best one"})
 
 
 _HEALER_MODES = {

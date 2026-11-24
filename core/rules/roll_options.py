@@ -237,6 +237,7 @@ class AppliedOptions:
     targets: list[str] = field(default_factory=list)  # chiavi con un ``target_effect`` da applicare
     reroll_limit: int = 0  # ``after_damage``: dadi di danno ritirabili
     keep_rolled: bool = False
+    extra_d20: bool = False  # il d20 del ritiro si aggiunge a quelli tirati, si tiene il migliore (Fortunato 2014)
     cancels: list[str] = field(default_factory=list)  # fonti di vantaggio/svantaggio che l'opzione toglie
     maximize: bool = False  # i dadi di danno dell'incantesimo valgono il massimo
     maximize_types: frozenset[str] | None = None  # solo questi tipi di danno; None = tutti
@@ -601,6 +602,7 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         if spec.replace_die:
             out.replace_die = given["die"]
         out.reroll = out.reroll or spec.after == "reroll"
+        out.extra_d20 = out.extra_d20 or spec.extra_d20
         out.succeed = out.succeed or spec.after == "succeed"
         out.twenty = out.twenty or spec.after == "twenty"
         out.second_attack = out.second_attack or spec.second_attack

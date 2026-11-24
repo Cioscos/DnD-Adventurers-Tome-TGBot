@@ -23,7 +23,7 @@ from api.services.rules_targets import apply_target_effect, pending_target_effec
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from api.schemas.common import OptionResult
-from api.services.d20 import d20_records, resolve_applied
+from api.services.d20 import d20_records, resolve_applied, resolve_d20
 from api.services.spell_effects import end_by_target, resists_chosen_type
 from api.services.dice_stats import record_dice
 from api.services.rules_states import end_unextended, remove_state, use_feature
@@ -250,7 +250,13 @@ async def last_roll_options(
                             **({"attack_mode": pending["attack_mode"]} if weapon_attack else {}))
     merge_options(applied, opts)
     die, dice, mode, bonus, total = last["die"], last["dice"], last["mode"], last["bonus"], last["total"]
-    if opts.reroll:
+    if opts.extra_d20:  # Fortunato 2014: un d20 in più, non un ritiro; il giocatore usa il migliore di quelli tirati
+        added = resolve_d20("normal", (body.dice or [])[:1] or None, None)
+        record_dice(char, d20_records(added))
+        best = max(die, *(dice or []), added.kept)  # anche l'altro d20 di uno svantaggio
+        total += best - die
+        die, dice, mode = best, [*(dice or [die]), added.kept], "advantage"
+    elif opts.reroll:
         outcome = resolve_applied(body.mode, body.dice, None, applied)
         total += outcome.kept - die
         die, dice, mode = outcome.kept, outcome.dice, outcome.mode
