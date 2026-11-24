@@ -2,6 +2,8 @@
 import pytest
 
 from api.routers import maps, notes
+from core.db import engine as db_engine
+from core.db.models import AbilityScore, Character, Map
 
 
 async def _pg(client) -> int:
@@ -68,3 +70,33 @@ async def test_zona_con_barra_si_elimina(client, tmp_path, monkeypatch, zona, ur
         assert (await client.delete(f"/characters/{cid}/maps/zone/{url}")).status_code == 204
     pg = (await client.get(f"/characters/{cid}")).json()
     assert [m["zone_name"] for m in pg["maps"]] == ["Altra"]
+
+
+@pytest.mark.caccia(id="CB-032", fonte="invariante: ciò che è salvato si può aprire, modificare ed eliminare", zona="flusso:note-mappe",
+                    voce="persistenza", copre=[])
+async def test_all_avvio_si_riparano_i_dati_irraggiungibili(client, test_session_factory):
+    cid = await _pg(client)
+    nota = {"body": "x", "tags": ["t"]}
+    async with test_session_factory() as s:
+        (await s.get(Character, cid)).notes = {"..": nota, "a/..": nota, "Buona": nota, "Atto 1/2": "testo"}
+        s.add_all([AbilityScore(character_id=cid, name="luck", value=12)]
+                  + [Map(character_id=cid, zone_name=z, file_id="", file_type="photo") for z in ("..", " ", "Cripta 1/2")])
+        await s.commit()
+        for _ in range(2):  # idempotente
+            await (await s.connection()).run_sync(db_engine._repair_unreachable)
+            await s.commit()
+    pg = await client.get(f"/characters/{cid}")
+    assert pg.status_code == 200 and len(pg.json()["ability_scores"]) == 6
+    assert sorted(m["zone_name"] for m in pg.json()["maps"]) == ["Cripta 1/2", "Mappe", "Mappe"]
+    note = (await client.get(f"/characters/{cid}/notes")).json()
+    assert [(n["title"], n["body"], n["tags"]) for n in note] == [
+        ("Nota", "x", ["t"]), ("a-..", "x", ["t"]), ("Buona", "x", ["t"]), ("Atto 1/2", "testo", [])]
+
+
+@pytest.mark.caccia(id="CB-033", fonte="invariante: il nome di una zona entra nella sua colonna (200)", zona="flusso:note-mappe",
+                    voce="limiti", copre=["POST /characters/{char_id}/maps/upload"])
+async def test_zona_troppo_lunga_rifiutata(client):
+    cid = await _pg(client)
+    for n, atteso in ((200, 201), (201, 422)):
+        r = await client.post(f"/characters/{cid}/maps/upload", data={"zone_name": "z" * n}, files={"file": ("a.png", b"x")})
+        assert r.status_code == atteso

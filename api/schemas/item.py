@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any, Optional
 
-from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from api.schemas.common import OptionResult, RollMode, absent_when_none
 from api.schemas.container import ContainerStatsRead, validate_container_meta
@@ -156,7 +156,7 @@ class ItemRead(BaseModel):
 
 
 class ItemCreate(BaseModel):
-    name: str
+    name: str = Field(pattern=r"\S")
     description: Optional[str] = None
     weight: float = 0.0
     quantity: int = 1
@@ -197,7 +197,7 @@ class ItemCreate(BaseModel):
 
 
 class ItemUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, pattern=r"\S")
     description: Optional[str] = None
     weight: Optional[float] = None
     quantity: Optional[int] = None

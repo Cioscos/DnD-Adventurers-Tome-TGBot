@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from core.utils.reachable_names import is_reachable
 from core.db.models import RestorationType
 from core.game.actions import ActionType
 
@@ -364,9 +365,7 @@ class HPOp(str, Enum):
 
 
 def reachable_segment(name: str) -> str:
-    """Un nome che sta nell'indirizzo (titolo di nota, zona): vuoto non si raggiunge, «..» il browser lo risolve
-    (DELETE …/notes/.. eliminava il personaggio)."""
-    if not name.strip() or any(part.strip() in (".", "..") for part in name.split("/")):
+    if not is_reachable(name):
         raise ValueError("invalid name")
     return name
 

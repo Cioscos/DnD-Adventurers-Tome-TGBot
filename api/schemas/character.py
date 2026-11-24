@@ -428,7 +428,7 @@ class SpeciesApply(BaseModel):
 
 
 class CharacterCreate(BaseModel):
-    name: str
+    name: str = Field(pattern=r"\S")
     # Base scores WITHOUT species bonuses; each 3-20 after bonuses (checked in the router).
     ability_scores: Optional[dict[str, int]] = None
     species: Optional[SpeciesApply] = None
@@ -461,7 +461,7 @@ class CharacterCreate(BaseModel):
 
 class CharacterUpdate(BaseModel):
     """Partial update for identity / metadata fields."""
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, pattern=r"\S")
     race: Optional[str] = None
     gender: Optional[str] = None
     background: Optional[str] = None

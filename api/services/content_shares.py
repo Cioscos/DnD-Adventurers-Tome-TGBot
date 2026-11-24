@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, ContentShare, Item
+from core.utils.reachable_names import reachable_name
 
 SHARE_TTL_DAYS = 30
 SHARED_VOICE_DIR = Path("data/shared_voice")
@@ -142,7 +143,7 @@ def import_note(share: ContentShare, char: Character) -> str:
     """
     p = share.payload or {}
     notes = dict(char.notes or {})
-    title = unique_note_title(notes, str(p.get("title") or "Nota"))
+    title = unique_note_title(notes, reachable_name(str(p.get("title") or "Nota"), "Nota"))
     body = str(p.get("body") or "")
     if share.voice_file_path:
         src = Path(share.voice_file_path)

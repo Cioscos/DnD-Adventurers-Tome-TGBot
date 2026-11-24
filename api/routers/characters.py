@@ -480,7 +480,7 @@ async def delete_character(
     files = await _character_files(session, char)
     await session.flush()
     await session.delete(char)
-    await session.flush()
+    await session.commit()
     for path in files:  # solo dopo che il database ha accettato l'eliminazione
         try:
             path.unlink(missing_ok=True)

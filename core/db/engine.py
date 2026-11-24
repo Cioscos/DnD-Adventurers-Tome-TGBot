@@ -6,6 +6,7 @@ Database file is stored at ``data/dnd_bot.db`` relative to the project root.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -15,6 +16,7 @@ from sqlalchemy import event, inspect as sa_inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.db.models import Base
+from core.utils.reachable_names import is_reachable, reachable_name, reachable_notes
 
 logger = logging.getLogger(__name__)
 
@@ -414,6 +416,30 @@ def _migrate_schema(connection) -> None:
             logger.info("Dropping legacy table: %s", table)
             connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
             existing_tables.discard(table)
+    _repair_unreachable(connection)
+
+
+def _repair_unreachable(connection) -> None:
+    """Dati che l'API oggi rifiuta e che nessuna schermata può più aprire o eliminare: caratteristiche inventate (la scheda
+    dava errore 500), titoli di nota e zone di mappe come «..» o vuoti. Idempotente."""
+    tables = set(sa_inspect(connection).get_table_names())
+    if "ability_scores" in tables:
+        connection.execute(text("DELETE FROM ability_scores WHERE lower(name) NOT IN "
+                                "('strength','dexterity','constitution','intelligence','wisdom','charisma')"))
+    if "characters" in tables:
+        for char_id, raw in connection.execute(text("SELECT id, notes FROM characters WHERE notes IS NOT NULL")).fetchall():
+            try:
+                notes = json.loads(raw) if isinstance(raw, str) else raw
+            except ValueError:
+                continue
+            if isinstance(notes, dict) and not all(map(is_reachable, notes)):
+                connection.execute(text("UPDATE characters SET notes = :n WHERE id = :id"),
+                                   {"n": json.dumps(reachable_notes(notes)), "id": char_id})
+    if "maps" in tables:
+        for map_id, zone in connection.execute(text("SELECT id, zone_name FROM maps")).fetchall():
+            if zone is not None and not is_reachable(zone):
+                connection.execute(text("UPDATE maps SET zone_name = :z WHERE id = :id"),
+                                   {"z": reachable_name(zone, "Mappe"), "id": map_id})
 
 
 def _migrate_class_resources_to_abilities(connection) -> None:

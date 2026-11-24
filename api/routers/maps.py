@@ -150,7 +150,7 @@ async def upload_map(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
-    zone_name: Annotated[str, Form(), AfterValidator(reachable_segment)],
+    zone_name: Annotated[str, Form(max_length=200), AfterValidator(reachable_segment)],
     file: UploadFile = File(...),
 ) -> Map:
     """Upload a map image from the webapp and associate it with a zone."""

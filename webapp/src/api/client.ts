@@ -580,7 +580,7 @@ function attackBody(
 
 /** Il titolo di una nota nell'indirizzo. «..» il browser lo risolve (DELETE …/notes/.. eliminerebbe il personaggio): non parte. */
 function noteSegment(title: string): string {
-  if (title.split('/').some((p) => p.trim() === '.' || p.trim() === '..')) throw new Error('invalid note title')
+  if (title.split('/').some((p) => p === '.' || p === '..')) throw new Error('invalid note title')
   return encodeURIComponent(title)
 }
 

@@ -35,3 +35,16 @@ async def test_iniziativa_d_ufficio_con_la_destrezza_attuale(client, test_sessio
     r = await client.post(f"/sessions/{sid}/encounter/start", json={"auto_roll_missing": True})
     pg = next(c for c in r.json()["combatants"] if c["id"] == pid)
     assert pg["initiative"] - pg["initiative_die"] == 4
+
+
+@pytest.mark.caccia(id="CB-030", fonte="invariante: una modifica accettata ha effetto, altrimenti è rifiutata", zona="flusso:sessione-combattimento",
+                    voce="contratto", copre=["PATCH /sessions/{session_id}/encounter/combatants/{combatant_id}"])
+async def test_il_modificatore_di_un_pg_sta_sulla_scheda(client, test_session_factory):
+    sid, pid = await _incontro(client, test_session_factory)
+    as_user(GM_ID)
+    url = f"/sessions/{sid}/encounter/combatants/"
+    assert (await client.patch(f"{url}{pid}", json={"initiative_mod": 5})).status_code == 422
+    live = (await client.get(f"/sessions/{sid}/live")).json()["encounter"]["combatants"]
+    mostro = next(c for c in live if c["kind"] == "monster")
+    r = await client.patch(f"{url}{mostro['id']}", json={"initiative_mod": 5})
+    assert next(c for c in r.json()["combatants"] if c["id"] == mostro["id"])["initiative_mod"] == 5

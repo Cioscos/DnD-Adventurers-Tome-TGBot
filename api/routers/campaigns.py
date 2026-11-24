@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_telegram_user, get_current_user
+from api.locks import character_locks
 from api.database import get_db
 from api.schemas.campaign import (
     CampaignCreate,
@@ -306,6 +307,10 @@ async def rename(
     return CampaignRead(id=camp.id, name=camp.name, invite_code=camp.invite_code, is_gm=True)
 
 
+def _linked(notes: dict | None, campaign_id: int) -> bool:
+    return any(isinstance(v, dict) and v.get("campaign_id") == campaign_id for v in (notes or {}).values())
+
+
 @router.delete("/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_campaign(
     campaign_id: int,
@@ -315,27 +320,33 @@ async def delete_campaign(
     camp = await _get_campaign(db, campaign_id, user_id, gm_only=True)
     if await active_session_id(db, camp.id) is not None:
         raise _err(409, "campaign_session_active")
-    # game_sessions.campaign_id has no FK: detach closed sessions in code.
-    await db.execute(
-        update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
-    )
-    # SQLite riusa gli id: un collegamento rimasto nelle note punterebbe alla prossima campagna, di altri.
-    for pc in (await db.execute(select(Character).where(Character.notes.is_not(None)))).scalars():
-        if any(isinstance(v, dict) and v.get("campaign_id") == camp.id for v in (pc.notes or {}).values()):
-            pc.notes = {t: {**v, "campaign_id": None} if isinstance(v, dict) and v.get("campaign_id") == camp.id else v
-                        for t, v in pc.notes.items()}
-    stash = await db.get(Character, camp.stash_character_id)
-    await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
-    await db.execute(delete(CampaignSchedule).where(CampaignSchedule.campaign_id == camp.id))
-    # Explicit like lore: don't depend on PRAGMA foreign_keys for the atlas cascade. Markers first (FK to maps/types).
-    for model in (CampaignMapMarker, CampaignMarkerType, CampaignMap):
-        await db.execute(delete(model).where(model.campaign_id == camp.id))
-    await db.delete(camp)  # cascades campaign_members
-    await db.flush()
-    await db.delete(stash)  # cascades items and currency
-    await db.flush()
-    shutil.rmtree(svc.LORE_DIR / str(camp.id), ignore_errors=True)  # only after the DB delete went through
-    shutil.rmtree(svc.ATLAS_DIR / str(camp.id), ignore_errors=True)
+    campaign_dir = str(camp.id)
+    ids = set((await db.execute(select(CampaignMember.character_id).where(CampaignMember.campaign_id == camp.id))).scalars())
+    ids |= {cid for cid, notes in (await db.execute(select(Character.id, Character.notes).where(Character.notes.is_not(None)))).all()
+            if _linked(notes, camp.id)}
+    async with character_locks(ids):  # una nota salvata nello stesso momento non va persa né resta collegata
+        # game_sessions.campaign_id has no FK: detach closed sessions in code.
+        await db.execute(
+            update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
+        )
+        # SQLite riusa gli id: un collegamento rimasto nelle note punterebbe alla prossima campagna, di altri.
+        for pc in (await db.execute(select(Character).where(Character.notes.is_not(None))
+                                    .execution_options(populate_existing=True))).scalars():
+            if _linked(pc.notes, camp.id):
+                pc.notes = {t: {**v, "campaign_id": None} if isinstance(v, dict) and v.get("campaign_id") == camp.id else v
+                            for t, v in pc.notes.items()}
+        stash = await db.get(Character, camp.stash_character_id)
+        await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
+        await db.execute(delete(CampaignSchedule).where(CampaignSchedule.campaign_id == camp.id))
+        # Explicit like lore: don't depend on PRAGMA foreign_keys for the atlas cascade. Markers first (FK to maps/types).
+        for model in (CampaignMapMarker, CampaignMarkerType, CampaignMap):
+            await db.execute(delete(model).where(model.campaign_id == camp.id))
+        await db.delete(camp)  # cascades campaign_members
+        await db.flush()
+        await db.delete(stash)  # cascades items and currency
+        await db.commit()
+    shutil.rmtree(svc.LORE_DIR / campaign_dir, ignore_errors=True)  # only after the DB delete went through
+    shutil.rmtree(svc.ATLAS_DIR / campaign_dir, ignore_errors=True)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

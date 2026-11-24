@@ -14,7 +14,7 @@
           "Campagna eliminata: le note dei personaggi non restano collegate a un'altra campagna.",
           "Personaggio eliminato: si eliminano anche mappe, note vocali e sagoma.",
           "Export, import e duplica conservano le munizioni da recuperare.",
-          "Il server rifiuta caratteristiche, abilità, danni negativi e zone o note senza nome che rovinavano la scheda."
+          "Il server rifiuta caratteristiche, abilità, danni negativi e nomi vuoti o non validi che rovinavano la scheda; i dati già rovinati si riparano da soli."
         ],
         "en": [
           "Notes: a title with “/” no longer prevents editing, deleting or sharing the note; a “..” title is refused, because deleting it erased the character.",
@@ -26,7 +26,7 @@
           "Deleted campaign: character notes are no longer linked to another campaign.",
           "Deleted character: its maps, voice notes and silhouette are deleted too.",
           "Export, import and duplicate keep the ammunition left to recover.",
-          "The server refuses unknown abilities and skills, negative damage and unnamed zones or notes that damaged the sheet."
+          "The server refuses unknown abilities and skills, negative damage and empty or invalid names that damaged the sheet; data already damaged is repaired automatically."
         ]
       }
     },

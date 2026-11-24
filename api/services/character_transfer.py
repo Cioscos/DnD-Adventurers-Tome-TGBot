@@ -29,6 +29,7 @@ from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPE
 from core.rules.subclasses import sync_subclass_keys
 from api.services.item_charges import attunement_limit
 from core.game.item_bonuses import is_attuned
+from core.utils.reachable_names import reachable_notes
 from core.db.models import (
     Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
     HomebrewRule, Item, RestorationType, Spell, SpellSlot, SpellSlotsMode,
@@ -226,7 +227,7 @@ async def import_character(
     cols["tool_proficiencies"] = {k: v for k, v in cols["tool_proficiencies"].items()
                                   if k in TOOLS and v in (True, "expert")}  # file modificato a mano: solo il catalogo
     char = Character(
-        user_id=user_id, name=name, notes=data.character.notes,
+        user_id=user_id, name=name, notes=reachable_notes(data.character.notes),
         spell_slots_mode=SpellSlotsMode(data.character.spell_slots_mode), **cols,
     )
     migrate_tools(char)  # export vecchi: strumenti scritti come testo

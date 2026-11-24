@@ -574,6 +574,11 @@ async def patch_combatant(
     comb = _primary_row(enc, comb)
     was_dead = comb.is_dead
 
+    if body.initiative_mod is not None and comb.kind == "pc":  # viene dalla scheda al momento del tiro; il master corregge `initiative`
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "pc_initiative_mod_on_sheet"},
+        )
     if body.conditions is not None and comb.kind == "pc":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
