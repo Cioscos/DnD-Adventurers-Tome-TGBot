@@ -299,6 +299,8 @@ async def delete_companion(
             end_form(char, comp)
         else:
             return_to_normal(char, comp)  # azione bonus; già spesa = 409 e la forma resta, non si elimina
+    if _beast_state(char).get("id") == comp.id:  # l'ordine era per lei: SQLite riusa l'id, non deve passare alla prossima
+        _save_beast_state(char, {})
     await session.delete(comp)
 
 

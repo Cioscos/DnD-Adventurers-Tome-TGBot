@@ -56,7 +56,6 @@ async def test_cambiare_tipo_non_aggira_le_forme_conosciute(client):
     assert sum(c["kind"] == "wild_shape" for c in await _lista(client, cid)) <= 4
 
 
-@pytest.mark.xfail(strict=True, reason="CB-339 l'ordine della bestia eliminata passa alla nuova (stato turn.beast e id riusato)")
 @pytest.mark.caccia(id="CB-339", fonte="2014 · Ranger · Signore delle Bestie · Compagno del Ranger · pag. 106", zona="flusso:compagni-forme",
                     voce="annullamento", copre=["DELETE /characters/{char_id}/companions/{comp_id}", "POST /characters/{char_id}/companions/{comp_id}/attack",
                                                 "carta:2014/classes/ranger.md#Compagno del Ranger / Ranger's Companion (Signore delle Bestie 3, pag. 106)"])
