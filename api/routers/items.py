@@ -859,12 +859,14 @@ async def attack_with_weapon(
         # Un attacco dell'azione segnato a mano non dice con quale arma è stato fatto: quello vale.
         if len(used) >= turn["action_attacks"] and not any(opens and weapon_id != item.id for weapon_id, opens in used):
             raise HTTPException(status_code=409, detail={"code": "offhand_needs_light_attack"})
-    if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
-        if any(
-            i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
-            for i in char.items
-        ):
-            raise HTTPException(status_code=422, detail="off_hand_occupied")
+    versatile_two = grip == "two" and has_prop("versatile") and meta.get("versatile_dice")
+    # Due Mani: l'arma va impugnata a due mani per attaccare (2014 pag. 147), come una Versatile impugnata così.
+    if (versatile_two or has_property(item, "two_handed")) and any(
+        i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
+        for i in char.items
+    ):
+        raise HTTPException(status_code=422, detail="off_hand_occupied")
+    if versatile_two:
         damage_dice_str = meta["versatile_dice"]
     if attack_mode == "thrown" and not has_prop("thrown"):
         raise HTTPException(status_code=422, detail="weapon_not_thrown")

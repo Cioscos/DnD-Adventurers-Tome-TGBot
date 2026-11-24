@@ -76,7 +76,6 @@ async def test_la_rete_del_catalogo_non_infligge_danni(client, dadi):
                     copre=["carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "carta:2014/equipment.md#Regole",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3163: difforme dal manuale, confermato")
 async def test_non_si_attacca_con_un_arma_a_due_mani_imbracciando_lo_scudo(client, dadi):
     cid = await _pg(client, strength=16)
     scudo = await _oggetto(client, cid, "Scudo", "shield", item_metadata={"ac_bonus": 2})
