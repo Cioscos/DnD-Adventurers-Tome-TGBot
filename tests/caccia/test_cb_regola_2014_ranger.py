@@ -170,7 +170,6 @@ async def test_da_incapacitato_i_privilegi_d_azione_non_si_usano(client, who, fe
                     zona="regola:2014/ranger", voce="regola",
                     copre=["carta:2014/classes/ranger.md#Devastatore dell'Orda / Horde Breaker (Cacciatore 3, pag. 106)",
                            "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-1917: difforme dal manuale, confermato")
 async def test_devastatore_dell_orda_solo_con_la_stessa_arma(client):
     cid = await _hunter(client, 3, (PREY, "horde_breaker"))
     sword = await _sword(client, cid, equip="main_hand")
