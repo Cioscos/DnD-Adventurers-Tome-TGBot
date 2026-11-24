@@ -356,3 +356,143 @@ async def test_la_pulizia_tiene_gli_ultimi_anche_nello_stesso_secondo(client, te
         await s.commit()
     righe = (await client.get(f"/characters/{cid}/history")).json()
     assert [r["description"] for r in righe] == ["e7", "e6", "e5"]
+
+
+@pytest.mark.caccia(id="CB-1473", fonte="invariante: due richieste insieme registrano entrambi i tiri", zona="flusso:dadi", voce="ripetizione",
+                    copre=["POST /characters/{char_id}/dice/result", "GET /characters/{char_id}/dice/history", "GET /characters/{char_id}/dice/stats"])
+async def test_due_tiri_diversi_insieme_restano_entrambi(client):
+    cid = await _pg(client)
+    esiti = await asyncio.gather(*[client.post(f"/characters/{cid}/dice/result", json=_tiro(v)) for v in (2, 5)])
+    assert [r.status_code for r in esiti] == [200, 200]
+    assert sorted(e["total"] for e in (await client.get(f"/characters/{cid}/dice/history")).json()) == [2, 5]
+    assert await _stats(client, cid) == {"d6": {"2": 1, "5": 1}}
+
+
+@pytest.mark.caccia(id="CB-1475", fonte="invariante: la pulizia della cronologia per numero di eventi vale anche per i tiri dei dadi", zona="flusso:dadi",
+                    voce="limiti", copre=["POST /characters/{char_id}/dice/result", "POST /characters/{char_id}/dice/initiative", "GET /characters/{char_id}/history"])
+@pytest.mark.xfail(strict=True, reason="CB-1475 dice/result e dice/initiative non chiamano prune_history")
+async def test_tiri_di_dadi_rispettano_la_pulizia_per_eventi(client, test_session_factory):
+    from core.db.models import Character
+    cid = await _pg(client)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.settings = {**(char.settings or {}), "history_retention_mode": "events", "history_retention_events": 3}
+        await s.commit()
+    for v in (1, 2, 3, 4):
+        await client.post(f"/characters/{cid}/dice/result", json=_tiro(v))
+    for v in (5, 6):
+        await client.post(f"/characters/{cid}/dice/initiative", json={"die": v})
+    assert len((await client.get(f"/characters/{cid}/history")).json()) <= 3
+
+
+@pytest.mark.caccia(id="CB-1477", fonte="invariante: una richiesta rifiutata non registra nulla", zona="flusso:dadi", voce="limiti",
+                    copre=["POST /characters/{char_id}/dice/result"])
+async def test_vantaggio_con_tre_d20_rifiutato_senza_registrare(client):
+    cid = await _pg(client)
+    r = await client.post(f"/characters/{cid}/dice/result", json=_tiro(5, 9, 15, kind="d20", mode="advantage"))
+    assert r.status_code == 422
+    assert (await client.get(f"/characters/{cid}/dice/history")).json() == []
+    assert await _stats(client, cid) == {}
+
+
+@pytest.mark.caccia(id="CB-1478", fonte="invariante: i dadi d20 letti fuori da 1-20 si rifiutano e non si registrano", zona="flusso:dadi", voce="limiti",
+                    copre=["POST /characters/{char_id}/dice/initiative"])
+async def test_iniziativa_con_facce_fuori_intervallo_non_registra(client):
+    cid = await _pg(client)
+    for corpo in ({"dice": [0, 10], "mode": "advantage"}, {"dice": [10, 21], "mode": "disadvantage"}, {"dice": [-3], "mode": "normal"}):
+        assert (await client.post(f"/characters/{cid}/dice/initiative", json=corpo)).status_code == 422, corpo
+    assert (await client.get(f"/characters/{cid}/dice/history")).json() == []
+    assert await _stats(client, cid) == {}
+
+
+@pytest.mark.caccia(id="CB-1479", fonte="dice_stats.py: il totale della prova con il d20 alimenta il riepilogo della serata", zona="flusso:dadi", voce="interazione",
+                    copre=["POST /characters/{char_id}/dice/initiative", "GET /characters/{char_id}/dice/stats"])
+async def test_iniziativa_registra_il_totale_della_prova(client):
+    cid = await _pg(client)
+    await client.patch(f"/characters/{cid}/ability_scores/dexterity", json={"value": 14})
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"dice": [4, 17], "mode": "advantage"})
+    assert r.json()["total"] == 19
+    assert (await _stats(client, cid))["d20_total"] == {"19": 1}
+    cron = (await client.get(f"/characters/{cid}/history")).json()[0]
+    assert cron["event_type"] == "dice_roll" and cron["description"].endswith("19")
+
+
+@pytest.mark.caccia(id="CB-1480", fonte="decisione D-003", zona="flusso:dadi", voce="persistenza",
+                    copre=["POST /characters/{char_id}/duplicate", "GET /characters/{char_id}/dice/history", "GET /characters/{char_id}/dice/stats"])
+async def test_duplicato_riparte_senza_tiri_e_statistiche(client):
+    cid = await _pg(client)
+    await client.post(f"/characters/{cid}/dice/result", json=_tiro(3, 4))
+    r = await client.post(f"/characters/{cid}/duplicate")
+    assert r.status_code in (200, 201), r.text
+    nuovo = r.json()["id"]
+    assert (await client.get(f"/characters/{nuovo}/dice/history")).json() == []
+    assert await _stats(client, nuovo) == {}
+    assert all(e["event_type"] != "dice_roll" for e in (await client.get(f"/characters/{nuovo}/history")).json())
+    assert len((await client.get(f"/characters/{cid}/dice/history")).json()) == 1
+
+
+@pytest.mark.caccia(id="CB-1481", fonte="invariante: il messaggio in chat va al proprio utente e un invio fallito non risponde ok", zona="flusso:dadi", voce="normale",
+                    copre=["POST /characters/{char_id}/dice/post-to-chat"])
+async def test_post_to_chat_destinatario_ed_errore_di_invio(client, monkeypatch):
+    inviati, esito = [], [True]
+
+    async def finto(chat, testo, **k):
+        inviati.append((chat, testo))
+        return esito[0]
+    monkeypatch.setattr(telegram_notify, "send_telegram_message", finto)
+    monkeypatch.setattr(telegram_notify, "bot_token_configured", lambda: True)
+    cid = await _pg(client)
+    corpo = {"notation": "2d6+2", "rolls": [3, 5], "total": 10}
+    assert (await client.post(f"/characters/{cid}/dice/post-to-chat", json=corpo)).json() == {"ok": True}
+    assert inviati[0][0] == 1234 and "10" in inviati[0][1]
+    esito[0] = False
+    assert (await client.post(f"/characters/{cid}/dice/post-to-chat", json=corpo)).status_code >= 400
+
+
+@pytest.mark.caccia(id="CB-1482", fonte="invariante: azzerare le statistiche toglie anche i totali delle prove", zona="flusso:dadi", voce="annullamento",
+                    copre=["DELETE /characters/{char_id}/dice/stats", "POST /characters/{char_id}/dice/initiative"])
+async def test_azzerare_le_statistiche_toglie_anche_il_totale_della_prova(client):
+    cid = await _pg(client)
+    await client.post(f"/characters/{cid}/dice/initiative", json={"die": 12})
+    assert (await _stats(client, cid))["d20_total"]
+    await client.delete(f"/characters/{cid}/dice/stats")
+    assert await _stats(client, cid) == {}
+    assert len((await client.get(f"/characters/{cid}/dice/history")).json()) == 1
+
+
+@pytest.mark.caccia(id="CB-1491", fonte="2014 · Talenti · Allerta · +5 all'iniziativa", zona="flusso:dadi", voce="edizioni",
+                    copre=["POST /characters/{char_id}/dice/initiative", "carta:2014/feats.md#Allerta / Alert (pag. 165)"])
+async def test_iniziativa_2014_con_allerta_somma_cinque(client):
+    from tests.integration.test_level_choices import _take, _to_level_4
+    from tests.integration.rules.test_2014_bard import _full
+    body = await _to_level_4(client)
+    prima = (await client.post(f"/characters/{body['id']}/dice/initiative", json={"die": 10})).json()
+    await _take(client, body, "alert")
+    dopo = (await client.post(f"/characters/{body['id']}/dice/initiative", json={"die": 10})).json()
+    assert dopo["bonus"] == prima["bonus"] + 5 and dopo["total"] == prima["total"] + 5
+    assert dopo["bonus"] == (await _full(client, body["id"]))["initiative_bonus"]
+
+
+@pytest.mark.caccia(id="CB-1492", fonte="2024 · Talenti · Allerta · bonus di competenza all'iniziativa", zona="flusso:dadi", voce="edizioni",
+                    copre=["POST /characters/{char_id}/dice/initiative", "carta:2024/feats.md#Allerta / Alert (pag. 200) - Origine"])
+async def test_iniziativa_2024_con_allerta_somma_la_competenza(client, test_session_factory):
+    from tests.integration.rules.test_feats_origin_2024 import _give, _hero
+    cid = await _hero(client, 5)
+    prima = (await client.post(f"/characters/{cid}/dice/initiative", json={"die": 10})).json()
+    await _give(test_session_factory, client, cid, "2024_alert")
+    dopo = (await client.post(f"/characters/{cid}/dice/initiative", json={"die": 10})).json()
+    assert dopo["bonus"] == prima["bonus"] + 3 and dopo["total"] == prima["total"] + 3
+
+
+@pytest.mark.caccia(id="CB-1493", fonte="CLAUDE.md: ogni endpoint verifica il proprietario; un'ispirazione non si spende da altri", zona="flusso:dadi",
+                    voce="permessi", copre=["POST /characters/{char_id}/dice/result", "PATCH /characters/{char_id}/inspiration"])
+async def test_altro_utente_non_spende_l_ispirazione_altrui(client, come_utente):
+    cid = await _pg(client, "2024")
+    await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})
+    come_utente(9002)
+    r = await client.post(f"/characters/{cid}/dice/result", json=_tiro(12, kind="d20", with_inspiration=True))
+    assert r.status_code == 403
+    come_utente(1234)
+    assert (await client.get(f"/characters/{cid}")).json()["heroic_inspiration"] is True
+    assert (await client.get(f"/characters/{cid}/dice/history")).json() == []
+    assert await _stats(client, cid) == {}
