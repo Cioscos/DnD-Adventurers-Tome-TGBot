@@ -541,7 +541,11 @@ async def update_conditions(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
-    result = await apply_conditions(session, char, body.conditions)
+    # La pagina rimanda tutta la mappa a ogni tocco: ciò che non cambia non è stato toccato, e non deve per esempio far
+    # cadere la sospensione di Calmare Emozioni. Una richiesta che non cambia nulla resta com'è: è una conferma esplicita.
+    current = char.conditions or {}
+    touched = {k: v for k, v in body.conditions.items() if v != current.get(k, 0 if k == "exhaustion" else False)}
+    result = await apply_conditions(session, char, touched or body.conditions)
     # apply_conditions already dropped the effects of conditions turned off
     gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
     for slug, rounds in (body.durations or {}).items():

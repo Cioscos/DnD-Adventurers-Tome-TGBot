@@ -92,7 +92,6 @@ async def _calmare(client, ed):
                     copre=["PATCH /characters/{char_id}/conditions", "PATCH /characters/{char_id}/concentration",
                            "carta:2014/spells.md#Calmare Emozioni"])
 @pytest.mark.parametrize("ed", _ED)
-@pytest.mark.xfail(strict=True, reason="CB-540 la mappa completa rimandata cancella la sospensione di Calmare Emozioni")
 async def test_calmare_emozioni_sopravvive_a_un_tocco_su_altra_condizione(client, ed):
     cid = await _calmare(client, ed)
     mappa = (await _scheda(client, cid))["conditions"]  # la pagina rimanda tutta la mappa a ogni tocco
