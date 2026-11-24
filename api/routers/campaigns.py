@@ -83,22 +83,24 @@ async def _get_campaign(
 
 
 async def _my_last_character_id(db: AsyncSession, campaign_id: int, user_id: int) -> Optional[int]:
-    """The caller's PG from the most recent campaign session, if still an enrolled non-dead member."""
-    return (await db.execute(
-        select(SessionParticipant.character_id)
-        .join(GameSession, GameSession.id == SessionParticipant.session_id)
-        .join(CampaignMember, and_(
-            CampaignMember.character_id == SessionParticipant.character_id,
-            CampaignMember.campaign_id == campaign_id,
-            CampaignMember.status != "dead",
-        ))
-        .where(
-            GameSession.campaign_id == campaign_id,
-            SessionParticipant.user_id == user_id,
-            SessionParticipant.character_id.is_not(None),
-        )
+    """The caller's PG from the most recent campaign session (seated or left early), if still an enrolled non-dead member."""
+    enrolled = set((await db.execute(select(CampaignMember.character_id).where(
+        CampaignMember.campaign_id == campaign_id, CampaignMember.user_id == user_id,
+        CampaignMember.status != "dead",
+    ))).scalars())
+    rows = (await db.execute(
+        select(SessionParticipant.character_id, GameSession.departed)
+        .select_from(GameSession)
+        .outerjoin(SessionParticipant, and_(
+            SessionParticipant.session_id == GameSession.id, SessionParticipant.user_id == user_id))
+        .where(GameSession.campaign_id == campaign_id)
         .order_by(GameSession.created_at.desc(), GameSession.id.desc())
-    )).scalars().first()
+    )).all()
+    for seated, departed in rows:
+        left = [d.get("character_id") for d in reversed(departed or []) if d.get("user_id") == user_id]
+        if (cid := next((c for c in (seated, *left) if c in enrolled), None)) is not None:
+            return cid
+    return None
 
 
 def _duration(created: str, last: str) -> int:

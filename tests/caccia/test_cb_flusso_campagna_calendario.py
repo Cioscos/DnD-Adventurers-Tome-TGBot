@@ -752,7 +752,6 @@ async def test_regalo_del_master_resta_al_pg_che_lo_ha_ricevuto(client, test_ses
     assert [(g["item"], g["to"]) for g in rec["items"]["gm_grants"]] == [("Pozione", "Eroe"), ("Corda", "Secondo")]
 
 
-@pytest.mark.xfail(strict=True, reason="CB-881 dopo leave il banner propone il PG della serata precedente")
 @pytest.mark.caccia(id="CB-881", fonte="invariante: dopo essere usciti dalla serata il banner propone il PG con cui si stava giocando",
                     zona="flusso:campagna-calendario", voce="persistenza", copre=["GET /campaigns/active-for-me", "GET /campaigns/{campaign_id}"])
 async def test_rientro_propone_il_pg_appena_lasciato(client, test_session_factory):
