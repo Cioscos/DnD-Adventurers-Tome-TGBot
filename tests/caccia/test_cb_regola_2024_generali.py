@@ -167,7 +167,6 @@ async def test_il_danno_di_un_incantesimo_non_scende_sotto_zero(client):
 @pytest.mark.parametrize("percorso,corpo", [
     ("spells", {"name": "Decimo", "level": 10}), ("spells", {"name": "Negativo", "level": -1}),
     ("spell_slots", {"level": 0, "total": 1}), ("spell_slots", {"level": 10, "total": 1})])
-@pytest.mark.xfail(strict=True, reason="CB-2867: difforme dal manuale, confermato")
 async def test_livelli_di_incantesimo_e_di_slot_fuori_dalla_scala_rifiutati(client, percorso, corpo):
     cid = await _pg(client)
     r = await client.post(f"/characters/{cid}/{percorso}", json=corpo)

@@ -76,7 +76,7 @@ class SpellRead(BaseModel):
 
 class SpellCreate(BaseModel):
     name: str = Field(pattern=VISIBLE)
-    level: int = 0
+    level: int = Field(0, ge=0, le=9)  # livelli da 0 (trucchetti) a 9
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -101,7 +101,7 @@ class SpellCreate(BaseModel):
 
 class SpellUpdate(BaseModel):
     name: Optional[str] = Field(None, pattern=VISIBLE)
-    level: Optional[int] = None
+    level: Optional[int] = Field(None, ge=0, le=9)
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -201,7 +201,7 @@ class SpellSlotRead(BaseModel):
 
 
 class SpellSlotCreate(BaseModel):
-    level: int
+    level: int = Field(ge=1, le=9)  # gli slot servono gli incantesimi dal 1° al 9° livello
     total: int
     used: int = 0
     is_pact: bool = False
