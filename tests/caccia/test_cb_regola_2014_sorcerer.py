@@ -64,7 +64,6 @@ async def test_incantesimo_rapido_dopo_un_incantesimo_di_livello_lanciato_con_l_
 @pytest.mark.caccia(id="CB-2013", fonte="2014 · Stregone · Affinità Elementale · pag. 111", zona="regola:2014/sorcerer", voce="regola",
                     copre=["carta:2014/classes/sorcerer.md#Affinità Elementale / Elemental Affinity (Discendenza Draconica 6, pag. 111)",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-2013: difforme dal manuale, confermato")
 async def test_affinita_elementale_somma_il_carisma_a_un_solo_tiro_di_danno_per_lancio(client):
     cid = await _draconic(client, 6, "red", charisma=18)
     spell = await _spell(client, cid, "Raggio rovente", 2, attack_save="ATK", damage_dice="2d6", damage_type="fire", range_area="36 m")
