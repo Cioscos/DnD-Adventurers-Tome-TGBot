@@ -4,10 +4,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, event, select
+from sqlalchemy import and_, delete, event, func, select
 from sqlalchemy.orm import Session
 
-from core.db.models import Character, CharacterHistory
+from core.db.models import Character, CharacterHistory, GameSession, SessionParticipant, SessionStatus
 
 logger = logging.getLogger(__name__)
 _DIRTY = "history_char_ids"
@@ -23,18 +23,30 @@ def add_history(session, char_id: int, event_type: str, description: str, meta: 
     ))
 
 
+def _evening_start(session: Session, char_id: int) -> str | None:
+    """Inizio della serata aperta in cui il PG è o è stato seduto: il riepilogo legge quelle righe alla chiusura."""
+    seated = set(session.scalars(select(SessionParticipant.session_id).where(SessionParticipant.character_id == char_id)))
+    starts = [gs.created_at for gs in session.execute(select(GameSession.id, GameSession.created_at, GameSession.departed).where(
+        GameSession.status == SessionStatus.ACTIVE))
+        if gs.id in seated or any(d.get("character_id") == char_id for d in gs.departed or [])]
+    return min(starts, default=None)
+
+
 def prune(session: Session, char_id: int, settings: dict | None) -> int:
     """Toglie le righe oltre il limite scelto nelle Impostazioni (``history_retention_*``); dice quante."""
     settings = settings if isinstance(settings, dict) else {}
     mode = settings.get("history_retention_mode", "off")
     if mode not in ("events", "days"):
         return 0
-    mine = CharacterHistory.character_id == char_id
     try:
+        start = _evening_start(session, char_id)
+        mine = and_(CharacterHistory.character_id == char_id, *([CharacterHistory.timestamp < start] if start else []))
         if mode == "events":
+            tonight = session.scalar(select(func.count(CharacterHistory.id)).where(
+                CharacterHistory.character_id == char_id, CharacterHistory.timestamp >= start)) if start else 0
             keep = max(1, int(settings.get("history_retention_events", 100) or 100))
             old = select(CharacterHistory.id).where(mine).order_by(
-                CharacterHistory.timestamp.desc(), CharacterHistory.id.desc()).offset(keep)
+                CharacterHistory.timestamp.desc(), CharacterHistory.id.desc()).offset(keep - min(keep, tonight))
             stmt = delete(CharacterHistory).where(CharacterHistory.id.in_(old))
         else:
             days = max(1, int(settings.get("history_retention_days", 30) or 30))

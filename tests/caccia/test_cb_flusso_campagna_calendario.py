@@ -727,7 +727,6 @@ async def test_master_di_una_campagna_e_giocatore_di_un_altra(client, test_sessi
     assert (await client.get(f"/campaigns/{b['id']}")).json()["name"] == "Altrui"
 
 
-@pytest.mark.xfail(strict=True, reason="CB-880 il riepilogo attribuisce i regali per utente: vince l'ultimo PG")
 @pytest.mark.caccia(id="CB-880", fonte="invariante: il riepilogo dice a quale PG è andato l'oggetto, anche se il giocatore cambia PG a serata in corso",
                     zona="flusso:campagna-calendario", voce="interazione",
                     copre=["POST /sessions/{session_id}/gm/grant_item", "GET /sessions/{session_id}/recap"])
@@ -925,3 +924,22 @@ async def test_serata_allo_stesso_istante_una_sola(client):
     assert len((await client.get(url)).json()) == 3
     assert (await client.delete(f"{url}/{prima.json()['id']}")).status_code == 204
     assert (await client.post(url, json={"starts_at": t1})).status_code == 201
+
+
+@pytest.mark.caccia(id="CB-1523", fonte="invariante: il riepilogo della serata conta tutto ciò che vi è accaduto, anche con la cronologia limitata", zona="flusso:campagna-calendario", voce="limiti",
+                    copre=["GET /sessions/{session_id}/recap", "PATCH /characters/{char_id}/hp"])
+async def test_la_pulizia_della_cronologia_non_toglie_dati_al_riepilogo(client, test_session_factory):
+    camp, a = await _enrolled(client, test_session_factory)
+    act(PLAYER_ID)
+    pg = (await client.get(f"/characters/{a}")).json()
+    await client.patch(f"/characters/{a}/hp", json={"op": "set_max", "value": 50})
+    await client.patch(f"/characters/{a}/hp", json={"op": "set_current", "value": 50})
+    await client.patch(f"/characters/{a}", json={"settings": {**(pg["settings"] or {}), "history_retention_mode": "events", "history_retention_events": 3}})
+    sid = await _apri_serata(client, camp["id"], [(PLAYER_ID, a)])
+    act(PLAYER_ID)
+    for _ in range(6):
+        assert (await client.patch(f"/characters/{a}/hp", json={"op": "damage", "value": 3})).status_code == 200
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/close")
+    [riga] = [c for c in (await client.get(f"/sessions/{sid}/recap")).json()["characters"] if c["character_id"] == a]
+    assert riga["damage_taken"] == 18
