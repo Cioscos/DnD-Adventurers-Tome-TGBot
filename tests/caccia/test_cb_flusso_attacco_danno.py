@@ -524,7 +524,6 @@ async def test_arma_con_bonus_magico_e_un_colpo_magico(client, dadi):
     assert j.get("is_magic") is True
 
 
-@pytest.mark.xfail(strict=True, reason="CB-073 il rilancio con Ispirazione come primo attacco è gratuito")
 @pytest.mark.caccia(id="CB-073", fonte="2024 · Ispirazione Eroica · pag. 368: rilancio di un d20 già tirato", zona="flusso:attacco-danno",
                     voce="ripetizione", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_2024_rilancio_senza_attacco_precedente_non_e_gratuito(client, dadi):

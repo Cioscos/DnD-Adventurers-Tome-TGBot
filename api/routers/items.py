@@ -841,6 +841,10 @@ async def attack_with_weapon(
         raise HTTPException(status_code=422, detail="weapon_not_thrown")
 
     if body and body.with_inspiration:
+        last = get_turn(char).get("last_roll") or {}
+        # 2024: si ritira un d20 già tirato, senza non c'è nulla da ritirare (nel 2014 il rilancio è rifiutato più sotto)
+        if character_edition(char) == "2024" and (last.get("roll") != "attack" or last.get("item_id") != item.id):
+            raise HTTPException(status_code=409, detail={"code": "no_roll_to_reroll"})
         spend_inspiration_reroll(char)
 
     # Determine ability modifier (effective: equipped-item bonuses included)
