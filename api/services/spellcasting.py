@@ -48,6 +48,7 @@ def effect_view(char: Character, srd_index: str | None, name: str | None, level:
             "hit_damage": any(o.phase == "after_hit" or (o.phase == "before" and "attack" in o.rolls and o.extra_dice)
                               for o in (*variant.options, *variant.on_hit)),
             "weapon_choice": variant.weapon_choice, "weapon_kinds": list(variant.weapon_kinds),
+            "others_only": variant.shares_damage,  # chi lancia non è fra i bersagli (Vincolo di Interdizione)
             "choices": [{"key": c.key, "label": c.label, "options": c.options(edition), "when": list(c.when) if c.when else None} for c in variant.choices]}
 
 

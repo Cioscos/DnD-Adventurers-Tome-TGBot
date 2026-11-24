@@ -98,6 +98,8 @@ async def _resolve(session: AsyncSession, caster: Character, spell, slot_level: 
         return None
     effect, variant = found
     chosen = _check_choices(variant, edition, choices)
+    if variant.shares_damage and (targets is None or caster.id in targets):
+        raise _invalid("invalid_target")  # Vincolo di Interdizione: lega chi lancia a un'altra creatura, mai a sé stesso
     if effect.target.kind == "self" and any(t != caster.id for t in targets or []):
         raise _invalid("self_only_spell")  # un effetto solo su chi lancia non si dà ad altri
     if effect.target.kind in ("self", "aura") or targets is None:  # l'aura è del lanciatore: nessun bersaglio

@@ -80,3 +80,16 @@ describe('weapon choice of Shillelagh', () => {
     expect(onClose).toHaveBeenCalled()
   })
 })
+
+describe('targets of Warding Bond', () => {
+  it('does not offer the caster, only the allies and another creature', async () => {
+    const onConfirm = vi.fn()
+    const wardingBond: SpellEffectInfo = { target_kind: 'ally', others_only: true, max_targets_by_slot: { '2': 1 }, choices: [] }
+    renderWithProviders(<SpellEffectAsk charId={1} title="Vincolo di Interdizione" effect={wardingBond} slotLevel={2} onConfirm={onConfirm} onClose={vi.fn()} />)
+    const ally = await screen.findByText('Eroe')
+    expect(screen.queryByText('character.turn.removal_self')).not.toBeInTheDocument()
+    expect(screen.getByText('character.turn.ally_other')).toBeInTheDocument()
+    fireEvent.click(ally)
+    expect(onConfirm).toHaveBeenCalledWith({ targets: [2], choices: undefined })
+  })
+})
