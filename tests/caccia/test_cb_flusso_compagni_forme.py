@@ -530,7 +530,6 @@ async def _primordiale(client, cid):
         "kind": "companion", "name": "Bestia", "feature_key": PRIMORDIALE, "max_hp": 5, "statblock": {}})
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1073: la bestia primordiale si crea senza il privilegio")
 @pytest.mark.caccia(id="CB-1073", fonte="2024 · Ranger · Signore delle Bestie · Compagno Primordiale · pag. 122 (privilegio della sottoclasse; come per il compagno 2014 il server rifiuta chi non lo ha)",
                     zona="flusso:compagni-forme", voce="regola", copre=["POST /characters/{char_id}/companions", "carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)"])
 async def test_la_bestia_primordiale_non_si_crea_senza_il_privilegio(client):
@@ -541,7 +540,6 @@ async def test_la_bestia_primordiale_non_si_crea_senza_il_privilegio(client):
     assert await _lista(client, cid) == []
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1074: una seconda bestia primordiale si crea con POST")
 @pytest.mark.caccia(id="CB-1074", fonte="2024 · Ranger · Signore delle Bestie · Compagno Primordiale · pag. 122 (una sola bestia alla volta)",
                     zona="flusso:compagni-forme", voce="limiti", copre=["POST /characters/{char_id}/companions", "carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)"])
 async def test_la_bestia_primordiale_e_una_sola_alla_volta(client):

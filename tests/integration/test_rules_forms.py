@@ -234,7 +234,7 @@ async def test_companion_from_feature_scales_with_pb(client):
 
 
 async def test_primal_companion_2024_uses_wisdom_and_level(client):
-    cid = await _ranger(client, 3, "2024", wisdom=16)  # PB +2, SAG +3
+    cid = await _ranger(client, 3, "2024", subclass="Signore delle Bestie", wisdom=16)  # PB +2, SAG +3; 2024 pag. 122
     sb = beast()
     sb["actions"] = [{"name": "Colpo", "attack_bonus": 0, "damage_dice": "1d8+2", "damage_type": "slashing"}]
     comp = await _companion(client, cid, "ranger.primal_companion", statblock=sb)

@@ -112,10 +112,10 @@ async def create_companion(
         raise HTTPException(status_code=422, detail="companion_limit")
     if body.is_active and body.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
-    if body.feature_key == BEAST_COMPANION:  # solo il Signore delle Bestie, e una bestia per volta (quella morta si sostituisce)
-        if not any(spec.key == BEAST_COMPANION for spec, _row in active_features(char)):
+    if body.feature_key in BEAST_KEYS:  # solo il Signore delle Bestie, e una bestia per volta (quella morta si sostituisce)
+        if not any(spec.key == body.feature_key for spec, _row in active_features(char)):
             raise HTTPException(status_code=422, detail="feature_unavailable")
-        if any(c.feature_key == BEAST_COMPANION and c.current_hp > 0 for c in rows):
+        if any(c.feature_key == body.feature_key and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
     limits = form_limits(char)
     if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
