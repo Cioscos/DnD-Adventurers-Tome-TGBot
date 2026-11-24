@@ -71,6 +71,12 @@ class GmConditionApply(BaseModel):
     def _check(self) -> "GmConditionApply":
         if self.slug == "exhaustion" and self.value is None:
             raise ValueError("exhaustion requires value")
+        if self.value is not None:
+            if self.slug == "exhaustion":
+                if not isinstance(self.value, int) or not 0 <= self.value <= 6:
+                    raise ValueError("exhaustion_out_of_range")
+            elif not isinstance(self.value, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
+                raise ValueError("condition_must_be_bool")
         self.source_note = (self.source_note or "").strip() or None
         if self.value is not None and (self.expiry or self.save or self.source_combatant_id
                                        or self.source_note or self.ends_with_concentration):

@@ -741,8 +741,8 @@ async def _come_giocatore(client, cid) -> dict:
 @pytest.mark.caccia(id="CB-1296", fonte="2014 · Indebolimento · pag. 291 (sei livelli); 2024 · Esaurimento · pag. 366", zona="flusso:condizioni", voce="limiti",
                     copre=["POST /sessions/{session_id}/encounter/combatants/{combatant_id}/conditions",
                            "carta:2014/general.md#Indebolimento / Exhaustion (riquadro, pag. 291)"])
-@pytest.mark.parametrize("valore", [pytest.param(7, marks=pytest.mark.xfail(strict=True, reason="CB-1296 il master scrive Indebolimento 7 sulla scheda")),
-                                    pytest.param(-1, marks=pytest.mark.xfail(strict=True, reason="CB-1296 il master scrive Indebolimento -1 sulla scheda"))])
+@pytest.mark.parametrize("valore", [7,
+                                    -1])
 async def test_il_master_non_puo_dare_a_un_pg_un_livello_di_indebolimento_fuori_da_uno_sei(client, test_session_factory, valore):
     sid, cid, pc, _ = await _gm_su_pg(client, test_session_factory)
     r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc}/conditions", json={"slug": "exhaustion", "value": valore})
@@ -751,7 +751,6 @@ async def test_il_master_non_puo_dare_a_un_pg_un_livello_di_indebolimento_fuori_
     assert j["conditions"].get("exhaustion", 0) == 0 and j["is_dead"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1297 il master scrive blinded: 5 sulla scheda")
 @pytest.mark.caccia(id="CB-1297", fonte="invariante: una condizione è accesa o spenta, non vale 5 (la stessa regola del giocatore)", zona="flusso:condizioni", voce="contratto",
                     copre=["POST /sessions/{session_id}/encounter/combatants/{combatant_id}/conditions"])
 async def test_il_master_non_scrive_un_numero_come_valore_di_una_condizione(client, test_session_factory):
@@ -764,7 +763,6 @@ async def test_il_master_non_scrive_un_numero_come_valore_di_una_condizione(clie
 @pytest.mark.caccia(id="CB-1298", fonte="2014 · Calmare Emozioni · pag. 218; 2024 · pag. 249; invariante: dopo export, import e copia nulla va perso", zona="flusso:condizioni",
                     voce="persistenza", copre=["GET /characters/{char_id}/export", "POST /characters/import", "POST /characters/{char_id}/duplicate",
                                               "PATCH /characters/{char_id}/concentration", "carta:2014/spells.md#Calmare Emozioni"])
-@pytest.mark.xfail(strict=True, reason="CB-1298 la sospensione di Calmare Emozioni non passa a copia e importata")
 @pytest.mark.parametrize("ed", _ED)
 @pytest.mark.parametrize("via", ["importa", "copia"])
 async def test_calmare_emozioni_su_copia_o_importata_finita_la_concentrazione_la_condizione_torna(client, ed, via):
