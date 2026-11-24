@@ -5,7 +5,8 @@ test('il doppio tocco su Tira Iniziativa registra un solo tiro', async ({ comeUt
   const page = await comeUtente(UTENTE)
   await page.goto(`/?dev_user=${UTENTE}#/char/${charId}/dice`)
   await page.getByRole('button', { name: 'Tira Iniziativa' }).dblclick()
-  await expect.poll(async () => (await (await apiRequest.get(`/characters/${charId}/dice/history`)).json()).length).toBeGreaterThan(0)
+  // l'animazione 3D del browser senza GPU può durare più dei 5 s predefiniti
+  await expect.poll(async () => (await (await apiRequest.get(`/characters/${charId}/dice/history`)).json()).length, { timeout: 20_000 }).toBeGreaterThan(0)
   await page.waitForTimeout(1500)
   expect((await (await apiRequest.get(`/characters/${charId}/dice/history`)).json()).length).toBe(1)
 })
