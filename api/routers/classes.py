@@ -251,7 +251,9 @@ async def distribute_class_levels(
     if subclass_changed:
         grant_assassin_kits(char, lang)
 
-    # Apply level changes + resource sync (body order = hp_rolls order)
+    # Apply level changes (body order = hp_rolls order); il sync viene dopo, con il livello totale definitivo: a metà giro
+    # un massimo più basso per un momento taglierebbe i PF correnti
+    leveled = []
     for entry in body.classes:
         cls = classes_by_id[entry.class_id]
         new_level = entry.level
@@ -265,6 +267,8 @@ async def distribute_class_levels(
         prev_level = cls.level
         cls.level = new_level
         sync_level_choices(char, cls, prev_level, new_level)
+        leveled.append(cls)
+    for cls in leveled:
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     if subclass_changed:

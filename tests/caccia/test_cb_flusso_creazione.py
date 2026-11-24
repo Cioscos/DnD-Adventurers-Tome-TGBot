@@ -634,3 +634,25 @@ async def test_seconda_classe_non_da_equipaggiamento_di_partenza(client, ed):
     assert r.status_code == 201, r.text[:150]
     dopo = (await client.get(f"/characters/{pg['id']}")).json()
     assert (_somma(dopo), dopo["currency"]["gold"]) == prima
+
+
+@pytest.mark.caccia(id="CB-1393", fonte="invariante: ridistribuire i livelli senza cambiare il massimo non toglie PF correnti", zona="flusso:creazione",
+                    voce="interazione", copre=["PATCH /characters/{char_id}/classes/distribute"])
+async def test_ridistribuire_i_livelli_non_toglie_pf_con_il_calcolo_spento(client):
+    umano = {"key": "2024_human", "options": {"size": "medium", "skill": "arcana", "origin_feat": "2024_tough"}}
+    pg = (await client.post("/characters", json={
+        "name": "R", "rules_edition": "2024", "species_2024": umano,
+        "initial_class": {"class_name": "fighter", "level": 5, "skill_choices": ["athletics", "history"]}})).json()
+    cid = pg["id"]
+    await client.patch(f"/characters/{cid}", json={"settings": {**pg["settings"], "advancement": "milestone", "hp_auto_calc": False}})
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "rogue", "level": 1})
+    assert r.status_code in (200, 201), r.text[:200]
+    prima = (await client.get(f"/characters/{cid}")).json()
+    massimo = prima["computed"]["hp_max_effective"]
+    ids = {c["class_name"]: c["id"] for c in prima["classes"]}
+    r = await client.patch(f"/characters/{cid}/classes/distribute", json={"classes": [
+        {"class_id": ids["fighter"], "level": 3}, {"class_id": ids["rogue"], "level": 3}]})
+    assert r.status_code == 200, r.text[:200]
+    dopo = (await client.get(f"/characters/{cid}")).json()
+    assert dopo["computed"]["hp_max_effective"] == massimo
+    assert dopo["current_hit_points"] == prima["current_hit_points"]
