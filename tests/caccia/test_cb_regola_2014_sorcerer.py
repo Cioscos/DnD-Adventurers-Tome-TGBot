@@ -34,7 +34,6 @@ async def _surge(client, cid, **body) -> dict:
                     copre=["carta:2014/classes/sorcerer.md#Onde di Caos / Tides of Chaos (Magia Selvaggia 1, pag. 111)",
                            "GET /characters/{char_id}/roll-options"])
 @pytest.mark.parametrize("roll", ["initiative", "death_save"])
-@pytest.mark.xfail(strict=True, reason="CB-2011: difforme dal manuale, confermato")
 async def test_onde_di_caos_vale_anche_per_l_iniziativa_e_per_il_ts_contro_la_morte(client, roll):
     # L'iniziativa è una prova di Destrezza e il TS contro la morte è un tiro salvezza: Onde di Caos li copre come gli altri
     cid = await _sorcerer(client, 1, "wild_magic")

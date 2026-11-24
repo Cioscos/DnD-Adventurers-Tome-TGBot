@@ -358,7 +358,9 @@ PRESENCE_USE = OnUse(
 
 TIDES = f"{CK}.tides_of_chaos"
 TIDES_ADVANTAGE = RollOptionSpec(
-    key=f"{CK}.tides_of_chaos_advantage", phase="before", rolls=("attack", "skill", "save"), mode="advantage", cost=Cost(feature_key=TIDES),
+    # l'iniziativa è una prova di Destrezza (pag. 189), il TS contro la morte un tiro salvezza (pag. 197)
+    key=f"{CK}.tides_of_chaos_advantage", phase="before", rolls=("attack", "skill", "save", "initiative", "death_save"),
+    mode="advantage", cost=Cost(feature_key=TIDES),
     label={"it": "Onde di Caos: tira questo attacco, prova o TS con vantaggio", "en": "Tides of Chaos: make this attack, check or save with advantage"})
 
 BEND_LUCK_USE = OnUse(
