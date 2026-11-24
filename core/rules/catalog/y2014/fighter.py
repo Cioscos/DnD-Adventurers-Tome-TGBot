@@ -145,7 +145,7 @@ def _arcane_charge_notes(ctx: RuleContext, params: dict) -> list[str]:
 
 
 INDOMITABLE_REROLL = RollOptionSpec(
-    key=IND, phase="after_roll", after="reroll", rolls=("save",), cost=Cost(feature_key=IND),
+    key=IND, phase="after_roll", after="reroll", rolls=("save", "death_save"), cost=Cost(feature_key=IND),
     label={"it": "Indomito: ripeti il tiro salvezza fallito (vale il nuovo risultato)",
            "en": "Indomitable: reroll the failed saving throw (the new result stands)"})
 

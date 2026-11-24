@@ -119,7 +119,6 @@ async def test_il_cavaliere_mistico_puo_prendere_un_talento_che_chiede_di_lancia
 
 @pytest.mark.caccia(id="CB-1764", fonte="2014 · Guerriero · Indomito · pag. 72; Tiri salvezza contro la morte · pag. 197", zona="regola:2014/fighter", voce="regola",
                     copre=["carta:2014/classes/fighter.md#Indomito / Indomitable (Guerriero 9, pag. 72)", "POST /characters/{char_id}/death_saves/roll", "POST /characters/{char_id}/last-roll/options"])
-@pytest.mark.xfail(strict=True, reason="CB-1764: difforme dal manuale, confermato")
 async def test_indomito_ripete_un_tiro_salvezza_contro_la_morte_fallito(client, test_session_factory):
     cid = await _guerriero(client, 9)
     await _pf(test_session_factory, cid, 0)
