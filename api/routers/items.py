@@ -6,6 +6,7 @@ import json
 import random
 import re
 import uuid
+from dataclasses import replace
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -597,10 +598,12 @@ def _settle_attack(
     Un 1 naturale non ha danno da aspettare, a meno che un'opzione dopo il tiro possa ancora cambiarlo."""
     pending = None
     item_id = item.id if item else None
-    context = roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip, offhand=offhand,
-                           confirmed=tuple(opts.keys))
-    if body and body.defer_damage and (
-            not result.is_fumble or any(o.spec.phase == "after_roll" for o in roll_options_for(context))):
+    # Il d20 appena tirato: ``last_roll`` è già stato cancellato dalle opzioni e non è ancora riscritto (Fortuna sull'1).
+    context = replace(roll_context(char, "attack", ability=ability, item=item, attack_mode=attack_mode, grip=grip,
+                                   offhand=offhand, confirmed=tuple(opts.keys)), natural_d20=result.to_hit_die)
+    # Un 1 ritirabile si tiene anche senza defer_damage: prima del tiro il client non sapeva che sarebbe servito.
+    rerollable = result.is_fumble and any(o.spec.phase == "after_roll" for o in roll_options_for(context))
+    if (body and body.defer_damage and not result.is_fumble) or rerollable:
         result.attack_id = uuid.uuid4().hex
         pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
                    "attack_mode": attack_mode, "grip": grip, "offhand": offhand,
