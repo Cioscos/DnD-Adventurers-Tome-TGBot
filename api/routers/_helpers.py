@@ -64,7 +64,7 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
             keep_subq = (
                 select(CharacterHistory.id)
                 .where(CharacterHistory.character_id == char.id)
-                .order_by(CharacterHistory.timestamp.desc())
+                .order_by(CharacterHistory.timestamp.desc(), CharacterHistory.id.desc())
                 .limit(keep)
                 .subquery()
             )
@@ -207,7 +207,7 @@ async def _lose_concentration(session: AsyncSession, char: Character) -> dict:
     """Fa cadere la concentrazione e restituisce ciò che serve per ripristinarla dopo un ritiro riuscito."""
     settings = char.settings or {}
     snapshot = {"spell_id": char.concentrating_spell_id, "item_spell": settings.get("concentration_item_spell"),
-                "rounds": settings.get("concentration_rounds_left"), "active_states": list(char.active_states or []),
+                "rounds": settings.get("concentration_rounds_left"), "level": settings.get("concentration_level"), "active_states": list(char.active_states or []),
                 "released": []}
     end_concentration(char)
     await release_concentration_effects(session, char, snapshot["released"])
@@ -230,6 +230,8 @@ async def retouch_concentration(
             settings["concentration_item_spell"] = snap["item_spell"]
         if snap["rounds"] is not None:
             settings["concentration_rounds_left"] = snap["rounds"]
+        if snap.get("level") is not None:
+            settings["concentration_level"] = snap["level"]
         char.settings = settings
         char.active_states = list(snap["active_states"])
         await restore_released(session, snap["released"])

@@ -336,3 +336,23 @@ async def test_d100_non_conta_nelle_statistiche_del_d10(client):
     corpo = _tiro(4, 7, kind="d10", notation="1d100", total=37, modifier=0)
     assert (await client.post(f"/characters/{cid}/dice/result", json=corpo)).status_code == 200
     assert "d10" not in await _stats(client, cid)
+
+
+@pytest.mark.caccia(id="CB-765", fonte="invariante: la pulizia della cronologia tiene gli eventi più recenti", zona="flusso:dadi", voce="limiti",
+                    copre=["POST /characters/{char_id}/dice/result"])
+async def test_la_pulizia_tiene_gli_ultimi_anche_nello_stesso_secondo(client, test_session_factory):
+    from core.db.models import Character
+    from api.routers._helpers import prune_history
+
+    cid = await _pg(client)
+    await client.delete(f"/characters/{cid}/history")
+    async with test_session_factory() as s:
+        for i in range(8):
+            s.add(CharacterHistory(character_id=cid, event_type="other", description=f"e{i}", timestamp="2026-11-24T10:00:00"))
+            await s.flush()
+        char = await s.get(Character, cid)
+        char.settings = {**(char.settings or {}), "history_retention_mode": "events", "history_retention_events": 3}
+        await prune_history(s, char)
+        await s.commit()
+    righe = (await client.get(f"/characters/{cid}/history")).json()
+    assert [r["description"] for r in righe] == ["e7", "e6", "e5"]

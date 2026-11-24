@@ -442,3 +442,43 @@ async def test_scadenza_della_durata_pulisce_il_livello_del_lancio(client):
     s = await _stato(client, cid)
     assert s["concentrating_spell_id"] is None
     assert [k for k in (s["settings"] or {}) if k.startswith("concentration")] == []
+
+
+async def _concentrato_al_terzo(client) -> int:
+    cid = await _pg(client)
+    for op, v in (("set_max", 60), ("set_current", 60)):
+        await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": v})
+    await _slot(client, cid, 3, 2)
+    c = await _lancia(client, cid, await _incantesimo(client, cid), livello=3)
+    assert c["settings"]["concentration_level"] == 3
+    return cid
+
+
+@pytest.mark.caccia(id="CB-759", fonte="invariante: un annullamento rimette tutto com'era", zona="flusso:concentrazione", voce="annullamento",
+                    copre=["POST /characters/{char_id}/hp/undo"])
+async def test_annullare_il_danno_rimette_il_livello_del_lancio(client, dadi):
+    cid = await _concentrato_al_terzo(client)
+    dadi(1)
+    c = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5})).json()
+    assert c["concentrating_spell_id"] is None
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": c["hp_undo_id"]})
+    assert r.status_code == 200, r.text
+    s = await _stato(client, cid)
+    assert s["concentrating_spell_id"] is not None
+    assert s["settings"].get("concentration_level") == 3
+
+
+@pytest.mark.caccia(id="CB-760", fonte="invariante: un tiro salvezza ritirato con successo rimette la concentrazione com'era", zona="flusso:concentrazione",
+                    voce="annullamento", copre=["POST /characters/{char_id}/concentration/save"])
+async def test_il_ritiro_riuscito_rimette_il_livello_del_lancio(client, test_session_factory):
+    from api.routers._helpers import _lose_concentration, retouch_concentration
+    from api.services.character_load import get_owned_full
+
+    cid = await _concentrato_al_terzo(client)
+    async with test_session_factory() as s:
+        char = await get_owned_full(cid, TEST_USER_ID, s)
+        snapshot = await _lose_concentration(s, char)
+        assert "concentration_level" not in char.settings
+        tiro = {"die": 15, "bonus": 0, "total": 15, "mode": "normal", "dice": [15], "notes": [], "auto_fail": False}
+        await retouch_concentration(s, char, {"dc": 10, "lost": True, "snapshot": snapshot}, tiro)
+        assert char.settings.get("concentration_level") == 3

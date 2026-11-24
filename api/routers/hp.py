@@ -115,7 +115,7 @@ def _now() -> str:
     return _utcnow().isoformat(timespec="seconds")
 
 
-_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", ZERO_HP_USES, TEMP_GIVEN, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell", "concentration_level", ZERO_HP_USES, TEMP_GIVEN, SPELL_GIVEN)  # + il conteggio di Ira Implacabile
 
 
 def _hp_state(char: Character, form=None) -> dict:
