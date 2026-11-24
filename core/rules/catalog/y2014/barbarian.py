@@ -57,7 +57,7 @@ def _rage_state(ctx: RuleContext, params: dict) -> StateSpec:
                    if a in spirit and (a != "eagle" or not heavy_armor(ctx.char))]
         if level >= 14 and "bear" in _chosen(row, "totem_attunement"):
             others.append(f"{CK}.attunement_bear")
-    frenzy = berserker and bool(params.get("frenzy"))
+    frenzy = berserker and level >= 3 and bool(params.get("frenzy"))  # Frenesia: privilegio del Berserker al 3°
     # Ira Persistente (15): resta solo la perdita dei sensi; prima finisce anche a fine turno senza aver attaccato.
     ends = ("unconscious", "rest_short", "rest_long") + (() if level >= 15 else ("turn_end_inactive",))
     return StateSpec(
@@ -200,7 +200,7 @@ FEATURES = (
                 available=lambda c: not state_on(c, "rage"),
                 toggles=(UseToggle(
                     "frenzy", {"it": "Frenesia", "en": "Frenzy"},
-                    available=lambda c: c.class_row.subclass_key == "berserker"),),
+                    available=lambda c: c.class_row.subclass_key == "berserker" and c.class_level >= 3),),
             )),
     feature("unarmored_defense", CK, ED, 1, ("Difesa Senza Armatura / Unarmored Defense (Barbaro 1, pag. 48)"),
             ("Difesa Senza Armatura", "Unarmored Defense"),

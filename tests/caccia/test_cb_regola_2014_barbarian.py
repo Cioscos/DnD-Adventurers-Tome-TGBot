@@ -72,7 +72,6 @@ async def test_l_attacco_fatto_nel_turno_di_un_nemico_tiene_viva_l_ira(client, t
 @pytest.mark.caccia(id="CB-1563", fonte="2014 · Barbaro · Cammino del Berserker · Frenesia · pag. 49", zona="regola:2014/barbarian",
                     voce="limiti", copre=["carta:2014/classes/barbarian.md#Frenesia / Frenzy (Cammino del Berserker 3, pag. 49)",
                                           "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-1563: difforme dal manuale, confermato")
 async def test_la_frenesia_non_si_sceglie_prima_del_terzo_livello(client):
     cid = await _barbarian(client, 2, BERSERKER)
     assert (await _rage(client, cid, frenzy=True)).status_code == 200
