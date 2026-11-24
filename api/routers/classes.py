@@ -86,7 +86,9 @@ async def create_class_for_character(
     grant = class_proficiencies(character_edition(char), normalize_class_name(body.class_name),
                                 as_multiclass=not is_first_class)
     chosen = body.skill_choices or []
-    if (msg := validate_skill_choices(grant, chosen)) is not None:
+    # 2014 pag. 125: un'abilità già posseduta non si sceglie di nuovo (andrebbe persa). Nel 2024 il manuale non lo dice.
+    owned = frozenset(k for k, v in (char.skills or {}).items() if v) if character_edition(char) == "2014" else frozenset()
+    if (msg := validate_skill_choices(grant, chosen, owned)) is not None:
         raise HTTPException(status_code=422, detail=msg)
 
     hit_die = body.hit_die

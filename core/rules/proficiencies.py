@@ -226,11 +226,17 @@ def merge_grant(char: Any, grant: ProficiencyGrant, lang: str = "it", skills: tu
         char.skills = current
 
 
-def validate_skill_choices(grant: ProficiencyGrant, chosen: list[str]) -> str | None:
-    """Messaggio d'errore se la scelta non rispetta elenco e numero della concessione, altrimenti `None`."""
+def validate_skill_choices(grant: ProficiencyGrant, chosen: list[str], owned: frozenset[str] = frozenset()) -> str | None:
+    """Messaggio d'errore se la scelta non rispetta elenco e numero della concessione, altrimenti `None`.
+
+    ``owned`` (2014 pag. 125): abilità già sulla scheda. Non si scelgono di nuovo; se dell'elenco ne restano meno di quante
+    se ne scelgono, se ne prende un'altra qualsiasi."""
     if len(set(chosen)) != len(chosen):
         return "Duplicate skill"
-    if any(s not in grant.skills_from for s in chosen):
+    if owned & set(chosen):
+        return "class_skill_taken"
+    exhausted = len([s for s in grant.skills_from if s not in owned]) < grant.skills_count
+    if any(s not in (ALL_SKILLS if exhausted else grant.skills_from) for s in chosen):
         return "Skill not allowed for this class"
     if len(chosen) > grant.skills_count:
         return f"At most {grant.skills_count} skills"

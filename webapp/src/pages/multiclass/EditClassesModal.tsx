@@ -449,6 +449,8 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   asMulticlass
                   value={pickerSkills}
                   onChange={setPickerSkills}
+                  takenSkills={char.rules_edition === '2014'
+                    ? Object.entries(char.skills ?? {}).filter(([, v]) => v).map(([k]) => k) : undefined}
                 />
 
                 {pickerUnmet.length > 0 && (

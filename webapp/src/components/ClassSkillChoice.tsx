@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useClassProficiencies } from '@/hooks/useClassProficiencies'
 import Pressable from '@/components/ui/Pressable'
+import { SKILL_KEYS } from '@/lib/species'
 
 interface Props {
   edition: string
@@ -20,6 +21,9 @@ export default function ClassSkillChoice({ edition, className, asMulticlass, val
   if (!data || data.skills_count === 0) return null
 
   const full = value.length >= data.skills_count
+  // 2014 pag. 125: se l'elenco è esaurito dalle abilità già possedute, se ne sceglie un'altra qualsiasi (come il server)
+  const exhausted = edition === '2014' && data.skills_from.filter((s) => !takenSkills.includes(s)).length < data.skills_count
+  const offered = exhausted ? SKILL_KEYS : data.skills_from
   const toggle = (slug: string) =>
     onChange(value.includes(slug) ? value.filter((s) => s !== slug) : full ? value : [...value, slug])
 
@@ -32,7 +36,7 @@ export default function ClassSkillChoice({ edition, className, asMulticlass, val
         {t('character.multiclass.skill_choice_hint', { chosen: value.length, count: data.skills_count })}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {data.skills_from.map((slug) => {
+        {offered.map((slug) => {
           const on = value.includes(slug)
           return (
             <Pressable

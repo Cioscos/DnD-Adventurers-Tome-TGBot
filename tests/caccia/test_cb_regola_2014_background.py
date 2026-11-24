@@ -44,7 +44,6 @@ def _scelta(pg: dict, gruppo: str) -> dict | None:
     ("rogue", "insight"),
     ("bard", "religion"),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3111: difforme dal manuale, confermato")
 async def test_abilita_della_seconda_classe_gia_data_dal_background(client, classe, doppia):
     pg = await _pg_accolito(client)
     prima = _competenti(pg)
