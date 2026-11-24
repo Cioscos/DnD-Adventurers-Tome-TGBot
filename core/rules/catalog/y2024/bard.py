@@ -172,8 +172,8 @@ CLASS_FEATURES = (
             ("Segreti Magici", "Magical Secrets"),
             ("I nuovi incantesimi preparati dal 10° livello possono venire dalle liste di Bardo, Chierico, Druido e Mago e contano da bardo.",
              "From level 10 the new prepared spells can come from the Bard, Cleric, Druid and Wizard lists and count as bard spells."),
-            choices=(ChoiceSpec(group="magical_secrets", levels={10: 1, 11: 2, 13: 3, 15: 4, 17: 5, 18: 6, 19: 7, 20: 8},
-                                options=_no_options, spell_pick="known"),)),
+            # un permesso, non una scelta da fare (pag. 61): si aggiungono come ogni preparato, il catalogo non filtra le liste
+            ),
     feature("superior_inspiration", CK, ED, 18, "Ispirazione Superiore / Superior Inspiration (Bardo 18, pag. 61)",
             ("Ispirazione Superiore", "Superior Inspiration"),
             ("Quando tiri l'Iniziativa, se hai meno di due usi di Ispirazione Bardica ne recuperi fino ad averne due.",

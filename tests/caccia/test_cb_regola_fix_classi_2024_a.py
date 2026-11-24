@@ -5,6 +5,7 @@ from tests.integration.rules.test_2014_barbarian import _ability, _keys, _weapon
 from tests.integration.rules.test_2024_barbarian import _barbarian, _new_turn, _rage
 from tests.integration.rules.test_2024_barbarian_paths import _use
 from tests.integration.rules.test_2024_barbarian_strike import _damage, _deferred
+from tests.integration.rules.test_2024_bard import _bard24
 
 RAGE = "barbarian.rage"
 RECKLESS = "barbarian.reckless_attack"
@@ -43,3 +44,14 @@ async def test_frenesia_solo_se_l_attacco_irruento_e_dichiarato_in_ira(client):
     assert FRENZY not in await _keys(client, cid, "attack", item_id=ascia)
     r = await _damage(client, cid, colpo, [FRENZY])
     assert r.status_code == 409, "l'Attacco Irruento è stato usato prima che l'Ira fosse attiva: niente Frenesia"
+
+
+@pytest.mark.caccia(id="CB-4473", fonte="2024 · Bardo · Segreti Magici · pag. 61", zona="regola:2024/bard", voce="regola",
+                    copre=["carta:2024/classes/bard.md#Segreti Magici / Magical Secrets (Bardo 10, pag. 61)",
+                           "GET /characters/{char_id}"])
+@pytest.mark.parametrize("livello", [10, 20])
+async def test_segreti_magici_2024_e_un_permesso_non_una_scelta_da_fare(client, livello):
+    cid = await _bard24(client, livello)
+    full = (await client.get(f"/characters/{cid}")).json()
+    assert "bard.magical_secrets" in {a["feature_key"] for a in full["abilities"]}
+    assert not [c for c in full["pending_choices"] if c.get("group") == "magical_secrets"],         "i nuovi preparati possono venire dalle quattro liste: nessuna scelta obbligatoria"
