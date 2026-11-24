@@ -79,7 +79,6 @@ async def test_un_livello_da_ranger_non_cambia_gli_slot_dell_unico_incantatore(c
                     copre=["carta:2014/classes/ranger.md#Sterminatore di Nemici / Foe Slayer (Ranger 20, pag. 105)",
                            "carta:2014/classes/ranger.md#Sensi Ferini / Feral Senses (Ranger 18, pag. 105)",
                            "GET /characters/{char_id}/roll-options", "POST /characters/{char_id}/companions/{comp_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-1912: difforme dal manuale, confermato")
 async def test_l_attacco_della_bestia_non_prende_le_opzioni_d_attacco_del_ranger(client):
     cid, comp = await _beast(client, 20, wisdom=16)  # Signore delle Bestie 20, Saggezza +3
     offered = set(await _roll_keys(client, cid, "attack", attack_mode="companion"))

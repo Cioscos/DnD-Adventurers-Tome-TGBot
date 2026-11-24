@@ -84,6 +84,11 @@ def _weapon_attack(ctx: RuleContext) -> bool:
     return _weapon_in_hand(ctx)
 
 
+def _own_attack(ctx: RuleContext) -> bool:
+    """L'attacco è del ranger: non quello della bestia o di un altro compagno (Sterminatore di Nemici, Sensi Ferini)."""
+    return ctx.attack_mode not in ("beast", "companion")
+
+
 def _melee_weapon(ctx: RuleContext) -> bool:
     return _weapon_in_hand(ctx) and ctx.attack_mode in ("melee", "offhand")
 
@@ -186,7 +191,7 @@ HIDE_STEALTH = RollOptionSpec(
            "en": "Hide in Plain Sight: are you still against a solid surface, without moving or acting? +10 to Stealth"})
 
 FERAL_SENSES = RollOptionSpec(
-    key=f"{CK}.feral_senses", phase="before", rolls=("attack",), cancels=("condition:blinded",),
+    key=f"{CK}.feral_senses", phase="before", rolls=("attack",), cancels=("condition:blinded",), available=_own_attack,
     label={"it": "Sensi Ferini: attacchi una creatura entro 9 m che non vedi? Non vederla non ti dà svantaggio",
            "en": "Feral Senses: are you attacking a creature within 30 ft that you cannot see? Not seeing it gives no disadvantage"},
     effect=_say("Sensi Ferini: non vedere il bersaglio non ti dà svantaggio al tiro per colpire. Le altre fonti di svantaggio restano: "
@@ -196,7 +201,7 @@ FERAL_SENSES = RollOptionSpec(
 
 
 def _slayer_ready(ctx: RuleContext) -> bool:
-    return _wis_mod(ctx) > 0
+    return _own_attack(ctx) and _wis_mod(ctx) > 0
 
 
 def _slayer_bonus(ctx: RuleContext, _inputs: dict) -> int:
