@@ -636,7 +636,6 @@ async def test_valore_base_ed_effettivo_della_caratteristica_con_un_oggetto(clie
     assert (destrezza["base_value"], destrezza["value"]) == (10, 10)
 
 
-@pytest.mark.xfail(strict=True, reason="CB-991 il punteggio effettivo scende sotto 1 (-2, modificatore -6) e la capacità di carico diventa negativa (-30)")
 @pytest.mark.caccia(id="CB-991", fonte="decisione D-013: il punteggio effettivo non scende sotto 1, il modificatore non sotto -5; invariante: la capacità di carico non è negativa",
                     zona="flusso:caratteristiche-tiri", voce="limiti", copre=["POST /characters/{char_id}/items", "GET /characters/{char_id}", "POST /characters/{char_id}/ability_checks/{ability}/roll"])
 @pytest.mark.parametrize("edizione", ["2014", "2024"])
@@ -651,7 +650,6 @@ async def test_forza_ridotta_da_un_oggetto_resta_a_1(client, edizione):
     assert pg["carry_capacity"] >= 0
 
 
-@pytest.mark.xfail(strict=True, reason="CB-1001 la Costituzione effettiva scende sotto 1 (-2, modificatore -6) invece di fermarsi a 1")
 @pytest.mark.caccia(id="CB-1001", fonte="decisione D-013: il punteggio effettivo non scende sotto 1, il modificatore non sotto -5",
                     zona="flusso:caratteristiche-tiri", voce="limiti", copre=["POST /characters/{char_id}/items", "GET /characters/{char_id}"])
 @pytest.mark.parametrize("edizione", ["2014", "2024"])

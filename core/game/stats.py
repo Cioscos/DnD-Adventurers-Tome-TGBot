@@ -147,7 +147,7 @@ def effective_ability_score(
       - Final = max(base + sum(rel), max(abs)) if any absolute exists,
                 else base + sum(rel)
 
-    No cap applied (homebrew-friendly).
+    Never below 1, like the base score (D-013); no upper cap (homebrew-friendly).
 
     Returns (effective_value, list_of_applied_modifiers_for_breakdown).
     """
@@ -194,7 +194,7 @@ def effective_ability_score(
     else:
         effective = base_plus_rel
 
-    return effective, applied
+    return max(1, effective), applied
 
 
 def effective_ability_mod(char, ability: str) -> int:
