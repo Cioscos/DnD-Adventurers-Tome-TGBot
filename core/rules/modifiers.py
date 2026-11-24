@@ -72,6 +72,7 @@ class Applied:
     jump_bonus_ft: int | None = None  # piedi in più al salto in lungo con rincorsa (Lavoro al Secondo Piano); 0 se il privilegio c'è
     advantage_from: list[str] = field(default_factory=list)
     disadvantage_from: list[str] = field(default_factory=list)
+    reroll_of: dict | None = None  # il tiro che l'Ispirazione rilancia: {"dice", "mode"}
 
 
 def _medium_armor_master(char) -> bool:

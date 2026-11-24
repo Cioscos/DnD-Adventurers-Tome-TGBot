@@ -256,6 +256,7 @@ class AppliedOptions:
     damage_type: str | None = None  # il danno dell'incantesimo cambia tipo (Incantesimo Trasmutato)
     gifts: list[dict] = field(default_factory=list)  # PF temporanei per un'altra creatura: {"target": id, "value": n}, consegnati dal router
     concentrates: list[dict] = field(default_factory=list)  # {"spell_id", "rounds"}: incantesimi a concentrazione lanciati da un'opzione dopo il colpo
+    reroll_of: dict | None = None  # il tiro salvato che l'Ispirazione rilancia: {"dice", "mode"}
 
     @property
     def mode(self) -> str | None:

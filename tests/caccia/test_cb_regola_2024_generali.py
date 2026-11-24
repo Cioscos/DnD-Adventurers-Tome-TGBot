@@ -45,7 +45,6 @@ def _slot(scheda):
                                                "POST /characters/{char_id}/skills/{skill_name}/roll",
                                                "POST /characters/{char_id}/saving_throws/{ability}/roll"])
 @pytest.mark.parametrize("percorso", ["skills/athletics/roll", "saving_throws/wisdom/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-2861: difforme dal manuale, confermato")
 async def test_il_rilancio_con_ispirazione_tocca_un_solo_d20_e_lo_svantaggio_resta(client, percorso):
     cid = await _pg(client)
     await client.patch(f"/characters/{cid}/inspiration", json={"heroic_inspiration": True})

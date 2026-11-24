@@ -95,8 +95,19 @@ def resolve_body(body, applied: Applied | None = None) -> D20Outcome:
     applied = applied or Applied()
     if body is None:
         return resolve_applied("normal", None, None, applied)
-    reroll = getattr(body, "with_inspiration", False)
-    return resolve_applied("normal" if reroll else body.mode, body.dice, body.die, applied, reroll)
+    if not getattr(body, "with_inspiration", False):
+        return resolve_applied(body.mode, body.dice, body.die, applied)
+    prev = applied.reroll_of or {}
+    dice, mode = list(prev.get("dice") or []), prev.get("mode")
+    if mode not in ("advantage", "disadvantage") or len(dice) != 2 or applied.replace_die is not None:
+        return resolve_applied("normal", body.dice, body.die, applied, True)
+    # 2024 pag. 12-13: con vantaggio o svantaggio il rilancio tocca un solo d20 e il modo resta. Si rilancia il più basso,
+    # che in entrambi i modi è la scelta migliore per chi tira.
+    dice[dice.index(min(dice))] = resolve_d20("normal", (body.dice or [])[:1] or None, body.die).kept
+    outcome = resolve_d20(mode, dice, None)
+    if applied.min_d20 is not None:
+        outcome.kept = max(outcome.kept, applied.min_d20)
+    return outcome
 
 
 def d20_history_label(o: D20Outcome) -> str:
