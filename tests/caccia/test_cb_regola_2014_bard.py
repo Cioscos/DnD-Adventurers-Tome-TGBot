@@ -129,7 +129,6 @@ async def test_un_bardo_incapacitato_non_usa_privilegi_che_costano_azione_o_reaz
                     copre=["carta:2014/classes/bard.md#Controfascino / Countercharm (Bardo 6, pag. 54)",
                            "POST /sessions/{session_id}/encounter/start", "POST /sessions/{session_id}/encounter/next-turn",
                            "POST /characters/{char_id}/features/{feature_key}/use", "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-1614: difforme dal manuale, confermato")
 async def test_controfascino_finisce_con_la_fine_del_turno_successivo_del_bardo(client, test_session_factory, monkeypatch, come_utente):
     install_fake_telegram(monkeypatch)
     sid, _ = await setup_full_encounter(client, test_session_factory)  # ordine: PG, goblin, goblin

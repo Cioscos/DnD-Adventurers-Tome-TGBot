@@ -339,8 +339,10 @@ async def test_countercharm_is_an_action_that_lasts_until_the_end_of_the_next_tu
     r = await _use(client, cid, "bard.countercharm")
     assert r.status_code == 200, r.text
     state = r.json()["state"]
-    assert (state["key"], state["rounds_left"]) == ("countercharm", 2)
-    assert set(state["ends_on"]) == {"incapacitated", "rest_short", "rest_long", "manual"}  # M3: un riposo lo chiude
+    # 2014, Controfascino (Bardo 6), pag. 54: «fino alla fine del tuo turno successivo», non due round (CB-1614)
+    assert (state["key"], state["rounds_left"], state["data"]["skip_new_turns"]) == ("countercharm", None, 1)
+    assert set(state["ends_on"]) == {"new_turn", "turn_end_counted", "incapacitated", "rest_short", "rest_long",
+                                     "manual"}  # M3: un riposo lo chiude
     assert state["data"]["others"] == ["bard.countercharm"]
     again = await _use(client, cid, "bard.countercharm")
     assert again.status_code == 409 and again.json()["detail"]["code"] == "turn_slot_used"

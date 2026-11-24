@@ -210,8 +210,10 @@ FEATURES = (
              "Action: until the end of your next turn you and friends within 30 ft who hear you have advantage on saves against "
              "being charmed or frightened."),
             "action", roll_options=(COUNTERCHARM_SAVE,),
+            # fino alla fine del prossimo turno del bardo: lo schema di Percezione del Divino (``turn_end_counted``)
             on_use=OnUse(slot="action", state=StateSpec(
-                "countercharm", rounds=2, ends_on=("incapacitated", "rest_short", "rest_long", "manual"), data={"others": [COUNTERCHARM]}))),
+                "countercharm", ends_on=("new_turn", "turn_end_counted", "incapacitated", "rest_short", "rest_long", "manual"),
+                data={"skip_new_turns": 1, "until": "next_turn_end", "others": [COUNTERCHARM]}))),
     feature("magical_secrets", CK, ED, 10, "Segreti Magici / Magical Secrets (Bardo 10, pag. 54)",
             ("Segreti Magici", "Magical Secrets"),
             ("Al 10°, 14° e 18° livello due incantesimi di qualsiasi classe (o trucchetti) contano come da bardo e fra i conosciuti.",
