@@ -491,3 +491,499 @@ async def test_salvare_le_impostazioni_non_tocca_il_livello_del_lancio(client):
     for settings in ({"quick_actions": []}, {"concentration_level": 9}):  # lettura vecchia, valore inventato
         assert (await client.patch(f"/characters/{cid}", json={"settings": settings})).status_code == 200
         assert (await _stato(client, cid))["settings"]["concentration_level"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Giro successivo: concentrazione da oggetto, turni in uno scontro, morte, bersagli in serata
+# ---------------------------------------------------------------------------
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session  # noqa: E402
+from tests.integration.rules.test_2014_bard_inspiration import _seat  # noqa: E402
+from tests.integration.test_magic_items import _item  # noqa: E402
+
+
+async def _bacchetta(client, cid, nome="Raggio Fantasma", durata="Concentration, up to 1 minute", cariche=5) -> int:
+    incantesimo = {"name": nome, "level": 2, "charges_cost": 1, "is_concentration": True, "duration": durata}
+    return await _item(client, cid, name="Bacchetta", charges={"current": cariche, "max": cariche}, granted_spells=[incantesimo])
+
+
+async def _usa_oggetto(client, cid, iid):
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _pg_con_bacchetta(client, dadi, edizione="2014"):
+    cid = await _pg(client, edizione)
+    iid = await _bacchetta(client, cid)
+    dadi(3)
+    c = await _usa_oggetto(client, cid, iid)
+    return cid, iid, c
+
+
+@pytest.mark.caccia(id="CB-1173", fonte="comportamento dichiarato in CLAUDE.md: POST /items/{item_id}/cast consuma cariche e avvia la concentrazione", zona="flusso:concentrazione",
+                    voce="normale", copre=["POST /characters/{char_id}/items/{item_id}/cast"])
+async def test_incantesimo_di_oggetto_avvia_concentrazione_e_spende_una_carica(client, dadi):
+    cid, iid, c = await _pg_con_bacchetta(client, dadi)
+    assert c["concentrating_spell_id"] is None
+    assert c["settings"]["concentration_item_spell"] == {"item_id": iid, "name": "Raggio Fantasma"}
+    assert c["settings"]["concentration_rounds_left"] == 10
+    item = next(i for i in (await client.get(f"/characters/{cid}/items")).json() if i["id"] == iid)
+    assert item["item_metadata"]["charges"]["current"] == 4
+
+
+@pytest.mark.caccia(id="CB-1174", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="regola",
+                    copre=["PATCH /characters/{char_id}/hp"])
+async def test_danno_con_concentrazione_da_oggetto_chiede_il_ts_e_la_perde(client, dadi):
+    cid, _, _ = await _pg_con_bacchetta(client, dadi)
+    dadi(1)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 24})).json()
+    assert r["concentration_save"]["dc"] == 12 and r["concentration_save"]["lost_concentration"] is True
+    s = await _stato(client, cid)
+    assert [k for k in (s["settings"] or {}) if k.startswith("concentration")] == []
+
+
+@pytest.mark.caccia(id="CB-1175", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="regola",
+                    copre=["PATCH /characters/{char_id}/hp"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_a_zero_pf_finisce_anche_la_concentrazione_da_oggetto(client, dadi, edizione):
+    cid, _, _ = await _pg_con_bacchetta(client, dadi, edizione)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 99})).json()
+    assert r["current_hit_points"] == 0
+    assert [k for k in (r["settings"] or {}) if k.startswith("concentration")] == []
+
+
+@pytest.mark.caccia(id="CB-1176", fonte="2014 · Concentrazione · pag. 203; 2024 · pag. 363", zona="flusso:concentrazione", voce="regola",
+                    copre=["PATCH /characters/{char_id}/conditions"])
+@pytest.mark.parametrize("condizione", ["incapacitated", "stunned", "paralyzed"])
+async def test_incapacitato_chiude_la_concentrazione_da_oggetto(client, dadi, condizione):
+    cid, _, _ = await _pg_con_bacchetta(client, dadi)
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {condizione: True}})
+    assert r.status_code == 200, r.text
+    s = await _stato(client, cid)
+    assert [k for k in (s["settings"] or {}) if k.startswith("concentration")] == []
+
+
+@pytest.mark.caccia(id="CB-1177", fonte="comportamento dichiarato in CLAUDE.md: D8, il riposo breve mantiene la concentrazione, il lungo la chiude", zona="flusso:concentrazione",
+                    voce="persistenza", copre=["POST /characters/{char_id}/rest"])
+async def test_riposo_e_concentrazione_da_oggetto(client, dadi):
+    cid, iid, _ = await _pg_con_bacchetta(client, dadi)
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).status_code == 200
+    assert (await _stato(client, cid))["settings"]["concentration_item_spell"]["item_id"] == iid
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})).status_code == 200
+    s = await _stato(client, cid)
+    assert [k for k in (s["settings"] or {}) if k.startswith("concentration")] == []
+
+
+@pytest.mark.caccia(id="CB-1178", fonte="comportamento dichiarato in CLAUDE.md: la durata è a round e scade con i tick", zona="flusso:concentrazione", voce="normale",
+                    copre=["POST /characters/{char_id}/rounds/tick"])
+async def test_la_concentrazione_da_oggetto_scade_al_decimo_round(client, dadi):
+    cid, _, _ = await _pg_con_bacchetta(client, dadi)
+    for _ in range(9):
+        await client.post(f"/characters/{cid}/rounds/tick")
+    assert (await _stato(client, cid))["settings"]["concentration_rounds_left"] == 1
+    r = (await client.post(f"/characters/{cid}/rounds/tick")).json()
+    assert "Concentrazione" in r["expired_effects"]
+    assert [k for k in (r["settings"] or {}) if k.startswith("concentration")] == []
+
+
+@pytest.mark.xfail(strict=True, reason="CB-1179 la concentrazione da incantesimo di oggetto interrotta a mano non scrive la Cronologia")
+@pytest.mark.caccia(id="CB-1179", fonte="comportamento dichiarato nel codice: interrompere la concentrazione si scrive nella Cronologia", zona="flusso:concentrazione",
+                    voce="annullamento", copre=["PATCH /characters/{char_id}/concentration", "GET /characters/{char_id}/history"])
+async def test_interrompere_la_concentrazione_da_oggetto_si_scrive_nella_cronologia(client, dadi):
+    cid, _, _ = await _pg_con_bacchetta(client, dadi)
+    r = await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    assert r.status_code == 200
+    assert [k for k in (r.json()["settings"] or {}) if k.startswith("concentration")] == []
+    cron = (await client.get(f"/characters/{cid}/history")).json()
+    voci = [h for h in (cron if isinstance(cron, list) else cron.get("items", [])) if h["event_type"] == "concentration"]
+    assert len(voci) == 1
+
+
+from core.rules.spell_effects import SPELL_STATE_PREFIX  # noqa: E402
+from tests.integration._encounter_helpers import setup_full_encounter  # noqa: E402
+
+BLESS = f"{SPELL_STATE_PREFIX}bless"
+
+
+async def _benedizione(client, user, nome="Benedizione", durata="Concentration, up to 1 minute", livello_slot=1):
+    """Un incantatore dell'utente con Benedizione (catalogo) e due slot di 1° livello: (personaggio, incantesimo)."""
+    as_user(user)
+    cid = (await client.post("/characters", json={"name": nome + str(user)})).json()["id"]
+    for op, v in (("set_max", 40), ("set_current", 40)):
+        await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": v})
+    r = await client.post(f"/characters/{cid}/spells", json={
+        "name": "Bless", "srd_index": "bless", "level": 1, "is_concentration": True, "duration": durata, "is_prepared": True})
+    assert r.status_code == 201, r.text
+    assert (await client.post(f"/characters/{cid}/spell_slots", json={"level": 1, "total": 2})).status_code == 201
+    return cid, r.json()["id"]
+
+
+async def _benedici(client, user, cid, sid, bersagli):
+    as_user(user)
+    r = await client.post(f"/characters/{cid}/spells/{sid}/use", json={"slot_level": 1, "targets": bersagli})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _stati(client, cid, user, chiave=BLESS):
+    as_user(user)
+    return [s for s in (await _stato(client, cid))["active_states"] or [] if s["key"] == chiave]
+
+
+async def _serata_con_benedizione(client, fabbrica):
+    sid, eroe = await seed_session(fabbrica)
+    chierico, spell = await _benedizione(client, GM_ID)
+    await _seat(fabbrica, chierico, GM_ID)
+    await _benedici(client, GM_ID, chierico, spell, [eroe])
+    assert len(await _stati(client, eroe, PLAYER_ID)) == 1
+    as_user(GM_ID)
+    return sid, eroe, chierico, spell
+
+
+async def _ally_patch(client, c, s, d):
+    await client.patch(f"/characters/{c}/concentration", json={"spell_id": None})
+
+
+async def _ally_ts(client, c, s, d):
+    d(1)
+    await client.post(f"/characters/{c}/concentration/save", json={"damage": 10})
+
+
+async def _ally_zero(client, c, s, d):
+    await client.patch(f"/characters/{c}/hp", json={"op": "damage", "value": 99})
+
+
+async def _ally_set_zero(client, c, s, d):
+    await client.patch(f"/characters/{c}/hp", json={"op": "set_current", "value": 0})
+
+
+async def _ally_incapacitato(client, c, s, d):
+    await client.patch(f"/characters/{c}/conditions", json={"conditions": {"incapacitated": True}})
+
+
+async def _ally_riposo(client, c, s, d):
+    await client.post(f"/characters/{c}/rest", json={"rest_type": "long"})
+
+
+async def _ally_tick(client, c, s, d):
+    for _ in range(10):
+        await client.post(f"/characters/{c}/rounds/tick")
+
+
+async def _ally_elimina(client, c, s, d):
+    await client.delete(f"/characters/{c}/spells/{s}")
+
+
+async def _ally_altro(client, c, s, d):
+    await client.post(f"/characters/{c}/spell_slots", json={"level": 2, "total": 2})
+    r = await client.post(f"/characters/{c}/spells", json={"name": "Altro", "level": 2, "is_concentration": True,
+                                                            "duration": "Concentration, up to 1 minute", "is_prepared": True})
+    await client.post(f"/characters/{c}/spells/{r.json()['id']}/use", json={"slot_level": 2, "confirm": ["one_slot_per_turn"]})
+
+
+@pytest.mark.caccia(id="CB-1181", fonte="comportamento dichiarato in CLAUDE.md: gli stati spell:<chiave> sui bersagli finiscono con la concentrazione del lanciatore",
+                    zona="flusso:concentrazione", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/concentration", "POST /characters/{char_id}/concentration/save", "PATCH /characters/{char_id}/hp",
+                           "PATCH /characters/{char_id}/conditions", "POST /characters/{char_id}/rest", "POST /characters/{char_id}/rounds/tick",
+                           "DELETE /characters/{char_id}/spells/{spell_id}", "POST /characters/{char_id}/spells/{spell_id}/use"])
+@pytest.mark.parametrize("chiudi", [_ally_patch, _ally_ts, _ally_zero, _ally_set_zero, _ally_incapacitato, _ally_riposo, _ally_tick, _ally_elimina, _ally_altro],
+                         ids=lambda f: f.__name__)
+async def test_effetto_sull_alleato_cade_quando_il_lanciatore_perde_la_concentrazione(client, test_session_factory, dadi, chiudi):
+    _, eroe, chierico, spell = await _serata_con_benedizione(client, test_session_factory)
+    await chiudi(client, chierico, spell, dadi)
+    assert await _stati(client, eroe, PLAYER_ID) == []
+    assert (await _stati(client, chierico, GM_ID, "spell_cast:bless")) == []
+
+
+@pytest.mark.caccia(id="CB-1182", fonte="invariante: un annullamento rimette tutto com'era, anche l'effetto sull'alleato", zona="flusso:concentrazione", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/hp", "POST /characters/{char_id}/hp/undo"])
+async def test_annullare_il_danno_che_rompe_la_concentrazione_rimette_l_effetto_sull_alleato(client, test_session_factory, dadi):
+    _, eroe, chierico, spell = await _serata_con_benedizione(client, test_session_factory)
+    dadi(1)
+    r = (await client.patch(f"/characters/{chierico}/hp", json={"op": "damage", "value": 24})).json()
+    assert r["concentrating_spell_id"] is None
+    assert await _stati(client, eroe, PLAYER_ID) == []
+    as_user(GM_ID)
+    u = await client.post(f"/characters/{chierico}/hp/undo", json={"op_id": r["hp_undo_id"]})
+    assert u.status_code == 200, u.text
+    assert (await _stato(client, chierico))["concentrating_spell_id"] == spell
+    assert len(await _stati(client, eroe, PLAYER_ID)) == 1
+
+
+@pytest.mark.caccia(id="CB-1183", fonte="comportamento dichiarato in CLAUDE.md: gli stati di un incantesimo finiscono con la concentrazione, anche se lanciato da un oggetto", zona="flusso:concentrazione",
+                    voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/cast", "PATCH /characters/{char_id}/hp"])
+async def test_incantesimo_di_oggetto_sull_alleato_cade_con_la_concentrazione(client, test_session_factory, dadi):
+    sid, eroe = await seed_session(test_session_factory)
+    as_user(GM_ID)
+    cid = (await client.post("/characters", json={"name": "Portatore"})).json()["id"]
+    for op, v in (("set_max", 40), ("set_current", 40)):
+        await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": v})
+    await _seat(test_session_factory, cid, GM_ID)
+    spell = {"name": "Bless", "srd_index": "bless", "level": 1, "charges_cost": 1, "is_concentration": True}
+    as_user(GM_ID)
+    iid = await _item(client, cid, name="Bastone", charges={"current": 3, "max": 3}, granted_spells=[spell])
+    dadi(3)
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0, "targets": [eroe]})
+    assert r.status_code == 200, r.text
+    assert len(await _stati(client, eroe, PLAYER_ID)) == 1
+    as_user(GM_ID)
+    dadi(1)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 24})
+    assert await _stati(client, eroe, PLAYER_ID) == []
+
+
+@pytest.mark.caccia(id="CB-1184", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="interazione",
+                    copre=["POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_stesso_incantesimo_di_due_lanciatori_non_cade_per_uno_solo(client, test_session_factory, dadi):
+    sid, eroe = await seed_session(test_session_factory)
+    chierico, spell = await _benedizione(client, GM_ID)
+    await _seat(test_session_factory, chierico, GM_ID)
+    await _benedici(client, GM_ID, chierico, spell, [eroe])
+    as_user(PLAYER_ID)  # l'eroe benedice sé stesso con la sua copia dell'incantesimo
+    for op, v in (("set_max", 40), ("set_current", 40)):
+        await client.patch(f"/characters/{eroe}/hp", json={"op": op, "value": v})
+    r = await client.post(f"/characters/{eroe}/spells", json={"name": "Bless", "srd_index": "bless", "level": 1, "is_concentration": True,
+                                                              "duration": "Concentration, up to 1 minute", "is_prepared": True})
+    await client.post(f"/characters/{eroe}/spell_slots", json={"level": 1, "total": 2})
+    await _benedici(client, PLAYER_ID, eroe, r.json()["id"], [eroe])
+    as_user(GM_ID)
+    await client.patch(f"/characters/{chierico}/concentration", json={"spell_id": None})
+    assert len(await _stati(client, eroe, PLAYER_ID)) >= 1
+
+
+async def _eroe_incantatore(client, eroe, durata="Concentration, up to 1 minute"):
+    as_user(PLAYER_ID)
+    for op, v in (("set_max", 40), ("set_current", 40)):
+        await client.patch(f"/characters/{eroe}/hp", json={"op": op, "value": v})
+    r = await client.post(f"/characters/{eroe}/spells", json={"name": "Benedizione", "level": 1, "is_concentration": True,
+                                                              "duration": durata, "is_prepared": True})
+    assert r.status_code == 201, r.text
+    assert (await client.post(f"/characters/{eroe}/spell_slots", json={"level": 1, "total": 3})).status_code == 201
+    return r.json()["id"]
+
+
+async def _incontro_attivo(client, fabbrica):
+    """Eroe primo in iniziativa, poi due goblin; l'incontro è avviato. Restituisce (sessione, eroe, incantesimo)."""
+    sid, enc = await setup_full_encounter(client, fabbrica)
+    eroe = next(c for c in enc["combatants"] if c["kind"] == "pc")["character_id"]
+    spell = await _eroe_incantatore(client, eroe)
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/start", json={})
+    assert r.status_code == 200, r.text
+    return sid, eroe, spell
+
+
+async def _avanti(client, sid, n=1):
+    as_user(GM_ID)
+    for _ in range(n):
+        r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+        assert r.status_code == 200, r.text
+
+
+async def _stato_eroe(client, eroe):
+    as_user(PLAYER_ID)
+    return await _stato(client, eroe)
+
+
+async def _round_rimasti(client, eroe):
+    return ((await _stato_eroe(client, eroe))["settings"] or {}).get("concentration_rounds_left")
+
+
+@pytest.mark.caccia(id="CB-1185", fonte="comportamento dichiarato nel codice: in uno scontro i round di concentrazione scendono all'inizio del turno del lanciatore, non a ogni turno", zona="flusso:concentrazione",
+                    voce="normale", copre=["POST /sessions/{session_id}/encounter/next-turn", "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_in_uno_scontro_il_contatore_scende_solo_al_turno_del_lanciatore(client, test_session_factory):
+    sid, eroe, spell = await _incontro_attivo(client, test_session_factory)
+    await _benedici(client, PLAYER_ID, eroe, spell, [])
+    assert await _round_rimasti(client, eroe) == 10
+    await _avanti(client, sid, 2)  # turni dei due goblin
+    assert await _round_rimasti(client, eroe) == 10
+    await _avanti(client, sid, 1)  # di nuovo il turno dell'eroe
+    assert await _round_rimasti(client, eroe) == 9
+
+
+@pytest.mark.caccia(id="CB-1186", fonte="comportamento dichiarato in CLAUDE.md: un minuto di concentrazione sono 10 round e l'effetto sugli alleati finisce con lei", zona="flusso:concentrazione",
+                    voce="normale", copre=["POST /sessions/{session_id}/encounter/next-turn"])
+async def test_in_uno_scontro_la_concentrazione_finisce_al_decimo_round(client, test_session_factory):
+    sid, eroe, spell = await _incontro_attivo(client, test_session_factory)
+    await _benedici(client, PLAYER_ID, eroe, spell, [eroe])
+    assert len(await _stati(client, eroe, PLAYER_ID)) == 1
+    await _avanti(client, sid, 3 * 9)  # nove giri completi
+    assert await _round_rimasti(client, eroe) == 1
+    assert (await _stato_eroe(client, eroe))["concentrating_spell_id"] == spell
+    await _avanti(client, sid, 3)
+    s = await _stato_eroe(client, eroe)
+    assert s["concentrating_spell_id"] is None
+    assert [k for k in (s["settings"] or {}) if k.startswith("concentration")] == []
+    assert await _stati(client, eroe, PLAYER_ID) == []
+
+
+@pytest.mark.caccia(id="CB-1187", fonte="comportamento dichiarato nel codice: durante uno scontro il tick manuale raddoppierebbe il conteggio, quindi è rifiutato", zona="flusso:concentrazione",
+                    voce="ripetizione", copre=["POST /characters/{char_id}/rounds/tick"])
+async def test_tick_manuale_rifiutato_in_uno_scontro_e_il_contatore_non_cambia(client, test_session_factory):
+    sid, eroe, spell = await _incontro_attivo(client, test_session_factory)
+    await _benedici(client, PLAYER_ID, eroe, spell, [])
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{eroe}/rounds/tick")
+    assert r.status_code == 409
+    assert await _round_rimasti(client, eroe) == 10
+
+
+@pytest.mark.caccia(id="CB-1188", fonte="invariante: il turno indietro rimette la concentrazione e l'effetto sull'alleato com'erano", zona="flusso:concentrazione",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn", "POST /sessions/{session_id}/encounter/next-turn"])
+async def test_turno_indietro_dopo_la_scadenza_rimette_concentrazione_ed_effetti(client, test_session_factory):
+    sid, eroe, spell = await _incontro_attivo(client, test_session_factory)
+    await _benedici(client, PLAYER_ID, eroe, spell, [eroe])
+    await _avanti(client, sid, 3 * 9 + 2)  # ultimo goblin del nono giro
+    assert await _round_rimasti(client, eroe) == 1
+    await _avanti(client, sid, 1)  # scade
+    assert (await _stato_eroe(client, eroe))["concentrating_spell_id"] is None
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/prev-turn")
+    assert r.status_code == 200, r.text
+    s = await _stato_eroe(client, eroe)
+    assert s["concentrating_spell_id"] == spell and s["settings"]["concentration_rounds_left"] == 1
+    assert len(await _stati(client, eroe, PLAYER_ID)) == 1
+
+
+@pytest.mark.caccia(id="CB-1189", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="regola",
+                    copre=["POST /sessions/{session_id}/encounter/combatants/{combatant_id}/conditions"])
+@pytest.mark.parametrize("condizione", ["stunned", "incapacitated"])
+async def test_il_master_che_stordisce_un_pg_gli_fa_cadere_la_concentrazione(client, test_session_factory, condizione):
+    sid, eroe, spell = await _incontro_attivo(client, test_session_factory)
+    await _benedici(client, PLAYER_ID, eroe, spell, [eroe])
+    as_user(GM_ID)
+    live = (await client.post(f"/sessions/{sid}/encounter/sync-pcs")).json()
+    pc = next(c for c in live["combatants"] if c["kind"] == "pc")
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/conditions", json={"slug": condizione, "value": True})
+    assert r.status_code == 200, r.text
+    s = await _stato_eroe(client, eroe)
+    assert s["concentrating_spell_id"] is None
+    assert await _stati(client, eroe, PLAYER_ID) == []
+
+
+@pytest.mark.xfail(strict=True, reason="CB-1190 la morte per spossatezza 6 non chiude la concentrazione")
+@pytest.mark.caccia(id="CB-1190", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="regola",
+                    copre=["PATCH /characters/{char_id}/conditions"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_la_morte_per_spossatezza_chiude_la_concentrazione(client, dadi, edizione):
+    cid = await _pg(client, edizione)
+    await _slot(client, cid)
+    sid = await _incantesimo(client, cid)
+    await _lancia(client, cid, sid)
+    r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"exhaustion": 6}})
+    assert r.status_code == 200, r.text
+    s = await _stato(client, cid)
+    assert s["is_dead"] is True
+    assert s["concentrating_spell_id"] is None
+
+
+@pytest.mark.caccia(id="CB-1191", fonte="2024 · Concentrazione · pag. 363", zona="flusso:concentrazione", voce="edizioni",
+                    copre=["PATCH /characters/{char_id}/hp"])
+async def test_2024_tramortito_a_zero_non_resta_concentrato(client, dadi):
+    cid = await _pg(client, "2024")
+    await _slot(client, cid)
+    sid = await _incantesimo(client, cid)
+    await _lancia(client, cid, sid)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 30, "knock_out": True})).json()
+    assert r["current_hit_points"] == 1 and r["conditions"].get("unconscious") is True
+    assert r["concentrating_spell_id"] is None
+
+
+@pytest.mark.caccia(id="CB-1192", fonte="invariante: l'annullo di un danno rimette la concentrazione da oggetto com'era", zona="flusso:concentrazione", voce="annullamento",
+                    copre=["POST /characters/{char_id}/hp/undo"])
+async def test_annullo_del_danno_ripristina_la_concentrazione_da_oggetto(client, dadi):
+    cid, iid, _ = await _pg_con_bacchetta(client, dadi)
+    await client.post(f"/characters/{cid}/rounds/tick")
+    dadi(1)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 24})).json()
+    assert [k for k in (r["settings"] or {}) if k.startswith("concentration")] == []
+    u = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r["hp_undo_id"]})
+    assert u.status_code == 200, u.text
+    s = await _stato(client, cid)
+    assert s["settings"]["concentration_item_spell"] == {"item_id": iid, "name": "Raggio Fantasma"}
+    assert s["settings"]["concentration_rounds_left"] == 9
+
+
+@pytest.mark.caccia(id="CB-1193", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="interazione",
+                    copre=["POST /characters/{char_id}/items/{item_id}/cast"])
+async def test_incantesimo_di_oggetto_sostituisce_la_concentrazione_di_un_incantesimo_e_i_suoi_effetti(client, test_session_factory, dadi):
+    sid, eroe = await seed_session(test_session_factory)
+    chierico, spell = await _benedizione(client, GM_ID)
+    await _seat(test_session_factory, chierico, GM_ID)
+    await _benedici(client, GM_ID, chierico, spell, [eroe])
+    as_user(GM_ID)
+    iid = await _bacchetta(client, chierico)
+    dadi(3)
+    c = await _usa_oggetto(client, chierico, iid)
+    assert c["concentrating_spell_id"] is None and c["settings"]["concentration_item_spell"]["item_id"] == iid
+    assert await _stati(client, eroe, PLAYER_ID) == []
+
+
+@pytest.mark.caccia(id="CB-1194", fonte="invariante: un lancio rifiutato per cariche finite non spende né cambia nulla", zona="flusso:concentrazione", voce="limiti",
+                    copre=["POST /characters/{char_id}/items/{item_id}/cast"])
+async def test_oggetto_senza_cariche_non_toglie_la_concentrazione_in_corso(client, dadi):
+    cid = await _pg(client)
+    await _slot(client, cid)
+    sid = await _incantesimo(client, cid)
+    await _lancia(client, cid, sid)
+    iid = await _bacchetta(client, cid, cariche=1)
+    dadi(3)
+    await _usa_oggetto(client, cid, iid)  # l'ultima carica
+    await _lancia(client, cid, sid)  # la concentrazione torna all'incantesimo della lista
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0})
+    assert r.status_code == 409, r.text
+    s = await _stato(client, cid)
+    assert s["concentrating_spell_id"] == sid and "concentration_item_spell" not in s["settings"]
+
+
+@pytest.mark.caccia(id="CB-1195", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="ripetizione",
+                    copre=["POST /characters/{char_id}/items/{item_id}/cast"])
+async def test_rilancio_dall_oggetto_riparte_dalla_durata_e_spende_una_carica_per_lancio(client, dadi):
+    cid, iid, _ = await _pg_con_bacchetta(client, dadi)
+    for _ in range(4):
+        await client.post(f"/characters/{cid}/rounds/tick")
+    dadi(3)
+    c = await _usa_oggetto(client, cid, iid)
+    assert c["settings"]["concentration_rounds_left"] == 10
+    item = next(i for i in (await client.get(f"/characters/{cid}/items")).json() if i["id"] == iid)
+    assert item["item_metadata"]["charges"]["current"] == 3
+
+
+@pytest.mark.caccia(id="CB-1196", fonte="invariante: i dati di un altro utente non si toccano", zona="flusso:concentrazione", voce="permessi",
+                    copre=["POST /characters/{char_id}/items/{item_id}/cast"])
+async def test_lancio_da_oggetto_di_un_altro_utente_rifiutato(client, dadi, come_utente):
+    cid = await _pg(client)
+    iid = await _bacchetta(client, cid)
+    come_utente(9002)
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0})
+    assert r.status_code in (403, 404)
+    come_utente(TEST_USER_ID)
+    s = await _stato(client, cid)
+    assert "concentration_item_spell" not in (s["settings"] or {})
+    item = next(i for i in (await client.get(f"/characters/{cid}/items")).json() if i["id"] == iid)
+    assert item["item_metadata"]["charges"]["current"] == 5
+
+
+@pytest.mark.caccia(id="CB-1197", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="limiti",
+                    copre=["POST /characters/{char_id}/concentration/save"])
+@pytest.mark.parametrize("danno,cd", [(1, 10), (2, 10), (3, 10), (23, 11), (2000000, 1000000)])
+async def test_cd_con_danni_piccoli_e_enormi(client, dadi, danno, cd):
+    cid = await _pg(client)
+    dadi(10)
+    r = await client.post(f"/characters/{cid}/concentration/save", json={"damage": danno})
+    assert r.status_code == 200, r.text
+    assert r.json()["dc"] == cd
+
+
+@pytest.mark.caccia(id="CB-1198", fonte="2014 · Concentrazione · pag. 203", zona="flusso:concentrazione", voce="regola",
+                    copre=["PATCH /characters/{char_id}/hp"])
+async def test_danno_assorbito_dai_pf_temporanei_chiede_comunque_il_ts_con_il_danno_intero(client, dadi):
+    cid = await _pg(client)
+    await _slot(client, cid)
+    sid = await _incantesimo(client, cid)
+    await _lancia(client, cid, sid)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_temp", "value": 20})
+    dadi(15)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 14})).json()
+    assert r["current_hit_points"] == 28 and r["temp_hp"] == 6
+    assert r["concentration_save"]["dc"] == 10
