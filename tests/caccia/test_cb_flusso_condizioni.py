@@ -349,7 +349,6 @@ async def test_indebolimento_4_dimezza_i_pf_e_la_cura_non_li_supera(client):
 
 @pytest.mark.caccia(id="CB-565", fonte="2024 · Privo di sensi · general.md pag. 377", zona="flusso:condizioni", voce="edizioni",
                     copre=["PATCH /characters/{char_id}/conditions"])
-@pytest.mark.xfail(strict=True, reason="CB-565 2024: Privo di sensi non accende anche Prono")
 async def test_2024_privo_di_sensi_accende_anche_prono(client):
     cid = await _pg(client, "2024")
     j = (await _cond(client, cid, {"unconscious": True})).json()
