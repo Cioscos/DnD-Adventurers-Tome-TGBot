@@ -17,8 +17,8 @@ from core.rules.catalog._common import (
 from core.rules.catalog.y2014.barbarian import RETALIATION, rage_damage
 from core.rules.states import begin_state
 from core.rules.types import (
-    ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses, UseChoice,
-    UseToggle, ZeroHpSave,
+    OTHERS_TURN, ChoiceSpec, Cost, Modifier, OnUse, RollOptionSpec, RuleContext, StateSpec, TargetEffect, UnarmoredAc, Uses,
+    UseChoice, UseToggle, ZeroHpSave,
 )
 from core.rules.weapons import MASTERY_GROUP, MASTERY_IT, MASTERY_OPTIONS, has_property, mastery_choice, weapon_key, weapon_mastery
 from core.utils.session_view import armor_category
@@ -318,7 +318,7 @@ def _divine_fury(kind: str, it: str, en: str) -> RollOptionSpec:
     return RollOptionSpec(
         key=f"{CK}.divine_fury_{kind}", phase="after_hit", rolls=("attack",), group="divine_fury", once_per_turn=True,
         extra_dice=lambda c, _i: f"1d6+{c.class_level // 2}", extra_damage_type=kind, label=_both(it, en),
-        available=lambda c: raging(c) and c.spell is None)
+        available=lambda c: raging(c) and c.spell is None and not (c.char.turn_state or {}).get(OTHERS_TURN))  # nel tuo turno
 
 
 def _fanatical_used(_session: Any, ctx: RuleContext, _inputs: dict) -> None:

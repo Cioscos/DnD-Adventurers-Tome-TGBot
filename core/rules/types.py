@@ -413,6 +413,7 @@ class Modifier:
 
 
 FORGONE = -1  # ``action_weapons``: attacco dell'azione ceduto (bestia, trucchetto, incantesimo), senza arma
+OTHERS_TURN = "others_turn"  # ``Character.turn_state``: è cominciato il turno di un altro (i privilegi «nel tuo turno» tacciono)
 # slot di turno -> chiave booleana in ``Character.turn_state``
 TURN_FLAGS = {
     "action": "action_used",
