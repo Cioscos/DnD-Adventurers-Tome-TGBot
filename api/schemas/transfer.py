@@ -45,6 +45,7 @@ def _named(v: str, info: ValidationInfo) -> str:
     return v.strip()
 
 
+Named = Annotated[str, AfterValidator(_named)]
 Int0 = Annotated[int, _rng(0, 1_000_000)]
 Restoration = Literal["long_rest", "short_rest", "none", "manual"]
 
@@ -148,12 +149,20 @@ class ExportCharacter(BaseModel):
 
 
 class ExportClass(BaseModel):
-    class_name: str = Field(max_length=100)
+    class_name: Named = Field(max_length=100)
     level: Annotated[int, _rng(1, 20)] = 1
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[Annotated[int, _rng(1, 100)]] = None
     hit_dice_used: Int0 = 0
+    @field_validator("spellcasting_ability")
+    @classmethod
+    def _known_ability(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        """Una caratteristica inventata si scarta (il file resta importabile); l'export non cambia ciò che è salvato."""
+        if v is None or (info.context or {}).get("lenient"):
+            return v
+        return key if (key := v.strip().lower()) in ABILITY_NAMES else None
+
     # {gruppo: [chiave_opzione]}: scelte di classe (core/rules/types.py::ChoiceSpec)
     options: dict[str, Annotated[list[str], _cap(40)]] = Field(default_factory=dict)
 
@@ -186,7 +195,7 @@ class ExportAbilityScore(BaseModel):
 class ExportItem(BaseModel):
     ref: Optional[int] = None  # chiave locale al file, mai un id DB
     container_ref: Optional[int] = None
-    name: str = Field(max_length=200)
+    name: Named = Field(max_length=200)
     description: Optional[str] = None
     weight: Annotated[float, _rng(0, 1_000_000)] = 0.0
     quantity: Int0 = 1
@@ -209,7 +218,7 @@ class ExportItem(BaseModel):
 
 class ExportSpell(BaseModel):
     export_key: str = Field(max_length=20)
-    name: str = Field(max_length=200)
+    name: Named = Field(max_length=200)
     level: Annotated[int, _rng(0, 9)] = 0
     description: Optional[str] = None
     casting_time: Optional[str] = None
@@ -248,7 +257,7 @@ _OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted"
 
 
 class ExportAbility(BaseModel):
-    name: str = Field(max_length=200)
+    name: Named = Field(max_length=200)
     description: Optional[str] = None
     max_uses: Optional[Int0] = None
     uses: Optional[Int0] = None

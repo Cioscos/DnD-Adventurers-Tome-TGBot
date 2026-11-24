@@ -281,7 +281,7 @@ class AbilityRead(BaseModel):
 
 
 class AbilityCreate(BaseModel):
-    name: str
+    name: str = Field(pattern=r"\S")
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None
@@ -294,7 +294,7 @@ class AbilityCreate(BaseModel):
 
 
 class AbilityUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, pattern=r"\S")
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None
