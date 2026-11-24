@@ -49,7 +49,8 @@
       "option_prerequisite": "Una delle opzioni scelte richiede un'altra opzione che non hai: sceglila insieme al prerequisito o dopo averlo preso.",
       "option_is_prerequisite": "Questa opzione è il prerequisito di un'altra che hai scelto: non puoi sostituirla.",
       "class_already_present": "Il personaggio ha già quella classe.",
-      "form_hit_dice": "In forma i Dadi Vita sono quelli della bestia: i tuoi si spendono di nuovo quando torni alla forma normale."
+      "form_hit_dice": "In forma i Dadi Vita sono quelli della bestia: i tuoi si spendono di nuovo quando torni alla forma normale.",
+      "death_save_already_rolled": "Hai già fatto il tiro salvezza contro la morte in questo turno: il prossimo all'inizio del tuo turno."
     },
     "error_boundary": {
       "title": "Qualcosa è andato storto",

@@ -74,6 +74,7 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
+from api.routers.sessions import active_encounter_row
 from api.routers._helpers import (
     apply_con_hp, collect_homebrew_notifications, effective_con_mod, roll_concentration_save, saving_throw_bonus,
 )
@@ -1200,6 +1201,9 @@ async def roll_death_save(
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
     if char.current_hit_points > 0 or ds.get("stable"):  # si tira solo a 0 PF e non stabili (2014 p.197 / 2024 p.28)
         raise HTTPException(status_code=409, detail={"code": "death_save_not_needed"})
+    # Uno per turno, a inizio turno (2014 pag. 197 / 2024 pag. 28, 365): in uno scontro il server sa quando il turno ricomincia
+    if get_turn(char).get("death_save_rolled") and await active_encounter_row(session, char.id) is not None:
+        raise HTTPException(status_code=409, detail={"code": "death_save_already_rolled"})
     before = {"death_saves": dict(ds), "hp": char.current_hit_points}
 
     applied = modifiers_for(char, "death_save")

@@ -1,6 +1,9 @@
 """Controlli scritti dai correttori del gruppo pf-personaggio per i dubbi «Q-…» risolti come difetti."""
 import pytest
 
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
+from tests.integration._telegram_stub import install_fake_telegram
+
 
 async def _pg(client, classe, livello, edizione="2014") -> int:
     r = await client.post("/characters", json={"name": "P", "rules_edition": edizione,
@@ -74,3 +77,29 @@ async def test_recupero_arcano_vale_nel_riposo_lungo_2024_interrotto(client):
     # il lungo interrotto dopo almeno un'ora vale un riposo breve: il Recupero Arcano si fa
     assert r.status_code == 200, r.text
     assert next(s for s in r.json()["spell_slots"] if s["level"] == 1)["used"] == 0
+
+
+@pytest.mark.caccia(id="CB-4314", fonte="2024 · Regole generali · Tiri salvezza contro morte · pag. 28 e Glossario · pag. 365 (si tira a inizio turno a 0 PF: uno per turno)",
+                    zona="regola:2024/generali", voce="regola",
+                    copre=["carta:2024/general.md#Tiri salvezza contro morte / Death Saving Throws (pag. 28-29)",
+                           "carta:2024/general.md#Death Saving Throw (Tiro salvezza contro morte) (pag. 365)",
+                           "POST /characters/{char_id}/death_saves/roll", "POST /sessions/{session_id}/encounter/next-turn"])
+async def test_un_solo_ts_contro_la_morte_per_turno_in_uno_scontro(client, test_session_factory, monkeypatch):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    cid = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()["combatants"][0]["character_id"]
+    as_user(PLAYER_ID)  # tocca al PG
+    await _pf(client, cid, 10)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})
+    assert r.status_code == 200 and r.json()["failures"] == 1, r.text
+    # secondo tiro nello stesso turno: rifiutato, il conteggio non cambia
+    assert (await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})).status_code == 409
+    assert (await client.get(f"/characters/{cid}")).json()["death_saves"]["failures"] == 1
+    as_user(GM_ID)
+    for _ in range(3):  # i due goblin, poi di nuovo il PG
+        assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200
+    as_user(PLAYER_ID)
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 5})
+    assert r.status_code == 200 and r.json()["failures"] == 2, r.text
