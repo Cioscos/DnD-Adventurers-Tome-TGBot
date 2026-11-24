@@ -742,7 +742,8 @@ async def _come_giocatore(client, cid) -> dict:
                     copre=["POST /sessions/{session_id}/encounter/combatants/{combatant_id}/conditions",
                            "carta:2014/general.md#Indebolimento / Exhaustion (riquadro, pag. 291)"])
 @pytest.mark.parametrize("valore", [7,
-                                    -1])
+                                    -1,
+                                    True])
 async def test_il_master_non_puo_dare_a_un_pg_un_livello_di_indebolimento_fuori_da_uno_sei(client, test_session_factory, valore):
     sid, cid, pc, _ = await _gm_su_pg(client, test_session_factory)
     r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc}/conditions", json={"slug": "exhaustion", "value": valore})
@@ -808,3 +809,27 @@ async def test_durata_su_condizione_attiva_non_cancella_cd_e_fonte(client, test_
     await _cond(client, cid, {"restrained": True}, durations={"restrained": 3})
     [e] = [x for x in (await _scheda(client, cid))["condition_effects"] if x["slug"] == "restrained"]
     assert (e["save_dc"], e["source_note"]) == (15, "Ragnatela")
+
+
+@pytest.mark.caccia(id="CB-1500", fonte="decisione D-017 (tests/caccia/decisioni.md): protetta la condizione già attiva", zona="flusso:condizioni",
+                    voce="interazione", copre=["PATCH /characters/{char_id}/conditions"])
+async def test_una_condizione_riaccesa_prende_la_durata_nuova_e_non_la_cd_vecchia(client, test_session_factory):
+    cid = await _pg(client)
+    async with test_session_factory() as s:  # condizione spenta con l'effetto rimasto, come dopo Protezione dai Veleni
+        await upsert_effect(s, ("character", cid), "poisoned", save=SaveSpec("constitution", 15, "end"), source_note="Ragno")
+        await s.commit()
+    await _cond(client, cid, {"poisoned": True}, durations={"poisoned": 4})
+    [e] = [x for x in (await _scheda(client, cid))["condition_effects"] if x["slug"] == "poisoned"]
+    assert (e["save_dc"], e["source_note"]) == (None, None)
+
+
+@pytest.mark.caccia(id="CB-1501", fonte="2014 · Indebolimento · pag. 291 (livelli, non acceso o spento)", zona="flusso:condizioni",
+                    voce="contratto", copre=["POST /characters/import"])
+async def test_un_file_con_esaurimento_sospeso_non_diventa_acceso(client):
+    cid = await _pg(client)
+    dati = (await client.get(f"/characters/{cid}/export")).json()
+    dati["character"]["settings"] = {**(dati["character"].get("settings") or {}), "conditions_suspended_on": {"exhaustion": 1}}
+    dati["character"]["conditions"] = {"exhaustion": False}
+    r = await client.post("/characters/import", json=dati)
+    assert r.status_code == 201, r.text
+    assert (await _scheda(client, r.json()["id"]))["conditions"].get("exhaustion") is not True

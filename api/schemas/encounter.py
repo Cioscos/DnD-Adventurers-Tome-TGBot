@@ -73,7 +73,7 @@ class GmConditionApply(BaseModel):
             raise ValueError("exhaustion requires value")
         if self.value is not None:
             if self.slug == "exhaustion":
-                if not isinstance(self.value, int) or not 0 <= self.value <= 6:
+                if isinstance(self.value, bool) or not isinstance(self.value, int) or not 0 <= self.value <= 6:
                     raise ValueError("exhaustion_out_of_range")
             elif not isinstance(self.value, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
                 raise ValueError("condition_must_be_bool")

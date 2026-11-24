@@ -557,10 +557,12 @@ async def update_conditions(
                 raise HTTPException(status_code=422, detail="exhaustion_out_of_range")
         elif not isinstance(val, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
             raise HTTPException(status_code=422, detail="condition_must_be_bool")
+    was_on = {slug for slug, val in current.items() if val}
     result = await apply_conditions(session, char, changes)
     # apply_conditions already dropped the effects of conditions turned off
-    # effetti del master o con CD o fonte (incantesimi, privilegi di altri): la durata del giocatore non li sostituisce (D-017)
-    kept = {e.slug for e in await effects_for_character(session, char_id)
+    # condizione già accesa con un effetto del master o con CD o fonte (incantesimi, privilegi di altri): la durata del
+    # giocatore non lo sostituisce (D-017)
+    kept = {e.slug for e in await effects_for_character(session, char_id) if e.slug in was_on
             if e.applied_by_gm or e.save_dc is not None or e.source_note or e.source_character_id
             or e.source_combatant_id or e.source_spell_id}
     for slug, rounds in (body.durations or {}).items():

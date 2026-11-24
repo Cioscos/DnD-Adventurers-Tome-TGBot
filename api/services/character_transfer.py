@@ -302,7 +302,8 @@ async def import_character(
 
     # gli stati attivi non viaggiano: ciò che un incantesimo sospendeva (Calmare Emozioni) sulla copia è di nuovo acceso
     if isinstance(suspended := (char.settings or {}).get(SUSPENDED_ON), dict):
-        char.conditions = {**(char.conditions or {}), **{c: True for c in suspended if (char.conditions or {}).get(c) is False}}
+        char.conditions = {**(char.conditions or {}), **{c: True for c in suspended
+                                                          if c != "exhaustion" and (char.conditions or {}).get(c) is False}}
 
     # un file importato passa dal retrofit per le sue classi (R34, R39): il segno del file non vale
     # gli id dei personaggi di un altro database non valgono qui
