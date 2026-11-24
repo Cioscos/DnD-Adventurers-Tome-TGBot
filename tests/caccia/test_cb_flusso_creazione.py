@@ -14,7 +14,6 @@ async def _lista(client):
     return (await client.get("/characters")).json()
 
 
-@pytest.mark.xfail(strict=True, reason="CB-637 initial_class.level fuori da 1-20 accettato con 201")
 @pytest.mark.caccia(id="CB-637", fonte="invariante: il livello di una classe va da 1 a 20 (CLAUDE.md · limiti livello 1 e 20)", zona="flusso:creazione",
                     voce="limiti", copre=["POST /characters"])
 @pytest.mark.parametrize("livello", [0, -3, 21, 25])
@@ -24,7 +23,6 @@ async def test_livello_iniziale_fuori_da_1_20_rifiutato(client, livello):
     assert await _lista(client) == []
 
 
-@pytest.mark.xfail(strict=True, reason="CB-638 hit_die 0 accettato, hit_die negativo fa un 500")
 @pytest.mark.caccia(id="CB-638", fonte="invariante: un dado vita è un dado vero (2014 · Punti ferita e Dadi Vita · pag. 163): mai zero o negativo",
                     zona="flusso:creazione", voce="limiti", copre=["POST /characters"])
 @pytest.mark.parametrize("dado", [0, -8])
