@@ -157,10 +157,19 @@ export function useAttackRoll() {
       return secondStep(first, inspiration)
     },
     unarmedEffect: async (charId: number, effect: UnarmedEffect): Promise<WeaponAttackResult | null> => {
-      const confirm = await limitConfirmation(charId)
-      if (!confirm) return null
+      // Anche il colpo bonus di Arti Marziali o della Raffica può afferrare o spingere (2024): si sceglie chi lo paga.
+      let picked: RollChoice
       try {
-        return await api.items.attackUnarmed(charId, false, undefined, { effect, ...confirm })
+        picked = await askRollOptions(charId, { roll: 'attack' }, 'before', { cancellable: true, ownSlotOnly: true })
+      } catch (err) {
+        if (err instanceof CastCancelled) return null
+        throw err
+      }
+      const confirm = picked.own_slot ? {} : await limitConfirmation(charId)
+      if (!confirm) return null
+      const roll = picked.options.length ? { options: picked.options, option_inputs: picked.option_inputs } : undefined
+      try {
+        return await api.items.attackUnarmed(charId, false, roll, { effect, ...confirm })
       } catch (err) {
         if (refused(err)) return null
         throw err

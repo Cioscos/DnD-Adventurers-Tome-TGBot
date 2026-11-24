@@ -1040,14 +1040,19 @@ async def attack_with_weapon(
 # Unarmed strike
 # ---------------------------------------------------------------------------
 
-def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int) -> WeaponAttackResult:
-    """Afferrare o Spingere 2024: niente tiro per colpire, il bersaglio fa un TS su Forza o Destrezza contro ``dc``."""
+def _unarmed_effect(session: AsyncSession, char: Character, body: AttackSubmission, dc: int) -> WeaponAttackResult:
+    """Afferrare o Spingere 2024: niente tiro per colpire, il bersaglio fa un TS su Forza o Destrezza contro ``dc``.
+
+    Anche il colpo bonus di Arti Marziali o un colpo della Raffica (2024 pag. 101-102, Colpo Senz'Armi pag. 377): si pagano
+    solo le opzioni con uno slot proprio, le altre riguardano un tiro per colpire che qui non c'è."""
     if character_edition(char) != "2024":
         raise HTTPException(status_code=422, detail="unarmed_effect_2024_only")
-    use_options(session, char, "attack", None)  # è un tiro nuovo: il precedente non si ritocca più
+    effect = body.effect
+    body = body.model_copy(update={"options": [k for k in body.options if uses_own_slot(char, [k])]})
+    use_options(session, char, "attack", body, attack_mode="melee", grip="one")  # è un tiro nuovo: il precedente non si ritocca più
     _set_pending_attack(char, None)
-    spend(char, "attack")
-    _note_action_weapon(char, None, None)
+    spend(char, "attack", own_slot=_own_slot_attack(char, body))
+    _note_action_weapon(char, None, body)
     add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
     return WeaponAttackResult(
         weapon_name="Attacco a mano libera", to_hit_die=0, to_hit_bonus=0, to_hit_total=0, is_critical=False,
@@ -1078,7 +1083,7 @@ async def attack_unarmed(
             ability_mod, ability = dex_mod, "dexterity"
     pb = char.proficiency_bonus
     if body and body.effect != "damage":
-        return _unarmed_effect(session, char, body.effect, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
+        return _unarmed_effect(session, char, body, 8 + damage_mod + pb)  # la CD resta con la caratteristica di prima (Danza: non DES)
 
     if body and body.with_inspiration:
         spend_inspiration_attack(char)
