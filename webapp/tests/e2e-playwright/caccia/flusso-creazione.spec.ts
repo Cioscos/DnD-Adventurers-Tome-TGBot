@@ -28,7 +28,7 @@ test('il doppio tocco su Crea crea un solo personaggio', async ({ comeUtente, ap
 
 
 // caccia: {"id": "CB-1392", "fonte": "invariante: un wizard chiuso senza creare non lascia scelte al successivo (monete al posto dell'equipaggiamento)", "zona": "flusso:creazione", "voce": "annullamento", "copre": ["route:/"]}
-test.fail('chiudere il wizard con le monete accese e riaprirlo con la stessa classe le spegne', async ({ comeUtente }) => {
+test('chiudere il wizard con le monete accese e riaprirlo con la stessa classe le spegne', async ({ comeUtente }) => {
   const page = await comeUtente(UTENTE)
   await page.goto(`/?dev_user=${UTENTE}`)
   const monete = page.getByRole('button', { name: /Monete al posto dell'equipaggiamento/ })

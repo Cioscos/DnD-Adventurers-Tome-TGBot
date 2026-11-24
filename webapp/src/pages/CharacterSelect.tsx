@@ -238,6 +238,7 @@ export default function CharacterSelect() {
     setOriginFeat(null)
     setSpecies24({ entry: null, options: {} })
     setBg24(null)
+    setWealthKey(null)
   }
 
   const handleNameNext = () => {
