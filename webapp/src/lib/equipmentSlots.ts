@@ -140,15 +140,11 @@ export function equippedItemIcon(
 
 /**
  * Ritorna l'item equipaggiato che andrebbe rimosso per equipaggiare `item`
- * in `slot` (conflitto arma a due mani ⇄ mano secondaria), o null se nessun conflitto.
+ * in `slot` (un'arma a due mani occupa entrambe le mani, in qualunque delle due sia), o null se nessun conflitto.
+ * Specchio di `_check_hands` in api/routers/items.py.
  */
 export function handsConflict(items: Item[], item: Item, slot: EquipmentSlot): Item | null {
-  if (slot === 'off_hand') {
-    const main = equippedInSlot(items, 'main_hand')
-    return isTwoHanded(main) ? main : null
-  }
-  if (slot === 'main_hand' && isTwoHanded(item)) {
-    return equippedInSlot(items, 'off_hand')
-  }
-  return null
+  if (slot !== 'main_hand' && slot !== 'off_hand') return null
+  const held = equippedInSlot(items.filter((i) => i.id !== item.id), slot === 'main_hand' ? 'off_hand' : 'main_hand')
+  return held && (isTwoHanded(item) || isTwoHanded(held)) ? held : null
 }

@@ -164,15 +164,14 @@ def _check_attunement_limit(char, item, new_meta: dict | None, name: str) -> Non
 
 
 def _check_hands(char, item, slot: EquipmentSlot | None) -> None:
-    """422 when equipping ``item`` in ``slot`` would put a two-handed weapon next to an occupied off hand."""
-    others = [i for i in char.items if i.id != item.id and i.is_equipped]
-    if slot == EquipmentSlot.MAIN_HAND and has_property(item, "two_handed"):
-        busy = any(i.equipment_slot == EquipmentSlot.OFF_HAND for i in others)
-    elif slot == EquipmentSlot.OFF_HAND:
-        busy = any(i.equipment_slot == EquipmentSlot.MAIN_HAND and has_property(i, "two_handed") for i in others)
-    else:
+    """422 when equipping ``item`` in ``slot`` would put a two-handed weapon next to an occupied other hand.
+
+    Un'arma a due mani occupa entrambe le mani, in qualunque delle due sia (2014 pag. 147, Due Mani)."""
+    hands = {EquipmentSlot.MAIN_HAND: EquipmentSlot.OFF_HAND, EquipmentSlot.OFF_HAND: EquipmentSlot.MAIN_HAND}
+    if slot not in hands:
         return
-    if busy:
+    held = [i for i in char.items if i.id != item.id and i.is_equipped and i.equipment_slot == hands[slot]]
+    if any(has_property(item, "two_handed") or has_property(i, "two_handed") for i in held):
         raise HTTPException(status_code=422, detail="hands_conflict")
 
 

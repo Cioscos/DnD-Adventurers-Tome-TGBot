@@ -95,7 +95,6 @@ async def test_non_si_attacca_con_un_arma_a_due_mani_imbracciando_lo_scudo(clien
                     zona="regola:2014/equipaggiamento", voce="interazione",
                     copre=["carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "PATCH /characters/{char_id}/items/{item_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-3164: difforme dal manuale, confermato")
 async def test_un_arma_a_due_mani_nella_mano_secondaria_non_convive_con_un_arma_nella_principale(client):
     cid = await _pg(client, strength=16)
     spada = await _oggetto(client, cid, "Spada lunga", "weapon", item_metadata={
