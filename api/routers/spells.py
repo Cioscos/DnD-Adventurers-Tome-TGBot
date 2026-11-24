@@ -50,7 +50,7 @@ from api.routers._helpers import collect_homebrew_notifications, refuse_null, ro
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
-from core.rules.catalog.y2014.sorcerer import SUBTLE_KEY, TWINNED_TURN_KEY
+from core.rules.catalog.y2014.sorcerer import SP, SUBTLE_KEY, TWINNED_TURN_KEY
 from core.rules.catalog.y2014.wizard_schools_c import EMPOWERED_USED, _empowered
 from core.rules.catalog.y2024.sorcerer_subclasses import NO_CONCENTRATION_KEY
 from core.rules.catalog.y2024.warlock_subclasses import PSYCHIC_SILENT, THRALL_CAST
@@ -260,6 +260,8 @@ def _consume_cast(
     il chiamante con ``_charge_pact_use``, con un UPDATE condizionato.
     """
     ki_pool, ki_total = _ki_payment(char, spell, ritual, free_cast, ki_extra) if ki else (None, 0)
+    # Stregoneria Psionica 2024 pag. 146: coi punti stregoneria l'incantesimo non ha componenti, il nascondiglio resta
+    silent = silent or (ki_pool is not None and ki_pool.feature_key == SP)
     free_state = None
     free_at_will = False
     no_concentration = no_concentration_option  # Compagno Draconico (l'opzione è convalidata da use_options); Benedizione del Dio della Guerra: il lancio gratuito non chiede Concentrazione

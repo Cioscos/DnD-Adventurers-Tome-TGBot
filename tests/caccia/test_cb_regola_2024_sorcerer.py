@@ -105,7 +105,6 @@ async def test_impulso_45_48_rende_invisibile_lo_stregone(client):
                     copre=["carta:2024/classes/sorcerer.md#Stregoneria Psionica / Psionic Sorcery (Stregoneria Aberrante 6, pag. 146)",
                            "carta:2024/general.md#Hide [Action] (Nascondersi) (pag. 368)",
                            "POST /characters/{char_id}/hide", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-2615: difforme dal manuale, confermato")
 async def test_stregoneria_psionica_a_punti_non_toglie_il_nascondiglio(client):
     # Lanciato coi punti l'incantesimo psionico non ha componente verbale: chi è nascosto resta Invisibile
     cid = await _make(client, "aberrant", 7)
