@@ -158,7 +158,6 @@ async def test_dominare_2024_la_concentrazione_dura_di_piu_con_uno_slot_superior
                     copre=["carta:2024/spells.md#Evoca Elementale",
                            "carta:2024/classes/druid.md#Incantesimi del Circolo del Mare / Circle of the Sea Spells (Circolo del Mare 3, pag. 87)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3718: difforme dal manuale, confermato")
 async def test_evoca_elementale_del_circolo_del_mare_2024_concentrazione_fino_a_10_minuti(client):
     cid = await _circle(client, "sea", 9, wisdom=16)
     riga = await _concesso(client, cid, "conjure-elemental")

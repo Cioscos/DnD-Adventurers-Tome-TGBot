@@ -684,6 +684,15 @@ GRANTED_SPELLS = {key: replace(spell, components=_COMPONENTS.get(key), school=_S
 # oltre il 5° nel 2024 vale per entrambi i tipi, il tiro di danno ne dà uno solo (rivederlo con la scalata).
 GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     "flame-strike": replace(GRANTED_SPELLS["flame-strike"], damage_dice="5d6", extra_damage_dice="5d6"),
+    # Arma Magica: 1 ora senza Concentrazione (p.295)
+    "magic-weapon": replace(GRANTED_SPELLS["magic-weapon"], duration="1 ora", is_concentration=False),
+    # Arma Spirituale: +1d8 per livello oltre il 2° (p.319-320); nel 2014 è +1d8 ogni due livelli, che il tiro non sa scalare
+    "spiritual-weapon": replace(GRANTED_SPELLS["spiritual-weapon"], higher_levels_dice="1d8"),
+    # Tempesta di ghiaccio: 2d10 contundenti, +1d10 per livello oltre il 4° (p.287)
+    "ice-storm": replace(GRANTED_SPELLS["ice-storm"], damage_dice="2d10", higher_levels_dice="1d10"),
+    # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti (p.254)
+    "conjure-elemental": replace(GRANTED_SPELLS["conjure-elemental"], casting_time="1 azione", range_area="18 m",
+                                 duration="Concentrazione, fino a 10 minuti", components="V, S"),
 }
 # Scuole cambiate nel 2024 (spells-2024: Cura Ferite abiurazione, Rianimare necromanzia...)
 _SCHOOLS_2024 = {

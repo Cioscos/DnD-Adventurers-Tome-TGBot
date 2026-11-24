@@ -123,7 +123,6 @@ async def test_soffio_del_drago_tira_3d6_del_tipo_scelto_piu_1d6_per_slot(client
                     copre=["carta:2024/spells.md#Tempesta di ghiaccio", "POST /characters",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(4, "2d10"), (5, "3d10")])
-@pytest.mark.xfail(strict=True, reason="CB-3864: difforme dal manuale, confermato")
 async def test_tempesta_di_ghiaccio_concessa_nel_2024_usa_i_d10_del_manuale_2024(client, slot, dadi_attesi):
     cid = await _pg(client, "druid", 9, "Circolo del Mare")
     riga = await _concesso(client, cid, "ice-storm")

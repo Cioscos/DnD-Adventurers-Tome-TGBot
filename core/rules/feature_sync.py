@@ -256,8 +256,8 @@ async def _sync_granted_spells(session: AsyncSession, char: Character, lang: str
         elif not spell.components and GRANTED_SPELLS[key].components:
             spell.components = GRANTED_SPELLS[key].components  # una riga sincronizzata prima delle componenti le riceve ora
         spell.school = spell.school or granted_spell(key, character_edition(char)).school  # idem per la scuola (Magia Ammaliante)
-        if key in created:  # riga creata da noi: la Concentrazione segue l'edizione (Arma Spirituale)
-            spell.is_concentration = _concentrates(GRANTED_SPELLS[key], character_edition(char))
+        if key in created:  # riga creata da noi: la Concentrazione segue l'edizione (Arma Spirituale, Arma Magica)
+            spell.is_concentration = _concentrates(granted_spell(key, character_edition(char)), character_edition(char))
         if key in previous or not spell.always_prepared:
             owned.append(key)
         spell.always_prepared = spell.is_prepared = True

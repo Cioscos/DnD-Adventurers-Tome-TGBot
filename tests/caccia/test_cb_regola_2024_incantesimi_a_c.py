@@ -102,7 +102,6 @@ async def test_colonna_di_fiamme_con_slot_piu_alto_aggiunge_un_d6_di_ciascun_tip
 @pytest.mark.caccia(id="CB-3663", fonte="2024 · Incantesimi · Arma Spirituale · pag. 319-320", zona="regola:2024/incantesimi-A-C", voce="limiti",
                     copre=["carta:2024/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
 @pytest.mark.parametrize("slot, dadi_attesi", [(3, 2), (5, 4), (9, 8)])
-@pytest.mark.xfail(strict=True, reason="CB-3663: difforme dal manuale, confermato")
 async def test_arma_spirituale_del_dominio_della_guerra_aggiunge_un_d8_per_slot_oltre_il_secondo(client, slot, dadi_attesi):
     cid = await _pg(client, "cleric", 3, "Dominio della Guerra", wisdom=16)  # Arma Spirituale sempre preparata dal dominio
     arma = await _incantesimo(client, cid, "spiritual-weapon")
@@ -188,7 +187,6 @@ async def test_colpo_dell_esilio_2024_lanciato_prima_non_vale_con_un_arma_a_dist
 
 @pytest.mark.caccia(id="CB-3669", fonte="2024 · Incantesimi · Arma Magica · pag. 295", zona="regola:2024/incantesimi-A-C", voce="interazione",
                     copre=["carta:2024/spells.md#Arma Magica", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3669: difforme dal manuale, confermato")
 async def test_arma_magica_del_dominio_2024_non_toglie_la_concentrazione_di_scudo_della_fede(client):
     cid = await _pg(client, "cleric", 3, "Dominio della Guerra", wisdom=16)  # entrambi sempre preparati dal dominio
     scudo = (await _incantesimo(client, cid, "shield-of-faith"))["id"]
