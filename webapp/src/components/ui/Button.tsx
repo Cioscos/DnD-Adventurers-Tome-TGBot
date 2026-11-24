@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { m } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { fireHaptic, type HapticKind } from '@/lib/haptics'
@@ -57,7 +57,7 @@ interface Ripple { id: number; x: number; y: number }
 function ButtonInner({
   variant = 'primary',
   size = 'md',
-  loading = false,
+  loading,
   disabled = false,
   icon,
   iconPosition = 'left',
@@ -70,12 +70,20 @@ function ButtonInner({
   title,
   'aria-label': ariaLabel,
 }: ButtonProps) {
-  const isDisabled = disabled || loading
+  const isDisabled = disabled || !!loading
+  // Doppio tocco: `loading` arriva solo al render successivo, qui il secondo tocco si ferma subito.
+  const locked = useRef(false)
+  useEffect(() => { if (!loading) locked.current = false }, [loading])
   const [ripples, setRipples] = useState<Ripple[]>([])
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (isDisabled) return
+    if (isDisabled || locked.current) return
+    if (loading !== undefined) {
+      locked.current = true
+      // due giri di timer: prima arriva il render con loading (TanStack notifica con setTimeout 0), poi si riapre
+      setTimeout(() => setTimeout(() => { locked.current = false }))
+    }
     // haptic
     fireHaptic(hapticKind)
     // ink-spread ripple on primary

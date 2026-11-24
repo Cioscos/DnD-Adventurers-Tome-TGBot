@@ -1,21 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CampaignRecap from '@/pages/CampaignRecap'
 import CampaignCalendar from '@/pages/campaign/CampaignCalendar'
 import ScheduleSheet from '@/pages/campaign/ScheduleSheet'
+import { formatTime24 } from '@/lib/format'
+import { clear, enqueue, peek, pruneOlderThan } from '@/lib/rewardQueue'
 import type { ScheduleRead, SessionRecap } from '@/types'
 
-const { recap, getCampaign, scheduleList, scheduleUpdate, navigate } = vi.hoisted(() => ({
-  recap: vi.fn(), getCampaign: vi.fn(), scheduleList: vi.fn(), scheduleUpdate: vi.fn(), navigate: vi.fn(),
+const { recap, getCampaign, scheduleList, scheduleUpdate, scheduleCreate, navigate } = vi.hoisted(() => ({
+  recap: vi.fn(), getCampaign: vi.fn(), scheduleList: vi.fn(), scheduleUpdate: vi.fn(), scheduleCreate: vi.fn(), navigate: vi.fn(),
 }))
 
 vi.mock('@/api/client', async (orig) => ({
   ...(await orig<typeof import('@/api/client')>()),
   api: {
     sessions: { recap },
-    campaigns: { get: getCampaign, schedule: { list: scheduleList, update: scheduleUpdate, create: vi.fn(), remove: vi.fn() } },
+    campaigns: { get: getCampaign, schedule: { list: scheduleList, update: scheduleUpdate, create: scheduleCreate, remove: vi.fn() } },
     share: { recap: vi.fn() },
   },
 }))
@@ -105,5 +107,34 @@ describe('caccia: campagna e calendario', () => {
     const dettaglio = await screen.findByTestId('day-detail')
     expect(dettaglio.textContent).toContain('campaign.night_n {"n":1}')
     expect(dettaglio.textContent).toContain('campaign.calendar.planned')
+  })
+
+  // caccia: {"id": "CB-764", "fonte": "invariante: gli orari del server sono UTC senza fuso e si mostrano nell'ora locale", "zona": "flusso:campagna-calendario", "voce": "persistenza", "copre": ["route:/session/:id"]}
+  it('gli orari del feed e l’età dei premi leggono UTC', () => {
+    const adesso = new Date()
+    const server = adesso.toISOString().slice(0, 19)
+    expect(formatTime24(server, 'it')).toBe(formatTime24(adesso, 'it'))
+    clear()
+    enqueue({ message_id: 1, item_id: 1, item_name: 'x', item_quantity: 1, char_id: 1, granted_at: server })
+    pruneOlderThan(60_000)
+    expect(peek()?.message_id).toBe(1)
+    const vecchio2 = new Date(adesso.getTime() - 120_000).toISOString().slice(0, 19)
+    clear()
+    enqueue({ message_id: 2, item_id: 1, item_name: 'x', item_quantity: 1, char_id: 1, granted_at: vecchio2 })
+    pruneOlderThan(60_000)
+    expect(peek()).toBeNull()
+  })
+
+  // caccia: {"id": "CB-767", "fonte": "invariante: un doppio tocco non crea due oggetti", "zona": "flusso:campagna-calendario", "voce": "ripetizione", "copre": ["route:/campaign/:id"]}
+  it('due tocchi nello stesso istante su Salva creano una sola serata, e un errore lascia riprovare', async () => {
+    scheduleCreate.mockRejectedValueOnce(new Error('rete')).mockResolvedValue({ id: 6 })
+    renderWithProviders(<ScheduleSheet open campaignId={3} row={null} defaultDate="2030-01-01" onClose={vi.fn()} />)
+    const salva = (await screen.findByText('common.save')).closest('button')!
+    await waitFor(() => expect(salva).toBeEnabled())
+    act(() => { salva.click(); salva.click() })
+    await waitFor(() => expect(scheduleCreate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(salva).toBeEnabled())
+    act(() => { salva.click() })
+    await waitFor(() => expect(scheduleCreate).toHaveBeenCalledTimes(2))
   })
 })
