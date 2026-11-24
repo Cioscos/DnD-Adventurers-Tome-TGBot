@@ -3511,7 +3511,7 @@
    "save_ability": "dex",
    "damage_dice": "6d12",
    "damage_type": "radiant",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d12",
    "classes": [
     "cleric"
    ],
@@ -3599,14 +3599,14 @@
     "it": "Evochi uno spirito Medio dalla Selva Fatata in uno spazio non occupato che puoi vedere entro gittata. Lo spirito dura per la durata e ha l'aspetto di una creatura Fatata a tua scelta. Quando lo spirito appare, puoi effettuare un attacco con incantesimo in mischia contro una creatura entro 5 piedi da esso. Se colpisci, il bersaglio subisce danni Psichici pari a 3d12 più il tuo modificatore di caratteristica da incantatore e ha la condizione Spaventato fino all'inizio del tuo turno successivo, con te e lo spirito come fonte della paura.\n\nCome Azione Bonus nei tuoi turni successivi, puoi teletrasportare lo spirito in uno spazio non occupato che puoi vedere entro 30 piedi dallo spazio che ha lasciato ed effettuare l'attacco contro una creatura entro 5 piedi da esso."
    },
    "higher_level": {
-    "en": "The damage increases by 1d12 for each spell slot level above 6.",
-    "it": "I danni aumentano di 1d12 per ogni livello dello slot incantesimo superiore al 6°."
+    "en": "The damage increases by 2d12 for each spell slot level above 6.",
+    "it": "I danni aumentano di 2d12 per ogni livello dello slot incantesimo superiore al 6°."
    },
    "attack_type": "ATK",
    "save_ability": null,
    "damage_dice": "3d12",
    "damage_type": "psychic",
-   "higher_levels_dice": "1d12",
+   "higher_levels_dice": "2d12",
    "classes": [
     "druid"
    ],
