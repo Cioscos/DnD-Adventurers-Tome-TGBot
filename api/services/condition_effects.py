@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
 from core.rules.edition import character_edition
-from core.rules.states import restore_exhaustion
+from core.rules.states import RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, has_state, item_spell_held, restore_exhaustion
 from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
@@ -80,8 +80,13 @@ def effect_snapshot(effect: ConditionEffect | PendingSave) -> dict:
 async def _restore_row(db: AsyncSession, model, snap: dict):
     """Recreate a deleted row, keeping its id unless something reused it meanwhile."""
     data = dict(snap)
-    if await db.get(model, data["id"]) is not None:
+    if "id" in data and await db.get(model, data["id"]) is not None:
         data.pop("id")
+    for column in model.__table__.columns:  # una fonte cancellata nel frattempo (PG tolto dall'incontro) non blocca il ripristino
+        for fk in column.foreign_keys:
+            if column.nullable and data.get(column.name) is not None and (
+                    await db.execute(select(fk.column).where(fk.column == data[column.name]))).first() is None:
+                data[column.name] = None
     row = model(**data)
     db.add(row)
     await db.flush()
@@ -108,7 +113,7 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
         if eff is not None and eff.expiry_count == d["prev_count"] - 1:
             eff.expiry_count = d["prev_count"]
     new_ids: dict[int, int] = {}
-    await _restore_released(db, log.expired, created, new_ids)
+    resumed: int | None = None  # chi riprende la concentrazione finita con l'avanzamento
     c = log.concentration
     char = await db.get(Character, c["char_id"]) if c else None
     if char is not None:
@@ -122,6 +127,7 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             and s.get("concentration_item_spell") == c["prev_item_spell"]
             and s.get("concentration_rounds_left") == left)
         if still:
+            resumed = char.id if ended else None
             char.concentrating_spell_id = c["prev_spell_id"]
             s["concentration_rounds_left"] = prev
             if c["prev_item_spell"] is not None:
@@ -130,6 +136,7 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
                 s["concentration_level"] = c["prev_level"]
             char.settings = s
             await _restore_released(db, c.get("released_effects", []), created, new_ids)
+    await _restore_released(db, log.expired, created, new_ids)  # dopo la concentrazione: vi guarda
     for cid, snap in log.char_states.items():
         pc = await db.get(Character, int(cid))
         if pc is not None:
@@ -137,10 +144,39 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             cur_wild = [s for s in pc.active_states or [] if s.get("key") == "wild_shape"
                         and (s.get("data") or {}).get("companion_id") not in snap_forms]  # la stessa forma torna dallo snapshot, round compresi
             now_wild = bool(cur_wild)
+            holds = has_state(pc, SUSPENDED_KEY) or resumed == pc.id  # chi ha chiuso la sospensione dopo l'avanzamento non la riprende
+            suspending = [s for s in pc.active_states or [] if s.get("key") == SUSPENDED_KEY]
             pc.active_states = list(snap["active_states"])
+            if not holds:
+                pc.active_states = [s for s in pc.active_states if s.get("key") != SUSPENDED_KEY]
+            elif not has_state(pc, SUSPENDED_KEY):  # sospensione cominciata dopo l'avanzamento
+                pc.active_states = [*pc.active_states, *suspending]
             if now_wild:  # una nuova forma è partita dopo l'avanzamento: resta la sua, non quella dello snapshot
                 pc.active_states = [x for x in pc.active_states if x.get("key") != "wild_shape"] + cur_wild
             set_damaged(pc, snap["damaged"])
+            from api.services.condition_removal import resuspend  # import locale: il servizio importa questo modulo
+            from api.services.effects import _still_concentrating  # circular import
+            await resuspend(db, pc)
+            for slug, x in (snap.get("suspended") or {}).items():  # tornata dopo l'avanzamento: le resta la durata di prima
+                eff = (await db.execute(select(ConditionEffect).where(
+                    _target_filter(("character", pc.id)), ConditionEffect.slug == slug,
+                    ConditionEffect.pending.is_(False)))).scalars().first() if (pc.conditions or {}).get(slug) else None
+                if eff is not None and eff.expiry_count == x["effect"]["expiry_count"] - 1:
+                    eff.expiry_count += 1
+            held = {}
+            for slug, x in (snap.get("suspended") or {}).items():
+                if (pc.conditions or {}).get(slug):
+                    continue
+                if await _rehold(db, pc.id, slug, x["by"]):
+                    held[slug] = x
+                elif not x["effect"].get("ends_with_concentration") or await db.run_sync(_still_concentrating, x["effect"]):
+                    # chi la sospendeva ha smesso dopo l'avanzamento: torna attiva
+                    pc.conditions = {**(pc.conditions or {}), slug: True}
+                    await _restore_row(db, ConditionEffect, x["effect"])
+            if held:
+                st = pc.settings or {}
+                pc.settings = {**st, SUSPENDED_EFFECTS: {**(st.get(SUSPENDED_EFFECTS) or {}), **{c: x["effect"] for c, x in held.items()}},
+                               SUSPENDED_ON: {**(st.get(SUSPENDED_ON) or {}), **{c: x["by"] for c, x in held.items()}}}
             form = await db.get(Companion, snap["wild_closed"]) if snap.get("wild_closed") else None  # la riga che ha chiuso proprio l'avanzamento
             if form is not None and form.character_id == pc.id and form.kind == "wild_shape" and not form.is_active and not now_wild:
                 from api.services.wild_shape import deactivate_other_forms  # import locale: il servizio importa gli stati
@@ -183,18 +219,41 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
     await db.flush()
 
 
+async def _rehold(db: AsyncSession, receiver_id: int, slug: str, caster_id: int) -> bool:
+    """La condizione scaduta mentre era sospesa torna nell'elenco di chi la sospende. False se non la sospende più."""
+    caster = await db.get(Character, caster_id)
+    if caster is None or not has_state(caster, SUSPENDED_KEY):
+        return False
+    held = list((caster.settings or {}).get(SUSPENDED_KEY) or [])
+    if not any(e["id"] == receiver_id and slug in e["conditions"] for e in held):
+        caster.settings = {**(caster.settings or {}), SUSPENDED_KEY: [*held, {"id": receiver_id, "conditions": [slug]}]}
+    return True
+
+
 async def _restore_released(db: AsyncSession, entries: list[dict], created: set[int],
                             new_ids: dict[int, int]) -> None:
     """Recreate effects an advance switched off, skipping targets changed meanwhile."""
+    from api.services.effects import _still_concentrating  # circular import
     for x in entries:
         kind, tid = x["target"]
         slug = x["slug"]
         owner = await db.get(Character if kind == "character" else Combatant, tid)
+        snap = x["effect_snapshot"]
+        if owner is not None and kind == "combatant" and owner.created_at > snap["created_at"]:
+            continue  # l'id è di un combattente aggiunto dopo: il bersaglio non c'è più
+        if snap["encounter_id"] is not None and (snap["expiry_count"] is not None or snap["save_dc"] is not None):
+            enc = await db.get(Encounter, snap["encounter_id"])
+            if enc is None or enc.status == "ended":  # L5: finito lo scontro, durate e TS cadono
+                continue
         if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
                 select(ConditionEffect.id).where(_target_filter((kind, tid)), ConditionEffect.slug == slug,
                                                  ConditionEffect.pending.is_(False)))).first():
             continue
+        if snap["ends_with_concentration"] and not await db.run_sync(_still_concentrating, snap):
+            continue  # la concentrazione che la teneva è finita nel frattempo
         owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
+        if x.get("returned_from") is not None:
+            owner.settings = {**(owner.settings or {}), RETURNED_FROM: {**((owner.settings or {}).get(RETURNED_FROM) or {}), slug: x["returned_from"]}}
         eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
         new_ids[x["effect_snapshot"]["id"]] = eff.id
         for ps in x.get("pending_saves", []):
@@ -220,13 +279,14 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
         await db.delete(eff)
         await db.flush()
         return label
-    snapshot = effect_snapshot(eff)
+    snapshot, returned = effect_snapshot(eff), None
     saves = [effect_snapshot(ps) for ps in (await db.execute(select(PendingSave).where(
         PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
     if eff.character_id is not None:
         target = ("character", eff.character_id)
         char = await db.get(Character, eff.character_id)
         prev = (char.conditions or {}).get(eff.slug)
+        returned = ((char.settings or {}).get(RETURNED_FROM) or {}).get(eff.slug)
         if history:
             add_history(db, char.id, "condition_change", history.format(label=label))
         await apply_conditions(db, char, {eff.slug: False})
@@ -238,9 +298,18 @@ async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | N
         comb.conditions = conds
         await clear_effects_for(db, target, [eff.slug])
     if undo_list is not None:
-        undo_list.append({"target": list(target), "slug": eff.slug, "prev_value": prev,
+        undo_list.append({"target": list(target), "returned_from": returned, "slug": eff.slug, "prev_value": prev,
                           "effect_snapshot": snapshot, "pending_saves": saves})
     return label
+
+
+RELEASED_LOG = "released_effects"  # ``session.info``: effetti caduti con una concentrazione durante un'operazione PF
+
+
+def item_concentration(char: Character) -> str | None:
+    """Chiave dell'incantesimo di un oggetto o privilegio su cui ``char`` si concentra (non ha una riga fra i suoi incantesimi)."""
+    held = item_spell_held(char)
+    return f"{held.get('item_id') or held.get('feature_key') or ''}:{held.get('name')}"[:200] if held else None
 
 
 async def release_concentration_effects(db: AsyncSession, char: Character,
@@ -249,12 +318,21 @@ async def release_concentration_effects(db: AsyncSession, char: Character,
     current one (all of them if it no longer concentrates). Returns their labels."""
     q = select(ConditionEffect).where(ConditionEffect.ends_with_concentration.is_(True),
                                       ConditionEffect.source_character_id == char.id)
-    if char.concentrating_spell_id is not None:
+    if char.__dict__.pop("concentration_restarted", False):
+        pass  # un nuovo lancio chiude il precedente, anche dello stesso incantesimo (2014 pag. 203)
+    elif char.concentrating_spell_id is not None:
         q = q.where(or_(ConditionEffect.source_spell_id.is_(None),
                         ConditionEffect.source_spell_id != char.concentrating_spell_id))
+    elif (held := item_concentration(char)) is not None:
+        q = q.where(or_(ConditionEffect.source_item_spell.is_(None), ConditionEffect.source_item_spell != held))
     history = f"Terminata (fine concentrazione di {char.name}): {{label}}"
-    return [await expire_effect(db, eff, history, undo_list)
-            for eff in (await db.execute(q.order_by(ConditionEffect.id))).scalars().all()]
+    dropped: list[dict] = []
+    labels = [await expire_effect(db, eff, history, dropped)
+              for eff in (await db.execute(q.order_by(ConditionEffect.id))).scalars().all()]
+    for keep in (undo_list, db.info.get(RELEASED_LOG)):  # l'operazione PF in corso li tiene per il suo annullo
+        if keep is not None:
+            keep.extend(dropped)
+    return labels
 
 
 def _target_filter(target: Target):
@@ -292,7 +370,7 @@ async def upsert_effect(
     db: AsyncSession, target: Target, slug: str, *,
     expiry: ExpirySpec | None = None, save: SaveSpec | None = None,
     source_combatant_id: int | None = None, source_character_id: int | None = None,
-    source_spell_id: int | None = None, ends_with_concentration: bool = False,
+    source_spell_id: int | None = None, source_item_spell: str | None = None, ends_with_concentration: bool = False,
     applied_by_gm: bool = False, encounter: Encounter | None = None, source_note: str | None = None,
 ) -> ConditionEffect:
     """Replace the effect for (target, slug). Applies the "next turn" correction when
@@ -325,6 +403,7 @@ async def upsert_effect(
         source_combatant_id=source_combatant_id,
         source_character_id=source_character_id,
         source_spell_id=source_spell_id,
+        source_item_spell=source_item_spell,
         ends_with_concentration=ends_with_concentration,
         applied_by_gm=applied_by_gm,
         source_note=source_note,
@@ -374,7 +453,9 @@ async def characters_effect_payload(
     TS aperti: tutti i pending, più il TS fallito di ogni effetto se nessun TS più recente l'ha superato."""
     rows = list((await db.execute(select(ConditionEffect).where(
         ConditionEffect.character_id.in_(char_ids)).order_by(ConditionEffect.id))).scalars())
-    active = [e for e in rows if e.pending is False]  # i pending non sono sulla scheda...
+    on = dict((await db.execute(select(Character.id, Character.conditions).where(Character.id.in_(char_ids)))).all())
+    # i pending non sono sulla scheda, né la condizione già spenta che aspetta l'archivio del suo TS...
+    active = [e for e in rows if e.pending is False and (on.get(e.character_id) or {}).get(e.slug)]
     slugs = {(e.character_id, e.id): e.slug for e in rows}  # ...ma i loro TS vanno mostrati
     newest = {(cid, eid): top for cid, eid, top in (await db.execute(
         select(PendingSave.character_id, PendingSave.effect_id, func.max(PendingSave.id))

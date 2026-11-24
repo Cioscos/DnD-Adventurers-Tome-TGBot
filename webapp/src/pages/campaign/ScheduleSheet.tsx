@@ -56,7 +56,8 @@ export default function ScheduleSheet({ open, campaignId, row, defaultDate = '',
       qc.invalidateQueries({ queryKey: ['schedule', campaignId] })
       onClose()
     },
-    onError: (e) => setErr(t(e instanceof ApiError && e.status === 422 ? 'campaign.calendar.err_past' : 'campaign.calendar.err_generic')),
+    onError: (e) => setErr(t(e instanceof ApiError && e.status === 422 ? 'campaign.calendar.err_past'
+      : e instanceof ApiError && e.detail === 'schedule_duplicate' ? 'campaign.calendar.err_duplicate' : 'campaign.calendar.err_generic')),
   })
 
   return (

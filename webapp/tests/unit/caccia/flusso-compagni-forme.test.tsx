@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { screen } from '@testing-library/react'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CompanionCard from '@/pages/extras/CompanionCard'
-import { wildShapeMaxCr, wildShapeWarning } from '@/lib/companionRules'
+import { monsterToStatblock, wildShapeMaxCr, wildShapeWarning } from '@/lib/companionRules'
 import type { Companion } from '@/types'
 
 vi.mock('@/api/client', () => ({
@@ -68,4 +68,42 @@ it('nel 2024 la forma attiva non mostra PF propri, quella non attiva sì', () =>
   unmount()
   renderWithProviders(<CompanionCard charId={7} comp={forma(false)} wildShapeUses={2} formHasNoHp />)
   expect(screen.getByText('character.hp.quick_damage')).toBeInTheDocument()
+})
+
+// caccia: {"id": "CB-1086", "fonte": "2014 e 2024 · Druido · Forma Selvatica · dal 2° livello (pag. 66 e 80): a 1° livello nessuna forma, e il server chiede conferma", "zona": "flusso:compagni-forme", "voce": "regola", "copre": ["route:/char/:id/extras"]}
+it('un druido di 1° livello non ha ancora Forma Selvatica: l\'avviso della scheda lo segnala', () => {
+  expect(wildShapeWarning(entry('beast', 0.25), 1, false, '2014')).not.toBeNull()
+  expect(wildShapeWarning(entry('beast', 0.25), 1, false, '2024')).not.toBeNull()
+})
+
+// caccia: {"id": "CB-1087", "fonte": "invariante: ogni mostro del catalogo, aggiunto da «dal catalogo», diventa uno statblock che l'API accetta (azioni con bonus intero e dadi NdM, Dadi Vita NdM)", "zona": "flusso:compagni-forme", "voce": "contratto", "copre": ["route:/char/:id/extras"]}
+it('ogni mostro del catalogo produce uno statblock che il server non rifiuta', async () => {
+  const catalogo = (await import('@/data/srd/monsters.json')) as unknown as { items: Parameters<typeof monsterToStatblock>[0][] }
+  const DADI = /^(\d{1,3})d([1-9]\d{0,3})([+-]\d+)?$/i
+  const rifiutati: string[] = []
+  for (const m of catalogo.items) {
+    const sb = monsterToStatblock(m, 'it')
+    const azioni = sb.actions ?? []
+    const male = azioni.some((a) => (a.attack_bonus != null && !Number.isInteger(a.attack_bonus))
+      || (a.damage_dice != null && !DADI.test(String(a.damage_dice).trim())))
+    const vita = sb.hit_dice != null && !/^(\d{1,3})d(\d{1,3})([+-]\d+)?$/i.test(String(sb.hit_dice))
+    if (male || vita || m.hit_points > 100_000 || m.armor_class > 100) rifiutati.push(m.index)
+  }
+  expect(catalogo.items.length).toBeGreaterThan(300)
+  expect(rifiutati).toEqual([])
+})
+
+// caccia: {"id": "CB-1088", "fonte": "2014 · Druido · Circolo della Luna · Forma Selvatica Elementale · pag. 69 (dal 10°, solo 2014)", "zona": "flusso:compagni-forme", "voce": "edizioni", "copre": ["route:/char/:id/extras"]}
+it('l\'avviso non scatta per un elementale solo con la Luna 2014 dal 10°', () => {
+  const aria = { index: 'air-elemental', type: 'elemental', challenge_rating: 5, speed: { walk_ft: 0, fly_ft: 90 } } as Parameters<typeof wildShapeWarning>[0]
+  expect(wildShapeWarning(aria, 10, true, '2014')).toBeNull()
+  expect(wildShapeWarning(aria, 9, true, '2014')).not.toBeNull()
+  expect(wildShapeWarning(aria, 10, false, '2014')).not.toBeNull()
+  expect(wildShapeWarning(aria, 10, true, '2024')).not.toBeNull()
+})
+
+// caccia: {"id": "CB-1090", "fonte": "tests/caccia/decisioni.md D-015 (compagno con PF massimi 0: PF non segnati, la scheda non lo dà a terra)", "zona": "flusso:compagni-forme", "voce": "limiti", "copre": ["route:/char/:id/extras"]}
+it('un compagno con PF massimi 0 non mostra «a terra»', () => {
+  renderWithProviders(<CompanionCard charId={7} comp={scheda({ max_hp: 0, current_hp: 0 })} wildShapeUses={null} />)
+  expect(screen.queryByText('character.extras.down')).toBeNull()
 })

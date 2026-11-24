@@ -17,7 +17,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import telegram_notify
-from api.routers._helpers import initiative_bonus
+from api.routers._helpers import initiative_bonus, prune_history
 from api.services.d20 import d20_records, resolve_body, resolve_d20, spend_inspiration_reroll
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
@@ -156,6 +156,7 @@ async def roll_character_initiative(
     _log_roll(session, char, f"{len(outcome.dice)}d20{keep}{bonus:+d}", outcome.dice, total, bonus, "init",
               body.label if body else None)
     await session.flush()
+    await prune_history(session, char)
     result = RollResult(
         die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
         auto_fail=applied.auto_fail, bonus=bonus, total=total,
@@ -212,6 +213,7 @@ async def post_dice_result(
               body.with_inspiration)
 
     await session.flush()
+    await prune_history(session, char)
     logger.info(
         "dice/result persisted: char=%s notation=%s total=%s history_len=%s",
         char_id, notation, total, len(char.rolls_history or []),

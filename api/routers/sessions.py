@@ -61,6 +61,7 @@ from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
 from api.services.recap import close_game_session, dice_baseline, history_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
+from api.services.durations import is_concentrating
 from api.services.d20 import set_inspiration
 from api.services.rules_states import remove_state
 from api.services.effects import apply_conditions
@@ -70,6 +71,7 @@ from api.services.trades import add_coins, give_coins, give_item, remove_coins, 
 from api.services.condition_effects import character_effect_payload, characters_effect_payload
 from api.services.rules_turn import attacks_allowed, get_turn
 from api.services.encounter_view import build_encounter_block, public_states
+from core.rules.states import item_spell_held
 from core.db.models import (
     Campaign,
     CampaignMember,
@@ -256,6 +258,7 @@ async def _load_live_characters(
         # stesso snapshot di load_snapshot: regole attive e oggetti fuori dai contenitori (già caricati sopra)
         homebrew_ac = await get_passive_modifiers(db, char, "character.ac", (
             rules.get(char.id, []), [i for i in char.items if i.container_id is None]))
+        item_spell = item_spell_held(char)
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -275,8 +278,8 @@ async def _load_live_characters(
             armor_category=armor_category(char),
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
-            is_concentrating=char.concentrating_spell_id is not None,
-            concentration_spell=spell_names.get(char.concentrating_spell_id),
+            is_concentrating=is_concentrating(char),
+            concentration_spell=spell_names.get(char.concentrating_spell_id) or item_spell.get("name"),
             active_states=public_states(char, lang),
         )
     return out
@@ -932,6 +935,7 @@ async def gm_grant_item(
             body=whisper_body,
             sent_at=now_iso,
             recipient_user_id=rid,
+            recipient_character_id=char.id,
             sender_display_name="__GM__",
             item_id=granted_item_id,
             item_name=body.item.name,

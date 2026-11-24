@@ -5,13 +5,9 @@ import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import {
-  ABILITIES, POINT_BUY_BUDGET, STANDARD_ARRAY, arrayScores, assignFromArray, defaultScores, pointBuyCost,
+  ABILITIES, MAX_SCORE, POINT_BUY_BUDGET, STANDARD_ARRAY, arrayScores, assignFromArray, bonusOf, defaultScores, overMax, pointBuyCost,
   pointBuyTotal, roll4d6DropLowest, type Ability, type ScoreMode, type Scores,
 } from '@/lib/pointBuy'
-
-const ABBR: Record<string, Ability> = {
-  str: 'strength', dex: 'dexterity', con: 'constitution', int: 'intelligence', wis: 'wisdom', cha: 'charisma',
-}
 
 interface Props {
   mode: ScoreMode
@@ -25,8 +21,6 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
   const { t } = useTranslation()
   const { playAndCollect } = useDiceAnimation()
   const [rolling, setRolling] = useState(false)
-  const bonusOf = (a: Ability) =>
-    Object.entries(bonuses).reduce((n, [k, v]) => n + ((ABBR[k] ?? k) === a ? v : 0), 0)
 
   const setMode = (m: ScoreMode) => {
     if (m === 'array') onChange(m, arrayScores(), STANDARD_ARRAY)
@@ -56,6 +50,7 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
   const step = (a: Ability, d: number) => {
     const v = scores[a] + d
     if (mode === 'pointbuy' ? Number.isNaN(pointBuyCost(v)) : v < 3 || v > 20) return
+    if (d > 0 && v + bonusOf(bonuses, a) > MAX_SCORE) return
     onChange(mode, { ...scores, [a]: v }, pool)
   }
 
@@ -87,7 +82,7 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
 
       <ul className="space-y-2">
         {ABILITIES.map((a) => {
-          const bonus = bonusOf(a)
+          const bonus = bonusOf(bonuses, a)
           return (
             <li key={a} className="rounded-xl border border-dnd-border bg-dnd-surface p-2">
               <div className="flex items-center justify-between gap-2">
@@ -126,6 +121,9 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
           )
         })}
       </ul>
+      {overMax(scores, bonuses) && (
+        <p className="text-center text-sm text-dnd-crimson-bright">{t('character.create.score_over_max', { max: MAX_SCORE })}</p>
+      )}
     </div>
   )
 }

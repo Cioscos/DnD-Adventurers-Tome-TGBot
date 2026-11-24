@@ -26,6 +26,8 @@ import ScrollArea from '@/components/ScrollArea'
 import { haptic, isInsideTelegram } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
+import { notifyMutationError } from '@/lib/mutationError'
+import { shownRolls } from '@/lib/shownRolls'
 import { useCharacterStore } from '@/store/characterStore'
 import type { DiceRollResult } from '@/types'
 import { useRollAndPersist } from '@/dice/useRollAndPersist'
@@ -169,13 +171,9 @@ export default function Dice() {
     },
   })
 
-  // P5: was a bare `api.dice.postToChat(...).catch(() => {})` fire-and-forget
-  // call directly in the tap handler — no pending feedback at all. Wrapped so
-  // the "send to chat" Button can show `loading`. Error handling stays a silent
-  // no-op, matching the original `.catch(() => {})`.
   const postToChatMutation = useMutation({
     mutationFn: (result: DiceRollResult) => api.dice.postToChat(charId, result),
-    onError: () => {},
+    onError: notifyMutationError,
   })
 
   const dexMod = char?.initiative_bonus ?? char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
@@ -347,9 +345,9 @@ export default function Dice() {
               >
                 {lastResult.total}
               </m.p>
-              {lastResult.rolls.length > 1 && !statRollExtras && (
+              {shownRolls(lastResult.notation, lastResult.rolls).length > 1 && !statRollExtras && (
                 <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
-                  {formatRollList(lastResult.rolls)}
+                  {formatRollList(shownRolls(lastResult.notation, lastResult.rolls))}
                 </p>
               )}
               {statRollExtras && (() => {
@@ -458,9 +456,9 @@ export default function Dice() {
                     <div className="flex flex-col min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
                         <span className="text-xs text-dnd-gold-dim font-mono max-w-full break-words">{entry.notation}</span>
-                        {entry.rolls.length > 1 && (
+                        {shownRolls(entry.notation, entry.rolls).length > 1 && (
                           <span className="text-xs text-dnd-text-faint font-mono truncate min-w-0 max-w-full">
-                            [{entry.rolls.join('+')}]
+                            [{shownRolls(entry.notation, entry.rolls).join('+')}]
                           </span>
                         )}
                       </div>

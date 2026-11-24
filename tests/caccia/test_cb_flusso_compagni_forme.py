@@ -515,3 +515,300 @@ async def test_la_bestia_che_svanisce_con_il_ranger_porta_via_l_ordine(client, t
         char.turn_state = {**char.turn_state, "beast": {"id": comp.id + 100, "attacks_left": 1}}  # un'altra bestia tiene il suo
         await drop_primal_beast(s, char)
         assert char.turn_state["beast"]["id"] == comp.id + 100
+
+
+# ---------------------------------------------------------------------------
+# Giro 2: bestie di privilegio, riposi, import/export, permessi, contratto
+# ---------------------------------------------------------------------------
+
+PRIMORDIALE = "ranger.primal_companion"
+BESTIA_2014 = "ranger.rangers_companion"
+
+
+async def _primordiale(client, cid):
+    return await client.post(f"/characters/{cid}/companions", json={
+        "kind": "companion", "name": "Bestia", "feature_key": PRIMORDIALE, "max_hp": 5, "statblock": {}})
+
+
+@pytest.mark.caccia(id="CB-1073", fonte="2024 · Ranger · Signore delle Bestie · Compagno Primordiale · pag. 122 (privilegio della sottoclasse; come per il compagno 2014 il server rifiuta chi non lo ha)",
+                    zona="flusso:compagni-forme", voce="regola", copre=["POST /characters/{char_id}/companions", "carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)"])
+async def test_la_bestia_primordiale_non_si_crea_senza_il_privilegio(client):
+    from tests.integration.rules.test_2024_ranger import _ranger24
+    cid = await _ranger24(client, 5)  # ranger 2024 senza Signore delle Bestie
+    r = await _primordiale(client, cid)
+    assert r.status_code == 422
+    assert await _lista(client, cid) == []
+
+
+@pytest.mark.caccia(id="CB-1074", fonte="2024 · Ranger · Signore delle Bestie · Compagno Primordiale · pag. 122 (una sola bestia alla volta)",
+                    zona="flusso:compagni-forme", voce="limiti", copre=["POST /characters/{char_id}/companions", "carta:2024/classes/ranger.md#Compagno Primordiale / Primal Companion (Signore delle Bestie 3, pag. 122)"])
+async def test_la_bestia_primordiale_e_una_sola_alla_volta(client):
+    cid = await _sub(client, 5, "beast_master")
+    await _bestia24(client, cid, "land")
+    r = await _primordiale(client, cid)
+    assert r.status_code == 422
+    assert sum(c["feature_key"] == PRIMORDIALE for c in await _lista(client, cid)) == 1
+
+
+@pytest.mark.caccia(id="CB-1075", fonte="2014 · Druido · Forma Selvatica · pag. 66 (si torna normali prima del tempo con un'azione bonus)",
+                    zona="flusso:compagni-forme", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/companions/{comp_id}", "POST /characters/{char_id}/turn/use", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)"])
+async def test_terminare_la_forma_con_patch_costa_l_azione_bonus(client):
+    cid = await _druid(client, 4)
+    forma = await _form(client, cid, _beast(0.25))
+    assert (await _activate(client, cid, forma)).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": True})).status_code == 200
+    r = await client.patch(f"/characters/{cid}/companions/{forma}", json={"is_active": False})
+    assert r.status_code == 409  # come POST /deactivate con l'azione bonus già spesa
+    assert (await _full(client, cid))["active_form"] is not None
+
+
+@pytest.mark.caccia(id="CB-1076", fonte="invariante: un nome di soli spazi è un nome vuoto (CB-341, CB-342): anche un file importato non lo introduce",
+                    zona="flusso:compagni-forme", voce="persistenza", copre=["POST /characters/import", "GET /characters/{char_id}/export"])
+async def test_l_import_rifiuta_un_compagno_senza_nome(client):
+    cid = await _druid(client, 4)
+    await _form(client, cid, _beast(0.25))
+    file = (await client.get(f"/characters/{cid}/export")).json()
+    file["companions"][0]["name"] = "   "
+    r = await client.post("/characters/import", json=file)
+    assert r.status_code == 422
+
+
+@pytest.mark.caccia(id="CB-1077", fonte="invariante: export e import conservano la bestia del ranger con PF, temporanei e Dadi Vita spesi",
+                    zona="flusso:compagni-forme", voce="persistenza",
+                    copre=["GET /characters/{char_id}/export", "POST /characters/import", "POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
+async def test_export_e_import_conservano_la_bestia_del_ranger(client, dadi):
+    cid, bestia = await _bestia14(client, 5)
+    await client.patch(f"/characters/{cid}/companions/{bestia}/hp", json={"op": "damage", "value": 12})  # 20 -> 8
+    dadi(3)
+    assert (await client.post(f"/characters/{cid}/companions/{bestia}/hit-dice", json={"count": 1})).status_code == 200  # 8 + 3 = 11
+    await client.patch(f"/characters/{cid}/companions/{bestia}/hp", json={"op": "set_temp", "value": 5})
+    prima = (await _lista(client, cid))[0]
+    nuovo = (await client.post("/characters/import", json=(await client.get(f"/characters/{cid}/export")).json())).json()["id"]
+    dopo = (await _lista(client, nuovo))[0]
+    chiavi = lambda c: (c["feature_key"], c["max_hp"], c["current_hp"], c["temp_hp"], c["statblock"]["hit_dice"], c["statblock"]["hit_dice_spent"])  # noqa: E731
+    assert chiavi(dopo) == chiavi(prima) == (BESTIA_2014, 20, 11, 5, "3d8", 1)
+
+
+@pytest.mark.caccia(id="CB-1078", fonte="2014 · Regole generali · Riposo Lungo · pag. 186 (tutti i PF, Dadi Vita spesi fino a metà del totale, minimo uno)",
+                    zona="flusso:compagni-forme", voce="persistenza",
+                    copre=["POST /characters/{char_id}/rest", "POST /characters/{char_id}/companions/{comp_id}/hit-dice", "carta:2014/general.md#Riposo Lungo / Long Rest (pag. 186)"])
+@pytest.mark.parametrize("totale, restano_spesi", [(1, 0), (3, 2), (4, 2), (5, 3)])
+async def test_il_riposo_lungo_ridona_alla_bestia_pf_e_meta_dei_dadi_vita(client, dadi, totale, restano_spesi):
+    cid, bestia = await _bestia14(client, 5)
+    sb = {"hit_dice": f"{totale}d8", "abilities": {"con": 10}, "actions": []}
+    await client.patch(f"/characters/{cid}/companions/{bestia}", json={"statblock": sb})
+    for _ in range(totale):  # li spende tutti
+        await client.patch(f"/characters/{cid}/companions/{bestia}/hp", json={"op": "damage", "value": 6})
+        dadi(8)
+        assert (await client.post(f"/characters/{cid}/companions/{bestia}/hit-dice", json={"count": 1})).status_code == 200
+    await client.patch(f"/characters/{cid}/companions/{bestia}/hp", json={"op": "damage", "value": 6})
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})).status_code == 200
+    c = (await _lista(client, cid))[0]
+    assert (c["current_hp"], c["statblock"]["hit_dice_spent"]) == (20, restano_spesi)
+
+
+PERMESSI = [  # tipo di compagno, metodo, suffisso, corpo
+    ("forma", "post", "/{comp}/deactivate", None), ("forma", "post", "/{comp}/wild-heal", {"slot_level": 1}),
+    ("bestia", "post", "/{comp}/hit-dice", {"count": 1}), ("bestia", "post", "/{comp}/command", {"command": "dodge", "bonus": False}),
+    ("bestia", "post", "/{comp}/attack", {"action_index": 0, "mode": "normal", "dice": [10]}),
+    ("bestia", "post", "", {"kind": "familiar", "name": "Intruso", "statblock": {}, "max_hp": 1}),
+]
+
+
+@pytest.mark.caccia(id="CB-1079", fonte="invariante: i compagni di un altro personaggio non si toccano, nemmeno con ordini, Dadi Vita, attacchi o cure della forma",
+                    zona="flusso:compagni-forme", voce="permessi",
+                    copre=["POST /characters/{char_id}/companions/{comp_id}/deactivate", "POST /characters/{char_id}/companions/{comp_id}/wild-heal",
+                           "POST /characters/{char_id}/companions/{comp_id}/hit-dice", "POST /characters/{char_id}/companions/{comp_id}/command",
+                           "POST /characters/{char_id}/companions/{comp_id}/attack", "POST /characters/{char_id}/companions"])
+@pytest.mark.parametrize("tipo, metodo, suffisso, corpo", PERMESSI)
+async def test_gli_altri_endpoint_dei_compagni_rifiutano_un_altro_utente(client, come_utente, tipo, metodo, suffisso, corpo):
+    come_utente(1)
+    if tipo == "forma":
+        cid = await _druid(client, 4)
+        comp = await _form(client, cid, _beast(0.25))
+    else:
+        cid, comp = await _bestia14(client, 3)
+    prima = (await _lista(client, cid), (await client.get(f"/characters/{cid}/turn-state")).json()["turn"])
+    come_utente(2)
+    mio = await _druid(client, 4)
+    kw = {} if corpo is None else {"json": corpo}
+    assert (await getattr(client, metodo)(f"/characters/{cid}/companions" + suffisso.format(comp=comp), **kw)).status_code in (403, 404)
+    if "{comp}" in suffisso:  # il mio personaggio con l'id di un compagno altrui
+        assert (await getattr(client, metodo)(f"/characters/{mio}/companions" + suffisso.format(comp=comp), **kw)).status_code == 404
+    come_utente(1)
+    assert (await _lista(client, cid), (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]) == prima
+
+
+@pytest.mark.caccia(id="CB-1080", fonte="invariante: le richieste che CompanionForm e CompanionCard mandano (client.ts) sono accettate dall'API, anche con note nulle e opzioni vuote",
+                    zona="flusso:compagni-forme", voce="contratto",
+                    copre=["POST /characters/{char_id}/companions", "PATCH /characters/{char_id}/companions/{comp_id}", "PATCH /characters/{char_id}/companions/{comp_id}/hp",
+                           "POST /characters/{char_id}/companions/{comp_id}/attack", "POST /characters/{char_id}/companions/{comp_id}/command",
+                           "POST /characters/{char_id}/companions/{comp_id}/hit-dice", "POST /characters/{char_id}/companions/{comp_id}/activate",
+                           "POST /characters/{char_id}/companions/{comp_id}/deactivate"])
+async def test_le_richieste_del_frontend_sono_accettate(client):
+    cid, bestia = await _bestia14(client, 5)
+    base = f"/characters/{cid}/companions"
+    r = await client.post(base, json={"kind": "familiar", "name": "Gufo", "max_hp": 4, "armor_class": 11, "notes": None, "spell_school": None,
+                                      "statblock": {"actions": [{"name": "Artigli", "attack_bonus": 3, "damage_dice": "1d4+1"}]}})
+    assert r.status_code == 201, r.text
+    gufo = r.json()["id"]
+    assert (await client.patch(f"{base}/{gufo}", json={"name": "Gufetto", "notes": "x"})).status_code == 200
+    assert (await client.patch(f"{base}/{gufo}/hp", json={"op": "damage", "value": 1})).status_code == 200
+    r = await client.post(f"{base}/{gufo}/attack", json={"action_index": 0, "mode": "normal", "dice": [12], "options": [], "option_inputs": {}})
+    assert r.status_code == 200, r.text
+    assert (await client.post(f"{base}/{bestia}/command", json={"command": "attack", "bonus": False})).status_code == 200
+    r = await client.post(f"{base}/{bestia}/attack", json={"action_index": 0, "mode": "normal", "dice": [12], "options": [], "option_inputs": {}, "reaction": True})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"{base}/{bestia}/hit-dice", json={"count": 1})  # PF pieni: 409, non 422
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "hp_full"
+    druido = await _druid(client, 4)
+    forma = await _form(client, druido, _beast(0.25))
+    assert (await client.post(f"/characters/{druido}/companions/{forma}/activate", json={"force": False})).status_code == 200
+    await _nuovo_turno(client, druido)
+    assert (await client.post(f"/characters/{druido}/companions/{forma}/deactivate")).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1081", fonte="2014 · Druido · Forma Selvatica · pag. 66 (finisce se privo di sensi); 2024 · Druido · Forma Selvatica · pag. 80 (finisce se Incapacitato)",
+                    zona="flusso:compagni-forme", voce="edizioni",
+                    copre=["PATCH /characters/{char_id}/conditions", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)", "carta:2024/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 80)"])
+@pytest.mark.parametrize("edizione, condizione, finisce", [
+    ("2024", "incapacitated", True), ("2024", "stunned", True), ("2024", "unconscious", True),
+    ("2014", "incapacitated", False), ("2014", "stunned", False), ("2014", "unconscious", True)])
+async def test_la_forma_finisce_con_la_condizione_giusta_per_edizione(client, edizione, condizione, finisce):
+    cid = await (_druid24(client, 4) if edizione == "2024" else _druid(client, 4))
+    forma = await _form(client, cid, _beast(0.25))
+    assert (await _activate(client, cid, forma)).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/conditions", json={"conditions": {condizione: True}})).status_code == 200
+    assert ((await _full(client, cid))["active_form"] is not None) is (not finisce)
+    assert next(c for c in await _lista(client, cid) if c["id"] == forma)["is_active"] is (not finisce)
+
+
+@pytest.mark.caccia(id="CB-1082", fonte="invariante: due richieste uguali insieme spendono un solo Dado Vita della bestia",
+                    zona="flusso:compagni-forme", voce="ripetizione", copre=["POST /characters/{char_id}/companions/{comp_id}/hit-dice"])
+async def test_due_richieste_di_dadi_vita_insieme_ne_spendono_uno(client, dadi):
+    cid, bestia = await _bestia14(client, 5)
+    sb = {"hit_dice": "1d8", "abilities": {"con": 10}, "actions": []}
+    await client.patch(f"/characters/{cid}/companions/{bestia}", json={"statblock": sb})
+    await client.patch(f"/characters/{cid}/companions/{bestia}/hp", json={"op": "damage", "value": 15})  # 20 -> 5
+    dadi(5)
+    rs = await asyncio.gather(*[client.post(f"/characters/{cid}/companions/{bestia}/hit-dice", json={"count": 1}) for _ in range(2)])
+    assert sorted(r.status_code for r in rs) == [200, 409]
+    c = (await _lista(client, cid))[0]
+    assert (c["current_hp"], c["statblock"]["hit_dice_spent"]) == (10, 1)
+
+
+@pytest.mark.caccia(id="CB-1083", fonte="2024 · Druido · Forma Selvatica · pag. 80 (2 usi, 3 dal 6°, 4 dal 17°); 2014 · Druido · Forma Selvatica · pag. 66 (2 usi, illimitati al 20°)",
+                    zona="flusso:compagni-forme", voce="limiti", copre=["POST /characters/{char_id}/companions/{comp_id}/activate", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)", "carta:2024/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 80)"])
+@pytest.mark.parametrize("edizione, livello, usi", [
+    ("2024", 2, 2), ("2024", 5, 2), ("2024", 6, 3), ("2024", 16, 3), ("2024", 17, 4), ("2014", 19, 2), ("2014", 20, None)])
+async def test_gli_usi_della_forma_selvatica_seguono_il_livello(client, edizione, livello, usi):
+    cid = await (_druid24(client, livello) if edizione == "2024" else _druid(client, livello))
+    riga = next(a for a in (await _full(client, cid))["abilities"] if a["feature_key"] == WILD)
+    assert (riga["max_uses"], riga["uses"]) == (usi, usi)
+    forma = await _form(client, cid, _beast(0.25))
+    assert (await _activate(client, cid, forma)).status_code == 200
+    assert await _usi(client, cid) == (None if usi is None else usi - 1)
+
+
+@pytest.mark.caccia(id="CB-1084", fonte="invariante: annullare il danno che ha chiuso la forma rimette forma, PF della forma e PF del druido com'erano",
+                    zona="flusso:compagni-forme", voce="annullamento", copre=["PATCH /characters/{char_id}/hp", "POST /characters/{char_id}/hp/undo"])
+@pytest.mark.parametrize("danno", [10, 15])  # la forma ha 10 PF: azzerata esatta, e con eccesso
+async def test_annullare_il_danno_che_chiude_la_forma_la_riapre(client, danno):
+    cid = await _druid(client, 4)
+    forma = await _form(client, cid, _beast(0.25), hp=10)
+    await _activate(client, cid, forma)
+    pf = (await _full(client, cid))["current_hit_points"]
+    op = (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": danno})).json()["hp_undo_id"]
+    assert (await _full(client, cid))["active_form"] is None
+    assert (await client.post(f"/characters/{cid}/hp/undo", json={"op_id": op})).status_code == 200
+    c = next(c for c in await _lista(client, cid) if c["id"] == forma)
+    assert (c["is_active"], c["current_hp"], (await _full(client, cid))["current_hit_points"]) == (True, 10, pf)
+    assert (await _full(client, cid))["active_form"] is not None
+    assert (await client.post(f"/characters/{cid}/hp/undo", json={"op_id": op})).status_code == 409  # una volta sola
+
+
+@pytest.mark.caccia(id="CB-1085", fonte="2024 · Druido · Regole della Forma Selvatica · pag. 81 e Regole generali · Punti Ferita Temporanei · pag. 29 (non si sommano: si tengono i vecchi o i nuovi)",
+                    zona="flusso:compagni-forme", voce="interazione",
+                    copre=["POST /characters/{char_id}/companions/{comp_id}/activate", "PATCH /characters/{char_id}/hp",
+                           "carta:2024/classes/druid.md#Regole della Forma Selvatica / Rules While Shape-Shifted (Druido 2, pag. 81)",
+                           "carta:2024/general.md#Punti Ferita Temporanei / Temporary Hit Points (pag. 29)"])
+@pytest.mark.parametrize("prima, atteso", [(0, 4), (2, 4), (4, 4), (20, 20)])
+async def test_i_pf_temporanei_della_forma_non_si_sommano_a_quelli_che_ha_gia(client, prima, atteso):
+    cid = await _druid24(client, 4)  # 4 PF temporanei dalla forma
+    if prima:
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": "set_temp", "value": prima})).status_code == 200
+    forma = await _form(client, cid, _beast(0.25))
+    assert (await _activate(client, cid, forma)).status_code == 200
+    assert (await _full(client, cid))["temp_hp"] == atteso
+
+
+@pytest.mark.caccia(id="CB-1089", fonte="2014 · Druido · Forma Selvatica · pag. 66; 2024 · Druido · Forma Selvatica · pag. 80-81 (la forma vale solo mentre la si è assunta)",
+                    zona="flusso:compagni-forme", voce="regola", copre=["POST /characters/{char_id}/companions/{comp_id}/attack", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)"])
+async def test_una_forma_non_assunta_non_attacca(client):
+    cid = await _druid(client, 4)
+    sb = {**_beast(0.25), "actions": [{"name": "Morso", "attack_bonus": 4, "damage_dice": "1d6+2", "damage_type": "piercing"}]}
+    forma = await _form(client, cid, sb)
+    r = await client.post(f"/characters/{cid}/companions/{forma}/attack", json={"action_index": 0, "mode": "normal", "dice": [10], "damage_rolls": [3]})
+    assert r.status_code == 409
+
+
+@pytest.mark.caccia(id="CB-1091", fonte="tests/caccia/decisioni.md D-015 (compagno con PF massimi 0: PF non segnati, mai a terra)",
+                    zona="flusso:compagni-forme", voce="limiti", copre=["PATCH /characters/{char_id}/companions/{comp_id}/hp"])
+async def test_un_compagno_senza_pf_segnati_non_va_a_terra(client):
+    cid = await _druid(client, 4)
+    r = await client.post(f"/characters/{cid}/companions", json={"kind": "familiar", "name": "Gufo", "statblock": {}, "max_hp": 0})
+    comp = r.json()["id"]
+    r = await client.patch(f"/characters/{cid}/companions/{comp}/hp", json={"op": "damage", "value": 3})
+    assert r.status_code == 200 and r.json()["down"] is False
+
+
+@pytest.mark.caccia(id="CB-1092", fonte="invariante: un nome di soli spazi è un nome vuoto (stessa famiglia di CB-1076): anche il personaggio importato",
+                    zona="flusso:compagni-forme", voce="persistenza", copre=["POST /characters/import", "GET /characters/{char_id}/export"])
+async def test_l_import_rifiuta_un_personaggio_senza_nome(client):
+    cid = await _druid(client, 4)
+    file = (await client.get(f"/characters/{cid}/export")).json()
+    file["character"]["name"] = "   "
+    r = await client.post("/characters/import", json=file)
+    assert r.status_code == 422
+
+
+@pytest.mark.caccia(id="CB-1502", fonte="invariante: l'export non cambia i dati già salvati", zona="flusso:compagni-forme",
+                    voce="persistenza", copre=["POST /characters/{char_id}/duplicate"])
+async def test_la_copia_di_un_nome_gia_salvato_non_lo_svuota(client, test_session_factory):
+    from core.db.models import Character
+    cid = (await client.post("/characters", json={"name": "X"})).json()["id"]
+    async with test_session_factory() as s:
+        (await s.get(Character, cid)).name = "   "
+        await s.commit()
+    r = await client.post(f"/characters/{cid}/duplicate")
+    assert r.status_code in (200, 201), r.text
+    assert r.json()["name"] != ""
+
+
+@pytest.mark.caccia(id="CB-1510", fonte="2024 · Ranger · Signore delle Bestie · Compagno Primordiale · pag. 122 (una sola bestia alla volta)",
+                    zona="flusso:compagni-forme", voce="limiti", copre=["PATCH /characters/{char_id}/companions/{comp_id}/hp", "PATCH /characters/{char_id}/companions/{comp_id}"])
+@pytest.mark.parametrize("via", ["cura", "modifica"])
+async def test_una_bestia_morta_non_torna_accanto_a_una_viva(client, via):
+    cid = await _sub(client, 5, "beast_master")
+    await _bestia24(client, cid, "land")
+    vecchia = (await _lista(client, cid))[0]["id"]
+    await client.patch(f"/characters/{cid}/companions/{vecchia}/hp", json={"op": "damage", "value": 999})
+    assert (await _primordiale(client, cid)).status_code == 201
+    if via == "cura":
+        r = await client.patch(f"/characters/{cid}/companions/{vecchia}/hp", json={"op": "heal", "value": 5})
+    else:
+        r = await client.patch(f"/characters/{cid}/companions/{vecchia}", json={"current_hp": 5})
+    assert r.status_code == 422 and r.json()["detail"] == "companion_exists", r.text
+    assert sum(c["feature_key"] == PRIMORDIALE and c["current_hp"] > 0 for c in await _lista(client, cid)) == 1
+
+
+@pytest.mark.caccia(id="CB-1539", fonte="2014 · Druido · Forma Selvatica · pag. 66: a 0 PF la forma finisce da sola, senza azione bonus", zona="flusso:compagni-forme", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/companions/{comp_id}"])
+async def test_forma_a_zero_pf_spenta_nella_stessa_richiesta_non_chiede_l_azione_bonus(client):
+    cid = await _druid(client, 4)
+    f = await _form(client, cid)
+    assert (await _activate(client, cid, f)).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": True})).status_code == 200
+    r = await client.patch(f"/characters/{cid}/companions/{f}", json={"is_active": False, "current_hp": 0})
+    assert r.status_code == 200 and r.json()["is_active"] is False, r.text

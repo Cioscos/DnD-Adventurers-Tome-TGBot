@@ -1,10 +1,8 @@
 """Shared helpers for router logic (avoid circular imports)."""
 import json
-import logging
-from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult, RollMode
@@ -16,8 +14,8 @@ from api.services.durations import end_concentration, is_concentrating
 from api.services.effects import cap_current_hp, sync_zero_hp
 from api.services.condition_effects import release_concentration_effects, restore_released
 from api.services.homebrew.passive import get_passive_modifiers
-from api.services.history import add_history
-from core.db.models import Character, CharacterHistory
+from api.services.history import add_history, prune
+from core.db.models import Character
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import save_roll_part
@@ -29,14 +27,6 @@ from core.rules.spell_effects import enchanted_weapon
 from core.rules.spellcasting import concentration_dc
 from core.rules.modifiers import modifiers_for
 from core.rules.weapons import best_damage_dice, has_property, martial_arts_level
-
-logger = logging.getLogger(__name__)
-
-
-def _settings_value(char: Character, key: str, default):
-    settings = (char.settings if isinstance(char.settings, dict) else None) or {}
-    return settings.get(key, default)
-
 
 async def prune_history(session: AsyncSession, char: Character) -> int:
     """Trim a character's history per `settings.history_retention_*`.
@@ -52,51 +42,7 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
     Best-effort: errors are swallowed and logged to avoid breaking the
     primary action that triggered the prune.
     """
-    mode = _settings_value(char, "history_retention_mode", "off")
-    if mode not in ("events", "days"):
-        return 0
-
-    try:
-        if mode == "events":
-            keep = int(_settings_value(char, "history_retention_events", 100) or 100)
-            keep = max(1, keep)
-            # IDs to keep: the most recent N
-            keep_subq = (
-                select(CharacterHistory.id)
-                .where(CharacterHistory.character_id == char.id)
-                .order_by(CharacterHistory.timestamp.desc(), CharacterHistory.id.desc())
-                .limit(keep)
-                .subquery()
-            )
-            # Only prune when there are more rows than the cap to avoid the
-            # cost of running the delete every insert on small histories.
-            count_q = select(func.count(CharacterHistory.id)).where(
-                CharacterHistory.character_id == char.id
-            )
-            total = (await session.execute(count_q)).scalar() or 0
-            if total <= keep:
-                return 0
-            result = await session.execute(
-                delete(CharacterHistory).where(
-                    CharacterHistory.character_id == char.id,
-                    ~CharacterHistory.id.in_(select(keep_subq.c.id)),
-                )
-            )
-            return result.rowcount or 0
-        else:  # "days"
-            days = int(_settings_value(char, "history_retention_days", 30) or 30)
-            days = max(1, days)
-            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat(timespec="seconds")
-            result = await session.execute(
-                delete(CharacterHistory).where(
-                    CharacterHistory.character_id == char.id,
-                    CharacterHistory.timestamp < cutoff,
-                )
-            )
-            return result.rowcount or 0
-    except Exception as exc:
-        logger.warning("prune_history failed for char %s: %s", char.id, exc)
-        return 0
+    return await session.run_sync(lambda s: prune(s, char.id, char.settings))
 
 
 async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
@@ -203,6 +149,14 @@ def _append_concentration_history(
     add_history(session, char_id, "concentration_save", desc)
 
 
+def refuse_null(model: type, changes: dict) -> None:
+    """422 se una modifica manda ``null`` a una colonna che non lo ammette: senza, lo rifiuta il database con un errore del server."""
+    for field, value in changes.items():
+        column = model.__table__.columns.get(field)
+        if value is None and column is not None and not column.nullable:
+            raise HTTPException(status_code=422, detail=f"{field}_required")
+
+
 async def _lose_concentration(session: AsyncSession, char: Character) -> dict:
     """Fa cadere la concentrazione e restituisce ciò che serve per ripristinarla dopo un ritiro riuscito."""
     settings = char.settings or {}
@@ -235,6 +189,8 @@ async def retouch_concentration(
         char.settings = settings
         char.active_states = list(snap["active_states"])
         await restore_released(session, snap["released"])
+        from api.services.condition_removal import resuspend  # import locale: il servizio importa gli alleati di sessione
+        await resuspend(session, char)
         conc.update(lost=False, snapshot=None)
     elif not success and not conc["lost"] and is_concentrating(char):
         conc.update(lost=True, snapshot=await _lose_concentration(session, char))

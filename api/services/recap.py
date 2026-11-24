@@ -15,7 +15,7 @@ import re
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -106,6 +106,9 @@ async def record_deletion(db: AsyncSession, char: Character) -> None:
         ))).scalars().all()
         stats = _char_stats(char, mine.get("dice_stats_start"), own, (gs.created_at, _now()), player)
         stats.update(character_id=-char.id, healing_given=_given(cured).get(char.id, 0))  # id negativo: quello vero può tornare in uso
+        await db.execute(update(SessionMessage).where(
+            SessionMessage.session_id == gs.id, SessionMessage.recipient_character_id == char.id,
+        ).values(recipient_character_id=-char.id))
         gs.departed = [d for d in gs.departed if d is not mine] + [{
             "user_id": mine["user_id"], "stats": stats,
             "healed_by": {str(k): v for k, v in _given(rows).items()},
@@ -264,6 +267,7 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
     for c in characters:
         c["healing_given"] = given.get(c["character_id"], 0)
     characters += [d["stats"] for d in deleted]  # con le cure già contate
+    name_by_char = {**{d["stats"]["character_id"]: d["stats"]["name"] for d in deleted}, **{c.id: c.name for c in chars.values()}}
     name_by_user = {**{d["user_id"]: d["stats"]["name"] for d in deleted}, **{c.user_id: c.name for c in chars.values()}}
 
     encs = (await db.execute(
@@ -315,7 +319,7 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
                 who = to if kind == "stash_take" else frm  # "gm" for the GM rows
                 stash.append({"kind": kind, "who": who, "summary": _summary(pl.get("items"), pl.get("coins"))})
         elif m.item_name is not None:
-            gm_grants.append({"to": name_by_user.get(m.recipient_user_id), "item": m.item_name,
+            gm_grants.append({"to": name_by_char.get(m.recipient_character_id) or name_by_user.get(m.recipient_user_id), "item": m.item_name,
                               "quantity": m.item_quantity or 1})
 
     return {

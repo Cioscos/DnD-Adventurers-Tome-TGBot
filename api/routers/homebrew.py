@@ -24,7 +24,9 @@ from api.schemas.homebrew import (
     TemplateDetailRead,
     TemplateRead,
 )
+from api.services.effects import cap_current_hp
 from api.services.homebrew.dispatcher import dispatch
+from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.templates import TEMPLATES, get_template
 from core.db.models import Character, HomebrewResource, HomebrewRule, Item
 
@@ -45,6 +47,17 @@ async def _get_owned_char(
     if char.user_id != user_id:
         raise HTTPException(403, "Not your character")
     return char
+
+
+async def _hp_max_bonus(session: AsyncSession, char: Character) -> int:
+    return await get_passive_modifiers(session, char, "character.hit_points_max")
+
+
+async def _cap_if_lowered(session: AsyncSession, char: Character, before: int) -> None:
+    """La regola tolta o cambiata alzava i PF massimi: i correnti non li superano."""
+    await session.flush()
+    if await _hp_max_bonus(session, char) < before:
+        await cap_current_hp(session, char, always=True)
 
 
 async def _get_owned_rule(
@@ -291,6 +304,7 @@ async def install_template(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     template = get_template(template_id)
     if template is None:
         raise HTTPException(404, "Template not found")
@@ -310,6 +324,7 @@ async def install_template(
     await session.flush()
     await _materialize_property_defaults(session, char, rule)
     await _materialize_resources(session, char, rule)
+    await _cap_if_lowered(session, char, hp_before)
     return rule
 
 
@@ -324,6 +339,7 @@ async def delete_rule(
 ) -> None:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     # Custom conditions applied by this rule live in char.conditions (a JSON blob,
     # outside the relational graph), so deleting the rule cannot cascade them away —
     # they would linger as orphans pointing at a now-deleted rule. Remove only the
@@ -342,6 +358,7 @@ async def delete_rule(
         flag_modified(char, "conditions")
         await clear_effects_for(session, ("character", char.id), orphaned)
     await session.delete(rule)
+    await _cap_if_lowered(session, char, hp_before)
 
 
 # ─── Write-side rule endpoints ───────────────────────────────────────────────
@@ -363,6 +380,7 @@ async def create_rule(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     now = _now()
     rule = HomebrewRule(
         character_id=char.id,
@@ -382,6 +400,7 @@ async def create_rule(
     # redundant outer guard that duplicated the internal check).
     await _materialize_property_defaults(session, char, rule)
     await _materialize_resources(session, char, rule)
+    await _cap_if_lowered(session, char, hp_before)
     return rule
 
 
@@ -397,6 +416,7 @@ async def update_rule(
 ) -> HomebrewRule:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     if body.name is not None:
         rule.name = body.name
     if body.description is not None:
@@ -415,6 +435,7 @@ async def update_rule(
     # value on that resource and wiping it would be a silent data-loss.
     if dsl_changed:
         await _materialize_resources(session, char, rule)
+    await _cap_if_lowered(session, char, hp_before)
     return rule
 
 
@@ -429,8 +450,11 @@ async def toggle_enabled(
     session: Annotated[AsyncSession, Depends(get_db, scope="function")],
 ) -> HomebrewRule:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
+    char = await _get_owned_char(char_id, user_id, session)
+    hp_before = await _hp_max_bonus(session, char)
     rule.enabled = body.enabled
     rule.updated_at = _now()
+    await _cap_if_lowered(session, char, hp_before)
     return rule
 
 

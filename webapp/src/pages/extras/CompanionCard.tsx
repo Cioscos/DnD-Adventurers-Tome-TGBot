@@ -76,6 +76,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
     onError: (err) => {
       const code = apiErrorCode(err)
       if (code === 'turn_slot_used') toast.error(t('character.extras.chain_master.reaction_used'))
+      else if (err instanceof ApiError && err.detail === 'companion_exists') toast.error(t('character.extras.beast.form_errors.companion_exists'))
       else notifyMutationError(err)
     },
   })
@@ -193,7 +194,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
           {comp.temp_hp > 0 && <span className="text-dnd-cobalt-bright">+{comp.temp_hp} temp</span>}
         </div>
         <HPGauge current={comp.current_hp} max={comp.max_hp} temp={comp.temp_hp} size="md" segmented />
-        {comp.current_hp === 0 && (
+        {comp.current_hp === 0 && comp.max_hp > 0 && (
           <p className="mt-1 text-xs text-dnd-crimson-bright font-body">{t('character.extras.down')}</p>
         )}
       </div>
@@ -247,14 +248,16 @@ export default function CompanionCard({ charId, comp, wildShapeUses, formHasNoHp
                   {a.damage_dice ? ` · ${a.damage_dice}${comp.damage_bonus_extra ? `${comp.damage_bonus_extra > 0 ? '+' : ''}${comp.damage_bonus_extra}` : ''}` : ''}
                 </span>
               </span>
-              <RollButton
-                onRoll={(mode) => attack.mutate({ idx, mode })}
-                pending={attack.isPending}
-                ariaLabel={`${t('character.turn.attack')} ${a.name}`}
-                className="flex items-center gap-1 text-sm font-medium px-4 min-h-11 rounded-lg border bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30"
-              >
-                <Swords size={14} />{t('character.turn.attack')}
-              </RollButton>
+              {(comp.kind !== 'wild_shape' || comp.is_active) && (
+                <RollButton
+                  onRoll={(mode) => attack.mutate({ idx, mode })}
+                  pending={attack.isPending}
+                  ariaLabel={`${t('character.turn.attack')} ${a.name}`}
+                  className="flex items-center gap-1 text-sm font-medium px-4 min-h-11 rounded-lg border bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30"
+                >
+                  <Swords size={14} />{t('character.turn.attack')}
+                </RollButton>
+              )}
               {isBeast && (
                 <RollButton
                   onRoll={(mode) => attack.mutate({ idx, mode, reaction: true })}

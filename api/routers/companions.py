@@ -85,6 +85,17 @@ async def _get_companion(session: AsyncSession, char: Character, comp_id: int) -
     return comp
 
 
+async def _refuse_second_beast(session: AsyncSession, char: Character, comp: Companion) -> None:
+    """Una bestia a 0 PF non si rialza a mano se un'altra è viva: una sola alla volta, come alla creazione."""
+    if comp.feature_key not in BEAST_KEYS or comp.current_hp > 0:
+        return
+    alive = await session.scalar(select(Companion.id).where(
+        Companion.character_id == char.id, Companion.feature_key == comp.feature_key,
+        Companion.id != comp.id, Companion.current_hp > 0).limit(1))
+    if alive is not None:
+        raise HTTPException(status_code=422, detail="companion_exists")
+
+
 @router.get("/{char_id}/companions", response_model=list[CompanionRead])
 async def list_companions(
     char_id: int,
@@ -112,10 +123,10 @@ async def create_companion(
         raise HTTPException(status_code=422, detail="companion_limit")
     if body.is_active and body.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
-    if body.feature_key == BEAST_COMPANION:  # solo il Signore delle Bestie, e una bestia per volta (quella morta si sostituisce)
-        if not any(spec.key == BEAST_COMPANION for spec, _row in active_features(char)):
+    if body.feature_key in BEAST_KEYS:  # solo il Signore delle Bestie, e una bestia per volta (quella morta si sostituisce)
+        if not any(spec.key == body.feature_key for spec, _row in active_features(char)):
             raise HTTPException(status_code=422, detail="feature_unavailable")
-        if any(c.feature_key == BEAST_COMPANION and c.current_hp > 0 for c in rows):
+        if any(c.feature_key == body.feature_key and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
     limits = form_limits(char)
     if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
@@ -166,12 +177,14 @@ async def update_companion(
         rows = (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
         if sum(c.kind == "wild_shape" and not other_edition(char, c) for c in rows) >= limits.known_forms:
             raise HTTPException(status_code=422, detail="known_forms_limit")  # come alla creazione
+    if changes.get("current_hp"):
+        await _refuse_second_beast(session, char, comp)
     for k, v in changes.items():
         setattr(comp, k, v)
     if comp.is_active and comp.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     comp.current_hp = min(comp.current_hp, _effective_max_hp(char, comp))
-    if comp.is_active and comp.current_hp == 0 and form_own_hp(char):  # a 0 PF la forma finisce, anche se corretta a mano
+    if (comp.is_active or was_active) and comp.current_hp == 0 and form_own_hp(char):  # a 0 PF la forma finisce, anche se corretta a mano
         end_form(char, comp)
     elif comp.is_active and not was_active:
         if limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione (e la conferma per superarli)
@@ -179,7 +192,7 @@ async def update_companion(
         await deactivate_other_forms(session, char_id, comp.id)
         start_form(char, comp)
     elif was_active and not comp.is_active:
-        end_form(char, comp)
+        return_to_normal(char, comp)  # come «Termina»: azione bonus, 409 se è già spesa
     return _read(char, comp)
 
 
@@ -331,7 +344,7 @@ async def companion_hp(
         # nel 2024 i PF sono quelli del druido, quindi anche cura e PF temporanei
         full = await update_hp(char_id, HPUpdate(op=HPOp(body.op), value=body.value), user_id, session, lang)
         out = _read(char, comp)
-        out.down = comp.current_hp == 0
+        out.down = comp.current_hp == 0 < out.max_hp
         out.concentration_save = full.concentration_save  # il TS di PATCH /hp, se l'eccesso l'ha fatto tirare
         return out
     value = body.value
@@ -347,13 +360,15 @@ async def companion_hp(
         comp.temp_hp -= absorbed
         comp.current_hp = max(0, comp.current_hp - (value - absorbed))
     elif body.op == "heal":
+        if body.value > 0:
+            await _refuse_second_beast(session, char, comp)
         comp.current_hp = min(_effective_max_hp(char, comp), comp.current_hp + body.value)
     else:
         comp.temp_hp = body.value
     out = _read(char, comp)
     add_history(session, char_id, "companion_hp",
              f"{comp.name}: {body.op} {value if body.op == 'damage' else body.value} → PF {out.current_hp}/{out.max_hp}, temp {comp.temp_hp}")
-    out.down = comp.current_hp == 0
+    out.down = comp.current_hp == 0 < out.max_hp  # 0/0: PF non segnati (D-015)
     return out
 
 
@@ -496,6 +511,8 @@ async def companion_attack(
     action = actions[body.action_index]
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
+    if comp.kind == "wild_shape" and not comp.is_active:  # una forma salvata è una scheda, non una creatura
+        raise HTTPException(status_code=409, detail={"code": "form_not_active"})
     if comp.kind != "wild_shape" and comp.current_hp <= 0 < _effective_max_hp(char, comp):  # a terra: non attacca
         raise HTTPException(status_code=409, detail={"code": "companion_down"})
     if comp.feature_key in BEAST_KEYS:
@@ -515,7 +532,7 @@ async def companion_attack(
 
     # In Forma Selvatica attacca il personaggio: le sue condizioni restano; un compagno è un altro combattente.
     applied = Applied()
-    in_form = comp.kind == "wild_shape" and comp.is_active
+    in_form = comp.kind == "wild_shape"
     if in_form:
         refuse_if_incapacitated(char)
         applied = modifiers_for(char, "attack", ability="strength")

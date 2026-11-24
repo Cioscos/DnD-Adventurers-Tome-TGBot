@@ -45,7 +45,7 @@ from api.services.choices import take_feat
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.rules.feature_sync import ABILITY_BONUS_KEY, ARCHIVED_FEATURES, GRANTED_CREATED, GRANTED_SPELL_KEYS, REPLACED_AT_REST, RETROFIT_DONE
 from core.rules.level_choices import FREE_KNOWN_KEY, TOOL_SEED_FLAG, sync_level_choices
-from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
+from core.rules.states import ALLY_EXCLUSIVE, COND_RELEASE, SPELL_CAST_TYPE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SUSPENDED_KEY, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, TARGET_IMMUNITY, SPELL_TEMP_DROPPED, TEMP_GIVEN, TEMP_RELEASE, ZERO_HP_USES, release_given_spells
 from core.game.stats import AC_MIGRATED_FLAG, hit_points_for_level, roll_ability_mod
 from core.rules.proficiencies import FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, SEEDED_FLAG
 from api.routers import maps, notes, silhouette
@@ -67,7 +67,7 @@ from api.routers.sessions import active_encounter_row
 from api.services.rules_targets import activate_pending_effect, drop_pending_effect
 from core.game.item_bonuses import item_bonus_total
 from core.game.actions import HIDE_MIN_TOTAL
-from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
+from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, refuse_null, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body, set_inspiration, spend_inspiration_reroll
 from api.services.rules_options import (
@@ -95,8 +95,8 @@ from core.rules.modifiers import ac_delta, effective_hp_max, modifiers_for, rule
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, upsert_effect
-from api.services.durations import tick_rounds
+from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, release_concentration_effects, upsert_effect
+from api.services.durations import end_concentration, tick_rounds
 from api.services.spell_slots import CREATED_SLOTS, recalc_spell_slots
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
@@ -108,7 +108,7 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 SERVER_OWNED_SETTINGS = (TOOL_SEED_FLAG, "hp_rolls", "condition_durations", "resolved_choice_levels",
                          "concentration_rounds_left", "concentration_level", REPLACED_AT_REST, "concentration_item_spell", ARCHIVED_FEATURES,
                          GRANTED_SPELL_KEYS, GRANTED_CREATED, ABILITY_BONUS_KEY, ZERO_HP_USES, TARGET_IMMUNITY, FREE_KNOWN_KEY,
-                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON, CREATED_SLOTS,
+                         RETROFIT_DONE, ALLY_EXCLUSIVE, TEMP_GIVEN, TEMP_RELEASE, SPELL_GIVEN, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SPELL_CAST_TYPE, SUSPENDED_KEY, COND_RELEASE, SUSPENDED_BACK, RETURNED_FROM, SUSPENDED_EFFECTS, SUSPENDED_ON, CREATED_SLOTS,
                          "saved_dice", "knocked_out", "hiding", "inspiration_extra", AC_MIGRATED_FLAG,
                          SEEDED_FLAG, FEATURE_GRANTS_KEY, FEATURE_TOOLS_KEY, ASSASSIN_KITS_FLAG)
 
@@ -414,7 +414,9 @@ async def update_character(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await get_owned(char_id, user_id, session, full=True)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    refuse_null(Character, changes)
+    for field, value in changes.items():
         if field == "settings" and value is not None:
             # Server-owned keys: a stale client snapshot must never overwrite them.
             old = char.settings or {}
@@ -482,6 +484,8 @@ async def delete_character(
 
     await session.execute(delete(CampaignMember).where(CampaignMember.character_id == char.id))
     release_given_spells(char, [{"key": clock} for clock in (char.settings or {}).get(SPELL_GIVEN) or {}])  # i bersagli perdono gli effetti
+    end_concentration(char)  # ciò che sospendeva (Calmare Emozioni) o teneva con la concentrazione finisce con lui
+    await release_concentration_effects(session, char)
     files = await _character_files(session, char)
     await session.flush()
     await session.delete(char)
@@ -557,11 +561,16 @@ async def update_conditions(
                 raise HTTPException(status_code=422, detail="exhaustion_out_of_range")
         elif not isinstance(val, (bool, dict)):  # accesa o spenta; le regole homebrew scrivono un oggetto
             raise HTTPException(status_code=422, detail="condition_must_be_bool")
+    was_on = {slug for slug, val in current.items() if val}
     result = await apply_conditions(session, char, changes)
     # apply_conditions already dropped the effects of conditions turned off
-    gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
+    # condizione già accesa con un effetto del master o con CD o fonte (incantesimi, privilegi di altri): la durata del
+    # giocatore non lo sostituisce (D-017)
+    kept = {e.slug for e in await effects_for_character(session, char_id) if e.slug in was_on
+            if e.applied_by_gm or e.save_dc is not None or e.source_note or e.source_character_id
+            or e.source_combatant_id or e.source_spell_id}
     for slug, rounds in (body.durations or {}).items():
-        if slug != "exhaustion" and rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in gm_slugs:
+        if slug != "exhaustion" and rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in kept:
             await upsert_effect(session, ("character", char_id), slug,
                                 expiry=ExpirySpec("owner", "start", rounds))
     if result["changed"]:

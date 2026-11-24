@@ -807,6 +807,7 @@
       "incapacitated": "You are incapacitated: you can't attack.",
       "bonus_used": "Bonus action already used this turn.",
       "offhand_needs_attack": "Attack with the Attack action first: the off hand comes after.",
+      "offhand_needs_light_attack": "The off hand comes after an attack with a different suitable weapon (usually Light).",
       "ammo_missing": "Ammunition empty or not equipped: track it yourself",
       "grip_one": "One hand",
       "grip_two": "Two hands",
@@ -2612,6 +2613,7 @@
       "equipment_fixed": "Included",
       "equipment_skip": "Skip: no equipment",
       "equipment_none": "No starting equipment for this class.",
+      "score_over_max": "No score can exceed {{max}} with bonuses: lower or swap the one over the limit.",
       "scores_skip": "Skip: leave all at 10",
       "background_pick": "Pick background from catalogue",
       "step_background": "Background",
@@ -2796,6 +2798,7 @@
       "time": "Time",
       "note": "Note (optional)",
       "err_past": "The night must be in the future.",
+      "err_duplicate": "A night is already scheduled at that time.",
       "err_generic": "Could not save. Try again."
     },
     "lore": {

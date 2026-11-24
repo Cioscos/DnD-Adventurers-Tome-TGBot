@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from api.routers._helpers import collect_homebrew_notifications
+from api.routers._helpers import collect_homebrew_notifications, refuse_null
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.history import add_history
@@ -60,7 +60,9 @@ async def update_spell_slot(
         raise HTTPException(status_code=404, detail="Slot not found")
 
     old_used = slot.used
-    for field, value in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    refuse_null(SpellSlot, changes)
+    for field, value in changes.items():
         setattr(slot, field, value)
     await session.flush()
 

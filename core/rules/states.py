@@ -208,6 +208,14 @@ def release_suspended(char: Any, closed: list[dict]) -> None:
         char.settings = {**{k: v for k, v in settings.items() if k != SUSPENDED_KEY}, COND_RELEASE: [*(settings.get(COND_RELEASE) or []), *held]}
 
 
+def item_spell_held(char: Any) -> dict:
+    """Incantesimo di un oggetto o privilegio su cui ``char`` si concentra; vuoto se non c'è o è illeggibile (vecchi import)."""
+    held = (char.settings or {}).get("concentration_item_spell")
+    if not isinstance(held, dict):
+        return {}
+    return {k: v for k, v in held.items() if isinstance(v, str if k in ("name", "feature_key") else int)}
+
+
 def charge_exhaustion(char: Any, closed: list[dict]) -> None:
     """Gli stati appena chiusi lasciano la spossatezza che dichiaravano (Frenesia). Al 6° livello si muore.
 
@@ -256,6 +264,12 @@ SPELL_SPENT = "spell_spent"
 # ``SUSPENDED_KEY``: [{"id": ricevente, "conditions": [...]}] che alla chiusura passano in ``COND_RELEASE``. Sul ricevente
 # ``SUSPENDED_ON``: {condizione: id di chi la sospende}, cancellato se la condizione cambia per altra via (allora non torna).
 SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON = "suspended_conditions", "conditions_release", "conditions_suspended_on"
+# {condizione: riga di durata, TS e fonte tolta con la sospensione}: torna con la condizione
+SUSPENDED_EFFECTS = "conditions_suspended_effects"
+# su chi lancia: [{"id", "conditions"}] tornate con l'ultima fine della concentrazione; un annullo le sospende di nuovo
+SUSPENDED_BACK = "conditions_suspended_back"
+# sul ricevente: {condizione tornata: id di chi la sospendeva}, tolta se la condizione cambia (allora un annullo non la sospende)
+RETURNED_FROM = "conditions_returned_from"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
 
 

@@ -205,11 +205,12 @@ async def test_a_companion_that_is_not_a_beast_form_never_attacks_magically(clie
     assert (await _bite(client, cid, pet))["is_magical"] is False
 
 
-async def test_a_deactivated_form_does_not_attack_magically(client):
+async def test_a_deactivated_form_does_not_attack(client):
     cid = await _druid(client, 6, "moon")
     form = await _active_form(client, cid, actions=[WOLF_BITE])
     await client.post(f"/characters/{cid}/companions/{form}/deactivate")
-    assert (await _bite(client, cid, form))["is_magical"] is False
+    r = await client.post(f"/characters/{cid}/companions/{form}/attack", json={"action_index": 0, "dice": [12]})
+    assert r.status_code == 409  # gli attacchi della bestia esistono solo in forma (2014 pag. 66)
 
 
 # ---------------------------------------------------------------------------

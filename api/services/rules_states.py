@@ -20,7 +20,7 @@ from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.roll_options import keep_target_effect, refund_spent
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX
-from core.rules.states import begin_state, has_state, settle_closed
+from core.rules.states import begin_state, has_state, item_spell_held, settle_closed
 from core.rules.types import RuleContext, StateSpec, parse_dice
 from core.rules.uses import pool_key
 
@@ -131,7 +131,7 @@ def end_states_on_rest(char, rest: str) -> list[str]:
     closed = (end_states(char, "rest_short", "rest_long", within=LONG_REST_ROUNDS) if rest == "long"
               else end_states(char, "rest_short", within=SHORT_REST_ROUNDS))
     # la concentrazione legata a uno stato chiuso finisce con lui (quella degli incantesimi resta, D8)
-    held = ((char.settings or {}).get("concentration_item_spell") or {}).get("feature_key")
+    held = item_spell_held(char).get("feature_key")
     if held and held not in {s.get("feature_key") for s in get_states(char)}:
         from api.services.durations import end_concentration  # import locale: durations importa questo modulo
         end_concentration(char)

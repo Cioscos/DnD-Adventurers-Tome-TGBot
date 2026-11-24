@@ -63,3 +63,17 @@ describe('weaponRangeFt (PA1)', () => {
     expect(weaponRangeFt({ name: 'Arco di Corvo', item_metadata: { weapon_type: 'ranged' } }, CATALOG)).toBeNull()
   })
 })
+
+describe('weaponOptions — Combattente con due armi 2024 (CB-1518)', () => {
+  const weapon = (id: number, properties: string[]) => ({ id, item_type: 'weapon', is_equipped: true, item_metadata: { properties } })
+  const char = (feats: string[]) => ({
+    classes: [], rules_edition: '2024', ability_scores: [], items: [weapon(1, ['prop_light']), weapon(2, [])],
+    abilities: feats.map((k) => ({ feature_key: k })),
+  }) as never
+
+  it('a non-light melee weapon is offered only with the feat and a light one in the other hand', () => {
+    expect(weaponOptions(weapon(2, []), char([])).offhand).toBe(false)
+    expect(weaponOptions(weapon(2, []), char(['feat.2024_dual_wielder'])).offhand).toBe(true)
+    expect(weaponOptions(weapon(2, ['prop_two_handed']), char(['feat.2024_dual_wielder'])).offhand).toBe(false)
+  })
+})

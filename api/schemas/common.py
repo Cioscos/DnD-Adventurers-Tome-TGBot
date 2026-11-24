@@ -7,8 +7,9 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from core.utils.reachable_names import VISIBLE
 from core.utils.reachable_names import is_reachable
-from core.db.models import RestorationType
+from core.db.models import ABILITY_NAMES, RestorationType
 from core.game.actions import ActionType
 
 # Valid restoration_type values, derived from the enum so the schema can never
@@ -128,8 +129,14 @@ def _blank_to_none(v: Optional[str]) -> Optional[str]:
     return (v.strip() or None) if isinstance(v, str) else v
 
 
+def _spellcasting_ability(v: Optional[str]) -> Optional[str]:
+    if v is not None and (v := v.strip().lower()) not in ABILITY_NAMES:
+        raise ValueError("unknown ability")
+    return v
+
+
 class CharacterClassCreate(BaseModel):
-    class_name: str
+    class_name: str = Field(pattern=VISIBLE)
     level: int = Field(default=1, ge=1, le=20)
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
@@ -138,6 +145,7 @@ class CharacterClassCreate(BaseModel):
     skill_choices: Optional[list[str]] = None
 
     _subclass_blank = field_validator("subclass")(_blank_to_none)
+    _ability_known = field_validator("spellcasting_ability")(_spellcasting_ability)
 
 
 class CharacterClassUpdate(BaseModel):
@@ -149,6 +157,7 @@ class CharacterClassUpdate(BaseModel):
     hp_rolls: Optional[list[int]] = None  # one die roll per gained level (not a column)
 
     _subclass_blank = field_validator("subclass")(_blank_to_none)
+    _ability_known = field_validator("spellcasting_ability")(_spellcasting_ability)
 
 
 class ClassLevelEntry(BaseModel):
@@ -273,7 +282,7 @@ class AbilityRead(BaseModel):
 
 
 class AbilityCreate(BaseModel):
-    name: str
+    name: str = Field(pattern=VISIBLE)
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None
@@ -286,7 +295,7 @@ class AbilityCreate(BaseModel):
 
 
 class AbilityUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, pattern=VISIBLE)
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None

@@ -30,6 +30,7 @@ from api.schemas.encounter import (
     InitiativeRollRequest,
     PendingSaveResolve,
     ReorderRequest,
+    check_condition_value,
 )
 from api.services import telegram_notify
 from api.services.d20 import d20_records, resolve_body
@@ -584,6 +585,12 @@ async def patch_combatant(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": "pc_conditions_on_sheet"},
         )
+    for slug, value in (body.conditions or {}).items():  # ciò che cambia: un valore vecchio rimandato non blocca
+        if value != (comb.conditions or {}).get(slug):
+            try:
+                check_condition_value(slug, value)
+            except ValueError as err:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(err)) from err
     touches_hp = (
         body.current_hp is not None or body.max_hp is not None or body.ac is not None
     )
@@ -930,6 +937,8 @@ async def end_encounter(
                 names.append("Concentrazione")
             if names:
                 ended.append(f"{char.name}: {', '.join(names)}")
+    await db.flush()  # le concentrazioni sono finite per tutti: le condizioni che sospendevano sono tornate e cadono con le altre
+    for cid in {c.character_id for c in enc.combatants if c.character_id is not None}:
         # Le durate in round e i TS ripetuti contano solo in combattimento: finito quello, la condizione cade (L5)
         for eff in (await db.execute(select(ConditionEffect).where(
                 ConditionEffect.character_id == cid,

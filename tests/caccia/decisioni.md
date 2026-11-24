@@ -16,3 +16,8 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-010 | Le forme 2024 la cui CA era stata sovrascritta (CB-337) vanno ripristinate? | No: si correggono a mano dalla scheda della forma | 2026-11-24 |
 | D-011 | I campi numerici delle richieste devono rifiutare `true`? | No, oltre a quelli già stretti (CB-257): la UI non lo manda e l'effetto resta sul proprio personaggio | 2026-11-24 |
 | D-012 | Creazione: un background con abilità scelto dopo la classe faceva perdere in silenzio le competenze doppie | Anche nel 2014 il background viene prima della classe; nel 2024 l'identità ha solo il testo libero; il server rifiuta i doppioni in entrambe le edizioni | 2026-11-24 |
+| D-013 | Minimo del punteggio di caratteristica effettivo (oggetti con malus)? | 1, come il punteggio base: il modificatore non scende sotto -5 | 2026-11-24 |
+| D-014 | Due serate programmate della stessa campagna nello stesso istante? | Rifiuto 409: una campagna non ha due serate programmate nello stesso istante | 2026-11-24 |
+| D-015 | Compagno con PF massimi 0: a terra o PF non segnati? | PF non segnati: può agire, e la scheda e il campo down non lo danno a terra | 2026-11-24 |
+| D-016 | Limite delle durate delle condizioni inviate dal giocatore? | Massimo 9999 round, oltre 422 | 2026-11-24 |
+| D-017 | Una condizione già attiva con CD e fonte, ritoccata dal giocatore con una durata, perde CD e fonte? | No: stessa protezione degli effetti del master | 2026-11-24 |

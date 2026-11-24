@@ -2,13 +2,17 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import Filter
 from api.services.homebrew.filters import evaluate_filter
+from api.services.homebrew.path_resolver import PathResolutionError
 from core.db.models import Character, CharacterClass, HomebrewRule, Item
+
+logger = logging.getLogger(__name__)
 
 
 async def load_snapshot(session: AsyncSession, char: Character, items=None) -> tuple[list[HomebrewRule], list[Item]]:
@@ -87,9 +91,13 @@ def _sum_modifiers(snapshot: tuple[list[HomebrewRule], list[Item]], char: Charac
                     "character": {"id": char.id, "name": char.name},
                     "vars": {},
                 }
-                cond = Filter.model_validate(mod["when"])
-                if evaluate_filter(cond, ctx):
-                    val = mod["value"]
+                try:
+                    applies = evaluate_filter(Filter.model_validate(mod["when"]), ctx)
+                except (PathResolutionError, KeyError, TypeError, ValueError) as exc:  # percorso inesistente o condizione illeggibile: la regola non si applica, la scheda resta leggibile
+                    logger.warning("homebrew rule %s skipped: %s", rule.id, exc)
+                    continue
+                if applies:
+                    val = mod.get("value")
                     if isinstance(val, int):
                         total += val
                     # dice notation in MVP is treated as static 0 (deferred)

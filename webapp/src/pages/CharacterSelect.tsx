@@ -45,7 +45,7 @@ import {
   speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice,
 } from '@/lib/species'
 import { localized } from '@/lib/srd/catalog'
-import { STANDARD_ARRAY, arrayScores, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
+import { STANDARD_ARRAY, arrayScores, overMax, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -143,11 +143,12 @@ export default function CharacterSelect() {
   const equipKey = `${edition}:${selectedClass?.class_name ?? ''}`
   const [equipPicks, setEquipPicks] = useEquipPicks(equipKey)
   // Ricchezza in monete: legata a edizione+classe come le scelte, cambiando chiave si spegne da sola.
-  const [wealthKey, setWealthKey] = useState<string | null>(null)
-  const wealth = wealthKey === equipKey
+  const [wealthPick, setWealthPick] = useEquipPicks<true>(equipKey)
+  const wealth = wealthPick === true
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = uiLang(i18n.language)
   const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
+  const scoreBonuses: Record<string, number> = (is2024 ? bg24?.increases : speciesPayload?.ability_bonuses) ?? {}
 
   const charactersQuery = useQuery({
     queryKey: ['characters'],
@@ -238,6 +239,7 @@ export default function CharacterSelect() {
     setOriginFeat(null)
     setSpecies24({ entry: null, options: {} })
     setBg24(null)
+    setWealthPick(null)
   }
 
   const handleNameNext = () => {
@@ -833,7 +835,7 @@ export default function CharacterSelect() {
                 mode={scoreMode}
                 scores={scores}
                 pool={scorePool}
-                bonuses={is2024 ? bg24?.increases ?? {} : speciesPayload?.ability_bonuses ?? {}}
+                bonuses={scoreBonuses}
                 onChange={(mode, sc, pool) => { setScoreMode(mode); setScores(sc); setScorePool(pool) }}
               />
               <WizardFooter
@@ -842,7 +844,7 @@ export default function CharacterSelect() {
                 onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={() => { setScoresSkipped(false); goNext() }}
-                primaryDisabled={!scoresValid(scoreMode, scores)}
+                primaryDisabled={!scoresValid(scoreMode, scores) || overMax(scores, scoreBonuses)}
                 primaryHaptic="medium"
               />
               <Pressable
@@ -857,7 +859,7 @@ export default function CharacterSelect() {
           {step === 'equipment' && selectedClass && (
             <m.div key="step-equipment" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
               <EquipmentStep edition={edition} className={selectedClass.class_name} picks={equipPicks} onPicks={setEquipPicks}
-                wealth={wealth} onWealth={(on) => setWealthKey(on ? equipKey : null)} />
+                wealth={wealth} onWealth={(on) => setWealthPick(on || null)} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
@@ -867,7 +869,7 @@ export default function CharacterSelect() {
                 primaryHaptic="medium"
               />
               <Pressable
-                onClick={() => { setEquipPicks(null); setWealthKey(null); goNext() }}
+                onClick={() => { setEquipPicks(null); setWealthPick(null); goNext() }}
                 className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
               >
                 {t('character.create.equipment_skip')}

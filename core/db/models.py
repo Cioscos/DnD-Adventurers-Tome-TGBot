@@ -823,6 +823,8 @@ class SessionMessage(Base):
     recipient_user_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, nullable=True, index=True
     )
+    # PG che ha ricevuto l'oggetto: il giocatore può cambiarlo a serata aperta
+    recipient_character_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     sender_display_name: Mapped[Optional[str]] = mapped_column(
         String(120), nullable=True
     )
@@ -954,6 +956,8 @@ class ConditionEffect(Base):
     source_spell_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("spells.id", ondelete="SET NULL"), nullable=True
     )
+    # Concentrazione su un incantesimo di un oggetto o privilegio: chiave di ``item_concentration``
+    source_item_spell: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     applied_by_gm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Fonte scritta dal GM ("Ragnatela"), oltre o al posto della creatura (U35)
     source_note: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)

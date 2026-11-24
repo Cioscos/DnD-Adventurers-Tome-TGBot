@@ -83,22 +83,24 @@ async def _get_campaign(
 
 
 async def _my_last_character_id(db: AsyncSession, campaign_id: int, user_id: int) -> Optional[int]:
-    """The caller's PG from the most recent campaign session, if still an enrolled non-dead member."""
-    return (await db.execute(
-        select(SessionParticipant.character_id)
-        .join(GameSession, GameSession.id == SessionParticipant.session_id)
-        .join(CampaignMember, and_(
-            CampaignMember.character_id == SessionParticipant.character_id,
-            CampaignMember.campaign_id == campaign_id,
-            CampaignMember.status != "dead",
-        ))
-        .where(
-            GameSession.campaign_id == campaign_id,
-            SessionParticipant.user_id == user_id,
-            SessionParticipant.character_id.is_not(None),
-        )
+    """The caller's PG from the most recent campaign session (seated or left early), if still an enrolled non-dead member."""
+    enrolled = set((await db.execute(select(CampaignMember.character_id).where(
+        CampaignMember.campaign_id == campaign_id, CampaignMember.user_id == user_id,
+        CampaignMember.status != "dead",
+    ))).scalars())
+    rows = (await db.execute(
+        select(SessionParticipant.character_id, GameSession.departed)
+        .select_from(GameSession)
+        .outerjoin(SessionParticipant, and_(
+            SessionParticipant.session_id == GameSession.id, SessionParticipant.user_id == user_id))
+        .where(GameSession.campaign_id == campaign_id)
         .order_by(GameSession.created_at.desc(), GameSession.id.desc())
-    )).scalars().first()
+    )).all()
+    for seated, departed in rows:
+        left = [d.get("character_id") for d in reversed(departed or []) if d.get("user_id") == user_id]
+        if (cid := next((c for c in (seated, *left) if c in enrolled), None)) is not None:
+            return cid
+    return None
 
 
 def _duration(created: str, last: str) -> int:
@@ -362,6 +364,15 @@ def _schedule_read(row: CampaignSchedule) -> ScheduleRead:
     return ScheduleRead(id=row.id, starts_at=row.starts_at, note=row.note, session_id=row.session_id, status=st)
 
 
+async def _check_free_instant(db: AsyncSession, campaign_id: int, starts_at: str, sid: int | None = None) -> None:
+    """D-014: una sola serata programmata per istante."""
+    taken = await db.scalar(select(CampaignSchedule.id).where(
+        CampaignSchedule.campaign_id == campaign_id, CampaignSchedule.starts_at == starts_at,
+        CampaignSchedule.session_id.is_(None), CampaignSchedule.id != (sid or 0)).limit(1))
+    if taken is not None:
+        raise _err(409, "schedule_duplicate")
+
+
 async def _get_schedule(db: AsyncSession, campaign_id: int, sid: int) -> CampaignSchedule:
     row = await db.get(CampaignSchedule, sid)
     if row is None or row.campaign_id != campaign_id:
@@ -383,7 +394,8 @@ async def list_schedule(
     return [_schedule_read(r) for r in rows]
 
 
-@router.post("/{campaign_id}/schedule", response_model=ScheduleRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{campaign_id}/schedule", response_model=ScheduleRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(user_write_lock)])
 async def create_schedule(
     campaign_id: int,
     body: ScheduleCreate,
@@ -393,6 +405,7 @@ async def create_schedule(
     await _get_campaign(db, campaign_id, user_id, gm_only=True)
     if body.starts_at <= _naive_now():
         raise _err(422, "starts_at_in_past")
+    await _check_free_instant(db, campaign_id, body.starts_at)
     row = CampaignSchedule(campaign_id=campaign_id, starts_at=body.starts_at,
                            note=body.note or None, created_at=_naive_now())
     db.add(row)
@@ -400,7 +413,7 @@ async def create_schedule(
     return _schedule_read(row)
 
 
-@router.patch("/{campaign_id}/schedule/{sid}", response_model=ScheduleRead)
+@router.patch("/{campaign_id}/schedule/{sid}", response_model=ScheduleRead, dependencies=[Depends(user_write_lock)])
 async def update_schedule(
     campaign_id: int,
     sid: int,
@@ -415,6 +428,7 @@ async def update_schedule(
             raise _err(409, "schedule_done")
         if body.starts_at <= _naive_now():
             raise _err(422, "starts_at_in_past")
+        await _check_free_instant(db, campaign_id, body.starts_at, sid)
         row.starts_at = body.starts_at
         row.reminded_day_at = row.reminded_hour_at = None
     if "note" in body.model_fields_set:

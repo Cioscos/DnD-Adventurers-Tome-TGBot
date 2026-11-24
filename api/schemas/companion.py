@@ -5,13 +5,14 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
+from core.utils.reachable_names import VISIBLE
 from core.rules.companions import COMPANION_FEATURES, MAX_HIT_DICE, MAX_MULTIATTACK
 from api.services.dice_notation import DICE_RE  # noqa: F401 — riesportata: companions.py la importa da qui
 from api.schemas.common import ConcentrationSaveResult, D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 CompanionKind = Literal["familiar", "companion", "mount", "summon", "wild_shape"]
 MAX_COMPANIONS = 30
-CompanionName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+CompanionName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100, pattern=VISIBLE)]
 
 
 def validate_statblock(sb: Any) -> dict:

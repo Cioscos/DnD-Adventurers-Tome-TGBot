@@ -36,7 +36,7 @@ from api.schemas.spell import (
     SpellUpdate,
     SpellUseRequest,
 )
-from api.services.durations import end_concentration, start_concentration
+from api.services.durations import end_concentration, is_concentrating, start_concentration
 from core.data.damage_types import LABELS_IT, canonical_damage_type
 from api.services.effects import casts_verbally, end_hide
 from api.services.rules_states import end_on_action
@@ -46,7 +46,7 @@ from api.services.spell_effects import apply_spell_effects, cast_level, cast_dam
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
-from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
+from api.routers._helpers import collect_homebrew_notifications, refuse_null, roll_concentration_save
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
@@ -71,7 +71,7 @@ from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
 from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
-from core.rules.states import begin_state, free_cast_state, has_state
+from core.rules.states import begin_state, free_cast_state, has_state, item_spell_held
 from core.rules.types import StateSpec
 from api.services.choices import consume_spell_pick, ensure_new_spell, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
@@ -412,6 +412,7 @@ async def update_spell(
     _check_class(char, data.get("class_id"))
     if data.get("always_prepared") is None:
         data.pop("always_prepared", None)
+    refuse_null(Spell, data)
     new_always = data.get("always_prepared", spell.always_prepared)
     if new_always:
         if data.get("is_prepared") is False:
@@ -774,8 +775,9 @@ async def update_concentration(
 ) -> CharacterFull:
     char = await get_owned_full(char_id, user_id, session)
     if body.spell_id is None:
-        if char.concentrating_spell_id is not None:  # il log della serata e la Cronologia dicono che è stata interrotta
-            name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id), None)
+        if is_concentrating(char):  # il log della serata e la Cronologia dicono che è stata interrotta
+            name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id),
+                        item_spell_held(char).get("name"))
             add_history(session, char.id, "concentration", "Concentrazione interrotta" + (f": {name}" if name else ""))
         end_concentration(char)
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:

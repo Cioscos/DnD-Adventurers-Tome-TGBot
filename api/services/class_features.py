@@ -12,9 +12,9 @@ __all__ = ["sync_cataloged_features", "sync_class_feature_abilities"]
 
 async def sync_cataloged_features(session: AsyncSession, char: Character, *args, **kw) -> None:
     await feature_sync.sync_cataloged_features(session, char, *args, **kw)
-    await cap_current_hp(session, char)  # il core non taglia i PF correnti: il tetto effettivo lo mette questo
+    await cap_current_hp(session, char, always=True)  # il core non taglia i PF correnti: il tetto effettivo lo mette questo
 
 
 async def sync_class_feature_abilities(session: AsyncSession, char: Character, *args, **kw) -> None:
     await feature_sync.sync_class_feature_abilities(session, char, *args, **kw)
-    await cap_current_hp(session, char)
+    await cap_current_hp(session, char, always=True)

@@ -40,3 +40,96 @@ async def test_titoli_irraggiungibili_rinominati_nell_import(client, test_sessio
         await s.commit()
     copia = (await client.post(f"/characters/{nuovo}/duplicate")).json()["id"]
     assert [n["title"] for n in (await client.get(f"/characters/{copia}/notes")).json()] == ["Nota"]
+
+
+async def _file_di_prova(client):
+    cid = (await client.post("/characters", json={"name": "F", "initial_class": {"class_name": "wizard", "level": 1}})).json()["id"]
+    for path, body in (("items", {"name": "Corda", "item_type": "gear"}), ("spells", {"name": "Luce", "level": 0}), ("abilities", {"name": "Dono"})):
+        assert (await client.post(f"/characters/{cid}/{path}", json=body)).status_code == 201
+    return cid, (await client.get(f"/characters/{cid}/export")).json()
+
+
+@pytest.mark.caccia(id="CB-1505", fonte="invariante (come CB-1076): un nome di soli spazi è un nome vuoto, anche in un file", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters/import", "POST /characters/{char_id}/spells", "POST /characters/{char_id}/abilities"])
+@pytest.mark.parametrize("parte,campo", [("classes", "class_name"), ("items", "name"), ("spells", "name"), ("abilities", "name")])
+async def test_import_rifiuta_classi_oggetti_incantesimi_e_capacita_senza_nome(client, parte, campo):
+    cid, dati = await _file_di_prova(client)
+    assert (await client.post("/characters/import", json=dati)).status_code == 201
+    dati[parte][-1][campo] = "   "
+    r = await client.post("/characters/import", json=dati)
+    if parte in ("spells", "abilities"):  # l'app fino alla 3.14.7 li salvava senza nome: il file resta importabile, il vuoto no
+        assert r.status_code == 201 and all(x["name"].strip() for x in r.json()[parte])
+        assert (await client.post(f"/characters/{cid}/{parte}", json={"name": "   "})).status_code == 422
+    else:
+        assert r.status_code == 422
+
+
+@pytest.mark.caccia(id="CB-1506", fonte="invariante (come CB-1374): la caratteristica da incantatore è una delle sei", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters/import"])
+@pytest.mark.parametrize("valore", ["pippo", "INT", "Intelligenza"])
+async def test_import_al_posto_di_una_caratteristica_sconosciuta_usa_quella_della_classe(client, valore):
+    _cid, dati = await _file_di_prova(client)
+    dati["classes"][0]["spellcasting_ability"] = valore
+    r = await client.post("/characters/import", json=dati)
+    assert r.status_code == 201, r.text
+    assert r.json()["classes"][0]["spellcasting_ability"] == "intelligence"
+
+
+@pytest.mark.caccia(id="CB-1536", fonte="invariante (come CB-1505): un nome che non si vede è un nome vuoto", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters/import"])
+async def test_import_un_nome_di_soli_caratteri_invisibili_e_vuoto(client):
+    _cid, dati = await _file_di_prova(client)
+    dati["spells"][-1]["name"] = "\u200b"
+    r = await client.post("/characters/import", json=dati)
+    assert r.status_code == 201 and r.json()["spells"][-1]["name"] == "?"
+    dati["character"]["name"] = "\u200b\u200b"  # CB-1551: l'app fino alla 3.14.7 lo salvava, il file resta importabile
+    assert (await client.post("/characters/import", json=dati)).json()["name"].startswith("?")
+
+
+@pytest.mark.caccia(id="CB-1537", fonte="decisione D-016 (tests/caccia/decisioni.md): massimo 9999 round; invariante: gli id di un altro personaggio non viaggiano",
+                    zona="flusso:import-export-condivisione", voce="limiti", copre=["POST /characters/import"])
+async def test_import_concentrazione_da_oggetto_senza_id_altrui_e_con_i_round_al_massimo(client):
+    _cid, dati = await _file_di_prova(client)
+    dati["character"]["settings"] = {"concentration_rounds_left": 50000, "concentration_item_spell": {"item_id": 1, "name": "X"}}
+    r = await client.post("/characters/import", json=dati)
+    assert r.status_code == 201, r.text
+    s = r.json()["settings"]
+    assert s["concentration_rounds_left"] == 9999 and s["concentration_item_spell"] == {"name": "X"}
+
+
+@pytest.mark.caccia(id="CB-1546", fonte="invariante: un file illeggibile in un punto non rompe la scheda importata", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters/import", "PATCH /characters/{char_id}/hp"])
+@pytest.mark.parametrize("valore", ["X", [1], 5, True, {"name": 5}, {"name": ["x"]}])
+async def test_import_concentrazione_da_oggetto_illeggibile_scartata(client, valore):
+    _cid, dati = await _file_di_prova(client)
+    dati["character"]["settings"] = {"concentration_item_spell": valore}
+    r = await client.post("/characters/import", json=dati)
+    assert r.status_code == 201, r.text
+    assert (await client.patch(f"/characters/{r.json()['id']}/hp", json={"op": "damage", "value": 1})).status_code == 200
+    assert (await client.patch(f"/characters/{r.json()['id']}/concentration", json={"spell_id": None})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1548", fonte="invariante (come CB-1536): un nome che non si vede è un nome vuoto, anche dall'app", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters", "PATCH /characters/{char_id}", "POST /characters/{char_id}/items"])
+async def test_un_nome_invisibile_e_rifiutato_ovunque(client):
+    assert (await client.post("/characters", json={"name": "\u200b"})).status_code == 422
+    cid, _dati = await _file_di_prova(client)
+    assert (await client.patch(f"/characters/{cid}", json={"name": "\u200b"})).status_code == 422
+    for parte in ("items", "spells", "abilities"):
+        assert (await client.post(f"/characters/{cid}/{parte}", json={"name": "\u200b"})).status_code == 422
+    nuovo = (await client.post("/characters", json={"name": "\ue000"})).json()["id"]  # ciò che l'app accetta, il file lo riporta
+    assert (await client.post("/characters/import", json=(await client.get(f"/characters/{nuovo}/export")).json())).status_code == 201
+    assert (await client.patch(f"/characters/{cid}", json={"name": "Ünï ‍👩‍🚀"})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1558", fonte="invariante (come CB-1548): un nome che non si vede è un nome vuoto, per compagni, note e caratteri rari", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters/{char_id}/companions", "POST /characters/{char_id}/notes", "POST /campaigns"])
+@pytest.mark.parametrize("nome", ["\u200b", "\u2800", "\u3164"])
+async def test_nomi_invisibili_rifiutati_anche_per_compagni_note_e_campagne(client, nome):
+    cid, _dati = await _file_di_prova(client)
+    base = f"/characters/{cid}"
+    for url, corpo in ((f"{base}/items", {"name": nome, "item_type": "gear"}), (f"{base}/notes", {"title": nome, "body": "x"}), ("/campaigns", {"name": nome}),
+                       (f"{base}/companions", {"kind": "companion", "name": nome, "max_hp": 5, "armor_class": 10, "statblock": {}})):
+        assert (await client.post(url, json=corpo)).status_code == 422, url
+        visibile = {k: ("Ok" if k in ("name", "title") else v) for k, v in corpo.items()}
+        assert (await client.post(url, json=visibile)).status_code in (200, 201), url

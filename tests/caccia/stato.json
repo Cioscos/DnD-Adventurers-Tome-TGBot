@@ -2,7 +2,7 @@
   "ritirati": [],
   "zone": {
     "flusso:attacco-danno": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -18,7 +18,7 @@
       }
     },
     "flusso:campagna-calendario": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -29,12 +29,12 @@
         "normale": "fatta",
         "permessi": "fatta",
         "persistenza": "fatta",
-        "regola": "non_applicabile",
+        "regola": "fatta",
         "ripetizione": "fatta"
       }
     },
     "flusso:caratteristiche-tiri": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -50,7 +50,7 @@
       }
     },
     "flusso:compagni-forme": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -66,7 +66,7 @@
       }
     },
     "flusso:concentrazione": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -82,7 +82,7 @@
       }
     },
     "flusso:condizioni": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -98,7 +98,7 @@
       }
     },
     "flusso:creazione": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",
@@ -114,7 +114,7 @@
       }
     },
     "flusso:dadi": {
-      "commit": "aea7de5321097560b718a638def37a6a4445cbf2",
+      "commit": "006ff27b38b7fbdcde02cb243e6aebea8ddc1a55",
       "data": "2026-11-24",
       "voci": {
         "annullamento": "fatta",

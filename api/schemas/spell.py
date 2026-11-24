@@ -6,6 +6,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from core.utils.reachable_names import VISIBLE
 from core.rules.spell_healing import SPELL_HEALING
 from api.services.dice_notation import DICE_RE as _EXTRA_DICE_RE
 from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
@@ -74,7 +75,7 @@ class SpellRead(BaseModel):
 
 
 class SpellCreate(BaseModel):
-    name: str
+    name: str = Field(pattern=VISIBLE)
     level: int = 0
     description: Optional[str] = None
     casting_time: Optional[str] = None
@@ -99,7 +100,7 @@ class SpellCreate(BaseModel):
 
 
 class SpellUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, pattern=VISIBLE)
     level: Optional[int] = None
     description: Optional[str] = None
     casting_time: Optional[str] = None
@@ -213,7 +214,7 @@ class SpellSlotUpdate(BaseModel):
 
 class ConcentrationUpdate(BaseModel):
     spell_id: Optional[int] = None  # null to drop concentration
-    rounds: Optional[int] = Field(default=None, ge=0)
+    rounds: Optional[int] = Field(default=None, ge=0, le=9999)  # D-016
 
 
 class RollDamageRequest(RollOptionsBody):

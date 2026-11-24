@@ -16,7 +16,7 @@ from api.services.condition_effects import (
 from api.services.history import add_history
 from api.services.rules_states import end_counted_at_turn_end, end_states, end_unextended, get_states, tick_states
 from api.services.turn_start import apply_turn_start
-from core.rules.states import SPELL_GIVEN, exhaustion_level
+from core.rules.states import SPELL_GIVEN, SUSPENDED_EFFECTS, SUSPENDED_ON, exhaustion_level
 from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged, set_surprised
 
 
@@ -40,7 +40,10 @@ def start_concentration(char: Character, spell_id: int | None, rounds: int | Non
                         item_spell: dict | None = None, level: int | None = None) -> None:
     """Begin concentrating, properly ending any previous one first. ``level``: livello del lancio, per ritirare i danni
     dei turni successivi senza un altro slot (Guardiani spirituali, Raggio di luna)."""
+    again = (char.concentrating_spell_id == spell_id if spell_id is not None
+             else item_spell is not None and (char.settings or {}).get("concentration_item_spell") == item_spell)
     end_concentration(char)
+    char.concentration_restarted = again  # solo in memoria: ``release_concentration_effects`` fa cadere anche gli effetti dello stesso incantesimo
     char.concentrating_spell_id = spell_id
     s = dict(char.settings or {})
     if item_spell is not None:
@@ -94,10 +97,33 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
     return entry, ended
 
 
+def tick_suspended(char: Character) -> dict:
+    """Le durate delle condizioni sospese (Calmare Emozioni) scorrono: quella scaduta nel frattempo non torna (2014 pag. 218).
+    Ritorna com'erano le voci toccate, per l'annullo del turno."""
+    settings = char.settings or {}
+    saved, marks = dict(settings.get(SUSPENDED_EFFECTS) or {}), dict(settings.get(SUSPENDED_ON) or {})
+    before = {}
+    for slug, effect in list(saved.items()):
+        left = effect.get("expiry_count")
+        if slug not in marks or not _is_int(left):
+            continue
+        before[slug] = {"effect": effect, "by": marks[slug]}
+        if left > 1:
+            saved[slug] = {**effect, "expiry_count": left - 1}
+        else:
+            saved.pop(slug)
+            marks.pop(slug)
+    if before:
+        char.settings = {**{k: v for k, v in settings.items() if k not in (SUSPENDED_EFFECTS, SUSPENDED_ON)},
+                         **({SUSPENDED_EFFECTS: saved} if saved else {}), **({SUSPENDED_ON: marks} if marks else {})}
+    return before
+
+
 async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
     """Manual "end of round": every expiry on the PC -1 (any anchor/edge), concentration
     -1. No repeated saves (out of combat there are no turns)."""
     expired: list[str] = []
+    tick_suspended(char)
     for eff in await effects_for_character(session, char.id):
         if eff.expiry_count is None:
             continue
@@ -180,6 +206,8 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
         if char.heroic_inspiration and not was_inspired:  # Guerriero Eroico: l'annullamento la toglie
             undo.char_states[str(char.id)]["inspired"] = True
         if combatant.extra_turn_of is None:  # il secondo turno dei Riflessi è nello stesso round: gli stati scorrono una volta
+            if touched := tick_suspended(char):
+                undo.char_states[str(char.id)]["suspended"] = touched
             expired += tick_states(char)
             entry, ended = _tick_concentration(db, char)
             if entry is not None:

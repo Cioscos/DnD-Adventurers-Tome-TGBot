@@ -41,6 +41,7 @@ from core.game.stats import effective_ability_score, roll_ability_mod
 from core.game.containers import container_meta, is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta, weapon_magic_bonus
 from api.routers._helpers import (
+    refuse_null,
     apply_con_hp as _apply_con_hp,
     collect_homebrew_notifications,
     effective_con_mod,
@@ -269,6 +270,7 @@ async def update_item(
     was_equipped = item.is_equipped
 
     data = body.model_dump(exclude_unset=True)
+    refuse_null(Item, data)
     if "item_metadata" in data:
         data["item_metadata"] = json.dumps(data["item_metadata"]) if data["item_metadata"] else None
 
@@ -541,6 +543,27 @@ def _own_slot_attack(char: Character, body: AttackSubmission | None) -> bool:
     return bool(body and uses_own_slot(char, body.options or []))
 
 
+def one_handed_melee(item: Item) -> bool:
+    return not has_property(item, "two_handed") and (item_meta(item).get("weapon_type") or "melee") == "melee"
+
+
+def _opens_offhand(char: Character, item: Item) -> bool:
+    """L'attacco con quest'arma dà diritto all'altra mano: leggera (nel 2014 da mischia), o a una mano con Combattente a Due Armi."""
+    if has_feat(char, "feat.dual_wielder"):
+        return one_handed_melee(item)
+    return has_property(item, "light") and (
+        character_edition(char) == "2024" or (item_meta(item).get("weapon_type") or "melee") == "melee")
+
+
+def _note_action_weapon(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
+    """Armi degli attacchi dell'azione Attacco, in ordine: [id (0: senz'armi), se apre l'altra mano]. Si decide ora: l'arma
+    può sparire dall'inventario prima dell'altra mano."""
+    if not _own_slot_attack(char, body):
+        turn = get_turn(char)
+        entry = [item.id, _opens_offhand(char, item)] if item else [0, False]
+        char.turn_state = {**turn, "action_weapons": [*(turn.get("action_weapons") or []), entry]}
+
+
 def _note_martial_attack(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
     """Arti Marziali: l'azione Attacco è stata fatta con un colpo senz'armi o un'arma da monaco, senza armatura né scudo.
     Solo così il colpo senz'armi extra con l'azione bonus è ammesso (``turn_state["martial_attack"]``)."""
@@ -811,8 +834,6 @@ async def attack_with_weapon(
 
     # Validate the choices before consuming inspiration.
     if offhand and has_feat(char, "feat.dual_wielder"):  # Combattente a Due Armi 2014: armi da mischia a una mano, anche non leggere
-        one_handed_melee = lambda i: (not has_property(i, "two_handed")  # noqa: E731
-                                      and (item_meta(i).get("weapon_type") or "melee") == "melee")
         if not one_handed_melee(item):
             raise HTTPException(status_code=422, detail="offhand_two_handed")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and one_handed_melee(i) for i in char.items):
@@ -820,7 +841,8 @@ async def attack_with_weapon(
     elif offhand:
         if character_edition(char) == "2014" and (meta.get("weapon_type") or "melee") != "melee":
             raise HTTPException(status_code=422, detail="offhand_not_melee")  # 2014 p.195: arma da mischia leggera
-        if not has_property(item, "light"):
+        # 2024 pag. 203: con Combattente a Due Armi basta un'arma da mischia senza Due Mani (l'attacco dell'azione resta con una leggera)
+        if not has_property(item, "light") and not (has_feat(char, "feat.2024_dual_wielder") and one_handed_melee(item)):
             raise HTTPException(status_code=422, detail="offhand_not_light")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and has_property(i, "light")
                    for i in char.items):
@@ -828,8 +850,14 @@ async def attack_with_weapon(
     else:
         _check_attack_limit(char, body, item)
     # L'attacco con l'altra mano segue un attacco dell'azione Attacco (2014 p.195, 2024 p.213): da solo non esiste.
-    if offhand and get_turn(char)["action_attacks"] < 1:
-        raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
+    if offhand:
+        turn = get_turn(char)
+        if turn["action_attacks"] < 1:
+            raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
+        used = turn.get("action_weapons") or []
+        # Un attacco dell'azione segnato a mano non dice con quale arma è stato fatto: quello vale.
+        if len(used) >= turn["action_attacks"] and not any(opens and weapon_id != item.id for weapon_id, opens in used):
+            raise HTTPException(status_code=409, detail={"code": "offhand_needs_light_attack"})
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
             i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
@@ -902,6 +930,7 @@ async def attack_with_weapon(
             if loading_applies(char, item):  # contati per arma: il tetto della Ricarica è suo
                 shots = get_turn(char).get("loading_shots") or {}
                 char.turn_state = {**get_turn(char), "loading_shots": {**shots, str(item.id): shots.get(str(item.id), 0) + 1}}
+            _note_action_weapon(char, item, body)
             _note_martial_attack(char, item, body)
         elif NICK_OPTION not in opts.keys:
             spend(char, "bonus")
@@ -910,11 +939,13 @@ async def attack_with_weapon(
     ammo_state: AmmoState | None = None
     ammo_missing = False
     if any("ammunition" in p.lower() for p in properties):
-        source = next(
+        source = slotted = next(
             (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION), None
         )
-        if source is None:
-            ammo = [i for i in char.items if i.item_type == "ammunition"]
+        if source is None or source.quantity <= 0:
+            # Pila nello slot finita: solo altre dello stesso nome, mai munizioni di un altro tipo.
+            ammo = [i for i in char.items if i.item_type == "ammunition"
+                    and (slotted is None or i.name.lower() == slotted.name.lower())]
             quick_ids = {
                 c.id for c in char.items if (m := container_meta(c)) and m.get("quick_access")
             }
@@ -991,6 +1022,7 @@ def _unarmed_effect(session: AsyncSession, char: Character, effect: str, dc: int
     use_options(session, char, "attack", None)  # è un tiro nuovo: il precedente non si ritocca più
     _set_pending_attack(char, None)
     spend(char, "attack")
+    _note_action_weapon(char, None, None)
     add_history(session, char.id, "attack_roll", f"Colpo senz'armi ({effect}): CD {dc}")
     return WeaponAttackResult(
         weapon_name="Attacco a mano libera", to_hit_die=0, to_hit_bonus=0, to_hit_total=0, is_critical=False,
@@ -1069,6 +1101,7 @@ async def attack_unarmed(
     _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble, to_hit_total)
     if not (body and body.with_inspiration):
         spend(char, "attack", own_slot=_own_slot_attack(char, body))  # il rilancio con ispirazione è lo stesso attacco
+        _note_action_weapon(char, None, body)
         _note_martial_attack(char, None, body)
 
     firing_results = await dispatch(

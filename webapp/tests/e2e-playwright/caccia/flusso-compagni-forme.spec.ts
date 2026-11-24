@@ -29,13 +29,14 @@ test('eliminare la forma attiva dalla pagina Extra chiude anche la forma sul per
   expect((await apiRequest.post(`/characters/${id}/companions/${formId}/activate`, { data: {} })).ok()).toBeTruthy()
   const page = await comeUtente(UTENTE)
   await page.goto(`/?dev_user=${UTENTE}#/char/${id}/extras`)
+  // `exact`: la home, ancora a schermo durante il cambio di pagina, ha la scheda «Druido elimina forma»
   // un tocco mentre la pagina sta ancora entrando può non lasciare aperto il foglio: si riprova finché non c'è
   await expect(async () => {
-    if (!(await page.getByText('Eliminare Lupo?').isVisible())) await page.getByRole('button', { name: 'Elimina' }).click({ timeout: 1000 })
+    if (!(await page.getByText('Eliminare Lupo?').isVisible())) await page.getByRole('button', { name: 'Elimina', exact: true }).click({ timeout: 1000 })
     await page.waitForTimeout(400)
     await expect(page.getByText('Eliminare Lupo?')).toBeVisible({ timeout: 500 })
   }).toPass({ timeout: 10_000 })
-  const conferma = page.getByRole('button', { name: 'Elimina' }).nth(1) // quello del foglio, non della scheda
+  const conferma = page.getByRole('button', { name: 'Elimina', exact: true }).nth(1) // quello del foglio, non della scheda
   const eliminata = page.waitForResponse((r) => r.request().method() === 'DELETE')
   await conferma.click()
   expect((await eliminata).ok()).toBeTruthy()

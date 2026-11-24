@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
+from core.utils.reachable_names import VISIBLE
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES
 from api.schemas.common import (
@@ -428,7 +429,7 @@ class SpeciesApply(BaseModel):
 
 
 class CharacterCreate(BaseModel):
-    name: str = Field(pattern=r"\S")
+    name: str = Field(pattern=VISIBLE)
 
     @field_validator("name")
     @classmethod
@@ -467,7 +468,7 @@ class CharacterCreate(BaseModel):
 
 class CharacterUpdate(BaseModel):
     """Partial update for identity / metadata fields."""
-    name: Optional[str] = Field(None, pattern=r"\S")
+    name: Optional[str] = Field(None, pattern=VISIBLE)
     race: Optional[str] = None
     gender: Optional[str] = None
     background: Optional[str] = None
@@ -531,7 +532,7 @@ class ConditionsUpdate(BaseModel):
     """Map of condition_slug → bool or int (exhaustion level)."""
     conditions: dict[str, Any]  # i valori si validano nella rotta, solo su ciò che cambia
     # slug -> rounds left; None removes the duration
-    durations: Optional[dict[str, Optional[int]]] = None
+    durations: Optional[dict[str, Optional[Annotated[int, Field(le=9999)]]]] = None  # D-016, come il campo della pagina
 
 
 class InspirationUpdate(BaseModel):

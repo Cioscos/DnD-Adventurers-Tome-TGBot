@@ -50,3 +50,37 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByText('12')).toBeTruthy()
   })
 })
+
+describe('WeaponAttackModal, giro 2', () => {
+  // caccia: {"id": "CB-808", "fonte": "2024 · Maestria · Colpo di striscio · pag. 214: il danno sul mancato è mostrato, a zero solo la nota", "zona": "flusso:attacco-danno", "voce": "limiti", "copre": ["route:/char/:id/inventory"]}
+  it('il colpo di striscio mostra il danno, a zero mostra solo la nota di mancato e nessun blocco del danno normale', () => {
+    const { rerender } = render(<WeaponAttackModal result={{ ...base, to_hit_die: 3, grazed: true, damage_rolls: [], damage_bonus: 3, damage_total: 3 }} onClose={() => {}} />)
+    expect(screen.getByText('character.attack.grazed')).toBeTruthy()
+    expect(screen.getByText('3')).toBeTruthy()
+    expect(screen.queryByText('character.attack.damage', { exact: false })).toBeNull()
+    rerender(<WeaponAttackModal result={{ ...base, to_hit_die: 3, grazed: true, damage_rolls: [], damage_bonus: 0, damage_total: 0 }} onClose={() => {}} />)
+    expect(screen.getByText('character.attack.missed_noted')).toBeTruthy()
+    expect(screen.queryByText('character.attack.grazed')).toBeNull()
+  })
+
+  // caccia: {"id": "CB-809", "fonte": "2024 · Colpo senz'armi · pag. 377: Afferrare e Spingere non hanno tiro per colpire né danno, solo la CD", "zona": "flusso:attacco-danno", "voce": "contratto", "copre": ["route:/char/:id/inventory"]}
+  it('afferrare mostra la CD e non il tiro per colpire né il danno', () => {
+    render(<WeaponAttackModal result={{ ...base, to_hit_die: 0, to_hit_bonus: 0, to_hit_total: 0, damage_dice: '', damage_rolls: [], damage_bonus: 0, damage_total: 0, effect: 'grapple', save_dc: 13 }} onClose={() => {}} />)
+    expect(screen.getByTestId('unarmed-effect').textContent).toContain('"dc":13')
+    expect(screen.queryByText('character.attack.to_hit')).toBeNull()
+    expect(screen.queryByText('character.attack.damage', { exact: false })).toBeNull()
+  })
+
+  // caccia: {"id": "CB-810", "fonte": "invariante: l'ultima munizione spesa si vede come zero rimaste, non sparisce", "zona": "flusso:attacco-danno", "voce": "limiti", "copre": ["route:/char/:id/inventory"]}
+  it('con la pila di munizioni a zero rimaste il modale lo scrive', () => {
+    render(<WeaponAttackModal result={{ ...base, ammo: { item_id: 1, name: 'Frecce', remaining: 0 } }} onClose={() => {}} />)
+    expect(screen.getByText('Frecce: 0')).toBeTruthy()
+  })
+
+  // caccia: {"id": "CB-811", "fonte": "invariante: un colpo senza danno tirato (arma magica negativa nel modale) mostra il segno meno sul modificatore", "zona": "flusso:attacco-danno", "voce": "limiti", "copre": ["route:/char/:id/inventory"]}
+  it('il modificatore negativo del danno e del colpire si legge con il segno meno', () => {
+    render(<WeaponAttackModal result={{ ...base, to_hit_bonus: -1, to_hit_total: 11, damage_rolls: [2], damage_bonus: -2, damage_total: 0 }} onClose={() => {}} />)
+    expect(screen.getByText('[2] -2')).toBeTruthy()
+    expect(screen.getByText('-1', { exact: false })).toBeTruthy()
+  })
+})

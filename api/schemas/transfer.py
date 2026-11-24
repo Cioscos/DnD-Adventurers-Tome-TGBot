@@ -10,9 +10,11 @@ from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
 from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
+from core.data.classes import CLASS_SPELLCASTING, class_table_key
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.species_2024 import SPECIES_2024
 from core.db.models import ABILITY_NAMES, EquipmentSlot
+from core.utils.reachable_names import is_visible
 from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
 
@@ -37,6 +39,21 @@ def _cap(n: int) -> AfterValidator:
     return AfterValidator(check)
 
 
+def _named(v: str, info: ValidationInfo) -> str:
+    if (info.context or {}).get("lenient"):  # l'export non cambia ciò che è salvato
+        return v
+    if not v.strip():
+        raise ValueError("blank name")
+    return v.strip() if is_visible(v) else "?"  # l'app lo accettava fino alla 3.14.7: il file resta importabile
+
+
+def _named_or_mark(v: str, info: ValidationInfo) -> str:
+    """Le versioni fino alla 3.14.7 salvavano incantesimi e capacità senza nome: il file resta importabile, con un segno al posto del vuoto."""
+    return v if (info.context or {}).get("lenient") else v.strip() if is_visible(v) else "?"
+
+
+MarkedName = Annotated[str, AfterValidator(_named_or_mark)]
+Named = Annotated[str, AfterValidator(_named)]
 Int0 = Annotated[int, _rng(0, 1_000_000)]
 Restoration = Literal["long_rest", "short_rest", "none", "manual"]
 
@@ -75,7 +92,7 @@ class ExportCharacter(BaseModel):
         except ValueError:
             return None
 
-    name: str = Field(min_length=1, max_length=100)
+    name: Annotated[str, AfterValidator(_named)] = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
     species_key: Optional[str] = Field(None, max_length=40)  # specie 2024 del motore; chiave sconosciuta = nessun tratto
     species_options: dict = Field(default_factory=dict, max_length=10)  # come SpeciesChoiceIn; valori non solo str (_feat_ability_id è un id)
@@ -140,12 +157,22 @@ class ExportCharacter(BaseModel):
 
 
 class ExportClass(BaseModel):
-    class_name: str = Field(max_length=100)
+    class_name: Named = Field(max_length=100)
     level: Annotated[int, _rng(1, 20)] = 1
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[Annotated[int, _rng(1, 100)]] = None
     hit_dice_used: Int0 = 0
+    @field_validator("spellcasting_ability")
+    @classmethod
+    def _known_ability(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        """Una caratteristica inventata diventa quella della classe (il file resta importabile); l'export non cambia ciò che è salvato."""
+        if v is None or (info.context or {}).get("lenient"):
+            return v
+        if (key := v.strip().lower()) in ABILITY_NAMES:
+            return key
+        return CLASS_SPELLCASTING.get(class_table_key(info.data.get("class_name") or "") or "")  # «INT»: quella della classe
+
     # {gruppo: [chiave_opzione]}: scelte di classe (core/rules/types.py::ChoiceSpec)
     options: dict[str, Annotated[list[str], _cap(40)]] = Field(default_factory=dict)
 
@@ -178,7 +205,7 @@ class ExportAbilityScore(BaseModel):
 class ExportItem(BaseModel):
     ref: Optional[int] = None  # chiave locale al file, mai un id DB
     container_ref: Optional[int] = None
-    name: str = Field(max_length=200)
+    name: Named = Field(max_length=200)
     description: Optional[str] = None
     weight: Annotated[float, _rng(0, 1_000_000)] = 0.0
     quantity: Int0 = 1
@@ -201,7 +228,7 @@ class ExportItem(BaseModel):
 
 class ExportSpell(BaseModel):
     export_key: str = Field(max_length=20)
-    name: str = Field(max_length=200)
+    name: MarkedName = Field(max_length=200)
     level: Annotated[int, _rng(0, 9)] = 0
     description: Optional[str] = None
     casting_time: Optional[str] = None
@@ -240,7 +267,7 @@ _OPTION_LISTS = {"picks", "tools", "instruments", "cantrips", "spell", "granted"
 
 
 class ExportAbility(BaseModel):
-    name: str = Field(max_length=200)
+    name: MarkedName = Field(max_length=200)
     description: Optional[str] = None
     max_uses: Optional[Int0] = None
     uses: Optional[Int0] = None
@@ -296,7 +323,7 @@ class ExportCurrency(BaseModel):
 
 
 class ExportHomebrewRule(BaseModel):
-    name: str = Field(max_length=100)
+    name: MarkedName = Field(max_length=100)
     version: Annotated[int, _rng(1, 1_000_000)] = 1
     description: Optional[str] = None
     enabled: bool = True
@@ -315,7 +342,7 @@ class ExportHomebrewResource(BaseModel):
 
 class ExportCompanion(BaseModel):
     kind: Literal["familiar", "companion", "mount", "summon", "wild_shape"]
-    name: str = Field(min_length=1, max_length=100)
+    name: Annotated[str, AfterValidator(_named)] = Field(min_length=1, max_length=100)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     statblock: dict = Field(default_factory=dict)
     max_hp: Int0 = 0
@@ -343,6 +370,12 @@ class ExportConditionEffect(BaseModel):
     save_dc: Optional[Annotated[int, _rng(1, 100)]] = None
     save_edge: Optional[Literal["start", "end"]] = None
     source_note: Optional[str] = Field(None, max_length=120)
+
+    @field_validator("expiry_count")
+    @classmethod
+    def _max_rounds(cls, v: Optional[int], info: ValidationInfo) -> Optional[int]:
+        """D-016: al massimo 9999 round; un file più vecchio si accorcia, non si rifiuta."""
+        return v if v is None or (info.context or {}).get("lenient") else min(v, 9999)
 
 
 class CharacterExport(BaseModel):
