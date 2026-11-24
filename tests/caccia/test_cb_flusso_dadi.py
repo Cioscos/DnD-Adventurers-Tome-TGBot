@@ -276,7 +276,6 @@ async def test_iniziativa_con_dadi_fissati_in_storico_e_statistiche(client):
     assert (await client.post(f"/characters/{cid}/dice/initiative", json={"dice": [3], "mode": "advantage"})).status_code == 422
 
 
-@pytest.mark.xfail(strict=True, reason="CB-752 la risposta di dice/result restituisce modifier 0")
 @pytest.mark.caccia(id="CB-752", fonte="invariante: la risposta restituisce il modificatore inviato", zona="flusso:dadi", voce="contratto",
                     copre=["POST /characters/{char_id}/dice/result"])
 async def test_risposta_del_tiro_riporta_il_modificatore(client):

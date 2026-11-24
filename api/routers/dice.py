@@ -192,7 +192,7 @@ async def post_dice_result(
         char_id, notation, total, len(char.rolls_history or []),
     )
 
-    return DiceRollResult(notation=notation, rolls=rolls, total=total)
+    return DiceRollResult(notation=notation, rolls=rolls, total=total, modifier=body.modifier)
 
 
 @router.get("/{char_id}/dice/history", response_model=list[DiceRollResult])
