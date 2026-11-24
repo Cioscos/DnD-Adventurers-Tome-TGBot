@@ -541,11 +541,25 @@ def _own_slot_attack(char: Character, body: AttackSubmission | None) -> bool:
     return bool(body and uses_own_slot(char, body.options or []))
 
 
+def one_handed_melee(item: Item) -> bool:
+    return not has_property(item, "two_handed") and (item_meta(item).get("weapon_type") or "melee") == "melee"
+
+
+def _opens_offhand(char: Character, item: Item) -> bool:
+    """L'attacco con quest'arma dà diritto all'altra mano: leggera (nel 2014 da mischia), o a una mano con Combattente a Due Armi."""
+    if has_feat(char, "feat.dual_wielder"):
+        return one_handed_melee(item)
+    return has_property(item, "light") and (
+        character_edition(char) == "2024" or (item_meta(item).get("weapon_type") or "melee") == "melee")
+
+
 def _note_action_weapon(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
-    """Armi degli attacchi dell'azione Attacco, in ordine (0: senz'armi): l'altra mano ne chiede una leggera diversa."""
+    """Armi degli attacchi dell'azione Attacco, in ordine: [id (0: senz'armi), se apre l'altra mano]. Si decide ora: l'arma
+    può sparire dall'inventario prima dell'altra mano."""
     if not _own_slot_attack(char, body):
         turn = get_turn(char)
-        char.turn_state = {**turn, "action_weapons": [*(turn.get("action_weapons") or []), item.id if item else 0]}
+        entry = [item.id, _opens_offhand(char, item)] if item else [0, False]
+        char.turn_state = {**turn, "action_weapons": [*(turn.get("action_weapons") or []), entry]}
 
 
 def _note_martial_attack(char: Character, item: Item | None, body: AttackSubmission | None) -> None:
@@ -817,12 +831,7 @@ async def attack_with_weapon(
     offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
-    opens_offhand = lambda i: has_property(i, "light") and (  # noqa: E731  # l'arma dell'attacco che apre l'altra mano
-        character_edition(char) == "2024" or (item_meta(i).get("weapon_type") or "melee") == "melee")
     if offhand and has_feat(char, "feat.dual_wielder"):  # Combattente a Due Armi 2014: armi da mischia a una mano, anche non leggere
-        one_handed_melee = lambda i: (not has_property(i, "two_handed")  # noqa: E731
-                                      and (item_meta(i).get("weapon_type") or "melee") == "melee")
-        opens_offhand = one_handed_melee
         if not one_handed_melee(item):
             raise HTTPException(status_code=422, detail="offhand_two_handed")
         if not any(i.id != item.id and i.item_type == "weapon" and i.is_equipped and one_handed_melee(i) for i in char.items):
@@ -844,8 +853,7 @@ async def attack_with_weapon(
             raise HTTPException(status_code=409, detail={"code": "offhand_needs_attack"})
         used = turn.get("action_weapons") or []
         # Un attacco dell'azione segnato a mano non dice con quale arma è stato fatto: quello vale.
-        if len(used) >= turn["action_attacks"] and not any(
-                i.id in used and i.id != item.id and opens_offhand(i) for i in char.items):
+        if len(used) >= turn["action_attacks"] and not any(opens and weapon_id != item.id for weapon_id, opens in used):
             raise HTTPException(status_code=409, detail={"code": "offhand_needs_light_attack"})
     if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
         if any(
@@ -928,11 +936,13 @@ async def attack_with_weapon(
     ammo_state: AmmoState | None = None
     ammo_missing = False
     if any("ammunition" in p.lower() for p in properties):
-        source = next(
-            (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION and i.quantity > 0), None
+        source = slotted = next(
+            (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION), None
         )
-        if source is None:
-            ammo = [i for i in char.items if i.item_type == "ammunition"]
+        if source is None or source.quantity <= 0:
+            # Pila nello slot finita: solo altre dello stesso nome, mai munizioni di un altro tipo.
+            ammo = [i for i in char.items if i.item_type == "ammunition"
+                    and (slotted is None or i.name.lower() == slotted.name.lower())]
             quick_ids = {
                 c.id for c in char.items if (m := container_meta(c)) and m.get("quick_access")
             }

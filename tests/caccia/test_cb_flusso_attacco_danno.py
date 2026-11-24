@@ -1225,3 +1225,39 @@ async def test_il_master_non_attacca_con_il_personaggio_di_un_giocatore(client, 
     assert (await _senz_armi(client, cid)).status_code in (403, 404)
     as_user(PLAYER_ID)
     assert (await _turno(client, cid))["action_attacks"] == 0
+
+
+@pytest.mark.caccia(id="CB-1498", fonte="invariante: una pila finita passa solo ad altre dello stesso tipo", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("altre", [["Quadrelli"], ["Frecce +1"], ["Frecce", "Quadrelli"]])
+async def test_pila_nello_slot_finita_non_spende_munizioni_di_un_altro_tipo(client, dadi, altre):
+    cid = await _pg(client, dexterity=16)
+    arco = await _arma(client, cid, "Arco corto", "1d6", ["ammunition", "two-handed"], tipo="ranged", equip=True)
+    nello_slot = await _oggetto(client, cid, "Frecce", "ammunition", quantity=1)
+    await _slot(client, cid, nello_slot, "ammunition")
+    sciolte = {n: await _oggetto(client, cid, n, "ammunition", quantity=10) for n in altre}
+    dadi(3)
+    _j(await _att(client, cid, arco))
+    await client.post(f"/characters/{cid}/turn/new")
+    dadi(3)
+    assert _j(await _att(client, cid, arco))["ammo_missing"] is ("Frecce" not in altre)
+    for nome, iid in sciolte.items():
+        assert (await _pila(client, cid, iid))["quantity"] == (9 if nome == "Frecce" else 10)
+
+
+@pytest.mark.caccia(id="CB-1499", fonte="2014 · Combattere con Due Armi · pag. 195; 2024 · Armi · Leggera · pag. 213: conta l'arma dell'attacco fatto", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+@pytest.mark.parametrize("edizione", ["2014", "2024"])
+async def test_l_altra_mano_resta_aperta_se_l_arma_dell_attacco_sparisce(client, dadi, edizione):
+    cid = await _pg(client, "fighter", 1, edizione, dexterity=16)
+    a = await _arma(client, cid, "Spada corta", "1d6", ["finesse", "light"])
+    b = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, b, "off_hand")
+    ascia = await _arma(client, cid, "Ascia", "1d6", ["light", "thrown"], equip=True)
+    dadi(3)
+    _j(await _att(client, cid, ascia))
+    r = await client.delete(f"/characters/{cid}/items/{ascia}")
+    assert r.status_code < 300, r.text
+    dadi(3)
+    _j(await _att(client, cid, b, attack_mode="offhand"))
