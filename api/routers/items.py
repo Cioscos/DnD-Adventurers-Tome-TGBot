@@ -929,7 +929,7 @@ async def attack_with_weapon(
     ammo_missing = False
     if any("ammunition" in p.lower() for p in properties):
         source = next(
-            (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION), None
+            (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION and i.quantity > 0), None
         )
         if source is None:
             ammo = [i for i in char.items if i.item_type == "ammunition"]

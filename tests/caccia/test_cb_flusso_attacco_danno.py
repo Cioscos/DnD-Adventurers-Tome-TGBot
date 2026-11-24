@@ -1108,7 +1108,6 @@ async def test_2024_attacco_dell_altra_mano_con_una_balestra_a_mano_spende_una_m
     assert (await _turno(client, cid))["bonus_used"] is True
 
 
-@pytest.mark.xfail(strict=True, reason="CB-813 la pila vuota nello slot munizioni blocca le altre pile")
 @pytest.mark.caccia(id="CB-813", fonte="invariante: una pila di munizioni finita non blocca le altre pile dello stesso tipo (come la faretra vuota di CB-040)", zona="flusso:attacco-danno",
                     voce="limiti", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_pila_nello_slot_munizioni_finita_si_passa_alle_frecce_sciolte(client, dadi):
