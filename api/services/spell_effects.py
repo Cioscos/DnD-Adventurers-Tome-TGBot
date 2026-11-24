@@ -343,7 +343,8 @@ async def apply_spell_effects(session: AsyncSession, caster: Character, spell, s
     if rolled:
         data["per_target"] = rolled
     ends = [*(["concentration_end"] if concentration else []), *([f"rest_{variant.until_rest}"] if variant.until_rest else []), *variant.clock_ends_on]
-    begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data}),
+    counted = {"skip_new_turns": 1} if "turn_end_counted" in ends else {}  # fino alla fine del turno seguente (Interdizione alle Lame 2014)
+    begin_state(caster, StateSpec(clock, rounds=rounds, ends_on=tuple(ends) or ("manual",), data={"spell_key": effect.key, "state_data": data, **counted}),
                 clock, spell.name)
     settings = dict(caster.settings or {})  # riletto: la chiusura del lancio precedente può averlo cambiato
     regranted = {(a["id"], key) for a in applied}

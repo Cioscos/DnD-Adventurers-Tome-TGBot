@@ -146,7 +146,7 @@ async def test_resistance_2024_reduces_the_chosen_type_by_a_d4_once_per_turn(cli
     assert "spell:resistance:reduce" not in await _roll_keys(client, hero, "damage_taken", damage_type="fire")  # una volta per turno
 
 
-async def test_blade_ward_2014_halves_only_confirmed_weapon_damage_and_lasts_one_round(client, test_session_factory):
+async def test_blade_ward_2014_halves_only_confirmed_weapon_damage_until_the_end_of_the_next_turn(client, test_session_factory):
     hero, caster, spell = await _table(client, test_session_factory, "Blade Ward", "blade-ward", 0)
     await _cast(client, caster, spell, [])
     as_user(GM_ID)
@@ -159,6 +159,9 @@ async def test_blade_ward_2014_halves_only_confirmed_weapon_damage_and_lasts_one
         r = await client.patch(f"/characters/{caster}/hp", json={"op": "damage", "value": 10, "damage_type": "slashing", "options": opts})
         assert r.status_code == 200, r.text
         assert (await _full(client, caster))["current_hit_points"] == left
+    # 2014 spells.md p.245: fino alla fine del turno successivo dell'incantatore. Un round dopo (il suo turno seguente) vale ancora
+    await client.post(f"/characters/{caster}/rounds/tick")
+    assert "spell:blade_ward:weapon" in await _roll_keys(client, caster, "damage_taken", damage_type="slashing")
     await client.post(f"/characters/{caster}/rounds/tick")
     assert "spell:blade_ward:weapon" not in await _roll_keys(client, caster, "damage_taken", damage_type="slashing")
 

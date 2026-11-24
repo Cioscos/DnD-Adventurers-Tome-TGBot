@@ -66,7 +66,8 @@ _AURA_PURITY_2024 = SpellVariant(modifiers=res("poison"), options=(_PURITY_OPTIO
 BLADE_WARD_2014 = SpellVariant(
     options=(confirm_physical("spell:blade_ward:weapon", txt("Interdizione alle Lame: è il danno di un attacco con arma?",
                                                              "Blade Ward: is it the damage of a weapon attack?")),),
-    rounds=1,
+    # l'orologio finisce alla fine del turno che segue il lancio (2014 p.245); i 2 round sono il tetto fuori incontro
+    rounds=2, clock_ends_on=("new_turn", "turn_end_counted"),
     text=txt("Resistenza ai danni degli attacchi con armi fino alla fine del tuo turno successivo: conferma al danno che viene da un attacco con arma.",
              "Resistance to weapon attack damage until the end of your next turn: confirm on the damage that it comes from a weapon attack."))
 

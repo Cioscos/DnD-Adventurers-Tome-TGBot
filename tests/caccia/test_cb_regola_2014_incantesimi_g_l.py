@@ -100,7 +100,6 @@ async def test_immagine_maggiore_dal_sesto_livello_non_toglie_la_concentrazione_
 @pytest.mark.caccia(id="CB-3314", fonte="2014 · Incantesimi · Interdizione alle Lame · pag. 245", zona="regola:2014/incantesimi-G-L", voce="limiti",
                     copre=["carta:2014/spells.md#Interdizione alle Lame", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "POST /sessions/{session_id}/encounter/next-turn"])
-@pytest.mark.xfail(strict=True, reason="CB-3314: difforme dal manuale, confermato")
 async def test_interdizione_alle_lame_vale_ancora_nel_turno_successivo_di_chi_la_lancia(client, test_session_factory):
     sessione, incontro = await setup_full_encounter(client, test_session_factory)
     eroe = next(c for c in incontro["combatants"] if c["kind"] == "pc")["character_id"]
