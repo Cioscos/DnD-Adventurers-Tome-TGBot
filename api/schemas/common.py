@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from core.utils.reachable_names import VISIBLE
 from core.utils.reachable_names import is_reachable
 from core.db.models import ABILITY_NAMES, RestorationType
 from core.game.actions import ActionType
@@ -135,7 +136,7 @@ def _spellcasting_ability(v: Optional[str]) -> Optional[str]:
 
 
 class CharacterClassCreate(BaseModel):
-    class_name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
+    class_name: str = Field(pattern=VISIBLE)
     level: int = Field(default=1, ge=1, le=20)
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
@@ -281,7 +282,7 @@ class AbilityRead(BaseModel):
 
 
 class AbilityCreate(BaseModel):
-    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
+    name: str = Field(pattern=VISIBLE)
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None
@@ -294,7 +295,7 @@ class AbilityCreate(BaseModel):
 
 
 class AbilityUpdate(BaseModel):
-    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
+    name: Optional[str] = Field(None, pattern=VISIBLE)
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None

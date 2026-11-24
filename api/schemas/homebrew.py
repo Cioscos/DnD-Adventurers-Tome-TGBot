@@ -1,16 +1,28 @@
 """Pydantic schemas exposed by the homebrew router."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from api.services.homebrew.dsl import RuleDSL
 from api.services.homebrew.types import Severity
+from core.utils.reachable_names import VISIBLE
+
+
+def _check_comparable(node: Any) -> None:
+    """Una condizione che confronta una lista o un oggetto non è mai vera. Solo da chi scrive la regola: un file vecchio resta importabile."""
+    if isinstance(node, dict):
+        if "path" in node and node.get("op") in ("has_property", "lt", "lte", "gt", "gte") and isinstance(node.get("value"), (list, dict)):
+            raise ValueError(f"value not comparable with op '{node['op']}'")
+        node = list(node.values())
+    if isinstance(node, list):
+        for child in node:
+            _check_comparable(child)
 
 
 class HomebrewRuleCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    name: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=100, pattern=VISIBLE)
     description: Optional[str] = None
     dsl: dict
     enabled: bool = True
@@ -21,12 +33,13 @@ class HomebrewRuleCreate(BaseModel):
     def _dsl_valid(cls, v: dict) -> dict:
         # Strict validation — raises ValidationError if shape is wrong.
         RuleDSL.model_validate(v)
+        _check_comparable(v)
         return v
 
 
 class HomebrewRuleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, pattern=VISIBLE)
     description: Optional[str] = None
     dsl: Optional[dict] = None
     enabled: Optional[bool] = None
@@ -36,6 +49,7 @@ class HomebrewRuleUpdate(BaseModel):
     def _dsl_valid(cls, v):
         if v is not None:
             RuleDSL.model_validate(v)
+            _check_comparable(v)
         return v
 
 

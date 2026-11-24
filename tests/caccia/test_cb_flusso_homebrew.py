@@ -76,3 +76,17 @@ async def test_una_condizione_homebrew_con_un_valore_non_confrontabile_non_blocc
     regola = _build_passive_rule("x", {"type": "character"}, "character.hit_points_max", 10, {"path": "$character", "op": "has_property", "value": ["a"]})
     assert (await client.post(f"/characters/{cid}/homebrew/rules", json=regola)).status_code in (201, 422)
     assert (await client.get(f"/characters/{cid}")).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1557", fonte="invariante: una condizione che non può essere vera si rifiuta a chi la scrive; un file vecchio resta importabile", zona="flusso:homebrew",
+                    voce="contratto", copre=["POST /characters/{char_id}/homebrew/rules", "POST /characters/import"])
+@pytest.mark.parametrize("op", ["has_property", "gt"])
+async def test_una_condizione_non_confrontabile_si_rifiuta_ma_il_file_si_importa(client, op):
+    cid = (await client.post("/characters", json={"name": "H", "initial_class": {"class_name": "fighter", "level": 3}})).json()["id"]
+    buona = _build_passive_rule("x", {"type": "character"}, "character.hit_points_max", 10, {"path": "$character.level", "op": op, "value": "1"})
+    assert (await client.post(f"/characters/{cid}/homebrew/rules", json=buona)).status_code == 201
+    dati = (await client.get(f"/characters/{cid}/export")).json()
+    brutta = _build_passive_rule("x", {"type": "character"}, "character.hit_points_max", 10, {"path": "$character.level", "op": op, "value": ["1"]})
+    assert (await client.post(f"/characters/{cid}/homebrew/rules", json=brutta)).status_code == 422
+    dati["homebrew_rules"][0]["dsl"] = brutta["dsl"]
+    assert (await client.post("/characters/import", json=dati)).status_code == 201

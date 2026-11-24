@@ -6,6 +6,7 @@ from typing import Annotated, Literal, Optional
 
 from pydantic import AfterValidator, BaseModel, StringConstraints
 
+from core.utils.reachable_names import VISIBLE
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
 
@@ -13,7 +14,7 @@ MemberStatus = Literal["active", "reserve", "dead"]
 
 
 class CampaignCreate(BaseModel):
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120, pattern=VISIBLE)]
 
 
 class CampaignEnroll(BaseModel):

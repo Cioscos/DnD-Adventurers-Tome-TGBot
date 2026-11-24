@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
+from core.utils.reachable_names import VISIBLE
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES
 from api.schemas.common import (
@@ -428,7 +429,7 @@ class SpeciesApply(BaseModel):
 
 
 class CharacterCreate(BaseModel):
-    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
+    name: str = Field(pattern=VISIBLE)
 
     @field_validator("name")
     @classmethod
@@ -467,7 +468,7 @@ class CharacterCreate(BaseModel):
 
 class CharacterUpdate(BaseModel):
     """Partial update for identity / metadata fields."""
-    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
+    name: Optional[str] = Field(None, pattern=VISIBLE)
     race: Optional[str] = None
     gender: Optional[str] = None
     background: Optional[str] = None

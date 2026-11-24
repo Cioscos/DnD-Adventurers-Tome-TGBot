@@ -10,7 +10,7 @@ from api.services.session_allies import ally_target, load_receiver
 from core.data.labels import condition_label
 from core.db.models import Character
 from core.rules.condition_removal import ConditionRemoval, outcome_lines, resolve_picks
-from core.rules.states import SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state, has_state
+from core.rules.states import RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state, has_state
 from core.rules.types import StateSpec
 
 
@@ -67,7 +67,8 @@ async def resuspend(session: AsyncSession, caster: Character) -> None:
         if await session.get(Character, entry["id"]) is None:
             continue
         target = await load_receiver(session, entry["id"])
-        present = [c for c in entry["conditions"] if (target.conditions or {}).get(c)]
+        returned = (target.settings or {}).get(RETURNED_FROM) or {}  # tolta e ripresa nel frattempo: è un'altra, resta
+        present = [c for c in entry["conditions"] if (target.conditions or {}).get(c) and returned.get(c) == caster.id]
         if not present:
             continue
         effects = await _suspended_effects(session, target, present)

@@ -40,7 +40,10 @@ def start_concentration(char: Character, spell_id: int | None, rounds: int | Non
                         item_spell: dict | None = None, level: int | None = None) -> None:
     """Begin concentrating, properly ending any previous one first. ``level``: livello del lancio, per ritirare i danni
     dei turni successivi senza un altro slot (Guardiani spirituali, Raggio di luna)."""
+    again = (char.concentrating_spell_id == spell_id if spell_id is not None
+             else item_spell is not None and (char.settings or {}).get("concentration_item_spell") == item_spell)
     end_concentration(char)
+    char.concentration_restarted = again  # solo in memoria: ``release_concentration_effects`` fa cadere anche gli effetti dello stesso incantesimo
     char.concentrating_spell_id = spell_id
     s = dict(char.settings or {})
     if item_spell is not None:

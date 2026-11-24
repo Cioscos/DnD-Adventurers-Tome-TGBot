@@ -120,3 +120,16 @@ async def test_un_nome_invisibile_e_rifiutato_ovunque(client):
     nuovo = (await client.post("/characters", json={"name": "\ue000"})).json()["id"]  # ciò che l'app accetta, il file lo riporta
     assert (await client.post("/characters/import", json=(await client.get(f"/characters/{nuovo}/export")).json())).status_code == 201
     assert (await client.patch(f"/characters/{cid}", json={"name": "Ünï ‍👩‍🚀"})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1558", fonte="invariante (come CB-1548): un nome che non si vede è un nome vuoto, per compagni, note e caratteri rari", zona="flusso:import-export-condivisione",
+                    voce="contratto", copre=["POST /characters/{char_id}/companions", "POST /characters/{char_id}/notes", "POST /campaigns"])
+@pytest.mark.parametrize("nome", ["\u200b", "\u2800", "\u3164"])
+async def test_nomi_invisibili_rifiutati_anche_per_compagni_note_e_campagne(client, nome):
+    cid, _dati = await _file_di_prova(client)
+    base = f"/characters/{cid}"
+    for url, corpo in ((f"{base}/items", {"name": nome, "item_type": "gear"}), (f"{base}/notes", {"title": nome, "body": "x"}), ("/campaigns", {"name": nome}),
+                       (f"{base}/companions", {"kind": "companion", "name": nome, "max_hp": 5, "armor_class": 10, "statblock": {}})):
+        assert (await client.post(url, json=corpo)).status_code == 422, url
+        visibile = {k: ("Ok" if k in ("name", "title") else v) for k, v in corpo.items()}
+        assert (await client.post(url, json=visibile)).status_code in (200, 201), url

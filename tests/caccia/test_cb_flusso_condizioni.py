@@ -1199,3 +1199,78 @@ async def test_turno_indietro_ridà_la_condizione_a_chi_era_gia_immune(client, t
     await client.post(f"/sessions/{sid}/encounter/prev-turn")
     async with test_session_factory() as s:
         assert (await s.get(Character, cid)).conditions["frightened"] is True
+
+
+@pytest.mark.caccia(id="CB-1556", fonte="invariante: l'annullo rimette ciò che l'operazione aveva cambiato, non una condizione presa dopo", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /characters/{char_id}/hp/undo"])
+async def test_annullo_pf_non_sospende_una_condizione_presa_dopo(client, test_session_factory):
+    cid = await _affascinato_sospeso(client, test_session_factory, durata=5)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).json()
+    assert r["conditions"]["charmed"] is True
+    await _cond(client, cid, {"charmed": False})
+    await _cond(client, cid, {"charmed": True}, durations={"charmed": 77})
+    u = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r["hp_undo_id"]})
+    assert u.status_code == 200, u.text
+    j = await _scheda(client, cid)
+    assert j["conditions"]["charmed"] is True and [e["expiry_count"] for e in j["condition_effects"]] == [77]
+
+
+@pytest.mark.caccia(id="CB-1559", fonte="invariante: annullare in ordine rimette tutto com'era; 2014 · Calmare Emozioni · pag. 218", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /characters/{char_id}/hp/undo", "POST /sessions/{session_id}/encounter/prev-turn"])
+@pytest.mark.parametrize("caso", ["turno", "master"])
+async def test_annullo_pf_dopo_turno_indietro_o_dopo_il_master(client, test_session_factory, caso):
+    from core.db.models import Character
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+    sid, cid = await _sospeso_in_scontro(client, test_session_factory, 1, 9)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.hit_points = char.current_hit_points = 30
+        await s.commit()
+    as_user(PLAYER_ID)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).json()
+    assert r["conditions"]["charmed"] is True
+    as_user(GM_ID)
+    if caso == "turno":
+        for _ in range(6):
+            await client.post(f"/sessions/{sid}/encounter/next-turn")
+            if not (await _come_giocatore(client, cid))["conditions"]["charmed"]:
+                break
+        assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+        assert (await _come_giocatore(client, cid))["conditions"]["charmed"] is True
+    else:  # il master lo affascina di nuovo: è un'altra condizione
+        live = (await client.get(f"/sessions/{sid}/live")).json()["encounter"]["combatants"]
+        pc = next(c["id"] for c in live if c["kind"] == "pc")
+        assert (await client.post(f"/sessions/{sid}/encounter/combatants/{pc}/conditions",
+                                  json={"slug": "charmed", "expiry": {"anchor": "owner", "edge": "start", "count": 77}})).status_code == 200
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r["hp_undo_id"]})).status_code == 200
+    as_user(GM_ID)
+    assert (await _come_giocatore(client, cid))["conditions"]["charmed"] is (caso == "master")
+
+
+@pytest.mark.caccia(id="CB-1560", fonte="invariante (come CB-1541): «Turno indietro» non ridà un effetto di una concentrazione finita nel frattempo", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_non_ridà_un_effetto_di_una_concentrazione_interrotta(client, test_session_factory):
+    from api.services.condition_effects import ExpirySpec
+    from core.db.models import Character
+    from tests.integration._encounter_helpers import GM_ID, as_user
+    sid, cid, _pc, _m = await _gm_su_pg(client, test_session_factory)
+    async with test_session_factory() as s:
+        mago = Character(user_id=777, name="Mago", settings={"concentration_item_spell": {"name": "X"}})
+        s.add(mago)
+        await s.flush()
+        mid = mago.id
+        (await s.get(Character, cid)).conditions = {"charmed": True}
+        await upsert_effect(s, ("character", cid), "charmed", expiry=ExpirySpec("owner", "start", 1), source_character_id=mid,
+                            source_item_spell=":X", ends_with_concentration=True)
+        await s.commit()
+    as_user(GM_ID)
+    for _ in range(6):
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+        if not (await _come_giocatore(client, cid))["conditions"]["charmed"]:
+            break
+    async with test_session_factory() as s:
+        (await s.get(Character, mid)).settings = {}
+        await s.commit()
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    assert (await _come_giocatore(client, cid))["conditions"]["charmed"] is False

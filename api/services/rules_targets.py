@@ -20,7 +20,7 @@ from api.services.effects import apply_conditions
 from api.services.history import add_history
 from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
-from core.rules.states import add_target_immunity, immune_conditions, is_target_immune
+from core.rules.states import RETURNED_FROM, add_target_immunity, immune_conditions, is_target_immune
 
 
 async def pc_char(db: AsyncSession, comb: Combatant) -> Character:
@@ -76,6 +76,8 @@ async def apply_condition_to_combatant(
         return  # respinta per immunità: né condizione, né effetto, né TS di fine turno
     if not (owner.conditions or {}).get(body.slug):  # keep custom:* payloads on re-apply
         await set_condition(db, comb, body.slug, True)
+    if comb.kind == "pc" and (back := (owner.settings or {}).get(RETURNED_FROM)):  # applicata sopra a quella tornata: è un'altra
+        owner.settings = {**owner.settings, RETURNED_FROM: {c: by for c, by in back.items() if c != body.slug}}
     target = ("character", comb.character_id) if comb.kind == "pc" else ("combatant", comb.id)
     await upsert_effect(
         db, target, body.slug,

@@ -1178,3 +1178,35 @@ async def test_concentrazione_da_oggetto_illeggibile_gia_salvata(client, test_se
     as_user(PLAYER_ID)
     assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).status_code == 200
     assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-1555", fonte="2014 · Concentrazione · pag. 203; 2024 · Glossario, Concentrazione: un nuovo lancio chiude il precedente", zona="flusso:concentrazione", voce="ripetizione",
+                    copre=["POST /characters/{char_id}/spells/{spell_id}/use", "POST /characters/{char_id}/items/{item_id}/cast"])
+@pytest.mark.parametrize("via", ["incantesimo", "oggetto"])
+async def test_rilanciare_lo_stesso_incantesimo_chiude_gli_effetti_del_primo(client, test_session_factory, dadi, via):
+    from core.db.models import Character, ConditionEffect
+    from api.services.condition_effects import item_concentration
+    cid = await _pg(client)
+    altro = await _pg(client)
+    await _slot(client, cid)
+    if via == "oggetto":
+        iid = await _bacchetta(client, cid)
+        dadi(3)
+
+        async def lancia():
+            return await _usa_oggetto(client, cid, iid)
+    else:
+        sid = await _incantesimo(client, cid)
+
+        async def lancia():
+            return await _lancia(client, cid, sid)
+    await lancia()
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        (await s.get(Character, altro)).conditions = {"charmed": True}
+        s.add(ConditionEffect(character_id=altro, slug="charmed", source_character_id=cid, source_spell_id=char.concentrating_spell_id,
+                              source_item_spell=item_concentration(char), ends_with_concentration=True, created_at="2026-11-24T10:00:00"))
+        await s.commit()
+    await lancia()
+    s2 = await _stato(client, altro)
+    assert not s2["conditions"]["charmed"] and s2["condition_effects"] == []

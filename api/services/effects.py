@@ -24,7 +24,7 @@ from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, RETURNED_FROM, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool = False) -> None:
@@ -192,6 +192,8 @@ async def apply_conditions(session: AsyncSession, char: Character,
     if saved := (char.settings or {}).get(SUSPENDED_EFFECTS):
         left = {c: e for c, e in saved.items() if c not in changes}
         char.settings = {**{k: v for k, v in char.settings.items() if k != SUSPENDED_EFFECTS}, **({SUSPENDED_EFFECTS: left} if left else {})}
+    if back := (char.settings or {}).get(RETURNED_FROM):
+        char.settings = {**char.settings, RETURNED_FROM: {c: by for c, by in back.items() if c not in changes}}
     for flag, slug in (("knocked_out", "unconscious"), ("hiding", "invisible")):
         if changes.get(slug, True) is False and (char.settings or {}).get(flag):
             char.settings = {k: v for k, v in char.settings.items() if k != flag}  # tolta a mano: finito
@@ -303,6 +305,7 @@ def _restore_suspended(session: Session, char: Character) -> None:
             receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_ON}, **({SUSPENDED_ON: marks} if marks else {})}
         if back:
             returned.append({"id": receiver.id, "conditions": back})
+            receiver.settings = {**(receiver.settings or {}), RETURNED_FROM: {**((receiver.settings or {}).get(RETURNED_FROM) or {}), **{c: char.id for c in back}}}
             receiver.conditions = {**(receiver.conditions or {}), **{c: True for c in back}}
             for c in back:
                 if c in effects:

@@ -12,6 +12,7 @@ from api.schemas.common import OptionResult, RollMode, absent_when_none
 from api.schemas.container import ContainerStatsRead, validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from api.services.dice_notation import DICE_RE
+from core.utils.reachable_names import VISIBLE
 from core.db.models import EquipmentSlot
 from core.rules.weapons import weapon_mastery
 from api.services.equipment import slot_allowed_for_type
@@ -160,7 +161,7 @@ class ItemRead(BaseModel):
 
 
 class ItemCreate(BaseModel):
-    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
+    name: str = Field(pattern=VISIBLE)
     description: Optional[str] = None
     weight: float = 0.0
     quantity: int = 1
@@ -201,7 +202,7 @@ class ItemCreate(BaseModel):
 
 
 class ItemUpdate(BaseModel):
-    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
+    name: Optional[str] = Field(None, pattern=VISIBLE)
     description: Optional[str] = None
     weight: Optional[float] = None
     quantity: Optional[int] = None

@@ -6,6 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from core.utils.reachable_names import VISIBLE
 from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 
@@ -18,7 +19,7 @@ class EncounterCreateRequest(BaseModel):
 
 
 class CombatantAddRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=120, pattern=VISIBLE)
     count: int = Field(default=1, ge=1, le=20)
     initiative_mod: int = Field(default=0, ge=-10, le=10)
     max_hp: Optional[int] = Field(default=None, ge=1)
@@ -33,7 +34,7 @@ class InitiativeRollRequest(RollOptionsBody):
 
 
 class CombatantPatchRequest(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120, pattern=VISIBLE)
     initiative: Optional[int] = Field(default=None, ge=-10, le=50)
     initiative_mod: Optional[int] = Field(default=None, ge=-10, le=10)
     current_hp: Optional[int] = Field(default=None, ge=0)

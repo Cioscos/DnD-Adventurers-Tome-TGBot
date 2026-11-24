@@ -268,6 +268,8 @@ SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON = "suspended_conditions", "conditions_
 SUSPENDED_EFFECTS = "conditions_suspended_effects"
 # su chi lancia: [{"id", "conditions"}] tornate con l'ultima fine della concentrazione; un annullo le sospende di nuovo
 SUSPENDED_BACK = "conditions_suspended_back"
+# sul ricevente: {condizione tornata: id di chi la sospendeva}, tolta se la condizione cambia (allora un annullo non la sospende)
+RETURNED_FROM = "conditions_returned_from"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
 
 

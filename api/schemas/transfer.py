@@ -1,7 +1,6 @@
 """Schema del file di esportazione/importazione personaggio (format_version 1)."""
 from __future__ import annotations
 
-import unicodedata
 from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, Optional
 
@@ -15,6 +14,7 @@ from core.data.classes import CLASS_SPELLCASTING, class_table_key
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.species_2024 import SPECIES_2024
 from core.db.models import ABILITY_NAMES, EquipmentSlot
+from core.utils.reachable_names import is_visible
 from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
 
@@ -39,21 +39,17 @@ def _cap(n: int) -> AfterValidator:
     return AfterValidator(check)
 
 
-def _visible(v: str) -> bool:
-    return any(not c.isspace() and unicodedata.category(c) not in ("Cf", "Cc") for c in v)  # uno spazio a larghezza zero non è un nome
-
-
 def _named(v: str, info: ValidationInfo) -> str:
     if (info.context or {}).get("lenient"):  # l'export non cambia ciò che è salvato
         return v
     if not v.strip():
         raise ValueError("blank name")
-    return v.strip() if _visible(v) else "?"  # l'app lo accettava fino alla 3.14.7: il file resta importabile
+    return v.strip() if is_visible(v) else "?"  # l'app lo accettava fino alla 3.14.7: il file resta importabile
 
 
 def _named_or_mark(v: str, info: ValidationInfo) -> str:
     """Le versioni fino alla 3.14.7 salvavano incantesimi e capacità senza nome: il file resta importabile, con un segno al posto del vuoto."""
-    return v if (info.context or {}).get("lenient") else v.strip() if _visible(v) else "?"
+    return v if (info.context or {}).get("lenient") else v.strip() if is_visible(v) else "?"
 
 
 MarkedName = Annotated[str, AfterValidator(_named_or_mark)]
@@ -327,7 +323,7 @@ class ExportCurrency(BaseModel):
 
 
 class ExportHomebrewRule(BaseModel):
-    name: str = Field(max_length=100)
+    name: MarkedName = Field(max_length=100)
     version: Annotated[int, _rng(1, 1_000_000)] = 1
     description: Optional[str] = None
     enabled: bool = True
