@@ -540,7 +540,6 @@ async def test_2024_rilancio_senza_attacco_precedente_non_e_gratuito(client, dad
     assert (await _pila(client, cid, fr))["quantity"] == 4
 
 
-@pytest.mark.xfail(strict=True, reason="CB-074 damage_dice non canonico accettato e danno 0 senza errore")
 @pytest.mark.caccia(id="CB-074", fonte="invariante: un'arma accettata infligge danno, o la notazione è rifiutata alla creazione", zona="flusso:attacco-danno",
                     voce="limiti", copre=["POST /characters/{char_id}/items", "POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 @pytest.mark.parametrize("notazione", ["d8", "2d6 + 2", "1d8+1d4"])
