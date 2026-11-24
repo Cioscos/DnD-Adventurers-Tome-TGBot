@@ -103,7 +103,6 @@ async def test_scagliare_maledizione_con_slot_quarto_dura_dieci_minuti_di_concen
 
 @pytest.mark.caccia(id="CB-3414", fonte="2014 · Incantesimi · Tempesta di Vendetta · pag. 284", zona="regola:2014/incantesimi-S-Z", voce="regola",
                     copre=["carta:2014/spells.md#Tempesta di Vendetta", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3414: difforme dal manuale, confermato")
 async def test_tempesta_di_vendetta_il_ts_superato_non_dimezza_il_tuono_iniziale(client):
     cid = await _pg(client, "druid", 17)
     sid = await _impara(client, cid, "storm-of-vengeance")

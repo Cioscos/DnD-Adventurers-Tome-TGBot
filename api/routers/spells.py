@@ -1078,7 +1078,8 @@ async def roll_spell_damage(
 # danno solo a TS fallito (prima riga), oppure danno che non dipende dal TS, che vale solo per l'effetto (punizioni e il resto).
 _NO_HALF_ON_SAVE = {
     "disintegrate", "contagion", "black-tentacles", "hunger-of-hadar", "cordon-of-arrows", "dream", "geas",
-    "contact-other-plane", "faithful-hound", "conjure-animals",
+    "contact-other-plane", "faithful-hound", "conjure-animals", "storm-of-vengeance",
+    "evards-black-tentacles",  # la chiave della riga concessa (Stregoneria Aberrante 2024), non l'indice SRD
     "blinding-smite", "banishing-smite", "searing-smite", "staggering-smite", "thunderous-smite", "wrathful-smite",
     "ensnaring-strike", "feeblemind", "heat-metal", "phantasmal-force", "web", "fount-of-moonlight", "bestow-curse",
 }

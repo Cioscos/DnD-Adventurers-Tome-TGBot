@@ -158,7 +158,6 @@ def test_saltare_concesso_nel_2024_si_lancia_con_un_azione_bonus():
                     zona="regola:2024/incantesimi-S-Z", voce="interazione",
                     copre=["carta:2024/spells.md#Tentacoli neri di Evard", "POST /characters",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3867: difforme dal manuale, confermato")
 async def test_tentacoli_neri_concessi_allo_stregone_aberrante_non_dimezzano_al_ts_superato(client):
     cid = await _pg(client, "sorcerer", 7, "Stregoneria Aberrante")
     riga = await _concesso(client, cid, "evards-black-tentacles")
@@ -169,7 +168,6 @@ async def test_tentacoli_neri_concessi_allo_stregone_aberrante_non_dimezzano_al_
 
 @pytest.mark.caccia(id="CB-3868", fonte="2024 · Incantesimi · Tempesta di Vendetta · pag. 321", zona="regola:2024/incantesimi-S-Z", voce="regola",
                     copre=["carta:2024/spells.md#Tempesta di Vendetta", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3868: difforme dal manuale, confermato")
 async def test_tempesta_di_vendetta_2024_il_ts_superato_non_dimezza_il_tuono(client):
     cid = await _pg(client, "druid", 17)
     sid = await _impara(client, cid, "storm-of-vengeance")
