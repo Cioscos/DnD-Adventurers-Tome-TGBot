@@ -136,7 +136,6 @@ async def test_contattare_altri_piani_non_mostra_la_cd_di_chi_lancia_al_posto_de
 
 @pytest.mark.caccia(id="CB-3217", fonte="2014 · Incantesimi · Colpo Infuocato · pag. 222", zona="regola:2014/incantesimi-A-C", voce="persistenza",
                     copre=["carta:2014/spells.md#Colpo Infuocato", "POST /characters/{char_id}/spells", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-3217: difforme dal manuale, confermato")
 async def test_la_seconda_parte_del_danno_di_colpo_infuocato_scritta_all_aggiunta_resta_salvata(client):
     cid = await _pg(client, "cleric", 9, wisdom=16)
     classe = (await _scheda(client, cid))["classes"][0]["id"]

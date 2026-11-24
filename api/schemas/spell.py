@@ -93,6 +93,9 @@ class SpellCreate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    # Seconda parte del danno, di un altro tipo (Colpo Infuocato: 4d6 fuoco + 4d6 radiosi); limiti come nell'import
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     class_id: Optional[int] = None
     always_prepared: bool = False
     # Scelta di incantesimi in sospeso (Segreti Magici) che questo incantesimo risolve; non è una colonna.
@@ -118,6 +121,9 @@ class SpellUpdate(BaseModel):
     school: Optional[str] = Field(default=None, max_length=30)
     srd_index: Optional[str] = Field(default=None, max_length=80)
     higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
+    # Seconda parte del danno, di un altro tipo (Colpo Infuocato: 4d6 fuoco + 4d6 radiosi); limiti come nell'import
+    extra_damage_dice: Optional[str] = Field(default=None, max_length=20)
+    extra_damage_type: Optional[str] = Field(default=None, max_length=100)
     class_id: Optional[int] = None
     always_prepared: Optional[bool] = None
 
