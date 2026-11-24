@@ -294,14 +294,21 @@ GNOME = (
 )
 
 # --- Halfling (pag. 193) ----------------------------------------------------------------------------------------------
+def _rolled_a_one(ctx: RuleContext) -> bool:
+    """Con Vantaggio o Svantaggio il ritiro tocca uno dei due d20, a scelta (pag. 12-13): conta anche l'1 non tenuto."""
+    if ctx.natural_d20 is None:  # nessun tiro salvato di questo tipo
+        return False
+    return 1 in ((((ctx.turn or {}).get("last_roll") or {}).get("dice")) or [ctx.natural_d20])
+
+
 HALFLING = (
     data_trait("halfling", "brave", 1, 193, roll_options=(_advantage(
         "species.2024_halfling_brave", ("save",), "Coraggioso: il tiro salvezza è contro l'essere spaventato? Vantaggio",
         "Brave: is the saving throw against being frightened? Advantage"),)),
     data_trait("halfling", "halfling_nimbleness", 1, 193),
-    # Gratuita e offerta (non automatica): il manuale dice «puoi ritirare». Il d20 tenuto del tiro salvato dev'essere 1
+    # Gratuita e offerta (non automatica): il manuale dice «puoi ritirare». Basta un 1 fra i d20 del tiro salvato
     data_trait("halfling", "luck", 1, 193, roll_options=(RollOptionSpec(
-        key="species.2024_halfling_luck", phase="after_roll", after="reroll", rolls=D20_TESTS, available=lambda c: c.natural_d20 == 1,
+        key="species.2024_halfling_luck", phase="after_roll", after="reroll", rolls=D20_TESTS, available=_rolled_a_one,
         label=_both("Fortuna: hai fatto 1 sul d20, ritiralo (vale il nuovo risultato)", "Luck: you rolled a 1 on the d20, reroll it (the new roll stands)")),)),
     data_trait("halfling", "naturally_stealthy", 1, 193),
 )
