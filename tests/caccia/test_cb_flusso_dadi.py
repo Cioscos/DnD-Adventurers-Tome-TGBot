@@ -495,3 +495,14 @@ async def test_altro_utente_non_spende_l_ispirazione_altrui(client, come_utente)
     assert (await client.get(f"/characters/{cid}")).json()["heroic_inspiration"] is True
     assert (await client.get(f"/characters/{cid}/dice/history")).json() == []
     assert await _stats(client, cid) == {}
+
+
+@pytest.mark.caccia(id="CB-1507", fonte="invariante (Impostazioni: ultimi N eventi)", zona="flusso:dadi", voce="limiti", copre=["GET /characters/{char_id}/history"])
+async def test_la_pulizia_della_cronologia_vale_anche_per_i_pf(client):
+    pg = (await client.post("/characters", json={"name": "S", "initial_class": {"class_name": "fighter", "level": 5}})).json()
+    cid = pg["id"]
+    await client.patch(f"/characters/{cid}", json={"settings": {**pg["settings"], "history_retention_mode": "events", "history_retention_events": 2}})
+    for n in range(1, 6):
+        assert (await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": n})).status_code == 200
+    voci = (await client.get(f"/characters/{cid}/history")).json()
+    assert len(voci["entries"] if isinstance(voci, dict) else voci) == 2
