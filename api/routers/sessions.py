@@ -59,7 +59,7 @@ from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
-from api.services.recap import close_game_session, dice_baseline, record_departure
+from api.services.recap import close_game_session, dice_baseline, history_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
 from api.services.d20 import set_inspiration
 from api.services.rules_states import remove_state
@@ -489,6 +489,7 @@ async def join_session(
         display_name=char.name,
         joined_at=utc_now_iso(),
         dice_stats_start=dice_baseline(session, char),
+        history_start_id=await history_baseline(db, session, char),
     ))
     touch(session)
     await db.flush()

@@ -795,6 +795,8 @@ class SessionParticipant(Base):
     joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
     # Copia di Character.dice_stats all'ingresso: il riepilogo fa la differenza alla chiusura.
     dice_stats_start: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Ultima voce di cronologia precedente all'ingresso: il riepilogo della serata conta da lì in poi (NULL: dall'inizio)
+    history_start_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     session: Mapped["GameSession"] = relationship(back_populates="participants")
     character: Mapped[Optional["Character"]] = relationship()

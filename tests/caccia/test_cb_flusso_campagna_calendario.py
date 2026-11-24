@@ -440,7 +440,6 @@ async def test_pg_tolto_resta_nel_riepilogo(client, test_session_factory):
     assert [(c["character_id"], c["damage_taken"]) for c in rec["characters"]] == [(cid, 7)]
 
 
-@pytest.mark.xfail(strict=True, reason="CB-160 il riepilogo conta PF e cure di prima che il PG si sieda")
 @pytest.mark.caccia(id="CB-160", fonte="invariante: il riepilogo di un PG parte da quando si siede", zona="flusso:campagna-calendario",
                     voce="interazione", copre=["POST /campaigns/{campaign_id}/session/join", "GET /sessions/{session_id}/recap"])
 async def test_riepilogo_parte_da_quando_il_pg_si_siede(client, test_session_factory):

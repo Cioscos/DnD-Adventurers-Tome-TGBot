@@ -55,6 +55,15 @@ def dice_baseline(gs: GameSession, char: Character) -> dict:
     return copy.deepcopy(char.dice_stats or {})
 
 
+async def history_baseline(db: AsyncSession, gs: GameSession, char: Character) -> int:
+    """history_start_id di un PG che si siede: l'ultima voce di cronologia già scritta (il riepilogo conta da lì in poi).
+    Chi rientra tiene quella della prima volta, come per i dadi."""
+    prev = next((d for d in gs.departed or [] if d.get("character_id") == char.id), None)
+    if prev is not None and prev.get("history_start_id") is not None:
+        return prev["history_start_id"]
+    return await db.scalar(select(func.max(CharacterHistory.id))) or 0
+
+
 def record_departure(gs: GameSession, p: SessionParticipant) -> None:
     """Keep a leaving player in the recap: first baseline wins (rejoin reuses it, see dice_baseline)."""
     if p.character_id is None:
@@ -62,7 +71,9 @@ def record_departure(gs: GameSession, p: SessionParticipant) -> None:
     rest = [d for d in gs.departed or [] if d.get("character_id") != p.character_id]
     prev = next((d for d in gs.departed or [] if d.get("character_id") == p.character_id), None)
     start = p.dice_stats_start if prev is None or prev.get("dice_stats_start") is None else prev["dice_stats_start"]
-    gs.departed = rest + [{"user_id": p.user_id, "character_id": p.character_id, "dice_stats_start": start}]
+    since = p.history_start_id if prev is None or prev.get("history_start_id") is None else prev["history_start_id"]
+    gs.departed = rest + [{"user_id": p.user_id, "character_id": p.character_id, "dice_stats_start": start,
+                           "history_start_id": since}]
 
 
 def _summary(items: list[dict], coins: dict) -> str:
@@ -168,12 +179,12 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         select(SessionParticipant).where(SessionParticipant.session_id == gs.id)
         .order_by(SessionParticipant.id)
     )).scalars().all()
-    # (character_id, dice_stats_start): players still at the table, then those who left early.
-    pcs = [(p.character_id, p.dice_stats_start) for p in parts if p.character_id is not None]
-    present = {cid for cid, _ in pcs}
-    pcs += [(d["character_id"], d.get("dice_stats_start")) for d in gs.departed or []
+    # (character_id, dice_stats_start, history_start_id): players still at the table, then those who left early.
+    pcs = [(p.character_id, p.dice_stats_start, p.history_start_id) for p in parts if p.character_id is not None]
+    present = {cid for cid, _, _ in pcs}
+    pcs += [(d["character_id"], d.get("dice_stats_start"), d.get("history_start_id")) for d in gs.departed or []
             if d.get("character_id") is not None and d["character_id"] not in present]
-    ids = [cid for cid, _ in pcs]
+    ids = [cid for cid, _, _ in pcs]
     chars = {c.id: c for c in (await db.execute(
         select(Character).options(selectinload(Character.classes)).where(Character.id.in_(ids))
     )).scalars()} if ids else {}
@@ -193,8 +204,10 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         )).scalars():
             rows_by_char.setdefault(r.character_id, []).append(r)
     characters = [
-        _char_stats(chars[cid], start, rows_by_char.get(cid, []), window, player_names.get(cid))
-        for cid, start in pcs if cid in chars
+        # solo ciò che è successo da quando si è seduto (senza segno, serate aperte prima della colonna: tutta la finestra)
+        _char_stats(chars[cid], start, [r for r in rows_by_char.get(cid, []) if since is None or r.id > since],
+                    window, player_names.get(cid))
+        for cid, start, since in pcs if cid in chars
     ]
     given: dict[int, int] = {}  # cure date ad altri PG: dalle righe di chi le ha ricevute (meta by_id)
     for rows in rows_by_char.values():

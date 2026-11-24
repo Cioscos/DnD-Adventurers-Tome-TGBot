@@ -40,7 +40,7 @@ from api.services.game_sessions import active_session_id, find_active_session_fo
 from api.schemas.session import GameSessionRead
 from api.services import campaigns as svc
 from api.services.campaigns import create_campaign, generate_campaign_code
-from api.services.recap import dice_baseline, record_departure
+from api.services.recap import dice_baseline, history_baseline, record_departure
 from core.db.models import (
     Campaign,
     CampaignLore,
@@ -521,7 +521,7 @@ async def join_campaign_session(
     db.add(SessionParticipant(
         session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
         character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
-        dice_stats_start=dice_baseline(session, char),
+        dice_stats_start=dice_baseline(session, char), history_start_id=await history_baseline(db, session, char),
     ))
     touch(session)
     await db.flush()
