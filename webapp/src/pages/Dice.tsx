@@ -26,6 +26,7 @@ import ScrollArea from '@/components/ScrollArea'
 import { haptic, isInsideTelegram } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
+import { notifyMutationError } from '@/lib/mutationError'
 import { shownRolls } from '@/lib/shownRolls'
 import { useCharacterStore } from '@/store/characterStore'
 import type { DiceRollResult } from '@/types'
@@ -170,13 +171,9 @@ export default function Dice() {
     },
   })
 
-  // P5: was a bare `api.dice.postToChat(...).catch(() => {})` fire-and-forget
-  // call directly in the tap handler — no pending feedback at all. Wrapped so
-  // the "send to chat" Button can show `loading`. Error handling stays a silent
-  // no-op, matching the original `.catch(() => {})`.
   const postToChatMutation = useMutation({
     mutationFn: (result: DiceRollResult) => api.dice.postToChat(charId, result),
-    onError: () => {},
+    onError: notifyMutationError,
   })
 
   const dexMod = char?.initiative_bonus ?? char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0

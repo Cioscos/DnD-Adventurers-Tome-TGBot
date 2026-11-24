@@ -14,7 +14,7 @@ const { stats, diceHistory, getChar, getHistory, rollMock, postToChat, tg, toast
   toastFn: { error: vi.fn(), warning: vi.fn(), info: vi.fn(), success: vi.fn(), base: vi.fn() },
 }))
 
-vi.mock('@/api/client', () => ({ api: { dice: { stats, resetStats: vi.fn(), history: diceHistory, initiative: vi.fn(), postToChat }, characters: { get: getChar }, history: { get: getHistory, clear: vi.fn() } } }))
+vi.mock('@/api/client', () => ({ ApiError: class extends Error {}, api: { dice: { stats, resetStats: vi.fn(), history: diceHistory, initiative: vi.fn(), postToChat }, characters: { get: getChar }, history: { get: getHistory, clear: vi.fn() } } }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useParams: () => ({ id: '7' }) }
@@ -167,7 +167,7 @@ describe('caccia: dadi', () => {
   })
 
   // caccia: {"id": "CB-1497", "fonte": "invariante: un invio fallito non resta in silenzio", "zona": "flusso:dadi", "voce": "ripetizione", "copre": ["POST /characters/{char_id}/dice/post-to-chat", "route:/char/:id/dice"]}
-  it.fails("se «Manda al bot» fallisce compare un avviso", async () => {
+  it("se «Manda al bot» fallisce compare un avviso", async () => {
     tg.dentro = true
     getChar.mockResolvedValue({ id: 7, name: 'Eroe', ability_scores: [] })
     diceHistory.mockResolvedValue([])
