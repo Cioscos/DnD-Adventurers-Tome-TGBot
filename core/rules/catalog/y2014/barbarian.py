@@ -84,7 +84,7 @@ RAGE_MODIFIERS = (
 def _reckless_confirmed(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     """Fino al prossimo turno gli attacchi contro di lui hanno vantaggio (mostrato sulla scheda, D1)."""
     begin_state(ctx.char, StateSpec(
-        "reckless", rounds=1, data={"others": [RECKLESS]}), RECKLESS, "Attacco Irruento")
+        "reckless", rounds=1, ends_on=("new_turn", "manual"), data={"others": [RECKLESS]}), RECKLESS, "Attacco Irruento")
 
 
 def _reckless_declared(ctx: RuleContext) -> bool:

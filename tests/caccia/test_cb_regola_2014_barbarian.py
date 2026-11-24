@@ -115,7 +115,6 @@ async def test_l_attacco_della_forma_selvatica_tiene_viva_l_ira(client, test_ses
 @pytest.mark.caccia(id="CB-1566", fonte="2014 · Barbaro · Attacco Irruento · pag. 48", zona="regola:2014/barbarian", voce="regola",
                     copre=["carta:2014/classes/barbarian.md#Attacco Irruento / Reckless Attack (Barbaro 2, pag. 48)",
                            "POST /characters/{char_id}/turn/new"])
-@pytest.mark.xfail(strict=True, reason="CB-1566: difforme dal manuale, confermato")
 async def test_il_vantaggio_concesso_dall_attacco_irruento_finisce_al_turno_seguente(client):
     cid = await _barbarian(client, 2, strength=16)
     spada = await _weapon(client, cid)
