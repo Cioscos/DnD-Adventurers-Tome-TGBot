@@ -68,9 +68,9 @@ _RANGES_PER_KIND = {
 def _shown_rolls(notation: str | None, rolls: list[int]) -> list[int]:
     """I dadi da elencare accanto al totale: con ``khN`` solo quelli tenuti; nessuno per il d100, dove i due d10 sono
     decine e unità e la loro somma non è il totale."""
-    kept = re.search(r"kh(\d+)", notation or "")
+    kept = re.search(r"k([hl])(\d+)", notation or "")  # kh: i più alti; kl: i più bassi (svantaggio)
     if kept:
-        return sorted(rolls, reverse=True)[:int(kept.group(1))]
+        return sorted(rolls, reverse=kept.group(1) == "h")[:int(kept.group(2))]
     return [] if "d100" in (notation or "") else rolls
 
 
