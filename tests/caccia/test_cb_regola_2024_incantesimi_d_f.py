@@ -83,7 +83,6 @@ async def test_dardo_incantato_2024_dal_catalogo_lancia_tre_dardi_piu_uno_per_sl
 @pytest.mark.caccia(id="CB-3712", fonte="2024 · Incantesimi · Esplosione Stregonesca · pag. 318", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Esplosione Stregonesca", "POST /characters/{char_id}/spells/{spell_id}/attack",
                            "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3712: difforme dal manuale, confermato")
 async def test_esplosione_stregonesca_dal_catalogo_tira_1d8_del_tipo_scelto(client):
     cid = await _pg(client, "sorcerer", 1)
     sid = await _impara(client, cid, "sorcerous-burst")
@@ -95,7 +94,6 @@ async def test_esplosione_stregonesca_dal_catalogo_tira_1d8_del_tipo_scelto(clie
 
 @pytest.mark.caccia(id="CB-3713", fonte="2024 · Incantesimi · Esplosione Stregonesca · pag. 318", zona="regola:2024/incantesimi-D-F", voce="regola",
                     copre=["carta:2024/spells.md#Esplosione Stregonesca"])
-@pytest.mark.xfail(strict=True, reason="CB-3713: difforme dal manuale, confermato")
 def test_esplosione_stregonesca_del_catalogo_ha_componenti_verbale_e_somatica():
     assert _SRD["2024"]["sorcerous-burst"]["components"] == ["V", "S"]
 

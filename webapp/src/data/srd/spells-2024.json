@@ -15545,7 +15545,10 @@
     "it": "120 piedi"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V",
+    "S"
+   ],
    "material": null,
    "duration": {
     "en": "Instantaneous",
@@ -15560,7 +15563,7 @@
    "higher_level": null,
    "attack_type": "ATK",
    "save_ability": null,
-   "damage_dice": null,
+   "damage_dice": "1d8",
    "damage_type": null,
    "higher_levels_dice": null,
    "classes": [
