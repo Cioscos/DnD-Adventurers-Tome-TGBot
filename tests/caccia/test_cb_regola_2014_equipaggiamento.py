@@ -40,7 +40,6 @@ async def _scheda(client, cid) -> dict:
                     zona="regola:2014/equipaggiamento", voce="interazione",
                     copre=["carta:2014/equipment.md#Proprieta delle Armi / Weapon Properties (pagg. 146-147)",
                            "POST /characters/{char_id}/items/{item_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-3161: difforme dal manuale, confermato")
 async def test_lancia_lanciata_a_due_mani_non_usa_il_dado_versatile(client, dadi):
     cid = await _pg(client, strength=14)
     lancia = await _oggetto(client, cid, "Lancia", "weapon", item_metadata={

@@ -828,8 +828,9 @@ async def attack_with_weapon(
     magic_bonus = weapon_magic_bonus(item)
 
     has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
-    grip = body.grip if body else "one"
     attack_mode = body.attack_mode if body else "melee"
+    # L'impugnatura a due mani di Versatile vale in mischia (2014 pag. 147): lanciata o con l'altra mano è a una mano.
+    grip = body.grip if body and attack_mode == "melee" else "one"
     offhand = attack_mode == "offhand"
 
     # Validate the choices before consuming inspiration.
