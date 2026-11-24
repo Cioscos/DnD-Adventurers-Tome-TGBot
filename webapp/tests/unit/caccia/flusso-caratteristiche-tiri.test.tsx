@@ -56,7 +56,7 @@ afterEach(() => { getChar.mockReset(); updateSavingThrows.mockReset() })
 
 describe('caccia: tiri salvezza', () => {
   // caccia: {"id": "CB-255", "fonte": "invariante: due modifiche ravvicinate a competenze diverse restano entrambe", "zona": "flusso:caratteristiche-tiri", "voce": "ripetizione", "copre": ["route:/char/:id/saves", "PATCH /characters/{char_id}/saving_throws"]}
-  it.fails('due competenze toccate di seguito non si annullano a vicenda', async () => {
+  it('due competenze toccate di seguito non si annullano a vicenda', async () => {
     getChar.mockResolvedValue(char)
     updateSavingThrows.mockReturnValue(new Promise(() => {})) // la prima risposta non è ancora arrivata
     renderWithProviders(<SavingThrows />)

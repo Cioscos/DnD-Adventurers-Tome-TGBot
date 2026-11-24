@@ -155,7 +155,8 @@ describe('SavingThrows page', () => {
     expect(screen.getByText('+5')).toBeInTheDocument()
   })
 
-  it('toggling proficiency merges the flipped value into the existing map', async () => {
+  // CB-255: solo la competenza toccata (il server unisce), così due tocchi ravvicinati non si annullano a vicenda.
+  it('toggling proficiency sends only the flipped value', async () => {
     getChar.mockResolvedValue(baseChar)
     updateSavingThrows.mockResolvedValue(baseChar)
     renderWithProviders(<SavingThrows />)
@@ -163,7 +164,7 @@ describe('SavingThrows page', () => {
     // First "Proficiency" toggle == STR (ABILITIES[0]); stopPropagation keeps it off the roll path.
     await userEvent.click(screen.getAllByLabelText('Proficiency')[0])
     await waitFor(() =>
-      expect(updateSavingThrows).toHaveBeenCalledWith(5, { strength: false, constitution: true }),
+      expect(updateSavingThrows).toHaveBeenCalledWith(5, { strength: false }),
     )
   })
 

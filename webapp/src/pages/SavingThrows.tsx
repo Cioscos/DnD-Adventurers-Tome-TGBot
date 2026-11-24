@@ -126,15 +126,11 @@ export default function SavingThrows() {
 
   const toggle = (ability: string) => {
     const current = saves[ability] ?? false
-    mutation.mutate({ ...saves, [ability]: !current })
+    mutation.mutate({ [ability]: !current })  // solo quella toccata: il server unisce, due tocchi ravvicinati restano entrambi
   }
 
-  // `mutation` has a single call site (toggle, above) always sending a full
-  // saves-shaped object with exactly one key flipped — diffing against the
-  // current `saves` reliably recovers which ability is in flight (P4).
-  const pendingAbility = mutation.isPending
-    ? ABILITIES.find((a) => mutation.variables?.[a] !== saves[a])
-    : undefined
+  // `mutation` has a single call site (toggle, above) sending only the flipped key: that key is the ability in flight.
+  const pendingAbility = mutation.isPending ? Object.keys(mutation.variables ?? {})[0] : undefined
 
   return (
     <Layout title={t('character.saves.title')} backTo={`/char/${charId}`} group="combat" page="saves">
