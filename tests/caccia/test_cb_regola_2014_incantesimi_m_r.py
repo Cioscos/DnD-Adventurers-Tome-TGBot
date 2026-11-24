@@ -128,7 +128,6 @@ async def test_incantesimi_di_ritorno_in_vita_non_curano_una_creatura_viva(clien
 @pytest.mark.caccia(id="CB-3365", fonte="2014 · Incantesimi · Manto del Crociato (1d4 radiosi agli attacchi con arma, nessun danno al lancio) · pag. 250",
                     zona="regola:2014/incantesimi-M-R", voce="regola",
                     copre=["carta:2014/spells.md#Manto del Crociato", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-3365: difforme dal manuale, confermato")
 async def test_manto_del_crociato_non_tira_danni_al_lancio(client):
     cid = await _pg(client, "Paladino", "paladin", 9)
     catalogo = json.loads(SPELLS_JSON.read_text(encoding="utf-8"))["items"]
