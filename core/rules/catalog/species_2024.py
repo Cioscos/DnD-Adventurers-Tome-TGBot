@@ -128,10 +128,17 @@ def _giant(giant: str, **kw: Any) -> FeatureSpec:
     return data_trait("goliath", f"giant_ancestry_{giant}", 1, 192, option_group="giant", option_key=giant, passive=False, **_PB_LONG, **kw)
 
 
+def _spell_attack(ctx: RuleContext) -> bool:
+    return (getattr(ctx.spell, "attack_save", None) or "").strip().upper() == "ATK"
+
+
 def _on_hit(giant: str, dice: str, damage: str, it: str, en: str) -> FeatureSpec:
-    return _giant(giant, roll_options=(RollOptionSpec(
-        key=_G + giant, phase="after_hit", rolls=("attack",), extra_dice=lambda _c, _i: dice, extra_damage_type=damage,
-        cost=Cost(feature_key=_G + giant), label=_both(it, en)),))
+    # Anche l'attacco con incantesimo è un attacco: la variante «_spell» vale sul suo danno (come la Rivelazione celeste)
+    def option(suffix: str, phase: str, rolls: tuple[str, ...], **kw: Any) -> RollOptionSpec:
+        return RollOptionSpec(key=_G + giant + suffix, phase=phase, rolls=rolls, extra_dice=lambda _c, _i: dice, extra_damage_type=damage,
+                              cost=Cost(feature_key=_G + giant), label=_both(it, en), **kw)
+    return _giant(giant, roll_options=(option("", "after_hit", ("attack",)),
+                                       option("_spell", "before", ("spell_damage",), available=_spell_attack)))
 
 
 def _stone_reduction() -> RollOptionSpec:
