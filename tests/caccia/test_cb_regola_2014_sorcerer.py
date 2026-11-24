@@ -132,7 +132,6 @@ async def test_la_gittata_incantatore_del_manuale_esclude_raddoppiato_e_distante
                     copre=["carta:2014/classes/sorcerer.md#Incantesimo Distante / Distant Spell (Stregone 3, pag. 110)",
                            "POST /characters/{char_id}/spells/{spell_id}/use"])
 @pytest.mark.parametrize("range_area,shown", [("1,5 km", "3 km"), ("500 miglia", "1000 miglia")])
-@pytest.mark.xfail(strict=True, reason="CB-2017: difforme dal manuale, confermato")
 async def test_incantesimo_distante_raddoppia_la_gittata_in_chilometri_e_miglia_senza_cambiare_unita(client, range_area, shown):
     # Chiaroveggenza nel manuale italiano ha gittata 1,5 km: raddoppiata è 3 km, non 3 m
     cid = await _caster(client, 10, "distant")

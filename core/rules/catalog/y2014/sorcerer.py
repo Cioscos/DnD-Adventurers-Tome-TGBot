@@ -110,7 +110,8 @@ CONVERT_USE = OnUse(
 # Metamagia: la gittata, la durata, le condizioni dell'incantesimo
 # ---------------------------------------------------------------------------
 
-_RANGE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(km|m|metri|metro|ft|feet|foot|piedi|mi|miglia|miles?)\b", re.IGNORECASE)
+_RANGE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(km|m|metri|metro|ft|feet|foot|piedi|mi|miglia|miglio|miles?)\b", re.IGNORECASE)
+_UNITS = {"metri": "m", "metro": "m", "miglio": "miglia", "mile": "miles", "foot": "feet"}  # raddoppiata, la gittata è al plurale
 _TOUCH = ("contatto", "tocco", "touch")
 _SELF = ("personale", "incantatore", "self")  # «Incantatore» è la gittata personale del manuale italiano (pag. 202)
 
@@ -127,7 +128,7 @@ def _range_of(spell: Any) -> tuple[float, str] | str | None:
     if m is None:
         return None
     unit = m[2].lower()
-    return float(m[1].replace(",", ".")), "m" if unit.startswith(("m", "k")) and unit not in ("mi", "miles", "mile") else unit
+    return float(m[1].replace(",", ".")), _UNITS.get(unit, unit)
 
 
 def _distant_ok(ctx: RuleContext) -> bool:
