@@ -38,7 +38,6 @@ async def _aggiungi(client, cid, classe, livello, dado) -> None:
                     zona="regola:2024/paladin", voce="interazione",
                     copre=["carta:2024/classes/paladin.md#Aura di Protezione / Aura of Protection (Paladino 6, pag. 111)",
                            "GET /characters/{char_id}/roll-options", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-2461: difforme dal manuale, confermato")
 async def test_un_paladino_puo_scegliere_l_aura_di_protezione_piu_forte_di_un_compagno(client, test_session_factory):
     debole = await _paladin24(client, 6, charisma=12)  # la sua aura dà +1
     as_user(PLAYER_ID)

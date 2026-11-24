@@ -49,8 +49,11 @@ def _ally_aura(kind: str, edition: str | None = None):
 
 
 def _ally_aura_bonus(ctx: RuleContext, _inputs: dict) -> int:
-    from core.rules.auras import party_auras  # import locale
-    return max((a["bonus"] for a in party_auras(ctx.char, "protection")), default=0)
+    """Una sola Aura di Protezione alla volta, la più forte (2024 pag. 111; 2014 pag. 98): il compagno aggiunge solo ciò che
+    supera la propria aura attiva, già nei TS."""
+    from core.rules.auras import party_auras, projected_auras  # import locale
+    own = max((a["bonus"] for a in projected_auras(ctx.char) if a["kind"] == "protection"), default=0)
+    return max(0, max((a["bonus"] for a in party_auras(ctx.char, "protection")), default=0) - own)
 
 
 # Regole generali, e condizioni i cui effetti dipendono da ciò che l'app non vede (R25, R25 bis).
@@ -97,7 +100,7 @@ _CONDITION_OPTIONS = (
         key="aura:protection", phase="before", rolls=("save", "death_save"), bonus=_ally_aura_bonus,
         label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata (3 m, 9 m dal 18°)? Somma il suo Carisma",
                "en": "Aura of Protection of a paladin ally: are you within its range (10 ft, 30 ft from 18th)? Add their Charisma"},
-        available=_ally_aura("protection"),
+        available=lambda ctx: _ally_aura_bonus(ctx, {}) > 0,
     ),
     # Lo stesso bonus dopo aver visto il d20: serve al TS di concentrazione, anche quello automatico dopo il danno, per cui
     # il giocatore non può confermare prima (D1).
@@ -106,7 +109,7 @@ _CONDITION_OPTIONS = (
         label={"it": "Aura di Protezione di un compagno paladino: sei entro la sua gittata? Somma il suo Carisma al tiro",
                "en": "Aura of Protection of a paladin ally: are you within its range? Add their Charisma to the roll"},
         # Il Carisma si somma una volta: se è già stata confermata prima del tiro non si ripropone.
-        available=lambda ctx: _ally_aura("protection")(ctx) and "aura:protection" not in ctx.confirmed,
+        available=lambda ctx: _ally_aura_bonus(ctx, {}) > 0 and "aura:protection" not in ctx.confirmed,
     ),
     RollOptionSpec(
         key="aura:warding", phase="damage_in", rolls=("damage_taken",), grants_resistance=True,

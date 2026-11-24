@@ -1,7 +1,9 @@
 """Controlli scritti dal correttore del gruppo tiri-opzioni per i dubbi «Q-…» risolti dai verificatori come difetti."""
 import pytest
 
+from tests.caccia.test_cb_regola_2024_paladin import _seduti
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
+from tests.integration.rules.test_2014_paladin import _hurt, _paladin
 
 
 async def _pg(client, edizione="2024", classe="fighter", livello=5) -> int:
@@ -115,3 +117,26 @@ async def test_la_stessa_fonte_corregge_la_sua_istanza_e_un_ts_superato_chiude_s
     # il TS superato chiude l'istanza del goblin 2; quella del PG resta e con lei la condizione
     assert mostro["conditions"].get("frightened") is True
     assert [e["source_name"] for e in mostro["condition_effects"]] == [pg["name"]], mostro["condition_effects"]
+
+
+@pytest.mark.caccia(id="CB-4235", fonte="2014 · Paladino · Aura di Protezione · pag. 98", zona="regola:2014/paladin",
+                    voce="interazione", copre=["carta:2014/classes/paladin.md#Aura di Protezione / Aura of Protection (Paladino 6, pag. 98)",
+                                               "GET /characters/{char_id}/roll-options",
+                                               "POST /characters/{char_id}/saving_throws/{ability}/roll",
+                                               "POST /characters/{char_id}/death_saves/roll"])
+async def test_2014_il_paladino_prende_l_aura_di_protezione_piu_forte_di_un_compagno(client, test_session_factory):
+    as_user(GM_ID)
+    debole = await _paladin(client, 6, charisma=10)  # la sua aura dà +1
+    as_user(PLAYER_ID)
+    forte = await _paladin(client, 9, charisma=20)  # la sua aura dà +5
+    await _seduti(test_session_factory, (GM_ID, debole), (PLAYER_ID, forte))
+    as_user(GM_ID)
+    semplice = (await client.post(f"/characters/{debole}/saving_throws/dexterity/roll", json={"die": 10})).json()["total"]
+    r = await client.post(f"/characters/{debole}/saving_throws/dexterity/roll", json={"die": 10, "options": ["aura:protection"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == semplice + 4  # vale l'aura più forte (+5) al posto della propria (+1), non la somma
+    # a 0 PF la sua aura è spenta (deve essere cosciente per conferirla), ma è una creatura amica entro 3 m del compagno
+    await _hurt(test_session_factory, debole, 0)
+    r = await client.post(f"/characters/{debole}/death_saves/roll", json={"die": 7, "options": ["aura:protection"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["outcome"] == "success", r.json()  # 7 + 5 = 12

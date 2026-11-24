@@ -76,7 +76,10 @@ async def test_a_paladin_does_not_stack_a_fellow_paladin_aura_on_his_own(client,
         part.character_id = friend
         await s.commit()
     as_user(PLAYER_ID)
-    assert PROTECTION not in await _roll_keys(client, own, "save", ability="dexterity")
+    # 2014 pag. 98 (Q-2014-paladin-3, CB-4235): vale l'aura più forte, non la somma né sempre la propria. Il compagno
+    # (+5) aggiunge solo ciò che supera la propria aura (+1), già nei TS.
+    listed = (await client.get(f"/characters/{own}/roll-options", params={"roll": "save", "ability": "dexterity"})).json()
+    assert next(o["bonus"] for o in listed if o["key"] == PROTECTION) == 4
 
 
 async def test_the_aura_of_warding_halves_spell_damage_for_an_ally_even_if_the_paladin_is_down(client, test_session_factory):
