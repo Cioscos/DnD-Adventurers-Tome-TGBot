@@ -80,7 +80,6 @@ async def test_2014_attacco_dell_altra_mano_non_con_un_arma_a_distanza(client, d
     assert (await _pila(client, cid, q))["quantity"] == 5
 
 
-@pytest.mark.xfail(strict=True, reason="CB-040 faretra rapida vuota: le frecce sciolte non si usano")
 @pytest.mark.caccia(id="CB-040", fonte="2014 · Equipaggiamento · Munizioni · pag. 146: una munizione per attacco", zona="flusso:attacco-danno",
                     voce="limiti", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_faretra_veloce_vuota_si_passa_alle_frecce_sciolte(client, dadi):

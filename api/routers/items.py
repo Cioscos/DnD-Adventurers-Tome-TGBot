@@ -916,11 +916,8 @@ async def attack_with_weapon(
                 [i for i in ammo if i.container_id in quick_ids],
                 [i for i in ammo if i.container_id is None],
             ):
-                # One stack, or several stacks of the same ammo: use the first (lowest id).
+                # One live stack, or several of the same ammo: use the first (lowest id). Empty stacks don't count.
                 live = sorted((i for i in pool if i.quantity > 0), key=lambda i: i.id)
-                if len(pool) == 1:
-                    source = pool[0]
-                    break
                 if live and len({i.name.lower() for i in live}) == 1:
                     source = live[0]
                     break
