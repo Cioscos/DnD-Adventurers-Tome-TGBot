@@ -84,7 +84,7 @@ async def _danno(client, cid, sid, livello, **altro) -> dict:
     ("sorcerer", 17, "meteor-swarm", 9, (20, "d6", "fire"), (20, "d6", "bludgeoning")),
     ("warlock", 9, "jallarzis-storm-of-radiance", 5, (2, "d10", "radiant"), (2, "d10", "thunder")),
 ])
-@pytest.mark.xfail(strict=True, reason="CB-3861: difforme dal manuale, confermato")
+@pytest.mark.xfail(strict=True, reason="CB-3861: dati del catalogo corretti; resta CB-3217 (SpellCreate scarta extra_damage_*)")
 async def test_incantesimo_2024_preso_dal_catalogo_infligge_anche_il_secondo_tipo_di_danno(client, classe, livello, indice, slot, prima, seconda):
     cid = await _pg(client, classe, livello)
     sid = await _impara(client, cid, indice)

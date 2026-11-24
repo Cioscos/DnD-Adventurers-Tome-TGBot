@@ -7334,6 +7334,8 @@
    "damage_dice": "5d6",
    "damage_type": "fire",
    "higher_levels_dice": "1d6",
+   "extra_damage_dice": "5d6",
+   "extra_damage_type": "radiant",
    "classes": [
     "cleric"
    ],
@@ -9891,6 +9893,8 @@
    "damage_dice": "2d10",
    "damage_type": "bludgeoning",
    "higher_levels_dice": "1d10",
+   "extra_damage_dice": "4d6",
+   "extra_damage_type": "cold",
    "classes": [
     "druid",
     "sorcerer",
@@ -10389,8 +10393,8 @@
    "damage_dice": "2d10",
    "damage_type": "radiant",
    "higher_levels_dice": "1d10",
-   "extra_damage_dice": null,
-   "extra_damage_type": null,
+   "extra_damage_dice": "2d10",
+   "extra_damage_type": "thunder",
    "classes": [
     "warlock",
     "wizard"
@@ -11890,6 +11894,8 @@
    "damage_dice": "20d6",
    "damage_type": "fire",
    "higher_levels_dice": null,
+   "extra_damage_dice": "20d6",
+   "extra_damage_type": "bludgeoning",
    "classes": [
     "sorcerer",
     "wizard"
