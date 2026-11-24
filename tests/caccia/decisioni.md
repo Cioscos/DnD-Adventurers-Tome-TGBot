@@ -11,3 +11,7 @@ Prevalgono sul manuale. Nessun testo dei manuali qui.
 | D-005 | Al cambio di specie che cosa succede agli incantesimi dati dalla vecchia specie? | Vanno rimossi, come abilità e talento, e compaiono nel riepilogo del cambio | 2026-11-24 |
 | D-006 | Creazione 2024: un'abilità già data dal background scelta anche fra quelle di classe? | Va rifiutata, come già succede per l'abilità della specie: il giocatore ne sceglie un'altra | 2026-11-24 |
 | D-007 | Serve una lunghezza massima per il nome del personaggio? | No: nessun limite | 2026-11-24 |
+| D-008 | Creazione 2024: l'abilità doppia fra classe e background si scopriva solo alla fine. Come segnalarla? | Invertire i passi: edizione col nome, poi background e specie, poi la classe con le abilità già date non sceglibili | 2026-11-24 |
+| D-009 | Un'arma già salvata con dadi di danno non validi si può modificare senza correggerli? | No: il rifiuto (422) resta, il campo va corretto | 2026-11-24 |
+| D-010 | Le forme 2024 la cui CA era stata sovrascritta (CB-337) vanno ripristinate? | No: si correggono a mano dalla scheda della forma | 2026-11-24 |
+| D-011 | I campi numerici delle richieste devono rifiutare `true`? | No, oltre a quelli già stretti (CB-257): la UI non lo manda e l'effetto resta sul proprio personaggio | 2026-11-24 |

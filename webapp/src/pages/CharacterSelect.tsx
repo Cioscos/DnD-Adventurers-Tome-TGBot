@@ -242,7 +242,7 @@ export default function CharacterSelect() {
 
   const handleNameNext = () => {
     if (!newName.trim()) return
-    setStep('class')
+    goNext()
   }
 
   const handleCustomSelect = () => {
@@ -286,7 +286,30 @@ export default function CharacterSelect() {
     !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
 
   const hasEquipmentStep = !!selectedClass && !isCustomSelected
-  const afterAbilities = hasEquipmentStep ? 'equipment' : 'identity'
+  // 2024: background e specie prima della classe, così le abilità che danno non si possono scegliere due volte.
+  const steps: Step[] = [
+    'name',
+    ...(is2024 ? (['background', ...(bg24 ? [] : ['feat']), 'species', 'class'] as Step[]) : (['class', 'species'] as Step[])),
+    'abilities',
+    ...(hasEquipmentStep ? (['equipment'] as Step[]) : []),
+    'identity',
+  ]
+  const goNext = () => setStep(steps[steps.indexOf(step) + 1])
+  const goBack = () => setStep(steps[steps.indexOf(step) - 1])
+  const takenByOrigin = (bg: Background2024Choice | null, sp: Species24State) =>
+    is2024 ? [...(bg?.entry.skills ?? []), ...(sp.options.skill ? [sp.options.skill] : [])] : []
+  // Tornando indietro a cambiare origine cadono le scelte che ora sarebbero doppie: il loro passo le richiede.
+  const dropTakenClassSkills = (taken: string[]) =>
+    setSelectedClass((c) => (c?.skills ? { ...c, skills: c.skills.filter((s) => !taken.includes(s)) } : c))
+  const changeSpecies24 = (sp: Species24State, bg = bg24) => {
+    setSpecies24(sp)
+    dropTakenClassSkills(takenByOrigin(bg, sp))
+  }
+  const changeBackground24 = (bg: Background2024Choice | null) => {
+    setBg24(bg)
+    const { skill, ...rest } = species24.options
+    changeSpecies24(skill && bg?.entry.skills.includes(skill) ? { ...species24, options: rest } : species24, bg)
+  }
   const classProf = useClassProficiencies(edition, selectedClass && !isCustomSelected ? selectedClass.class_name : null, false)
   const classSkillsIncomplete =
     !!selectedClass && !isCustomSelected &&
@@ -490,7 +513,7 @@ export default function CharacterSelect() {
         </Button>
       </div>
 
-      {/* Creation wizard — modal Sheet. Flusso: Nome → Classe → Identità → Crea. */}
+      {/* Creation wizard — modal Sheet. Flusso: vedi `steps`. */}
       <Sheet
         open={creating}
         onClose={() => {
@@ -529,7 +552,33 @@ export default function CharacterSelect() {
                 placeholder={t('character.create.name_placeholder')}
                 autoFocus
                 onCommit={handleNameNext}
+                commitOnBlur={false}
               />
+              <div className="mt-4">
+                <p className="text-xs text-dnd-text-muted font-body italic text-center mb-2">
+                  {t('character.create.edition_hint')}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['2014', '2024'] as const).map((ed) => (
+                    <Pressable
+                      key={ed}
+                      aria-pressed={edition === ed}
+                      onClick={() => {
+                        if (ed === edition) return
+                        setEdition(ed)
+                        // le abilità di classe offerte cambiano con l'edizione
+                        if (selectedClass && !isCustomSelected) setSelectedClass({ ...selectedClass, skills: [] })
+                      }}
+                      className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                        ${edition === ed
+                          ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                          : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+                    >
+                      {t(`character.settings.rules_edition.${ed}`)}
+                    </Pressable>
+                  ))}
+                </div>
+              </div>
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.cancel')}
@@ -600,32 +649,6 @@ export default function CharacterSelect() {
                     ))}
                   </m.div>
 
-                  <div className="mb-3">
-                    <p className="text-xs text-dnd-text-muted font-body italic text-center mb-2">
-                      {t('character.create.edition_hint')}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['2014', '2024'] as const).map((ed) => (
-                        <Pressable
-                          key={ed}
-                          aria-pressed={edition === ed}
-                          onClick={() => {
-                            if (ed === edition) return
-                            setEdition(ed)
-                            // le abilità di classe offerte cambiano con l'edizione
-                            if (selectedClass && !isCustomSelected) setSelectedClass({ ...selectedClass, skills: [] })
-                          }}
-                          className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
-                            ${edition === ed
-                              ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
-                              : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
-                        >
-                          {t(`character.settings.rules_edition.${ed}`)}
-                        </Pressable>
-                      ))}
-                    </div>
-                  </div>
-
                   {selectedClass && !isCustomSelected && (
                     <div className="mb-3">
                       <ClassSkillChoice
@@ -634,6 +657,7 @@ export default function CharacterSelect() {
                         asMulticlass={false}
                         value={selectedClass.skills ?? []}
                         onChange={(skills) => setSelectedClass({ ...selectedClass, skills })}
+                        takenSkills={takenByOrigin(bg24, species24)}
                       />
                     </div>
                   )}
@@ -679,9 +703,9 @@ export default function CharacterSelect() {
                   <WizardFooter
                     className="mt-4"
                     secondaryLabel={t('common.back')}
-                    onSecondary={() => setStep('name')}
+                    onSecondary={goBack}
                     primaryLabel={`${t('common.next')} →`}
-                    onPrimary={() => setStep('species')}
+                  onPrimary={goNext}
                     primaryDisabled={selectedClass === undefined || classSkillsIncomplete}
                     primaryHaptic="medium"
                   />
@@ -737,14 +761,14 @@ export default function CharacterSelect() {
           {step === 'species' && (
             <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
               <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace}
-                edition={edition} species24={species24} onSpecies24={setSpecies24}
-                takenSkills={[...(selectedClass?.skills ?? []), ...(bg24 ? bg24.entry.skills : backgroundSkills)]} />
+                edition={edition} species24={species24} onSpecies24={changeSpecies24}
+                takenSkills={bg24 ? bg24.entry.skills : backgroundSkills} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('class')}
+                onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => setStep(is2024 ? 'background' : 'abilities')}
+                onPrimary={goNext}
                 primaryDisabled={is2024 && !!species24.entry && speciesChoicesMissing(species24.entry, species24.options).length > 0}
                 primaryHaptic="medium"
               />
@@ -753,13 +777,13 @@ export default function CharacterSelect() {
 
           {step === 'background' && (
             <m.div key="step-background" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
-              <BackgroundStep2024 value={bg24} onChange={setBg24} />
+              <BackgroundStep2024 value={bg24} onChange={changeBackground24} />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('species')}
+                onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => setStep(bg24 ? 'abilities' : 'feat')}
+                onPrimary={goNext}
                 primaryDisabled={!background24Valid(bg24)}
                 primaryHaptic="medium"
               />
@@ -772,9 +796,9 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('background')}
+                onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => setStep('abilities')}
+                onPrimary={goNext}
                 primaryHaptic="medium"
               />
             </m.div>
@@ -792,14 +816,14 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep(!is2024 ? 'species' : bg24 ? 'background' : 'feat')}
+                onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => { setScoresSkipped(false); setStep(afterAbilities) }}
+                onPrimary={() => { setScoresSkipped(false); goNext() }}
                 primaryDisabled={!scoresValid(scoreMode, scores)}
                 primaryHaptic="medium"
               />
               <Pressable
-                onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep(afterAbilities) }}
+                onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); goNext() }}
                 className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
               >
                 {t('character.create.scores_skip')}
@@ -814,13 +838,13 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('abilities')}
+                onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => setStep('identity')}
+                onPrimary={goNext}
                 primaryHaptic="medium"
               />
               <Pressable
-                onClick={() => { setEquipPicks(null); setWealthKey(null); setStep('identity') }}
+                onClick={() => { setEquipPicks(null); setWealthKey(null); goNext() }}
                 className="mt-1 w-full min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
               >
                 {t('character.create.equipment_skip')}
@@ -902,7 +926,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep(hasEquipmentStep ? 'equipment' : 'abilities')}
+                onSecondary={goBack}
                 primaryLabel={t('character.create.create_cta')}
                 onPrimary={() => handleCreate(buildIdentityPayload())}
                 primaryDisabled={createMutation.isPending}

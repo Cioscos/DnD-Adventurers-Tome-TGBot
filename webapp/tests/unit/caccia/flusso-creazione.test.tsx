@@ -1,5 +1,28 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { renderWithProviders } from '../utils/renderWithProviders'
+import CharacterSelect from '@/pages/CharacterSelect'
 import { background24Payload, creationExtras, increasesValid, type Background2024Choice } from '@/lib/species'
+
+vi.mock('@/api/client', () => ({
+  api: { characters: { list: vi.fn().mockResolvedValue([]), create: vi.fn() }, sessions: { me: vi.fn().mockResolvedValue(null) } },
+  ApiError: class ApiError extends Error {},
+}))
+vi.mock('react-router-dom', async (orig) => ({ ...((await orig()) as Record<string, unknown>), useNavigate: () => vi.fn() }))
+vi.mock('react-i18next', async (orig) => ({
+  ...((await orig()) as Record<string, unknown>), useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }),
+}))
+vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }), telegramConfirm: vi.fn() }))
+vi.mock('@/hooks/useClassProficiencies', () => ({
+  useClassProficiencies: (_e: string, cls: string | null) => ({
+    isLoading: false, data: cls ? { skills_count: 2, skills_from: ['history', 'insight', 'medicine', 'religion'] } : undefined,
+  }),
+}))
+vi.mock('@/components/ui/Sheet', async () => {
+  const React = await import('react')
+  return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children as never) : null) }
+})
 
 describe('caccia: creazione', () => {
   // caccia: {"id": "CB-653", "fonte": "2024 · Background · pag. 177 (+2/+1 oppure +1/+1/+1 su tre caratteristiche)", "zona": "flusso:creazione", "voce": "limiti", "copre": ["route:/"]}
@@ -26,5 +49,36 @@ describe('caccia: creazione', () => {
     expect(creationExtras({ scores: punteggi, skipped: true, species: null, skills: [] })).toEqual({})
     expect(creationExtras({ scores: punteggi, skipped: false, species: null, skills: ['stealth', 'arcana'] }))
       .toEqual({ ability_scores: punteggi, skills: { stealth: true, arcana: true } })
+  })
+
+  // caccia: {"id": "CB-768", "fonte": "decisione D-006 (un'abilità del background non si sceglie per la classe) e D-008 (nel 2024 il background viene prima della classe)", "zona": "flusso:creazione", "voce": "edizioni", "copre": ["route:/"]}
+  it('2024: le abilità del background non si possono scegliere per la classe, nemmeno cambiandolo dopo', async () => {
+    const user = userEvent.setup()
+    const clic = (name: string | RegExp) => user.click(screen.getByRole('button', { name }))
+    const avanti = () => screen.getByRole('button', { name: 'common.next →' })
+    renderWithProviders(<CharacterSelect />)
+    await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
+    await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
+    await clic('character.settings.rules_edition.2024')
+    await user.click(avanti())
+    await clic(/character.create.background_pick/)
+    await user.click(await screen.findByText('Marinaio')) // acrobatics, perception
+    await user.click(avanti())
+    await user.click(avanti()) // specie libera
+    await clic(/dnd.classes.cleric/)
+    await clic('character.skills.insight')
+    await clic('character.skills.history')
+    expect(avanti()).toBeEnabled()
+    await clic('common.back')
+    await clic('common.back')
+    await clic(/Marinaio/)
+    await user.click(await screen.findByText('Accolito')) // Intuizione e Religione
+    await user.click(avanti())
+    await user.click(avanti())
+    expect(screen.getByRole('button', { name: 'character.skills.insight' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'character.skills.religion' })).toBeDisabled()
+    expect(avanti()).toBeDisabled() // la scelta caduta va rifatta
+    await clic('character.skills.medicine')
+    expect(avanti()).toBeEnabled()
   })
 })

@@ -35,15 +35,20 @@ const elf = (species2024 as unknown as Species2024Entry[]).find((e) => e.key ===
 const user = userEvent.setup()
 const next = () => user.click(screen.getByRole('button', { name: 'common.next →' }))
 
-async function toSpecies(edition: '2014' | '2024') {
+async function toSpecies(edition: '2014' | '2024', background?: string) {
   list.mockResolvedValue([])
   me.mockResolvedValue(null)
   renderWithProviders(<CharacterSelect />)
   await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
   await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
-  await next()
   if (edition === '2024') await user.click(screen.getByRole('button', { name: 'character.settings.rules_edition.2024' }))
-  await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
+  await next()
+  if (edition === '2014') await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
+  if (background) {
+    await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
+    await user.click(await screen.findByText(background))
+    expect(screen.queryByText('character.feats.origin_hint')).toBeNull()
+  } else if (edition === '2024') await next() // senza background: passo del talento d'Origine
   await next()
   await user.click(screen.getByRole('button', { name: /character.create.species_pick/ }))
 }
@@ -57,7 +62,7 @@ describe('creazione 2024: specie', () => {
 
   it('2024: catalogo species-2024, «Avanti» bloccato senza scelte, payload con species_2024 e background_2024', async () => {
     create.mockResolvedValue({ id: 9 })
-    await toSpecies('2024')
+    await toSpecies('2024', 'Accolito')
     expect(await screen.findByText('Goliath')).toBeTruthy()
     await user.click(screen.getByText('Elfo'))
     expect(screen.getByRole('button', { name: 'common.next →' })).toHaveProperty('disabled', true)
@@ -68,12 +73,8 @@ describe('creazione 2024: specie', () => {
     await user.click(screen.getByRole('button', { name: 'Percezione' }))
     await next()
 
-    // passo background 2024, poi niente talento d'Origine
-    await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
-    await user.click(await screen.findByText('Accolito'))
-    expect(screen.getByText('Iniziato alla magia')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
     await next()
-    expect(screen.queryByText('character.feats.origin_hint')).toBeNull()
     await next() // punteggi
     await user.click(screen.getByRole('button', { name: 'character.create.create_cta' }))
 
@@ -88,18 +89,20 @@ describe('creazione 2024: specie', () => {
   })
 
   it('Percezione già data dal background scelto: non è più sceglibile per la specie', async () => {
-    await toSpecies('2024')
+    await toSpecies('2024', 'Marinaio')  // acrobatics, perception
     await user.click(await screen.findByText('Elfo'))
-    expect(screen.getByRole('button', { name: 'Percezione' })).toHaveProperty('disabled', false)
+    expect(screen.getByRole('button', { name: 'Percezione' })).toHaveProperty('disabled', true)
     await user.click(within(screen.getByRole('group', { name: 'Stirpe elfica' })).getByRole('button', { name: 'Drow' }))
     await user.click(within(screen.getByRole('group', { name: 'Caratteristica da incantatore' })).getByRole('button', { name: 'Saggezza' }))
     await user.click(screen.getByRole('button', { name: 'Intuizione' }))
-    await next()
-    await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
-    await user.click(await screen.findByText('Guardia'))  // Atletica e Percezione
+    expect(screen.getByRole('button', { name: 'common.next →' })).toHaveProperty('disabled', false)
+    // cambiando background con uno che dà Intuizione, la scelta della specie cade e va rifatta
     await user.click(screen.getByRole('button', { name: 'common.back' }))
-    expect(screen.getByRole('button', { name: 'Percezione' })).toHaveProperty('disabled', true)
-    expect(screen.getByRole('button', { name: 'Intuizione' })).toHaveProperty('disabled', false)
+    await user.click(screen.getByRole('button', { name: /Marinaio/ }))
+    await user.click(await screen.findByText('Accolito'))
+    await next()
+    expect(screen.getByRole('button', { name: 'Intuizione' })).toHaveProperty('disabled', true)
+    expect(screen.getByRole('button', { name: 'common.next →' })).toHaveProperty('disabled', true)
   })
 
   it('le abilità di un background 2014 scelto prima non finiscono nel payload col background 2024', async () => {
@@ -109,21 +112,20 @@ describe('creazione 2024: specie', () => {
     renderWithProviders(<CharacterSelect />)
     await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
     await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Lia')
-    await next()
     await user.click(screen.getByRole('button', { name: 'character.settings.rules_edition.2024' }))
-    await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
-    await next() // classe saltata
-    await next() // specie saltata
+    await next()
     await next() // niente background 2024
     await next() // niente talento d'Origine
+    await next() // specie saltata
+    await user.click(screen.getByRole('button', { name: /character.create.skip_class/ }))
+    await next()
     await user.click(screen.getByRole('button', { name: 'character.create.scores_skip' }))
     await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
     await user.click(await screen.findByText('Accolito'))  // catalogo 2014: Intuizione, Religione
-    for (let i = 0; i < 3; i++) await user.click(screen.getByRole('button', { name: 'common.back' }))
+    for (let i = 0; i < 5; i++) await user.click(screen.getByRole('button', { name: 'common.back' }))
     await user.click(screen.getByRole('button', { name: /character.create.background_pick/ }))
     await user.click(await screen.findByText('Accolito'))  // ora il catalogo 2024
-    await next()
-    await next() // punteggi
+    for (let i = 0; i < 4; i++) await next() // background, specie, classe, punteggi
     await user.click(screen.getByRole('button', { name: 'character.create.create_cta' }))
     const extras = create.mock.calls[0][3]
     expect(extras.background_2024.key).toBe('acolyte')

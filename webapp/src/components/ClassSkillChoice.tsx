@@ -9,10 +9,12 @@ interface Props {
   asMulticlass: boolean
   value: string[]
   onChange: (skills: string[]) => void
+  /** Abilità già date da background e specie: non si possono scegliere per la classe. */
+  takenSkills?: string[]
 }
 
 /** Scelta delle abilità della classe: non mostra nulla se la classe non ne concede. */
-export default function ClassSkillChoice({ edition, className, asMulticlass, value, onChange }: Props) {
+export default function ClassSkillChoice({ edition, className, asMulticlass, value, onChange, takenSkills = [] }: Props) {
   const { t } = useTranslation()
   const { data } = useClassProficiencies(edition, className, asMulticlass)
   if (!data || data.skills_count === 0) return null
@@ -35,10 +37,11 @@ export default function ClassSkillChoice({ edition, className, asMulticlass, val
           return (
             <Pressable
               key={slug}
+              disabled={takenSkills.includes(slug)}
               onClick={() => toggle(slug)}
               className={`min-h-[44px] px-2 rounded-xl border text-sm font-body text-center transition-colors
                 ${on ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}
-                ${!on && full ? 'opacity-50' : ''}`}
+                ${!on && full ? 'opacity-50' : ''} disabled:opacity-40`}
             >
               {t(`character.skills.${slug}`, { defaultValue: slug })}
             </Pressable>
