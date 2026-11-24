@@ -86,7 +86,9 @@ def _movement_message(ctx: RuleContext, _params: dict) -> dict[str, str]:
 
 
 TANDEM = RollOptionSpec(
-    key=f"{CK}.tandem_footwork", phase="before", rolls=("initiative",), cost=Cost(feature_key=BI), extra_dice=_die,
+    key=f"{CK}.tandem_footwork", phase="before", rolls=("initiative",), extra_dice=_die,
+    # dal 18° l'Ispirazione Superiore, stesso innesco e applicata prima (Effetti simultanei), ridà gli usi da spendere
+    cost=Cost(feature_key=BI, refilled=lambda c: c.class_level >= 18),
     available=lambda c: not _incapacitated(c.char),
     label={"it": "Passo a Due: spendi Ispirazione Bardica e somma il dado all'Iniziativa tua e degli alleati entro 9 m",
            "en": "Tandem Footwork: spend Bardic Inspiration and add the die to your Initiative and your allies' within 30 ft"},

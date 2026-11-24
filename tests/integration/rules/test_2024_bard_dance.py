@@ -171,6 +171,15 @@ async def test_tandem_footwork_is_not_offered_when_incapacitated_without_uses_or
     assert "bard.tandem_footwork" not in await _roll_keys(client, await _bard24(client, 6, LORE), "initiative")
 
 
+async def test_tandem_footwork_without_uses_at_18_is_paid_by_superior_inspiration(client):
+    cid = await _bard24(client, 18, DANCE, charisma=16)  # 3 usi
+    await _set_uses(client, cid, BI, 0)
+    r = await client.post(f"/characters/{cid}/dice/initiative", json={"die": 10, "options": ["bard.tandem_footwork"]})
+    assert r.status_code == 200, r.text
+    assert len(r.json()["option_result"]["extra_rolls"]) == 1
+    assert (await _ability(client, cid, BI))["uses"] == 1  # Ispirazione Superiore 0 -> 2, Passo a Due 2 -> 1
+
+
 # ---------------------------------------------------------------------------
 # Evasione Guida
 # ---------------------------------------------------------------------------

@@ -37,7 +37,6 @@ async def test_il_dado_del_valore_2024_si_somma_al_danno_di_un_attacco_con_incan
                                                "carta:2024/classes/bard.md#Passo a Due / Tandem Footwork (Collegio della Danza 6, pag. 64)",
                                                "carta:2024/general.md#Simultaneous Effects (Effetti simultanei) (pag. 374)",
                                                "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-2212: difforme dal manuale, confermato")
 async def test_ispirazione_superiore_paga_il_passo_a_due_della_stessa_iniziativa(client):
     cid = await _bard24(client, 18, DANCE, charisma=16)
     await _set_uses(client, cid, BI, 0)

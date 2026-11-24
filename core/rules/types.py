@@ -437,6 +437,9 @@ class Cost:
     pact_only: bool = False
     # Costo che dipende dal lancio (Incantesimo Raddoppiato: il livello dell'incantesimo): sostituisce ``amount``
     amount_by: "Callable[[RuleContext], int] | None" = None
+    # Con ``feature_key``: la riga senza usi è ricaricata prima del pagamento da un'opzione automatica dello stesso tiro
+    # (Ispirazione Superiore ridà gli usi che Passo a Due spende alla stessa Iniziativa)
+    refilled: "Callable[[RuleContext], bool] | None" = None
 
 
 @dataclass(frozen=True)
