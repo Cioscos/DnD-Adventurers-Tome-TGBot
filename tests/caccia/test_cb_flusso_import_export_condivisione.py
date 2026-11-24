@@ -82,8 +82,8 @@ async def test_import_un_nome_di_soli_caratteri_invisibili_e_vuoto(client):
     dati["spells"][-1]["name"] = "\u200b"
     r = await client.post("/characters/import", json=dati)
     assert r.status_code == 201 and r.json()["spells"][-1]["name"] == "?"
-    dati["character"]["name"] = "\u200b\u200b"
-    assert (await client.post("/characters/import", json=dati)).status_code == 422
+    dati["character"]["name"] = "\u200b\u200b"  # CB-1551: l'app fino alla 3.14.7 lo salvava, il file resta importabile
+    assert (await client.post("/characters/import", json=dati)).json()["name"].startswith("?")
 
 
 @pytest.mark.caccia(id="CB-1537", fonte="decisione D-016 (tests/caccia/decisioni.md): massimo 9999 round; invariante: gli id di un altro personaggio non viaggiano",
@@ -99,7 +99,7 @@ async def test_import_concentrazione_da_oggetto_senza_id_altrui_e_con_i_round_al
 
 @pytest.mark.caccia(id="CB-1546", fonte="invariante: un file illeggibile in un punto non rompe la scheda importata", zona="flusso:import-export-condivisione",
                     voce="contratto", copre=["POST /characters/import", "PATCH /characters/{char_id}/hp"])
-@pytest.mark.parametrize("valore", ["X", [1], 5, True])
+@pytest.mark.parametrize("valore", ["X", [1], 5, True, {"name": 5}, {"name": ["x"]}])
 async def test_import_concentrazione_da_oggetto_illeggibile_scartata(client, valore):
     _cid, dati = await _file_di_prova(client)
     dati["character"]["settings"] = {"concentration_item_spell": valore}

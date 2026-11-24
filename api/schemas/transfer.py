@@ -46,9 +46,9 @@ def _visible(v: str) -> bool:
 def _named(v: str, info: ValidationInfo) -> str:
     if (info.context or {}).get("lenient"):  # l'export non cambia ciò che è salvato
         return v
-    if not _visible(v):
+    if not v.strip():
         raise ValueError("blank name")
-    return v.strip()
+    return v.strip() if _visible(v) else "?"  # l'app lo accettava fino alla 3.14.7: il file resta importabile
 
 
 def _named_or_mark(v: str, info: ValidationInfo) -> str:

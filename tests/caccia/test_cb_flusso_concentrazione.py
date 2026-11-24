@@ -1119,3 +1119,62 @@ async def test_set_current_zero_senza_pf_massimi_non_chiude_la_concentrazione(cl
     await client.patch(f"/characters/{cid}/concentration", json={"spell_id": sid})
     r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
     assert r.status_code == 200 and r.json()["concentrating_spell_id"] == sid
+
+
+@pytest.mark.caccia(id="CB-1551", fonte="invariante: un annullo non ridà ciò che nel frattempo non può più esserci (bersaglio sostituito, scontro finito)",
+                    zona="flusso:concentrazione", voce="annullamento", copre=["POST /characters/{char_id}/hp/undo", "POST /sessions/{session_id}/encounter/end"])
+@pytest.mark.parametrize("caso", ["sostituito", "finito"])
+async def test_annullo_pf_non_ridà_una_condizione_a_chi_non_puo_averla(client, test_session_factory, caso):
+    from sqlalchemy import select
+    from core.db.models import Character, Combatant, ConditionEffect, Encounter
+    sid, enc = await setup_full_encounter(client, test_session_factory)
+    async with test_session_factory() as s:
+        cid = (await s.execute(select(Character.id).where(Character.user_id == PLAYER_ID))).scalar_one()
+        char = await s.get(Character, cid)
+        char.hit_points = char.current_hit_points = 30
+        altro = Character(user_id=777, name="Altro", conditions={"charmed": True})
+        s.add(altro)
+        await s.flush()
+        aid = altro.id
+        await s.commit()
+    mostro = next(c["id"] for c in enc["combatants"] if c["kind"] == "monster")
+    as_user(PLAYER_ID)
+    bene = await _incantesimo(client, cid)
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": bene})
+    async with test_session_factory() as s:
+        eid = (await s.execute(select(Encounter.id))).scalars().first()
+        su_mostro = caso == "sostituito"
+        if su_mostro:
+            (await s.get(Combatant, mostro)).conditions = {"charmed": True}
+        s.add(ConditionEffect(character_id=None if su_mostro else aid, combatant_id=mostro if su_mostro else None, slug="charmed", expiry_anchor="owner", expiry_edge="start",
+                              expiry_count=3, source_character_id=cid, source_spell_id=bene, ends_with_concentration=True, encounter_id=eid, created_at="2026-06-09T10:00:00"
+                              if not su_mostro else "2099-01-01T00:00:00"))
+        await s.commit()
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).json()
+    async with test_session_factory() as s:
+        if caso == "sostituito":  # un combattente nuovo con lo stesso id
+            (await s.get(Combatant, mostro)).created_at = "2099-01-02T00:00:00"
+        if caso == "finito":
+            (await s.get(Encounter, eid)).status = "ended"
+        await s.commit()
+    assert (await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r["hp_undo_id"]})).status_code == 200
+    async with test_session_factory() as s:
+        assert (await s.execute(select(ConditionEffect))).scalars().all() == []
+
+
+@pytest.mark.caccia(id="CB-1552", fonte="invariante (come CB-1546): un valore illeggibile già salvato non rompe la serata né il riposo", zona="flusso:concentrazione", voce="contratto",
+                    copre=["GET /sessions/{session_id}/live", "POST /characters/{char_id}/rest"])
+@pytest.mark.parametrize("valore", ["Bless", 5, ["x"], {"name": 5}, {"name": "X", "feature_key": ["a"]}])
+async def test_concentrazione_da_oggetto_illeggibile_gia_salvata(client, test_session_factory, valore):
+    from core.db.models import Character
+    sid, cid = await seed_session(test_session_factory)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.hit_points = char.current_hit_points = 10
+        char.settings = {"concentration_item_spell": valore}
+        await s.commit()
+    as_user(GM_ID)
+    assert (await client.get(f"/sessions/{sid}/live")).status_code == 200
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})).status_code == 200

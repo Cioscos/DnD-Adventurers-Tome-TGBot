@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
 from core.rules.edition import character_edition
-from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, has_state, restore_exhaustion
+from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, has_state, item_spell_held, restore_exhaustion
 from api.services.rules_turn import get_turn, set_damaged, set_start_heal, set_surprised
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
@@ -155,6 +155,7 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
                 pc.active_states = [x for x in pc.active_states if x.get("key") != "wild_shape"] + cur_wild
             set_damaged(pc, snap["damaged"])
             from api.services.condition_removal import resuspend  # import locale: il servizio importa questo modulo
+            from api.services.effects import _still_concentrating  # circular import
             await resuspend(db, pc)
             for slug, x in (snap.get("suspended") or {}).items():  # tornata dopo l'avanzamento: le resta la durata di prima
                 eff = (await db.execute(select(ConditionEffect).where(
@@ -168,7 +169,8 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
                     continue
                 if await _rehold(db, pc.id, slug, x["by"]):
                     held[slug] = x
-                else:  # chi la sospendeva ha smesso dopo l'avanzamento: torna attiva
+                elif not x["effect"].get("ends_with_concentration") or await db.run_sync(_still_concentrating, x["effect"]):
+                    # chi la sospendeva ha smesso dopo l'avanzamento: torna attiva
                     pc.conditions = {**(pc.conditions or {}), slug: True}
                     await _restore_row(db, ConditionEffect, x["effect"])
             if held:
@@ -235,6 +237,13 @@ async def _restore_released(db: AsyncSession, entries: list[dict], created: set[
         kind, tid = x["target"]
         slug = x["slug"]
         owner = await db.get(Character if kind == "character" else Combatant, tid)
+        snap = x["effect_snapshot"]
+        if owner is not None and kind == "combatant" and owner.created_at > snap["created_at"]:
+            continue  # l'id è di un combattente aggiunto dopo: il bersaglio non c'è più
+        if snap["encounter_id"] is not None and (snap["expiry_count"] is not None or snap["save_dc"] is not None):
+            enc = await db.get(Encounter, snap["encounter_id"])
+            if enc is None or enc.status == "ended":  # L5: finito lo scontro, durate e TS cadono
+                continue
         if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
                 select(ConditionEffect.id).where(_target_filter((kind, tid)), ConditionEffect.slug == slug,
                                                  ConditionEffect.pending.is_(False)))).first():
@@ -293,8 +302,8 @@ RELEASED_LOG = "released_effects"  # ``session.info``: effetti caduti con una co
 
 def item_concentration(char: Character) -> str | None:
     """Chiave dell'incantesimo di un oggetto o privilegio su cui ``char`` si concentra (non ha una riga fra i suoi incantesimi)."""
-    held = (char.settings or {}).get("concentration_item_spell")
-    return f"{held.get('item_id') or held.get('feature_key') or ''}:{held.get('name')}"[:200] if isinstance(held, dict) and held else None
+    held = item_spell_held(char)
+    return f"{held.get('item_id') or held.get('feature_key') or ''}:{held.get('name')}"[:200] if held else None
 
 
 async def release_concentration_effects(db: AsyncSession, char: Character,

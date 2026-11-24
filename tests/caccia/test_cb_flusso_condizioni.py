@@ -1154,3 +1154,48 @@ async def test_turno_indietro_scaduta_sospesa_e_poi_la_concentrazione_interrotta
     assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
     j = await _come_giocatore(client, cid)
     assert j["conditions"]["charmed"] is True and [e["expiry_count"] for e in j["condition_effects"]] == [1]
+
+
+@pytest.mark.caccia(id="CB-1553", fonte="invariante (come CB-1515): legata a una concentrazione finita non torna", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_non_riaccende_una_condizione_senza_concentrazione_fonte(client, test_session_factory):
+    from core.db.models import Character
+    from core.rules.states import SUSPENDED_EFFECTS
+    sid, cid = await _sospeso_in_scontro(client, test_session_factory, 1, 5)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        e = char.settings[SUSPENDED_EFFECTS]["charmed"]
+        char.settings = {**char.settings, SUSPENDED_EFFECTS: {"charmed": {**e, "ends_with_concentration": True, "source_character_id": None}}}
+        await s.commit()
+    await _fino_al_turno(client, test_session_factory, sid, cid, 5)
+    await _interrompi(client, cid)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    assert (await _come_giocatore(client, cid))["conditions"]["charmed"] is False
+
+
+@pytest.mark.caccia(id="CB-1554", fonte="invariante: «Turno indietro» rimette la condizione com'era, anche a chi nel frattempo ne è immune (la sospende)", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_ridà_la_condizione_a_chi_era_gia_immune(client, test_session_factory):
+    from core.db.models import Character
+    from api.services.condition_effects import ExpirySpec
+    from core.rules.states import begin_state
+    from core.rules.types import StateSpec
+    from tests.integration._encounter_helpers import GM_ID, as_user
+    sid, cid, _pc, _m = await _gm_su_pg(client, test_session_factory)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.conditions = {"frightened": True}
+        begin_state(char, StateSpec("x", ends_on=("manual",), immune_conditions=("frightened",)), "x")
+        await upsert_effect(s, ("character", cid), "frightened", expiry=ExpirySpec("owner", "start", 1))
+        await s.commit()
+    as_user(GM_ID)
+    for _ in range(6):
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+        async with test_session_factory() as s:
+            if not (await s.get(Character, cid)).conditions.get("frightened"):
+                break
+    else:
+        raise AssertionError("la condizione non è scaduta")
+    await client.post(f"/sessions/{sid}/encounter/prev-turn")
+    async with test_session_factory() as s:
+        assert (await s.get(Character, cid)).conditions["frightened"] is True

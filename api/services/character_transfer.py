@@ -315,7 +315,7 @@ async def import_character(
     if "concentration_item_spell" in char.settings:  # l'id è della riga dell'altro personaggio; un valore illeggibile si scarta
         held = char.settings["concentration_item_spell"]
         char.settings = {**{k: v for k, v in char.settings.items() if k != "concentration_item_spell"},
-                         **({"concentration_item_spell": {k: v for k, v in held.items() if k != "item_id"}} if isinstance(held, dict) else {})}
+                         **({"concentration_item_spell": {k: v for k, v in held.items() if k != "item_id"}} if isinstance(held, dict) and isinstance(held.get("name"), str) else {})}
 
     for sp, row in zip(data.spells, spells):
         row.class_id = classes[int(sp.source_class_key[1:])].id if sp.source_class_key else None

@@ -71,7 +71,7 @@ from core.rules.edition import character_edition
 from core.rules.pact_casts import pact_cast
 from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
-from core.rules.states import begin_state, free_cast_state, has_state
+from core.rules.states import begin_state, free_cast_state, has_state, item_spell_held
 from core.rules.types import StateSpec
 from api.services.choices import consume_spell_pick, ensure_new_spell, release_spell_pick, spell_pick_target
 from core.rules.level_choices import reconcile_choices
@@ -777,7 +777,7 @@ async def update_concentration(
     if body.spell_id is None:
         if is_concentrating(char):  # il log della serata e la Cronologia dicono che è stata interrotta
             name = next((s.name for s in char.spells if s.id == char.concentrating_spell_id),
-                        ((char.settings or {}).get("concentration_item_spell") or {}).get("name"))
+                        item_spell_held(char).get("name"))
             add_history(session, char.id, "concentration", "Concentrazione interrotta" + (f": {name}" if name else ""))
         end_concentration(char)
     elif body.rounds is not None or body.spell_id != char.concentrating_spell_id:

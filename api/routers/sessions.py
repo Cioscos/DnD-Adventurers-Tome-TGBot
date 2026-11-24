@@ -71,6 +71,7 @@ from api.services.trades import add_coins, give_coins, give_item, remove_coins, 
 from api.services.condition_effects import character_effect_payload, characters_effect_payload
 from api.services.rules_turn import attacks_allowed, get_turn
 from api.services.encounter_view import build_encounter_block, public_states
+from core.rules.states import item_spell_held
 from core.db.models import (
     Campaign,
     CampaignMember,
@@ -257,7 +258,7 @@ async def _load_live_characters(
         # stesso snapshot di load_snapshot: regole attive e oggetti fuori dai contenitori (già caricati sopra)
         homebrew_ac = await get_passive_modifiers(db, char, "character.ac", (
             rules.get(char.id, []), [i for i in char.items if i.container_id is None]))
-        item_spell = (char.settings or {}).get("concentration_item_spell") or {}
+        item_spell = item_spell_held(char)
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,

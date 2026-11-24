@@ -208,6 +208,14 @@ def release_suspended(char: Any, closed: list[dict]) -> None:
         char.settings = {**{k: v for k, v in settings.items() if k != SUSPENDED_KEY}, COND_RELEASE: [*(settings.get(COND_RELEASE) or []), *held]}
 
 
+def item_spell_held(char: Any) -> dict:
+    """Incantesimo di un oggetto o privilegio su cui ``char`` si concentra; vuoto se non c'è o è illeggibile (vecchi import)."""
+    held = (char.settings or {}).get("concentration_item_spell")
+    if not isinstance(held, dict):
+        return {}
+    return {k: v for k, v in held.items() if isinstance(v, str if k in ("name", "feature_key") else int)}
+
+
 def charge_exhaustion(char: Any, closed: list[dict]) -> None:
     """Gli stati appena chiusi lasciano la spossatezza che dichiaravano (Frenesia). Al 6° livello si muore.
 
