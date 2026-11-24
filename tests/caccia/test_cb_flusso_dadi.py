@@ -370,7 +370,6 @@ async def test_due_tiri_diversi_insieme_restano_entrambi(client):
 
 @pytest.mark.caccia(id="CB-1475", fonte="invariante: la pulizia della cronologia per numero di eventi vale anche per i tiri dei dadi", zona="flusso:dadi",
                     voce="limiti", copre=["POST /characters/{char_id}/dice/result", "POST /characters/{char_id}/dice/initiative", "GET /characters/{char_id}/history"])
-@pytest.mark.xfail(strict=True, reason="CB-1475 dice/result e dice/initiative non chiamano prune_history")
 async def test_tiri_di_dadi_rispettano_la_pulizia_per_eventi(client, test_session_factory):
     from core.db.models import Character
     cid = await _pg(client)
