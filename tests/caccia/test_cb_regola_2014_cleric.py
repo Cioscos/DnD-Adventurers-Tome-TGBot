@@ -90,7 +90,6 @@ async def test_mitigare_elementi_non_si_somma_a_una_resistenza_gia_presente(clie
                     copre=["carta:2014/classes/cleric.md#Incanalare Divinità: Conoscenze Secolari / Channel Divinity: Knowledge of the Ages (Conoscenza 2, pag. 60)",
                            "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/skills/{skill_name}/roll"])
-@pytest.mark.xfail(strict=True, reason="CB-1663: difforme dal manuale, confermato")
 async def test_conoscenze_secolari_sostituisce_il_factotum_invece_di_sommarsi(client):
     r = await client.post("/characters", json={"name": "Bardo", "rules_edition": "2014",
                                                "initial_class": {"class_name": "bard", "level": 2}})

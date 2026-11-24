@@ -164,11 +164,13 @@ def _ages_state(_ctx: RuleContext, params: dict) -> StateSpec:
 
 
 def _ages_bonus(ctx: RuleContext) -> int:
-    """Competenza in più per l'abilità scelta, solo se non l'hai già: chi è competente o esperto non la somma due volte."""
+    """Competenza in più per l'abilità scelta, solo se non l'hai già: chi è competente o esperto non la somma due volte.
+    Il Factotum, già sul totale, vale solo senza competenza: la competenza lo sostituisce (come l'Atleta Straordinario)."""
+    from core.game.skills import jack_of_all_trades_part  # import locale: skills usa stats, che usa il catalogo
     state = next((s for s in ctx.char.active_states or [] if s.get("key") == "knowledge_of_the_ages"), None)
     if state is None or (state.get("data") or {}).get("skill") != ctx.skill or (ctx.char.skills or {}).get(ctx.skill):
         return 0
-    return ctx.char.proficiency_bonus
+    return ctx.char.proficiency_bonus - jack_of_all_trades_part(ctx.char)
 
 
 def _read_thoughts_state(ctx: RuleContext, _params: dict) -> StateSpec:
