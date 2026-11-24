@@ -6866,7 +6866,10 @@
     "it": "30 piedi"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V",
+    "S"
+   ],
    "material": null,
    "duration": {
     "en": "Instantaneous",
@@ -9063,8 +9066,8 @@
     "it": "Scegli una creatura consenziente che puoi vedere entro gittata. Finché l'incantesimo non termina, la Velocità del bersaglio raddoppia, ottiene un bonus di +2 alla Classe Armatura, ha Vantaggio ai tiri salvezza su Destrezza e ottiene un'azione aggiuntiva in ciascuno dei suoi turni. Quell'azione può essere usata solo per l'azione Attacco (un solo attacco), Scatto, Disimpegno, Nascondersi o Utilizzare.\n\nQuando l'incantesimo termina, il bersaglio è Incapacitato e ha Velocità 0 fino alla fine del suo turno successivo, mentre un'ondata di letargia lo travolge."
    },
    "higher_level": null,
-   "attack_type": "SAVE",
-   "save_ability": "dex",
+   "attack_type": null,
+   "save_ability": null,
    "damage_dice": null,
    "damage_type": null,
    "higher_levels_dice": null,
