@@ -471,7 +471,6 @@ async def test_velocita_e_sensi_di_specie_sopravvivono_a_import_e_copia(client):
 
 @pytest.mark.caccia(id="CB-1379", fonte="invariante: i PF correnti non superano mai il massimo (2014 · Punti ferita pag. 196, 2024 · Punti ferita), anche dopo un cambio di specie o la rimozione di Robusto che abbassa il massimo",
                     zona="flusso:creazione", voce="annullamento", copre=["PUT /characters/{char_id}/species", "DELETE /characters/{char_id}/abilities/{ability_id}", "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1379 i PF correnti restano sopra il massimo quando il massimo cala")
 @pytest.mark.parametrize("modo", ["nano", "halfling", "umano_altro_talento", "rimuovi_robusto"])
 async def test_massimo_che_cala_non_lascia_pf_correnti_oltre(client, modo):
     umano = {"key": "2024_human", "options": {"size": "medium", "skill": "arcana", "origin_feat": "2024_tough"}}
