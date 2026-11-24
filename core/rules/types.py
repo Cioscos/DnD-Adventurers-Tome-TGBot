@@ -661,6 +661,8 @@ class FeatureSpec:
     name: dict[str, str]
     summary: dict[str, str]
     action_type: str | None
+    # Sottoclasse -> attivazione diversa da ``action_type`` (Forma Selvatica 2014: azione bonus per il Circolo della Luna)
+    subclass_action_types: dict[str, str] | None = None
     uses: Uses | None = None
     restoration: str | dict[int, str] = "none"  # dict: livello minimo -> tipo di riposo
     short_rest_recovers: "int | dict[int, int] | None" = None  # dict: livello minimo -> usi recuperati (Ripristino Stregonesco)

@@ -91,7 +91,6 @@ async def test_incantesimi_bestiali_non_sbloccano_gli_incantesimi_di_un_altra_cl
                     zona="regola:2014/druid", voce="regola",
                     copre=["carta:2014/classes/druid.md#Forma Selvatica da Combattimento / Combat Wild Shape (Circolo della Luna 2, pag. 69)",
                            "GET /characters/{char_id}"])
-@pytest.mark.xfail(strict=True, reason="CB-1715: difforme dal manuale, confermato")
 async def test_la_forma_selvatica_della_luna_e_una_azione_bonus_sulla_scheda(client):
     luna = await _ability(client, await _druid(client, 2, "moon"), "druid.wild_shape")
     terra = await _ability(client, await _druid(client, 2, "land"), "druid.wild_shape")

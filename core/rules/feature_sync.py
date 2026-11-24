@@ -530,7 +530,7 @@ def _sync_from_catalog(session: AsyncSession, char: Character, cls: CharacterCla
             spent = _spent(ability)
 
         ability.name = spec.name.get(lang) or spec.name["it"]
-        ability.action_type = spec.action_type
+        ability.action_type = (spec.subclass_action_types or {}).get(cls.subclass_key, spec.action_type)
         ability.is_passive = spec.passive
         # Senza contatore la ricarica non esiste: `none` distingue questa riga da una risorsa illimitata.
         ability.restoration_type = RestorationType.NONE if spec.uses is None else _restoration(spec, cls.level)
