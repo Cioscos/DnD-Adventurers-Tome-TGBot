@@ -800,7 +800,7 @@ async def attack_with_weapon(
     refuse_if_incapacitated(char)
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    damage_dice_str: str = meta.get("damage_dice", "1d4")
+    damage_dice_str: str = meta.get("damage_dice") or "1d4"  # anche vuota o nulla
     properties: list[str] = meta.get("properties", [])
     magic_bonus = weapon_magic_bonus(item)
 

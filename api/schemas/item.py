@@ -111,8 +111,8 @@ def _validate_weapon_meta(v: dict) -> None:
     vd = v.get("versatile_dice")
     if vd not in (None, "") and not (isinstance(vd, str) and _VERSATILE_RE.match(vd.strip())):
         raise ValueError("versatile_dice must be dice notation like '1d10'")
-    dd = v.get("damage_dice")  # il numero secco è del catalogo (Cerbottana: «1»)
-    if dd not in (None, "") and not (isinstance(dd, str) and (DICE_RE.match(dd.strip()) or dd.strip().isdigit())):
+    dd = v.get("damage_dice")  # «1»: il danno fisso del catalogo (Cerbottana), l'unico che il motore tira senza dadi
+    if dd not in (None, "") and not (isinstance(dd, str) and (DICE_RE.match(dd.strip()) or dd.strip() == "1")):
         raise ValueError("damage_dice must be dice notation like '1d8' or '2d6+2'")
     wc = v.get("weapon_category")
     if wc not in (None, "simple", "martial"):
