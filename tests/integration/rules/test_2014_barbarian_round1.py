@@ -4,8 +4,8 @@ from __future__ import annotations
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, setup_full_encounter
 from tests.integration._telegram_stub import install_fake_telegram
 from tests.integration.rules.test_2014_barbarian import (
-    BERSERKER, RAGE, TOTEM, _ability, _armor, _attack, _barbarian, _full, _hit, _hp, _keys, _pick, _rage, _states,
-    _turn, _weapon,
+    BERSERKER, RAGE, TOTEM, _ability, _armor, _attack, _barbarian, _full, _hit, _hp, _keys, _new_turn_in_rage, _pick, _rage,
+    _states, _turn, _weapon,
 )
 
 
@@ -32,7 +32,7 @@ async def test_bear_resistance_and_the_14th_level_totems_work_in_heavy_armor(cli
     wolf = await _totem_barbarian(client, 14, spirit="wolf", attunement="wolf", strength=18)
     await _armor(client, wolf, "heavy")
     await _rage(client, wolf)
-    await client.post(f"/characters/{wolf}/turn/new")  # l'ira ha speso la bonus: il Lupo 14 ne ha bisogno
+    await _new_turn_in_rage(client, wolf)  # l'ira ha speso la bonus: il Lupo 14 ne ha bisogno
     sword = await _weapon(client, wolf)
     assert "barbarian.attunement_wolf_knock" in await _keys(client, wolf, "attack", item_id=sword)  # Lupo 14
 
@@ -85,7 +85,7 @@ async def test_ending_the_rage_spends_the_bonus_action_but_never_refuses(client)
     cid = await _barbarian(client, 5)
     await _rage(client, cid)
     assert (await _turn(client, cid))["bonus_used"] is True
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     assert (await _turn(client, cid))["bonus_used"] is False
     assert (await client.delete(f"/characters/{cid}/active-states/rage")).status_code == 200
     assert (await _turn(client, cid))["bonus_used"] is True
@@ -104,7 +104,7 @@ async def test_frenzy_attack_after_the_attack_action_does_not_need_the_extra_att
     cid = await _barbarian(client, 3, BERSERKER, strength=16)
     sword = await _weapon(client, cid)
     await _rage(client, cid, frenzy=True)
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     url = f"/characters/{cid}/items/{sword}/attack"
     assert (await client.post(url, json={"die": 10})).status_code == 200  # l'azione Attacco
     assert (await client.post(url, json={"die": 10})).status_code == 409  # un secondo senza Frenesia: oltre il limite
@@ -280,7 +280,7 @@ async def _berserker_5(client):
     cid = await _barbarian(client, 5, BERSERKER, strength=16)
     sword = await _weapon(client, cid)
     await _rage(client, cid, frenzy=True)
-    await client.post(f"/characters/{cid}/turn/new")
+    await _new_turn_in_rage(client, cid)
     return cid, f"/characters/{cid}/items/{sword}/attack"
 
 

@@ -26,13 +26,15 @@ from api.schemas.common import OptionResult
 from api.services.d20 import d20_records, resolve_applied
 from api.services.spell_effects import end_by_target, resists_chosen_type
 from api.services.dice_stats import record_dice
-from api.services.rules_states import end_unextended, remove_state, use_feature
+from api.services.rules_states import end_states, end_unextended, get_states, remove_state, use_feature
 from api.services.wild_shape import STATE_KEY as WILD_SHAPE_STATE, get_active_form, return_to_normal
 from api.services.session_allies import attach_party, attach_party_auras, attach_spell_auras, seated_allies
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
 from core.rules.states import is_target_immune, item_spell_held
 from api.services.turn_start import apply_turn_start
-from api.services.rules_turn import clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, spend
+from api.services.rules_turn import (
+    clear_once_per_turn, get_turn, refuse_if_incapacitated, release, reset_turn, set_damaged, spend,
+)
 from api.services.durations import end_concentration, is_concentrating
 from api.services.condition_effects import release_concentration_effects
 from core.db.models import Character, Combatant, Encounter, GameSession
@@ -131,8 +133,12 @@ async def turn_new(
 ) -> dict:
     char = await _owned_char(db, char_id, user_id)
     in_encounter = await active_encounter_row(db, char_id) is not None
-    if not in_encounter:
-        end_unextended(char)  # fuori da un incontro «Nuovo turno» chiude il turno che finisce (Ira 2024)
+    if not in_encounter:  # fuori da un incontro «Nuovo turno» chiude il turno che finisce, come la fine turno in scontro
+        if any("turn_end_inactive" in s["ends_on"] for s in get_states(char)):  # Ira 2014: né attacchi né danni dal turno precedente
+            if not (ended := get_turn(char))["attacks_made"] and not ended["damaged"]:
+                end_states(char, "turn_end_inactive")
+            set_damaged(char, False)  # il danno conta una sola valutazione (senza Ira resta: l'annullo dei PF lo confronta)
+        end_unextended(char)  # Ira 2024
     turn = reset_turn(char, keep_surprise=in_encounter, advances=not in_encounter)
     if not in_encounter:  # in un incontro l'inizio del turno lo dà il passaggio di turno, non questo pulsante
         await apply_turn_start(db, char, in_encounter=False)

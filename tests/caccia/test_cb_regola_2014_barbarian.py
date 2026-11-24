@@ -41,7 +41,6 @@ async def _turno_dopo(client, sid, volte=1) -> None:
 @pytest.mark.caccia(id="CB-1561", fonte="2014 · Barbaro · Ira · pag. 48", zona="regola:2014/barbarian", voce="regola",
                     copre=["carta:2014/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 48)",
                            "POST /characters/{char_id}/turn/new"])
-@pytest.mark.xfail(strict=True, reason="CB-1561: difforme dal manuale, confermato")
 async def test_fuori_scontro_un_turno_senza_attacchi_ne_danni_chiude_l_ira(client):
     cid = await _barbarian(client, 3, strength=16)
     spada = await _weapon(client, cid)
