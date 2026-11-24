@@ -76,6 +76,45 @@ def record_departure(gs: GameSession, p: SessionParticipant) -> None:
                            "history_start_id": since}]
 
 
+async def record_deletion(db: AsyncSession, char: Character) -> None:
+    """Un PG eliminato a serata aperta resta nel riepilogo: scheda e cronologia spariscono con lui, quindi la sua voce si scrive ora.
+    Senza ``character_id`` in cima: SQLite riusa l'id, un PG nuovo non deve ereditarla."""
+    seats = {p.session_id: p for p in (await db.execute(select(SessionParticipant).join(GameSession).where(
+        SessionParticipant.character_id == char.id, GameSession.status == SessionStatus.ACTIVE))).scalars()}
+    evenings = (await db.execute(select(GameSession).where(
+        GameSession.status == SessionStatus.ACTIVE,
+        or_(GameSession.id.in_(list(seats)), GameSession.departed.is_not(None))))).scalars().all()
+    for gs in evenings:
+        if gs.id in seats:
+            record_departure(gs, seats[gs.id])
+        mine = next((d for d in gs.departed or [] if d.get("character_id") == char.id), None)
+        if mine is None:
+            continue
+        await db.execute(select(Character).options(selectinload(Character.classes)).where(Character.id == char.id))
+        player = await db.scalar(select(CampaignMember.player_name).where(
+            CampaignMember.character_id == char.id, CampaignMember.campaign_id == gs.campaign_id))
+        rows = (await db.execute(select(CharacterHistory).where(
+            CharacterHistory.character_id == char.id, CharacterHistory.timestamp >= gs.created_at,
+        ).order_by(CharacterHistory.id))).scalars().all()
+        since = mine.get("history_start_id")
+        own = [r for r in rows if since is None or r.id > since]
+        window = (gs.created_at, _now())
+        gs.departed = [d for d in gs.departed if d is not mine] + [{
+            "user_id": mine["user_id"], "stats": _char_stats(char, mine.get("dice_stats_start"), own, window, player),
+            "healed_by": {str(k): v for k, v in _given(rows).items()},
+        }]
+
+
+def _given(rows: list[CharacterHistory]) -> dict[int, int]:
+    """Cure date ad altri PG: dalle righe di chi le ha ricevute (meta by_id)."""
+    given: dict[int, int] = {}
+    for r in rows:
+        m = r.meta or {}
+        if r.event_type == "hp_change" and m.get("op") == "HEAL" and m.get("by_id") and not m.get("undone"):
+            given[m["by_id"]] = given.get(m["by_id"], 0) + int(m.get("amount") or 0)
+    return given
+
+
 def _summary(items: list[dict], coins: dict) -> str:
     """'Pozione ×2, Corda, 15 GP' from a feed payload's item snapshots + coins."""
     parts = [f"{i.get('name')} ×{i['quantity']}" if (i.get("quantity") or 1) > 1 else str(i.get("name"))
@@ -209,15 +248,15 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
                     window, player_names.get(cid))
         for cid, start, since in pcs if cid in chars
     ]
-    given: dict[int, int] = {}  # cure date ad altri PG: dalle righe di chi le ha ricevute (meta by_id)
-    for rows in rows_by_char.values():
-        for r in rows:
-            m = r.meta or {}
-            if r.event_type == "hp_change" and m.get("op") == "HEAL" and m.get("by_id") and not m.get("undone"):
-                given[m["by_id"]] = given.get(m["by_id"], 0) + int(m.get("amount") or 0)
+    deleted = [d for d in gs.departed or [] if d.get("stats")]  # PG eliminati a serata aperta (record_deletion)
+    given = _given([r for rows in rows_by_char.values() for r in rows])
+    for d in deleted:
+        for by, n in d["healed_by"].items():
+            given[int(by)] = given.get(int(by), 0) + n
+    characters += [d["stats"] for d in deleted]
     for c in characters:
         c["healing_given"] = given.get(c["character_id"], 0)
-    name_by_user = {c.user_id: c.name for c in chars.values()}
+    name_by_user = {**{d["user_id"]: d["stats"]["name"] for d in deleted}, **{c.user_id: c.name for c in chars.values()}}
 
     encs = (await db.execute(
         select(Encounter).options(selectinload(Encounter.combatants))

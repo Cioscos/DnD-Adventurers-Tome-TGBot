@@ -478,3 +478,27 @@ async def test_riepilogo_non_punta_alla_campagna_eliminata(client):
     await client.post(f"/sessions/{sid}/close")
     assert (await client.delete(f"/campaigns/{camp['id']}")).status_code == 204
     assert (await client.get(f"/sessions/{sid}/recap")).json()["campaign_id"] is None
+
+
+@pytest.mark.caccia(id="CB-766", fonte="invariante: il riepilogo racconta chi ha giocato la serata", zona="flusso:campagna-calendario",
+                    voce="annullamento", copre=["DELETE /characters/{char_id}", "GET /sessions/{session_id}/recap"])
+@pytest.mark.parametrize("uscito", [False, True])
+async def test_pg_eliminato_resta_nel_riepilogo(client, test_session_factory, uscito):
+    camp, cid = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    sid = (await client.post("/sessions", json={"campaign_id": camp["id"]})).json()["id"]
+    act(PLAYER_ID)
+    assert (await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": cid})).status_code == 200
+    await _hp(client, cid, ("set_max", 20), ("set_current", 20), ("damage", 7))
+    if uscito:  # si alza prima, poi elimina il personaggio a serata ancora aperta
+        assert (await client.post(f"/sessions/{sid}/leave")).status_code == 204
+    nome = (await client.get(f"/characters/{cid}")).json()["name"]
+    assert (await client.delete(f"/characters/{cid}")).status_code == 204
+    # SQLite riusa l'id: il PG nuovo non eredita la serata di quello eliminato
+    await client.post("/characters", json={"name": "Nuovo"})
+    act(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/close")).status_code == 204
+    rec = (await client.get(f"/sessions/{sid}/recap")).json()
+    assert [(c["name"], c["damage_taken"]) for c in rec["characters"]] == [(nome, 7)]
+    act(PLAYER_ID)
+    assert (await client.get(f"/sessions/{sid}/recap")).status_code == 200

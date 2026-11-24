@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.services.history import add_history
+from api.services.recap import record_deletion
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.data.tools import TOOLS, tool_label
@@ -472,6 +473,7 @@ async def delete_character(
         )
     )
     participant = (await session.execute(participant_q)).scalar_one_or_none()
+    await record_deletion(session, char)
     if participant is not None:
         game_session = await session.get(GameSession, participant.session_id)
         await session.delete(participant)
