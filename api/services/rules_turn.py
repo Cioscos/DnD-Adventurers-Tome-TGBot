@@ -98,6 +98,7 @@ def forgo_attack(char) -> dict:
     if st["action_attacks"] >= attacks_allowed(char):
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "no_attack_left"})
     st["action_attacks"] += 1
+    st["action_weapons"] = [*(st.get("action_weapons") or []), [0, False]]  # ceduto: non è un attacco con un'arma leggera
     _save(char, st)
     return st
 

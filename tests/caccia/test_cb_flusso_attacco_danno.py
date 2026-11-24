@@ -1261,3 +1261,40 @@ async def test_l_altra_mano_resta_aperta_se_l_arma_dell_attacco_sparisce(client,
     assert r.status_code < 300, r.text
     dadi(3)
     _j(await _att(client, cid, b, attack_mode="offhand"))
+
+
+@pytest.mark.caccia(id="CB-1509", fonte="2014 · Combattere con Due Armi · pag. 195; 2024 · Armi · Leggera · pag. 213: serve un attacco con un'arma leggera", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+async def test_un_attacco_ceduto_non_apre_l_altra_mano(client, test_session_factory, dadi):
+    from core.db.models import Character
+    from api.services.rules_turn import forgo_attack
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    cid = await _pg(client, "fighter", 5, "2014", dexterity=16)
+    lunga = await _arma(client, cid, "Spada lunga", "1d8", [])
+    a = await _arma(client, cid, "Pugnale", "1d4", ["finesse", "light"])
+    b = await _arma(client, cid, "Pugnale secondo", "1d4", ["finesse", "light"])
+    await _slot(client, cid, a, "main_hand")
+    await _slot(client, cid, b, "off_hand")
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == cid).options(
+            selectinload(Character.classes), selectinload(Character.abilities), selectinload(Character.items)))).scalar_one()
+        forgo_attack(char)
+        await s.commit()
+    dadi(3)
+    _j(await _att(client, cid, lunga))
+    dadi(3)
+    r = await _att(client, cid, b, attack_mode="offhand")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "offhand_needs_light_attack", r.text
+
+
+@pytest.mark.caccia(id="CB-1511", fonte="2024 · Armi · Leggera · pag. 213: un trucchetto o un incantesimo al posto di un attacco non è un attacco con un'arma leggera", zona="flusso:attacco-danno",
+                    voce="interazione", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
+def test_un_incantesimo_al_posto_di_un_attacco_non_vale_come_attacco_segnato_a_mano():
+    from types import SimpleNamespace
+    from core.rules.catalog.y2024.bard_colleges import _cantrip_for_an_attack
+    from core.rules.catalog.y2024.fighter_subclasses import _spell_for_two_attacks
+    for fn in (_cantrip_for_an_attack, _spell_for_two_attacks):
+        char = SimpleNamespace(turn_state={})
+        fn(None, SimpleNamespace(char=char), {})
+        assert len(char.turn_state["action_weapons"]) == char.turn_state["action_attacks"]

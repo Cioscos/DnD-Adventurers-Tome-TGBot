@@ -401,6 +401,7 @@ def _two_attack_spell(ctx: RuleContext) -> bool:
 def _spell_for_two_attacks(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
     turn = dict(ctx.char.turn_state or {})
     turn["action_attacks"] = turn.get("action_attacks", 0) + 2
+    turn["action_weapons"] = [*(turn.get("action_weapons") or []), [0, False], [0, False]]  # non sono attacchi con un'arma leggera
     ctx.char.turn_state = turn
 
 
