@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from api.services.history import add_history
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
-from api.services.d20 import d20_records, resolve_applied, resolve_body
+from api.services.d20 import d20_records, resolve_applied, resolve_body, set_inspiration
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_conditions, apply_heal, cap_current_hp, end_knock_out, sync_zero_hp
 from api.services.item_charges import plan_item_recharges, set_item_charges
@@ -976,8 +976,8 @@ async def rest(
         add_history(session, char.id, "rest", "Riposo lungo completato",
                      meta={"kind": "long"})
         for spec, row in active_features(char):  # alla fine del riposo lungo certi privilegi avviano un loro stato (Tranquillità)
-            if spec.long_rest_inspiration:  # Intraprendente dell'Umano 2024
-                char.heroic_inspiration = True
+            if spec.long_rest_inspiration:  # Intraprendente dell'Umano 2024: con una già in mano, la nuova si può cedere
+                set_inspiration(char, True)
             if spec.long_rest_state:
                 started = spec.long_rest_state(RuleContext(char=char, edition=edition, class_row=row, class_level=row.level))
                 if started is not None:
