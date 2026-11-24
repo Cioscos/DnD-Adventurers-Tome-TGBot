@@ -105,7 +105,6 @@ async def test_ardore_del_fuoco_vale_anche_quando_colpisci_con_un_attacco_con_in
                     copre=["carta:2024/races.md#Aasimar / Aasimar (pag. 186)", "POST /characters/{char_id}/features/{feature_key}/use",
                            "POST /characters/{char_id}/attack/{attack_id}/damage"])
 @pytest.mark.parametrize("forma,tipo", [("wings", "radiant"), ("shroud", "necrotic")])
-@pytest.mark.xfail(strict=True, reason="CB-3514: difforme dal manuale, confermato")
 async def test_i_danni_extra_della_rivelazione_celeste_hanno_il_tipo_della_forma(client, forma, tipo):
     cid = await _pg(client, "2024_aasimar", {"size": "medium"}, livello=3)
     assert (await _usa(client, cid, "species.2024_aasimar_celestial_revelation", params={"form": forma})).status_code == 200

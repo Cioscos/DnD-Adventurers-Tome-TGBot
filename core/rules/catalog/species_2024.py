@@ -232,11 +232,19 @@ def _revelation_message(ctx: RuleContext, params: dict) -> dict[str, str]:
     }[params["form"]]
 
 
+def _revelation_type(ctx: RuleContext, _inputs: dict) -> dict[str, str]:
+    """Il fisso si somma al danno dell'arma o dell'incantesimo: l'esito dice di che tipo è quella parte."""
+    pb = ctx.char.proficiency_bonus
+    if _form(ctx) == "shroud":
+        return _both(f"Rivelazione celeste: {pb} di questi danni sono necrotici", f"Celestial Revelation: {pb} of this damage is necrotic")
+    return _both(f"Rivelazione celeste: {pb} di questi danni sono radianti", f"Celestial Revelation: {pb} of this damage is radiant")
+
+
 def _revelation_damage(phase: str, rolls: tuple[str, ...]) -> RollOptionSpec:
     return RollOptionSpec(
         key=f"species.2024_aasimar_revelation_damage{'' if phase == 'after_hit' else '_spell'}", phase=phase, rolls=rolls,
         once_per_turn=True, group="species.2024_aasimar_revelation_damage", bonus=lambda c, _i: c.char.proficiency_bonus,
-        available=lambda c: _form(c) is not None,
+        available=lambda c: _form(c) is not None, effect=_revelation_type,
         label=_both("Rivelazione celeste: danni extra pari alla competenza (necrotici col Manto, altrimenti radianti), una volta per turno",
                     "Celestial Revelation: extra damage equal to your proficiency (necrotic with the Shroud, radiant otherwise), once per turn"))
 
