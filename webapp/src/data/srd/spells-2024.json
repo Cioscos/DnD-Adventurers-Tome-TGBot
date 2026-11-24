@@ -8709,7 +8709,10 @@
     "it": "Contatto"
    },
    "area": null,
-   "components": [],
+   "components": [
+    "V",
+    "S"
+   ],
    "material": null,
    "duration": {
     "en": "Up to 1 minute",

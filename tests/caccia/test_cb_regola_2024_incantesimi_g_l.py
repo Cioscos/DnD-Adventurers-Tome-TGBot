@@ -94,7 +94,6 @@ async def test_il_danno_di_lama_infuocata_2024_somma_il_modificatore_da_incantat
                     voce="interazione",
                     copre=["carta:2024/spells.md#Guida", "carta:2024/general.md#Hide [Action] (Nascondersi) (pag. 368)",
                            "POST /characters/{char_id}/spells", "POST /characters/{char_id}/hide", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3763: difforme dal manuale, confermato")
 async def test_guida_presa_dal_catalogo_2024_ha_la_componente_verbale_e_fa_finire_il_nascondiglio(client):
     cid = await _pg(client, "cleric", 1)
     sid = await _impara(client, cid, "guidance")
