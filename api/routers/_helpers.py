@@ -100,7 +100,9 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
 
 
 async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
-    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade)."""
+    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade); la capacità di carico
+    segue la Forza allo stesso modo."""
+    char.recalculate_carry_capacity()
     if (char.settings or {}).get("hp_auto_calc", True):
         delta = con_hp_delta(char.classes, old_con_mod, effective_con_mod(char), stored_rolls(char))
         if delta != 0:

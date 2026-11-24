@@ -332,7 +332,6 @@ async def test_export_import_conserva_competenze_e_totali(client):
         assert dopo[chiave] == prima[chiave], chiave
 
 
-@pytest.mark.xfail(strict=True, reason="CB-256 la capacita di carico ignora la Forza data da un oggetto")
 @pytest.mark.caccia(id="CB-256", fonte="2014 · Capacità di carico = punteggio di Forza × 15 (general.md)", zona="flusso:caratteristiche-tiri",
                     voce="interazione", copre=["POST /characters/{char_id}/items"])
 async def test_capacita_di_carico_segue_la_forza_data_da_un_oggetto(client):

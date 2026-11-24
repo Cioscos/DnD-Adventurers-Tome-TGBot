@@ -18,7 +18,6 @@ from core.game.stats import sync_base_ac
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
 from api.routers._helpers import apply_con_hp, effective_con_mod
-from api.services.effects import cap_current_hp, sync_zero_hp
 from api.services.character_response import build_character_response
 from pydantic import BaseModel
 from typing import Optional
