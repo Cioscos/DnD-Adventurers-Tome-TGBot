@@ -284,7 +284,6 @@ async def test_export_import_conserva_round_di_concentrazione(client):
 
 @pytest.mark.caccia(id="CB-453", fonte="invariante: una durata a round non può essere negativa", zona="flusso:concentrazione", voce="limiti",
                     copre=["PATCH /characters/{char_id}/concentration"])
-@pytest.mark.xfail(strict=True, reason="CB-453 PATCH concentration accetta rounds negativo")
 async def test_durata_manuale_negativa_rifiutata(client):
     cid = await _pg(client)
     sid = await _incantesimo(client, cid)
