@@ -78,7 +78,6 @@ async def test_la_velocita_di_volo_fissa_cambia_come_la_velocita(client, effetto
                     copre=["carta:2024/general.md#Hide [Action] (Nascondersi) (pag. 368)",
                            "carta:2024/general.md#Shape-Shifting (Mutare forma) (pag. 373)",
                            "POST /characters/{char_id}/hide", "POST /characters/{char_id}/companions/{comp_id}/attack"])
-@pytest.mark.xfail(strict=True, reason="CB-2962: difforme dal manuale, confermato")
 async def test_l_attacco_della_forma_selvatica_fa_finire_il_nascondiglio(client):
     cid = await _druid24(client, 2)
     forma = await _shape(client, cid, 0.25)

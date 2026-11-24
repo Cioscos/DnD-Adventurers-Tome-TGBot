@@ -98,7 +98,6 @@ async def test_in_ira_non_si_lancia_un_incantesimo_da_un_oggetto(client):
                     zona="regola:2014/barbarian", voce="interazione",
                     copre=["carta:2014/classes/barbarian.md#Ira / Rage (Barbaro 1, pag. 48)",
                            "POST /characters/{char_id}/companions/{comp_id}/attack", "POST /sessions/{session_id}/encounter/next-turn"])
-@pytest.mark.xfail(strict=True, reason="CB-1565: difforme dal manuale, confermato")
 async def test_l_attacco_della_forma_selvatica_tiene_viva_l_ira(client, test_session_factory, monkeypatch):
     sid, cid = await _in_scontro(client, test_session_factory, monkeypatch, ("barbarian", 2, 12), ("druid", 2, 8))
     bestia = {**_beast(0.25), "actions": [{"name": "Morso", "attack_bonus": 4, "damage_dice": "1d6+2", "damage_type": "piercing"}]}

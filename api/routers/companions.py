@@ -21,6 +21,7 @@ from api.schemas.companion import (
 from api.routers.hp import update_hp
 from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
+from api.services.effects import end_hide
 from api.services.last_damage import pairs
 from api.services.rules_options import merge_options, option_result, remember_roll, use_options
 from core.rules.roll_options import refund_spent
@@ -545,7 +546,11 @@ async def companion_attack(
     is_fumble = outcome.kept == 1
     is_critical = outcome.kept >= applied.crit_min or (opts.force_crit and not is_fumble)
     if in_form:  # solo la forma è il druido che attacca: un famiglio o un compagno non chiude gli stati del personaggio
+        end_hide(session, char)  # il tiro per colpire rompe il nascondiglio, dopo aver contato il vantaggio (2024 p.368)
         end_on_action(char, "attack")  # il Vantaggio di Passo Lunare vale per il prossimo tiro per colpire, anche della forma
+        # è un attacco del turno (l'Ira lo guarda, 2014 p.48 e 2024 p.51); own_slot: il Multiattacco o la reazione della forma
+        # non sono contati fra gli attacchi dell'azione Attacco del druido
+        spend(char, "attack", own_slot=True)
 
     rolls: list[int] = []
     flat = 0
