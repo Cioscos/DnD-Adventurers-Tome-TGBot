@@ -135,7 +135,6 @@ async def test_un_arma_a_distanza_da_lancio_lanciata_usa_la_destrezza(client):
                     zona="regola:2014/generali", voce="regola",
                     copre=["carta:2014/general.md#Punti Ferita e Dadi Vita / Hit Points and Hit Dice (pag. 163)",
                            "PATCH /characters/{char_id}/classes/distribute"])
-@pytest.mark.xfail(strict=True, reason="CB-2764: difforme dal manuale, confermato")
 async def test_con_i_pf_tirati_il_primo_livello_di_una_nuova_classe_si_tira(client):
     cid = await _pg(client, "fighter", 1)  # 10 PF, Costituzione 10
     await _impostazioni(client, cid, hp_mode="rolled", advancement="milestone")

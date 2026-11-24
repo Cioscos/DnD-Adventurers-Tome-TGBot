@@ -233,7 +233,12 @@ async def distribute_class_levels(
             entry.class_id = (await create_class_for_character(char, entry.new_class, session, lang=lang)).id
 
     classes_by_id = {c.id: c for c in char.classes}
-    gained_total = sum(max(0, e.level - classes_by_id[e.class_id].level) for e in body.classes)
+    # Livello da cui si contano i livelli guadagnati: una classe nuova nasce già al suo livello, ma i suoi livelli sono
+    # guadagnati e si tirano come dal 2° in poi (2014 pag. 163); solo il 1° della classe più vecchia ha i PF pieni.
+    first_id = min(classes_by_id)
+    start = {e.class_id: classes_by_id[e.class_id].level if e.new_class is None else int(e.class_id == first_id)
+             for e in body.classes}
+    gained_total = sum(max(0, e.level - start[e.class_id]) for e in body.classes)
     if body.hp_rolls is not None and len(body.hp_rolls) != gained_total:
         raise HTTPException(status_code=422, detail="hp_rolls must have one value per gained level")
     rolls_left = list(body.hp_rolls) if body.hp_rolls is not None else None
@@ -259,13 +264,15 @@ async def distribute_class_levels(
     for entry in body.classes:
         cls = classes_by_id[entry.class_id]
         new_level = entry.level
-        if new_level == cls.level:
+        if new_level == cls.level == start[cls.id]:
             continue
-        gained = max(0, new_level - cls.level)
+        gained = max(0, new_level - start[cls.id])
         mine, rolls_left = (
             (rolls_left[:gained], rolls_left[gained:]) if rolls_left is not None else (None, None)
         )
-        record_rolls(char, cls, cls.level, new_level, mine)
+        record_rolls(char, cls, start[cls.id], new_level, mine)
+        if new_level == cls.level:  # classe nuova al livello con cui è nata: solo i tiri
+            continue
         prev_level = cls.level
         cls.level = new_level
         sync_level_choices(char, cls, prev_level, new_level)
