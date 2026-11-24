@@ -71,7 +71,6 @@ async def _lancia_gratis(client, cid, sid):
                     copre=["carta:2024/feats.md#Robusto / Tough (pag. 202) - Origine",
                            "carta:2024/classes/fighter.md#Dono Epico / Epic Boon (Guerriero 19, pag. 92)",
                            "POST /characters/{char_id}/choices/{choice_id}/resolve"])
-@pytest.mark.xfail(strict=True, reason="CB-3461: difforme dal manuale, confermato")
 async def test_il_dono_epico_del_19_ammette_un_altro_talento_per_cui_si_e_qualificati(client):
     ch = await _pg(client, "fighter", 1)
     r = await client.patch(f"/characters/{ch['id']}/xp", json={"set": 305000})

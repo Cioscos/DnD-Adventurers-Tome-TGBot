@@ -363,7 +363,8 @@ def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> Non
         raise _bad("feat_wrong_edition")
     if origin == "creation" and spec.category != "origin":
         raise _bad("feat_wrong_category")
-    if origin == "level" and (spec.category == "epic_boon") != boon:
+    # il Dono Epico dà un Dono o un altro talento per cui si è qualificati (2024, Guerriero pag. 92 e le altre classi)
+    if origin == "level" and spec.category == "epic_boon" and not boon:
         raise _bad("feat_wrong_category")
     if (origin == "level" or spec.category == "epic_boon") and char.total_level < spec.min_level:
         raise _bad("feat_prerequisite_level")
