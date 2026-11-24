@@ -428,6 +428,9 @@ async def test_attivare_con_patch_rispetta_gs_usi_e_azione(client):
     usi = await _usi(client, cid)
     azione = (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]
     assert r.status_code in (409, 422) or (usi < 2 and (azione["action_used"] or azione["bonus_used"]))
+    nata = await client.post(f"/characters/{cid}/companions", json={  # stessa regola per una forma creata già attiva
+        "kind": "wild_shape", "name": "Subito attiva", "max_hp": 10, "statblock": _beast(2.0), "is_active": True})
+    assert nata.status_code in (409, 422), nata.text
 
 
 @pytest.mark.caccia(id="CB-371", fonte="2024 · Druido · Regole della Forma Selvatica · pag. 81", zona="flusso:compagni-forme", voce="edizioni",

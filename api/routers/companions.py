@@ -118,6 +118,8 @@ async def create_companion(
         if any(c.feature_key == BEAST_COMPANION and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
     limits = form_limits(char)
+    if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
+        raise HTTPException(status_code=409, detail={"code": "use_activate"})
     if body.kind == "wild_shape" and limits is not None and limits.known_forms is not None:
         if sum(c.kind == "wild_shape" for c in rows) >= limits.known_forms:  # 2024: forme conosciute, se ne sostituisce una
             raise HTTPException(status_code=422, detail="known_forms_limit")
