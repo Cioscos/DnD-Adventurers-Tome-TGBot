@@ -127,11 +127,14 @@ export type FeatListMode = 'level' | 'boon' | 'manual' | 'creation'
 export function featsFor(char: CharacterFull | null, edition: '2014' | '2024', mode: FeatListMode, lang: 'it' | 'en'): FeatItem[] {
   const source = edition === '2014' ? (mode === 'boon' ? [] : FEATS_2014) : FEATS_2024
   const level = char?.total_level ?? 0
+  // Dono Epico 2024 (pag. 210 e classi al 19°): un Dono o un altro talento per cui si è qualificati, i Doni per primi
   const wanted = (f: Feat2024) => mode === 'creation' ? f.category === 'origin'
-    : mode === 'boon' ? f.category === 'epic_boon'
+    : mode === 'boon' ? true
       : mode === 'level' ? f.category !== 'epic_boon'
         : f.category !== 'epic_boon' || level >= f.min_level
-  return source.filter(wanted).map((f) => ({
+  const list = source.filter(wanted)
+  if (mode === 'boon') list.sort((a, b) => Number(b.category === 'epic_boon') - Number(a.category === 'epic_boon'))
+  return list.map((f) => ({
     key: f.key, name: f.name[lang], summary: f.summary[lang], abilities: f.abilities ?? undefined, cap: f.max_score,
     unmet: char ? !meetsPrerequisites(f, char, { manual: mode === 'manual' }) : false,
     repeatable: f.repeatable, needs: f.needs, category: f.category,

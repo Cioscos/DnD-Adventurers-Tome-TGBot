@@ -69,7 +69,7 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     }))
   })
 
-  it('posts an epic boon (no tabs, boons only) with a +1 up to 30', async () => {
+  it('posts an epic boon (no tabs, boons and the other feats) with a +1 up to 30', async () => {
     resolve.mockResolvedValue({ id: 7 })
     const char = {
       ...mkChar(), rules_edition: '2024', total_level: 19, classes: [],
@@ -78,7 +78,8 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     renderWithProviders(<PendingChoicesBadge char={char} />)
     await userEvent.click(screen.getByText('character.level_choice.badge'))
     expect(screen.queryByText('character.level_choice.asi')).toBeNull()
-    expect(screen.queryByText('Attore')).toBeNull()
+    // PHB 2024 pag. 92 (Guerriero 19, Dono Epico): un Dono o un altro talento per cui si è qualificati; Attore chiede Carisma 13
+    expect(screen.getByText('Attore').closest('button')).toBeDisabled()
     // il Dono che richiede incantesimi resta disabilitato per chi non lancia
     expect(screen.getByText('Dono del Richiamo degli incantesimi').closest('button')).toBeDisabled()
     await userEvent.click(screen.getByText('Dono del Fato'))
