@@ -1,6 +1,7 @@
 """Controlli scritti dalla correzione del gruppo dati-incantesimi-fe (dubbi risolti come difetti)."""
 import pytest
 
+from tests.caccia.test_cb_regola_2014_incantesimi_a_c import _dal_catalogo as _dal_catalogo_2014, _pg as _pg_2014
 from tests.caccia.test_cb_regola_2024_incantesimi_m_r import _dal_catalogo, _pg
 
 
@@ -28,4 +29,28 @@ async def test_arma_elementale_2024_dal_catalogo_non_tira_danni_al_lancio(client
     assert r.status_code == 200, r.text
     voce = next(s for s in r.json() if s["srd_index"] == "elemental-weapon")
     # 1d4/2d4/3d4 del tipo scelto arrivano agli attacchi con l'arma (opzione già nel totale), l'incantesimo non ha un tiro suo
+    assert not (voce["damage_dice"] and not (voce["effect"] or {}).get("hit_damage"))
+
+
+@pytest.mark.caccia(id="CB-4033", fonte="2014 · Incantesimi · Arma Elementale · pag. 215", zona="regola:2014/incantesimi-A-C", voce="regola",
+                    copre=["carta:2014/spells.md#Arma Elementale", "POST /characters/{char_id}/spells", "GET /characters/{char_id}/spells"])
+async def test_arma_elementale_2014_dal_catalogo_non_tira_danni_al_lancio(client):
+    cid = await _pg_2014(client, "paladin", 9)
+    await _dal_catalogo_2014(client, cid, "elemental-weapon")
+    r = await client.get(f"/characters/{cid}/spells")
+    assert r.status_code == 200, r.text
+    voce = next(s for s in r.json() if s["srd_index"] == "elemental-weapon")
+    # +1/+2/+3 e 1d4/2d4/3d4 del tipo scelto arrivano agli attacchi con l'arma (opzione già nel totale), l'incantesimo non ha un tiro suo
+    assert not (voce["damage_dice"] and not (voce["effect"] or {}).get("hit_damage"))
+
+
+@pytest.mark.caccia(id="CB-4034", fonte="2014 · Incantesimi · Porta Dimensionale · pag. 261", zona="regola:2014/incantesimi-M-R", voce="regola",
+                    copre=["carta:2014/spells.md#Porta Dimensionale", "POST /characters/{char_id}/spells", "GET /characters/{char_id}/spells"])
+async def test_porta_dimensionale_2014_dal_catalogo_non_tira_danni_al_lancio(client):
+    cid = await _pg_2014(client, "bard", 7)
+    await _dal_catalogo_2014(client, cid, "dimension-door")
+    r = await client.get(f"/characters/{cid}/spells")
+    assert r.status_code == 200, r.text
+    voce = next(s for s in r.json() if s["srd_index"] == "dimension-door")
+    # la carta descrive solo il teletrasporto: i 4d6 forza del manuale toccano chi viaggia solo se l'arrivo fallisce, mai al lancio
     assert not (voce["damage_dice"] and not (voce["effect"] or {}).get("hit_damage"))
