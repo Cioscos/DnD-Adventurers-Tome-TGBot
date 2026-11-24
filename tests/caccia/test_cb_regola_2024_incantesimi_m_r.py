@@ -65,7 +65,6 @@ def _stati(scheda: dict, chiave: str) -> list[dict]:
 @pytest.mark.caccia(id="CB-3811", fonte="2024 · Incantesimi · Protezione dal Male e dal Bene (concentrazione, fino a 10 minuti) · pag. 309-310",
                     zona="regola:2024/incantesimi-M-R", voce="regola",
                     copre=["carta:2024/spells.md#Protezione dal Male e dal Bene", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3811: difforme dal manuale, confermato")
 async def test_protezione_dal_male_e_dal_bene_dal_catalogo_avvia_la_concentrazione(client):
     cid = await _pg(client)
     sid = await _dal_catalogo(client, cid, "protection-from-evil-and-good", slot=1)
