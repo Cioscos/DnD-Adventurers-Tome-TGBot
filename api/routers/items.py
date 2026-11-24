@@ -26,7 +26,7 @@ from api.services.rules_options import (
     roll_option_dice,
     use_options,
 )
-from api.services.rules_turn import attacks_allowed, get_turn, mark_once, refuse_if_incapacitated, spend
+from api.services.rules_turn import attacks_allowed, get_turn, loading_applies, mark_once, refuse_if_incapacitated, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_applied, resolve_body, spend_inspiration_reroll
@@ -556,7 +556,11 @@ def _check_attack_limit(char: Character, body: AttackSubmission | None, item: It
     Non vale per un attacco con un'opzione che ha uno slot proprio (Frenesia, Ritorsione): non è un attacco dell'azione."""
     if body and (body.with_inspiration or body.confirm_extra_attack or _own_slot_attack(char, body)):
         return
-    made, allowed = get_turn(char)["action_attacks"], attacks_allowed(char, item)
+    turn = get_turn(char)
+    made, allowed = turn["action_attacks"], attacks_allowed(char, item, per_weapon=False)
+    if made < allowed and item is not None and loading_applies(char, item):
+        # Ricarica (2014 p.147): un solo colpo per azione con quell'arma; gli altri attacchi dell'azione restano
+        made, allowed = (turn.get("loading_shots") or {}).get(str(item.id), 0), attacks_allowed(char, item)
     if made >= allowed:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "attack_limit", "made": made, "allowed": allowed})
 
@@ -895,6 +899,9 @@ async def attack_with_weapon(
     if not (body and body.with_inspiration):  # il rilancio con ispirazione è lo stesso attacco
         if not offhand:
             spend(char, "attack", own_slot=_own_slot_attack(char, body))
+            if loading_applies(char, item):  # contati per arma: il tetto della Ricarica è suo
+                shots = get_turn(char).get("loading_shots") or {}
+                char.turn_state = {**get_turn(char), "loading_shots": {**shots, str(item.id): shots.get(str(item.id), 0) + 1}}
             _note_martial_attack(char, item, body)
         elif NICK_OPTION not in opts.keys:
             spend(char, "bonus")

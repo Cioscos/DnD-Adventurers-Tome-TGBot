@@ -94,7 +94,6 @@ async def test_faretra_veloce_vuota_si_passa_alle_frecce_sciolte(client, dadi):
     assert (await _pila(client, cid, sciolte))["quantity"] == 9
 
 
-@pytest.mark.xfail(strict=True, reason="CB-041 Ricarica: limite contato su tutte le armi")
 @pytest.mark.caccia(id="CB-041", fonte="2014 · Equipaggiamento · Ricarica · pag. 147: una sola munizione per azione a prescindere dagli attacchi", zona="flusso:attacco-danno",
                     voce="regola", copre=["POST /characters/{char_id}/items/{item_id}/attack", "route:/char/:id/inventory"])
 async def test_ricarica_non_blocca_l_attacco_con_un_altra_arma(client, dadi):

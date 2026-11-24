@@ -175,7 +175,7 @@ def refuse_if_incapacitated(char) -> None:
 _CROSSBOW_EXPERT = ("feat.crossbow_expert", "feat.2024_crossbow_expert")
 
 
-def _loading_applies(char, item) -> bool:
+def loading_applies(char, item) -> bool:
     """Arma con Ricarica, salvo la balestra di chi ha Esperto di Balestre (2014 p.167, 2024 p.203)."""
     from core.rules.weapons import has_property, weapon_key  # import locale
     if not has_property(item, "loading"):
@@ -184,7 +184,7 @@ def _loading_applies(char, item) -> bool:
     return not (expert and "crossbow" in (weapon_key(item) or ""))  # shortcut: 2014 chiede anche la competenza nella balestra, non controllata
 
 
-def attacks_allowed(char, item=None, with_pact: bool = False) -> int:
+def attacks_allowed(char, item=None, with_pact: bool = False, *, per_weapon: bool = True) -> int:
     """Attacchi del turno: per azione il massimo fra 1 e i privilegi attivi, mai somma fra classi, per le azioni disponibili.
     ``item``: l'arma dell'attacco; i privilegi legati all'arma del patto contano solo con lei (``with_pact`` li forza)."""
     from core.game.item_bonuses import item_meta  # import locale
@@ -194,9 +194,8 @@ def attacks_allowed(char, item=None, with_pact: bool = False) -> int:
         *(spec.attacks_per_action for spec, _ in active_features(char)),
         *(spec.attacks_with_pact_weapon for spec, _ in active_features(char) if with_pact), 1,
     )
-    if item is not None and _loading_applies(char, item):
-        per_action = 1  # Ricarica: una sola munizione per azione, bonus o reazione
-        # shortcut: il limite conta tutti gli attacchi dell'azione, non solo quelli con l'arma a Ricarica; rivederlo se serve il conteggio per arma.
+    if per_weapon and item is not None and loading_applies(char, item):
+        per_action = 1  # Ricarica: una sola munizione per azione, bonus o reazione, con QUELL'arma (``per_weapon=False``: tutti gli attacchi dell'azione)
     turn = get_turn(char)
     hasted = 1 if turn.get("haste_action") and turn["extra_actions"] > 0 else 0  # l'azione di Velocità vale un solo attacco
     return per_action * (1 + turn["extra_actions"] - hasted) + hasted
