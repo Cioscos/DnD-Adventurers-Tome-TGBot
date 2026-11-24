@@ -29,7 +29,7 @@ async def _monaco_in_scontro(client, factory, monkeypatch, livello, sottoclasse=
 @pytest.mark.caccia(id="CB-1811", fonte="2014 · Monaco · Elusione · pag. 92", zona="regola:2014/monk", voce="edizioni",
                     copre=["carta:2014/classes/monk.md#Elusione / Evasion (Monaco 7, pag. 92)",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.parametrize("edizione, offerta", [pytest.param("2014", True, marks=pytest.mark.xfail(strict=True, reason="CB-1811: difforme dal manuale, confermato")), ("2024", False)])
+@pytest.mark.parametrize("edizione, offerta", [("2014", True), ("2024", False)])
 async def test_elusione_da_stordito_solo_nel_2024_si_perde(client, edizione, offerta):
     # 2014: nessuna clausola sull'incapacitato (il TS fallito d'ufficio dà comunque metà danni); 2024: non funziona da Incapacitato
     cid = await _monk(client, 7)

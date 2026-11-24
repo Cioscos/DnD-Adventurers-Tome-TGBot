@@ -168,18 +168,18 @@ def _evasion_started(_session: Any, ctx: RuleContext, _inputs: dict) -> None:
 
 
 EVASION_SAVE = RollOptionSpec(
-    key=f"{CK}.evasion", phase="before", rolls=("save",), available=lambda c: c.ability == "dexterity" and _can_act(c),
+    key=f"{CK}.evasion", phase="before", rolls=("save",), available=lambda c: c.ability == "dexterity",
     on_confirm=_evasion_started,
     label={"it": "Elusione: l'effetto dimezza i danni con un TS Destrezza?", "en": "Evasion: does the effect halve damage on a Dexterity save?"},
     effect=_say("Elusione: se superi il TS non subisci danni, se lo fallisci subisci la metà. Applica l'esito al danno.",
                 "Evasion: if you pass the save you take no damage, on a failure you take half. Apply the outcome to the damage."))
 EVASION_SUCCESS = RollOptionSpec(
     key=f"{CK}.evasion_success", phase="damage_in", rolls=("damage_taken",), multiplier=0, group="evasion",
-    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE) and _can_act(c),
+    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE),
     label={"it": "Elusione: hai superato il TS, nessun danno", "en": "Evasion: you passed the save, no damage"})
 EVASION_FAILED = RollOptionSpec(
     key=f"{CK}.evasion_failed", phase="damage_in", rolls=("damage_taken",), multiplier=0.5, group="evasion",
-    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE) and _can_act(c),
+    cost=Cost(state_key=EVASION_STATE), available=lambda c: state_on(c, EVASION_STATE),
     label={"it": "Elusione: hai fallito il TS, metà del danno", "en": "Evasion: you failed the save, half damage"})
 
 
@@ -473,8 +473,8 @@ FEATURES = (
              "Your unarmed strikes count as magical for overcoming resistance and immunity to nonmagical damage."),
             magic_unarmed=True),
     feature("evasion", CK, ED, 7, "Elusione / Evasion (Monaco 7, pag. 92)", ("Elusione", "Evasion"),
-            ("Con un TS Destrezza per metà danni: TS superato nessun danno, fallito metà. Non vale se sei incapacitato.",
-             "On a Dexterity save for half damage: no damage on a success, half on a failure. Not while incapacitated."),
+            ("Con un TS Destrezza per metà danni: TS superato nessun danno, fallito metà.",
+             "On a Dexterity save for half damage: no damage on a success, half on a failure."),
             roll_options=(EVASION_SAVE, EVASION_SUCCESS, EVASION_FAILED)),
     feature("stillness_of_mind", CK, ED, 7, "Mente Lucida / Stillness of Mind (Monaco 7, pag. 92)",
             ("Mente Lucida", "Stillness of Mind"),

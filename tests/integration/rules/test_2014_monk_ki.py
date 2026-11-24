@@ -519,10 +519,11 @@ async def test_evasion_damage_options_need_the_confirmed_save_and_do_not_survive
     assert EVASION_OK not in await _roll_keys(client, cid, "damage_taken")
 
 
-async def test_evasion_does_not_work_while_incapacitated(client):
+async def test_evasion_still_works_while_incapacitated(client):
+    # 2014, Elusione (Monaco 7, pag. 92): nessuna clausola sull'Incapacitato, che c'è solo nella carta 2024 (pag. 103)
     cid = await _monk(client, 7)
     await _conditions(client, cid, incapacitated=True)
-    assert EVASION not in await _roll_keys(client, cid, "save", ability="dexterity")
+    assert EVASION in await _roll_keys(client, cid, "save", ability="dexterity")
 
 
 # ---------------------------------------------------------------------------
