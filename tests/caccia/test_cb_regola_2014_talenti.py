@@ -96,7 +96,6 @@ async def test_incantatore_rituale_non_toglie_al_chierico_l_obbligo_di_preparare
 @pytest.mark.caccia(id="CB-3014", fonte="2014 · Talenti · Incantatore da Guerra · pag. 168; Guerriero · Cavaliere Mistico · pag. 75",
                     zona="regola:2014/talenti", voce="interazione",
                     copre=["carta:2014/feats.md#Incantatore da Guerra / War Caster (pag. 168)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3014: difforme dal manuale, confermato")
 async def test_il_cavaliere_mistico_puo_prendere_incantatore_da_guerra(client):
     cid = await _fighter(client, 3, "eldritch_knight")
     r = await _take(client, cid, "war_caster")
@@ -107,7 +106,6 @@ async def test_il_cavaliere_mistico_puo_prendere_incantatore_da_guerra(client):
                     voce="interazione",
                     copre=["carta:2014/feats.md#Iniziato alla Magia / Magic Initiate (pag. 168)", "POST /characters/{char_id}/feats",
                            "PUT /characters/{char_id}/feats/{ability_id}/options"])
-@pytest.mark.xfail(strict=True, reason="CB-3015: difforme dal manuale, confermato")
 async def test_chi_lancia_incantesimi_da_un_talento_soddisfa_il_prerequisito(client):
     ch = await _char14(client, "fighter")
     cid = ch["id"]
@@ -121,7 +119,6 @@ async def test_chi_lancia_incantesimi_da_un_talento_soddisfa_il_prerequisito(cli
 @pytest.mark.caccia(id="CB-3016", fonte="2014 · Talenti · Incantatore da Guerra · pag. 168; Paladino · Incantesimi dal 2º livello · pag. 97",
                     zona="regola:2014/talenti", voce="limiti",
                     copre=["carta:2014/feats.md#Incantatore da Guerra / War Caster (pag. 168)", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3016: difforme dal manuale, confermato")
 async def test_un_paladino_di_primo_livello_non_lancia_incantesimi(client):
     ch = await _char14(client, "paladin", level=1)
     r = await _take(client, ch["id"], "war_caster")

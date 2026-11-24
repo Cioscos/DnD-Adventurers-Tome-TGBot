@@ -20,10 +20,11 @@ from core.data.feats import ALL_ABILITIES, LIST_ABILITY as _LIST_ABILITY, MI_ABI
 from core.data.feats_2024 import ALL_FEATS as FEATS
 from api.services.history import add_history
 from core.data.skills import SKILL_ABILITY_MAP
+from core.data.spell_slots import caster_kind, normalize_class_name
 from core.db.models import Ability, Character, CharacterClass, HomebrewRule, RestorationType, Spell
 from core.rules.catalog._common import has_fighting_style, styles_taken
 from core.rules.proficiencies import armor_trained, normalize
-from core.rules.catalog import features_for
+from core.rules.catalog import active_features, features_for
 from core.rules.level_choices import (  # noqa: F401
     FREE_KNOWN_KEY, active_choice_specs, apply_grants, mark_resolved, pending_key, reconcile_choices, sync_level_choices,
 )
@@ -354,6 +355,33 @@ async def reopen_tome(session: AsyncSession, char: Character) -> None:
     _history(session, char, "Libro delle Ombre: scelte da rifare")
 
 
+# livello di classe da cui la classe lancia: mezzi incantatori dal 2° nel 2014 (Paladino pag. 97, Ranger pag. 104), dal 1° nel 2024
+_CASTS_FROM = {"2014": {"full": 1, "pact": 1, "half": 2, "third": 3}, "2024": {"full": 1, "pact": 1, "half": 1, "third": 3}}
+# shortcut: la razza 2014 è testo libero, quelle del manuale con un incantesimo innato si riconoscono dal nome; da togliere con un catalogo
+_CASTING_RACES_2014 = ("elfo alto", "alto elfo", "high elf", "drow", "elfo oscuro", "dark elf", "gnomo delle foreste", "forest gnome",
+                       "tiefling")
+
+
+def _casts_spells(char: Character) -> bool:
+    """Prerequisito dei talenti da incantatore. 2024 «Incantesimi o Magia del Patto» (pag. 209): una classe che lancia al suo
+    livello, il terzo incantatore dalla sottoclasse anche senza caratteristica salvata. 2014 «capacità di lanciare almeno un
+    incantesimo» (pag. 168), da qualsiasi fonte: anche un talento completato, un privilegio o la razza."""
+    edition = character_edition(char)
+    for row in char.classes:
+        if normalize_class_name(row.class_name) is None:  # classe custom: la caratteristica salvata
+            if row.spellcasting_ability:
+                return True
+            continue
+        kind = caster_kind(row, edition)
+        if kind and row.level >= _CASTS_FROM[edition][kind]:
+            return True
+    if edition == "2024":
+        return False
+    race = (char.race or "").lower()
+    return any(name in race for name in _CASTING_RACES_2014) or any(
+        spec.granted_spells or (spec.class_key == "feat" and _feat_spells(row)) for spec, row in active_features(char))
+
+
 def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> None:
     """Edizione, categoria e prerequisiti (livello, caratteristica, incantesimi) di un talento.
 
@@ -372,7 +400,7 @@ def _check_feat(char: Character, spec, boon: bool, origin: str = "level") -> Non
         names, minimum = spec.prereq_abilities
         if not any(_score_row(char, n).value >= minimum for n in names):
             raise _bad("feat_prerequisite_ability")
-    if spec.needs_spellcasting and not any(c.spellcasting_ability for c in char.classes):
+    if spec.needs_spellcasting and not _casts_spells(char):
         raise _bad("feat_prerequisite_spellcasting")
     if spec.prereq_armor and not armor_trained(char, spec.prereq_armor):
         raise _bad("feat_prerequisite_armor")

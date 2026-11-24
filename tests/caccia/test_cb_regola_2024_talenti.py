@@ -90,7 +90,6 @@ async def test_il_dono_epico_del_19_ammette_un_altro_talento_per_cui_si_e_qualif
                            "POST /characters/{char_id}/feats"])
 @pytest.mark.parametrize(("classe", "sottoclasse", "chiave"), [("fighter", "Cavaliere Mistico", "eldritch_knight"),
                                                               ("rogue", "Mistificatore Arcano", "arcane_trickster")])
-@pytest.mark.xfail(strict=True, reason="CB-3462: difforme dal manuale, confermato")
 async def test_il_terzo_incantatore_soddisfa_il_prerequisito_incantesimi(client, classe, sottoclasse, chiave):
     ch = await _pg(client, classe, 4, sottoclasse)
     assert ch["classes"][0]["subclass_key"] == chiave, ch["classes"]

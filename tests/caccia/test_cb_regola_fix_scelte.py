@@ -23,3 +23,19 @@ async def test_elenco_della_seconda_classe_esaurito_si_sceglie_un_altra_abilita(
     r = await client.post(f"/characters/{cid}/classes", json={"class_name": "ranger", "level": 1, "skill_choices": ["arcana"]})
     assert r.status_code == 201, r.json().get("detail")
     assert r.json()["skills"].get("arcana")
+
+
+@pytest.mark.caccia(id="CB-4114", fonte="2014 · Talenti · Incantatore da Guerra: capacità di lanciare almeno un incantesimo, da qualsiasi fonte · pag. 168; Razze · Elfo Alto pag. 21, Tiefling pag. 43",
+                    zona="regola:2014/talenti", voce="interazione",
+                    copre=["carta:2014/feats.md#Incantatore da Guerra / War Caster (pag. 168)",
+                           "carta:2014/races.md#Elfo Alto / High Elf (pag. 21)", "carta:2014/races.md#Tiefling / Tiefling (pag. 43)",
+                           "POST /characters/{char_id}/feats"])
+@pytest.mark.parametrize(("razza", "atteso"), [("Tiefling", 201), ("Elfo alto", 201), ("Umano", 422)])
+async def test_chi_conosce_un_trucchetto_di_razza_sa_lanciare_incantesimi(client, razza, atteso):
+    r = await client.post("/characters", json={
+        "name": "Guerriero", "rules_edition": "2014", "identity": {"race": razza}, "ability_scores": SCORES,
+        "initial_class": {"class_name": "fighter", "level": 4}})
+    assert r.status_code == 201 and r.json()["race"] == razza, r.text
+    # Eredità Infernale (taumaturgia) e il trucchetto dell'Elfo Alto: il guerriero sa lanciare almeno un incantesimo
+    r = await client.post(f"/characters/{r.json()['id']}/feats", json={"feat_key": "war_caster", "ability": None})
+    assert r.status_code == atteso, r.text
