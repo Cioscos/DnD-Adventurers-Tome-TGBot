@@ -1801,6 +1801,7 @@
           "once_per_turn": "The surge d20 is rolled once per turn.",
           "no_repeat": "There is no repeat in progress.",
           "tides_not_spent": "Tides of Chaos has not been spent.",
+          "no_slot_cast": "Tamed Surge is used right after a sorcerer spell cast with a spell slot.",
           "no_pending_surge": "There is no surge to choose.",
           "feature_not_usable": "This feature cannot be used now.",
           "invalid_choice": "That choice is not valid.",

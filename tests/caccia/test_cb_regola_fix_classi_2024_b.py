@@ -1,8 +1,11 @@
 """Controlli scritti dai correttori del gruppo classi-2024-b per i dubbi risolti come difetti."""
 import pytest
 
-from tests.integration.rules.test_2014_bard import _full
+from tests.integration.rules.test_2014_bard import _ability, _full
+from tests.integration.rules.test_2014_fighter_eldritch_knight import _cast, _spell
 from tests.integration.rules.test_2014_sorcerer import _sorcerer
+
+TAMED = "sorcerer.tamed_surge"
 
 
 async def _surge(client, cid, **body):
@@ -28,3 +31,21 @@ async def test_impulso_59_60_recupera_lo_slot_del_patto_se_e_il_piu_basso(client
     after = {s["id"]: s["used"] for s in (await _full(client, cid))["spell_slots"]}
     assert after[pact["id"]] == 0 and after[second["id"]] == 1
 
+
+@pytest.mark.caccia(id="CB-4512", fonte="2024 · Stregone · Magia Selvaggia, Impulso Domato · pag. 150 (subito dopo un incantesimo da stregone lanciato con uno slot)",
+                    zona="regola:2024/sorcerer", voce="regola",
+                    copre=["carta:2024/classes/sorcerer.md#Impulso Domato / Tamed Surge (Magia Selvaggia 18, pag. 150)",
+                           "POST /characters/{char_id}/wild-magic/surge", "POST /characters/{char_id}/spells/{spell_id}/use"])
+async def test_impulso_domato_solo_dopo_un_lancio_con_slot(client):
+    r = await client.post("/characters", json={"name": "Stregone", "rules_edition": "2024", "initial_class": {
+        "class_name": "sorcerer", "level": 18, "subclass": "Magia Selvaggia"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    r = await _surge(client, cid, tamed=True, percentile=[53])  # nessun lancio: niente azione extra scelta a piacere
+    assert r.status_code == 409, r.text[:200]
+    assert (await _ability(client, cid, TAMED))["uses"] == 1
+    spell = await _spell(client, cid, "Ragnatela", 2)
+    assert (await _cast(client, cid, spell, slot_level=2)).status_code == 200
+    r = await _surge(client, cid, tamed=True, percentile=[53])
+    assert r.status_code == 200, r.text[:200]
+    assert r.json()["applied"]["extra_action"] is True and (await _ability(client, cid, TAMED))["uses"] == 0

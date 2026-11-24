@@ -367,6 +367,8 @@ async def test_tamed_surge_picks_the_result_once_and_never_the_last_row(client):
     cid = await _make(client, "wild_magic", 18)
     await _surge(client, cid, tamed=True, percentile=[98], expect=422)
     assert (await _ability(client, cid, P + "tamed_surge"))["uses"] == 1
+    # 2024 pag. 150: «subito dopo aver lanciato un incantesimo da stregone con uno slot»
+    assert (await _cast(client, cid, await _spell(client, cid, "Ragnatela", 2), slot_level=2)).status_code == 200
     body = await _surge(client, cid, tamed=True, percentile=[53])
     assert body["applied"]["label"] == "53-56" and body["applied"]["extra_action"] is True
     assert (await _ability(client, cid, P + "tamed_surge"))["uses"] == 0
