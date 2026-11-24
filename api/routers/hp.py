@@ -243,8 +243,12 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
             clocks = await foreign_spell_clocks(session, char)  # prima della spesa: uno stato speso chiude l'orologio di chi l'ha lanciato
             opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug, damage_in=raw)
             rolls, reduction = roll_option_dice(char, opts)
+            # un solo arrotondamento sul totale dell'attacco (Schivata Prodigiosa: «dimezza i danni di quell'attacco»,
+            # 2014 pag. 78): ciò che l'arrotondamento parte per parte perderebbe resta sulla parte principale
+            extras = [p.amount for p in body.extra_damage]
+            scaled = scale_damage(raw + sum(extras), opts.multiplier) - sum(scale_damage(a, opts.multiplier) for a in extras)
             # dadi e bonus riducono il danno insieme: se il totale è negativo (Parata con Destrezza bassa) non lo aumenta
-            option_after = max(0, scale_damage(raw, opts.multiplier) - max(0, reduction + opts.bonus) - ally_cut)  # con le riduzioni degli alleati
+            option_after = max(0, scaled - max(0, reduction + opts.bonus) - ally_cut)  # con le riduzioni degli alleati
             option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after, allies=ally_block)
             # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
             raw = option_after
