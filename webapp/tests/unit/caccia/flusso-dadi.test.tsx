@@ -39,7 +39,7 @@ describe('caccia: dadi', () => {
   })
 
   // caccia: {"id": "CB-756", "fonte": "invariante: un orario UTC dell'API si mostra nell'ora locale di chi guarda", "zona": "flusso:dadi", "voce": "normale", "copre": ["route:/char/:id/history", "route:/char/:id/dice"]}
-  it.fails("l'orario di un evento scritto dall'API in UTC si mostra nell'ora locale", () => {
+  it("l'orario di un evento scritto dall'API in UTC si mostra nell'ora locale", () => {
     process.env.TZ = 'Europe/Rome' // fissa il fuso: Node lo rispetta a runtime su Windows e Linux, e lo ripristina afterEach
     expect(new Date(2026, 10, 24, 12).getTimezoneOffset()).toBe(-60)
     const ora = formatRelative('2026-11-24T09:00:00', {

@@ -1,5 +1,7 @@
 /** Human-friendly relative date helpers used by History and other timelines. */
 
+import { fromServer } from './calendarDates'
+
 type Locale = 'it' | 'en'
 
 const LOCALE_TAGS: Record<Locale, string> = {
@@ -40,7 +42,7 @@ export interface FormatRelativeOptions {
  * Older → absolute date
  */
 export function formatRelative(iso: string | Date, opts: FormatRelativeOptions): string {
-  const date = iso instanceof Date ? iso : new Date(iso)
+  const date = iso instanceof Date ? iso : fromServer(iso)
   const now = opts.now ?? new Date()
   const tag = LOCALE_TAGS[opts.locale] ?? opts.locale
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`
@@ -76,7 +78,7 @@ export function formatRelative(iso: string | Date, opts: FormatRelativeOptions):
 
 /** Absolute date formatted for tooltip (e.g. "23/05/2026 14:32"). */
 export function formatAbsolute(iso: string | Date, locale: Locale = 'it'): string {
-  const date = iso instanceof Date ? iso : new Date(iso)
+  const date = iso instanceof Date ? iso : fromServer(iso)
   const tag = LOCALE_TAGS[locale] ?? locale
   try {
     return new Intl.DateTimeFormat(tag, {
@@ -90,13 +92,13 @@ export function formatAbsolute(iso: string | Date, locale: Locale = 'it'): strin
 
 /** Day-bucket key for grouping (e.g. "2026-05-23"). */
 export function dayKey(iso: string | Date): string {
-  const d = iso instanceof Date ? iso : new Date(iso)
+  const d = iso instanceof Date ? iso : fromServer(iso)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 /** Long-form day header for sticky group titles ("23 maggio 2026"). */
 export function dayHeader(iso: string | Date, locale: Locale): string {
-  const d = iso instanceof Date ? iso : new Date(iso)
+  const d = iso instanceof Date ? iso : fromServer(iso)
   const tag = LOCALE_TAGS[locale] ?? locale
   try {
     return new Intl.DateTimeFormat(tag, { day: '2-digit', month: 'long', year: 'numeric' }).format(d)
