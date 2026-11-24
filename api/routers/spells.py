@@ -68,7 +68,7 @@ from core.rules.catalog import active_features
 from core.rules.catalog.spells import spell_effect
 from core.rules.catalog.y2024.paladin import STEED, make_steed
 from core.rules.edition import character_edition
-from core.rules.pact_casts import pact_cast
+from core.rules.pact_casts import FREE_CASTS, pact_cast, spent_free_casts
 from core.rules.school_hooks import after_cast
 from core.rules.spellbook import MODES, book_refusal, copy_cost, prepare_refusal, wizard_row
 from core.rules.states import begin_state, free_cast_state, has_state, item_spell_held
@@ -253,8 +253,8 @@ def _consume_cast(
         used = arcanum or invocation
         pact_row = next((a for a in char.abilities if (a.id == used.ability_id if used.ability_id is not None
                                                         else a.feature_key == used.feature_key)), None)
-        if pact_row is None or (pact_row.uses or 0) < 1:
-            raise HTTPException(status_code=409, detail={"code": "no_uses"})
+        if pact_row is None or (pact_row.uses or 0) < 1 or (used.free_key is not None and not used.uses_left):
+            raise HTTPException(status_code=409, detail={"code": "no_uses"})  # il lancio gratuito di questo incantesimo è già speso
     if ritual:
         # Lancio rituale: +10 min, nessuno slot. Richiede il tag ritual e chi può celebrarlo per edizione.
         if not spell.is_ritual:
@@ -284,6 +284,8 @@ def _consume_cast(
                      meta={"ki": ki_total, "slot_level": spell.level + ki_extra})
     elif arcanum is not None:
         spend(char, _cast_kind(char, spell))  # 409 turn_slot_used: nulla è ancora scritto
+        if arcanum.free_key is not None:  # prima dell'UPDATE degli usi (_charge_pact_use), che lo porta con sé
+            pact_row.options = {**(pact_row.options or {}), FREE_CASTS: [*spent_free_casts(pact_row), arcanum.free_key]}
         add_history(session, char.id, "spell_cast", f"Lanciato {spell.name} (Arcanum Mistico)",
                      meta={"slot_level": spell.level, "arcanum": True})
     elif free_at_will:

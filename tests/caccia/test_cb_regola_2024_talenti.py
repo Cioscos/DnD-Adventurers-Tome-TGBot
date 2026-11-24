@@ -181,7 +181,6 @@ async def test_il_dono_del_fato_torna_quando_tiri_l_iniziativa(client, test_sess
 @pytest.mark.caccia(id="CB-3470", fonte="2024 · Talenti · Toccato dalle fate · pag. 204", zona="regola:2024/talenti", voce="limiti",
                     copre=["carta:2024/feats.md#Toccato dalle fate / Fey-Touched (pag. 204) - Generale (livello 4+)",
                            "PUT /characters/{char_id}/feats/{ability_id}/options", "POST /characters/{char_id}/spells/{spell_id}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3470: difforme dal manuale, confermato")
 async def test_toccato_dalle_fate_passo_velato_gratis_una_sola_volta(client):
     ch = await _pg(client, "fighter", 4)
     cid = ch["id"]

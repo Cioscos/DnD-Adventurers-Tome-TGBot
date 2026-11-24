@@ -104,8 +104,8 @@ _register(
     _f24("crossbow_expert", modifiers=(Modifier("damage", _off_hand_modifier, when=_crossbow_offhand),)),
     _f24("crusher"),
     _f24("elemental_adept", modifiers=(Modifier("damage_min_die", 2, when=_adept_type),)),
-    # Toccato dalle fate / dall'ombra: due lanci gratuiti per riposo lungo, condivisi fra l'incantesimo fisso e quello
-    # scelto (``options["spell"]``); il manuale ne dà uno per incantesimo (ruling della PR 2)
+    # Toccato dalle fate / dall'ombra: due usi per riposo lungo, uno per l'incantesimo fisso e uno per quello scelto
+    # (``options["spell"]``); chi ha già usato il suo lo segna ``core/rules/pact_casts.py`` (``FREE_CASTS``)
     _f24("fey_touched", passive=False, granted_spells=("misty-step",), free_spell="misty-step", arcanum_group="spell",
          uses=Uses(table={1: 2}), restoration="long_rest"),
     _f24("keen_mind"),  # competenza o Maestria applicate al completamento; Studio rapido: testo
