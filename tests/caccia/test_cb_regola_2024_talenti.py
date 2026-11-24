@@ -196,7 +196,6 @@ async def test_toccato_dalle_fate_passo_velato_gratis_una_sola_volta(client):
 @pytest.mark.caccia(id="CB-3471", fonte="2024 · Talenti · Dono dello Spirito della notte · pag. 211", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Dono dello Spirito della notte / Boon of the Night Spirit (pag. 211) - Dono epico",
                            "POST /characters/{char_id}/features/{feature_key}/use"])
-@pytest.mark.xfail(strict=True, reason="CB-3471: difforme dal manuale, confermato")
 async def test_fondersi_con_le_ombre_rende_invisibile(client):
     ch = await _pg(client, "fighter", 19)
     await _preso(client, ch["id"], "2024_boon_night_spirit", "dexterity")

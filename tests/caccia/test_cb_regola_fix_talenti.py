@@ -79,3 +79,25 @@ async def test_toccato_dall_ombra_un_lancio_gratuito_per_incantesimo(client):
     assert (await _lancia_gratis(client, cid, incantesimi["silent-image"])).status_code == 200
     assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long", "confirm_early": True})).status_code == 200
     assert (await _lancia_gratis(client, cid, incantesimi["invisibility"])).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-4153", fonte="2024 · Talenti · Dono dello Spirito della notte · pag. 211", zona="regola:2024/talenti", voce="regola",
+                    copre=["carta:2024/feats.md#Dono dello Spirito della notte / Boon of the Night Spirit (pag. 211) - Dono epico",
+                           "GET /characters/{char_id}/roll-options", "PATCH /characters/{char_id}/hp"])
+async def test_forma_d_ombra_resiste_senza_azione_bonus_e_senza_invisibilita(client):
+    r = await client.post("/characters", json={"name": "Talenti 2024", "rules_edition": "2024",
+                                               "initial_class": {"class_name": "fighter", "level": 19}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    assert (await _take(client, cid, "2024_boon_night_spirit", "dexterity")).status_code == 201
+    # «Forma d'ombra»: resistenza a tutto tranne psichico e radioso in luce fioca o oscurità, senza azione Bonus né Invisibile
+    chiave = next((k for k in await _roll_keys(client, cid, "damage_taken", damage_type="fire") if "night_spirit" in k), None)
+    assert chiave, await _roll_keys(client, cid, "damage_taken", damage_type="fire")
+    assert chiave not in await _roll_keys(client, cid, "damage_taken", damage_type="psychic")
+    assert chiave not in await _roll_keys(client, cid, "damage_taken", damage_type="radiant")
+    pieni = (await _full(client, cid))["current_hit_points"]
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20, "damage_type": "fire", "options": [chiave]})
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] == pieni - 10
+    assert not r.json()["conditions"].get("invisible")
+    assert (await _turno(client, cid))["bonus_used"] is False
