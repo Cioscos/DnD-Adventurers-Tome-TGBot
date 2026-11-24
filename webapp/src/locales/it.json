@@ -2796,6 +2796,7 @@
       "time": "Ora",
       "note": "Nota (facoltativa)",
       "err_past": "La serata deve essere nel futuro.",
+      "err_duplicate": "C'è già una serata programmata in quel momento.",
       "err_generic": "Non sono riuscito a salvare. Riprova."
     },
     "lore": {

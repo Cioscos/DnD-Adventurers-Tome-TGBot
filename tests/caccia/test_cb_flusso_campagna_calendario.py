@@ -902,7 +902,6 @@ async def test_banner_con_due_campagne_propone_il_pg_giusto_per_ciascuna(client,
     assert banner == {camp_b["id"]: (sb2, z), camp_c["id"]: (sc2, y)}
 
 
-@pytest.mark.xfail(strict=True, reason="CB-894 D-014: due serate allo stesso istante vengono create entrambe")
 @pytest.mark.caccia(id="CB-894", fonte="decisione D-014 (tests/caccia/decisioni.md): due serate programmate allo stesso istante sono rifiutate con 409",
                     zona="flusso:campagna-calendario", voce="ripetizione",
                     copre=["POST /campaigns/{campaign_id}/schedule", "DELETE /campaigns/{campaign_id}/schedule/{sid}"])

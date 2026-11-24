@@ -2797,6 +2797,7 @@
       "time": "Time",
       "note": "Note (optional)",
       "err_past": "The night must be in the future.",
+      "err_duplicate": "A night is already scheduled at that time.",
       "err_generic": "Could not save. Try again."
     },
     "lore": {
