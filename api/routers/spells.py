@@ -999,7 +999,7 @@ async def roll_spell_damage(
     carried_dice = carried["dice"] if carried else []
     total = (sum(main_rolls) + sum(second_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
              + sum(v for _, v in carried_dice))
-    total = scale_damage(total, opts.multiplier)
+    total = scale_damage(max(0, total), opts.multiplier)  # il danno arriva a 0, mai sotto (2014 pag. 196; 2024 pag. 27)
     half_damage = total // 2  # per difetto, in entrambe le edizioni
 
     parts = damage_parts([("main", main_type, sides, main_rolls), ("second", second_type, second_sides, second_rolls),
@@ -1249,7 +1249,7 @@ async def last_damage_options(
             dice[i][1] = v
 
     values = [v for _, v in dice]
-    total = last_damage_total(values, {**last, "flat": flat})
+    total = max(0, last_damage_total(values, {**last, "flat": flat}))  # come il tiro: mai sotto 0
     base = last.get("base", len(values))
     old = last["result"]
     previous = OptionResult(**old["option_result"]) if old.get("option_result") else None
