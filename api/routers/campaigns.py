@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -326,9 +326,10 @@ async def delete_campaign(
             if _linked(notes, camp.id)}
     async with character_locks(ids):  # una nota salvata nello stesso momento non va persa né resta collegata
         # game_sessions.campaign_id has no FK: detach closed sessions in code.
-        await db.execute(
-            update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
-        )
+        for gs in (await db.execute(select(GameSession).where(GameSession.campaign_id == camp.id))).scalars():
+            gs.campaign_id = None
+            if gs.recap:  # anche nel riepilogo salvato: l'id riusato porterebbe alla campagna di altri
+                gs.recap = {**gs.recap, "campaign_id": None}
         # SQLite riusa gli id: un collegamento rimasto nelle note punterebbe alla prossima campagna, di altri.
         for pc in (await db.execute(select(Character).where(Character.notes.is_not(None))
                                     .execution_options(populate_existing=True))).scalars():

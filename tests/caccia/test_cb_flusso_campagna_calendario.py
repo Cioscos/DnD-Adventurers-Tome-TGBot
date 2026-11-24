@@ -470,7 +470,6 @@ async def test_serata_fatta_non_si_sposta(client):
     assert r.status_code in (409, 422), r.text
 
 
-@pytest.mark.xfail(strict=True, reason="CB-162 il riepilogo conserva l'id della campagna eliminata")
 @pytest.mark.caccia(id="CB-162", fonte="invariante: dopo l'eliminazione di una campagna nessun riferimento punta al suo id", zona="flusso:campagna-calendario",
                     voce="persistenza", copre=["DELETE /campaigns/{campaign_id}", "GET /sessions/{session_id}/recap"])
 async def test_riepilogo_non_punta_alla_campagna_eliminata(client):
