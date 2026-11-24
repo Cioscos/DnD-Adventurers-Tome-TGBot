@@ -44,7 +44,6 @@ async def test_la_ca_della_luna_vale_solo_finche_si_e_in_forma(client):
     assert scheda["armor_class"] == 12
 
 
-@pytest.mark.xfail(strict=True, reason="CB-338 PATCH kind aggira il limite di forme conosciute")
 @pytest.mark.caccia(id="CB-338", fonte="2024 · Druido · Forma Selvatica · pag. 80", zona="flusso:compagni-forme", voce="limiti",
                     copre=["PATCH /characters/{char_id}/companions/{comp_id}", "carta:2024/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 80)"])
 async def test_cambiare_tipo_non_aggira_le_forme_conosciute(client):

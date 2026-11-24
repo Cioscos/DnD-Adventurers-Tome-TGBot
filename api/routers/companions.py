@@ -158,6 +158,11 @@ async def update_companion(
         changes["statblock"] = {k: v for k, v in changes["statblock"].items() if k != "hit_dice_spent"}
         if kept is not None:
             changes["statblock"]["hit_dice_spent"] = kept
+    limits = form_limits(char)
+    if changes.get("kind") == "wild_shape" and comp.kind != "wild_shape" and limits is not None and limits.known_forms is not None:
+        rows = (await session.execute(select(Companion).where(Companion.character_id == char_id))).scalars()
+        if sum(c.kind == "wild_shape" and not other_edition(char, c) for c in rows) >= limits.known_forms:
+            raise HTTPException(status_code=422, detail="known_forms_limit")  # come alla creazione
     for k, v in changes.items():
         setattr(comp, k, v)
     if comp.is_active and comp.kind != "wild_shape":
