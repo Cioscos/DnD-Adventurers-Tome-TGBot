@@ -105,7 +105,8 @@ async def _apply(session: AsyncSession, char, percentile: int, repeat: bool = Fa
     if s.heal:
         out["healed"] = (await apply_heal(session, char, sum(_roll_dice(char, s.heal))))["healed"]
     if s.slot:
-        used = sorted((x for x in char.spell_slots if not x.is_pact and x.used > 0), key=lambda x: x.level)
+        # il più basso fra tutti, Patto compreso (2014 pag. 112, 164); a pari livello prima il normale: il Patto torna col riposo breve
+        used = sorted((x for x in char.spell_slots if x.used > 0), key=lambda x: (x.level, bool(x.is_pact)))
         if used:
             used[0].used -= 1
             out["slot_level"] = used[0].level

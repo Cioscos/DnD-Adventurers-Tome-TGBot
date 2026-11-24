@@ -81,7 +81,6 @@ async def test_affinita_elementale_somma_il_carisma_a_un_solo_tiro_di_danno_per_
                     zona="regola:2014/sorcerer", voce="interazione",
                     copre=["carta:2014/classes/sorcerer.md#Impulso di Magia Selvaggia / Wild Magic Surge (Magia Selvaggia 1, pag. 111)",
                            "POST /characters/{char_id}/wild-magic/surge"])
-@pytest.mark.xfail(strict=True, reason="CB-2014: difforme dal manuale, confermato")
 async def test_impulso_59_60_recupera_anche_lo_slot_del_patto_speso(client):
     cid = await _sorcerer(client, 1, "wild_magic")
     assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "warlock", "level": 1})).status_code == 201
