@@ -74,7 +74,7 @@ const warlock2024 = {
 
 describe('caccia: regola 2024 warlock', () => {
   // caccia: {"id": "CB-2675", "fonte": "2024 · Warlock · Patto del Tomo · pag. 157", "zona": "regola:2024/warlock", "voce": "regola", "copre": ["carta:2024/classes/warlock.md#Patto del Tomo / Pact of the Tome (Suppliche Occulte, pag. 157)", "route:/char/:id", "route:/char/:id/hp"]}
-  it.fails('il riposo breve offre di rifare le scelte del Libro delle Ombre', async () => {
+  it('il riposo breve offre di rifare le scelte del Libro delle Ombre', async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     render(createElement(QueryClientProvider, { client: qc }, createElement(RestSheet, { char: tomo2024, open: true, onClose: vi.fn() })))
     await userEvent.click(screen.getByText('character.quick_actions.rest_short'))

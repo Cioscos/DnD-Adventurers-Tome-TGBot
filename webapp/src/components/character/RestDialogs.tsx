@@ -132,6 +132,8 @@ export default function RestDialogs({ char, rest }: { char: CharacterFull; rest:
               <ArcaneRecoveryPicker char={char} value={rest.arcane} onChange={rest.setArcane} />
               <SorcerousRestorationPicker char={char} value={rest.restoration} onChange={rest.setRestoration} />
               <MemorizeSpellPicker char={char} onChange={rest.setMemorize} />
+              {/* 2024: il Libro delle Ombre si evoca anche al termine di un riposo breve (Warlock pag. 157); nel 2014 si riceve una volta */}
+              {is2024 && <TomeReopenToggle char={char} value={rest.reopenTome} onChange={rest.setReopenTome} />}
               <RestResistancePicker char={char} value={rest.resistance} onChange={rest.setResistance} />
               <RestAllyTempPicker char={char} value={rest.tempAllies} onChange={rest.setTempAllies} />
               {is2024 && interruptedToggle(t('character.quick_actions.rest_interrupted_short_2024'))}
