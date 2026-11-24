@@ -18,7 +18,7 @@ describe('caccia: regola 2024 talenti', () => {
   })
 
   // caccia: {"id": "CB-3482", "fonte": "2024 · Talenti · Dono del Richiamo degli incantesimi · pag. 211", "zona": "regola:2024/talenti", "voce": "limiti", "copre": ["carta:2024/feats.md#Dono del Richiamo degli incantesimi / Boon of Spell Recall (pag. 211) - Dono epico (livello 19+, privilegio Incantesimi)", "route:/char/:id/abilities"]}
-  it.fails('il warlock con la sola Magia del Patto non soddisfa il Dono del Richiamo degli incantesimi', () => {
+  it('il warlock con la sola Magia del Patto non soddisfa il Dono del Richiamo degli incantesimi', () => {
     const dono = featByKey('2024_boon_spell_recall')
     expect(dono).toBeTruthy()
     expect(meetsPrerequisites(dono!, pg('wizard', 19, 'intelligence'))).toBe(true)
