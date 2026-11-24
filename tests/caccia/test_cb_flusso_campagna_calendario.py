@@ -502,3 +502,36 @@ async def test_pg_eliminato_resta_nel_riepilogo(client, test_session_factory, us
     assert [(c["name"], c["damage_taken"]) for c in rec["characters"]] == [(nome, 7)]
     act(PLAYER_ID)
     assert (await client.get(f"/sessions/{sid}/recap")).status_code == 200
+
+
+@pytest.mark.caccia(id="CB-769", fonte="invariante: il PG nuovo non eredita nulla da quello eliminato, anche se SQLite riusa l'id", zona="flusso:campagna-calendario",
+                    voce="interazione", copre=["DELETE /characters/{char_id}", "GET /sessions/{session_id}/recap"])
+async def test_id_riusato_non_mescola_le_voci_del_riepilogo(client, test_session_factory):
+    from core.db.models import CharacterHistory
+
+    camp, cid = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    sid = (await client.post("/sessions", json={"campaign_id": camp["id"]})).json()["id"]
+    act(PLAYER_ID)
+    await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": cid})
+    act(GM_ID)
+    altro = (await client.post("/characters", json={"name": "Curato"})).json()["id"]
+    async with test_session_factory() as s:
+        gs = await s.get(GameSession, sid)
+        s.add(SessionParticipant(session_id=sid, user_id=GM_ID + 7, character_id=altro, role=SessionRole.PLAYER, joined_at=gs.created_at))
+        s.add(CharacterHistory(character_id=altro, event_type="hp_change", description="x", timestamp=gs.created_at,
+                               meta={"op": "HEAL", "amount": 6, "by_id": cid}))
+        await s.commit()
+    act(PLAYER_ID)
+    assert (await client.delete(f"/characters/{cid}")).status_code == 204
+    async with test_session_factory() as s:  # il PG nuovo nasce con lo stesso id e si siede
+        s.add(Character(id=cid, user_id=PLAYER_ID, name="Nuovo"))
+        await s.flush()
+        s.add(CampaignMember(campaign_id=camp["id"], character_id=cid, user_id=PLAYER_ID, status="active", joined_at="2026-06-09T10:00:00"))
+        await s.commit()
+    assert (await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": cid})).status_code == 200
+    act(GM_ID)
+    await client.post(f"/sessions/{sid}/close")
+    pg = (await client.get(f"/sessions/{sid}/recap")).json()["characters"]
+    assert len({c["character_id"] for c in pg}) == len(pg) == 3
+    assert {c["name"]: c["healing_given"] for c in pg} == {"Eroe": 6, "Nuovo": 0, "Curato": 0}
