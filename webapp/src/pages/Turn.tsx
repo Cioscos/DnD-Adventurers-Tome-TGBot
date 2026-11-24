@@ -1,4 +1,5 @@
 import { uiLang } from '@/lib/lang'
+import { concentrationLabel } from '@/lib/concentration'
 import { askRollOptions, refreshAfterOptions, rolledText } from '@/lib/rollOptions'
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
@@ -273,6 +274,7 @@ export default function Turn() {
   const influenceTotal = influenceRolled && lastRoll?.roll === 'skill' && influenceSkills.includes(lastRoll.skill ?? '') ? lastRoll.total : null
   const lang = uiLang(i18n.language)
   const concSpell = char.concentrating_spell_id ? char.spells.find((s) => s.id === char.concentrating_spell_id) : undefined
+  const concName = concentrationLabel(char) // anche da un oggetto, fuori dalla lista
   // Un incantesimo del catalogo ha già la sua riga (l'orologio legato alla concentrazione): niente doppione
   const concClocked = (char.active_states ?? []).some((s) => s.key.startsWith('spell_cast:') && s.ends_on?.includes('concentration_end'))
   const concRounds = char.settings?.concentration_rounds_left as number | null | undefined
@@ -635,12 +637,12 @@ export default function Turn() {
       ))}
 
       {/* U15: l'incantesimo in concentrazione senza stato proprio (Ragnatela, Guardiani spirituali) resta visibile nel turno */}
-      {concSpell && !concClocked && (
+      {concName && !concClocked && (
         <p data-testid="turn-concentration" className="flex flex-wrap items-center gap-x-2 px-3 py-2 rounded-xl border border-dnd-arcane/40 bg-dnd-arcane/10 text-sm font-body text-dnd-text">
           <Sparkles size={16} aria-hidden className="shrink-0 text-dnd-arcane-bright" />
-          <span>{t('character.spells.concentration')}: {concSpell.name}</span>
+          <span>{t('character.spells.concentration')}: {concName}</span>
           {concRounds != null && <span className="text-dnd-text-muted tabular-nums">{t('character.turn.state_rounds_left', { n: concRounds })}</span>}
-          {concSpell.save_dc != null && !!concSpell.attack_save?.trim() && concSpell.attack_save.trim().toUpperCase() !== 'ATK' && (
+          {concSpell?.save_dc != null && !!concSpell.attack_save?.trim() && concSpell.attack_save.trim().toUpperCase() !== 'ATK' && (
             <span className="text-dnd-text-muted tabular-nums">{t('character.turn.concentration_spell_dc', { dc: concSpell.save_dc })}</span>
           )}
         </p>

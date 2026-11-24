@@ -19,7 +19,7 @@ test('la concentrazione avviata dal lancio resta dopo il ricaricamento', async (
 })
 
 // caccia: {"id": "CB-1203", "fonte": "comportamento dichiarato nel codice: l'incantesimo in concentrazione resta visibile nel turno (U15), anche se viene da un oggetto", "zona": "flusso:concentrazione", "voce": "interazione", "copre": ["route:/char/:id/turn"]}
-test.fail('la concentrazione da incantesimo di oggetto è visibile nella pagina del turno', async ({ comeUtente, apiRequest, charId }) => {
+test('la concentrazione da incantesimo di oggetto è visibile nella pagina del turno', async ({ comeUtente, apiRequest, charId }) => {
   const spell = { name: 'Raggio Fantasma', level: 2, charges_cost: 1, is_concentration: true, duration: 'Concentration, up to 1 minute' }
   const it = await apiRequest.post(`/characters/${charId}/items`, {
     data: { name: 'Bacchetta', item_type: 'accessory', item_metadata: { charges: { current: 3, max: 3 }, granted_spells: [spell] } },
