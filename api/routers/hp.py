@@ -306,7 +306,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
                 end_form(char, form)
                 add_history(session, char.id, "companion_hp",
                              f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
-                applied = conc_damage = overflow
+                applied = overflow  # la CD di concentrazione resta sul colpo intero: un solo danno subito (2014 pag. 66, 203)
             else:
                 form_absorbed = True
                 applied = 0
