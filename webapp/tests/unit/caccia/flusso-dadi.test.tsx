@@ -77,7 +77,7 @@ describe('caccia: dadi', () => {
   })
 
   // caccia: {"id": "CB-1483", "fonte": "invariante: i dadi elencati accanto al totale tornano come somma", "zona": "flusso:dadi", "voce": "normale", "copre": ["route:/char/:id/dice"]}
-  it.fails("nello storico un 4d6kh3 non elenca il dado scartato accanto al totale", async () => {
+  it("nello storico un 4d6kh3 non elenca il dado scartato accanto al totale", async () => {
     getChar.mockResolvedValue({ id: 7, name: 'Eroe', ability_scores: [] })
     diceHistory.mockResolvedValue([{ notation: '4d6kh3', rolls: [3, 4, 5, 1], total: 12, timestamp: '2026-11-24T09:00:00', source: 'manual', label: null }])
     renderWithProviders(<Dice />)
@@ -137,7 +137,7 @@ describe('caccia: dadi', () => {
   })
 
   // caccia: {"id": "CB-1494", "fonte": "invariante: nessun elenco di dadi sommato non dà il totale (stessa causa di CB-1483)", "zona": "flusso:dadi", "voce": "normale", "copre": ["route:/char/:id/dice"]}
-  it.fails("nello storico un d100 non elenca i due d10 accanto al percentile", async () => {
+  it("nello storico un d100 non elenca i due d10 accanto al percentile", async () => {
     getChar.mockResolvedValue({ id: 7, name: 'Eroe', ability_scores: [] })
     diceHistory.mockResolvedValue([{ notation: '1d100', rolls: [4, 7], total: 47, timestamp: '2026-11-24T09:00:00', source: 'manual', label: null }])
     renderWithProviders(<Dice />)
@@ -147,7 +147,7 @@ describe('caccia: dadi', () => {
   })
 
   // caccia: {"id": "CB-1495", "fonte": "invariante: nessun elenco di dadi sommato non dà il totale (stessa causa di CB-1483)", "zona": "flusso:dadi", "voce": "normale", "copre": ["route:/char/:id/dice"]}
-  it.fails("il pannello del risultato di un d100 non elenca i due d10 accanto al percentile", async () => {
+  it("il pannello del risultato di un d100 non elenca i due d10 accanto al percentile", async () => {
     getChar.mockResolvedValue({ id: 7, name: 'Eroe', ability_scores: [] })
     diceHistory.mockResolvedValue([])
     rollMock.mockResolvedValue([{ kind: 'd100', notation: '1d100', rolls: [4, 7], total: 47 }])
@@ -159,7 +159,7 @@ describe('caccia: dadi', () => {
   })
 
   // caccia: {"id": "CB-1496", "fonte": "invariante: nessun elenco di dadi sommato non dà il totale (stessa causa di CB-1483)", "zona": "flusso:dadi", "voce": "normale", "copre": ["route:/char/:id/dice"]}
-  it.fails("la finestra del risultato di un d100 non elenca i due d10 accanto al percentile", async () => {
+  it("la finestra del risultato di un d100 non elenca i due d10 accanto al percentile", async () => {
     renderWithProviders(<DicePoolResultModal charId={7} initialResults={[{ kind: 'd100', notation: '1d100', rolls: [4, 7], total: 47 }]} inspirationAvailable={false} onClose={() => {}} />)
     await screen.findByText('47')
     const elenco = screen.queryByText(/^\[[\d+]+\]$/)

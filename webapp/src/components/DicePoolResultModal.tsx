@@ -11,6 +11,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
 import type { RollGroup } from '@/dice/useRollAndPersist'
 import { haptic } from '@/auth/telegram'
+import { shownRolls } from '@/lib/shownRolls'
 
 const MAX_INLINE_ROLLS = 8
 
@@ -126,9 +127,9 @@ export default function DicePoolResultModal({
           >
             <span className="text-dnd-gold-dim min-w-0 flex-1">
               <span className="font-semibold">{g.notation}</span>
-              {g.rolls.length > 1 && (
+              {shownRolls(g.notation, g.rolls).length > 1 && (
                 <span className="text-dnd-text-faint text-xs ml-1.5 break-words">
-                  {formatRollList(g.rolls)}
+                  {formatRollList(shownRolls(g.notation, g.rolls))}
                 </span>
               )}
             </span>
