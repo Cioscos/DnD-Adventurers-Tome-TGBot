@@ -897,13 +897,14 @@ async def roll_spell_damage(
                 gained = min(gained, rule.max_extra)
             base_count += gained
             second_die = DICE_RE.match((spell.extra_damage_dice or "").strip())
-            if second_die and int(second_die.group(2)) == sides:
-                if rule.both:  # un dado in più di ciascun tipo
-                    second_gained = gained
-                # I dadi in più sono del tipo scelto al lancio: se è quello della seconda parte (Colpo Infuocato: radioso) passano a lei
-                elif (up := cast_upcast_type(char, spell)) and up == spell.extra_damage_type:
-                    base_count -= gained
-                    second_gained = gained
+            same_sides = bool(second_die) and int(second_die.group(2)) == sides
+            if rule.both:  # un dado in più di ciascun tipo
+                second_gained = gained if same_sides else 0
+            # I dadi in più sono del tipo scelto al lancio: se non è quello principale lasciano il tiro e passano alla seconda parte
+            # di quel tipo (Colpo Infuocato: radioso), o senza una si applicano a mano (Fame di Hadar 2024: l'acido, pag. 286)
+            elif (up := cast_upcast_type(char, spell)) and up != canonical_damage_type(spell.damage_type):
+                base_count -= gained
+                second_gained = gained if same_sides and up == spell.extra_damage_type else 0
             # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
             base_bonus += int(um.group(3) or 0) * steps
 

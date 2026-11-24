@@ -24,6 +24,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DiceKind } from '@/dice/types'
 import { upcastBoth, upcastExtraDice } from '@/lib/srd/catalog'
 import { cantripMultiplier, totalLevelOf } from '@/lib/dnd'
+import { canonicalDamageType } from '@/lib/damageModifier'
 
 const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
@@ -158,7 +159,8 @@ export default function SpellDamageSheet({
           const upcastType = cached?.spells?.find((s) => s.id === spell.id)?.effect?.cast_upcast_type  // lo dice il server: lo store del client può averla persa
           const both = upcastBoth(spell.srd_index, cached?.rules_edition)  // Colonna di fiamme 2024: un dado in più di ciascun tipo
           const toSecond = second?.sides === main.sides && (both || (upcastType && upcastType === spell.extra_damage_type)) ? gained : 0
-          const moved = both ? 0 : toSecond
+          // di un tipo che non è il principale lasciano il tiro, anche senza seconda parte (Fame di Hadar 2024: l'acido si applica a mano)
+          const moved = !both && upcastType && upcastType !== canonicalDamageType(spell.damage_type) ? gained : 0
           const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count) + gained - moved
           const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [

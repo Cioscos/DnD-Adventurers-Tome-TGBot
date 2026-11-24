@@ -193,6 +193,17 @@ describe('SpellDamageSheet', () => {
     await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd6', count: 4 }, { kind: 'd6', count: 5 }]))
   })
 
+  it('leaves the extra dice out of the main roll when their type is not the main one and there is no second part (Hunger of Hadar 2024, acid)', async () => {
+    flags.anim = true
+    playAndCollect.mockResolvedValue([])
+    rollDamage.mockResolvedValue(result)
+    const hadar = { ...leveled, damage_dice: '2d6', damage_type: 'cold', higher_levels_dice: '1d6' } as Spell
+    useSpell.mockResolvedValue({ id: 7, spells: [{ ...hadar, effect: { cast_upcast_type: 'acid' } }] })
+    renderWithProviders(<SpellDamageSheet charId={7} spell={hadar} slotLevel={4} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(playAndCollect).toHaveBeenCalledWith([{ kind: 'd6', count: 2 }]))
+  })
+
   it('names each group of dice by its damage type in the result', async () => {
     rollDamage.mockResolvedValue({ ...result, parts: [
       { label: 'main', type: 'fire', kind: 'd6', rolls: [1, 2] }, { label: 'second', type: 'radiant', kind: 'd6', rolls: [3, 4] }] })
