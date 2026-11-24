@@ -75,7 +75,6 @@ async def test_valore_proficient_accettato_da_la_competenza(client):
         assert r.status_code == 422
 
 
-@pytest.mark.xfail(strict=True, reason="CB-238 Cos 1 poi 10 non restituisce i PF")
 @pytest.mark.caccia(id="CB-238", fonte="2014 · Caratteristiche · Costituzione · pag. 177", zona="flusso:caratteristiche-tiri",
                     voce="limiti", copre=["PATCH /characters/{char_id}/ability_scores/{ability_name}", "route:/char/:id/stats"])
 async def test_costituzione_a_1_e_di_nuovo_a_10_restituisce_i_pf(client):
@@ -87,7 +86,6 @@ async def test_costituzione_a_1_e_di_nuovo_a_10_restituisce_i_pf(client):
     assert (pg["hit_points"], pg["current_hit_points"]) == (prima, prima)
 
 
-@pytest.mark.xfail(strict=True, reason="CB-239 PATCH Cos ignora il minimo 1 PF per livello")
 @pytest.mark.caccia(id="CB-239", fonte="2014 · Caratteristiche · Costituzione · pag. 177", zona="flusso:caratteristiche-tiri",
                     voce="limiti", copre=["PATCH /characters/{char_id}/ability_scores/{ability_name}"])
 async def test_costituzione_abbassata_da_i_pf_di_chi_ha_sempre_avuto_quel_valore(client):

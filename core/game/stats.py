@@ -112,6 +112,16 @@ def total_base_hp(
     return total
 
 
+def con_hp_delta(classes: "Iterable[_ClassLike]", old_con_mod: int, new_con_mod: int,
+                 rolls: "Mapping[int, Mapping[int, int]] | None" = None) -> int:
+    """Di quanto cambiano i PF massimi se il modificatore di Costituzione passa da ``old`` a ``new``: come se il nuovo
+    ci fosse sempre stato (2014, pag. 177), minimo di 1 PF per livello compreso. Andata e ritorno si annullano."""
+    classes = list(classes)
+    plain = sum(c.level for c in classes if not c.hit_die)  # senza dado vita non c'è una formula: resta lineare
+    return (total_base_hp(classes, new_con_mod, rolls) - total_base_hp(classes, old_con_mod, rolls)
+            + (new_con_mod - old_con_mod) * plain)
+
+
 def effective_ability_score(
     ability_name: str,
     base_value: int,

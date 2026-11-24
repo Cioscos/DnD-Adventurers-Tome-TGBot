@@ -21,7 +21,8 @@ from core.db.models import Character, CharacterHistory
 from core.game.attacks import unarmed_strike_profile
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import save_roll_part
-from core.game.stats import effective_ability_mod, roll_ability_mod
+from core.game.stats import con_hp_delta, effective_ability_mod, roll_ability_mod
+from api.services.hp_rolls import stored_rolls
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.spell_effects import enchanted_weapon
@@ -101,7 +102,7 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
 async def apply_con_hp(session: AsyncSession, char, old_con_mod: int) -> None:
     """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade)."""
     if (char.settings or {}).get("hp_auto_calc", True):
-        delta = (effective_con_mod(char) - old_con_mod) * char.total_level
+        delta = con_hp_delta(char.classes, old_con_mod, effective_con_mod(char), stored_rolls(char))
         if delta != 0:
             was_at_zero = char.current_hit_points == 0
             char.hit_points = max(0, char.hit_points + delta)
