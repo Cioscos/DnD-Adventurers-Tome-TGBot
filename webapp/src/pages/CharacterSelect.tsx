@@ -45,7 +45,7 @@ import {
   speciesChoicesMissing, background24Valid, background24Payload, type Background2024Choice,
 } from '@/lib/species'
 import { localized } from '@/lib/srd/catalog'
-import { STANDARD_ARRAY, arrayScores, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
+import { STANDARD_ARRAY, arrayScores, overMax, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -148,6 +148,7 @@ export default function CharacterSelect() {
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = uiLang(i18n.language)
   const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
+  const scoreBonuses: Record<string, number> = (is2024 ? bg24?.increases : speciesPayload?.ability_bonuses) ?? {}
 
   const charactersQuery = useQuery({
     queryKey: ['characters'],
@@ -834,7 +835,7 @@ export default function CharacterSelect() {
                 mode={scoreMode}
                 scores={scores}
                 pool={scorePool}
-                bonuses={is2024 ? bg24?.increases ?? {} : speciesPayload?.ability_bonuses ?? {}}
+                bonuses={scoreBonuses}
                 onChange={(mode, sc, pool) => { setScoreMode(mode); setScores(sc); setScorePool(pool) }}
               />
               <WizardFooter
@@ -843,7 +844,7 @@ export default function CharacterSelect() {
                 onSecondary={goBack}
                 primaryLabel={`${t('common.next')} →`}
                 onPrimary={() => { setScoresSkipped(false); goNext() }}
-                primaryDisabled={!scoresValid(scoreMode, scores)}
+                primaryDisabled={!scoresValid(scoreMode, scores) || overMax(scores, scoreBonuses)}
                 primaryHaptic="medium"
               />
               <Pressable

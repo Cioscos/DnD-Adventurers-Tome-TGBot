@@ -29,6 +29,19 @@ export const defaultScores = (v = 10): Scores =>
 export const arrayScores = (pool = STANDARD_ARRAY): Scores =>
   Object.fromEntries(ABILITIES.map((a, i) => [a, pool[i]])) as Scores
 
+const ABBR: Record<string, Ability> = {
+  str: 'strength', dex: 'dexterity', con: 'constitution', int: 'intelligence', wis: 'wisdom', cha: 'charisma',
+}
+export const MAX_SCORE = 20
+
+/** Bonus di specie o background su una caratteristica (chiavi intere o abbreviate). */
+export const bonusOf = (bonuses: Record<string, number>, a: Ability): number =>
+  Object.entries(bonuses).reduce((n, [k, v]) => n + ((ABBR[k] ?? k) === a ? v : 0), 0)
+
+/** Nessun punteggio supera 20 dopo gli aumenti. */
+export const overMax = (s: Scores, bonuses: Record<string, number>): boolean =>
+  ABILITIES.some((a) => s[a] + bonusOf(bonuses, a) > MAX_SCORE)
+
 /** Only point-buy can be invalid (over budget); the other modes stay within 3-20. */
 export function scoresValid(mode: ScoreMode, s: Scores): boolean {
   if (mode !== 'pointbuy') return true

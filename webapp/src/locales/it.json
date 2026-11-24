@@ -2612,6 +2612,7 @@
       "equipment_fixed": "Incluso",
       "equipment_skip": "Salta: nessun equipaggiamento",
       "equipment_none": "Nessun equipaggiamento di partenza per questa classe.",
+      "score_over_max": "Nessun punteggio può superare {{max}} con i bonus: riduci o scambia quello in eccesso.",
       "scores_skip": "Salta: lascia tutti a 10",
       "background_pick": "Scegli background dal catalogo",
       "step_background": "Background",

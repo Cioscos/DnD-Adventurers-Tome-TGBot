@@ -133,7 +133,7 @@ async function realScoresStep() {
 
 describe('caccia: creazione, giro 3', () => {
   // caccia: {"id": "CB-1387", "fonte": "2024 · Background · pag. 177 (massimo 20 dopo gli aumenti) e Punteggi di caratteristica: nessun punteggio oltre 20", "zona": "flusso:creazione", "voce": "limiti", "copre": ["route:/"]}
-  it.fails('punteggi manuali: con +2 del background il totale mostrato non supera 20', async () => {
+  it('punteggi manuali: con +2 del background il totale mostrato non supera 20', async () => {
     const Step = await realScoresStep()
     function Harness() {
       const [s, setS] = useState<Scores>(defaultScores(10))
@@ -145,6 +145,16 @@ describe('caccia: creazione, giro 3', () => {
     for (let i = 0; i < 12; i++) await user.click(piu[0])
     const totale = Number(screen.getAllByRole('listitem')[0].textContent?.match(/\d+/)?.[0])
     expect(totale).toBeLessThanOrEqual(20)
+  })
+
+  // caccia: {"id": "CB-1519", "fonte": "2024 · Background · pag. 177 (massimo 20 dopo gli aumenti)", "zona": "flusso:creazione", "voce": "limiti", "copre": ["route:/"]}
+  it('punteggi tirati: un totale oltre 20 si vede e dice perché', async () => {
+    const Step = await realScoresStep()
+    const s = { ...defaultScores(10), strength: 18 }
+    const { rerender } = renderWithProviders(<Step mode="roll" scores={s} pool={[18]} bonuses={{ str: 3 }} onChange={vi.fn()} />)
+    expect(screen.getByText('character.create.score_over_max')).toBeTruthy()
+    rerender(<Step mode="roll" scores={s} pool={[18]} bonuses={{ str: 2 }} onChange={vi.fn()} />)
+    expect(screen.queryByText('character.create.score_over_max')).toBeNull()
   })
 
   // caccia: {"id": "CB-1388", "fonte": "2014 · Punteggi di caratteristica · pag. 13: acquisto a punti (27 punti, punteggi da 8 a 15) e matrice standard 15, 14, 13, 12, 10, 8", "zona": "flusso:creazione", "voce": "limiti", "copre": ["route:/"]}

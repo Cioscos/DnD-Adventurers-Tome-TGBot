@@ -2613,6 +2613,7 @@
       "equipment_fixed": "Included",
       "equipment_skip": "Skip: no equipment",
       "equipment_none": "No starting equipment for this class.",
+      "score_over_max": "No score can exceed {{max}} with bonuses: lower or swap the one over the limit.",
       "scores_skip": "Skip: leave all at 10",
       "background_pick": "Pick background from catalogue",
       "step_background": "Background",
