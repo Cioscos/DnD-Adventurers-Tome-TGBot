@@ -51,6 +51,16 @@ def stat_int(statblock: dict, key: str, default: int = 0, *, high: int = 10_000)
 BEAST_BONUS_ORDERS = ("help", "disengage", "dash", "dodge")  # Addestramento Straordinario: tutti tranne l'attacco
 
 
+def rangers_beast_allowed(statblock: dict) -> bool:
+    """Compagno del Ranger (2014 p.106): una bestia Media o più piccola, GS 1/4 o meno. Un dato assente (statblock scritto a
+    mano) non si può verificare e non blocca."""
+    sb = statblock or {}
+    cr, size, kind = sb.get("challenge_rating"), sb.get("size"), sb.get("type")
+    return not ((isinstance(cr, (int, float)) and not isinstance(cr, bool) and cr > 0.25)
+                or (isinstance(size, str) and size and size.lower() not in ("tiny", "small", "medium"))
+                or (isinstance(kind, str) and kind and kind.lower() != "beast"))
+
+
 # chiave -> (classe, edizione, formula)
 COMPANION_FEATURES: dict[str, tuple[str, str, Callable[..., CompanionStats]]] = {
     "ranger.rangers_companion": ("ranger", "2014", _rangers_companion),

@@ -33,7 +33,8 @@ from api.services.wild_shape import (
 from api.services.history import add_history
 from core.db.models import Ability, Character, Companion, SpellSlot
 from core.rules.companions import (
-    BEAST_BONUS_ORDERS, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition, stat_int, summon_temp_hp, thrall_stats,
+    BEAST_BONUS_ORDERS, BEAST_COMPANION, BEAST_KEYS, MAX_MULTIATTACK, PRIMAL_COMPANION, THRALL_KEY, companion_stats, other_edition,
+    rangers_beast_allowed, stat_int, summon_temp_hp, thrall_stats,
 )
 from core.rules.edition import character_edition
 from core.rules.catalog import active_features
@@ -129,6 +130,8 @@ async def create_companion(
             raise HTTPException(status_code=422, detail="feature_unavailable")
         if any(c.feature_key == body.feature_key and c.current_hp > 0 for c in rows):
             raise HTTPException(status_code=422, detail="companion_exists")
+        if body.feature_key == BEAST_COMPANION and not rangers_beast_allowed(body.statblock):  # resta aggiungibile come compagno semplice
+            raise HTTPException(status_code=422, detail="beast_not_allowed")
     limits = form_limits(char)
     if body.is_active and limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione
         raise HTTPException(status_code=409, detail={"code": "use_activate"})
