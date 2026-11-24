@@ -109,9 +109,15 @@ _MARK_2024 = SpellVariant(
 
 # --- Punizioni ------------------------------------------------------------------------------------------------------------------
 
-def _ranged(ctx: RuleContext) -> bool:
+def _ranged_weapon(ctx: RuleContext) -> bool:
+    """Un'arma della categoria A distanza: il lancio di un'arma da mischia non lo è (Grandine di Spine 2024, come Tiro con l'Arco)."""
     from core.game.item_bonuses import item_meta  # import locale, come negli altri privilegi
-    return ctx.attack_mode == "thrown" or (ctx.item is not None and item_meta(ctx.item).get("weapon_type", "melee") == "ranged")
+    return ctx.item is not None and item_meta(ctx.item).get("weapon_type", "melee") == "ranged"
+
+
+def _ranged(ctx: RuleContext) -> bool:
+    """Un attacco a distanza con arma: anche il lancio di un'arma da mischia."""
+    return ctx.attack_mode == "thrown" or _ranged_weapon(ctx)
 
 
 def _hit_ok(ctx: RuleContext, *, ranged: bool, anywhere: bool = False) -> bool:
@@ -158,7 +164,8 @@ def _cast_on_hit(variant: SpellVariant, base_slot: int, kind: str = "melee") -> 
     """2024: la punizione è un'azione bonus «subito dopo aver colpito» (mischia o senz'armi): si offre dopo il colpo a segno, con lo slot
     scelto lì (e i dadi che ne seguono), come la Punizione Divina. Non serve lanciarla prima, e un mancato non spreca lo slot.
     Se l'hai già lanciata prima (stato sul lanciatore) vale l'opzione dello stato: non si conta due volte.
-    ``kind``: ``melee`` (mischia o senz'armi), ``ranged`` (arma a distanza: Grandine di Spine, Freccia Fulminea), ``any`` (qualunque arma: Colpo Intrappolante).
+    ``kind``: ``melee`` (mischia o senz'armi), ``ranged`` (attacco a distanza con arma, anche un lancio: Freccia Fulminea),
+    ``ranged_weapon`` (arma a distanza, non un'arma da mischia lanciata: Grandine di Spine), ``any`` (qualunque arma: Colpo Intrappolante).
     Solo le opzioni dopo il colpo: quella «mancato» (Freccia Fulminea, after_roll) non può chiedere lo slot (RollOptionSpec lo vieta), resta sullo stato lanciato prima."""
     first = variant.options[0]  # l'opzione dopo il colpo è sempre la prima
     states = {o.cost.state_key for o in variant.options if o.cost and o.cost.state_key} | {first.key.removesuffix(":hit")}
@@ -167,7 +174,8 @@ def _cast_on_hit(variant: SpellVariant, base_slot: int, kind: str = "melee") -> 
         return replace(ctx, spell_data={**_data(ctx), "slot_level": int(inputs.get("slot_level") or base_slot)})
 
     def available(ctx: RuleContext) -> bool:
-        kind_ok = (ctx.attack_mode in ("melee", "offhand") if kind == "melee" else _ranged(ctx) if kind == "ranged" else ctx.item is not None)
+        kind_ok = (ctx.attack_mode in ("melee", "offhand") if kind == "melee" else _ranged(ctx) if kind == "ranged"
+                   else _ranged_weapon(ctx) if kind == "ranged_weapon" else ctx.item is not None)
         return (ctx.spell is None and kind_ok and _own_attack(ctx) and not (ctx.char.turn_state or {}).get("spell_slot_cast")
                 and not any(s.get("key") in states for s in ctx.char.active_states or []))
 
@@ -297,9 +305,13 @@ _ENSNARE = _variant(_smite(
 # Raffica di Spine / Grandine di Spine (danni ad area a parte)
 _HAIL_TEXT = txt("Raffica di Spine: il bersaglio e le creature entro 1,5 m fanno un TS Destrezza CD {dc}: perforanti, la metà se superato (danni a parte, non nel totale).",
                  "Hail of Thorns: the target and creatures within 5 ft make a Dexterity save DC {dc}: piercing, half on a success (separate damage, not in the total).")
-_HAIL = lambda conc: _variant(_smite(  # noqa: E731
-    "hail_of_thorns", "Raffica di Spine" if conc else "Grandine di Spine", "Hail of Thorns", "piercing", txt("Punizione a distanza: 1d10 perforanti ad area (+1d10 per slot oltre il 1°)", "Ranged strike: 1d10 piercing in an area (+1d10 per slot above 1st)"),
-    dice=_dice(1, 10, 1, cap=6 if conc else None), ranged=True, separate=True, doubles=False, effect=_HAIL_TEXT), concentration=conc, rounds=MIN1 if conc else 1)
+def _HAIL(conc: bool) -> SpellVariant:
+    option = _smite(
+        "hail_of_thorns", "Raffica di Spine" if conc else "Grandine di Spine", "Hail of Thorns", "piercing", txt("Punizione a distanza: 1d10 perforanti ad area (+1d10 per slot oltre il 1°)", "Ranged strike: 1d10 piercing in an area (+1d10 per slot above 1st)"),
+        dice=_dice(1, 10, 1, cap=6 if conc else None), ranged=True, separate=True, doubles=False, effect=_HAIL_TEXT)
+    if not conc:  # 2024 p.283: dopo un colpo «con un'arma a distanza», non con un'arma da mischia lanciata (2014 p.266: attacco a distanza con arma)
+        option = replace(option, available=lambda c: not _data(c).get("discharged") and _own_attack(c) and _ranged_weapon(c))
+    return _variant(option, concentration=conc, rounds=MIN1 if conc else 1)
 
 # Freccia Folgorante / Fulminea (4d8 al posto dei danni dell'arma, area a parte)
 def _lightning_miss(conc: bool) -> RollOptionSpec:
@@ -362,7 +374,7 @@ SPELLS: tuple[SpellEffect, ...] = (
     _spell("staggering_smite", "staggering-smite", ("Punizione Demoralizzante", "Punizione Sconvolgente", "Staggering Smite"), {"2014": _STAGGER_2014, "2024": _cast_on_hit(_STAGGER_2024, 4)}),
     _spell("banishing_smite", "banishing-smite", ("Punizione Esiliante", "Colpo dell'Esilio", "Banishing Smite"), {"2014": _BANISH_2014, "2024": _cast_on_hit(_BANISH_2024, 5)}),
     _spell("ensnaring_strike", "ensnaring-strike", ("Colpo Intrappolante", "Ensnaring Strike"), {"2014": _ENSNARE, "2024": _cast_on_hit(_ENSNARE, 1, "any")}),
-    _spell("hail_of_thorns", "hail-of-thorns", ("Raffica di Spine", "Grandine di Spine", "Hail of Thorns"), {"2014": _HAIL(True), "2024": _cast_on_hit(_HAIL(False), 1, "ranged")}),
+    _spell("hail_of_thorns", "hail-of-thorns", ("Raffica di Spine", "Grandine di Spine", "Hail of Thorns"), {"2014": _HAIL(True), "2024": _cast_on_hit(_HAIL(False), 1, "ranged_weapon")}),
     _spell("lightning_arrow", "lightning-arrow", ("Freccia Folgorante", "Freccia Fulminea", "Lightning Arrow"), {"2014": _LIGHTNING(True), "2024": _cast_on_hit(_LIGHTNING(False), 3, "ranged")}),
     _spell("true_strike", "true-strike", ("Colpo Accurato", "True Strike"), {"2014": _TRUE_2014, "2024": _TRUE_2024}),
 )
