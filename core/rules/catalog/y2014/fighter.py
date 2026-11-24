@@ -462,9 +462,10 @@ RELENTLESS = RollOptionSpec(
 # ---------------------------------------------------------------------------
 
 def _after_action_spell(ctx: RuleContext, *, cantrip_only: bool) -> bool:
-    """Un incantesimo da guerriero lanciato con l'azione in questo turno (segnato dal lancio) e l'attacco non è un incantesimo."""
+    """Un incantesimo di qualsiasi classe lanciato con l'azione in questo turno (segnato dal lancio; 2014 p.75 non
+    vincola la classe) e l'attacco non è un incantesimo."""
     turn = ctx.turn or {}
-    if ctx.spell is not None or turn.get("action_spell_class") != ctx.class_row.id:
+    if ctx.spell is not None:
         return False
     return turn.get("action_spell_level") == 0 if cantrip_only else turn.get("action_spell_level") is not None
 

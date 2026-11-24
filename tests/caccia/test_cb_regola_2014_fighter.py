@@ -94,7 +94,6 @@ async def test_un_paladino_o_ranger_di_1_livello_non_cambia_gli_slot_del_cavalie
 
 @pytest.mark.caccia(id="CB-1762", fonte="2014 · Guerriero · Magia da Guerra · pag. 75", zona="regola:2014/fighter", voce="interazione",
                     copre=["carta:2014/classes/fighter.md#Magia da Guerra / War Magic (Cavaliere Mistico 7, pag. 75)", "POST /characters/{char_id}/spells/{spell_id}/use", "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-1762: difforme dal manuale, confermato")
 async def test_magia_da_guerra_vale_dopo_un_trucchetto_di_un_altra_classe(client):
     cid = await _guerriero(client, 7, "eldritch_knight")
     await _classe(client, cid, "wizard", 1, 6)
