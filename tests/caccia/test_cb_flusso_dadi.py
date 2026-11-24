@@ -185,7 +185,6 @@ async def test_dadi_e_cronologia_di_un_altro_utente(client, come_utente, monkeyp
     assert len((await client.get(f"/characters/{cid}/history")).json()) == 1
 
 
-@pytest.mark.xfail(strict=True, reason="CB-746 3d20 manuale registra d20_total come totale di prova")
 @pytest.mark.caccia(id="CB-746", fonte="dice_stats.py: il totale della prova con il d20 è d20 + modificatori, non una somma di più dadi",
                     zona="flusso:dadi", voce="interazione", copre=["POST /characters/{char_id}/dice/result", "GET /sessions/{session_id}/recap"])
 async def test_somma_di_piu_d20_manuali_non_e_un_totale_di_prova(client):

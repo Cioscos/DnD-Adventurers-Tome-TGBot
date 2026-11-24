@@ -180,7 +180,9 @@ async def post_dice_result(
     if body.with_inspiration:
         spend_inspiration_reroll(char)
 
-    record_dice(char, [(e.kind, e.value) for e in body.rolls], total if all(e.kind == "d20" for e in body.rolls) else None)
+    # d20_total è il totale di UNA prova: un solo d20, o i due di vantaggio/svantaggio. 3d20 sommati non lo sono.
+    is_check = all(e.kind == "d20" for e in body.rolls) and (len(rolls) == 1 or body.mode != "normal")
+    record_dice(char, [(e.kind, e.value) for e in body.rolls], total if is_check else None)
     _log_roll(session, char, notation, rolls, total, body.modifier, body.source or "manual", body.label,
               body.with_inspiration)
 
