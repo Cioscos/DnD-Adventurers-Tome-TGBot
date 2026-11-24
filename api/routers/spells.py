@@ -1229,6 +1229,8 @@ async def last_damage_options(
     spell = next((s for s in char.spells if last and kind == "spell" and s.id == last["spell_id"]), None)
     if not last or (kind == "spell" and spell is None):
         raise HTTPException(status_code=409, detail={"code": "no_last_damage"})
+    if used := set(body.options) & set(last.get("after_used", [])):  # Potenziato si somma a un'altra opzione, non a sé stesso
+        raise HTTPException(status_code=409, detail={"code": "option_unavailable", "key": sorted(used)[0]})
     opts = use_options(session, char, "spell_damage" if kind == "spell" else "weapon_damage", body, phase="after_damage",
                        spell=spell, damage_type=canonical_damage_type(last["result"].get("damage_type")) if spell else None)
 
@@ -1287,7 +1289,8 @@ async def last_damage_options(
     add_history(session, char_id, "spell_damage" if kind == "spell" else "attack_roll",
                  f"Dopo il danno ({option_names(char, opts.keys)}): {label}" + (f" = {total}" if kind != "spell" else ""))
     turn = get_turn(char)  # il pagamento ha riscritto il turno
-    turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json")}
+    turn["last_damage"] = {**last, "dice": dice, "added": added, "flat": flat, "result": result.model_dump(mode="json"),
+                           "after_used": [*last.get("after_used", []), *opts.keys]}
     char.turn_state = turn
     await session.commit()  # get_db chiude dopo la risposta: il client rilegge subito usi e turno
     return result

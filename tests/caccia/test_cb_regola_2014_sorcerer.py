@@ -97,7 +97,6 @@ async def test_impulso_59_60_recupera_anche_lo_slot_del_patto_speso(client):
                     copre=["carta:2014/classes/sorcerer.md#Incantesimo Potenziato / Empowered Spell (Stregone 3, pag. 110)",
                            "carta:2014/classes/sorcerer.md#Metamagia / Metamagic (Stregone 3, pag. 109)",
                            "POST /characters/{char_id}/last-damage/options"])
-@pytest.mark.xfail(strict=True, reason="CB-2015: difforme dal manuale, confermato")
 async def test_incantesimo_potenziato_si_usa_una_volta_sola_sullo_stesso_danno(client):
     # Potenziato si somma a un'altra opzione, non a sé stesso: due usi ritirerebbero più dadi del Carisma
     cid = await _caster(client, 5, "empowered", charisma=16)
