@@ -419,7 +419,6 @@ async def test_le_risposte_dei_compagni_hanno_i_campi_letti_dal_frontend(client)
     assert all("class_name" in c and "level" in c and "subclass_key" in c for c in pg["classes"]) and "rules_edition" in pg
 
 
-@pytest.mark.xfail(strict=True, reason="CB-370 PATCH is_active attiva la forma senza GS, usi né azione")
 @pytest.mark.caccia(id="CB-370", fonte="2014 · Druido · Forma Selvatica · pag. 66", zona="flusso:compagni-forme", voce="limiti",
                     copre=["PATCH /characters/{char_id}/companions/{comp_id}", "carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)"])
 async def test_attivare_con_patch_rispetta_gs_usi_e_azione(client):
