@@ -80,7 +80,6 @@ async def test_immagine_maggiore_2024_dal_quarto_livello_non_toglie_la_concentra
 
 @pytest.mark.caccia(id="CB-3762", fonte="2024 · Incantesimi · Lama infuocata · pag. 275", zona="regola:2024/incantesimi-G-L", voce="regola",
                     copre=["carta:2024/spells.md#Lama infuocata", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3762: difforme dal manuale, confermato")
 async def test_il_danno_di_lama_infuocata_2024_somma_il_modificatore_da_incantatore(client, dadi):
     cid = await _pg(client, "druid", 3, wisdom=16)  # Saggezza +3
     sid = await _impara(client, cid, "flame-blade")

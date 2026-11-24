@@ -113,7 +113,6 @@ async def test_arma_spirituale_del_dominio_della_guerra_aggiunge_un_d8_per_slot_
 
 @pytest.mark.caccia(id="CB-3664", fonte="2024 · Incantesimi · Arma Spirituale · pag. 319-320", zona="regola:2024/incantesimi-A-C", voce="regola",
                     copre=["carta:2024/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3664: difforme dal manuale, confermato")
 async def test_il_danno_di_arma_spirituale_2024_somma_il_modificatore_da_incantatore(client, dadi):
     cid = await _pg(client, "cleric", 3, wisdom=16)  # Saggezza +3
     arma = await _dal_catalogo(client, cid, "spiritual-weapon")

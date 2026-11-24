@@ -73,7 +73,6 @@ async def test_arma_spirituale_aggiunge_un_d8_ogni_due_livelli_di_slot_oltre_il_
 
 @pytest.mark.caccia(id="CB-3212", fonte="2014 · Incantesimi · Arma Spirituale · pag. 215", zona="regola:2014/incantesimi-A-C", voce="regola",
                     copre=["carta:2014/spells.md#Arma Spirituale", "POST /characters/{char_id}/spells/{spell_id}/roll_damage"])
-@pytest.mark.xfail(strict=True, reason="CB-3212: difforme dal manuale, confermato")
 async def test_il_danno_di_arma_spirituale_somma_il_modificatore_da_incantatore(client, dadi):
     cid = await _pg(client, "cleric", 3, "Dominio della Vita", wisdom=16)  # Saggezza +3
     arma = await _incantesimo(client, cid, "spiritual-weapon")

@@ -78,7 +78,7 @@ from core.rules.level_choices import reconcile_choices
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import build_spellcasting_info, fill_spell_stats, prepared_class_room
-from core.game.stats import cantrip_dice_multiplier
+from core.game.stats import cantrip_dice_multiplier, effective_ability_mod
 from core.rules.spell_healing import healing_dice, healing_fixed, healing_spec
 from core.rules.spellcasting import (
     at_will, bonus_cast, can_ritual, champion_bonus_cast, LONG_CASTING as _LONG_CASTING, cast_warnings, caster_stats, casting_kind, ki_cast_info, spell_stats,
@@ -812,6 +812,10 @@ async def concentration_save(
 # Spell damage roll
 # ---------------------------------------------------------------------------
 
+# Danno «dadi + modificatore da incantatore» (2014 pag. 215; 2024 pag. 275, 302, 319-320)
+_ADDS_SPELL_MOD = {("spiritual-weapon", "2014"), ("spiritual-weapon", "2024"), ("flame-blade", "2024"), ("arcane-sword", "2024")}
+
+
 @router.post(
     "/{char_id}/spells/{spell_id}/roll_damage",
     response_model=RollDamageResult,
@@ -867,6 +871,8 @@ async def roll_spell_damage(
 
     # Privilegi che aggiungono un fisso ai danni di un incantesimo (Incantesimi Potenti)
     base_bonus += modifiers_for(char, "damage", spell=spell).flat
+    if (spell.srd_index, character_edition(char)) in _ADDS_SPELL_MOD and (caster := spell_stats(char, spell)):
+        base_bonus += effective_ability_mod(char, caster.ability)
     _mark_empowered(char, spell)
 
     # Apply critical (double dice count, not the flat bonus)
