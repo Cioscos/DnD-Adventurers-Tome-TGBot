@@ -431,7 +431,6 @@ async def test_rilancio_dello_stesso_incantesimo_riparte_dalla_durata(client):
 
 @pytest.mark.caccia(id="CB-461", fonte="invariante: a concentrazione finita non restano impostazioni della concentrazione", zona="flusso:concentrazione",
                     voce="persistenza", copre=["POST /characters/{char_id}/rounds/tick"])
-@pytest.mark.xfail(strict=True, reason="CB-461 la scadenza dei round lascia concentration_level")
 async def test_scadenza_della_durata_pulisce_il_livello_del_lancio(client):
     cid = await _pg(client)
     await _slot(client, cid)

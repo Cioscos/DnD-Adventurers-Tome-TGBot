@@ -73,7 +73,8 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
         return None, False
     entry = {"char_id": char.id, "prev_rounds": conc,
              "prev_spell_id": char.concentrating_spell_id,
-             "prev_item_spell": s.get("concentration_item_spell"), "released_effects": []}
+             "prev_item_spell": s.get("concentration_item_spell"), "prev_level": s.get("concentration_level"),
+             "released_effects": []}
     ended = False
     if not _is_int(conc):
         s.pop("concentration_rounds_left")
@@ -82,6 +83,7 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
     else:
         s.pop("concentration_rounds_left")
         s.pop("concentration_item_spell", None)
+        s.pop("concentration_level", None)
         ended = True
     char.settings = s
     if ended:
