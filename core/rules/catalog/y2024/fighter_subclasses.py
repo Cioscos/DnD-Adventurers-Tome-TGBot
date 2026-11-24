@@ -122,6 +122,12 @@ def _melee(ctx: RuleContext) -> bool:
     return ctx.attack_mode in ("melee", "offhand")
 
 
+def _attack_roll(ctx: RuleContext) -> bool:
+    """Un tiro per colpire con arma, Colpo Senz'Armi o incantesimo (2024 pag. 361), non quello di un compagno: le manovre
+    che non nominano l'arma (Attacco Preciso, Attacco con Finta, pag. 95)."""
+    return ctx.roll == "attack" and (ctx.spell is not None or _weapon_attack(ctx))
+
+
 # ---------------------------------------------------------------------------
 # Manovre
 # ---------------------------------------------------------------------------
@@ -213,7 +219,7 @@ MANEUVER_ROWS = (
               ("Azione bonus e un dado: vantaggio al prossimo attacco del turno contro una creatura entro 1,5 m, +dado al danno se colpisce.",
                "Bonus action and a die: advantage on your next attack this turn against a creature within 5 ft, +die to damage on a hit."),
               "bonus_action", roll_options=(replace(FEINT_STRIKE, extra_dice=_strike_dice("feinting_attack"),
-                                         available=lambda c: _weapon_attack(c) and state_on(c, "feinting_attack")),),
+                                         available=lambda c: _attack_roll(c) and state_on(c, "feinting_attack")),),
               on_use=OnUse(slot="bonus", spends=SD, cost_by=lambda c, _p: _sd_cost(c), effect=_clear_relentless,
                            state=_stamped_state("feinting_attack"))),
     _maneuver("goading", "Attacco Adescante", "Goading Attack", 95,
@@ -242,7 +248,7 @@ MANEUVER_ROWS = (
     _maneuver("precision", "Attacco Preciso", "Precision Attack", 95,
               ("Dopo un tiro per colpire mancato, somma il dado al tiro e può diventare un colpo.",
                "After a missed attack roll, add the die to the roll; it may turn into a hit."),
-              roll_options=(_paid(PRECISION, available=lambda c: _weapon_attack(c) and not _other_maneuver_used(c)),)),
+              roll_options=(_paid(PRECISION, available=lambda c: _attack_roll(c) and not _other_maneuver_used(c)),)),
     _maneuver("pushing", "Attacco con Spinta", "Pushing Attack", 95,
               ("Dopo un colpo, +dado al danno; TS Forza o il bersaglio Grande o più piccolo è spinto fino a 4,5 m.",
                "After a hit, +die to damage; Strength save or a Large or smaller target is pushed up to 15 ft."),

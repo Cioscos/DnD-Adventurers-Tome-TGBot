@@ -96,3 +96,58 @@ async def test_manovre_2024_una_sostituzione_quando_se_ne_imparano_di_nuove(clie
     assert (await client.post(url, json={"group": "maneuvers", "old_key": "trip", "new_key": "goading"})).status_code == 200
     r = await client.post(url, json={"group": "maneuvers", "old_key": "rally", "new_key": "menacing"})
     assert r.status_code == 409, r.text[:200]
+
+
+async def _maestro_mago(client, *manovre) -> tuple[int, int]:
+    """Maestro di Battaglia 2024 di 3° con un livello da mago e Dardo di Fuoco (attacco con incantesimo)."""
+    r = await client.post("/characters", json={"name": "Guerriero", "rules_edition": "2024", "initial_class": {
+        "class_name": "fighter", "level": 3, "subclass": "Maestro di Battaglia"}})
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    scelta = next(c for c in r.json()["pending_choices"] if c.get("group") == "maneuvers")
+    r = await client.post(f"/characters/{cid}/choices/{scelta['id']}/resolve", json={"kind": "class_option", "options": list(manovre)})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "wizard", "level": 1})
+    assert r.status_code == 201, r.text
+    mago = next(c["id"] for c in r.json()["classes"] if c["class_name"] == "wizard")
+    r = await client.post(f"/characters/{cid}/spells", json={"name": "Dardo di Fuoco", "level": 0, "attack_save": "ATK", "damage_dice": "1d10",
+                                                              "damage_type": "fire", "casting_time": "1 azione", "class_id": mago})
+    assert r.status_code == 201, r.text
+    return cid, r.json()["id"]
+
+
+async def _opzioni_attacco(client, cid, spell_id) -> set[str]:
+    r = await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "spell_id": spell_id})
+    assert r.status_code == 200, r.text
+    return {o["key"] for o in r.json()}
+
+
+@pytest.mark.caccia(id="CB-4515", fonte="2024 · Guerriero · Maestro di Battaglia, Attacco Preciso e Attacco con Finta · pag. 95 (un tiro per colpire, non solo con arma); Glossario, Tiro per Colpire · pag. 361",
+                    zona="regola:2024/fighter", voce="interazione",
+                    copre=["carta:2024/classes/fighter.md#Attacco Preciso / Precision Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "carta:2024/classes/fighter.md#Attacco con Finta / Feinting Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "POST /characters/{char_id}/spells/{spell_id}/attack", "POST /characters/{char_id}/last-roll/options",
+                           "GET /characters/{char_id}/roll-options"])
+async def test_attacco_preciso_e_finta_valgono_anche_per_l_attacco_con_incantesimo(client):
+    cid, dardo = await _maestro_mago(client, "precision", "feinting", "menacing")
+    r = await client.post(f"/characters/{cid}/spells/{dardo}/attack", json={"die": 2})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/last-roll/options", json={"options": ["fighter.maneuver_precision"]})
+    assert r.status_code == 200, r.text[:200]
+    assert (await _ability(client, cid, "fighter.superiority_dice"))["uses"] == 3
+    assert (await client.post(f"/characters/{cid}/features/fighter.maneuver_feinting/use", json={})).status_code == 200
+    assert "fighter.maneuver_feinting_strike" in await _opzioni_attacco(client, cid, dardo)
+    r = await client.post(f"/characters/{cid}/spells/{dardo}/attack", json={"dice": [3, 15], "options": ["fighter.maneuver_feinting_strike"]})
+    assert r.status_code == 200, r.text[:200]
+    assert r.json()["mode"] == "advantage" and r.json()["to_hit_die"] == 15
+
+
+@pytest.mark.caccia(id="CB-4516", fonte="2024 · Guerriero · Maestro di Battaglia, Attacco Disarmante, Colpo Distraente, Attacco Adescante, Attacco con Manovra, Attacco Minaccioso · pag. 95 (se si colpisce, senza limite all'arma)",
+                    zona="regola:2024/fighter", voce="interazione",
+                    copre=["carta:2024/classes/fighter.md#Attacco Minaccioso / Menacing Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "carta:2024/classes/fighter.md#Attacco Disarmante / Disarming Attack (Manovra, Maestro di Battaglia 3, pag. 95)",
+                           "GET /characters/{char_id}/roll-options"])
+@pytest.mark.xfail(strict=True, reason="CB-4516: difforme dal manuale, confermato (rinviato: il flusso degli attacchi con incantesimo non ha una fase after_hit)")
+async def test_le_manovre_dopo_un_colpo_valgono_anche_per_l_attacco_con_incantesimo(client):
+    cid, dardo = await _maestro_mago(client, "precision", "disarming", "menacing")
+    assert {"fighter.maneuver_disarming", "fighter.maneuver_menacing"} <= await _opzioni_attacco(client, cid, dardo)
