@@ -38,7 +38,7 @@ async def get_history(
     result = await session.execute(
         select(CharacterHistory)
         .where(CharacterHistory.character_id == char_id)
-        .order_by(CharacterHistory.timestamp.desc())
+        .order_by(CharacterHistory.timestamp.desc(), CharacterHistory.id.desc())
         .limit(200)
     )
     return list(result.scalars().all())

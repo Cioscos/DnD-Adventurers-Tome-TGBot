@@ -194,7 +194,6 @@ async def test_somma_di_piu_d20_manuali_non_e_un_totale_di_prova(client):
     assert "d20_total" not in await _stats(client, cid)
 
 
-@pytest.mark.xfail(strict=True, reason="CB-747 cronologia ordinata solo per timestamp al secondo, pari merito in ordine arbitrario")
 @pytest.mark.caccia(id="CB-747", fonte="invariante: la cronologia mostra il più recente in cima", zona="flusso:dadi", voce="normale",
                     copre=["GET /characters/{char_id}/history", "route:/char/:id/history"])
 async def test_cronologia_piu_recente_in_cima_anche_nello_stesso_secondo(client, test_session_factory):
