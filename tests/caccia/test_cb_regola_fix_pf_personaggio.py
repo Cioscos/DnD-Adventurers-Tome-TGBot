@@ -39,7 +39,7 @@ async def test_schivata_prodigiosa_dimezza_il_totale_di_un_attacco_con_piu_tipi_
 @pytest.mark.caccia(id="CB-4312", fonte="2014 · Druido · Forma Selvatica · pag. 66; Concentrazione · pag. 203 (CD: 10 o metà del danno subito, un TS per fonte)",
                     zona="regola:2014/druid", voce="interazione",
                     copre=["carta:2014/classes/druid.md#Forma Selvatica / Wild Shape (Druido 2, pag. 66)",
-                           "PATCH /characters/{char_id}/hp", "POST /characters/{char_id}/companions/{companion_id}/activate"])
+                           "PATCH /characters/{char_id}/hp", "POST /characters/{char_id}/companions/{comp_id}/activate"])
 async def test_la_cd_di_concentrazione_usa_il_colpo_intero_quando_la_forma_selvatica_cede(client, dadi):
     cid = await _pg(client, "druid", 4)
     await _pf(client, cid, 40)
