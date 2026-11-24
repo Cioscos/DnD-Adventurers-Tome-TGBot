@@ -439,11 +439,12 @@ async def start_encounter(
             detail={"code": "missing_initiative", "names": [c.name for c in missing_pcs]},
         )
     for c in missing:
-        applied = await _pc_initiative_modifiers(db, c)
+        applied, opts, pc = await _pc_initiative_modifiers(db, c)
         outcome = resolve_body(None, applied)
+        _, option_total = ([], 0) if pc is None else roll_option_dice(pc, opts)
         c.initiative_die = outcome.kept
-        c.initiative = c.initiative_die + c.initiative_mod + applied.flat
-        if c.character_id is not None and (pc := await db.get(Character, c.character_id)) is not None:
+        c.initiative = c.initiative_die + c.initiative_mod + applied.flat + opts.bonus + option_total
+        if pc is not None:
             record_dice(pc, d20_records(outcome), c.initiative)  # tirata d'ufficio, è comunque il d20 del PG
     await add_second_turns(db, enc, lang, utc_now_iso())
     ordered = sorted(
@@ -702,13 +703,16 @@ def _surprise_disadvantage(comb: Combatant, char: Character | None, applied: App
         applied.notes.append("condition:surprised")
 
 
-async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
+async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> tuple[Applied, AppliedOptions, Character | None]:
+    """Il tiro d'ufficio è il tiro di iniziativa del PG: valgono le sue opzioni automatiche (Ispirazione Superiore)."""
     char = await _pc_for_initiative(db, comb)
     applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
     if char is not None:  # la DES può essere cambiata dopo l'apertura dell'incontro
         comb.initiative_mod = await pc_initiative_mod(db, char)
     _surprise_disadvantage(comb, char, applied)
-    return applied
+    opts = AppliedOptions() if char is None else use_options(db, char, "initiative", None, ability="dexterity")
+    merge_options(applied, opts)
+    return applied, opts, char
 
 
 async def _notify_gm_condition(

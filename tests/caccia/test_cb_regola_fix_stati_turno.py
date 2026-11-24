@@ -2,6 +2,9 @@
 import pytest
 
 from tests.caccia.test_cb_regola_2014_barbarian import _in_ira
+from tests.caccia.test_cb_regola_2014_bard import BI, _riga
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, seed_session
+from tests.integration._telegram_stub import install_fake_telegram
 from tests.integration.rules.test_2014_barbarian import _barbarian, _hit, _rage, _states
 from tests.integration.rules.test_2014_fighter import _fighter
 
@@ -40,3 +43,28 @@ async def test_indomito_con_svantaggio_ritira_un_solo_d20(client, dadi, svantagg
     assert r.status_code == 200, r.text
     # si ritira il 4: il 15 resta e con lo svantaggio vale il più basso fra 18 e 15
     assert (r.json()["die"], r.json()["mode"]) == (15, "disadvantage"), r.json()
+
+
+@pytest.mark.caccia(id="CB-4193", fonte="2024 · Bardo · Ispirazione Superiore · pag. 61", zona="regola:2024/bard", voce="interazione",
+                    copre=["carta:2024/classes/bard.md#Ispirazione Superiore / Superior Inspiration (Bardo 18, pag. 61)",
+                           "POST /sessions/{session_id}/encounter/start"])
+async def test_ispirazione_superiore_anche_con_l_iniziativa_tirata_dal_master(client, test_session_factory, monkeypatch, come_utente):
+    install_fake_telegram(monkeypatch)
+    sid, cid = await seed_session(test_session_factory)
+    come_utente(PLAYER_ID)
+    assert (await client.patch(f"/characters/{cid}", json={"rules_edition": "2024"})).status_code == 200
+    assert (await client.patch(f"/characters/{cid}/ability_scores/charisma", json={"value": 16})).status_code == 200
+    assert (await client.post(f"/characters/{cid}/classes", json={"class_name": "bard", "level": 18, "hit_die": 8})).status_code == 201
+    riga = await _riga(client, cid, BI)
+    assert riga["max_uses"] == 3
+    assert (await client.patch(f"/characters/{cid}/abilities/{riga['id']}", json={"uses": 0})).status_code == 200
+    come_utente(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})).status_code == 201
+    r = await client.post(f"/sessions/{sid}/encounter/combatants",
+                          json={"name": "Goblin", "count": 1, "initiative_mod": 2, "max_hp": 7, "ac": 15})
+    assert r.status_code in (200, 201), r.text
+    r = await client.post(f"/sessions/{sid}/encounter/start", json={"auto_roll_missing": True})
+    assert r.status_code == 200, r.text
+    come_utente(PLAYER_ID)
+    # il tiro d'ufficio è il tiro di iniziativa del bardo: gli usi tornano a due come quando tira lui
+    assert (await _riga(client, cid, BI))["uses"] == 2
