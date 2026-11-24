@@ -201,6 +201,10 @@ def spell_stats(char: Any, spell: Any) -> CasterStats | None:
     return own or _feat_stats(char, spell) or _granted_stats(char, spell) or best_caster(char)
 
 
+# La CD scritta sulla carta, non quella di chi lancia: il TS lo fa chi lancia (Contattare Altri Piani, CD 15 in entrambe le edizioni)
+FIXED_SAVE_DC = {"contact-other-plane": 15}
+
+
 def concentration_dc(edition: Edition, damage: int) -> int:
     dc = max(10, damage // 2)
     return min(dc, 30) if edition == "2024" else dc

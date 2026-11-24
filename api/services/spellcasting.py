@@ -28,7 +28,7 @@ from core.rules.pact_casts import pact_cast
 from core.rules.spellbook import wizard_row
 from core.rules.states import SPELL_CAST_TYPE
 from core.rules.spellcasting import (
-    at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
+    FIXED_SAVE_DC, at_will, bonus_cast, caster_stats, champion_bonus_cast, can_ritual, casting_kind, granted_ritual_only, ki_cast_info, known_limits, normalize_school, prepared_limit,
     no_verbal, prepares, school_limit, spell_range_override, spell_stats,
 )
 
@@ -96,6 +96,8 @@ def fill_spell_stats(char: Character, spells: Iterable[SpellRead]) -> None:
                              **({"self_only": True} if ki.self_only else {})}
             if not stats:  # chi lancia solo col ki ha la CD del ki, non quella di un incantatore
                 spell.save_dc, spell.attack_bonus = ki.dc, char.proficiency_bonus + effective_ability_mod(char, "wisdom")
+        if spell.srd_index in FIXED_SAVE_DC:
+            spell.save_dc = FIXED_SAVE_DC[spell.srd_index]
 
 
 def _class_limits(char: Character, manual_cap: bool) -> list[ClassSpellLimits]:

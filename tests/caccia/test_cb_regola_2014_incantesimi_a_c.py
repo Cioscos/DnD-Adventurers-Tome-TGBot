@@ -127,7 +127,6 @@ async def test_il_vantaggio_di_colpo_accurato_vale_ancora_nel_turno_successivo(c
 
 @pytest.mark.caccia(id="CB-3216", fonte="2014 · Incantesimi · Contattare Altri Piani · pag. 224", zona="regola:2014/incantesimi-A-C", voce="regola",
                     copre=["carta:2014/spells.md#Contattare Altri Piani", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-3216: difforme dal manuale, confermato")
 async def test_contattare_altri_piani_non_mostra_la_cd_di_chi_lancia_al_posto_della_cd_15(client):
     cid = await _pg(client, "warlock", 9, charisma=10)  # CD degli incantesimi 8 + 4 + 0 = 12
     await _dal_catalogo(client, cid, "contact-other-plane")

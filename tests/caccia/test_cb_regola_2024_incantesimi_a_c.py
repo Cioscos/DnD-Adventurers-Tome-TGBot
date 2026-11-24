@@ -137,7 +137,6 @@ async def test_cerchio_magico_2024_dura_un_ora_in_piu_per_ogni_slot_oltre_il_ter
 
 @pytest.mark.caccia(id="CB-3666", fonte="2024 · Incantesimi · Contattare Altri Piani · pag. 255", zona="regola:2024/incantesimi-A-C", voce="regola",
                     copre=["carta:2024/spells.md#Contattare Altri Piani", "GET /characters/{char_id}/spells"])
-@pytest.mark.xfail(strict=True, reason="CB-3666: difforme dal manuale, confermato")
 async def test_contattare_altri_piani_2024_non_mostra_la_cd_di_chi_lancia_al_posto_della_cd_15(client):
     cid = await _pg(client, "wizard", 9, intelligence=10)  # CD degli incantesimi 8 + 4 + 0 = 12
     await _dal_catalogo(client, cid, "contact-other-plane", preparato=False)  # nel libro degli incantesimi
