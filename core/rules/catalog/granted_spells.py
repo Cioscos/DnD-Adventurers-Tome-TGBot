@@ -694,6 +694,9 @@ GRANTED_SPELLS_2024: dict[str, GrantedSpell] = {
     # Evoca Elementale: azione, 18 m, V S, Concentrazione fino a 10 minuti (p.254)
     "conjure-elemental": replace(GRANTED_SPELLS["conjure-elemental"], casting_time="1 azione", range_area="18 m",
                                  duration="Concentrazione, fino a 10 minuti", components="V, S"),
+    # Saltare: azione bonus (p.290); Inviare: istantanea (p.314)
+    "jump": replace(GRANTED_SPELLS["jump"], casting_time="1 azione bonus"),
+    "sending": replace(GRANTED_SPELLS["sending"], duration="Istantanea"),
 }
 # Scuole cambiate nel 2024 (spells-2024: Cura Ferite abiurazione, Rianimare necromanzia...)
 _SCHOOLS_2024 = {

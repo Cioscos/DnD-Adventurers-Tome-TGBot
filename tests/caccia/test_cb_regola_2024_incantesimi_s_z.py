@@ -147,7 +147,6 @@ def test_incantesimo_concesso_nel_2024_ha_ts_e_dadi_della_carta(indice, attesi):
 
 @pytest.mark.caccia(id="CB-3866", fonte="2024 · Incantesimi · Saltare · pag. 290; Warlock · Balzo Ultraterreno · pag. 156", zona="regola:2024/incantesimi-S-Z",
                     voce="edizioni", copre=["carta:2024/spells.md#Saltare"])
-@pytest.mark.xfail(strict=True, reason="CB-3866: difforme dal manuale, confermato")
 def test_saltare_concesso_nel_2024_si_lancia_con_un_azione_bonus():
     assert casting_kind(granted_spell("jump", "2024")) == "bonus"  # oggi «1 azione», il tempo di lancio 2014
 
