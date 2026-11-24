@@ -277,9 +277,9 @@ _BANISH_2014 = _variant(_smite(
     effect=txt("Punizione Esiliante: +5d10 da forza; se il bersaglio ha 50 PF o meno è esiliato fino alla fine dell'incantesimo (lo applica il GM).",
                "Banishing Smite: extra 5d10 force; if the target has 50 HP or fewer it is banished until the spell ends (the GM applies it).")),
     concentration=True)
-_BANISH_2024 = _variant(_smite(
+_BANISH_2024 = _variant(_smite(  # 2024 p.245: solo dopo un colpo in mischia o senz'armi (il 2014 vale con qualunque arma)
     "banishing_smite", "Colpo dell'Esilio", "Banishing Smite", "force", txt("Punizione: +5d10 forza, esilio sotto i 50 PF", "Smite: extra 5d10 force, banishment at 50 HP or fewer"),
-    dice=lambda *_: "5d10", lingers=True, anywhere=True,
+    dice=lambda *_: "5d10", lingers=True,
     effect=txt("Colpo dell'Esilio: +5d10 da forza; se il bersaglio ha 50 PF o meno, TS Carisma CD {dc} o è trasportato in un semipiano innocuo, incapacitato, per la durata (lo applica il GM).",
                "Banishing Smite: extra 5d10 force; if the target has 50 HP or fewer, Charisma save DC {dc} or it is sent to a harmless demiplane, incapacitated, for the duration (the GM applies it).")),
     concentration=True)

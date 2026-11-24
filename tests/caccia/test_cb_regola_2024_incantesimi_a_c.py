@@ -172,7 +172,6 @@ async def test_rilanciare_arma_magica_2024_toglie_l_effetto_dall_arma_di_prima(c
 @pytest.mark.caccia(id="CB-3668", fonte="2024 · Incantesimi · Colpo dell'Esilio · pag. 245", zona="regola:2024/incantesimi-A-C", voce="regola",
                     copre=["carta:2024/spells.md#Colpo dell'Esilio", "POST /characters/{char_id}/spells/{spell_id}/use",
                            "GET /characters/{char_id}/roll-options"])
-@pytest.mark.xfail(strict=True, reason="CB-3668: difforme dal manuale, confermato")
 async def test_colpo_dell_esilio_2024_lanciato_prima_non_vale_con_un_arma_a_distanza(client):
     cid = await _pg(client, "paladin", 17, charisma=16)
     r = await client.post(f"/characters/{cid}/spells", json={"name": "Colpo dell'Esilio", "srd_index": "banishing-smite", "level": 5,
