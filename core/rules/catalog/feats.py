@@ -118,7 +118,8 @@ _register(
              key="feat.2024_lucky", phase="before", rolls=D20_TESTS, mode="advantage", cost=Cost(feature_key="feat.2024_lucky"),
              label={"it": "Fortunato: spendi un punto per avere vantaggio", "en": "Lucky: spend a point to gain advantage"}),)),
     _f24("savage_attacker", weapon_damage_twice=True),
-    _f24("tavern_brawler", unarmed_die="1d4", modifiers=(Modifier("damage_reroll", 1, when=_unarmed),)),
+    _f24("tavern_brawler", unarmed_die="1d4", modifiers=(Modifier("damage_reroll", 1, when=_unarmed),),
+         proficiency_grants={"weapons": ("improvised",)}),
     _f24("healer"),  # Medico da campo e i ritiri delle cure: l'app non ha un'azione «cura un altro» (D1, testo)
     _f24("crafter"),  # 3 strumenti da artigiano del catalogo nella colonna (``complete_feat``)
     _f24("musician"),  # 3 strumenti musicali del catalogo; Canto incoraggiante: Ispirazione agli alleati, testo per il GM

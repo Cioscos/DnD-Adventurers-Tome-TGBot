@@ -125,7 +125,6 @@ async def test_armatura_media_2024_non_addestra_agli_scudi(client):
 
 @pytest.mark.caccia(id="CB-3465", fonte="2024 · Talenti · Attaccabrighe da taverna · pag. 202", zona="regola:2024/talenti", voce="regola",
                     copre=["carta:2024/feats.md#Attaccabrighe da taverna / Tavern Brawler (pag. 202) - Origine", "POST /characters/{char_id}/feats"])
-@pytest.mark.xfail(strict=True, reason="CB-3465: difforme dal manuale, confermato")
 async def test_attaccabrighe_da_taverna_da_competenza_nelle_armi_improvvisate(client):
     ch = await _pg(client, "wizard", 1)
     body = await _preso(client, ch["id"], "2024_tavern_brawler")
