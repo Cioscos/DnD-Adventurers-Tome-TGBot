@@ -428,7 +428,7 @@ class SpeciesApply(BaseModel):
 
 
 class CharacterCreate(BaseModel):
-    name: str = Field(pattern=r"\S")
+    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
 
     @field_validator("name")
     @classmethod
@@ -467,7 +467,7 @@ class CharacterCreate(BaseModel):
 
 class CharacterUpdate(BaseModel):
     """Partial update for identity / metadata fields."""
-    name: Optional[str] = Field(None, pattern=r"\S")
+    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
     race: Optional[str] = None
     gender: Optional[str] = None
     background: Optional[str] = None

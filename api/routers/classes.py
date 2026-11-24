@@ -37,7 +37,7 @@ from api.services.class_features import sync_cataloged_features, sync_class_feat
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import total_base_hp
 from core.rules.modifiers import effective_hp_max, rule_hp_bonus
-from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
+from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, refuse_null
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.spell_slots import recalc_spell_slots
@@ -307,6 +307,7 @@ async def update_class(
         raise HTTPException(status_code=404, detail="Class not found")
     old_level = cls.level
     data = body.model_dump(exclude_unset=True)
+    refuse_null(CharacterClass, data)
     # Clamp difensivo: i dadi vita spesi vivono in [0, level] (spec 2026-07-17).
     if data.get("hit_dice_used") is not None:
         effective_level = data.get("level") or cls.level or 1

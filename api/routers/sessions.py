@@ -279,7 +279,6 @@ async def _load_live_characters(
             has_pending_save=any(p.status == "pending" for p in pendings),
             is_concentrating=is_concentrating(char),
             concentration_spell=spell_names.get(char.concentrating_spell_id) or item_spell.get("name"),
-            concentration_from_item=bool(item_spell),
             active_states=public_states(char, lang),
         )
     return out
@@ -550,7 +549,6 @@ async def get_session_live(
                 has_pending_save=raw["has_pending_save"],
                 is_concentrating=raw["is_concentrating"],
                 concentration_spell=raw["concentration_spell"],
-                concentration_from_item=raw["concentration_from_item"],
                 death_saves=raw["death_saves"],
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -574,7 +572,6 @@ async def get_session_live(
                 has_pending_save=raw["has_pending_save"],
                 is_concentrating=raw["is_concentrating"],
                 concentration_spell=raw["concentration_spell"],
-                concentration_from_item=raw["concentration_from_item"],
                 death_saves=None,
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],

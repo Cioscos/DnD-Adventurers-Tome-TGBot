@@ -46,7 +46,7 @@ from api.services.spell_effects import apply_spell_effects, cast_level, cast_dam
 from core.rules.condition_removal import NOT_RECOGNIZED, looks_like_removal, spell_removal
 from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
-from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
+from api.routers._helpers import collect_homebrew_notifications, refuse_null, roll_concentration_save
 from api.routers.sessions import active_encounter_row
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_applied, resolve_body, spend_inspiration_attack
@@ -412,6 +412,7 @@ async def update_spell(
     _check_class(char, data.get("class_id"))
     if data.get("always_prepared") is None:
         data.pop("always_prepared", None)
+    refuse_null(Spell, data)
     new_always = data.get("always_prepared", spell.always_prepared)
     if new_always:
         if data.get("is_prepared") is False:

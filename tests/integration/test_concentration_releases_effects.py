@@ -144,7 +144,10 @@ async def test_release_on_hp_undo_switch(client, test_session_factory, monkeypat
     r = await client.post(f"/characters/{caster}/hp/undo", json={"op_id": dmg["hp_undo_id"]})
     assert r.status_code == 200, r.text
     assert r.json()["concentrating_spell_id"] == a
-    assert await _linked(test_session_factory, target) == (False, False)
+    # l'effetto di B cade e torna quello di A, che il danno annullato aveva tolto (CB-1545, come «Turno indietro»)
+    assert await _linked(test_session_factory, target) == (True, True)
+    async with test_session_factory() as s:
+        assert [e.source_spell_id for e in (await s.execute(select(ConditionEffect))).scalars()] == [a]
 
 
 async def test_release_on_new_concentration_cast(client, test_session_factory):

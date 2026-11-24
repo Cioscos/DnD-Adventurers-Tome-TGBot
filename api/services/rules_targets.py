@@ -15,7 +15,7 @@ from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.encounter import GmConditionApply, InternalConditionApply
-from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, upsert_effect
+from api.services.condition_effects import ExpirySpec, SaveSpec, _target_combatant_id, clear_effects_for, item_concentration, upsert_effect
 from api.services.effects import apply_conditions
 from api.services.history import add_history
 from core.data.labels import condition_label
@@ -64,12 +64,13 @@ async def apply_condition_to_combatant(
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="source_combatant_id not in this encounter")
     src_char = await pc_char(db, src) if src is not None and src.kind == "pc" else None
-    spell_id = None
+    spell_id = held = None
     if body.ends_with_concentration:
-        if src_char is None or src_char.concentrating_spell_id is None:
+        if src_char is None or (src_char.concentrating_spell_id is None and item_concentration(src_char) is None):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail={"code": "source_not_concentrating"})
         spell_id = src_char.concentrating_spell_id
+        held = item_concentration(src_char)
     owner = await pc_char(db, comb) if comb.kind == "pc" else comb
     if comb.kind == "pc" and body.slug in immune_conditions(owner):
         return  # respinta per immunità: né condizione, né effetto, né TS di fine turno
@@ -82,7 +83,7 @@ async def apply_condition_to_combatant(
         save=SaveSpec(**body.save.model_dump()) if body.save else None,
         source_combatant_id=src.id if src else None,
         source_character_id=src_char.id if src_char else None,
-        source_spell_id=spell_id,
+        source_spell_id=spell_id, source_item_spell=held,
         ends_with_concentration=body.ends_with_concentration,
         applied_by_gm=applied_by_gm, encounter=enc, source_note=body.source_note,
     )
@@ -239,6 +240,7 @@ async def apply_target_effect(
         applied_by_gm=False, encounter_id=enc.id, created_at=now,
         ends_with_concentration=bool(effect.get("ends_with_concentration")),
         source_spell_id=char.concentrating_spell_id if effect.get("ends_with_concentration") else None,
+        source_item_spell=item_concentration(char) if effect.get("ends_with_concentration") else None,
         immunity_key=effect_key if effect.get("immune_on_success") else None,
         also_slugs=",".join(effect.get("also", ())) or None,
         # TS ripetuto (Collera della Natura): lo porta la condizione, comincia a contare quando il primo TS è fallito

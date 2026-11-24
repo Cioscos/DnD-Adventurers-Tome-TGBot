@@ -41,6 +41,7 @@ from core.game.stats import effective_ability_score, roll_ability_mod
 from core.game.containers import container_meta, is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta, weapon_magic_bonus
 from api.routers._helpers import (
+    refuse_null,
     apply_con_hp as _apply_con_hp,
     collect_homebrew_notifications,
     effective_con_mod,
@@ -269,6 +270,7 @@ async def update_item(
     was_equipped = item.is_equipped
 
     data = body.model_dump(exclude_unset=True)
+    refuse_null(Item, data)
     if "item_metadata" in data:
         data["item_metadata"] = json.dumps(data["item_metadata"]) if data["item_metadata"] else None
 

@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from api.routers._helpers import collect_homebrew_notifications
+from api.routers._helpers import collect_homebrew_notifications, refuse_null
 from api.services.effects import cap_current_hp
 from api.services.history import add_history
 from api.services.homebrew.dispatcher import dispatch
@@ -67,6 +67,7 @@ async def update_ability(
     # cambiare solo `uses` e `description`. Nome/max_uses/restoration_type/tipo
     # sono governati dall'auto-calcolo e ri-sincronizzati al level-up.
     edited = body.model_dump(exclude_unset=True)
+    refuse_null(Ability, edited)
     if ability.is_class_feature:
         forbidden = set(edited.keys()) - {"uses", "description"}
         if forbidden:

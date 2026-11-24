@@ -991,3 +991,166 @@ async def test_a_fine_scontro_la_condizione_sospesa_non_resta(client, test_sessi
     assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 200
     j = await _come_giocatore(client, cid)
     assert not j["conditions"].get("charmed") and j["condition_effects"] == []
+
+
+@pytest.mark.caccia(id="CB-1532", fonte="invariante: l'annullo del danno rimette com'era ciò che la concentrazione teneva; 2014 · Calmare Emozioni · pag. 218", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /characters/{char_id}/hp/undo"])
+@pytest.mark.parametrize("ed", _ED)
+async def test_annullo_del_danno_sospende_di_nuovo(client, test_session_factory, ed):
+    cid = await _affascinato_sospeso(client, test_session_factory, ed, durata=5)
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})).json()
+    assert r["conditions"]["charmed"] is True
+    u = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r["hp_undo_id"]})
+    assert u.status_code == 200, u.text
+    j = await _scheda(client, cid)
+    assert j["conditions"]["charmed"] is False and j["condition_effects"] == []
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    j = await _scheda(client, cid)
+    assert j["conditions"]["charmed"] is True
+    assert [(e["expiry_count"], e["save_dc"]) for e in j["condition_effects"]] == [(5, 14)]
+
+
+@pytest.mark.caccia(id="CB-1533", fonte="invariante: «Turno indietro» rimette com'era ciò che la concentrazione teneva; 2014 · Calmare Emozioni · pag. 218", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_sospende_di_nuovo(client, test_session_factory):
+    from core.db.models import Character
+    from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state
+    from core.rules.types import StateSpec
+    from tests.integration._encounter_helpers import GM_ID, as_user
+    sid, cid, pc, _m = await _gm_su_pg(client, test_session_factory)
+    async with test_session_factory() as s:
+        eroe = await s.get(Character, cid)
+        eroe.conditions = {"charmed": False}
+        eroe.settings = {**(eroe.settings or {}), "concentration_rounds_left": 1, "concentration_item_spell": {"name": "X"},
+                         SUSPENDED_KEY: [{"id": cid, "conditions": ["charmed"]}], SUSPENDED_ON: {"charmed": cid},
+                         SUSPENDED_EFFECTS: {"charmed": {"character_id": cid, "slug": "charmed", "expiry_anchor": "owner", "expiry_edge": "start",
+                                                         "expiry_count": 3, "created_at": "2026-11-24T10:00:00"}}}
+        begin_state(eroe, StateSpec(SUSPENDED_KEY, ends_on=("concentration_end", "manual")), "removal")
+        await s.commit()
+    as_user(GM_ID)
+    for _ in range(6):
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+        async with test_session_factory() as s:
+            if (await s.get(Character, cid)).conditions["charmed"]:
+                break
+    else:
+        raise AssertionError("la concentrazione non è scaduta")
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    j = await _come_giocatore(client, cid)
+    assert j["conditions"]["charmed"] is False and j["condition_effects"] == []
+    async with test_session_factory() as s:
+        st = (await s.get(Character, cid)).settings
+    assert st[SUSPENDED_ON] == {"charmed": cid} and st[SUSPENDED_EFFECTS]["charmed"]["expiry_count"] == 3
+    assert st[SUSPENDED_KEY] == [{"id": cid, "conditions": ["charmed"]}]
+
+
+@pytest.mark.caccia(id="CB-1535", fonte="invariante (come CB-1514): una condizione spenta non si mostra, nemmeno col TS ripetuto in sospeso", zona="flusso:condizioni",
+                    voce="annullamento", copre=["GET /characters/{char_id}"])
+async def test_spenta_col_ts_in_sospeso_l_effetto_non_si_vede(client, test_session_factory):
+    from core.db.models import Character
+    cid = await _pg(client)
+    await _cond(client, cid, {"restrained": True})
+    await _effetto(test_session_factory, cid, "restrained", 13, pending_save=True)
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.conditions = {**char.conditions, "restrained": False}
+        await s.commit()
+    assert (await _scheda(client, cid))["condition_effects"] == []
+
+
+async def _sospeso_in_scontro(client, factory, durata, round_conc):
+    """L'eroe, nell'incontro, sospende su di sé Affascinato (Calmare Emozioni); ritorna (sessione, scheda)."""
+    from core.db.models import Character
+    from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state
+    from core.rules.types import StateSpec
+    sid, cid, _pc, _m = await _gm_su_pg(client, factory)
+    async with factory() as s:
+        eroe = await s.get(Character, cid)
+        eroe.conditions = {"charmed": False}
+        eroe.settings = {**(eroe.settings or {}), "concentration_rounds_left": round_conc, "concentration_item_spell": {"name": "X"},
+                         SUSPENDED_KEY: [{"id": cid, "conditions": ["charmed"]}], SUSPENDED_ON: {"charmed": cid},
+                         SUSPENDED_EFFECTS: {"charmed": {"character_id": cid, "slug": "charmed", "expiry_anchor": "owner", "expiry_edge": "start",
+                                                         "expiry_count": durata, "created_at": "2026-11-24T10:00:00"}}}
+        begin_state(eroe, StateSpec(SUSPENDED_KEY, ends_on=("concentration_end", "manual")), "removal")
+        await s.commit()
+    return sid, cid
+
+
+async def _fino_al_turno(client, factory, sid, cid, round_conc):
+    """Avanza finché comincia il turno dell'eroe: la concentrazione ha un round in meno."""
+    from core.db.models import Character
+    from tests.integration._encounter_helpers import GM_ID, as_user
+    as_user(GM_ID)
+    for _ in range(6):
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+        async with factory() as s:
+            if (await s.get(Character, cid)).settings.get("concentration_rounds_left") != round_conc:
+                return
+    raise AssertionError("il turno dell'eroe non è arrivato")
+
+
+async def _interrompi(client, cid, spell_id=None):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+    as_user(PLAYER_ID)
+    assert (await client.patch(f"/characters/{cid}/concentration", json={"spell_id": spell_id})).status_code == 200
+    as_user(GM_ID)
+
+
+@pytest.mark.caccia(id="CB-1541", fonte="invariante: «Turno indietro» non riapre ciò che è stato chiuso dopo l'avanzamento; 2014 · Calmare Emozioni · pag. 218", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_non_sospende_sotto_un_altra_concentrazione(client, test_session_factory):
+    from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
+    sid, cid = await _sospeso_in_scontro(client, test_session_factory, 9, 5)
+    as_user(PLAYER_ID)
+    bene = (await client.post(f"/characters/{cid}/spells", json={"name": "Benedizione", "level": 1, "is_concentration": True})).json()["id"]
+    as_user(GM_ID)
+    await _fino_al_turno(client, test_session_factory, sid, cid, 5)
+    await _interrompi(client, cid)
+    await _interrompi(client, cid, bene)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    j = await _come_giocatore(client, cid)
+    assert j["conditions"]["charmed"] is True and j["concentrating_spell_id"] == bene
+    assert [e["expiry_count"] for e in j["condition_effects"]] == [9]  # CB-1543: la durata di prima dell'avanzamento
+
+
+@pytest.mark.caccia(id="CB-1542", fonte="invariante: dopo «Turno indietro» la condizione sospesa torna ancora con la fine della concentrazione", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_condizione_e_concentrazione_scadute_insieme(client, test_session_factory):
+    sid, cid = await _sospeso_in_scontro(client, test_session_factory, 1, 1)
+    await _fino_al_turno(client, test_session_factory, sid, cid, 1)
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    assert (await _come_giocatore(client, cid))["conditions"]["charmed"] is False
+    await _interrompi(client, cid)
+    assert (await _come_giocatore(client, cid))["conditions"]["charmed"] is True
+
+
+@pytest.mark.caccia(id="CB-1544", fonte="2014 · Calmare Emozioni · pag. 218: senza chi la sospende la condizione torna", zona="flusso:condizioni", voce="annullamento",
+                    copre=["DELETE /characters/{char_id}"])
+async def test_lanciatore_eliminato_la_condizione_torna(client, test_session_factory):
+    from core.db.models import Character
+    from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_ON
+    cid = await _affascinato_sospeso(client, test_session_factory, durata=5)
+    altro = await _pg(client)
+    async with test_session_factory() as s:  # la sospensione è su un altro personaggio
+        mago, bersaglio = await s.get(Character, cid), await s.get(Character, altro)
+        bersaglio.conditions = {"charmed": False}
+        bersaglio.settings = {**(bersaglio.settings or {}), SUSPENDED_ON: {"charmed": cid},
+                              SUSPENDED_EFFECTS: {"charmed": {**mago.settings[SUSPENDED_EFFECTS]["charmed"], "character_id": altro}}}
+        mago.settings = {**{k: v for k, v in mago.settings.items() if k not in (SUSPENDED_ON, SUSPENDED_EFFECTS)},
+                         "suspended_conditions": [{"id": altro, "conditions": ["charmed"]}]}
+        await s.commit()
+    assert (await client.delete(f"/characters/{cid}")).status_code == 204
+    j = await _scheda(client, altro)
+    assert j["conditions"]["charmed"] is True and [e["expiry_count"] for e in j["condition_effects"]] == [5]
+
+
+@pytest.mark.caccia(id="CB-1550", fonte="invariante: «Turno indietro» ridà la condizione scaduta con l'avanzamento, sospesa o no", zona="flusso:condizioni",
+                    voce="annullamento", copre=["POST /sessions/{session_id}/encounter/prev-turn"])
+async def test_turno_indietro_scaduta_sospesa_e_poi_la_concentrazione_interrotta(client, test_session_factory):
+    sid, cid = await _sospeso_in_scontro(client, test_session_factory, 1, 5)
+    await _fino_al_turno(client, test_session_factory, sid, cid, 5)
+    await _interrompi(client, cid)
+    assert not (await _come_giocatore(client, cid))["conditions"]["charmed"]
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    j = await _come_giocatore(client, cid)
+    assert j["conditions"]["charmed"] is True and [e["expiry_count"] for e in j["condition_effects"]] == [1]

@@ -996,7 +996,7 @@ async def test_la_serata_mostra_la_concentrazione_da_oggetto(client, test_sessio
     await _seat(test_session_factory, cid, GM_ID)
     vivi = (await client.get(f"/sessions/{sid}/live")).json()["live_characters"]
     [foto] = [c for c in vivi if c["id"] == cid]
-    assert (foto["is_concentrating"], foto["concentration_spell"], foto["concentration_from_item"]) == (True, "Raggio Fantasma", True)
+    assert (foto["is_concentrating"], foto["concentration_spell"]) == (True, "Raggio Fantasma")
 
 
 @pytest.mark.caccia(id="CB-1517", fonte="invariante (come CB-1179): interrompere la concentrazione si scrive in Cronologia", zona="flusso:concentrazione", voce="annullamento",
@@ -1010,3 +1010,112 @@ async def test_termina_sull_orologio_si_scrive_in_cronologia(client):
     assert r.status_code == 200, r.text
     voci = (await client.get(f"/characters/{cid}/history")).json()
     assert any(v["event_type"] == "concentration" and "interrotta" in v["description"] for v in voci)
+
+
+@pytest.mark.caccia(id="CB-1538", fonte="invariante: un valore nullo dove non può esserlo si rifiuta, non rompe il server", zona="flusso:concentrazione", voce="contratto",
+                    copre=["PATCH /characters/{char_id}/spells/{spell_id}"])
+@pytest.mark.parametrize("campo", ["name", "level", "is_concentration", "is_ritual", "is_pinned", "is_prepared"])
+async def test_incantesimo_con_un_campo_obbligatorio_nullo_rifiutato(client, campo):
+    cid = await _pg(client)
+    sid = await _incantesimo(client, cid)
+    assert (await client.patch(f"/characters/{cid}/spells/{sid}", json={campo: None})).status_code == 422
+
+
+@pytest.mark.caccia(id="CB-1534", fonte="2014 · Concentrazione · pag. 203; 2024 · Glossario, Concentrazione: gli effetti finiscono con la concentrazione, anche se l'incantesimo viene da un oggetto",
+                    zona="flusso:concentrazione", voce="interazione",
+                    copre=["POST /sessions/{session_id}/encounter/combatants/{combatant_id}/conditions", "PATCH /characters/{char_id}/concentration"])
+async def test_condizione_legata_alla_concentrazione_da_oggetto(client, test_session_factory, dadi):
+    from sqlalchemy import select
+    from core.db.models import Character, ConditionEffect
+    sid, enc = await setup_full_encounter(client, test_session_factory)
+    async with test_session_factory() as s:
+        cid = (await s.execute(select(Character.id).where(Character.user_id == PLAYER_ID))).scalar_one()
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/start", json={})
+    pc = next(c["id"] for c in enc["combatants"] if c["kind"] == "pc")
+    mostro = next(c["id"] for c in enc["combatants"] if c["kind"] == "monster")
+    as_user(PLAYER_ID)
+    iid = await _bacchetta(client, cid)
+    luce = await _incantesimo(client, cid, "Luce", conc=False, livello=0)
+    dadi(3)
+    await _usa_oggetto(client, cid, iid)
+    as_user(GM_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{mostro}/conditions",
+                          json={"slug": "charmed", "source_combatant_id": pc, "ends_with_concentration": True})
+    assert r.status_code == 200, r.text
+
+    async def accese() -> int:
+        async with test_session_factory() as s:
+            return len((await s.execute(select(ConditionEffect.id).where(ConditionEffect.combatant_id == mostro))).all())
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{cid}/spells/{luce}/use", json={"slot_level": 0})).status_code == 200
+    assert await accese() == 1  # un altro lancio non tocca la concentrazione
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": None})
+    assert await accese() == 0
+
+
+@pytest.mark.caccia(id="CB-1545", fonte="invariante (come CB-451): l'annullo del danno rimette ciò che la concentrazione teneva", zona="flusso:concentrazione", voce="annullamento",
+                    copre=["POST /characters/{char_id}/hp/undo"])
+@pytest.mark.parametrize("op,valore,tolto", [("set_current", 0, False), ("damage", 200, False), ("damage", 1, False), ("damage", 200, True)])
+async def test_annullo_pf_ridà_la_condizione_legata_alla_concentrazione(client, test_session_factory, dadi, op, valore, tolto):
+    from sqlalchemy import select
+    from core.db.models import Character, ConditionEffect
+    sid, enc = await setup_full_encounter(client, test_session_factory)
+    async with test_session_factory() as s:
+        cid = (await s.execute(select(Character.id).where(Character.user_id == PLAYER_ID))).scalar_one()
+        (await s.get(Character, cid)).hit_points = (await s.get(Character, cid)).current_hit_points = 30
+        await s.commit()
+    as_user(GM_ID)
+    await client.post(f"/sessions/{sid}/encounter/start", json={})
+    pc = next(c["id"] for c in enc["combatants"] if c["kind"] == "pc")
+    mostro = next(c["id"] for c in enc["combatants"] if c["kind"] == "monster")
+    as_user(PLAYER_ID)
+    bene = await _incantesimo(client, cid)
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": bene})
+    as_user(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/combatants/{mostro}/conditions",
+                              json={"slug": "charmed", "source_combatant_id": pc, "ends_with_concentration": True})).status_code == 200
+
+    async def accese() -> int:
+        async with test_session_factory() as s:
+            return len((await s.execute(select(ConditionEffect.id).where(ConditionEffect.combatant_id == mostro))).all())
+    as_user(PLAYER_ID)
+    dadi(1)  # il TS di concentrazione fallisce
+    r = (await client.patch(f"/characters/{cid}/hp", json={"op": op, "value": valore})).json()
+    assert await accese() == 0
+    if tolto:  # la fonte non è più nell'incontro: l'effetto torna senza di lei
+        as_user(GM_ID)
+        assert (await client.delete(f"/sessions/{sid}/encounter/combatants/{pc}")).status_code in (200, 204)
+        as_user(PLAYER_ID)
+    assert (await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r["hp_undo_id"]})).status_code == 200
+    assert await accese() == 1
+
+
+@pytest.mark.caccia(id="CB-1547", fonte="invariante (come CB-1538): un valore nullo dove non può esserlo si rifiuta, non rompe il server", zona="flusso:concentrazione", voce="contratto",
+                    copre=["PATCH /characters/{char_id}", "PATCH /characters/{char_id}/classes/{class_id}", "PATCH /characters/{char_id}/items/{item_id}",
+                           "PATCH /characters/{char_id}/currency", "PATCH /characters/{char_id}/abilities/{ability_id}"])
+async def test_campi_obbligatori_nulli_rifiutati_ovunque(client):
+    cid = await _pg(client)
+    base = f"/characters/{cid}"
+    classe = (await _stato(client, cid))["classes"][0]["id"]
+    oggetto = (await client.post(f"{base}/items", json={"name": "Corda", "item_type": "gear"})).json()["id"]
+    await client.post(f"{base}/abilities", json={"name": "Dono"})
+    dono = next(a["id"] for a in (await _stato(client, cid))["abilities"] if a["name"] == "Dono")
+    casi = [(base, ("name", "speed", "spell_slots_mode", "rules_edition")), (f"{base}/classes/{classe}", ("level", "hit_dice_used")),
+            (f"{base}/items/{oggetto}", ("name", "weight", "quantity", "item_type", "is_equipped")),
+            (f"{base}/currency", ("copper", "silver", "electrum", "gold", "platinum")),
+            (f"{base}/abilities/{dono}", ("name", "is_passive", "is_active", "restoration_type"))]
+    for url, campi in casi:
+        for campo in campi:
+            r = await client.patch(url, json={campo: None})
+            assert r.status_code == 422, (url, campo, r.status_code)
+
+
+@pytest.mark.caccia(id="CB-1549", fonte="invariante: una scheda senza PF massimi non è a 0 PF, la concentrazione resta", zona="flusso:concentrazione", voce="limiti",
+                    copre=["PATCH /characters/{char_id}/hp"])
+async def test_set_current_zero_senza_pf_massimi_non_chiude_la_concentrazione(client):
+    cid = (await client.post("/characters", json={"name": "Vuoto"})).json()["id"]
+    sid = await _incantesimo(client, cid)
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": sid})
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
+    assert r.status_code == 200 and r.json()["concentrating_spell_id"] == sid

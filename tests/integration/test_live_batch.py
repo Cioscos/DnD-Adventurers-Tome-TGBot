@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import event
 
 from api.services.condition_effects import SaveSpec, character_effect_payload, upsert_effect
-from core.db.models import PendingSave
+from core.db.models import Character, PendingSave
 
 
 def _ps(eff_id, cid, status, **kw):
@@ -25,6 +25,8 @@ async def test_effetti_e_ts_divisi_per_scheda(client, test_session_factory):
     b = (await client.post("/characters", json={"name": "Bea"})).json()["id"]
     c = (await client.post("/characters", json={"name": "Ciro"})).json()["id"]
     async with test_session_factory() as s:
+        (await s.get(Character, a)).conditions = {"poisoned": True}  # un effetto si mostra finché la condizione è attiva (CB-1535)
+        (await s.get(Character, b)).conditions = {"prone": True}
         pois = await upsert_effect(s, ("character", a), "poisoned", save=SaveSpec("constitution", 12, "end"))
         fear = await upsert_effect(s, ("character", a), "frightened")
         fear.pending = True  # in attesa del TS: non è sulla scheda, ma il suo TS sì

@@ -2,6 +2,7 @@
 import json
 from typing import Any
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult, RollMode
@@ -148,6 +149,14 @@ def _append_concentration_history(
     add_history(session, char_id, "concentration_save", desc)
 
 
+def refuse_null(model: type, changes: dict) -> None:
+    """422 se una modifica manda ``null`` a una colonna che non lo ammette: senza, lo rifiuta il database con un errore del server."""
+    for field, value in changes.items():
+        column = model.__table__.columns.get(field)
+        if value is None and column is not None and not column.nullable:
+            raise HTTPException(status_code=422, detail=f"{field}_required")
+
+
 async def _lose_concentration(session: AsyncSession, char: Character) -> dict:
     """Fa cadere la concentrazione e restituisce ciò che serve per ripristinarla dopo un ritiro riuscito."""
     settings = char.settings or {}
@@ -180,6 +189,8 @@ async def retouch_concentration(
         char.settings = settings
         char.active_states = list(snap["active_states"])
         await restore_released(session, snap["released"])
+        from api.services.condition_removal import resuspend  # import locale: il servizio importa gli alleati di sessione
+        await resuspend(session, char)
         conc.update(lost=False, snapshot=None)
     elif not success and not conc["lost"] and is_concentrating(char):
         conc.update(lost=True, snapshot=await _lose_concentration(session, char))

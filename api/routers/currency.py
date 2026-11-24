@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.routers._helpers import refuse_null
 from core.db.models import Character, CharacterClass, Currency
 from api.schemas.character import CharacterFull
 from api.schemas.common import CurrencyConvert, CurrencyRead, CurrencyUpdate
@@ -55,7 +56,9 @@ async def update_currency(
 ) -> Currency:
     await get_owned_full(char_id, user_id, session)
     currency = await _get_or_create_currency(char_id, session)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    refuse_null(Currency, changes)
+    for field, value in changes.items():
         setattr(currency, field, max(0, value))
     return currency
 

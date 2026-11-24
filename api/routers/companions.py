@@ -184,7 +184,7 @@ async def update_companion(
     if comp.is_active and comp.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     comp.current_hp = min(comp.current_hp, _effective_max_hp(char, comp))
-    if comp.is_active and comp.current_hp == 0 and form_own_hp(char):  # a 0 PF la forma finisce, anche se corretta a mano
+    if (comp.is_active or was_active) and comp.current_hp == 0 and form_own_hp(char):  # a 0 PF la forma finisce, anche se corretta a mano
         end_form(char, comp)
     elif comp.is_active and not was_active:
         if limits is not None:  # il druido assume la forma solo con /activate: GS, usi e azione (e la conferma per superarli)

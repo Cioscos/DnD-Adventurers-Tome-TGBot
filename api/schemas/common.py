@@ -135,7 +135,7 @@ def _spellcasting_ability(v: Optional[str]) -> Optional[str]:
 
 
 class CharacterClassCreate(BaseModel):
-    class_name: str = Field(pattern=r"\S")
+    class_name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
     level: int = Field(default=1, ge=1, le=20)
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
@@ -281,7 +281,7 @@ class AbilityRead(BaseModel):
 
 
 class AbilityCreate(BaseModel):
-    name: str = Field(pattern=r"\S")
+    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None
@@ -294,7 +294,7 @@ class AbilityCreate(BaseModel):
 
 
 class AbilityUpdate(BaseModel):
-    name: Optional[str] = Field(None, pattern=r"\S")
+    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
     description: Optional[str] = None
     max_uses: Optional[int] = None
     uses: Optional[int] = None

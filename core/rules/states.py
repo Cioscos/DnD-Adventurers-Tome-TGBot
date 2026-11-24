@@ -258,6 +258,8 @@ SPELL_SPENT = "spell_spent"
 SUSPENDED_KEY, COND_RELEASE, SUSPENDED_ON = "suspended_conditions", "conditions_release", "conditions_suspended_on"
 # {condizione: riga di durata, TS e fonte tolta con la sospensione}: torna con la condizione
 SUSPENDED_EFFECTS = "conditions_suspended_effects"
+# su chi lancia: [{"id", "conditions"}] tornate con l'ultima fine della concentrazione; un annullo le sospende di nuovo
+SUSPENDED_BACK = "conditions_suspended_back"
 ALLY_EXCLUSIVE = "ally_exclusive"  # settings: {chiave del privilegio: id del personaggio che ha il suo stato}, scritto dal server
 
 

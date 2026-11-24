@@ -10,7 +10,7 @@ from api.services.session_allies import ally_target, load_receiver
 from core.data.labels import condition_label
 from core.db.models import Character
 from core.rules.condition_removal import ConditionRemoval, outcome_lines, resolve_picks
-from core.rules.states import SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state
+from core.rules.states import SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_KEY, SUSPENDED_ON, begin_state, has_state
 from core.rules.types import StateSpec
 
 
@@ -43,6 +43,40 @@ async def resolve_targets(session: AsyncSession, caster: Character, removal: Con
     return out
 
 
+async def _suspended_effects(session: AsyncSession, target: Character, present: list[str]) -> dict[str, dict]:
+    return {e.slug: {k: v for k, v in effect_snapshot(e).items() if k != "id"}
+            for e in await effects_for_character(session, target.id) if e.slug in present and not e.pending}
+
+
+def _mark_suspended(caster: Character, target: Character, present: list[str], effects: dict[str, dict]) -> None:
+    settings = target.settings or {}
+    target.settings = {**settings, SUSPENDED_ON: {**(settings.get(SUSPENDED_ON) or {}), **{c: caster.id for c in present}},
+                       SUSPENDED_EFFECTS: {**{k: v for k, v in (settings.get(SUSPENDED_EFFECTS) or {}).items() if k not in present}, **effects}}
+
+
+async def resuspend(session: AsyncSession, caster: Character) -> None:
+    """Un annullo ha ridato la concentrazione a chi sospendeva delle condizioni (Calmare Emozioni): quelle tornate con la sua fine,
+    se sono ancora attive, si sospendono di nuovo."""
+    from api.services.durations import is_concentrating  # import locali, come sopra
+    from api.services.effects import apply_conditions
+    settings = caster.settings or {}
+    if not settings.get(SUSPENDED_BACK) or settings.get(SUSPENDED_KEY) or not has_state(caster, SUSPENDED_KEY) or not is_concentrating(caster):
+        return
+    held: list[dict] = []
+    for entry in settings[SUSPENDED_BACK]:
+        if await session.get(Character, entry["id"]) is None:
+            continue
+        target = await load_receiver(session, entry["id"])
+        present = [c for c in entry["conditions"] if (target.conditions or {}).get(c)]
+        if not present:
+            continue
+        effects = await _suspended_effects(session, target, present)
+        await apply_conditions(session, target, {c: False for c in present})
+        _mark_suspended(caster, target, present, effects)
+        held.append({"id": target.id, "conditions": present})
+    caster.settings = {**{k: v for k, v in (caster.settings or {}).items() if k != SUSPENDED_BACK}, **({SUSPENDED_KEY: held} if held else {})}
+
+
 async def apply_removal(session: AsyncSession, caster: Character, removal: ConditionRemoval, conds: list[str], untracked: list[str],
                         targets: list[Character | None], *, explicit: bool) -> list[dict[str, str]]:
     """Toglie ``conds`` a ogni bersaglio che le ha. Sulla scheda di un altro PG lo storico dice «Condizione X tolta da <nome>»
@@ -62,17 +96,13 @@ async def apply_removal(session: AsyncSession, caster: Character, removal: Condi
         changes = {c: (int(have[c]) - 1 if c == "exhaustion" else False) for c in present}
         effects = {}
         if removal.suppress:  # la riga cade con la condizione: si mette da parte per quando torna
-            effects = {e.slug: {k: v for k, v in effect_snapshot(e).items() if k != "id"}
-                       for e in await effects_for_character(session, target.id) if e.slug in present and not e.pending}
+            effects = await _suspended_effects(session, target, present)
         if changes:
             await apply_conditions(session, target, changes)
         mine = target.id == caster.id
         if removal.suppress and present:
             held.append({"id": target.id, "conditions": present})
-            target.settings = {**(target.settings or {}), SUSPENDED_ON: {**((target.settings or {}).get(SUSPENDED_ON) or {}),
-                                                                       **{c: caster.id for c in present}},
-                               SUSPENDED_EFFECTS: {**{k: v for k, v in ((target.settings or {}).get(SUSPENDED_EFFECTS) or {}).items()
-                                                      if k not in present}, **effects}}
+            _mark_suspended(caster, target, present, effects)
         if not mine:
             for c in present:
                 add_history(session, target.id, "condition_change", f"Condizione {condition_label(c)} tolta da {caster.name}",

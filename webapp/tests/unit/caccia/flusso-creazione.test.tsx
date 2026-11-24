@@ -21,7 +21,14 @@ vi.mock('@/hooks/useClassProficiencies', () => ({
   }),
 }))
 vi.mock('@/pages/creation/AbilityScoresStep', async (orig) => ({ ...((await orig()) as Record<string, unknown>), default: () => null }))
-vi.mock('@/pages/creation/EquipmentStep', async (orig) => ({ ...((await orig()) as Record<string, unknown>), default: () => null }))
+vi.mock('@/pages/creation/EquipmentStep', async (orig) => {
+  const React = await import('react')
+  return {
+    ...((await orig()) as Record<string, unknown>),
+    default: (p: { wealth: boolean; onWealth: (on: boolean) => void }) =>
+      React.createElement('button', { onClick: () => p.onWealth(!p.wealth) }, `monete ${p.wealth ? 'accese' : 'spente'}`),
+  }
+})
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children as never) : null) }
@@ -233,5 +240,36 @@ describe('caccia: creazione, giro 3', () => {
     await user.click(avanti())
     expect(screen.queryByText('character.feats.origin_hint')).not.toBeInTheDocument()
     expect(screen.getByText('character.create.species_hint')).toBeInTheDocument()
+  })
+
+  // caccia: {"id": "CB-1540", "fonte": "invariante: cambiando classe le scelte di equipaggiamento ripartono da capo, anche tornando alla prima", "zona": "flusso:creazione", "voce": "annullamento", "copre": ["route:/"]}
+  it('le monete scelte per una classe non si riaccendono tornandoci', async () => {
+    const user = userEvent.setup()
+    const clic = (name: string | RegExp) => user.click(screen.getByRole('button', { name }))
+    const classe = async (nome: RegExp) => {
+      await clic(nome)
+      for (const abilita of ['history', 'medicine']) {
+        const b = screen.getByRole('button', { name: `character.skills.${abilita}` })
+        if (screen.getByRole('button', { name: 'common.next →' }).hasAttribute('disabled')) await user.click(b)
+      }
+      await clic('common.next →')
+      await clic('common.next →') // specie libera
+      if (screen.queryByRole('button', { name: /^monete/ }) === null) await clic('character.create.scores_skip')
+    }
+    const indietro = async () => { for (let i = 0; i < 3; i++) await clic('common.back') }
+    renderWithProviders(<CharacterSelect />)
+    await user.click(await screen.findByRole('button', { name: /character.select.new/ }))
+    await user.type(screen.getByPlaceholderText('character.create.name_placeholder'), 'Tia')
+    await clic('common.next →')
+    await clic('common.next →') // background saltato
+    await classe(/dnd.classes.cleric/)
+    await clic('monete spente')
+    expect(screen.getByRole('button', { name: 'monete accese' })).toBeInTheDocument()
+    await indietro()
+    await classe(/dnd.classes.wizard/)
+    expect(screen.getByRole('button', { name: 'monete spente' })).toBeInTheDocument()
+    await indietro()
+    await classe(/dnd.classes.cleric/)
+    expect(screen.getByRole('button', { name: 'monete spente' })).toBeInTheDocument()
   })
 })

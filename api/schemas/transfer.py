@@ -1,6 +1,7 @@
 """Schema del file di esportazione/importazione personaggio (format_version 1)."""
 from __future__ import annotations
 
+import unicodedata
 from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, Optional
 
@@ -10,6 +11,7 @@ from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
 from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
+from core.data.classes import CLASS_SPELLCASTING, class_table_key
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.species_2024 import SPECIES_2024
 from core.db.models import ABILITY_NAMES, EquipmentSlot
@@ -37,17 +39,21 @@ def _cap(n: int) -> AfterValidator:
     return AfterValidator(check)
 
 
+def _visible(v: str) -> bool:
+    return any(not c.isspace() and unicodedata.category(c) not in ("Cf", "Cc") for c in v)  # uno spazio a larghezza zero non è un nome
+
+
 def _named(v: str, info: ValidationInfo) -> str:
     if (info.context or {}).get("lenient"):  # l'export non cambia ciò che è salvato
         return v
-    if not v.strip():
+    if not _visible(v):
         raise ValueError("blank name")
     return v.strip()
 
 
 def _named_or_mark(v: str, info: ValidationInfo) -> str:
     """Le versioni fino alla 3.14.7 salvavano incantesimi e capacità senza nome: il file resta importabile, con un segno al posto del vuoto."""
-    return v if (info.context or {}).get("lenient") else v.strip() or "?"
+    return v if (info.context or {}).get("lenient") else v.strip() if _visible(v) else "?"
 
 
 MarkedName = Annotated[str, AfterValidator(_named_or_mark)]
@@ -164,10 +170,12 @@ class ExportClass(BaseModel):
     @field_validator("spellcasting_ability")
     @classmethod
     def _known_ability(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
-        """Una caratteristica inventata si scarta (il file resta importabile); l'export non cambia ciò che è salvato."""
+        """Una caratteristica inventata diventa quella della classe (il file resta importabile); l'export non cambia ciò che è salvato."""
         if v is None or (info.context or {}).get("lenient"):
             return v
-        return key if (key := v.strip().lower()) in ABILITY_NAMES else None
+        if (key := v.strip().lower()) in ABILITY_NAMES:
+            return key
+        return CLASS_SPELLCASTING.get(class_table_key(info.data.get("class_name") or "") or "")  # «INT»: quella della classe
 
     # {gruppo: [chiave_opzione]}: scelte di classe (core/rules/types.py::ChoiceSpec)
     options: dict[str, Annotated[list[str], _cap(40)]] = Field(default_factory=dict)

@@ -801,3 +801,14 @@ async def test_una_bestia_morta_non_torna_accanto_a_una_viva(client, via):
         r = await client.patch(f"/characters/{cid}/companions/{vecchia}", json={"current_hp": 5})
     assert r.status_code == 422 and r.json()["detail"] == "companion_exists", r.text
     assert sum(c["feature_key"] == PRIMORDIALE and c["current_hp"] > 0 for c in await _lista(client, cid)) == 1
+
+
+@pytest.mark.caccia(id="CB-1539", fonte="2014 · Druido · Forma Selvatica · pag. 66: a 0 PF la forma finisce da sola, senza azione bonus", zona="flusso:compagni-forme", voce="annullamento",
+                    copre=["PATCH /characters/{char_id}/companions/{comp_id}"])
+async def test_forma_a_zero_pf_spenta_nella_stessa_richiesta_non_chiede_l_azione_bonus(client):
+    cid = await _druid(client, 4)
+    f = await _form(client, cid)
+    assert (await _activate(client, cid, f)).status_code == 200
+    assert (await client.post(f"/characters/{cid}/turn/use", json={"slot": "bonus", "used": True})).status_code == 200
+    r = await client.patch(f"/characters/{cid}/companions/{f}", json={"is_active": False, "current_hp": 0})
+    assert r.status_code == 200 and r.json()["is_active"] is False, r.text

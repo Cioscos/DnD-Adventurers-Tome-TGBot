@@ -74,7 +74,7 @@ class SpellRead(BaseModel):
 
 
 class SpellCreate(BaseModel):
-    name: str = Field(pattern=r"\S")
+    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
     level: int = 0
     description: Optional[str] = None
     casting_time: Optional[str] = None
@@ -99,7 +99,7 @@ class SpellCreate(BaseModel):
 
 
 class SpellUpdate(BaseModel):
-    name: Optional[str] = Field(None, pattern=r"\S")
+    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
     level: Optional[int] = None
     description: Optional[str] = None
     casting_time: Optional[str] = None

@@ -67,7 +67,6 @@ class CharacterLiveSnapshot(BaseModel):
     has_pending_save: bool = False
     is_concentrating: bool = False
     concentration_spell: Optional[str] = None  # nome dell'incantesimo mantenuto (U33)
-    concentration_from_item: bool = False  # incantesimo di un oggetto: una condizione non vi si può legare
     # Stati con effetti su altri (Lupo, Orso, Attacco Irruento): li vedono tutti i partecipanti (R36)
     active_states: list[PublicState] = []
 

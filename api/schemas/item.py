@@ -160,7 +160,7 @@ class ItemRead(BaseModel):
 
 
 class ItemCreate(BaseModel):
-    name: str = Field(pattern=r"\S")
+    name: str = Field(pattern=r"[^\s\p{Cf}\p{Cc}]")
     description: Optional[str] = None
     weight: float = 0.0
     quantity: int = 1
@@ -201,7 +201,7 @@ class ItemCreate(BaseModel):
 
 
 class ItemUpdate(BaseModel):
-    name: Optional[str] = Field(None, pattern=r"\S")
+    name: Optional[str] = Field(None, pattern=r"[^\s\p{Cf}\p{Cc}]")
     description: Optional[str] = None
     weight: Optional[float] = None
     quantity: Optional[int] = None

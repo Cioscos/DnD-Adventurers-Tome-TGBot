@@ -37,7 +37,8 @@ from api.services.spell_slots import clear_created_slots
 from api.services.rules_turn import clear_turn, get_turn, set_damaged
 from api.services.session_allies import load_receiver, attach_party, attach_party_auras, attach_spell_auras, refund_donor_tokens, spend_donor_tokens
 from api.services import ally_reactions
-from api.services.condition_effects import release_concentration_effects
+from api.services.condition_effects import RELEASED_LOG, release_concentration_effects, restore_released
+from api.services.condition_removal import resuspend
 from api.services.spell_effects import regrant_spells
 from core.rules.catalog.spells.hitpoints import DEATH_WARD_HOLD
 from api.services.spell_hp import drop_orphan_spell_states, foreign_spell_clocks, reopen_spell_clocks, spell_damage_effects
@@ -205,6 +206,7 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
     form = await get_active_form(session, char.id)  # the form involved in this op, if any
     if form is not None and not form_own_hp(char):
         form = None  # 2024: la forma non ha PF propri, i danni vanno ai temporanei e ai PF del druido
+    session.info.setdefault(RELEASED_LOG, [])
     before = _hp_state(char, form)
     max_before = effective_hp_max(char, await get_passive_modifiers(session, char, "character.hit_points_max"))
     zero_before = _zero_conditions(char)
@@ -528,6 +530,9 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
 
     if body.op == HPOp.SET_CURRENT:  # SET_MAX non tocca i PF correnti: un personaggio appena creato non è «a terra»
         await sync_zero_hp(session, char, was_at_zero)
+        if char.current_hit_points == 0 < old and is_concentrating(char):  # come col danno: cade anche ciò che la concentrazione teneva su altri
+            end_concentration(char)
+            await release_concentration_effects(session, char)
 
     # Auto-reset death saves when rising from 0 HP
     if was_at_zero and char.current_hit_points > 0:
@@ -539,7 +544,8 @@ async def apply_hp_update(session: AsyncSession, char: Character, body: HPUpdate
 
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
-    char.hp_undo = {"op_id": op_id, "hp_max": max_before, "before": before, "after": _hp_state(char, form),
+    released = [x for x in session.info[RELEASED_LOG] if x["effect_snapshot"]["source_character_id"] == char.id]
+    char.hp_undo = {"op_id": op_id, "released": released, "hp_max": max_before, "before": before, "after": _hp_state(char, form),
                     "spent": option_block.spent if option_block else [], "ally_reaction_id": ally_req.id if ally_req is not None else None, "zero_before": zero_before,
                     "turn_no": get_turn(char).get("turn_no", 0), "zero_after": _zero_conditions(char), "shared": shared_log, "history_from": history_from or 0,
                     "clocks": [c for c in clocks if any(t.startswith(f"state:{c['key']}:") for t in (option_block.spent if option_block else []))]}
@@ -650,6 +656,9 @@ async def _restore_hp(session: AsyncSession, char: Character, snap: dict, form, 
         else:
             settings[k] = before[k]
     char.settings = settings
+    if is_concentrating(char):
+        await restore_released(session, snap.get("released") or [])
+    await resuspend(session, char)
     zero, zero_after = snap.get("zero_before"), snap.get("zero_after")
     if zero and zero_after:  # solo ciò che l'operazione ha scritto torna com'era; il resto è di chi l'ha messo
         changed = {k for k in zero if zero[k] != zero_after.get(k, zero[k])}

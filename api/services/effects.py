@@ -17,14 +17,14 @@ from core.data.labels import condition_label
 from api.services.history import add_history
 from api.services.beast_companion import drop_primal_beast
 from api.services.telegram_notify import notify_party_emergency
-from api.services.condition_effects import clear_effects_for, release_concentration_effects
+from api.services.condition_effects import clear_effects_for, item_concentration, release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 from core.rules.catalog.spells import SPELL_EFFECTS
 from core.rules.edition import character_edition
 from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 from core.rules.spell_effects import SPELL_CLOCK_PREFIX, SPELL_STATE_PREFIX
-from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
+from core.rules.states import COND_RELEASE, SPELL_RELEASE, SPELL_SPENT, SPELL_TEMP_DROPPED, SUSPENDED_BACK, SUSPENDED_EFFECTS, SUSPENDED_ON, TEMP_RELEASE, immune_conditions, settle_closed
 
 
 async def cap_current_hp(session: AsyncSession, char: Character, *, always: bool = False) -> None:
@@ -176,6 +176,13 @@ async def apply_conditions(session: AsyncSession, char: Character,
     # Uno stato attivo (Ira Incontenibile) impedisce di aggiungere quelle condizioni; toglierle resta possibile.
     immune = immune_conditions(char) if any(changes.values()) else set()  # solo chi aggiunge ha da guardare le immunità
     changes = {c: v for c, v in changes.items() if not (v and c in immune)}
+    # una condizione che si accende ora non riprende un effetto rimasto da prima
+    turned_on = [c for c, v in changes.items() if v and not old_conditions.get(c) and c != "exhaustion"]
+    with session.no_autoflush:  # un flush a metà operazione chiuderebbe ora le concentrazioni (PF a 0): solo se c'è da pulire
+        left_over = bool(turned_on) and (await session.execute(select(ConditionEffect.id).where(
+            ConditionEffect.character_id == char.id, ConditionEffect.slug.in_(turned_on), ConditionEffect.pending.is_(False)).limit(1))).first()
+    if left_over:
+        await clear_effects_for(session, ("character", char.id), turned_on)
     current = dict(old_conditions)
     current.update(changes)
     char.conditions = current
@@ -236,7 +243,12 @@ async def apply_conditions(session: AsyncSession, char: Character,
 
 def _still_concentrating(session: Session, effect: dict) -> bool:
     source = session.get(Character, effect.get("source_character_id") or 0)
-    return source is not None and source.concentrating_spell_id is not None and source.concentrating_spell_id == effect.get("source_spell_id")
+    if source is None:
+        return False
+    if source.concentrating_spell_id is not None:
+        return source.concentrating_spell_id == effect.get("source_spell_id")
+    held = item_concentration(source)
+    return held is not None and held == effect.get("source_item_spell")
 
 
 def _restore_effect(session: Session, effect: dict) -> None:
@@ -271,6 +283,7 @@ def _restore_suspended(session: Session, char: Character) -> None:
     if not pending:
         return
     char.settings = {k: v for k, v in char.settings.items() if k != COND_RELEASE}
+    returned: list[dict] = []
     for entry in pending:
         receiver = session.get(Character, entry["id"])
         if receiver is None:
@@ -289,12 +302,14 @@ def _restore_suspended(session: Session, char: Character) -> None:
         if receiver.settings and SUSPENDED_ON in receiver.settings:
             receiver.settings = {**{k: v for k, v in receiver.settings.items() if k != SUSPENDED_ON}, **({SUSPENDED_ON: marks} if marks else {})}
         if back:
+            returned.append({"id": receiver.id, "conditions": back})
             receiver.conditions = {**(receiver.conditions or {}), **{c: True for c in back}}
             for c in back:
                 if c in effects:
                     _restore_effect(session, effects[c])
                 add_history(session, receiver.id, "condition_change", f"Condizione tornata: {condition_label(c)} (la concentrazione di {char.name} è finita)",
                              meta={"slug": c, "active": True, "restored": True})
+    char.settings = {**(char.settings or {}), SUSPENDED_BACK: returned}
 
 
 def _end_incapacitated_concentration(session: Session, char: Character) -> None:
